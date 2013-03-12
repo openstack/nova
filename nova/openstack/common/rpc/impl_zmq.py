@@ -25,6 +25,7 @@ import eventlet
 import greenlet
 from oslo.config import cfg
 
+from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
@@ -91,8 +92,8 @@ def _serialize(data):
     try:
         return jsonutils.dumps(data, ensure_ascii=True)
     except TypeError:
-        LOG.error(_("JSON serialization failed."))
-        raise
+        with excutils.save_and_reraise_exception():
+            LOG.error(_("JSON serialization failed."))
 
 
 def _deserialize(data):
@@ -511,9 +512,9 @@ class ZmqProxy(ZmqBaseReactor):
                               ipc_dir, run_as_root=True)
                 utils.execute('chmod', '750', ipc_dir, run_as_root=True)
             except utils.ProcessExecutionError:
-                LOG.error(_("Could not create IPC directory %s") %
-                          (ipc_dir, ))
-                raise
+                with excutils.save_and_reraise_exception():
+                    LOG.error(_("Could not create IPC directory %s") %
+                              (ipc_dir, ))
 
         try:
             self.register(consumption_proxy,
@@ -521,9 +522,9 @@ class ZmqProxy(ZmqBaseReactor):
                           zmq.PULL,
                           out_bind=True)
         except zmq.ZMQError:
-            LOG.error(_("Could not create ZeroMQ receiver daemon. "
-                        "Socket may already be in use."))
-            raise
+            with excutils.save_and_reraise_exception():
+                LOG.error(_("Could not create ZeroMQ receiver daemon. "
+                            "Socket may already be in use."))
 
         super(ZmqProxy, self).consume_in_thread()
 
@@ -594,6 +595,9 @@ class Connection(rpc_common.Connection):
         self.reactor = ZmqReactor(conf)
 
     def create_consumer(self, topic, proxy, fanout=False):
+        # Register with matchmaker.
+        _get_matchmaker().register(topic, CONF.rpc_zmq_host)
+
         # Subscription scenarios
         if fanout:
             sock_type = zmq.SUB
@@ -620,6 +624,10 @@ class Connection(rpc_common.Connection):
         self.topics.append(topic)
 
     def close(self):
+        _get_matchmaker().stop_heartbeat()
+        for topic in self.topics:
+            _get_matchmaker().unregister(topic, CONF.rpc_zmq_host)
+
         self.reactor.close()
         self.topics = []
 
@@ -627,6 +635,7 @@ class Connection(rpc_common.Connection):
         self.reactor.wait()
 
     def consume_in_thread(self):
+        _get_matchmaker().start_heartbeat()
         self.reactor.consume_in_thread()
 
 
@@ -742,7 +751,7 @@ def _multi_send(method, context, topic, msg, timeout=None,
         LOG.warn(_("No matchmaker results. Not casting."))
         # While not strictly a timeout, callers know how to handle
         # this exception and a timeout isn't too big a lie.
-        raise rpc_common.Timeout, "No match from matchmaker."
+        raise rpc_common.Timeout(_("No match from matchmaker."))
 
     # This supports brokerless fanout (addresses > 1)
     for queue in queues:
@@ -785,7 +794,7 @@ def fanout_cast(conf, context, topic, msg, **kwargs):
     _multi_send(_cast, context, 'fanout~' + str(topic), msg, **kwargs)
 
 
-def notify(conf, context, topic, msg, **kwargs):
+def notify(conf, context, topic, msg, envelope):
     """
     Send notification event.
     Notifications are sent to topic-priority.
@@ -793,9 +802,8 @@ def notify(conf, context, topic, msg, **kwargs):
     """
     # NOTE(ewindisch): dot-priority in rpc notifier does not
     # work with our assumptions.
-    topic.replace('.', '-')
-    kwargs['envelope'] = kwargs.get('envelope', True)
-    cast(conf, context, topic, msg, **kwargs)
+    topic = topic.replace('.', '-')
+    cast(conf, context, topic, msg, envelope=envelope)
 
 
 def cleanup():
