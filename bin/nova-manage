@@ -675,11 +675,13 @@ class ServiceCommands(object):
     def enable(self, host, service):
         """Enable scheduling for a service."""
         ctxt = context.get_admin_context()
-        svc = db.service_get_by_args(ctxt, host, service)
-        if not svc:
-            print _("Unable to find service")
-            return
-        db.service_update(ctxt, svc['id'], {'disabled': False})
+        try:
+            svc = db.service_get_by_args(ctxt, host, service)
+            db.service_update(ctxt, svc['id'], {'disabled': False})
+        except exception.NotFound as ex:
+            print _("error: %s") % ex
+            sys.exit(2)
+        print _("Service %(service)s on host %(host)s enabled.") % locals()
 
     @args('--host', dest='host', metavar='<host>', help='Host')
     @args('--service', dest='service', metavar='<service>',
@@ -687,11 +689,13 @@ class ServiceCommands(object):
     def disable(self, host, service):
         """Disable scheduling for a service."""
         ctxt = context.get_admin_context()
-        svc = db.service_get_by_args(ctxt, host, service)
-        if not svc:
-            print _("Unable to find service")
-            return
-        db.service_update(ctxt, svc['id'], {'disabled': True})
+        try:
+            svc = db.service_get_by_args(ctxt, host, service)
+            db.service_update(ctxt, svc['id'], {'disabled': True})
+        except exception.NotFound as ex:
+            print _("error: %s") % ex
+            sys.exit(2)
+        print _("Service %(service)s on host %(host)s disabled.") % locals()
 
     @args('--host', dest='host', metavar='<host>', help='Host')
     def describe_resource(self, host):

@@ -382,3 +382,17 @@ class DBCommandsTestCase(test.TestCase):
     def test_archive_deleted_rows_negative(self):
         self.assertRaises(SystemExit,
                           self.commands.archive_deleted_rows, -1)
+
+
+class ServiceCommandsTestCase(test.TestCase):
+    def setUp(self):
+        super(ServiceCommandsTestCase, self).setUp()
+        self.commands = nova_manage.ServiceCommands()
+
+    def test_service_enable_invalid_params(self):
+        self.assertRaises(SystemExit,
+                          self.commands.enable, 'nohost', 'noservice')
+
+    def test_service_disable_invalid_params(self):
+        self.assertRaises(SystemExit,
+                          self.commands.disable, 'nohost', 'noservice')
