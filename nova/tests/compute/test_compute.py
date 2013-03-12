@@ -3414,13 +3414,15 @@ class ComputeTestCase(BaseTestCase):
                 if migration['id'] == m['id']:
                     migration['status'] = status
 
-        def fake_confirm_resize(context, instance):
+        def fake_confirm_resize(context, instance, migration_ref=None):
             # raise exception for 'fake_uuid4' to check migration status
             # does not get set to 'error' on confirm_resize failure.
             if instance['uuid'] == 'fake_uuid4':
                 raise test.TestingException
+            self.assertNotEqual(migration_ref, None)
             for migration in migrations:
-                if migration['instance_uuid'] == instance['uuid']:
+                if (migration['instance_uuid'] ==
+                    migration_ref['instance_uuid']):
                     migration['status'] = 'confirmed'
 
         self.stubs.Set(db, 'instance_get_by_uuid',
