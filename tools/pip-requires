@@ -26,5 +26,5 @@ python-quantumclient>=2.1.2
 python-glanceclient>=0.5.0,<2
 python-keystoneclient>=0.2.0
 stevedore>=0.7
-websockify
+websockify<0.4
 http://tarballs.openstack.org/oslo-config/oslo.config-1.1.0b1.tar.gz#egg=oslo.config
