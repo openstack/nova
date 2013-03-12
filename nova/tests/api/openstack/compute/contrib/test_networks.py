@@ -94,9 +94,13 @@ NEW_NETWORK = {
 class FakeNetworkAPI(object):
 
     _sentinel = object()
+    _vlan_is_disabled = False
 
     def __init__(self):
         self.networks = copy.deepcopy(FAKE_NETWORKS)
+
+    def disable_vlan(self):
+        self._vlan_is_disabled = True
 
     def delete(self, context, network_id):
         for i, network in enumerate(self.networks):
@@ -125,6 +129,8 @@ class FakeNetworkAPI(object):
 
     def add_network_to_project(self, context,
                                project_id, network_uuid=None):
+        if self._vlan_is_disabled:
+            raise NotImplementedError()
         if network_uuid:
             for network in self.networks:
                 if network.get('project_id', None) is None:
@@ -273,6 +279,13 @@ class NetworksTest(test.TestCase):
         req = fakes.HTTPRequest.blank('/v2/1234/os-networks/100')
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller.delete, req, 100)
+
+    def test_network_add_vlan_disabled(self):
+        self.fake_network_api.disable_vlan()
+        uuid = FAKE_NETWORKS[1]['uuid']
+        req = fakes.HTTPRequest.blank('/v2/1234/os-networks/add')
+        self.assertRaises(webob.exc.HTTPNotImplemented,
+                          self.controller.add, req, {'id': uuid})
 
     def test_network_add(self):
         uuid = FAKE_NETWORKS[1]['uuid']
