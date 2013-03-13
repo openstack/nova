@@ -24,7 +24,7 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova.compute import api
-from nova import exception
+from nova.compute import instance_types
 from nova.openstack.common import timeutils
 
 authorize_show = extensions.extension_authorizer('compute',
@@ -119,18 +119,7 @@ class SimpleTenantUsageController(object):
             info['hours'] = self._hours_for(instance,
                                             period_start,
                                             period_stop)
-            flavor_type = instance['instance_type_id']
-
-            if not flavors.get(flavor_type):
-                try:
-                    it_ref = compute_api.get_instance_type(context,
-                                                           flavor_type)
-                    flavors[flavor_type] = it_ref
-                except exception.InstanceTypeNotFound:
-                    # can't bill if there is no instance type
-                    continue
-
-            flavor = flavors[flavor_type]
+            flavor = instance_types.extract_instance_type(instance)
 
             info['instance_id'] = instance['uuid']
             info['name'] = instance['display_name']
