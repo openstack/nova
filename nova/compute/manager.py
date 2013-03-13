@@ -742,6 +742,15 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         try:
             self._check_instance_exists(context, instance)
+
+            try:
+                self._start_building(context, instance)
+            except exception.InstanceNotFound:
+                LOG.info(_("Instance disappeared before we could start it"),
+                         instance=instance)
+                # Quickly bail out of here
+                return
+
             image_meta = self._check_image_size(context, instance)
 
             if node is None:
@@ -753,8 +762,6 @@ class ComputeManager(manager.SchedulerDependentManager):
                 extra_usage_info = {"image_name": image_meta['name']}
             else:
                 extra_usage_info = {}
-
-            self._start_building(context, instance)
 
             self._notify_about_instance_usage(
                     context, instance, "create.start",

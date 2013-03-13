@@ -708,6 +708,19 @@ class ComputeTestCase(BaseTestCase):
                           self.compute.run_instance,
                           self.context, instance=instance)
 
+    def test_run_instance_bails_on_missing_instance(self):
+        # Make sure that run_instance() will quickly ignore a deleted instance
+        called = {}
+        instance = self._create_instance()
+
+        def fake_instance_update(self, *a, **args):
+            called['instance_update'] = True
+            raise exception.InstanceNotFound(instance_id='foo')
+        self.stubs.Set(self.compute, '_instance_update', fake_instance_update)
+
+        self.compute.run_instance(self.context, instance)
+        self.assertIn('instance_update', called)
+
     def test_can_terminate_on_error_state(self):
         # Make sure that the instance can be terminated in ERROR state.
         #check failed to schedule --> terminate
