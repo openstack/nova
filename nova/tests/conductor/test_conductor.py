@@ -112,6 +112,7 @@ class _BaseTestCase(object):
     def test_instance_update_invalid_key(self):
         # NOTE(danms): the real DB API call ignores invalid keys
         if self.db == None:
+            self.stub_out_client_exceptions()
             self.assertRaises(KeyError,
                               self._do_update, 'any-uuid', foobar=1)
 
@@ -601,7 +602,6 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
         super(ConductorTestCase, self).setUp()
         self.conductor = conductor_manager.ConductorManager()
         self.conductor_manager = self.conductor
-        self.stub_out_client_exceptions()
 
     def test_block_device_mapping_update_or_create(self):
         fake_bdm = {'id': 'fake-id'}
@@ -673,16 +673,32 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
         self.assertEqual(result, 'result')
 
     def _test_stubbed(self, name, dbargs, condargs,
-                      db_result_listified=False):
+                      db_result_listified=False, db_exception=None):
 
         self.mox.StubOutWithMock(db, name)
-        getattr(db, name)(self.context, *dbargs).AndReturn('fake-result')
-        self.mox.ReplayAll()
-        result = self.conductor.service_get_all_by(self.context, **condargs)
-        if db_result_listified:
-            self.assertEqual(['fake-result'], result)
+        if db_exception:
+            getattr(db, name)(self.context, *dbargs).AndRaise(db_exception)
+            getattr(db, name)(self.context, *dbargs).AndRaise(db_exception)
         else:
-            self.assertEqual('fake-result', result)
+            getattr(db, name)(self.context, *dbargs).AndReturn('fake-result')
+        self.mox.ReplayAll()
+        if db_exception:
+            self.assertRaises(rpc_common.ClientException,
+                              self.conductor.service_get_all_by,
+                              self.context, **condargs)
+
+            self.stub_out_client_exceptions()
+
+            self.assertRaises(db_exception.__class__,
+                              self.conductor.service_get_all_by,
+                              self.context, **condargs)
+        else:
+            result = self.conductor.service_get_all_by(self.context,
+                                                       **condargs)
+            if db_result_listified:
+                self.assertEqual(['fake-result'], result)
+            else:
+                self.assertEqual('fake-result', result)
 
     def test_service_get_all(self):
         self._test_stubbed('service_get_all', (), {})
@@ -712,6 +728,19 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
         self._test_stubbed('service_get_by_args',
                            ('host', 'binary'),
                            dict(host='host', binary='binary'))
+
+    def test_service_get_by_compute_host_not_found(self):
+        self._test_stubbed('service_get_by_compute_host',
+                           ('host',),
+                           dict(topic='compute', host='host'),
+                           db_exception=exc.ComputeHostNotFound(host='host'))
+
+    def test_service_get_by_args_not_found(self):
+        self._test_stubbed('service_get_by_args',
+                           ('host', 'binary'),
+                           dict(host='host', binary='binary'),
+                           db_exception=exc.HostBinaryNotFound(binary='binary',
+                                                               host='host'))
 
     def test_security_groups_trigger_handler(self):
         self.mox.StubOutWithMock(self.conductor_manager.security_group_api,
@@ -786,15 +815,24 @@ class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
                                                    'fake-key', 'fake-sort')
 
     def _test_stubbed(self, name, dbargs, condargs,
-                      db_result_listified=False):
+                      db_result_listified=False, db_exception=None):
         self.mox.StubOutWithMock(db, name)
-        getattr(db, name)(self.context, *dbargs).AndReturn('fake-result')
-        self.mox.ReplayAll()
-        result = self.conductor.service_get_all_by(self.context, **condargs)
-        if db_result_listified:
-            self.assertEqual(['fake-result'], result)
+        if db_exception:
+            getattr(db, name)(self.context, *dbargs).AndRaise(db_exception)
         else:
-            self.assertEqual('fake-result', result)
+            getattr(db, name)(self.context, *dbargs).AndReturn('fake-result')
+        self.mox.ReplayAll()
+        if db_exception:
+            self.assertRaises(db_exception.__class__,
+                              self.conductor.service_get_all_by,
+                              self.context, **condargs)
+        else:
+            result = self.conductor.service_get_all_by(self.context,
+                                                       **condargs)
+            if db_result_listified:
+                self.assertEqual(['fake-result'], result)
+            else:
+                self.assertEqual('fake-result', result)
 
     def test_service_get_all(self):
         self._test_stubbed('service_get_all', (), {})
@@ -819,6 +857,24 @@ class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
                            ('host',),
                            dict(topic='compute', host='host'),
                            db_result_listified=True)
+
+    def test_service_get_by_args(self):
+        self._test_stubbed('service_get_by_args',
+                           ('host', 'binary'),
+                           dict(host='host', binary='binary'))
+
+    def test_service_get_by_compute_host_not_found(self):
+        self._test_stubbed('service_get_by_compute_host',
+                           ('host',),
+                           dict(topic='compute', host='host'),
+                           db_exception=exc.ComputeHostNotFound(host='host'))
+
+    def test_service_get_by_args_not_found(self):
+        self._test_stubbed('service_get_by_args',
+                           ('host', 'binary'),
+                           dict(host='host', binary='binary'),
+                           db_exception=exc.HostBinaryNotFound(binary='binary',
+                                                               host='host'))
 
     def test_security_groups_trigger_handler(self):
         self.mox.StubOutWithMock(self.conductor_manager.security_group_api,
@@ -913,8 +969,12 @@ class ConductorAPITestCase(_BaseTestCase, test.TestCase):
             args = args[1:]
         else:
             ctxt = self.context
+        db_exception = kwargs.get('db_exception')
         self.mox.StubOutWithMock(db, name)
-        getattr(db, name)(ctxt, *args).AndReturn('fake-result')
+        if db_exception:
+            getattr(db, name)(ctxt, *args).AndRaise(db_exception)
+        else:
+            getattr(db, name)(ctxt, *args).AndReturn('fake-result')
         if name == 'service_destroy':
             # TODO(russellb) This is a hack ... SetUp() starts the conductor()
             # service.  There is a cleanup step that runs after this test which
@@ -922,8 +982,13 @@ class ConductorAPITestCase(_BaseTestCase, test.TestCase):
             # to db.service_destroy(), which we have stubbed out.
             db.service_destroy(mox.IgnoreArg(), mox.IgnoreArg())
         self.mox.ReplayAll()
-        result = getattr(self.conductor, name)(self.context, *args)
-        self.assertEqual(
+        if db_exception:
+            self.assertRaises(db_exception.__class__,
+                              getattr(self.conductor, name),
+                              self.context, *args)
+        else:
+            result = getattr(self.conductor, name)(self.context, *args)
+            self.assertEqual(
                 result, 'fake-result' if kwargs.get('returns', True) else None)
 
     def test_service_get_all(self):
@@ -940,6 +1005,18 @@ class ConductorAPITestCase(_BaseTestCase, test.TestCase):
 
     def test_service_get_by_compute_host(self):
         self._test_stubbed('service_get_by_compute_host', 'host')
+
+    def test_service_get_by_args(self):
+        self._test_stubbed('service_get_by_args', 'host', 'binary')
+
+    def test_service_get_by_compute_host_not_found(self):
+        self._test_stubbed('service_get_by_compute_host', 'host',
+                           db_exception=exc.ComputeHostNotFound(host='host'))
+
+    def test_service_get_by_args_not_found(self):
+        self._test_stubbed('service_get_by_args', 'host', 'binary',
+                           db_exception=exc.HostBinaryNotFound(binary='binary',
+                                                               host='host'))
 
     def test_service_create(self):
         self._test_stubbed('service_create', {})
@@ -998,7 +1075,6 @@ class ConductorLocalAPITestCase(ConductorAPITestCase):
         self.conductor = conductor_api.LocalAPI()
         self.conductor_manager = self.conductor._manager._target
         self.db = db
-        self.stub_out_client_exceptions()
 
     def test_client_exceptions(self):
         instance = self._create_fake_instance()
