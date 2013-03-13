@@ -154,7 +154,7 @@ class Instance(BASE, NovaBase):
         return base_name
 
     def _extra_keys(self):
-        return ['name', 'system_metadata']
+        return ['name']
 
     user_id = Column(String(255))
     project_id = Column(String(255))

@@ -1554,10 +1554,14 @@ class MigrationTestCase(test.TestCase):
         self._create(source_compute='host3', dest_compute='host4')
 
     def _create(self, status='migrating', source_compute='host1',
-                source_node='a', dest_compute='host2', dest_node='b'):
+                source_node='a', dest_compute='host2', dest_node='b',
+                system_metadata=None):
 
         values = {'host': source_compute}
         instance = db.instance_create(self.ctxt, values)
+        if system_metadata:
+            db.instance_system_metadata_update(self.ctxt, instance['uuid'],
+                                               system_metadata, False)
 
         values = {'status': status, 'source_compute': source_compute,
                   'source_node': source_node, 'dest_compute': dest_compute,
@@ -1568,6 +1572,14 @@ class MigrationTestCase(test.TestCase):
         for migration in migrations:
             self.assertNotEqual('confirmed', migration['status'])
             self.assertNotEqual('reverted', migration['status'])
+
+    def test_migration_get_in_progress_joins(self):
+        self._create(source_compute='foo', system_metadata={'foo': 'bar'})
+        migrations = db.migration_get_in_progress_by_host_and_node(self.ctxt,
+                'foo', 'a')
+        system_metadata = migrations[0]['instance']['system_metadata'][0]
+        self.assertEqual(system_metadata['key'], 'foo')
+        self.assertEqual(system_metadata['value'], 'bar')
 
     def test_in_progress_host1_nodea(self):
         migrations = db.migration_get_in_progress_by_host_and_node(self.ctxt,
