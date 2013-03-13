@@ -68,7 +68,6 @@ from nova.openstack.common import rpc
 from nova.openstack.common import timeutils
 from nova import paths
 from nova import safe_utils
-from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import utils
 from nova.virt import driver
 from nova.virt import event as virtevent
@@ -336,7 +335,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._last_info_cache_heal = 0
         self.compute_api = compute.API()
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
-        self.scheduler_rpcapi = scheduler_rpcapi.SchedulerAPI()
         self.conductor_api = conductor.API()
         self.is_quantum_security_groups = (
             openstack_driver.is_quantum_security_groups())
