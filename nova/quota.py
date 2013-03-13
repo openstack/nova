@@ -789,15 +789,20 @@ class QuotaEngine(object):
 
     def __init__(self, quota_driver_class=None):
         """Initialize a Quota object."""
-
-        if not quota_driver_class:
-            quota_driver_class = CONF.quota_driver
-
-        if isinstance(quota_driver_class, basestring):
-            quota_driver_class = importutils.import_object(quota_driver_class)
-
         self._resources = {}
-        self._driver = quota_driver_class
+        self._driver_cls = quota_driver_class
+        self.__driver = None
+
+    @property
+    def _driver(self):
+        if self.__driver:
+            return self.__driver
+        if not self._driver_cls:
+            self._driver_cls = CONF.quota_driver
+        if isinstance(self._driver_cls, basestring):
+            self._driver_cls = importutils.import_object(self._driver_cls)
+        self.__driver = self._driver_cls
+        return self.__driver
 
     def __contains__(self, resource):
         return resource in self._resources
