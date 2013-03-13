@@ -22,6 +22,7 @@ import time
 
 from oslo.config import cfg
 
+from nova.cells import rpcapi as cells_rpcapi
 from nova.compute import rpcapi as compute_rpcapi
 from nova.conductor import api as conductor_api
 from nova import manager
@@ -43,6 +44,7 @@ consoleauth_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(consoleauth_opts)
+CONF.import_opt('enable', 'nova.cells.opts', group='cells')
 
 
 class ConsoleAuthManager(manager.Manager):
@@ -53,8 +55,9 @@ class ConsoleAuthManager(manager.Manager):
     def __init__(self, scheduler_driver=None, *args, **kwargs):
         super(ConsoleAuthManager, self).__init__(*args, **kwargs)
         self.mc = memorycache.get_client()
-        self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.conductor_api = conductor_api.API()
+        self.compute_rpcapi = compute_rpcapi.ComputeAPI()
+        self.cells_rpcapi = cells_rpcapi.CellsAPI()
 
     def _get_tokens_for_instance(self, instance_uuid):
         tokens_str = self.mc.get(instance_uuid.encode('UTF-8'))
@@ -88,8 +91,16 @@ class ConsoleAuthManager(manager.Manager):
         instance_uuid = token['instance_uuid']
         if instance_uuid is None:
             return False
+
+        # NOTE(comstud): consoleauth was meant to run in API cells.  So,
+        # if cells is enabled, we must call down to the child cell for
+        # the instance.
+        if CONF.cells.enable:
+            return self.cells_rpcapi.validate_console_port(context,
+                    instance_uuid, token['port'], token['console_type'])
+
         instance = self.conductor_api.instance_get_by_uuid(context,
-                                                             instance_uuid)
+                                                           instance_uuid)
         return self.compute_rpcapi.validate_console_port(context,
                                             instance,
                                             token['port'],

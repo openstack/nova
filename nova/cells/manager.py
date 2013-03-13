@@ -66,7 +66,7 @@ class CellsManager(manager.Manager):
 
     Scheduling requests get passed to the scheduler class.
     """
-    RPC_API_VERSION = '1.5'
+    RPC_API_VERSION = '1.6'
 
     def __init__(self, *args, **kwargs):
         # Mostly for tests.
@@ -346,4 +346,19 @@ class CellsManager(manager.Manager):
     def action_events_get(self, ctxt, cell_name, action_id):
         response = self.msg_runner.action_events_get(ctxt, cell_name,
                                                      action_id)
+        return response.value_or_raise()
+
+    def consoleauth_delete_tokens(self, ctxt, instance_uuid):
+        """Delete consoleauth tokens for an instance in API cells."""
+        self.msg_runner.consoleauth_delete_tokens(ctxt, instance_uuid)
+
+    def validate_console_port(self, ctxt, instance_uuid, console_port,
+                              console_type):
+        """Validate console port with child cell compute node."""
+        instance = self.db.instance_get_by_uuid(ctxt, instance_uuid)
+        if not instance['cell_name']:
+            raise exception.InstanceUnknownCell(instance_uuid=instance_uuid)
+        response = self.msg_runner.validate_console_port(ctxt,
+                instance['cell_name'], instance_uuid, console_port,
+                console_type)
         return response.value_or_raise()

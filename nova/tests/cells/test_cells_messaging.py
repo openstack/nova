@@ -593,6 +593,7 @@ class CellsTargetedMethodsTestCase(test.TestCase):
         self.tgt_methods_cls = methods_cls
         self.tgt_compute_api = methods_cls.compute_api
         self.tgt_db_inst = methods_cls.db
+        self.tgt_c_rpcapi = methods_cls.compute_rpcapi
 
     def test_schedule_run_instance(self):
         host_sched_kwargs = {'filter_properties': {},
@@ -872,6 +873,28 @@ class CellsTargetedMethodsTestCase(test.TestCase):
         result = response.value_or_raise()
         self.assertEqual(fake_events, result)
 
+    def test_validate_console_port(self):
+        instance_uuid = 'fake_instance_uuid'
+        instance = {'uuid': instance_uuid}
+        console_port = 'fake-port'
+        console_type = 'fake-type'
+
+        self.mox.StubOutWithMock(self.tgt_c_rpcapi, 'validate_console_port')
+        self.mox.StubOutWithMock(self.tgt_db_inst, 'instance_get_by_uuid')
+
+        self.tgt_db_inst.instance_get_by_uuid(self.ctxt,
+                instance_uuid).AndReturn(instance)
+        self.tgt_c_rpcapi.validate_console_port(self.ctxt,
+                instance, console_port, console_type).AndReturn('fake_result')
+
+        self.mox.ReplayAll()
+
+        response = self.src_msg_runner.validate_console_port(self.ctxt,
+                self.tgt_cell_name, instance_uuid, console_port,
+                console_type)
+        result = response.value_or_raise()
+        self.assertEqual('fake_result', result)
+
 
 class CellsBroadcastMethodsTestCase(test.TestCase):
     """Test case for _BroadcastMessageMethods class.  Most of these
@@ -900,6 +923,7 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
         self.src_methods_cls = methods_cls
         self.src_db_inst = methods_cls.db
         self.src_compute_api = methods_cls.compute_api
+        self.src_ca_rpcapi = methods_cls.consoleauth_rpcapi
 
         if not up:
             # fudge things so we only have 1 child to broadcast to
@@ -913,12 +937,14 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
         self.mid_methods_cls = methods_cls
         self.mid_db_inst = methods_cls.db
         self.mid_compute_api = methods_cls.compute_api
+        self.mid_ca_rpcapi = methods_cls.consoleauth_rpcapi
 
         self.tgt_msg_runner = fakes.get_message_runner(tgt_cell)
         methods_cls = self.tgt_msg_runner.methods_by_type['broadcast']
         self.tgt_methods_cls = methods_cls
         self.tgt_db_inst = methods_cls.db
         self.tgt_compute_api = methods_cls.compute_api
+        self.tgt_ca_rpcapi = methods_cls.consoleauth_rpcapi
 
     def test_at_the_top(self):
         self.assertTrue(self.tgt_methods_cls._at_the_top())
@@ -1283,3 +1309,20 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
                     ('api-cell!child-cell2', [3]),
                     ('api-cell', [1, 2])]
         self.assertEqual(expected, response_values)
+
+    def test_consoleauth_delete_tokens(self):
+        fake_uuid = 'fake-instance-uuid'
+
+        # To show these should not be called in src/mid-level cell
+        self.mox.StubOutWithMock(self.src_ca_rpcapi,
+                                 'delete_tokens_for_instance')
+        self.mox.StubOutWithMock(self.mid_ca_rpcapi,
+                                 'delete_tokens_for_instance')
+
+        self.mox.StubOutWithMock(self.tgt_ca_rpcapi,
+                                 'delete_tokens_for_instance')
+        self.tgt_ca_rpcapi.delete_tokens_for_instance(self.ctxt, fake_uuid)
+
+        self.mox.ReplayAll()
+
+        self.src_msg_runner.consoleauth_delete_tokens(self.ctxt, fake_uuid)

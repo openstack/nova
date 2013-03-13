@@ -18,6 +18,8 @@ Tests For Compute w/ Cells
 """
 import functools
 
+from oslo.config import cfg
+
 from nova.compute import api as compute_api
 from nova.compute import cells_api as compute_cells_api
 from nova import db
@@ -31,6 +33,7 @@ from nova.tests.compute import test_compute
 LOG = logging.getLogger('nova.tests.test_compute_cells')
 
 ORIG_COMPUTE_API = None
+cfg.CONF.import_opt('enable', 'nova.cells.opts', group='cells')
 
 
 def stub_call_to_cells(context, instance, method, *args, **kwargs):
@@ -112,6 +115,7 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
         super(CellsComputeAPITestCase, self).setUp()
         global ORIG_COMPUTE_API
         ORIG_COMPUTE_API = self.compute_api
+        self.flags(enable=True, group='cells')
 
         def _fake_cell_read_only(*args, **kwargs):
             return False

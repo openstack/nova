@@ -30,6 +30,7 @@ CONF = cfg.CONF
 
 class ConsoleAuthRpcAPITestCase(test.TestCase):
     def _test_consoleauth_api(self, method, **kwargs):
+        do_cast = kwargs.pop('_do_cast', False)
         ctxt = context.RequestContext('fake_user', 'fake_project')
         rpcapi = consoleauth_rpcapi.ConsoleAuthAPI()
         expected_retval = 'foo'
@@ -45,18 +46,22 @@ class ConsoleAuthRpcAPITestCase(test.TestCase):
         self.call_msg = None
         self.call_timeout = None
 
-        def _fake_call(_ctxt, _topic, _msg, _timeout):
+        def _fake_call(_ctxt, _topic, _msg, _timeout=None):
             self.call_ctxt = _ctxt
             self.call_topic = _topic
             self.call_msg = _msg
             self.call_timeout = _timeout
             return expected_retval
 
-        self.stubs.Set(rpc, 'call', _fake_call)
+        if do_cast:
+            self.stubs.Set(rpc, 'cast', _fake_call)
+        else:
+            self.stubs.Set(rpc, 'call', _fake_call)
 
         retval = getattr(rpcapi, method)(ctxt, **kwargs)
 
-        self.assertEqual(retval, expected_retval)
+        if not do_cast:
+            self.assertEqual(retval, expected_retval)
         self.assertEqual(self.call_ctxt, ctxt)
         self.assertEqual(self.call_topic, CONF.consoleauth_topic)
         self.assertEqual(self.call_msg, expected_msg)
@@ -73,6 +78,7 @@ class ConsoleAuthRpcAPITestCase(test.TestCase):
 
     def test_delete_tokens_for_instnace(self):
         self._test_consoleauth_api('delete_tokens_for_instance',
+                                   _do_cast=True,
                                    instance_uuid="instance",
                                    version='1.2')
 

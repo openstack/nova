@@ -43,11 +43,7 @@ class ConsoleauthTestCase(test.TestCase):
         token = 'mytok'
         self.flags(console_token_ttl=1)
 
-        def fake_validate_console_port(*args, **kwargs):
-            return True
-        self.stubs.Set(self.manager.compute_rpcapi,
-                       "validate_console_port",
-                       fake_validate_console_port)
+        self._stub_validate_console_port(True)
 
         self.manager.authorize_console(self.context, token, 'novnc',
                                          '127.0.0.1', '8080', 'host',
@@ -56,16 +52,20 @@ class ConsoleauthTestCase(test.TestCase):
         timeutils.advance_time_seconds(1)
         self.assertFalse(self.manager.check_token(self.context, token))
 
+    def _stub_validate_console_port(self, result):
+        def fake_validate_console_port(ctxt, instance, port, console_type):
+            return result
+
+        self.stubs.Set(self.manager.compute_rpcapi,
+                       'validate_console_port',
+                       fake_validate_console_port)
+
     def test_multiple_tokens_for_instance(self):
         tokens = ["token" + str(i) for i in xrange(10)]
         instance = "12345"
 
-        def fake_validate_console_port(*args, **kwargs):
-            return True
+        self._stub_validate_console_port(True)
 
-        self.stubs.Set(self.manager.compute_rpcapi,
-                       "validate_console_port",
-                       fake_validate_console_port)
         for token in tokens:
             self.manager.authorize_console(self.context, token, 'novnc',
                                           '127.0.0.1', '8080', 'host',
@@ -92,12 +92,7 @@ class ConsoleauthTestCase(test.TestCase):
     def test_wrong_token_has_port(self):
         token = 'mytok'
 
-        def fake_validate_console_port(*args, **kwargs):
-            return False
-
-        self.stubs.Set(self.manager.compute_rpcapi,
-                       "validate_console_port",
-                       fake_validate_console_port)
+        self._stub_validate_console_port(False)
 
         self.manager.authorize_console(self.context, token, 'novnc',
                                         '127.0.0.1', '8080', 'host',
@@ -114,3 +109,20 @@ class ConsoleauthTestCase(test.TestCase):
         self.manager.backdoor_port = 59697
         port = self.manager.get_backdoor_port(self.context)
         self.assertEqual(port, self.manager.backdoor_port)
+
+
+class CellsConsoleauthTestCase(ConsoleauthTestCase):
+    """Test Case for consoleauth w/ cells enabled."""
+
+    def setUp(self):
+        super(CellsConsoleauthTestCase, self).setUp()
+        self.flags(enable=True, group='cells')
+
+    def _stub_validate_console_port(self, result):
+        def fake_validate_console_port(ctxt, instance_uuid, console_port,
+                                       console_type):
+            return result
+
+        self.stubs.Set(self.manager.cells_rpcapi,
+                       'validate_console_port',
+                       fake_validate_console_port)

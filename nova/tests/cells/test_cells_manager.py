@@ -473,3 +473,37 @@ class CellsManagerClassTestCase(test.TestCase):
         response = self.cells_manager.action_events_get(self.ctxt, 'fake-cell',
                                                         'fake-action')
         self.assertEqual(expected_response, response)
+
+    def test_consoleauth_delete_tokens(self):
+        instance_uuid = 'fake-instance-uuid'
+
+        self.mox.StubOutWithMock(self.msg_runner,
+                                 'consoleauth_delete_tokens')
+        self.msg_runner.consoleauth_delete_tokens(self.ctxt, instance_uuid)
+        self.mox.ReplayAll()
+        self.cells_manager.consoleauth_delete_tokens(self.ctxt,
+                instance_uuid=instance_uuid)
+
+    def test_validate_console_port(self):
+        instance_uuid = 'fake-instance-uuid'
+        cell_name = 'fake-cell-name'
+        instance = {'cell_name': cell_name}
+        console_port = 'fake-console-port'
+        console_type = 'fake-console-type'
+
+        self.mox.StubOutWithMock(self.msg_runner,
+                                 'validate_console_port')
+        self.mox.StubOutWithMock(self.cells_manager.db,
+                                 'instance_get_by_uuid')
+        fake_response = self._get_fake_response()
+
+        self.cells_manager.db.instance_get_by_uuid(self.ctxt,
+                instance_uuid).AndReturn(instance)
+        self.msg_runner.validate_console_port(self.ctxt, cell_name,
+                instance_uuid, console_port,
+                console_type).AndReturn(fake_response)
+        self.mox.ReplayAll()
+        response = self.cells_manager.validate_console_port(self.ctxt,
+                instance_uuid=instance_uuid, console_port=console_port,
+                console_type=console_type)
+        self.assertEqual('fake-response', response)
