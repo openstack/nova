@@ -1169,14 +1169,15 @@ def fixed_ip_get_by_address_detailed(context, address, session=None):
     if not session:
         session = get_session()
 
-    result = session.query(models.FixedIp, models.Network, models.Instance).\
-        filter_by(address=address).\
-        outerjoin((models.Network,
-                   models.Network.id ==
-                   models.FixedIp.network_id)).\
-        outerjoin((models.Instance,
-                   models.Instance.uuid ==
-                   models.FixedIp.instance_uuid)).\
+    result = model_query(context, models.FixedIp, models.Network,
+                         models.Instance, session=session).\
+                         filter_by(address=address).\
+                         outerjoin((models.Network,
+                                    models.Network.id ==
+                                    models.FixedIp.network_id)).\
+                         outerjoin((models.Instance,
+                                    models.Instance.uuid ==
+                                    models.FixedIp.instance_uuid)).\
         first()
 
     if not result:
