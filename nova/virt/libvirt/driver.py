@@ -579,7 +579,8 @@ class LibvirtDriver(driver.ComputeDriver):
             self._wrapped_conn.getLibVersion()
             return True
         except libvirt.libvirtError as e:
-            if (e.get_error_code() == libvirt.VIR_ERR_SYSTEM_ERROR and
+            if (e.get_error_code() in (libvirt.VIR_ERR_SYSTEM_ERROR,
+                                       libvirt.VIR_ERR_INTERNAL_ERROR) and
                 e.get_error_domain() in (libvirt.VIR_FROM_REMOTE,
                                          libvirt.VIR_FROM_RPC)):
                 LOG.debug(_('Connection to libvirt broke'))
