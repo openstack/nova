@@ -1622,6 +1622,44 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute.terminate_instance(self.context, instance=instance)
 
+    def test_vnc_console_instance_not_ready(self):
+        self.flags(vnc_enabled=True)
+        self.flags(enabled=False, group='spice')
+        instance = self._create_fake_instance(
+                params={'vm_state': vm_states.BUILDING})
+        instance = jsonutils.to_primitive(instance)
+
+        def fake_driver_get_console(*args, **kwargs):
+            raise exception.InstanceNotFound(instance_id=instance['uuid'])
+
+        self.stubs.Set(self.compute.driver, "get_vnc_console",
+                       fake_driver_get_console)
+
+        self.stub_out_client_exceptions()
+
+        self.assertRaises(exception.InstanceNotReady,
+                self.compute.get_vnc_console, self.context, 'novnc',
+                instance=instance)
+
+    def test_spice_console_instance_not_ready(self):
+        self.flags(vnc_enabled=False)
+        self.flags(enabled=True, group='spice')
+        instance = self._create_fake_instance(
+                params={'vm_state': vm_states.BUILDING})
+        instance = jsonutils.to_primitive(instance)
+
+        def fake_driver_get_console(*args, **kwargs):
+            raise exception.InstanceNotFound(instance_id=instance['uuid'])
+
+        self.stubs.Set(self.compute.driver, "get_spice_console",
+                       fake_driver_get_console)
+
+        self.stub_out_client_exceptions()
+
+        self.assertRaises(exception.InstanceNotReady,
+                self.compute.get_spice_console, self.context, 'spice-html5',
+                instance=instance)
+
     def test_diagnostics(self):
         # Make sure we can get diagnostics for an instance.
         expected_diagnostic = {'cpu0_time': 17300000000,
