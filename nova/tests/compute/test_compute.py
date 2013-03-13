@@ -7290,18 +7290,18 @@ class ComputeRescheduleOrReraiseTestCase(BaseTestCase):
         self.compute._spawn(mox.IgnoreArg(), self.instance, None, None, None,
                 False, None).AndRaise(test.TestingException("BuildError"))
         self.compute._reschedule_or_reraise(mox.IgnoreArg(), self.instance,
-                mox.IgnoreArg(), None, None, None, False, None, {})
+                mox.IgnoreArg(), None, None, None, False, None, {}, [])
 
         self.mox.ReplayAll()
         self.compute._run_instance(self.context, None, {}, None, None, None,
                 False, None, self.instance)
 
-    def test_deallocate_network_fail(self):
-        """Test de-allocation of network failing before re-scheduling logic
-        can even run.
+    def test_shutdown_instance_fail(self):
+        """Test shutdown instance failing before re-scheduling logic can even
+        run.
         """
         instance_uuid = self.instance['uuid']
-        self.mox.StubOutWithMock(self.compute, '_deallocate_network')
+        self.mox.StubOutWithMock(self.compute, '_shutdown_instance')
 
         try:
             raise test.TestingException("Original")
@@ -7311,8 +7311,8 @@ class ComputeRescheduleOrReraiseTestCase(BaseTestCase):
             compute_utils.add_instance_fault_from_exc(self.context,
                     self.compute.conductor_api,
                     self.instance, exc_info[0], exc_info=exc_info)
-            self.compute._deallocate_network(self.context,
-                    self.instance).AndRaise(InnerTestingException("Error"))
+            self.compute._shutdown_instance(self.context, self.instance,
+                    mox.IgnoreArg()).AndRaise(InnerTestingException("Error"))
             self.compute._log_original_error(exc_info, instance_uuid)
 
             self.mox.ReplayAll()
@@ -7327,11 +7327,14 @@ class ComputeRescheduleOrReraiseTestCase(BaseTestCase):
         # Test handling of exception from _reschedule.
         instance_uuid = self.instance['uuid']
         method_args = (None, None, None, None, False, {})
-        self.mox.StubOutWithMock(self.compute, '_deallocate_network')
+        self.mox.StubOutWithMock(self.compute, '_shutdown_instance')
+        self.mox.StubOutWithMock(self.compute, '_cleanup_volumes')
         self.mox.StubOutWithMock(self.compute, '_reschedule')
 
-        self.compute._deallocate_network(self.context,
-                self.instance)
+        self.compute._shutdown_instance(self.context, self.instance,
+                                        mox.IgnoreArg())
+        self.compute._cleanup_volumes(self.context, instance_uuid,
+                                        mox.IgnoreArg())
         self.compute._reschedule(self.context, None, instance_uuid,
                 {}, self.compute.scheduler_rpcapi.run_instance,
                 method_args, task_states.SCHEDULING).AndRaise(
@@ -7352,7 +7355,8 @@ class ComputeRescheduleOrReraiseTestCase(BaseTestCase):
         # Test not-rescheduling, but no nested exception.
         instance_uuid = self.instance['uuid']
         method_args = (None, None, None, None, False, {})
-        self.mox.StubOutWithMock(self.compute, '_deallocate_network')
+        self.mox.StubOutWithMock(self.compute, '_shutdown_instance')
+        self.mox.StubOutWithMock(self.compute, '_cleanup_volumes')
         self.mox.StubOutWithMock(self.compute, '_reschedule')
 
         try:
@@ -7362,8 +7366,11 @@ class ComputeRescheduleOrReraiseTestCase(BaseTestCase):
             compute_utils.add_instance_fault_from_exc(self.context,
                     self.compute.conductor_api,
                     self.instance, exc_info[0], exc_info=exc_info)
-            self.compute._deallocate_network(self.context,
-                    self.instance)
+
+            self.compute._shutdown_instance(self.context, self.instance,
+                                            mox.IgnoreArg())
+            self.compute._cleanup_volumes(self.context, instance_uuid,
+                                            mox.IgnoreArg())
             self.compute._reschedule(self.context, None, {}, instance_uuid,
                     self.compute.scheduler_rpcapi.run_instance, method_args,
                     task_states.SCHEDULING, exc_info).AndReturn(False)
@@ -7380,7 +7387,8 @@ class ComputeRescheduleOrReraiseTestCase(BaseTestCase):
         # Test behavior when re-scheduling happens.
         instance_uuid = self.instance['uuid']
         method_args = (None, None, None, None, False, {})
-        self.mox.StubOutWithMock(self.compute, '_deallocate_network')
+        self.mox.StubOutWithMock(self.compute, '_shutdown_instance')
+        self.mox.StubOutWithMock(self.compute, '_cleanup_volumes')
         self.mox.StubOutWithMock(self.compute, '_reschedule')
 
         try:
@@ -7391,8 +7399,10 @@ class ComputeRescheduleOrReraiseTestCase(BaseTestCase):
             compute_utils.add_instance_fault_from_exc(self.context,
                     self.compute.conductor_api,
                     self.instance, exc_info[0], exc_info=exc_info)
-            self.compute._deallocate_network(self.context,
-                    self.instance)
+            self.compute._shutdown_instance(self.context, self.instance,
+                                            mox.IgnoreArg())
+            self.compute._cleanup_volumes(self.context, instance_uuid,
+                                          mox.IgnoreArg())
             self.compute._reschedule(self.context, None, {}, instance_uuid,
                     self.compute.scheduler_rpcapi.run_instance,
                     method_args, task_states.SCHEDULING, exc_info).AndReturn(
