@@ -1475,8 +1475,10 @@ def instance_destroy(context, instance_uuid, constraint=None):
         session.query(models.SecurityGroupInstanceAssociation).\
                 filter_by(instance_uuid=instance_uuid).\
                 soft_delete()
-
         session.query(models.InstanceInfoCache).\
+                 filter_by(instance_uuid=instance_uuid).\
+                 soft_delete()
+        session.query(models.InstanceMetadata).\
                  filter_by(instance_uuid=instance_uuid).\
                  soft_delete()
     return instance_ref
