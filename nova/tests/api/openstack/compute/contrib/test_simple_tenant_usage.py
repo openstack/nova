@@ -22,6 +22,7 @@ import webob
 
 from nova.api.openstack.compute.contrib import simple_tenant_usage
 from nova.compute import api
+from nova.compute import instance_types
 from nova import context
 from nova.openstack.common import jsonutils
 from nova.openstack.common import policy as common_policy
@@ -29,6 +30,7 @@ from nova.openstack.common import timeutils
 from nova import policy
 from nova import test
 from nova.tests.api.openstack import fakes
+from nova import utils
 
 SERVERS = 5
 TENANTS = 2
@@ -42,17 +44,21 @@ START = NOW - datetime.timedelta(hours=HOURS)
 STOP = NOW
 
 
-def fake_instance_type_get(self, context, instance_type_id):
-    return {'id': 1,
-            'vcpus': VCPUS,
-            'root_gb': ROOT_GB,
-            'ephemeral_gb': EPHEMERAL_GB,
-            'memory_mb': MEMORY_MB,
-            'name':
-            'fakeflavor'}
+FAKE_INST_TYPE = {'id': 1,
+                  'vcpus': VCPUS,
+                  'root_gb': ROOT_GB,
+                  'ephemeral_gb': EPHEMERAL_GB,
+                  'memory_mb': MEMORY_MB,
+                  'name': 'fakeflavor',
+                  'flavorid': 'foo',
+                  'rxtx_factor': 1.0,
+                  'vcpu_weight': 1,
+                  'swap': 0}
 
 
 def get_fake_db_instance(start, end, instance_id, tenant_id):
+    sys_meta = utils.dict_to_metadata(
+        instance_types.save_instance_type_info({}, FAKE_INST_TYPE))
     return {'id': instance_id,
             'uuid': '00000000-0000-0000-0000-00000000000000%02d' % instance_id,
             'image_ref': '1',
@@ -62,7 +68,8 @@ def get_fake_db_instance(start, end, instance_id, tenant_id):
             'state_description': 'state',
             'instance_type_id': 1,
             'launched_at': start,
-            'terminated_at': end}
+            'terminated_at': end,
+            'system_metadata': sys_meta}
 
 
 def fake_instance_get_active_by_window_joined(self, context, begin, end,
@@ -77,8 +84,6 @@ def fake_instance_get_active_by_window_joined(self, context, begin, end,
 class SimpleTenantUsageTest(test.TestCase):
     def setUp(self):
         super(SimpleTenantUsageTest, self).setUp()
-        self.stubs.Set(api.API, "get_instance_type",
-                       fake_instance_type_get)
         self.stubs.Set(api.API, "get_active_by_window",
                        fake_instance_get_active_by_window_joined)
         self.admin_context = context.RequestContext('fakeadmin_0',
