@@ -1522,6 +1522,9 @@ def instance_destroy(context, instance_uuid, constraint=None):
         session.query(models.InstanceMetadata).\
                  filter_by(instance_uuid=instance_uuid).\
                  soft_delete()
+        session.query(models.InstanceSystemMetadata).\
+                 filter_by(instance_uuid=instance_uuid).\
+                 soft_delete()
     return instance_ref
 
 
