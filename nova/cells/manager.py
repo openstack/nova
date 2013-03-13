@@ -277,12 +277,11 @@ class CellsManager(manager.Manager):
         if host is None:
             cell_name = None
         else:
-            result = cells_utils.split_cell_and_item(host)
-            cell_name = result[0]
-            if len(result) > 1:
-                host = result[1]
-            else:
-                host = None
+            cell_name, host = cells_utils.split_cell_and_item(host)
+            # If no cell name was given, assume that the host name is the
+            # cell_name and that the target is all hosts
+            if cell_name is None:
+                cell_name, host = host, cell_name
         responses = self.msg_runner.task_log_get_all(ctxt, cell_name,
                 task_name, period_beginning, period_ending,
                 host=host, state=state)

@@ -615,10 +615,7 @@ class HostAPI(compute_api.HostAPI):
         this call to cells, as we have instance information here in
         the API cell.
         """
-        try:
-            cell_name, host_name = cells_utils.split_cell_and_item(host_name)
-        except ValueError:
-            cell_name = None
+        cell_name, host_name = cells_utils.split_cell_and_item(host_name)
         instances = super(HostAPI, self).instance_get_all_by_host(context,
                                                                   host_name)
         if cell_name:
