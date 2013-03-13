@@ -305,7 +305,8 @@ class ConductorManager(manager.Manager):
                                  wr_bytes, instance['uuid'], last_refreshed,
                                  update_totals)
 
-    @rpc_common.client_exceptions(exception.HostBinaryNotFound)
+    @rpc_common.client_exceptions(exception.ComputeHostNotFound,
+                                  exception.HostBinaryNotFound)
     def service_get_all_by(self, context, topic=None, host=None, binary=None):
         if not any((topic, host, binary)):
             result = self.db.service_get_all(context)
