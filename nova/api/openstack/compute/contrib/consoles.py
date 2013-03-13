@@ -49,7 +49,8 @@ class ConsolesController(wsgi.Controller):
         except exception.InstanceNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=unicode(e))
         except exception.InstanceNotReady as e:
-            raise webob.exc.HTTPConflict(explanation=unicode(e))
+            raise webob.exc.HTTPConflict(
+                    explanation=_('Instance not yet ready'))
 
         return {'console': {'type': console_type, 'url': output['url']}}
 
