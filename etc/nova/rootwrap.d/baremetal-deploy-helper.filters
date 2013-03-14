@@ -4,7 +4,7 @@
 [Filters]
 # nova-baremetal-deploy-helper
 iscsiadm: CommandFilter, /sbin/iscsiadm, root
-fdisk: CommandFilter, /sbin/fdisk, root
+sfdisk: CommandFilter, /sbin/sfdisk, root
 dd: CommandFilter, /bin/dd, root
 mkswap: CommandFilter, /sbin/mkswap, root
 blkid: CommandFilter, /sbin/blkid, root

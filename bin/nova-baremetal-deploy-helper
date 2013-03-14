@@ -45,6 +45,7 @@ from wsgiref import simple_server
 
 from nova import config
 from nova import context as nova_context
+from nova import exception
 from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt.baremetal import baremetal_states
@@ -95,18 +96,27 @@ def logout_iscsi(portal_address, portal_port, target_iqn):
 
 def make_partitions(dev, root_mb, swap_mb):
     """Create partitions for root and swap on a disk device."""
-    commands = ['o,w',
-                'n,p,1,,+%dM,t,1,83,w' % root_mb,
-                'n,p,2,,+%dM,t,2,82,w' % swap_mb,
-                ]
-    for command in commands:
-        command = command.replace(',', '\n')
-        utils.execute('fdisk', dev,
-                      process_input=command,
-                      run_as_root=True,
-                      check_exit_code=[0])
-        # avoid "device is busy"
-        time.sleep(3)
+    stdin_command = ('0 0;\n0 0;\n0 0;\n0 0;\n')
+    utils.execute('sfdisk', '-D', '-uM', dev, process_input=stdin_command,
+            run_as_root=True,
+            check_exit_code=[0])
+    # create new partitions
+    commandp1 = '- %d 83;\n;\n;\n;' % root_mb
+    p1outraw, err = utils.execute('sfdisk', '-D', '-uM', '-N1', dev,
+            process_input=commandp1,
+            run_as_root=True,
+            check_exit_code=[0])
+    # get end location of 1st partition
+    p1re = re.compile('^%s-part1.*$' % dev, re.U + re.M)
+    p1balist = p1re.findall(p1outraw)
+    p1endraw = p1balist[1]
+    p1end = int(p1endraw.split()[2])
+    commandp2 = ('%d %d 82\n;\n;' % (p1end + 1, swap_mb))
+    utils.execute('sfdisk', '-D', '-uM', '-N2', dev, process_input=commandp2,
+            run_as_root=True,
+            check_exit_code=[0])
+    # avoid "device is busy"
+    time.sleep(3)
 
 
 def is_block_device(dev):
@@ -215,6 +225,11 @@ def deploy(address, port, iqn, lun, image_path, pxe_config_path,
     login_iscsi(address, port, iqn)
     try:
         root_uuid = work_on_disk(dev, root_mb, swap_mb, image_path)
+    except exception.ProcessExecutionError, err:
+        # Log output if there was a error
+        LOG.error("Cmd     : %s" % err.cmd)
+        LOG.error("StdOut  : %s" % err.stdout)
+        LOG.error("StdErr  : %s" % err.stderr)
     finally:
         logout_iscsi(address, port, iqn)
     switch_pxe_config(pxe_config_path, root_uuid)
