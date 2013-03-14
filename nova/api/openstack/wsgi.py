@@ -654,11 +654,12 @@ class ResourceExceptionHandler(object):
             return True
 
         if isinstance(ex_value, exception.NotAuthorized):
-            msg = unicode(ex_value)
+            msg = unicode(ex_value.message % ex_value.kwargs)
             raise Fault(webob.exc.HTTPForbidden(explanation=msg))
         elif isinstance(ex_value, exception.Invalid):
+            msg = unicode(ex_value.message % ex_value.kwargs)
             raise Fault(exception.ConvertedException(
-                code=ex_value.code, explanation=unicode(ex_value)))
+                    code=ex_value.code, explanation=msg))
 
         # Under python 2.6, TypeError's exception value is actually a string,
         # so test # here via ex_type instead:
@@ -1167,6 +1168,10 @@ class Fault(webob.exc.HTTPException):
         # Replace the body with fault details.
         code = self.wrapped_exc.status_int
         fault_name = self._fault_names.get(code, "computeFault")
+        explanation = self.wrapped_exc.explanation
+        LOG.debug(_("Returning %(code)s to user: %(explanation)s"),
+                  {'code': code, 'explanation': explanation})
+
         fault_data = {
             fault_name: {
                 'code': code,
