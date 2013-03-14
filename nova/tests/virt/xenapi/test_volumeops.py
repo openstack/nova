@@ -33,7 +33,7 @@ class VolumeAttachTestCase(test.TestCase):
         ops = volumeops.VolumeOps('session')
         self.mox.StubOutWithMock(volumeops.vm_utils, 'lookup')
         self.mox.StubOutWithMock(volumeops.vm_utils, 'find_vbd_by_number')
-        self.mox.StubOutWithMock(volumeops.vm_utils, '_is_vm_shutdown')
+        self.mox.StubOutWithMock(volumeops.vm_utils, 'is_vm_shutdown')
         self.mox.StubOutWithMock(volumeops.vm_utils, 'unplug_vbd')
         self.mox.StubOutWithMock(volumeops.vm_utils, 'destroy_vbd')
         self.mox.StubOutWithMock(volumeops.volume_utils, 'get_device_number')
@@ -49,7 +49,7 @@ class VolumeAttachTestCase(test.TestCase):
         volumeops.vm_utils.find_vbd_by_number(
             'session', 'vmref', 'devnumber').AndReturn('vbdref')
 
-        volumeops.vm_utils._is_vm_shutdown('session', 'vmref').AndReturn(
+        volumeops.vm_utils.is_vm_shutdown('session', 'vmref').AndReturn(
             False)
 
         volumeops.vm_utils.unplug_vbd('session', 'vbdref')

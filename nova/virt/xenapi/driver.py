@@ -239,17 +239,8 @@ class XenAPIDriver(driver.ComputeDriver):
         """Transfers the VHD of a running instance to another host, then shuts
         off the instance copies over the COW disk"""
         # NOTE(vish): Xen currently does not use network info.
-        rv = self._vmops.migrate_disk_and_power_off(context, instance,
-                                                    dest, instance_type)
-        block_device_mapping = driver.block_device_info_get_mapping(
-                block_device_info)
-        name_label = self._vmops._get_orig_vm_name_label(instance)
-        for vol in block_device_mapping:
-            connection_info = vol['connection_info']
-            mount_device = vol['mount_device'].rpartition("/")[2]
-            self._volumeops.detach_volume(connection_info,
-                    name_label, mount_device)
-        return rv
+        return self._vmops.migrate_disk_and_power_off(context, instance,
+                    dest, instance_type, block_device_info)
 
     def suspend(self, instance):
         """suspend the specified instance."""

@@ -1513,6 +1513,122 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
                           self.context, instance,
                           '127.0.0.1', instance_type, None)
 
+    def test_migrate_rollback_when_resize_down_fs_fails(self):
+        conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
+        vmops = conn._vmops
+        virtapi = vmops._virtapi
+
+        self.mox.StubOutWithMock(vmops, '_resize_ensure_vm_is_shutdown')
+        self.mox.StubOutWithMock(vmops, '_apply_orig_vm_name_label')
+        self.mox.StubOutWithMock(vm_utils, 'resize_disk')
+        self.mox.StubOutWithMock(vmops, '_migrate_vhd')
+        self.mox.StubOutWithMock(vm_utils, 'destroy_vdi')
+        self.mox.StubOutWithMock(vm_utils, 'get_vdi_for_vm_safely')
+        self.mox.StubOutWithMock(vmops, '_restore_orig_vm_and_cleanup_orphan')
+        self.mox.StubOutWithMock(virtapi, 'instance_update')
+
+        instance = {'auto_disk_config': True, 'uuid': 'uuid'}
+        vm_ref = "vm_ref"
+        dest = "dest"
+        instance_type = "type"
+        sr_path = "sr_path"
+
+        virtapi.instance_update(self.context, 'uuid', {'progress': 20.0})
+        vmops._resize_ensure_vm_is_shutdown(instance, vm_ref)
+        vmops._apply_orig_vm_name_label(instance, vm_ref)
+        old_vdi_ref = "old_ref"
+        vm_utils.get_vdi_for_vm_safely(vmops._session, vm_ref).AndReturn(
+            (old_vdi_ref, None))
+        virtapi.instance_update(self.context, 'uuid', {'progress': 40.0})
+        new_vdi_ref = "new_ref"
+        new_vdi_uuid = "new_uuid"
+        vm_utils.resize_disk(vmops._session, instance, old_vdi_ref,
+            instance_type).AndReturn((new_vdi_ref, new_vdi_uuid))
+        virtapi.instance_update(self.context, 'uuid', {'progress': 60.0})
+        vmops._migrate_vhd(instance, new_vdi_uuid, dest,
+                           sr_path, 0).AndRaise(
+                                exception.ResizeError(reason="asdf"))
+
+        vm_utils.destroy_vdi(vmops._session, new_vdi_ref)
+        vmops._restore_orig_vm_and_cleanup_orphan(instance, None)
+
+        self.mox.ReplayAll()
+
+        self.assertRaises(exception.InstanceFaultRollback,
+                          vmops._migrate_disk_resizing_down, self.context,
+                          instance, dest, instance_type, vm_ref, sr_path)
+
+    def test_resize_ensure_vm_is_shutdown_cleanly(self):
+        conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
+        vmops = conn._vmops
+        fake_instance = {'uuid': 'uuid'}
+
+        self.mox.StubOutWithMock(vm_utils, 'is_vm_shutdown')
+        self.mox.StubOutWithMock(vm_utils, 'clean_shutdown_vm')
+        self.mox.StubOutWithMock(vm_utils, 'hard_shutdown_vm')
+
+        vm_utils.is_vm_shutdown(vmops._session, "ref").AndReturn(False)
+        vm_utils.clean_shutdown_vm(vmops._session, fake_instance,
+            "ref").AndReturn(True)
+
+        self.mox.ReplayAll()
+
+        vmops._resize_ensure_vm_is_shutdown(fake_instance, "ref")
+
+    def test_resize_ensure_vm_is_shutdown_forced(self):
+        conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
+        vmops = conn._vmops
+        fake_instance = {'uuid': 'uuid'}
+
+        self.mox.StubOutWithMock(vm_utils, 'is_vm_shutdown')
+        self.mox.StubOutWithMock(vm_utils, 'clean_shutdown_vm')
+        self.mox.StubOutWithMock(vm_utils, 'hard_shutdown_vm')
+
+        vm_utils.is_vm_shutdown(vmops._session, "ref").AndReturn(False)
+        vm_utils.clean_shutdown_vm(vmops._session, fake_instance,
+            "ref").AndReturn(False)
+        vm_utils.hard_shutdown_vm(vmops._session, fake_instance,
+            "ref").AndReturn(True)
+
+        self.mox.ReplayAll()
+
+        vmops._resize_ensure_vm_is_shutdown(fake_instance, "ref")
+
+    def test_resize_ensure_vm_is_shutdown_fails(self):
+        conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
+        vmops = conn._vmops
+        fake_instance = {'uuid': 'uuid'}
+
+        self.mox.StubOutWithMock(vm_utils, 'is_vm_shutdown')
+        self.mox.StubOutWithMock(vm_utils, 'clean_shutdown_vm')
+        self.mox.StubOutWithMock(vm_utils, 'hard_shutdown_vm')
+
+        vm_utils.is_vm_shutdown(vmops._session, "ref").AndReturn(False)
+        vm_utils.clean_shutdown_vm(vmops._session, fake_instance,
+            "ref").AndReturn(False)
+        vm_utils.hard_shutdown_vm(vmops._session, fake_instance,
+            "ref").AndReturn(False)
+
+        self.mox.ReplayAll()
+
+        self.assertRaises(exception.ResizeError,
+            vmops._resize_ensure_vm_is_shutdown, fake_instance, "ref")
+
+    def test_resize_ensure_vm_is_shutdown_already_shutdown(self):
+        conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
+        vmops = conn._vmops
+        fake_instance = {'uuid': 'uuid'}
+
+        self.mox.StubOutWithMock(vm_utils, 'is_vm_shutdown')
+        self.mox.StubOutWithMock(vm_utils, 'clean_shutdown_vm')
+        self.mox.StubOutWithMock(vm_utils, 'hard_shutdown_vm')
+
+        vm_utils.is_vm_shutdown(vmops._session, "ref").AndReturn(True)
+
+        self.mox.ReplayAll()
+
+        vmops._resize_ensure_vm_is_shutdown(fake_instance, "ref")
+
 
 class XenAPIImageTypeTestCase(test.TestCase):
     """Test ImageType class."""

@@ -3089,6 +3089,43 @@ class ComputeTestCase(BaseTestCase):
         self.compute.terminate_instance(self.context,
             instance=jsonutils.to_primitive(instance))
 
+    def test_resize_instance_driver_rollback(self):
+        # Ensure instance status set to Running after rollback.
+
+        def throw_up(*args, **kwargs):
+            raise exception.InstanceFaultRollback(test.TestingException())
+
+        self.stubs.Set(self.compute.driver, 'migrate_disk_and_power_off',
+                       throw_up)
+
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+        instance_type = flavors.get_default_instance_type()
+        reservations = self._ensure_quota_reservations_rolledback()
+        self.compute.run_instance(self.context, instance=instance)
+        new_instance = db.instance_update(self.context, instance['uuid'],
+                                      {'host': 'foo'})
+        new_instance = jsonutils.to_primitive(new_instance)
+        self.compute.prep_resize(self.context, instance=new_instance,
+                                 instance_type=instance_type, image={},
+                                 reservations=reservations)
+        migration_ref = db.migration_get_by_instance_and_status(
+                self.context.elevated(), new_instance['uuid'], 'pre-migrating')
+        db.instance_update(self.context, new_instance['uuid'],
+                           {"task_state": task_states.RESIZE_PREP})
+
+        self.assertRaises(test.TestingException, self.compute.resize_instance,
+                          self.context, instance=new_instance,
+                          migration=migration_ref, image={},
+                          reservations=reservations,
+                          instance_type=jsonutils.to_primitive(instance_type))
+
+        instance = db.instance_get_by_uuid(self.context, new_instance['uuid'])
+        self.assertEqual(instance['vm_state'], vm_states.ACTIVE)
+        self.assertEqual(instance['task_state'], None)
+
+        self.compute.terminate_instance(self.context,
+            instance=jsonutils.to_primitive(instance))
+
     def test_resize_instance(self):
         # Ensure instance can be migrated/resized.
         instance = jsonutils.to_primitive(self._create_fake_instance())
