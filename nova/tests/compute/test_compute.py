@@ -3822,6 +3822,56 @@ class ComputeTestCase(BaseTestCase):
         self.mox.VerifyAll()
         self.mox.UnsetStubs()
 
+    def test_init_host_with_deleted_migration(self):
+        our_host = self.compute.host
+        not_our_host = 'not-' + our_host
+        fake_context = 'fake-context'
+
+        deleted_instance = {
+            'name': 'fake-name',
+            'host': not_our_host,
+            'uuid': 'fake-uuid',
+            }
+
+        self.mox.StubOutWithMock(self.compute.driver, 'init_host')
+        self.mox.StubOutWithMock(self.compute.driver, 'destroy')
+        self.mox.StubOutWithMock(self.compute.conductor_api,
+                                 'instance_get_all_by_host')
+        self.mox.StubOutWithMock(context, 'get_admin_context')
+        self.mox.StubOutWithMock(self.compute, 'init_virt_events')
+        self.mox.StubOutWithMock(self.compute, '_get_instances_on_driver')
+        self.mox.StubOutWithMock(self.compute, '_init_instance')
+        self.mox.StubOutWithMock(self.compute, '_report_driver_status')
+        self.mox.StubOutWithMock(self.compute, 'publish_service_capabilities')
+        self.mox.StubOutWithMock(self.compute, '_get_instance_nw_info')
+
+        self.compute.driver.init_host(host=our_host)
+        context.get_admin_context().AndReturn(fake_context)
+        self.compute.conductor_api.instance_get_all_by_host(
+            fake_context, our_host).AndReturn([])
+        self.compute.init_virt_events()
+
+        # simulate failed instance
+        self.compute._get_instances_on_driver(fake_context).AndReturn([
+            deleted_instance])
+        self.compute._get_instance_nw_info(fake_context, deleted_instance
+            ).AndRaise(exception.InstanceNotFound(
+                instance_id=deleted_instance['uuid']))
+        # ensure driver.destroy is called so that driver may
+        # clean up any dangling files
+        self.compute.driver.destroy(deleted_instance,
+            mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg())
+
+        self.compute._report_driver_status(fake_context)
+        self.compute.publish_service_capabilities(fake_context)
+
+        self.mox.ReplayAll()
+        self.compute.init_host()
+        # tearDown() uses context.get_admin_context(), so we have
+        # to do the verification here and unstub it.
+        self.mox.VerifyAll()
+        self.mox.UnsetStubs()
+
     def test_init_instance_failed_resume_sets_error(self):
         instance = {
             'uuid': 'fake-uuid',

@@ -434,13 +434,25 @@ class ComputeManager(manager.SchedulerDependentManager):
                            '%(instance_host)s) is not equal to our '
                            'host (%(our_host)s).'),
                          locals(), instance=instance)
-                network_info = self._get_instance_nw_info(context, instance)
-                bdi = self._get_instance_volume_block_device_info(context,
-                                                                  instance)
+                # TODO(deva): detect if instance's disk is shared or local,
+                #             and destroy if it is local.
+                destroy_disks = False
+                try:
+                    network_info = self._get_instance_nw_info(context,
+                                                              instance)
+                    bdi = self._get_instance_volume_block_device_info(context,
+                                                                      instance)
+                except exception.InstanceNotFound:
+                    network_info = network_model.NetworkInfo()
+                    bdi = {}
+                    LOG.info(_('Instance has been marked deleted already, '
+                               'removing it from the hypervisor.'),
+                             instance=instance)
+                    # always destroy disks if the instance was deleted
+                    destroy_disks = True
                 self.driver.destroy(instance,
                                     self._legacy_nw_info(network_info),
-                                    bdi,
-                                    False)
+                                    bdi, destroy_disks)
 
     def _init_instance(self, context, instance):
         '''Initialize this instance during service init.'''
