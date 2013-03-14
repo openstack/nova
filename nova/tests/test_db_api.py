@@ -23,6 +23,7 @@ import datetime
 import uuid as stdlib_uuid
 
 from oslo.config import cfg
+from sqlalchemy.dialects import sqlite
 from sqlalchemy import MetaData
 from sqlalchemy.schema import Table
 from sqlalchemy.sql.expression import select
@@ -1994,10 +1995,10 @@ class ArchiveTestCase(test.TestCase):
     def setUp(self):
         super(ArchiveTestCase, self).setUp()
         self.context = context.get_admin_context()
-        engine = get_engine()
-        self.conn = engine.connect()
+        self.engine = get_engine()
+        self.conn = self.engine.connect()
         self.metadata = MetaData()
-        self.metadata.bind = engine
+        self.metadata.bind = self.engine
         self.table1 = Table("instance_id_mappings",
                            self.metadata,
                            autoload=True)
@@ -2010,9 +2011,22 @@ class ArchiveTestCase(test.TestCase):
         self.shadow_table2 = Table("shadow_dns_domains",
                                   self.metadata,
                                   autoload=True)
+        self.consoles = Table("consoles",
+                              self.metadata,
+                              autoload=True)
+        self.console_pools = Table("console_pools",
+                                   self.metadata,
+                                   autoload=True)
+        self.shadow_consoles = Table("shadow_consoles",
+                                     self.metadata,
+                                     autoload=True)
+        self.shadow_console_pools = Table("shadow_console_pools",
+                                          self.metadata,
+                                          autoload=True)
         self.uuidstrs = []
         for unused in xrange(6):
             self.uuidstrs.append(stdlib_uuid.uuid4().hex)
+        self.ids = []
 
     def tearDown(self):
         super(ArchiveTestCase, self).tearDown()
@@ -2028,6 +2042,10 @@ class ArchiveTestCase(test.TestCase):
         delete_statement4 = self.shadow_table2.delete(
                                 self.shadow_table2.c.domain.in_(self.uuidstrs))
         self.conn.execute(delete_statement4)
+        for table in [self.console_pools, self.consoles, self.shadow_consoles,
+                      self.shadow_console_pools]:
+            delete_statement5 = table.delete(table.c.id.in_(self.ids))
+            self.conn.execute(delete_statement5)
 
     def test_archive_deleted_rows(self):
         # Add 6 rows to table
@@ -2037,7 +2055,7 @@ class ArchiveTestCase(test.TestCase):
         # Set 4 to deleted
         update_statement = self.table1.update().\
                 where(self.table1.c.uuid.in_(self.uuidstrs[:4]))\
-                .values(deleted=True)
+                .values(deleted=1)
         self.conn.execute(update_statement)
         query1 = select([self.table1]).where(self.table1.c.uuid.in_(
                                              self.uuidstrs))
@@ -2083,7 +2101,7 @@ class ArchiveTestCase(test.TestCase):
         # Set 4 to deleted
         update_statement = self.table1.update().\
                 where(self.table1.c.uuid.in_(self.uuidstrs[:4]))\
-                .values(deleted=True)
+                .values(deleted=1)
         self.conn.execute(update_statement)
         query1 = select([self.table1]).where(self.table1.c.uuid.in_(
                                              self.uuidstrs))
@@ -2126,7 +2144,7 @@ class ArchiveTestCase(test.TestCase):
         self.conn.execute(insert_statement)
         update_statement = self.table2.update().\
                            where(self.table2.c.domain == uuidstr0).\
-                           values(deleted=True)
+                           values(deleted=1)
         self.conn.execute(update_statement)
         query1 = select([self.table2], self.table2.c.domain == uuidstr0)
         rows1 = self.conn.execute(query1).fetchall()
@@ -2140,3 +2158,28 @@ class ArchiveTestCase(test.TestCase):
         self.assertEqual(len(rows3), 0)
         rows4 = self.conn.execute(query2).fetchall()
         self.assertEqual(len(rows4), 1)
+
+    def test_archive_deleted_rows_fk_constraint(self):
+        # consoles.pool_id depends on console_pools.id
+        # SQLite doesn't enforce foreign key constraints without a pragma.
+        dialect = self.engine.url.get_dialect()
+        if dialect == sqlite.dialect:
+            self.conn.execute("PRAGMA foreign_keys = ON")
+        insert_statement = self.console_pools.insert().values(deleted=1)
+        result = self.conn.execute(insert_statement)
+        id1 = result.inserted_primary_key[0]
+        self.ids.append(id1)
+        insert_statement = self.consoles.insert().values(deleted=1,
+                                                         pool_id=id1)
+        result = self.conn.execute(insert_statement)
+        id2 = result.inserted_primary_key[0]
+        self.ids.append(id2)
+        # The first try to archive console_pools should fail, due to FK.
+        num = db.archive_deleted_rows_for_table(self.context, "console_pools")
+        self.assertEqual(num, 0)
+        # Then archiving consoles should work.
+        num = db.archive_deleted_rows_for_table(self.context, "consoles")
+        self.assertEqual(num, 1)
+        # Then archiving console_pools should work.
+        num = db.archive_deleted_rows_for_table(self.context, "console_pools")
+        self.assertEqual(num, 1)
