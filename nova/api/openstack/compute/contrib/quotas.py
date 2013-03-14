@@ -88,23 +88,34 @@ class QuotaSetsController(object):
         context = req.environ['nova.context']
         authorize_update(context)
         project_id = id
+
+        bad_keys = []
         for key in body['quota_set'].keys():
-            if key in QUOTAS:
-                try:
-                    value = int(body['quota_set'][key])
-                except (ValueError, TypeError):
-                    LOG.warn(_("Quota for %s should be integer.") % key)
-                    # NOTE(hzzhoushaoyu): Do not prevent valid value to be
-                    # updated. If raise BadRequest, some may be updated and
-                    # others may be not.
-                    continue
-                self._validate_quota_limit(value)
-                try:
-                    db.quota_update(context, project_id, key, value)
-                except exception.ProjectQuotaNotFound:
-                    db.quota_create(context, project_id, key, value)
-                except exception.AdminRequired:
-                    raise webob.exc.HTTPForbidden()
+            if (key not in QUOTAS and
+                    key != 'tenant_id' and
+                    key != 'id'):
+                bad_keys.append(key)
+
+        if len(bad_keys) > 0:
+            msg = _("Bad key(s) %s in quota_set") % ",".join(bad_keys)
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
+        for key in body['quota_set'].keys():
+            try:
+                value = int(body['quota_set'][key])
+            except (ValueError, TypeError):
+                LOG.warn(_("Quota for %s should be integer.") % key)
+                # NOTE(hzzhoushaoyu): Do not prevent valid value to be
+                # updated. If raise BadRequest, some may be updated and
+                # others may be not.
+                continue
+            self._validate_quota_limit(value)
+            try:
+                db.quota_update(context, project_id, key, value)
+            except exception.ProjectQuotaNotFound:
+                db.quota_create(context, project_id, key, value)
+            except exception.AdminRequired:
+                raise webob.exc.HTTPForbidden()
         return {'quota_set': self._get_quotas(context, id)}
 
     @wsgi.serializers(xml=QuotaTemplate)
