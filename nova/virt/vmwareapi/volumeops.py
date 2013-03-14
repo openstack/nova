@@ -1,5 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
+# Copyright (c) 2013 Hewlett-Packard Development Company, L.P.
 # Copyright (c) 2012 VMware, Inc.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -35,13 +36,9 @@ class VMwareVolumeOps(object):
     Management class for Volume-related tasks
     """
 
-    def __init__(self, session, cluster_name=None):
+    def __init__(self, session, cluster=None):
         self._session = session
-        if not cluster_name:
-            self._cluster = None
-        else:
-            self._cluster = vm_util.get_cluster_ref_from_name(
-                                        self._session, cluster_name)
+        self._cluster = cluster
 
     def attach_disk_to_vm(self, vm_ref, instance_name,
                           adapter_type, disk_type, vmdk_path=None,
