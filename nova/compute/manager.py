@@ -820,7 +820,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 # try to re-schedule instance:
                 self._reschedule_or_reraise(context, instance, exc_info,
                         requested_networks, admin_password, injected_files,
-                        is_first_time, request_spec, filter_properties)
+                        is_first_time, request_spec, filter_properties, bdms)
             else:
                 # Spawn success:
                 self._notify_about_instance_usage(context, instance,
@@ -838,7 +838,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     def _reschedule_or_reraise(self, context, instance, exc_info,
             requested_networks, admin_password, injected_files, is_first_time,
-            request_spec, filter_properties):
+            request_spec, filter_properties, bdms=None):
         """Try to re-schedule the build or re-raise the original build error to
         error out the instance.
         """
@@ -849,9 +849,16 @@ class ComputeManager(manager.SchedulerDependentManager):
                 instance, exc_info[1], exc_info=exc_info)
 
         try:
-            self._deallocate_network(context, instance)
+            LOG.debug(_("Clean up resource before rescheduling."),
+                      instance=instance)
+            if bdms is None:
+                capi = self.conductor_api
+                bdms = capi.block_device_mapping_get_all_by_instance(context,
+                                                                     instance)
+            self._shutdown_instance(context, instance, bdms)
+            self._cleanup_volumes(context, instance['uuid'], bdms)
         except Exception:
-            # do not attempt retry if network de-allocation failed:
+            # do not attempt retry if clean up failed:
             with excutils.save_and_reraise_exception():
                 self._log_original_error(exc_info, instance_uuid)
 
