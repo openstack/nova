@@ -101,11 +101,16 @@ def set_vif_host_backend_802qbh_config(conf, devname, profileid,
 
 
 def set_vif_bandwidth_config(conf, extra_specs):
-    """Config vif inbound/outbound bandwidth limit."""
+    """Config vif inbound/outbound bandwidth limit. parameters are
+    set in instance_type_extra_specs table, key is in  the format
+    quota:vif_inbound_average.
+    """
 
     bandwidth_items = ['vif_inbound_average', 'vif_inbound_peak',
         'vif_inbound_burst', 'vif_outbound_average', 'vif_outbound_peak',
         'vif_outbound_burst']
     for key, value in extra_specs.iteritems():
-        if key in bandwidth_items:
-            setattr(conf, key, value)
+        scope = key.split(':')
+        if len(scope) > 1 and scope[0] == 'quota':
+            if scope[1] in bandwidth_items:
+                setattr(conf, scope[1], value)

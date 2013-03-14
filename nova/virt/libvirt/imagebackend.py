@@ -120,8 +120,10 @@ class Image(object):
         # throttling for qemu.
         if self.source_type in ['file', 'block']:
             for key, value in extra_specs.iteritems():
-                if key in tune_items:
-                    setattr(info, key, value)
+                scope = key.split(':')
+                if len(scope) > 1 and scope[0] == 'quota':
+                    if scope[1] in tune_items:
+                        setattr(info, scope[1], value)
         return info
 
     def cache(self, fetch_func, filename, size=None, *args, **kwargs):
