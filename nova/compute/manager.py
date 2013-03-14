@@ -2657,7 +2657,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         else:
             return '\n'.join(log.split('\n')[-int(length):])
 
-    @rpc_common.client_exceptions(exception.ConsoleTypeInvalid)
+    @rpc_common.client_exceptions(exception.ConsoleTypeInvalid,
+            exception.InstanceNotReady, exception.InstanceNotFound)
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @wrap_instance_fault
     def get_vnc_console(self, context, console_type, instance):
@@ -2678,15 +2679,21 @@ class ComputeManager(manager.SchedulerDependentManager):
         else:
             raise exception.ConsoleTypeInvalid(console_type=console_type)
 
-        # Retrieve connect info from driver, and then decorate with our
-        # access info token
-        connect_info = self.driver.get_vnc_console(instance)
-        connect_info['token'] = token
-        connect_info['access_url'] = access_url
+        try:
+            # Retrieve connect info from driver, and then decorate with our
+            # access info token
+            connect_info = self.driver.get_vnc_console(instance)
+            connect_info['token'] = token
+            connect_info['access_url'] = access_url
+        except exception.InstanceNotFound:
+            if instance['vm_state'] != vm_states.BUILDING:
+                raise
+            raise exception.InstanceNotReady(instance_id=instance['uuid'])
 
         return connect_info
 
-    @rpc_common.client_exceptions(exception.ConsoleTypeInvalid)
+    @rpc_common.client_exceptions(exception.ConsoleTypeInvalid,
+            exception.InstanceNotReady, exception.InstanceNotFound)
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @wrap_instance_fault
     def get_spice_console(self, context, console_type, instance):
@@ -2706,14 +2713,21 @@ class ComputeManager(manager.SchedulerDependentManager):
         else:
             raise exception.ConsoleTypeInvalid(console_type=console_type)
 
-        # Retrieve connect info from driver, and then decorate with our
-        # access info token
-        connect_info = self.driver.get_spice_console(instance)
-        connect_info['token'] = token
-        connect_info['access_url'] = access_url
+        try:
+            # Retrieve connect info from driver, and then decorate with our
+            # access info token
+            connect_info = self.driver.get_spice_console(instance)
+            connect_info['token'] = token
+            connect_info['access_url'] = access_url
+        except exception.InstanceNotFound:
+            if instance['vm_state'] != vm_states.BUILDING:
+                raise
+            raise exception.InstanceNotReady(instance_id=instance['uuid'])
 
         return connect_info
 
+    @rpc_common.client_exceptions(exception.ConsoleTypeInvalid,
+            exception.InstanceNotReady, exception.InstanceNotFound)
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @wrap_instance_fault
     def validate_console_port(self, ctxt, instance, port, console_type):
