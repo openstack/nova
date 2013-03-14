@@ -350,6 +350,20 @@ class HostFiltersTestCase(test.TestCase):
 
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
 
+    def test_affinity_different_filter_handles_deleted_instance(self):
+        filt_cls = self.class_map['DifferentHostFilter']()
+        host = fakes.FakeHostState('host1', 'node1', {})
+        instance = fakes.FakeInstance(context=self.context,
+                                         params={'host': 'host1'})
+        instance_uuid = instance.uuid
+        db.instance_destroy(self.context, instance_uuid)
+
+        filter_properties = {'context': self.context.elevated(),
+                             'scheduler_hints': {
+                                'different_host': [instance_uuid], }}
+
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+
     def test_affinity_same_filter_no_list_passes(self):
         filt_cls = self.class_map['SameHostFilter']()
         host = fakes.FakeHostState('host1', 'compute', {})
@@ -400,6 +414,20 @@ class HostFiltersTestCase(test.TestCase):
                              'scheduler_hints': None}
 
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
+
+    def test_affinity_same_filter_handles_deleted_instance(self):
+        filt_cls = self.class_map['SameHostFilter']()
+        host = fakes.FakeHostState('host1', 'node1', {})
+        instance = fakes.FakeInstance(context=self.context,
+                                         params={'host': 'host1'})
+        instance_uuid = instance.uuid
+        db.instance_destroy(self.context, instance_uuid)
+
+        filter_properties = {'context': self.context.elevated(),
+                             'scheduler_hints': {
+                                'same_host': [instance_uuid], }}
+
+        self.assertFalse(filt_cls.host_passes(host, filter_properties))
 
     def test_affinity_simple_cidr_filter_passes(self):
         filt_cls = self.class_map['SimpleCIDRAffinityFilter']()
