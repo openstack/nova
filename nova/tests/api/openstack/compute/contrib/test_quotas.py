@@ -27,8 +27,8 @@ from nova.tests.api.openstack import fakes
 def quota_set(id):
     return {'quota_set': {'id': id, 'metadata_items': 128, 'volumes': 10,
             'gigabytes': 1000, 'ram': 51200, 'floating_ips': 10,
-            'instances': 10, 'injected_files': 5, 'cores': 20,
-            'injected_file_content_bytes': 10240,
+            'fixed_ips': 10, 'instances': 10, 'injected_files': 5,
+            'cores': 20, 'injected_file_content_bytes': 10240,
             'security_groups': 10, 'security_group_rules': 20}}
 
 
@@ -50,6 +50,8 @@ class QuotaSetsTest(test.TestCase):
             'ram': 51200,
             'volumes': 10,
             'floating_ips': 10,
+            'fixed_ips': 10,
+            'fixed_ips': 10,
             'metadata_items': 128,
             'gigabytes': 1000,
             'injected_files': 5,
@@ -69,6 +71,7 @@ class QuotaSetsTest(test.TestCase):
         self.assertEqual(qs['volumes'], 10)
         self.assertEqual(qs['gigabytes'], 1000)
         self.assertEqual(qs['floating_ips'], 10)
+        self.assertEqual(qs['fixed_ips'], 10)
         self.assertEqual(qs['metadata_items'], 128)
         self.assertEqual(qs['injected_files'], 5)
         self.assertEqual(qs['injected_file_content_bytes'], 10240)
@@ -89,6 +92,7 @@ class QuotaSetsTest(test.TestCase):
                     'volumes': 10,
                     'gigabytes': 1000,
                     'floating_ips': 10,
+                    'fixed_ips': 10,
                     'metadata_items': 128,
                     'injected_files': 5,
                     'injected_file_content_bytes': 10240,
@@ -114,7 +118,8 @@ class QuotaSetsTest(test.TestCase):
         body = {'quota_set': {'instances': 50, 'cores': 50,
                               'ram': 51200, 'volumes': 10,
                               'gigabytes': 1000, 'floating_ips': 10,
-                              'metadata_items': 128, 'injected_files': 5,
+                              'fixed_ips': 10, 'metadata_items': 128,
+                              'injected_files': 5,
                               'injected_file_content_bytes': 10240,
                               'security_groups': 10,
                               'security_group_rules': 20}}
@@ -129,7 +134,8 @@ class QuotaSetsTest(test.TestCase):
         body = {'quota_set': {'instances': 50, 'cores': 50,
                               'ram': 51200, 'volumes': 10,
                               'gigabytes': 1000, 'floating_ips': 10,
-                              'metadata_items': 128, 'injected_files': 5,
+                              'fixed_ips': 10, 'metadata_items': 128,
+                              'injected_files': 5,
                               'injected_file_content_bytes': 10240,
                               'security_groups': 10,
                               'security_group_rules': 20}}
@@ -154,6 +160,7 @@ class QuotaXMLSerializerTest(test.TestCase):
                 gigabytes=40,
                 ram=50,
                 floating_ips=60,
+                fixed_ips=10,
                 instances=70,
                 injected_files=80,
                 security_groups=10,
@@ -179,6 +186,7 @@ class QuotaXMLSerializerTest(test.TestCase):
                 gigabytes='40',
                 ram='50',
                 floating_ips='60',
+                fixed_ips='10',
                 instances='70',
                 injected_files='80',
                 security_groups='10',
@@ -193,6 +201,7 @@ class QuotaXMLSerializerTest(test.TestCase):
                   '<gigabytes>40</gigabytes>'
                   '<ram>50</ram>'
                   '<floating_ips>60</floating_ips>'
+                  '<fixed_ips>10</fixed_ips>'
                   '<instances>70</instances>'
                   '<injected_files>80</injected_files>'
                   '<security_groups>10</security_groups>'

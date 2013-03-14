@@ -1152,6 +1152,12 @@ class NetworkManager(manager.SchedulerDependentManager):
 
     def allocate_fixed_ip(self, context, instance_id, network, **kwargs):
         """Gets a fixed ip from the pool."""
+        LOG.debug("QUOTA: %s" % quota.allowed_fixed_ips(context, 1))
+        if quota.allowed_fixed_ips(context, 1) < 1:
+            LOG.warn(_('Quota exceeded for %s, tried to allocate address'),
+                     context.project_id)
+            raise exception.QuotaError(code='FixedAddressLimitExceeded')
+
         # TODO(vish): when this is called by compute, we can associate compute
         #             with a network, or a cluster of computes with a network
         #             and use that network here with a method like

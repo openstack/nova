@@ -42,6 +42,10 @@ quota_opts = [
     cfg.IntOpt('quota_floating_ips',
                default=10,
                help='number of floating ips allowed per project'),
+    cfg.IntOpt('quota_fixed_ips',
+               default=10,
+               help=('number of fixed ips allowed per project (this should be '
+                     'at least the number of instances allowed)')),
     cfg.IntOpt('quota_metadata_items',
                default=128,
                help='number of metadata items allowed per instance'),
@@ -74,6 +78,7 @@ def _get_default_quotas():
         'volumes': FLAGS.quota_volumes,
         'gigabytes': FLAGS.quota_gigabytes,
         'floating_ips': FLAGS.quota_floating_ips,
+        'fixed_ips': FLAGS.quota_fixed_ips,
         'metadata_items': FLAGS.quota_metadata_items,
         'injected_files': FLAGS.quota_max_injected_files,
         'injected_file_content_bytes':
@@ -171,6 +176,18 @@ def allowed_floating_ips(context, requested_floating_ips):
                                                   used_floating_ips,
                                                   quota['floating_ips'])
     return min(requested_floating_ips, allowed_floating_ips)
+
+
+def allowed_fixed_ips(context, requested_fixed_ips):
+    """Check quota and return min(requested, allowed) fixed ips."""
+    project_id = context.project_id
+    context = context.elevated()
+    used_fixed_ips = db.fixed_ip_count_by_project(context, project_id)
+    quota = get_project_quotas(context, project_id)
+    allowed_fixed_ips = _get_request_allotment(requested_fixed_ips,
+                                               used_fixed_ips,
+                                               quota['fixed_ips'])
+    return min(requested_fixed_ips, allowed_fixed_ips)
 
 
 def allowed_security_groups(context, requested_security_groups):

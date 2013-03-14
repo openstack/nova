@@ -1114,6 +1114,27 @@ def fixed_ip_update(context, address, values):
         fixed_ip_ref.save(session=session)
 
 
+@require_context
+def fixed_ip_count_by_project(context, project_id, session=None):
+    authorize_project_context(context, project_id)
+
+    # NOTE(mikal): Yes I know this is horrible, but I couldn't
+    # get a query using a join working, mainly because of a failure
+    # to be able to express the where clause sensibly. Patches
+    # welcome.
+    session = get_session()
+    with session.begin():
+        instance_id_query = model_query(context, models.Instance.id,
+                                        read_deleted="no", session=session).\
+                               filter(models.Instance.project_id == \
+                                      project_id)
+        id_filter = models.FixedIp.instance_id.in_(instance_id_query)
+        return model_query(context, models.FixedIp, read_deleted="no",
+                           session=session).\
+                           filter(id_filter).\
+                           count()
+
+
 ###################
 
 
