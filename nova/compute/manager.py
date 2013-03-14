@@ -1,4 +1,4 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
+# vim: tabstop=6 shiftwidth=4 softtabstop=4
 
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
@@ -711,6 +711,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                  instance,
                                                  volume,
                                                  bdm['device_name'])
+                if 'serial' not in cinfo:
+                    cinfo['serial'] = bdm['volume_id']
                 self.conductor_api.block_device_mapping_update(
                         context, bdm['id'],
                         {'connection_info': jsonutils.dumps(cinfo)})

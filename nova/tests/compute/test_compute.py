@@ -56,7 +56,7 @@ from nova.openstack.common import rpc
 from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
-import nova.policy
+from nova import policy
 from nova import quota
 from nova import test
 from nova.tests.compute import fake_resource_tracker
@@ -242,6 +242,60 @@ class BaseTestCase(test.TestCase):
                   'user_id': self.user_id,
                   'project_id': self.project_id}
         return db.security_group_create(self.context, values)
+
+
+class ComputeVolumeTestCase(BaseTestCase):
+    def setUp(self):
+        super(ComputeVolumeTestCase, self).setUp()
+        self.volume_id = 'fake'
+        self.instance = {
+            'id': 'fake',
+            'uuid': 'fake',
+            'name': 'fake',
+            'root_device_name': '/dev/vda',
+        }
+        self.stubs.Set(self.compute.volume_api, 'get', lambda *a, **kw:
+                       {'id': self.volume_id})
+        self.stubs.Set(self.compute.driver, 'get_volume_connector',
+                       lambda *a, **kw: None)
+        self.stubs.Set(self.compute.driver, 'attach_volume',
+                       lambda *a, **kw: None)
+        self.stubs.Set(self.compute.volume_api, 'initialize_connection',
+                       lambda *a, **kw: {})
+        self.stubs.Set(self.compute.volume_api, 'attach',
+                       lambda *a, **kw: None)
+        self.stubs.Set(self.compute.volume_api, 'check_attach',
+                       lambda *a, **kw: None)
+
+        def store_cinfo(context, *args):
+            self.cinfo = jsonutils.loads(args[-1].get('connection_info'))
+
+        self.stubs.Set(self.compute.conductor_api,
+                       'block_device_mapping_update',
+                       store_cinfo)
+        self.stubs.Set(self.compute.conductor_api,
+                       'block_device_mapping_update_or_create',
+                       store_cinfo)
+
+    def test_attach_volume_serial(self):
+
+        self.compute.attach_volume(self.context, self.volume_id,
+                                   '/dev/vdb', self.instance)
+        self.assertEqual(self.cinfo.get('serial'), self.volume_id)
+
+    def test_boot_volume_serial(self):
+        block_device_mapping = [{
+            'id': 1,
+            'no_device': None,
+            'virtual_name': None,
+            'snapshot_id': None,
+            'volume_id': self.volume_id,
+            'device_name': '/dev/vdb',
+            'delete_on_termination': False,
+        }]
+        self.compute._setup_block_device_mapping(self.context, self.instance,
+                                                 block_device_mapping)
+        self.assertEqual(self.cinfo.get('serial'), self.volume_id)
 
 
 class ComputeTestCase(BaseTestCase):
@@ -6968,7 +7022,7 @@ class ComputePolicyTestCase(BaseTestCase):
         self.compute_api = compute.API()
 
     def test_actions_are_prefixed(self):
-        self.mox.StubOutWithMock(nova.policy, 'enforce')
+        self.mox.StubOutWithMock(policy, 'enforce')
         nova.policy.enforce(self.context, 'compute:reboot', {})
         self.mox.ReplayAll()
         compute_api.check_policy(self.context, 'reboot', {})
