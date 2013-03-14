@@ -65,6 +65,7 @@ from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.notifier import api as notifier
 from nova.openstack.common import rpc
+from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import timeutils
 from nova import paths
 from nova import safe_utils
@@ -2656,6 +2657,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         else:
             return '\n'.join(log.split('\n')[-int(length):])
 
+    @rpc_common.client_exceptions(exception.ConsoleTypeInvalid)
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @wrap_instance_fault
     def get_vnc_console(self, context, console_type, instance):
@@ -2684,6 +2686,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         return connect_info
 
+    @rpc_common.client_exceptions(exception.ConsoleTypeInvalid)
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @wrap_instance_fault
     def get_spice_console(self, context, console_type, instance):
