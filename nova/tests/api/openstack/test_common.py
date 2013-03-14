@@ -28,7 +28,7 @@ from nova.api.openstack import common
 from nova.api.openstack import xmlutil
 from nova import exception
 from nova import test
-from nova.tests import utils as test_utils
+from nova.tests import utils
 
 
 NS = "{http://docs.openstack.org/compute/api/v1.1}"
@@ -297,7 +297,7 @@ class MiscFunctionsTest(test.TestCase):
             self.fail("webob.exc.HTTPConflict was not raised")
 
     def test_check_img_metadata_properties_quota_valid_metadata(self):
-        ctxt = test_utils.get_test_admin_context()
+        ctxt = utils.get_test_admin_context()
         metadata1 = {"key": "value"}
         actual = common.check_img_metadata_properties_quota(ctxt, metadata1)
         self.assertEqual(actual, None)
@@ -311,7 +311,7 @@ class MiscFunctionsTest(test.TestCase):
         self.assertEqual(actual, None)
 
     def test_check_img_metadata_properties_quota_inv_metadata(self):
-        ctxt = test_utils.get_test_admin_context()
+        ctxt = utils.get_test_admin_context()
         metadata1 = {"a" * 260: "value"}
         self.assertRaises(webob.exc.HTTPBadRequest,
                 common.check_img_metadata_properties_quota, ctxt, metadata1)
@@ -512,3 +512,11 @@ class MetadataXMLSerializationTest(test.TestCase):
         """.replace("  ", "").replace("\n", ""))
 
         self.assertEqual(expected.toxml(), actual.toxml())
+
+    def test_metadata_deserializer(self):
+        """Should throw a 400 error on corrupt xml."""
+        deserializer = common.MetadataXMLDeserializer()
+        self.assertRaises(
+                exception.MalformedRequestBody,
+                deserializer.deserialize,
+                utils.killer_xml_body())

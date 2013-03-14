@@ -7,6 +7,7 @@ from nova.api.openstack import wsgi
 from nova import exception
 from nova import test
 from nova.tests.api.openstack import fakes
+from nova.tests import utils
 
 
 class RequestTest(test.TestCase):
@@ -271,6 +272,21 @@ class ResourceTest(test.TestCase):
                                                  'application/xml',
                                                  '<fooAction>true</fooAction>')
         self.assertEqual(controller._action_foo, method)
+
+    def test_get_method_action_corrupt_xml(self):
+        class Controller(wsgi.Controller):
+            @wsgi.action('fooAction')
+            def _action_foo(self, req, id, body):
+                return body
+
+        controller = Controller()
+        resource = wsgi.Resource(controller)
+        self.assertRaises(
+                exception.MalformedRequestBody,
+                resource.get_method,
+                None, 'action',
+                'application/xml',
+                utils.killer_xml_body())
 
     def test_get_method_action_bad_body(self):
         class Controller(wsgi.Controller):

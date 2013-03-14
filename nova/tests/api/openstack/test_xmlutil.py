@@ -16,9 +16,12 @@
 #    under the License.
 
 from lxml import etree
+from xml.dom import minidom
 
 from nova.api.openstack import xmlutil
+from nova import exception
 from nova import test
+from nova.tests import utils as tests_utils
 
 
 class SelectorTest(test.TestCase):
@@ -720,3 +723,64 @@ class MiscellaneousXMLUtilTests(test.TestCase):
         tmpl = xmlutil.MasterTemplate(root, 1)
         result = tmpl.serialize(dict(wrapper=dict(a='foo', b='bar')))
         self.assertEqual(result, expected_xml)
+
+    def test_safe_parse_xml(self):
+
+        normal_body = ("""
+                 <?xml version="1.0" ?><foo>
+                    <bar>
+                        <v1>hey</v1>
+                        <v2>there</v2>
+                    </bar>
+                </foo>""").strip()
+
+        dom = xmlutil.safe_minidom_parse_string(normal_body)
+        self.assertEqual(normal_body, str(dom.toxml()))
+
+        self.assertRaises(exception.MalformedRequestBody,
+                          xmlutil.safe_minidom_parse_string,
+                          tests_utils.killer_xml_body())
+
+
+class SafeParserTestCase(test.TestCase):
+    def test_external_dtd(self):
+        xml_string = ("""<?xml version="1.0" encoding="utf-8"?>
+                <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+                 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+                <html>
+                   <head/>
+                     <body>html with dtd</body>
+                   </html>""")
+
+        parser = xmlutil.ProtectedExpatParser(forbid_dtd=False,
+                                            forbid_entities=True)
+        self.assertRaises(ValueError,
+                          minidom.parseString,
+                          xml_string, parser)
+
+    def test_external_file(self):
+        xml_string = """<!DOCTYPE external [
+                <!ENTITY ee SYSTEM "file:///PATH/TO/root.xml">
+                ]>
+                <root>&ee;</root>"""
+
+        parser = xmlutil.ProtectedExpatParser(forbid_dtd=False,
+                                            forbid_entities=True)
+        self.assertRaises(ValueError,
+                          minidom.parseString,
+                          xml_string, parser)
+
+    def test_notation(self):
+        xml_string = """<?xml version="1.0" standalone="no"?>
+                        <!-- comment data -->
+                        <!DOCTYPE x [
+                        <!NOTATION notation SYSTEM "notation.jpeg">
+                        ]>
+                        <root attr1="value1">
+                        </root>"""
+
+        parser = xmlutil.ProtectedExpatParser(forbid_dtd=False,
+                                            forbid_entities=True)
+        self.assertRaises(ValueError,
+                          minidom.parseString,
+                          xml_string, parser)

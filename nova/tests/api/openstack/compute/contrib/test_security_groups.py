@@ -30,6 +30,7 @@ from nova.openstack.common import jsonutils
 from nova import quota
 from nova import test
 from nova.tests.api.openstack import fakes
+from nova.tests import utils
 
 CONF = cfg.CONF
 FAKE_UUID = 'a47ae74e-ab08-447f-8eee-ffd43fc46c16'
@@ -727,13 +728,6 @@ class TestSecurityGroupRules(test.TestCase):
         self.assertEquals(security_group_rule['to_port'], 81)
 
     def test_create_by_invalid_cidr_json(self):
-        rules = {
-                  "security_group_rule": {
-                        "ip_protocol": "tcp",
-                        "from_port": "22",
-                        "to_port": "22",
-                        "parent_group_id": self.sg2['id'],
-                        "cidr": "10.2.3.124/2433"}}
         rule = security_group_rule_template(
                 ip_protocol="tcp",
                 from_port=22,
@@ -1146,6 +1140,13 @@ class TestSecurityGroupRulesXMLDeserializer(test.TestCase):
         }
         self.assertEquals(request['body'], expected)
 
+    def test_corrupt_xml(self):
+        """Should throw a 400 error on corrupt xml."""
+        self.assertRaises(
+                exception.MalformedRequestBody,
+                self.deserializer.deserialize,
+                utils.killer_xml_body())
+
 
 class TestSecurityGroupXMLDeserializer(test.TestCase):
 
@@ -1191,6 +1192,13 @@ class TestSecurityGroupXMLDeserializer(test.TestCase):
             },
         }
         self.assertEquals(request['body'], expected)
+
+    def test_corrupt_xml(self):
+        """Should throw a 400 error on corrupt xml."""
+        self.assertRaises(
+                exception.MalformedRequestBody,
+                self.deserializer.deserialize,
+                utils.killer_xml_body())
 
 
 class TestSecurityGroupXMLSerializer(test.TestCase):

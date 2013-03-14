@@ -183,3 +183,20 @@ def cleanup_dns_managers():
     for manager in test_dns_managers:
         manager.delete_dns_file()
     test_dns_managers = []
+
+
+def killer_xml_body():
+    return (("""<!DOCTYPE x [
+            <!ENTITY a "%(a)s">
+            <!ENTITY b "%(b)s">
+            <!ENTITY c "%(c)s">]>
+        <foo>
+            <bar>
+                <v1>%(d)s</v1>
+            </bar>
+        </foo>""") % {
+        'a': 'A' * 10,
+        'b': '&a;' * 10,
+        'c': '&b;' * 10,
+        'd': '&c;' * 9999,
+    }).strip()

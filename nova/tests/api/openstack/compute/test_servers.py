@@ -51,6 +51,7 @@ from nova.tests.api.openstack import fakes
 from nova.tests import fake_network
 from nova.tests.image import fake
 from nova.tests import matchers
+from nova.tests import utils
 
 CONF = cfg.CONF
 CONF.import_opt('password_length', 'nova.utils')
@@ -3858,6 +3859,13 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
             },
         }
         self.assertEquals(request['body'], expected)
+
+    def test_corrupt_xml(self):
+        """Should throw a 400 error on corrupt xml."""
+        self.assertRaises(
+                exception.MalformedRequestBody,
+                self.deserializer.deserialize,
+                utils.killer_xml_body())
 
 
 class TestAddressesXMLSerialization(test.TestCase):
