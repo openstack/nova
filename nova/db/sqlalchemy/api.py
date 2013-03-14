@@ -121,7 +121,7 @@ def require_instance_exists_using_uuid(f):
     """
     @functools.wraps(f)
     def wrapper(context, instance_uuid, *args, **kwargs):
-        db.instance_get_by_uuid(context, instance_uuid)
+        instance_get_by_uuid(context, instance_uuid)
         return f(context, instance_uuid, *args, **kwargs)
 
     return wrapper
@@ -136,7 +136,7 @@ def require_aggregate_exists(f):
 
     @functools.wraps(f)
     def wrapper(context, aggregate_id, *args, **kwargs):
-        db.aggregate_get(context, aggregate_id)
+        aggregate_get(context, aggregate_id)
         return f(context, aggregate_id, *args, **kwargs)
     return wrapper
 
@@ -1437,7 +1437,7 @@ def instance_create(context, values):
         instance_ref.save(session=session)
 
     # create the instance uuid to ec2_id mapping entry for instance
-    db.ec2_instance_create(context, instance_ref['uuid'])
+    ec2_instance_create(context, instance_ref['uuid'])
 
     return instance_ref
 
