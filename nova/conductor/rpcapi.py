@@ -82,6 +82,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.42 - Added get_ec2_ids, aggregate_metadata_get_by_host
     1.43 - Added compute_stop
     1.44 - Added compute_node_delete
+    1.45 - Added project_id to quota_commit and quota_rollback
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -414,15 +415,17 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                             instance=instance_p, migration=migration_p)
         return self.call(context, msg, version='1.41')
 
-    def quota_commit(self, context, reservations):
+    def quota_commit(self, context, reservations, project_id=None):
         reservations_p = jsonutils.to_primitive(reservations)
-        msg = self.make_msg('quota_commit', reservations=reservations_p)
-        return self.call(context, msg, version='1.41')
+        msg = self.make_msg('quota_commit', reservations=reservations_p,
+                            project_id=project_id)
+        return self.call(context, msg, version='1.45')
 
-    def quota_rollback(self, context, reservations):
+    def quota_rollback(self, context, reservations, project_id=None):
         reservations_p = jsonutils.to_primitive(reservations)
-        msg = self.make_msg('quota_rollback', reservations=reservations_p)
-        return self.call(context, msg, version='1.41')
+        msg = self.make_msg('quota_rollback', reservations=reservations_p,
+                            project_id=project_id)
+        return self.call(context, msg, version='1.45')
 
     def get_ec2_ids(self, context, instance):
         instance_p = jsonutils.to_primitive(instance)
