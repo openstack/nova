@@ -388,6 +388,7 @@ class InvalidDevicePath(Invalid):
 
 class DevicePathInUse(Invalid):
     message = _("The supplied device path (%(path)s) is in use.")
+    code = 409
 
 
 class DeviceIsBusy(Invalid):
