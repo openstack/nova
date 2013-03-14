@@ -38,8 +38,9 @@ def upgrade(migrate_engine):
     i = sys_meta.insert()
     for values in q.execute():
         for index in range(0, len(instance_type_props)):
+            value = values[index + 1]
             i.execute({"key": "instance_type_%s" % instance_type_props[index],
-                       "value": str(values[index + 1]),
+                       "value": None if value is None else str(value),
                        "instance_uuid": values[0]})
 
 

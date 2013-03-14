@@ -785,7 +785,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
                  is_public=False),
             dict(id=13, name='type4', memory_mb=128, vcpus=1,
                  root_gb=10, ephemeral_gb=0, flavorid="4", swap=0,
-                 rxtx_factor=1.0, vcpu_weight=1, disabled=True,
+                 rxtx_factor=1.0, vcpu_weight=None, disabled=True,
                  is_public=True),
             dict(id=14, name='type5', memory_mb=128, vcpus=1,
                  root_gb=10, ephemeral_gb=0, flavorid="5", swap=0,
@@ -831,8 +831,14 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
             for prop in instance_type_props:
                 prop_name = 'instance_type_%s' % prop
                 self.assertIn(prop_name, inst_sys_meta)
-                self.assertEqual(str(inst_sys_meta[prop_name]),
-                                 str(inst_type[prop]))
+                if prop == "vcpu_weight":
+                    # NOTE(danms) vcpu_weight can be NULL
+                    self.assertEqual(inst_sys_meta[prop_name],
+                                     inst_type[prop] and str(inst_type[prop])
+                                     or None)
+                else:
+                    self.assertEqual(str(inst_sys_meta[prop_name]),
+                                     str(inst_type[prop]))
 
     # migration 154, add shadow tables for deleted data
     # There are 53 shadow tables but we only test one
@@ -1031,6 +1037,74 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
             # Make sure nothing else changed.
             for key, value in data[the_id].items():
                 self.assertEqual(value, result[key])
+
+    # migration 161, fix system_metadata "None" values should be NULL
+    def _pre_upgrade_161(self, engine):
+        fake_instances = [dict(uuid='m161-uuid1')]
+        sm_base = dict(instance_uuid='m161-uuid1', value=None)
+        now = timeutils.utcnow().replace(microsecond=0)
+        fake_sys_meta = [
+            # Should be fixed
+            dict(sm_base, key='instance_type_foo', value='None'),
+            dict(sm_base, key='instance_type_bar', value='88 mph'),
+
+            # Should be unaffected
+            dict(sm_base, key='instance_type_name', value='None'),
+            dict(sm_base, key='instance_type_flavorid', value='None'),
+            dict(sm_base, key='foo', value='None'),
+            dict(sm_base, key='instance_type_bat'),
+            dict(sm_base, key='instance_type_baz', created_at=now),
+            ]
+
+        instances = get_table(engine, 'instances')
+        sys_meta = get_table(engine, 'instance_system_metadata')
+        engine.execute(instances.insert(), fake_instances)
+
+        data = {}
+        for sm in fake_sys_meta:
+            result = sys_meta.insert().values(sm).execute()
+            sm['id'] = result.inserted_primary_key[0]
+            data[sm['id']] = sm
+
+        return data
+
+    def _check_161(self, engine, data):
+        our_ids = data.keys()
+        sys_meta = get_table(engine, 'instance_system_metadata')
+        results = sys_meta.select().where(sys_meta.c.id.in_(our_ids)).\
+                                    execute()
+        results = list(results)
+        self.assertEqual(len(our_ids), len(results))
+        for result in results:
+            the_id = result['id']
+            key = result['key']
+            value = result['value']
+            original = data[the_id]
+
+            if key == 'instance_type_baz':
+                # Neither value nor created_at should have been altered
+                self.assertEqual(result['value'], original['value'])
+                self.assertEqual(result['created_at'], original['created_at'])
+            elif key in ['instance_type_name', 'instance_type_flavorid']:
+                # These should not have their values changed, but should
+                # have corrected created_at stamps
+                self.assertEqual(result['value'], original['value'])
+                self.assertTrue(isinstance(result['created_at'],
+                                           datetime.datetime))
+            elif key.startswith('instance_type'):
+                # Values like instance_type_% should be stamped and values
+                # converted from 'None' to None where appropriate
+                self.assertEqual(result['value'],
+                                 None if original['value'] == 'None'
+                                 else original['value'])
+                self.assertTrue(isinstance(result['created_at'],
+                                           datetime.datetime))
+            else:
+                # None of the non-instance_type values should have
+                # been touched. Since we didn't set created_at on any
+                # of them, they should all still be None.
+                self.assertEqual(result['value'], original['value'])
+                self.assertEqual(result['created_at'], None)
 
 
 class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
