@@ -345,7 +345,7 @@ def extract_tarball(fileobj, path, callback=None):
     :param path: path to extract tarball into
     :param callback: optional callback to call on each chunk read
     """
-    tar_cmd = "tar -zx --directory=%(path)s" % locals()
+    tar_cmd = "tar -x --directory=%(path)s" % locals()
     tar_proc = make_subprocess(tar_cmd, stderr=True, stdin=True)
 
     while True:
