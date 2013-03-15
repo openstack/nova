@@ -24,6 +24,7 @@ from nova.api.openstack.compute.contrib import security_groups
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import compute
+from nova.compute import power_state
 import nova.db
 from nova import exception
 from nova.openstack.common import jsonutils
@@ -93,8 +94,8 @@ def return_server_by_uuid(context, server_uuid):
 
 
 def return_non_running_server(context, server_id):
-    return {'id': server_id, 'power_state': 0x02, 'uuid': FAKE_UUID,
-            'host': "localhost", 'name': 'asdf'}
+    return {'id': server_id, 'power_state': power_state.SHUTDOWN,
+            'uuid': FAKE_UUID, 'host': "localhost", 'name': 'asdf'}
 
 
 def return_security_group_by_name(context, project_id, group_name):
@@ -518,8 +519,7 @@ class TestSecurityGroups(test.TestCase):
         body = dict(addSecurityGroup=dict(name="test"))
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers/1/action')
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.manager._addSecurityGroup, req, '1', body)
+        self.manager._addSecurityGroup(req, '1', body)
 
     def test_associate_already_associated_security_group_to_instance(self):
         self.stubs.Set(nova.db, 'instance_get', return_server)
@@ -613,8 +613,7 @@ class TestSecurityGroups(test.TestCase):
         body = dict(removeSecurityGroup=dict(name="test"))
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers/1/action')
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.manager._removeSecurityGroup, req, '1', body)
+        self.manager._removeSecurityGroup(req, '1', body)
 
     def test_disassociate_already_associated_security_group_to_instance(self):
         self.stubs.Set(nova.db, 'instance_get', return_server)
