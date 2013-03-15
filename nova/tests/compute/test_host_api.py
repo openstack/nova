@@ -205,6 +205,27 @@ class ComputeHostAPITestCase(test.TestCase):
                                                            'fake-host')
         self.assertEqual('fake-response', result)
 
+    def test_service_update(self):
+        host_name = 'fake-host'
+        binary = 'nova-compute'
+        params_to_update = dict(disabled=True)
+        service_id = 42
+        expected_result = {'id': service_id}
+
+        self.mox.StubOutWithMock(self.host_api.db, 'service_get_by_args')
+        self.host_api.db.service_get_by_args(self.ctxt,
+            host_name, binary).AndReturn({'id': service_id})
+
+        self.mox.StubOutWithMock(self.host_api.db, 'service_update')
+        self.host_api.db.service_update(
+            self.ctxt, service_id, params_to_update).AndReturn(expected_result)
+
+        self.mox.ReplayAll()
+
+        result = self.host_api.service_update(
+            self.ctxt, host_name, binary, params_to_update)
+        self.assertEqual(expected_result, result)
+
     def test_instance_get_all_by_host(self):
         self.mox.StubOutWithMock(self.host_api.db,
                                  'instance_get_all_by_host')
@@ -311,6 +332,24 @@ class ComputeHostAPICellsTestCase(ComputeHostAPITestCase):
         result = self.host_api.service_get_by_compute_host(self.ctxt,
                                                            'fake-host')
         self.assertEqual('fake-response', result)
+
+    def test_service_update(self):
+        host_name = 'fake-host'
+        binary = 'nova-compute'
+        params_to_update = dict(disabled=True)
+        service_id = 42
+        expected_result = {'id': service_id}
+
+        self.mox.StubOutWithMock(self.host_api.cells_rpcapi, 'service_update')
+        self.host_api.cells_rpcapi.service_update(
+            self.ctxt, host_name,
+            binary, params_to_update).AndReturn(expected_result)
+
+        self.mox.ReplayAll()
+
+        result = self.host_api.service_update(
+            self.ctxt, host_name, binary, params_to_update)
+        self.assertEqual(expected_result, result)
 
     def test_instance_get_all_by_host(self):
         instances = [dict(id=1, cell_name='cell1', host='host1'),

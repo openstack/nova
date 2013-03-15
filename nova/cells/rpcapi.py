@@ -49,6 +49,7 @@ class CellsAPI(rpc_proxy.RpcProxy):
         1.5 - Adds actions_get(), action_get_by_request_id(), and
               action_events_get()
         1.6 - Adds consoleauth_delete_tokens() and validate_console_port()
+        1.7 - Adds service_update()
     '''
     BASE_RPC_API_VERSION = '1.0'
 
@@ -178,6 +179,21 @@ class CellsAPI(rpc_proxy.RpcProxy):
         return self.call(ctxt, self.make_msg('service_get_by_compute_host',
                                              host_name=host_name),
                          version='1.2')
+
+    def service_update(self, ctxt, host_name, binary, params_to_update):
+        """
+        Used to enable/disable a service. For compute services, setting to
+        disabled stops new builds arriving on that host.
+
+        :param host_name: the name of the host machine that the service is
+                          running
+        :param binary: The name of the executable that the service runs as
+        :param params_to_update: eg. {'disabled': True}
+        """
+        return self.call(ctxt, self.make_msg(
+            'service_update', host_name=host_name,
+             binary=binary, params_to_update=params_to_update),
+             version='1.7')
 
     def proxy_rpc_to_manager(self, ctxt, rpc_message, topic, call=False,
                              timeout=None):

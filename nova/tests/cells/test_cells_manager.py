@@ -294,6 +294,26 @@ class CellsManagerClassTestCase(test.TestCase):
                 host_name=cell_and_host)
         self.assertEqual(expected_response, response)
 
+    def test_service_update(self):
+        fake_cell = 'fake-cell'
+        fake_response = messaging.Response(
+            fake_cell, FAKE_SERVICES[0], False)
+        expected_response = copy.deepcopy(FAKE_SERVICES[0])
+        cells_utils.add_cell_to_service(expected_response, fake_cell)
+        cell_and_host = cells_utils.cell_with_item('fake-cell', 'fake-host')
+        params_to_update = {'disabled': True}
+
+        self.mox.StubOutWithMock(self.msg_runner, 'service_update')
+        self.msg_runner.service_update(self.ctxt,
+                fake_cell, 'fake-host', 'nova-api',
+                params_to_update).AndReturn(fake_response)
+        self.mox.ReplayAll()
+
+        response = self.cells_manager.service_update(
+            self.ctxt, host_name=cell_and_host, binary='nova-api',
+            params_to_update=params_to_update)
+        self.assertEqual(expected_response, response)
+
     def test_proxy_rpc_to_manager(self):
         self.mox.StubOutWithMock(self.msg_runner,
                                  'proxy_rpc_to_manager')

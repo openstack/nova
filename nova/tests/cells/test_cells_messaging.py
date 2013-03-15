@@ -20,6 +20,7 @@ from oslo.config import cfg
 from nova.cells import messaging
 from nova.cells import utils as cells_utils
 from nova import context
+from nova import db
 from nova import exception
 from nova.openstack.common import rpc
 from nova.openstack.common import timeutils
@@ -744,6 +745,42 @@ class CellsTargetedMethodsTestCase(test.TestCase):
                 fake_host_name)
         result = response.value_or_raise()
         self.assertEqual('fake-service', result)
+
+    def test_service_update(self):
+        binary = 'nova-compute'
+        fake_service = dict(id=42, host='fake_host', binary='nova-compute',
+                            topic='compute')
+        fake_compute = dict(
+            id=7116, service_id=42, host='fake_host', vcpus=0, memory_mb=0,
+            local_gb=0, vcpus_used=0, memory_mb_used=0, local_gb_used=0,
+            hypervisor_type=0, hypervisor_version=0, hypervisor_hostname=0,
+            free_ram_mb=0, free_disk_gb=0, current_workload=0, running_vms=0,
+            cpu_info='HAL', disk_available_least=0)
+        params_to_update = {'disabled': True, 'report_count': 13}
+
+        ctxt = context.RequestContext('fake_user', 'fake_project',
+                                      is_admin=True)
+        # We use the real DB for this test, as it's too hard to reach the
+        # host_api to mock out its DB methods
+        db.service_create(ctxt, fake_service)
+        db.compute_node_create(ctxt, fake_compute)
+
+        self.mox.ReplayAll()
+
+        response = self.src_msg_runner.service_update(
+                ctxt, self.tgt_cell_name,
+                'fake_host', binary, params_to_update)
+        result = response.value_or_raise()
+        result.pop('created_at', None)
+        result.pop('updated_at', None)
+        expected_result = dict(
+            deleted=0, deleted_at=None,
+            binary=fake_service['binary'],
+            disabled=True,    # We just updated this..
+            report_count=13,  # ..and this
+            host='fake_host', id=42,
+            topic='compute')
+        self.assertEqual(expected_result, result)
 
     def test_proxy_rpc_to_manager_call(self):
         fake_topic = 'fake-topic'

@@ -63,7 +63,7 @@ class CellsManager(manager.Manager):
 
     Scheduling requests get passed to the scheduler class.
     """
-    RPC_API_VERSION = '1.6'
+    RPC_API_VERSION = '1.7'
 
     def __init__(self, *args, **kwargs):
         # Mostly for tests.
@@ -246,6 +246,24 @@ class CellsManager(manager.Manager):
         response = self.msg_runner.service_get_by_compute_host(ctxt,
                                                                cell_name,
                                                                host_name)
+        service = response.value_or_raise()
+        cells_utils.add_cell_to_service(service, response.cell_name)
+        return service
+
+    def service_update(self, ctxt, host_name, binary, params_to_update):
+        """
+        Used to enable/disable a service. For compute services, setting to
+        disabled stops new builds arriving on that host.
+
+        :param host_name: the name of the host machine that the service is
+                          running
+        :param binary: The name of the executable that the service runs as
+        :param params_to_update: eg. {'disabled': True}
+        :returns: the service reference
+        """
+        cell_name, host_name = cells_utils.split_cell_and_item(host_name)
+        response = self.msg_runner.service_update(
+            ctxt, cell_name, host_name, binary, params_to_update)
         service = response.value_or_raise()
         cells_utils.add_cell_to_service(service, response.cell_name)
         return service

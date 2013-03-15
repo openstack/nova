@@ -41,6 +41,7 @@ from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import crypto
+from nova import db
 from nova.db import base
 from nova import exception
 from nova import hooks
@@ -2563,6 +2564,14 @@ class HostAPI(base.Base):
     def service_get_by_compute_host(self, context, host_name):
         """Get service entry for the given compute hostname."""
         return self.db.service_get_by_compute_host(context, host_name)
+
+    def service_update(self, context, host_name, binary, params_to_update):
+        """
+        Enable / Disable a service.
+        For compute services, this stops new builds and migrations going to
+        the host."""
+        service = db.service_get_by_args(context, host_name, binary)
+        return db.service_update(context, service['id'], params_to_update)
 
     def instance_get_all_by_host(self, context, host_name):
         """Return all instances on the given host."""
