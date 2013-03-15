@@ -49,7 +49,7 @@ datetime_fields = ['launched_at', 'terminated_at', 'updated_at']
 class ConductorManager(manager.Manager):
     """Mission: TBD."""
 
-    RPC_API_VERSION = '1.44'
+    RPC_API_VERSION = '1.45'
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(*args, **kwargs)
@@ -398,11 +398,11 @@ class ConductorManager(manager.Manager):
     def network_migrate_instance_finish(self, context, instance, migration):
         self.network_api.migrate_instance_finish(context, instance, migration)
 
-    def quota_commit(self, context, reservations):
-        quota.QUOTAS.commit(context, reservations)
+    def quota_commit(self, context, reservations, project_id=None):
+        quota.QUOTAS.commit(context, reservations, project_id=project_id)
 
-    def quota_rollback(self, context, reservations):
-        quota.QUOTAS.rollback(context, reservations)
+    def quota_rollback(self, context, reservations, project_id=None):
+        quota.QUOTAS.rollback(context, reservations, project_id=project_id)
 
     def get_ec2_ids(self, context, instance):
         ec2_ids = {}
