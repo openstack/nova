@@ -139,6 +139,9 @@ class NetworkController(wsgi.Controller):
         try:
             self.network_api.add_network_to_project(
                 context, project_id, network_id)
+        except NotImplementedError:
+            msg = (_("VLAN support must be enabled"))
+            raise exc.HTTPNotImplemented(explanation=msg)
         except Exception as ex:
             msg = (_("Cannot associate network %(network)s"
                      " with project %(project)s: %(message)s") %

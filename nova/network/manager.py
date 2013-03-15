@@ -1418,6 +1418,9 @@ class NetworkManager(manager.Manager):
                     dev = self.driver.get_dev(network)
                     self.driver.update_dns(context, dev, network)
 
+    def add_network_to_project(self, ctxt, project_id, network_uuid):
+        raise NotImplementedError()
+
 
 class FlatManager(NetworkManager):
     """Basic network where no vlans are used.
