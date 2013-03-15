@@ -31,6 +31,7 @@ from oslo.config import cfg
 from sqlalchemy import and_
 from sqlalchemy import Boolean
 from sqlalchemy.exc import DataError
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.exc import NoSuchTableError
 from sqlalchemy import Integer
 from sqlalchemy import MetaData
@@ -4735,11 +4736,17 @@ def archive_deleted_rows_for_table(context, tablename, max_rows):
                        order_by(column).limit(max_rows)
         rows = conn.execute(query).fetchall()
         if rows:
-            insert_statement = shadow_table.insert()
-            conn.execute(insert_statement, rows)
             keys = [getattr(row, column_name) for row in rows]
             delete_statement = table.delete(column.in_(keys))
-            result = conn.execute(delete_statement)
+            try:
+                result = conn.execute(delete_statement)
+            except IntegrityError:
+                # A foreign key constraint keeps us from deleting some of
+                # these rows until we clean up a dependent table.  Just
+                # skip this table for now; we'll come back to it later.
+                return rows_archived
+            insert_statement = shadow_table.insert()
+            conn.execute(insert_statement, rows)
             rows_archived = result.rowcount
     return rows_archived
 
