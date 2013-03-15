@@ -1245,6 +1245,18 @@ def fixed_ip_update(context, address, values):
         fixed_ip_ref.save(session=session)
 
 
+@require_context
+def fixed_ip_count_by_project(context, project_id, session=None):
+    nova.context.authorize_project_context(context, project_id)
+    return model_query(context, models.FixedIp.id,
+                       base_model=models.FixedIp, read_deleted="no",
+                       session=session).\
+                join((models.Instance,
+                      models.Instance.uuid == models.FixedIp.instance_uuid)).\
+                filter(models.Instance.uuid == project_id).\
+                count()
+
+
 ###################
 
 
