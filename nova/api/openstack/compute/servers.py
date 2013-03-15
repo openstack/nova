@@ -222,11 +222,11 @@ class CommonDeserializer(wsgi.MetadataXMLDeserializer):
         #             anyone that might be using it.
         auto_disk_config = server_node.getAttribute('auto_disk_config')
         if auto_disk_config:
-            server['OS-DCF:diskConfig'] = utils.bool_from_str(auto_disk_config)
+            server['OS-DCF:diskConfig'] = auto_disk_config
 
         auto_disk_config = server_node.getAttribute('OS-DCF:diskConfig')
         if auto_disk_config:
-            server['OS-DCF:diskConfig'] = utils.bool_from_str(auto_disk_config)
+            server['OS-DCF:diskConfig'] = auto_disk_config
 
         config_drive = server_node.getAttribute('config_drive')
         if config_drive:

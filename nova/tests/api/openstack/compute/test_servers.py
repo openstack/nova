@@ -2191,11 +2191,11 @@ class ServersControllerCreateTest(test.TestCase):
         # NOTE(vish): the extension converts OS-DCF:disk_config into
         #             auto_disk_config, so we are testing with
         #             the_internal_value
-        params = {'auto_disk_config': True}
+        params = {'auto_disk_config': 'AUTO'}
         old_create = compute_api.API.create
 
         def create(*args, **kwargs):
-            self.assertEqual(kwargs['auto_disk_config'], True)
+            self.assertEqual(kwargs['auto_disk_config'], 'AUTO')
             return old_create(*args, **kwargs)
 
         self.stubs.Set(compute_api.API, 'create', create)
@@ -3762,14 +3762,14 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
     <server xmlns="http://docs.openstack.org/compute/api/v2"
      xmlns:OS-DCF="http://docs.openstack.org/compute/ext/disk_config/api/v1.1"
      name="new-server-test" imageRef="1" flavorRef="1"
-     OS-DCF:diskConfig="True">
+     OS-DCF:diskConfig="AUTO">
     </server>"""
         request = self.deserializer.deserialize(serial_request)
         expected = {"server": {
                 "name": "new-server-test",
                 "imageRef": "1",
                 "flavorRef": "1",
-                "OS-DCF:diskConfig": True,
+                "OS-DCF:diskConfig": "AUTO",
                 }}
         self.assertEquals(request['body'], expected)
 
