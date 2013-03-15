@@ -71,6 +71,7 @@ def pack_action_start(context, instance_uuid, action_name):
               'instance_uuid': instance_uuid,
               'request_id': context.request_id,
               'user_id': context.user_id,
+              'project_id': context.project_id,
               'start_time': context.timestamp}
     return values
 
