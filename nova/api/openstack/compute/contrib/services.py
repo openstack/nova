@@ -51,8 +51,8 @@ class ServicesUpdateTemplate(xmlutil.TemplateBuilder):
     def construct(self):
         root = xmlutil.TemplateElement('host')
         root.set('host')
-        root.set('service')
-        root.set('disabled')
+        root.set('binary')
+        root.set('status')
 
         return xmlutil.MasterTemplate(root, 1)
 
@@ -76,13 +76,13 @@ class ServiceController(object):
         host = ''
         if 'host' in req.GET:
             host = req.GET['host']
-        service = ''
-        if 'service' in req.GET:
-            service = req.GET['service']
+        binary = ''
+        if 'binary' in req.GET:
+            binary = req.GET['binary']
         if host:
             services = [s for s in services if s['host'] == host]
-        if service:
-            services = [s for s in services if s['binary'] == service]
+        if binary:
+            services = [s for s in services if s['binary'] == binary]
 
         svcs = []
         for svc in services:
@@ -113,12 +113,12 @@ class ServiceController(object):
 
         try:
             host = body['host']
-            service = body['service']
+            binary = body['binary']
         except (TypeError, KeyError):
             raise webob.exc.HTTPUnprocessableEntity()
 
         try:
-            svc = db.service_get_by_args(context, host, service)
+            svc = db.service_get_by_args(context, host, binary)
             if not svc:
                 raise webob.exc.HTTPNotFound('Unknown service')
 
@@ -126,7 +126,8 @@ class ServiceController(object):
         except exception.ServiceNotFound:
             raise webob.exc.HTTPNotFound("service not found")
 
-        return {'host': host, 'service': service, 'disabled': disabled}
+        status = id + 'd'
+        return {'service': {'host': host, 'binary': binary, 'status': status}}
 
 
 class Services(extensions.ExtensionDescriptor):

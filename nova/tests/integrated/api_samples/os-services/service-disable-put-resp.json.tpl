@@ -1,5 +1,7 @@
 {
-   "disabled": true,
-   "host": "%(host)s",
-   "service": "%(service)s"
+    "service": {
+       "host": "%(host)s",
+       "binary": "%(binary)s",
+       "status": "disabled"
+    }
 }

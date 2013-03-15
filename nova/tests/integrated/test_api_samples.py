@@ -1990,24 +1990,24 @@ class ServicesJsonTest(ApiSampleTestBase):
     def test_service_enable(self):
         """Enable an existing agent build."""
         subs = {"host": "host1",
-                'service': 'nova-compute'}
-        response = self._do_put('/os-services/enable',
+                'binary': 'nova-compute'}
+        response = self._do_put('os-services/enable',
                                 'service-enable-put-req', subs)
         self.assertEqual(response.status, 200)
         subs = {"host": "host1",
-                "service": "nova-compute"}
+                "binary": "nova-compute"}
         return self._verify_response('service-enable-put-resp',
                                       subs, response)
 
     def test_service_disable(self):
         """Disable an existing agent build."""
         subs = {"host": "host1",
-                'service': 'nova-compute'}
-        response = self._do_put('/os-services/disable',
+                'binary': 'nova-compute'}
+        response = self._do_put('os-services/disable',
                                 'service-disable-put-req', subs)
         self.assertEqual(response.status, 200)
         subs = {"host": "host1",
-                "service": "nova-compute"}
+                "binary": "nova-compute"}
         return self._verify_response('service-disable-put-resp',
                                      subs, response)
 

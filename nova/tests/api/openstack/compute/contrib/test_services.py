@@ -64,7 +64,7 @@ class FakeRequest(object):
 
 class FakeRequestWithService(object):
         environ = {"nova.context": context.get_admin_context()}
-        GET = {"service": "nova-compute"}
+        GET = {"binary": "nova-compute"}
 
 
 class FakeRequestWithHost(object):
@@ -74,7 +74,7 @@ class FakeRequestWithHost(object):
 
 class FakeRequestWithHostService(object):
         environ = {"nova.context": context.get_admin_context()}
-        GET = {"host": "host1", "service": "nova-compute"}
+        GET = {"host": "host1", "binary": "nova-compute"}
 
 
 def fake_host_api_service_get_all(context, filters=None, set_zones=False):
@@ -190,15 +190,15 @@ class ServicesTest(test.TestCase):
         self.assertEqual(res_dict, response)
 
     def test_services_enable(self):
-        body = {'host': 'host1', 'service': 'nova-compute'}
+        body = {'host': 'host1', 'binary': 'nova-compute'}
         req = fakes.HTTPRequest.blank('/v2/fake/os-services/enable')
         res_dict = self.controller.update(req, "enable", body)
 
-        self.assertEqual(res_dict['disabled'], False)
+        self.assertEqual(res_dict['service']['status'], 'enabled')
 
     def test_services_disable(self):
         req = fakes.HTTPRequest.blank('/v2/fake/os-services/disable')
-        body = {'host': 'host1', 'service': 'nova-compute'}
+        body = {'host': 'host1', 'binary': 'nova-compute'}
         res_dict = self.controller.update(req, "disable", body)
 
-        self.assertEqual(res_dict['disabled'], True)
+        self.assertEqual(res_dict['service']['status'], 'disabled')
