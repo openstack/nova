@@ -65,6 +65,8 @@ variables / types used
 
 """
 
+from oslo.config import cfg
+
 from nova import block_device
 from nova.compute import instance_types
 from nova import exception
@@ -74,6 +76,8 @@ from nova.virt import driver
 
 
 LOG = logging.getLogger(__name__)
+
+CONF = cfg.CONF
 
 
 def has_disk_dev(mapping, disk_dev):
@@ -103,6 +107,8 @@ def get_dev_prefix_for_disk_bus(disk_bus):
        Returns the dev prefix or raises an
        exception if the disk bus is unknown."""
 
+    if CONF.libvirt_disk_prefix:
+        return CONF.libvirt_disk_prefix
     if disk_bus == "ide":
         return "hd"
     elif disk_bus == "virtio":

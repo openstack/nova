@@ -980,6 +980,10 @@ class LibvirtConnTestCase(test.TestCase):
         instance_data = dict(self.test_instance)
         self._check_xml_and_disk_prefix(instance_data)
 
+    def test_xml_user_specified_disk_prefix(self):
+        instance_data = dict(self.test_instance)
+        self._check_xml_and_disk_prefix(instance_data, 'sd')
+
     def test_xml_disk_driver(self):
         instance_data = dict(self.test_instance)
         self._check_xml_and_disk_driver(instance_data)
@@ -1711,28 +1715,39 @@ class LibvirtConnTestCase(test.TestCase):
         target = tree.find('./devices/filesystem/source').get('dir')
         self.assertTrue(len(target) > 0)
 
-    def _check_xml_and_disk_prefix(self, instance):
+    def _check_xml_and_disk_prefix(self, instance, prefix=None):
         user_context = context.RequestContext(self.user_id,
                                               self.project_id)
         instance_ref = db.instance_create(user_context, instance)
 
+        def _get_prefix(p, default):
+            if p:
+                return p + 'a'
+            return default
+
         type_disk_map = {
             'qemu': [
-               (lambda t: t.find('.').get('type'), 'qemu'),
-               (lambda t: t.find('./devices/disk/target').get('dev'), 'vda')],
+                (lambda t: t.find('.').get('type'), 'qemu'),
+                (lambda t: t.find('./devices/disk/target').get('dev'),
+                 _get_prefix(prefix, 'vda'))],
             'xen': [
-               (lambda t: t.find('.').get('type'), 'xen'),
-               (lambda t: t.find('./devices/disk/target').get('dev'), 'sda')],
+                (lambda t: t.find('.').get('type'), 'xen'),
+                (lambda t: t.find('./devices/disk/target').get('dev'),
+                 _get_prefix(prefix, 'sda'))],
             'kvm': [
-               (lambda t: t.find('.').get('type'), 'kvm'),
-               (lambda t: t.find('./devices/disk/target').get('dev'), 'vda')],
+                (lambda t: t.find('.').get('type'), 'kvm'),
+                (lambda t: t.find('./devices/disk/target').get('dev'),
+                 _get_prefix(prefix, 'vda'))],
             'uml': [
-               (lambda t: t.find('.').get('type'), 'uml'),
-               (lambda t: t.find('./devices/disk/target').get('dev'), 'ubda')]
+                (lambda t: t.find('.').get('type'), 'uml'),
+                (lambda t: t.find('./devices/disk/target').get('dev'),
+                 _get_prefix(prefix, 'ubda'))]
             }
 
         for (libvirt_type, checks) in type_disk_map.iteritems():
             self.flags(libvirt_type=libvirt_type)
+            if prefix:
+                self.flags(libvirt_disk_prefix=prefix)
             conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
             network_info = _fake_network_info(self.stubs, 1)
