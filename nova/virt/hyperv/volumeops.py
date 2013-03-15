@@ -23,6 +23,7 @@ import time
 
 from oslo.config import cfg
 
+from nova import exception
 from nova.openstack.common import log as logging
 from nova.virt import driver
 from nova.virt.hyperv import hostutils
@@ -87,6 +88,30 @@ class VolumeOps(object):
         for vol in mapping:
             self.attach_volume(vol['connection_info'], instance_name)
 
+    def login_storage_targets(self, block_device_info):
+        mapping = driver.block_device_info_get_mapping(block_device_info)
+        for vol in mapping:
+            self._login_storage_target(vol['connection_info'])
+
+    def _login_storage_target(self, connection_info):
+        data = connection_info['data']
+        target_lun = data['target_lun']
+        target_iqn = data['target_iqn']
+        target_portal = data['target_portal']
+        # Check if we already logged in
+        if self._volutils.get_device_number_for_target(target_iqn, target_lun):
+            LOG.debug(_("Already logged in on storage target. No need to "
+                        "login. Portal: %(target_portal)s, "
+                        "IQN: %(target_iqn)s, LUN: %(target_lun)s") % locals())
+        else:
+            LOG.debug(_("Logging in on storage target. Portal: "
+                        "%(target_portal)s, IQN: %(target_iqn)s, "
+                        "LUN: %(target_lun)s") % locals())
+            self._volutils.login_storage_target(target_lun, target_iqn,
+                                                target_portal)
+            # Wait for the target to be mounted
+            self._get_mounted_disk_from_lun(target_iqn, target_lun, True)
+
     def attach_volume(self, connection_info, instance_name, ebs_root=False):
         """
         Attach a volume to the SCSI controller or to the IDE controller if
@@ -94,13 +119,13 @@ class VolumeOps(object):
         """
         LOG.debug(_("Attach_volume: %(connection_info)s to %(instance_name)s")
                   % locals())
-        data = connection_info['data']
-        target_lun = data['target_lun']
-        target_iqn = data['target_iqn']
-        target_portal = data['target_portal']
-        self._volutils.login_storage_target(target_lun, target_iqn,
-                                            target_portal)
         try:
+            self._login_storage_target(connection_info)
+
+            data = connection_info['data']
+            target_lun = data['target_lun']
+            target_iqn = data['target_iqn']
+
             #Getting the mounted disk
             mounted_disk_path = self._get_mounted_disk_from_lun(target_iqn,
                                                                 target_lun)
@@ -113,7 +138,7 @@ class VolumeOps(object):
                 slot = 0
             else:
                 #Find the SCSI controller for the vm
-                ctrller_path = self._vmutils.get_vm_iscsi_controller(
+                ctrller_path = self._vmutils.get_vm_scsi_controller(
                     instance_name)
                 slot = self._get_free_controller_slot(ctrller_path)
 
@@ -136,13 +161,19 @@ class VolumeOps(object):
         for vol in mapping:
             self.detach_volume(vol['connection_info'], instance_name)
 
+    def logout_storage_target(self, target_iqn):
+        LOG.debug(_("Logging off storage target %(target_iqn)s") % locals())
+        self._volutils.logout_storage_target(target_iqn)
+
     def detach_volume(self, connection_info, instance_name):
         """Dettach a volume to the SCSI controller."""
         LOG.debug(_("Detach_volume: %(connection_info)s "
                     "from %(instance_name)s") % locals())
+
         data = connection_info['data']
         target_lun = data['target_lun']
         target_iqn = data['target_iqn']
+
         #Getting the mounted disk
         mounted_disk_path = self._get_mounted_disk_from_lun(target_iqn,
                                                             target_lun)
@@ -151,8 +182,7 @@ class VolumeOps(object):
                   mounted_disk_path)
         self._vmutils.detach_vm_disk(instance_name, mounted_disk_path)
 
-        #Sending logout
-        self._volutils.logout_storage_target(target_iqn)
+        self.logout_storage_target(target_iqn)
 
     def get_volume_connector(self, instance):
         if not self._initiator:
@@ -165,27 +195,26 @@ class VolumeOps(object):
             'initiator': self._initiator,
         }
 
-    def _get_mounted_disk_from_lun(self, target_iqn, target_lun):
+    def _get_mounted_disk_from_lun(self, target_iqn, target_lun,
+                                   wait_for_device=False):
         device_number = self._volutils.get_device_number_for_target(target_iqn,
                                                                     target_lun)
         if device_number is None:
-            raise vmutils.HyperVException(_('Unable to find a mounted '
-                                            'disk for target_iqn: %s')
-                                          % target_iqn)
+            raise exception.NotFound(_('Unable to find a mounted disk for '
+                                       'target_iqn: %s') % target_iqn)
         LOG.debug(_('Device number: %(device_number)s, '
                     'target lun: %(target_lun)s') % locals())
         #Finding Mounted disk drive
-        for i in range(1, CONF.hyperv.volume_attach_retry_count):
+        for i in range(0, CONF.hyperv.volume_attach_retry_count):
             mounted_disk_path = self._vmutils.get_mounted_disk_by_drive_number(
                 device_number)
-            if mounted_disk_path:
+            if mounted_disk_path or not wait_for_device:
                 break
             time.sleep(CONF.hyperv.volume_attach_retry_interval)
 
         if not mounted_disk_path:
-            raise vmutils.HyperVException(_('Unable to find a mounted disk '
-                                            'for target_iqn: %s')
-                                          % target_iqn)
+            raise exception.NotFound(_('Unable to find a mounted disk '
+                                       'for target_iqn: %s') % target_iqn)
         return mounted_disk_path
 
     def disconnect_volume(self, physical_drive_path):
@@ -194,3 +223,6 @@ class VolumeOps(object):
             physical_drive_path)
         #Logging out the target
         self._volutils.execute_log_out(session_id)
+
+    def get_target_from_disk_path(self, physical_drive_path):
+        return self._volutils.get_target_from_disk_path(physical_drive_path)

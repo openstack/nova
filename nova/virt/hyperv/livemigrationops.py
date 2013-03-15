@@ -25,7 +25,6 @@ from nova.openstack.common import log as logging
 from nova.virt.hyperv import imagecache
 from nova.virt.hyperv import livemigrationutils
 from nova.virt.hyperv import pathutils
-from nova.virt.hyperv import vmutils
 from nova.virt.hyperv import volumeops
 
 LOG = logging.getLogger(__name__)
@@ -35,9 +34,7 @@ CONF.import_opt('use_cow_images', 'nova.virt.driver')
 
 class LiveMigrationOps(object):
     def __init__(self):
-
         self._pathutils = pathutils.PathUtils()
-        self._vmutils = vmutils.VMUtils()
         self._livemigrutils = livemigrationutils.LiveMigrationUtils()
         self._volumeops = volumeops.VolumeOps()
         self._imagecache = imagecache.ImageCache()
@@ -49,7 +46,10 @@ class LiveMigrationOps(object):
         instance_name = instance_ref["name"]
 
         try:
-            self._livemigrutils.live_migrate_vm(instance_name, dest)
+            iscsi_targets = self._livemigrutils.live_migrate_vm(instance_name,
+                                                                dest)
+            for (target_iqn, target_lun) in iscsi_targets:
+                self._volumeops.logout_storage_target(target_iqn)
         except Exception:
             with excutils.save_and_reraise_exception():
                 LOG.debug(_("Calling live migration recover_method "
@@ -66,10 +66,12 @@ class LiveMigrationOps(object):
         self._livemigrutils.check_live_migration_config()
 
         if CONF.use_cow_images:
-            ebs_root = self._volumeops.ebs_root_in_block_devices(
+            boot_from_volume = self._volumeops.ebs_root_in_block_devices(
                 block_device_info)
-            if not ebs_root:
+            if not boot_from_volume:
                 self._imagecache.get_cached_image(context, instance)
+
+        self._volumeops.login_storage_targets(block_device_info)
 
     def post_live_migration_at_destination(self, ctxt, instance_ref,
                                            network_info, block_migration):

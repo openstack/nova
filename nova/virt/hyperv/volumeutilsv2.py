@@ -37,10 +37,10 @@ CONF = cfg.CONF
 
 
 class VolumeUtilsV2(basevolumeutils.BaseVolumeUtils):
-    def __init__(self):
-        super(VolumeUtilsV2, self).__init__()
+    def __init__(self, host='.'):
+        super(VolumeUtilsV2, self).__init__(host)
 
-        storage_namespace = '//./root/microsoft/windows/storage'
+        storage_namespace = '//%s/root/microsoft/windows/storage' % host
         if sys.platform == 'win32':
             self._conn_storage = wmi.WMI(moniker=storage_namespace)
 
@@ -64,16 +64,21 @@ class VolumeUtilsV2(basevolumeutils.BaseVolumeUtils):
 
     def logout_storage_target(self, target_iqn):
         """Logs out storage target through its session id."""
+        targets = self._conn_storage.MSFT_iSCSITarget(NodeAddress=target_iqn)
+        if targets:
+            target = targets[0]
+            if target.IsConnected:
+                sessions = self._conn_storage.MSFT_iSCSISession(
+                    TargetNodeAddress=target_iqn)
 
-        target = self._conn_storage.MSFT_iSCSITarget(NodeAddress=target_iqn)[0]
-        if target.IsConnected:
-            session = self._conn_storage.MSFT_iSCSISession(
-                TargetNodeAddress=target_iqn)[0]
-            if session.IsPersistent:
-                session.Unregister()
-            target.Disconnect()
+                for session in sessions:
+                    if session.IsPersistent:
+                        session.Unregister()
+
+                target.Disconnect()
 
     def execute_log_out(self, session_id):
-        session = self._conn_wmi.MSiSCSIInitiator_SessionClass(
-            SessionId=session_id)[0]
-        self.logout_storage_target(session.TargetName)
+        sessions = self._conn_wmi.MSiSCSIInitiator_SessionClass(
+            SessionId=session_id)
+        if sessions:
+            self.logout_storage_target(sessions[0].TargetName)

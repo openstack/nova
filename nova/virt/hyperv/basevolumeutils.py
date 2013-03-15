@@ -37,10 +37,10 @@ LOG = logging.getLogger(__name__)
 
 class BaseVolumeUtils(object):
 
-    def __init__(self):
+    def __init__(self, host='.'):
         if sys.platform == 'win32':
-            self._conn_wmi = wmi.WMI(moniker='//./root/wmi')
-            self._conn_cimv2 = wmi.WMI(moniker='//./root/cimv2')
+            self._conn_wmi = wmi.WMI(moniker='//%s/root/wmi' % host)
+            self._conn_cimv2 = wmi.WMI(moniker='//%s/root/cimv2' % host)
 
     @abc.abstractmethod
     def login_storage_target(self, target_lun, target_iqn, target_portal):
@@ -96,27 +96,48 @@ class BaseVolumeUtils(object):
         start_device_id = disk_path.find('"', disk_path.find('DeviceID'))
         end_device_id = disk_path.find('"', start_device_id + 1)
         device_id = disk_path[start_device_id + 1:end_device_id]
-        return device_id[device_id.find("\\") + 2:]
+        drive_number = device_id[device_id.find("\\") + 2:]
+        if drive_number == 'NODRIVE':
+            return None
+        return int(drive_number)
 
     def get_session_id_from_mounted_disk(self, physical_drive_path):
         drive_number = self._get_drive_number_from_disk_path(
             physical_drive_path)
+        if not drive_number:
+            return None
+
         initiator_sessions = self._conn_wmi.query("SELECT * FROM "
                                                   "MSiSCSIInitiator_Session"
                                                   "Class")
         for initiator_session in initiator_sessions:
             devices = initiator_session.Devices
             for device in devices:
-                device_number = str(device.DeviceNumber)
+                device_number = device.DeviceNumber
                 if device_number == drive_number:
                     return initiator_session.SessionId
 
     def get_device_number_for_target(self, target_iqn, target_lun):
-        initiator_session = self._conn_wmi.query("SELECT * FROM "
-                                                 "MSiSCSIInitiator_Session"
-                                                 "Class WHERE TargetName='%s'"
-                                                 % target_iqn)[0]
-        devices = initiator_session.Devices
+        initiator_sessions = self._conn_wmi.query("SELECT * FROM "
+                                                  "MSiSCSIInitiator_Session"
+                                                  "Class WHERE TargetName='%s'"
+                                                  % target_iqn)
+        if not initiator_sessions:
+            return None
+
+        devices = initiator_sessions[0].Devices
         for device in devices:
             if device.ScsiLun == target_lun:
                 return device.DeviceNumber
+
+    def get_target_from_disk_path(self, disk_path):
+        initiator_sessions = self._conn_wmi.MSiSCSIInitiator_SessionClass()
+        drive_number = self._get_drive_number_from_disk_path(disk_path)
+        if not drive_number:
+            return None
+
+        for initiator_session in initiator_sessions:
+            devices = initiator_session.Devices
+            for device in devices:
+                if device.DeviceNumber == drive_number:
+                    return (device.TargetName, device.ScsiLun)

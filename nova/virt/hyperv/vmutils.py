@@ -44,10 +44,10 @@ class HyperVException(exception.NovaException):
 
 class VMUtils(object):
 
-    def __init__(self):
+    def __init__(self, host='.'):
         if sys.platform == 'win32':
-            self._conn = wmi.WMI(moniker='//./root/virtualization')
-            self._conn_cimv2 = wmi.WMI(moniker='//./root/cimv2')
+            self._conn = wmi.WMI(moniker='//%s/root/virtualization' % host)
+            self._conn_cimv2 = wmi.WMI(moniker='//%s/root/cimv2' % host)
 
     def list_instances(self):
         """Return the names of all the instances known to Hyper-V."""
@@ -92,7 +92,7 @@ class VMUtils(object):
     def _lookup_vm_check(self, vm_name):
         vm = self._lookup_vm(vm_name)
         if not vm:
-            raise HyperVException(_('VM not found: %s') % vm_name)
+            raise exception.NotFound(_('VM not found: %s') % vm_name)
         return vm
 
     def _lookup_vm(self, vm_name):
@@ -164,7 +164,7 @@ class VMUtils(object):
         LOG.debug(_('Set vCPUs for vm %s'), vm_name)
         self._set_vm_vcpus(vm, vmsetting, vcpus_num, limit_cpu_features)
 
-    def get_vm_iscsi_controller(self, vm_name):
+    def get_vm_scsi_controller(self, vm_name):
         vm = self._lookup_vm_check(vm_name)
 
         vmsettings = vm.associators(
@@ -263,7 +263,7 @@ class VMUtils(object):
         scsicontrl = self._clone_wmi_obj('Msvm_ResourceAllocationSettingData',
                                          scsicontrldflt)
         scsicontrl.VirtualSystemIdentifiers = ['{' + str(uuid.uuid4()) + '}']
-        scsiresource = self._add_virt_resource(scsicontrl, vm.path_())
+        self._add_virt_resource(scsicontrl, vm.path_())
 
     def attach_volume_to_controller(self, vm_name, controller_path, address,
                                     mounted_disk_path):
@@ -316,7 +316,6 @@ class VMUtils(object):
 
     def set_vm_state(self, vm_name, req_state):
         """Set the desired state of the VM."""
-
         vm = self._lookup_vm_check(vm_name)
         (job_path, ret_val) = vm.RequestStateChange(req_state)
         #Invalid state for current operation (32775) typically means that
@@ -470,7 +469,8 @@ class VMUtils(object):
         vm = self._lookup_vm_check(vm_name)
         physical_disk = self._get_mounted_disk_resource_from_path(
             disk_path)
-        self._remove_virt_resource(physical_disk, vm.path_())
+        if physical_disk:
+            self._remove_virt_resource(physical_disk, vm.path_())
 
     def _get_mounted_disk_resource_from_path(self, disk_path):
         physical_disks = self._conn.query("SELECT * FROM "
@@ -488,3 +488,15 @@ class VMUtils(object):
                                          str(device_number))
         if len(mounted_disks):
             return mounted_disks[0].path_()
+
+    def get_controller_volume_paths(self, controller_path):
+        disks = self._conn.query("SELECT * FROM "
+                                 "Msvm_ResourceAllocationSettingData "
+                                 "WHERE ResourceSubType="
+                                 "'Microsoft Physical Disk Drive' AND "
+                                 "Parent='%s'" % controller_path)
+        disk_data = {}
+        for disk in disks:
+            if disk.HostResource:
+                disk_data[disk.path().RelPath] = disk.HostResource[0]
+        return disk_data
