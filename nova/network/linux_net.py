@@ -118,6 +118,10 @@ linux_net_opts = [
                default='',
                help='Regular expression to match iptables rule that should'
                     'always be on the bottom.'),
+    cfg.StrOpt('iptables_drop_action',
+               default='DROP',
+               help=('The table that iptables to jump to when a packet is '
+                     'to be dropped.')),
     ]
 
 CONF = cfg.CONF
@@ -1489,9 +1493,11 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
                     ipv4_filter.add_rule(*rule)
             else:
                 ipv4_filter.add_rule('FORWARD',
-                                     '--in-interface %s -j DROP' % bridge)
+                                     ('--in-interface %s -j %s'
+                                      % (bridge, CONF.iptables_drop_action)))
                 ipv4_filter.add_rule('FORWARD',
-                                     '--out-interface %s -j DROP' % bridge)
+                                     ('--out-interface %s -j %s'
+                                      % (bridge, CONF.iptables_drop_action)))
 
     @classmethod
     @lockutils.synchronized('lock_bridge', 'nova-', external=True)
@@ -1507,9 +1513,13 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
                         ipv4_filter.remove_rule(*rule)
                 else:
                     ipv4_filter.remove_rule('FORWARD',
-                                    '--in-interface %s -j DROP' % bridge)
+                                            ('--in-interface %s -j %s'
+                                             % (bridge,
+                                                CONF.iptables_drop_action)))
                     ipv4_filter.remove_rule('FORWARD',
-                                    '--out-interface %s -j DROP' % bridge)
+                                            ('--out-interface %s -j %s'
+                                             % (bridge,
+                                                CONF.iptables_drop_action)))
             try:
                 utils.execute('ip', 'link', 'delete', bridge, run_as_root=True,
                               check_exit_code=[0, 2, 254])
@@ -1549,18 +1559,24 @@ def isolate_dhcp_address(interface, address):
     # block dhcp broadcast traffic across the interface
     ipv4_filter = iptables_manager.ipv4['filter']
     ipv4_filter.add_rule('FORWARD',
-                         '-m physdev --physdev-in %s -d 255.255.255.255 '
-                         '-p udp --dport 67 -j DROP' % interface, top=True)
+                         ('-m physdev --physdev-in %s -d 255.255.255.255 '
+                          '-p udp --dport 67 -j %s'
+                          % (interface, CONF.iptables_drop_action)),
+                         top=True)
     ipv4_filter.add_rule('FORWARD',
-                         '-m physdev --physdev-out %s -d 255.255.255.255 '
-                         '-p udp --dport 67 -j DROP' % interface, top=True)
+                         ('-m physdev --physdev-out %s -d 255.255.255.255 '
+                          '-p udp --dport 67 -j %s'
+                          % (interface, CONF.iptables_drop_action)),
+                         top=True)
     # block ip traffic to address across the interface
     ipv4_filter.add_rule('FORWARD',
-                         '-m physdev --physdev-in %s -d %s -j DROP'
-                         % (interface, address), top=True)
+                         ('-m physdev --physdev-in %s -d %s -j %s'
+                          % (interface, address, CONF.iptables_drop_action)),
+                         top=True)
     ipv4_filter.add_rule('FORWARD',
-                         '-m physdev --physdev-out %s -s %s -j DROP'
-                         % (interface, address), top=True)
+                         ('-m physdev --physdev-out %s -s %s -j %s'
+                          % (interface, address, CONF.iptables_drop_action)),
+                         top=True)
 
 
 def remove_isolate_dhcp_address(interface, address):
@@ -1575,18 +1591,26 @@ def remove_isolate_dhcp_address(interface, address):
     # block dhcp broadcast traffic across the interface
     ipv4_filter = iptables_manager.ipv4['filter']
     ipv4_filter.remove_rule('FORWARD',
-                         '-m physdev --physdev-in %s -d 255.255.255.255 '
-                         '-p udp --dport 67 -j DROP' % interface, top=True)
+                            ('-m physdev --physdev-in %s -d 255.255.255.255 '
+                             '-p udp --dport 67 -j %s'
+                             % (interface, CONF.iptables_drop_action)),
+                            top=True)
     ipv4_filter.remove_rule('FORWARD',
-                         '-m physdev --physdev-out %s -d 255.255.255.255 '
-                         '-p udp --dport 67 -j DROP' % interface, top=True)
+                            ('-m physdev --physdev-out %s -d 255.255.255.255 '
+                             '-p udp --dport 67 -j %s'
+                             % (interface, CONF.iptables_drop_action)),
+                            top=True)
     # block ip traffic to address across the interface
     ipv4_filter.remove_rule('FORWARD',
-                         '-m physdev --physdev-in %s -d %s -j DROP'
-                         % (interface, address), top=True)
+                            ('-m physdev --physdev-in %s -d %s -j %s'
+                             % (interface, address,
+                                CONF.iptables_drop_action)),
+                            top=True)
     ipv4_filter.remove_rule('FORWARD',
-                         '-m physdev --physdev-out %s -s %s -j DROP'
-                         % (interface, address), top=True)
+                            ('-m physdev --physdev-out %s -s %s -j %s'
+                             % (interface, address,
+                                CONF.iptables_drop_action)),
+                            top=True)
 
 
 def get_gateway_rules(bridge):
@@ -1602,8 +1626,10 @@ def get_gateway_rules(bridge):
             rules.append(('FORWARD', '-i %s -o %s -j ACCEPT' % (iface,
                                                                 bridge)))
     rules.append(('FORWARD', '-i %s -o %s -j ACCEPT' % (bridge, bridge)))
-    rules.append(('FORWARD', '-i %s -j DROP' % bridge))
-    rules.append(('FORWARD', '-o %s -j DROP' % bridge))
+    rules.append(('FORWARD', '-i %s -j %s' % (bridge,
+                                              CONF.iptables_drop_action)))
+    rules.append(('FORWARD', '-o %s -j %s' % (bridge,
+                                              CONF.iptables_drop_action)))
     return rules
 
 
@@ -1641,9 +1667,11 @@ class LinuxOVSInterfaceDriver(LinuxNetInterfaceDriver):
                          mac_address, run_as_root=True)
                 # .. and make sure iptbles won't forward it as well.
                 iptables_manager.ipv4['filter'].add_rule('FORWARD',
-                        '--in-interface %s -j DROP' % bridge)
+                    '--in-interface %s -j %s' % (bridge,
+                                                 CONF.iptables_drop_action))
                 iptables_manager.ipv4['filter'].add_rule('FORWARD',
-                        '--out-interface %s -j DROP' % bridge)
+                    '--out-interface %s -j %s' % (bridge,
+                                                  CONF.iptables_drop_action))
             else:
                 for rule in get_gateway_rules(bridge):
                     iptables_manager.ipv4['filter'].add_rule(*rule)
@@ -1676,9 +1704,11 @@ class QuantumLinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
             # appropriate flows to block all non-dhcp traffic.
             # .. and make sure iptbles won't forward it as well.
             iptables_manager.ipv4['filter'].add_rule('FORWARD',
-                    '--in-interface %s -j DROP' % bridge)
+                    ('--in-interface %s -j %s'
+                     % (bridge, CONF.iptables_drop_action)))
             iptables_manager.ipv4['filter'].add_rule('FORWARD',
-                    '--out-interface %s -j DROP' % bridge)
+                    ('--out-interface %s -j %s'
+                     % (bridge, CONF.iptables_drop_action)))
             return bridge
         else:
             for rule in get_gateway_rules(bridge):

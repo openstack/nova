@@ -627,6 +627,97 @@ class LinuxNetworkTestCase(test.TestCase):
         for inp in expected_inputs:
             self.assertFalse(inp in inputs[0])
 
+    def test_isolated_host_iptables_logdrop(self):
+        # Ensure that a different drop action for iptables doesn't change
+        # the drop action for ebtables.
+        self.flags(fake_network=False,
+                   share_dhcp_address=True,
+                   iptables_drop_action='LOGDROP')
+
+        # NOTE(vish): use a fresh copy of the manager for each test
+        self.stubs.Set(linux_net, 'iptables_manager',
+                       linux_net.IptablesManager())
+        self.stubs.Set(linux_net, 'binary_name', 'test')
+        executes = []
+        inputs = []
+
+        def fake_execute(*args, **kwargs):
+            executes.append(args)
+            process_input = kwargs.get('process_input')
+            if process_input:
+                inputs.append(process_input)
+            return "", ""
+
+        self.stubs.Set(utils, 'execute', fake_execute)
+
+        driver = linux_net.LinuxBridgeInterfaceDriver()
+
+        @classmethod
+        def fake_ensure(_self, bridge, interface, network, gateway):
+            return bridge
+
+        self.stubs.Set(linux_net.LinuxBridgeInterfaceDriver,
+                       'ensure_bridge', fake_ensure)
+
+        iface = 'eth0'
+        dhcp = '192.168.1.1'
+        network = {'dhcp_server': dhcp,
+                   'bridge': 'br100',
+                   'bridge_interface': iface}
+        driver.plug(network, 'fakemac')
+        expected = [
+            ('ebtables', '-t', 'filter', '-D', 'INPUT', '-p', 'ARP', '-i',
+             iface, '--arp-ip-dst', dhcp, '-j', 'DROP'),
+            ('ebtables', '-t', 'filter', '-I', 'INPUT', '-p', 'ARP', '-i',
+             iface, '--arp-ip-dst', dhcp, '-j', 'DROP'),
+            ('ebtables', '-t', 'filter', '-D', 'OUTPUT', '-p', 'ARP', '-o',
+             iface, '--arp-ip-src', dhcp, '-j', 'DROP'),
+            ('ebtables', '-t', 'filter', '-I', 'OUTPUT', '-p', 'ARP', '-o',
+             iface, '--arp-ip-src', dhcp, '-j', 'DROP'),
+            ('iptables-save', '-c'),
+            ('iptables-restore', '-c'),
+            ('ip6tables-save', '-c'),
+            ('ip6tables-restore', '-c'),
+        ]
+        self.assertEqual(executes, expected)
+        expected_inputs = [
+             ('-A test-FORWARD -m physdev --physdev-in %s '
+              '-d 255.255.255.255 -p udp --dport 67 -j LOGDROP' % iface),
+             ('-A test-FORWARD -m physdev --physdev-out %s '
+              '-d 255.255.255.255 -p udp --dport 67 -j LOGDROP' % iface),
+             ('-A test-FORWARD -m physdev --physdev-in %s '
+              '-d 192.168.1.1 -j LOGDROP' % iface),
+             ('-A test-FORWARD -m physdev --physdev-out %s '
+              '-s 192.168.1.1 -j LOGDROP' % iface),
+        ]
+        for inp in expected_inputs:
+            self.assertTrue(inp in inputs[0])
+
+        executes = []
+        inputs = []
+
+        @classmethod
+        def fake_remove(_self, bridge, gateway):
+            return
+
+        self.stubs.Set(linux_net.LinuxBridgeInterfaceDriver,
+                       'remove_bridge', fake_remove)
+
+        driver.unplug(network)
+        expected = [
+            ('ebtables', '-t', 'filter', '-D', 'INPUT', '-p', 'ARP', '-i',
+             iface, '--arp-ip-dst', dhcp, '-j', 'DROP'),
+            ('ebtables', '-t', 'filter', '-D', 'OUTPUT', '-p', 'ARP', '-o',
+             iface, '--arp-ip-src', dhcp, '-j', 'DROP'),
+            ('iptables-save', '-c'),
+            ('iptables-restore', '-c'),
+            ('ip6tables-save', '-c'),
+            ('ip6tables-restore', '-c'),
+        ]
+        self.assertEqual(executes, expected)
+        for inp in expected_inputs:
+            self.assertFalse(inp in inputs[0])
+
     def _test_initialize_gateway(self, existing, expected, routes=''):
         self.flags(fake_network=False)
         executes = []
