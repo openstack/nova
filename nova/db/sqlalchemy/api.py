@@ -1950,10 +1950,12 @@ def key_pair_create(context, values):
 @require_context
 def key_pair_destroy(context, user_id, name):
     nova.context.authorize_user_context(context, user_id)
-    model_query(context, models.KeyPair).\
-             filter_by(user_id=user_id).\
-             filter_by(name=name).\
-             delete()
+    result = model_query(context, models.KeyPair).\
+                         filter_by(user_id=user_id).\
+                         filter_by(name=name).\
+                         delete()
+    if not result:
+        raise exception.KeypairNotFound(user_id=user_id, name=name)
 
 
 @require_context
