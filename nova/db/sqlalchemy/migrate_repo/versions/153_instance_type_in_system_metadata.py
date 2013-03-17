@@ -33,15 +33,20 @@ def upgrade(migrate_engine):
 
     q = select(select_columns, from_obj=instances.join(
             instance_types,
-            instances.c.instance_type_id == instance_types.c.id))
+            instances.c.instance_type_id == instance_types.c.id)).where(
+                instances.c.deleted == 0)
 
     i = sys_meta.insert()
     for values in q.execute():
+        insert_rows = []
         for index in range(0, len(instance_type_props)):
             value = values[index + 1]
-            i.execute({"key": "instance_type_%s" % instance_type_props[index],
-                       "value": None if value is None else str(value),
-                       "instance_uuid": values[0]})
+            insert_rows.append({
+                "key": "instance_type_%s" % instance_type_props[index],
+                "value": None if value is None else str(value),
+                "instance_uuid": values[0],
+            })
+        i.execute(insert_rows)
 
 
 def downgrade(migration_engine):

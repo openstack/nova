@@ -794,10 +794,10 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
             ]
 
         fake_instances = [
-            dict(uuid='m153-uuid1', instance_type_id=10),
-            dict(uuid='m153-uuid2', instance_type_id=11),
-            dict(uuid='m153-uuid3', instance_type_id=12),
-            dict(uuid='m153-uuid4', instance_type_id=13),
+            dict(uuid='m153-uuid1', instance_type_id=10, deleted=0),
+            dict(uuid='m153-uuid2', instance_type_id=11, deleted=0),
+            dict(uuid='m153-uuid3', instance_type_id=12, deleted=0),
+            dict(uuid='m153-uuid4', instance_type_id=13, deleted=0),
             # NOTE(danms): no use of type5
             ]
 
