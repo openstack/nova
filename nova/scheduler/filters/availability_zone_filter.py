@@ -43,5 +43,5 @@ class AvailabilityZoneFilter(filters.BaseHostFilter):
                 return availability_zone in metadata['availability_zone']
             else:
                 return availability_zone == CONF.default_availability_zone
-            return False
+
         return True
