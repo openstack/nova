@@ -21,6 +21,8 @@ from nova.virt.hyperv import livemigrationutils
 from nova.virt.hyperv import networkutils
 from nova.virt.hyperv import networkutilsv2
 from nova.virt.hyperv import pathutils
+from nova.virt.hyperv import rdpconsoleutils
+from nova.virt.hyperv import rdpconsoleutilsv2
 from nova.virt.hyperv import vhdutils
 from nova.virt.hyperv import vhdutilsv2
 from nova.virt.hyperv import vmutils
@@ -86,3 +88,9 @@ def get_volumeutils():
 
 def get_livemigrationutils():
     return livemigrationutils.LiveMigrationUtils()
+
+
+def get_rdpconsoleutils():
+    return _get_class(rdpconsoleutils.RDPConsoleUtils,
+                      rdpconsoleutilsv2.RDPConsoleUtilsV2,
+                      CONF.hyperv.force_hyperv_utils_v1)()
