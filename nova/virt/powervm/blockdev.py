@@ -399,7 +399,10 @@ class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
         source_cksum = hasher.hexdigest()
 
         comp_path = os.path.join(remote_path, os.path.basename(source_path))
-        uncomp_path = comp_path.rstrip(".gz")
+        if comp_path.endswith(".gz"):
+            uncomp_path = os.path.splitext(comp_path)[0]
+        else:
+            uncomp_path = comp_path
         if not decompress:
             final_path = comp_path
         else:
