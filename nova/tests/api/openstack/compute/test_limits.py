@@ -30,6 +30,7 @@ from nova.api.openstack import xmlutil
 import nova.context
 from nova.openstack.common import jsonutils
 from nova import test
+from nova.tests.api.openstack import fakes
 from nova.tests import matchers
 
 
@@ -76,6 +77,7 @@ class LimitsControllerTest(BaseLimitTestSuite):
         """Run before each test."""
         super(LimitsControllerTest, self).setUp()
         self.controller = limits.create_resource()
+        self.ctrler = limits.LimitsController()
 
     def _get_index_request(self, accept_header="application/json"):
         """Helper to set routing arguments."""
@@ -283,6 +285,31 @@ class LimitsControllerTest(BaseLimitTestSuite):
             'maxSecurityGroupRules': 16,
         }
         self._test_index_absolute_limits_json(expected)
+
+    def test_limit_create(self):
+        req = fakes.HTTPRequest.blank('/v2/fake/limits')
+        self.assertRaises(webob.exc.HTTPNotImplemented, self.ctrler.create,
+                          req, {})
+
+    def test_limit_delete(self):
+        req = fakes.HTTPRequest.blank('/v2/fake/limits')
+        self.assertRaises(webob.exc.HTTPNotImplemented, self.ctrler.delete,
+                          req, 1)
+
+    def test_limit_detail(self):
+        req = fakes.HTTPRequest.blank('/v2/fake/limits')
+        self.assertRaises(webob.exc.HTTPNotImplemented, self.ctrler.detail,
+                          req)
+
+    def test_limit_show(self):
+        req = fakes.HTTPRequest.blank('/v2/fake/limits')
+        self.assertRaises(webob.exc.HTTPNotImplemented, self.ctrler.show,
+                          req, 1)
+
+    def test_limit_update(self):
+        req = fakes.HTTPRequest.blank('/v2/fake/limits')
+        self.assertRaises(webob.exc.HTTPNotImplemented, self.ctrler.update,
+                          req, 1, {})
 
 
 class TestLimiter(limits.Limiter):
