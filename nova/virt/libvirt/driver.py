@@ -2717,6 +2717,12 @@ class LibvirtDriver(driver.ComputeDriver):
                           locals())
                 continue
 
+            if not path:
+                LOG.debug(_('skipping disk for %(instance_name)s as it'
+                            ' does not have a path') %
+                          locals())
+                continue
+
             # get the real disk size or
             # raise a localized error if image is unavailable
             dk_size = int(os.path.getsize(path))
