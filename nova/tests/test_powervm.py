@@ -393,3 +393,26 @@ class PowerVMDriverTestCase(test.TestCase):
         expected_name = 'rsz__really_long_instance_name_00000001'
         result = self.powervm_connection._get_resize_name(inst_name)
         self.assertEqual(expected_name, result)
+
+    def test_get_host_stats(self):
+        host_stats = self.powervm_connection.get_host_stats(True)
+        self.assertIsNotNone(host_stats)
+        self.assertEquals(host_stats['vcpus'], 8.0)
+        self.assertEquals(round(host_stats['vcpus_used'], 1), 1.7)
+        self.assertEquals(host_stats['host_memory_total'], 65536)
+        self.assertEquals(host_stats['host_memory_free'], 46336)
+        self.assertEquals(host_stats['disk_total'], 10168)
+        self.assertEquals(host_stats['disk_used'], 0)
+        self.assertEquals(host_stats['disk_available'], 10168)
+        self.assertEquals(host_stats['disk_total'],
+                          host_stats['disk_used'] +
+                          host_stats['disk_available'])
+
+        self.assertEquals(host_stats['cpu_info'], ('ppc64', 'powervm', '3940'))
+        self.assertEquals(host_stats['hypervisor_type'], 'powervm')
+        self.assertEquals(host_stats['hypervisor_version'], '7.1')
+
+        self.assertEquals(host_stats['hypervisor_hostname'], "fake-powervm")
+        self.assertEquals(host_stats['supported_instances'][0][0], "ppc64")
+        self.assertEquals(host_stats['supported_instances'][0][1], "powervm")
+        self.assertEquals(host_stats['supported_instances'][0][2], "hvm")
