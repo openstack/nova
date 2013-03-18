@@ -165,19 +165,6 @@ def can_resize_fs(image, size, use_cow=False):
     return True
 
 
-def bind(src, target, instance_name):
-    """Bind device to a filesystem."""
-    if src:
-        utils.execute('touch', target, run_as_root=True)
-        utils.execute('mount', '-o', 'bind', src, target,
-                run_as_root=True)
-
-
-def unbind(target):
-    if target:
-        utils.execute('umount', target, run_as_root=True)
-
-
 class _DiskImage(object):
     """Provide operations on a disk image file."""
 
