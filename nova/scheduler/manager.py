@@ -97,7 +97,9 @@ class SchedulerManager(manager.Manager):
         except (exception.ComputeServiceUnavailable,
                 exception.InvalidHypervisorType,
                 exception.UnableToMigrateToSelf,
-                exception.DestinationHypervisorTooOld) as ex:
+                exception.DestinationHypervisorTooOld,
+                exception.InvalidLocalStorage,
+                exception.InvalidSharedStorage) as ex:
             request_spec = {'instance_properties': {
                 'uuid': instance['uuid'], },
             }
