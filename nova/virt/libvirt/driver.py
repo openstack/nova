@@ -2833,6 +2833,11 @@ class LibvirtDriver(driver.ComputeDriver):
         :param instance_ref: nova.db.sqlalchemy.models.Instance
         :param block_migration: if true, prepare for block migration
         :param disk_over_commit: if true, allow disk over commit
+        :returns: a dict containing:
+             :filename: name of the tmpfile under CONF.instances_path
+             :block_migration: whether this is block migration
+             :disk_over_commit: disk-over-commit factor on dest host
+             :disk_available_mb: available disk space on dest host
         """
         disk_available_mb = None
         if block_migration:
@@ -2872,6 +2877,7 @@ class LibvirtDriver(driver.ComputeDriver):
         :param context: security context
         :param instance_ref: nova.db.sqlalchemy.models.Instance
         :param dest_check_data: result of check_can_live_migrate_destination
+        :returns: a dict containing migration info
         """
         # Checking shared storage connectivity
         # if block migration, instances_paths should not be on shared storage.

@@ -2995,9 +2995,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         :param instance: dict of instance data
         :param block_migration: if true, prepare for block migration
         :param disk_over_commit: if true, allow disk over commit
-
-        Returns a mapping of values required in case of block migration
-        and None otherwise.
+        :returns: a dict containing migration info
         """
         src_compute_info = self._get_compute_info(ctxt, instance['host'])
         dst_compute_info = self._get_compute_info(ctxt, CONF.host)
@@ -3026,9 +3024,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         :param context: security context
         :param instance: dict of instance data
         :param dest_check_data: result of check_can_live_migrate_destination
-
-        Returns a dict values required for live migration without shared
-        storage.
+        :returns: a dict containing migration info
         """
         capi = self.conductor_api
         bdms = capi.block_device_mapping_get_all_by_instance(ctxt, instance)
