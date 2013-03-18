@@ -164,6 +164,12 @@ class XenAPIDriver(driver.ComputeDriver):
         """List VM instances."""
         return self._vmops.list_instances()
 
+    def list_instance_uuids(self):
+        """Get the list of nova instance uuids for VMs found on the
+        hypervisor.
+        """
+        return self._vmops.list_instance_uuids()
+
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info=None, block_device_info=None):
         """Create VM instance."""
