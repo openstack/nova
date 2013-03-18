@@ -190,6 +190,18 @@ class VMOps(object):
 
         return name_labels
 
+    def list_instance_uuids(self):
+        """Get the list of nova instance uuids for VMs found on the
+        hypervisor.
+        """
+        nova_uuids = []
+        for vm_ref, vm_rec in vm_utils.list_vms(self._session):
+            other_config = vm_rec['other_config']
+            nova_uuid = other_config.get('nova_uuid')
+            if nova_uuid:
+                nova_uuids.append(nova_uuid)
+        return nova_uuids
+
     def confirm_migration(self, migration, instance, network_info):
         name_label = self._get_orig_vm_name_label(instance)
         vm_ref = vm_utils.lookup(self._session, name_label)
