@@ -67,6 +67,7 @@ from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
+from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
 from nova import quota
@@ -557,6 +558,7 @@ class NetworkManager(manager.Manager):
         self.db.virtual_interface_delete_by_instance(read_deleted_context,
                                                      instance_uuid)
 
+    @rpc_common.client_exceptions(exception.InstanceNotFound)
     def get_instance_nw_info(self, context, instance_id, rxtx_factor,
                              host, instance_uuid=None, **kwargs):
         """Creates network info list for instance.

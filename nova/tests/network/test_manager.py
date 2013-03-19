@@ -1222,6 +1222,18 @@ class CommonNetworkTestCase(test.TestCase):
     def fake_create_fixed_ips(self, context, network_id, fixed_cidr=None):
         return None
 
+    def test_get_instance_nw_info_client_exceptions(self):
+        manager = network_manager.NetworkManager()
+        self.mox.StubOutWithMock(manager.db,
+                                 'virtual_interface_get_by_instance')
+        manager.db.virtual_interface_get_by_instance(
+                self.context, FAKEUUID).AndRaise(exception.InstanceNotFound(
+                                                 instance_id=FAKEUUID))
+        self.mox.ReplayAll()
+        self.assertRaises(rpc_common.ClientException,
+                          manager.get_instance_nw_info,
+                          self.context, FAKEUUID, 'fake_rxtx_factor', HOST)
+
     def test_deallocate_for_instance_passes_host_info(self):
         manager = fake_network.FakeNetworkManager()
         db = manager.db
