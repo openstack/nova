@@ -360,3 +360,26 @@ class CellsAPITestCase(test.TestCase):
         self.assertRaises(exception.InstanceUnknownCell,
                           self.cells_rpcapi.action_events_get,
                           self.fake_context, fake_instance, 'fake-action')
+
+    def test_consoleauth_delete_tokens(self):
+        call_info = self._stub_rpc_method('cast', None)
+
+        self.cells_rpcapi.consoleauth_delete_tokens(self.fake_context,
+                                                    'fake-uuid')
+
+        expected_args = {'instance_uuid': 'fake-uuid'}
+        self._check_result(call_info, 'consoleauth_delete_tokens',
+                expected_args, version='1.6')
+
+    def test_validate_console_port(self):
+        call_info = self._stub_rpc_method('call', 'fake_response')
+
+        result = self.cells_rpcapi.validate_console_port(self.fake_context,
+                'fake-uuid', 'fake-port', 'fake-type')
+
+        expected_args = {'instance_uuid': 'fake-uuid',
+                         'console_port': 'fake-port',
+                         'console_type': 'fake-type'}
+        self._check_result(call_info, 'validate_console_port',
+                expected_args, version='1.6')
+        self.assertEqual(result, 'fake_response')

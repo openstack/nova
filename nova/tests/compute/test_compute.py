@@ -1966,6 +1966,26 @@ class ComputeTestCase(BaseTestCase):
 
         self.assertTrue(self.tokens_deleted)
 
+    def test_delete_instance_deletes_console_auth_tokens_cells(self):
+        instance = self._create_fake_instance()
+        self.flags(vnc_enabled=True)
+        self.flags(enable=True, group='cells')
+
+        self.tokens_deleted = False
+
+        def fake_delete_tokens(*args, **kwargs):
+            self.tokens_deleted = True
+
+        cells_rpcapi = self.compute.cells_rpcapi
+        self.stubs.Set(cells_rpcapi, 'consoleauth_delete_tokens',
+                       fake_delete_tokens)
+
+        self.compute._delete_instance(self.context,
+                instance=jsonutils.to_primitive(instance),
+                bdms={})
+
+        self.assertTrue(self.tokens_deleted)
+
     def test_instance_termination_exception_sets_error(self):
         """Test that we handle InstanceTerminationFailure
         which is propagated up from the underlying driver.
@@ -5437,6 +5457,14 @@ class ComputeAPITestCase(BaseTestCase):
             self.assertEqual(instance_properties['progress'], 0)
             self.assertIn('host2', filter_properties['ignore_hosts'])
 
+        def _noop(*args, **kwargs):
+            pass
+
+        self.stubs.Set(self.compute.cells_rpcapi,
+                       'consoleauth_delete_tokens', _noop)
+        self.stubs.Set(self.compute.consoleauth_rpcapi,
+                       'delete_tokens_for_instance', _noop)
+
         self.stubs.Set(rpc, 'cast', _fake_cast)
 
         instance = self._create_fake_instance(dict(host='host2'))
@@ -5471,6 +5499,14 @@ class ComputeAPITestCase(BaseTestCase):
                     task_states.RESIZE_PREP)
             self.assertEqual(instance_properties['progress'], 0)
             self.assertNotIn('host2', filter_properties['ignore_hosts'])
+
+        def _noop(*args, **kwargs):
+            pass
+
+        self.stubs.Set(self.compute.cells_rpcapi,
+                       'consoleauth_delete_tokens', _noop)
+        self.stubs.Set(self.compute.consoleauth_rpcapi,
+                       'delete_tokens_for_instance', _noop)
 
         self.stubs.Set(rpc, 'cast', _fake_cast)
         self.flags(allow_resize_to_same_host=True)

@@ -67,7 +67,7 @@ class ConsoleAuthAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         return self.call(ctxt, self.make_msg('check_token', token=token))
 
     def delete_tokens_for_instance(self, ctxt, instance_uuid):
-        return self.call(ctxt,
+        return self.cast(ctxt,
                 self.make_msg('delete_tokens_for_instance',
                               instance_uuid=instance_uuid),
                 version="1.2")

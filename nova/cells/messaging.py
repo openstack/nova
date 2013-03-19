@@ -30,6 +30,8 @@ from oslo.config import cfg
 from nova.cells import state as cells_state
 from nova.cells import utils as cells_utils
 from nova import compute
+from nova.compute import rpcapi as compute_rpcapi
+from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import context
 from nova.db import base
 from nova import exception
@@ -599,6 +601,8 @@ class _BaseMessageMethods(base.Base):
         self.msg_runner = msg_runner
         self.state_manager = msg_runner.state_manager
         self.compute_api = compute.API()
+        self.compute_rpcapi = compute_rpcapi.ComputeAPI()
+        self.consoleauth_rpcapi = consoleauth_rpcapi.ConsoleAuthAPI()
 
     def task_log_get_all(self, message, task_name, period_beginning,
                          period_ending, host, state):
@@ -729,6 +733,25 @@ class _TargetedMessageMethods(_BaseMessageMethods):
     def action_events_get(self, message, action_id):
         action_events = self.db.action_events_get(message.ctxt, action_id)
         return jsonutils.to_primitive(action_events)
+
+    def validate_console_port(self, message, instance_uuid, console_port,
+                              console_type):
+        """Validate console port with child cell compute node."""
+        # 1st arg is instance_uuid that we need to turn into the
+        # instance object.
+        try:
+            instance = self.db.instance_get_by_uuid(message.ctxt,
+                                                    instance_uuid)
+        except exception.InstanceNotFound:
+            with excutils.save_and_reraise_exception():
+                # Must be a race condition.  Let's try to resolve it by
+                # telling the top level cells that this instance doesn't
+                # exist.
+                instance = {'uuid': instance_uuid}
+                self.msg_runner.instance_destroy_at_top(message.ctxt,
+                                                        instance)
+        return self.compute_rpcapi.validate_console_port(message.ctxt,
+                instance, console_port, console_type)
 
 
 class _BroadcastMessageMethods(_BaseMessageMethods):
@@ -884,6 +907,13 @@ class _BroadcastMessageMethods(_BaseMessageMethods):
     def compute_node_stats(self, message):
         """Return compute node stats from this cell."""
         return self.db.compute_node_statistics(message.ctxt)
+
+    def consoleauth_delete_tokens(self, message, instance_uuid):
+        """Delete consoleauth tokens for an instance in API cells."""
+        if not self._at_the_top():
+            return
+        self.consoleauth_rpcapi.delete_tokens_for_instance(message.ctxt,
+                                                           instance_uuid)
 
 
 _CELL_MESSAGE_TYPE_TO_MESSAGE_CLS = {'targeted': _TargetedMessage,
@@ -1222,6 +1252,24 @@ class MessageRunner(object):
         message = _TargetedMessage(self, ctxt, 'action_events_get',
                                 method_kwargs, 'down',
                                 cell_name, need_response=True)
+        return message.process()
+
+    def consoleauth_delete_tokens(self, ctxt, instance_uuid):
+        """Delete consoleauth tokens for an instance in API cells."""
+        message = _BroadcastMessage(self, ctxt, 'consoleauth_delete_tokens',
+                                    dict(instance_uuid=instance_uuid),
+                                    'up', run_locally=False)
+        message.process()
+
+    def validate_console_port(self, ctxt, cell_name, instance_uuid,
+                              console_port, console_type):
+        """Validate console port with child cell compute node."""
+        method_kwargs = {'instance_uuid': instance_uuid,
+                         'console_port': console_port,
+                         'console_type': console_type}
+        message = _TargetedMessage(self, ctxt, 'validate_console_port',
+                                   method_kwargs, 'down',
+                                   cell_name, need_response=True)
         return message.process()
 
     @staticmethod

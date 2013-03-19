@@ -50,6 +50,7 @@ class CellsAPI(rpc_proxy.RpcProxy):
               compute_node_stats()
         1.5 - Adds actions_get(), action_get_by_request_id(), and
               action_events_get()
+        1.6 - Adds consoleauth_delete_tokens() and validate_console_port()
     '''
     BASE_RPC_API_VERSION = '1.0'
 
@@ -247,3 +248,19 @@ class CellsAPI(rpc_proxy.RpcProxy):
                                              cell_name=instance['cell_name'],
                                              action_id=action_id),
                          version='1.5')
+
+    def consoleauth_delete_tokens(self, ctxt, instance_uuid):
+        """Delete consoleauth tokens for an instance in API cells."""
+        self.cast(ctxt, self.make_msg('consoleauth_delete_tokens',
+                                      instance_uuid=instance_uuid),
+                  version='1.6')
+
+    def validate_console_port(self, ctxt, instance_uuid, console_port,
+                              console_type):
+        """Validate console port with child cell compute node."""
+        return self.call(ctxt,
+                self.make_msg('validate_console_port',
+                              instance_uuid=instance_uuid,
+                              console_port=console_port,
+                              console_type=console_type),
+                version='1.6')
