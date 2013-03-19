@@ -68,6 +68,8 @@ class TestFaults(test.TestCase):
 
         for request in requests:
             exc = webob.exc.HTTPRequestEntityTooLarge
+            # NOTE(aloga): we intentionally pass an integer for the
+            # 'Retry-After' header. It should be then converted to a str
             fault = wsgi.Fault(exc(explanation='sorry',
                         headers={'Retry-After': 4}))
             response = request.get_response(fault)
@@ -76,7 +78,7 @@ class TestFaults(test.TestCase):
                 "overLimit": {
                     "message": "sorry",
                     "code": 413,
-                    "retryAfter": 4,
+                    "retryAfter": "4",
                 },
             }
             actual = jsonutils.loads(response.body)

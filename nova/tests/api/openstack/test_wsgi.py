@@ -867,6 +867,7 @@ class ResponseObjectTest(test.TestCase):
                                    atom=AtomSerializer)
         robj['X-header1'] = 'header1'
         robj['X-header2'] = 'header2'
+        robj['X-header3'] = 3
 
         for content_type, mtype in wsgi._MEDIA_TYPE_MAP.items():
             request = wsgi.Request.blank('/tests/123')
@@ -875,6 +876,7 @@ class ResponseObjectTest(test.TestCase):
             self.assertEqual(response.headers['Content-Type'], content_type)
             self.assertEqual(response.headers['X-header1'], 'header1')
             self.assertEqual(response.headers['X-header2'], 'header2')
+            self.assertEqual(response.headers['X-header3'], '3')
             self.assertEqual(response.status_int, 202)
             self.assertEqual(response.body, mtype)
 
