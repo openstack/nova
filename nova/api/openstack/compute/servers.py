@@ -357,7 +357,12 @@ class ActionDeserializer(CommonDeserializer):
             rebuild['name'] = name
 
         if node.hasAttribute("auto_disk_config"):
-            rebuild['auto_disk_config'] = node.getAttribute("auto_disk_config")
+            rebuild['OS-DCF:diskConfig'] = node.getAttribute(
+                "auto_disk_config")
+
+        if node.hasAttribute("OS-DCF:diskConfig"):
+            rebuild['OS-DCF:diskConfig'] = node.getAttribute(
+                "OS-DCF:diskConfig")
 
         metadata_node = self.find_first_child_named(node, "metadata")
         if metadata_node is not None:
@@ -391,7 +396,11 @@ class ActionDeserializer(CommonDeserializer):
             raise AttributeError("No flavorRef was specified in request")
 
         if node.hasAttribute("auto_disk_config"):
-            resize['auto_disk_config'] = node.getAttribute("auto_disk_config")
+            resize['OS-DCF:diskConfig'] = node.getAttribute("auto_disk_config")
+
+        if node.hasAttribute("OS-DCF:diskConfig"):
+            resize['OS-DCF:diskConfig'] = node.getAttribute(
+                "OS-DCF:diskConfig")
 
         return resize
 
