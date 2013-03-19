@@ -199,3 +199,6 @@ systool: CommandFilter, /usr/bin/systool, root
 # nova/virt/libvirt/volume.py:
 sginfo: CommandFilter, /usr/bin/sginfo, root
 sg_scan: CommandFilter, /usr/bin/sg_scan, root
+
+# nova/virt/xenapi/vm_utils.py:
+xenstore-read: CommandFilter, /usr/bin/xenstore-read, root
