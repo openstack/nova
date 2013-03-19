@@ -239,7 +239,8 @@ class API(base.Base):
                     quantum.update_port(port['id'], port_req_body)
                     touched_port_ids.append(port['id'])
                 else:
-                    if fixed_ips.get(network_id):
+                    fixed_ip = fixed_ips.get(network_id)
+                    if fixed_ip:
                         port_req_body['port']['fixed_ips'] = [{'ip_address':
                                                                fixed_ip}]
                     port_req_body['port']['network_id'] = network_id
