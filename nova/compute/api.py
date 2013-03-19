@@ -2285,6 +2285,10 @@ class API(base.Base):
 
     @wrap_check_policy
     @check_instance_lock
+    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.PAUSED,
+                                    vm_states.SUSPENDED, vm_states.STOPPED,
+                                    vm_states.RESIZED, vm_states.SOFT_DELETED],
+                          task_state=None)
     def attach_volume(self, context, instance, volume_id, device=None):
         """Attach an existing volume to an existing instance."""
         # NOTE(vish): Fail fast if the device is not going to pass. This
@@ -2314,6 +2318,10 @@ class API(base.Base):
         return device
 
     @check_instance_lock
+    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.PAUSED,
+                                    vm_states.SUSPENDED, vm_states.STOPPED,
+                                    vm_states.RESIZED, vm_states.SOFT_DELETED],
+                          task_state=None)
     def _detach_volume(self, context, instance, volume_id):
         check_policy(context, 'detach_volume', instance)
 
@@ -2364,7 +2372,7 @@ class API(base.Base):
     @wrap_check_policy
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.PAUSED,
-                          vm_states.SUSPENDED, vm_states.STOPPED],
+                                    vm_states.SUSPENDED, vm_states.STOPPED],
                           task_state=None)
     def delete_instance_metadata(self, context, instance, key):
         """Delete the given metadata item from an instance."""
@@ -2378,7 +2386,7 @@ class API(base.Base):
     @wrap_check_policy
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.PAUSED,
-                          vm_states.SUSPENDED, vm_states.STOPPED],
+                                    vm_states.SUSPENDED, vm_states.STOPPED],
                           task_state=None)
     def update_instance_metadata(self, context, instance,
                                  metadata, delete=False):

@@ -402,6 +402,9 @@ class VolumeAttachmentController(wsgi.Controller):
                                                     volume_id, device)
         except exception.NotFound:
             raise exc.HTTPNotFound()
+        except exception.InstanceInvalidState as state_error:
+            common.raise_http_conflict_for_instance_invalid_state(state_error,
+                    'attach_volume')
 
         # The attach is async
         attachment = {}
@@ -446,12 +449,16 @@ class VolumeAttachmentController(wsgi.Controller):
             raise exc.HTTPNotFound()
 
         found = False
-        for bdm in bdms:
-            if bdm['volume_id'] == volume_id:
-                self.compute_api.detach_volume(context,
-                    volume_id=volume_id)
-                found = True
-                break
+        try:
+            for bdm in bdms:
+                if bdm['volume_id'] == volume_id:
+                    self.compute_api.detach_volume(context,
+                        volume_id=volume_id)
+                    found = True
+                    break
+        except exception.InstanceInvalidState as state_error:
+            common.raise_http_conflict_for_instance_invalid_state(state_error,
+                    'detach_volume')
 
         if not found:
             raise exc.HTTPNotFound()
