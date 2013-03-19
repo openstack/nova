@@ -324,25 +324,36 @@ class InequalityCondition(object):
 def service_destroy(context, service_id):
     session = get_session()
     with session.begin():
-        service_ref = service_get(context, service_id, session=session)
-        service_ref.soft_delete(session=session)
+        count = model_query(context, models.Service, session=session).\
+                    filter_by(id=service_id).\
+                    soft_delete(synchronize_session=False)
 
-        if (service_ref.topic == CONF.compute_topic and
-            service_ref.compute_node):
-            for c in service_ref.compute_node:
-                c.soft_delete(session=session)
+        if count == 0:
+            raise exception.ServiceNotFound(service_id=service_id)
+
+        model_query(context, models.ComputeNode, session=session).\
+                    filter_by(service_id=service_id).\
+                    soft_delete(synchronize_session=False)
 
 
 @require_admin_context
-def service_get(context, service_id, session=None):
-    result = model_query(context, models.Service, session=session).\
-                     options(joinedload('compute_node')).\
-                     filter_by(id=service_id).\
-                     first()
+def _service_get(context, service_id, with_compute_node=True, session=None):
+    query = model_query(context, models.Service, session=session).\
+                     filter_by(id=service_id)
+
+    if with_compute_node:
+        query = query.options(joinedload('compute_node'))
+
+    result = query.first()
     if not result:
         raise exception.ServiceNotFound(service_id=service_id)
 
     return result
+
+
+@require_admin_context
+def service_get(context, service_id):
+    return _service_get(context, service_id)
 
 
 @require_admin_context
@@ -420,7 +431,8 @@ def service_create(context, values):
 def service_update(context, service_id, values):
     session = get_session()
     with session.begin():
-        service_ref = service_get(context, service_id, session=session)
+        service_ref = _service_get(context, service_id,
+                                   with_compute_node=False, session=session)
         service_ref.update(values)
         service_ref.save(session=session)
     return service_ref
