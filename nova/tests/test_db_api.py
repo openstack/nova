@@ -1655,6 +1655,198 @@ class MigrationTestCase(test.TestCase):
             self.assertEqual(migration['instance_uuid'], instance['uuid'])
 
 
+class ModelsObjectComparatorMixin(object):
+    def _dict_from_object(self, obj, ignored_keys):
+        if ignored_keys is None:
+            ignored_keys = []
+        return dict([(k, v) for k, v in obj.iteritems()
+                                if k not in ignored_keys])
+
+    def _assertEqualObjects(self, obj1, obj2, ignored_keys=None):
+        obj1 = self._dict_from_object(obj1, ignored_keys)
+        obj2 = self._dict_from_object(obj2, ignored_keys)
+
+        self.assertEqual(len(obj1), len(obj2))
+        for key, value in obj1.iteritems():
+            self.assertEqual(value, obj2[key])
+
+    def _assertEqualListsOfObjects(self, objs1, objs2, ignored_keys=None):
+        self.assertEqual(len(objs1), len(objs2))
+        objs2 = dict([(o['id'], o) for o in objs2])
+        for o1 in objs1:
+            self._assertEqualObjects(o1, objs2[o1['id']], ignored_keys)
+
+
+class ServiceTestCase(test.TestCase, ModelsObjectComparatorMixin):
+    def setUp(self):
+        super(ServiceTestCase, self).setUp()
+        self.ctxt = context.get_admin_context()
+
+    def _get_base_values(self):
+        return {
+            'host': 'fake_host',
+            'binary': 'fake_binary',
+            'topic': 'fake_topic',
+            'report_count': 3,
+            'disabled': False
+        }
+
+    def _create_service(self, values):
+        v = self._get_base_values()
+        v.update(values)
+        return db.service_create(self.ctxt, v)
+
+    def test_service_create(self):
+        service = self._create_service({})
+        self.assertFalse(service['id'] is None)
+        for key, value in self._get_base_values().iteritems():
+            self.assertEqual(value, service[key])
+
+    def test_service_destroy(self):
+        service1 = self._create_service({})
+        service2 = self._create_service({'host': 'fake_host2'})
+
+        db.service_destroy(self.ctxt, service1['id'])
+        self.assertRaises(exception.ServiceNotFound,
+                          db.service_get, self.ctxt, service1['id'])
+        self._assertEqualObjects(db.service_get(self.ctxt, service2['id']),
+                                 service2, ignored_keys=['compute_node'])
+
+    def test_service_update(self):
+        service = self._create_service({})
+        new_values = {
+            'host': 'fake_host1',
+            'binary': 'fake_binary1',
+            'topic': 'fake_topic1',
+            'report_count': 4,
+            'disabled': True
+        }
+        db.service_update(self.ctxt, service['id'], new_values)
+        updated_service = db.service_get(self.ctxt, service['id'])
+        for key, value in new_values.iteritems():
+            self.assertEqual(value, updated_service[key])
+
+    def test_service_update_not_found_exception(self):
+        self.assertRaises(exception.ServiceNotFound,
+                          db.service_update, self.ctxt, 100500, {})
+
+    def test_service_get(self):
+        service1 = self._create_service({})
+        service2 = self._create_service({'host': 'some_other_fake_host'})
+        real_service1 = db.service_get(self.ctxt, service1['id'])
+        self._assertEqualObjects(service1, real_service1,
+                                 ignored_keys=['compute_node'])
+
+    def test_service_get_with_compute_node(self):
+        service = self._create_service({})
+        compute_values = dict(vcpus=2, memory_mb=1024, local_gb=2048,
+                              vcpus_used=0, memory_mb_used=0,
+                              local_gb_used=0, free_ram_mb=1024,
+                              free_disk_gb=2048, hypervisor_type="xen",
+                              hypervisor_version=1, cpu_info="",
+                              running_vms=0, current_workload=0,
+                              service_id=service['id'])
+        compute = db.compute_node_create(self.ctxt, compute_values)
+        real_service = db.service_get(self.ctxt, service['id'])
+        real_compute = real_service['compute_node'][0]
+        self.assertEqual(compute['id'], real_compute['id'])
+
+    def test_service_get_not_found_exception(self):
+        self.assertRaises(exception.ServiceNotFound,
+                          db.service_get, self.ctxt, 100500)
+
+    def test_service_get_by_host_and_topic(self):
+        service1 = self._create_service({'host': 'host1', 'topic': 'topic1'})
+        service2 = self._create_service({'host': 'host2', 'topic': 'topic2'})
+
+        real_service1 = db.service_get_by_host_and_topic(self.ctxt,
+                                                         host='host1',
+                                                         topic='topic1')
+        self._assertEqualObjects(service1, real_service1)
+
+    def test_service_get_all(self):
+        values = [
+            {'host': 'host1', 'topic': 'topic1'},
+            {'host': 'host2', 'topic': 'topic2'},
+            {'disabled': True}
+        ]
+        services = [self._create_service(vals) for vals in values]
+        disabled_services = [services[-1]]
+        non_disabled_services = services[:-1]
+
+        compares = [
+            (services, db.service_get_all(self.ctxt)),
+            (disabled_services, db.service_get_all(self.ctxt, True)),
+            (non_disabled_services, db.service_get_all(self.ctxt, False))
+        ]
+        for comp in compares:
+            self._assertEqualListsOfObjects(*comp)
+
+    def test_service_get_all_by_topic(self):
+        values = [
+            {'host': 'host1', 'topic': 't1'},
+            {'host': 'host2', 'topic': 't1'},
+            {'disabled': True, 'topic': 't1'},
+            {'host': 'host3', 'topic': 't2'}
+        ]
+        services = [self._create_service(vals) for vals in values]
+        expected = services[:2]
+        real = db.service_get_all_by_topic(self.ctxt, 't1')
+        self._assertEqualListsOfObjects(expected, real)
+
+    def test_service_get_all_by_host(self):
+        values = [
+            {'host': 'host1', 'topic': 't1'},
+            {'host': 'host1', 'topic': 't1'},
+            {'host': 'host2', 'topic': 't1'},
+            {'host': 'host3', 'topic': 't2'}
+        ]
+        services = [self._create_service(vals) for vals in values]
+
+        expected = services[:2]
+        real = db.service_get_all_by_host(self.ctxt, 'host1')
+        self._assertEqualListsOfObjects(expected, real)
+
+    def test_service_get_by_compute_host(self):
+        values = [
+            {'host': 'host1', 'topic': CONF.compute_topic},
+            {'host': 'host2', 'topic': 't1'},
+            {'host': 'host3', 'topic': CONF.compute_topic}
+        ]
+        services = [self._create_service(vals) for vals in values]
+
+        real_service = db.service_get_by_compute_host(self.ctxt, 'host1')
+        self._assertEqualObjects(services[0], real_service,
+                                 ignored_keys=['compute_node'])
+
+        self.assertRaises(exception.ComputeHostNotFound,
+                          db.service_get_by_compute_host,
+                          self.ctxt, 'non-exists-host')
+
+    def test_service_get_by_compute_host_not_found(self):
+        self.assertRaises(exception.ComputeHostNotFound,
+                          db.service_get_by_compute_host,
+                          self.ctxt, 'non-exists-host')
+
+    def test_service_get_by_args(self):
+        values = [
+            {'host': 'host1', 'binary': 'a'},
+            {'host': 'host2', 'binary': 'b'}
+        ]
+        services = [self._create_service(vals) for vals in values]
+
+        service1 = db.service_get_by_args(self.ctxt, 'host1', 'a')
+        self._assertEqualObjects(services[0], service1)
+
+        service2 = db.service_get_by_args(self.ctxt, 'host2', 'b')
+        self._assertEqualObjects(services[1], service2)
+
+    def test_service_get_by_args_not_found_exception(self):
+        self.assertRaises(exception.HostBinaryNotFound,
+                          db.service_get_by_args,
+                          self.ctxt, 'non-exists-host', 'a')
+
+
 class TestFixedIPGetByNetworkHost(test.TestCase):
     def test_not_found_exception(self):
         ctxt = context.get_admin_context()
