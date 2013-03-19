@@ -79,6 +79,14 @@ class ContextTestCase(test.TestCase):
         ctxt = context.RequestContext('111', '222')
         self.assertEquals(ctxt.service_catalog, [])
 
+        ctxt = context.RequestContext('111', '222',
+                service_catalog=[])
+        self.assertEquals(ctxt.service_catalog, [])
+
+        ctxt = context.RequestContext('111', '222',
+                service_catalog=None)
+        self.assertEquals(ctxt.service_catalog, [])
+
     def test_service_catalog_cinder_only(self):
         service_catalog = [
                 {u'type': u'compute', u'name': u'nova'},
