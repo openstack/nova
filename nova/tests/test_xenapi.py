@@ -419,6 +419,62 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         expected = self.conn.get_diagnostics(instance)
         self.assertThat(fake_diagnostics, matchers.DictMatches(expected))
 
+    def test_get_vnc_console(self):
+        instance = self._create_instance()
+        session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass',
+                fake.FakeVirtAPI())
+        conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
+        vm_ref = vm_utils.lookup(session, instance['name'])
+
+        console = conn.get_vnc_console(instance)
+
+        # Note(sulo): We dont care about session id in test
+        # they will always differ so strip that out
+        actual_path = console['internal_access_path'].split('&')[0]
+        expected_path = "/console?ref=%s" % str(vm_ref)
+
+        self.assertEqual(expected_path, actual_path)
+
+    def test_get_vnc_console_for_rescue(self):
+        instance = self._create_instance()
+        session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass',
+                                            fake.FakeVirtAPI())
+        conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
+        rescue_vm = xenapi_fake.create_vm(instance['name'] + '-rescue',
+                                          'Running')
+        # Set instance state to rescued
+        instance['vm_state'] = 'rescued'
+
+        console = conn.get_vnc_console(instance)
+
+        # Note(sulo): We dont care about session id in test
+        # they will always differ so strip that out
+        actual_path = console['internal_access_path'].split('&')[0]
+        expected_path = "/console?ref=%s" % str(rescue_vm)
+
+        self.assertEqual(expected_path, actual_path)
+
+    def test_get_vnc_console_instance_not_ready(self):
+        instance = {}
+        # set instance name and state
+        instance['name'] = 'fake-instance'
+        instance['uuid'] = '00000000-0000-0000-0000-000000000000'
+        instance['vm_state'] = 'building'
+
+        conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
+        self.assertRaises(exception.InstanceNotFound,
+                          conn.get_vnc_console, instance)
+
+    def test_get_vnc_console_rescue_not_ready(self):
+        instance = {}
+        instance['name'] = 'fake-rescue'
+        instance['uuid'] = '00000000-0000-0000-0000-000000000001'
+        instance['vm_state'] = 'rescued'
+
+        conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
+        self.assertRaises(exception.InstanceNotReady,
+                          conn.get_vnc_console, instance)
+
     def test_instance_snapshot_fails_with_no_primary_vdi(self):
 
         def create_bad_vbd(session, vm_ref, vdi_ref, userdevice,
