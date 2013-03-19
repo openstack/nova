@@ -165,6 +165,7 @@ class PowerVMOperator(object):
         data['hypervisor_type'] = constants.POWERVM_HYPERVISOR_TYPE
         data['hypervisor_version'] = constants.POWERVM_HYPERVISOR_VERSION
         data['hypervisor_hostname'] = self._operator.get_hostname()
+        data['supported_instances'] = constants.POWERVM_SUPPORTED_INSTANCES
         data['extres'] = ''
 
         self._host_stats = data
