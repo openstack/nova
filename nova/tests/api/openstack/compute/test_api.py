@@ -157,7 +157,7 @@ class APITest(test.TestCase):
         if hasattr(exception_type, 'headers'):
             for (key, value) in exception_type.headers.iteritems():
                 self.assertTrue(key in resp.headers)
-                self.assertEquals(resp.headers[key], value)
+                self.assertEquals(resp.headers[key], str(value))
 
     def test_quota_error_mapping(self):
         self._do_test_exception_mapping(exception.QuotaError, 'too many used')

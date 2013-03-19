@@ -588,7 +588,7 @@ class ResponseObject(object):
         response = webob.Response()
         response.status_int = self.code
         for hdr, value in self._headers.items():
-            response.headers[hdr] = value
+            response.headers[hdr] = str(value)
         response.headers['Content-Type'] = content_type
         if self.obj is not None:
             response.body = serializer.serialize(self.obj)
@@ -1150,6 +1150,8 @@ class Fault(webob.exc.HTTPException):
     def __init__(self, exception):
         """Create a Fault for the given webob.exc.exception."""
         self.wrapped_exc = exception
+        for key, value in self.wrapped_exc.headers.items():
+            self.wrapped_exc.headers[key] = str(value)
         self.status_int = exception.status_int
 
     @webob.dec.wsgify(RequestClass=Request)
