@@ -1137,7 +1137,8 @@ class TestQuantumv2(test.TestCase):
             **search_opts).AndReturn({'ports': self.port_data1})
         port_req_body = {
             'port': {
-                'fixed_ips': [{'subnet_id': 'my_subid1'}],
+                'fixed_ips': [{'subnet_id': 'my_subid1'},
+                              {'subnet_id': 'my_subid1'}],
             },
         }
         port = self.port_data1[0]
