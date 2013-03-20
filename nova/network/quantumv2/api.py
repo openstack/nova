@@ -383,7 +383,8 @@ class API(base.Base):
         ports = data['ports']
         for p in ports:
             for subnet in ipam_subnets:
-                fixed_ips = [{'subnet_id': subnet['id']}]
+                fixed_ips = p['fixed_ips']
+                fixed_ips.append({'subnet_id': subnet['id']})
                 port_req_body = {'port': {'fixed_ips': fixed_ips}}
                 try:
                     quantumv2.get_client(context).update_port(p['id'],
