@@ -1090,14 +1090,27 @@ class SecurityGroupsSampleJsonTest(ServersSampleBase):
     extension_name = "nova.api.openstack.compute.contrib" + \
                      ".security_groups.Security_groups"
 
-    def test_security_group_create(self):
-        name = self.ctype + '-test'
-        subs = {
-                'group_name': name,
+    def _get_create_subs(self):
+        return {
+                'group_name': 'test',
                 "description": "description",
         }
-        response = self._do_post('os-security-groups',
-                                 'security-group-post-req', subs)
+
+    def _create_security_group(self):
+        subs = self._get_create_subs()
+        return self._do_post('os-security-groups',
+                             'security-group-post-req', subs)
+
+    def _add_group(self, uuid):
+        subs = {
+                'group_name': 'test'
+        }
+        return  self._do_post('servers/%s/action' % uuid,
+                              'security-group-add-post-req', subs)
+
+    def test_security_group_create(self):
+        response = self._create_security_group()
+        subs = self._get_create_subs()
         self._verify_response('security-groups-create-resp', subs,
                               response, 200)
 
@@ -1123,6 +1136,25 @@ class SecurityGroupsSampleJsonTest(ServersSampleBase):
         subs = self._get_regexes()
         return self._verify_response('server-security-groups-list-resp',
                                       subs, response, 200)
+
+    def test_security_groups_add(self):
+        self._create_security_group()
+        uuid = self._post_server()
+        response = self._add_group(uuid)
+        self.assertEqual(response.status, 202)
+        self.assertEqual(response.read(), '')
+
+    def test_security_groups_remove(self):
+        self._create_security_group()
+        uuid = self._post_server()
+        self._add_group(uuid)
+        subs = {
+                'group_name': 'test'
+        }
+        response = self._do_post('servers/%s/action' % uuid,
+                                 'security-group-remove-post-req', subs)
+        self.assertEqual(response.status, 202)
+        self.assertEqual(response.read(), '')
 
 
 class SecurityGroupsSampleXmlTest(SecurityGroupsSampleJsonTest):

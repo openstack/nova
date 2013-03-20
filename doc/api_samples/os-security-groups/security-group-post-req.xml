@@ -1,4 +1,4 @@
-<security_group name="xml-test">
+<security_group name="test">
     <description>
         description
     </description>
