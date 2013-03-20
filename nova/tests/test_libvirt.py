@@ -307,6 +307,19 @@ class LibvirtConnTestCase(test.TestCase):
 
         self.stubs.Set(libvirt_driver.disk, 'extend', fake_extend)
 
+        class FakeConn():
+            def getCapabilities(self):
+                return """<capabilities>
+                            <host><cpu><arch>x86_64</arch></cpu></host>
+                          </capabilities>"""
+
+            def getLibVersion(self):
+                return (0 * 1000 * 1000) + (9 * 1000) + 11
+
+        self.conn = FakeConn()
+        self.stubs.Set(libvirt_driver.LibvirtDriver, '_connect',
+                       lambda *a, **k: self.conn)
+
         instance_type = db.instance_type_get(self.context, 5)
         sys_meta = instance_types.save_instance_type_info({}, instance_type)
 
@@ -721,10 +734,10 @@ class LibvirtConnTestCase(test.TestCase):
         self.flags(libvirt_type="kvm",
                    libvirt_cpu_mode=None)
 
-        def get_lib_version_stub(self):
+        def get_lib_version_stub():
             return (0 * 1000 * 1000) + (9 * 1000) + 11
 
-        self.stubs.Set(libvirt.virConnect,
+        self.stubs.Set(self.conn,
                        "getLibVersion",
                        get_lib_version_stub)
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -769,10 +782,10 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEquals(conf.cpu, None)
 
     def test_get_guest_cpu_config_host_passthrough_new(self):
-        def get_lib_version_stub(self):
+        def get_lib_version_stub():
             return (0 * 1000 * 1000) + (9 * 1000) + 11
 
-        self.stubs.Set(libvirt.virConnect,
+        self.stubs.Set(self.conn,
                        "getLibVersion",
                        get_lib_version_stub)
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -790,10 +803,10 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEquals(conf.cpu.model, None)
 
     def test_get_guest_cpu_config_host_model_new(self):
-        def get_lib_version_stub(self):
+        def get_lib_version_stub():
             return (0 * 1000 * 1000) + (9 * 1000) + 11
 
-        self.stubs.Set(libvirt.virConnect,
+        self.stubs.Set(self.conn,
                        "getLibVersion",
                        get_lib_version_stub)
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -811,10 +824,10 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEquals(conf.cpu.model, None)
 
     def test_get_guest_cpu_config_custom_new(self):
-        def get_lib_version_stub(self):
+        def get_lib_version_stub():
             return (0 * 1000 * 1000) + (9 * 1000) + 11
 
-        self.stubs.Set(libvirt.virConnect,
+        self.stubs.Set(self.conn,
                        "getLibVersion",
                        get_lib_version_stub)
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -833,10 +846,11 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEquals(conf.cpu.model, "Penryn")
 
     def test_get_guest_cpu_config_host_passthrough_old(self):
-        def get_lib_version_stub(self):
+        def get_lib_version_stub():
             return (0 * 1000 * 1000) + (9 * 1000) + 7
 
-        self.stubs.Set(libvirt.virConnect, "getLibVersion",
+        self.stubs.Set(self.conn,
+                       "getLibVersion",
                        get_lib_version_stub)
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_ref = db.instance_create(self.context, self.test_instance)
@@ -852,7 +866,7 @@ class LibvirtConnTestCase(test.TestCase):
                           disk_info)
 
     def test_get_guest_cpu_config_host_model_old(self):
-        def get_lib_version_stub(self):
+        def get_lib_version_stub():
             return (0 * 1000 * 1000) + (9 * 1000) + 7
 
         # Ensure we have a predictable host CPU
@@ -869,7 +883,7 @@ class LibvirtConnTestCase(test.TestCase):
             caps.host.cpu = cpu
             return caps
 
-        self.stubs.Set(libvirt.virConnect,
+        self.stubs.Set(self.conn,
                        "getLibVersion",
                        get_lib_version_stub)
         self.stubs.Set(libvirt_driver.LibvirtDriver,
@@ -894,10 +908,10 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEquals(conf.cpu.features[1].name, "ht")
 
     def test_get_guest_cpu_config_custom_old(self):
-        def get_lib_version_stub(self):
+        def get_lib_version_stub():
             return (0 * 1000 * 1000) + (9 * 1000) + 7
 
-        self.stubs.Set(libvirt.virConnect,
+        self.stubs.Set(self.conn,
                        "getLibVersion",
                        get_lib_version_stub)
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -3574,7 +3588,7 @@ class LibvirtConnTestCase(test.TestCase):
         driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         conn = driver._conn
         self.mox.StubOutWithMock(driver, 'list_instance_ids')
-        self.mox.StubOutWithMock(conn, 'lookupByID')
+        conn.lookupByID = self.mox.CreateMockAnything()
 
         driver.list_instance_ids().AndReturn([1, 2])
         conn.lookupByID(1).AndReturn(DiagFakeDomain(None))
