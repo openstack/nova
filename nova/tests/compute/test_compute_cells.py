@@ -186,14 +186,6 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
     def test_backup(self):
         return super(CellsComputeAPITestCase, self).test_backup()
 
-    def test_detach_volume(self):
-        self.skipTest("This test is failing due to TypeError: "
-                      "detach_volume() takes exactly 3 arguments (4 given).")
-
-    def test_no_detach_volume_in_rescue_state(self):
-        self.skipTest("This test is failing due to TypeError: "
-                      "detach_volume() takes exactly 3 arguments (4 given).")
-
     def test_evacuate(self):
         self.skipTest("Test is incompatible with cells.")
 

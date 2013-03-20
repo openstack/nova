@@ -326,6 +326,7 @@ class VolumeAttachmentController(wsgi.Controller):
 
     def __init__(self):
         self.compute_api = compute.API()
+        self.volume_api = volume.API()
         super(VolumeAttachmentController, self).__init__()
 
     @wsgi.serializers(xml=VolumeAttachmentsTemplate)
@@ -442,8 +443,9 @@ class VolumeAttachmentController(wsgi.Controller):
         except exception.NotFound:
             raise exc.HTTPNotFound()
 
-        bdms = self.compute_api.get_instance_bdms(context, instance)
+        volume = self.volume_api.get(context, volume_id)
 
+        bdms = self.compute_api.get_instance_bdms(context, instance)
         if not bdms:
             LOG.debug(_("Instance %s is not attached."), server_id)
             raise exc.HTTPNotFound()
@@ -451,11 +453,16 @@ class VolumeAttachmentController(wsgi.Controller):
         found = False
         try:
             for bdm in bdms:
-                if bdm['volume_id'] == volume_id:
-                    self.compute_api.detach_volume(context,
-                        volume_id=volume_id)
+                if bdm['volume_id'] != volume_id:
+                    continue
+                try:
+                    self.compute_api.detach_volume(context, instance, volume)
                     found = True
                     break
+                except exception.VolumeUnattached:
+                    # The volume is not attached.  Treat it as NotFound
+                    # by falling through.
+                    pass
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'detach_volume')

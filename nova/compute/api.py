@@ -2317,37 +2317,31 @@ class API(base.Base):
 
         return device
 
+    def _detach_volume(self, context, instance, volume):
+        """Detach volume from instance.  This method is separated to make
+        it easier for cells version to override.
+        """
+        self.volume_api.check_detach(context, volume)
+        self.volume_api.begin_detaching(context, volume)
+        self.compute_rpcapi.detach_volume(context, instance=instance,
+                volume_id=volume['id'])
+
+    @wrap_check_policy
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.PAUSED,
                                     vm_states.SUSPENDED, vm_states.STOPPED,
                                     vm_states.RESIZED, vm_states.SOFT_DELETED],
                           task_state=None)
-    def _detach_volume(self, context, instance, volume_id):
-        check_policy(context, 'detach_volume', instance)
-
-        volume = self.volume_api.get(context, volume_id)
-        self.volume_api.check_detach(context, volume)
-        self.volume_api.begin_detaching(context, volume)
-
-        self.compute_rpcapi.detach_volume(context, instance=instance,
-                volume_id=volume_id)
-        return instance
-
-    # FIXME(comstud): I wonder if API should pull in the instance from
-    # the volume ID via volume API and pass it and the volume object here
-    def detach_volume(self, context, volume_id):
+    def detach_volume(self, context, instance, volume):
         """Detach a volume from an instance."""
-        volume = self.volume_api.get(context, volume_id)
         if volume['attach_status'] == 'detached':
             msg = _("Volume must be attached in order to detach.")
             raise exception.InvalidVolume(reason=msg)
-
-        instance_uuid = volume['instance_uuid']
-        instance = self.db.instance_get_by_uuid(context.elevated(),
-                                                instance_uuid)
-        if not instance:
-            raise exception.VolumeUnattached(volume_id=volume_id)
-        self._detach_volume(context, instance, volume_id)
+        # The caller likely got the instance from volume['instance_uuid']
+        # in the first place, but let's sanity check.
+        if volume['instance_uuid'] != instance['uuid']:
+            raise exception.VolumeUnattached(volume_id=volume['id'])
+        self._detach_volume(context, instance, volume)
 
     @wrap_check_policy
     def attach_interface(self, context, instance, network_id, port_id,

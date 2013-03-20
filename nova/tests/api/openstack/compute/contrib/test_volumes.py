@@ -68,11 +68,15 @@ def fake_get_instance(self, context, instance_id):
     return({'uuid': instance_id})
 
 
+def fake_get_volume(self, context, id):
+    return({'id': 'woot'})
+
+
 def fake_attach_volume(self, context, instance, volume_id, device):
     return()
 
 
-def fake_detach_volume(self, context, volume_id):
+def fake_detach_volume(self, context, instance, volume):
     return()
 
 
@@ -223,6 +227,7 @@ class VolumeAttachTests(test.TestCase):
                        'get_instance_bdms',
                        fake_get_instance_bdms)
         self.stubs.Set(compute_api.API, 'get', fake_get_instance)
+        self.stubs.Set(cinder.API, 'get', fake_get_volume)
         self.context = context.get_admin_context()
         self.expected_show = {'volumeAttachment':
             {'device': '/dev/fake0',
