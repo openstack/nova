@@ -1,6 +1,8 @@
 #!/bin/bash
 PACKAGE=openstack-xen-plugins
-RPMBUILD_DIR=$PWD/rpmbuild
+THIS_DIR=$(cd $(dirname $0) && pwd)
+RPMBUILD_DIR="$THIS_DIR/rpmbuild"
+
 if [ ! -d $RPMBUILD_DIR ]; then
     echo $RPMBUILD_DIR is missing
     exit 1
@@ -13,7 +15,7 @@ done
 
 rm -rf /tmp/$PACKAGE
 mkdir /tmp/$PACKAGE
-cp -r ../etc/xapi.d /tmp/$PACKAGE
+cp -r "$THIS_DIR/../etc/xapi.d" /tmp/$PACKAGE
 tar czf $RPMBUILD_DIR/SOURCES/$PACKAGE.tar.gz -C /tmp $PACKAGE
 
 rpmbuild -ba --nodeps --define "_topdir $RPMBUILD_DIR" \
