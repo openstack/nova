@@ -125,6 +125,7 @@ class API(base.Base):
 
         return nets
 
+    @refresh_cache
     def allocate_for_instance(self, context, instance, **kwargs):
         """Allocate network resources for the instance.
 
@@ -281,8 +282,7 @@ class API(base.Base):
         self.trigger_security_group_members_refresh(context, instance)
         self.trigger_instance_add_security_group_refresh(context, instance)
 
-        nw_info = self.get_instance_nw_info(context, instance, networks=nets,
-                      conductor_api=kwargs.get('conductor_api'))
+        nw_info = self._get_instance_nw_info(context, instance, networks=nets)
         # NOTE(danms): Only return info about ports we created in this run.
         # In the initial allocation case, this will be everything we created,
         # and in later runs will only be what was created that time. Thus,
@@ -325,6 +325,7 @@ class API(base.Base):
         self.trigger_security_group_members_refresh(context, instance)
         self.trigger_instance_remove_security_group_refresh(context, instance)
 
+    @refresh_cache
     def allocate_port_for_instance(self, context, instance, port_id,
                                    network_id=None, requested_ip=None,
                                    conductor_api=None):
@@ -332,6 +333,7 @@ class API(base.Base):
                 requested_networks=[(network_id, requested_ip, port_id)],
                 conductor_api=conductor_api)
 
+    @refresh_cache
     def deallocate_port_for_instance(self, context, instance, port_id,
                                      conductor_api=None):
         try:
@@ -343,8 +345,7 @@ class API(base.Base):
         self.trigger_security_group_members_refresh(context, instance)
         self.trigger_instance_remove_security_group_refresh(context, instance)
 
-        return self.get_instance_nw_info(context, instance,
-                                         conductor_api=conductor_api)
+        return self._get_instance_nw_info(context, instance)
 
     def list_ports(self, context, **search_opts):
         return quantumv2.get_client(context).list_ports(**search_opts)
@@ -365,6 +366,7 @@ class API(base.Base):
         nw_info = self._build_network_info_model(context, instance, networks)
         return network_model.NetworkInfo.hydrate(nw_info)
 
+    @refresh_cache
     def add_fixed_ip_to_instance(self, context, instance, network_id,
                                  conductor_api=None):
         """Add a fixed ip to the instance from specified network."""
@@ -400,6 +402,7 @@ class API(base.Base):
         raise exception.NetworkNotFoundForInstance(
                 instance_id=instance['uuid'])
 
+    @refresh_cache
     def remove_fixed_ip_from_instance(self, context, instance, address,
                                       conductor_api=None):
         """Remove a fixed ip from the instance."""
@@ -714,6 +717,11 @@ class API(base.Base):
             raise exception.FloatingIpMultipleFoundForAddress(address=address)
         return fips[0]
 
+    def _get_floating_ips_by_fixed_and_port(self, client, fixed_ip, port):
+        """Get floatingips from fixed ip and port."""
+        data = client.list_floatingips(fixed_ip_address=fixed_ip, port_id=port)
+        return data['floatingips']
+
     def release_floating_ip(self, context, address,
                             affect_auto_assigned=False):
         """Remove a floating ip with the given address from a project."""
@@ -765,8 +773,8 @@ class API(base.Base):
     def _build_network_info_model(self, context, instance, networks=None):
         search_opts = {'tenant_id': instance['project_id'],
                        'device_id': instance['uuid'], }
-        data = quantumv2.get_client(context,
-                                    admin=True).list_ports(**search_opts)
+        client = quantumv2.get_client(context, admin=True)
+        data = client.list_ports(**search_opts)
         ports = data.get('ports', [])
         if networks is None:
             networks = self._get_available_networks(context,
@@ -792,10 +800,16 @@ class API(base.Base):
                                          {'net': port['network_id'],
                                           'port': port['id']})
 
-            network_IPs = [network_model.FixedIP(address=ip_address)
-                           for ip_address in [ip['ip_address']
-                                              for ip in port['fixed_ips']]]
-            # TODO(gongysh) get floating_ips for each fixed_ip
+            network_IPs = []
+            for fixed_ip in port['fixed_ips']:
+                fixed = network_model.FixedIP(address=fixed_ip['ip_address'])
+                floats = self._get_floating_ips_by_fixed_and_port(
+                        client, fixed_ip['ip_address'], port['id'])
+                for ip in floats:
+                    fip = network_model.IP(address=ip['floating_ip_address'],
+                                           type='floating')
+                    fixed.add_floating_ip(fip)
+                network_IPs.append(fixed)
 
             subnets = self._get_subnets_from_port(context, port)
             for subnet in subnets:

@@ -618,6 +618,9 @@ class MockClient(object):
         return {'subnets':
                 [subnet for subnet in self._fake_subnets.values()]}
 
+    def list_floatingips(self, **_params):
+        return {'floatingips': []}
+
     def delete_security_group(self, security_group):
         self.show_security_group(security_group)
         ports = self.list_ports()

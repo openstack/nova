@@ -167,6 +167,9 @@ class TestQuantumv2(test.TestCase):
                            'fixed_ips': [{'ip_address': self.port_address,
                                           'subnet_id': 'my_subid1'}],
                            'mac_address': 'my_mac1', }]
+        self.float_data1 = [{'port_id': 'my_portid1',
+                             'fixed_ip_address': self.port_address,
+                             'floating_ip_address': '172.0.1.2'}]
         self.dhcp_port_data1 = [{'fixed_ips': [{'ip_address': '10.0.1.9',
                                                'subnet_id': 'my_subid1'}]}]
         self.port_data2 = []
@@ -178,6 +181,11 @@ class TestQuantumv2(test.TestCase):
                                 'fixed_ips': [{'ip_address': '10.0.2.2',
                                                'subnet_id': 'my_subid2'}],
                                 'mac_address': 'my_mac2', })
+        self.float_data2 = []
+        self.float_data2.append(self.float_data1[0])
+        self.float_data2.append({'port_id': 'my_portid2',
+                                 'fixed_ip_address': '10.0.2.2',
+                                 'floating_ip_address': '172.0.2.2'})
         self.port_data3 = [{'network_id': 'my_netid1',
                            'device_id': 'device_id3',
                            'device_owner': 'compute:nova',
@@ -242,6 +250,8 @@ class TestQuantumv2(test.TestCase):
         id_suffix = index + 1
         self.assertEquals('10.0.%s.2' % id_suffix,
                           nw_inf.fixed_ips()[index]['address'])
+        self.assertEquals('172.0.%s.2' % id_suffix,
+            nw_inf.fixed_ips()[index].floating_ip_addresses()[0])
         self.assertEquals('my_netname%s' % id_suffix,
                           nw_inf[index]['network']['label'])
         self.assertEquals('my_portid%s' % id_suffix, nw_inf[index]['id'])
@@ -269,6 +279,14 @@ class TestQuantumv2(test.TestCase):
         self.moxed_client.list_networks(
             shared=True).AndReturn({'networks': []})
         for i in xrange(1, number + 1):
+            float_data = number == 1 and self.float_data1 or self.float_data2
+            for ip in port_data[i - 1]['fixed_ips']:
+                float_data = [x for x in float_data
+                              if x['fixed_ip_address'] == ip['ip_address']]
+                self.moxed_client.list_floatingips(
+                    fixed_ip_address=ip['ip_address'],
+                    port_id=port_data[i - 1]['id']).AndReturn(
+                        {'floatingips': float_data})
             subnet_data = i == 1 and self.subnet_data1 or self.subnet_data2
             self.moxed_client.list_subnets(
                 id=mox.SameElementsAs(['my_subid%s' % i])).AndReturn(
@@ -307,6 +325,12 @@ class TestQuantumv2(test.TestCase):
             tenant_id=self.instance['project_id'],
             device_id=self.instance['uuid']).AndReturn(
                 {'ports': self.port_data1})
+        port_data = self.port_data1
+        for ip in port_data[0]['fixed_ips']:
+            self.moxed_client.list_floatingips(
+                fixed_ip_address=ip['ip_address'],
+                port_id=port_data[0]['id']).AndReturn(
+                    {'floatingips': self.float_data1})
         self.moxed_client.list_subnets(
             id=mox.SameElementsAs(['my_subid1'])).AndReturn(
                 {'subnets': self.subnet_data1})
@@ -379,7 +403,7 @@ class TestQuantumv2(test.TestCase):
 
     def _stub_allocate_for_instance(self, net_idx=1, **kwargs):
         api = quantumapi.API()
-        self.mox.StubOutWithMock(api, 'get_instance_nw_info')
+        self.mox.StubOutWithMock(api, '_get_instance_nw_info')
         self.mox.StubOutWithMock(api, '_populate_quantum_extension_values')
         # Net idx is 1-based for compatibility with existing unit tests
         nets = self.nets[net_idx - 1]
@@ -461,11 +485,10 @@ class TestQuantumv2(test.TestCase):
             if kwargs.get('_break') == 'pre_get_instance_nw_info':
                 self.mox.ReplayAll()
                 return api
-        api.get_instance_nw_info(mox.IgnoreArg(),
-                                 self.instance,
-                                 networks=nets,
-                                 conductor_api=mox.IgnoreArg()).AndReturn(
-                                         self._returned_nw_info)
+        api._get_instance_nw_info(mox.IgnoreArg(),
+                                  self.instance,
+                                  networks=nets).AndReturn(
+                                        self._returned_nw_info)
         self.mox.ReplayAll()
         return api
 
@@ -702,6 +725,13 @@ class TestQuantumv2(test.TestCase):
                 {'networks': [self.nets2[1]]})
         self.moxed_client.list_networks(shared=True).AndReturn(
             {'networks': []})
+        float_data = number == 1 and self.float_data1 or self.float_data2
+        for data in port_data[1:]:
+            for ip in data['fixed_ips']:
+                self.moxed_client.list_floatingips(
+                    fixed_ip_address=ip['ip_address'],
+                    port_id=data['id']).AndReturn(
+                        {'floatingips': float_data[1:]})
         for port in port_data[1:]:
             self.moxed_client.list_subnets(id=['my_subid2']).AndReturn({})
 
@@ -1124,6 +1154,7 @@ class TestQuantumv2(test.TestCase):
 
     def test_add_fixed_ip_to_instance(self):
         api = quantumapi.API()
+        self._setup_mock_for_refresh_cache(api)
         network_id = 'my_netid1'
         search_opts = {'network_id': network_id}
         self.moxed_client.list_subnets(
@@ -1151,6 +1182,7 @@ class TestQuantumv2(test.TestCase):
 
     def test_remove_fixed_ip_from_instance(self):
         api = quantumapi.API()
+        self._setup_mock_for_refresh_cache(api)
         address = '10.0.0.3'
         zone = 'compute:%s' % self.instance['availability_zone']
         search_opts = {'device_id': self.instance['uuid'],
