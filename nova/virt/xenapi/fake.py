@@ -206,12 +206,13 @@ def after_VBD_create(vbd_ref, vbd_rec):
     vm_rec = _db_content['VM'][vm_ref]
     vm_rec['VBDs'].append(vbd_ref)
 
-    vdi_ref = vbd_rec['VDI']
-    vdi_rec = _db_content['VDI'][vdi_ref]
-    vdi_rec['VBDs'].append(vbd_ref)
-
     vm_name_label = _db_content['VM'][vm_ref]['name_label']
     vbd_rec['vm_name_label'] = vm_name_label
+
+    vdi_ref = vbd_rec['VDI']
+    if vdi_ref and vdi_ref != "OpaqueRef:NULL":
+        vdi_rec = _db_content['VDI'][vdi_ref]
+        vdi_rec['VBDs'].append(vbd_ref)
 
 
 def after_VM_create(vm_ref, vm_rec):
@@ -400,6 +401,12 @@ class SessionBase(object):
 
     def pool_get_default_SR(self, _1, pool_ref):
         return 'FAKE DEFAULT SR'
+
+    def VBD_insert(self, _1, vbd_ref, vdi_ref):
+        vbd_rec = get_record('VBD', vbd_ref)
+        get_record('VDI', vdi_ref)
+        vbd_rec['empty'] = False
+        vbd_rec['VDI'] = vdi_ref
 
     def VBD_plug(self, _1, ref):
         rec = get_record('VBD', ref)

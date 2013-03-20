@@ -81,9 +81,14 @@ RESIZE_TOTAL_STEPS = 5
 DEVICE_ROOT = '0'
 DEVICE_RESCUE = '1'
 DEVICE_SWAP = '2'
-DEVICE_EPHEMERAL = '3'
-DEVICE_CD = '4'
-DEVICE_CONFIGDRIVE = '5'
+DEVICE_CONFIGDRIVE = '3'
+# Note(johngarbutt) HVM guests only support four devices
+# until the PV tools activate, when others before available
+# As such, ephemeral disk only available once PV tools load
+DEVICE_EPHEMERAL = '4'
+# Note(johngarbutt) Currently don't support ISO boot during rescue
+# and we must have the ISO visible before the PV drivers start
+DEVICE_CD = '1'
 
 
 def cmp_version(a, b):
@@ -529,24 +534,32 @@ class VMOps(object):
         if not vm_utils.ensure_free_mem(self._session, instance):
             raise exception.InsufficientFreeMemory(uuid=instance['uuid'])
 
-        mode = vm_mode.get_from_instance(instance)
-        if mode == vm_mode.XEN:
-            use_pv_kernel = True
-        elif mode == vm_mode.HVM:
-            use_pv_kernel = False
-        else:
-            use_pv_kernel = vm_utils.determine_is_pv(self._session,
-                    vdis['root']['ref'], disk_image_type, instance['os_type'])
-            mode = use_pv_kernel and vm_mode.XEN or vm_mode.HVM
-
+        mode = self._determine_vm_mode(instance, vdis, disk_image_type)
         if instance['vm_mode'] != mode:
             # Update database with normalized (or determined) value
             self._virtapi.instance_update(context,
                                           instance['uuid'], {'vm_mode': mode})
 
+        use_pv_kernel = (mode == vm_mode.XEN)
         vm_ref = vm_utils.create_vm(self._session, instance, name_label,
                                     kernel_file, ramdisk_file, use_pv_kernel)
         return vm_ref
+
+    def _determine_vm_mode(self, instance, vdis, disk_image_type):
+        current_mode = vm_mode.get_from_instance(instance)
+        if current_mode == vm_mode.XEN or current_mode == vm_mode.HVM:
+            return current_mode
+
+        is_pv = False
+        if 'root' in vdis:
+            os_type = instance['os_type']
+            vdi_ref = vdis['root']['ref']
+            is_pv = vm_utils.determine_is_pv(self._session, vdi_ref,
+                                             disk_image_type, os_type)
+        if is_pv:
+            return vm_mode.XEN
+        else:
+            return vm_mode.HVM
 
     def _attach_disks(self, instance, vm_ref, name_label, vdis,
                       disk_image_type, admin_password=None, files=None):
@@ -556,19 +569,14 @@ class VMOps(object):
         # Attach (required) root disk
         if disk_image_type == vm_utils.ImageType.DISK_ISO:
             # DISK_ISO needs two VBDs: the ISO disk and a blank RW disk
-            LOG.debug(_("Detected ISO image type, creating blank VM "
-                        "for install"), instance=instance)
+            root_disk_size = instance_type['root_gb']
+            if root_disk_size > 0:
+                vm_utils.generate_iso_blank_root_disk(self._session, instance,
+                    vm_ref, DEVICE_ROOT, name_label, root_disk_size)
 
-            cd_vdi = vdis.pop('root')
-            root_vdi = vm_utils.fetch_blank_disk(self._session,
-                                                 instance_type['id'])
-            vdis['root'] = root_vdi
-
-            vm_utils.create_vbd(self._session, vm_ref, root_vdi['ref'],
-                                DEVICE_ROOT, bootable=False)
-
-            vm_utils.create_vbd(self._session, vm_ref, cd_vdi['ref'],
-                                DEVICE_CD, vbd_type='CD', bootable=True)
+            cd_vdi = vdis.pop('iso')
+            vm_utils.attach_cd(self._session, vm_ref, cd_vdi['ref'],
+                               DEVICE_CD)
         else:
             root_vdi = vdis['root']
 

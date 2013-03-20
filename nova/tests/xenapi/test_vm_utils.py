@@ -204,3 +204,83 @@ class BittorrentTestCase(stubs.XenAPITestBase):
 
     def test_create_image_uncached(self):
         self._test_create_image('none')
+
+
+class CreateVBDTestCase(test.TestCase):
+    def setUp(self):
+        super(CreateVBDTestCase, self).setUp()
+
+        class FakeSession():
+            def call_xenapi(*args):
+                pass
+
+        self.session = FakeSession()
+        self.mock = mox.Mox()
+        self.mock.StubOutWithMock(self.session, 'call_xenapi')
+        self.vbd_rec = self._generate_vbd_rec()
+
+    def _generate_vbd_rec(self):
+        vbd_rec = {}
+        vbd_rec['VM'] = 'vm_ref'
+        vbd_rec['VDI'] = 'vdi_ref'
+        vbd_rec['userdevice'] = '0'
+        vbd_rec['bootable'] = False
+        vbd_rec['mode'] = 'RW'
+        vbd_rec['type'] = 'disk'
+        vbd_rec['unpluggable'] = True
+        vbd_rec['empty'] = False
+        vbd_rec['other_config'] = {}
+        vbd_rec['qos_algorithm_type'] = ''
+        vbd_rec['qos_algorithm_params'] = {}
+        vbd_rec['qos_supported_algorithms'] = []
+        return vbd_rec
+
+    def test_create_vbd_default_args(self):
+        self.session.call_xenapi('VBD.create',
+                self.vbd_rec).AndReturn("vbd_ref")
+        self.mock.ReplayAll()
+
+        result = vm_utils.create_vbd(self.session, "vm_ref", "vdi_ref", 0)
+        self.assertEquals(result, "vbd_ref")
+        self.mock.VerifyAll()
+
+    def test_create_vbd_osvol(self):
+        self.session.call_xenapi('VBD.create',
+                self.vbd_rec).AndReturn("vbd_ref")
+        self.session.call_xenapi('VBD.add_to_other_config', "vbd_ref",
+                                 "osvol", "True")
+        self.mock.ReplayAll()
+        result = vm_utils.create_vbd(self.session, "vm_ref", "vdi_ref", 0,
+                                     osvol=True)
+        self.assertEquals(result, "vbd_ref")
+        self.mock.VerifyAll()
+
+    def test_create_vbd_extra_args(self):
+        self.vbd_rec['VDI'] = 'OpaqueRef:NULL'
+        self.vbd_rec['type'] = 'a'
+        self.vbd_rec['mode'] = 'RO'
+        self.vbd_rec['bootable'] = True
+        self.vbd_rec['empty'] = True
+        self.vbd_rec['unpluggable'] = False
+        self.session.call_xenapi('VBD.create',
+                self.vbd_rec).AndReturn("vbd_ref")
+        self.mock.ReplayAll()
+
+        result = vm_utils.create_vbd(self.session, "vm_ref", None, 0,
+                vbd_type="a", read_only=True, bootable=True,
+                empty=True, unpluggable=False)
+        self.assertEquals(result, "vbd_ref")
+        self.mock.VerifyAll()
+
+    def test_attach_cd(self):
+        self.mock.StubOutWithMock(vm_utils, 'create_vbd')
+
+        vm_utils.create_vbd(self.session, "vm_ref", None, 1,
+                vbd_type='cd', read_only=True, bootable=True,
+                empty=True, unpluggable=False).AndReturn("vbd_ref")
+        self.session.call_xenapi('VBD.insert', "vbd_ref", "vdi_ref")
+        self.mock.ReplayAll()
+
+        result = vm_utils.attach_cd(self.session, "vm_ref", "vdi_ref", 1)
+        self.assertEquals(result, "vbd_ref")
+        self.mock.VerifyAll()

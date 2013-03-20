@@ -387,17 +387,20 @@ def destroy_vbd(session, vbd_ref):
 
 
 def create_vbd(session, vm_ref, vdi_ref, userdevice, vbd_type='disk',
-               read_only=False, bootable=False, osvol=False):
+               read_only=False, bootable=False, osvol=False,
+               empty=False, unpluggable=True):
     """Create a VBD record and returns its reference."""
     vbd_rec = {}
     vbd_rec['VM'] = vm_ref
+    if vdi_ref == None:
+        vdi_ref = 'OpaqueRef:NULL'
     vbd_rec['VDI'] = vdi_ref
     vbd_rec['userdevice'] = str(userdevice)
     vbd_rec['bootable'] = bootable
     vbd_rec['mode'] = read_only and 'RO' or 'RW'
     vbd_rec['type'] = vbd_type
-    vbd_rec['unpluggable'] = True
-    vbd_rec['empty'] = False
+    vbd_rec['unpluggable'] = unpluggable
+    vbd_rec['empty'] = empty
     vbd_rec['other_config'] = {}
     vbd_rec['qos_algorithm_type'] = ''
     vbd_rec['qos_algorithm_params'] = {}
@@ -412,6 +415,16 @@ def create_vbd(session, vm_ref, vdi_ref, userdevice, vbd_type='disk',
         # attached nova (or cinder) volume
         session.call_xenapi("VBD.add_to_other_config",
                                   vbd_ref, 'osvol', "True")
+    return vbd_ref
+
+
+def attach_cd(session, vm_ref, vdi_ref, userdevice):
+    """Create an empty VBD, then insert the CD."""
+    vbd_ref = create_vbd(session, vm_ref, None, userdevice,
+                         vbd_type='cd', read_only=True,
+                         bootable=True, empty=True,
+                         unpluggable=False)
+    session.call_xenapi('VBD.insert', vbd_ref, vdi_ref)
     return vbd_ref
 
 
@@ -835,6 +848,12 @@ def generate_ephemeral(session, instance, vm_ref, userdevice, name_label,
     _generate_disk(session, instance, vm_ref, userdevice, name_label,
                    'ephemeral', size_gb * 1024,
                    CONF.default_ephemeral_format)
+
+
+def generate_iso_blank_root_disk(session, instance, vm_ref, userdevice,
+                                 name_label, size_gb):
+    _generate_disk(session, instance, vm_ref, userdevice, name_label,
+                   'user', size_gb * 1024, CONF.default_ephemeral_format)
 
 
 def generate_configdrive(session, instance, vm_ref, userdevice,
