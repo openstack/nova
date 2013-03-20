@@ -194,6 +194,25 @@ class EC2TimestampValidationTestCase(test.TestCase):
         expired = ec2utils.is_ec2_timestamp_expired(params)
         self.assertFalse(expired)
 
+    def test_validate_ec2_timestamp_ms_time_regex(self):
+        result = ec2utils._ms_time_regex.match('2011-04-22T11:29:49.123Z')
+        self.assertIsNotNone(result)
+        result = ec2utils._ms_time_regex.match('2011-04-22T11:29:49.123456Z')
+        self.assertIsNotNone(result)
+        result = ec2utils._ms_time_regex.match('2011-04-22T11:29:49.1234567Z')
+        self.assertIsNone(result)
+        result = ec2utils._ms_time_regex.match('2011-04-22T11:29:49.123')
+        self.assertIsNone(result)
+        result = ec2utils._ms_time_regex.match('2011-04-22T11:29:49Z')
+        self.assertIsNone(result)
+
+    def test_validate_ec2_timestamp_aws_sdk_format(self):
+        params = {'Timestamp': '2011-04-22T11:29:49.123Z'}
+        expired = ec2utils.is_ec2_timestamp_expired(params)
+        self.assertFalse(expired)
+        expired = ec2utils.is_ec2_timestamp_expired(params, expires=300)
+        self.assertTrue(expired)
+
     def test_validate_ec2_timestamp_invalid_format(self):
         params = {'Timestamp': '2011-04-22T11:29:49.000P'}
         expired = ec2utils.is_ec2_timestamp_expired(params)
