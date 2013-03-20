@@ -2227,6 +2227,121 @@ class BlockDeviceMappingTestCase(test.TestCase):
         self.assertEqual(bdms[0]['device_name'], 'fake2')
 
 
+class VirtualInterfaceTestCase(test.TestCase, ModelsObjectComparatorMixin):
+    def setUp(self):
+        super(VirtualInterfaceTestCase, self).setUp()
+        self.ctxt = context.get_admin_context()
+        self.instance_uuid = db.instance_create(self.ctxt, {})['uuid']
+        values = {'host': 'localhost', 'project_id': 'project1'}
+        self.network = db.network_create_safe(self.ctxt, values)
+
+    def _get_base_values(self):
+        return {
+            'instance_uuid': self.instance_uuid,
+            'address': 'fake_address',
+            'network_id': self.network['id'],
+            'uuid': str(stdlib_uuid.uuid4())
+        }
+
+    def _create_virt_interface(self, values):
+        v = self._get_base_values()
+        v.update(values)
+        return db.virtual_interface_create(self.ctxt, v)
+
+    def test_virtual_interface_create(self):
+        vif = self._create_virt_interface({})
+        self.assertFalse(vif['id'] is None)
+        ignored_keys = ['id', 'deleted', 'deleted_at', 'updated_at',
+                        'created_at', 'uuid']
+        self._assertEqualObjects(vif, self._get_base_values(), ignored_keys)
+
+    @test.testtools.skip("bug 1156227")
+    def test_virtual_interface_create_with_duplicate_address(self):
+        vif = self._create_virt_interface({})
+        # NOTE(boris-42): Due to the bug 1156227 this won't work. In havana-1
+        #                 it will be fixed.
+        self.assertRaises(exception.VirtualInterfaceCreateException,
+                          self._create_virt_interface, {uuid: vif['uuid']})
+
+    def test_virtual_interface_get(self):
+        vifs = [self._create_virt_interface({'address':'a'}),
+                self._create_virt_interface({'address':'b'})]
+
+        for vif in vifs:
+            real_vif = db.virtual_interface_get(self.ctxt, vif['id'])
+            self._assertEqualObjects(vif, real_vif)
+
+    def test_virtual_interface_get_by_address(self):
+        vifs = [self._create_virt_interface({'address': 'first'}),
+                self._create_virt_interface({'address': 'second'})]
+        for vif in vifs:
+            real_vif = db.virtual_interface_get_by_address(self.ctxt,
+                                                           vif['address'])
+            self._assertEqualObjects(vif, real_vif)
+
+    def test_virtual_interface_get_by_uuid(self):
+        vifs = [self._create_virt_interface({}),
+                self._create_virt_interface({})]
+        for vif in vifs:
+            real_vif = db.virtual_interface_get_by_uuid(self.ctxt, vif['uuid'])
+            self._assertEqualObjects(vif, real_vif)
+
+    def test_virtual_interface_get_by_instance(self):
+        inst_uuid2 = db.instance_create(self.ctxt, {})['uuid']
+        vifs1 = [self._create_virt_interface({'address': 'fake1'}),
+                 self._create_virt_interface({'address': 'fake2'})]
+        vifs2 = [self._create_virt_interface({'address': 'fake3',
+                                              'instance_uuid': inst_uuid2})]
+        vifs1_real = db.virtual_interface_get_by_instance(self.ctxt,
+                                                          self.instance_uuid)
+        vifs2_real = db.virtual_interface_get_by_instance(self.ctxt,
+                                                          inst_uuid2)
+        self._assertEqualListsOfObjects(vifs1, vifs1_real)
+        self._assertEqualListsOfObjects(vifs2, vifs2_real)
+
+    def test_virtual_interface_get_by_instance_and_network(self):
+        inst_uuid2 = db.instance_create(self.ctxt, {})['uuid']
+        values = {'host': 'localhost', 'project_id': 'project2'}
+        network_id = db.network_create_safe(self.ctxt, values)['id']
+
+        vifs = [self._create_virt_interface({'address': 'fake1'}),
+                self._create_virt_interface({'address': 'fake2',
+                                             'network_id': network_id,
+                                             'instance_uuid': inst_uuid2}),
+                self._create_virt_interface({'address': 'fake3',
+                                             'instance_uuid': inst_uuid2})]
+        for vif in vifs:
+            params = (self.ctxt, vif['instance_uuid'], vif['network_id'])
+            r_vif = db.virtual_interface_get_by_instance_and_network(*params)
+            self._assertEqualObjects(r_vif, vif)
+
+    def test_virtual_interface_delete_by_instance(self):
+        inst_uuid2 = db.instance_create(self.ctxt, {})['uuid']
+
+        values = [dict(address='fake1'), dict(address='fake2'),
+                  dict(address='fake3', instance_uuid=inst_uuid2)]
+        for vals in values:
+            self._create_virt_interface(vals)
+
+        db.virtual_interface_delete_by_instance(self.ctxt, self.instance_uuid)
+
+        real_vifs1 = db.virtual_interface_get_by_instance(self.ctxt,
+                                                          self.instance_uuid)
+        real_vifs2 = db.virtual_interface_get_by_instance(self.ctxt,
+                                                          inst_uuid2)
+        self.assertEqual(len(real_vifs1), 0)
+        self.assertEqual(len(real_vifs2), 1)
+
+    def test_virtual_interface_get_all(self):
+        inst_uuid2 = db.instance_create(self.ctxt, {})['uuid']
+        values = [dict(address='fake1'), dict(address='fake2'),
+                  dict(address='fake3', instance_uuid=inst_uuid2)]
+
+        vifs = [self._create_virt_interface(val) for val in values]
+        real_vifs = db.virtual_interface_get_all(self.ctxt)
+        self._assertEqualListsOfObjects(vifs, real_vifs)
+
+
 class ArchiveTestCase(test.TestCase):
 
     def setUp(self):
