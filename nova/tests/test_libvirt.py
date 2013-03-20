@@ -291,6 +291,13 @@ class LibvirtConnTestCase(test.TestCase):
         self.useFixture(fixtures.MonkeyPatch(
             'nova.virt.libvirt.driver.libvirt_utils',
             fake_libvirt_utils))
+        # Force libvirt to return a host UUID that matches the serial in
+        # nova.tests.fakelibvirt. This is necessary because the host UUID
+        # returned by libvirt becomes the serial whose value is checked for in
+        # test_xml_and_uri_* below.
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.virt.libvirt.driver.LibvirtDriver.get_host_uuid',
+            lambda _: 'cef19ce0-0ca2-11df-855d-b19fbce37686'))
         self.useFixture(fixtures.MonkeyPatch(
             'nova.virt.libvirt.imagebackend.libvirt_utils',
             fake_libvirt_utils))
