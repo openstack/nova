@@ -178,6 +178,9 @@ def ec2_vol_id_to_uuid(ec2_id):
     return get_volume_uuid_from_int_id(ctxt, int_id)
 
 
+_ms_time_regex = re.compile('^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3,6}Z$')
+
+
 def is_ec2_timestamp_expired(request, expires=None):
     """Checks the timestamp or expiry time included in an EC2 request
     and returns true if the request is expired
@@ -185,6 +188,15 @@ def is_ec2_timestamp_expired(request, expires=None):
     query_time = None
     timestamp = request.get('Timestamp')
     expiry_time = request.get('Expires')
+
+    def parse_strtime(strtime):
+        if _ms_time_regex.match(strtime):
+            # NOTE(MotoKen): time format for aws-sdk-java contains millisecond
+            time_format = "%Y-%m-%dT%H:%M:%S.%fZ"
+        else:
+            time_format = "%Y-%m-%dT%H:%M:%SZ"
+        return timeutils.parse_strtime(strtime, time_format)
+
     try:
         if timestamp and expiry_time:
             msg = _("Request must include either Timestamp or Expires,"
@@ -192,12 +204,10 @@ def is_ec2_timestamp_expired(request, expires=None):
             LOG.error(msg)
             raise exception.InvalidRequest(msg)
         elif expiry_time:
-            query_time = timeutils.parse_strtime(expiry_time,
-                                        "%Y-%m-%dT%H:%M:%SZ")
+            query_time = parse_strtime(expiry_time)
             return timeutils.is_older_than(query_time, -1)
         elif timestamp:
-            query_time = timeutils.parse_strtime(timestamp,
-                                        "%Y-%m-%dT%H:%M:%SZ")
+            query_time = parse_strtime(timestamp)
 
             # Check if the difference between the timestamp in the request
             # and the time on our servers is larger than 5 minutes, the
