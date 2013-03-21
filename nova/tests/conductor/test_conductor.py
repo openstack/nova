@@ -399,13 +399,16 @@ class _BaseTestCase(object):
     def test_vol_usage_update(self):
         self.mox.StubOutWithMock(db, 'vol_usage_update')
         db.vol_usage_update(self.context, 'fake-vol', 'rd-req', 'rd-bytes',
-                            'wr-req', 'wr-bytes', 'fake-id', 'fake-refr',
+                            'wr-req', 'wr-bytes', 'fake-id',
+                            'fake-project_id', 'fake-user_id', 'fake-refr',
                             'fake-bool')
         self.mox.ReplayAll()
         self.conductor.vol_usage_update(self.context, 'fake-vol', 'rd-req',
                                         'rd-bytes', 'wr-req', 'wr-bytes',
-                                        {'uuid': 'fake-id'}, 'fake-refr',
-                                        'fake-bool')
+                                        {'uuid': 'fake-id',
+                                         'project_id': 'fake-project_id',
+                                         'user_id': 'fake-user_id'},
+                                        'fake-refr', 'fake-bool')
 
     def test_ping(self):
         result = self.conductor.ping(self.context, 'foo')

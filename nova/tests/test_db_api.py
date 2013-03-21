@@ -2372,11 +2372,17 @@ class VolumeUsageDBApiTestCase(test.TestCase):
         refreshed_time = now - datetime.timedelta(seconds=5)
 
         expected_vol_usages = [{'volume_id': u'1',
+                                'instance_uuid': 'fake-instance-uuid1',
+                                'project_id': 'fake-project-uuid1',
+                                'user_id': 'fake-user-uuid1',
                                 'curr_reads': 1000,
                                 'curr_read_bytes': 2000,
                                 'curr_writes': 3000,
                                 'curr_write_bytes': 4000},
                                {'volume_id': u'2',
+                                'instance_uuid': 'fake-instance-uuid2',
+                                'project_id': 'fake-project-uuid2',
+                                'user_id': 'fake-user-uuid2',
                                 'curr_reads': 100,
                                 'curr_read_bytes': 200,
                                 'curr_writes': 300,
@@ -2390,13 +2396,20 @@ class VolumeUsageDBApiTestCase(test.TestCase):
         self.assertEqual(len(vol_usages), 0)
 
         vol_usage = db.vol_usage_update(ctxt, 1, rd_req=10, rd_bytes=20,
-                                        wr_req=30, wr_bytes=40, instance_id=1)
+                                        wr_req=30, wr_bytes=40,
+                                        instance_id='fake-instance-uuid1',
+                                        project_id='fake-project-uuid1',
+                                        user_id='fake-user-uuid1')
         vol_usage = db.vol_usage_update(ctxt, 2, rd_req=100, rd_bytes=200,
                                         wr_req=300, wr_bytes=400,
-                                        instance_id=1)
+                                        instance_id='fake-instance-uuid2',
+                                        project_id='fake-project-uuid2',
+                                        user_id='fake-user-uuid2')
         vol_usage = db.vol_usage_update(ctxt, 1, rd_req=1000, rd_bytes=2000,
                                         wr_req=3000, wr_bytes=4000,
-                                        instance_id=1,
+                                        instance_id='fake-instance-uuid1',
+                                        project_id='fake-project-uuid1',
+                                        user_id='fake-user-uuid1',
                                         last_refreshed=refreshed_time)
 
         vol_usages = db.vol_get_usage_by_time(ctxt, start_time)
@@ -2411,6 +2424,9 @@ class VolumeUsageDBApiTestCase(test.TestCase):
         timeutils.set_time_override(now)
         start_time = now - datetime.timedelta(seconds=10)
         expected_vol_usages = {'volume_id': u'1',
+                               'project_id': 'fake-project-uuid',
+                               'user_id': 'fake-user-uuid',
+                               'instance_uuid': 'fake-instance-uuid',
                                'tot_reads': 600,
                                'tot_read_bytes': 800,
                                'tot_writes': 1000,
@@ -2422,17 +2438,25 @@ class VolumeUsageDBApiTestCase(test.TestCase):
 
         vol_usage = db.vol_usage_update(ctxt, 1, rd_req=100, rd_bytes=200,
                                         wr_req=300, wr_bytes=400,
-                                        instance_id=1)
+                                        instance_id='fake-instance-uuid',
+                                        project_id='fake-project-uuid',
+                                        user_id='fake-user-uuid')
         vol_usage = db.vol_usage_update(ctxt, 1, rd_req=200, rd_bytes=300,
                                         wr_req=400, wr_bytes=500,
-                                        instance_id=1,
+                                        instance_id='fake-instance-uuid',
+                                        project_id='fake-project-uuid',
+                                        user_id='fake-user-uuid',
                                         update_totals=True)
         vol_usage = db.vol_usage_update(ctxt, 1, rd_req=300, rd_bytes=400,
                                         wr_req=500, wr_bytes=600,
-                                        instance_id=1)
+                                        instance_id='fake-instance-uuid',
+                                        project_id='fake-project-uuid',
+                                        user_id='fake-user-uuid')
         vol_usage = db.vol_usage_update(ctxt, 1, rd_req=400, rd_bytes=500,
                                         wr_req=600, wr_bytes=700,
-                                        instance_id=1,
+                                        instance_id='fake-instance-uuid',
+                                        project_id='fake-project-uuid',
+                                        user_id='fake-user-uuid',
                                         update_totals=True)
 
         vol_usages = db.vol_get_usage_by_time(ctxt, start_time)

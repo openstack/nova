@@ -302,8 +302,9 @@ class ConductorManager(manager.Manager):
                          wr_bytes, instance, last_refreshed=None,
                          update_totals=False):
         self.db.vol_usage_update(context, vol_id, rd_req, rd_bytes, wr_req,
-                                 wr_bytes, instance['uuid'], last_refreshed,
-                                 update_totals)
+                                 wr_bytes, instance['uuid'],
+                                 instance['project_id'], instance['user_id'],
+                                 last_refreshed, update_totals)
 
     @rpc_common.client_exceptions(exception.ComputeHostNotFound,
                                   exception.HostBinaryNotFound)

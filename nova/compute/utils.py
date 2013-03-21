@@ -290,7 +290,9 @@ def usage_volume_info(vol_usage):
 
     usage_info = dict(
           volume_id=vol_usage['volume_id'],
-          instance_id=vol_usage['instance_id'],
+          tenant_id=vol_usage['project_id'],
+          user_id=vol_usage['user_id'],
+          instance_id=vol_usage['instance_uuid'],
           last_refreshed=null_safe_str(last_refreshed_time),
           reads=vol_usage['tot_reads'] + vol_usage['curr_reads'],
           read_bytes=vol_usage['tot_read_bytes'] +

@@ -4188,8 +4188,8 @@ def vol_get_usage_by_time(context, begin):
 
 @require_context
 def vol_usage_update(context, id, rd_req, rd_bytes, wr_req, wr_bytes,
-                     instance_id, last_refreshed=None, update_totals=False,
-                     session=None):
+                     instance_id, project_id, user_id, last_refreshed=None,
+                     update_totals=False, session=None):
     if not session:
         session = get_session()
 
@@ -4206,7 +4206,9 @@ def vol_usage_update(context, id, rd_req, rd_bytes, wr_req, wr_bytes,
                       'curr_read_bytes': rd_bytes,
                       'curr_writes': wr_req,
                       'curr_write_bytes': wr_bytes,
-                      'instance_id': instance_id}
+                      'instance_uuid': instance_id,
+                      'project_id': project_id,
+                      'user_id': user_id}
         else:
             values = {'tot_last_refreshed': last_refreshed,
                       'tot_reads': models.VolumeUsage.tot_reads + rd_req,
@@ -4219,7 +4221,9 @@ def vol_usage_update(context, id, rd_req, rd_bytes, wr_req, wr_bytes,
                       'curr_read_bytes': 0,
                       'curr_writes': 0,
                       'curr_write_bytes': 0,
-                      'instance_id': instance_id}
+                      'instance_uuid': instance_id,
+                      'project_id': project_id,
+                      'user_id': user_id}
 
         rows = model_query(context, models.VolumeUsage,
                            session=session, read_deleted="yes").\
@@ -4233,6 +4237,9 @@ def vol_usage_update(context, id, rd_req, rd_bytes, wr_req, wr_bytes,
         vol_usage.tot_last_refreshed = timeutils.utcnow()
         vol_usage.curr_last_refreshed = timeutils.utcnow()
         vol_usage.volume_id = id
+        vol_usage.instance_uuid = instance_id
+        vol_usage.project_id = project_id
+        vol_usage.user_id = user_id
 
         if not update_totals:
             vol_usage.curr_reads = rd_req

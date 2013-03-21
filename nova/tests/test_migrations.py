@@ -1229,6 +1229,46 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
                           it_projects.insert().execute,
                           dict(instance_type=31, project_id='pr1', deleted=0))
 
+    # migration 175, Modify volume_usage-cache, Drop column instance_id, add
+    # columns instance_uuid, project_id and user_id
+    def _pre_upgrade_175(self, engine):
+        volume_usage_cache = get_table(engine, 'volume_usage_cache')
+        fake_usage = {'volume_id': 'fake_volume_id',
+                      'instance_id': 10,
+                      'tot_last_refreshed': datetime.datetime.now(),
+                      'tot_reads': 2,
+                      'tot_read_bytes': 3,
+                      'tot_writes': 4,
+                      'tot_write_bytes': 5,
+                      'curr_last_refreshed': datetime.datetime.now(),
+                      'curr_reads': 6,
+                      'curr_read_bytes': 7,
+                      'curr_writes': 8,
+                      'curr_write_bytes': 9}
+        volume_usage_cache.insert().execute(fake_usage)
+
+    def _check_175(self, engine, data):
+        volume_usage_cache = get_table(engine, 'volume_usage_cache')
+        # Get the record
+        rows = volume_usage_cache.select().execute().fetchall()
+        self.assertEqual(len(rows), 1)
+
+        self.assertEqual(rows[0]['instance_uuid'], None)
+        self.assertEqual(rows[0]['project_id'], None)
+        self.assertEqual(rows[0]['user_id'], None)
+        self.assertFalse('instance_id' in rows[0])
+
+    def _post_downgrade_175(self, engine):
+        volume_usage_cache = get_table(engine, 'volume_usage_cache')
+        # Get the record
+        rows = volume_usage_cache.select().execute().fetchall()
+        self.assertEqual(len(rows), 1)
+
+        self.assertFalse('instance_uuid' in rows[0])
+        self.assertFalse('project_id' in rows[0])
+        self.assertFalse('user_id' in rows[0])
+        self.assertEqual(rows[0]['instance_id'], None)
+
 
 class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""

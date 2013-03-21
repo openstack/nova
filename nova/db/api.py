@@ -1466,11 +1466,12 @@ def vol_get_usage_by_time(context, begin):
 
 
 def vol_usage_update(context, id, rd_req, rd_bytes, wr_req, wr_bytes,
-                     instance_id, last_refreshed=None, update_totals=False):
+                     instance_id, project_id, user_id,
+                     last_refreshed=None, update_totals=False):
     """Update cached volume usage for a volume
        Creates new record if needed."""
     return IMPL.vol_usage_update(context, id, rd_req, rd_bytes, wr_req,
-                                 wr_bytes, instance_id,
+                                 wr_bytes, instance_id, project_id, user_id,
                                  last_refreshed=last_refreshed,
                                  update_totals=update_totals)
 

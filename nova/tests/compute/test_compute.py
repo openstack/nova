@@ -332,6 +332,120 @@ class ComputeVolumeTestCase(BaseTestCase):
                                                  block_device_mapping)
         self.assertEqual(self.cinfo.get('serial'), self.volume_id)
 
+    def test_poll_volume_usage_disabled(self):
+        ctxt = 'MockContext'
+        self.mox.StubOutWithMock(self.compute, '_get_host_volume_bdms')
+        self.mox.StubOutWithMock(utils, 'last_completed_audit_period')
+        # None of the mocks should be called.
+        self.mox.ReplayAll()
+
+        CONF.volume_usage_poll_interval = 0
+        self.compute._poll_volume_usage(ctxt)
+        self.mox.UnsetStubs()
+
+    def test_poll_volume_usage_interval_not_elapsed(self):
+        ctxt = 'MockContext'
+        self.mox.StubOutWithMock(self.compute, '_get_host_volume_bdms')
+        self.mox.StubOutWithMock(utils, 'last_completed_audit_period')
+        self.mox.StubOutWithMock(self.compute.driver, 'get_all_volume_usage')
+        self.mox.StubOutWithMock(self.compute,
+                                 '_send_volume_usage_notifications')
+        self.mox.StubOutWithMock(time, 'time')
+        # Following methods will be called.
+        utils.last_completed_audit_period().AndReturn((0, 0))
+        time.time().AndReturn(10)
+        self.mox.ReplayAll()
+
+        CONF.volume_usage_poll_interval = 2
+        self.compute._last_vol_usage_poll = 9
+        self.compute._poll_volume_usage(ctxt)
+        self.mox.UnsetStubs()
+
+    def test_poll_volume_usage_returns_no_vols(self):
+        ctxt = 'MockContext'
+        self.compute.host = 'MockHost'
+        self.mox.StubOutWithMock(self.compute, '_get_host_volume_bdms')
+        self.mox.StubOutWithMock(utils, 'last_completed_audit_period')
+        self.mox.StubOutWithMock(self.compute.driver, 'get_all_volume_usage')
+        self.mox.StubOutWithMock(self.compute,
+                                 '_send_volume_usage_notifications')
+        # Following methods are called.
+        utils.last_completed_audit_period().AndReturn((0, 0))
+        self.compute._get_host_volume_bdms(ctxt, 'MockHost').AndReturn([])
+        self.mox.ReplayAll()
+
+        CONF.volume_usage_poll_interval = 10
+        self.compute._last_vol_usage_poll = 0
+        self.compute._poll_volume_usage(ctxt)
+        self.mox.UnsetStubs()
+
+    def test_poll_volume_usage_with_data(self):
+        ctxt = 'MockContext'
+        self.compute.host = 'MockHost'
+        curr_time = time.time()
+        self.mox.StubOutWithMock(utils, 'last_completed_audit_period')
+        self.mox.StubOutWithMock(self.compute, '_get_host_volume_bdms')
+        self.mox.StubOutWithMock(timeutils, 'utcnow')
+        self.mox.StubOutWithMock(self.compute, '_update_volume_usage_cache')
+        self.mox.StubOutWithMock(self.compute,
+                                 '_send_volume_usage_notifications')
+        self.stubs.Set(self.compute.driver, 'get_all_volume_usage',
+                       lambda x, y: [3, 4])
+        # All the mocks are called
+        utils.last_completed_audit_period().AndReturn((10, 20))
+        self.compute._get_host_volume_bdms(ctxt, 'MockHost').AndReturn([1, 2])
+        timeutils.utcnow().AndReturn(5)
+        self.compute._update_volume_usage_cache(ctxt, [3, 4], 5)
+        self.compute._send_volume_usage_notifications(ctxt, 20)
+        self.mox.ReplayAll()
+        CONF.volume_usage_poll_interval = 10
+        self.compute._last_vol_usage_poll = 0
+        self.compute._poll_volume_usage(ctxt)
+        self.assertTrue((curr_time < self.compute._last_vol_usage_poll),
+                        "_last_vol_usage_poll was not properly updated <%s>" %
+                        self.compute._last_vol_usage_poll)
+        self.mox.UnsetStubs()
+
+    def test_send_volume_usage_notifications(self):
+        ctxt = 'MockContext'
+        test_notifier.NOTIFICATIONS = []
+        self.compute.host = 'MockHost'
+        fake_usage = {'tot_last_refreshed': 20,
+                      'curr_last_refreshed': 10,
+                      'volume_id': 'fake_volume_id',
+                      'instance_uuid': 'fake_instance_uuid',
+                      'project_id': 'fake_project_id',
+                      'user_id': 'fake_user_id',
+                      'tot_reads': 11,
+                      'curr_reads': 22,
+                      'tot_read_bytes': 33,
+                      'curr_read_bytes': 44,
+                      'tot_writes': 55,
+                      'curr_writes': 66,
+                      'tot_write_bytes': 77,
+                      'curr_write_bytes': 88}
+
+        self.stubs.Set(self.compute.conductor_api,
+                       'vol_get_usage_by_time',
+                       lambda x, y:
+                       [db.sqlalchemy.models.VolumeUsage(**fake_usage)])
+        self.stubs.Set(self.compute.conductor_api,
+                       'instance_get_all_by_filters',
+                       lambda x, y: [{'project_id': 'fake_project_id',
+                                      'user_id': 'fake_user_id'}])
+
+        self.compute._send_volume_usage_notifications(ctxt, 20)
+        self.assertEquals(len(test_notifier.NOTIFICATIONS), 1)
+        msg = test_notifier.NOTIFICATIONS[0]
+        payload = msg['payload']
+        self.assertEquals(payload['instance_id'], 'fake_instance_uuid')
+        self.assertEquals(payload['user_id'], 'fake_user_id')
+        self.assertEquals(payload['tenant_id'], 'fake_project_id')
+        self.assertEquals(payload['reads'], 33)
+        self.assertEquals(payload['read_bytes'], 77)
+        self.assertEquals(payload['writes'], 121)
+        self.assertEquals(payload['write_bytes'], 165)
+
 
 class ComputeTestCase(BaseTestCase):
     def test_wrap_instance_fault(self):
