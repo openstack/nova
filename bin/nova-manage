@@ -604,10 +604,11 @@ class VmCommands(object):
                            context.get_admin_context(), host)
 
         for instance in instances:
+            instance_type = instance_types.extract_instance_type(instance)
             print ("%-10s %-15s %-10s %-10s %-26s %-9s %-9s %-9s"
                    " %-10s %-10s %-10s %-5d" % (instance['display_name'],
                                                 instance['host'],
-                                                instance['instance_type'].name,
+                                                instance_type['name'],
                                                 instance['vm_state'],
                                                 instance['launched_at'],
                                                 instance['image_ref'],
