@@ -127,10 +127,10 @@ def param2id(object_id):
 class VpnCommands(object):
     """Class for managing VPNs."""
 
-    @args('--project', dest="project_id", metavar='<Project name>',
+    @args('--project', dest='project_id', metavar='<Project name>',
             help='Project name')
-    @args('--ip', dest="ip", metavar='<IP Address>', help='IP Address')
-    @args('--port', dest="port", metavar='<Port>', help='Port')
+    @args('--ip', metavar='<IP Address>', help='IP Address')
+    @args('--port', metavar='<Port>', help='Port')
     def change(self, project_id, ip, port):
         """Change the ip and port for a vpn.
 
@@ -168,7 +168,7 @@ class ShellCommands(object):
         Falls back to Python shell if unavailable"""
         self.run('python')
 
-    @args('--shell', dest="shell", metavar='<bpython|ipython|python >',
+    @args('--shell', metavar='<bpython|ipython|python >',
             help='Python shell')
     def run(self, shell=None):
         """Runs a Python interactive interpreter."""
@@ -205,7 +205,7 @@ class ShellCommands(object):
                 readline.parse_and_bind("tab:complete")
             code.interact()
 
-    @args('--path', dest='path', metavar='<path>', help='Script path')
+    @args('--path', metavar='<path>', help='Script path')
     def script(self, path):
         """Runs the script from the specified path with flags set properly.
         arguments: path"""
@@ -223,10 +223,10 @@ def _db_error(caught_exception):
 class ProjectCommands(object):
     """Class for managing projects."""
 
-    @args('--project', dest="project_id", metavar='<Project name>',
+    @args('--project', dest='project_id', metavar='<Project name>',
             help='Project name')
-    @args('--key', dest="key", metavar='<key>', help='Key')
-    @args('--value', dest="value", metavar='<value>', help='Value')
+    @args('--key', metavar='<key>', help='Key')
+    @args('--value', metavar='<value>', help='Value')
     def quota(self, project_id, key=None, value=None):
         """Set or display quotas for project."""
         ctxt = context.get_admin_context()
@@ -249,7 +249,7 @@ class ProjectCommands(object):
                 value['limit'] = 'unlimited'
             print '%s: %s' % (key, value['limit'])
 
-    @args('--project', dest="project_id", metavar='<Project name>',
+    @args('--project', dest='project_id', metavar='<Project name>',
             help='Project name')
     def scrub(self, project_id):
         """Deletes data associated with project."""
@@ -268,7 +268,7 @@ AccountCommands = ProjectCommands
 class FixedIpCommands(object):
     """Class for managing fixed ip."""
 
-    @args('--host', dest="host", metavar='<host>', help='Host')
+    @args('--host', metavar='<host>', help='Host')
     def list(self, host=None):
         """Lists all fixed ips (optionally by host)."""
         ctxt = context.get_admin_context()
@@ -328,15 +328,13 @@ class FixedIpCommands(object):
         if not has_ip:
             print _('No fixed IP found.')
 
-    @args('--address', dest="address", metavar='<ip address>',
-          help='IP address')
+    @args('--address', metavar='<ip address>', help='IP address')
     def reserve(self, address):
         """Mark fixed ip as reserved
         arguments: address"""
         self._set_reserved(address, True)
 
-    @args('--address', dest="address", metavar='<ip address>',
-          help='IP address')
+    @args('--address', metavar='<ip address>', help='IP address')
     def unreserve(self, address):
         """Mark fixed ip as free to use
         arguments: address"""
@@ -378,10 +376,9 @@ class FloatingIpCommands(object):
             else:
                 return net.iter_hosts()
 
-    @args('--ip_range', dest="ip_range", metavar='<range>', help='IP range')
-    @args('--pool', dest="pool", metavar='<pool>', help='Optional pool')
-    @args('--interface', dest="interface", metavar='<interface>',
-          help='Optional interface')
+    @args('--ip_range', metavar='<range>', help='IP range')
+    @args('--pool', metavar='<pool>', help='Optional pool')
+    @args('--interface', metavar='<interface>', help='Optional interface')
     def create(self, ip_range, pool=None, interface=None):
         """Creates floating ips for zone by range."""
         admin_context = context.get_admin_context()
@@ -401,7 +398,7 @@ class FloatingIpCommands(object):
             print('error: %s' % exc)
             sys.exit(1)
 
-    @args('--ip_range', dest="ip_range", metavar='<range>', help='IP range')
+    @args('--ip_range', metavar='<range>', help='IP range')
     def delete(self, ip_range):
         """Deletes floating ips by range."""
         admin_context = context.get_admin_context()
@@ -410,7 +407,7 @@ class FloatingIpCommands(object):
                for address in self.address_to_hosts(ip_range))
         db.floating_ip_bulk_destroy(admin_context, ips)
 
-    @args('--host', dest="host", metavar='<host>', help='Host')
+    @args('--host', metavar='<host>', help='Host')
     def list(self, host=None):
         """Lists all floating ips (optionally by host)
         Note: if host is given, only active floating IPs are returned"""
@@ -439,38 +436,33 @@ class FloatingIpCommands(object):
 class NetworkCommands(object):
     """Class for managing networks."""
 
-    @args('--label', dest="label", metavar='<label>',
-            help='Label for network (ex: public)')
-    @args('--fixed_range_v4', dest="cidr", metavar='<x.x.x.x/yy>',
+    @args('--label', metavar='<label>', help='Label for network (ex: public)')
+    @args('--fixed_range_v4', dest='cidr', metavar='<x.x.x.x/yy>',
             help='IPv4 subnet (ex: 10.0.0.0/8)')
-    @args('--num_networks', dest="num_networks", metavar='<number>',
+    @args('--num_networks', metavar='<number>',
             help='Number of networks to create')
-    @args('--network_size', dest="network_size", metavar='<number>',
+    @args('--network_size', metavar='<number>',
             help='Number of IPs per network')
-    @args('--vlan', dest="vlan_start", metavar='<vlan id>', help='vlan id')
-    @args('--vpn', dest="vpn_start", help='vpn start')
-    @args('--fixed_range_v6', dest="cidr_v6",
+    @args('--vlan', dest='vlan_start', metavar='<vlan id>', help='vlan id')
+    @args('--vpn', dest='vpn_start', help='vpn start')
+    @args('--fixed_range_v6', dest='cidr_v6',
           help='IPv6 subnet (ex: fe80::/64')
-    @args('--gateway', dest="gateway", help='gateway')
-    @args('--gateway_v6', dest="gateway_v6", help='ipv6 gateway')
-    @args('--bridge', dest="bridge",
-            metavar='<bridge>',
+    @args('--gateway', help='gateway')
+    @args('--gateway_v6', help='ipv6 gateway')
+    @args('--bridge', metavar='<bridge>',
             help='VIFs on this network are connected to this bridge')
-    @args('--bridge_interface', dest="bridge_interface",
-            metavar='<bridge interface>',
+    @args('--bridge_interface', metavar='<bridge interface>',
             help='the bridge is connected to this interface')
-    @args('--multi_host', dest="multi_host", metavar="<'T'|'F'>",
+    @args('--multi_host', metavar="<'T'|'F'>",
             help='Multi host')
-    @args('--dns1', dest="dns1", metavar="<DNS Address>", help='First DNS')
-    @args('--dns2', dest="dns2", metavar="<DNS Address>", help='Second DNS')
-    @args('--uuid', dest="uuid", metavar="<network uuid>",
-      help='Network UUID')
-    @args('--fixed_cidr', dest="fixed_cidr", metavar='<x.x.x.x/yy>',
+    @args('--dns1', metavar="<DNS Address>", help='First DNS')
+    @args('--dns2', metavar="<DNS Address>", help='Second DNS')
+    @args('--uuid', metavar="<network uuid>", help='Network UUID')
+    @args('--fixed_cidr', metavar='<x.x.x.x/yy>',
             help='IPv4 subnet for fixed IPS (ex: 10.20.0.0/16)')
-    @args('--project_id', dest="project_id", metavar="<project id>",
-      help='Project id')
-    @args('--priority', dest="priority", metavar="<number>",
-      help='Network interface priority')
+    @args('--project_id', metavar="<project id>",
+          help='Project id')
+    @args('--priority', metavar="<number>", help='Network interface priority')
     def create(self, label=None, cidr=None, num_networks=None,
                network_size=None, multi_host=None, vlan_start=None,
                vpn_start=None, cidr_v6=None, gateway=None,
@@ -516,10 +508,8 @@ class NetworkCommands(object):
                               network.project_id,
                               network.uuid)
 
-    @args('--fixed_range', dest="fixed_range", metavar='<x.x.x.x/yy>',
-            help='Network to delete')
-    @args('--uuid', dest='uuid', metavar='<uuid>',
-            help='UUID of network to delete')
+    @args('--fixed_range', metavar='<x.x.x.x/yy>', help='Network to delete')
+    @args('--uuid', metavar='<uuid>', help='UUID of network to delete')
     def delete(self, fixed_range=None, uuid=None):
         """Deletes a network."""
 
@@ -538,12 +528,10 @@ class NetworkCommands(object):
         net_manager.delete_network(context.get_admin_context(),
             fixed_range, uuid)
 
-    @args('--fixed_range', dest="fixed_range", metavar='<x.x.x.x/yy>',
-            help='Network to modify')
-    @args('--project', dest="project", metavar='<project name>',
+    @args('--fixed_range', metavar='<x.x.x.x/yy>', help='Network to modify')
+    @args('--project', metavar='<project name>',
             help='Project name to associate')
-    @args('--host', dest="host", metavar='<host>',
-            help='Host to associate')
+    @args('--host', metavar='<host>', help='Host to associate')
     @args('--disassociate-project', action="store_true", dest='dis_project',
           default=False, help='Disassociate Network from Project')
     @args('--disassociate-host', action="store_true", dest='dis_host',
@@ -592,7 +580,7 @@ class NetworkCommands(object):
 class VmCommands(object):
     """Class for mangaging VM instances."""
 
-    @args('--host', dest="host", metavar='<host>', help='Host')
+    @args('--host', metavar='<host>', help='Host')
     def list(self, host=None):
         """Show a list of all instances."""
 
@@ -635,9 +623,8 @@ class VmCommands(object):
 class ServiceCommands(object):
     """Enable and disable running services."""
 
-    @args('--host', dest='host', metavar='<host>', help='Host')
-    @args('--service', dest='service', metavar='<service>',
-            help='Nova service')
+    @args('--host', metavar='<host>', help='Host')
+    @args('--service', metavar='<service>', help='Nova service')
     def list(self, host=None, service=None):
         """
         Show a list of all running services. Filter by host & service name.
@@ -669,9 +656,8 @@ class ServiceCommands(object):
                                   svc['availability_zone'], active, art,
                                   svc['updated_at'])
 
-    @args('--host', dest='host', metavar='<host>', help='Host')
-    @args('--service', dest='service', metavar='<service>',
-            help='Nova service')
+    @args('--host', metavar='<host>', help='Host')
+    @args('--service', metavar='<service>', help='Nova service')
     def enable(self, host, service):
         """Enable scheduling for a service."""
         ctxt = context.get_admin_context()
@@ -683,9 +669,8 @@ class ServiceCommands(object):
             sys.exit(2)
         print _("Service %(service)s on host %(host)s enabled.") % locals()
 
-    @args('--host', dest='host', metavar='<host>', help='Host')
-    @args('--service', dest='service', metavar='<service>',
-            help='Nova service')
+    @args('--host', metavar='<host>', help='Host')
+    @args('--service', metavar='<service>', help='Nova service')
     def disable(self, host, service):
         """Disable scheduling for a service."""
         ctxt = context.get_admin_context()
@@ -697,7 +682,7 @@ class ServiceCommands(object):
             sys.exit(2)
         print _("Service %(service)s on host %(host)s disabled.") % locals()
 
-    @args('--host', dest='host', metavar='<host>', help='Host')
+    @args('--host', metavar='<host>', help='Host')
     def describe_resource(self, host):
         """Describes cpu/memory/hdd info for host.
 
@@ -782,8 +767,7 @@ class DbCommands(object):
     def __init__(self):
         pass
 
-    @args('--version', dest='version', metavar='<version>',
-            help='Database version')
+    @args('--version', metavar='<version>', help='Database version')
     def sync(self, version=None):
         """Sync the database up to the most recent version."""
         return migration.db_sync(version)
@@ -792,7 +776,7 @@ class DbCommands(object):
         """Print the current database version."""
         print migration.db_version()
 
-    @args('--max_rows', dest='max_rows', metavar='<number>',
+    @args('--max_rows', metavar='<number>',
             help='Maximum number of deleted rows to archive')
     def archive_deleted_rows(self, max_rows):
         """Move up to max_rows deleted rows from production tables to shadow
@@ -818,21 +802,18 @@ class InstanceTypeCommands(object):
             val["ephemeral_gb"], val["flavorid"], val["swap"],
             val["rxtx_factor"], is_public, val["extra_specs"])
 
-    @args('--name', dest='name', metavar='<name>',
+    @args('--name', metavar='<name>',
             help='Name of instance type/flavor')
-    @args('--memory', dest='memory', metavar='<memory size>',
-            help='Memory size')
+    @args('--memory', metavar='<memory size>', help='Memory size')
     @args('--cpu', dest='vcpus', metavar='<num cores>', help='Number cpus')
-    @args('--root_gb', dest='root_gb', metavar='<root_gb>',
-            help='Root disk size')
-    @args('--ephemeral_gb', dest='ephemeral_gb', metavar='<ephemeral_gb>',
+    @args('--root_gb', metavar='<root_gb>', help='Root disk size')
+    @args('--ephemeral_gb', metavar='<ephemeral_gb>',
             help='Ephemeral disk size')
     @args('--flavor', dest='flavorid', metavar='<flavor  id>',
             help='Flavor ID')
-    @args('--swap', dest='swap', metavar='<swap>', help='Swap')
-    @args('--rxtx_factor', dest='rxtx_factor', metavar='<rxtx_factor>',
-            help='rxtx_factor')
-    @args('--is_public', dest="is_public", metavar='<is_public>',
+    @args('--swap', metavar='<swap>', help='Swap')
+    @args('--rxtx_factor', metavar='<rxtx_factor>', help='rxtx_factor')
+    @args('--is_public', metavar='<is_public>',
             help='Make flavor accessible to the public')
     def create(self, name, memory, vcpus, root_gb, ephemeral_gb=0,
                flavorid=None, swap=0, rxtx_factor=1.0, is_public=True):
@@ -859,8 +840,7 @@ class InstanceTypeCommands(object):
         else:
             print _("%s created") % name
 
-    @args('--name', dest='name', metavar='<name>',
-            help='Name of instance type/flavor')
+    @args('--name', metavar='<name>', help='Name of instance type/flavor')
     def delete(self, name):
         """Marks instance types / flavors as deleted."""
         try:
@@ -876,8 +856,7 @@ class InstanceTypeCommands(object):
         else:
             print _("%s deleted") % name
 
-    @args('--name', dest='name', metavar='<name>',
-            help='Name of instance type/flavor')
+    @args('--name', metavar='<name>', help='Name of instance type/flavor')
     def list(self, name=None):
         """Lists all active or specific instance types / flavors."""
         try:
@@ -893,12 +872,9 @@ class InstanceTypeCommands(object):
         else:
             self._print_instance_types(name, inst_types)
 
-    @args('--name', dest='name', metavar='<name>',
-           help='Name of instance type/flavor')
-    @args('--key', dest='key', metavar='<key>',
-           help='The key of the key/value pair')
-    @args('--value', dest='value', metavar='<value>',
-           help='The value of the key/value pair')
+    @args('--name', metavar='<name>', help='Name of instance type/flavor')
+    @args('--key', metavar='<key>', help='The key of the key/value pair')
+    @args('--value', metavar='<value>', help='The value of the key/value pair')
     def set_key(self, name, key, value=None):
         """Add key/value pair to specified instance type's extra_specs."""
         try:
@@ -919,10 +895,8 @@ class InstanceTypeCommands(object):
         except db_exc.DBError, e:
             _db_error(e)
 
-    @args('--name', dest='name', metavar='<name>',
-           help='Name of instance type/flavor')
-    @args('--key', dest='key', metavar='<key>',
-           help='The key to be deleted')
+    @args('--name', metavar='<name>', help='Name of instance type/flavor')
+    @args('--key', metavar='<key>', help='The key to be deleted')
     def unset_key(self, name, key):
         """Delete the specified extra spec for instance type."""
         try:
@@ -1056,22 +1030,21 @@ class GetLogCommands(object):
 class CellCommands(object):
     """Commands for managing cells."""
 
-    @args('--name', dest='name', metavar='<name>',
-            help='Name for the new cell')
-    @args('--cell_type', dest='cell_type', metavar='<parent|child>',
+    @args('--name', metavar='<name>', help='Name for the new cell')
+    @args('--cell_type', metavar='<parent|child>',
          help='Whether the cell is a parent or child')
-    @args('--username', dest='username', metavar='<username>',
+    @args('--username', metavar='<username>',
          help='Username for the message broker in this cell')
-    @args('--password', dest='password', metavar='<password>',
+    @args('--password', metavar='<password>',
          help='Password for the message broker in this cell')
-    @args('--hostname', dest='hostname', metavar='<hostname>',
+    @args('--hostname', metavar='<hostname>',
          help='Address of the message broker in this cell')
-    @args('--port', dest='port', metavar='<number>',
+    @args('--port', metavar='<number>',
          help='Port number of the message broker in this cell')
-    @args('--virtual_host', dest='virtual_host', metavar='<virtual_host>',
+    @args('--virtual_host', metavar='<virtual_host>',
          help='The virtual host of the message broker in this cell')
-    @args('--woffset', dest='woffset', metavar='<float>')
-    @args('--wscale', dest='wscale', metavar='<float>')
+    @args('--woffset', metavar='<float>')
+    @args('--wscale', metavar='<float>')
     def create(self, name, cell_type='child', username=None, password=None,
                hostname=None, port=None, virtual_host=None,
                woffset=None, wscale=None):
@@ -1093,8 +1066,8 @@ class CellCommands(object):
         ctxt = context.get_admin_context()
         db.cell_create(ctxt, values)
 
-    @args('--cell_name', dest='cell_name', metavar='<cell_name>',
-         help='Name of the cell to delete')
+    @args('--cell_name', metavar='<cell_name>',
+          help='Name of the cell to delete')
     def delete(self, cell_name):
         ctxt = context.get_admin_context()
         db.cell_delete(ctxt, cell_name)
@@ -1165,6 +1138,9 @@ def add_command_parsers(subparsers):
 
             action_kwargs = []
             for args, kwargs in getattr(action_fn, 'args', []):
+                # FIXME(markmc): hack to assume dest is the arg name without
+                # the leading hyphens if no dest is supplied
+                kwargs.setdefault('dest', args[0][2:])
                 if kwargs['dest'].startswith('action_kwarg_'):
                     action_kwargs.append(
                             kwargs['dest'][len('action_kwarg_'):])
