@@ -912,6 +912,7 @@ class LibvirtDriver(driver.ComputeDriver):
         dom = self._lookup_by_name(instance["name"])
         (state, _max_mem, _mem, _cpus, _t) = dom.info()
         state = LIBVIRT_POWER_STATE[state]
+        old_domid = dom.ID()
         # NOTE(vish): This check allows us to reboot an instance that
         #             is already shutdown.
         if state == power_state.RUNNING:
@@ -920,8 +921,10 @@ class LibvirtDriver(driver.ComputeDriver):
         #             FLAG defines depending on how long the get_info
         #             call takes to return.
         for x in xrange(FLAGS.libvirt_wait_soft_reboot_seconds):
+            dom = self._lookup_by_name(instance["name"])
             (state, _max_mem, _mem, _cpus, _t) = dom.info()
             state = LIBVIRT_POWER_STATE[state]
+            new_domid = dom.ID()
 
             if state in [power_state.SHUTDOWN,
                          power_state.CRASHED]:
@@ -930,6 +933,10 @@ class LibvirtDriver(driver.ComputeDriver):
                 self._create_domain(domain=dom)
                 timer = utils.LoopingCall(self._wait_for_running, instance)
                 timer.start(interval=0.5).wait()
+                return True
+            elif old_domid != new_domid:
+                LOG.info(_("Instance may have been rebooted during soft "
+                           "reboot, so return now."), instance=instance)
                 return True
             greenthread.sleep(1)
         return False
