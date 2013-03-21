@@ -145,6 +145,10 @@ class IptablesFirewallDriver(FirewallDriver):
         self.network_infos = {}
         self.basicly_filtered = False
 
+        # Flags for DHCP request rule
+        self.dhcp_create = False
+        self.dhcp_created = False
+
         self.iptables.ipv4['filter'].add_chain('sg-fallback')
         self.iptables.ipv4['filter'].add_rule('sg-fallback', '-j DROP')
         self.iptables.ipv6['filter'].add_chain('sg-fallback')
@@ -187,6 +191,17 @@ class IptablesFirewallDriver(FirewallDriver):
         LOG.debug(_('Filters added to instance'), instance=instance)
         self.refresh_provider_fw_rules()
         LOG.debug(_('Provider Firewall Rules refreshed'), instance=instance)
+        # Ensure that DHCP request rule is updated if necessary
+        if (self.dhcp_create and not self.dhcp_created):
+            self.iptables.ipv4['filter'].add_rule(
+                    'INPUT',
+                    '-s 0.0.0.0/32 -d 255.255.255.255/32 '
+                    '-p udp -m udp --sport 68 --dport 67 -j ACCEPT')
+            self.iptables.ipv4['filter'].add_rule(
+                    'FORWARD',
+                    '-s 0.0.0.0/32 -d 255.255.255.255/32 '
+                    '-p udp -m udp --sport 68 --dport 67 -j ACCEPT')
+            self.dhcp_created = True
         self.iptables.apply()
 
     def _create_filter(self, ips, chain_name):
@@ -268,6 +283,7 @@ class IptablesFirewallDriver(FirewallDriver):
             if dhcp_server:
                 ipv4_rules.append('-s %s -p udp --sport 67 --dport 68 '
                                   '-j ACCEPT' % (dhcp_server,))
+                self.dhcp_create = True
 
     def _do_project_network_rules(self, ipv4_rules, ipv6_rules, network_info):
         # make sure this is legacy nw_info
