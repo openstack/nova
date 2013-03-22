@@ -304,8 +304,12 @@ class NovaTestResult(testtools.TestResult):
 
 
 test = subunit.ProtocolTestCase(sys.stdin, passthrough=None)
-runner = unittest.TextTestRunner(verbosity=2,
-                                 resultclass=NovaTestResult)
+
+if sys.version_info <= (2, 6):
+    runner = unittest.TextTestRunner(verbosity=2)
+else:
+    runner = unittest.TextTestRunner(verbosity=2, resultclass=NovaTestResult)
+
 if runner.run(test).wasSuccessful():
     exit_code = 0
 else:
