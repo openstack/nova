@@ -417,9 +417,10 @@ class IptablesFirewallDriver(FirewallDriver):
                         nw_api = network.API()
                         capi = conductor.API()
                         for instance in rule['grantee_group']['instances']:
-                            nw_info = nw_api.get_instance_nw_info(ctxt,
-                                                                  instance,
-                                                                  capi)
+                            nw_info = nw_api.get_instance_nw_info(
+                                ctxt,
+                                instance,
+                                conductor_api=capi)
 
                             ips = [ip['address']
                                 for ip in nw_info.fixed_ips()
