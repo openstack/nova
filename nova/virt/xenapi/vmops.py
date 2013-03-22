@@ -1549,15 +1549,17 @@ class VMOps(object):
         return self._make_plugin_call('xenstore.py', 'delete_record', instance,
                                       vm_ref=vm_ref, path=path)
 
-    def _make_plugin_call(self, plugin, method, instance, vm_ref=None,
+    def _make_plugin_call(self, plugin, method, instance=None, vm_ref=None,
                           **addl_args):
         """
         Abstracts out the process of calling a method of a xenapi plugin.
         Any errors raised by the plugin will in turn raise a RuntimeError here.
         """
-        vm_ref = vm_ref or self._get_vm_opaque_ref(instance)
-        vm_rec = self._session.call_xenapi("VM.get_record", vm_ref)
-        args = {'dom_id': vm_rec['domid']}
+        args = {}
+        if instance or vm_ref:
+            vm_ref = vm_ref or self._get_vm_opaque_ref(instance)
+            vm_rec = self._session.call_xenapi("VM.get_record", vm_ref)
+            args['dom_id'] = vm_rec['domid']
         args.update(addl_args)
         try:
             return self._session.call_plugin(plugin, method, args)
@@ -1660,6 +1662,21 @@ class VMOps(object):
             raise exception.MigrationPreCheckError(reason=msg)
         return migrate_data
 
+    def _get_iscsi_srs(self, ctxt, instance_ref):
+        vm_ref = self._get_vm_opaque_ref(instance_ref)
+        vbd_refs = self._session.call_xenapi("VM.get_VBDs", vm_ref)
+
+        iscsi_srs = []
+
+        for vbd_ref in vbd_refs:
+            vdi_ref = self._session.call_xenapi("VBD.get_VDI", vbd_ref)
+            # Check if it's on an iSCSI SR
+            sr_ref = self._session.call_xenapi("VDI.get_SR", vdi_ref)
+            if self._session.call_xenapi("SR.get_type", sr_ref) == 'iscsi':
+                iscsi_srs.append(sr_ref)
+
+        return iscsi_srs
+
     def check_can_live_migrate_destination(self, ctxt, instance_ref,
                                            block_migration=False,
                                            disk_over_commit=False):
@@ -1687,6 +1704,20 @@ class VMOps(object):
             # block migration work will be able to resolve this
         return dest_check_data
 
+    def _is_xsm_sr_check_relaxed(self):
+        try:
+            return self.cached_xsm_sr_relaxed
+        except AttributeError:
+            config_value = None
+            try:
+                config_value = self._make_plugin_call('config_file',
+                                                      'get_val',
+                                                      key='relax-xsm-sr-check')
+            except Exception as exc:
+                LOG.exception(exc)
+            self.cached_xsm_sr_relaxed = config_value == "true"
+            return self.cached_xsm_sr_relaxed
+
     def check_can_live_migrate_source(self, ctxt, instance_ref,
                                       dest_check_data):
         """Check if it's possible to execute live migration on the source side.
@@ -1697,6 +1728,13 @@ class VMOps(object):
                                 destination, includes block_migration flag
 
         """
+        if len(self._get_iscsi_srs(ctxt, instance_ref)) > 0:
+            # XAPI must support the relaxed SR check for live migrating with
+            # iSCSI VBDs
+            if not self._is_xsm_sr_check_relaxed():
+                raise exception.MigrationError(_('XAPI supporting '
+                                'relax-xsm-sr-check=true requried'))
+
         if 'migrate_data' in dest_check_data:
             vm_ref = self._get_vm_opaque_ref(instance_ref)
             migrate_data = dest_check_data['migrate_data']
@@ -1709,9 +1747,10 @@ class VMOps(object):
                 raise exception.MigrationPreCheckError(reason=msg)
         return dest_check_data
 
-    def _generate_vdi_map(self, destination_sr_ref, vm_ref):
+    def _generate_vdi_map(self, destination_sr_ref, vm_ref, sr_ref=None):
         """generate a vdi_map for _call_live_migrate_command."""
-        sr_ref = vm_utils.safe_find_sr(self._session)
+        if sr_ref is None:
+            sr_ref = vm_utils.safe_find_sr(self._session)
         vm_vdis = vm_utils.get_instance_vdis_for_sr(self._session,
                                                     vm_ref, sr_ref)
         return dict((vdi, destination_sr_ref) for vdi in vm_vdis)
@@ -1722,6 +1761,19 @@ class VMOps(object):
         migrate_send_data = migrate_data['migrate_send_data']
 
         vdi_map = self._generate_vdi_map(destination_sr_ref, vm_ref)
+
+        # Add destination SR refs for all of the VDIs that we created
+        # as part of the pre migration callback
+        if 'pre_live_migration_result' in migrate_data:
+            pre_migrate_data = migrate_data['pre_live_migration_result']
+            sr_uuid_map = pre_migrate_data.get('sr_uuid_map', [])
+            for sr_uuid in sr_uuid_map:
+                # Source and destination SRs have the same UUID, so get the
+                # reference for the local SR
+                sr_ref = self._session.call_xenapi("SR.get_by_uuid", sr_uuid)
+                vdi_map.update(
+                    self._generate_vdi_map(
+                        sr_uuid_map[sr_uuid], vm_ref, sr_ref))
         vif_map = {}
         options = {}
         self._session.call_xenapi(command_name, vm_ref,
@@ -1737,12 +1789,18 @@ class VMOps(object):
                 if not migrate_data:
                     raise exception.InvalidParameterValue('Block Migration '
                                     'requires migrate data from destination')
+
+                iscsi_srs = self._get_iscsi_srs(context, instance)
                 try:
                     self._call_live_migrate_command(
                         "VM.migrate_send", vm_ref, migrate_data)
                 except self._session.XenAPI.Failure as exc:
                     LOG.exception(exc)
                     raise exception.MigrationError(_('Migrate Send failed'))
+
+                # Tidy up the iSCSI SRs
+                for sr_ref in iscsi_srs:
+                    volume_utils.forget_sr(self._session, sr_ref)
             else:
                 host_ref = self._get_host_opaque_ref(context,
                                                      destination_hostname)
@@ -1775,3 +1833,26 @@ class VMOps(object):
                 usage[uuid] = {'memory_mb': memory_mb, 'uuid': uuid}
 
         return usage
+
+    def attach_block_device_volumes(self, block_device_info):
+        sr_uuid_map = {}
+        try:
+            if block_device_info is not None:
+                for block_device_map in block_device_info[
+                                                'block_device_mapping']:
+                    sr_uuid, _ = self._volumeops.attach_volume(
+                        block_device_map['connection_info'],
+                        None,
+                        block_device_map['mount_device'],
+                        hotplug=False)
+
+                    sr_ref = self._session.call_xenapi('SR.get_by_uuid',
+                                                       sr_uuid)
+                    sr_uuid_map[sr_uuid] = sr_ref
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                # Disconnect the volumes we just connected
+                for sr in sr_uuid_map:
+                    volume_utils.forget_sr(self._session, sr_uuid_map[sr_ref])
+
+        return sr_uuid_map

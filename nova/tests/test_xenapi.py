@@ -2825,21 +2825,29 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBase):
                           {}, {},
                           True, False)
 
-    def test_check_can_live_migrate_source_with_block_migrate(self):
-        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
-        self.conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
-
+    def _add_default_live_migrate_stubs(self, conn):
         def fake_generate_vdi_map(destination_sr_ref, _vm_ref):
             pass
 
-        self.stubs.Set(self.conn._vmops, "_generate_vdi_map",
-                       fake_generate_vdi_map)
+        def fake_get_iscsi_srs(destination_sr_ref, _vm_ref):
+            return []
 
         def fake_get_vm_opaque_ref(instance):
             return "fake_vm"
 
-        self.stubs.Set(self.conn._vmops, "_get_vm_opaque_ref",
+        self.stubs.Set(conn._vmops, "_generate_vdi_map",
+                       fake_generate_vdi_map)
+        self.stubs.Set(conn._vmops, "_get_iscsi_srs",
+                       fake_get_iscsi_srs)
+        self.stubs.Set(conn._vmops, "_get_vm_opaque_ref",
                        fake_get_vm_opaque_ref)
+
+    def test_check_can_live_migrate_source_with_block_migrate(self):
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
+        self.conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
+
+        self._add_default_live_migrate_stubs(self.conn)
+
         dest_check_data = {'block_migration': True,
                            'migrate_data': {
                             'destination_sr_ref': None,
@@ -2850,22 +2858,65 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBase):
                                                          dest_check_data)
         self.assertEqual(dest_check_data, result)
 
+    def test_check_can_live_migrate_source_with_block_migrate_iscsi(self):
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
+        self.conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
+
+        self._add_default_live_migrate_stubs(self.conn)
+
+        def fake_get_iscsi_srs(destination_sr_ref, _vm_ref):
+            return ['sr_ref']
+        self.stubs.Set(self.conn._vmops, "_get_iscsi_srs",
+                       fake_get_iscsi_srs)
+
+        def fake_make_plugin_call(plugin, method, **args):
+            return "true"
+        self.stubs.Set(self.conn._vmops, "_make_plugin_call",
+                       fake_make_plugin_call)
+
+        dest_check_data = {'block_migration': True,
+                           'migrate_data': {
+                            'destination_sr_ref': None,
+                            'migrate_send_data': None
+                           }}
+        result = self.conn.check_can_live_migrate_source(self.context,
+                                                         {'host': 'host'},
+                                                         dest_check_data)
+        self.assertEqual(dest_check_data, result)
+
+    def test_check_can_live_migrate_source_with_block_iscsi_fails(self):
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
+        self.conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
+
+        self._add_default_live_migrate_stubs(self.conn)
+
+        def fake_get_iscsi_srs(destination_sr_ref, _vm_ref):
+            return ['sr_ref']
+        self.stubs.Set(self.conn._vmops, "_get_iscsi_srs",
+                       fake_get_iscsi_srs)
+
+        def fake_make_plugin_call(plugin, method, **args):
+            return {'returncode': 'error', 'message': 'Plugin not found'}
+        self.stubs.Set(self.conn._vmops, "_make_plugin_call",
+                       fake_make_plugin_call)
+
+        dest_check_data = {'block_migration': True,
+                           'migrate_data': {
+                            'destination_sr_ref': None,
+                            'migrate_send_data': None
+                           }}
+
+        self.assertRaises(exception.MigrationError,
+                          self.conn.check_can_live_migrate_source,
+                          self.context, {'host': 'host'},
+                          {})
+
     def test_check_can_live_migrate_source_with_block_migrate_fails(self):
         stubs.stubout_session(self.stubs,
                               stubs.FakeSessionForFailedMigrateTests)
         self.conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
 
-        def fake_generate_vdi_map(destination_sr_ref, _vm_ref):
-            pass
-
-        self.stubs.Set(self.conn._vmops, "_generate_vdi_map",
-                       fake_generate_vdi_map)
-
-        def fake_get_vm_opaque_ref(instance):
-            return "fake_vm"
-
-        self.stubs.Set(self.conn._vmops, "_get_vm_opaque_ref",
-                       fake_get_vm_opaque_ref)
+        self._add_default_live_migrate_stubs(self.conn)
 
         dest_check_data = {'block_migration': True,
                            'migrate_data': {
@@ -2966,17 +3017,7 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBase):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         self.conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
 
-        def fake_generate_vdi_map(destination_sr_ref, _vm_ref):
-            pass
-
-        self.stubs.Set(self.conn._vmops, "_generate_vdi_map",
-                       fake_generate_vdi_map)
-
-        def fake_get_vm_opaque_ref(instance):
-            return "fake_vm"
-
-        self.stubs.Set(self.conn._vmops, "_get_vm_opaque_ref",
-                       fake_get_vm_opaque_ref)
+        self._add_default_live_migrate_stubs(self.conn)
 
         def post_method(context, instance, destination_hostname,
                         block_migration):
@@ -2988,6 +3029,34 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBase):
         self.conn.live_migration(self.conn, None, None, post_method, None,
                                  True, migrate_data)
         self.assertTrue(post_method.called, "post_method.called")
+
+    def test_live_migration_block_cleans_srs(self):
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
+        self.conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
+
+        self._add_default_live_migrate_stubs(self.conn)
+
+        def fake_get_iscsi_srs(context, instance):
+            return ['sr_ref']
+        self.stubs.Set(self.conn._vmops, "_get_iscsi_srs",
+                       fake_get_iscsi_srs)
+
+        def fake_forget_sr(context, instance):
+            fake_forget_sr.called = True
+        self.stubs.Set(volume_utils, "forget_sr",
+                       fake_forget_sr)
+
+        def post_method(context, instance, destination_hostname,
+                        block_migration):
+            post_method.called = True
+
+        migrate_data = {"destination_sr_ref": "foo",
+                        "migrate_send_data": "bar"}
+        self.conn.live_migration(self.conn, None, None, post_method, None,
+                                 True, migrate_data)
+
+        self.assertTrue(post_method.called, "post_method.called")
+        self.assertTrue(fake_forget_sr.called, "forget_sr.called")
 
     def test_live_migration_with_block_migration_raises_invalid_param(self):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
@@ -3012,15 +3081,7 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBase):
                               stubs.FakeSessionForFailedMigrateTests)
         self.conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
 
-        def fake_get_vm_opaque_ref(instance):
-            return "fake_vm"
-        self.stubs.Set(self.conn._vmops, "_get_vm_opaque_ref",
-                       fake_get_vm_opaque_ref)
-
-        def fake_generate_vdi_map(destination_sr_ref, _vm_ref):
-            pass
-        self.stubs.Set(self.conn._vmops, "_generate_vdi_map",
-                       fake_generate_vdi_map)
+        self._add_default_live_migrate_stubs(self.conn)
 
         def recover_method(context, instance, destination_hostname,
                            block_migration):
@@ -3046,11 +3107,7 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBase):
 
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
 
-        def fake_get_vm_opaque_ref(instance):
-            return "fake_vm"
-
-        self.stubs.Set(conn._vmops, "_get_vm_opaque_ref",
-                       fake_get_vm_opaque_ref)
+        self._add_default_live_migrate_stubs(conn)
 
         def fake_generate_vdi_map(destination_sr_ref, _vm_ref):
             return fake_vdi_map
