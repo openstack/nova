@@ -523,16 +523,12 @@ class ComputeCellsAPI(compute_api.API):
         self._cast_to_cells(context, instance, 'attach_volume',
                 volume_id, device)
 
-    @check_instance_lock
     @validate_cell
-    def _detach_volume(self, context, instance, volume_id):
+    def _detach_volume(self, context, instance, volume):
         """Detach a volume from an instance."""
-        check_policy(context, 'detach_volume', instance)
-
-        volume = self.volume_api.get(context, volume_id)
         self.volume_api.check_detach(context, volume)
         self._cast_to_cells(context, instance, 'detach_volume',
-                volume_id)
+                volume)
 
     @wrap_check_policy
     @validate_cell

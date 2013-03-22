@@ -6222,26 +6222,12 @@ class ComputeAPITestCase(BaseTestCase):
         params = {'vm_state': vm_states.RESCUED}
         instance = self._create_fake_instance(params=params)
 
-        def fake(*args, **kwargs):
-            pass
-
-        def fake_volume_get(self, context, volume_id):
-            pass
-            return {'id': volume_id, 'attach_status': 'in-use',
-                    'instance_uuid': instance['uuid']}
-
-        def fake_rpc_detach_volume(self, context, **kwargs):
-            pass
-
-        self.stubs.Set(cinder.API, 'get', fake_volume_get)
-        self.stubs.Set(cinder.API, 'check_detach', fake)
-        self.stubs.Set(cinder.API, 'begin_detaching', fake)
-        self.stubs.Set(compute_rpcapi.ComputeAPI, 'detach_volume',
-                       fake_rpc_detach_volume)
+        volume = {'id': 1, 'attach_status': 'in-use',
+                  'instance_uuid': instance['uuid']}
 
         self.assertRaises(exception.InstanceInvalidState,
                 self.compute_api.detach_volume,
-                self.context, 1)
+                self.context, instance, volume)
 
     def test_vnc_console(self):
         # Make sure we can a vnc console for an instance.
@@ -6473,9 +6459,10 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_detach_volume(self):
         # Ensure volume can be detached from instance
-
         called = {}
         instance = self._create_fake_instance()
+        volume = {'id': 1, 'attach_status': 'in-use',
+                  'instance_uuid': instance['uuid']}
 
         def fake_check_detach(*args, **kwargs):
             called['fake_check_detach'] = True
@@ -6483,35 +6470,43 @@ class ComputeAPITestCase(BaseTestCase):
         def fake_begin_detaching(*args, **kwargs):
             called['fake_begin_detaching'] = True
 
-        def fake_volume_get(self, context, volume_id):
-            called['fake_volume_get'] = True
-            return {'id': volume_id, 'attach_status': 'in-use',
-                    'instance_uuid': instance['uuid']}
-
         def fake_rpc_detach_volume(self, context, **kwargs):
             called['fake_rpc_detach_volume'] = True
 
-        self.stubs.Set(cinder.API, 'get', fake_volume_get)
         self.stubs.Set(cinder.API, 'check_detach', fake_check_detach)
         self.stubs.Set(cinder.API, 'begin_detaching', fake_begin_detaching)
         self.stubs.Set(compute_rpcapi.ComputeAPI, 'detach_volume',
                        fake_rpc_detach_volume)
 
-        self.compute_api.detach_volume(self.context, 1)
-        self.assertTrue(called.get('fake_volume_get'))
+        self.compute_api.detach_volume(self.context,
+                instance, volume)
         self.assertTrue(called.get('fake_check_detach'))
         self.assertTrue(called.get('fake_begin_detaching'))
         self.assertTrue(called.get('fake_rpc_detach_volume'))
 
     def test_detach_invalid_volume(self):
         # Ensure exception is raised while detaching an un-attached volume
+        instance = {'uuid': 'uuid1',
+                    'locked': False,
+                    'vm_state': vm_states.ACTIVE}
+        volume = {'id': 1, 'attach_status': 'detached'}
 
-        def fake_volume_get(self, context, volume_id):
-            return {'id': volume_id, 'attach_status': 'detached'}
-
-        self.stubs.Set(cinder.API, 'get', fake_volume_get)
         self.assertRaises(exception.InvalidVolume,
-                          self.compute_api.detach_volume, self.context, 1)
+                          self.compute_api.detach_volume, self.context,
+                          instance, volume)
+
+    def test_detach_unattached_volume(self):
+        # Ensure exception is raised when volume's idea of attached
+        # instance doesn't match.
+        instance = {'uuid': 'uuid1',
+                    'locked': False,
+                    'vm_state': vm_states.ACTIVE}
+        volume = {'id': 1, 'attach_status': 'in-use',
+                  'instance_uuid': 'uuid2'}
+
+        self.assertRaises(exception.VolumeUnattached,
+                          self.compute_api.detach_volume, self.context,
+                          instance, volume)
 
     def test_detach_volume_libvirt_is_down(self):
         # Ensure rollback during detach if libvirt goes down

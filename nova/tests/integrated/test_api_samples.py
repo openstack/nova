@@ -3760,6 +3760,7 @@ class VolumeAttachmentsSampleJsonTest(ServersSampleBase):
         attach_id = "a26887c6-c47b-4654-abb5-dfadf7d3f803"
         self._stub_compute_api_get_instance_bdms(server_id)
         self._stub_compute_api_get()
+        self.stubs.Set(cinder.API, 'get', fakes.stub_volume_get)
         self.stubs.Set(compute_api.API, 'detach_volume', lambda *a, **k: None)
         response = self._do_delete('servers/%s/os-volume_attachments/%s'
                                    % (server_id, attach_id))
