@@ -5293,6 +5293,17 @@ class ComputeAPITestCase(BaseTestCase):
         instance = db.instance_get_by_uuid(self.context, instance['uuid'])
         self.compute_api.resize(self.context, instance, '4')
 
+        # Do the prep/finish_resize steps (manager does this)
+        old_type = instance_types.extract_instance_type(instance)
+        new_type = instance_types.get_instance_type_by_flavor_id('4')
+        sys_meta = utils.metadata_to_dict(instance['system_metadata'])
+        sys_meta = instance_types.save_instance_type_info(sys_meta,
+                                                          old_type, 'old_')
+        sys_meta = instance_types.save_instance_type_info(sys_meta,
+                                                          new_type, 'new_')
+        sys_meta = instance_types.save_instance_type_info(sys_meta,
+                                                          new_type)
+
         # create a fake migration record (manager does this)
         db.migration_create(self.context.elevated(),
                 {'instance_uuid': instance['uuid'],
@@ -5300,7 +5311,8 @@ class ComputeAPITestCase(BaseTestCase):
         # set the state that the instance gets when resize finishes
         instance = db.instance_update(self.context, instance['uuid'],
                                       {'task_state': None,
-                                       'vm_state': vm_states.RESIZED})
+                                       'vm_state': vm_states.RESIZED,
+                                       'system_metadata': sys_meta})
 
         self.compute_api.confirm_resize(self.context, instance)
         self.compute.terminate_instance(self.context,
