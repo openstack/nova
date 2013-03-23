@@ -110,12 +110,7 @@ def ec2_id_to_id(ec2_id):
 def image_ec2_id(image_id, image_type='ami'):
     """Returns image ec2_id using id and three letter type."""
     template = image_type + '-%08x'
-    try:
-        return id_to_ec2_id(image_id, template=template)
-    except ValueError:
-        #TODO(wwolf): once we have ec2_id -> glance_id mapping
-        # in place, this wont be necessary
-        return "ami-00000000"
+    return id_to_ec2_id(image_id, template=template)
 
 
 def get_ip_info_for_instance_from_nw_info(nw_info):
