@@ -370,6 +370,8 @@ class HostSerializerTest(test.TestCase):
                              tree[i].get('host_name'))
             self.assertEqual(fake_hosts.HOST_LIST[i]['service'],
                              tree[i].get('service'))
+            self.assertEqual(fake_hosts.HOST_LIST[i]['zone'],
+                             tree[i].get('zone'))
 
     def test_update_serializer_with_status(self):
         exemplar = dict(host='host_c1', status='enabled')

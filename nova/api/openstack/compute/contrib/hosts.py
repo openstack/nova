@@ -34,6 +34,7 @@ class HostIndexTemplate(xmlutil.TemplateBuilder):
         elem = xmlutil.SubTemplateElement(root, 'host', selector='hosts')
         elem.set('host_name')
         elem.set('service')
+        elem.set('zone')
 
         return xmlutil.MasterTemplate(root, 1)
 
