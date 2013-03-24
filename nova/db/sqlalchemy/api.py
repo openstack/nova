@@ -3634,25 +3634,20 @@ def instance_type_access_get_by_flavor_id(context, flavor_id):
 @require_admin_context
 def instance_type_access_add(context, flavor_id, project_id):
     """Add given tenant to the flavor access list."""
-    # NOTE(boris-42): There is a race condition in this method and it will be
-    #                 rewritten after bp/db-unique-keys implementation.
     session = get_session()
     with session.begin():
         instance_type_ref = instance_type_get_by_flavor_id(context, flavor_id,
                                                            session=session)
         instance_type_id = instance_type_ref['id']
-        access_ref = _instance_type_access_query(context, session=session).\
-                        filter_by(instance_type_id=instance_type_id).\
-                        filter_by(project_id=project_id).\
-                        first()
-        if access_ref:
-            raise exception.FlavorAccessExists(flavor_id=flavor_id,
-                                               project_id=project_id)
 
         access_ref = models.InstanceTypeProjects()
         access_ref.update({"instance_type_id": instance_type_id,
                            "project_id": project_id})
-        access_ref.save(session=session)
+        try:
+            access_ref.save(session=session)
+        except db_exc.DBDuplicateEntry:
+            raise exception.FlavorAccessExists(flavor_id=flavor_id,
+                                               project_id=project_id)
         return access_ref
 
 
