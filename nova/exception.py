@@ -161,6 +161,12 @@ class NovaException(Exception):
 
         super(NovaException, self).__init__(message)
 
+    def format_message(self):
+        if self.__class__.__name__.endswith('_Remote'):
+            return self.args[0]
+        else:
+            return unicode(self)
+
 
 class EC2APIError(NovaException):
     message = _("Unknown")
