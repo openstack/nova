@@ -495,7 +495,6 @@ class MulticallProxyWaiter(object):
                 data = self._dataqueue.get(timeout=self._timeout)
                 result = self._process_data(data)
             except queue.Empty:
-                LOG.exception(_('Timed out waiting for RPC response.'))
                 self.done()
                 raise rpc_common.Timeout()
             except Exception:
