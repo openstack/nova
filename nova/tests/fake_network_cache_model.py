@@ -65,6 +65,7 @@ def new_vif(vif_dict=None):
     vif = dict(
         id=1,
         address='aa:aa:aa:aa:aa:aa',
+        type='bridge',
         network=new_network())
     vif_dict = vif_dict or {}
     vif.update(vif_dict)
