@@ -329,7 +329,6 @@ class ComputeManager(manager.SchedulerDependentManager):
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
         self.virtapi = ComputeVirtAPI(self)
-        self.driver = driver.load_compute_driver(self.virtapi, compute_driver)
         self.network_api = network.API()
         self.volume_api = volume.API()
         self._last_host_check = 0
@@ -343,11 +342,15 @@ class ComputeManager(manager.SchedulerDependentManager):
             openstack_driver.is_quantum_security_groups())
         self.consoleauth_rpcapi = consoleauth.rpcapi.ConsoleAuthAPI()
         self.cells_rpcapi = cells_rpcapi.CellsAPI()
+        self._resource_tracker_dict = {}
 
         super(ComputeManager, self).__init__(service_name="compute",
                                              *args, **kwargs)
 
-        self._resource_tracker_dict = {}
+        # NOTE(russellb) Load the driver last.  It may call back into the
+        # compute manager via the virtapi, so we want it to be fully
+        # initialized before that happens.
+        self.driver = driver.load_compute_driver(self.virtapi, compute_driver)
 
     def _get_resource_tracker(self, nodename):
         rt = self._resource_tracker_dict.get(nodename)
