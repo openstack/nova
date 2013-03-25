@@ -2516,6 +2516,15 @@ class ArchiveTestCase(test.TestCase):
         # SQLite doesn't enforce foreign key constraints without a pragma.
         dialect = self.engine.url.get_dialect()
         if dialect == sqlite.dialect:
+            # We're seeing issues with foreign key support in SQLite 3.6.20
+            # SQLAlchemy doesn't support it at all with < SQLite 3.6.19
+            # It works fine in SQLite 3.7.
+            # So return early to skip this test if running SQLite < 3.7
+            import sqlite3
+            tup = sqlite3.sqlite_version_info
+            if tup[0] < 3 or (tup[0] == 3 and tup[1] < 7):
+                self.skipTest(
+                    'sqlite version too old for reliable SQLA foreign_keys')
             self.conn.execute("PRAGMA foreign_keys = ON")
         insert_statement = self.console_pools.insert().values(deleted=1)
         result = self.conn.execute(insert_statement)
