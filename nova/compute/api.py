@@ -2984,10 +2984,6 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
                                         security_group_id=security_group['id'],
                                         instance_id=instance_uuid)
 
-        #check if the instance is in running state
-        if instance['power_state'] != power_state.RUNNING:
-            raise exception.InstanceNotRunning(instance_id=instance_uuid)
-
         self.db.instance_add_security_group(context.elevated(),
                                             instance_uuid,
                                             security_group['id'])
@@ -3013,10 +3009,6 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
             raise exception.SecurityGroupNotExistsForInstance(
                                     security_group_id=security_group['id'],
                                     instance_id=instance_uuid)
-
-        #check if the instance is in running state
-        if instance['power_state'] != power_state.RUNNING:
-            raise exception.InstanceNotRunning(instance_id=instance_uuid)
 
         self.db.instance_remove_security_group(context.elevated(),
                                                instance_uuid,
