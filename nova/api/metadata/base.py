@@ -106,10 +106,8 @@ class InstanceMetadata():
         ctxt = context.get_admin_context()
 
         capi = self.conductor_api
-        services = capi.service_get_all_by_host(ctxt.elevated(),
-                                                instance['host'])
         self.availability_zone = ec2utils.get_availability_zone_by_host(
-                services, instance['host'], capi)
+                instance['host'], capi)
 
         self.ip_info = ec2utils.get_ip_info_for_instance(ctxt, instance)
 

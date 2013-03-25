@@ -1188,8 +1188,7 @@ class CloudController(object):
             self._format_instance_bdm(context, instance['uuid'],
                                       i['rootDeviceName'], i)
             host = instance['host']
-            services = db.service_get_all_by_host(context.elevated(), host)
-            zone = ec2utils.get_availability_zone_by_host(services, host)
+            zone = ec2utils.get_availability_zone_by_host(host)
             i['placement'] = {'availabilityZone': zone}
             if instance['reservation_id'] not in reservations:
                 r = {}
