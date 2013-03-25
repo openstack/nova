@@ -33,6 +33,7 @@ from nova.compute import instance_types
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import vm_mode
+from nova.compute import vm_states
 from nova import context as nova_context
 from nova import exception
 from nova.openstack.common import excutils
@@ -1365,11 +1366,17 @@ class VMOps(object):
 
     def get_vnc_console(self, instance):
         """Return connection info for a vnc console."""
-        try:
-            vm_ref = self._get_vm_opaque_ref(instance)
-        except exception.NotFound:
-            # The compute manager expects InstanceNotFound for this case.
-            raise exception.InstanceNotFound(instance_id=instance['uuid'])
+        if instance['vm_state'] == vm_states.RESCUED:
+            name = '%s-rescue' % instance['name']
+            vm_ref = vm_utils.lookup(self._session, name)
+            if vm_ref is None:
+                # The rescue instance might not be ready at this point.
+                raise exception.InstanceNotReady(instance_id=instance['uuid'])
+        else:
+            vm_ref = vm_utils.lookup(self._session, instance['name'])
+            if vm_ref is None:
+                # The compute manager expects InstanceNotFound for this case.
+                raise exception.InstanceNotFound(instance_id=instance['uuid'])
 
         session_id = self._session.get_session_id()
         path = "/console?ref=%s&session_id=%s" % (str(vm_ref), session_id)
