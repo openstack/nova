@@ -125,10 +125,22 @@ class TestQuantumSecurityGroups(
         pass
 
     def test_get_security_group_by_instance(self):
-        pass
-
-    def test_get_security_group_by_instance_non_existing(self):
-        pass
+        sg = self._create_sg_template().get('security_group')
+        net = self._create_network()
+        self._create_port(
+            network_id=net['network']['id'], security_groups=[sg['id']],
+            device_id=test_security_groups.FAKE_UUID)
+        expected = [{'rules': [], 'tenant_id': 'fake_tenant', 'id': sg['id'],
+                    'name': 'test', 'description': 'test-description'}]
+        self.stubs.Set(nova.db, 'instance_get',
+                       test_security_groups.return_server)
+        self.stubs.Set(nova.db, 'instance_get_by_uuid',
+                       test_security_groups.return_server_by_uuid)
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/%s/os-security-groups'
+                                      % test_security_groups.FAKE_UUID)
+        res_dict = self.server_controller.index(
+            req, test_security_groups.FAKE_UUID)['security_groups']
+        self.assertEquals(expected, res_dict)
 
     def test_get_security_group_by_id(self):
         sg = self._create_sg_template().get('security_group')
@@ -508,7 +520,8 @@ class MockClient(object):
         ret = {'status': 'ACTIVE', 'id': str(uuid.uuid4()),
                'mac_address': p.get('mac_address', 'fa:16:3e:b8:f5:fb'),
                'port_security_enabled': p.get('port_security_enabled'),
-               'device_owner': str(uuid.uuid4())}
+               'device_id': p.get('device_id', str(uuid.uuid4())),
+               'security_groups': p.get('security_groups', [])}
 
         fields = ['network_id', 'security_groups', 'admin_state_up']
         for field in fields:
@@ -611,8 +624,16 @@ class MockClient(object):
                 [network for network in self._fake_networks.values()]}
 
     def list_ports(self, **_params):
-        return {'ports':
-                [port for port in self._fake_ports.values()]}
+        ret = []
+        device_id = _params.get('device_id')
+        for port in self._fake_ports.values():
+            if device_id:
+                if device_id == port['device_id']:
+                    print port
+                    ret.append(port)
+            else:
+                ret.append(port)
+        return {'ports': ret}
 
     def list_subnets(self, **_params):
         return {'subnets':

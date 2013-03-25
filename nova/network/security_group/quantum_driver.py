@@ -30,8 +30,6 @@ from nova.network.security_group import security_group_base
 from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import uuidutils
-
-
 from nova import utils
 
 
@@ -248,37 +246,47 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                 raise e
         return self._convert_to_nova_security_group_rule_format(rule)
 
-    def get_instance_security_groups(self, req, instance_id):
-        dict_security_groups = {}
-        security_group_name_map = {}
+    def get_instance_security_groups(self, req, instance_id,
+                                     instance_uuid=None, detailed=False):
+        """Returns the security groups that are associated with an instance.
+        If detailed is True then it also returns the full details of the
+        security groups associated with an instance.
+        """
         admin_context = context.get_admin_context()
-
         quantum = quantumv2.get_client(admin_context)
-        params = {'device_id': instance_id}
+        if instance_uuid:
+            params = {'device_id': instance_uuid}
+        else:
+            params = {'device_id': instance_id}
         ports = quantum.list_ports(**params)
         security_groups = quantum.list_security_groups().get('security_groups')
 
+        security_group_lookup = {}
         for security_group in security_groups:
-            name = security_group.get('name')
-            # Since the name is optional for quantum security groups
-            if not name:
-                name = security_group['id']
-            security_group_name_map[security_group['id']] = name
+            security_group_lookup[security_group['id']] = security_group
 
+        ret = []
         for port in ports['ports']:
             for security_group in port.get('security_groups', []):
                 try:
-                    dict_security_groups[security_group] = (
-                        security_group_name_map[security_group])
+                    if detailed:
+                        ret.append(self._convert_to_nova_security_group_format(
+                            security_group_lookup[security_group]))
+                    else:
+                        name = security_group_lookup[security_group].get(
+                            'name')
+                        # Since the name is optional for
+                        # quantum security groups
+                        if not name:
+                            name = security_group['id']
+                        ret.append({'name': name})
                 except KeyError:
                     # If this should only happen due to a race condition
                     # if the security group on a port was deleted after the
-                    # ports were returned. We pass since this security group
-                    # is no longer on the port.
+                    # ports were returned. We pass since this security
+                    # group is no longer on the port.
                     pass
-        ret = []
-        for security_group in dict_security_groups.values():
-            ret.append({'name': security_group})
+
         return ret
 
     def _has_security_group_requirements(self, port):
