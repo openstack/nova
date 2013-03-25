@@ -726,16 +726,13 @@ class MiscellaneousXMLUtilTests(test.TestCase):
 
     def test_safe_parse_xml(self):
 
-        normal_body = ("""
-                 <?xml version="1.0" ?><foo>
-                    <bar>
-                        <v1>hey</v1>
-                        <v2>there</v2>
-                    </bar>
-                </foo>""").strip()
+        normal_body = ('<?xml version="1.0" ?>'
+                       '<foo><bar><v1>hey</v1><v2>there</v2></bar></foo>')
 
         dom = xmlutil.safe_minidom_parse_string(normal_body)
-        self.assertEqual(normal_body, str(dom.toxml()))
+        # Some versions of minidom inject extra newlines so we ignore them
+        result = str(dom.toxml()).replace('\n', '')
+        self.assertEqual(normal_body, result)
 
         self.assertRaises(exception.MalformedRequestBody,
                           xmlutil.safe_minidom_parse_string,
