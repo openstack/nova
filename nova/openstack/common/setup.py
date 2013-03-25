@@ -171,6 +171,14 @@ def generate_authors():
                            " log --format='%aN <%aE>' | sort -u | "
                            "egrep -v '" + jenkins_email + "'")
             changelog = _run_shell_command(git_log_cmd)
+            signed_cmd = ("git log --git-dir=" + git_dir +
+                          " | grep -i Co-authored-by: | sort -u")
+            signed_entries = _run_shell_command(signed_cmd)
+            if signed_entries:
+                new_entries = "\n".join(
+                    [signed.split(":", 1)[1].strip()
+                     for signed in signed_entries.split("\n") if signed])
+                changelog = "\n".join((changelog, new_entries))
             mailmap = _parse_git_mailmap(git_dir)
             with open(new_authors, 'w') as new_authors_fh:
                 new_authors_fh.write(canonicalize_emails(changelog, mailmap))
