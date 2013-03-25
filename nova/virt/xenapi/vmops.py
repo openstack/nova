@@ -1658,21 +1658,21 @@ class VMOps(object):
         :param disk_over_commit: if true, allow disk over commit
 
         """
+        dest_check_data = {}
         if block_migration:
             migrate_send_data = self._migrate_receive(ctxt)
             destination_sr_ref = vm_utils.safe_find_sr(self._session)
-            dest_check_data = {
-                "block_migration": block_migration,
-                "migrate_data": {"migrate_send_data": migrate_send_data,
-                                 "destination_sr_ref": destination_sr_ref}}
-            return dest_check_data
+            dest_check_data.update(
+                {"block_migration": block_migration,
+                 "migrate_data": {"migrate_send_data": migrate_send_data,
+                                  "destination_sr_ref": destination_sr_ref}})
         else:
             src = instance_ref['host']
             self._ensure_host_in_aggregate(ctxt, src)
             # TODO(johngarbutt) we currently assume
             # instance is on a SR shared with other destination
             # block migration work will be able to resolve this
-            return None
+        return dest_check_data
 
     def check_can_live_migrate_source(self, ctxt, instance_ref,
                                       dest_check_data):
@@ -1684,17 +1684,17 @@ class VMOps(object):
                                 destination, includes block_migration flag
 
         """
-        if dest_check_data and 'migrate_data' in dest_check_data:
+        if 'migrate_data' in dest_check_data:
             vm_ref = self._get_vm_opaque_ref(instance_ref)
             migrate_data = dest_check_data['migrate_data']
             try:
                 self._call_live_migrate_command(
                     "VM.assert_can_migrate", vm_ref, migrate_data)
-                return dest_check_data
             except self._session.XenAPI.Failure as exc:
                 LOG.exception(exc)
                 raise exception.MigrationError(_('VM.assert_can_migrate'
                                                  'failed'))
+        return dest_check_data
 
     def _generate_vdi_map(self, destination_sr_ref, vm_ref):
         """generate a vdi_map for _call_live_migrate_command."""
