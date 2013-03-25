@@ -85,3 +85,33 @@ class GenerateConfigDriveTestCase(test.TestCase):
         # And the actual call we're testing
         vm_utils.generate_configdrive('session', instance, 'vm_ref',
                                       'userdevice')
+
+
+class XenAPIGetUUID(test.TestCase):
+    def test_get_this_vm_uuid_new_kernel(self):
+        self.mox.StubOutWithMock(vm_utils, '_get_sys_hypervisor_uuid')
+
+        vm_utils._get_sys_hypervisor_uuid().AndReturn(
+            '2f46f0f5-f14c-ef1b-1fac-9eeca0888a3f')
+
+        self.mox.ReplayAll()
+        self.assertEquals('2f46f0f5-f14c-ef1b-1fac-9eeca0888a3f',
+                          vm_utils.get_this_vm_uuid())
+        self.mox.VerifyAll()
+
+    def test_get_this_vm_uuid_old_kernel_reboot(self):
+        self.mox.StubOutWithMock(vm_utils, '_get_sys_hypervisor_uuid')
+        self.mox.StubOutWithMock(utils, 'execute')
+
+        vm_utils._get_sys_hypervisor_uuid().AndRaise(
+            IOError(13, 'Permission denied'))
+        utils.execute('xenstore-read', 'domid', run_as_root=True).AndReturn(
+            ('27', ''))
+        utils.execute('xenstore-read', '/local/domain/27/vm',
+                      run_as_root=True).AndReturn(
+            ('/vm/2f46f0f5-f14c-ef1b-1fac-9eeca0888a3f', ''))
+
+        self.mox.ReplayAll()
+        self.assertEquals('2f46f0f5-f14c-ef1b-1fac-9eeca0888a3f',
+                          vm_utils.get_this_vm_uuid())
+        self.mox.VerifyAll()

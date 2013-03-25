@@ -1918,9 +1918,23 @@ def vdi_attached_here(session, vdi_ref, read_only=False):
         LOG.debug(_('Destroying VBD for VDI %s done.'), vdi_ref)
 
 
-def get_this_vm_uuid():
+def _get_sys_hypervisor_uuid():
     with file('/sys/hypervisor/uuid') as f:
         return f.readline().strip()
+
+
+def get_this_vm_uuid():
+    try:
+        return _get_sys_hypervisor_uuid()
+    except IOError:
+        # Some guest kernels (without 5c13f8067745efc15f6ad0158b58d57c44104c25)
+        # cannot read from uuid after a reboot.  Fall back to trying xenstore.
+        # See https://bugs.launchpad.net/ubuntu/+source/xen-api/+bug/1081182
+        domid, _ = utils.execute('xenstore-read', 'domid', run_as_root=True)
+        vm_key, _ = utils.execute('xenstore-read',
+                                 '/local/domain/%s/vm' % domid.strip(),
+                                 run_as_root=True)
+        return vm_key.strip()[4:]
 
 
 def _get_this_vm_ref(session):
