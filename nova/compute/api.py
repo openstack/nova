@@ -1561,12 +1561,14 @@ class API(BaseAPI):
         return {'url': connect_info['access_url']}
 
     @wrap_check_policy
-    def validate_vnc_console(self, context, instance_id, host, port):
+    def validate_vnc_console(self, context, instance_id, host, port,
+                             console_type):
         """Validate VNC Console for an instance."""
         instance = self.get(context, instance_id)
         output = self._call_compute_message('get_vnc_console',
-                                            context,
-                                            instance)
+                context,
+                instance,
+                params={"console_type": console_type})
         return (port == output['port'] and host == output['host'])
 
     @wrap_check_policy
