@@ -16,6 +16,7 @@
 
 import os
 import pprint
+import re
 import socket
 import sys
 import types
@@ -220,7 +221,7 @@ class ZmqClient(object):
     def cast(self, msg_id, topic, data, envelope=False):
         msg_id = msg_id or 0
 
-        if not (envelope or rpc_common._SEND_RPC_ENVELOPE):
+        if not envelope:
             self.outq.send(map(bytes,
                            (msg_id, topic, 'cast', _serialize(data))))
             return
@@ -294,11 +295,16 @@ class InternalContext(object):
     def reply(self, ctx, proxy,
               msg_id=None, context=None, topic=None, msg=None):
         """Reply to a casted call."""
-        # Our real method is curried into msg['args']
+        # NOTE(ewindisch): context kwarg exists for Grizzly compat.
+        #                  this may be able to be removed earlier than
+        #                  'I' if ConsumerBase.process were refactored.
+        if type(msg) is list:
+            payload = msg[-1]
+        else:
+            payload = msg
 
-        child_ctx = RpcContext.unmarshal(msg[0])
         response = ConsumerBase.normalize_reply(
-            self._get_response(child_ctx, proxy, topic, msg[1]),
+            self._get_response(ctx, proxy, topic, payload),
             ctx.replies)
 
         LOG.debug(_("Sending reply"))
@@ -431,6 +437,8 @@ class ZmqProxy(ZmqBaseReactor):
 
     def __init__(self, conf):
         super(ZmqProxy, self).__init__(conf)
+        pathsep = set((os.path.sep or '', os.path.altsep or '', '/', '\\'))
+        self.badchars = re.compile(r'[%s]' % re.escape(''.join(pathsep)))
 
         self.topic_proxy = {}
 
@@ -456,6 +464,13 @@ class ZmqProxy(ZmqBaseReactor):
                 LOG.info(_("Creating proxy for topic: %s"), topic)
 
                 try:
+                    # The topic is received over the network,
+                    # don't trust this input.
+                    if self.badchars.search(topic) is not None:
+                        emsg = _("Topic contained dangerous characters.")
+                        LOG.warn(emsg)
+                        raise RPCException(emsg)
+
                     out_sock = ZmqSocket("ipc://%s/zmq_topic_%s" %
                                          (ipc_dir, topic),
                                          sock_type, bind=True)
@@ -675,8 +690,8 @@ def _call(addr, context, topic, msg, timeout=None,
         'method': '-reply',
         'args': {
             'msg_id': msg_id,
-            'context': mcontext,
             'topic': reply_topic,
+            # TODO(ewindisch): safe to remove mcontext in I.
             'msg': [mcontext, msg]
         }
     }

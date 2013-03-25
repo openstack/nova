@@ -68,16 +68,21 @@ class RpcProxy(object):
         :param context: The request context
         :param msg: The message to send, including the method and args.
         :param topic: Override the topic for this message.
+        :param version: (Optional) Override the requested API version in this
+               message.
         :param timeout: (Optional) A timeout to use when waiting for the
                response.  If no timeout is specified, a default timeout will be
                used that is usually sufficient.
-        :param version: (Optional) Override the requested API version in this
-               message.
 
         :returns: The return value from the remote method.
         """
         self._set_version(msg, version)
-        return rpc.call(context, self._get_topic(topic), msg, timeout)
+        real_topic = self._get_topic(topic)
+        try:
+            return rpc.call(context, real_topic, msg, timeout)
+        except rpc.common.Timeout as exc:
+            raise rpc.common.Timeout(
+                exc.info, real_topic, msg.get('method'))
 
     def multicall(self, context, msg, topic=None, version=None, timeout=None):
         """rpc.multicall() a remote method.
@@ -85,17 +90,22 @@ class RpcProxy(object):
         :param context: The request context
         :param msg: The message to send, including the method and args.
         :param topic: Override the topic for this message.
+        :param version: (Optional) Override the requested API version in this
+               message.
         :param timeout: (Optional) A timeout to use when waiting for the
                response.  If no timeout is specified, a default timeout will be
                used that is usually sufficient.
-        :param version: (Optional) Override the requested API version in this
-               message.
 
         :returns: An iterator that lets you process each of the returned values
                   from the remote method as they arrive.
         """
         self._set_version(msg, version)
-        return rpc.multicall(context, self._get_topic(topic), msg, timeout)
+        real_topic = self._get_topic(topic)
+        try:
+            return rpc.multicall(context, real_topic, msg, timeout)
+        except rpc.common.Timeout as exc:
+            raise rpc.common.Timeout(
+                exc.info, real_topic, msg.get('method'))
 
     def cast(self, context, msg, topic=None, version=None):
         """rpc.cast() a remote method.
