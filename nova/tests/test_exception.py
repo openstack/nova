@@ -133,3 +133,31 @@ class NovaExceptionTestCase(test.TestCase):
 
         exc = FakeNovaException(code=404)
         self.assertEquals(exc.kwargs['code'], 404)
+
+    def test_format_message_local(self):
+        class FakeNovaException(exception.NovaException):
+            message = "some message"
+
+        exc = FakeNovaException()
+        self.assertEquals(unicode(exc), exc.format_message())
+
+    def test_format_message_remote(self):
+        class FakeNovaException_Remote(exception.NovaException):
+            message = "some message"
+
+            def __unicode__(self):
+                return u"print the whole trace"
+
+        exc = FakeNovaException_Remote()
+        self.assertEquals(unicode(exc), u"print the whole trace")
+        self.assertEquals(exc.format_message(), "some message")
+
+    def test_format_message_remote_error(self):
+        class FakeNovaException_Remote(exception.NovaException):
+            message = "some message %(somearg)s"
+
+            def __unicode__(self):
+                return u"print the whole trace"
+
+        exc = FakeNovaException_Remote(lame_arg='lame')
+        self.assertEquals(exc.format_message(), "some message %(somearg)s")
