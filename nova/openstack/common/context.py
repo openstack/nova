@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2011 OpenStack Foundation
+# Copyright 2011 OpenStack Foundation.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -37,9 +37,9 @@ class RequestContext(object):
     accesses the system, as well as additional request information.
     """
 
-    def __init__(self, auth_tok=None, user=None, tenant=None, is_admin=False,
+    def __init__(self, auth_token=None, user=None, tenant=None, is_admin=False,
                  read_only=False, show_deleted=False, request_id=None):
-        self.auth_tok = auth_tok
+        self.auth_token = auth_token
         self.user = user
         self.tenant = tenant
         self.is_admin = is_admin
@@ -55,7 +55,7 @@ class RequestContext(object):
                 'is_admin': self.is_admin,
                 'read_only': self.read_only,
                 'show_deleted': self.show_deleted,
-                'auth_token': self.auth_tok,
+                'auth_token': self.auth_token,
                 'request_id': self.request_id}
 
 

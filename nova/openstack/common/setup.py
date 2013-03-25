@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2011 OpenStack Foundation
+# Copyright 2011 OpenStack Foundation.
 # Copyright 2012-2013 Hewlett-Packard Development Company, L.P.
 # All Rights Reserved.
 #
@@ -41,6 +41,11 @@ def parse_mailmap(mailmap='.mailmap'):
                     continue
                 mapping[alias] = canonical_email
     return mapping
+
+
+def _parse_git_mailmap(git_dir, mailmap='.mailmap'):
+    mailmap = os.path.join(os.path.dirname(git_dir), mailmap)
+    return parse_mailmap(mailmap)
 
 
 def canonicalize_emails(changelog, mapping):
@@ -117,9 +122,9 @@ def _run_shell_command(cmd, throw_on_error=False):
         output = subprocess.Popen(["/bin/sh", "-c", cmd],
                                   stdout=subprocess.PIPE,
                                   stderr=subprocess.PIPE)
+    out = output.communicate()
     if output.returncode and throw_on_error:
         raise Exception("%s returned %d" % cmd, output.returncode)
-    out = output.communicate()
     if len(out) == 0:
         return None
     if len(out[0].strip()) == 0:
@@ -127,14 +132,26 @@ def _run_shell_command(cmd, throw_on_error=False):
     return out[0].strip()
 
 
+def _get_git_directory():
+    parent_dir = os.path.dirname(__file__)
+    while True:
+        git_dir = os.path.join(parent_dir, '.git')
+        if os.path.exists(git_dir):
+            return git_dir
+        parent_dir, child = os.path.split(parent_dir)
+        if not child:   # reached to root dir
+            return None
+
+
 def write_git_changelog():
     """Write a changelog based on the git changelog."""
     new_changelog = 'ChangeLog'
+    git_dir = _get_git_directory()
     if not os.getenv('SKIP_WRITE_GIT_CHANGELOG'):
-        if os.path.isdir('.git'):
-            git_log_cmd = 'git log --stat'
+        if git_dir:
+            git_log_cmd = 'git --git-dir=%s log' % git_dir
             changelog = _run_shell_command(git_log_cmd)
-            mailmap = parse_mailmap()
+            mailmap = _parse_git_mailmap(git_dir)
             with open(new_changelog, "w") as changelog_file:
                 changelog_file.write(canonicalize_emails(changelog, mailmap))
     else:
@@ -146,13 +163,15 @@ def generate_authors():
     jenkins_email = 'jenkins@review.(openstack|stackforge).org'
     old_authors = 'AUTHORS.in'
     new_authors = 'AUTHORS'
+    git_dir = _get_git_directory()
     if not os.getenv('SKIP_GENERATE_AUTHORS'):
-        if os.path.isdir('.git'):
+        if git_dir:
             # don't include jenkins email address in AUTHORS file
-            git_log_cmd = ("git log --format='%aN <%aE>' | sort -u | "
+            git_log_cmd = ("git --git-dir=" + git_dir +
+                           " log --format='%aN <%aE>' | sort -u | "
                            "egrep -v '" + jenkins_email + "'")
             changelog = _run_shell_command(git_log_cmd)
-            mailmap = parse_mailmap()
+            mailmap = _parse_git_mailmap(git_dir)
             with open(new_authors, 'w') as new_authors_fh:
                 new_authors_fh.write(canonicalize_emails(changelog, mailmap))
                 if os.path.exists(old_authors):
@@ -258,19 +277,21 @@ def get_cmdclass():
     return cmdclass
 
 
-def _get_revno():
+def _get_revno(git_dir):
     """Return the number of commits since the most recent tag.
 
     We use git-describe to find this out, but if there are no
     tags then we fall back to counting commits since the beginning
     of time.
     """
-    describe = _run_shell_command("git describe --always")
+    describe = _run_shell_command(
+        "git --git-dir=%s describe --always" % git_dir)
     if "-" in describe:
         return describe.rsplit("-", 2)[-2]
 
     # no tags found
-    revlist = _run_shell_command("git rev-list --abbrev-commit HEAD")
+    revlist = _run_shell_command(
+        "git --git-dir=%s rev-list --abbrev-commit HEAD" % git_dir)
     return len(revlist.splitlines())
 
 
@@ -279,18 +300,21 @@ def _get_version_from_git(pre_version):
     revision if there is one, or tag plus number of additional revisions
     if the current revision has no tag."""
 
-    if os.path.isdir('.git'):
+    git_dir = _get_git_directory()
+    if git_dir:
         if pre_version:
             try:
                 return _run_shell_command(
-                    "git describe --exact-match",
+                    "git --git-dir=" + git_dir + " describe --exact-match",
                     throw_on_error=True).replace('-', '.')
             except Exception:
-                sha = _run_shell_command("git log -n1 --pretty=format:%h")
-                return "%s.a%s.g%s" % (pre_version, _get_revno(), sha)
+                sha = _run_shell_command(
+                    "git --git-dir=" + git_dir + " log -n1 --pretty=format:%h")
+                return "%s.a%s.g%s" % (pre_version, _get_revno(git_dir), sha)
         else:
             return _run_shell_command(
-                "git describe --always").replace('-', '.')
+                "git --git-dir=" + git_dir + " describe --always").replace(
+                    '-', '.')
     return None
 
 

@@ -4,12 +4,21 @@
 
  Synced in from openstack-common
 """
+
+__all__ = ['main']
+
+import __builtin__ as builtins
 import sys
 
-import pyflakes.checker
-from pyflakes.scripts import pyflakes
+import pyflakes.api
+from pyflakes import checker
+
+
+def main():
+    checker.Checker.builtIns = (set(dir(builtins)) |
+                                set(['_']) |
+                                set(checker._MAGIC_GLOBALS))
+    sys.exit(pyflakes.api.main())
 
 if __name__ == "__main__":
-    orig_builtins = set(pyflakes.checker._MAGIC_GLOBALS)
-    pyflakes.checker._MAGIC_GLOBALS = orig_builtins | set(['_'])
-    sys.exit(pyflakes.main())
+    main()

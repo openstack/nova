@@ -39,8 +39,8 @@ import functools
 
 from oslo.config import cfg
 
-from nova.openstack.common import lockutils
 from nova.openstack.common import importutils
+from nova.openstack.common import lockutils
 
 
 db_opts = [
