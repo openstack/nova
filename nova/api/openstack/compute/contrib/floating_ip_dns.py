@@ -188,7 +188,7 @@ class FloatingIPDNSDomainController(object):
         try:
             self.network_api.delete_dns_domain(context, domain)
         except exception.NotFound as e:
-            raise webob.exc.HTTPNotFound(explanation=unicode(e))
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
         return webob.Response(status_int=202)
 
@@ -272,7 +272,7 @@ class FloatingIPDNSEntryController(object):
         try:
             self.network_api.delete_dns_entry(context, name, domain)
         except exception.NotFound as e:
-            raise webob.exc.HTTPNotFound(explanation=unicode(e))
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
         return webob.Response(status_int=202)
 

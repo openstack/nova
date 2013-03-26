@@ -67,7 +67,7 @@ class FlavorExtraSpecsController(object):
                                                               flavor_id,
                                                               specs)
         except exception.MetadataLimitExceeded as error:
-            raise exc.HTTPBadRequest(explanation=unicode(error))
+            raise exc.HTTPBadRequest(explanation=error.format_message())
         return body
 
     @wsgi.serializers(xml=ExtraSpecsTemplate)
@@ -86,8 +86,7 @@ class FlavorExtraSpecsController(object):
                                                                flavor_id,
                                                                body)
         except exception.MetadataLimitExceeded as error:
-            raise exc.HTTPBadRequest(explanation=unicode(error))
-
+            raise exc.HTTPBadRequest(explanation=error.format_message())
         return body
 
     @wsgi.serializers(xml=ExtraSpecsTemplate)

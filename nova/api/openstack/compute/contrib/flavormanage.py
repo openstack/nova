@@ -45,7 +45,7 @@ class FlavorManageController(wsgi.Controller):
             flavor = instance_types.get_instance_type_by_flavor_id(
                     id, read_deleted="no")
         except exception.NotFound, e:
-            raise webob.exc.HTTPNotFound(explanation=str(e))
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
         instance_types.destroy(flavor['name'])
 
@@ -74,7 +74,7 @@ class FlavorManageController(wsgi.Controller):
                                            swap, rxtx_factor, is_public)
             req.cache_db_flavor(flavor)
         except exception.InstanceTypeExists as err:
-            raise webob.exc.HTTPConflict(explanation=str(err))
+            raise webob.exc.HTTPConflict(explanation=err.format_message())
 
         return self._view_builder.show(req, flavor)
 
