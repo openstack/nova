@@ -387,7 +387,7 @@ class ServerSecurityGroupController(SecurityGroupControllerBase):
         try:
             instance = self.compute_api.get(context, server_id)
         except exception.InstanceNotFound as exp:
-            raise exc.HTTPNotFound(explanation=unicode(exp))
+            raise exc.HTTPNotFound(explanation=exp.format_message())
 
         groups = self.security_group_api.get_instance_security_groups(
             req, instance['id'], instance['uuid'], True)
@@ -429,11 +429,11 @@ class SecurityGroupActionController(wsgi.Controller):
             instance = self.compute_api.get(context, id)
             method(context, instance, group_name)
         except exception.SecurityGroupNotFound as exp:
-            raise exc.HTTPNotFound(explanation=unicode(exp))
+            raise exc.HTTPNotFound(explanation=exp.format_message())
         except exception.InstanceNotFound as exp:
-            raise exc.HTTPNotFound(explanation=unicode(exp))
+            raise exc.HTTPNotFound(explanation=exp.format_message())
         except exception.Invalid as exp:
-            raise exc.HTTPBadRequest(explanation=unicode(exp))
+            raise exc.HTTPBadRequest(explanation=exp.format_message())
 
         return webob.Response(status_int=202)
 

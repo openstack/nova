@@ -47,7 +47,7 @@ class ServerPasswordController(object):
         try:
             return self.compute_api.get(context, server_id)
         except exception.InstanceNotFound as exp:
-            raise webob.exc.HTTPNotFound(explanation=unicode(exp))
+            raise webob.exc.HTTPNotFound(explanation=exp.format_message())
 
     @wsgi.serializers(xml=ServerPasswordTemplate)
     def index(self, req, server_id):

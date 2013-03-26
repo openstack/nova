@@ -47,7 +47,7 @@ class ServerStartStopActionController(wsgi.Controller):
         try:
             self.compute_api.start(context, instance)
         except exception.InstanceNotReady as e:
-            raise webob.exc.HTTPConflict(explanation=unicode(e))
+            raise webob.exc.HTTPConflict(explanation=e.format_message())
         return webob.Response(status_int=202)
 
     @wsgi.action('os-stop')
@@ -59,7 +59,7 @@ class ServerStartStopActionController(wsgi.Controller):
         try:
             self.compute_api.stop(context, instance)
         except exception.InstanceNotReady as e:
-            raise webob.exc.HTTPConflict(explanation=unicode(e))
+            raise webob.exc.HTTPConflict(explanation=e.format_message())
         return webob.Response(status_int=202)
 
 
