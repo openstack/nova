@@ -68,6 +68,10 @@ compute_opts = [
                 default=False,
                 help='Allow destination machine to match source for resize. '
                      'Useful when testing in single-host environments.'),
+    cfg.BoolOpt('allow_migrate_to_same_host',
+                default=False,
+                help='Allow migrate machine to the same host. '
+                     'Useful when testing in single-host environments.'),
     cfg.StrOpt('default_schedule_zone',
                default=None,
                help='availability zone to use when user doesn\'t specify one'),
@@ -2033,6 +2037,10 @@ class API(base.Base):
         filter_properties = {'ignore_hosts': []}
 
         if not CONF.allow_resize_to_same_host:
+            filter_properties['ignore_hosts'].append(instance['host'])
+
+        # Here when flavor_id is None, the process is considered as migrate.
+        if (not flavor_id and not CONF.allow_migrate_to_same_host):
             filter_properties['ignore_hosts'].append(instance['host'])
 
         # With cells, the best we can do right now is commit the reservations
