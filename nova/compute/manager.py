@@ -1989,11 +1989,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         Returns the updated system_metadata as a dict, as well as the
         post-cleanup current instance type.
         """
-        same_type = (migration['old_instance_type_id'] ==
-                     migration['new_instance_type_id'])
-
         sys_meta = utils.metadata_to_dict(instance['system_metadata'])
-        if restore_old and not same_type:
+        if restore_old:
             instance_type = instance_types.extract_instance_type(instance,
                                                                  'old_')
             sys_meta = instance_types.save_instance_type_info(sys_meta,
@@ -2001,10 +1998,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         else:
             instance_type = instance_types.extract_instance_type(instance)
 
-        if not same_type:
-            instance_types.delete_instance_type_info(sys_meta, 'old_')
-
-        # NOTE(danms): new instance type is always stored in prep_resize
+        instance_types.delete_instance_type_info(sys_meta, 'old_')
         instance_types.delete_instance_type_info(sys_meta, 'new_')
 
         return sys_meta, instance_type
@@ -2380,14 +2374,14 @@ class ComputeManager(manager.SchedulerDependentManager):
         resize_instance = False
         old_instance_type_id = migration['old_instance_type_id']
         new_instance_type_id = migration['new_instance_type_id']
+        old_instance_type = instance_types.extract_instance_type(instance)
+        sys_meta = utils.metadata_to_dict(instance['system_metadata'])
+        instance_types.save_instance_type_info(sys_meta,
+                                               old_instance_type,
+                                               prefix='old_')
         if old_instance_type_id != new_instance_type_id:
             instance_type = instance_types.extract_instance_type(instance,
                                                                  prefix='new_')
-            old_instance_type = instance_types.extract_instance_type(instance)
-            sys_meta = utils.metadata_to_dict(instance['system_metadata'])
-            instance_types.save_instance_type_info(sys_meta,
-                                                    old_instance_type,
-                                                    prefix='old_')
             instance_types.save_instance_type_info(sys_meta, instance_type)
 
             instance = self._instance_update(
@@ -2398,7 +2392,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                     vcpus=instance_type['vcpus'],
                     root_gb=instance_type['root_gb'],
                     ephemeral_gb=instance_type['ephemeral_gb'],
-                    system_metadata=sys_meta)
+                    system_metadata=dict(sys_meta))
 
             resize_instance = True
 
@@ -2414,7 +2408,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         instance = self._instance_update(context, instance['uuid'],
                               task_state=task_states.RESIZE_FINISH,
-                              expected_task_state=task_states.RESIZE_MIGRATED)
+                              expected_task_state=task_states.RESIZE_MIGRATED,
+                              system_metadata=sys_meta)
 
         self._notify_about_instance_usage(
             context, instance, "finish_resize.start",

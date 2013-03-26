@@ -2806,7 +2806,7 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(instance_types, 'extract_instance_type')
         self.mox.StubOutWithMock(instance_types, 'delete_instance_type_info')
         self.mox.StubOutWithMock(instance_types, 'save_instance_type_info')
-        if revert and old != new:
+        if revert:
             instance_types.extract_instance_type(instance, 'old_').AndReturn(
                 {'instance_type_id': old})
             instance_types.save_instance_type_info(
@@ -2814,9 +2814,8 @@ class ComputeTestCase(BaseTestCase):
         else:
             instance_types.extract_instance_type(instance).AndReturn(
                 {'instance_type_id': new})
-        if old != new:
-            instance_types.delete_instance_type_info(
-                sys_meta, 'old_').AndReturn(sys_meta)
+        instance_types.delete_instance_type_info(
+            sys_meta, 'old_').AndReturn(sys_meta)
         instance_types.delete_instance_type_info(
             sys_meta, 'new_').AndReturn(sys_meta)
 
