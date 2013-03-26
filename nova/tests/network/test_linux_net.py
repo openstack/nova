@@ -15,6 +15,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import calendar
 import os
 
 import mox
@@ -25,6 +26,7 @@ from nova import flags
 from nova.network import linux_net
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
+from nova.openstack.common import timeutils
 from nova import test
 from nova import utils
 
@@ -111,6 +113,7 @@ fixed_ips = [{'id': 0,
               'address': '192.168.0.100',
               'instance_id': 0,
               'allocated': True,
+              'leased': True,
               'virtual_interface_id': 0,
               'instance_uuid': '00000000-0000-0000-0000-0000000000000000',
               'floating_ips': []},
@@ -119,6 +122,7 @@ fixed_ips = [{'id': 0,
               'address': '192.168.1.100',
               'instance_id': 0,
               'allocated': True,
+              'leased': True,
               'virtual_interface_id': 1,
               'instance_uuid': '00000000-0000-0000-0000-0000000000000000',
               'floating_ips': []},
@@ -127,6 +131,7 @@ fixed_ips = [{'id': 0,
               'address': '192.168.0.101',
               'instance_id': 1,
               'allocated': True,
+              'leased': True,
               'virtual_interface_id': 2,
               'instance_uuid': '00000000-0000-0000-0000-0000000000000001',
               'floating_ips': []},
@@ -135,6 +140,7 @@ fixed_ips = [{'id': 0,
               'address': '192.168.1.101',
               'instance_id': 1,
               'allocated': True,
+              'leased': True,
               'virtual_interface_id': 3,
               'instance_uuid': '00000000-0000-0000-0000-0000000000000001',
               'floating_ips': []},
@@ -143,6 +149,7 @@ fixed_ips = [{'id': 0,
               'address': '192.168.0.102',
               'instance_id': 0,
               'allocated': True,
+              'leased': False,
               'virtual_interface_id': 4,
               'instance_uuid': '00000000-0000-0000-0000-0000000000000000',
               'floating_ips': []},
@@ -151,6 +158,7 @@ fixed_ips = [{'id': 0,
               'address': '192.168.1.102',
               'instance_id': 1,
               'allocated': True,
+              'leased': False,
               'virtual_interface_id': 5,
               'instance_uuid': '00000000-0000-0000-0000-0000000000000001',
               'floating_ips': []}]
@@ -188,7 +196,7 @@ vifs = [{'id': 0,
          'instance_uuid': '00000000-0000-0000-0000-0000000000000001'}]
 
 
-def get_associated(context, network_id, host=None):
+def get_associated(context, network_id, host=None, address=None):
     result = []
     for datum in fixed_ips:
         if (datum['network_id'] == network_id and datum['allocated']
@@ -196,6 +204,8 @@ def get_associated(context, network_id, host=None):
             and datum['virtual_interface_id'] is not None):
             instance = instances[datum['instance_uuid']]
             if host and host != instance['host']:
+                continue
+            if address and address != datum['address']:
                 continue
             cleaned = {}
             cleaned['address'] = datum['address']
@@ -207,6 +217,8 @@ def get_associated(context, network_id, host=None):
             cleaned['instance_hostname'] = instance['hostname']
             cleaned['instance_updated'] = instance['updated_at']
             cleaned['instance_created'] = instance['created_at']
+            cleaned['allocated'] = datum['allocated']
+            cleaned['leased'] = datum['leased']
             result.append(cleaned)
     return result
 
@@ -304,7 +316,6 @@ class LinuxNetworkTestCase(test.TestCase):
                 "192.168.1.102,net:NW-5"
         )
         actual_hosts = self.driver.get_dhcp_hosts(self.context, networks[1])
-
         self.assertEquals(actual_hosts, expected)
 
     def test_get_dhcp_opts_for_nw00(self):
@@ -319,6 +330,41 @@ class LinuxNetworkTestCase(test.TestCase):
         actual_opts = self.driver.get_dhcp_opts(self.context, networks[1])
 
         self.assertEquals(actual_opts, expected_opts)
+
+    def test_get_dhcp_leases_for_nw00(self):
+        timestamp = timeutils.utcnow()
+        seconds_since_epoch = calendar.timegm(timestamp.utctimetuple())
+
+        leases = self.driver.get_dhcp_leases(self.context, networks[0])
+        leases = leases.split('\n')
+        for lease in leases:
+            lease = lease.split(' ')
+            data = get_associated(self.context, 0, address=lease[2])[0]
+            self.assertTrue(data['allocated'])
+            self.assertTrue(data['leased'])
+            self.assertTrue(lease[0] > seconds_since_epoch)
+            self.assertTrue(lease[1] == data['vif_address'])
+            self.assertTrue(lease[2] == data['address'])
+            self.assertTrue(lease[3] == data['instance_hostname'])
+            self.assertTrue(lease[4] == '*')
+
+    def test_get_dhcp_leases_for_nw01(self):
+        self.flags(host='fake_instance01')
+        timestamp = timeutils.utcnow()
+        seconds_since_epoch = calendar.timegm(timestamp.utctimetuple())
+
+        leases = self.driver.get_dhcp_leases(self.context, networks[1])
+        leases = leases.split('\n')
+        for lease in leases:
+            lease = lease.split(' ')
+            data = get_associated(self.context, 1, address=lease[2])[0]
+            self.assertTrue(data['allocated'])
+            self.assertTrue(data['leased'])
+            self.assertTrue(lease[0] > seconds_since_epoch)
+            self.assertTrue(lease[1] == data['vif_address'])
+            self.assertTrue(lease[2] == data['address'])
+            self.assertTrue(lease[3] == data['instance_hostname'])
+            self.assertTrue(lease[4] == '*')
 
     def test_dhcp_opts_not_default_gateway_network(self):
         expected = "NW-0,3"
