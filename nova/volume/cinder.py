@@ -171,7 +171,7 @@ def _untranslate_snapshot_summary_view(context, snapshot):
 class API(base.Base):
     """API for interacting with the volume manager."""
 
-    def _reraise_translated_volume_exception(self, volume_id):
+    def _reraise_translated_volume_exception(self, volume_id=None):
         """Transform the exception for the volume but keep its traceback
         intact."""
         exc_type, exc_value, exc_trace = sys.exc_info()
@@ -181,6 +181,8 @@ class API(base.Base):
     def _translate_volume_exception(self, volume_id, exc_value):
         if isinstance(exc_value, cinder_exception.NotFound):
             return exception.VolumeNotFound(volume_id=volume_id)
+        elif isinstance(exc_value, cinder_exception.BadRequest):
+            return exception.InvalidInput(reason=exc_value.message)
         return exc_value
 
     def get(self, context, volume_id):
@@ -265,9 +267,11 @@ class API(base.Base):
                       metadata=metadata,
                       imageRef=image_id)
 
-        item = cinderclient(context).volumes.create(size, **kwargs)
-
-        return _untranslate_volume_summary_view(context, item)
+        try:
+            item = cinderclient(context).volumes.create(size, **kwargs)
+            return _untranslate_volume_summary_view(context, item)
+        except Exception:
+            self._reraise_translated_volume_exception()
 
     def delete(self, context, volume):
         cinderclient(context).volumes.delete(volume['id'])
