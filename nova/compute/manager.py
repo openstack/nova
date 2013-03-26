@@ -3023,7 +3023,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         finally:
             self.driver.check_can_live_migrate_destination_cleanup(ctxt,
                     dest_check_data)
-        if dest_check_data and 'migrate_data' in dest_check_data:
+        if 'migrate_data' in dest_check_data:
             migrate_data.update(dest_check_data['migrate_data'])
         return migrate_data
 
