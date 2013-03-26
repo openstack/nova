@@ -7,7 +7,6 @@ Group:          Applications/Utilities
 Source0:        openstack-xen-plugins.tar.gz
 BuildArch:      noarch
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-Requires:       parted
 
 %define debug_package %{nil}
 
