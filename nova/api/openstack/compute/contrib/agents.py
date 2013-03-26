@@ -109,7 +109,7 @@ class AgentController(object):
                                  'url': url,
                                  'md5hash': md5hash})
         except exception.AgentBuildNotFound as ex:
-            raise webob.exc.HTTPNotFound(explanation=str(ex))
+            raise webob.exc.HTTPNotFound(explanation=ex.format_message())
 
         return {"agent": {'agent_id': id, 'version': version,
                 'url': url, 'md5hash': md5hash}}
@@ -122,7 +122,7 @@ class AgentController(object):
         try:
             db.agent_build_destroy(context, id)
         except exception.AgentBuildNotFound as ex:
-            raise webob.exc.HTTPNotFound(explanation=str(ex))
+            raise webob.exc.HTTPNotFound(explanation=ex.format_message())
 
     def create(self, req, body):
         """Creates a new agent build."""
