@@ -27,7 +27,6 @@ from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import compute
 from nova.compute import api as compute_api
-from nova import db
 from nova import exception
 from nova.network.security_group import openstack_driver
 from nova.network.security_group import quantum_driver
@@ -390,8 +389,8 @@ class ServerSecurityGroupController(SecurityGroupControllerBase):
         except exception.InstanceNotFound as exp:
             raise exc.HTTPNotFound(explanation=unicode(exp))
 
-        groups = db.security_group_get_by_instance(context, instance['id'])
-
+        groups = self.security_group_api.get_instance_security_groups(
+            req, instance['id'], instance['uuid'], True)
         result = [self._format_security_group(context, group)
                     for group in groups]
 
