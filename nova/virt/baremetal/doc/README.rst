@@ -40,7 +40,7 @@ Additional setting for bare-metal provisioning [nova.conf]
 
   # baremetal compute driver
   compute_driver = nova.virt.baremetal.driver.BareMetalDriver
-  baremetal_driver = {nova.virt.baremetal.tilera.TILERA | nova.virt.baremetal.pxe.PXE}
+  baremetal_driver = {nova.virt.baremetal.tilera.Tilera | nova.virt.baremetal.pxe.PXE}
   power_manager = {nova.virt.baremetal.tilera_pdu.Pdu | nova.virt.baremetal.ipmi.Ipmi}
 
   # instance_type_extra_specs this baremetal compute

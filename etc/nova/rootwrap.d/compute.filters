@@ -202,3 +202,6 @@ sg_scan: CommandFilter, /usr/bin/sg_scan, root
 
 # nova/virt/xenapi/vm_utils.py:
 xenstore-read: CommandFilter, /usr/bin/xenstore-read, root
+
+# nova/virt/baremetal/tilera.py: '/usr/sbin/rpc.mountd'
+rpc.mountd: CommandFilter, /usr/sbin/rpc.mountd, root
