@@ -17,6 +17,7 @@
 
 from oslo.config import cfg
 from quantumclient import client
+from quantumclient.common import exceptions
 from quantumclient.v2_0 import client as clientv20
 
 from nova.openstack.common import excutils
@@ -38,10 +39,10 @@ def _get_auth_token():
             auth_strategy=CONF.quantum_auth_strategy,
             insecure=CONF.quantum_api_insecure)
         httpclient.authenticate()
-    except Exception:
+        return httpclient.auth_token
+    except exceptions.QuantumClientException as e:
         with excutils.save_and_reraise_exception():
-            LOG.exception(_("_get_auth_token() failed"))
-    return httpclient.auth_token
+            LOG.error(_('Quantum client authentication failed: %s'), e)
 
 
 def _get_client(token=None):
