@@ -353,8 +353,8 @@ class API(base.Base):
     def show_port(self, context, port_id):
         return quantumv2.get_client(context).show_port(port_id)
 
-    def get_instance_nw_info(self, context, instance, networks=None,
-            conductor_api=None):
+    def get_instance_nw_info(self, context, instance, conductor_api=None,
+                             networks=None):
         result = self._get_instance_nw_info(context, instance, networks)
         update_instance_info_cache(self, context, instance, result,
                                    conductor_api)
