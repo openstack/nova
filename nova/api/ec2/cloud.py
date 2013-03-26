@@ -694,8 +694,8 @@ class CloudController(object):
         else:
             ec2_id = instance_id
         validate_ec2_id(ec2_id)
-        instance_id = ec2utils.ec2_id_to_id(ec2_id)
-        instance = self.compute_api.get(context, instance_id)
+        instance_uuid = ec2utils.ec2_inst_id_to_uuid(context, ec2_id)
+        instance = self.compute_api.get(context, instance_uuid)
         output = self.compute_api.get_console_output(context, instance)
         now = timeutils.utcnow()
         return {"InstanceId": ec2_id,
@@ -805,8 +805,8 @@ class CloudController(object):
         validate_ec2_id(instance_id)
         validate_ec2_id(volume_id)
         volume_id = ec2utils.ec2_vol_id_to_uuid(volume_id)
-        instance_id = ec2utils.ec2_id_to_id(instance_id)
-        instance = self.compute_api.get(context, instance_id)
+        instance_uuid = ec2utils.ec2_inst_id_to_uuid(context, instance_id)
+        instance = self.compute_api.get(context, instance_uuid)
         msg = _("Attach volume %(volume_id)s to instance %(instance_id)s"
                 " at %(device)s") % locals()
         LOG.audit(msg, context=context)
@@ -820,7 +820,7 @@ class CloudController(object):
         volume = self.volume_api.get(context, volume_id)
         return {'attachTime': volume['attach_time'],
                 'device': volume['mountpoint'],
-                'instanceId': ec2utils.id_to_ec2_inst_id(instance_id),
+                'instanceId': ec2utils.id_to_ec2_inst_id(instance_uuid),
                 'requestId': context.request_id,
                 'status': volume['attach_status'],
                 'volumeId': ec2utils.id_to_ec2_vol_id(volume_id)}
@@ -919,11 +919,10 @@ class CloudController(object):
             raise exception.EC2APIError(
                 _('attribute not supported: %s') % attribute)
 
-        ec2_instance_id = instance_id
         validate_ec2_id(instance_id)
-        instance_id = ec2utils.ec2_id_to_id(ec2_instance_id)
-        instance = self.compute_api.get(context, instance_id)
-        result = {'instance_id': ec2_instance_id}
+        instance_uuid = ec2utils.ec2_inst_id_to_uuid(context, instance_id)
+        instance = self.compute_api.get(context, instance_uuid)
+        result = {'instance_id': instance_id}
         fn(instance, result)
         return result
 
@@ -956,8 +955,8 @@ class CloudController(object):
             i['previousState'] = _state_description(previous_state['vm_state'],
                                         previous_state['shutdown_terminate'])
             try:
-                internal_id = ec2utils.ec2_id_to_id(ec2_id)
-                instance = self.compute_api.get(context, internal_id)
+                instance_uuid = ec2utils.ec2_inst_id_to_uuid(context, ec2_id)
+                instance = self.compute_api.get(context, instance_uuid)
                 i['currentState'] = _state_description(instance['vm_state'],
                                             instance['shutdown_terminate'])
             except exception.NotFound:
@@ -1152,8 +1151,8 @@ class CloudController(object):
     def associate_address(self, context, instance_id, public_ip, **kwargs):
         LOG.audit(_("Associate address %(public_ip)s to"
                 " instance %(instance_id)s") % locals(), context=context)
-        instance_id = ec2utils.ec2_id_to_id(instance_id)
-        instance = self.compute_api.get(context, instance_id)
+        instance_uuid = ec2utils.ec2_inst_id_to_uuid(context, instance_id)
+        instance = self.compute_api.get(context, instance_uuid)
 
         cached_ipinfo = ec2utils.get_ip_info_for_instance(context, instance)
         fixed_ips = cached_ipinfo['fixed_ips'] + cached_ipinfo['fixed_ip6s']
@@ -1247,8 +1246,8 @@ class CloudController(object):
         instances = []
         for ec2_id in instance_id:
             validate_ec2_id(ec2_id)
-            _instance_id = ec2utils.ec2_id_to_id(ec2_id)
-            instance = self.compute_api.get(context, _instance_id)
+            instance_uuid = ec2utils.ec2_inst_id_to_uuid(context, ec2_id)
+            instance = self.compute_api.get(context, instance_uuid)
             instances.append(instance)
         return instances
 
@@ -1511,8 +1510,8 @@ class CloudController(object):
         name = kwargs.get('name')
         validate_ec2_id(instance_id)
         ec2_instance_id = instance_id
-        instance_id = ec2utils.ec2_id_to_id(ec2_instance_id)
-        instance = self.compute_api.get(context, instance_id)
+        instance_uuid = ec2utils.ec2_inst_id_to_uuid(context, ec2_instance_id)
+        instance = self.compute_api.get(context, instance_uuid)
 
         bdms = self.compute_api.get_instance_bdms(context, instance)
 
@@ -1542,7 +1541,7 @@ class CloudController(object):
             start_time = time.time()
             while vm_state != vm_states.STOPPED:
                 time.sleep(1)
-                instance = self.compute_api.get(context, instance_id)
+                instance = self.compute_api.get(context, instance_uuid)
                 vm_state = instance['vm_state']
                 # NOTE(yamahata): timeout and error. 1 hour for now for safety.
                 #                 Is it too short/long?

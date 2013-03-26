@@ -684,8 +684,8 @@ class CinderCloudTestCase(test.TestCase):
                                             'delete_on_termination': True},
                                            ]}
         ec2_instance_id = self._run_instance(**kwargs)
-        instance_uuid = ec2utils.ec2_instance_id_to_uuid(self.context,
-                                                         ec2_instance_id)
+        instance_uuid = ec2utils.ec2_inst_id_to_uuid(self.context,
+                                                     ec2_instance_id)
         vols = self.volume_api.get_all(self.context)
         vols = [v for v in vols if v['instance_uuid'] == instance_uuid]
 
@@ -762,9 +762,8 @@ class CinderCloudTestCase(test.TestCase):
                                             'volume_id': vol1_uuid,
                                             'delete_on_termination': True}]}
         ec2_instance_id = self._run_instance(**kwargs)
-        instance_id = ec2utils.ec2_id_to_id(ec2_instance_id)
-        instance_uuid = ec2utils.ec2_instance_id_to_uuid(self.context,
-                                                         ec2_instance_id)
+        instance_uuid = ec2utils.ec2_inst_id_to_uuid(self.context,
+                                                     ec2_instance_id)
 
         vols = self.volume_api.get_all(self.context)
         vols = [v for v in vols if v['instance_uuid'] == instance_uuid]
@@ -775,7 +774,7 @@ class CinderCloudTestCase(test.TestCase):
         vol = self.volume_api.get(self.context, vol2_uuid)
         self._assert_volume_detached(vol)
 
-        instance = db.instance_get(self.context, instance_id)
+        instance = db.instance_get_by_uuid(self.context, instance_uuid)
         self.cloud.compute_api.attach_volume(self.context,
                                              instance,
                                              volume_id=vol2_uuid,
@@ -847,8 +846,8 @@ class CinderCloudTestCase(test.TestCase):
                                             'snapshot_id': snap2_uuid,
                                             'delete_on_termination': True}]}
         ec2_instance_id = self._run_instance(**kwargs)
-        instance_uuid = ec2utils.ec2_instance_id_to_uuid(self.context,
-                                                         ec2_instance_id)
+        instance_uuid = ec2utils.ec2_inst_id_to_uuid(self.context,
+                                                     ec2_instance_id)
 
         vols = self.volume_api.get_all(self.context)
         vols = [v for v in vols if v['instance_uuid'] == instance_uuid]
