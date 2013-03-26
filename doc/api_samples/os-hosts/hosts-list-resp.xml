@@ -1,9 +1,9 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <hosts>
-  <host host_name="461697a871354212908d82bbb0f9f5ee" service="compute"/>
-  <host host_name="272ab5d262994ebdaf228935c8ecf57e" service="cert"/>
-  <host host_name="2d1bdd671b5d41fd89dec74be5770c63" service="network"/>
-  <host host_name="7c2dd5ecb7494dd1bf4240b7f7f9bf3a" service="scheduler"/>
-  <host host_name="f9c273d8e03141a2a01def0ad18e5be4" service="conductor"/>
-  <host host_name="2b893569cd824b979bd80a2c94570a1f" service="cells"/>
+  <host zone="internal" host_name="02ff30050a0d4ce486e60e946a97d28f" service="conductor"/>
+  <host zone="nova" host_name="69dd365b9eae459883a50d1fe7b3c40b" service="compute"/>
+  <host zone="internal" host_name="059ca4da76cf49e8a3d08d2303542157" service="cert"/>
+  <host zone="internal" host_name="ea70b9f0c530497fba8571deb4835ab0" service="network"/>
+  <host zone="internal" host_name="7d52ad3988504fb18b0cdfd94dbd267b" service="scheduler"/>
+  <host zone="internal" host_name="dc36bce962cc49c2ab916287bcf6c9d3" service="cells"/>
 </hosts>
