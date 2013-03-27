@@ -25,6 +25,7 @@ from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova.compute import api
 from nova.compute import instance_types
+from nova import exception
 from nova.openstack.common import timeutils
 
 authorize_show = extensions.extension_authorizer('compute',
@@ -103,6 +104,30 @@ class SimpleTenantUsageController(object):
             # instance hasn't launched, so no charge
             return 0
 
+    def _get_flavor(self, context, compute_api, instance, flavors_cache):
+        """Get flavor information from the instance's system_metadata,
+        allowing a fallback to lookup by-id for deleted instances only"""
+        try:
+            return instance_types.extract_instance_type(instance)
+        except KeyError:
+            if not instance['deleted']:
+                # Only support the fallback mechanism for deleted instances
+                # that would have been skipped by migration #153
+                raise
+
+        flavor_type = instance['instance_type_id']
+        if flavor_type in flavors_cache:
+            return flavors_cache[flavor_type]
+
+        try:
+            it_ref = compute_api.get_instance_type(context, flavor_type)
+            flavors_cache[flavor_type] = it_ref
+        except exception.InstanceTypeNotFound:
+            # can't bill if there is no instance type
+            it_ref = None
+
+        return it_ref
+
     def _tenant_usages_for_period(self, context, period_start,
                                   period_stop, tenant_id=None, detailed=True):
 
@@ -119,7 +144,9 @@ class SimpleTenantUsageController(object):
             info['hours'] = self._hours_for(instance,
                                             period_start,
                                             period_stop)
-            flavor = instance_types.extract_instance_type(instance)
+            flavor = self._get_flavor(context, compute_api, instance, flavors)
+            if not flavor:
+                continue
 
             info['instance_id'] = instance['uuid']
             info['name'] = instance['display_name']
