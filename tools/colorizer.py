@@ -302,6 +302,22 @@ class NovaTestResult(testtools.TestResult):
                 self._writeElapsedTime(elapsed)
                 self.stream.writeln()
 
+    def printErrors(self):
+        if self.showAll:
+            self.stream.writeln()
+        self.printErrorList('ERROR', self.errors)
+        self.printErrorList('FAIL', self.failures)
+
+    def printErrorList(self, flavor, errors):
+        for test, err in errors:
+            self.colorizer.write("=" * 70, 'red')
+            self.stream.writeln()
+            self.colorizer.write(flavor, 'red')
+            self.stream.writeln(": %s" % test.id())
+            self.colorizer.write("-" * 70, 'red')
+            self.stream.writeln()
+            self.stream.writeln("%s" % err)
+
 
 test = subunit.ProtocolTestCase(sys.stdin, passthrough=None)
 
