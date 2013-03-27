@@ -1847,6 +1847,194 @@ class ServiceTestCase(test.TestCase, ModelsObjectComparatorMixin):
                           self.ctxt, 'non-exists-host', 'a')
 
 
+class InstanceTypeTestCase(test.TestCase, ModelsObjectComparatorMixin):
+
+    def setUp(self):
+        super(InstanceTypeTestCase, self).setUp()
+        self.ctxt = context.get_admin_context()
+
+    def _get_base_values(self):
+        return {
+            'name': 'fake_name',
+            'memory_mb': 512,
+            'vcpus': 1,
+            'root_gb': 10,
+            'ephemeral_gb': 10,
+            'flavorid': 'fake_flavor',
+            'swap': 0,
+            'rxtx_factor': 0.5,
+            'vcpu_weight': 1,
+            'disabled': False,
+            'is_public': True
+        }
+
+    def _create_inst_type(self, values):
+        v = self._get_base_values()
+        v.update(values)
+        return db.instance_type_create(self.ctxt, v)
+
+    def test_instance_type_create(self):
+        inst_type = self._create_inst_type({})
+        ignored_keys = ['id', 'deleted', 'deleted_at', 'updated_at',
+                        'created_at', 'extra_specs']
+
+        self.assertFalse(inst_type['id'] is None)
+        self._assertEqualObjects(inst_type, self._get_base_values(),
+                                 ignored_keys)
+
+    def test_instance_type_destroy(self):
+        specs1 = {'a': '1', 'b': '2'}
+        inst_type1 = self._create_inst_type({'name': 'name1', 'flavorid': 'a1',
+                                             'extra_specs': specs1})
+        specs2 = {'c': '4', 'd': '3'}
+        inst_type2 = self._create_inst_type({'name': 'name2', 'flavorid': 'a2',
+                                             'extra_specs': specs2})
+
+        db.instance_type_destroy(self.ctxt, 'name1')
+
+        self.assertRaises(exception.InstanceTypeNotFound,
+                          db.instance_type_get, self.ctxt, inst_type1['id'])
+        real_specs1 = db.instance_type_extra_specs_get(self.ctxt,
+                                                       inst_type1['flavorid'])
+        self._assertEqualObjects(real_specs1, {})
+
+        r_inst_type2 = db.instance_type_get(self.ctxt, inst_type2['id'])
+        self._assertEqualObjects(inst_type2, r_inst_type2, 'extra_specs')
+
+    def test_instance_type_create_duplicate_name(self):
+        self._create_inst_type({})
+        self.assertRaises(exception.InstanceTypeExists,
+                          self._create_inst_type,
+                          {'flavorid': 'some_random_flavor'})
+
+    def test_instance_type_create_duplicate_flavorid(self):
+        self._create_inst_type({})
+        self.assertRaises(exception.InstanceTypeIdExists,
+                          self._create_inst_type,
+                          {'name': 'some_random_name'})
+
+    def test_instance_type_create_with_extra_specs(self):
+        extra_specs = dict(a='abc', b='def', c='ghi')
+        inst_type = self._create_inst_type({'extra_specs': extra_specs})
+        ignored_keys = ['id', 'deleted', 'deleted_at', 'updated_at',
+                        'created_at', 'extra_specs']
+
+        self._assertEqualObjects(inst_type, self._get_base_values(),
+                                 ignored_keys)
+        self._assertEqualObjects(extra_specs, inst_type['extra_specs'])
+
+    def test_instance_type_get_all(self):
+        # NOTE(boris-42): Remove base instance types
+        for it in db.instance_type_get_all(self.ctxt):
+            db.instance_type_destroy(self.ctxt, it['name'])
+
+        instance_types = [
+            {'root_gb': 600, 'memory_mb': 100, 'disabled': True,
+             'is_public': True, 'name': 'a1', 'flavorid': 'f1'},
+            {'root_gb': 500, 'memory_mb': 200, 'disabled': True,
+             'is_public': True, 'name': 'a2', 'flavorid': 'f2'},
+            {'root_gb': 400, 'memory_mb': 300, 'disabled': False,
+             'is_public': True, 'name': 'a3', 'flavorid': 'f3'},
+            {'root_gb': 300, 'memory_mb': 400, 'disabled': False,
+             'is_public': False, 'name': 'a4', 'flavorid': 'f4'},
+            {'root_gb': 200, 'memory_mb': 500, 'disabled': True,
+             'is_public': False, 'name': 'a5', 'flavorid': 'f5'},
+            {'root_gb': 100, 'memory_mb': 600, 'disabled': True,
+             'is_public': False, 'name': 'a6', 'flavorid': 'f6'}
+        ]
+        instance_types = [self._create_inst_type(it) for it in instance_types]
+
+        lambda_filters = {
+            'min_memory_mb': lambda it, v: it['memory_mb'] >= v,
+            'min_root_gb': lambda it, v: it['root_gb'] >= v,
+            'disabled': lambda it, v: it['disabled'] == v,
+            'is_public': lambda it, v: (v is None or it['is_public'] == v)
+        }
+
+        mem_filts = [{'min_memory_mb': x} for x in [100, 350, 550, 650]]
+        root_filts = [{'min_root_gb': x} for x in [100, 350, 550, 650]]
+        disabled_filts = [{'disabled': x} for x in [True, False]]
+        is_public_filts = [{'is_public': x} for x in [True, False, None]]
+
+        def assert_multi_filter_instance_type_get(filters=None):
+            if filters is None:
+                filters = {}
+
+            expected_it = instance_types
+            for name, value in filters.iteritems():
+                filt = lambda it: lambda_filters[name](it, value)
+                expected_it = filter(filt, expected_it)
+
+            real_it = db.instance_type_get_all(self.ctxt, filters=filters)
+            self._assertEqualListsOfObjects(expected_it, real_it)
+
+        #no filter
+        assert_multi_filter_instance_type_get()
+
+        #test only with one filter
+        for filt in mem_filts:
+            assert_multi_filter_instance_type_get(filt)
+        for filt in root_filts:
+            assert_multi_filter_instance_type_get(filt)
+        for filt in disabled_filts:
+            assert_multi_filter_instance_type_get(filt)
+        for filt in is_public_filts:
+            assert_multi_filter_instance_type_get(filt)
+
+        #test all filters together
+        for mem in mem_filts:
+            for root in root_filts:
+                for disabled in disabled_filts:
+                    for is_public in is_public_filts:
+                        filts = [f.items() for f in
+                                    [mem, root, disabled, is_public]]
+                        filts = dict(reduce(lambda x, y: x + y, filts, []))
+                        assert_multi_filter_instance_type_get(filts)
+
+    def test_instance_type_get(self):
+        inst_types = [{'name': 'abc', 'flavorid': '123'},
+                    {'name': 'def', 'flavorid': '456'},
+                    {'name': 'ghi', 'flavorid': '789'}]
+        inst_types = [self._create_inst_type(t) for t in inst_types]
+
+        for inst_type in inst_types:
+            inst_type_by_id = db.instance_type_get(self.ctxt, inst_type['id'])
+            self._assertEqualObjects(inst_type, inst_type_by_id)
+
+    def test_instance_type_get_by_name(self):
+        inst_types = [{'name': 'abc', 'flavorid': '123'},
+                    {'name': 'def', 'flavorid': '456'},
+                    {'name': 'ghi', 'flavorid': '789'}]
+        inst_types = [self._create_inst_type(t) for t in inst_types]
+
+        for inst_type in inst_types:
+            inst_type_by_name = db.instance_type_get_by_name(self.ctxt,
+                                                             inst_type['name'])
+            self._assertEqualObjects(inst_type, inst_type_by_name)
+
+    def test_instance_type_get_by_name_not_found(self):
+        self._create_inst_type({})
+        self.assertRaises(exception.InstanceTypeNotFoundByName,
+                          db.instance_type_get_by_name, self.ctxt, 'nonexists')
+
+    def test_instance_type_get_by_flavor_id(self):
+        inst_types = [{'name': 'abc', 'flavorid': '123'},
+                      {'name': 'def', 'flavorid': '456'},
+                      {'name': 'ghi', 'flavorid': '789'}]
+        inst_types = [self._create_inst_type(t) for t in inst_types]
+
+        for inst_type in inst_types:
+            params = (self.ctxt, inst_type['flavorid'])
+            inst_type_by_flavorid = db.instance_type_get_by_flavor_id(*params)
+            self._assertEqualObjects(inst_type, inst_type_by_flavorid)
+
+    def test_instance_type_get_by_flavor_not_found(self):
+        self._create_inst_type({})
+        self.assertRaises(exception.FlavorNotFound,
+                          db.instance_type_get_by_flavor_id,
+                          self.ctxt, 'nonexists')
+
+
 class TestFixedIPGetByNetworkHost(test.TestCase):
     def test_not_found_exception(self):
         ctxt = context.get_admin_context()

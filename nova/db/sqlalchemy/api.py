@@ -3554,7 +3554,6 @@ def instance_type_get_all(context, inactive=False, filters=None):
             query = query.filter(or_(*the_filter))
         else:
             query = query.filter(the_filter[0])
-        del filters['is_public']
 
     inst_types = query.order_by("name").all()
 
