@@ -37,7 +37,7 @@ class ExtendedAZController(wsgi.Controller):
         self.mc = memorycache.get_client()
 
     def _get_host_az(self, context, instance):
-        host = instance.get('host')
+        host = str(instance.get('host'))
         if not host:
             return None
         cache_key = "azcache-%s" % host
