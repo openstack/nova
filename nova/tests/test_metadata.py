@@ -25,6 +25,11 @@ import hmac
 import json
 import re
 
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+
 from oslo.config import cfg
 import webob
 
@@ -131,6 +136,12 @@ class MetadataTestCase(test.TestCase):
         self.flags(use_local=True, group='conductor')
         fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs,
                                                           spectacular=True)
+
+    def test_can_pickle_metadata(self):
+        # Make sure that InstanceMetadata is possible to pickle. This is
+        # required for memcache backend to work correctly.
+        md = fake_InstanceMetadata(self.stubs, copy.copy(self.instance))
+        pickle.dumps(md, protocol=0)
 
     def test_user_data(self):
         inst = copy.copy(self.instance)
