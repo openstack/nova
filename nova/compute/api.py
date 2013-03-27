@@ -40,7 +40,6 @@ from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova.consoleauth import rpcapi as consoleauth_rpcapi
-from nova import context
 from nova import crypto
 from nova.db import base
 from nova import exception
@@ -3178,12 +3177,11 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
                 self.security_group_rpcapi.refresh_instance_security_rules(
                         context, instance['host'], instance)
 
-    def get_instance_security_groups(self, req, instance_id,
+    def get_instance_security_groups(self, context, instance_id,
                                      instance_uuid=None, detailed=False):
         if detailed:
-            return self.db.security_group_get_by_instance(
-                context.get_admin_context(), instance_id)
-        instance = req.get_db_instance(instance_id)
+            return self.db.security_group_get_by_instance(context, instance_id)
+        instance = self.db.instance_get(context, instance_id)
         groups = instance.get('security_groups')
         if groups:
             return [{'name': group['name']} for group in groups]
