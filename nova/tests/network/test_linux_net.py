@@ -503,7 +503,7 @@ class LinuxNetworkTestCase(test.TestCase):
           '--strict-order',
           '--bind-interfaces',
           '--conf-file=%s' % CONF.dnsmasq_config_file,
-          '--domain=%s' % CONF.dhcp_domain,
+          '--domain=\'%s\'' % CONF.dhcp_domain,
           '--pid-file=%s' % linux_net._dhcp_file(dev, 'pid'),
           '--listen-address=%s' % network_ref['dhcp_server'],
           '--except-interface=lo',
