@@ -913,18 +913,3 @@ class OrphanTestCase(BaseTrackerTestCase):
         orphans = self.tracker._find_orphaned_instances()
 
         self.assertEqual(2, len(orphans))
-
-
-class DeletedNodeTestCase(BaseTrackerTestCase):
-
-    def test_remove_deleted_node(self):
-        self.assertFalse(self.tracker.disabled)
-        self.assertTrue(self.updated)
-
-        def _get_available_resource(nodename):
-            return {}
-        self.tracker.driver.get_available_resource = _get_available_resource
-
-        self.tracker.update_available_resource(self.context, delete=True)
-        self.assertEqual(self.deleted, True)
-        self.assertEqual(self.compute['deleted'], 1)
