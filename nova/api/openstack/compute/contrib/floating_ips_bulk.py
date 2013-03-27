@@ -98,12 +98,12 @@ class FloatingIPBulkController(object):
                     'interface': interface}
                    for address in self._address_to_hosts(ip_range))
         except exception.InvalidInput as exc:
-            raise webob.exc.HTTPBadRequest(explanation=str(exc))
+            raise webob.exc.HTTPBadRequest(explanation=exc.format_message())
 
         try:
             db.floating_ip_bulk_create(context, ips)
         except exception.FloatingIpExists as exc:
-            raise webob.exc.HTTPBadRequest(explanation=str(exc))
+            raise webob.exc.HTTPBadRequest(explanation=exc.format_message())
 
         return {"floating_ips_bulk_create": {"ip_range": ip_range,
                                                "pool": pool,
@@ -126,7 +126,7 @@ class FloatingIPBulkController(object):
             ips = ({'address': str(address)}
                    for address in self._address_to_hosts(ip_range))
         except exception.InvalidInput as exc:
-            raise webob.exc.HTTPBadRequest(explanation=str(exc))
+            raise webob.exc.HTTPBadRequest(explanation=exc.format_message())
         db.floating_ip_bulk_destroy(context, ips)
 
         return {"floating_ips_bulk_delete": ip_range}

@@ -64,7 +64,8 @@ class RescueController(wsgi.Controller):
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                                                                   'rescue')
         except exception.InstanceNotRescuable as non_rescuable:
-            raise exc.HTTPBadRequest(explanation=unicode(non_rescuable))
+            raise exc.HTTPBadRequest(
+                explanation=non_rescuable.format_message())
 
         return {'adminPass': password}
 
