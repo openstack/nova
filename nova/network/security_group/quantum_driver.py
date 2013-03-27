@@ -120,6 +120,8 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
             search_opts['name'] = names
         if ids:
             search_opts['id'] = ids
+        if project:
+            search_opts['tenant_id'] = project
         try:
             security_groups = quantum.list_security_groups(**search_opts).get(
                 'security_groups')
