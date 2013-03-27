@@ -43,39 +43,44 @@ class AvailabilityZoneTestCases(test.TestCase):
         self.default_az = CONF.default_availability_zone
         self.default_in_az = CONF.internal_service_availability_zone
         self.context = context.get_admin_context()
-
-        agg = {'name': 'agg1'}
-        self.agg = db.aggregate_create(self.context, agg)
-
-        metadata = {'availability_zone': self.availability_zone}
-        db.aggregate_metadata_add(self.context, self.agg['id'], metadata)
+        self.agg = self._create_az('az_agg', self.availability_zone)
 
     def tearDown(self):
         db.aggregate_delete(self.context, self.agg['id'])
         super(AvailabilityZoneTestCases, self).tearDown()
 
-    def _create_service_with_topic(self, topic):
+    def _create_az(self, agg_name, az_name):
+        agg_meta = {'name': agg_name}
+        agg = db.aggregate_create(self.context, agg_meta)
+
+        metadata = {'availability_zone': az_name}
+        db.aggregate_metadata_add(self.context, agg['id'], metadata)
+
+        return agg
+
+    def _create_service_with_topic(self, topic, host, disabled=False):
         values = {
             'binary': 'bin',
-            'host': self.host,
+            'host': host,
             'topic': topic,
+            'disabled': disabled,
         }
         return db.service_create(self.context, values)
 
     def _destroy_service(self, service):
         return db.service_destroy(self.context, service['id'])
 
-    def _add_to_aggregate(self, service):
+    def _add_to_aggregate(self, service, aggregate):
         return db.aggregate_host_add(self.context,
-                                     self.agg['id'], service['host'])
+                                     aggregate['id'], service['host'])
 
-    def _delete_from_aggregate(self, service):
+    def _delete_from_aggregate(self, service, aggregate):
         return db.aggregate_host_delete(self.context,
-                                        self.agg['id'], service['host'])
+                                        self.aggregate['id'], service['host'])
 
     def test_set_availability_zone_compute_service(self):
         """Test for compute service get right availability zone."""
-        service = self._create_service_with_topic('compute')
+        service = self._create_service_with_topic('compute', self.host)
         services = db.service_get_all(self.context)
 
         # The service is not add into aggregate, so confirm it is default
@@ -86,7 +91,7 @@ class AvailabilityZoneTestCases(test.TestCase):
 
         # The service is added into aggregate, confirm return the aggregate
         # availability zone.
-        self._add_to_aggregate(service)
+        self._add_to_aggregate(service, self.agg)
         new_service = az.set_availability_zones(self.context, services)[0]
         self.assertEquals(new_service['availability_zone'],
                           self.availability_zone)
@@ -95,7 +100,7 @@ class AvailabilityZoneTestCases(test.TestCase):
 
     def test_set_availability_zone_not_compute_service(self):
         """Test not compute service get right availability zone."""
-        service = self._create_service_with_topic('network')
+        service = self._create_service_with_topic('network', self.host)
         services = db.service_get_all(self.context)
         new_service = az.set_availability_zones(self.context, services)[0]
         self.assertEquals(new_service['availability_zone'],
@@ -107,8 +112,46 @@ class AvailabilityZoneTestCases(test.TestCase):
         self.assertEquals(self.default_az,
                         az.get_host_availability_zone(self.context, self.host))
 
-        service = self._create_service_with_topic('compute')
-        self._add_to_aggregate(service)
+        service = self._create_service_with_topic('compute', self.host)
+        self._add_to_aggregate(service, self.agg)
 
         self.assertEquals(self.availability_zone,
                         az.get_host_availability_zone(self.context, self.host))
+
+    def test_get_availability_zones(self):
+        """Test get_availability_zones."""
+
+        # get_availability_zones returns two lists, zones with at least one
+        # enabled services, and zones with no enabled services.
+        # Use the following test data:
+        #
+        # zone         host        enabled
+        # nova-test    host1       Yes
+        # nova-test    host2       No
+        # nova-test2   host3       Yes
+        # nova-test3   host4       No
+        # <default>    host5       No
+
+        agg2 = self._create_az('agg-az2', 'nova-test2')
+        agg3 = self._create_az('agg-az3', 'nova-test3')
+
+        service1 = self._create_service_with_topic('compute', 'host1',
+                                                   disabled=False)
+        service2 = self._create_service_with_topic('compute', 'host2',
+                                                   disabled=True)
+        service3 = self._create_service_with_topic('compute', 'host3',
+                                                   disabled=False)
+        service4 = self._create_service_with_topic('compute', 'host4',
+                                                   disabled=True)
+        service5 = self._create_service_with_topic('compute', 'host5',
+                                                   disabled=True)
+
+        self._add_to_aggregate(service1, self.agg)
+        self._add_to_aggregate(service2, self.agg)
+        self._add_to_aggregate(service3, agg2)
+        self._add_to_aggregate(service4, agg3)
+
+        zones, not_zones = az.get_availability_zones(self.context)
+
+        self.assertEquals(zones, ['nova-test', 'nova-test2'])
+        self.assertEquals(not_zones, ['nova-test3', 'nova'])
