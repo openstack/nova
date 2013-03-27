@@ -514,6 +514,13 @@ class TestQuantumv2(test.TestCase):
         # port.
         self._allocate_for_instance(1, macs=set(['ab:cd:ef:01:23:45']))
 
+    def test_allocate_for_instance_accepts_only_portid(self):
+        # Make sure allocate_for_instance works when only a portid is provided
+        self._returned_nw_info = self.port_data1
+        result = self._allocate_for_instance(
+            requested_networks=[(None, None, 'my_portid1')])
+        self.assertEqual(self.port_data1, result)
+
     def test_allocate_for_instance_not_enough_macs_via_ports(self):
         # using a hypervisor MAC via a pre-created port will stop it being
         # used to dynamically create a port on a network. We put the network
