@@ -80,8 +80,8 @@ def get_availability_zones(context):
             available_zones.append(zone)
 
     not_available_zones = []
-    zones = [service['available_zones'] for service in disabled_services
-            if service['available_zones'] not in available_zones]
+    zones = [service['availability_zone'] for service in disabled_services
+            if service['availability_zone'] not in available_zones]
     for zone in zones:
         if zone not in not_available_zones:
             not_available_zones.append(zone)
