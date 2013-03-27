@@ -77,6 +77,11 @@ def make_sg(elem):
     make_rule(rule)
 
 
+def _authorize_context(req):
+    context = req.environ['nova.context']
+    authorize(context)
+    return context
+
 sg_nsmap = {None: wsgi.XMLNS_V11}
 
 
@@ -213,11 +218,6 @@ class SecurityGroupControllerBase(object):
                     context, rule)]
         return security_group
 
-    def _authorize_context(self, req):
-        context = req.environ['nova.context']
-        authorize(context)
-        return context
-
     def _from_body(self, body, key):
         if not body:
             raise exc.HTTPUnprocessableEntity()
@@ -233,7 +233,7 @@ class SecurityGroupController(SecurityGroupControllerBase):
     @wsgi.serializers(xml=SecurityGroupTemplate)
     def show(self, req, id):
         """Return data about the given security group."""
-        context = self._authorize_context(req)
+        context = _authorize_context(req)
 
         id = self.security_group_api.validate_id(id)
 
@@ -245,7 +245,7 @@ class SecurityGroupController(SecurityGroupControllerBase):
 
     def delete(self, req, id):
         """Delete a security group."""
-        context = self._authorize_context(req)
+        context = _authorize_context(req)
 
         id = self.security_group_api.validate_id(id)
 
@@ -259,7 +259,7 @@ class SecurityGroupController(SecurityGroupControllerBase):
     @wsgi.serializers(xml=SecurityGroupsTemplate)
     def index(self, req):
         """Returns a list of security groups."""
-        context = self._authorize_context(req)
+        context = _authorize_context(req)
 
         search_opts = {}
         search_opts.update(req.GET)
@@ -280,7 +280,7 @@ class SecurityGroupController(SecurityGroupControllerBase):
     @wsgi.deserializers(xml=SecurityGroupXMLDeserializer)
     def create(self, req, body):
         """Creates a new security group."""
-        context = self._authorize_context(req)
+        context = _authorize_context(req)
 
         security_group = self._from_body(body, 'security_group')
 
@@ -303,7 +303,7 @@ class SecurityGroupRulesController(SecurityGroupControllerBase):
     @wsgi.serializers(xml=SecurityGroupRuleTemplate)
     @wsgi.deserializers(xml=SecurityGroupRulesXMLDeserializer)
     def create(self, req, body):
-        context = self._authorize_context(req)
+        context = _authorize_context(req)
 
         sg_rule = self._from_body(body, 'security_group_rule')
 
@@ -358,7 +358,7 @@ class SecurityGroupRulesController(SecurityGroupControllerBase):
                                         cidr, ip_protocol, from_port, to_port)
 
     def delete(self, req, id):
-        context = self._authorize_context(req)
+        context = _authorize_context(req)
 
         id = self.security_group_api.validate_id(id)
 
@@ -380,7 +380,7 @@ class ServerSecurityGroupController(SecurityGroupControllerBase):
     @wsgi.serializers(xml=SecurityGroupsTemplate)
     def index(self, req, server_id):
         """Returns a list of security groups for the given instance."""
-        context = self._authorize_context(req)
+        context = _authorize_context(req)
 
         self.security_group_api.ensure_default(context)
 
@@ -390,7 +390,7 @@ class ServerSecurityGroupController(SecurityGroupControllerBase):
             raise exc.HTTPNotFound(explanation=exp.format_message())
 
         groups = self.security_group_api.get_instance_security_groups(
-            req, instance['id'], instance['uuid'], True)
+            context, instance['id'], instance['uuid'], True)
         result = [self._format_security_group(context, group)
                     for group in groups]
 
@@ -466,7 +466,10 @@ class SecurityGroupsOutputController(wsgi.Controller):
             openstack_driver.get_openstack_security_group_driver())
 
     def _extend_servers(self, req, servers):
+        # TODO(arosen) this function should be refactored to reduce duplicate
+        # code and use get_instance_security_groups instead of get_db_instance.
         key = "security_groups"
+        context = _authorize_context(req)
         if not openstack_driver.is_quantum_security_groups():
             for server in servers:
                 instance = req.get_db_instance(server['id'])
@@ -483,7 +486,7 @@ class SecurityGroupsOutputController(wsgi.Controller):
                 for server in servers:
                     instance_sgs = (
                         self.security_group_api.get_instance_security_groups(
-                            req, server['id']))
+                            context, server['id']))
             else:
                 try:
                     # try converting to json
