@@ -264,7 +264,8 @@ sql_opts = [
                        os.path.abspath(os.path.join(os.path.dirname(__file__),
                        '../', '$sqlite_db')),
                help='The SQLAlchemy connection string used to connect to the '
-                    'database'),
+                    'database',
+               secret=True),
     cfg.StrOpt('sqlite_db',
                default='nova.sqlite',
                help='the filename to use with sqlite'),
