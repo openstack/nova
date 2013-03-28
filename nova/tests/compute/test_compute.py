@@ -7976,3 +7976,69 @@ class EvacuateHostTestCase(BaseTestCase):
                            lambda x: True)
             self.assertRaises(exception.InstanceRecreateNotSupported,
                               lambda: self._rebuild(on_shared_storage=True))
+
+
+class ComputeInjectedFilesTestCase(BaseTestCase):
+    # Test that running instances with injected_files decodes files correctly
+
+    def setUp(self):
+        super(ComputeInjectedFilesTestCase, self).setUp()
+        self.instance = self._create_fake_instance()
+        self.stubs.Set(self.compute.driver, 'spawn', self._spawn)
+
+    def _spawn(self, context, instance, image_meta, injected_files,
+            admin_password, nw_info, block_device_info):
+        self.assertEqual(self.expected, injected_files)
+
+    def _test(self, injected_files, decoded_files):
+        self.expected = decoded_files
+        self.compute.run_instance(self.context, self.instance,
+                                  injected_files=injected_files)
+
+    def test_injected_none(self):
+        # test an input of None for injected_files
+        self._test(None, [])
+
+    def test_injected_empty(self):
+        # test an input of [] for injected_files
+        self._test([], [])
+
+    def test_injected_success(self):
+        # test with valid b64 encoded content.
+        injected_files = [
+            ('/a/b/c', base64.b64encode('foobarbaz')),
+            ('/d/e/f', base64.b64encode('seespotrun')),
+        ]
+
+        decoded_files = [
+            ('/a/b/c', 'foobarbaz'),
+            ('/d/e/f', 'seespotrun'),
+        ]
+        self._test(injected_files, decoded_files)
+
+    def test_injected_invalid(self):
+        # test with invalid b64 encoded content
+        injected_files = [
+            ('/a/b/c', base64.b64encode('foobarbaz')),
+            ('/d/e/f', 'seespotrun'),
+        ]
+
+        self.assertRaises(exception.Base64Exception, self.compute.run_instance,
+                self.context, self.instance, injected_files=injected_files)
+
+    def test_reschedule(self):
+        # test that rescheduling is done with original encoded files
+        expected = [
+            ('/a/b/c', base64.b64encode('foobarbaz')),
+            ('/d/e/f', base64.b64encode('seespotrun')),
+        ]
+
+        def _ror(context, instance, exc_info, requested_networks,
+                 admin_password, injected_files, is_first_time, request_spec,
+                 filter_properties, bdms=None):
+            self.assertEqual(expected, injected_files)
+
+        self.stubs.Set(self.compute, '_reschedule_or_reraise', _ror)
+
+        self.compute.run_instance(self.context, self.instance,
+                                  injected_files=expected)

@@ -1200,3 +1200,7 @@ class UnsupportedVirtType(Invalid):
 class UnsupportedHardware(Invalid):
     message = _("Requested hardware '%(model)s' is not supported by "
                 "the '%(virt)s' virt driver")
+
+
+class Base64Exception(NovaException):
+    message = _("Invalid Base 64 data for file %(path)s")
