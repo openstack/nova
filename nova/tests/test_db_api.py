@@ -1847,10 +1847,9 @@ class ServiceTestCase(test.TestCase, ModelsObjectComparatorMixin):
                           self.ctxt, 'non-exists-host', 'a')
 
 
-class InstanceTypeTestCase(test.TestCase, ModelsObjectComparatorMixin):
-
+class BaseInstanceTypeTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def setUp(self):
-        super(InstanceTypeTestCase, self).setUp()
+        super(BaseInstanceTypeTestCase, self).setUp()
         self.ctxt = context.get_admin_context()
 
     def _get_base_values(self):
@@ -1872,6 +1871,9 @@ class InstanceTypeTestCase(test.TestCase, ModelsObjectComparatorMixin):
         v = self._get_base_values()
         v.update(values)
         return db.instance_type_create(self.ctxt, v)
+
+
+class InstanceTypeTestCase(BaseInstanceTypeTestCase):
 
     def test_instance_type_create(self):
         inst_type = self._create_inst_type({})
@@ -2033,6 +2035,90 @@ class InstanceTypeTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertRaises(exception.FlavorNotFound,
                           db.instance_type_get_by_flavor_id,
                           self.ctxt, 'nonexists')
+
+
+class InstanceTypeAccessTestCase(BaseInstanceTypeTestCase):
+
+    def _create_inst_type_access(self, instance_type_id, project_id):
+        return db.instance_type_access_add(self.ctxt, instance_type_id,
+                                           project_id)
+
+    def test_instance_type_access_get_by_flavor_id(self):
+        inst_types = ({'name': 'n1', 'flavorid': 'f1'},
+                      {'name': 'n2', 'flavorid': 'f2'})
+        it1, it2 = tuple((self._create_inst_type(v) for v in inst_types))
+
+        access_it1 = [self._create_inst_type_access(it1['flavorid'], 'pr1'),
+                      self._create_inst_type_access(it1['flavorid'], 'pr2')]
+
+        access_it2 = [self._create_inst_type_access(it2['flavorid'], 'pr1')]
+
+        for it, access_it in zip((it1, it2), (access_it1, access_it2)):
+            params = (self.ctxt, it['flavorid'])
+            real_access_it = db.instance_type_access_get_by_flavor_id(*params)
+            self._assertEqualListsOfObjects(access_it, real_access_it)
+
+    def test_instance_type_access_get_by_flavor_id_flavor_not_found(self):
+        self.assertRaises(exception.FlavorNotFound,
+                          db.instance_type_get_by_flavor_id,
+                          self.ctxt, 'nonexists')
+
+    def test_instance_type_access_add(self):
+        inst_type = self._create_inst_type({'flavorid': 'f1'})
+        project_id = 'p1'
+
+        access = self._create_inst_type_access(inst_type['flavorid'],
+                                               project_id)
+        # NOTE(boris-42): Check that instance_type_access_add doesn't fail and
+        #                 returns correct value. This is enough because other
+        #                 logic is checked by other methods.
+        self.assertFalse(access['id'] is None)
+        self.assertEqual(access['instance_type_id'], inst_type['id'])
+        self.assertEqual(access['project_id'], project_id)
+
+    def test_instance_type_access_add_to_non_existing_flavor(self):
+        self.assertRaises(exception.FlavorNotFound,
+                          self._create_inst_type_access,
+                          'nonexists', 'does_not_matter')
+
+    def test_instance_type_access_add_duplicate_project_id_flavor(self):
+        inst_type = self._create_inst_type({'flavorid': 'f1'})
+        params = (inst_type['flavorid'], 'p1')
+
+        self._create_inst_type_access(*params)
+        self.assertRaises(exception.FlavorAccessExists,
+                          self._create_inst_type_access, *params)
+
+    def test_instance_type_access_remove(self):
+        inst_types = ({'name': 'n1', 'flavorid': 'f1'},
+                      {'name': 'n2', 'flavorid': 'f2'})
+        it1, it2 = tuple((self._create_inst_type(v) for v in inst_types))
+
+        access_it1 = [self._create_inst_type_access(it1['flavorid'], 'pr1'),
+                      self._create_inst_type_access(it1['flavorid'], 'pr2')]
+
+        access_it2 = [self._create_inst_type_access(it2['flavorid'], 'pr1')]
+
+        db.instance_type_access_remove(self.ctxt, it1['flavorid'],
+                                       access_it1[1]['project_id'])
+
+        for it, access_it in zip((it1, it2), (access_it1[:1], access_it2)):
+            params = (self.ctxt, it['flavorid'])
+            real_access_it = db.instance_type_access_get_by_flavor_id(*params)
+            self._assertEqualListsOfObjects(access_it, real_access_it)
+
+    def test_instance_type_access_remove_flavor_not_found(self):
+        self.assertRaises(exception.FlavorNotFound,
+                          db.instance_type_access_remove,
+                          self.ctxt, 'nonexists', 'does_not_matter')
+
+    def test_instance_type_access_remove_access_not_found(self):
+        inst_type = self._create_inst_type({'flavorid': 'f1'})
+        params = (inst_type['flavorid'], 'p1')
+        self._create_inst_type_access(*params)
+        self.assertRaises(exception.FlavorAccessNotFound,
+                          db.instance_type_access_remove,
+                          self.ctxt, inst_type['flavorid'], 'p2')
 
 
 class TestFixedIPGetByNetworkHost(test.TestCase):
