@@ -24,6 +24,7 @@ from nova.api.openstack.compute.contrib import simple_tenant_usage
 from nova.compute import api
 from nova.compute import instance_types
 from nova import context
+from nova import exception
 from nova.openstack.common import jsonutils
 from nova.openstack.common import policy as common_policy
 from nova.openstack.common import timeutils
@@ -404,3 +405,66 @@ class SimpleTenantUsageSerializerTest(test.TestCase):
         self.assertEqual(len(raw_usages), len(tree))
         for idx, child in enumerate(tree):
             self._verify_tenant_usage(raw_usages[idx], child)
+
+
+class SimpleTenantUsageControllerTest(test.TestCase):
+    def setUp(self):
+        super(SimpleTenantUsageControllerTest, self).setUp()
+        self.controller = simple_tenant_usage.SimpleTenantUsageController()
+
+        class FakeComputeAPI:
+            def get_instance_type(self, context, flavor_type):
+                if flavor_type == 1:
+                    return instance_types.get_default_instance_type()
+                else:
+                    raise exception.InstanceTypeNotFound(flavor_type)
+
+        self.compute_api = FakeComputeAPI()
+        self.context = None
+
+        now = datetime.datetime.now()
+        self.baseinst = dict(display_name='foo',
+                             launched_at=now - datetime.timedelta(1),
+                             terminated_at=now,
+                             instance_type_id=1,
+                             vm_state='deleted',
+                             deleted=0)
+        basetype = instance_types.get_default_instance_type()
+        sys_meta = utils.dict_to_metadata(
+            instance_types.save_instance_type_info({}, basetype))
+        self.baseinst['system_metadata'] = sys_meta
+        self.basetype = instance_types.extract_instance_type(self.baseinst)
+
+    def test_get_flavor_from_sys_meta(self):
+        # Non-deleted instances get their type information from their
+        # system_metadata
+        flavor = self.controller._get_flavor(self.context, self.compute_api,
+                                             self.baseinst, {})
+        self.assertEqual(flavor, self.basetype)
+
+    def test_get_flavor_from_non_deleted_with_id_fails(self):
+        # If an instance is not deleted and missing type information from
+        # system_metadata, then that's a bug
+        inst_without_sys_meta = dict(self.baseinst, system_metadata=[])
+        self.assertRaises(KeyError,
+                          self.controller._get_flavor, self.context,
+                          self.compute_api, inst_without_sys_meta, {})
+
+    def test_get_flavor_from_deleted_with_id(self):
+        # Deleted instances may not have type info in system_metadata,
+        # so verify that they get their type from a lookup of their
+        # instance_type_id
+        inst_without_sys_meta = dict(self.baseinst, system_metadata=[],
+                                     deleted=1)
+        flavor = self.controller._get_flavor(self.context, self.compute_api,
+                                             inst_without_sys_meta, {})
+        self.assertEqual(flavor, instance_types.get_default_instance_type())
+
+    def test_get_flavor_from_deleted_with_id_of_deleted(self):
+        # Verify the legacy behavior of instance_type_id pointing to a
+        # missing type being non-fatal
+        inst_without_sys_meta = dict(self.baseinst, system_metadata=[],
+                                     deleted=1, instance_type_id=2)
+        flavor = self.controller._get_flavor(self.context, self.compute_api,
+                                             inst_without_sys_meta, {})
+        self.assertEqual(flavor, None)
