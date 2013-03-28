@@ -227,26 +227,44 @@ class ProjectCommands(object):
     @args('--key', metavar='<key>', help='Key')
     @args('--value', metavar='<value>', help='Value')
     def quota(self, project_id, key=None, value=None):
-        """Set or display quotas for project."""
+        """
+        Create, update or display quotas for project
+
+        If no quota key is provided, the quota will be displayed.
+        If a valid quota key is provided and it does not exist,
+        it will be created. Otherwise, it will be updated.
+        """
+
         ctxt = context.get_admin_context()
         project_quota = QUOTAS.get_project_quotas(ctxt, project_id)
-        if key and key in project_quota:
-            if value.lower() == 'unlimited':
-                value = -1
-            try:
-                db.quota_update(ctxt, project_id, key, value)
-            except exception.ProjectQuotaNotFound:
-                db.quota_create(ctxt, project_id, key, value)
-        else:
-            print _('%(key)s is not a valid quota key. Valid options are: '
-                    '%(options)s.') % {'key': key,
-                                       'options': ', '.join(project_quota)}
-            sys.exit(2)
+        # if key is None, that means we need to show the quotas instead
+        # of updating them
+        if key:
+            if key in project_quota:
+                if value.lower() == 'unlimited':
+                    value = -1
+                try:
+                    db.quota_update(ctxt, project_id, key, value)
+                except exception.ProjectQuotaNotFound:
+                    db.quota_create(ctxt, project_id, key, value)
+            else:
+                print _('%(key)s is not a valid quota key. Valid options are: '
+                        '%(options)s.') % {'key': key,
+                                           'options': ', '.join(project_quota)}
+                sys.exit(2)
+        print_format = "%-36s %-10s %-10s %-10s"
+        print print_format % (
+                    _('Quota'),
+                    _('Limit'),
+                    _('In Use'),
+                    _('Reserved'))
+        # Retrieve the quota after update
         project_quota = QUOTAS.get_project_quotas(ctxt, project_id)
         for key, value in project_quota.iteritems():
             if value['limit'] < 0 or value['limit'] is None:
                 value['limit'] = 'unlimited'
-            print '%s: %s' % (key, value['limit'])
+            print print_format % (key, value['limit'], value['in_use'],
+                                  value['reserved'])
 
     @args('--project', dest='project_id', metavar='<Project name>',
             help='Project name')

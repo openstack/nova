@@ -366,7 +366,8 @@ class ProjectCommandsTestCase(test.TestCase):
 
         sys.stdout = sys.__stdout__
         result = output.getvalue()
-        self.assertEquals(('instances: unlimited' in result), True)
+        print_format = "%-36s %-10s" % ('instances', 'unlimited')
+        self.assertEquals((print_format in result), True)
 
     def test_quota_update_invalid_key(self):
         self.assertRaises(SystemExit,
