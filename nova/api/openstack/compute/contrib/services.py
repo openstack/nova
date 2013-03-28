@@ -42,19 +42,32 @@ class ServicesIndexTemplate(xmlutil.TemplateBuilder):
         elem.set('zone')
         elem.set('status')
         elem.set('state')
-        elem.set('update_at')
+        elem.set('updated_at')
 
         return xmlutil.MasterTemplate(root, 1)
 
 
-class ServicesUpdateTemplate(xmlutil.TemplateBuilder):
+class ServiceUpdateTemplate(xmlutil.TemplateBuilder):
     def construct(self):
-        root = xmlutil.TemplateElement('host')
+        root = xmlutil.TemplateElement('service', selector='service')
         root.set('host')
         root.set('binary')
         root.set('status')
 
         return xmlutil.MasterTemplate(root, 1)
+
+
+class ServiceUpdateDeserializer(wsgi.XMLDeserializer):
+    def default(self, string):
+        node = xmlutil.safe_minidom_parse_string(string)
+        service = {}
+        service_node = self.find_first_child_named(node, 'service')
+        if service_node is None:
+            return service
+        service['host'] = service_node.getAttribute('host')
+        service['binary'] = service_node.getAttribute('binary')
+
+        return dict(body=service)
 
 
 class ServiceController(object):
@@ -98,7 +111,8 @@ class ServiceController(object):
                          'updated_at': svc['updated_at']})
         return {'services': svcs}
 
-    @wsgi.serializers(xml=ServicesUpdateTemplate)
+    @wsgi.deserializers(xml=ServiceUpdateDeserializer)
+    @wsgi.serializers(xml=ServiceUpdateTemplate)
     def update(self, req, id, body):
         """Enable/Disable scheduling for a service."""
         context = req.environ['nova.context']
@@ -110,7 +124,6 @@ class ServiceController(object):
             disabled = True
         else:
             raise webob.exc.HTTPNotFound("Unknown action")
-
         try:
             host = body['host']
             binary = body['binary']
