@@ -480,6 +480,7 @@ class LinuxNetworkTestCase(test.TestCase):
                        'label': 'fake',
                        'multi_host': False,
                        'cidr': '10.0.0.0/24',
+                       'netmask': '255.255.255.0',
                        'dns1': '8.8.4.4',
                        'dhcp_start': '1.0.0.2',
                        'dhcp_server': '10.0.0.1'}
@@ -507,8 +508,9 @@ class LinuxNetworkTestCase(test.TestCase):
           '--pid-file=%s' % linux_net._dhcp_file(dev, 'pid'),
           '--listen-address=%s' % network_ref['dhcp_server'],
           '--except-interface=lo',
-          "--dhcp-range=set:%s,%s,static,%ss" % (network_ref['label'],
+          "--dhcp-range=set:%s,%s,static,%s,%ss" % (network_ref['label'],
                                                    network_ref['dhcp_start'],
+                                                   network_ref['netmask'],
                                                    CONF.dhcp_lease_time),
           '--dhcp-lease-max=256',
           '--dhcp-hostsfile=%s' % linux_net._dhcp_file(dev, 'conf'),
