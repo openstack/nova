@@ -689,8 +689,6 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
                     hostname="test", architecture="x86-64", instance_id=1,
                     injected_files=None, check_injection=False,
                     create_record=True, empty_dns=False,
-                    image_meta={'id': IMAGE_VHD,
-                                'disk_format': 'vhd'},
                     block_device_info=None,
                     key_data=None):
         if injected_files is None:
@@ -726,6 +724,9 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
             # NOTE(tr3buchet): this is a terrible way to do this...
             network_info[0]['network']['subnets'][0]['dns'] = []
 
+        image_meta = {}
+        if image_ref:
+            image_meta = IMAGE_FIXTURES[image_ref]["image_meta"]
         self.conn.spawn(self.context, instance, image_meta, injected_files,
                         'herp', network_info, block_device_info)
         self.create_vm_record(self.conn, os_type, instance['name'])
@@ -743,7 +744,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
     def test_spawn_not_enough_memory(self):
         self.assertRaises(exception.InsufficientFreeMemory,
                           self._test_spawn,
-                          1, 2, 3, "4")  # m1.xlarge
+                          '1', 2, 3, "4")  # m1.xlarge
 
     def test_spawn_fail_cleanup_1(self):
         """Simulates an error while downloading an image.
@@ -754,7 +755,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         start_vms = self._list_vms()
         stubs.stubout_fetch_disk_image(self.stubs, raise_failure=True)
         self.assertRaises(xenapi_fake.Failure,
-                          self._test_spawn, 1, 2, 3)
+                          self._test_spawn, '1', 2, 3)
         # No additional VDI should be found.
         vdi_recs_end = self._list_vdis()
         end_vms = self._list_vms()
@@ -771,7 +772,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         start_vms = self._list_vms()
         stubs.stubout_create_vm(self.stubs)
         self.assertRaises(xenapi_fake.Failure,
-                          self._test_spawn, 1, 2, 3)
+                          self._test_spawn, '1', 2, 3)
         # No additional VDI should be found.
         vdi_recs_end = self._list_vdis()
         end_vms = self._list_vms()
@@ -788,7 +789,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         vdi_recs_start = self._list_vdis()
         start_vms = self._list_vms()
         self.assertRaises(xenapi_fake.Failure,
-                          self._test_spawn, 1, 2, 3)
+                          self._test_spawn, '1', 2, 3)
         # No additional VDI should be found.
         vdi_recs_end = self._list_vdis()
         end_vms = self._list_vms()
@@ -817,7 +818,19 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self.check_vm_params_for_windows()
 
     def test_spawn_glance(self):
-        stubs.stubout_fetch_disk_image(self.stubs)
+
+        def fake_fetch_disk_image(context, session, instance, name_label,
+                                  image_id, image_type):
+            sr_ref = vm_utils.safe_find_sr(session)
+            image_type_str = vm_utils.ImageType.to_string(image_type)
+            vdi_ref = vm_utils.create_vdi(session, sr_ref, instance,
+                name_label, image_type_str, "20")
+            vdi_role = vm_utils.ImageType.get_role(image_type)
+            vdi_uuid = session.call_xenapi("VDI.get_uuid", vdi_ref)
+            return {vdi_role: dict(uuid=vdi_uuid, file=None)}
+        self.stubs.Set(vm_utils, '_fetch_disk_image',
+                       fake_fetch_disk_image)
+
         self._test_spawn(IMAGE_MACHINE,
                          IMAGE_KERNEL,
                          IMAGE_RAMDISK)
@@ -826,7 +839,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
     def test_spawn_boot_from_volume_no_image_meta(self):
         dev_info = get_fake_device_info()
         self._test_spawn(None, None, None,
-                         image_meta={}, block_device_info=dev_info)
+                         block_device_info=dev_info)
 
     def test_spawn_boot_from_volume_with_image_meta(self):
         dev_info = get_fake_device_info()
@@ -908,7 +921,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
             (r'mount', _mount_handler),
             (r'umount', _umount_handler),
             (r'tee.*interfaces', _tee_handler)])
-        self._test_spawn(1, 2, 3, check_injection=True)
+        self._test_spawn('1', 2, 3, check_injection=True)
 
         # tee must not run in this case, where an injection-capable
         # guest agent is detected
@@ -1808,22 +1821,27 @@ class XenAPIGenerateLocal(stubs.XenAPITestBase):
 
         def fake_create_vbd(session, vm_ref, vdi_ref, userdevice,
                             vbd_type='disk', read_only=False, bootable=True,
-                            osvol=False):
-            pass
+                            osvol=False, empty=False, unpluggable=True):
+            return session.call_xenapi('VBD.create', {'VM': vm_ref,
+                                                      'VDI': vdi_ref})
 
         self.stubs.Set(vm_utils, 'create_vbd', fake_create_vbd)
 
-    def assertCalled(self, instance):
+    def assertCalled(self, instance,
+                     disk_image_type=vm_utils.ImageType.DISK_VHD):
         ctx = context.RequestContext(self.user_id, self.project_id)
         session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass',
                                             fake.FakeVirtAPI())
 
-        disk_image_type = vm_utils.ImageType.DISK_VHD
         vm_ref = xenapi_fake.create_vm(instance['name'], 'Halted')
         vdi_ref = xenapi_fake.create_vdi(instance['name'], 'fake')
 
         vdi_uuid = session.call_xenapi('VDI.get_record', vdi_ref)['uuid']
-        vdis = {'root': {'uuid': vdi_uuid, 'ref': vdi_ref}}
+
+        vdi_key = 'root'
+        if disk_image_type == vm_utils.ImageType.DISK_ISO:
+            vdi_key = 'iso'
+        vdis = {vdi_key: {'uuid': vdi_uuid, 'ref': vdi_ref}}
 
         self.called = False
         self.conn._vmops._attach_disks(instance, vm_ref, instance['name'],
@@ -1853,6 +1871,24 @@ class XenAPIGenerateLocal(stubs.XenAPITestBase):
         self.stubs.Set(vm_utils, 'generate_ephemeral', fake_generate_ephemeral)
 
         self.assertCalled(instance)
+
+    def test_generate_iso_blank_root_disk(self):
+        instance_values = dict(self.instance_values, instance_type_id=4)
+        instance_values.pop('kernel_id')
+        instance_values.pop('ramdisk_id')
+        instance = create_instance_with_system_metadata(self.context,
+                                                        instance_values)
+
+        def fake_generate_ephemeral(*args):
+            pass
+        self.stubs.Set(vm_utils, 'generate_ephemeral', fake_generate_ephemeral)
+
+        def fake_generate_iso(*args):
+            self.called = True
+        self.stubs.Set(vm_utils, 'generate_iso_blank_root_disk',
+            fake_generate_iso)
+
+        self.assertCalled(instance, vm_utils.ImageType.DISK_ISO)
 
 
 class XenAPIBWCountersTestCase(stubs.XenAPITestBase):
@@ -3199,62 +3235,6 @@ class XenAPIInjectMetadataTestCase(stubs.XenAPITestBase):
                     'vm-data/user-metadata/c': '3',
                     },
                 })
-
-
-class VMOpsTestCase(test.TestCase):
-    def _get_mock_session(self, product_brand, product_version):
-        class Mock(object):
-            pass
-
-        mock_session = Mock()
-        mock_session.product_brand = product_brand
-        mock_session.product_version = product_version
-
-        return mock_session
-
-    def test_check_resize_func_name_defaults_to_VDI_resize(self):
-        session = self._get_mock_session(None, None)
-        ops = vmops.VMOps(session, fake.FakeVirtAPI())
-
-        self.assertEquals(
-            'VDI.resize',
-            ops.check_resize_func_name())
-
-    def _test_finish_revert_migration_after_crash(self, backup_made, new_made):
-        instance = {'name': 'foo',
-                    'task_state': task_states.RESIZE_MIGRATING}
-        session = self._get_mock_session(None, None)
-        ops = vmops.VMOps(session, fake.FakeVirtAPI())
-
-        self.mox.StubOutWithMock(vm_utils, 'lookup')
-        self.mox.StubOutWithMock(ops, '_destroy')
-        self.mox.StubOutWithMock(vm_utils, 'set_vm_name_label')
-        self.mox.StubOutWithMock(ops, '_attach_mapped_block_devices')
-        self.mox.StubOutWithMock(ops, '_start')
-
-        vm_utils.lookup(session, 'foo-orig').AndReturn(
-            backup_made and 'foo' or None)
-        vm_utils.lookup(session, 'foo').AndReturn(
-            (not backup_made or new_made) and 'foo' or None)
-        if backup_made:
-            if new_made:
-                ops._destroy(instance, 'foo')
-            vm_utils.set_vm_name_label(session, 'foo', 'foo')
-            ops._attach_mapped_block_devices(instance, [])
-        ops._start(instance, 'foo')
-
-        self.mox.ReplayAll()
-
-        ops.finish_revert_migration(instance, [])
-
-    def test_finish_revert_migration_after_crash(self):
-        self._test_finish_revert_migration_after_crash(True, True)
-
-    def test_finish_revert_migration_after_crash_before_new(self):
-        self._test_finish_revert_migration_after_crash(True, False)
-
-    def test_finish_revert_migration_after_crash_before_backup(self):
-        self._test_finish_revert_migration_after_crash(False, False)
 
 
 class XenAPISessionTestCase(test.TestCase):
