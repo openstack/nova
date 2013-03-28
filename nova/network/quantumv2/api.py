@@ -289,7 +289,8 @@ class API(base.Base):
         # this only affects the attach case, not the original use for this
         # method.
         return network_model.NetworkInfo([port for port in nw_info
-                                          if port['id'] in created_port_ids])
+                                          if port['id'] in created_port_ids +
+                                                           touched_port_ids])
 
     def _refresh_quantum_extensions_cache(self):
         if (not self.last_quantum_extension_sync or
