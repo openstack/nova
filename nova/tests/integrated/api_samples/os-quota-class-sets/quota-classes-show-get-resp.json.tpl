@@ -2,7 +2,7 @@
     "quota_class_set": {
         "cores": 20,
         "floating_ips": 10,
-	"fixed_ips": 10,
+        "fixed_ips": -1,
         "id": "%(set_id)s",
         "injected_file_content_bytes": 10240,
         "injected_file_path_bytes": 255,

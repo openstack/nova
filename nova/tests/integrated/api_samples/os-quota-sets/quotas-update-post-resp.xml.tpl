@@ -2,7 +2,7 @@
 <quota_set>
   <cores>20</cores>
   <floating_ips>10</floating_ips>
-  <fixed_ips>10</fixed_ips>
+  <fixed_ips>-1</fixed_ips>
   <injected_file_content_bytes>10240</injected_file_content_bytes>
   <injected_file_path_bytes>255</injected_file_path_bytes>
   <injected_files>5</injected_files>
