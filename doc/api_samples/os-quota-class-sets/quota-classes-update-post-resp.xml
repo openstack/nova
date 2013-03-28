@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <quota_class_set>
   <cores>50</cores>
-  <fixed_ips>10</fixed_ips>
+  <fixed_ips>-1</fixed_ips>
   <floating_ips>10</floating_ips>
   <injected_file_content_bytes>10240</injected_file_content_bytes>
   <injected_file_path_bytes>255</injected_file_path_bytes>
