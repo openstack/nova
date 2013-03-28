@@ -286,7 +286,7 @@ class AdminActionsController(wsgi.Controller):
                 exception.InvalidHypervisorType,
                 exception.UnableToMigrateToSelf,
                 exception.DestinationHypervisorTooOld) as ex:
-            raise exc.HTTPBadRequest(explanation=str(ex))
+            raise exc.HTTPBadRequest(explanation=ex.format_message())
         except Exception:
             if host is None:
                 msg = _("Live migration of instance %(id)s to another host"

@@ -127,14 +127,16 @@ class Controller(object):
             raise exc.HTTPBadRequest(explanation=msg)
 
         except exception.InvalidMetadata as error:
-            raise exc.HTTPBadRequest(explanation=unicode(error))
+            raise exc.HTTPBadRequest(explanation=error.format_message())
 
         except exception.InvalidMetadataSize as error:
-            raise exc.HTTPRequestEntityTooLarge(explanation=unicode(error))
+            raise exc.HTTPRequestEntityTooLarge(
+                explanation=error.format_message())
 
         except exception.QuotaError as error:
-            raise exc.HTTPRequestEntityTooLarge(explanation=unicode(error),
-                                                headers={'Retry-After': 0})
+            raise exc.HTTPRequestEntityTooLarge(
+                explanation=error.format_message(),
+                headers={'Retry-After': 0})
 
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,

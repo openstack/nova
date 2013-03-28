@@ -2894,7 +2894,7 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
                 return self.db.security_group_get(context, id)
         except exception.NotFound as exp:
             if map_exception:
-                msg = unicode(exp)
+                msg = exp.format_message()
                 self.raise_not_found(msg)
             else:
                 raise
