@@ -454,6 +454,7 @@ class ComputeVolumeTestCase(BaseTestCase):
                       'instance_uuid': 'fake_instance_uuid',
                       'project_id': 'fake_project_id',
                       'user_id': 'fake_user_id',
+                      'availability_zone': 'fake-az',
                       'tot_reads': 11,
                       'curr_reads': 22,
                       'tot_read_bytes': 33,
@@ -483,6 +484,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.assertEquals(payload['read_bytes'], 77)
         self.assertEquals(payload['writes'], 121)
         self.assertEquals(payload['write_bytes'], 165)
+        self.assertEquals(payload['availability_zone'], 'fake-az')
 
     def test_detach_volume_usage(self):
         # Test that detach volume update the volume usage cache table correctly

@@ -1269,6 +1269,22 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         self.assertFalse('user_id' in rows[0])
         self.assertEqual(rows[0]['instance_id'], None)
 
+    def _check_176(self, engine, data):
+        volume_usage_cache = get_table(engine, 'volume_usage_cache')
+        # Get the record
+        rows = volume_usage_cache.select().execute().fetchall()
+        self.assertEqual(len(rows), 1)
+
+        self.assertEqual(rows[0]['availability_zone'], None)
+
+    def _post_downgrade_176(self, engine):
+        volume_usage_cache = get_table(engine, 'volume_usage_cache')
+        # Get the record
+        rows = volume_usage_cache.select().execute().fetchall()
+        self.assertEqual(len(rows), 1)
+
+        self.assertFalse('availability_zone' in rows[0])
+
 
 class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""
