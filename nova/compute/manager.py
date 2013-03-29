@@ -744,6 +744,21 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         return block_device_info
 
+    def _decode_files(self, injected_files):
+        """Base64 decode the list of files to inject."""
+        if not injected_files:
+            return []
+
+        def _decode(f):
+            path, contents = f
+            try:
+                decoded = base64.b64decode(contents)
+                return path, decoded
+            except TypeError:
+                raise exception.Base64Exception(path=path)
+
+        return [_decode(f) for f in injected_files]
+
     def _run_instance(self, context, request_spec,
                       filter_properties, requested_networks, injected_files,
                       admin_password, is_first_time, node, instance):
@@ -787,6 +802,10 @@ class ComputeManager(manager.SchedulerDependentManager):
             network_info = None
             bdms = self.conductor_api.block_device_mapping_get_all_by_instance(
                 context, instance)
+
+            # b64 decode the files to inject:
+            injected_files_orig = injected_files
+            injected_files = self._decode_files(injected_files)
 
             rt = self._get_resource_tracker(node)
             try:
@@ -833,8 +852,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                 exc_info = sys.exc_info()
                 # try to re-schedule instance:
                 self._reschedule_or_reraise(context, instance, exc_info,
-                        requested_networks, admin_password, injected_files,
-                        is_first_time, request_spec, filter_properties, bdms)
+                        requested_networks, admin_password,
+                        injected_files_orig, is_first_time, request_spec,
+                        filter_properties, bdms)
             else:
                 # Spawn success:
                 self._notify_about_instance_usage(context, instance,
@@ -1067,6 +1087,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                               injected_files, admin_password,
                               self._legacy_nw_info(network_info),
                               block_device_info)
+
         except Exception:
             with excutils.save_and_reraise_exception():
                 LOG.exception(_('Instance failed to spawn'), instance=instance)
@@ -1180,11 +1201,6 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         if filter_properties is None:
             filter_properties = {}
-        if injected_files is None:
-            injected_files = []
-        else:
-            injected_files = [(path, base64.b64decode(contents))
-                              for path, contents in injected_files]
 
         @lockutils.synchronized(instance['uuid'], 'nova-')
         def do_run_instance():
