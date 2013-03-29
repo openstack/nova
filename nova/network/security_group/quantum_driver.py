@@ -23,7 +23,6 @@ from quantumclient.quantum import v2_0 as quantumv20
 from webob import exc
 
 from nova.compute import api as compute_api
-from nova import context
 from nova import exception
 from nova.network import quantumv2
 from nova.network.security_group import security_group_base
@@ -246,14 +245,13 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                 raise e
         return self._convert_to_nova_security_group_rule_format(rule)
 
-    def get_instance_security_groups(self, req, instance_id,
+    def get_instance_security_groups(self, context, instance_id,
                                      instance_uuid=None, detailed=False):
         """Returns the security groups that are associated with an instance.
         If detailed is True then it also returns the full details of the
         security groups associated with an instance.
         """
-        admin_context = context.get_admin_context()
-        quantum = quantumv2.get_client(admin_context)
+        quantum = quantumv2.get_client(context)
         if instance_uuid:
             params = {'device_id': instance_uuid}
         else:
