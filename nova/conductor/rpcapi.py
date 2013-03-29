@@ -83,6 +83,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.43 - Added compute_stop
     1.44 - Added compute_node_delete
     1.45 - Added project_id to quota_commit and quota_rollback
+    1.46 - Added compute_confirm_resize
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -437,3 +438,10 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         msg = self.make_msg('compute_stop', instance=instance_p,
                             do_cast=do_cast)
         return self.call(context, msg, version='1.43')
+
+    def compute_confirm_resize(self, context, instance, migration_ref):
+        instance_p = jsonutils.to_primitive(instance)
+        migration_p = jsonutils.to_primitive(migration_ref)
+        msg = self.make_msg('compute_confirm_resize', instance=instance_p,
+                            migration_ref=migration_p)
+        return self.call(context, msg, version='1.46')
