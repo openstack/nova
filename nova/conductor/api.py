@@ -337,6 +337,10 @@ class LocalAPI(object):
     def compute_stop(self, context, instance, do_cast=True):
         return self._manager.compute_stop(context, instance, do_cast)
 
+    def compute_confirm_resize(self, context, instance, migration_ref):
+        return self._manager.compute_confirm_resize(context, instance,
+                                                    migration_ref)
+
 
 class API(object):
     """Conductor API that does updates via RPC to the ConductorManager."""
@@ -671,3 +675,8 @@ class API(object):
 
     def compute_stop(self, context, instance, do_cast=True):
         return self.conductor_rpcapi.compute_stop(context, instance, do_cast)
+
+    def compute_confirm_resize(self, context, instance, migration_ref):
+        return self.conductor_rpcapi.compute_confirm_resize(context,
+                                                            instance,
+                                                            migration_ref)
