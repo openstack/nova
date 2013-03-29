@@ -1388,6 +1388,14 @@ def fake_compute_create(*args, **kwargs):
     return ([fake_compute_get()], '')
 
 
+def fake_get_instance_security_groups(inst, context, instance_id):
+    if instance_id == UUID1:
+        return [{'name': 'fake-0-0'}, {'name': 'fake-0-1'}]
+
+    elif instance_id == UUID2:
+        return [{'name': 'fake-1-0'}, {'name': 'fake-1-1'}]
+
+
 class SecurityGroupsOutputTest(test.TestCase):
     content_type = 'application/json'
 

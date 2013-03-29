@@ -481,35 +481,37 @@ class SecurityGroupsOutputController(wsgi.Controller):
             # instance from the request. The reason for this is if using
             # quantum security groups the requested security groups for the
             # instance are not in the db and have not been sent to quantum yet.
-            instance_sgs = []
             if req.method != 'POST':
                 for server in servers:
-                    instance_sgs = (
+                    groups = (
                         self.security_group_api.get_instance_security_groups(
                             context, server['id']))
+                    if groups:
+                        server[key] = groups
+            # In this section of code len(servers) == 1 as you can only POST
+            # one server in an API request.
             else:
                 try:
                     # try converting to json
                     req_obj = json.loads(req.body)
                     # Add security group to server, if no security group was in
                     # request add default since that is the group it is part of
-                    instance_sgs = req_obj['server'].get(
+                    servers[0][key] = req_obj['server'].get(
                         key, [{'name': 'default'}])
                 except ValueError:
                     root = minidom.parseString(req.body)
                     sg_root = root.getElementsByTagName(key)
+                    groups = []
                     if sg_root:
                         security_groups = sg_root[0].getElementsByTagName(
                             'security_group')
                         for security_group in security_groups:
-                            instance_sgs.append(
+                            groups.append(
                                 {'name': security_group.getAttribute('name')})
-                    if not instance_sgs:
-                        instance_sgs = [{'name': 'default'}]
+                    if not groups:
+                        groups = [{'name': 'default'}]
 
-            if instance_sgs:
-                for server in servers:
-                    server[key] = instance_sgs
+                    servers[0][key] = groups
 
     def _show(self, req, resp_obj):
         if not softauth(req.environ['nova.context']):

@@ -31,6 +31,7 @@ import nova.db
 from nova import exception
 from nova.network import quantumv2
 from nova.network.quantumv2 import api as quantum_api
+from nova.network.security_group import quantum_driver
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack.compute.contrib import test_security_groups
@@ -323,8 +324,13 @@ class TestQuantumSecurityGroupsOutputTest(TestQuantumSecurityGroupsTestCase):
         self.controller = security_groups.SecurityGroupController()
         self.stubs.Set(compute.api.API, 'get',
                        test_security_groups.fake_compute_get)
+        self.stubs.Set(compute.api.API, 'get_all',
+                       test_security_groups.fake_compute_get_all)
         self.stubs.Set(compute.api.API, 'create',
                        test_security_groups.fake_compute_create)
+        self.stubs.Set(quantum_driver.SecurityGroupAPI,
+                       'get_instance_security_groups',
+                       test_security_groups.fake_get_instance_security_groups)
         self.flags(
             osapi_compute_extension=[
                 'nova.api.openstack.compute.contrib.select_extensions'],
@@ -370,6 +376,16 @@ class TestQuantumSecurityGroupsOutputTest(TestQuantumSecurityGroupsTestCase):
         for i, group in enumerate(self._get_groups(server)):
             name = 'fake-2-%s' % i
             self.assertEqual(group.get('name'), name)
+
+    def test_create_server_get_default_security_group(self):
+        url = '/v2/fake/servers'
+        image_uuid = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
+        server = dict(name='server_test', imageRef=image_uuid, flavorRef=2)
+        res = self._make_request(url, {'server': server})
+        self.assertEqual(res.status_int, 202)
+        server = self._get_server(res.body)
+        group = self._get_groups(server)[0]
+        self.assertEquals(group.get('name'), 'default')
 
     def test_show(self):
         url = '/v2/fake/servers'
@@ -629,7 +645,6 @@ class MockClient(object):
         for port in self._fake_ports.values():
             if device_id:
                 if device_id == port['device_id']:
-                    print port
                     ret.append(port)
             else:
                 ret.append(port)
