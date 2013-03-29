@@ -4,7 +4,7 @@
         "cores": 50,
         "ram": 51200,
         "floating_ips": 10,
-        "fixed_ips": 10,
+        "fixed_ips": -1,
         "metadata_items": 128,
         "injected_files": 5,
         "injected_file_content_bytes": 10240,
