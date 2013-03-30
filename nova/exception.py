@@ -244,6 +244,12 @@ class VolumeUnattached(Invalid):
     message = _("Volume %(volume_id)s is not attached to anything")
 
 
+class VolumeNotCreated(NovaException):
+    message = _("Volume %(volume_id)s did not finish being created"
+                " even after we waited %(seconds)s seconds or %(attempts)s"
+                " attempts.")
+
+
 class InvalidKeypair(Invalid):
     message = _("Keypair data is invalid")
 

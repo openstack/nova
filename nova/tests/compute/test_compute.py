@@ -248,6 +248,7 @@ class ComputeVolumeTestCase(BaseTestCase):
     def setUp(self):
         super(ComputeVolumeTestCase, self).setUp()
         self.volume_id = 'fake'
+        self.fetched_attempts = 0
         self.instance = {
             'id': 'fake',
             'uuid': 'fake',
@@ -282,6 +283,40 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.compute.attach_volume(self.context, self.volume_id,
                                    '/dev/vdb', self.instance)
         self.assertEqual(self.cinfo.get('serial'), self.volume_id)
+
+    def test_await_block_device_created_to_slow(self):
+
+        def never_get(context, vol_id):
+            return {
+                'status': 'creating',
+                'id': 'blah',
+            }
+
+        self.stubs.Set(self.compute.volume_api, 'get', never_get)
+        self.assertRaises(exception.VolumeNotCreated,
+                          self.compute._await_block_device_map_created,
+                          self.context, '1', max_tries=2, wait_between=0.1)
+
+    def test_await_block_device_created_slow(self):
+        c = self.compute
+
+        def slow_get(context, vol_id):
+            while self.fetched_attempts < 2:
+                self.fetched_attempts += 1
+                return {
+                    'status': 'creating',
+                    'id': 'blah',
+                }
+            return {
+                'status': 'available',
+                'id': 'blah',
+            }
+
+        self.stubs.Set(c.volume_api, 'get', slow_get)
+        attempts = c._await_block_device_map_created(self.context, '1',
+                                                     max_tries=4,
+                                                     wait_between=0.1)
+        self.assertEqual(attempts, 3)
 
     def test_boot_volume_serial(self):
         block_device_mapping = [{

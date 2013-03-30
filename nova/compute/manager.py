@@ -673,6 +673,30 @@ class ComputeManager(manager.SchedulerDependentManager):
             network_info = network_info.legacy()
         return network_info
 
+    def _await_block_device_map_created(self, context, vol_id, max_tries=30,
+                                        wait_between=1):
+        # TODO(yamahata): creating volume simultaneously
+        #                 reduces creation time?
+        # TODO(yamahata): eliminate dumb polling
+        # TODO(harlowja): make the max_tries configurable or dynamic?
+        attempts = 0
+        start = time.time()
+        while attempts < max_tries:
+            volume = self.volume_api.get(context, vol_id)
+            volume_status = volume['status']
+            if volume_status != 'creating':
+                if volume_status != 'available':
+                    LOG.warn(_("Volume id: %s finished being created but was"
+                               " not set as 'available'"), vol_id)
+                # NOTE(harlowja): return how many attempts were tried
+                return attempts + 1
+            greenthread.sleep(wait_between)
+            attempts += 1
+        # NOTE(harlowja): Should only happen if we ran out of attempts
+        raise exception.VolumeNotCreated(volume_id=vol_id,
+                                         seconds=int(time.time() - start),
+                                         attempts=attempts)
+
     def _setup_block_device_mapping(self, context, instance, bdms):
         """setup volumes for block device mapping."""
         block_device_mapping = []
@@ -705,14 +729,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                         bdm['snapshot_id'])
                 vol = self.volume_api.create(context, bdm['volume_size'],
                                              '', '', snapshot)
-                # TODO(yamahata): creating volume simultaneously
-                #                 reduces creation time?
-                # TODO(yamahata): eliminate dumb polling
-                while True:
-                    volume = self.volume_api.get(context, vol['id'])
-                    if volume['status'] != 'creating':
-                        break
-                    greenthread.sleep(1)
+                self._await_block_device_map_created(context, vol['id'])
                 self.conductor_api.block_device_mapping_update(
                     context, bdm['id'], {'volume_id': vol['id']})
                 bdm['volume_id'] = vol['id']
