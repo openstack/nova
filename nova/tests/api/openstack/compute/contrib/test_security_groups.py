@@ -33,7 +33,8 @@ from nova.tests.api.openstack import fakes
 from nova.tests import utils
 
 CONF = cfg.CONF
-FAKE_UUID = 'a47ae74e-ab08-447f-8eee-ffd43fc46c16'
+FAKE_UUID1 = 'a47ae74e-ab08-447f-8eee-ffd43fc46c16'
+FAKE_UUID2 = 'c6e6430a-6563-4efa-9542-5e93c9e97d18'
 
 
 class AttrDict(dict):
@@ -80,7 +81,7 @@ def return_server(context, server_id):
     return {'id': int(server_id),
             'power_state': 0x01,
             'host': "localhost",
-            'uuid': FAKE_UUID,
+            'uuid': FAKE_UUID1,
             'name': 'asdf'}
 
 
@@ -93,13 +94,13 @@ def return_server_by_uuid(context, server_uuid):
 
 
 def return_non_running_server(context, server_id):
-    return {'id': server_id, 'power_state': 0x02, 'uuid': FAKE_UUID,
+    return {'id': server_id, 'power_state': 0x02, 'uuid': FAKE_UUID1,
             'host': "localhost", 'name': 'asdf'}
 
 
 def return_security_group_by_name(context, project_id, group_name):
     return {'id': 1, 'name': group_name,
-            "instances": [{'id': 1, 'uuid': FAKE_UUID}]}
+            "instances": [{'id': 1, 'uuid': FAKE_UUID1}]}
 
 
 def return_security_group_without_instances(context, project_id, group_name):
@@ -346,7 +347,7 @@ class TestSecurityGroups(test.TestCase):
         expected = {'security_groups': groups}
 
         def return_instance(context, server_id):
-            self.assertEquals(server_id, FAKE_UUID)
+            self.assertEquals(server_id, FAKE_UUID1)
             return return_server_by_uuid(context, server_id)
 
         self.stubs.Set(nova.db, 'instance_get_by_uuid',
@@ -360,8 +361,8 @@ class TestSecurityGroups(test.TestCase):
                        return_security_groups)
 
         req = fakes.HTTPRequest.blank('/v2/%s/servers/%s/os-security-groups' %
-                                      ('fake', FAKE_UUID))
-        res_dict = self.server_controller.index(req, FAKE_UUID)
+                                      ('fake', FAKE_UUID1))
+        res_dict = self.server_controller.index(req, FAKE_UUID1)
 
         self.assertEquals(res_dict, expected)
 
@@ -1389,12 +1390,9 @@ def fake_compute_create(*args, **kwargs):
     return ([fake_compute_get()], '')
 
 
-def fake_get_instance_security_groups(inst, req, instance_id):
-    if instance_id == UUID1:
-        return [{'name': 'fake-0-0'}, {'name': 'fake-0-1'}]
-
-    elif instance_id == UUID2:
-        return [{'name': 'fake-1-0'}, {'name': 'fake-1-1'}]
+def fake_get_instances_security_groups_bindings(inst, context):
+    return {UUID1: [{'name': 'fake-0-0'}, {'name': 'fake-0-1'}],
+            UUID2: [{'name': 'fake-1-0'}, {'name': 'fake-1-1'}]}
 
 
 class SecurityGroupsOutputTest(test.TestCase):
