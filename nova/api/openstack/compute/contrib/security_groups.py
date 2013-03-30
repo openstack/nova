@@ -482,10 +482,11 @@ class SecurityGroupsOutputController(wsgi.Controller):
             # quantum security groups the requested security groups for the
             # instance are not in the db and have not been sent to quantum yet.
             if req.method != 'POST':
+                sg_instance_bindings = (
+                    self.security_group_api
+                    .get_instances_security_groups_bindings(context))
                 for server in servers:
-                    groups = (
-                        self.security_group_api.get_instance_security_groups(
-                            context, server['id']))
+                    groups = sg_instance_bindings.get(server['id'])
                     if groups:
                         server[key] = groups
             # In this section of code len(servers) == 1 as you can only POST
