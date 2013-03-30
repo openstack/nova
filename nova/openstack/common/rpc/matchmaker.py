@@ -35,10 +35,10 @@ matchmaker_opts = [
                default='/etc/nova/matchmaker_ring.json',
                help='Matchmaker ring file (JSON)'),
     cfg.IntOpt('matchmaker_heartbeat_freq',
-               default='300',
+               default=300,
                help='Heartbeat frequency'),
     cfg.IntOpt('matchmaker_heartbeat_ttl',
-               default='600',
+               default=600,
                help='Heartbeat time-to-live.'),
 ]
 
