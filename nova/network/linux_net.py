@@ -1513,14 +1513,17 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
                     for rule in get_gateway_rules(bridge):
                         ipv4_filter.remove_rule(*rule)
                 else:
-                    ipv4_filter.remove_rule('FORWARD',
-                                            ('--in-interface %s -j %s'
-                                             % (bridge,
-                                                CONF.iptables_drop_action)))
-                    ipv4_filter.remove_rule('FORWARD',
-                                            ('--out-interface %s -j %s'
-                                             % (bridge,
-                                                CONF.iptables_drop_action)))
+                    drop_actions = ['DROP']
+                    if CONF.iptables_drop_action != 'DROP':
+                        drop_actions.append(CONF.iptables_drop_action)
+
+                    for drop_action in drop_actions:
+                        ipv4_filter.remove_rule('FORWARD',
+                                                ('--in-interface %s -j %s'
+                                                 % (bridge, drop_action)))
+                        ipv4_filter.remove_rule('FORWARD',
+                                                ('--out-interface %s -j %s'
+                                                 % (bridge, drop_action)))
             try:
                 utils.execute('ip', 'link', 'delete', bridge, run_as_root=True,
                               check_exit_code=[0, 2, 254])
@@ -1591,27 +1594,34 @@ def remove_isolate_dhcp_address(interface, address):
     # NOTE(vish): the above is not possible with iptables/arptables
     # block dhcp broadcast traffic across the interface
     ipv4_filter = iptables_manager.ipv4['filter']
-    ipv4_filter.remove_rule('FORWARD',
-                            ('-m physdev --physdev-in %s -d 255.255.255.255 '
-                             '-p udp --dport 67 -j %s'
-                             % (interface, CONF.iptables_drop_action)),
-                            top=True)
-    ipv4_filter.remove_rule('FORWARD',
-                            ('-m physdev --physdev-out %s -d 255.255.255.255 '
-                             '-p udp --dport 67 -j %s'
-                             % (interface, CONF.iptables_drop_action)),
-                            top=True)
-    # block ip traffic to address across the interface
-    ipv4_filter.remove_rule('FORWARD',
-                            ('-m physdev --physdev-in %s -d %s -j %s'
-                             % (interface, address,
-                                CONF.iptables_drop_action)),
-                            top=True)
-    ipv4_filter.remove_rule('FORWARD',
-                            ('-m physdev --physdev-out %s -s %s -j %s'
-                             % (interface, address,
-                                CONF.iptables_drop_action)),
-                            top=True)
+
+    drop_actions = ['DROP']
+    if CONF.iptables_drop_action != 'DROP':
+        drop_actions.append(CONF.iptables_drop_action)
+
+    for drop_action in drop_actions:
+        ipv4_filter.remove_rule('FORWARD',
+                                ('-m physdev --physdev-in %s '
+                                 '-d 255.255.255.255 '
+                                 '-p udp --dport 67 -j %s'
+                                 % (interface, drop_action)),
+                                top=True)
+        ipv4_filter.remove_rule('FORWARD',
+                                ('-m physdev --physdev-out %s '
+                                 '-d 255.255.255.255 '
+                                 '-p udp --dport 67 -j %s'
+                                 % (interface, drop_action)),
+                                top=True)
+
+        # block ip traffic to address across the interface
+        ipv4_filter.remove_rule('FORWARD',
+                                ('-m physdev --physdev-in %s -d %s -j %s'
+                                 % (interface, address, drop_action)),
+                                top=True)
+        ipv4_filter.remove_rule('FORWARD',
+                                ('-m physdev --physdev-out %s -s %s -j %s'
+                                 % (interface, address, drop_action)),
+                                top=True)
 
 
 def get_gateway_rules(bridge):
