@@ -24,8 +24,3 @@
    :platform: Unix
    :synopsis: Infrastructure-as-a-Service Cloud platform.
 """
-
-import gettext
-
-
-gettext.install('nova', unicode=1)

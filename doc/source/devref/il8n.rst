@@ -27,8 +27,7 @@ The ``_()`` function is brought into the global scope by doing::
     import gettext
     gettext.install("nova", unicode=1)
 
-In general, you shouldn't need to add these to any nova files, since the lines
-are present in ``nova/__init__.py``. However, if this code is missing, it may
-result in an error that looks like like::
+These lines are needed in any toplevel script before any nova modules are
+imported. If this code is missing, it may result in an error that looks like::
 
     NameError: name '_' is not defined
