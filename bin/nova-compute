@@ -29,6 +29,7 @@ if os.name == 'nt':
 else:
     eventlet.monkey_patch()
 
+import gettext
 import os
 import sys
 import traceback
@@ -43,6 +44,7 @@ POSSIBLE_TOPDIR = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
 if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'nova', '__init__.py')):
     sys.path.insert(0, POSSIBLE_TOPDIR)
 
+gettext.install('nova', unicode=1)
 
 from nova import config
 import nova.db.api

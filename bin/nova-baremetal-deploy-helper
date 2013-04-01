@@ -23,6 +23,7 @@ import eventlet
 if __name__ == '__main__':
     eventlet.monkey_patch()
 
+import gettext
 import os
 import sys
 import threading
@@ -35,6 +36,8 @@ possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
                                    os.pardir))
 if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
     sys.path.insert(0, possible_topdir)
+
+gettext.install('nova', unicode=1)
 
 import cgi
 import Queue

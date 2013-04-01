@@ -21,6 +21,7 @@
 Built on top of pep8.py
 """
 
+import gettext
 import imp
 import inspect
 import logging
@@ -643,6 +644,7 @@ imports_on_separate_lines_N301_compliant = r"""
     """
 
 if __name__ == "__main__":
+    gettext.install('nova', unicode=1)
     #include nova path
     sys.path.append(os.getcwd())
     #Run once tests (not per line)

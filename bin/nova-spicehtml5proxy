@@ -21,10 +21,13 @@ Websocket proxy that is compatible with OpenStack Nova
 SPICE HTML5 consoles. Leverages websockify.py by Joel Martin
 """
 
+import gettext
 import os
 import sys
 
 from oslo.config import cfg
+
+gettext.install('nova', unicode=1)
 
 from nova import config
 from nova.console import websocketproxy
