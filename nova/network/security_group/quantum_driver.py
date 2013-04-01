@@ -245,6 +245,36 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                 raise e
         return self._convert_to_nova_security_group_rule_format(rule)
 
+    def get_instances_security_groups_bindings(self, context):
+        """Returns a dict(instance_id, [security_groups]) to allow obtaining
+        all of the instances and their security groups in one shot."""
+        quantum = quantumv2.get_client(context)
+        ports = quantum.list_ports().get('ports')
+        security_groups = quantum.list_security_groups().get('security_groups')
+        security_group_lookup = {}
+        instances_security_group_bindings = {}
+        for security_group in security_groups:
+            security_group_lookup[security_group['id']] = security_group
+
+        for port in ports:
+            for port_security_group in port.get('security_groups', []):
+                try:
+                    sg = security_group_lookup[port_security_group]
+                    # name is optional in quantum so if not specified return id
+                    if sg.get('name'):
+                        sg_entry = {'name': sg['name']}
+                    else:
+                        sg_entry = {'name': sg['id']}
+                    instances_security_group_bindings.setdefault(
+                        port['device_id'], []).append(sg_entry)
+                except KeyError:
+                    # This should only happen due to a race condition
+                    # if the security group on a port was deleted after the
+                    # ports were returned. We pass since this security
+                    # group is no longer on the port.
+                    pass
+        return instances_security_group_bindings
+
     def get_instance_security_groups(self, context, instance_id,
                                      instance_uuid=None, detailed=False):
         """Returns the security groups that are associated with an instance.
@@ -279,7 +309,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                             name = security_group['id']
                         ret.append({'name': name})
                 except KeyError:
-                    # If this should only happen due to a race condition
+                    # This should only happen due to a race condition
                     # if the security group on a port was deleted after the
                     # ports were returned. We pass since this security
                     # group is no longer on the port.
