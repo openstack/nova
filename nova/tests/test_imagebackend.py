@@ -156,6 +156,7 @@ class RawTestCase(_ImageTestCase, test.TestCase):
     def setUp(self):
         self.image_class = imagebackend.Raw
         super(RawTestCase, self).setUp()
+        self.stubs.Set(imagebackend.Raw, 'correct_format', lambda _: None)
 
     def prepare_mocks(self):
         fn = self.mox.CreateMockAnything()
@@ -195,6 +196,24 @@ class RawTestCase(_ImageTestCase, test.TestCase):
 
         image = self.image_class(self.INSTANCE, self.NAME)
         image.create_image(fn, self.TEMPLATE_PATH, self.SIZE, image_id=None)
+
+        self.mox.VerifyAll()
+
+    def test_correct_format(self):
+        info = self.mox.CreateMockAnything()
+        self.stubs.UnsetAll()
+
+        self.mox.StubOutWithMock(os.path, 'exists')
+        self.mox.StubOutWithMock(imagebackend.images, 'qemu_img_info')
+
+        os.path.exists(self.PATH).AndReturn(True)
+        info = self.mox.CreateMockAnything()
+        info.file_format = 'foo'
+        imagebackend.images.qemu_img_info(self.PATH).AndReturn(info)
+        self.mox.ReplayAll()
+
+        image = self.image_class(self.INSTANCE, self.NAME, path=self.PATH)
+        self.assertEqual(image.driver_format, 'foo')
 
         self.mox.VerifyAll()
 
