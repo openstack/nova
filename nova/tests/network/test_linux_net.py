@@ -484,7 +484,6 @@ class LinuxNetworkTestCase(test.TestCase):
                        'dns1': '8.8.4.4',
                        'dhcp_start': '1.0.0.2',
                        'dhcp_server': '10.0.0.1'}
-        executes = []
 
         def fake_execute(*args, **kwargs):
             executes.append(args)
@@ -496,29 +495,37 @@ class LinuxNetworkTestCase(test.TestCase):
         self.stubs.Set(linux_net, 'write_to_file', lambda *a, **kw: None)
         self.stubs.Set(linux_net, '_dnsmasq_pid_for', lambda *a, **kw: None)
         dev = 'br100'
-        linux_net.restart_dhcp(self.context, dev, network_ref)
-        expected = ['env',
-          'CONFIG_FILE=%s' % jsonutils.dumps(CONF.dhcpbridge_flagfile),
-          'NETWORK_ID=fake',
-          'dnsmasq',
-          '--strict-order',
-          '--bind-interfaces',
-          '--conf-file=%s' % CONF.dnsmasq_config_file,
-          '--domain=\'%s\'' % CONF.dhcp_domain,
-          '--pid-file=%s' % linux_net._dhcp_file(dev, 'pid'),
-          '--listen-address=%s' % network_ref['dhcp_server'],
-          '--except-interface=lo',
-          "--dhcp-range=set:%s,%s,static,%s,%ss" % (network_ref['label'],
-                                                   network_ref['dhcp_start'],
-                                                   network_ref['netmask'],
-                                                   CONF.dhcp_lease_time),
-          '--dhcp-lease-max=256',
-          '--dhcp-hostsfile=%s' % linux_net._dhcp_file(dev, 'conf'),
-          '--dhcp-script=%s' % CONF.dhcpbridge,
-          '--leasefile-ro']
-        if extra_expected:
-            expected += extra_expected
-        self.assertEqual([tuple(expected)], executes)
+
+        default_domain = CONF.dhcp_domain
+        for domain in ('', default_domain):
+            executes = []
+            CONF.dhcp_domain = domain
+            linux_net.restart_dhcp(self.context, dev, network_ref)
+            expected = ['env',
+            'CONFIG_FILE=%s' % jsonutils.dumps(CONF.dhcpbridge_flagfile),
+            'NETWORK_ID=fake',
+            'dnsmasq',
+            '--strict-order',
+            '--bind-interfaces',
+            '--conf-file=%s' % CONF.dnsmasq_config_file,
+            '--pid-file=%s' % linux_net._dhcp_file(dev, 'pid'),
+            '--listen-address=%s' % network_ref['dhcp_server'],
+            '--except-interface=lo',
+            "--dhcp-range=set:%s,%s,static,%s,%ss" % (network_ref['label'],
+                                                    network_ref['dhcp_start'],
+                                                    network_ref['netmask'],
+                                                    CONF.dhcp_lease_time),
+            '--dhcp-lease-max=256',
+            '--dhcp-hostsfile=%s' % linux_net._dhcp_file(dev, 'conf'),
+            '--dhcp-script=%s' % CONF.dhcpbridge,
+            '--leasefile-ro']
+
+            if CONF.dhcp_domain:
+                expected.append('--domain=%s' % CONF.dhcp_domain)
+
+            if extra_expected:
+                expected += extra_expected
+            self.assertEqual([tuple(expected)], executes)
 
     def test_dnsmasq_execute(self):
         self._test_dnsmasq_execute()
