@@ -1,5 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
+# Copyright (c) 2013 Hewlett-Packard Development Company, L.P.
 # Copyright (c) 2012 VMware, Inc.
 # Copyright (c) 2011 Citrix Systems, Inc.
 # Copyright 2011 OpenStack Foundation
@@ -143,11 +144,9 @@ class VMwareESXDriver(driver.ComputeDriver):
         self._session = VMwareAPISession(self._host_ip,
                                          host_username, host_password,
                                          api_retry_count, scheme=scheme)
-        self._cluster_name = CONF.vmwareapi_cluster_name
-        self._volumeops = volumeops.VMwareVolumeOps(self._session,
-                                                    self._cluster_name)
+        self._volumeops = volumeops.VMwareVolumeOps(self._session)
         self._vmops = vmops.VMwareVMOps(self._session, self.virtapi,
-                                        self._volumeops, self._cluster_name)
+                                        self._volumeops)
         self._host = host.Host(self._session)
         self._host_state = None
 
@@ -346,14 +345,19 @@ class VMwareVCDriver(VMwareESXDriver):
 
     def __init__(self, virtapi, read_only=False, scheme="https"):
         super(VMwareVCDriver, self).__init__(virtapi)
+        self._cluster_name = CONF.vmwareapi_cluster_name
         if not self._cluster_name:
             self._cluster = None
         else:
             self._cluster = vm_util.get_cluster_ref_from_name(
-                self._session, self._cluster_name)
+                            self._session, self._cluster_name)
             if self._cluster is None:
                 raise exception.NotFound(_("VMware Cluster %s is not found")
                                            % self._cluster_name)
+        self._volumeops = volumeops.VMwareVolumeOps(self._session,
+                                                    self._cluster)
+        self._vmops = vmops.VMwareVMOps(self._session, self.virtapi,
+                                        self._volumeops, self._cluster)
         self._vc_state = None
 
     @property

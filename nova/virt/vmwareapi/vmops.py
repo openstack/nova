@@ -1,5 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
+# Copyright (c) 2013 Hewlett-Packard Development Company, L.P.
 # Copyright (c) 2012 VMware, Inc.
 # Copyright (c) 2011 Citrix Systems, Inc.
 # Copyright 2011 OpenStack Foundation
@@ -75,17 +76,13 @@ RESIZE_TOTAL_STEPS = 4
 class VMwareVMOps(object):
     """Management class for VM-related tasks."""
 
-    def __init__(self, session, virtapi, volumeops, cluster_name=None):
+    def __init__(self, session, virtapi, volumeops, cluster=None):
         """Initializer."""
         self.compute_api = compute.API()
         self._session = session
         self._virtapi = virtapi
         self._volumeops = volumeops
-        if not cluster_name:
-            self._cluster = None
-        else:
-            self._cluster = vm_util.get_cluster_ref_from_name(
-                                        self._session, cluster_name)
+        self._cluster = cluster
         self._instance_path_base = VMWARE_PREFIX + CONF.base_dir_name
         self._default_root_device = 'vda'
         self._rescue_suffix = '-rescue'
