@@ -16,5 +16,5 @@
 import eventlet
 eventlet.monkey_patch(os=False)
 
-import gettext
-gettext.install('nova', unicode=1)
+from nova.openstack.common import gettextutils
+gettextutils.install('nova')

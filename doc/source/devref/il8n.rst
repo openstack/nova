@@ -24,10 +24,14 @@ in nova/tests/test_localization.py.
 
 The ``_()`` function is brought into the global scope by doing::
 
-    import gettext
-    gettext.install("nova", unicode=1)
+    from nova.openstack.common import gettextutils
+    gettextutils.install('nova')
 
 These lines are needed in any toplevel script before any nova modules are
 imported. If this code is missing, it may result in an error that looks like::
 
     NameError: name '_' is not defined
+
+The gettextutils.install() function also queries the NOVA_LOCALEDIR environment
+variable to allow overriding the default localedir with a specific custom
+location for Nova's message catalog.
