@@ -66,17 +66,3 @@ def new_bm_interface(**kwargs):
         raise test.TestingException("unknown field: %s"
                                     % ','.join(kwargs.keys()))
     return x
-
-
-def new_bm_deployment(**kwargs):
-    x = bm_models.BareMetalDeployment()
-    x.id = kwargs.pop('id', None)
-    x.key = kwargs.pop('key', None)
-    x.image_path = kwargs.pop('image_path', None)
-    x.pxe_config_path = kwargs.pop('pxe_config_path', None)
-    x.root_mb = kwargs.pop('root_mb', None)
-    x.swap_mb = kwargs.pop('swap_mb', None)
-    if len(kwargs) > 0:
-        raise test.TestingException("unknown field: %s"
-                                    % ','.join(kwargs.keys()))
-    return x
