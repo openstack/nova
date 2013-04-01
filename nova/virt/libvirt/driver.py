@@ -1356,6 +1356,12 @@ class LibvirtDriver(driver.ComputeDriver):
         disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
                                             instance,
                                             block_device_info)
+        # NOTE(vish): This could generate the wrong device_format if we are
+        #             using the raw backend and the images don't exist yet.
+        #             The create_images_and_backing below doesn't properly
+        #             regenerate raw backend images, however, so when it
+        #             does we need to (re)generate the xml after the images
+        #             are in place.
         xml = self.to_xml(instance, network_info, disk_info,
                           block_device_info=block_device_info,
                           write_to_disk=True)
@@ -1461,13 +1467,14 @@ class LibvirtDriver(driver.ComputeDriver):
                                             None,
                                             image_meta,
                                             rescue=True)
-        xml = self.to_xml(instance, network_info, disk_info,
-                          image_meta, rescue=rescue_images)
-        self._create_image(context, instance, xml,
+        self._create_image(context, instance,
                            disk_info['mapping'],
                            '.rescue', rescue_images,
                            network_info=network_info,
                            admin_pass=rescue_password)
+        xml = self.to_xml(instance, network_info, disk_info,
+                          image_meta, rescue=rescue_images,
+                          write_to_disk=True)
         self._destroy(instance)
         self._create_domain(xml)
 
@@ -1505,16 +1512,16 @@ class LibvirtDriver(driver.ComputeDriver):
                                             instance,
                                             block_device_info,
                                             image_meta)
-        xml = self.to_xml(instance, network_info,
-                          disk_info, image_meta,
-                          block_device_info=block_device_info)
-
-        self._create_image(context, instance, xml,
+        self._create_image(context, instance,
                            disk_info['mapping'],
                            network_info=network_info,
                            block_device_info=block_device_info,
                            files=injected_files,
                            admin_pass=admin_password)
+        xml = self.to_xml(instance, network_info,
+                          disk_info, image_meta,
+                          block_device_info=block_device_info,
+                          write_to_disk=True)
 
         self._create_domain_and_network(xml, instance, network_info,
                                         block_device_info)
@@ -1720,7 +1727,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if os.path.exists(console_log):
             libvirt_utils.chown(console_log, os.getuid())
 
-    def _create_image(self, context, instance, libvirt_xml,
+    def _create_image(self, context, instance,
                       disk_mapping, suffix='',
                       disk_images=None, network_info=None,
                       block_device_info=None, files=None, admin_pass=None):
@@ -1748,7 +1755,6 @@ class LibvirtDriver(driver.ComputeDriver):
         fileutils.ensure_tree(basepath(suffix=''))
 
         LOG.info(_('Creating image'), instance=instance)
-        libvirt_utils.write_to_file(basepath('libvirt.xml'), libvirt_xml)
 
         # NOTE(dprince): for rescue console.log may already exist... chown it.
         self._chown_console_log_for_instance(instance)
@@ -3518,14 +3524,15 @@ class LibvirtDriver(driver.ComputeDriver):
                                             instance,
                                             block_device_info,
                                             image_meta)
-        xml = self.to_xml(instance, network_info, disk_info,
-                          block_device_info=block_device_info)
         # assume _create_image do nothing if a target file exists.
         # TODO(oda): injecting files is not necessary
-        self._create_image(context, instance, xml,
+        self._create_image(context, instance,
                            disk_mapping=disk_info['mapping'],
                            network_info=network_info,
                            block_device_info=None)
+        xml = self.to_xml(instance, network_info, disk_info,
+                          block_device_info=block_device_info,
+                          write_to_disk=True)
         self._create_domain_and_network(xml, instance, network_info,
                                         block_device_info)
         timer = utils.FixedIntervalLoopingCall(self._wait_for_running,
