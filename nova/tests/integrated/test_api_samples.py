@@ -1,5 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 # Copyright 2012 Nebula, Inc.
+# Copyright 2013 IBM Corp.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -2291,6 +2292,14 @@ class ExtendedQuotasSampleJsonTests(ApiSampleTestBase):
         response = self._do_delete('os-quota-sets/fake_tenant')
         self.assertEqual(response.status, 202)
         self.assertEqual(response.read(), '')
+
+    def test_update_quotas(self):
+        # Get api sample to update quotas.
+        response = self._do_put('os-quota-sets/fake_tenant',
+                                'quotas-update-post-req',
+                                {})
+        return self._verify_response('quotas-update-post-resp', {},
+                                     response, 200)
 
 
 class ExtendedQuotasSampleXmlTests(ExtendedQuotasSampleJsonTests):

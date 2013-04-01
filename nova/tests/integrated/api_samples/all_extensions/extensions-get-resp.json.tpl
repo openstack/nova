@@ -437,7 +437,7 @@
             "description": "%(text)s",
             "links": [],
             "name": "ExtendedQuotas",
-            "namespace": "http://docs.openstack.org/compute/ext/quota-delete/api/v1.1",
+            "namespace": "http://docs.openstack.org/compute/ext/extended_quotas/api/v1.1",
             "updated": "%(timestamp)s"
         },
         {
