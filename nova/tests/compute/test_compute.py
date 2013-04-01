@@ -5552,6 +5552,7 @@ class ComputeAPITestCase(BaseTestCase):
 
         self.stubs.Set(rpc, 'cast', _fake_cast)
         self.flags(allow_resize_to_same_host=True)
+        self.flags(allow_migrate_to_same_host=True)
 
         instance = self._create_fake_instance(dict(host='host2'))
         instance = db.instance_get_by_uuid(self.context, instance['uuid'])
