@@ -98,6 +98,20 @@ def fake_get_all_types(context, inactive=0, filters=None):
 class FakeRequest(object):
     environ = {"nova.context": context.get_admin_context()}
 
+    def get_db_flavor(self, flavor_id):
+        return INSTANCE_TYPES[flavor_id]
+
+
+class FakeResponse(object):
+    obj = {'flavor': {'id': '0'},
+           'flavors': [
+               {'id': '0'},
+               {'id': '2'}]
+    }
+
+    def attach(self, **kwargs):
+        pass
+
 
 class FlavorAccessTest(test.TestCase):
     def setUp(self):
@@ -208,6 +222,28 @@ class FlavorAccessTest(test.TestCase):
                                       use_admin_context=False)
         result = self.flavor_controller.index(req)
         self._verify_flavor_list(result['flavors'], expected['flavors'])
+
+    def test_show(self):
+        resp = FakeResponse()
+        self.flavor_action_controller.show(self.req, resp, '0')
+        self.assertEqual({'id': '0', 'os-flavor-access:is_public': True},
+                         resp.obj['flavor'])
+        self.flavor_action_controller.show(self.req, resp, '2')
+        self.assertEqual({'id': '0', 'os-flavor-access:is_public': False},
+                         resp.obj['flavor'])
+
+    def test_detail(self):
+        resp = FakeResponse()
+        self.flavor_action_controller.detail(self.req, resp)
+        self.assertEqual([{'id': '0', 'os-flavor-access:is_public': True},
+                          {'id': '2', 'os-flavor-access:is_public': False}],
+                         resp.obj['flavors'])
+
+    def test_create(self):
+        resp = FakeResponse()
+        self.flavor_action_controller.create(self.req, {}, resp)
+        self.assertEqual({'id': '0', 'os-flavor-access:is_public': True},
+                         resp.obj['flavor'])
 
     def test_add_tenant_access(self):
         def stub_add_instance_type_access(flavorid, projectid, ctxt=None):
