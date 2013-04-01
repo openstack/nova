@@ -26,7 +26,7 @@ Usual usage in an openstack.common module:
 import gettext
 
 
-t = gettext.translation('openstack-common', 'locale', fallback=True)
+t = gettext.translation('nova', 'locale', fallback=True)
 
 
 def _(msg):
