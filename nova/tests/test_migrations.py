@@ -1151,6 +1151,45 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
                     fetchall()
         self.assertEqual(1, len(uc_name2_rows))
 
+    # migration 173, add unique constraint to keypairs
+    def _pre_upgrade_173(self, engine):
+        created_at = [datetime.datetime.now() for x in range(0, 7)]
+        fake_keypairs = [dict(name='key1', user_id='1a',
+                              created_at=created_at[0],
+                              deleted=0),
+                         dict(name='key1', user_id='1a',
+                              created_at=created_at[1],
+                              deleted=0),
+                         dict(name='key1', user_id='1a',
+                              created_at=created_at[2],
+                              deleted=0)
+                         ]
+        keypairs = get_table(engine, 'key_pairs')
+        engine.execute(keypairs.insert(), fake_keypairs)
+        return fake_keypairs
+
+    def _check_173(self, engine, data):
+        keypairs = get_table(engine, 'key_pairs')
+        # Unique constraints are not listed in table.constraints for any db.
+        # So, simply add a duplicate keypair to check if unique constraint
+        # is applied to the key_pairs table or not.
+        insert = keypairs.insert()
+        duplicate_keypair = dict(name='key4', user_id='4a',
+                        created_at=datetime.datetime.now(),
+                        deleted=0)
+        insert.execute(duplicate_keypair)
+        # Insert again
+        self.assertRaises(sqlalchemy.exc.IntegrityError, insert.execute,
+                          duplicate_keypair)
+
+        # Get all unique records
+        rows = keypairs.select().\
+                     where(keypairs.c.deleted != keypairs.c.id).\
+                     execute().\
+                     fetchall()
+        # Ensure the number of unique keypairs is correct
+        self.assertEqual(len(rows), 2)
+
 
 class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""
