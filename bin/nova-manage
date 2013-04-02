@@ -390,6 +390,14 @@ class FloatingIpCommands(object):
                 reason = _("/%s should be specified as single address(es) "
                            "not in cidr format") % net.prefixlen
                 raise exception.InvalidInput(reason=reason)
+            elif net.size >= 1000000:
+                # NOTE(dripton): If we generate a million IPs and put them in
+                # the database, the system will slow to a crawl and/or run
+                # out of memory and crash.  This is clearly a misconfiguration.
+                reason = _("Too many IP addresses will be generated.  Please "
+                           "increase /%s to reduce the number generated."
+                          ) % net.prefixlen
+                raise exception.InvalidInput(reason=reason)
             else:
                 return net.iter_hosts()
 
