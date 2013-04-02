@@ -1238,3 +1238,9 @@ class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     def _post_downgrade_004(self, engine):
         bm_nodes = get_table(engine, 'bm_nodes')
         self.assertNotIn(u'instance_name', [c.name for c in bm_nodes.columns])
+
+    def _check_005(self, engine, data):
+        bm_nodes = get_table(engine, 'bm_nodes')
+        columns = [c.name for c in bm_nodes.columns]
+        self.assertNotIn(u'prov_vlan_id', columns)
+        self.assertNotIn(u'registration_status', columns)

@@ -387,7 +387,7 @@ class BareMetalDriver(driver.ComputeDriver):
         vcpus = node['cpus']
         memory_mb = node['memory_mb']
         local_gb = node['local_gb']
-        if node['registration_status'] != 'done' or node['instance_uuid']:
+        if node['instance_uuid']:
             vcpus_used = node['cpus']
             memory_mb_used = node['memory_mb']
             local_gb_used = node['local_gb']

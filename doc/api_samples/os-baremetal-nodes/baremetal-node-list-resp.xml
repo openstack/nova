@@ -4,7 +4,6 @@
     instance_uuid="None"
     pm_address="10.1.2.3"
     cpus="8"
-    prov_vlan_id="1234"
     memory_mb="8192"
     prov_mac_address="12:34:56:78:90:ab"
     service_host="host"

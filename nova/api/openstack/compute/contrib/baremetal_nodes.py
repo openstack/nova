@@ -28,7 +28,7 @@ LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'baremetal_nodes')
 
 node_fields = ['id', 'cpus', 'local_gb', 'memory_mb', 'pm_address',
-               'pm_user', 'prov_mac_address', 'prov_vlan_id',
+               'pm_user', 'prov_mac_address',
                'service_host', 'terminal_port', 'instance_uuid',
                ]
 
