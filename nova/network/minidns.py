@@ -198,7 +198,7 @@ class MiniDNS(dns_driver.DNSDriver):
                 entry['domain'] != fqdomain.lower()):
                 outfile.write(line)
             else:
-                print "deleted %s" % entry
+                LOG.info(_("deleted %s"), entry)
                 deleted = True
         infile.close()
         outfile.close()
