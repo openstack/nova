@@ -99,6 +99,13 @@ class FloatingIpCommandsTestCase(test.TestCase):
         result = address_to_hosts('192.168.100.0/28')
         self.assertTrue(len(list(result)) == 14)
         assert_loop(result, expected)
+        # /16
+        result = address_to_hosts('192.168.100.0/16')
+        self.assertTrue(len(list(result)) == 65534)
+        # NOTE(dripton): I don't test /13 because it makes the test take 3s.
+        # /12 gives over a million IPs, which is ridiculous.
+        self.assertRaises(exception.InvalidInput, address_to_hosts,
+                          '192.168.100.1/12')
 
 
 class NetworkCommandsTestCase(test.TestCase):
