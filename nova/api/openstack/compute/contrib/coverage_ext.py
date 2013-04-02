@@ -66,7 +66,7 @@ class CoverageController(object):
         if not self._cover_inst:
             try:
                 import coverage
-                data_out = os.path.join(self.data_path, '.nova-coverage')
+                data_out = os.path.join(self.data_path, '.nova-coverage.api')
                 self._cover_inst = coverage.coverage(data_file=data_out)
             except ImportError:
                 pass
@@ -224,17 +224,20 @@ class CoverageController(object):
             html = body['html']
 
         if self.combine:
-            self.coverInst.combine()
+            data_out = os.path.join(self.data_path, '.nova-coverage')
+            import coverage
+            coverInst = coverage.coverage(data_file=data_out)
+            coverInst.combine()
             if xml:
-                self.coverInst.xml_report(outfile=path)
+                coverInst.xml_report(outfile=path)
             elif html:
                 if os.path.isdir(path):
                     msg = _("Directory conflict: %s already exists")
                     raise exc.HTTPBadRequest(explanation=msg)
-                self.coverInst.html_report(directory=path)
+                coverInst.html_report(directory=path)
             else:
                 output = open(path, 'w')
-                self.coverInst.report(file=output)
+                coverInst.report(file=output)
                 output.close()
             for service in self.services:
                 service['telnet'].close()
