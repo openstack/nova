@@ -313,7 +313,6 @@ class VMOps(object):
 
     def suspend(self, instance):
         """Suspend the specified instance."""
-        print instance
         LOG.debug(_("Suspend instance"), instance=instance)
         self._set_vm_state(instance["name"],
                            constants.HYPERV_VM_STATE_SUSPENDED)

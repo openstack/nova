@@ -176,7 +176,6 @@ class BareMetalNodeController(wsgi.Controller):
         authorize(context)
         self._check_node_exists(context, id)
         body = body['remove_interface']
-        print "body(%s)" % body
         if_id = body.get('id')
         address = body.get('address')
         if not if_id and not address:
