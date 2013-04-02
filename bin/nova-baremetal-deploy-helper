@@ -99,23 +99,13 @@ def logout_iscsi(portal_address, portal_port, target_iqn):
 
 def make_partitions(dev, root_mb, swap_mb):
     """Create partitions for root and swap on a disk device."""
-    stdin_command = ('0 0;\n0 0;\n0 0;\n0 0;\n')
-    utils.execute('sfdisk', '-D', '-uM', dev, process_input=stdin_command,
-            run_as_root=True,
-            check_exit_code=[0])
-    # create new partitions
-    commandp1 = '- %d 83;\n;\n;\n;' % root_mb
-    p1outraw, err = utils.execute('sfdisk', '-D', '-uM', '-N1', dev,
-            process_input=commandp1,
-            run_as_root=True,
-            check_exit_code=[0])
-    # get end location of 1st partition
-    p1re = re.compile('^%s-part1.*$' % dev, re.U + re.M)
-    p1balist = p1re.findall(p1outraw)
-    p1endraw = p1balist[1]
-    p1end = int(p1endraw.split()[2])
-    commandp2 = ('%d %d 82\n;\n;' % (p1end + 1, swap_mb))
-    utils.execute('sfdisk', '-D', '-uM', '-N2', dev, process_input=commandp2,
+    # Lead in with 1MB to allow room for the partition table itself, otherwise
+    # the way sfdisk adjusts doesn't shift the partition up to compensate, and
+    # we lose the space.
+    # http://bazaar.launchpad.net/~ubuntu-branches/ubuntu/raring/util-linux/
+    # raring/view/head:/fdisk/sfdisk.c#L1940
+    stdin_command = ('1 %d 83;\n- %d 82;\n0 0;\n0 0;\n' % (root_mb, swap_mb))
+    utils.execute('sfdisk', '-uM', dev, process_input=stdin_command,
             run_as_root=True,
             check_exit_code=[0])
     # avoid "device is busy"
