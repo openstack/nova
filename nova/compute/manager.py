@@ -3945,8 +3945,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         try:
             yield
         except Exception, error:
-            self._quota_rollback(context, reservations)
             with excutils.save_and_reraise_exception():
+                self._quota_rollback(context, reservations)
                 msg = _('%s. Setting instance vm_state to ERROR')
                 LOG.error(msg % error, instance_uuid=instance_uuid)
                 self._set_instance_error_state(context, instance_uuid)
