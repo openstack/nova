@@ -761,6 +761,20 @@ class BaseOperator(object):
         command = 'rm %s' % file_path
         self.run_vios_command_as_root(command)
 
+    def set_lpar_mac_base_value(self, instance_name, mac):
+        """Set LPAR's property virtual_eth_mac_base_value
+
+        :param instance_name: name of the instance to be set
+        :param mac: mac of virtual ethernet
+        """
+        # NOTE(ldbragst) We only use the base mac value because the last
+        # byte is the slot id of the virtual NIC, which doesn't change.
+        mac_base_value = mac[:-2].replace(':', '')
+        cmd = ' '.join(['chsyscfg -r lpar -i',
+                        '"name=%s,' % instance_name,
+                        'virtual_eth_mac_base_value=%s"' % mac_base_value])
+        self.run_vios_command(cmd)
+
 
 class IVMOperator(BaseOperator):
     """Integrated Virtualization Manager (IVM) Operator.
