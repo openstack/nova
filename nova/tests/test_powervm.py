@@ -104,6 +104,18 @@ class FakeIVMOperator(object):
     def rename_lpar(self, old, new):
         pass
 
+    def set_lpar_mac_base_value(self, instance_name, mac):
+        pass
+
+    def get_logical_vol_size(self, diskname):
+        pass
+
+    def macs_for_instance(self, instance):
+        return set(['FA:98:64:2B:29:39'])
+
+    def run_vios_command(self, cmd):
+        pass
+
 
 class FakeBlockAdapter(powervm_blockdev.PowerVMLocalVolumeAdapter):
 
@@ -281,12 +293,16 @@ class PowerVMDriverTestCase(test.TestCase):
 
     def _test_finish_revert_migration_after_crash(self, backup_made, new_made):
         inst = {'name': 'foo'}
+        network_info = []
+        network_info.append({'address': 'fa:89:f0:8b:9b:39'})
 
         self.mox.StubOutWithMock(self.powervm_connection, 'instance_exists')
         self.mox.StubOutWithMock(self.powervm_connection._powervm, 'destroy')
         self.mox.StubOutWithMock(self.powervm_connection._powervm._operator,
                                  'rename_lpar')
         self.mox.StubOutWithMock(self.powervm_connection._powervm, 'power_on')
+        self.mox.StubOutWithMock(self.powervm_connection._powervm._operator,
+                                 'set_lpar_mac_base_value')
 
         self.powervm_connection.instance_exists('rsz_foo').AndReturn(
             backup_made)
@@ -297,11 +313,14 @@ class PowerVMDriverTestCase(test.TestCase):
                 self.powervm_connection._powervm.destroy('foo')
             self.powervm_connection._powervm._operator.rename_lpar('rsz_foo',
                                                                    'foo')
+        self.powervm_connection._powervm._operator.set_lpar_mac_base_value(
+                'foo', 'fa:89:f0:8b:9b:39')
         self.powervm_connection._powervm.power_on('foo')
 
         self.mox.ReplayAll()
 
-        self.powervm_connection.finish_revert_migration(inst, [])
+        self.powervm_connection.finish_revert_migration(inst, network_info,
+                                                    block_device_info=None)
 
     def test_finish_revert_migration_after_crash(self):
         self._test_finish_revert_migration_after_crash(True, True)
@@ -348,6 +367,62 @@ class PowerVMDriverTestCase(test.TestCase):
                                                image_path)
         expected_path = 'some/image/path/logical-vol-name_rsz.gz'
         self.assertEqual(file_path, expected_path)
+
+    def test_set_lpar_mac_base_value(self):
+        instance = self.instance
+        context = 'fake_context'
+        dest = '10.8.46.20'  # Some fake dest IP
+        instance_type = 'fake_instance_type'
+        network_info = []
+        network_info.append({'address': 'fa:89:f0:8b:9b:39'})
+        block_device_info = None
+        self.flags(powervm_mgr=dest)
+        fake_noop = lambda *args, **kwargs: None
+        fake_op = self.powervm_connection._powervm._operator
+        self.stubs.Set(fake_op, 'get_vhost_by_instance_id', fake_noop)
+        self.stubs.Set(fake_op, 'get_disk_name_by_vhost', fake_noop)
+        self.stubs.Set(self.powervm_connection._powervm, 'power_off',
+                       fake_noop)
+        self.stubs.Set(fake_op, 'get_logical_vol_size',
+                       lambda *args, **kwargs: '20')
+        self.stubs.Set(self.powervm_connection, '_get_resize_name', fake_noop)
+        self.stubs.Set(fake_op, 'rename_lpar', fake_noop)
+
+        def fake_migrate_disk(*args, **kwargs):
+            disk_info = {}
+            disk_info['fake_dict'] = 'some/file/path.gz'
+            return disk_info
+
+        def fake_set_lpar_mac_base_value(inst_name, mac, *args, **kwargs):
+            # get expected mac address from FakeIVM set
+            fake_ivm = FakeIVMOperator()
+            exp_mac = fake_ivm.macs_for_instance(inst_name).pop()
+            self.assertEqual(exp_mac, mac)
+
+        self.stubs.Set(self.powervm_connection._powervm, 'migrate_disk',
+                       fake_migrate_disk)
+        self.stubs.Set(fake_op, 'set_lpar_mac_base_value',
+                       fake_set_lpar_mac_base_value)
+        disk_info = self.powervm_connection.migrate_disk_and_power_off(
+                        context, instance,
+                        dest, instance_type, network_info, block_device_info)
+
+    def test_set_lpar_mac_base_value_command(self):
+        inst_name = 'some_instance'
+        mac = 'FA:98:64:2B:29:39'
+        exp_mac_str = mac[:-2].replace(':', '').lower()
+
+        def fake_run_vios_command(cmd, *args, **kwargs):
+            exp_cmd = ('chsyscfg -r lpar -i "name=%(inst_name)s, ',
+                       'virtual_eth_mac_base_value=%(exp_mac_str)s"' %
+                       locals())
+            assertEqual(exp_cmd, cmd)
+
+        self.stubs.Set(self.powervm_connection._powervm._operator,
+                       'run_vios_command', fake_run_vios_command)
+
+        fake_op = self.powervm_connection._powervm
+        fake_op._operator.set_lpar_mac_base_value(inst_name, mac)
 
     def test_migrate_build_scp_command(self):
         lv_name = 'logical-vol-name'
