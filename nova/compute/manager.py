@@ -2985,8 +2985,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             context, instance, port_id, network_id, requested_ip,
             self.conductor_api)
         if len(network_info) != 1:
-            LOG.error(_('allocate_port_for_instance returned %(port)s ports') %
-                      dict(ports=len(network_info)))
+            LOG.error(_('allocate_port_for_instance returned %(ports)s ports')
+                      % dict(ports=len(network_info)))
             raise exception.InterfaceAttachFailed(instance=instance)
         image_meta = _get_image_meta(context, instance['image_ref'])
         legacy_net_info = self._legacy_nw_info(network_info)
