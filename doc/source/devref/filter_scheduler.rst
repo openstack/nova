@@ -256,67 +256,10 @@ putting instance on an appropriate host would have low.
 
 So let's find out, how does all this computing work happen.
 
-Before weighting Filter Scheduler creates the list of tuples containing weights
-and cost functions to use for weighing hosts. These functions can be got from
-cache, if this operation had been done before (this cache depends on `topic` of
-node, Filter Scheduler works with only the Compute Nodes, so the topic would be
-"`compute`" here). If there is no cost functions in cache associated with
-"compute", Filter Scheduler tries to get these cost functions from `nova.conf`.
-Weight in tuple means weight of cost function matching with it. It also can be
-got from `nova.conf`. After that Scheduler weights host, using selected cost
-functions. It does this using `weighted_sum` method, which parameters are:
-
-* `weighted_fns` - list of cost functions created with their weights;
-* `host_states` - hosts to be weighted;
-* `weighing_properties` - dictionary of values that can influence weights.
-
-This method firstly creates a grid of function results (it just counts value of
-each function using `host_state` and `weighing_properties`) - `scores`, where
-it would be one row per host and one function per column. The next step is to
-multiply value from the each cell of the grid by the weight of appropriate cost
-function. And the final step is to sum values in the each row - it would be the
-weight of host, described in this line. This method returns the host with the
-lowest weight - the best one.
-
-If we concentrate on cost functions, it would be important to say that we use
-`compute_fill_first_cost_fn` function by default, which simply returns hosts
-free RAM:
-
-::
-
-    def compute_fill_first_cost_fn(host_state, weighing_properties):
-        """More free ram = higher weight. So servers will less free ram will be
-           preferred."""
-        return host_state.free_ram_mb
-
-You can implement your own variant of cost function for the hosts capabilities
-you would like to mention. Using different cost functions (as you understand,
-there can be a lot of ones used in the same time) can make the chose of next
-host for the creating of the new instance flexible.
-
-These cost functions should be set up in the `nova.conf` with the flag
-`least_cost_functions` (there can be more than one functions separated by
-commas). By default this line would look like this:
-
-::
-
-    --least_cost_functions=nova.scheduler.least_cost.compute_fill_first_cost_fn
-
-As for weights of cost functions, they also should be described in `nova.conf`.
-The line with this description looks the following way:
-**function_name_weight**.
-
-As for default cost function, it would be: `compute_fill_first_cost_fn_weight`,
-and by default it is -1.0.
-
-::
-
-    --compute_fill_first_cost_fn_weight=-1.0
-
-Negative function's weight means that the more free RAM Compute Node has, the
-better it is. Nova tries to spread instances as much as possible over the
-Compute Nodes. Positive weight here would mean that Nova would fill up a single
-Compute Node first.
+The Filter Scheduler weights hosts based on the config option
+`scheduler_weight_classes`, this defaults to
+`nova.scheduler.weights.all_weighers`, which selects the only weigher available
+-- the RamWeigher. Hosts are then weighted and sorted with the largest weight winning.
 
 Filter Scheduler finds local list of acceptable hosts by repeated filtering and
 weighing. Each time it chooses a host, it virtually consumes resources on it,

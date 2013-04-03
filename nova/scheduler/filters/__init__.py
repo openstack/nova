@@ -48,10 +48,3 @@ def all_filters():
     and should return a list of all filter classes available.
     """
     return HostFilterHandler().get_all_classes()
-
-
-def standard_filters():
-    """Deprecated.  Configs should change to use all_filters()."""
-    LOG.deprecated(_("Use 'nova.scheduler.filters.all_filters' instead "
-            "of 'nova.scheduler.filters.standard_filters'"))
-    return all_filters()

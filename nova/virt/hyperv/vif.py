@@ -29,8 +29,7 @@ hyperv_opts = [
                default=None,
                help='External virtual switch Name, '
                     'if not provided, the first external virtual '
-                    'switch is used',
-               deprecated_group='DEFAULT'),
+                    'switch is used'),
 ]
 
 CONF = cfg.CONF
