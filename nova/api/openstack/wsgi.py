@@ -60,6 +60,15 @@ _MEDIA_TYPE_MAP = {
     'application/atom+xml': 'atom',
 }
 
+# These are typically automatically created by routes as either defaults
+# collection or member methods.
+_ROUTES_METHODS = [
+    'create',
+    'delete',
+    'show',
+    'update',
+]
+
 
 class Request(webob.Request):
     """Add some OpenStack API-specific logic to the base webob.Request."""
@@ -998,8 +1007,7 @@ class Resource(wsgi.Application):
                 meth = getattr(self.controller, action)
         except AttributeError:
             if (not self.wsgi_actions or
-                action not in ['action', 'create', 'delete', 'update',
-                               'show']):
+                action not in _ROUTES_METHODS + ['action']):
                 # Propagate the error
                 raise
         else:
