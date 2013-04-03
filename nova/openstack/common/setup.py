@@ -171,8 +171,8 @@ def generate_authors():
                            " log --format='%aN <%aE>' | sort -u | "
                            "egrep -v '" + jenkins_email + "'")
             changelog = _run_shell_command(git_log_cmd)
-            signed_cmd = ("git log --git-dir=" + git_dir +
-                          " | grep -i Co-authored-by: | sort -u")
+            signed_cmd = ("git --git-dir=" + git_dir +
+                          " log | grep -i Co-authored-by: | sort -u")
             signed_entries = _run_shell_command(signed_cmd)
             if signed_entries:
                 new_entries = "\n".join(
