@@ -1225,6 +1225,20 @@ def fixed_ip_get_by_instance(context, instance_uuid):
     return result
 
 
+@require_admin_context
+def fixed_ip_get_by_host(context, host):
+    session = get_session()
+    with session.begin():
+        instance_uuids = _instance_get_all_uuids_by_host(context, host,
+                                                         session=session)
+        if not instance_uuids:
+            return []
+
+        return model_query(context, models.FixedIp, session=session).\
+                 filter(models.FixedIp.instance_uuid.in_(instance_uuids)).\
+                 all()
+
+
 @require_context
 def fixed_ip_get_by_network_host(context, network_id, host):
     result = model_query(context, models.FixedIp, read_deleted="no").\
@@ -1846,6 +1860,22 @@ def instance_get_all_by_host(context, host, columns_to_join=None):
     return _instances_fill_metadata(context,
         _instance_get_all_query(context).filter_by(host=host).all(),
                                 manual_joins=columns_to_join)
+
+
+@require_admin_context
+def _instance_get_all_uuids_by_host(context, host, session=None):
+    """Return a list of the instance uuids on a given host.
+
+    Returns a list of UUIDs, not Instance model objects. This internal version
+    allows you to specify a session object as a kwarg.
+    """
+    uuids = []
+    for tuple in model_query(context, models.Instance.uuid, read_deleted="no",
+                             base_model=models.Instance, session=session).\
+                filter_by(host=host).\
+                all():
+        uuids.append(tuple[0])
+    return uuids
 
 
 @require_admin_context
@@ -4912,6 +4942,9 @@ def _get_default_deleted_value(table):
     # from the column, but I don't see a way to do that in the low-level APIs
     # of SQLAlchemy 0.7.  0.8 has better introspection APIs, which we should
     # use when Nova is ready to require 0.8.
+
+    # NOTE(mikal): this is a little confusing. This method returns the value
+    # that a _not_deleted_ row would have.
     deleted_column_type = table.c.deleted.type
     if isinstance(deleted_column_type, Integer):
         return 0

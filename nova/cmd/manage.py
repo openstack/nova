@@ -285,7 +285,8 @@ class FixedIpCommands(object):
             if host is None:
                 fixed_ips = db.fixed_ip_get_all(ctxt)
             else:
-                fixed_ips = db.fixed_ip_get_all_by_instance_host(ctxt, host)
+                fixed_ips = db.fixed_ip_get_by_host(ctxt, host)
+
         except exception.NotFound as ex:
             print _("error: %s") % ex
             return(2)

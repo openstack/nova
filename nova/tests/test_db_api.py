@@ -20,6 +20,7 @@
 """Unit tests for the DB API."""
 
 import datetime
+import types
 import uuid as stdlib_uuid
 
 from oslo.config import cfg
@@ -30,6 +31,7 @@ from sqlalchemy.sql.expression import select
 
 from nova import context
 from nova import db
+from nova.db.sqlalchemy import api as sqlalchemy_api
 from nova import exception
 from nova.openstack.common.db.sqlalchemy import session as db_session
 from nova.openstack.common import timeutils
@@ -319,6 +321,27 @@ class DbApiTestCase(DbTestCase):
         floating = db.floating_ip_create(ctxt, values)
         fixed_ip_ref = db.fixed_ip_get_by_floating_address(ctxt, floating)
         self.assertEqual(fixed, fixed_ip_ref['address'])
+
+    def test_fixed_ip_get_by_host(self):
+        ctxt = context.get_admin_context()
+
+        values = {'address': 'fixed1'}
+        fixed1 = db.fixed_ip_create(ctxt, values)
+        instance1 = self.create_instances_with_args()
+        db.fixed_ip_associate(ctxt, 'fixed1', instance1['uuid'])
+
+        values = {'address': 'fixed2'}
+        fixed2 = db.fixed_ip_create(ctxt, values)
+        instance2 = self.create_instances_with_args()
+        db.fixed_ip_associate(ctxt, 'fixed2', instance2['uuid'])
+
+        values = {'address': 'fixed3'}
+        fixed3 = db.fixed_ip_create(ctxt, values)
+        instance3 = self.create_instances_with_args(host='host2')
+        db.fixed_ip_associate(ctxt, 'fixed3', instance3['uuid'])
+
+        result = db.fixed_ip_get_by_host(ctxt, 'host1')
+        self.assertEqual(2, len(result))
 
     def test_floating_ip_get_by_fixed_address(self):
         ctxt = context.get_admin_context()
@@ -1614,6 +1637,26 @@ class AggregateDBApiTestCase(test.TestCase):
         self.assertRaises(exception.AggregateHostNotFound,
                           db.aggregate_host_delete,
                           ctxt, result['id'], _get_fake_aggr_hosts()[0])
+
+
+class SqlAlchemyDbApiTestCase(DbTestCase):
+    def test_instance_get_all_by_host(self):
+        ctxt = context.get_admin_context()
+
+        self.create_instances_with_args()
+        self.create_instances_with_args()
+        self.create_instances_with_args(host='host2')
+        result = sqlalchemy_api._instance_get_all_uuids_by_host(ctxt, 'host1')
+        self.assertEqual(2, len(result))
+
+    def test_instance_get_all_uuids_by_host(self):
+        ctxt = context.get_admin_context()
+        self.create_instances_with_args()
+        self.create_instances_with_args()
+        self.create_instances_with_args(host='host2')
+        result = sqlalchemy_api._instance_get_all_uuids_by_host(ctxt, 'host1')
+        self.assertEqual(2, len(result))
+        self.assertEqual(types.UnicodeType, type(result[0]))
 
 
 class CapacityTestCase(test.TestCase):
