@@ -74,7 +74,6 @@ class BareMetalPXETestCase(bm_db_base.BMDBTestCase):
                 service_host='test_host',
                 cpus=4,
                 memory_mb=2048,
-                prov_mac_address='11:11:11:11:11:11',
             )
         self.nic_info = [
                 {'address': '22:22:22:22:22:22', 'datapath_id': '0x1',

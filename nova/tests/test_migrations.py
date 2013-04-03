@@ -1425,3 +1425,8 @@ class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
 
         rows = ifs.select().where(ifs.c.bm_node_id == 2).execute().fetchall()
         self.assertEqual(len(rows), 0)
+
+    def _check_007(self, engine, data):
+        bm_nodes = db_utils.get_table(engine, 'bm_nodes')
+        columns = [c.name for c in bm_nodes.columns]
+        self.assertNotIn(u'prov_mac_address', columns)
