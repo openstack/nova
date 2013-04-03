@@ -4887,10 +4887,20 @@ def sm_volume_get_all(context):
 ################
 
 
-def _aggregate_get_query(context, model_class, id_field, id,
+def _aggregate_get_query(context, model_class, id_field=None, id=None,
                          session=None, read_deleted=None):
-    return model_query(context, model_class, session=session,
-                       read_deleted=read_deleted).filter(id_field == id)
+    columns_to_join = {models.Aggregate: ['_hosts', '_metadata']}
+
+    query = model_query(context, model_class, session=session,
+                        read_deleted=read_deleted)
+
+    for c in columns_to_join.get(model_class, []):
+        query = query.options(joinedload(c))
+
+    if id and id_field:
+        query = query.filter(id_field == id)
+
+    return query
 
 
 @require_admin_context
@@ -4910,7 +4920,7 @@ def aggregate_create(context, values, metadata=None):
         raise exception.AggregateNameExists(aggregate_name=values['name'])
     if metadata:
         aggregate_metadata_add(context, aggregate.id, metadata)
-    return aggregate
+    return aggregate_get(context, aggregate.id)
 
 
 @require_admin_context
@@ -5001,7 +5011,7 @@ def aggregate_delete(context, aggregate_id):
 
 @require_admin_context
 def aggregate_get_all(context):
-    return model_query(context, models.Aggregate).all()
+    return _aggregate_get_query(context, models.Aggregate).all()
 
 
 @require_admin_context

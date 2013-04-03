@@ -2089,7 +2089,11 @@ class AggregateAPI(base.Base):
             values = {"name": aggregate_name,
                       "availability_zone": availability_zone}
             aggregate = self.db.aggregate_create(context, values)
-            return dict(aggregate.iteritems())
+            aggregate = self._get_aggregate_info(context, aggregate)
+            # To maintain the same API result as before.
+            del aggregate['hosts']
+            del aggregate['metadata']
+            return aggregate
         else:
             raise exception.InvalidAggregateAction(action='create_aggregate',
                                                    aggregate_id="'N/A'",
