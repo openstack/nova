@@ -85,7 +85,7 @@ class InvalidMetadataPath(Exception):
 class InstanceMetadata():
     """Instance metadata."""
 
-    def __init__(self, instance, address=None, content=[], extra_md=None,
+    def __init__(self, instance, address=None, content=None, extra_md=None,
                  conductor_api=None):
         """Creation of this object should basically cover all time consuming
         collection.  Methods after that should not cause time delays due to
@@ -94,6 +94,8 @@ class InstanceMetadata():
         The user should then get a single instance and make multiple method
         calls on it.
         """
+        if not content:
+            content = []
 
         self.instance = instance
         self.extra_md = extra_md
@@ -137,7 +139,6 @@ class InstanceMetadata():
         self.files = []
 
         # get network info, and the rendered network template
-        ctxt = context.get_admin_context()
         network_info = network.API().get_instance_nw_info(ctxt, instance,
                                                           conductor_api=capi)
 
