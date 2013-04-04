@@ -240,6 +240,16 @@ class PowerVMDriver(driver.ComputeDriver):
         diskname = pvm_op.get_disk_name_by_vhost(vhost)
 
         self._powervm.power_off(instance['name'], timeout=120)
+        # NOTE(ldbragst) Here we need to check if the resize or migrate is
+        # happening on the same host. If yes, then we need to assign a temp
+        # mac address to the source LPAR so we don't have a conflict when
+        # another LPAR is booted with the same mac address as the
+        # original LPAR
+        if src_host == dest:
+            macs = self.macs_for_instance(instance)
+            temp_mac = macs.pop()
+            self._powervm._operator.set_lpar_mac_base_value(instance['name'],
+                                                            temp_mac)
 
         disk_info = self._powervm.migrate_disk(
                 diskname, src_host, dest, CONF.powervm_img_remote_path,
@@ -307,6 +317,14 @@ class PowerVMDriver(driver.ComputeDriver):
 
         new_name = self._get_resize_name(instance['name'])
 
+        # NOTE(ldbragst) In the case of a resize_revert on the same host
+        # we reassign the original mac address, replacing the temp mac
+        # on the old instance that will be started
+        if (self._powervm.instance_exists(new_name) and
+                self._powervm.instance_exists(instance['name'])):
+            original_mac = network_info[0]['address']
+            self._powervm._operator.set_lpar_mac_base_value(instance['name'],
+                                                            original_mac)
         # Make sure we don't have a failed same-host migration still
         # hanging around
         if self.instance_exists(new_name):
