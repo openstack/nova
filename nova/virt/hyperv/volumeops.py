@@ -36,18 +36,13 @@ LOG = logging.getLogger(__name__)
 hyper_volumeops_opts = [
     cfg.IntOpt('volume_attach_retry_count',
                default=10,
-               help='The number of times to retry to attach a volume',
-               deprecated_name='hyperv_attaching_volume_retry_count',
-               deprecated_group='DEFAULT'),
+               help='The number of times to retry to attach a volume'),
     cfg.IntOpt('volume_attach_retry_interval',
                default=5,
-               help='Interval between volume attachment attempts, in seconds',
-               deprecated_name='hyperv_wait_between_attach_retry',
-               deprecated_group='DEFAULT'),
+               help='Interval between volume attachment attempts, in seconds'),
     cfg.BoolOpt('force_volumeutils_v1',
                 default=False,
-                help='Force volumeutils v1',
-                deprecated_group='DEFAULT'),
+                help='Force volumeutils v1'),
 ]
 
 CONF = cfg.CONF

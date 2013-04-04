@@ -44,22 +44,18 @@ hyperv_opts = [
     cfg.BoolOpt('limit_cpu_features',
                 default=False,
                 help='Required for live migration among '
-                     'hosts with different CPU features',
-                deprecated_group='DEFAULT'),
+                     'hosts with different CPU features'),
     cfg.BoolOpt('config_drive_inject_password',
                 default=False,
-                help='Sets the admin password in the config drive image',
-                deprecated_group='DEFAULT'),
+                help='Sets the admin password in the config drive image'),
     cfg.StrOpt('qemu_img_cmd',
                default="qemu-img.exe",
                help='qemu-img is used to convert between '
-                    'different image types',
-               deprecated_group='DEFAULT'),
+                    'different image types'),
     cfg.BoolOpt('config_drive_cdrom',
                 default=False,
                 help='Attaches the Config Drive image as a cdrom drive '
-                     'instead of a disk drive',
-                deprecated_group='DEFAULT')
+                     'instead of a disk drive')
 ]
 
 CONF = cfg.CONF

@@ -25,8 +25,6 @@ availability_zone_opts = [
                default='internal',
                help='availability_zone to show internal services under'),
     cfg.StrOpt('default_availability_zone',
-               # deprecated in Grizzly release
-               deprecated_name='node_availability_zone',
                default='nova',
                help='default compute node availability_zone'),
     ]

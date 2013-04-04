@@ -37,20 +37,6 @@ class TestWeighedHost(test.TestCase):
         self.assertEqual(len(classes), 1)
         self.assertIn('RAMWeigher', class_names)
 
-    def test_all_weighers_with_deprecated_config1(self):
-        self.flags(compute_fill_first_cost_fn_weight=-1.0)
-        classes = weights.all_weighers()
-        class_names = [cls.__name__ for cls in classes]
-        self.assertEqual(len(classes), 1)
-        self.assertIn('_LeastCostWeigher', class_names)
-
-    def test_all_weighers_with_deprecated_config2(self):
-        self.flags(least_cost_functions=['something'])
-        classes = weights.all_weighers()
-        class_names = [cls.__name__ for cls in classes]
-        self.assertEqual(len(classes), 1)
-        self.assertIn('_LeastCostWeigher', class_names)
-
 
 class RamWeigherTestCase(test.TestCase):
     def setUp(self):

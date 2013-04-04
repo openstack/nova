@@ -256,22 +256,6 @@ class HostFiltersTestCase(test.TestCase):
         for cls in classes:
             self.class_map[cls.__name__] = cls
 
-    def test_standard_filters_is_deprecated(self):
-        info = {'called': False}
-
-        def _fake_deprecated(*args, **kwargs):
-            info['called'] = True
-
-        self.stubs.Set(filters.LOG, 'deprecated', _fake_deprecated)
-
-        filter_handler = filters.HostFilterHandler()
-        filter_handler.get_matching_classes(
-                ['nova.scheduler.filters.standard_filters'])
-
-        self.assertTrue(info['called'])
-        self.assertIn('AllHostsFilter', self.class_map)
-        self.assertIn('ComputeFilter', self.class_map)
-
     def test_all_filters(self):
         # Double check at least a couple of known filters exist
         self.assertIn('AllHostsFilter', self.class_map)
