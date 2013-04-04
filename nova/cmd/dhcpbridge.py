@@ -41,7 +41,6 @@ from nova.openstack.common import rpc
 CONF = cfg.CONF
 CONF.import_opt('host', 'nova.netconf')
 CONF.import_opt('network_manager', 'nova.service')
-LOG = logging.getLogger('nova.dhcpbridge')
 
 
 def add_lease(mac, ip_address):
@@ -118,6 +117,8 @@ def main():
         default_config_files=jsonutils.loads(config_file))
 
     logging.setup("nova")
+    global LOG
+    LOG = logging.getLogger('nova.dhcpbridge')
 
     if CONF.action.name in ['add', 'del', 'old']:
         msg = (_("Called '%(action)s' for mac '%(mac)s' with ip '%(ip)s'") %

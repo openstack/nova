@@ -39,8 +39,6 @@ from nova.virt.baremetal import baremetal_states
 from nova.virt.baremetal import db
 
 
-LOG = logging.getLogger('nova.virt.baremetal.deploy_helper')
-
 QUEUE = Queue.Queue()
 
 
@@ -315,6 +313,7 @@ class BareMetalDeploy(object):
 def main():
     config.parse_args(sys.argv)
     logging.setup("nova")
+    LOG = logging.getLogger('nova.virt.baremetal.deploy_helper')
     app = BareMetalDeploy()
     srv = simple_server.make_server('', 10000, app)
     srv.serve_forever()
