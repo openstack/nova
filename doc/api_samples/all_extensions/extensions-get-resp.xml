@@ -103,6 +103,9 @@
   <extension alias="os-evacuate" updated="2013-01-06T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/evacuate/api/v2" name="Evacuate">
     <description>Enables server evacuation.</description>
   </extension>
+  <extension alias="os-extended-floating-ips" updated="2013-04-19T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/extended_floating_ips/api/v2" name="ExtendedFloatingIps">
+    <description>Adds optional fixed_address to the add floating IP command.</description>
+  </extension>
   <extension alias="os-fixed-ips" updated="2012-10-18T13:25:27-06:00" namespace="http://docs.openstack.org/compute/ext/fixed_ips/api/v2" name="FixedIPs">
     <description>Fixed IPs support.</description>
   </extension>
