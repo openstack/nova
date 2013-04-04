@@ -1244,3 +1244,46 @@ class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         columns = [c.name for c in bm_nodes.columns]
         self.assertNotIn(u'prov_vlan_id', columns)
         self.assertNotIn(u'registration_status', columns)
+
+    def _pre_upgrade_006(self, engine):
+        nodes = get_table(engine, 'bm_nodes')
+        ifs = get_table(engine, 'bm_interfaces')
+        # node 1 has two diffrent addresses in bm_nodes and bm_interfaces
+        engine.execute(nodes.insert(),
+                       [{'id': 1,
+                         'prov_mac_address': 'aa:aa:aa:aa:aa:aa'}])
+        engine.execute(ifs.insert(),
+                       [{'id': 101,
+                         'bm_node_id': 1,
+                         'address': 'bb:bb:bb:bb:bb:bb'}])
+        # node 2 has one same address both in bm_nodes and bm_interfaces
+        engine.execute(nodes.insert(),
+                       [{'id': 2,
+                         'prov_mac_address': 'cc:cc:cc:cc:cc:cc'}])
+        engine.execute(ifs.insert(),
+                       [{'id': 201,
+                         'bm_node_id': 2,
+                         'address': 'cc:cc:cc:cc:cc:cc'}])
+
+    def _check_006(self, engine, data):
+        ifs = get_table(engine, 'bm_interfaces')
+        rows = ifs.select().\
+                    where(ifs.c.bm_node_id == 1).\
+                    execute().\
+                    fetchall()
+        self.assertEqual(len(rows), 2)
+        rows = ifs.select().\
+                    where(ifs.c.bm_node_id == 2).\
+                    execute().\
+                    fetchall()
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]['address'], 'cc:cc:cc:cc:cc:cc')
+
+    def _post_downgrade_006(self, engine):
+        ifs = get_table(engine, 'bm_interfaces')
+        rows = ifs.select().where(ifs.c.bm_node_id == 1).execute().fetchall()
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]['address'], 'bb:bb:bb:bb:bb:bb')
+
+        rows = ifs.select().where(ifs.c.bm_node_id == 2).execute().fetchall()
+        self.assertEqual(len(rows), 0)

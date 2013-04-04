@@ -314,7 +314,6 @@ class PXEPrivateMethodsTestCase(BareMetalPXETestCase):
     def test_collect_mac_addresses(self):
         self._create_node()
         address_list = [nic['address'] for nic in self.nic_info]
-        address_list.append(self.node_info['prov_mac_address'])
         address_list.sort()
         macs = self.driver._collect_mac_addresses(self.context, self.node)
         self.assertEqual(macs, address_list)
@@ -432,7 +431,6 @@ class PXEPublicMethodsTestCase(BareMetalPXETestCase):
     def test_activate_bootloader_passes_details(self):
         self._create_node()
         macs = [nic['address'] for nic in self.nic_info]
-        macs.append(self.node_info['prov_mac_address'])
         macs.sort()
         image_info = {
                 'deploy_kernel': [None, 'aaaa'],
@@ -496,16 +494,16 @@ class PXEPublicMethodsTestCase(BareMetalPXETestCase):
         # create the config file
         bm_utils.write_to_file(mox.StrContains('fake-uuid'),
                                mox.StrContains(CONF.baremetal.tftp_root))
-        # unlink and link the 3 interfaces
-        for i in range(3):
+        # unlink and link the 2 interfaces
+        for i in range(2):
             bm_utils.unlink_without_raise(mox.Or(
                     mox.StrContains('fake-uuid'),
                     mox.StrContains(CONF.baremetal.tftp_root)))
             bm_utils.create_link_without_raise(
                     mox.StrContains('fake-uuid'),
                     mox.StrContains(CONF.baremetal.tftp_root))
-        # unlink all 3 interfaces, 4 images, and the config file
-        for i in range(8):
+        # unlink all 2 interfaces, 4 images, and the config file
+        for i in range(7):
             bm_utils.unlink_without_raise(mox.Or(
                     mox.StrContains('fake-uuid'),
                     mox.StrContains(CONF.baremetal.tftp_root)))
