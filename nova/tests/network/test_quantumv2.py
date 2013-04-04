@@ -19,6 +19,7 @@ import uuid
 
 import mox
 from oslo.config import cfg
+from quantumclient.common import exceptions as qexceptions
 from quantumclient.v2_0 import client
 
 from nova.compute import instance_types
@@ -1209,6 +1210,18 @@ class TestQuantumv2(test.TestCase):
 
         self.mox.ReplayAll()
         api.remove_fixed_ip_from_instance(self.context, self.instance, address)
+
+    def test_list_floating_ips_without_l3_support(self):
+        api = quantumapi.API()
+        QuantumNotFound = qexceptions.QuantumClientException(
+            status_code=404)
+        self.moxed_client.list_floatingips(
+            fixed_ip_address='1.1.1.1', port_id=1).AndRaise(QuantumNotFound)
+        self.mox.ReplayAll()
+        quantumv2.get_client('fake')
+        floatingips = api._get_floating_ips_by_fixed_and_port(
+            self.moxed_client, '1.1.1.1', 1)
+        self.assertEqual(floatingips, [])
 
 
 class TestQuantumv2ModuleMethods(test.TestCase):

@@ -19,6 +19,7 @@
 import time
 
 from oslo.config import cfg
+from quantumclient.common import exceptions as qexceptions
 
 from nova.compute import instance_types
 from nova import conductor
@@ -720,7 +721,15 @@ class API(base.Base):
 
     def _get_floating_ips_by_fixed_and_port(self, client, fixed_ip, port):
         """Get floatingips from fixed ip and port."""
-        data = client.list_floatingips(fixed_ip_address=fixed_ip, port_id=port)
+        try:
+            data = client.list_floatingips(fixed_ip_address=fixed_ip,
+                                           port_id=port)
+        # If a quantum plugin does not implement the L3 API a 404 from
+        # list_floatingips will be raised.
+        except qexceptions.QuantumClientException as e:
+            if e.status_code == 404:
+                return []
+            raise
         return data['floatingips']
 
     def release_floating_ip(self, context, address,
