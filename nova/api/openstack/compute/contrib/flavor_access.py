@@ -179,7 +179,7 @@ class FlavorActionController(wsgi.Controller):
         try:
             instance_types.add_instance_type_access(id, tenant, context)
         except exception.FlavorAccessExists as err:
-            raise webob.exc.HTTPConflict(explanation=str(err))
+            raise webob.exc.HTTPConflict(explanation=err.format_message())
 
         return _marshall_flavor_access(id)
 
@@ -196,7 +196,7 @@ class FlavorActionController(wsgi.Controller):
         try:
             instance_types.remove_instance_type_access(id, tenant, context)
         except exception.FlavorAccessNotFound, e:
-            raise webob.exc.HTTPNotFound(explanation=str(e))
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
         return _marshall_flavor_access(id)
 

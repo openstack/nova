@@ -287,7 +287,7 @@ class AdminActionsController(wsgi.Controller):
             self.compute_api.live_migrate(context, instance, block_migration,
                                           disk_over_commit, host)
         except exception.ComputeServiceUnavailable as ex:
-            raise exc.HTTPBadRequest(explanation=str(ex))
+            raise exc.HTTPBadRequest(explanation=ex.format_message())
         except Exception:
             msg = _("Live migration of instance %(id)s to host %(host)s"
                     " failed") % locals()
