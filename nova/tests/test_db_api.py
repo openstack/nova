@@ -55,7 +55,8 @@ class DbTestCase(test.TestCase):
 
     def create_instances_with_args(self, **kwargs):
         args = {'reservation_id': 'a', 'image_ref': 1, 'host': 'host1',
-                'project_id': self.project_id, 'vm_state': 'fake'}
+                'node': 'node1', 'project_id': self.project_id,
+                'vm_state': 'fake'}
         if 'context' in kwargs:
             ctxt = kwargs.pop('context')
             args['project_id'] = ctxt.project_id
@@ -150,6 +151,19 @@ class DbApiTestCase(DbTestCase):
             self.assertTrue(result[0]['deleted'])
         else:
             self.assertTrue(result[1]['deleted'])
+
+    def test_instance_get_all_by_host_and_node_no_join(self):
+        # Test that system metadata is not joined.
+        sys_meta = {'foo': 'bar'}
+        expected = self.create_instances_with_args(system_metadata=sys_meta)
+
+        elevated = self.context.elevated()
+        instances = db.instance_get_all_by_host_and_node(elevated, 'host1',
+                                                         'node1')
+        self.assertEqual(1, len(instances))
+        instance = instances[0]
+        self.assertEqual(expected['uuid'], instance['uuid'])
+        self.assertFalse('system_metadata' in dict(instance))
 
     def test_migration_get_unconfirmed_by_dest_compute(self):
         ctxt = context.get_admin_context()

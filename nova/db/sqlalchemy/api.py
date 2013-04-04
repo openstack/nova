@@ -1700,12 +1700,15 @@ def instance_get_active_by_window_joined(context, begin, end=None,
 
 
 @require_admin_context
-def _instance_get_all_query(context, project_only=False):
-    return model_query(context, models.Instance, project_only=project_only).\
-                   options(joinedload('info_cache')).\
-                   options(joinedload('security_groups')).\
-                   options(joinedload('metadata')).\
-                   options(joinedload('system_metadata'))
+def _instance_get_all_query(context, project_only=False, joins=None):
+    if joins is None:
+        joins = ['info_cache', 'security_groups', 'metadata',
+                 'system_metadata']
+
+    query = model_query(context, models.Instance, project_only=project_only)
+    for join in joins:
+        query = query.options(joinedload(join))
+    return query
 
 
 @require_admin_context
@@ -1715,8 +1718,8 @@ def instance_get_all_by_host(context, host):
 
 @require_admin_context
 def instance_get_all_by_host_and_node(context, host, node):
-    return _instance_get_all_query(context).filter_by(host=host).\
-                                            filter_by(node=node).all()
+    return _instance_get_all_query(context, joins=[]).filter_by(host=host).\
+            filter_by(node=node).all()
 
 
 @require_admin_context
