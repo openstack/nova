@@ -1125,7 +1125,7 @@ class SecurityGroupsSampleJsonTest(ServersSampleBase):
                                       subs, response, 200)
 
 
-class SecurityGroupsSampleXmlTest(ApiSampleTestBase):
+class SecurityGroupsSampleXmlTest(SecurityGroupsSampleJsonTest):
     ctype = 'xml'
 
 
