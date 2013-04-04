@@ -1554,11 +1554,57 @@ def _build_instance_get(context, session=None):
             options(joinedload('system_metadata'))
 
 
+def _instances_fill_metadata(context, instances, manual_joins=None):
+    """Selectively fill instances with manually-joined metadata. Note that
+    instance will be converted to a dict.
+
+    :param context: security context
+    :param instances: list of instances to fill
+    :param manual_joins: list of tables to manually join (can be any
+                         combination of 'metadata' and 'system_metadata' or
+                         None to take the default of both)
+    """
+    uuids = [inst['uuid'] for inst in instances]
+
+    if manual_joins is None:
+        manual_joins = ['metadata', 'system_metadata']
+
+    meta = collections.defaultdict(list)
+    if 'metadata' in manual_joins:
+        for row in _instance_metadata_get_multi(context, uuids):
+            meta[row['instance_uuid']].append(row)
+
+    sys_meta = collections.defaultdict(list)
+    if 'system_metadata' in manual_joins:
+        for row in _instance_system_metadata_get_multi(context, uuids):
+            sys_meta[row['instance_uuid']].append(row)
+
+    filled_instances = []
+    for inst in instances:
+        inst = dict(inst.iteritems())
+        inst['system_metadata'] = sys_meta[inst['uuid']]
+        inst['metadata'] = meta[inst['uuid']]
+        filled_instances.append(inst)
+
+    return filled_instances
+
+
+def _manual_join_columns(columns_to_join):
+    manual_joins = []
+    for column in ('metadata', 'system_metadata'):
+        if column in columns_to_join:
+            columns_to_join.remove(column)
+            manual_joins.append(column)
+    return manual_joins, columns_to_join
+
+
 @require_context
 def instance_get_all(context, columns_to_join=None):
     if columns_to_join is None:
-        columns_to_join = ['info_cache', 'security_groups', 'metadata',
-                           'system_metadata']
+        columns_to_join = ['info_cache', 'security_groups', 'metadata']
+        manual_joins = ['metadata', 'system_metadata']
+    else:
+        manual_joins, columns_to_join = _manual_join_columns(columns_to_join)
     query = model_query(context, models.Instance)
     for column in columns_to_join:
         query = query.options(joinedload(column))
@@ -1568,12 +1614,14 @@ def instance_get_all(context, columns_to_join=None):
             query = query.filter_by(project_id=context.project_id)
         else:
             query = query.filter_by(user_id=context.user_id)
-    return query.all()
+    instances = query.all()
+    return _instances_fill_metadata(context, instances, manual_joins)
 
 
 @require_context
 def instance_get_all_by_filters(context, filters, sort_key, sort_dir,
-                                limit=None, marker=None, session=None):
+                                limit=None, marker=None, columns_to_join=None,
+                                session=None):
     """Return instances that match all filters.  Deleted instances
     will be returned by default, unless there's a filter that says
     otherwise"""
@@ -1583,12 +1631,18 @@ def instance_get_all_by_filters(context, filters, sort_key, sort_dir,
     if not session:
         session = get_session()
 
-    query_prefix = session.query(models.Instance).\
-            options(joinedload('info_cache')).\
-            options(joinedload('security_groups')).\
-            options(joinedload('system_metadata')).\
-            options(joinedload('metadata')).\
-            order_by(sort_fn[sort_dir](getattr(models.Instance, sort_key)))
+    if columns_to_join is None:
+        columns_to_join = ['info_cache', 'security_groups']
+        manual_joins = ['metadata', 'system_metadata']
+    else:
+        manual_joins, columns_to_join = _manual_join_columns(columns_to_join)
+
+    query_prefix = session.query(models.Instance)
+    for column in columns_to_join:
+        query_prefix = query_prefix.options(joinedload(column))
+
+    query_prefix = query_prefix.order_by(sort_fn[sort_dir](
+            getattr(models.Instance, sort_key)))
 
     # Make a copy of the filters dictionary to use going forward, as we'll
     # be modifying it and we shouldn't affect the caller's use of it.
@@ -1646,8 +1700,7 @@ def instance_get_all_by_filters(context, filters, sort_key, sort_dir,
                            marker=marker,
                            sort_dir=sort_dir)
 
-    instances = query_prefix.all()
-    return instances
+    return _instances_fill_metadata(context, query_prefix.all(), manual_joins)
 
 
 def tag_filter(query, model, tag_model, tag_model_col, filters):
@@ -1765,8 +1818,6 @@ def instance_get_active_by_window_joined(context, begin, end=None,
 
     query = query.options(joinedload('info_cache')).\
                   options(joinedload('security_groups')).\
-                  options(joinedload('metadata')).\
-                  options(joinedload('system_metadata')).\
                   filter(or_(models.Instance.terminated_at == None,
                              models.Instance.terminated_at > begin))
     if end:
@@ -1776,14 +1827,13 @@ def instance_get_active_by_window_joined(context, begin, end=None,
     if host:
         query = query.filter_by(host=host)
 
-    return query.all()
+    return _instances_fill_metadata(context, query.all())
 
 
 @require_admin_context
 def _instance_get_all_query(context, project_only=False, joins=None):
     if joins is None:
-        joins = ['info_cache', 'security_groups', 'metadata',
-                 'system_metadata']
+        joins = ['info_cache', 'security_groups']
 
     query = model_query(context, models.Instance, project_only=project_only)
     for join in joins:
@@ -1793,19 +1843,22 @@ def _instance_get_all_query(context, project_only=False, joins=None):
 
 @require_admin_context
 def instance_get_all_by_host(context, host):
-    return _instance_get_all_query(context).filter_by(host=host).all()
+    return _instances_fill_metadata(context,
+        _instance_get_all_query(context).filter_by(host=host).all())
 
 
 @require_admin_context
 def instance_get_all_by_host_and_node(context, host, node):
-    return _instance_get_all_query(context, joins=[]).filter_by(host=host).\
-            filter_by(node=node).all()
+    return _instances_fill_metadata(context,
+        _instance_get_all_query(context, joins=[]).filter_by(host=host).
+            filter_by(node=node).all(), manual_joins=[])
 
 
 @require_admin_context
 def instance_get_all_by_host_and_not_type(context, host, type_id=None):
-    return _instance_get_all_query(context).filter_by(host=host).\
-                   filter(models.Instance.instance_type_id != type_id).all()
+    return _instances_fill_metadata(context,
+        _instance_get_all_query(context).filter_by(host=host).
+                   filter(models.Instance.instance_type_id != type_id).all())
 
 
 # NOTE(jkoelker) This is only being left here for compat with floating
@@ -1849,10 +1902,10 @@ def instance_get_all_hung_in_rebooting(context, reboot_window):
     reboot_window = (timeutils.utcnow() -
                      datetime.timedelta(seconds=reboot_window))
 
-    return model_query(context, models.Instance).\
-            options(joinedload('system_metadata')).\
-            filter(models.Instance.updated_at <= reboot_window).\
-            filter_by(task_state=task_states.REBOOTING).all()
+    return _instances_fill_metadata(context,
+        model_query(context, models.Instance).
+            filter(models.Instance.updated_at <= reboot_window).
+            filter_by(task_state=task_states.REBOOTING).all())
 
 
 @require_context
@@ -3794,6 +3847,13 @@ def cell_get_all(context):
 ########################
 # User-provided metadata
 
+def _instance_metadata_get_multi(context, instance_uuids, session=None):
+    return model_query(context, models.InstanceMetadata,
+                       session=session).\
+                    filter(
+            models.InstanceMetadata.instance_uuid.in_(instance_uuids))
+
+
 def _instance_metadata_get_query(context, instance_uuid, session=None):
     return model_query(context, models.InstanceMetadata, session=session,
                        read_deleted="no").\
@@ -3917,6 +3977,13 @@ def instance_metadata_update(context, instance_uuid, metadata, delete,
 
 #######################
 # System-owned metadata
+
+
+def _instance_system_metadata_get_multi(context, instance_uuids, session=None):
+    return model_query(context, models.InstanceSystemMetadata,
+                       session=session).\
+                    filter(
+            models.InstanceSystemMetadata.instance_uuid.in_(instance_uuids))
 
 
 def _instance_system_metadata_get_query(context, instance_uuid, session=None):
