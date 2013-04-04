@@ -2370,6 +2370,11 @@ class API(base.Base):
         return dict(rv.iteritems())
 
     @wrap_check_policy
+    def get_all_instance_metadata(self, context, search_filts):
+        """Get all metadata."""
+        return self.db.instance_metadata_get_all(context, search_filts)
+
+    @wrap_check_policy
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.PAUSED,
                                     vm_states.SUSPENDED, vm_states.STOPPED],

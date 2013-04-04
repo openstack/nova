@@ -98,6 +98,26 @@ class DbApiTestCase(DbTestCase):
 
         self.flags(osapi_compute_unique_server_name_scope=None)
 
+    def test_instance_metadata_get_all_query(self):
+        self.create_instances_with_args(metadata={'foo': 'bar'})
+        self.create_instances_with_args(metadata={'baz': 'quux'})
+
+        result = db.instance_metadata_get_all(self.context, [])
+        self.assertEqual(2, len(result))
+
+        result = db.instance_metadata_get_all(self.context,
+                                              [{'key': 'foo'}])
+        self.assertEqual(1, len(result))
+
+        result = db.instance_metadata_get_all(self.context,
+                                              [{'value': 'quux'}])
+        self.assertEqual(1, len(result))
+
+        result = db.instance_metadata_get_all(self.context,
+                                              [{'value': 'quux'},
+                                               {'key': 'foo'}])
+        self.assertEqual(2, len(result))
+
     def test_ec2_ids_not_found_are_printable(self):
         def check_exc_format(method):
             try:
