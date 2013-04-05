@@ -43,12 +43,12 @@ CONF = cfg.CONF
 CONF.import_opt('manager', 'nova.conductor.api', group='conductor')
 CONF.import_opt('topic', 'nova.conductor.api', group='conductor')
 CONF.import_opt('enabled_apis', 'nova.service')
-LOG = logging.getLogger('nova.all')
 
 
 def main():
     config.parse_args(sys.argv)
     logging.setup("nova")
+    LOG = logging.getLogger('nova.all')
     utils.monkey_patch()
     launcher = service.ProcessLauncher()
 

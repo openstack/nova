@@ -34,7 +34,6 @@ from nova import utils
 CONF = cfg.CONF
 CONF.import_opt('compute_topic', 'nova.compute.rpcapi')
 CONF.import_opt('use_local', 'nova.conductor.api', group='conductor')
-LOG = logging.getLogger('nova.compute')
 
 
 def block_db_access():
@@ -44,6 +43,7 @@ def block_db_access():
 
         def __call__(self, *args, **kwargs):
             stacktrace = "".join(traceback.format_stack())
+            LOG = logging.getLogger('nova.compute')
             LOG.error('No db access allowed in nova-compute: %s' % stacktrace)
             raise exception.DBNotAllowed('nova-compute')
 
