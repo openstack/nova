@@ -56,6 +56,9 @@ class FakeCoverage(object):
     def xml_report(self, outfile):
         pass
 
+    def erase(self):
+        pass
+
 
 class CoverageExtensionTest(test.TestCase):
 
@@ -202,3 +205,25 @@ class CoverageExtensionTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app(
                                fake_auth_context=self.admin_context))
         self.assertEqual(res.status_int, 404)
+
+    def test_reset_coverage_action_while_coverage_running(self):
+        self.stubs.Set(coverage_ext.CoverageController,
+                      '_check_coverage', fake_check_coverage)
+        body = {'reset': {}}
+        req = webob.Request.blank('/v2/fake/os-coverage/action')
+        req.method = "POST"
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+        res = req.get_response(fakes.wsgi_app(
+                               fake_auth_context=self.admin_context))
+        self.assertEqual(res.status_int, 200)
+
+    def test_reset_coverage_action_while_coverage_stopped(self):
+        body = {'reset': {}}
+        req = webob.Request.blank('/v2/fake/os-coverage/action')
+        req.method = "POST"
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+        res = req.get_response(fakes.wsgi_app(
+                               fake_auth_context=self.admin_context))
+        self.assertEqual(res.status_int, 200)
