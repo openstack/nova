@@ -27,6 +27,7 @@ from nova.openstack.common import log as logging
 from nova import service
 
 CONF = cfg.CONF
+CONF.import_opt('consoleauth_manager', 'nova.consoleauth.manager')
 
 
 def main():
