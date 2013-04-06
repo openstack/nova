@@ -24,6 +24,7 @@ import paramiko
 from nova import exception as nova_exception
 from nova.openstack.common import log as logging
 from nova import utils
+from nova.virt.powervm import constants
 from nova.virt.powervm import exception
 
 LOG = logging.getLogger(__name__)
@@ -53,7 +54,8 @@ def ssh_connect(connection):
                     username=connection.username,
                     password=connection.password,
                     port=connection.port,
-                    key_filename=connection.keyfile)
+                    key_filename=connection.keyfile,
+                    timeout=constants.POWERVM_CONNECTION_TIMEOUT)
         return ssh
     except Exception:
         LOG.exception(_('Connection error connecting PowerVM manager'))
