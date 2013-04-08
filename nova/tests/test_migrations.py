@@ -1190,6 +1190,45 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         # Ensure the number of unique keypairs is correct
         self.assertEqual(len(rows), 2)
 
+    def _pre_upgrade_174(self, engine):
+        instance_types = get_table(engine, 'instance_types')
+        instance_type_projects = get_table(engine, 'instance_type_projects')
+
+        instance_type_data = [
+            dict(id=31, name='itp_name0', memory_mb=128, vcpus=1,
+                 root_gb=10, ephemeral_gb=0, flavorid="itp_flavor1", swap=0,
+                 rxtx_factor=1.0, vcpu_weight=1, disabled=False,
+                 is_public=True, deleted=0)
+        ]
+        instance_type_projects_data = [
+            dict(project_id='pr1', instance_type_id=31, deleted=0),
+            dict(project_id='pr1', instance_type_id=31, deleted=0),
+            dict(project_id='pr2', instance_type_id=31, deleted=0)
+        ]
+
+        engine.execute(instance_types.insert(), instance_type_data)
+        engine.execute(instance_type_projects.insert(),
+                       instance_type_projects_data)
+
+    def _check_174(self, engine, data):
+        it_projects = get_table(engine, 'instance_type_projects')
+
+        def get_(project_id, it_id, deleted):
+            deleted_value = 0 if not deleted else it_projects.c.id
+            return it_projects.select().\
+                        where(it_projects.c.project_id == project_id).\
+                        where(it_projects.c.instance_type_id == it_id).\
+                        where(it_projects.c.deleted == deleted_value).\
+                        execute().\
+                        fetchall()
+
+        self.assertEqual(1, len(get_('pr1', '31', False)))
+        self.assertEqual(1, len(get_('pr1', '31', True)))
+        self.assertEqual(1, len(get_('pr2', '31', False)))
+        self.assertRaises(sqlalchemy.exc.IntegrityError,
+                          it_projects.insert().execute,
+                          dict(instance_type=31, project_id='pr1', deleted=0))
+
 
 class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""
