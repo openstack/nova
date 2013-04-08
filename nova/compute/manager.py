@@ -1015,9 +1015,10 @@ class ComputeManager(manager.SchedulerDependentManager):
         if timeout == 0:
             return
 
-        filters = {'vm_state': vm_states.BUILDING}
+        filters = {'vm_state': vm_states.BUILDING,
+                   'host': self.host}
         building_insts = self.conductor_api.instance_get_all_by_filters(
-            context, filters)
+            context, filters, columns_to_join=[])
 
         for instance in building_insts:
             if timeutils.is_older_than(instance['created_at'], timeout):

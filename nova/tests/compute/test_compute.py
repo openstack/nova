@@ -3825,8 +3825,10 @@ class ComputeTestCase(BaseTestCase):
         called = {'get_all': False, 'set_error_state': 0}
         created_at = timeutils.utcnow() + datetime.timedelta(seconds=-60)
 
-        def fake_instance_get_all_by_filters(*args, **kwargs):
+        def fake_instance_get_all_by_filters(context, filters, *args, **kw):
             called['get_all'] = True
+            self.assertIn('host', filters)
+            self.assertEqual(kw['columns_to_join'], [])
             return instances[:]
 
         self.stubs.Set(db, 'instance_get_all_by_filters',
