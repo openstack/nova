@@ -624,9 +624,9 @@ def instance_get_active_by_window_joined(context, begin, end=None,
                                               project_id, host)
 
 
-def instance_get_all_by_host(context, host):
+def instance_get_all_by_host(context, host, columns_to_join=None):
     """Get all instances belonging to a host."""
-    return IMPL.instance_get_all_by_host(context, host)
+    return IMPL.instance_get_all_by_host(context, host, columns_to_join)
 
 
 def instance_get_all_by_host_and_node(context, host, node):
