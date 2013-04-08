@@ -396,7 +396,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         try:
             driver_uuids = self.driver.list_instance_uuids()
             local_instances = self.conductor_api.instance_get_all_by_filters(
-                    context, {'uuid': driver_uuids})
+                    context, {'uuid': driver_uuids},
+                    columns_to_join=[])
             local_instance_uuids = [inst['uuid'] for inst in local_instances]
             for uuid in set(driver_uuids) - set(local_instance_uuids):
                 LOG.error(_('Instance %(uuid)s found in the hypervisor, but '
@@ -408,8 +409,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         # The driver doesn't support uuids listing, so we'll have
         # to brute force.
         driver_instances = self.driver.list_instances()
-        instances = self.conductor_api.instance_get_all_by_host(context,
-                                                                self.host)
+        instances = self.conductor_api.instance_get_all_by_host(
+            context, self.host, columns_to_join=[])
         name_map = dict((instance['name'], instance) for instance in instances)
         local_instances = []
         for driver_instance in driver_instances:
@@ -703,6 +704,15 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     def _get_instance_nw_info(self, context, instance):
         """Get a list of dictionaries of network data of an instance."""
+        if (not hasattr(instance, 'system_metadata') or
+            len(instance['system_metadata']) == 0):
+            # NOTE(danms): Several places in the code look up instances without
+            # pulling system_metadata for performance, and call this function.
+            # If we get an instance without it, re-fetch so that the call
+            # to network_api (which requires it for instance_type) will
+            # succeed.
+            instance = self.conductor_api.instance_get_by_uuid(
+                context, instance['uuid'])
         network_info = self.network_api.get_instance_nw_info(context,
                 instance, conductor_api=self.conductor_api)
         return network_info
@@ -3423,7 +3433,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             else:
                 # No more in our copy of uuids.  Pull from the DB.
                 db_instances = self.conductor_api.instance_get_all_by_host(
-                        context, self.host)
+                        context, self.host, columns_to_join=[])
                 if not db_instances:
                     # None.. just return.
                     return
@@ -3453,8 +3463,8 @@ class ComputeManager(manager.SchedulerDependentManager):
     @manager.periodic_task
     def _poll_rescued_instances(self, context):
         if CONF.rescue_timeout > 0:
-            instances = self.conductor_api.instance_get_all_by_host(context,
-                                                                    self.host)
+            instances = self.conductor_api.instance_get_all_by_host(
+                context, self.host, columns_to_join=[])
 
             rescued_instances = []
             for instance in instances:
@@ -3585,8 +3595,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             self._last_bw_usage_poll = curr_time
             LOG.info(_("Updating bandwidth usage cache"))
 
-            instances = self.conductor_api.instance_get_all_by_host(context,
-                                                                    self.host)
+            instances = self.conductor_api.instance_get_all_by_host(
+                context, self.host, columns_to_join=[])
             try:
                 bw_counters = self.driver.get_all_bw_counters(instances)
             except NotImplementedError:
@@ -3738,8 +3748,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         loop, one database record at a time, checking if the hypervisor has the
         same power state as is in the database.
         """
-        db_instances = self.conductor_api.instance_get_all_by_host(context,
-                                                                   self.host)
+        db_instances = self.conductor_api.instance_get_all_by_host(
+            context, self.host, columns_to_join=[])
 
         num_vm_instances = self.driver.get_num_instances()
         num_db_instances = len(db_instances)
@@ -3895,8 +3905,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             LOG.debug(_("CONF.reclaim_instance_interval <= 0, skipping..."))
             return
 
-        instances = self.conductor_api.instance_get_all_by_host(context,
-                                                                self.host)
+        instances = self.conductor_api.instance_get_all_by_host(
+            context, self.host, columns_to_join=[])
         for instance in instances:
             old_enough = (not instance['deleted_at'] or
                           timeutils.is_older_than(instance['deleted_at'],
@@ -3907,6 +3917,11 @@ class ComputeManager(manager.SchedulerDependentManager):
                 capi = self.conductor_api
                 bdms = capi.block_device_mapping_get_all_by_instance(
                     context, instance)
+                # NOTE(danms): We fetched instances above without the
+                # system_metadata for efficiency. If we get here, we need
+                # to re-fetch with it so that _delete_instace() can extract
+                # instance_type information.
+                instance = capi.instance_get_by_uuid(context, instance['uuid'])
                 LOG.info(_('Reclaiming deleted instance'), instance=instance)
                 # NOTE(comstud): Quotas were already accounted for when
                 # the instance was soft deleted, so there's no need to
