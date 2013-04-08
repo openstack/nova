@@ -76,19 +76,22 @@ class LocalAPI(object):
     def instance_get_all(self, context):
         return self._manager.instance_get_all(context)
 
-    def instance_get_all_by_host(self, context, host):
-        return self._manager.instance_get_all_by_host(context, host)
+    def instance_get_all_by_host(self, context, host, columns_to_join=None):
+        return self._manager.instance_get_all_by_host(context, host,
+                                                      columns_to_join)
 
     def instance_get_all_by_host_and_node(self, context, host, node):
         return self._manager.instance_get_all_by_host(context, host, node)
 
     def instance_get_all_by_filters(self, context, filters,
                                     sort_key='created_at',
-                                    sort_dir='desc'):
+                                    sort_dir='desc',
+                                    columns_to_join=None):
         return self._manager.instance_get_all_by_filters(context,
                                                          filters,
                                                          sort_key,
-                                                         sort_dir)
+                                                         sort_dir,
+                                                         columns_to_join)
 
     def instance_get_all_hung_in_rebooting(self, context, timeout):
         return self._manager.instance_get_all_hung_in_rebooting(context,
@@ -398,8 +401,9 @@ class API(object):
     def instance_get_all(self, context):
         return self.conductor_rpcapi.instance_get_all(context)
 
-    def instance_get_all_by_host(self, context, host):
-        return self.conductor_rpcapi.instance_get_all_by_host(context, host)
+    def instance_get_all_by_host(self, context, host, columns_to_join=None):
+        return self.conductor_rpcapi.instance_get_all_by_host(
+            context, host, columns_to_join=columns_to_join)
 
     def instance_get_all_by_host_and_node(self, context, host, node):
         return self.conductor_rpcapi.instance_get_all_by_host(context,
@@ -407,11 +411,10 @@ class API(object):
 
     def instance_get_all_by_filters(self, context, filters,
                                     sort_key='created_at',
-                                    sort_dir='desc'):
-        return self.conductor_rpcapi.instance_get_all_by_filters(context,
-                                                                 filters,
-                                                                 sort_key,
-                                                                 sort_dir)
+                                    sort_dir='desc',
+                                    columns_to_join=None):
+        return self.conductor_rpcapi.instance_get_all_by_filters(
+            context, filters, sort_key, sort_dir, columns_to_join)
 
     def instance_get_all_hung_in_rebooting(self, context, timeout):
         return self.conductor_rpcapi.instance_get_all_hung_in_rebooting(

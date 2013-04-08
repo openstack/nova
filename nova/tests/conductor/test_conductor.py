@@ -667,7 +667,8 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
         filters = {'foo': 'bar'}
         self.mox.StubOutWithMock(db, 'instance_get_all_by_filters')
         db.instance_get_all_by_filters(self.context, filters,
-                                       'fake-key', 'fake-sort')
+                                       'fake-key', 'fake-sort',
+                                       columns_to_join=None)
         self.mox.ReplayAll()
         self.conductor.instance_get_all_by_filters(self.context, filters,
                                                    'fake-key', 'fake-sort')
@@ -676,7 +677,7 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
         self.mox.StubOutWithMock(db, 'instance_get_all_by_host')
         self.mox.StubOutWithMock(db, 'instance_get_all_by_host_and_node')
         db.instance_get_all_by_host(self.context.elevated(),
-                                    'host').AndReturn('result')
+                                    'host', None).AndReturn('result')
         db.instance_get_all_by_host_and_node(self.context.elevated(), 'host',
                                              'node').AndReturn('result')
         self.mox.ReplayAll()
@@ -823,7 +824,8 @@ class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
         filters = {'foo': 'bar'}
         self.mox.StubOutWithMock(db, 'instance_get_all_by_filters')
         db.instance_get_all_by_filters(self.context, filters,
-                                       'fake-key', 'fake-sort')
+                                       'fake-key', 'fake-sort',
+                                       columns_to_join=None)
         self.mox.ReplayAll()
         self.conductor.instance_get_all_by_filters(self.context, filters,
                                                    'fake-key', 'fake-sort')
@@ -970,7 +972,8 @@ class ConductorAPITestCase(_BaseTestCase, test.TestCase):
         self.mox.StubOutWithMock(db, 'instance_get_all_by_filters')
         db.instance_get_all(self.context)
         db.instance_get_all_by_filters(self.context, {'name': 'fake-inst'},
-                                       'updated_at', 'asc')
+                                       'updated_at', 'asc',
+                                       columns_to_join=None)
         self.mox.ReplayAll()
         self.conductor.instance_get_all(self.context)
         self.conductor.instance_get_all_by_filters(self.context,
@@ -1046,13 +1049,19 @@ class ConductorAPITestCase(_BaseTestCase, test.TestCase):
         result = self.conductor.service_update(self.context, {'id': ''}, {})
         self.assertEqual(result, 'fake-result')
 
-    def test_instance_get_all_by_host(self):
-        self._test_stubbed('instance_get_all_by_host',
-                           self.context.elevated(), 'host')
-
     def test_instance_get_all_by_host_and_node(self):
         self._test_stubbed('instance_get_all_by_host_and_node',
                            self.context.elevated(), 'host', 'node')
+
+    def test_instance_get_all_by_host(self):
+        self.mox.StubOutWithMock(db, 'instance_get_all_by_host')
+        self.mox.StubOutWithMock(db, 'instance_get_all_by_host_and_node')
+        db.instance_get_all_by_host(self.context.elevated(), 'host',
+                                    None).AndReturn('fake-result')
+        self.mox.ReplayAll()
+        result = self.conductor.instance_get_all_by_host(self.context,
+                                                         'host')
+        self.assertEqual(result, 'fake-result')
 
     def test_ping(self):
         timeouts = []
