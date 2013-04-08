@@ -2132,6 +2132,51 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
                           self.ctxt, 'nonexists')
 
 
+class InstanceTypeExtraSpecsTestCase(BaseInstanceTypeTestCase):
+
+    def setUp(self):
+        super(InstanceTypeExtraSpecsTestCase, self).setUp()
+        values = ({'name': 'n1', 'flavorid': 'f1',
+                   'extra_specs': dict(a='a', b='b', c='c')},
+                  {'name': 'n2', 'flavorid': 'f2',
+                   'extra_specs': dict(d='d', e='e', f='f')})
+
+        # NOTE(boris-42): We have already tested instance_type_create method
+        #                 with extra_specs in InstanceTypeTestCase.
+        self.inst_types = [self._create_inst_type(v) for v in values]
+
+    def test_instance_type_extra_specs_get(self):
+        for it in self.inst_types:
+            real_specs = db.instance_type_extra_specs_get(self.ctxt,
+                                                          it['flavorid'])
+            self._assertEqualObjects(it['extra_specs'], real_specs)
+
+    def test_instance_type_extra_specs_delete(self):
+        for it in self.inst_types:
+            specs = it['extra_specs']
+            key = specs.keys()[0]
+            del specs[key]
+            db.instance_type_extra_specs_delete(self.ctxt, it['flavorid'], key)
+            real_specs = db.instance_type_extra_specs_get(self.ctxt,
+                                                          it['flavorid'])
+            self._assertEqualObjects(it['extra_specs'], real_specs)
+
+    def test_instance_type_extra_specs_update_or_create(self):
+        for it in self.inst_types:
+            current_specs = it['extra_specs']
+            current_specs.update(dict(b='b1', c='c1', d='d1', e='e1'))
+            params = (self.ctxt, it['flavorid'], current_specs)
+            db.instance_type_extra_specs_update_or_create(*params)
+            real_specs = db.instance_type_extra_specs_get(self.ctxt,
+                                                          it['flavorid'])
+            self._assertEqualObjects(current_specs, real_specs)
+
+    def test_instance_type_extra_specs_update_or_create_flavor_not_found(self):
+        self.assertRaises(exception.FlavorNotFound,
+                          db.instance_type_extra_specs_update_or_create,
+                          self.ctxt, 'nonexists', {})
+
+
 class InstanceTypeAccessTestCase(BaseInstanceTypeTestCase):
 
     def _create_inst_type_access(self, instance_type_id, project_id):
