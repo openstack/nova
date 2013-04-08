@@ -5097,6 +5097,105 @@ class LibvirtDriverTestCase(test.TestCase):
             self.libvirtconnection.get_instance_disk_info,
             instance_name)
 
+    def test_get_cpuset_ids(self):
+        # correct syntax
+        self.flags(vcpu_pin_set="1")
+        cpuset_ids = self.libvirtconnection._get_cpuset_ids()
+        self.assertEqual([1], cpuset_ids)
+
+        self.flags(vcpu_pin_set="1,2")
+        cpuset_ids = self.libvirtconnection._get_cpuset_ids()
+        self.assertEqual([1, 2], cpuset_ids)
+
+        self.flags(vcpu_pin_set=", ,   1 ,  ,,  2,    ,")
+        cpuset_ids = self.libvirtconnection._get_cpuset_ids()
+        self.assertEqual([1, 2], cpuset_ids)
+
+        self.flags(vcpu_pin_set="1-1")
+        cpuset_ids = self.libvirtconnection._get_cpuset_ids()
+        self.assertEqual([1], cpuset_ids)
+
+        self.flags(vcpu_pin_set=" 1 - 1, 1 - 2 , 1 -3")
+        cpuset_ids = self.libvirtconnection._get_cpuset_ids()
+        self.assertEqual([1, 2, 3], cpuset_ids)
+
+        self.flags(vcpu_pin_set="1,^2")
+        cpuset_ids = self.libvirtconnection._get_cpuset_ids()
+        self.assertEqual([1], cpuset_ids)
+
+        self.flags(vcpu_pin_set="1-2, ^1")
+        cpuset_ids = self.libvirtconnection._get_cpuset_ids()
+        self.assertEqual([2], cpuset_ids)
+
+        self.flags(vcpu_pin_set="1-3,5,^2")
+        cpuset_ids = self.libvirtconnection._get_cpuset_ids()
+        self.assertEqual([1, 3, 5], cpuset_ids)
+
+        self.flags(vcpu_pin_set=" 1 -    3        ,   ^2,        5")
+        cpuset_ids = self.libvirtconnection._get_cpuset_ids()
+        self.assertEqual([1, 3, 5], cpuset_ids)
+
+        # invalid syntax
+        self.flags(vcpu_pin_set=" -1-3,5,^2")
+        self.assertRaises(exception.Invalid,
+                          self.libvirtconnection._get_cpuset_ids)
+
+        self.flags(vcpu_pin_set="1-3-,5,^2")
+        self.assertRaises(exception.Invalid,
+                          self.libvirtconnection._get_cpuset_ids)
+
+        self.flags(vcpu_pin_set="-3,5,^2")
+        self.assertRaises(exception.Invalid,
+                          self.libvirtconnection._get_cpuset_ids)
+
+        self.flags(vcpu_pin_set="1-,5,^2")
+        self.assertRaises(exception.Invalid,
+                          self.libvirtconnection._get_cpuset_ids)
+
+        self.flags(vcpu_pin_set="1-3,5,^2^")
+        self.assertRaises(exception.Invalid,
+                          self.libvirtconnection._get_cpuset_ids)
+
+        self.flags(vcpu_pin_set="1-3,5,^2-")
+        self.assertRaises(exception.Invalid,
+                          self.libvirtconnection._get_cpuset_ids)
+
+        self.flags(vcpu_pin_set="--13,^^5,^2")
+        self.assertRaises(exception.Invalid,
+                          self.libvirtconnection._get_cpuset_ids)
+
+        self.flags(vcpu_pin_set="a-3,5,^2")
+        self.assertRaises(exception.Invalid,
+                          self.libvirtconnection._get_cpuset_ids)
+
+        self.flags(vcpu_pin_set="1-a,5,^2")
+        self.assertRaises(exception.Invalid,
+                          self.libvirtconnection._get_cpuset_ids)
+
+        self.flags(vcpu_pin_set="1-3,b,^2")
+        self.assertRaises(exception.Invalid,
+                          self.libvirtconnection._get_cpuset_ids)
+
+        self.flags(vcpu_pin_set="1-3,5,^c")
+        self.assertRaises(exception.Invalid,
+                          self.libvirtconnection._get_cpuset_ids)
+
+        self.flags(vcpu_pin_set="3 - 1, 5 , ^ 2 ")
+        self.assertRaises(exception.Invalid,
+                          self.libvirtconnection._get_cpuset_ids)
+
+        self.flags(vcpu_pin_set=" 1,1, ^1")
+        self.assertRaises(exception.Invalid,
+                          self.libvirtconnection._get_cpuset_ids)
+
+        self.flags(vcpu_pin_set=" 1,^1,^1,2, ^2")
+        self.assertRaises(exception.Invalid,
+                          self.libvirtconnection._get_cpuset_ids)
+
+        self.flags(vcpu_pin_set="^2")
+        self.assertRaises(exception.Invalid,
+                          self.libvirtconnection._get_cpuset_ids)
+
 
 class LibvirtVolumeUsageTestCase(test.TestCase):
     """Test for nova.virt.libvirt.libvirt_driver.LibvirtDriver

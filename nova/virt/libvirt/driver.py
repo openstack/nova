@@ -211,6 +211,10 @@ libvirt_opts = [
                  default=[],
                  help='Specific cachemodes to use for different disk types '
                       'e.g: ["file=directsync","block=none"]'),
+    cfg.StrOpt('vcpu_pin_set',
+                default=None,
+                help='Which pcpus can be used by vcpus of instance '
+                     'e.g: "4-12,^8,15"'),
     ]
 
 CONF = cfg.CONF
@@ -305,6 +309,7 @@ class LibvirtDriver(driver.ComputeDriver):
         self._fc_wwpns = None
         self._wrapped_conn = None
         self._caps = None
+        self._vcpu_total = 0
         self.read_only = read_only
         self.firewall_driver = firewall.load_driver(
             DEFAULT_FIREWALL_DRIVER,
@@ -2145,6 +2150,7 @@ class LibvirtDriver(driver.ComputeDriver):
         guest.uuid = instance['uuid']
         guest.memory = inst_type['memory_mb'] * 1024
         guest.vcpus = inst_type['vcpus']
+        guest.cpuset = CONF.vcpu_pin_set
 
         quota_items = ['cpu_shares', 'cpu_period', 'cpu_quota']
         for key, value in inst_type['extra_specs'].iteritems():
@@ -2517,19 +2523,82 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return interfaces
 
-    def get_vcpu_total(self):
-        """Get vcpu number of physical computer.
+    def _get_cpuset_ids(self):
+        """
+        Parsing vcpu_pin_set config.
 
-        :returns: the number of cpu core.
+        Returns a list of pcpu ids can be used by instances.
+        """
+        cpuset_ids = set()
+        cpuset_reject_ids = set()
+        for rule in CONF.vcpu_pin_set.split(','):
+            rule = rule.strip()
+            # Handle multi ','
+            if len(rule) < 1:
+                continue
+            # Note the count limit in the .split() call
+            range_parts = rule.split('-', 1)
+            if len(range_parts) > 1:
+                # So, this was a range; start by converting the parts to ints
+                try:
+                    start, end = [int(p.strip()) for p in range_parts]
+                except ValueError:
+                    raise exception.Invalid(_("Invalid range expression %r")
+                                            % rule)
+                # Make sure it's a valid range
+                if start > end:
+                    raise exception.Invalid(_("Invalid range expression %r")
+                                            % rule)
+                # Add available pcpu ids to set
+                cpuset_ids |= set(range(start, end + 1))
+            elif rule[0] == '^':
+                # Not a range, the rule is an exclusion rule; convert to int
+                try:
+                    cpuset_reject_ids.add(int(rule[1:].strip()))
+                except ValueError:
+                    raise exception.Invalid(_("Invalid exclusion "
+                                              "expression %r") % rule)
+            else:
+                # OK, a single PCPU to include; convert to int
+                try:
+                    cpuset_ids.add(int(rule))
+                except ValueError:
+                    raise exception.Invalid(_("Invalid inclusion "
+                                              "expression %r") % rule)
+        # Use sets to handle the exclusion rules for us
+        cpuset_ids -= cpuset_reject_ids
+        if not cpuset_ids:
+            raise exception.Invalid(_("No CPUs available after parsing %r") %
+                                    CONF.vcpu_pin_set)
+        # This will convert the set to a sorted list for us
+        return sorted(cpuset_ids)
+
+    def get_vcpu_total(self):
+        """Get available vcpu number of physical computer.
+
+        :returns: the number of cpu core instances can be used.
 
         """
+        if self._vcpu_total != 0:
+            return self._vcpu_total
 
         try:
-            return self._conn.getInfo()[2]
+            total_pcpus = self._conn.getInfo()[2]
         except libvirt.libvirtError:
             LOG.warn(_("Cannot get the number of cpu, because this "
                        "function is not implemented for this platform. "))
             return 0
+
+        if CONF.vcpu_pin_set is None:
+            self._vcpu_total = total_pcpus
+            return self._vcpu_total
+
+        available_ids = self._get_cpuset_ids()
+        if available_ids[-1] >= total_pcpus:
+            raise exception.Invalid(_("Invalid vcpu_pin_set config, "
+                                      "out of hypervisor cpu range."))
+        self._vcpu_total = len(available_ids)
+        return self._vcpu_total
 
     def get_memory_mb_total(self):
         """Get the total memory size(MB) of physical computer.
