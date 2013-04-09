@@ -102,8 +102,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
             group = quantum.show_security_group(id).get('security_group')
         except q_exc.QuantumClientException as e:
             if e.status_code == 404:
-                LOG.exception(_("Quantum Error getting security group %s"),
-                              name)
+                LOG.debug(_("Quantum security group %s not found"), name)
                 self.raise_not_found(e.message)
             else:
                 LOG.error(_("Quantum Error: %s"), e)
@@ -238,8 +237,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                 id).get('security_group_rule')
         except q_exc.QuantumClientException as e:
             if e.status_code == 404:
-                LOG.exception(_("Quantum Error getting security group rule "
-                                "%s.") % id)
+                LOG.debug(_("Quantum security group rule %s not found"), id)
                 self.raise_not_found(e.message)
             else:
                 LOG.error(_("Quantum Error: %s"), e)
