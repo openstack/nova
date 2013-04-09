@@ -813,7 +813,7 @@ def initialize_gateway_device(dev, network_ref):
         if CONF.send_arp_for_ha and CONF.send_arp_for_ha_count > 0:
             send_arp_for_ip(network_ref['dhcp_server'], dev,
                             CONF.send_arp_for_ha_count)
-    if(CONF.use_ipv6):
+    if CONF.use_ipv6:
         _execute('ip', '-f', 'inet6', 'addr',
                  'change', network_ref['cidr_v6'],
                  'dev', dev, run_as_root=True)

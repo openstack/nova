@@ -747,10 +747,10 @@ class CinderCloudTestCase(test.TestCase):
         for vol in vols:
             self.assertTrue(str(vol['id']) == str(vol1_uuid) or
                 str(vol['id']) == str(vol2_uuid))
-            if(str(vol['id']) == str(vol1_uuid)):
+            if str(vol['id']) == str(vol1_uuid):
                 self.volume_api.attach(self.context, vol,
                                        instance_uuid, '/dev/sdb')
-            elif(str(vol['id']) == str(vol2_uuid)):
+            elif str(vol['id']) == str(vol2_uuid):
                 self.volume_api.attach(self.context, vol,
                                        instance_uuid, '/dev/sdc')
 

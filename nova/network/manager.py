@@ -1626,7 +1626,7 @@ class FlatDHCPManager(RPCAllocateFixedIP, floating_ips.FloatingIP,
             # NOTE(dprince): dhcp DB queries require elevated context
             elevated = context.elevated()
             self.driver.update_dhcp(elevated, dev, network)
-            if(CONF.use_ipv6):
+            if CONF.use_ipv6:
                 self.driver.update_ra(context, dev, network)
                 gateway = utils.get_my_linklocal(dev)
                 self.db.network_update(context, network['id'],
@@ -1846,7 +1846,7 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
             # NOTE(dprince): dhcp DB queries require elevated context
             elevated = context.elevated()
             self.driver.update_dhcp(elevated, dev, network)
-            if(CONF.use_ipv6):
+            if CONF.use_ipv6:
                 self.driver.update_ra(context, dev, network)
                 gateway = utils.get_my_linklocal(dev)
                 self.db.network_update(context, network['id'],
