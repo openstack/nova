@@ -195,6 +195,12 @@ class Raw(Image):
                                   disk_name))
         self.snapshot_name = snapshot_name
         self.preallocate = CONF.preallocate_images != 'none'
+        self.correct_format()
+
+    def correct_format(self):
+        if os.path.exists(self.path):
+            data = images.qemu_img_info(self.path)
+            self.driver_format = data.file_format or 'raw'
 
     def create_image(self, prepare_template, base, size, *args, **kwargs):
         @lockutils.synchronized(base, 'nova-', external=True,
@@ -213,6 +219,7 @@ class Raw(Image):
             if not os.path.exists(self.path):
                 with utils.remove_path_on_error(self.path):
                     copy_raw_image(base, self.path, size)
+        self.correct_format()
 
     def snapshot_create(self):
         pass
