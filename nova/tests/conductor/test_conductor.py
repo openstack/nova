@@ -410,10 +410,6 @@ class _BaseTestCase(object):
                                          'user_id': 'fake-user_id'},
                                         'fake-refr', 'fake-bool')
 
-    def test_ping(self):
-        result = self.conductor.ping(self.context, 'foo')
-        self.assertEqual(result, {'service': 'conductor', 'arg': 'foo'})
-
     def test_compute_node_create(self):
         self.mox.StubOutWithMock(db, 'compute_node_create')
         db.compute_node_create(self.context, 'fake-values').AndReturn(
@@ -1073,17 +1069,17 @@ class ConductorAPITestCase(_BaseTestCase, test.TestCase):
                                                          'host')
         self.assertEqual(result, 'fake-result')
 
-    def test_ping(self):
+    def test_wait_until_ready(self):
         timeouts = []
         calls = dict(count=0)
 
-        def fake_ping(_self, context, message, timeout):
+        def fake_ping(context, message, timeout):
             timeouts.append(timeout)
             calls['count'] += 1
             if calls['count'] < 15:
                 raise rpc_common.Timeout("fake")
 
-        self.stubs.Set(conductor_api.API, 'ping', fake_ping)
+        self.stubs.Set(self.conductor.base_rpcapi, 'ping', fake_ping)
 
         self.conductor.wait_until_ready(self.context)
 
@@ -1117,7 +1113,7 @@ class ConductorLocalAPITestCase(ConductorAPITestCase):
         self.assertRaises(KeyError,
                           self._do_update, instance['uuid'], foo='bar')
 
-    def test_ping(self):
+    def test_wait_until_ready(self):
         # Override test in ConductorAPITestCase
         pass
 

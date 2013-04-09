@@ -76,6 +76,8 @@ class ConductorManager(manager.Manager):
         return self._compute_api
 
     def ping(self, context, arg):
+        # NOTE(russellb) This method can be removed in 2.0 of this API.  It is
+        # now a part of the base rpc API.
         return jsonutils.to_primitive({'service': 'conductor', 'arg': arg})
 
     @rpc_common.client_exceptions(KeyError, ValueError,

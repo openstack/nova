@@ -97,11 +97,6 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
             topic=CONF.conductor.topic,
             default_version=self.BASE_RPC_API_VERSION)
 
-    def ping(self, context, arg, timeout=None):
-        arg_p = jsonutils.to_primitive(arg)
-        msg = self.make_msg('ping', arg=arg_p)
-        return self.call(context, msg, version='1.22', timeout=timeout)
-
     def instance_update(self, context, instance_uuid, updates,
                         service=None):
         updates_p = jsonutils.to_primitive(updates)
