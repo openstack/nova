@@ -208,8 +208,8 @@ class SecurityGroupBase(object):
     def get_rule(self, context, id):
         raise NotImplementedError()
 
-    def get_instance_security_groups(self, context, instance_id,
-                                     instance_uuid=None, detailed=False):
+    def get_instance_security_groups(self, context, instance_uuid,
+                                     detailed=False):
         raise NotImplementedError()
 
     def add_to_instance(self, context, instance, security_group_name):

@@ -3238,11 +3238,12 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
                 self.security_group_rpcapi.refresh_instance_security_rules(
                         context, instance['host'], instance)
 
-    def get_instance_security_groups(self, context, instance_id,
-                                     instance_uuid=None, detailed=False):
+    def get_instance_security_groups(self, context, instance_uuid,
+                                     detailed=False):
         if detailed:
-            return self.db.security_group_get_by_instance(context, instance_id)
-        instance = self.db.instance_get(context, instance_id)
+            return self.db.security_group_get_by_instance(context,
+                                                          instance_uuid)
+        instance = self.db.instance_get_by_uuid(context, instance_uuid)
         groups = instance.get('security_groups')
         if groups:
             return [{'name': group['name']} for group in groups]

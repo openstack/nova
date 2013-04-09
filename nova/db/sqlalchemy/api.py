@@ -3304,10 +3304,10 @@ def security_group_get_by_project(context, project_id):
 
 
 @require_context
-def security_group_get_by_instance(context, instance_id):
+def security_group_get_by_instance(context, instance_uuid):
     return _security_group_get_query(context, read_deleted="no").\
                    join(models.SecurityGroup.instances).\
-                   filter_by(id=instance_id).\
+                   filter_by(uuid=instance_uuid).\
                    all()
 
 

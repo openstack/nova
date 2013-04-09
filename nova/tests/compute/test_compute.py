@@ -5266,7 +5266,7 @@ class ComputeAPITestCase(BaseTestCase):
                 security_group=['testgroup'])
         try:
             self.assertEqual(len(db.security_group_get_by_instance(
-                             self.context, ref[0]['id'])), 1)
+                             self.context, ref[0]['uuid'])), 1)
             group = db.security_group_get(self.context, group['id'])
             self.assert_(len(group['instances']) == 1)
         finally:

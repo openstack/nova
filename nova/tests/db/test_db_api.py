@@ -2159,7 +2159,7 @@ class SecurityGroupTestCase(test.TestCase, ModelsObjectComparatorMixin):
                            for vals in values]
 
         real = db.security_group_get_by_instance(self.ctxt,
-                                                 instance['id'])
+                                                 instance['uuid'])
         expected = security_groups[:2]
         self._assertEqualListsOfObjects(expected, real,
                                         ignored_keys=['instances'])

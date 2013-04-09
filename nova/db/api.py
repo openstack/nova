@@ -1077,9 +1077,9 @@ def security_group_get_by_project(context, project_id):
     return IMPL.security_group_get_by_project(context, project_id)
 
 
-def security_group_get_by_instance(context, instance_id):
+def security_group_get_by_instance(context, instance_uuid):
     """Get security groups to which the instance is assigned."""
-    return IMPL.security_group_get_by_instance(context, instance_id)
+    return IMPL.security_group_get_by_instance(context, instance_uuid)
 
 
 def security_group_exists(context, project_id, group_name):
