@@ -4,6 +4,7 @@
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
+# Copyright 2013 IBM Corp.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -1343,6 +1344,10 @@ class NetworkManager(manager.Manager):
         instance = self.db.instance_get(context, instance_id)
         vifs = self.db.virtual_interface_get_by_instance(context,
                                                          instance['uuid'])
+        for vif in vifs:
+            if vif.get('network_id') is not None:
+                network = self._get_network_by_id(context, vif['network_id'])
+                vif['net_uuid'] = network['uuid']
         return [dict(vif.iteritems()) for vif in vifs]
 
     def get_instance_id_by_floating_address(self, context, address):
@@ -1393,8 +1398,12 @@ class NetworkManager(manager.Manager):
         """Returns the vifs record for the mac_address."""
         # NOTE(vish): This is no longer used but can't be removed until
         #             we major version the network_rpcapi to 2.0.
-        return self.db.virtual_interface_get_by_address(context,
+        vif = self.db.virtual_interface_get_by_address(context,
                                                         mac_address)
+        if vif.get('network_id') is not None:
+            network = self._get_network_by_id(context, vif['network_id'])
+            vif['net_uuid'] = network['uuid']
+        return vif
 
     @manager.periodic_task(
         spacing=CONF.dns_update_periodic_interval)

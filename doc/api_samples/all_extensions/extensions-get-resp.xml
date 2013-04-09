@@ -21,6 +21,9 @@
   <extension alias="OS-EXT-STS" updated="2011-11-03T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/extended_status/api/v1.1" name="ExtendedStatus">
     <description>Extended Status support.</description>
   </extension>
+  <extension alias="OS-EXT-VIF-NET" updated="2013-03-07T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/extended-virtual-interfaces-net/api/v1.1" name="ExtendedVIFNet">
+    <description>Adds network id parameter to the virtual interface list.</description>
+  </extension>
   <extension alias="OS-FLV-DISABLED" updated="2012-08-29T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/flavor_disabled/api/v1.1" name="FlavorDisabled">
     <description>Support to show the disabled status of a flavor.</description>
   </extension>

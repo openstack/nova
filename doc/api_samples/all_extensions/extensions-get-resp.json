@@ -57,6 +57,14 @@
             "updated": "2011-11-03T00:00:00+00:00"
         },
         {
+            "alias": "OS-EXT-VIF-NET",
+            "description": "Adds network id parameter to the virtual interface list.",
+            "links": [],
+            "name": "ExtendedVIFNet",
+            "namespace": "http://docs.openstack.org/compute/ext/extended-virtual-interfaces-net/api/v1.1",
+            "updated": "2013-03-07T00:00:00+00:00"
+        },
+        {
             "alias": "OS-FLV-DISABLED",
             "description": "Support to show the disabled status of a flavor.",
             "links": [],

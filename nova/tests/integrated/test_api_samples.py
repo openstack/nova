@@ -2356,6 +2356,36 @@ class ExtendedStatusSampleXmlTests(ExtendedStatusSampleJsonTests):
         ctype = 'xml'
 
 
+class ExtendedVIFNetSampleJsonTests(ServersSampleBase):
+    extension_name = ("nova.api.openstack.compute.contrib"
+          ".extended_virtual_interfaces_net.Extended_virtual_interfaces_net")
+
+    def _get_flags(self):
+        f = super(ExtendedVIFNetSampleJsonTests, self)._get_flags()
+        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
+        # extended_virtual_interfaces_net_update also
+        # needs virtual_interfaces to be loaded
+        f['osapi_compute_extension'].append(
+            ('nova.api.openstack.compute.contrib'
+             '.virtual_interfaces.Virtual_interfaces'))
+        return f
+
+    def test_vifs_list(self):
+        uuid = self._post_server()
+
+        response = self._do_get('servers/%s/os-virtual-interfaces' % uuid)
+        self.assertEqual(response.status, 200)
+
+        subs = self._get_regexes()
+        subs['mac_addr'] = '(?:[a-f0-9]{2}:){5}[a-f0-9]{2}'
+
+        self._verify_response('vifs-list-resp', subs, response, 200)
+
+
+class ExtendedVIFNetSampleXmlTests(ExtendedIpsSampleJsonTests):
+        ctype = 'xml'
+
+
 class FlavorManageSampleJsonTests(ApiSampleTestBase):
     extension_name = ("nova.api.openstack.compute.contrib.flavormanage."
                       "Flavormanage")
