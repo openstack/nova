@@ -18,6 +18,7 @@ from oslo.config import cfg
 from nova import conductor
 from nova import context
 from nova.openstack.common import log as logging
+from nova.openstack.common import loopingcall
 from nova.openstack.common import timeutils
 from nova.servicegroup import api
 from nova import utils
@@ -46,7 +47,8 @@ class DbDriver(api.ServiceGroupDriver):
                                  ' ServiceGroup driver'))
         report_interval = service.report_interval
         if report_interval:
-            pulse = utils.FixedIntervalLoopingCall(self._report_state, service)
+            pulse = loopingcall.FixedIntervalLoopingCall(self._report_state,
+                                                         service)
             pulse.start(interval=report_interval,
                         initial_delay=report_interval)
             return pulse

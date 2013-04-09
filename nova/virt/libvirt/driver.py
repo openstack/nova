@@ -75,6 +75,7 @@ from nova.openstack.common import fileutils
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
+from nova.openstack.common import loopingcall
 from nova.openstack.common.notifier import api as notifier
 from nova import utils
 from nova import version
@@ -734,12 +735,12 @@ class LibvirtDriver(driver.ComputeDriver):
             except exception.NotFound:
                 LOG.error(_("During wait destroy, instance disappeared."),
                           instance=instance)
-                raise utils.LoopingCallDone()
+                raise loopingcall.LoopingCallDone()
 
             if state == power_state.SHUTDOWN:
                 LOG.info(_("Instance destroyed successfully."),
                          instance=instance)
-                raise utils.LoopingCallDone()
+                raise loopingcall.LoopingCallDone()
 
             # NOTE(wangpan): If the instance was booted again after destroy,
             #                this may be a endless loop, so check the id of
@@ -750,10 +751,11 @@ class LibvirtDriver(driver.ComputeDriver):
                 LOG.info(_("Instance may be started again."),
                          instance=instance)
                 kwargs['is_running'] = True
-                raise utils.LoopingCallDone()
+                raise loopingcall.LoopingCallDone()
 
         kwargs = {'is_running': False}
-        timer = utils.FixedIntervalLoopingCall(_wait_for_destroy, old_domid)
+        timer = loopingcall.FixedIntervalLoopingCall(_wait_for_destroy,
+                                                     old_domid)
         timer.start(interval=0.5).wait()
         if kwargs['is_running']:
             LOG.info(_("Going to destroy instance again."), instance=instance)
@@ -1327,8 +1329,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 LOG.info(_("Instance shutdown successfully."),
                          instance=instance)
                 self._create_domain(domain=dom)
-                timer = utils.FixedIntervalLoopingCall(self._wait_for_running,
-                                                       instance)
+                timer = loopingcall.FixedIntervalLoopingCall(
+                    self._wait_for_running, instance)
                 timer.start(interval=0.5).wait()
                 return True
             elif old_domid != new_domid:
@@ -1382,9 +1384,9 @@ class LibvirtDriver(driver.ComputeDriver):
             if state == power_state.RUNNING:
                 LOG.info(_("Instance rebooted successfully."),
                          instance=instance)
-                raise utils.LoopingCallDone()
+                raise loopingcall.LoopingCallDone()
 
-        timer = utils.FixedIntervalLoopingCall(_wait_for_reboot)
+        timer = loopingcall.FixedIntervalLoopingCall(_wait_for_reboot)
         timer.start(interval=0.5).wait()
 
     def pause(self, instance):
@@ -1405,8 +1407,8 @@ class LibvirtDriver(driver.ComputeDriver):
         """Power on the specified instance."""
         dom = self._lookup_by_name(instance['name'])
         self._create_domain(domain=dom, instance=instance)
-        timer = utils.FixedIntervalLoopingCall(self._wait_for_running,
-                                               instance)
+        timer = loopingcall.FixedIntervalLoopingCall(self._wait_for_running,
+                                                     instance)
         timer.start(interval=0.5).wait()
 
     def suspend(self, instance):
@@ -1534,9 +1536,9 @@ class LibvirtDriver(driver.ComputeDriver):
             if state == power_state.RUNNING:
                 LOG.info(_("Instance spawned successfully."),
                          instance=instance)
-                raise utils.LoopingCallDone()
+                raise loopingcall.LoopingCallDone()
 
-        timer = utils.FixedIntervalLoopingCall(_wait_for_boot)
+        timer = loopingcall.FixedIntervalLoopingCall(_wait_for_boot)
         timer.start(interval=0.5).wait()
 
     def _flush_libvirt_console(self, pty):
@@ -3139,7 +3141,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 recover_method(ctxt, instance_ref, dest, block_migration)
 
         # Waiting for completion of live_migration.
-        timer = utils.FixedIntervalLoopingCall(f=None)
+        timer = loopingcall.FixedIntervalLoopingCall(f=None)
 
         def wait_for_live_migration():
             """waiting for live migration completion."""
@@ -3506,7 +3508,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         if state == power_state.RUNNING:
             LOG.info(_("Instance running successfully."), instance=instance)
-            raise utils.LoopingCallDone()
+            raise loopingcall.LoopingCallDone()
 
     def finish_migration(self, context, migration, instance, disk_info,
                          network_info, image_meta, resize_instance,
@@ -3562,8 +3564,8 @@ class LibvirtDriver(driver.ComputeDriver):
                           write_to_disk=True)
         self._create_domain_and_network(xml, instance, network_info,
                                         block_device_info)
-        timer = utils.FixedIntervalLoopingCall(self._wait_for_running,
-                                               instance)
+        timer = loopingcall.FixedIntervalLoopingCall(self._wait_for_running,
+                                                     instance)
         timer.start(interval=0.5).wait()
 
     def _cleanup_failed_migration(self, inst_base):
@@ -3596,8 +3598,8 @@ class LibvirtDriver(driver.ComputeDriver):
         self._create_domain_and_network(xml, instance, network_info,
                                         block_device_info)
 
-        timer = utils.FixedIntervalLoopingCall(self._wait_for_running,
-                                               instance)
+        timer = loopingcall.FixedIntervalLoopingCall(self._wait_for_running,
+                                                     instance)
         timer.start(interval=0.5).wait()
 
     def confirm_migration(self, migration, instance, network_info):

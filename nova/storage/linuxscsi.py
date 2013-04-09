@@ -18,6 +18,7 @@
 
 from nova import exception
 from nova.openstack.common import log as logging
+from nova.openstack.common import loopingcall
 from nova import utils
 
 LOG = logging.getLogger(__name__)
@@ -77,12 +78,13 @@ def _wait_for_remove(device, tries):
 
     devices = get_device_list()
     if device["device"] not in devices:
-        raise utils.LoopingCallDone()
+        raise loopingcall.LoopingCallDone()
 
 
 def remove_device(device):
     tries = 0
-    timer = utils.FixedIntervalLoopingCall(_wait_for_remove, device, tries)
+    timer = loopingcall.FixedIntervalLoopingCall(_wait_for_remove, device,
+                                                 tries)
     timer.start(interval=2).wait()
     timer.stop()
 
