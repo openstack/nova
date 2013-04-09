@@ -259,18 +259,41 @@ class CoverageController(object):
                 output.close()
         return {'path': path}
 
+    def _reset_coverage_telnet(self, tn):
+        tn.write("coverInst.erase()\n")
+        tn.write("print 'finished'\n")
+        tn.expect([re.compile('finished')])
+
+    def _reset_coverage(self, req):
+        # Reopen telnet connections if they are closed.
+        for service in self.services:
+            if not service['telnet'].get_socket():
+                service['telnet'].open(service['host'], service['port'])
+
+        # Stop coverage if it is started.
+        try:
+            self._stop_coverage(req)
+        except exc.HTTPNotFound:
+            pass
+
+        for service in self.services:
+            self._reset_coverage_telnet(service['telnet'])
+            service['telnet'].close()
+        self.coverInst.erase()
+
     def action(self, req, body):
         _actions = {
                 'start': self._start_coverage,
                 'stop': self._stop_coverage,
                 'report': self._report_coverage,
+                'reset': self._reset_coverage,
         }
         authorize(req.environ['nova.context'])
         if not self.coverInst:
             msg = _("Python coverage module is not installed.")
             raise exc.HTTPServiceUnavailable(explanation=msg)
         for action, data in body.iteritems():
-            if action == 'stop':
+            if action == 'stop' or action == 'reset':
                 return _actions[action](req)
             elif action == 'report' or action == 'start':
                 return _actions[action](req, body)
