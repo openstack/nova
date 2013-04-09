@@ -56,7 +56,7 @@ class ChanceScheduler(driver.Scheduler):
             msg = _("Could not find another compute")
             raise exception.NoValidHost(reason=msg)
 
-        return hosts[int(random.random() * len(hosts))]
+        return random.choice(hosts)
 
     def select_hosts(self, context, request_spec, filter_properties):
         """Selects a set of random hosts."""

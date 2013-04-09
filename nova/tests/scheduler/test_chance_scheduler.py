@@ -82,15 +82,15 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         self.mox.StubOutWithMock(ctxt, 'elevated')
         self.mox.StubOutWithMock(self.driver, 'hosts_up')
-        self.mox.StubOutWithMock(random, 'random')
+        self.mox.StubOutWithMock(random, 'choice')
         self.mox.StubOutWithMock(driver, 'instance_update_db')
         self.mox.StubOutWithMock(compute_rpcapi.ComputeAPI, 'run_instance')
 
         ctxt.elevated().AndReturn(ctxt_elevated)
         # instance 1
-        self.driver.hosts_up(ctxt_elevated, 'compute').AndReturn(
-                ['host1', 'host2', 'host3', 'host4'])
-        random.random().AndReturn(.5)
+        hosts_full = ['host1', 'host2', 'host3', 'host4']
+        self.driver.hosts_up(ctxt_elevated, 'compute').AndReturn(hosts_full)
+        random.choice(hosts_full).AndReturn('host3')
         driver.instance_update_db(ctxt, instance1['uuid']).WithSideEffects(
                 inc_launch_index).AndReturn(instance1)
         compute_rpcapi.ComputeAPI.run_instance(ctxt, host='host3',
@@ -100,9 +100,8 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         # instance 2
         ctxt.elevated().AndReturn(ctxt_elevated)
-        self.driver.hosts_up(ctxt_elevated, 'compute').AndReturn(
-                ['host1', 'host2', 'host3', 'host4'])
-        random.random().AndReturn(.2)
+        self.driver.hosts_up(ctxt_elevated, 'compute').AndReturn(hosts_full)
+        random.choice(hosts_full).AndReturn('host1')
         driver.instance_update_db(ctxt, instance2['uuid']).WithSideEffects(
                 inc_launch_index).AndReturn(instance2)
         compute_rpcapi.ComputeAPI.run_instance(ctxt, host='host1',
@@ -178,19 +177,19 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         self.mox.StubOutWithMock(ctxt, 'elevated')
         self.mox.StubOutWithMock(self.driver, 'hosts_up')
-        self.mox.StubOutWithMock(random, 'random')
+        self.mox.StubOutWithMock(random, 'choice')
 
         ctxt.elevated().AndReturn(ctxt_elevated)
+
         # instance 1
-        self.driver.hosts_up(ctxt_elevated, 'compute').AndReturn(
-            ['host1', 'host2', 'host3', 'host4'])
-        random.random().AndReturn(.5)
+        hosts_full = ['host1', 'host2', 'host3', 'host4']
+        self.driver.hosts_up(ctxt_elevated, 'compute').AndReturn(hosts_full)
+        random.choice(hosts_full).AndReturn('host3')
 
         # instance 2
         ctxt.elevated().AndReturn(ctxt_elevated)
-        self.driver.hosts_up(ctxt_elevated, 'compute').AndReturn(
-            ['host1', 'host2', 'host3', 'host4'])
-        random.random().AndReturn(.2)
+        self.driver.hosts_up(ctxt_elevated, 'compute').AndReturn(hosts_full)
+        random.choice(hosts_full).AndReturn('host1')
 
         self.mox.ReplayAll()
         hosts = self.driver.select_hosts(ctxt, request_spec, {})
