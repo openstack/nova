@@ -87,7 +87,7 @@ def make_partitions(dev, root_mb, swap_mb):
     # we lose the space.
     # http://bazaar.launchpad.net/~ubuntu-branches/ubuntu/raring/util-linux/
     # raring/view/head:/fdisk/sfdisk.c#L1940
-    stdin_command = ('1 %d 83;\n- %d 82;\n0 0;\n0 0;\n' % (root_mb, swap_mb))
+    stdin_command = ('1,%d,83;\n,%d,82;\n0,0;\n0,0;\n' % (root_mb, swap_mb))
     utils.execute('sfdisk', '-uM', dev, process_input=stdin_command,
             run_as_root=True,
             check_exit_code=[0])
