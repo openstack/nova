@@ -533,6 +533,13 @@ class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
         self._set_connection()
         stdout, stderr = utils.ssh_execute(self._connection, cmd,
                                            check_exit_code=check_exit_code)
+
+        error_text = stderr.strip()
+        if error_text:
+            LOG.debug(
+                _("Found error stream for command \"%(cmd)s\": %(error_text)s")
+                % locals())
+
         return stdout.strip().splitlines()
 
     def run_vios_command_as_root(self, command, check_exit_code=True):
@@ -543,4 +550,11 @@ class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
         self._set_connection()
         stdout, stderr = common.ssh_command_as_root(
             self._connection, command, check_exit_code=check_exit_code)
+
+        error_text = stderr.read()
+        if error_text:
+            LOG.debug(
+                _("Found error stream for command \"%(command)s\":"
+                  " %(error_text)s") % locals())
+
         return stdout.read().splitlines()
