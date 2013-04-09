@@ -129,6 +129,7 @@ class TestQuantumv2(test.TestCase):
 
     def setUp(self):
         super(TestQuantumv2, self).setUp()
+        self.addCleanup(CONF.reset)
         self.mox.StubOutWithMock(quantumv2, 'get_client')
         self.moxed_client = self.mox.CreateMock(client.Client)
         quantumv2.get_client(mox.IgnoreArg()).MultipleTimes().AndReturn(
@@ -238,13 +239,9 @@ class TestQuantumv2(test.TestCase):
                                'fixed_ip_address': fixed_ip_address,
                                'router_id': 'router_id1'}
         self._returned_nw_info = []
-
-    def tearDown(self):
-        self.addCleanup(CONF.reset)
-        self.addCleanup(self.mox.VerifyAll)
-        self.addCleanup(self.mox.UnsetStubs)
         self.addCleanup(self.stubs.UnsetAll)
-        super(TestQuantumv2, self).tearDown()
+        self.addCleanup(self.mox.UnsetStubs)
+        self.addCleanup(self.mox.VerifyAll)
 
     def _verify_nw_info(self, nw_inf, index=0):
         id_suffix = index + 1
