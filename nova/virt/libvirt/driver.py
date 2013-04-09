@@ -2826,6 +2826,25 @@ class LibvirtDriver(driver.ComputeDriver):
                'disk_available_least': _get_disk_available_least()}
         return dic
 
+    def check_instance_shared_storage_local(self, ctxt, instance):
+        dirpath = libvirt_utils.get_instance_path(instance)
+
+        if not os.path.exists(dirpath):
+            return None
+
+        fd, tmp_file = tempfile.mkstemp(dir=dirpath)
+        LOG.debug(_("Creating tmpfile %s to verify with other "
+                    "compute node that the instance is on "
+                    "the same shared storage.") % tmp_file)
+        os.close(fd)
+        return {"filename": tmp_file}
+
+    def check_instance_shared_storage_remote(self, ctxt, data):
+        return os.path.exists(data['filename'])
+
+    def check_instance_shared_storage_cleanup(self, ctxt, data):
+        utils.delete_if_exists(data["filename"])
+
     def check_can_live_migrate_destination(self, ctxt, instance_ref,
                                            src_compute_info, dst_compute_info,
                                            block_migration=False,
