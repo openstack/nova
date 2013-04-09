@@ -2107,10 +2107,6 @@ class API(base.Base):
         """Retrieve diagnostics for the given instance."""
         return self.compute_rpcapi.get_diagnostics(context, instance=instance)
 
-    def get_backdoor_port(self, context, host_name):
-        """Retrieve backdoor port."""
-        return self.compute_rpcapi.get_backdoor_port(context, host_name)
-
     @wrap_check_policy
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.RESCUED])

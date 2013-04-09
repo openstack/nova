@@ -186,13 +186,3 @@ class ConsoleAPITestCase(test.TestCase):
         self.mox.ReplayAll()
 
         self.console_api.create_console(self.context, self.fake_uuid)
-
-    def test_get_backdoor_port(self):
-        self.mox.StubOutWithMock(console_rpcapi.ConsoleAPI,
-                                 'get_backdoor_port')
-
-        console_rpcapi.ConsoleAPI.get_backdoor_port(self.context, 'fake_host')
-
-        self.mox.ReplayAll()
-
-        self.console_api.get_backdoor_port(self.context, 'fake_host')

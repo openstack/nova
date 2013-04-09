@@ -122,5 +122,7 @@ class ConsoleAuthManager(manager.Manager):
             self.mc.delete(token)
         self.mc.delete(instance_uuid.encode('UTF-8'))
 
+    # NOTE(russellb) This method can be removed in 2.0 of this API.  It is
+    # deprecated in favor of the method in the base API.
     def get_backdoor_port(self, context):
         return self.backdoor_port

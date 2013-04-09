@@ -37,9 +37,6 @@ class CertRpcAPITestCase(test.TestCase):
         expected_msg = rpcapi.make_msg(method, **kwargs)
         expected_msg['version'] = expected_version
 
-        if method == 'get_backdoor_port':
-            del expected_msg['args']['host']
-
         self.call_ctxt = None
         self.call_topic = None
         self.call_msg = None
@@ -88,7 +85,3 @@ class CertRpcAPITestCase(test.TestCase):
     def test_decrypt_text(self):
         self._test_cert_api('decrypt_text',
                             project_id='fake_project_id', text='blah')
-
-    def test_get_backdoor_port(self):
-        self._test_cert_api('get_backdoor_port', host='fake_host',
-                            version='1.1')

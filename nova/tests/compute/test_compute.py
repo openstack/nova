@@ -6822,24 +6822,6 @@ class ComputeAPITestCase(BaseTestCase):
 
         db.instance_destroy(self.context, instance['uuid'])
 
-    def test_get_backdoor_port(self):
-        # Test api call to get backdoor_port.
-        fake_backdoor_port = 59697
-
-        self.mox.StubOutWithMock(rpc, 'call')
-
-        rpc_msg = {'method': 'get_backdoor_port',
-                   'namespace': None,
-                   'args': {},
-                   'version': compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION}
-        rpc.call(self.context, 'compute.fake_host', rpc_msg,
-                 None).AndReturn(fake_backdoor_port)
-
-        self.mox.ReplayAll()
-
-        port = self.compute_api.get_backdoor_port(self.context, 'fake_host')
-        self.assertEqual(port, fake_backdoor_port)
-
     def test_console_output(self):
         fake_instance = {'uuid': 'fake_uuid',
                          'host': 'fake_compute_host'}
@@ -7527,19 +7509,6 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         self.assertRaises(exception.ComputeHostNotFound,
                           self.api.remove_host_from_aggregate,
                           self.context, aggr['id'], 'invalid_host')
-
-
-class ComputeBackdoorPortTestCase(BaseTestCase):
-    """This is for unit test coverage of backdoor port rpc."""
-
-    def setUp(self):
-        super(ComputeBackdoorPortTestCase, self).setUp()
-        self.context = context.get_admin_context()
-        self.compute.backdoor_port = 59697
-
-    def test_get_backdoor_port(self):
-        port = self.compute.get_backdoor_port(self.context)
-        self.assertEqual(port, self.compute.backdoor_port)
 
 
 class ComputeAggrTestCase(BaseTestCase):

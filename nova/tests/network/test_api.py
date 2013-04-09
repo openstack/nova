@@ -255,15 +255,3 @@ class ApiTestCase(test.TestCase):
         instance = {'uuid': FAKE_UUID}
         result = self.network_api._is_multi_host(self.context, instance)
         self.assertEqual(is_multi_host, result)
-
-    def test_get_backdoor_port(self):
-        backdoor_port = 59697
-
-        def fake_get_backdoor_port(ctxt, host):
-            return backdoor_port
-
-        self.stubs.Set(self.network_api.network_rpcapi, 'get_backdoor_port',
-                       fake_get_backdoor_port)
-
-        port = self.network_api.get_backdoor_port(self.context, 'fake_host')
-        self.assertEqual(port, backdoor_port)

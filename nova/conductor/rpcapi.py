@@ -199,10 +199,6 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                             last_refreshed=last_refreshed)
         return self.call(context, msg, version='1.5')
 
-    def get_backdoor_port(self, context):
-        msg = self.make_msg('get_backdoor_port')
-        return self.call(context, msg, version='1.6')
-
     def security_group_get_by_instance(self, context, instance):
         instance_p = jsonutils.to_primitive(instance)
         msg = self.make_msg('security_group_get_by_instance',

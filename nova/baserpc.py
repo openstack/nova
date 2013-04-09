@@ -19,6 +19,7 @@ Base RPC client and server common to all services.
 """
 
 from nova.openstack.common import jsonutils
+from nova.openstack.common import rpc
 import nova.openstack.common.rpc.proxy as rpc_proxy
 
 
@@ -31,6 +32,7 @@ class BaseAPI(rpc_proxy.RpcProxy):
     API version history:
 
         1.0 - Initial version.
+        1.1 - Add get_backdoor_port
     """
 
     #
@@ -53,16 +55,26 @@ class BaseAPI(rpc_proxy.RpcProxy):
         msg = self.make_namespaced_msg('ping', self.namespace, arg=arg_p)
         return self.call(context, msg, timeout=timeout)
 
+    def get_backdoor_port(self, context, host):
+        msg = self.make_namespaced_msg('get_backdoor_port', self.namespace)
+        return self.call(context, msg,
+                         topic=rpc.queue_get_for(context, self.topic, host),
+                         version='1.1')
+
 
 class BaseRPCAPI(object):
     """Server side of the base RPC API."""
 
     RPC_API_NAMESPACE = _NAMESPACE
-    RPC_API_VERSION = '1.0'
+    RPC_API_VERSION = '1.1'
 
-    def __init__(self, service_name):
+    def __init__(self, service_name, backdoor_port):
         self.service_name = service_name
+        self.backdoor_port = backdoor_port
 
     def ping(self, context, arg):
         resp = {'service': self.service_name, 'arg': arg}
         return jsonutils.to_primitive(resp)
+
+    def get_backdoor_port(self, context):
+        return self.backdoor_port

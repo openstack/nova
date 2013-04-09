@@ -209,13 +209,13 @@ class Manager(base.Base):
         pluginmgr = pluginmanager.PluginManager('nova', self.__class__)
         pluginmgr.load_plugins()
 
-    def create_rpc_dispatcher(self):
+    def create_rpc_dispatcher(self, backdoor_port=None):
         '''Get the rpc dispatcher for this manager.
 
         If a manager would like to set an rpc API version, or support more than
         one class as the target of rpc messages, override this method.
         '''
-        base_rpc = baserpc.BaseRPCAPI(self.service_name)
+        base_rpc = baserpc.BaseRPCAPI(self.service_name, backdoor_port)
         return rpc_dispatcher.RpcDispatcher([self, base_rpc])
 
     def periodic_tasks(self, context, raise_on_error=False):

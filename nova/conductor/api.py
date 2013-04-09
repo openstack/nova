@@ -19,7 +19,6 @@ from oslo.config import cfg
 from nova import baserpc
 from nova.conductor import manager
 from nova.conductor import rpcapi
-from nova import exception as exc
 from nova.openstack.common import log as logging
 from nova.openstack.common.rpc import common as rpc_common
 from nova import utils
@@ -174,9 +173,6 @@ class LocalAPI(object):
                                              bw_in, bw_out,
                                              last_ctr_in, last_ctr_out,
                                              last_refreshed)
-
-    def get_backdoor_port(self, context, host):
-        raise exc.InvalidRequest
 
     def security_group_get_by_instance(self, context, instance):
         return self._manager.security_group_get_by_instance(context, instance)
@@ -509,12 +505,6 @@ class API(object):
             context, uuid, mac, start_period,
             bw_in, bw_out, last_ctr_in, last_ctr_out,
             last_refreshed)
-
-    #NOTE(mtreinish): This doesn't work on multiple conductors without any
-    # topic calculation in conductor_rpcapi. So the host param isn't used
-    # currently.
-    def get_backdoor_port(self, context, host):
-        return self.conductor_rpcapi.get_backdoor_port(context)
 
     def security_group_get_by_instance(self, context, instance):
         return self.conductor_rpcapi.security_group_get_by_instance(context,

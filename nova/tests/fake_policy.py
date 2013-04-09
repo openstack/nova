@@ -228,7 +228,6 @@ policy_data = """
     "network:get_instance_uuids_by_ip_filter": "",
     "network:get_instance_id_by_floating_address": "",
     "network:setup_networks_on_host": "",
-    "network:get_backdoor_port": "",
 
     "network:get_floating_ip": "",
     "network:get_floating_ip_pools": "",

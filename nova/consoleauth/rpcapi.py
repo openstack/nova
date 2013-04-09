@@ -71,7 +71,3 @@ class ConsoleAuthAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 self.make_msg('delete_tokens_for_instance',
                               instance_uuid=instance_uuid),
                 version="1.2")
-
-    def get_backdoor_port(self, ctxt, host):
-        return self.call(ctxt, self.make_msg('get_backdoor_port'),
-                         version='1.1')

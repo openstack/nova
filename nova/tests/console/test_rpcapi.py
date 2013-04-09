@@ -37,9 +37,6 @@ class ConsoleRpcAPITestCase(test.TestCase):
         expected_msg = rpcapi.make_msg(method, **kwargs)
         expected_msg['version'] = expected_version
 
-        if method == 'get_backdoor_port':
-            del expected_msg['args']['host']
-
         self.fake_args = None
         self.fake_kwargs = None
 
@@ -65,7 +62,3 @@ class ConsoleRpcAPITestCase(test.TestCase):
     def test_remove_console(self):
         self._test_console_api('remove_console', console_id='i',
                                rpc_method='cast')
-
-    def test_get_backdoor_port(self):
-        self._test_console_api('get_backdoor_port', host='fake_host',
-                               rpc_method='call', version='1.1')

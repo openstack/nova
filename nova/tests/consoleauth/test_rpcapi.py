@@ -38,9 +38,6 @@ class ConsoleAuthRpcAPITestCase(test.TestCase):
         expected_msg = rpcapi.make_msg(method, **kwargs)
         expected_msg['version'] = expected_version
 
-        if method == 'get_backdoor_port':
-            del expected_msg['args']['host']
-
         self.call_ctxt = None
         self.call_topic = None
         self.call_msg = None
@@ -81,7 +78,3 @@ class ConsoleAuthRpcAPITestCase(test.TestCase):
                                    _do_cast=True,
                                    instance_uuid="instance",
                                    version='1.2')
-
-    def test_get_backdoor_port(self):
-        self._test_consoleauth_api('get_backdoor_port', host='fake_host',
-                                   version='1.1')

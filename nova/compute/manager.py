@@ -650,6 +650,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         except exception.NotFound:
             return power_state.NOSTATE
 
+    # NOTE(russellb) This method can be removed in 3.0 of this API.  It is
+    # deprecated in favor of the method in the base API.
     def get_backdoor_port(self, context):
         """Return backdoor port for eventlet_backdoor."""
         return self.backdoor_port

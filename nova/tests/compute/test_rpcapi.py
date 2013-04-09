@@ -189,9 +189,6 @@ class ComputeRpcAPITestCase(test.TestCase):
         self._test_compute_api('host_power_action', 'call', action='action',
                 host='host')
 
-    def test_get_backdoor_port(self):
-        self._test_compute_api('get_backdoor_port', 'call', host='host')
-
     def test_inject_file(self):
         self._test_compute_api('inject_file', 'cast',
                 instance=self.fake_instance, path='path', file_contents='fc')

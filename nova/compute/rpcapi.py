@@ -620,10 +620,6 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 instance=instance_p),
                 topic=_compute_topic(self.topic, ctxt, None, instance))
 
-    def get_backdoor_port(self, ctxt, host):
-        return self.call(ctxt, self.make_msg('get_backdoor_port'),
-                         topic=_compute_topic(self.topic, ctxt, host, None))
-
     def publish_service_capabilities(self, ctxt):
         self.fanout_cast(ctxt, self.make_msg('publish_service_capabilities'))
 
