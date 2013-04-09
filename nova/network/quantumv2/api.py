@@ -129,8 +129,9 @@ class API(base.Base):
     def allocate_for_instance(self, context, instance, **kwargs):
         """Allocate network resources for the instance.
 
-        TODO(someone): document the rest of these parameters.
-
+        :param requested_networks: optional value containing
+            network_id, fixed_ip, and port_id
+        :param security_groups: security groups to allocate for instance
         :param macs: None or a set of MAC addresses that the instance
             should use. macs is supplied by the hypervisor driver (contrast
             with requested_networks which is user supplied).
@@ -293,6 +294,7 @@ class API(base.Base):
                                                            touched_port_ids])
 
     def _refresh_quantum_extensions_cache(self):
+        """Refresh the quantum extensions cache when necessary."""
         if (not self.last_quantum_extension_sync or
             ((time.time() - self.last_quantum_extension_sync)
              >= CONF.quantum_extension_sync_interval)):
@@ -304,6 +306,10 @@ class API(base.Base):
                                    for ext in extensions_list)
 
     def _populate_quantum_extension_values(self, instance, port_req_body):
+        """Populate quantum extension values for the instance.
+
+        If the extension contains nvp-qos then get the rxtx_factor.
+        """
         self._refresh_quantum_extensions_cache()
         if 'nvp-qos' in self.extensions:
             instance_type = instance_types.extract_instance_type(instance)
@@ -330,6 +336,7 @@ class API(base.Base):
     def allocate_port_for_instance(self, context, instance, port_id,
                                    network_id=None, requested_ip=None,
                                    conductor_api=None):
+        """Allocate a port for the instance."""
         return self.allocate_for_instance(context, instance,
                 requested_networks=[(network_id, requested_ip, port_id)],
                 conductor_api=conductor_api)
@@ -337,6 +344,10 @@ class API(base.Base):
     @refresh_cache
     def deallocate_port_for_instance(self, context, instance, port_id,
                                      conductor_api=None):
+        """Remove a specified port from the instance.
+
+        Return network information for the instance
+        """
         try:
             quantumv2.get_client(context).delete_port(port_id)
         except Exception as ex:
@@ -349,13 +360,18 @@ class API(base.Base):
         return self._get_instance_nw_info(context, instance)
 
     def list_ports(self, context, **search_opts):
+        """List ports for the client based on search options."""
         return quantumv2.get_client(context).list_ports(**search_opts)
 
     def show_port(self, context, port_id):
+        """Return the port for the client given the port id."""
         return quantumv2.get_client(context).show_port(port_id)
 
     def get_instance_nw_info(self, context, instance, conductor_api=None,
                              networks=None):
+        """Return network information for specified instance
+           and update cache.
+        """
         result = self._get_instance_nw_info(context, instance, networks)
         update_instance_info_cache(self, context, instance, result,
                                    conductor_api)
@@ -493,6 +509,7 @@ class API(base.Base):
 
     def trigger_instance_add_security_group_refresh(self, context,
                                                     instance_ref):
+        """Refresh and add security groups given an instance reference."""
         admin_context = context.elevated()
         for group in instance_ref['security_groups']:
             self.conductor_api.security_groups_trigger_handler(context,
@@ -500,13 +517,14 @@ class API(base.Base):
 
     def trigger_instance_remove_security_group_refresh(self, context,
                                                        instance_ref):
+        """Refresh and remove security groups given an instance reference."""
         admin_context = context.elevated()
         for group in instance_ref['security_groups']:
             self.conductor_api.security_groups_trigger_handler(context,
                 'instance_remove_security_group', instance_ref, group['name'])
 
     def trigger_security_group_members_refresh(self, context, instance_ref):
-
+        """Refresh security group members."""
         admin_context = context.elevated()
         group_ids = [group['id'] for group in instance_ref['security_groups']]
 
@@ -517,6 +535,7 @@ class API(base.Base):
 
     def _get_port_id_by_fixed_address(self, client,
                                       instance, address):
+        """Return port_id from a fixed address."""
         zone = 'compute:%s' % instance['availability_zone']
         search_opts = {'device_id': instance['uuid'],
                        'device_owner': zone}
@@ -551,6 +570,7 @@ class API(base.Base):
         client.update_floatingip(fip['id'], {'floatingip': param})
 
     def get_all(self, context):
+        """Get all networks for client."""
         client = quantumv2.get_client(context)
         networks = client.list_networks().get('networks') or {}
         for network in networks:
@@ -558,21 +578,26 @@ class API(base.Base):
         return networks
 
     def get(self, context, network_uuid):
+        """Get specific network for client."""
         client = quantumv2.get_client(context)
         network = client.show_network(network_uuid).get('network') or {}
         network['label'] = network['name']
         return network
 
     def delete(self, context, network_uuid):
+        """Delete a network for client."""
         raise NotImplementedError()
 
     def disassociate(self, context, network_uuid):
+        """Disassociate a network for client."""
         raise NotImplementedError()
 
     def get_fixed_ip(self, context, id):
+        """Get a fixed ip from the id."""
         raise NotImplementedError()
 
     def get_fixed_ip_by_address(self, context, address):
+        """Return instance uuids given an address."""
         uuid_maps = self._get_instance_uuids_by_ip(context, address)
         if len(uuid_maps) == 1:
             return uuid_maps[0]
@@ -604,6 +629,7 @@ class API(base.Base):
         return dict([(p['id'], p) for p in ports])
 
     def get_floating_ip(self, context, id):
+        """Return floating ip object given the floating ip id."""
         client = quantumv2.get_client(context)
         fip = client.show_floatingip(id)['floatingip']
         pool_dict = self._setup_net_dict(client,
@@ -619,6 +645,7 @@ class API(base.Base):
         return data['networks']
 
     def get_floating_ip_pools(self, context):
+        """Return floating ip pools."""
         client = quantumv2.get_client(context)
         pools = self._get_floating_ip_pools(client)
         return [{'name': n['name'] or n['id']} for n in pools]
@@ -643,6 +670,7 @@ class API(base.Base):
         return result
 
     def get_floating_ip_by_address(self, context, address):
+        """Return a floating ip given an address."""
         client = quantumv2.get_client(context)
         fip = self._get_floating_ip_by_address(client, address)
         pool_dict = self._setup_net_dict(client,
@@ -663,7 +691,7 @@ class API(base.Base):
         return []
 
     def get_instance_id_by_floating_address(self, context, address):
-        """Returns the instance id a floating ip's fixed ip is allocated to."""
+        """Return the instance id a floating ip's fixed ip is allocated to."""
         client = quantumv2.get_client(context)
         fip = self._get_floating_ip_by_address(client, address)
         if not fip['port_id']:
