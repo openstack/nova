@@ -324,7 +324,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '2.27'
+    RPC_API_VERSION = '2.28'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -440,14 +440,14 @@ class ComputeManager(manager.SchedulerDependentManager):
                            '%(instance_host)s) is not equal to our '
                            'host (%(our_host)s).'),
                          locals(), instance=instance)
-                # TODO(deva): detect if instance's disk is shared or local,
-                #             and destroy if it is local.
                 destroy_disks = False
                 try:
                     network_info = self._get_instance_nw_info(context,
                                                               instance)
                     bdi = self._get_instance_volume_block_device_info(context,
                                                                       instance)
+                    destroy_disks = not (self._is_instance_storage_shared(
+                                                            context, instance))
                 except exception.InstanceNotFound:
                     network_info = network_model.NetworkInfo()
                     bdi = {}
@@ -459,6 +459,32 @@ class ComputeManager(manager.SchedulerDependentManager):
                 self.driver.destroy(instance,
                                     self._legacy_nw_info(network_info),
                                     bdi, destroy_disks)
+
+    def _is_instance_storage_shared(self, context, instance):
+        shared_storage = True
+        data = None
+        try:
+            data = self.driver.check_instance_shared_storage_local(context,
+                                                       instance)
+            if data:
+                shared_storage = (self.compute_rpcapi.
+                                  check_instance_shared_storage(context,
+                                  instance,
+                                  data))
+        except NotImplementedError:
+            LOG.warning(_('Hypervisor driver does not support '
+                          'instance shared storage check, '
+                          'assuming it\'s not on shared storage'),
+                        instance=instance)
+            shared_storage = False
+        except Exception as e:
+            LOG.exception(_('Failed to check if instance shared'),
+                      instance=instance)
+        finally:
+            if data:
+                self.driver.check_instance_shared_storage_cleanup(context,
+                                                                  data)
+        return shared_storage
 
     def _init_instance(self, context, instance):
         '''Initialize this instance during service init.'''
@@ -3034,6 +3060,18 @@ class ComputeManager(manager.SchedulerDependentManager):
             return compute_node_ref['compute_node'][0]
         except IndexError:
             raise exception.NotFound(_("Host %(host)s not found") % locals())
+
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    def check_instance_shared_storage(self, ctxt, data):
+        """Check if the instance files are shared
+
+        :param context: security context
+        :param data: result of driver.check_instance_shared_storage_local
+
+        Returns True if instance disks located on shared storage and
+        False otherwise.
+        """
+        return self.driver.check_instance_shared_storage_remote(ctxt, data)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def check_can_live_migrate_destination(self, ctxt, instance,

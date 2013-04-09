@@ -3833,7 +3833,7 @@ class ComputeTestCase(BaseTestCase):
         instance = self._create_fake_instance(params)
         self.compute._instance_update(self.context, instance['uuid'])
 
-    def test_destroy_evacuated_instances(self):
+    def test_destroy_evacuated_instance_on_shared_storage(self):
         fake_context = context.get_admin_context()
 
         # instances in central db
@@ -3858,6 +3858,8 @@ class ComputeTestCase(BaseTestCase):
                                  '_get_instance_nw_info')
         self.mox.StubOutWithMock(self.compute,
                                  '_get_instance_volume_block_device_info')
+        self.mox.StubOutWithMock(self.compute,
+                                 '_is_instance_storage_shared')
         self.mox.StubOutWithMock(self.compute, '_legacy_nw_info')
         self.mox.StubOutWithMock(self.compute.driver, 'destroy')
 
@@ -3868,12 +3870,125 @@ class ComputeTestCase(BaseTestCase):
                                                    'fake_network_info')
         self.compute._get_instance_volume_block_device_info(
                 fake_context, evacuated_instance).AndReturn('fake_bdi')
+        self.compute._is_instance_storage_shared(fake_context,
+                        evacuated_instance).AndReturn(True)
         self.compute._legacy_nw_info('fake_network_info').AndReturn(
                 'fake_legacy_network_info')
         self.compute.driver.destroy(evacuated_instance,
                                     'fake_legacy_network_info',
                                     'fake_bdi',
                                     False)
+
+        self.mox.ReplayAll()
+        self.compute._destroy_evacuated_instances(fake_context)
+
+    def test_destroy_evacuated_instance_with_disks(self):
+        fake_context = context.get_admin_context()
+
+        # instances in central db
+        instances = [
+            # those are still related to this host
+            jsonutils.to_primitive(self._create_fake_instance(
+                                                {'host': self.compute.host})),
+            jsonutils.to_primitive(self._create_fake_instance(
+                                                {'host': self.compute.host})),
+            jsonutils.to_primitive(self._create_fake_instance(
+                                                {'host': self.compute.host}))
+        ]
+
+        # those are already been evacuated to other host
+        evacuated_instance = self._create_fake_instance({'host': 'otherhost'})
+
+        instances.append(evacuated_instance)
+
+        self.mox.StubOutWithMock(self.compute,
+                                 '_get_instances_on_driver')
+        self.mox.StubOutWithMock(self.compute,
+                                 '_get_instance_nw_info')
+        self.mox.StubOutWithMock(self.compute,
+                                 '_get_instance_volume_block_device_info')
+        self.mox.StubOutWithMock(self.compute.driver,
+                                 'check_instance_shared_storage_local')
+        self.mox.StubOutWithMock(self.compute.compute_rpcapi,
+                                 'check_instance_shared_storage')
+        self.mox.StubOutWithMock(self.compute.driver,
+                                 'check_instance_shared_storage_cleanup')
+        self.mox.StubOutWithMock(self.compute, '_legacy_nw_info')
+        self.mox.StubOutWithMock(self.compute.driver, 'destroy')
+
+        self.compute._get_instances_on_driver(fake_context).AndReturn(
+                instances)
+        self.compute._get_instance_nw_info(fake_context,
+                                           evacuated_instance).AndReturn(
+                                                   'fake_network_info')
+        self.compute._get_instance_volume_block_device_info(
+                fake_context, evacuated_instance).AndReturn('fake_bdi')
+        self.compute.driver.check_instance_shared_storage_local(fake_context,
+                evacuated_instance).AndReturn({'filename': 'tmpfilename'})
+        self.compute.compute_rpcapi.check_instance_shared_storage(fake_context,
+                evacuated_instance,
+                {'filename': 'tmpfilename'}).AndReturn(False)
+        self.compute.driver.check_instance_shared_storage_cleanup(fake_context,
+                {'filename': 'tmpfilename'})
+        self.compute._legacy_nw_info('fake_network_info').AndReturn(
+                'fake_legacy_network_info')
+        self.compute.driver.destroy(evacuated_instance,
+                                    'fake_legacy_network_info',
+                                    'fake_bdi',
+                                    True)
+
+        self.mox.ReplayAll()
+        self.compute._destroy_evacuated_instances(fake_context)
+
+    def test_destroy_evacuated_instance_not_implemented(self):
+        fake_context = context.get_admin_context()
+
+        # instances in central db
+        instances = [
+            # those are still related to this host
+            jsonutils.to_primitive(self._create_fake_instance(
+                                                {'host': self.compute.host})),
+            jsonutils.to_primitive(self._create_fake_instance(
+                                                {'host': self.compute.host})),
+            jsonutils.to_primitive(self._create_fake_instance(
+                                                {'host': self.compute.host}))
+        ]
+
+        # those are already been evacuated to other host
+        evacuated_instance = self._create_fake_instance({'host': 'otherhost'})
+
+        instances.append(evacuated_instance)
+
+        self.mox.StubOutWithMock(self.compute,
+                                 '_get_instances_on_driver')
+        self.mox.StubOutWithMock(self.compute,
+                                 '_get_instance_nw_info')
+        self.mox.StubOutWithMock(self.compute,
+                                 '_get_instance_volume_block_device_info')
+        self.mox.StubOutWithMock(self.compute.driver,
+                                 'check_instance_shared_storage_local')
+        self.mox.StubOutWithMock(self.compute.compute_rpcapi,
+                                 'check_instance_shared_storage')
+        self.mox.StubOutWithMock(self.compute.driver,
+                                 'check_instance_shared_storage_cleanup')
+        self.mox.StubOutWithMock(self.compute, '_legacy_nw_info')
+        self.mox.StubOutWithMock(self.compute.driver, 'destroy')
+
+        self.compute._get_instances_on_driver(fake_context).AndReturn(
+                instances)
+        self.compute._get_instance_nw_info(fake_context,
+                                           evacuated_instance).AndReturn(
+                                                   'fake_network_info')
+        self.compute._get_instance_volume_block_device_info(
+                fake_context, evacuated_instance).AndReturn('fake_bdi')
+        self.compute.driver.check_instance_shared_storage_local(fake_context,
+                evacuated_instance).AndRaise(NotImplementedError())
+        self.compute._legacy_nw_info('fake_network_info').AndReturn(
+                'fake_legacy_network_info')
+        self.compute.driver.destroy(evacuated_instance,
+                                    'fake_legacy_network_info',
+                                    'fake_bdi',
+                                    True)
 
         self.mox.ReplayAll()
         self.compute._destroy_evacuated_instances(fake_context)

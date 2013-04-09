@@ -165,6 +165,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                vnc on the correct port
         2.27 - Adds 'reservations' to terminate_instance() and
                soft_delete_instance()
+        2.28 - Adds check_instance_shared_storage()
     '''
 
     #
@@ -244,6 +245,13 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         return self.call(ctxt, self.make_msg('check_can_live_migrate_source',
                                              instance=instance_p,
                                              dest_check_data=dest_check_data),
+                         topic=_compute_topic(self.topic, ctxt, None,
+                                              instance))
+
+    def check_instance_shared_storage(self, ctxt, instance, data):
+        instance_p = jsonutils.to_primitive(instance)
+        return self.call(ctxt, self.make_msg('check_instance_shared_storage',
+                                             data=data),
                          topic=_compute_topic(self.topic, ctxt, None,
                                               instance))
 
