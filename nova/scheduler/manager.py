@@ -94,7 +94,8 @@ class SchedulerManager(manager.Manager):
             return self.driver.schedule_live_migration(
                 context, instance, dest,
                 block_migration, disk_over_commit)
-        except (exception.ComputeServiceUnavailable,
+        except (exception.NoValidHost,
+                exception.ComputeServiceUnavailable,
                 exception.InvalidHypervisorType,
                 exception.UnableToMigrateToSelf,
                 exception.DestinationHypervisorTooOld,
