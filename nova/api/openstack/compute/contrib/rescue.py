@@ -43,7 +43,6 @@ class RescueController(wsgi.Controller):
             raise exc.HTTPNotFound(msg)
 
     @wsgi.action('rescue')
-    @exts.wrap_errors
     def _rescue(self, req, id, body):
         """Rescue an instance."""
         context = req.environ["nova.context"]
@@ -68,7 +67,6 @@ class RescueController(wsgi.Controller):
         return {'adminPass': password}
 
     @wsgi.action('unrescue')
-    @exts.wrap_errors
     def _unrescue(self, req, id, body):
         """Unrescue an instance."""
         context = req.environ["nova.context"]
