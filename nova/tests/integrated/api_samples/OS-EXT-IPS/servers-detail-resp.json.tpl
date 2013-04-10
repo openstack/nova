@@ -1,6 +1,6 @@
 {
     "servers": [
-    {    
+    {
             "status": "ACTIVE",
             "updated": "%(timestamp)s",
             "user_id": "fake",

@@ -1,5 +1,5 @@
 {
     "reboot" : {
-        "type" : "%(type)s" 
+        "type" : "%(type)s"
     }
 }

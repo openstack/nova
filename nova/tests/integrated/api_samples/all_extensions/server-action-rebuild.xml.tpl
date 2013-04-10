@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<rebuild 
+<rebuild
     xmlns="http://docs.openstack.org/compute/api/v1.1"
     name="%(name)s"
     imageRef="%(host)s/v1.1/32278/images/%(uuid)s"
