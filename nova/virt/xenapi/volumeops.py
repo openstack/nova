@@ -20,6 +20,7 @@ Management class for Storage-related functions (attach, detach, etc).
 """
 
 from nova import exception
+from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
 from nova.virt.xenapi import vm_utils
 from nova.virt.xenapi import volume_utils
@@ -92,10 +93,11 @@ class VolumeOps(object):
             if hotplug:
                 self._session.call_xenapi("VBD.plug", vbd_ref)
         except Exception:
-            # NOTE(sirp): Forgetting the SR will have the effect of cleaning up
-            # the VDI and VBD records, so no need to handle that explicitly.
-            volume_utils.forget_sr(self._session, sr_ref)
-            raise
+            with excutils.save_and_reraise_exception():
+                # NOTE(sirp): Forgetting the SR will have the effect of
+                # cleaning up the VDI and VBD records, so no need to handle
+                # that explicitly.
+                volume_utils.forget_sr(self._session, sr_ref)
 
     def detach_volume(self, connection_info, instance_name, mountpoint):
         """Detach volume storage to VM instance."""
