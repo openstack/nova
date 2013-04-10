@@ -18,7 +18,6 @@
 from oslo.config import cfg
 
 from nova import db
-from nova.openstack.common import log as logging
 
 availability_zone_opts = [
     cfg.StrOpt('internal_service_availability_zone',
@@ -31,8 +30,6 @@ availability_zone_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(availability_zone_opts)
-
-LOG = logging.getLogger(__name__)
 
 
 def set_availability_zones(context, services):

@@ -28,7 +28,6 @@ from nova import context
 from nova import exception
 from nova import manager
 from nova.openstack.common import importutils
-from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 
 cell_manager_opts = [
@@ -44,8 +43,6 @@ cell_manager_opts = [
                 help="Number of instances to update per periodic task run")
 ]
 
-
-LOG = logging.getLogger(__name__)
 
 CONF = cfg.CONF
 CONF.register_opts(cell_manager_opts, group='cells')

@@ -23,11 +23,9 @@ from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import exception
 from nova import network
-from nova.openstack.common import log as logging
 from nova import utils
 
 
-LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'floating_ip_dns')
 
 

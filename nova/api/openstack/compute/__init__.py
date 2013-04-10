@@ -33,9 +33,6 @@ from nova.api.openstack.compute import limits
 from nova.api.openstack.compute import server_metadata
 from nova.api.openstack.compute import servers
 from nova.api.openstack.compute import versions
-from nova.openstack.common import log as logging
-
-LOG = logging.getLogger(__name__)
 
 allow_instance_snapshots_opt = cfg.BoolOpt('allow_instance_snapshots',
         default=True,

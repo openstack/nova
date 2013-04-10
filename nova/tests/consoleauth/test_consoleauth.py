@@ -22,11 +22,8 @@ Tests for Consoleauth Code.
 
 from nova.consoleauth import manager
 from nova import context
-from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import test
-
-LOG = logging.getLogger(__name__)
 
 
 class ConsoleauthTestCase(test.TestCase):

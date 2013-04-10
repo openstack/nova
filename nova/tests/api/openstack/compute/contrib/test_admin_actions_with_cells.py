@@ -21,12 +21,10 @@ Tests For Compute admin api w/ Cells
 from nova.api.openstack.compute.contrib import admin_actions
 from nova.compute import cells_api as compute_cells_api
 from nova.compute import vm_states
-from nova.openstack.common import log as logging
 from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests.api.openstack import fakes
 
-LOG = logging.getLogger('nova.tests.test_compute_cells')
 
 INSTANCE_IDS = {'inst_id': 1}
 

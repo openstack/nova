@@ -21,11 +21,8 @@ from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import exception
 import nova.image.glance
-from nova.openstack.common import log as logging
 import nova.utils
 
-
-LOG = logging.getLogger(__name__)
 
 SUPPORTED_FILTERS = {
     'name': 'name',

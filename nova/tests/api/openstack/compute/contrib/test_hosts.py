@@ -23,12 +23,9 @@ from nova.compute import vm_states
 from nova import context as context_maker
 from nova import db
 from nova import exception
-from nova.openstack.common import log as logging
 from nova import test
 from nova.tests import fake_hosts
 from nova.tests import utils
-
-LOG = logging.getLogger(__name__)
 
 
 def stub_service_get_all(context, disabled=None):

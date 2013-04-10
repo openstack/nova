@@ -29,7 +29,6 @@ from nova import exception
 from nova.image import glance
 from nova.network import api as network_api
 from nova.openstack.common import importutils
-from nova.openstack.common import log as logging
 from nova.openstack.common.notifier import api as notifier_api
 from nova.openstack.common.notifier import test_notifier
 from nova import test
@@ -37,7 +36,6 @@ from nova.tests import fake_instance_actions
 from nova.tests import fake_network
 import nova.tests.image.fake
 
-LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
 CONF.import_opt('compute_manager', 'nova.service')
 CONF.import_opt('compute_driver', 'nova.virt.driver')

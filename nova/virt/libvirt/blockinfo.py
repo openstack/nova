@@ -70,12 +70,9 @@ from oslo.config import cfg
 from nova import block_device
 from nova.compute import instance_types
 from nova import exception
-from nova.openstack.common import log as logging
 from nova.virt import configdrive
 from nova.virt import driver
 
-
-LOG = logging.getLogger(__name__)
 
 CONF = cfg.CONF
 

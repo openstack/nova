@@ -18,9 +18,6 @@ Scheduler host filters
 """
 
 from nova import filters
-from nova.openstack.common import log as logging
-
-LOG = logging.getLogger(__name__)
 
 
 class BaseHostFilter(filters.BaseFilter):

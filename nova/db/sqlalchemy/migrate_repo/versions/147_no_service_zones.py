@@ -14,10 +14,6 @@
 
 from sqlalchemy import String, Column, MetaData, Table, select
 
-from nova.openstack.common import log as logging
-
-LOG = logging.getLogger(__name__)
-
 
 """ Remove availability_zone column from services model and replace with
     aggregate based zone."""

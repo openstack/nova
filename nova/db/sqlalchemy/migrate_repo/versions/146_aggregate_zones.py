@@ -14,10 +14,6 @@
 
 from sqlalchemy import String, Column, MetaData, Table, delete, select
 
-from nova.openstack.common import log as logging
-
-LOG = logging.getLogger(__name__)
-
 
 def upgrade(migrate_engine):
     meta = MetaData()

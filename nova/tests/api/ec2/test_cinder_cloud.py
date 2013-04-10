@@ -31,7 +31,6 @@ from nova.compute import utils as compute_utils
 from nova import context
 from nova import db
 from nova import exception
-from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
 from nova import test
 from nova.tests import fake_network
@@ -43,7 +42,6 @@ CONF = cfg.CONF
 CONF.import_opt('compute_driver', 'nova.virt.driver')
 CONF.import_opt('default_instance_type', 'nova.compute.instance_types')
 CONF.import_opt('use_ipv6', 'nova.netconf')
-LOG = logging.getLogger(__name__)
 
 
 def get_fake_cache():

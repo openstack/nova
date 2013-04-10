@@ -27,12 +27,10 @@ from nova import db
 from nova import exception
 from nova import network
 from nova.openstack.common import fileutils
-from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import utils
 
 CONF = cfg.CONF
-LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'cloudpipe')
 
 

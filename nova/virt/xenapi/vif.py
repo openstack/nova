@@ -21,7 +21,6 @@
 
 from oslo.config import cfg
 
-from nova.openstack.common import log as logging
 from nova.virt.xenapi import network_utils
 from nova.virt.xenapi import vm_utils
 
@@ -32,7 +31,6 @@ xenapi_ovs_integration_bridge_opt = cfg.StrOpt('xenapi_ovs_integration_bridge',
 
 CONF = cfg.CONF
 CONF.register_opt(xenapi_ovs_integration_bridge_opt)
-LOG = logging.getLogger(__name__)
 
 
 class XenVIFDriver(object):

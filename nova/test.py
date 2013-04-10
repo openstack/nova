@@ -64,7 +64,6 @@ CONF.import_opt('sqlite_db', 'nova.openstack.common.db.sqlalchemy.session')
 CONF.set_override('use_stderr', False)
 
 logging.setup('nova')
-LOG = logging.getLogger(__name__)
 
 _DB_CACHE = None
 

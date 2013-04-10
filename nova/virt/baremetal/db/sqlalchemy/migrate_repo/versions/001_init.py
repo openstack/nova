@@ -18,10 +18,6 @@
 from sqlalchemy import Boolean, Column, DateTime
 from sqlalchemy import Index, Integer, MetaData, String, Table
 
-from nova.openstack.common import log as logging
-
-LOG = logging.getLogger(__name__)
-
 
 def upgrade(migrate_engine):
     meta = MetaData()

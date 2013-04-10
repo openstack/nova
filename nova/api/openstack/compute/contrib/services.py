@@ -23,11 +23,9 @@ from nova.api.openstack import xmlutil
 from nova import compute
 from nova import db
 from nova import exception
-from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import utils
 
-LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'services')
 CONF = cfg.CONF
 CONF.import_opt('service_down_time', 'nova.service')

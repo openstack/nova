@@ -20,11 +20,9 @@ from webob import exc
 from nova.api.openstack.compute.contrib import aggregates
 from nova import context
 from nova import exception
-from nova.openstack.common import log as logging
 from nova import test
 from nova.tests import matchers
 
-LOG = logging.getLogger(__name__)
 AGGREGATE_LIST = [
         {"name": "aggregate1", "id": "1", "availability_zone": "nova1"},
         {"name": "aggregate2", "id": "2", "availability_zone": "nova1"},

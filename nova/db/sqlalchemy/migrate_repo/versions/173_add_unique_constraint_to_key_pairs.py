@@ -17,9 +17,7 @@ from migrate.changeset import UniqueConstraint
 from sqlalchemy import Index, MetaData, Table
 
 from nova.db.sqlalchemy import utils
-from nova.openstack.common import log as logging
 
-LOG = logging.getLogger(__name__)
 
 OLD_IDX_NAME = 'key_pair_user_id_name_idx'
 UC_NAME = 'key_pairs_uniq_name_and_user_id'

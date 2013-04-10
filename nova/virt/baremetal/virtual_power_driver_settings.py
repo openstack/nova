@@ -18,11 +18,6 @@
 #
 # Virtual power driver commands
 
-from nova.openstack.common import log as logging
-
-
-LOG = logging.getLogger(__name__)
-
 
 class vbox(object):
     """set commands for basic Virtual Box control."""

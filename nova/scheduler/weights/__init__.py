@@ -19,10 +19,8 @@ Scheduler host weights
 
 from oslo.config import cfg
 
-from nova.openstack.common import log as logging
 from nova import weights
 
-LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
 
 

@@ -42,7 +42,6 @@ from nova import exception
 from nova.openstack.common import fileutils
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
-from nova.openstack.common import log as logging
 from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests import fake_libvirt_utils
@@ -77,7 +76,6 @@ CONF.import_opt('compute_manager', 'nova.service')
 CONF.import_opt('host', 'nova.netconf')
 CONF.import_opt('my_ip', 'nova.netconf')
 CONF.import_opt('base_dir_name', 'nova.virt.libvirt.imagecache')
-LOG = logging.getLogger(__name__)
 
 _fake_network_info = fake_network.fake_get_instance_nw_info
 _fake_stub_out_get_nw_info = fake_network.stub_out_nw_api_get_instance_nw_info

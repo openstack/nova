@@ -26,10 +26,8 @@ from oslo.config import cfg
 
 from nova import exception
 from nova.openstack.common import jsonutils
-from nova.openstack.common import log as logging
 from nova.openstack.common.rpc import proxy as rpc_proxy
 
-LOG = logging.getLogger(__name__)
 
 CONF = cfg.CONF
 CONF.import_opt('enable', 'nova.cells.opts', group='cells')

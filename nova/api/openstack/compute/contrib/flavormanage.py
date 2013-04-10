@@ -20,10 +20,8 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.compute import instance_types
 from nova import exception
-from nova.openstack.common import log as logging
 
 
-LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'flavormanage')
 
 

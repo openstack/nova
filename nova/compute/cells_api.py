@@ -25,9 +25,6 @@ from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import vm_states
 from nova import exception
 from nova.openstack.common import excutils
-from nova.openstack.common import log as logging
-
-LOG = logging.getLogger(__name__)
 
 
 check_instance_state = compute_api.check_instance_state

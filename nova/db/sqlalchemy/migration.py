@@ -22,15 +22,11 @@ import os
 from nova.db import migration
 from nova import exception
 from nova.openstack.common.db.sqlalchemy import session as db_session
-from nova.openstack.common import log as logging
 
 
 import migrate
 from migrate.versioning import util as migrate_util
 import sqlalchemy
-
-
-LOG = logging.getLogger(__name__)
 
 
 @migrate_util.decorator

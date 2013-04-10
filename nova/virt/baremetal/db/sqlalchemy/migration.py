@@ -23,11 +23,8 @@ import os
 import sqlalchemy
 
 from nova import exception
-from nova.openstack.common import log as logging
 from nova.virt.baremetal.db import migration
 from nova.virt.baremetal.db.sqlalchemy import session
-
-LOG = logging.getLogger(__name__)
 
 
 @migrate_util.decorator

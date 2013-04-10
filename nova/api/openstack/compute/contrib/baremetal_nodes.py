@@ -21,10 +21,8 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import exception
-from nova.openstack.common import log as logging
 from nova.virt.baremetal import db
 
-LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'baremetal_nodes')
 
 node_fields = ['id', 'cpus', 'local_gb', 'memory_mb', 'pm_address',
