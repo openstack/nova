@@ -508,7 +508,7 @@ class Connection(object):
                          'test:///default']
 
         if uri not in uri_whitelist:
-            raise libvirtError("libvir: error : no connection driver "
+            raise libvirtError("libvirt error: no connection driver "
                                "available for No connection for URI %s" % uri,
                                5, 0)
 
