@@ -65,6 +65,20 @@ class DbTestCase(test.TestCase):
         args.update(kwargs)
         return db.instance_create(ctxt, args)
 
+    def fake_metadata(self, content):
+        meta = {}
+        for i in range(0, 10):
+            meta["foo%i" % i] = "this is %s item %i" % (content, i)
+        return meta
+
+    def create_metadata_for_instance(self, instance_uuid):
+        meta = self.fake_metadata('metadata')
+        db.instance_metadata_update(self.context, instance_uuid, meta, False)
+        sys_meta = self.fake_metadata('system_metadata')
+        db.instance_system_metadata_update(self.context, instance_uuid,
+                                           sys_meta, False)
+        return meta, sys_meta
+
 
 class DbApiTestCase(DbTestCase):
     def test_create_instance_unique_hostname(self):
@@ -132,6 +146,37 @@ class DbApiTestCase(DbTestCase):
         check_exc_format(db.get_ec2_instance_id_by_uuid)
         check_exc_format(db.get_instance_uuid_by_ec2_id)
 
+    def test_instance_get_all_with_meta(self):
+        inst = self.create_instances_with_args()
+        fake_meta, fake_sys = self.create_metadata_for_instance(inst['uuid'])
+        result = db.instance_get_all(self.context)
+        for inst in result:
+            meta = utils.metadata_to_dict(inst['metadata'])
+            self.assertEqual(meta, fake_meta)
+            sys_meta = utils.metadata_to_dict(inst['system_metadata'])
+            self.assertEqual(sys_meta, fake_sys)
+
+    def test_instance_get_all_by_filters_with_meta(self):
+        inst = self.create_instances_with_args()
+        fake_meta, fake_sys = self.create_metadata_for_instance(inst['uuid'])
+        result = db.instance_get_all_by_filters(self.context, {})
+        for inst in result:
+            meta = utils.metadata_to_dict(inst['metadata'])
+            self.assertEqual(meta, fake_meta)
+            sys_meta = utils.metadata_to_dict(inst['system_metadata'])
+            self.assertEqual(sys_meta, fake_sys)
+
+    def test_instance_get_all_by_filters_without_meta(self):
+        inst = self.create_instances_with_args()
+        fake_meta, fake_sys = self.create_metadata_for_instance(inst['uuid'])
+        result = db.instance_get_all_by_filters(self.context, {},
+                                                columns_to_join=[])
+        for inst in result:
+            meta = utils.metadata_to_dict(inst['metadata'])
+            self.assertEqual(meta, {})
+            sys_meta = utils.metadata_to_dict(inst['system_metadata'])
+            self.assertEqual(sys_meta, {})
+
     def test_instance_get_all_by_filters(self):
         self.create_instances_with_args()
         self.create_instances_with_args()
@@ -183,7 +228,8 @@ class DbApiTestCase(DbTestCase):
         self.assertEqual(1, len(instances))
         instance = instances[0]
         self.assertEqual(expected['uuid'], instance['uuid'])
-        self.assertFalse('system_metadata' in dict(instance))
+        sysmeta = dict(instance)['system_metadata']
+        self.assertEqual(len(sysmeta), 0)
 
     def test_migration_get_unconfirmed_by_dest_compute(self):
         ctxt = context.get_admin_context()
