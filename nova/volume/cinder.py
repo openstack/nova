@@ -204,7 +204,7 @@ class API(base.Base):
     def check_attach(self, context, volume, instance=None):
         # TODO(vish): abstract status checking?
         if volume['status'] != "available":
-            msg = _("status must be available")
+            msg = _("status must be 'available'")
             raise exception.InvalidVolume(reason=msg)
         if volume['attach_status'] == "attached":
             msg = _("already attached")
