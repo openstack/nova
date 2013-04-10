@@ -30,11 +30,9 @@ from nova.compute import api as compute_api
 from nova import exception
 from nova.network.security_group import openstack_driver
 from nova.network.security_group import quantum_driver
-from nova.openstack.common import log as logging
 from nova.virt import netutils
 
 
-LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'security_groups')
 softauth = extensions.soft_extension_authorizer('compute', 'security_groups')
 

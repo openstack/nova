@@ -17,11 +17,8 @@
 
 from nova import exception
 from nova.network import model
-from nova.openstack.common import log as logging
 from nova import test
 from nova.tests import fake_network_cache_model
-
-LOG = logging.getLogger(__name__)
 
 
 class RouteTests(test.TestCase):

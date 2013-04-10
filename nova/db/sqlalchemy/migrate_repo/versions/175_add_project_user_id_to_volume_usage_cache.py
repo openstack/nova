@@ -16,10 +16,6 @@
 
 from sqlalchemy import MetaData, Integer, String, Table, Column
 
-from nova.openstack.common import log as logging
-
-LOG = logging.getLogger(__name__)
-
 
 def upgrade(migrate_engine):
     meta = MetaData()

@@ -17,11 +17,9 @@
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
-from nova.openstack.common import log as logging
 from nova import quota
 
 
-LOG = logging.getLogger(__name__)
 QUOTAS = quota.QUOTAS
 
 

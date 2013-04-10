@@ -22,11 +22,8 @@ import tempfile
 
 from nova import test
 
-from nova.openstack.common import log
 from nova import utils
 from nova.virt import configdrive
-
-LOG = log.getLogger(__name__)
 
 
 class ConfigDriveTestCase(test.TestCase):

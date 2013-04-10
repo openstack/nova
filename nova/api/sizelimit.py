@@ -22,7 +22,6 @@ from oslo.config import cfg
 import webob.dec
 import webob.exc
 
-from nova.openstack.common import log as logging
 from nova import wsgi
 
 
@@ -34,7 +33,6 @@ max_request_body_size_opt = cfg.IntOpt('osapi_max_request_body_size',
 
 CONF = cfg.CONF
 CONF.register_opt(max_request_body_size_opt)
-LOG = logging.getLogger(__name__)
 
 
 class LimitingReader(object):

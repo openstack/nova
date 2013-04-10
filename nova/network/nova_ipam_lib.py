@@ -17,10 +17,6 @@
 
 from nova import db
 from nova import ipv6
-from nova.openstack.common import log as logging
-
-
-LOG = logging.getLogger(__name__)
 
 
 def get_ipam_lib(net_man):

@@ -39,8 +39,6 @@ CONF = cfg.CONF
 CONF.import_opt('compute_manager', 'nova.service')
 CONF.import_opt('host', 'nova.netconf')
 
-LOG = logging.getLogger(__name__)
-
 
 class ImageCacheManagerTestCase(test.TestCase):
 

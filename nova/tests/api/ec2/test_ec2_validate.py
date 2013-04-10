@@ -26,7 +26,6 @@ from nova.compute import utils as compute_utils
 from nova import context
 from nova import db
 from nova import exception
-from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
 from nova.openstack.common import timeutils
 from nova import test
@@ -35,7 +34,6 @@ from nova.tests.image import fake
 
 CONF = cfg.CONF
 CONF.import_opt('compute_driver', 'nova.virt.driver')
-LOG = logging.getLogger(__name__)
 
 
 class EC2ValidateTestCase(test.TestCase):

@@ -22,10 +22,8 @@ from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import availability_zones
 from nova import db
-from nova.openstack.common import log as logging
 from nova import servicegroup
 
-LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
 
 authorize_list = extensions.extension_authorizer('compute',

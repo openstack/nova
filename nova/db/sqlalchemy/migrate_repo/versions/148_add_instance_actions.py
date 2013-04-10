@@ -25,10 +25,6 @@ from sqlalchemy import String
 from sqlalchemy import Table
 from sqlalchemy import Text
 
-from nova.openstack.common import log as logging
-
-LOG = logging.getLogger(__name__)
-
 
 def upgrade(migrate_engine):
     meta = MetaData()

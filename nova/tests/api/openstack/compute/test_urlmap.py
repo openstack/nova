@@ -16,12 +16,9 @@
 import webob
 
 from nova.openstack.common import jsonutils
-from nova.openstack.common import log as logging
 from nova import test
 from nova.tests.api.openstack import fakes
 import nova.tests.image.fake
-
-LOG = logging.getLogger(__name__)
 
 
 class UrlmapTest(test.TestCase):

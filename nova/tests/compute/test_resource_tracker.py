@@ -27,12 +27,9 @@ from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context
 from nova import db
-from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import test
 from nova.virt import driver
-
-LOG = logging.getLogger(__name__)
 
 
 FAKE_VIRT_MEMORY_MB = 5

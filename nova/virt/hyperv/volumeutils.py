@@ -26,12 +26,10 @@ import time
 from eventlet.green import subprocess
 from oslo.config import cfg
 
-from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt.hyperv import basevolumeutils
 from nova.virt.hyperv import vmutils
 
-LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
 
 

@@ -22,10 +22,6 @@ import sys
 if sys.platform == 'win32':
     import wmi
 
-from nova.openstack.common import log as logging
-
-LOG = logging.getLogger(__name__)
-
 
 class HostUtils(object):
     def __init__(self):

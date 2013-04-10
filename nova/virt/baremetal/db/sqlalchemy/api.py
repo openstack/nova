@@ -29,13 +29,10 @@ import nova.context
 from nova.db.sqlalchemy import api as sqlalchemy_api
 from nova import exception
 from nova.openstack.common.db import exception as db_exc
-from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
 from nova.virt.baremetal.db.sqlalchemy import models
 from nova.virt.baremetal.db.sqlalchemy import session as db_session
-
-LOG = logging.getLogger(__name__)
 
 
 def model_query(context, *args, **kwargs):

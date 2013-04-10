@@ -20,7 +20,6 @@ from oslo.config import cfg
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.compute import vm_states
-from nova.openstack.common import log as logging
 
 opts = [
     cfg.ListOpt('osapi_hide_server_address_states',
@@ -31,7 +30,6 @@ opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(opts)
-LOG = logging.getLogger(__name__)
 
 authorize = extensions.soft_extension_authorizer('compute',
                                                  'hide_server_addresses')

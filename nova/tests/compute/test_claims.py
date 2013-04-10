@@ -20,10 +20,7 @@
 import uuid
 
 from nova.compute import claims
-from nova.openstack.common import log as logging
 from nova import test
-
-LOG = logging.getLogger(__name__)
 
 
 class DummyTracker(object):

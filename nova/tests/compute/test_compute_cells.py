@@ -25,12 +25,9 @@ from nova.compute import cells_api as compute_cells_api
 from nova import db
 from nova import exception
 from nova.openstack.common import jsonutils
-from nova.openstack.common import log as logging
 from nova import quota
 from nova.tests.compute import test_compute
 
-
-LOG = logging.getLogger('nova.tests.test_compute_cells')
 
 ORIG_COMPUTE_API = None
 cfg.CONF.import_opt('enable', 'nova.cells.opts', group='cells')

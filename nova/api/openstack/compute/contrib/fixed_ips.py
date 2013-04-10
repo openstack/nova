@@ -19,9 +19,7 @@ import webob.exc
 from nova.api.openstack import extensions
 from nova import db
 from nova import exception
-from nova.openstack.common import log as logging
 
-LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'fixed_ips')
 
 

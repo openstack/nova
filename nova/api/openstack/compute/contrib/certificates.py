@@ -21,9 +21,7 @@ from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 import nova.cert.rpcapi
 from nova import network
-from nova.openstack.common import log as logging
 
-LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'certificates')
 
 

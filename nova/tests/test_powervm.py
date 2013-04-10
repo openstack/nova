@@ -28,7 +28,6 @@ from nova.compute import instance_types
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.network import model as network_model
-from nova.openstack.common import log as logging
 from nova.tests import fake_network_cache_model
 from nova.tests.image import fake
 from nova.virt import images
@@ -38,8 +37,6 @@ from nova.virt.powervm import driver as powervm_driver
 from nova.virt.powervm import exception
 from nova.virt.powervm import lpar
 from nova.virt.powervm import operator
-
-LOG = logging.getLogger(__name__)
 
 
 def fake_lpar(instance_name):

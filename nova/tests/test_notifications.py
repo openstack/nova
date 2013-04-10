@@ -28,7 +28,6 @@ from nova import context
 from nova import db
 from nova.network import api as network_api
 from nova import notifications
-from nova.openstack.common import log as logging
 from nova.openstack.common.notifier import api as notifier_api
 from nova.openstack.common.notifier import test_notifier
 from nova import test
@@ -36,7 +35,6 @@ from nova.tests import fake_network
 
 CONF = cfg.CONF
 CONF.import_opt('compute_driver', 'nova.virt.driver')
-LOG = logging.getLogger(__name__)
 
 
 class NotificationsTestCase(test.TestCase):
