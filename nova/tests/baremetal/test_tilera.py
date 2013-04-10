@@ -195,7 +195,6 @@ class TileraPrivateMethodsTestCase(BareMetalTileraTestCase):
     def test_collect_mac_addresses(self):
         self._create_node()
         address_list = [nic['address'] for nic in self.nic_info]
-        address_list.append(self.node_info['prov_mac_address'])
         address_list.sort()
         macs = self.driver._collect_mac_addresses(self.context, self.node)
         self.assertEqual(macs, address_list)
@@ -301,9 +300,6 @@ class TileraPublicMethodsTestCase(BareMetalTileraTestCase):
 
     def test_activate_bootloader_passes_details(self):
         self._create_node()
-        macs = [nic['address'] for nic in self.nic_info]
-        macs.append(self.node_info['prov_mac_address'])
-        macs.sort()
         image_info = {
                 'kernel': [None, 'cccc'],
             }

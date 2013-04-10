@@ -242,7 +242,6 @@ class PXE(base.NodeDriver):
 
     def _collect_mac_addresses(self, context, node):
         macs = set()
-        macs.add(db.bm_node_get(context, node['id'])['prov_mac_address'])
         for nic in db.bm_interface_get_all_by_bm_node_id(context, node['id']):
             if nic['address']:
                 macs.add(nic['address'])
