@@ -122,6 +122,10 @@ class ComputeRpcAPITestCase(test.TestCase):
                 instance=self.fake_instance,
                 dest_check_data={"test": "data"})
 
+    def test_check_instance_shared_storage(self):
+        self._test_compute_api('check_instance_shared_storage', 'call',
+                instance=self.fake_instance, data='foo', version='2.28')
+
     def test_confirm_resize_cast(self):
         self._test_compute_api('confirm_resize', 'cast',
                 instance=self.fake_instance, migration={'id': 'foo'},
