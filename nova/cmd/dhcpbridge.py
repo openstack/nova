@@ -41,6 +41,7 @@ from nova.openstack.common import rpc
 CONF = cfg.CONF
 CONF.import_opt('host', 'nova.netconf')
 CONF.import_opt('network_manager', 'nova.service')
+LOG = logging.getLogger(__name__)
 
 
 def add_lease(mac, ip_address):
