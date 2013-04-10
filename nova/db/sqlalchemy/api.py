@@ -1903,10 +1903,14 @@ def instance_get_all_hung_in_rebooting(context, reboot_window):
     reboot_window = (timeutils.utcnow() -
                      datetime.timedelta(seconds=reboot_window))
 
+    # NOTE(danms): this is only used in the _poll_rebooting_instances()
+    # call in compute/manager, so we can avoid the metadata lookups
+    # explicitly
     return _instances_fill_metadata(context,
         model_query(context, models.Instance).
             filter(models.Instance.updated_at <= reboot_window).
-            filter_by(task_state=task_states.REBOOTING).all())
+            filter_by(task_state=task_states.REBOOTING).all(),
+        manual_joins=[])
 
 
 @require_context
