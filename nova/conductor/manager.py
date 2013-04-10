@@ -49,7 +49,7 @@ datetime_fields = ['launched_at', 'terminated_at', 'updated_at']
 class ConductorManager(manager.Manager):
     """Mission: TBD."""
 
-    RPC_API_VERSION = '1.46'
+    RPC_API_VERSION = '1.47'
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(*args, **kwargs)
@@ -109,12 +109,14 @@ class ConductorManager(manager.Manager):
     def instance_get_all(self, context):
         return jsonutils.to_primitive(self.db.instance_get_all(context))
 
-    def instance_get_all_by_host(self, context, host, node=None):
+    def instance_get_all_by_host(self, context, host, node=None,
+                                 columns_to_join=None):
         if node is not None:
             result = self.db.instance_get_all_by_host_and_node(
                 context.elevated(), host, node)
         else:
-            result = self.db.instance_get_all_by_host(context.elevated(), host)
+            result = self.db.instance_get_all_by_host(context.elevated(), host,
+                                                      columns_to_join)
         return jsonutils.to_primitive(result)
 
     @rpc_common.client_exceptions(exception.MigrationNotFound)
@@ -254,9 +256,10 @@ class ConductorManager(manager.Manager):
                                       " invocation"))
 
     def instance_get_all_by_filters(self, context, filters, sort_key,
-                                    sort_dir):
-        result = self.db.instance_get_all_by_filters(context, filters,
-                                                     sort_key, sort_dir)
+                                    sort_dir, columns_to_join=None):
+        result = self.db.instance_get_all_by_filters(
+            context, filters, sort_key, sort_dir,
+            columns_to_join=columns_to_join)
         return jsonutils.to_primitive(result)
 
     def instance_get_all_hung_in_rebooting(self, context, timeout):

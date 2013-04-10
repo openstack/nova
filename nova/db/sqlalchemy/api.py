@@ -1842,9 +1842,10 @@ def _instance_get_all_query(context, project_only=False, joins=None):
 
 
 @require_admin_context
-def instance_get_all_by_host(context, host):
+def instance_get_all_by_host(context, host, columns_to_join=None):
     return _instances_fill_metadata(context,
-        _instance_get_all_query(context).filter_by(host=host).all())
+        _instance_get_all_query(context).filter_by(host=host).all(),
+                                manual_joins=columns_to_join)
 
 
 @require_admin_context
