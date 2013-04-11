@@ -81,6 +81,21 @@ class AvailabilityZoneApiTest(test.TestCase):
                        fake_set_availability_zones)
         self.stubs.Set(servicegroup.API, 'service_is_up', fake_service_is_up)
 
+    def test_filtered_availability_zones(self):
+        az = availability_zone.AvailabilityZoneController()
+        zones = ['zone1', 'internal']
+        expected = [{'zoneName': 'zone1',
+                    'zoneState': {'available': True},
+                     "hosts": None}]
+        result = az._get_filtered_availability_zones(zones, True)
+        self.assertEqual(result, expected)
+
+        expected = [{'zoneName': 'zone1',
+                    'zoneState': {'available': False},
+                     "hosts": None}]
+        result = az._get_filtered_availability_zones(zones, False)
+        self.assertEqual(result, expected)
+
     def test_availability_zone_index(self):
         req = webob.Request.blank('/v2/fake/os-availability-zone')
         resp = req.get_response(fakes.wsgi_app())
