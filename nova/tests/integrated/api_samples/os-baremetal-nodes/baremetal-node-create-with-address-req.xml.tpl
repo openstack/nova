@@ -6,8 +6,6 @@
     local_gb="128"
     pm_address="10.1.2.3"
     pm_user="pm_user"
+    prov_mac_address="%(address)s"
     terminal_port="8000"
-    instance_uuid="None"
-    id="%(node_id)s">
-    <interfaces/>
-</node>
+/>

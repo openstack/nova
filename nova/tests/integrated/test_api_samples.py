@@ -2782,8 +2782,23 @@ class BareMetalNodesJsonTest(ApiSampleTestBase, bm_db_base.BMDBTestCase):
         return self._verify_response("baremetal-node-create-resp", subs,
                                      response, 200)
 
+    def _create_node_with_address(self):
+        address = '12:34:56:78:90:ab'
+        req_subs = {'address': address}
+        response = self._do_post("os-baremetal-nodes",
+                                 "baremetal-node-create-with-address-req",
+                                 req_subs)
+        subs = {'node_id': '(?P<id>\d+)',
+                'interface_id': '\d+',
+                'address': address}
+        return self._verify_response("baremetal-node-create-with-address-resp",
+                                     subs, response, 200)
+
     def test_create_node(self):
         self._create_node()
+
+    def test_create_node_with_address(self):
+        self._create_node_with_address()
 
     def test_list_nodes(self):
         node_id = self._create_node()

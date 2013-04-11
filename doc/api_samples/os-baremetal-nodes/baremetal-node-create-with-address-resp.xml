@@ -14,6 +14,6 @@
       datapath_id="None"
       id="1"
       port_no="None"
-      address="aa:aa:aa:aa:aa:aa"/>
+      address="12:34:56:78:90:ab"/>
   </interfaces>
 </node>

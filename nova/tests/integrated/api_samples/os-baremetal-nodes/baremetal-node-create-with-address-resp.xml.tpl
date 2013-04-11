@@ -9,5 +9,11 @@
     terminal_port="8000"
     instance_uuid="None"
     id="%(node_id)s">
-    <interfaces/>
+    <interfaces>
+         <interface 
+             id="%(interface_id)s"
+             address="%(address)s"
+             datapath_id="None"
+             port_no="None"/>
+    </interfaces>
 </node>

@@ -5,7 +5,7 @@
         "instance_uuid": null,
         "interfaces": [
             {
-                "address": "aa:aa:aa:aa:aa:aa",
+                "address": "12:34:56:78:90:ab",
                 "datapath_id": null,
                 "id": 1,
                 "port_no": null
