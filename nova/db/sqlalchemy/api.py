@@ -1601,7 +1601,7 @@ def _manual_join_columns(columns_to_join):
 @require_context
 def instance_get_all(context, columns_to_join=None):
     if columns_to_join is None:
-        columns_to_join = ['info_cache', 'security_groups', 'metadata']
+        columns_to_join = ['info_cache', 'security_groups']
         manual_joins = ['metadata', 'system_metadata']
     else:
         manual_joins, columns_to_join = _manual_join_columns(columns_to_join)
