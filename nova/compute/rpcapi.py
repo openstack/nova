@@ -251,9 +251,11 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     def check_instance_shared_storage(self, ctxt, instance, data):
         instance_p = jsonutils.to_primitive(instance)
         return self.call(ctxt, self.make_msg('check_instance_shared_storage',
+                                             instance=instance_p,
                                              data=data),
                          topic=_compute_topic(self.topic, ctxt, None,
-                                              instance))
+                                              instance),
+                         version='2.28')
 
     def confirm_resize(self, ctxt, instance, migration, host,
             reservations=None, cast=True):

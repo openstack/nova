@@ -3073,7 +3073,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             raise exception.NotFound(_("Host %(host)s not found") % locals())
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    def check_instance_shared_storage(self, ctxt, data):
+    def check_instance_shared_storage(self, ctxt, instance, data):
         """Check if the instance files are shared
 
         :param context: security context
