@@ -3,7 +3,7 @@ distribute>=0.6.24
 
 coverage
 mox==0.5.3
-nose
+nose<1.3.0
 openstack.nose_plugin>=0.7
 nosehtmloutput
 pep8==1.1
