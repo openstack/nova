@@ -2745,7 +2745,7 @@ class VirtualInterfaceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         # NOTE(boris-42): Due to the bug 1156227 this won't work. In havana-1
         #                 it will be fixed.
         self.assertRaises(exception.VirtualInterfaceCreateException,
-                          self._create_virt_interface, {uuid: vif['uuid']})
+                          self._create_virt_interface, {"uuid": vif['uuid']})
 
     def test_virtual_interface_get(self):
         vifs = [self._create_virt_interface({'address':'a'}),

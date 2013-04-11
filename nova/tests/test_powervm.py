@@ -404,23 +404,6 @@ class PowerVMDriverTestCase(test.TestCase):
                         context, instance,
                         dest, instance_type, network_info, block_device_info)
 
-    def test_set_lpar_mac_base_value_command(self):
-        inst_name = 'some_instance'
-        mac = 'FA:98:64:2B:29:39'
-        exp_mac_str = mac[:-2].replace(':', '').lower()
-
-        def fake_run_vios_command(cmd, *args, **kwargs):
-            exp_cmd = ('chsyscfg -r lpar -i "name=%(inst_name)s, ',
-                       'virtual_eth_mac_base_value=%(exp_mac_str)s"' %
-                       locals())
-            assertEqual(exp_cmd, cmd)
-
-        self.stubs.Set(self.powervm_connection._powervm._operator,
-                       'run_vios_command', fake_run_vios_command)
-
-        fake_op = self.powervm_connection._powervm
-        fake_op._operator.set_lpar_mac_base_value(inst_name, mac)
-
     def test_migrate_build_scp_command(self):
         lv_name = 'logical-vol-name'
         src_host = 'compute_host_1'
@@ -488,3 +471,29 @@ class PowerVMDriverTestCase(test.TestCase):
         self.assertEquals(host_stats['supported_instances'][0][0], "ppc64")
         self.assertEquals(host_stats['supported_instances'][0][1], "powervm")
         self.assertEquals(host_stats['supported_instances'][0][2], "hvm")
+
+
+class PowerVMDriverLparTestCase(test.TestCase):
+    """Unit tests for PowerVM connection calls."""
+
+    def setUp(self):
+        super(PowerVMDriverLparTestCase, self).setUp()
+        self.stubs.Set(operator.PowerVMOperator, '_update_host_stats',
+                       lambda self: None)
+        self.powervm_connection = powervm_driver.PowerVMDriver(None)
+
+    def test_set_lpar_mac_base_value_command(self):
+        inst_name = 'some_instance'
+        mac = 'FA:98:64:2B:29:39'
+        exp_mac_str = mac[:-2].replace(':', '')
+
+        exp_cmd = ('chsyscfg -r lpar -i "name=%(inst_name)s, '
+                   'virtual_eth_mac_base_value=%(exp_mac_str)s"') % locals()
+
+        fake_op = self.powervm_connection._powervm
+        self.mox.StubOutWithMock(fake_op._operator, 'run_vios_command')
+        fake_op._operator.run_vios_command(exp_cmd)
+
+        self.mox.ReplayAll()
+
+        fake_op._operator.set_lpar_mac_base_value(inst_name, mac)

@@ -197,7 +197,6 @@ def main():
         cliutils.validate_args(fn, *fn_args, **fn_kwargs)
     except cliutils.MissingArgs as e:
         print(fn.__doc__)
-        parser.print_help()
         print(e)
         return(1)
     try:

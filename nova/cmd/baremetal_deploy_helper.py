@@ -40,6 +40,7 @@ from nova.virt.baremetal import db
 
 
 QUEUE = Queue.Queue()
+LOG = logging.getLogger(__name__)
 
 
 # All functions are called from deploy() directly or indirectly.
