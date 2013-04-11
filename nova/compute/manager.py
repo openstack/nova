@@ -2064,6 +2064,11 @@ class ComputeManager(manager.SchedulerDependentManager):
             rt = self._get_resource_tracker(migration['source_node'])
             rt.confirm_resize(context, migration)
 
+            instance = self._instance_update(context, instance['uuid'],
+                                             vm_state=vm_states.ACTIVE,
+                                             task_state=None,
+                                             expected_task_state=None)
+
             self._notify_about_instance_usage(
                 context, instance, "resize.confirm.end",
                 network_info=network_info)
