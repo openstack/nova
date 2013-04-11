@@ -3613,14 +3613,18 @@ class ComputeTestCase(BaseTestCase):
     def test_get_instance_nw_info(self):
         fake_network.unset_stub_network_methods(self.stubs)
 
-        fake_instance = 'fake-instance'
+        fake_instance = {'uuid': 'fake-instance'}
         fake_nw_info = network_model.NetworkInfo()
 
         self.mox.StubOutWithMock(self.compute.network_api,
                                  'get_instance_nw_info')
         self.mox.StubOutWithMock(self.compute.conductor_api,
                                  'instance_info_cache_update')
+        self.mox.StubOutWithMock(self.compute.conductor_api,
+                                 'instance_get_by_uuid')
 
+        self.compute.conductor_api.instance_get_by_uuid(
+            self.context, fake_instance['uuid']).AndReturn(fake_instance)
         self.compute.network_api.get_instance_nw_info(self.context,
                 fake_instance, conductor_api=self.compute.conductor_api
                 ).AndReturn(fake_nw_info)
@@ -3646,8 +3650,9 @@ class ComputeTestCase(BaseTestCase):
         call_info = {'get_all_by_host': 0, 'get_by_uuid': 0,
                 'get_nw_info': 0, 'expected_instance': None}
 
-        def fake_instance_get_all_by_host(context, host):
+        def fake_instance_get_all_by_host(context, host, columns_to_join):
             call_info['get_all_by_host'] += 1
+            self.assertEqual(columns_to_join, [])
             return instances[:]
 
         def fake_instance_get_by_uuid(context, instance_uuid):
@@ -3723,7 +3728,8 @@ class ComputeTestCase(BaseTestCase):
                       'launched_at': not_timed_out_time}]
         unrescued_instances = {'fake_uuid1': False, 'fake_uuid4': False}
 
-        def fake_instance_get_all_by_host(context, host):
+        def fake_instance_get_all_by_host(context, host, columns_to_join):
+            self.assertEqual(columns_to_join, [])
             return instances
 
         def fake_unrescue(self, context, instance):
@@ -4342,8 +4348,10 @@ class ComputeTestCase(BaseTestCase):
         self.compute.driver.list_instance_uuids().AndReturn(
                 [inst['uuid'] for inst in driver_instances])
         self.compute.conductor_api.instance_get_all_by_filters(
-                fake_context, {'uuid': [inst['uuid'] for
-                                        inst in driver_instances]}).AndReturn(
+                fake_context,
+                {'uuid': [inst['uuid'] for
+                          inst in driver_instances]},
+                columns_to_join=[]).AndReturn(
                         driver_instances)
 
         self.mox.ReplayAll()
@@ -4377,7 +4385,8 @@ class ComputeTestCase(BaseTestCase):
         self.compute.driver.list_instances().AndReturn(
                 [inst['name'] for inst in driver_instances])
         self.compute.conductor_api.instance_get_all_by_host(
-                fake_context, self.compute.host).AndReturn(all_instances)
+                fake_context, self.compute.host,
+                columns_to_join=[]).AndReturn(all_instances)
 
         self.mox.ReplayAll()
 

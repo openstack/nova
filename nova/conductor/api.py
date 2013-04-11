@@ -77,8 +77,8 @@ class LocalAPI(object):
         return self._manager.instance_get_all(context)
 
     def instance_get_all_by_host(self, context, host, columns_to_join=None):
-        return self._manager.instance_get_all_by_host(context, host,
-                                                      columns_to_join)
+        return self._manager.instance_get_all_by_host(
+            context, host, columns_to_join=columns_to_join)
 
     def instance_get_all_by_host_and_node(self, context, host, node):
         return self._manager.instance_get_all_by_host(context, host, node)
