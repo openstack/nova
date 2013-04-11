@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  Nova\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/nova\n"
-"POT-Creation-Date: 2013-04-10 00:03+0000\n"
+"POT-Creation-Date: 2013-04-11 00:03+0000\n"
 "PO-Revision-Date: 2013-02-02 18:03+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: en_US <LL@li.org>\n"
@@ -68,7 +68,7 @@ msgid "Subject for certificate for projects, %s for project, timestamp"
 msgstr "Projelerin sertifika konusu, proje ve tarih bilgisi için %s"
 
 #: nova/crypto.py:209
-#, fuzzy, python-format
+#, fuzzy
 msgid "Unable to find the key"
 msgstr "%r adresini bulmak olanaksız"
 
@@ -1511,7 +1511,7 @@ msgid "Running cmd (subprocess): %s"
 msgstr "Çalışan komut(alt süreç): %s"
 
 #: nova/utils.py:233 nova/utils.py:311
-#: nova/openstack/common/processutils.py:114 nova/virt/powervm/common.py:88
+#: nova/openstack/common/processutils.py:114 nova/virt/powervm/common.py:90
 #, python-format
 msgid "Result was %s"
 msgstr "Sonuç %s"
@@ -1668,7 +1668,7 @@ msgstr ""
 msgid "Sourcing roles from deprecated X-Role HTTP header"
 msgstr ""
 
-#: nova/api/sizelimit.py:55 nova/api/sizelimit.py:64 nova/api/sizelimit.py:78
+#: nova/api/sizelimit.py:53 nova/api/sizelimit.py:62 nova/api/sizelimit.py:76
 #: nova/api/metadata/password.py:62
 msgid "Request is too large."
 msgstr ""
@@ -2271,12 +2271,12 @@ msgstr "Genişletme fabrikası çağırılıyor %s"
 msgid "Failed to load extension %(ext_factory)s: %(exc)s"
 msgstr "%(ext_factory)s uzantısı yüklemede hata: %(exc)s"
 
-#: nova/api/openstack/extensions.py:357
+#: nova/api/openstack/extensions.py:345
 #, python-format
 msgid "Failed to load extension %(classpath)s: %(exc)s"
 msgstr "%(classpath)s uzantısı yüklemede hata: %(exc)s"
 
-#: nova/api/openstack/extensions.py:381
+#: nova/api/openstack/extensions.py:369
 #, python-format
 msgid "Failed to load extension %(ext_name)s: %(exc)s"
 msgstr "%(ext_name)s uzantısı yüklemede hata: %(exc)s"
@@ -2393,8 +2393,8 @@ msgid "Invalid minDisk filter [%s]"
 msgstr ""
 
 #: nova/api/openstack/compute/image_metadata.py:36
-#: nova/api/openstack/compute/images.py:144
-#: nova/api/openstack/compute/images.py:160
+#: nova/api/openstack/compute/images.py:141
+#: nova/api/openstack/compute/images.py:157
 msgid "Image not found."
 msgstr "İmaj bulunamadı"
 
@@ -2418,15 +2418,15 @@ msgstr "İstek gövdesi çok sayıda öğe içeriyor"
 msgid "Invalid metadata key"
 msgstr "Geçersiz özellik anahtarı"
 
-#: nova/api/openstack/compute/images.py:165
+#: nova/api/openstack/compute/images.py:162
 msgid "You are not allowed to delete the image."
 msgstr ""
 
-#: nova/api/openstack/compute/ips.py:71
+#: nova/api/openstack/compute/ips.py:68
 msgid "Instance does not exist"
 msgstr "Örnek mevcut değil"
 
-#: nova/api/openstack/compute/ips.py:94
+#: nova/api/openstack/compute/ips.py:91
 msgid "Instance is not a member of specified network"
 msgstr "Örnek belirlenmiş ağın bir üyesi değil"
 
@@ -2579,7 +2579,7 @@ msgid "HostId cannot be updated."
 msgstr ""
 
 #: nova/api/openstack/compute/servers.py:1003
-#, fuzzy, python-format
+#, fuzzy
 msgid "Personality cannot be updated."
 msgstr "%s için kişisel içerik çözümlenemedi"
 
@@ -2594,7 +2594,7 @@ msgid "Error in confirm-resize %s"
 msgstr "Yeniden boyutlandırma onayında hata %s"
 
 #: nova/api/openstack/compute/servers.py:1052
-#, fuzzy, python-format
+#, fuzzy
 msgid "Flavor used by the instance could not be found."
 msgstr "%(instance_id)s örneği bulunamadı."
 
@@ -2725,7 +2725,7 @@ msgstr ""
 #: nova/api/openstack/compute/contrib/admin_actions.py:186
 #: nova/api/openstack/compute/contrib/admin_actions.py:321
 #: nova/api/openstack/compute/contrib/multinic.py:41
-#: nova/api/openstack/compute/contrib/rescue.py:44
+#: nova/api/openstack/compute/contrib/rescue.py:42
 msgid "Server not found"
 msgstr ""
 
@@ -2763,7 +2763,7 @@ msgid "createBackup attribute 'rotation' must be greater than or equal to zero"
 msgstr "yedekOluşturma 'dönüşme' özelliği tamsayı olmak zorunda"
 
 #: nova/api/openstack/compute/contrib/admin_actions.py:248
-#: nova/api/openstack/compute/contrib/console_output.py:47
+#: nova/api/openstack/compute/contrib/console_output.py:45
 #: nova/api/openstack/compute/contrib/server_diagnostics.py:47
 #: nova/api/openstack/compute/contrib/server_start_stop.py:38
 msgid "Instance not found"
@@ -2847,7 +2847,7 @@ msgid "Failed to attach interface"
 msgstr "Tekrar yükleme örneğinde hata oluştu."
 
 #: nova/api/openstack/compute/contrib/attach_interfaces.py:121
-#, fuzzy, python-format
+#, fuzzy
 msgid "Attachments update is not supported"
 msgstr "Özellik desteklenmiyor: %s"
 
@@ -2856,7 +2856,7 @@ msgstr "Özellik desteklenmiyor: %s"
 msgid "Detach interface %s"
 msgstr "%s VLAN arayüzü başlatılıyor "
 
-#: nova/api/openstack/compute/contrib/baremetal_nodes.py:183
+#: nova/api/openstack/compute/contrib/baremetal_nodes.py:181
 msgid "Must specify id or address"
 msgstr ""
 
@@ -2886,11 +2886,11 @@ msgstr ""
 msgid "Only 'updated_since' and 'project_id' are understood."
 msgstr ""
 
-#: nova/api/openstack/compute/contrib/certificates.py:73
+#: nova/api/openstack/compute/contrib/certificates.py:71
 msgid "Only root certificate can be retrieved."
 msgstr "Sadece kök sertifikası alınabilir."
 
-#: nova/api/openstack/compute/contrib/cloudpipe.py:151
+#: nova/api/openstack/compute/contrib/cloudpipe.py:149
 msgid ""
 "Unable to claim IP for VPN instances, ensure it isn't running, and try "
 "again in a few minutes"
@@ -2898,24 +2898,24 @@ msgstr ""
 "VPN örnekleri için IP talep edilemiyor, çalışmadığından emin olun ve "
 "birkaç dakika içerisinde tekrar deneyin"
 
-#: nova/api/openstack/compute/contrib/cloudpipe_update.py:43
+#: nova/api/openstack/compute/contrib/cloudpipe_update.py:41
 #, fuzzy, python-format
 msgid "Unknown action %s"
 msgstr "Tanınmayan zincir: %r"
 
-#: nova/api/openstack/compute/contrib/console_output.py:52
+#: nova/api/openstack/compute/contrib/console_output.py:50
 msgid "os-getConsoleOutput malformed or missing from request body"
 msgstr ""
 
-#: nova/api/openstack/compute/contrib/console_output.py:59
+#: nova/api/openstack/compute/contrib/console_output.py:57
 msgid "Length in request body must be an integer value"
 msgstr ""
 
-#: nova/api/openstack/compute/contrib/console_output.py:67
+#: nova/api/openstack/compute/contrib/console_output.py:65
 msgid "Unable to get console"
 msgstr ""
 
-#: nova/api/openstack/compute/contrib/consoles.py:53
+#: nova/api/openstack/compute/contrib/consoles.py:51
 #, fuzzy
 msgid "Instance not yet ready"
 msgstr "Örnek tekrar boyutlandırılacak şekilde ayarlanmadı."
@@ -2989,12 +2989,12 @@ msgstr "Sunucu ve blok_göçü tanımlanmak zorunda."
 msgid "Error in evacuate, %s"
 msgstr "Göçte hata %s"
 
-#: nova/api/openstack/compute/contrib/fixed_ips.py:41
+#: nova/api/openstack/compute/contrib/fixed_ips.py:39
 #, python-format
 msgid "Fixed IP %s has been deleted"
 msgstr ""
 
-#: nova/api/openstack/compute/contrib/fixed_ips.py:73
+#: nova/api/openstack/compute/contrib/fixed_ips.py:71
 #, fuzzy, python-format
 msgid "Fixed IP %s not found"
 msgstr "Kural (%s) bulunamadı"
@@ -3016,7 +3016,7 @@ msgstr ""
 msgid "No Request Body"
 msgstr "İstek gövdesi yok"
 
-#: nova/api/openstack/compute/contrib/floating_ip_dns.py:225
+#: nova/api/openstack/compute/contrib/floating_ip_dns.py:223
 #, fuzzy
 msgid "DNS entries not found."
 msgstr "Örnek bulunamadı"
@@ -3042,7 +3042,7 @@ msgstr "Daha fazla değişken IP mevcut değil"
 
 #: nova/api/openstack/compute/contrib/floating_ips.py:215
 #: nova/api/openstack/compute/contrib/floating_ips.py:271
-#: nova/api/openstack/compute/contrib/security_groups.py:415
+#: nova/api/openstack/compute/contrib/security_groups.py:413
 msgid "Missing parameter dict"
 msgstr "Parametre dizini eksik"
 
@@ -3087,8 +3087,8 @@ msgstr "%(address)s değişken IP adresi ilişkilendirilemedi."
 msgid "/%s should be specified as single address(es) not in cidr format"
 msgstr ""
 
-#: nova/api/openstack/compute/contrib/fping.py:55
-#, fuzzy, python-format
+#: nova/api/openstack/compute/contrib/fping.py:53
+#, fuzzy
 msgid "fping utility is not found."
 msgstr "Kural (%s) bulunamadı"
 
@@ -3142,18 +3142,18 @@ msgstr ""
 msgid "Describe-resource is admin only functionality"
 msgstr ""
 
-#: nova/api/openstack/compute/contrib/hypervisors.py:185
-#: nova/api/openstack/compute/contrib/hypervisors.py:196
+#: nova/api/openstack/compute/contrib/hypervisors.py:183
+#: nova/api/openstack/compute/contrib/hypervisors.py:194
 #, python-format
 msgid "Hypervisor with ID '%s' could not be found."
 msgstr ""
 
-#: nova/api/openstack/compute/contrib/hypervisors.py:204
+#: nova/api/openstack/compute/contrib/hypervisors.py:202
 msgid "Virt driver does not implement uptime function."
 msgstr ""
 
-#: nova/api/openstack/compute/contrib/hypervisors.py:220
-#: nova/api/openstack/compute/contrib/hypervisors.py:230
+#: nova/api/openstack/compute/contrib/hypervisors.py:218
+#: nova/api/openstack/compute/contrib/hypervisors.py:228
 #, python-format
 msgid "No hypervisor matching '%s' could be found."
 msgstr ""
@@ -3295,17 +3295,17 @@ msgstr ""
 msgid "Quota for %s should be integer."
 msgstr "Sürüm tam sayı olmak zorunda"
 
-#: nova/api/openstack/compute/contrib/scheduler_hints.py:41
+#: nova/api/openstack/compute/contrib/scheduler_hints.py:38
 msgid "Malformed scheduler_hints attribute"
 msgstr "Bozuk scheduler_hints özelliği"
 
 #: nova/api/openstack/compute/contrib/security_group_default_rules.py:129
-#: nova/api/openstack/compute/contrib/security_groups.py:326
+#: nova/api/openstack/compute/contrib/security_groups.py:324
 msgid "Not enough parameters to build a valid rule."
 msgstr "Geçerli bir kuralı oluşturmak için yeterli parametre yok."
 
 #: nova/api/openstack/compute/contrib/security_group_default_rules.py:133
-#, fuzzy, python-format
+#, fuzzy
 msgid "This default rule already exists."
 msgstr "Bu kural zaten grupta var %s"
 
@@ -3315,20 +3315,20 @@ msgid "Showing security_group_default_rule with id %s"
 msgstr "%s id'li ağ gösteriliyor"
 
 #: nova/api/openstack/compute/contrib/security_group_default_rules.py:158
-#, fuzzy, python-format
+#, fuzzy
 msgid "security group default rule not found"
 msgstr "%(rule_id)s kurallı güvenlik grubu bulunamadı."
 
-#: nova/api/openstack/compute/contrib/security_groups.py:334
+#: nova/api/openstack/compute/contrib/security_groups.py:332
 #, fuzzy, python-format
 msgid "Bad prefix for network in cidr %s"
 msgstr "Global ipv6 için yanlış sonek: %s"
 
-#: nova/api/openstack/compute/contrib/security_groups.py:418
+#: nova/api/openstack/compute/contrib/security_groups.py:416
 msgid "Security group not specified"
 msgstr "Güvenlik grubu belirlenmedi"
 
-#: nova/api/openstack/compute/contrib/security_groups.py:422
+#: nova/api/openstack/compute/contrib/security_groups.py:420
 msgid "Security group name cannot be empty"
 msgstr "Güvenlik grup adı boş bırakılamaz"
 
@@ -3706,7 +3706,7 @@ msgid "Please specify either fixed_range or uuid"
 msgstr ""
 
 #: nova/cmd/manage.py:538
-#, fuzzy, python-format
+#, fuzzy
 msgid "UUID is required to delete Quantum Networks"
 msgstr "Ağ oluşturulurken %(req)s gereklidir."
 
@@ -3715,7 +3715,7 @@ msgid "Deleting by fixed_range is not supported with the QuantumManager"
 msgstr ""
 
 #: nova/cmd/manage.py:604
-#, fuzzy, python-format
+#, fuzzy
 msgid "instance"
 msgstr "%r örneğini tekrar yükle"
 
@@ -3794,7 +3794,7 @@ msgid "Service %(service)s on host %(host)s disabled."
 msgstr "%(service_id)s servisi bulunamadı."
 
 #: nova/cmd/manage.py:714
-#, fuzzy, python-format
+#, fuzzy
 msgid "An unexpected error has occurred."
 msgstr "BeklenmeyenHata: %s"
 
@@ -3856,7 +3856,7 @@ msgid "%s created"
 msgstr ""
 
 #: nova/cmd/manage.py:866
-#, fuzzy, python-format
+#, fuzzy
 msgid "Valid instance type name is required"
 msgstr "%s geçerli bir örnek ismidir"
 
@@ -4342,7 +4342,7 @@ msgstr "%s blok aygıt haritalandırması ayarlanıyor"
 msgid "Instance disappeared before we could start it"
 msgstr ""
 
-#: nova/compute/manager.py:847 nova/compute/manager.py:2313
+#: nova/compute/manager.py:847 nova/compute/manager.py:2314
 #, python-format
 msgid "No node specified, defaulting to %(node)s"
 msgstr ""
@@ -4365,7 +4365,7 @@ msgstr "Veritabanı hatası: %s"
 msgid "Clean up resource before rescheduling."
 msgstr ""
 
-#: nova/compute/manager.py:968 nova/compute/manager.py:2367
+#: nova/compute/manager.py:968 nova/compute/manager.py:2368
 msgid "Error trying to reschedule"
 msgstr ""
 
@@ -4382,11 +4382,11 @@ msgstr ""
 msgid "Re-scheduling %(method)s: attempt %(num)d"
 msgstr ""
 
-#: nova/compute/manager.py:1025
+#: nova/compute/manager.py:1026
 msgid "Instance build timed out. Set to error state."
 msgstr ""
 
-#: nova/compute/manager.py:1075
+#: nova/compute/manager.py:1076
 #, python-format
 msgid ""
 "image_id=%(image_id)s, image_size_bytes=%(size_bytes)d, "
@@ -4395,7 +4395,7 @@ msgstr ""
 "İmaj id=%(image_id)s, İmaj boyutu=%(size_bytes)d, İzin verilen "
 "boyut=%(allowed_size_bytes)d"
 
-#: nova/compute/manager.py:1081
+#: nova/compute/manager.py:1082
 #, python-format
 msgid ""
 "Image '%(image_id)s' size %(size_bytes)d exceeded instance_type allowed "
@@ -4404,400 +4404,400 @@ msgstr ""
 "İmaj '%(image_id)s' boyut%(size_bytes)d izin verilen örnek  "
 "%(allowed_size_bytes)d"
 
-#: nova/compute/manager.py:1091
+#: nova/compute/manager.py:1092
 msgid "Starting instance..."
 msgstr "Örnek başlatılıyor.."
 
-#: nova/compute/manager.py:1117
+#: nova/compute/manager.py:1118
 msgid "Instance failed network setup"
 msgstr "Ağ kurulumundaki örnek başarısız"
 
-#: nova/compute/manager.py:1120
+#: nova/compute/manager.py:1121
 #, python-format
 msgid "Instance network_info: |%s|"
 msgstr "Örnek ağ_bilgisi: |%s|"
 
-#: nova/compute/manager.py:1131
+#: nova/compute/manager.py:1132
 msgid "Instance failed block device setup"
 msgstr "Örnek blok aygıtı kurulumu hatalı"
 
-#: nova/compute/manager.py:1150
+#: nova/compute/manager.py:1151
 msgid "Instance failed to spawn"
 msgstr "Örnek oluşturmada hata"
 
-#: nova/compute/manager.py:1201
+#: nova/compute/manager.py:1202
 msgid "Deallocating network for instance"
 msgstr "Örnek için ağ serbest bırakılıyor"
 
-#: nova/compute/manager.py:1272
+#: nova/compute/manager.py:1273
 #, python-format
 msgid "%(action_str)s instance"
 msgstr "%(action_str)s örneği"
 
-#: nova/compute/manager.py:1288
+#: nova/compute/manager.py:1289
 #, fuzzy
 msgid "Failed to deallocate network for instance."
 msgstr "Örnek için ağ serbest bırakılıyor"
 
-#: nova/compute/manager.py:1309
+#: nova/compute/manager.py:1310
 #, python-format
 msgid "Ignoring DiskNotFound: %s"
 msgstr "DiskBulunamadı yok sayılıyor: %s"
 
-#: nova/compute/manager.py:1312
+#: nova/compute/manager.py:1313
 #, python-format
 msgid "Ignoring VolumeNotFound: %s"
 msgstr ""
 
-#: nova/compute/manager.py:1319
+#: nova/compute/manager.py:1320
 #, python-format
 msgid "terminating bdm %s"
 msgstr "Blok cihazı haritalandırması kapatılıyor %s"
 
-#: nova/compute/manager.py:1367
+#: nova/compute/manager.py:1368
 #, python-format
 msgid "Ignoring volume cleanup failure due to %s"
 msgstr ""
 
-#: nova/compute/manager.py:1420 nova/compute/manager.py:2543
-#: nova/compute/manager.py:4019
+#: nova/compute/manager.py:1421 nova/compute/manager.py:2544
+#: nova/compute/manager.py:4020
 #, python-format
 msgid "%s. Setting instance vm_state to ERROR"
 msgstr ""
 
-#: nova/compute/manager.py:1572
+#: nova/compute/manager.py:1573
 msgid "Rebuilding instance"
 msgstr ""
 
-#: nova/compute/manager.py:1585
+#: nova/compute/manager.py:1586
 msgid "Invalid state of instance files on shared storage"
 msgstr ""
 
-#: nova/compute/manager.py:1589
+#: nova/compute/manager.py:1590
 msgid "disk on shared storage, recreating using existing disk"
 msgstr ""
 
-#: nova/compute/manager.py:1593
+#: nova/compute/manager.py:1594
 #, python-format
 msgid "disk not on shared storagerebuilding from: '%s'"
 msgstr ""
 
-#: nova/compute/manager.py:1677
+#: nova/compute/manager.py:1678
 #, python-format
 msgid "bringing vm to original state: '%s'"
 msgstr ""
 
-#: nova/compute/manager.py:1709
+#: nova/compute/manager.py:1710
 #, fuzzy, python-format
 msgid "Detaching from volume api: %s"
 msgstr "Birimi ayır %s"
 
-#: nova/compute/manager.py:1727
+#: nova/compute/manager.py:1728
 msgid "Rebooting instance"
 msgstr ""
 
-#: nova/compute/manager.py:1746
+#: nova/compute/manager.py:1747
 #, python-format
 msgid ""
 "trying to reboot a non-running instance: (state: %(state)s expected: "
 "%(running)s)"
 msgstr ""
 
-#: nova/compute/manager.py:1762
+#: nova/compute/manager.py:1763
 #, python-format
 msgid "Cannot reboot instance: %(exc)s"
 msgstr ""
 
-#: nova/compute/manager.py:1775
+#: nova/compute/manager.py:1776
 msgid "Instance disappeared during reboot"
 msgstr ""
 
-#: nova/compute/manager.py:1802
+#: nova/compute/manager.py:1803
 msgid "instance snapshotting"
 msgstr ""
 
-#: nova/compute/manager.py:1808
+#: nova/compute/manager.py:1809
 #, python-format
 msgid ""
 "trying to snapshot a non-running instance: (state: %(state)s expected: "
 "%(running)s)"
 msgstr ""
 
-#: nova/compute/manager.py:1869
+#: nova/compute/manager.py:1870
 #, python-format
 msgid "Found %(num_images)d images (rotation: %(rotation)d)"
 msgstr "%(num_images)d tane imaj bulundu(dönüş: %(rotation)d)"
 
-#: nova/compute/manager.py:1876
+#: nova/compute/manager.py:1877
 #, python-format
 msgid "Rotating out %d backups"
 msgstr ""
 
-#: nova/compute/manager.py:1881
+#: nova/compute/manager.py:1882
 #, python-format
 msgid "Deleting image %s"
 msgstr "İmaj siliniyor %s"
 
-#: nova/compute/manager.py:1909
+#: nova/compute/manager.py:1910
 #, python-format
 msgid "Failed to set admin password. Instance %s is not running"
 msgstr "Yönetici parolası oluşturmada hata. %s örneği çalışmıyor."
 
-#: nova/compute/manager.py:1916
+#: nova/compute/manager.py:1917
 msgid "Root password set"
 msgstr ""
 
-#: nova/compute/manager.py:1923
+#: nova/compute/manager.py:1924
 msgid "set_admin_password is not implemented by this driver or guest instance."
 msgstr ""
 
-#: nova/compute/manager.py:1938
+#: nova/compute/manager.py:1939
 #, python-format
 msgid "set_admin_password failed: %s"
 msgstr ""
 
-#: nova/compute/manager.py:1945
+#: nova/compute/manager.py:1946
 msgid "error setting admin password"
 msgstr ""
 
-#: nova/compute/manager.py:1958
+#: nova/compute/manager.py:1959
 #, python-format
 msgid ""
 "trying to inject a file into a non-running (state: "
 "%(current_power_state)s expected: %(expected_state)s)"
 msgstr ""
 
-#: nova/compute/manager.py:1962
+#: nova/compute/manager.py:1963
 #, python-format
 msgid "injecting file to %(path)s"
 msgstr ""
 
-#: nova/compute/manager.py:1982
+#: nova/compute/manager.py:1983
 msgid ""
 "Unable to find a different image to use for rescue VM, using instance's "
 "current image"
 msgstr ""
 
-#: nova/compute/manager.py:1996
+#: nova/compute/manager.py:1997
 msgid "Rescuing"
 msgstr ""
 
-#: nova/compute/manager.py:2031
+#: nova/compute/manager.py:2032
 msgid "Unrescuing"
 msgstr ""
 
-#: nova/compute/manager.py:2052
+#: nova/compute/manager.py:2053
 #, python-format
 msgid "Changing instance metadata according to %(diff)r"
 msgstr ""
 
-#: nova/compute/manager.py:2271
+#: nova/compute/manager.py:2272
 #, fuzzy
 msgid "Instance has no source host"
 msgstr "Örneğin hiç bölümü yok."
 
-#: nova/compute/manager.py:2277
+#: nova/compute/manager.py:2278
 msgid "destination same as source!"
 msgstr "dedef kaynak ile aynı!"
 
-#: nova/compute/manager.py:2294
+#: nova/compute/manager.py:2295
 msgid "Migrating"
 msgstr ""
 
-#: nova/compute/manager.py:2540
+#: nova/compute/manager.py:2541
 #, python-format
 msgid "Failed to rollback quota for failed finish_resize: %(qr_error)s"
 msgstr ""
 
-#: nova/compute/manager.py:2603
+#: nova/compute/manager.py:2604
 msgid "Pausing"
 msgstr ""
 
-#: nova/compute/manager.py:2621
+#: nova/compute/manager.py:2622
 msgid "Unpausing"
 msgstr ""
 
-#: nova/compute/manager.py:2659
+#: nova/compute/manager.py:2660
 msgid "Retrieving diagnostics"
 msgstr ""
 
-#: nova/compute/manager.py:2690
+#: nova/compute/manager.py:2691
 msgid "Resuming"
 msgstr ""
 
-#: nova/compute/manager.py:2710
+#: nova/compute/manager.py:2711
 msgid "Reset network"
 msgstr ""
 
-#: nova/compute/manager.py:2715
+#: nova/compute/manager.py:2716
 msgid "Inject network info"
 msgstr ""
 
-#: nova/compute/manager.py:2718
+#: nova/compute/manager.py:2719
 #, python-format
 msgid "network_info to inject: |%s|"
 msgstr ""
 
-#: nova/compute/manager.py:2735
+#: nova/compute/manager.py:2736
 msgid "Get console output"
 msgstr ""
 
-#: nova/compute/manager.py:2762
+#: nova/compute/manager.py:2763
 msgid "Getting vnc console"
 msgstr ""
 
-#: nova/compute/manager.py:2797
+#: nova/compute/manager.py:2798
 #, fuzzy
 msgid "Getting spice console"
 msgstr "Konsol ekleniyor"
 
-#: nova/compute/manager.py:2844
+#: nova/compute/manager.py:2845
 #, python-format
 msgid "Booting with volume %(volume_id)s at %(mountpoint)s"
 msgstr "%(mountpoint)s'de %(volume_id)s bölümü ön yükleniyor"
 
-#: nova/compute/manager.py:2895
+#: nova/compute/manager.py:2896
 #, python-format
 msgid "Attaching volume %(volume_id)s to %(mountpoint)s"
 msgstr "%(mountpoint)s'e %(volume_id)s bölümü bağlanıyor"
 
-#: nova/compute/manager.py:2904
+#: nova/compute/manager.py:2905
 #, python-format
 msgid ""
 "Failed to connect to volume %(volume_id)s while attaching at "
 "%(mountpoint)s"
 msgstr ""
 
-#: nova/compute/manager.py:2919
+#: nova/compute/manager.py:2920
 #, python-format
 msgid "Failed to attach volume %(volume_id)s at %(mountpoint)s"
 msgstr ""
 
-#: nova/compute/manager.py:2949
+#: nova/compute/manager.py:2950
 #, python-format
 msgid "Detach volume %(volume_id)s from mountpoint %(mp)s"
 msgstr "%(mp)s bağlama noktasındaki %(volume_id)s bölümü ayrılıyor"
 
-#: nova/compute/manager.py:2959
+#: nova/compute/manager.py:2960
 msgid "Detaching volume from unknown instance"
 msgstr ""
 
-#: nova/compute/manager.py:2966
+#: nova/compute/manager.py:2967
 #, fuzzy, python-format
 msgid "Failed to detach volume %(volume_id)s from %(mp)s"
 msgstr "%(mp)s bağlama noktasındaki %(volume_id)s bölümü ayrılıyor"
 
-#: nova/compute/manager.py:2990
+#: nova/compute/manager.py:2991
 msgid "Updating volume usage cache with totals"
 msgstr ""
 
-#: nova/compute/manager.py:3028
+#: nova/compute/manager.py:3029
 #, python-format
 msgid "allocate_port_for_instance returned %(ports)s ports"
 msgstr ""
 
-#: nova/compute/manager.py:3048
+#: nova/compute/manager.py:3049
 #, fuzzy, python-format
 msgid "Port %(port_id)s is not attached"
 msgstr "%(volume_id)s bölümü hiçbir şeyle ilişkilendirilmedi"
 
-#: nova/compute/manager.py:3062
+#: nova/compute/manager.py:3063
 #, fuzzy, python-format
 msgid "Host %(host)s not found"
 msgstr "%(host)s sunucusu bulunamadı."
 
-#: nova/compute/manager.py:3199
+#: nova/compute/manager.py:3200
 #, python-format
 msgid "Pre live migration failed at  %(dest)s"
 msgstr "Güncel göç işlemi %(dest)s'da bir hata ile karşılaştı"
 
-#: nova/compute/manager.py:3227
+#: nova/compute/manager.py:3228
 msgid "_post_live_migration() is started.."
 msgstr ""
 
-#: nova/compute/manager.py:3282
+#: nova/compute/manager.py:3283
 #, python-format
 msgid "Migrating instance to %(dest)s finished successfully."
 msgstr "%(dest)s'a örnek göçü işlemi başarıyla tamamlandı."
 
-#: nova/compute/manager.py:3284
+#: nova/compute/manager.py:3285
 msgid ""
 "You may see the error \"libvirt: QEMU error: Domain not found: no domain "
 "with matching name.\" This error can be safely ignored."
 msgstr ""
 
-#: nova/compute/manager.py:3298
+#: nova/compute/manager.py:3299
 msgid "Post operation of migration started"
 msgstr ""
 
-#: nova/compute/manager.py:3438
+#: nova/compute/manager.py:3439
 msgid "Updated the info_cache for instance"
 msgstr ""
 
-#: nova/compute/manager.py:3483
+#: nova/compute/manager.py:3484
 #, python-format
 msgid ""
 "Found %(migration_count)d unconfirmed migrations older than "
 "%(confirm_window)d seconds"
 msgstr ""
 
-#: nova/compute/manager.py:3489
+#: nova/compute/manager.py:3490
 #, python-format
 msgid "Setting migration %(migration_id)s to error: %(reason)s"
 msgstr ""
 
-#: nova/compute/manager.py:3498
+#: nova/compute/manager.py:3499
 #, python-format
 msgid ""
 "Automatically confirming migration %(migration_id)s for instance "
 "%(instance_uuid)s"
 msgstr ""
 
-#: nova/compute/manager.py:3505
+#: nova/compute/manager.py:3506
 #, python-format
 msgid "Instance %(instance_uuid)s not found"
 msgstr ""
 
-#: nova/compute/manager.py:3509
+#: nova/compute/manager.py:3510
 msgid "In ERROR state"
 msgstr ""
 
-#: nova/compute/manager.py:3516
+#: nova/compute/manager.py:3517
 #, python-format
 msgid "In states %(vm_state)s/%(task_state)s, not RESIZED/None"
 msgstr ""
 
-#: nova/compute/manager.py:3525
+#: nova/compute/manager.py:3526
 #, python-format
 msgid "Error auto-confirming resize: %(e)s. Will retry later."
 msgstr ""
 
-#: nova/compute/manager.py:3542
+#: nova/compute/manager.py:3543
 #, python-format
 msgid ""
 "Running instance usage audit for host %(host)s from %(begin_time)s to "
 "%(end_time)s. %(number_instances)s instances."
 msgstr ""
 
-#: nova/compute/manager.py:3561
+#: nova/compute/manager.py:3562
 #, python-format
 msgid "Failed to generate usage audit for instance on host %s"
 msgstr ""
 
-#: nova/compute/manager.py:3585
+#: nova/compute/manager.py:3586
 msgid "Updating bandwidth usage cache"
 msgstr "Bant genişliği kullanım önbelleği güncelleniyor"
 
-#: nova/compute/manager.py:3703
+#: nova/compute/manager.py:3704
 #, fuzzy
 msgid "Updating volume usage cache"
 msgstr "Bant genişliği kullanım önbelleği güncelleniyor"
 
-#: nova/compute/manager.py:3721
+#: nova/compute/manager.py:3722
 msgid "Updating host status"
 msgstr "Sunucu durumu güncelleniyor"
 
-#: nova/compute/manager.py:3747
+#: nova/compute/manager.py:3748
 #, python-format
 msgid ""
 "Found %(num_db_instances)s in the database and %(num_vm_instances)s on "
@@ -4806,69 +4806,69 @@ msgstr ""
 "Veritabanında %(num_db_instances)s ve misafir sistemde "
 "%(num_vm_instances)s bulundu"
 
-#: nova/compute/manager.py:3752 nova/compute/manager.py:3801
+#: nova/compute/manager.py:3753 nova/compute/manager.py:3802
 msgid "During sync_power_state the instance has a pending task. Skip."
 msgstr ""
 
-#: nova/compute/manager.py:3788
+#: nova/compute/manager.py:3789
 #, python-format
 msgid ""
 "During the sync_power process the instance has moved from host %(src)s to"
 " host %(dst)s"
 msgstr ""
 
-#: nova/compute/manager.py:3826
+#: nova/compute/manager.py:3827
 msgid "Instance shutdown by itself. Calling the stop API."
 msgstr ""
 
-#: nova/compute/manager.py:3838 nova/compute/manager.py:3847
-#: nova/compute/manager.py:3877
+#: nova/compute/manager.py:3839 nova/compute/manager.py:3848
+#: nova/compute/manager.py:3878
 msgid "error during stop() in sync_power_state."
 msgstr ""
 
-#: nova/compute/manager.py:3842
+#: nova/compute/manager.py:3843
 msgid "Instance is suspended unexpectedly. Calling the stop API."
 msgstr ""
 
-#: nova/compute/manager.py:3858
+#: nova/compute/manager.py:3859
 msgid "Instance is paused unexpectedly. Ignore."
 msgstr ""
 
-#: nova/compute/manager.py:3864
+#: nova/compute/manager.py:3865
 msgid "Instance is unexpectedly not found. Ignore."
 msgstr ""
 
-#: nova/compute/manager.py:3870
+#: nova/compute/manager.py:3871
 msgid "Instance is not stopped. Calling the stop API."
 msgstr ""
 
-#: nova/compute/manager.py:3886
+#: nova/compute/manager.py:3887
 msgid "Instance is not (soft-)deleted."
 msgstr ""
 
-#: nova/compute/manager.py:3894
+#: nova/compute/manager.py:3895
 msgid "CONF.reclaim_instance_interval <= 0, skipping..."
 msgstr ""
 
-#: nova/compute/manager.py:3909
+#: nova/compute/manager.py:3910
 msgid "Reclaiming deleted instance"
 msgstr "Silinen örnek kurtarılıyor"
 
-#: nova/compute/manager.py:3974
+#: nova/compute/manager.py:3975
 #, python-format
 msgid ""
 "Detected instance with name label '%(name)s' which is marked as DELETED "
 "but still present on host."
 msgstr ""
 
-#: nova/compute/manager.py:3981
+#: nova/compute/manager.py:3982
 #, python-format
 msgid ""
 "Destroying instance with name label '%(name)s' which is marked as DELETED"
 " but still present on host."
 msgstr ""
 
-#: nova/compute/manager.py:3988
+#: nova/compute/manager.py:3989
 #, python-format
 msgid "Unrecognized value '%(action)s' for CONF.running_deleted_instance_action"
 msgstr ""
@@ -4993,7 +4993,7 @@ msgstr "%s örneği için sunucu bulma başarısız"
 msgid "Using %(prefix)s instead of %(req_prefix)s"
 msgstr ""
 
-#: nova/conductor/api.py:376
+#: nova/conductor/api.py:379
 msgid ""
 "Timed out waiting for nova-conductor. Is it running? Or did this service "
 "start before nova-conductor?"
@@ -5004,7 +5004,7 @@ msgstr ""
 msgid "Instance update attempted for '%(key)s' on %(instance_uuid)s"
 msgstr ""
 
-#: nova/conductor/manager.py:253
+#: nova/conductor/manager.py:255
 msgid "Invalid block_device_mapping_destroy invocation"
 msgstr ""
 
@@ -5083,20 +5083,20 @@ msgstr "Anahtar kontrol edliyor: %(token)s, %(token_valid)s)"
 msgid "Failed to notify cells of instance destroy"
 msgstr ""
 
-#: nova/db/api.py:675 nova/db/api.py:696
+#: nova/db/api.py:677 nova/db/api.py:698
 #, fuzzy
 msgid "Failed to notify cells of instance update"
 msgstr "Tekrar yükleme örneğinde hata oluştu."
 
-#: nova/db/api.py:736
+#: nova/db/api.py:738
 msgid "Failed to notify cells of instance info cache update"
 msgstr ""
 
-#: nova/db/api.py:1435
+#: nova/db/api.py:1437
 msgid "Failed to notify cells of bw_usage update"
 msgstr ""
 
-#: nova/db/api.py:1590
+#: nova/db/api.py:1592
 #, fuzzy
 msgid "Failed to notify cells of instance fault"
 msgstr "Tekrar yükleme örneğinde hata oluştu."
@@ -5110,7 +5110,7 @@ msgstr ""
 msgid "model or base_model parameter should be subclass of NovaBase"
 msgstr ""
 
-#: nova/db/sqlalchemy/api.py:201 nova/virt/baremetal/db/sqlalchemy/api.py:64
+#: nova/db/sqlalchemy/api.py:201 nova/virt/baremetal/db/sqlalchemy/api.py:61
 #, python-format
 msgid "Unrecognized read_deleted value '%s'"
 msgstr "Tanınmayan silinmiş okuma değeri '%s'"
@@ -5127,18 +5127,18 @@ msgstr ""
 msgid "Invalid instance id %s in request"
 msgstr "%s geçerli bir örnek ismidir"
 
-#: nova/db/sqlalchemy/api.py:2752
+#: nova/db/sqlalchemy/api.py:2810
 #, python-format
 msgid "Change will make usage less than 0 for the following resources: %(unders)s"
 msgstr ""
 
-#: nova/db/sqlalchemy/migration.py:73
-#: nova/virt/baremetal/db/sqlalchemy/migration.py:69
+#: nova/db/sqlalchemy/migration.py:69
+#: nova/virt/baremetal/db/sqlalchemy/migration.py:66
 msgid "version should be an integer"
 msgstr "Sürüm tam sayı olmak zorunda"
 
-#: nova/db/sqlalchemy/migration.py:100
-#: nova/virt/baremetal/db/sqlalchemy/migration.py:97
+#: nova/db/sqlalchemy/migration.py:96
+#: nova/virt/baremetal/db/sqlalchemy/migration.py:94
 msgid "Upgrade DB using Essex release first."
 msgstr ""
 
@@ -5747,7 +5747,7 @@ msgid "Quantum Error: %s"
 msgstr "Yakalama hatası: %s"
 
 #: nova/network/security_group/quantum_driver.py:127
-#, fuzzy, python-format
+#, fuzzy
 msgid "Quantum Error getting security groups"
 msgstr "%s güvenlik grubunu siliniz"
 
@@ -5768,7 +5768,7 @@ msgstr "%s güvenlik grubunu siliniz"
 #: nova/network/security_group/quantum_driver.py:388
 #: nova/network/security_group/quantum_driver.py:394
 #: nova/network/security_group/quantum_driver.py:423
-#, fuzzy, python-format
+#, fuzzy
 msgid "Quantum Error:"
 msgstr "Yakalama hatası: %s"
 
@@ -6719,7 +6719,7 @@ msgstr ""
 "Sahte komuta verilen yanıt: standartçıktı='%(stdout)s' "
 "standarthata='%(stderr)s'"
 
-#: nova/tests/fake_volume.py:186 nova/volume/cinder.py:207
+#: nova/tests/fake_volume.py:186
 msgid "status must be available"
 msgstr ""
 
@@ -6752,7 +6752,7 @@ msgid "Expected a function in 'auth[1]' parameter"
 msgstr ""
 
 #: nova/tests/test_hypervapi.py:433
-#, fuzzy, python-format
+#, fuzzy
 msgid "fake vswitch not found"
 msgstr " [%s] göstergesi bulunamadı"
 
@@ -6826,7 +6826,7 @@ msgstr "İçsel hata"
 msgid "After force-killing instances: %s"
 msgstr "Zorla öldürülen örneklerin ardından: %s"
 
-#: nova/tests/compute/test_compute.py:3937
+#: nova/tests/compute/test_compute.py:3939
 msgid "wrong host/node"
 msgstr ""
 
@@ -7105,47 +7105,47 @@ msgid ""
 "passed to baremetal driver: %s"
 msgstr ""
 
-#: nova/virt/baremetal/pxe.py:256 nova/virt/baremetal/tilera.py:180
+#: nova/virt/baremetal/pxe.py:255 nova/virt/baremetal/tilera.py:179
 #, fuzzy, python-format
 msgid "Fetching kernel and ramdisk for instance %s"
 msgstr "|%s| örneği için değişken IP tahsisi"
 
-#: nova/virt/baremetal/pxe.py:288 nova/virt/baremetal/tilera.py:211
+#: nova/virt/baremetal/pxe.py:287 nova/virt/baremetal/tilera.py:210
 #, python-format
 msgid "Fetching image %(ami)s for instance %(name)s"
 msgstr ""
 
-#: nova/virt/baremetal/pxe.py:328 nova/virt/baremetal/tilera.py:247
+#: nova/virt/baremetal/pxe.py:327 nova/virt/baremetal/tilera.py:246
 #, python-format
 msgid "Injecting files into image for instance %(name)s"
 msgstr ""
 
-#: nova/virt/baremetal/pxe.py:460 nova/virt/baremetal/tilera.py:366
+#: nova/virt/baremetal/pxe.py:459 nova/virt/baremetal/tilera.py:365
 #, python-format
 msgid "Node associated with another instance while waiting for deploy of %s"
 msgstr ""
 
-#: nova/virt/baremetal/pxe.py:467
+#: nova/virt/baremetal/pxe.py:466
 #, fuzzy, python-format
 msgid "PXE deploy started for instance %s"
 msgstr "%s örneği için konsol çıktısını getir"
 
-#: nova/virt/baremetal/pxe.py:472
+#: nova/virt/baremetal/pxe.py:471
 #, fuzzy, python-format
 msgid "PXE deploy completed for instance %s"
 msgstr "%s örneği için konsol çıktısını getir"
 
-#: nova/virt/baremetal/pxe.py:476
+#: nova/virt/baremetal/pxe.py:475
 #, fuzzy, python-format
 msgid "PXE deploy failed for instance %s"
 msgstr "%s örneği için konsol çıktısını getir"
 
-#: nova/virt/baremetal/pxe.py:478 nova/virt/baremetal/tilera.py:391
+#: nova/virt/baremetal/pxe.py:477 nova/virt/baremetal/tilera.py:390
 #, python-format
 msgid "Baremetal node deleted while waiting for deployment of instance %s"
 msgstr ""
 
-#: nova/virt/baremetal/pxe.py:483
+#: nova/virt/baremetal/pxe.py:482
 #, python-format
 msgid "Timeout reached while waiting for PXE deploy of instance %s"
 msgstr ""
@@ -7157,21 +7157,21 @@ msgid ""
 "not passed to baremetal driver: %s"
 msgstr ""
 
-#: nova/virt/baremetal/tilera.py:372
+#: nova/virt/baremetal/tilera.py:371
 #, fuzzy, python-format
 msgid "Tilera deploy started for instance %s"
 msgstr "%s örneği için konsol çıktısını getir"
 
-#: nova/virt/baremetal/tilera.py:378
+#: nova/virt/baremetal/tilera.py:377
 #, fuzzy, python-format
 msgid "Tilera deploy completed for instance %s"
 msgstr "%s örneği için konsol çıktısını getir"
 
-#: nova/virt/baremetal/tilera.py:386
+#: nova/virt/baremetal/tilera.py:385
 msgid "Node is unknown error state."
 msgstr ""
 
-#: nova/virt/baremetal/tilera.py:389
+#: nova/virt/baremetal/tilera.py:388
 #, fuzzy, python-format
 msgid "Tilera deploy failed for instance %s"
 msgstr "%s örneği için sunucu bulma başarısız"
@@ -7289,32 +7289,32 @@ msgstr "Örnekle değişken IP ilişkilendirilmedi"
 msgid "detach volume could not find tid for %s"
 msgstr ""
 
-#: nova/virt/baremetal/db/sqlalchemy/api.py:202
+#: nova/virt/baremetal/db/sqlalchemy/api.py:199
 msgid "instance_uuid must be supplied to bm_node_associate_and_update"
 msgstr ""
 
-#: nova/virt/baremetal/db/sqlalchemy/api.py:214
+#: nova/virt/baremetal/db/sqlalchemy/api.py:211
 #, python-format
 msgid "Failed to associate instance %(i_uuid)s to baremetal node %(n_uuid)s."
 msgstr ""
 
-#: nova/virt/baremetal/db/sqlalchemy/api.py:332
+#: nova/virt/baremetal/db/sqlalchemy/api.py:329
 #, fuzzy
 msgid "No more PXE IPs available"
 msgstr "Daha fazla değişken IP mevcut değil"
 
-#: nova/virt/baremetal/db/sqlalchemy/api.py:354
-#: nova/virt/baremetal/db/sqlalchemy/api.py:396
+#: nova/virt/baremetal/db/sqlalchemy/api.py:351
+#: nova/virt/baremetal/db/sqlalchemy/api.py:393
 #, fuzzy, python-format
 msgid "Baremetal interface %s not found"
 msgstr "%(interface)s arayüzü bulunamadı"
 
-#: nova/virt/baremetal/db/sqlalchemy/api.py:406
+#: nova/virt/baremetal/db/sqlalchemy/api.py:403
 #, fuzzy, python-format
 msgid "Baremetal interface %s already in use"
 msgstr "Sanal arayüz oluşturma hatası"
 
-#: nova/virt/baremetal/db/sqlalchemy/api.py:420
+#: nova/virt/baremetal/db/sqlalchemy/api.py:417
 #, python-format
 msgid "Baremetal virtual interface %s not found"
 msgstr ""
@@ -7748,7 +7748,7 @@ msgstr ""
 msgid "get_available_resource called"
 msgstr ""
 
-#: nova/virt/hyperv/hostops.py:135 nova/virt/libvirt/driver.py:3722
+#: nova/virt/hyperv/hostops.py:135 nova/virt/libvirt/driver.py:3724
 #: nova/virt/xenapi/host.py:148
 msgid "Updating host stats"
 msgstr ""
@@ -8121,7 +8121,7 @@ msgid "Failed to destroy instance: %s"
 msgstr "Tekrar yükleme örneğinde hata oluştu."
 
 #: nova/virt/hyperv/vmops.py:294
-#, fuzzy, python-format
+#, fuzzy
 msgid "reboot instance"
 msgstr "%r örneğini tekrar yükle"
 
@@ -8273,22 +8273,22 @@ msgstr ""
 msgid "Device number: %(device_number)s, target lun: %(target_lun)s"
 msgstr ""
 
-#: nova/virt/hyperv/volumeutils.py:53
+#: nova/virt/hyperv/volumeutils.py:51
 #, python-format
 msgid "An error has occurred when calling the iscsi initiator: %s"
 msgstr ""
 
-#: nova/virt/libvirt/blockinfo.py:130
+#: nova/virt/libvirt/blockinfo.py:127
 #, python-format
 msgid "Unable to determine disk prefix for %s"
 msgstr ""
 
-#: nova/virt/libvirt/blockinfo.py:177
+#: nova/virt/libvirt/blockinfo.py:174
 #, python-format
 msgid "No free disk device names for prefix '%s'"
 msgstr ""
 
-#: nova/virt/libvirt/blockinfo.py:267
+#: nova/virt/libvirt/blockinfo.py:264
 #, python-format
 msgid "Unable to determine disk bus for '%s'"
 msgstr ""
@@ -8654,51 +8654,51 @@ msgid "Live Migration failure: %(e)s"
 msgstr ""
 
 #: nova/virt/libvirt/driver.py:3230
-#, python-format
-msgid "plug_vifs() failed %(cnt)d.Retry up to %(max_retry)d for %(hostname)s."
+#, fuzzy, python-format
+msgid "plug_vifs() failed %(cnt)d. Retry up to %(max_retry)d."
 msgstr ""
 "plug_vifs() %(cnt)d kez başarısız oldu. %(hostname)s için %(max_retry)d "
 "denemeye kadar tekrar deneniyor."
 
-#: nova/virt/libvirt/driver.py:3340
+#: nova/virt/libvirt/driver.py:3342
 #, python-format
 msgid ""
 "Error from libvirt while getting description of %(instance_name)s: [Error"
 " Code %(error_code)s] %(ex)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3357
+#: nova/virt/libvirt/driver.py:3359
 #, python-format
 msgid "skipping %(path)s since it looks like volume"
 msgstr "Birim gibi göründüğünden beri %(path)s atlanıyor"
 
-#: nova/virt/libvirt/driver.py:3362
+#: nova/virt/libvirt/driver.py:3364
 #, python-format
 msgid "skipping disk for %(instance_name)s as it does not have a path"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3401
+#: nova/virt/libvirt/driver.py:3403
 #, python-format
 msgid "Getting disk size of %(i_name)s: %(e)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3447
+#: nova/virt/libvirt/driver.py:3449
 msgid "Starting migrate_disk_and_power_off"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3506
+#: nova/virt/libvirt/driver.py:3508
 msgid "Instance running successfully."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3512
+#: nova/virt/libvirt/driver.py:3514
 msgid "Starting finish_migration"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3574
+#: nova/virt/libvirt/driver.py:3576
 msgid "Starting finish_revert_migration"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3695
+#: nova/virt/libvirt/driver.py:3697
 #, python-format
 msgid "Checking instance files accessability%(instance_path)s"
 msgstr ""
@@ -9000,7 +9000,7 @@ msgid "Looking for Fibre Channel dev %(device)s"
 msgstr ""
 
 #: nova/virt/libvirt/volume.py:707
-#, fuzzy, python-format
+#, fuzzy
 msgid "Fibre Channel device not found."
 msgstr "%s'de iSCSI cihazı bulunamadı"
 
@@ -9106,25 +9106,25 @@ msgstr ""
 msgid "Uncompressed image file not found"
 msgstr ""
 
-#: nova/virt/powervm/common.py:59
+#: nova/virt/powervm/common.py:61
 msgid "Connection error connecting PowerVM manager"
 msgstr ""
 
-#: nova/virt/powervm/common.py:71
+#: nova/virt/powervm/common.py:73
 #, fuzzy, python-format
 msgid "Running cmd (SSH-as-root): %s"
 msgstr "Çalışan komut(alt süreç): %s"
 
-#: nova/virt/powervm/common.py:117
+#: nova/virt/powervm/common.py:119
 msgid "File transfer to PowerVM manager failed"
 msgstr ""
 
-#: nova/virt/powervm/common.py:136
+#: nova/virt/powervm/common.py:138
 #, python-format
 msgid "ftp GET %(remote_path)s to: %(local_path)s"
 msgstr ""
 
-#: nova/virt/powervm/common.py:142
+#: nova/virt/powervm/common.py:144
 msgid "File transfer from PowerVM manager failed"
 msgstr ""
 
@@ -9878,7 +9878,7 @@ msgid "Attach_volume: %(connection_info)s, %(instance_name)s, %(mountpoint)s"
 msgstr ""
 
 #: nova/virt/vmwareapi/volumeops.py:138 nova/virt/vmwareapi/volumeops.py:177
-#, fuzzy, python-format
+#, fuzzy
 msgid "Unable to find iSCSI Target"
 msgstr "%r adresini bulmak olanaksız"
 
@@ -10165,12 +10165,12 @@ msgstr ""
 msgid "Pool-set_name_label failed: %(e)s"
 msgstr ""
 
-#: nova/virt/xenapi/vif.py:103
+#: nova/virt/xenapi/vif.py:101
 #, python-format
 msgid "Found no PIF for device %s"
 msgstr ""
 
-#: nova/virt/xenapi/vif.py:122
+#: nova/virt/xenapi/vif.py:120
 #, python-format
 msgid ""
 "PIF %(pif_rec['uuid'])s for network %(bridge)s has VLAN id %(pif_vlan)d. "
@@ -10808,7 +10808,7 @@ msgid "Introducing SR %(label)s"
 msgstr ""
 
 #: nova/virt/xenapi/volume_utils.py:68
-#, fuzzy, python-format
+#, fuzzy
 msgid "Creating PBD for SR"
 msgstr "%s blok aygıt haritalandırması ayarlanıyor"
 
@@ -10922,2176 +10922,8 @@ msgstr ""
 msgid "Cinderclient connection created using URL: %s"
 msgstr ""
 
-#~ msgid "Fatal call to deprecated config %(msg)s"
-#~ msgstr ""
-
-#~ msgid "Failed to decrypt text"
-#~ msgstr ""
-
-#~ msgid "Invalid snapshot"
-#~ msgstr ""
-
-#~ msgid "Volume %(volume_id)s is still attached, detach volume first."
-#~ msgstr ""
-
-#~ msgid "Failed to load data into json format"
-#~ msgstr ""
-
-#~ msgid "Invalid volume type"
-#~ msgstr ""
-
-#~ msgid "Failed to resume server"
-#~ msgstr ""
-
-#~ msgid "Could not find driver for compute_driver %(name)s"
-#~ msgstr ""
-
-#~ msgid "Volume %(volume_id)s persistence file could not be found."
-#~ msgstr ""
-
-#~ msgid "Unable to locate account %(account_name)s on Solidfire device"
-#~ msgstr ""
-
-#~ msgid "Volume %(volume_id)s has no metadata with key %(metadata_key)s."
-#~ msgstr ""
-
-#~ msgid "Volume type %(volume_type_id)s could not be found."
-#~ msgstr ""
-
-#~ msgid "Volume type with name %(volume_type_name)s could not be found."
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Volume Type %(volume_type_id)s has no "
-#~ "extra specs with key %(extra_specs_key)s."
-#~ msgstr ""
-
-#~ msgid "deleting volume %(volume_name)s that has snapshot"
-#~ msgstr ""
-
-#~ msgid "deleting snapshot %(snapshot_name)s that has dependent volumes"
-#~ msgstr ""
-
-#~ msgid "Failed to create iscsi target for volume %(volume_id)s."
-#~ msgstr ""
-
-#~ msgid "Failed to remove iscsi target for volume %(volume_id)s."
-#~ msgstr ""
-
-#~ msgid "Host is not set to the network (%(network_id)s)."
-#~ msgstr ""
-
-#~ msgid "Port %(port_id)s could not be found."
-#~ msgstr ""
-
-#~ msgid "Invalid console type %(console_type)s "
-#~ msgstr ""
-
-#~ msgid "Flavor access not found for %(flavor_id) / %(project_id) combination."
-#~ msgstr ""
-
-#~ msgid "Volume Type %(name)s already exists."
-#~ msgstr ""
-
-#~ msgid "Host %(host)s is not up or doesn't exist."
-#~ msgstr ""
-
-#~ msgid "Maximum volume size exceeded"
-#~ msgstr ""
-
-#~ msgid "Maximum number of volumes allowed (%(allowed)d) exceeded"
-#~ msgstr ""
-
-#~ msgid "Detected more than one volume with name %(vol_name)s"
-#~ msgstr ""
-
-#~ msgid "Cannot create volume_type with name %(name)s and specs %(extra_specs)s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Bad or unexpected response from the "
-#~ "storage volume backend API: %(data)s"
-#~ msgstr ""
-
-#~ msgid "Unknown NFS exception"
-#~ msgstr ""
-
-#~ msgid "No mounted NFS shares found"
-#~ msgstr ""
-
-#~ msgid "There is no share which can host %(volume_size)sG"
-#~ msgstr ""
-
-#~ msgid "Bad response from SolidFire API"
-#~ msgstr ""
-
-#~ msgid "Error in SolidFire API response: data=%(data)s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Skipping %(full_task_name)s, %(ticks_to_skip)s ticks"
-#~ " left until next run"
-#~ msgstr ""
-
-#~ msgid "Full set of FLAGS:"
-#~ msgstr ""
-
-#~ msgid "Starting %(topic)s node (version %(vcs_string)s)"
-#~ msgstr ""
-
-#~ msgid "The service database object disappeared, Recreating it."
-#~ msgstr ""
-
-#~ msgid "in looping call"
-#~ msgstr ""
-
-#~ msgid "cannot understand XML"
-#~ msgstr "XML dosyası anlaşılamadı"
-
-#~ msgid "Invalid XML in request body"
-#~ msgstr ""
-
-#~ msgid "%(url)s returned a fault: %(e)s"
-#~ msgstr "%(url)s hata döndürdü: %(e)s"
-
-#~ msgid "Server name is not a string or unicode"
-#~ msgstr ""
-
-#~ msgid "Server name is an empty string"
-#~ msgstr ""
-
-#~ msgid "Server name must be less than 256 characters."
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Cannot create aggregate with name "
-#~ "%(name)s and availability zone %(avail_zone)s"
-#~ msgstr ""
-
-#~ msgid "Host '%s' could not be found."
-#~ msgstr ""
-
-#~ msgid "Putting host %(host)s in maintenance mode %(mode)s."
-#~ msgstr ""
-
-#~ msgid "Setting host %(host)s to %(state)s."
-#~ msgstr ""
-
-#~ msgid "Host not found"
-#~ msgstr ""
-
-#~ msgid "Network does not have %s action"
-#~ msgstr ""
-
-#~ msgid "Invalid request body. 'volume' not found"
-#~ msgstr ""
-
-#~ msgid "Invalid request body. 'size' not found"
-#~ msgstr ""
-
-#~ msgid "Snapshot and image cannot be specified together."
-#~ msgstr ""
-
-#~ msgid "Removing options '%(bad_options)s' from query"
-#~ msgstr ""
-
-#~ msgid "Updating status of %(resource)s '%(id)s' to '%(status)s'"
-#~ msgstr ""
-
-#~ msgid "No image_name was specified in request."
-#~ msgstr ""
-
-#~ msgid "Deprecated Config: %s"
-#~ msgstr ""
-
-#~ msgid "No host for instance, deleting immediately"
-#~ msgstr ""
-
-#~ msgid "host for instance is down, deleting from database"
-#~ msgstr ""
-
-#~ msgid "Image type not recognized %s"
-#~ msgstr ""
-
-#~ msgid "%(overs)s quota exceeded for %(pid)s, tried to resize instance. %(msg)s"
-#~ msgstr ""
-
-#~ msgid "create arguments must be positive integers"
-#~ msgstr ""
-
-#~ msgid "Build error: %s"
-#~ msgstr ""
-
-#~ msgid "Re-scheduling instance: attempt %d"
-#~ msgstr ""
-
-#~ msgid "Instance has already been created"
-#~ msgstr ""
-
-#~ msgid "set_admin_password is not implemented by this driver."
-#~ msgstr ""
-
-#~ msgid "Faild to detach volume %(volume_id)s from %(mp)s"
-#~ msgstr ""
-
-#~ msgid "No floating_ip found"
-#~ msgstr ""
-
-#~ msgid "No floating_ip found."
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Live migration: Unexpected error: cannot inherit floating ip.\n"
-#~ "%(e)s"
-#~ msgstr ""
-
-#~ msgid "In states %(vm_state)s/%(task_state)s, notRESIZED/None"
-#~ msgstr ""
-
-#~ msgid "Instance is paused or suspended unexpectedly. Calling the stop API."
-#~ msgstr ""
-
-#~ msgid "FLAGS.reclaim_instance_interval <= 0, skipping..."
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Unrecognized value '%(action)s' for "
-#~ "FLAGS.running_deleted_instance_action"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Host field should be not be set"
-#~ " on the instance until resources have"
-#~ " been claimed."
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Total memory: %(total_mem)d MB, used: "
-#~ "%(used_mem)d MB, free: %(free_mem)d MB"
-#~ msgstr ""
-
-#~ msgid "Memory limit not specified, defaulting to unlimited"
-#~ msgstr ""
-
-#~ msgid "Memory limit: %(memory_mb_limit)d MB, free: %(free_ram_mb)d MB"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Unable to claim resources.  Free memory"
-#~ " %(free_ram_mb)d MB < requested memory "
-#~ "%(memory_mb)d MB"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Total disk: %(total_disk)d GB, used: "
-#~ "%(used_disk)d GB, free: %(free_disk)d GB"
-#~ msgstr ""
-
-#~ msgid "Disk limit not specified, defaulting to unlimited"
-#~ msgstr ""
-
-#~ msgid "Disk limit: %(disk_gb_limit)d GB, free: %(free_disk_gb)d GB"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Unable to claim resources.  Free disk"
-#~ " %(free_disk_gb)d GB < requested disk "
-#~ "%(disk_gb)d GB"
-#~ msgstr ""
-
-#~ msgid "Total VCPUs: %(total_vcpus)d, used: %(used_vcpus)d"
-#~ msgstr ""
-
-#~ msgid "VCPU limit not specified, defaulting to unlimited"
-#~ msgstr ""
-
-#~ msgid "CPU limit: %(vcpu_limit)d"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Unable to claim resources.  Free CPU "
-#~ "%(free_vcpus)d < requested CPU %(vcpus)d"
-#~ msgstr ""
-
-#~ msgid "Finishing claim: %s"
-#~ msgstr ""
-
-#~ msgid "Compute_service record created for %s "
-#~ msgstr ""
-
-#~ msgid "Compute_service record updated for %s "
-#~ msgstr ""
-
-#~ msgid "Backend exists"
-#~ msgstr ""
-
-#~ msgid "No backend config with id %(sm_backend_id)s"
-#~ msgstr ""
-
-#~ msgid "No backend config with sr uuid %(sr_uuid)s"
-#~ msgstr ""
-
-#~ msgid "Flavor exists"
-#~ msgstr ""
-
-#~ msgid "%(sm_flavor_id) flavor not found"
-#~ msgstr ""
-
-#~ msgid "No sm_flavor called %(sm_flavor_id)s"
-#~ msgstr ""
-
-#~ msgid "No sm_flavor called %(sm_flavor_label)s"
-#~ msgstr ""
-
-#~ msgid "No sm_volume with id %(volume_id)s"
-#~ msgstr ""
-
-#~ msgid "Table |%s| not created!"
-#~ msgstr ""
-
-#~ msgid "quota_classes table not dropped"
-#~ msgstr ""
-
-#~ msgid "foreign key constraint couldn't be removed"
-#~ msgstr ""
-
-#~ msgid "Foreign Key constraint couldn't be removed"
-#~ msgstr ""
-
-#~ msgid "foreign key could not be dropped"
-#~ msgstr ""
-
-#~ msgid "foreign key could not be created"
-#~ msgstr ""
-
-#~ msgid "quota_usages table not dropped"
-#~ msgstr ""
-
-#~ msgid "reservations table not dropped"
-#~ msgstr ""
-
-#~ msgid "foreign key constraint couldn't be created"
-#~ msgstr ""
-
-#~ msgid "foreign key constraint couldn't be dropped"
-#~ msgstr ""
-
-#~ msgid "user_quotas table not dropped"
-#~ msgstr ""
-
-#~ msgid "args: %s"
-#~ msgstr ""
-
-#~ msgid "kwargs: %s"
-#~ msgstr ""
-
-#~ msgid "Starting Bridge interface for %s"
-#~ msgstr ""
-
-#~ msgid "networks retrieved for instance: |%(networks)s|"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "The network range is not big "
-#~ "enough to fit %(num_networks)s. Network "
-#~ "size is %(network_size)s"
-#~ msgstr ""
-
-#~ msgid "Error creating network entry"
-#~ msgstr ""
-
-#~ msgid "No network with net_id = %s"
-#~ msgstr ""
-
-#~ msgid "No fixed IPs to deallocate for vif %s"
-#~ msgstr ""
-
-#~ msgid "_get_auth_token() failed"
-#~ msgstr ""
-
-#~ msgid "Making asynchronous call on %s ..."
-#~ msgstr ""
-
-#~ msgid "Timeout while waiting on RPC response."
-#~ msgstr ""
-
-#~ msgid "Unable to connect to AMQP server: %s"
-#~ msgstr ""
-
-#~ msgid "->response->%s"
-#~ msgstr ""
-
-#~ msgid "Created topic proxy: %s"
-#~ msgstr ""
-
-#~ msgid "ROUTER RELAY-OUT START %(data)s"
-#~ msgstr ""
-
-#~ msgid "Create Consumer for topic (%(topic)s)"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Matchmaker could not be loaded.\n"
-#~ "rpc_zmq_matchmaker is not a class."
-#~ msgstr ""
-
-#~ msgid "Error loading Matchmaker."
-#~ msgstr ""
-
-#~ msgid "Casted '%(method)s' to volume '%(host)s'"
-#~ msgstr ""
-
-#~ msgid "Casted '%(method)s' to compute '%(host)s'"
-#~ msgstr ""
-
-#~ msgid "Casted '%(method)s' to %(topic)s '%(host)s'"
-#~ msgstr ""
-
-#~ msgid "Driver must implement schedule_create_volune"
-#~ msgstr ""
-
-#~ msgid "No host selection for %s defined."
-#~ msgstr ""
-
-#~ msgid "Scheduler only understands Compute nodes (for now)"
-#~ msgstr ""
-
-#~ msgid "Weighted %(weighted_host)s"
-#~ msgstr ""
-
-#~ msgid "Host filter fails for ignored host %(host)s"
-#~ msgstr ""
-
-#~ msgid "Host filter fails for non-forced host %(host)s"
-#~ msgstr ""
-
-#~ msgid "Host filter function %(func)s failed for %(host)s"
-#~ msgstr ""
-
-#~ msgid "Host filter passes for %(host)s"
-#~ msgstr ""
-
-#~ msgid "Received %(service_name)s service update from %(host)s."
-#~ msgstr ""
-
-#~ msgid "host_manager only implemented for 'compute'"
-#~ msgstr ""
-
-#~ msgid "Failed to schedule create_volume: %(ex)s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "SimpleScheduler now only covers volume "
-#~ "scheduling and is deprecated in Folsom."
-#~ " Non-volume functionality in "
-#~ "SimpleScheduler has been replaced by "
-#~ "FilterScheduler"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "nova-volume functionality is deprecated "
-#~ "in Folsom and will be removed in"
-#~ " Grizzly.  Volumes are now handled by"
-#~ " Cinder"
-#~ msgstr ""
-
-#~ msgid "Not enough allocatable volume gigabytes remaining"
-#~ msgstr ""
-
-#~ msgid "Previously tried hosts: %(hosts)s.  (host=%(host)s)"
-#~ msgstr ""
-
-#~ msgid "TCP: trust state of %(host)s:%(level)s(%(trust)s)"
-#~ msgstr ""
-
-#~ msgid "unrecognized argument %s"
-#~ msgstr ""
-
-#~ msgid "Run CLI command: %s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "CLI output:\n"
-#~ " stdout: %(out)s\n"
-#~ " stderr: %(err)s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "CLI Exception output:\n"
-#~ " stdout: %(out)s\n"
-#~ " stderr: %(err)s"
-#~ msgstr ""
-
-#~ msgid "Given data: %s"
-#~ msgstr ""
-
-#~ msgid "Result data: %s"
-#~ msgstr ""
-
-#~ msgid "_get: %s"
-#~ msgstr "getir: %s"
-
-#~ msgid "_get_all: %s"
-#~ msgstr "hepsini getir: %s"
-
-#~ msgid "test_snapshot_create: param=%s"
-#~ msgstr "Test sistem görüntüsü oluşturulması: parametre=%s"
-
-#~ msgid "test_snapshot_create: resp_dict=%s"
-#~ msgstr "Test sistem görüntüsü oluşturulması: yanıt dizini=%s"
-
-#~ msgid "test_snapshot_create_force: param=%s"
-#~ msgstr "Zorla test sistem görüntüsü oluşturulması: parametre=%s"
-
-#~ msgid "test_snapshot_create_force: resp_dict=%s"
-#~ msgstr "Zorla test sistem görüntüsü oluşturulması: yanıt dizini=%s"
-
-#~ msgid "test_snapshot_show: resp=%s"
-#~ msgstr "Test sistem görüntüsü gösterimi: yanıt=%s"
-
-#~ msgid "test_snapshot_detail: resp_dict=%s"
-#~ msgstr "Test sistem görüntüsü ayrıntısı: yanıt dizin=%s"
-
-#~ msgid "Failed to destroy vm %s"
-#~ msgstr ""
-
-#~ msgid "Failed to get info for disk %s"
-#~ msgstr ""
-
-#~ msgid "Result: %(result)s is not a dict."
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Key mismatch:\n"
-#~ "%(ex_keys)s\n"
-#~ "%(res_keys)s"
-#~ msgstr ""
-
-#~ msgid "Result: %(result)s is not a list."
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Length mismatch: %(result)s\n"
-#~ "%(expected)s."
-#~ msgstr ""
-
-#~ msgid "Result: %(res_obj)s not in %(expected)s."
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Values do not match:\n"
-#~ "%(expected)s\n"
-#~ "%(result)s"
-#~ msgstr ""
-
-#~ msgid "No domains exist."
-#~ msgstr ""
-
-#~ msgid "============= initial domains =========== : %s"
-#~ msgstr ""
-
-#~ msgid "Building domain: to be removed"
-#~ msgstr ""
-
-#~ msgid "Not running domain: remove"
-#~ msgstr ""
-
-#~ msgid "domain running on an unknown node: discarded"
-#~ msgstr ""
-
-#~ msgid "No such domain (%s)"
-#~ msgstr ""
-
-#~ msgid "Failed power down Bare-metal node %s"
-#~ msgstr ""
-
-#~ msgid "deactivate -> activate fails"
-#~ msgstr ""
-
-#~ msgid "destroy_domain: no such domain"
-#~ msgstr ""
-
-#~ msgid "No such domain %s"
-#~ msgstr ""
-
-#~ msgid "Domains: %s"
-#~ msgstr ""
-
-#~ msgid "After storing domains: %s"
-#~ msgstr ""
-
-#~ msgid "deactivation/removing domain failed"
-#~ msgstr ""
-
-#~ msgid "===== Domain is being created ====="
-#~ msgstr ""
-
-#~ msgid "Same domain name already exists"
-#~ msgstr ""
-
-#~ msgid "create_domain: before get_idle_node"
-#~ msgstr ""
-
-#~ msgid "Created new domain: %s"
-#~ msgstr ""
-
-#~ msgid "Failed to boot Bare-metal node %s"
-#~ msgstr ""
-
-#~ msgid "No such domain exists"
-#~ msgstr ""
-
-#~ msgid "change_domain_state: to new state %s"
-#~ msgstr ""
-
-#~ msgid "Stored fake domains to the file: %s"
-#~ msgstr ""
-
-#~ msgid "domain does not exist"
-#~ msgstr ""
-
-#~ msgid "Error encountered when destroying instance '%(name)s': %(ex)s"
-#~ msgstr ""
-
-#~ msgid "instance %(instance_name)s: deleting instance files %(target)s"
-#~ msgstr ""
-
-#~ msgid "instance %s: rebooted"
-#~ msgstr ""
-
-#~ msgid "_wait_for_reboot failed"
-#~ msgstr ""
-
-#~ msgid "instance %s: rescued"
-#~ msgstr ""
-
-#~ msgid "_wait_for_rescue failed"
-#~ msgstr ""
-
-#~ msgid "<============= spawn of baremetal =============>"
-#~ msgstr ""
-
-#~ msgid "instance %s: is building"
-#~ msgstr ""
-
-#~ msgid "Key is injected but instance is not running yet"
-#~ msgstr ""
-
-#~ msgid "instance %s: booted"
-#~ msgstr ""
-
-#~ msgid "~~~~~~ current state = %s ~~~~~~"
-#~ msgstr ""
-
-#~ msgid "instance %s spawned successfully"
-#~ msgstr ""
-
-#~ msgid "instance %s:not booted"
-#~ msgstr ""
-
-#~ msgid "Baremetal assignment is overcommitted."
-#~ msgstr ""
-
-#~ msgid "instance %s: Creating image"
-#~ msgstr ""
-
-#~ msgid "instance %(inst_name)s: injecting %(injection)s into image %(img_id)s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "instance %(inst_name)s: ignoring error "
-#~ "injecting data into image %(img_id)s "
-#~ "(%(e)s)"
-#~ msgstr ""
-
-#~ msgid "instance %s: starting toXML method"
-#~ msgstr ""
-
-#~ msgid "instance %s: finished toXML method"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Cannot get the number of cpu, "
-#~ "because this function is not implemented"
-#~ " for this platform. This error can"
-#~ " be safely ignored for now."
-#~ msgstr ""
-
-#~ msgid "#### RLK: cpu_arch = %s "
-#~ msgstr ""
-
-#~ msgid "Updating!"
-#~ msgstr ""
-
-#~ msgid "Unknown baremetal driver %(d)s"
-#~ msgstr ""
-
-#~ msgid "free_node...."
-#~ msgstr ""
-
-#~ msgid "deactivate_node is called for node_id = %(id)s node_ip = %(ip)s"
-#~ msgstr ""
-
-#~ msgid "status of node is set to 0"
-#~ msgstr ""
-
-#~ msgid "rootfs is already removed"
-#~ msgstr ""
-
-#~ msgid "Before ping to the bare-metal node"
-#~ msgstr ""
-
-#~ msgid "TILERA_BOARD_#%(node_id)s %(node_ip)s is ready"
-#~ msgstr ""
-
-#~ msgid "TILERA_BOARD_#%(node_id)s %(node_ip)s is not ready, out_msg=%(out_msg)s"
-#~ msgstr ""
-
-#~ msgid "Noting to do for tilera nodes: vmlinux is in CF"
-#~ msgstr ""
-
-#~ msgid "activate_node"
-#~ msgstr ""
-
-#~ msgid "no capable image handler configured"
-#~ msgstr ""
-
-#~ msgid "no disk image handler for: %s"
-#~ msgstr ""
-
-#~ msgid "Failed to unmount container filesystem: %s"
-#~ msgstr ""
-
-#~ msgid "injected file path not valid"
-#~ msgstr ""
-
-#~ msgid "unsupported partition: %s"
-#~ msgstr ""
-
-#~ msgid "unknown guestmount error"
-#~ msgstr ""
-
-#~ msgid "Failed to umount image at %s, guestmount was still running after 10s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Live migration is not supported \""
-#~ "                     \"by this version of "
-#~ "Hyper-V"
-#~ msgstr ""
-
-#~ msgid "Starting live migration for instance: %s"
-#~ msgstr ""
-
-#~ msgid "Failed to live migrate VM %s"
-#~ msgstr ""
-
-#~ msgid "compare_cpu called %s"
-#~ msgstr ""
-
-#~ msgid "Failed to create snapshot for VM %s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Failed to reconnect base disk "
-#~ "%(dest_base_disk_path)s and diff disk "
-#~ "%(dest_vhd_path)s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Failed to merge base disk "
-#~ "%(dest_base_disk_path)s and diff disk "
-#~ "%(dest_vhd_path)s"
-#~ msgstr ""
-
-#~ msgid "Removing folder %s "
-#~ msgstr ""
-
-#~ msgid "hyperv vm state: %s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Got Info for vm %(instance_name)s: "
-#~ "state=%(state)s, mem=%(memusage)s, num_cpu=%(numprocs)s,"
-#~ " uptime=%(uptime)s"
-#~ msgstr ""
-
-#~ msgid "cache image failed: %s"
-#~ msgstr ""
-
-#~ msgid "Starting VM %s "
-#~ msgstr ""
-
-#~ msgid "Started VM %s "
-#~ msgstr ""
-
-#~ msgid "spawn vm failed: %s"
-#~ msgstr ""
-
-#~ msgid "Failed to create VM %s"
-#~ msgstr ""
-
-#~ msgid "Created VM %s..."
-#~ msgstr ""
-
-#~ msgid "Set memory for vm %s..."
-#~ msgstr ""
-
-#~ msgid "Set vcpus for vm %s..."
-#~ msgstr ""
-
-#~ msgid "Creating a scsi controller for %(vm_name)s for volume attaching"
-#~ msgstr ""
-
-#~ msgid "Failed to add scsi controller to VM %s"
-#~ msgstr ""
-
-#~ msgid "Creating disk for %(vm_name)s by attaching disk file %(vhdfile)s"
-#~ msgstr ""
-
-#~ msgid "Failed to add diskdrive to VM %s"
-#~ msgstr ""
-
-#~ msgid "New disk drive path is %s"
-#~ msgstr ""
-
-#~ msgid "Failed to add vhd file to VM %s"
-#~ msgstr ""
-
-#~ msgid "Created disk for %s"
-#~ msgstr ""
-
-#~ msgid "Creating nic for %s "
-#~ msgstr ""
-
-#~ msgid "Cannot find vSwitch"
-#~ msgstr ""
-
-#~ msgid "Failed creating a port on the external vswitch"
-#~ msgstr ""
-
-#~ msgid "Failed creating port for %s"
-#~ msgstr ""
-
-#~ msgid "Created switch port %(vm_name)s on switch %(ext_path)s"
-#~ msgstr ""
-
-#~ msgid "Failed to add nic to VM %s"
-#~ msgstr ""
-
-#~ msgid "Created nic for %s "
-#~ msgstr ""
-
-#~ msgid "Attempting to bind NIC to %s "
-#~ msgstr ""
-
-#~ msgid "No vSwitch specified, attaching to default"
-#~ msgstr ""
-
-#~ msgid "Got request to destroy vm %s"
-#~ msgstr ""
-
-#~ msgid "Del: disk %(vhdfile)s vm %(instance_name)s"
-#~ msgstr ""
-
-#~ msgid "use_cow_image:%s"
-#~ msgstr ""
-
-#~ msgid "Failed to create Difference Disk from %(base)s to %(target)s"
-#~ msgstr ""
-
-#~ msgid "duplicate name found: %s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "WMI job failed: %(ErrorSummaryDescription)s -"
-#~ " %(ErrorDescription)s - %(ErrorCode)s"
-#~ msgstr ""
-
-#~ msgid "WMI job succeeded: %(desc)s, Elapsed=%(elap)s "
-#~ msgstr ""
-
-#~ msgid "Creating folder %s "
-#~ msgstr ""
-
-#~ msgid "Removing existing folder %s "
-#~ msgstr ""
-
-#~ msgid "Attach boot from volume failed: %s"
-#~ msgstr ""
-
-#~ msgid "Unable to attach boot volume to instance %s"
-#~ msgstr ""
-
-#~ msgid "Failed to add volume to VM %s"
-#~ msgstr ""
-
-#~ msgid "Detach_volume: %(connection_info)s, %(instance_name)s, %(mountpoint)s"
-#~ msgstr ""
-
-#~ msgid "Mounted disk to detach is: %s"
-#~ msgstr ""
-
-#~ msgid "host_resource disk detached is: %s"
-#~ msgstr ""
-
-#~ msgid "Physical disk detached is: %s"
-#~ msgstr ""
-
-#~ msgid "Failed to remove volume from VM %s"
-#~ msgstr ""
-
-#~ msgid "device.InitiatorName: %s"
-#~ msgstr ""
-
-#~ msgid "device.TargetName: %s"
-#~ msgstr ""
-
-#~ msgid "device.ScsiPortNumber: %s"
-#~ msgstr ""
-
-#~ msgid "device.ScsiPathId: %s"
-#~ msgstr ""
-
-#~ msgid "device.ScsiTargetId): %s"
-#~ msgstr ""
-
-#~ msgid "device.ScsiLun: %s"
-#~ msgstr ""
-
-#~ msgid "device.DeviceInterfaceGuid :%s"
-#~ msgstr ""
-
-#~ msgid "device.DeviceInterfaceName: %s"
-#~ msgstr ""
-
-#~ msgid "device.LegacyName: %s"
-#~ msgstr ""
-
-#~ msgid "device.DeviceType: %s"
-#~ msgstr ""
-
-#~ msgid "device.DeviceNumber %s"
-#~ msgstr ""
-
-#~ msgid "device.PartitionNumber :%s"
-#~ msgstr ""
-
-#~ msgid "Device number : %s"
-#~ msgstr ""
-
-#~ msgid "Target lun : %s"
-#~ msgstr ""
-
-#~ msgid "Mounted disk is: %s"
-#~ msgstr ""
-
-#~ msgid "Drive number to disconnect is: %s"
-#~ msgstr ""
-
-#~ msgid "DeviceNumber : %s"
-#~ msgstr ""
-
-#~ msgid "Disk path to parse: %s"
-#~ msgstr ""
-
-#~ msgid "start_device_id: %s"
-#~ msgstr ""
-
-#~ msgid "end_device_id: %s"
-#~ msgstr ""
-
-#~ msgid "attaching LXC block device"
-#~ msgstr ""
-
-#~ msgid "detaching LXC block device"
-#~ msgstr ""
-
-#~ msgid "Injecting %(injection)s into image %(img_id)s"
-#~ msgstr ""
-
-#~ msgid "Ignoring error injecting data into image %(img_id)s (%(e)s)"
-#~ msgstr ""
-
-#~ msgid "Starting toXML method"
-#~ msgstr ""
-
-#~ msgid "Finished toXML method"
-#~ msgstr ""
-
-#~ msgid "%(id)s (%(base_file)s): image verification failed"
-#~ msgstr ""
-
-#~ msgid "%(id)s (%(base_file)s): image verification skipped, no hash stored"
-#~ msgstr ""
-
-#~ msgid "%(id)s (%(base_file)s): checking"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "%(id)s (%(base_file)s): in use: on this"
-#~ " node %(local)d local, %(remote)d on "
-#~ "other nodes"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "%(id)s (%(base_file)s): warning -- an "
-#~ "absent base file is in use! "
-#~ "instances: %(instance_list)s"
-#~ msgstr ""
-
-#~ msgid "%(id)s (%(base_file)s): in use on (%(remote)d on other nodes)"
-#~ msgstr ""
-
-#~ msgid "%(id)s (%(base_file)s): image is not in use"
-#~ msgstr ""
-
-#~ msgid "%(id)s (%(base_file)s): image is in use"
-#~ msgstr ""
-
-#~ msgid "LVM snapshots not implemented"
-#~ msgstr ""
-
-#~ msgid "Read: %s"
-#~ msgstr ""
-
-#~ msgid "Writing image info file: %s"
-#~ msgstr ""
-
-#~ msgid "Wrote: %s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "ISCSI volume not yet found at: "
-#~ "%(mount_device)s. Will rescan & retry.  "
-#~ "Try number: %(tries)s"
-#~ msgstr ""
-
-#~ msgid "Found iSCSI node %(mount_device)s (after %(tries)s rescans)"
-#~ msgstr ""
-
-#~ msgid "File '%(file_path)' transfer to PowerVM manager failed"
-#~ msgstr ""
-
-#~ msgid "Copying image '%s' to IVM"
-#~ msgstr ""
-
-#~ msgid "Creating logical volume"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Must specify vmwareapi_host_ip,vmwareapi_host_username "
-#~ "and vmwareapi_host_password to "
-#~ "usecompute_driver=vmwareapi.VMWareESXDriver"
-#~ msgstr ""
-
-#~ msgid " No Virtual Machine has been registered yet"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Exception during HTTP connection close "
-#~ "in VMWareHTTpWrite. Exception is %s"
-#~ msgstr ""
-
-#~ msgid "Couldn't get a local Datastore reference"
-#~ msgstr ""
-
-#~ msgid "Creating VM on the ESX  host"
-#~ msgstr ""
-
-#~ msgid "Created VM on the ESX  host"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Creating Virtual Disk of size  "
-#~ "%(vmdk_file_size_in_kb)s KB and adapter type"
-#~ "  %(adapter_type)s on the ESX host "
-#~ "local store %(data_store_name)s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Created Virtual Disk of size "
-#~ "%(vmdk_file_size_in_kb)s KB on the ESX "
-#~ "host local store %(data_store_name)s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Deleting the file %(flat_uploaded_vmdk_path)s "
-#~ "on the ESX host localstore "
-#~ "%(data_store_name)s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Deleted the file %(flat_uploaded_vmdk_path)s "
-#~ "on the ESX host local store "
-#~ "%(data_store_name)s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Downloaded image file data %(image_ref)s "
-#~ "to the ESX data store "
-#~ "%(data_store_name)s"
-#~ msgstr ""
-
-#~ msgid "Reconfiguring VM instance to attach the image disk"
-#~ msgstr ""
-
-#~ msgid "Reconfigured VM instance to attach the image disk"
-#~ msgstr ""
-
-#~ msgid "instance is powered off and can not be suspended."
-#~ msgstr ""
-
-#~ msgid "Reconfiguring VM instance to set the machine id with ip - %(ip_addr)s"
-#~ msgstr ""
-
-#~ msgid "Reconfigured VM instance to set the machine id with ip - %(ip_addr)s"
-#~ msgstr ""
-
-#~ msgid "Shutting down VM"
-#~ msgstr ""
-
-#~ msgid "Asking xapi to upload %(vdi_uuids)s as ID %(image_id)s"
-#~ msgstr ""
-
-#~ msgid "Detected ISO image type, creating blank VM for install"
-#~ msgstr ""
-
-#~ msgid "Destroying VDIs for Instance %(instance_uuid)s"
-#~ msgstr ""
-
-#~ msgid "VM is not present, skipping power off..."
-#~ msgstr ""
-
-#~ msgid "Fetching VM ref while BUILDING failed"
-#~ msgstr ""
-
-#~ msgid "creating sr within volume_utils"
-#~ msgstr ""
-
-#~ msgid "type is = %s"
-#~ msgstr ""
-
-#~ msgid "name = %s"
-#~ msgstr ""
-
-#~ msgid "Created %(label)s as %(sr_ref)s."
-#~ msgstr ""
-
-#~ msgid "Unable to create Storage Repository"
-#~ msgstr ""
-
-#~ msgid "introducing sr within volume_utils"
-#~ msgstr ""
-
-#~ msgid "Introduced %(label)s as %(sr_ref)s."
-#~ msgstr ""
-
-#~ msgid "Creating pbd for SR"
-#~ msgstr ""
-
-#~ msgid "Unable to introduce Storage Repository"
-#~ msgstr ""
-
-#~ msgid "Unable to get SR using uuid"
-#~ msgstr ""
-
-#~ msgid "Forgetting SR %s..."
-#~ msgstr ""
-
-#~ msgid "Unable to forget Storage Repository"
-#~ msgstr ""
-
-#~ msgid "Introducing %s..."
-#~ msgstr ""
-
-#~ msgid "Error finding vdis in SR %s"
-#~ msgstr ""
-
-#~ msgid "Unable to find vbd for vdi %s"
-#~ msgstr ""
-
-#~ msgid "Could not find VDI ref"
-#~ msgstr ""
-
-#~ msgid "Creating SR %s"
-#~ msgstr ""
-
-#~ msgid "Could not create SR"
-#~ msgstr ""
-
-#~ msgid "Could not retrieve SR record"
-#~ msgstr ""
-
-#~ msgid "Introducing SR %s"
-#~ msgstr ""
-
-#~ msgid "SR found in xapi database. No need to introduce"
-#~ msgstr ""
-
-#~ msgid "Could not introduce SR"
-#~ msgstr ""
-
-#~ msgid "Checking for SR %s"
-#~ msgstr ""
-
-#~ msgid "SR %s not found in the xapi database"
-#~ msgstr ""
-
-#~ msgid "Could not forget SR"
-#~ msgstr ""
-
-#~ msgid "Unable to create VDI on SR %(sr_ref)s for instance %(instance_name)s"
-#~ msgstr ""
-
-#~ msgid "Unable to use SR %(sr_ref)s for instance %(instance_name)s"
-#~ msgstr ""
-
-#~ msgid "Unable to locate volume %s"
-#~ msgstr ""
-
-#~ msgid "Unable to detach volume %s"
-#~ msgstr ""
-
-#~ msgid "Unable to destroy vbd %s"
-#~ msgstr ""
-
-#~ msgid "Error purging SR %s"
-#~ msgstr ""
-
-#~ msgid "Volume size '%s' must be an integer and greater than 0"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Quota exceeded for %(pid)s, tried to "
-#~ "create %(size)sG volume (%(consumed)dG of "
-#~ "%(quota)dG already consumed)"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Quota exceeded for %(pid)s, tried to "
-#~ "create volume (%(consumed)d volumes already"
-#~ " consumed)"
-#~ msgstr ""
-
-#~ msgid "Size of specified image is larger than volume size."
-#~ msgstr ""
-
-#~ msgid "Failed to update quota for deleting volume."
-#~ msgstr ""
-
-#~ msgid "Volume status must be available or error"
-#~ msgstr ""
-
-#~ msgid "Volume still has %d dependent snapshots"
-#~ msgstr ""
-
-#~ msgid "must be available"
-#~ msgstr ""
-
-#~ msgid "Volume Snapshot status must be available or error"
-#~ msgstr ""
-
-#~ msgid "Volume status must be available/in-use."
-#~ msgstr ""
-
-#~ msgid "Volume status is in-use."
-#~ msgstr ""
-
-#~ msgid "Recovering from a failed execute.  Try number %s"
-#~ msgstr ""
-
-#~ msgid "volume group %s doesn't exist"
-#~ msgstr ""
-
-#~ msgid "Skipping ensure_export. No iscsi_target provisioned for volume: %s"
-#~ msgstr ""
-
-#~ msgid "Skipping remove_export. No iscsi_target provisioned for volume: %s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Skipping remove_export. No iscsi_target is "
-#~ "presently exported for volume: %s"
-#~ msgstr ""
-
-#~ msgid "ISCSI provider_location not stored, using discovery"
-#~ msgstr ""
-
-#~ msgid "Could not find iSCSI export  for volume %s"
-#~ msgstr ""
-
-#~ msgid "ISCSI Discovery: Found %s"
-#~ msgstr ""
-
-#~ msgid "Cannot confirm exported volume id:%(volume_id)s."
-#~ msgstr ""
-
-#~ msgid "FAKE ISCSI: %s"
-#~ msgstr ""
-
-#~ msgid "rbd has no pool %s"
-#~ msgstr ""
-
-#~ msgid "Image %s is not stored in rbd"
-#~ msgstr ""
-
-#~ msgid "Image %s has blank components"
-#~ msgstr ""
-
-#~ msgid "Image %s is not an rbd snapshot"
-#~ msgstr ""
-
-#~ msgid "%s is in a different ceph cluster"
-#~ msgstr ""
-
-#~ msgid "Unable to read image %s"
-#~ msgstr ""
-
-#~ msgid "Sheepdog is not working: %s"
-#~ msgstr ""
-
-#~ msgid "Sheepdog is not working"
-#~ msgstr ""
-
-#~ msgid "LoggingVolumeDriver: %s"
-#~ msgstr ""
-
-#~ msgid "Creating volume: %s"
-#~ msgstr ""
-
-#~ msgid "Failed to create iscsi target for volume id:%(vol_id)s."
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Failed to create iscsi target for "
-#~ "volume id:%(vol_id)s. Please ensure your "
-#~ "tgtd config file contains 'include "
-#~ "%(volumes_dir)s/*'"
-#~ msgstr ""
-
-#~ msgid "Removing volume: %s"
-#~ msgstr ""
-
-#~ msgid "Failed to create iscsi target for volume id:%(volume_id)s."
-#~ msgstr ""
-
-#~ msgid "valid iqn needed for show_target"
-#~ msgstr ""
-
-#~ msgid "Re-exporting %s volumes"
-#~ msgstr ""
-
-#~ msgid "volume %s: skipping export"
-#~ msgstr ""
-
-#~ msgid "Resuming any in progress delete operations"
-#~ msgstr ""
-
-#~ msgid "Resuming delete on volume: %s"
-#~ msgstr ""
-
-#~ msgid "volume %s: creating"
-#~ msgstr ""
-
-#~ msgid "volume %(vol_name)s: creating lv of size %(vol_size)sG"
-#~ msgstr ""
-
-#~ msgid "volume %s: creating export"
-#~ msgstr ""
-
-#~ msgid "volume %s: created successfully"
-#~ msgstr ""
-
-#~ msgid "Volume is not local to this node"
-#~ msgstr ""
-
-#~ msgid "volume %s: removing export"
-#~ msgstr ""
-
-#~ msgid "volume %s: deleting"
-#~ msgstr ""
-
-#~ msgid "volume %s: volume is busy"
-#~ msgstr ""
-
-#~ msgid "Failed to update usages deleting volume"
-#~ msgstr ""
-
-#~ msgid "volume %s: deleted successfully"
-#~ msgstr ""
-
-#~ msgid "snapshot %s: creating"
-#~ msgstr ""
-
-#~ msgid "snapshot %(snap_name)s: creating"
-#~ msgstr ""
-
-#~ msgid "snapshot %s: created successfully"
-#~ msgstr ""
-
-#~ msgid "snapshot %s: deleting"
-#~ msgstr ""
-
-#~ msgid "snapshot %s: snapshot is busy"
-#~ msgstr ""
-
-#~ msgid "snapshot %s: deleted successfully"
-#~ msgstr ""
-
-#~ msgid "Downloaded image %(image_id)s to %(volume_id)s successfully"
-#~ msgstr ""
-
-#~ msgid "Uploaded volume %(volume_id)s to image (%(image_id)s) successfully"
-#~ msgstr ""
-
-#~ msgid "Checking volume capabilities"
-#~ msgstr ""
-
-#~ msgid "New capabilities found: %s"
-#~ msgstr ""
-
-#~ msgid "Clear capabilities"
-#~ msgstr ""
-
-#~ msgid "Notification {%s} received"
-#~ msgstr ""
-
-#~ msgid "API %(name)s failed: %(reason)s"
-#~ msgstr ""
-
-#~ msgid "Using WSDL: %s"
-#~ msgstr ""
-
-#~ msgid "Using DFM server: %s"
-#~ msgstr ""
-
-#~ msgid "Using storage service: %s"
-#~ msgstr ""
-
-#~ msgid "Using storage service prefix: %s"
-#~ msgstr ""
-
-#~ msgid "Using vfiler: %s"
-#~ msgstr ""
-
-#~ msgid "%s is not set"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Either netapp_storage_service or "
-#~ "netapp_storage_service_prefix must be set"
-#~ msgstr ""
-
-#~ msgid "Connected to DFM server"
-#~ msgstr ""
-
-#~ msgid "Discovered %(dataset_count)s datasets and %(lun_count)s LUNs"
-#~ msgstr ""
-
-#~ msgid "Job failed: %s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Attempt to use volume_type without "
-#~ "specifying netapp_storage_service_prefix flag."
-#~ msgstr ""
-
-#~ msgid ""
-#~ "You must set the netapp_storage_service "
-#~ "flag in order to create volumes "
-#~ "with no volume_type."
-#~ msgstr ""
-
-#~ msgid "Failed to provision dataset member"
-#~ msgstr ""
-
-#~ msgid "No LUN was created by the provision job"
-#~ msgstr ""
-
-#~ msgid "Failed to remove and delete dataset member"
-#~ msgstr ""
-
-#~ msgid "No entry in LUN table for volume %s"
-#~ msgstr ""
-
-#~ msgid "Failed to get LUN details for LUN ID %s"
-#~ msgstr ""
-
-#~ msgid "Failed to get host details for host ID %s"
-#~ msgstr ""
-
-#~ msgid "No LUN ID for volume %s"
-#~ msgstr ""
-
-#~ msgid "Failed to get target portal for filer: %s"
-#~ msgstr ""
-
-#~ msgid "Failed to get target IQN for filer: %s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Cannot create volume of size "
-#~ "%(vol_size)s from snapshot of size "
-#~ "%(snap_size)s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Cannot create volume of type "
-#~ "%(new_type)s from snapshot of type "
-#~ "%(old_type)s"
-#~ msgstr ""
-
-#~ msgid "No metadata property %(prop)s defined for the LUN %(name)s"
-#~ msgstr ""
-
-#~ msgid "Success getting LUN list from server"
-#~ msgstr ""
-
-#~ msgid "Created LUN with name %s"
-#~ msgstr ""
-
-#~ msgid "Destroyed LUN %s"
-#~ msgstr ""
-
-#~ msgid "Mapped LUN %(handle)s to the initiator %(initiator_name)s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Succesfully fetched target details for "
-#~ "LUN %(handle)s and initiator "
-#~ "%(initiator_name)s"
-#~ msgstr ""
-
-#~ msgid "Failed to get LUN target details for the LUN %s"
-#~ msgstr ""
-
-#~ msgid "Failed to get target portal for the LUN %s"
-#~ msgstr ""
-
-#~ msgid "Failed to get target IQN for the LUN %s"
-#~ msgstr ""
-
-#~ msgid "Unmapped LUN %(handle)s from the initiator %(initiator_name)s"
-#~ msgstr ""
-
-#~ msgid "Object is not a NetApp LUN."
-#~ msgstr ""
-
-#~ msgid "Cloned LUN with new name %s"
-#~ msgstr ""
-
-#~ msgid "Could not find handle for LUN named %s"
-#~ msgstr ""
-
-#~ msgid "There's no NFS config file configured "
-#~ msgstr ""
-
-#~ msgid "NFS config file doesn't exist"
-#~ msgstr ""
-
-#~ msgid "casted to %s"
-#~ msgstr ""
-
-#~ msgid "Volume %s does not have provider_location specified, skipping"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Trying to delete non-existing volume "
-#~ "%(volume)s at path %(mounted_path)s"
-#~ msgstr ""
-
-#~ msgid "Specify san_password or san_private_key"
-#~ msgstr ""
-
-#~ msgid "san_ip must be set"
-#~ msgstr ""
-
-#~ msgid "Cannot parse list-view output: %s"
-#~ msgstr ""
-
-#~ msgid "LUID not found for %(zfs_poolname)s. Output=%(out)s"
-#~ msgstr ""
-
-#~ msgid "CLIQ command returned %s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Malformed response to CLIQ command "
-#~ "%(verb)s %(cliq_args)s. Result=%(out)s"
-#~ msgstr ""
-
-#~ msgid "Error running CLIQ command %(verb)s %(cliq_args)s.  Result=%(out)s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Unexpected number of virtual ips for "
-#~ "cluster  %(cluster_name)s. Result=%(_xml)s"
-#~ msgstr ""
-
-#~ msgid "Volume info: %(volume_name)s => %(volume_attributes)s"
-#~ msgstr ""
-
-#~ msgid "local_path not supported"
-#~ msgstr ""
-
-#~ msgid "Payload for SolidFire API call: %s"
-#~ msgstr ""
-
-#~ msgid "Call to json.loads() raised an exception: %s"
-#~ msgstr ""
-
-#~ msgid "Results of SolidFire API call: %s"
-#~ msgstr ""
-
-#~ msgid "Found solidfire account: %s"
-#~ msgstr ""
-
-#~ msgid "solidfire account: %s does not exist, create it..."
-#~ msgstr ""
-
-#~ msgid "More than one valid preset was detected, using %s"
-#~ msgstr ""
-
-#~ msgid "Enter SolidFire delete_volume..."
-#~ msgstr ""
-
-#~ msgid "Deleting volumeID: %s"
-#~ msgstr ""
-
-#~ msgid "Leaving SolidFire delete_volume"
-#~ msgstr ""
-
-#~ msgid "Executing SolidFire ensure_export..."
-#~ msgstr ""
-
-#~ msgid "Executing SolidFire create_export..."
-#~ msgstr ""
-
-#~ msgid "Enter SolidFire create_snapshot..."
-#~ msgstr ""
-
-#~ msgid ""
-#~ "_get_hdr_dic: attribute headers and values do not match.\n"
-#~ " Headers: %(header)s\n"
-#~ " Values: %(row)s"
-#~ msgstr ""
-
-#~ msgid "enter: check_for_setup_error"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "check_for_setup_error: failed with unexpected CLI output.\n"
-#~ " Command: %(cmd)s\n"
-#~ " stdout: %(out)s\n"
-#~ " stderr: %(err)s"
-#~ msgstr ""
-
-#~ msgid "pool %s doesn't exist"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "check_for_setup_error: failed with unexpected CLI output.\n"
-#~ " Command: %(cmd)s\n"
-#~ " stdout: %(out)s\n"
-#~ " stderr: %(err)s\n"
-#~ msgstr ""
-
-#~ msgid "Did not find expected column name in svcinfo lsnode: %s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "check_for_setup_error: Unexpected CLI output.\n"
-#~ " Details: %(msg)s\n"
-#~ "Command: %(cmd)s\n"
-#~ " stdout: %(out)s\n"
-#~ " stderr: %(err)s"
-#~ msgstr ""
-
-#~ msgid "Did not find expected column name in lsportip: %s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "check_for_setup_error: fail to storage "
-#~ "configuration: unknown storage node "
-#~ "%(node_id)s from CLI output.\n"
-#~ " stdout: %(out)s\n"
-#~ " stderr: %(err)s\n"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "check_for_setup_error: fail to storage "
-#~ "configuration: storage node %s has no"
-#~ " IP addresses configured"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "could not obtain IP address and "
-#~ "iSCSI name from the storage. Please "
-#~ "verify that the storage is configured"
-#~ " for iSCSI.\n"
-#~ " Storage nodes: %(nodes)s\n"
-#~ " portips: %(portips)s"
-#~ msgstr ""
-
-#~ msgid "leave: check_for_setup_error"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Password or SSH private key is "
-#~ "required for authentication: set either "
-#~ "san_password or san_private_key option"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Illegal value specified for "
-#~ "storwize_svc_vol_rsize: set to either a "
-#~ "number or a percentage"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Illegal value specified for "
-#~ "storwize_svc_vol_warning: set to either a "
-#~ "number or a percentage"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Illegal value specified for "
-#~ "storwize_svc_vol_grainsize: set to either "
-#~ "'32', '64', '128', or '256'"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Illegal value %s specified for "
-#~ "storwize_svc_flashcopy_timeout: valid values are "
-#~ "between 0 and 600"
-#~ msgstr ""
-
-#~ msgid "If compression is set to True, rsize must also be set (not equal to -1)"
-#~ msgstr ""
-
-#~ msgid "enter: do_setup"
-#~ msgstr ""
-
-#~ msgid "leave: do_setup"
-#~ msgstr ""
-
-#~ msgid "enter: create_volume: volume %s "
-#~ msgstr ""
-
-#~ msgid ""
-#~ "create volume %(name)s - did not find success message in CLI output.\n"
-#~ " stdout: %(out)s\n"
-#~ " stderr: %(err)s"
-#~ msgstr ""
-
-#~ msgid "leave: create_volume: volume %(name)s "
-#~ msgstr ""
-
-#~ msgid "enter: delete_volume: volume %(name)s "
-#~ msgstr ""
-
-#~ msgid ""
-#~ "delete volume %(name)s - non empty output from CLI.\n"
-#~ " stdout: %(out)s\n"
-#~ " stderr: %(err)s"
-#~ msgstr ""
-
-#~ msgid "warning: tried to delete volume %(name)s but it does not exist."
-#~ msgstr ""
-
-#~ msgid "leave: delete_volume: volume %(name)s "
-#~ msgstr ""
-
-#~ msgid "ensure_export: volume %s not found on storage"
-#~ msgstr ""
-
-#~ msgid "enter: initialize_connection: volume %(vol)s with connector %(conn)s"
-#~ msgstr ""
-
-#~ msgid "_create_new_host failed to return the host name."
-#~ msgstr ""
-
-#~ msgid ""
-#~ "initialize_connection: did not find preferred"
-#~ " node %(node)s for volume %(vol)s in"
-#~ " iSCSI configuration"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "initialize_connection: did not find a "
-#~ "preferred node for volume %s in "
-#~ "iSCSI configuration"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "leave: initialize_connection:\n"
-#~ " volume: %(vol)s\n"
-#~ " connector %(conn)s\n"
-#~ " properties: %(prop)s"
-#~ msgstr ""
-
-#~ msgid "enter: terminate_connection: volume %(vol)s with connector %(conn)s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "_get_host_from_iscsiname failed to return the"
-#~ " host name for iscsi name %s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "delete mapping of volume %(vol)s to "
-#~ "host %(host)s - non empty output "
-#~ "from CLI.\n"
-#~ " stdout: %(out)s\n"
-#~ " stderr: %(err)s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "terminate_connection: no mapping of volume "
-#~ "%(vol)s to host %(host)s found"
-#~ msgstr ""
-
-#~ msgid "leave: terminate_connection: volume %(vol)s with connector %(conn)s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "_run_flashcopy: fail to cleanup failed "
-#~ "FlashCopy mapping %(fc_map_id)% from "
-#~ "%(source)s to %(target)s.\n"
-#~ "stdout: %(out)s\n"
-#~ " stderr: %(err)s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "enter: _run_flashcopy: execute FlashCopy from"
-#~ " source %(source)s to target %(target)s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "create FC mapping from %(source)s to "
-#~ "%(target)s - did not find success "
-#~ "message in CLI output.\n"
-#~ " stdout: %(out)s\n"
-#~ " stderr: %(err)s\n"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "create FC mapping from %(source)s to "
-#~ "%(target)s - did not find mapping "
-#~ "id in CLI output.\n"
-#~ " stdout: %(out)s\n"
-#~ " stderr: %(err)s\n"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "_run_flashcopy: fail to prepare FlashCopy "
-#~ "from %(source)s to %(target)s.\n"
-#~ "stdout: %(out)s\n"
-#~ " stderr: %(err)s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "unexecpted mapping status %(status)s for "
-#~ "mapping %(id)s. Attributes: %(attr)s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "mapping %(id)s prepare failed to "
-#~ "complete within the alloted %(to)s "
-#~ "seconds timeout. Terminating"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "_run_flashcopy: fail to start FlashCopy "
-#~ "from %(source)s to %(target)s with "
-#~ "exception %(ex)s"
-#~ msgstr ""
-
-#~ msgid "_run_flashcopy: %s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "_run_flashcopy: fail to start FlashCopy "
-#~ "from %(source)s to %(target)s.\n"
-#~ "stdout: %(out)s\n"
-#~ " stderr: %(err)s"
-#~ msgstr ""
-
-#~ msgid "leave: _run_flashcopy: FlashCopy started from %(source)s to %(target)s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "enter: create_volume_from_snapshot: snapshot %(tgt)s"
-#~ " from volume %(src)s"
-#~ msgstr ""
-
-#~ msgid "create_volume_from_snapshot: source volume %s does not exist"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "create_volume_from_snapshot: cannot get source "
-#~ "volume %(src)s capacity from volume "
-#~ "attributes %(attr)s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "create_volume_from_snapshot: target volume %s "
-#~ "already exists, cannot create"
-#~ msgstr ""
-
-#~ msgid "leave: create_volume_from_snapshot: %s created successfully"
-#~ msgstr ""
-
-#~ msgid "enter: create_snapshot: snapshot %(tgt)s from volume %(src)s"
-#~ msgstr ""
-
-#~ msgid "create_snapshot: source volume %s does not exist"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "create_snapshot: source %(src)s and target "
-#~ "volume %(tgt)s have different capacities "
-#~ "(source:%(ssize)s target:%(tsize)s)"
-#~ msgstr ""
-
-#~ msgid "leave: create_snapshot: %s created successfully"
-#~ msgstr ""
-
-#~ msgid "enter: delete_snapshot: snapshot %s"
-#~ msgstr ""
-
-#~ msgid "leave: delete_snapshot: snapshot %s"
-#~ msgstr ""
-
-#~ msgid "enter: _get_host_from_iscsiname: iSCSI initiator %s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "_get_host_from_iscsiname: failed with unexpected CLI output.\n"
-#~ " command: %(cmd)s\n"
-#~ " stdout: %(out)s\n"
-#~ " stderr: %(err)s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "_get_host_from_iscsiname: Unexpected response from"
-#~ " CLI output. Command: %(cmd)s\n"
-#~ " stdout: %(out)s\n"
-#~ " stderr: %(err)s"
-#~ msgstr ""
-
-#~ msgid "leave: _get_host_from_iscsiname: iSCSI initiator %s"
-#~ msgstr ""
-
-#~ msgid "enter: _create_new_host: host %(name)s with iSCSI initiator %(init)s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "_create_new_host: cannot clean host name. "
-#~ "Host name is not unicode or string"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "create host %(name)s with iSCSI "
-#~ "initiator %(init)s - did not find "
-#~ "success message in CLI output.\n"
-#~ " stdout: %(out)s\n"
-#~ " stderr: %(err)s\n"
-#~ msgstr ""
-
-#~ msgid "leave: _create_new_host: host %(host)s with iSCSI initiator %(init)s"
-#~ msgstr ""
-
-#~ msgid "enter: _delete_host: host %s "
-#~ msgstr ""
-
-#~ msgid "warning: tried to delete host %(name)s but it does not exist."
-#~ msgstr ""
-
-#~ msgid "leave: _delete_host: host %s "
-#~ msgstr ""
-
-#~ msgid "enter: _is_volume_defined: volume %s "
-#~ msgstr ""
-
-#~ msgid "leave: _is_volume_defined: volume %(vol)s with %(str)s "
-#~ msgstr ""
-
-#~ msgid "enter: _is_host_defined: host %s "
-#~ msgstr ""
-
-#~ msgid ""
-#~ "_is_host_defined: Unexpected response from CLI output.\n"
-#~ " stdout: %(out)s\n"
-#~ " stderr: %(err)s\n"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Data received for host %(host1)s instead of host %(host2)s.\n"
-#~ " stdout: %(out)s\n"
-#~ " stderr: %(err)s\n"
-#~ msgstr ""
-
-#~ msgid "leave: _is_host_defined: host %(host)s with %(str)s "
-#~ msgstr ""
-
-#~ msgid "enter: _map_vol_to_host: volume %(vol)s to host %(host)s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "_map_vol_to_host: mapping host %(host)s to "
-#~ "volume %(vol)s with LUN %(lun)s - "
-#~ "did not find success message in "
-#~ "CLI output. stdout: %(out)s\n"
-#~ " stderr: %(err)s\n"
-#~ msgstr ""
-
-#~ msgid "leave: _map_vol_to_host: LUN %(lun)s, volume %(vol)s, host %(host)s"
-#~ msgstr ""
-
-#~ msgid "enter: _get_flashcopy_mapping_attributes: mapping %s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "_get_flashcopy_mapping_attributes: Unexpected response "
-#~ "from CLI output. Command: %(cmd)s\n"
-#~ " stdout: %(out)s\n"
-#~ " stderr: %(err)s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "leave: _get_flashcopy_mapping_attributes: mapping "
-#~ "%(id)s, attributes %(attr)s"
-#~ msgstr ""
-
-#~ msgid "enter: _get_volume_attributes: volume %s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "CLI Exception output:\n"
-#~ " command: %(cmd)s\n"
-#~ " stdout: %(out)s\n"
-#~ " stderr: %(err)s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "leave: _get_volume_attributes:\n"
-#~ " volume %(vol)s\n"
-#~ " attributes: %(attr)s"
-#~ msgstr ""
-
-#~ msgid "name cannot be None"
-#~ msgstr ""
-
-#~ msgid "id cannot be None"
-#~ msgstr ""
-
-#~ msgid "SR name = %s"
-#~ msgstr ""
-
-#~ msgid "Params: %s"
-#~ msgstr ""
-
-#~ msgid "Failed to create sr %s...continuing"
-#~ msgstr ""
-
-#~ msgid "Create failed"
-#~ msgstr ""
-
-#~ msgid "SR UUID of new SR is: %s"
-#~ msgstr ""
-
-#~ msgid "Failed to update db"
-#~ msgstr ""
-
-#~ msgid "Failed to introduce sr %s...continuing"
-#~ msgstr ""
-
-#~ msgid "Failed to reach backend %d"
-#~ msgstr ""
-
-#~ msgid "XenSMDriver requires xenapi connection, using %s"
-#~ msgstr ""
-
-#~ msgid "Failed to initiate session"
-#~ msgstr ""
-
-#~ msgid "Volume will be created in backend - %d"
-#~ msgstr ""
-
-#~ msgid "Failed to update volume in db"
-#~ msgstr ""
-
-#~ msgid "Unable to create volume"
-#~ msgstr ""
-
-#~ msgid "Volume %s does not exist"
-#~ msgstr ""
-
-#~ msgid "Failed to delete vdi"
-#~ msgstr ""
-
-#~ msgid "Failed to delete volume in db"
-#~ msgstr ""
-
-#~ msgid "Failed to find volume in db"
-#~ msgstr ""
-
-#~ msgid "Failed to find backend in db"
-#~ msgstr ""
-
-#~ msgid "Nexenta SA returned the error"
-#~ msgstr ""
-
-#~ msgid "Sending JSON data: %s"
-#~ msgstr ""
-
-#~ msgid "Auto switching to HTTPS connection to %s"
-#~ msgstr ""
-
-#~ msgid "No headers in server response"
-#~ msgstr ""
-
-#~ msgid "Bad response from server"
-#~ msgstr ""
-
-#~ msgid "Got response: %s"
-#~ msgstr ""
-
-#~ msgid "Volume %s does not exist in Nexenta SA"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Call to local_path should not happen."
-#~ " Verify that use_local_volumes flag is "
-#~ "turned off."
-#~ msgstr ""
-
-#~ msgid "Ignored target creation error \"%s\" while ensuring export"
-#~ msgstr ""
-
-#~ msgid "Ignored target group creation error \"%s\" while ensuring export"
-#~ msgstr ""
-
-#~ msgid "Ignored target group member addition error \"%s\" while ensuring export"
-#~ msgstr ""
-
-#~ msgid "Ignored LU creation error \"%s\" while ensuring export"
-#~ msgstr ""
-
-#~ msgid "Ignored LUN mapping entry addition error \"%s\" while ensuring export"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Got error trying to destroy target "
-#~ "group %(target_group)s, assuming it is "
-#~ "already gone: %(exc)s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Got error trying to delete target "
-#~ "%(target)s, assuming it is already gone:"
-#~ " %(exc)s"
-#~ msgstr ""
+#: nova/volume/cinder.py:207
+#, fuzzy
+msgid "status must be 'available'"
+msgstr "İmaj müsait olmak zorunda"
 
