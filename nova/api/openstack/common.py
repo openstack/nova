@@ -16,6 +16,7 @@
 #    under the License.
 
 import functools
+import itertools
 import os
 import re
 import urlparse
@@ -320,6 +321,9 @@ def get_networks_for_instance_from_nw_info(nw_info):
 
         networks[label]['ips'].extend(ips)
         networks[label]['floating_ips'].extend(floaters)
+        for ip in itertools.chain(networks[label]['ips'],
+                                  networks[label]['floating_ips']):
+            ip['mac_address'] = vif['address']
     return networks
 
 
@@ -328,10 +332,18 @@ def get_networks_for_instance(context, instance):
 
     We end up with a data structure like::
 
-        {'public': {'ips': [{'addr': '10.0.0.1', 'version': 4},
-                            {'addr': '2001::1', 'version': 6}],
-                    'floating_ips': [{'addr': '172.16.0.1', 'version': 4},
-                                     {'addr': '172.16.2.1', 'version': 4}]},
+        {'public': {'ips': [{'address': '10.0.0.1',
+                             'version': 4,
+                             'mac_address': 'aa:aa:aa:aa:aa:aa'},
+                            {'address': '2001::1',
+                             'version': 6,
+                             'mac_address': 'aa:aa:aa:aa:aa:aa'}],
+                    'floating_ips': [{'address': '172.16.0.1',
+                                      'version': 4,
+                                      'mac_address': 'aa:aa:aa:aa:aa:aa'},
+                                     {'address': '172.16.2.1',
+                                      'version': 4,
+                                      'mac_address': 'aa:aa:aa:aa:aa:aa'}]},
          ...}
     """
     nw_info = compute_utils.get_nw_info_for_instance(instance)

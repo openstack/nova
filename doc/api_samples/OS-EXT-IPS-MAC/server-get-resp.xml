@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<server xmlns:OS-EXT-IPS-MAC="http://docs.openstack.org/compute/ext/extended_ips_mac/api/v1.1" xmlns:atom="http://www.w3.org/2005/Atom" xmlns="http://docs.openstack.org/compute/api/v1.1" status="ACTIVE" updated="2013-02-07T18:46:29Z" hostId="068cc5e2de14b6e533a239c6eac0a0bdedcd57cab25450a6d3da43af" name="new-server-test" created="2013-02-07T18:46:28Z" userId="fake" tenantId="openstack" accessIPv4="" accessIPv6="" progress="0" id="22e7cf4d-ab7a-4a3d-9599-7d0dbaf9ed55">
+  <image id="70a599e0-31e7-49b7-b260-868f441e862b">
+    <atom:link href="http://openstack.example.com/openstack/images/70a599e0-31e7-49b7-b260-868f441e862b" rel="bookmark"/>
+  </image>
+  <flavor id="1">
+    <atom:link href="http://openstack.example.com/openstack/flavors/1" rel="bookmark"/>
+  </flavor>
+  <metadata>
+    <meta key="My Server Name">Apache1</meta>
+  </metadata>
+  <addresses>
+    <network id="private">
+      <ip version="4" addr="192.168.0.3" OS-EXT-IPS-MAC:mac_addr="00:0c:29:e1:42:90"/>
+    </network>
+  </addresses>
+  <atom:link href="http://openstack.example.com/v2/openstack/servers/22e7cf4d-ab7a-4a3d-9599-7d0dbaf9ed55" rel="self"/>
+  <atom:link href="http://openstack.example.com/openstack/servers/22e7cf4d-ab7a-4a3d-9599-7d0dbaf9ed55" rel="bookmark"/>
+</server>

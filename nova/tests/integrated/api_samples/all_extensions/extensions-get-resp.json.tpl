@@ -33,6 +33,14 @@
             "updated": "%(timestamp)s"
         },
         {
+            "alias": "OS-EXT-IPS-MAC",
+            "description": "%(text)s",
+            "links": [],
+            "name": "ExtendedIpsMac",
+            "namespace": "http://docs.openstack.org/compute/ext/extended_ips_mac/api/v1.1",
+            "updated": "%(timestamp)s"
+        },
+        {
             "alias": "OS-EXT-IMG-SIZE",
             "description": "%(text)s",
             "links": [],

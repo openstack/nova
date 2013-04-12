@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<server xmlns:OS-DCF="http://docs.openstack.org/compute/ext/disk_config/api/v1.1" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:OS-EXT-SRV-ATTR="http://docs.openstack.org/compute/ext/extended_status/api/v1.1" xmlns:OS-EXT-IPS="http://docs.openstack.org/compute/ext/extended_ips/api/v1.1" xmlns:OS-EXT-STS="http://docs.openstack.org/compute/ext/extended_status/api/v1.1" xmlns:OS-EXT-AZ="http://docs.openstack.org/compute/ext/extended_availability_zone/api/v2" xmlns="http://docs.openstack.org/compute/api/v1.1" status="ACTIVE" updated="2013-02-07T19:01:59Z" hostId="06d1cfd52be5f5d197193db2842978235fd085bd2dfaea32e5068468" name="new-server-test" created="2013-02-07T19:01:58Z" userId="fake" tenantId="openstack" accessIPv4="" accessIPv6="" progress="0" id="6be39927-53b2-4aee-8593-1c72b3673168" key_name="None" config_drive="" OS-EXT-SRV-ATTR:vm_state="active" OS-EXT-SRV-ATTR:task_state="None" OS-EXT-SRV-ATTR:power_state="1" OS-EXT-SRV-ATTR:instance_name="instance-00000001" OS-EXT-SRV-ATTR:host="b98603db318e495e819601702d16c512" OS-EXT-SRV-ATTR:hypervisor_hostname="fake-mini" OS-EXT-AZ:availability_zone="nova" OS-DCF:diskConfig="AUTO">
+<server xmlns:OS-DCF="http://docs.openstack.org/compute/ext/disk_config/api/v1.1" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:OS-EXT-SRV-ATTR="http://docs.openstack.org/compute/ext/extended_status/api/v1.1" xmlns:OS-EXT-IPS="http://docs.openstack.org/compute/ext/extended_ips/api/v1.1" xmlns:OS-EXT-IPS-MAC="http://docs.openstack.org/compute/ext/extended_ips_mac/api/v1.1" xmlns:OS-EXT-STS="http://docs.openstack.org/compute/ext/extended_status/api/v1.1" xmlns:OS-EXT-AZ="http://docs.openstack.org/compute/ext/extended_availability_zone/api/v2" xmlns="http://docs.openstack.org/compute/api/v1.1" status="ACTIVE" updated="2013-02-07T19:01:59Z" hostId="06d1cfd52be5f5d197193db2842978235fd085bd2dfaea32e5068468" name="new-server-test" created="2013-02-07T19:01:58Z" userId="fake" tenantId="openstack" accessIPv4="" accessIPv6="" progress="0" id="6be39927-53b2-4aee-8593-1c72b3673168" key_name="None" config_drive="" OS-EXT-SRV-ATTR:vm_state="active" OS-EXT-SRV-ATTR:task_state="None" OS-EXT-SRV-ATTR:power_state="1" OS-EXT-SRV-ATTR:instance_name="instance-00000001" OS-EXT-SRV-ATTR:host="b98603db318e495e819601702d16c512" OS-EXT-SRV-ATTR:hypervisor_hostname="fake-mini" OS-EXT-AZ:availability_zone="nova" OS-DCF:diskConfig="AUTO">
   <image id="70a599e0-31e7-49b7-b260-868f441e862b">
     <atom:link href="http://openstack.example.com/openstack/images/70a599e0-31e7-49b7-b260-868f441e862b" rel="bookmark"/>
   </image>
@@ -11,7 +11,8 @@
   </metadata>
   <addresses>
     <network id="private">
-      <ip OS-EXT-IPS:type="fixed" version="4" addr="192.168.0.3"/>
+      <ip OS-EXT-IPS:type="fixed" version="4" addr="192.168.0.3"
+          OS-EXT-IPS-MAC:mac_addr="00:0c:29:e1:42:90"/>
     </network>
   </addresses>
   <atom:link href="http://openstack.example.com/v2/openstack/servers/6be39927-53b2-4aee-8593-1c72b3673168" rel="self"/>

@@ -124,6 +124,7 @@ policy_data = """
     "compute_extension:extended_status": "",
     "compute_extension:extended_availability_zone": "",
     "compute_extension:extended_ips": "",
+    "compute_extension:extended_ips_mac": "",
     "compute_extension:extended_vif_net": "",
     "compute_extension:fixed_ips": "",
     "compute_extension:flavor_access": "",

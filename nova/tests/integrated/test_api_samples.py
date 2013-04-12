@@ -461,6 +461,7 @@ class ServersSampleJsonTest(ServersSampleBase):
         subs['hostid'] = '[a-f0-9]+'
         subs['id'] = uuid
         subs['hypervisor_hostname'] = r'[\w\.\-]+'
+        subs['mac_addr'] = '(?:[a-f0-9]{2}:){5}[a-f0-9]{2}'
         return self._verify_response('server-get-resp', subs, response, 200)
 
     def test_servers_list(self):
@@ -477,6 +478,7 @@ class ServersSampleJsonTest(ServersSampleBase):
         subs['hostid'] = '[a-f0-9]+'
         subs['id'] = uuid
         subs['hypervisor_hostname'] = r'[\w\.\-]+'
+        subs['mac_addr'] = '(?:[a-f0-9]{2}:){5}[a-f0-9]{2}'
         return self._verify_response('servers-details-resp', subs,
                                      response, 200)
 
@@ -2328,6 +2330,38 @@ class ExtendedIpsSampleJsonTests(ServersSampleBase):
 
 
 class ExtendedIpsSampleXmlTests(ExtendedIpsSampleJsonTests):
+        ctype = 'xml'
+
+
+class ExtendedIpsMacSampleJsonTests(ServersSampleBase):
+    extension_name = ("nova.api.openstack.compute.contrib"
+                      ".extended_ips_mac.Extended_ips_mac")
+
+    def test_show(self):
+        uuid = self._post_server()
+        response = self._do_get('servers/%s' % uuid)
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        subs['hostid'] = '[a-f0-9]+'
+        subs['id'] = uuid
+        subs['hypervisor_hostname'] = r'[\w\.\-]+'
+        subs['mac_addr'] = '(?:[a-f0-9]{2}:){5}[a-f0-9]{2}'
+        return self._verify_response('server-get-resp', subs,
+                                     response, 200)
+
+    def test_detail(self):
+        uuid = self._post_server()
+        response = self._do_get('servers/detail')
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        subs['id'] = uuid
+        subs['hostid'] = '[a-f0-9]+'
+        subs['mac_addr'] = '(?:[a-f0-9]{2}:){5}[a-f0-9]{2}'
+        return self._verify_response('servers-detail-resp', subs,
+                                     response, 200)
+
+
+class ExtendedIpsMacSampleXmlTests(ExtendedIpsMacSampleJsonTests):
         ctype = 'xml'
 
 
