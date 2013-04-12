@@ -49,7 +49,7 @@ datetime_fields = ['launched_at', 'terminated_at', 'updated_at']
 class ConductorManager(manager.Manager):
     """Mission: TBD."""
 
-    RPC_API_VERSION = '1.47'
+    RPC_API_VERSION = '1.48'
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(*args, **kwargs)
@@ -429,3 +429,6 @@ class ConductorManager(manager.Manager):
 
     def compute_confirm_resize(self, context, instance, migration_ref):
         self.compute_api.confirm_resize(context, instance, migration_ref)
+
+    def compute_unrescue(self, context, instance):
+        self.compute_api.unrescue(context, instance)
