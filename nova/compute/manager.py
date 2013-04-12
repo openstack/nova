@@ -3416,7 +3416,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                     to_unrescue.append(instance)
 
             for instance in to_unrescue:
-                self.compute_api.unrescue(context, instance)
+                self.conductor_api.compute_unrescue(context, instance)
 
     @manager.periodic_task
     def _poll_unconfirmed_resizes(self, context):

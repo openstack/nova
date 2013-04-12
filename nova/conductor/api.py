@@ -344,6 +344,9 @@ class LocalAPI(object):
         return self._manager.compute_confirm_resize(context, instance,
                                                     migration_ref)
 
+    def compute_unrescue(self, context, instance):
+        return self._manager.compute_unrescue(context, instance)
+
 
 class API(object):
     """Conductor API that does updates via RPC to the ConductorManager."""
@@ -683,3 +686,6 @@ class API(object):
         return self.conductor_rpcapi.compute_confirm_resize(context,
                                                             instance,
                                                             migration_ref)
+
+    def compute_unrescue(self, context, instance):
+        return self.conductor_rpcapi.compute_unrescue(context, instance)

@@ -3577,12 +3577,13 @@ class ComputeTestCase(BaseTestCase):
         def fake_instance_get_all_by_host(context, host):
             return instances
 
-        def fake_unrescue(self, context, instance):
+        def fake_unrescue(context, instance):
             unrescued_instances[instance['uuid']] = True
 
         self.stubs.Set(self.compute.conductor_api, 'instance_get_all_by_host',
                        fake_instance_get_all_by_host)
-        self.stubs.Set(compute_api.API, 'unrescue', fake_unrescue)
+        self.stubs.Set(self.compute.conductor_api, 'compute_unrescue',
+                       fake_unrescue)
 
         self.flags(rescue_timeout=60)
         ctxt = context.get_admin_context()
