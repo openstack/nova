@@ -2701,10 +2701,10 @@ class LibvirtConnTestCase(test.TestCase):
                                             instance,
                                             None,
                                             image_meta)
+        conn._create_image(context, instance,
+                           disk_info['mapping'])
         xml = conn.to_xml(instance, None,
                           disk_info, image_meta)
-        conn._create_image(context, instance, xml,
-                           disk_info['mapping'])
 
         wantFiles = [
             {'filename': '356a192b7913b04c54574d18c28d46e6395428ab',
@@ -2762,10 +2762,10 @@ class LibvirtConnTestCase(test.TestCase):
                                             instance,
                                             None,
                                             image_meta)
+        conn._create_image(context, instance,
+                           disk_info['mapping'])
         xml = conn.to_xml(instance, None,
                           disk_info, image_meta)
-        conn._create_image(context, instance, xml,
-                           disk_info['mapping'])
 
         wantFiles = [
             {'filename': '356a192b7913b04c54574d18c28d46e6395428ab',
@@ -4858,7 +4858,7 @@ class LibvirtDriverTestCase(test.TestCase):
         def fake_plug_vifs(instance, network_info):
             pass
 
-        def fake_create_image(context, inst, libvirt_xml,
+        def fake_create_image(context, inst,
                               disk_mapping, suffix='',
                               disk_images=None, network_info=None,
                               block_device_info=None):
