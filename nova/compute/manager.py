@@ -110,6 +110,10 @@ interval_opts = [
     cfg.IntOpt('bandwidth_poll_interval',
                default=600,
                help='interval to pull bandwidth usage info'),
+    cfg.IntOpt('sync_power_state_interval',
+               default=600,
+               help='interval to sync power states between '
+                    'the database and the hypervisor'),
     cfg.IntOpt("heal_instance_info_cache_interval",
                default=60,
                help="Number of seconds between instance info_cache self "
@@ -3738,7 +3742,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                 capability['host_ip'] = CONF.my_ip
             self.update_service_capabilities(capabilities)
 
-    @manager.periodic_task(spacing=600.0, run_immediately=True)
+    @manager.periodic_task(spacing=CONF.sync_power_state_interval,
+                           run_immediately=True)
     def _sync_power_states(self, context):
         """Align power states between the database and the hypervisor.
 
