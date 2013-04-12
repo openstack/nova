@@ -47,8 +47,9 @@ def network_dict(context, network):
         if context.is_admin:
             fields += admin_fields
         result = dict((field, network.get(field)) for field in fields)
-        if 'uuid' in network:
-            result['id'] = network['uuid']
+        uuid = network.get('uuid')
+        if uuid:
+            result['id'] = uuid
         return result
     else:
         return {}
