@@ -15,6 +15,9 @@
   <extension alias="OS-EXT-IPS" updated="2013-01-06T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/extended_ips/api/v1.1" name="ExtendedIps">
     <description>Adds type parameter to the ip list.</description>
   </extension>
+  <extension alias="OS-EXT-IPS-MAC" updated="2013-03-07T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/extended_ips_mac/api/v1.1" name="ExtendedIpsMac">
+    <description>Adds mac address parameter to the ip list.</description>
+  </extension>
   <extension alias="OS-EXT-SRV-ATTR" updated="2011-11-03T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/extended_status/api/v1.1" name="ExtendedServerAttributes">
     <description>Extended Server Attributes support.</description>
   </extension>

@@ -41,6 +41,14 @@
             "updated": "2013-01-06T00:00:00+00:00"
         },
         {
+            "alias": "OS-EXT-IPS-MAC",
+            "description": "Adds mac address parameter to the ip list.",
+            "links": [],
+            "name": "ExtendedIpsMac",
+            "namespace": "http://docs.openstack.org/compute/ext/extended_ips_mac/api/v1.1",
+            "updated": "2013-03-07T00:00:00+00:00"
+        },
+        {
             "alias": "OS-EXT-SRV-ATTR",
             "description": "Extended Server Attributes support.",
             "links": [],

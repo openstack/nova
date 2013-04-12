@@ -12,6 +12,9 @@
   <extension alias="OS-EXT-IPS" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/extended_ips/api/v1.1" name="ExtendedIps">
     <description>%(text)s</description>
   </extension>
+  <extension alias="OS-EXT-IPS-MAC" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/extended_ips_mac/api/v1.1" name="ExtendedIpsMac">
+    <description>%(text)s</description>
+  </extension>
   <extension alias="OS-EXT-IMG-SIZE" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/image_size/api/v1.1" name="ImageSize">
     <description>%(text)s</description>
   </extension>
