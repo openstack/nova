@@ -588,9 +588,9 @@ def instance_destroy(context, instance_uuid, constraint=None,
     return rv
 
 
-def instance_get_by_uuid(context, uuid):
+def instance_get_by_uuid(context, uuid, columns_to_join=None):
     """Get an instance or raise if it does not exist."""
-    return IMPL.instance_get_by_uuid(context, uuid)
+    return IMPL.instance_get_by_uuid(context, uuid, columns_to_join)
 
 
 def instance_get(context, instance_id):

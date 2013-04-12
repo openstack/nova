@@ -87,6 +87,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.47 - Added columns_to_join to instance_get_all_by_host and
                  instance_get_all_by_filters
     1.48 - Added compute_unrescue
+    1.49 - Added columns_to_join to instance_get_by_uuid
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -116,10 +117,12 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                             instance_id=instance_id)
         return self.call(context, msg, version='1.24')
 
-    def instance_get_by_uuid(self, context, instance_uuid):
+    def instance_get_by_uuid(self, context, instance_uuid,
+                             columns_to_join=None):
         msg = self.make_msg('instance_get_by_uuid',
-                            instance_uuid=instance_uuid)
-        return self.call(context, msg, version='1.2')
+                            instance_uuid=instance_uuid,
+                            columns_to_join=columns_to_join)
+        return self.call(context, msg, version='1.49')
 
     def migration_get(self, context, migration_id):
         msg = self.make_msg('migration_get', migration_id=migration_id)

@@ -204,6 +204,45 @@ class DbApiTestCase(DbTestCase):
                                                 {'display_name': u'test'})
         self.assertEqual(1, len(result))
 
+    def test_instance_get_by_uuid(self):
+        inst = self.create_instances_with_args()
+        fake_meta, fake_sys = self.create_metadata_for_instance(inst['uuid'])
+        result = db.instance_get_by_uuid(self.context, inst['uuid'])
+        meta = utils.metadata_to_dict(result['metadata'])
+        self.assertEqual(meta, fake_meta)
+        sys_meta = utils.metadata_to_dict(result['system_metadata'])
+        self.assertEqual(sys_meta, fake_sys)
+
+    def test_instance_get_by_uuid_join_empty(self):
+        inst = self.create_instances_with_args()
+        fake_meta, fake_sys = self.create_metadata_for_instance(inst['uuid'])
+        result = db.instance_get_by_uuid(self.context, inst['uuid'],
+                columns_to_join=[])
+        meta = utils.metadata_to_dict(result['metadata'])
+        self.assertEqual(meta, {})
+        sys_meta = utils.metadata_to_dict(result['system_metadata'])
+        self.assertEqual(sys_meta, {})
+
+    def test_instance_get_by_uuid_join_meta(self):
+        inst = self.create_instances_with_args()
+        fake_meta, fake_sys = self.create_metadata_for_instance(inst['uuid'])
+        result = db.instance_get_by_uuid(self.context, inst['uuid'],
+                columns_to_join=['metadata'])
+        meta = utils.metadata_to_dict(result['metadata'])
+        self.assertEqual(meta, fake_meta)
+        sys_meta = utils.metadata_to_dict(result['system_metadata'])
+        self.assertEqual(sys_meta, {})
+
+    def test_instance_get_by_uuid_join_sys_meta(self):
+        inst = self.create_instances_with_args()
+        fake_meta, fake_sys = self.create_metadata_for_instance(inst['uuid'])
+        result = db.instance_get_by_uuid(self.context, inst['uuid'],
+                columns_to_join=['system_metadata'])
+        meta = utils.metadata_to_dict(result['metadata'])
+        self.assertEqual(meta, {})
+        sys_meta = utils.metadata_to_dict(result['system_metadata'])
+        self.assertEqual(sys_meta, fake_sys)
+
     def test_instance_get_all_by_filters_deleted(self):
         inst1 = self.create_instances_with_args()
         inst2 = self.create_instances_with_args(reservation_id='b')

@@ -38,6 +38,7 @@ from sqlalchemy import MetaData
 from sqlalchemy import or_
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm import joinedload_all
+from sqlalchemy.orm import noload
 from sqlalchemy.schema import Table
 from sqlalchemy.sql.expression import asc
 from sqlalchemy.sql.expression import desc
@@ -1511,13 +1512,15 @@ def instance_destroy(context, instance_uuid, constraint=None):
 
 
 @require_context
-def instance_get_by_uuid(context, uuid):
-    return _instance_get_by_uuid(context, uuid)
+def instance_get_by_uuid(context, uuid, columns_to_join=None):
+    return _instance_get_by_uuid(context, uuid,
+            columns_to_join=columns_to_join)
 
 
 @require_context
-def _instance_get_by_uuid(context, uuid, session=None):
-    result = _build_instance_get(context, session=session).\
+def _instance_get_by_uuid(context, uuid, session=None, columns_to_join=None):
+    result = _build_instance_get(context, session=session,
+                                 columns_to_join=columns_to_join).\
                 filter_by(uuid=uuid).\
                 first()
 
@@ -1545,13 +1548,20 @@ def instance_get(context, instance_id):
 
 
 @require_context
-def _build_instance_get(context, session=None):
-    return model_query(context, models.Instance, session=session,
+def _build_instance_get(context, session=None, columns_to_join=None):
+    query = model_query(context, models.Instance, session=session,
                         project_only=True).\
             options(joinedload_all('security_groups.rules')).\
-            options(joinedload('info_cache')).\
-            options(joinedload('metadata')).\
-            options(joinedload('system_metadata'))
+            options(joinedload('info_cache'))
+    if columns_to_join is None:
+        columns_to_join = ['metadata', 'system_metadata']
+    for column in columns_to_join:
+        query = query.options(joinedload(column))
+    #NOTE(alaski) Stop lazy loading of columns not needed.
+    for col in ['metadata', 'system_metadata']:
+        if col not in columns_to_join:
+            query = query.options(noload(col))
+    return query
 
 
 def _instances_fill_metadata(context, instances, manual_joins=None):

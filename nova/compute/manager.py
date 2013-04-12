@@ -3794,7 +3794,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         # We re-query the DB to get the latest instance info to minimize
         # (not eliminate) race condition.
         u = self.conductor_api.instance_get_by_uuid(context,
-                                                    db_instance['uuid'])
+                                                    db_instance['uuid'],
+                                                    columns_to_join=[])
         db_power_state = u["power_state"]
         vm_state = u['vm_state']
 

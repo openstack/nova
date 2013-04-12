@@ -67,8 +67,10 @@ class LocalAPI(object):
     def instance_get(self, context, instance_id):
         return self._manager.instance_get(context, instance_id)
 
-    def instance_get_by_uuid(self, context, instance_uuid):
-        return self._manager.instance_get_by_uuid(context, instance_uuid)
+    def instance_get_by_uuid(self, context, instance_uuid,
+                             columns_to_join=None):
+        return self._manager.instance_get_by_uuid(context, instance_uuid,
+                columns_to_join)
 
     def instance_destroy(self, context, instance):
         return self._manager.instance_destroy(context, instance)
@@ -397,9 +399,11 @@ class API(object):
     def instance_get(self, context, instance_id):
         return self.conductor_rpcapi.instance_get(context, instance_id)
 
-    def instance_get_by_uuid(self, context, instance_uuid):
+    def instance_get_by_uuid(self, context, instance_uuid,
+                             columns_to_join=None):
         return self.conductor_rpcapi.instance_get_by_uuid(context,
-                                                          instance_uuid)
+                                                          instance_uuid,
+                                                          columns_to_join)
 
     def instance_get_all(self, context):
         return self.conductor_rpcapi.instance_get_all(context)
