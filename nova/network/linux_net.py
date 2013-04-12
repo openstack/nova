@@ -1015,7 +1015,6 @@ def restart_dhcp(context, dev, network_ref):
            '--strict-order',
            '--bind-interfaces',
            '--conf-file=%s' % CONF.dnsmasq_config_file,
-           '--domain=\'%s\'' % CONF.dhcp_domain,
            '--pid-file=%s' % _dhcp_file(dev, 'pid'),
            '--listen-address=%s' % network_ref['dhcp_server'],
            '--except-interface=lo',
@@ -1028,6 +1027,11 @@ def restart_dhcp(context, dev, network_ref):
            '--dhcp-hostsfile=%s' % _dhcp_file(dev, 'conf'),
            '--dhcp-script=%s' % CONF.dhcpbridge,
            '--leasefile-ro']
+
+    # dnsmasq currently gives an error for an empty domain,
+    # rather than ignoring.  So only specify it if defined.
+    if CONF.dhcp_domain:
+        cmd.append('--domain=%s' % CONF.dhcp_domain)
 
     dns_servers = set(CONF.dns_server)
     if CONF.use_network_dns_servers:
