@@ -314,6 +314,7 @@ class BareMetalDeploy(object):
 def main():
     config.parse_args(sys.argv)
     logging.setup("nova")
+    global LOG
     LOG = logging.getLogger('nova.virt.baremetal.deploy_helper')
     app = BareMetalDeploy()
     srv = simple_server.make_server('', 10000, app)
