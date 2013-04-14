@@ -86,6 +86,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.46 - Added compute_confirm_resize
     1.47 - Added columns_to_join to instance_get_all_by_host and
                  instance_get_all_by_filters
+    1.48 - Added compute_unrescue
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -449,3 +450,8 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         msg = self.make_msg('compute_confirm_resize', instance=instance_p,
                             migration_ref=migration_p)
         return self.call(context, msg, version='1.46')
+
+    def compute_unrescue(self, context, instance):
+        instance_p = jsonutils.to_primitive(instance)
+        msg = self.make_msg('compute_unrescue', instance=instance_p)
+        return self.call(context, msg, version='1.48')

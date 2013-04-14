@@ -612,6 +612,13 @@ class _BaseTestCase(object):
         self.conductor.compute_confirm_resize(self.context, 'instance',
                                               'migration')
 
+    def test_compute_unrescue(self):
+        self.mox.StubOutWithMock(self.conductor_manager.compute_api,
+                                 'unrescue')
+        self.conductor_manager.compute_api.unrescue(self.context, 'instance')
+        self.mox.ReplayAll()
+        self.conductor.compute_unrescue(self.context, 'instance')
+
 
 class ConductorTestCase(_BaseTestCase, test.TestCase):
     """Conductor Manager Tests."""
