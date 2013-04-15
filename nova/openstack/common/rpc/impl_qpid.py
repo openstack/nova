@@ -320,7 +320,7 @@ class Connection(object):
         # Reconnection is done by self.reconnect()
         self.connection.reconnect = False
         self.connection.heartbeat = self.conf.qpid_heartbeat
-        self.connection.protocol = self.conf.qpid_protocol
+        self.connection.transport = self.conf.qpid_protocol
         self.connection.tcp_nodelay = self.conf.qpid_tcp_nodelay
 
     def _register_consumer(self, consumer):

@@ -3348,10 +3348,12 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(rpc, 'call')
         rpc.call(c, rpc.queue_get_for(c, CONF.compute_topic, dest),
             {"method": "post_live_migration_at_destination",
+             "namespace": None,
              "args": {'instance': inst_ref, 'block_migration': False},
              "version": compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION},
             None)
         rpc.call(c, 'network', {'method': 'setup_networks_on_host',
+                                'namespace': None,
                                 'args': {'instance_id': inst_id,
                                          'host': self.compute.host,
                                          'teardown': True},
@@ -3394,12 +3396,14 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(rpc, 'call')
         rpc.call(c, rpc.queue_get_for(c, CONF.compute_topic, dest),
             {"method": "post_live_migration_at_destination",
+             "namespace": None,
              "args": {'instance': inst_ref, 'block_migration': False},
              "version": compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION},
             None)
         self.mox.StubOutWithMock(self.compute.driver, 'unplug_vifs')
         self.compute.driver.unplug_vifs(inst_ref, [])
         rpc.call(c, 'network', {'method': 'setup_networks_on_host',
+                                'namespace': None,
                                 'args': {'instance_id': inst_id,
                                          'host': self.compute.host,
                                          'teardown': True},
@@ -6666,10 +6670,12 @@ class ComputeAPITestCase(BaseTestCase):
         self.mox.StubOutWithMock(rpc, 'call')
 
         rpc_msg1 = {'method': 'get_vnc_console',
+                    'namespace': None,
                     'args': {'instance': fake_instance,
                              'console_type': fake_console_type},
                    'version': compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION}
         rpc_msg2 = {'method': 'authorize_console',
+                    'namespace': None,
                     'args': fake_connect_info,
                     'version': '1.2'}
 
@@ -6711,10 +6717,12 @@ class ComputeAPITestCase(BaseTestCase):
         self.mox.StubOutWithMock(rpc, 'call')
 
         rpc_msg1 = {'method': 'get_spice_console',
+                    'namespace': None,
                     'args': {'instance': fake_instance,
                              'console_type': fake_console_type},
                    'version': '2.24'}
         rpc_msg2 = {'method': 'authorize_console',
+                    'namespace': None,
                     'args': fake_connect_info,
                     'version': '1.2'}
 
@@ -6745,6 +6753,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.mox.StubOutWithMock(rpc, 'call')
 
         rpc_msg = {'method': 'get_backdoor_port',
+                   'namespace': None,
                    'args': {},
                    'version': compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION}
         rpc.call(self.context, 'compute.fake_host', rpc_msg,
@@ -6764,6 +6773,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.mox.StubOutWithMock(rpc, 'call')
 
         rpc_msg = {'method': 'get_console_output',
+                   'namespace': None,
                    'args': {'instance': fake_instance,
                             'tail_length': fake_tail_length},
                    'version': compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION}
@@ -7080,6 +7090,7 @@ class ComputeAPITestCase(BaseTestCase):
                                   instance['host'])
         rpc.cast(self.context, topic,
                 {"method": "refresh_instance_security_rules",
+                 "namespace": None,
                  "args": {'instance': jsonutils.to_primitive(instance)},
                  "version":
                     compute_rpcapi.SecurityGroupAPI.BASE_RPC_API_VERSION})
@@ -7109,6 +7120,7 @@ class ComputeAPITestCase(BaseTestCase):
                                   instance['host'])
         rpc.cast(self.context, topic,
                 {"method": "refresh_instance_security_rules",
+                 "namespace": None,
                  "args": {'instance': jsonutils.to_primitive(instance)},
                  "version":
                    compute_rpcapi.SecurityGroupAPI.BASE_RPC_API_VERSION})
@@ -7150,6 +7162,7 @@ class ComputeAPITestCase(BaseTestCase):
                                   instance['host'])
         rpc.cast(self.context, topic,
                 {"method": "refresh_instance_security_rules",
+                 "namespace": None,
                  "args": {'instance': jsonutils.to_primitive(instance)},
                  "version":
                    compute_rpcapi.SecurityGroupAPI.BASE_RPC_API_VERSION})
@@ -7171,6 +7184,7 @@ class ComputeAPITestCase(BaseTestCase):
                                   instance['host'])
         rpc.cast(self.context, topic,
                 {"method": "refresh_instance_security_rules",
+                 "namespace": None,
                  "args": {'instance': jsonutils.to_primitive(instance)},
                  "version":
                    compute_rpcapi.SecurityGroupAPI.BASE_RPC_API_VERSION})
