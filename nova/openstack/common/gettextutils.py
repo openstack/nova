@@ -24,10 +24,27 @@ Usual usage in an openstack.common module:
 """
 
 import gettext
+import os
 
-
-t = gettext.translation('nova', 'locale', fallback=True)
+_localedir = os.environ.get('nova'.upper() + '_LOCALEDIR')
+_t = gettext.translation('nova', localedir=_localedir, fallback=True)
 
 
 def _(msg):
-    return t.ugettext(msg)
+    return _t.ugettext(msg)
+
+
+def install(domain):
+    """Install a _() function using the given translation domain.
+
+    Given a translation domain, install a _() function using gettext's
+    install() function.
+
+    The main difference from gettext.install() is that we allow
+    overriding the default localedir (e.g. /usr/share/locale) using
+    a translation-domain-specific environment variable (e.g.
+    NOVA_LOCALEDIR).
+    """
+    gettext.install(domain,
+                    localedir=os.environ.get(domain.upper() + '_LOCALEDIR'),
+                    unicode=True)
