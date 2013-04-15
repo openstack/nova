@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  nova\n"
 "Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
-"POT-Creation-Date: 2013-04-14 00:03+0000\n"
+"POT-Creation-Date: 2013-04-15 00:04+0000\n"
 "PO-Revision-Date: 2012-05-07 06:51+0000\n"
 "Last-Translator: Edward <Unknown>\n"
 "Language-Team: Chinese (Simplified) <zh_CN@li.org>\n"
@@ -190,7 +190,7 @@ msgid ""
 msgstr ""
 
 #: nova/exception.py:254 nova/api/ec2/cloud.py:463
-#: nova/api/openstack/compute/contrib/keypairs.py:98 nova/compute/api.py:2739
+#: nova/api/openstack/compute/contrib/keypairs.py:98 nova/compute/api.py:2735
 msgid "Keypair data is invalid"
 msgstr "密钥对数据无效"
 
@@ -4044,138 +4044,138 @@ msgstr "搜索条件： %s"
 msgid "snapshot for %s"
 msgstr "开始为虚拟机 %s 快照"
 
-#: nova/compute/api.py:1968
+#: nova/compute/api.py:1964
 msgid "flavor_id is None. Assuming migration."
 msgstr "flavor_id为空。假定在迁移。"
 
-#: nova/compute/api.py:1977
+#: nova/compute/api.py:1973
 #, python-format
 msgid ""
 "Old instance type %(current_instance_type_name)s,  new instance type "
 "%(new_instance_type_name)s"
 msgstr "旧的实例类型 %(current_instance_type_name)s，新的实例类型 %(new_instance_type_name)s"
 
-#: nova/compute/api.py:2019
+#: nova/compute/api.py:2015
 #, fuzzy, python-format
 msgid "%(overs)s quota exceeded for %(pid)s, tried to resize instance."
 msgstr "%(pid)s 已经超过配额，试图运行 %(min_count)s 个实例"
 
-#: nova/compute/api.py:2157
+#: nova/compute/api.py:2153
 msgid "Cannot rescue a volume-backed instance"
 msgstr ""
 
-#: nova/compute/api.py:2264
+#: nova/compute/api.py:2260
 msgid "Locking"
 msgstr ""
 
-#: nova/compute/api.py:2272
+#: nova/compute/api.py:2268
 msgid "Unlocking"
 msgstr ""
 
-#: nova/compute/api.py:2344
+#: nova/compute/api.py:2340
 msgid "Volume must be attached in order to detach."
 msgstr ""
 
-#: nova/compute/api.py:2457
+#: nova/compute/api.py:2453
 #, fuzzy, python-format
 msgid "Going to try to live migrate instance to %s"
 msgstr "准备尝试终止实例 %s"
 
-#: nova/compute/api.py:2476
+#: nova/compute/api.py:2472
 msgid "vm evacuation scheduled"
 msgstr ""
 
-#: nova/compute/api.py:2480
+#: nova/compute/api.py:2476
 #, python-format
 msgid ""
 "Instance compute service state on %(inst_host)s expected to be down, but "
 "it was up."
 msgstr ""
 
-#: nova/compute/api.py:2719
+#: nova/compute/api.py:2715
 msgid "Keypair name contains unsafe characters"
 msgstr ""
 
-#: nova/compute/api.py:2723
+#: nova/compute/api.py:2719
 msgid "Keypair name must be between 1 and 255 characters long"
 msgstr "密钥对名称长度必须在1到255个字符之间"
 
-#: nova/compute/api.py:2820
+#: nova/compute/api.py:2816
 #, python-format
 msgid "Security group %s is not a string or unicode"
 msgstr "安全组 %s 既不是字符串也不是unicode"
 
-#: nova/compute/api.py:2823
+#: nova/compute/api.py:2819
 #, python-format
 msgid "Security group %s cannot be empty."
 msgstr "安全组 %s 不能为空。"
 
-#: nova/compute/api.py:2831
+#: nova/compute/api.py:2827
 #, fuzzy, python-format
 msgid ""
 "Value (%(value)s) for parameter Group%(property)s is invalid. Content "
 "limited to '%(allowed)'."
 msgstr "参数GroupName的值 (%s) 无效。长度超过了上限255。"
 
-#: nova/compute/api.py:2837
+#: nova/compute/api.py:2833
 #, python-format
 msgid "Security group %s should not be greater than 255 characters."
 msgstr "安全组 %s 不能比255个字符更长。"
 
-#: nova/compute/api.py:2857
+#: nova/compute/api.py:2853
 msgid "Quota exceeded, too many security groups."
 msgstr ""
 
-#: nova/compute/api.py:2860
+#: nova/compute/api.py:2856
 #, python-format
 msgid "Create Security Group %s"
 msgstr "创建安全组 %s"
 
-#: nova/compute/api.py:2867
+#: nova/compute/api.py:2863
 #, python-format
 msgid "Security group %s already exists"
 msgstr "安全组 %s 已经存在"
 
-#: nova/compute/api.py:2932
+#: nova/compute/api.py:2928
 #, fuzzy, python-format
 msgid "Unable to delete system group '%s'"
 msgstr "无法销毁VBD %s"
 
-#: nova/compute/api.py:2937
+#: nova/compute/api.py:2933
 #, fuzzy
 msgid "Security group is still in use"
 msgstr "安全组id应该是整数"
 
-#: nova/compute/api.py:2945
+#: nova/compute/api.py:2941
 msgid "Failed to update usages deallocating security group"
 msgstr ""
 
-#: nova/compute/api.py:2948
+#: nova/compute/api.py:2944
 #, python-format
 msgid "Delete security group %s"
 msgstr "删除安全组 %s"
 
-#: nova/compute/api.py:3034 nova/compute/api.py:3111
+#: nova/compute/api.py:3030 nova/compute/api.py:3107
 #, python-format
 msgid "Rule (%s) not found"
 msgstr "没有找到规则 (%s)"
 
-#: nova/compute/api.py:3050
+#: nova/compute/api.py:3046
 #, fuzzy
 msgid "Quota exceeded, too many security group rules."
 msgstr "添加安全组规则：%r"
 
-#: nova/compute/api.py:3053
+#: nova/compute/api.py:3049
 #, python-format
 msgid "Authorize security group ingress %s"
 msgstr "授权 %s 安全组入口权限"
 
-#: nova/compute/api.py:3064
+#: nova/compute/api.py:3060
 #, python-format
 msgid "Revoke security group ingress %s"
 msgstr "撤销 %s 安全组入口权限"
 
-#: nova/compute/api.py:3118
+#: nova/compute/api.py:3114
 msgid "Security group id should be integer"
 msgstr "安全组id应该是整数"
 
@@ -4378,7 +4378,7 @@ msgstr "正在设置 bdm %s"
 msgid "Instance disappeared before we could start it"
 msgstr ""
 
-#: nova/compute/manager.py:861 nova/compute/manager.py:2328
+#: nova/compute/manager.py:861 nova/compute/manager.py:2333
 #, python-format
 msgid "No node specified, defaulting to %(node)s"
 msgstr ""
@@ -4402,7 +4402,7 @@ msgstr "数据库错误：%s"
 msgid "Clean up resource before rescheduling."
 msgstr ""
 
-#: nova/compute/manager.py:982 nova/compute/manager.py:2382
+#: nova/compute/manager.py:982 nova/compute/manager.py:2387
 msgid "Error trying to reschedule"
 msgstr ""
 
@@ -4496,8 +4496,8 @@ msgstr "终止bdm %s"
 msgid "Ignoring volume cleanup failure due to %s"
 msgstr ""
 
-#: nova/compute/manager.py:1435 nova/compute/manager.py:2558
-#: nova/compute/manager.py:4052
+#: nova/compute/manager.py:1435 nova/compute/manager.py:2563
+#: nova/compute/manager.py:4057
 #, python-format
 msgid "%s. Setting instance vm_state to ERROR"
 msgstr "%s。把实例的 vm_state设置为ERROR"
@@ -4638,144 +4638,144 @@ msgstr "实例 %s：取消救援"
 msgid "Changing instance metadata according to %(diff)r"
 msgstr ""
 
-#: nova/compute/manager.py:2286
+#: nova/compute/manager.py:2291
 #, fuzzy
 msgid "Instance has no source host"
 msgstr "实例没有卷。"
 
-#: nova/compute/manager.py:2292
+#: nova/compute/manager.py:2297
 msgid "destination same as source!"
 msgstr "目标与来源一样。"
 
-#: nova/compute/manager.py:2309
+#: nova/compute/manager.py:2314
 msgid "Migrating"
 msgstr ""
 
-#: nova/compute/manager.py:2555
+#: nova/compute/manager.py:2560
 #, python-format
 msgid "Failed to rollback quota for failed finish_resize: %(qr_error)s"
 msgstr ""
 
-#: nova/compute/manager.py:2618
+#: nova/compute/manager.py:2623
 #, fuzzy
 msgid "Pausing"
 msgstr "正在更新。"
 
-#: nova/compute/manager.py:2636
+#: nova/compute/manager.py:2641
 msgid "Unpausing"
 msgstr ""
 
-#: nova/compute/manager.py:2674
+#: nova/compute/manager.py:2679
 #, fuzzy
 msgid "Retrieving diagnostics"
 msgstr "实例 %s ：获取诊断"
 
-#: nova/compute/manager.py:2705
+#: nova/compute/manager.py:2710
 msgid "Resuming"
 msgstr ""
 
-#: nova/compute/manager.py:2725
+#: nova/compute/manager.py:2730
 #, fuzzy
 msgid "Reset network"
 msgstr "重置网络"
 
-#: nova/compute/manager.py:2730
+#: nova/compute/manager.py:2735
 #, fuzzy
 msgid "Inject network info"
 msgstr "实例 %s：注入网络信息"
 
-#: nova/compute/manager.py:2733
+#: nova/compute/manager.py:2738
 #, python-format
 msgid "network_info to inject: |%s|"
 msgstr "将注入的network_info：|%s|"
 
-#: nova/compute/manager.py:2750
+#: nova/compute/manager.py:2755
 #, fuzzy
 msgid "Get console output"
 msgstr "获取实例 %s 控制台输出"
 
-#: nova/compute/manager.py:2777
+#: nova/compute/manager.py:2782
 #, fuzzy
 msgid "Getting vnc console"
 msgstr "实例 %s：正在获得VNC控制台"
 
-#: nova/compute/manager.py:2812
+#: nova/compute/manager.py:2817
 #, fuzzy
 msgid "Getting spice console"
 msgstr "实例 %s：正在获得VNC控制台"
 
-#: nova/compute/manager.py:2859
+#: nova/compute/manager.py:2864
 #, python-format
 msgid "Booting with volume %(volume_id)s at %(mountpoint)s"
 msgstr "卷 %(volume_id)s 正在 %(mountpoint)s 上启动"
 
-#: nova/compute/manager.py:2910
+#: nova/compute/manager.py:2915
 #, python-format
 msgid "Attaching volume %(volume_id)s to %(mountpoint)s"
 msgstr "正在把卷 %(volume_id)s 附加到 %(mountpoint)s"
 
-#: nova/compute/manager.py:2919
+#: nova/compute/manager.py:2924
 #, fuzzy, python-format
 msgid ""
 "Failed to connect to volume %(volume_id)s while attaching at "
 "%(mountpoint)s"
 msgstr "卷 %(volume_id)s 正在 %(mountpoint)s 上启动"
 
-#: nova/compute/manager.py:2934
+#: nova/compute/manager.py:2939
 #, fuzzy, python-format
 msgid "Failed to attach volume %(volume_id)s at %(mountpoint)s"
 msgstr "正在把卷 %(volume_id)s 附加到 %(mountpoint)s"
 
-#: nova/compute/manager.py:2964
+#: nova/compute/manager.py:2969
 #, python-format
 msgid "Detach volume %(volume_id)s from mountpoint %(mp)s"
 msgstr "卷 %(volume_id)s 从挂载点 %(mp)s 分离"
 
-#: nova/compute/manager.py:2974
+#: nova/compute/manager.py:2979
 #, fuzzy
 msgid "Detaching volume from unknown instance"
 msgstr "从未知实例%s中分离卷"
 
-#: nova/compute/manager.py:2981
+#: nova/compute/manager.py:2986
 #, fuzzy, python-format
 msgid "Failed to detach volume %(volume_id)s from %(mp)s"
 msgstr "正在把卷 %(volume_id)s 附加到 %(mountpoint)s"
 
-#: nova/compute/manager.py:3005
+#: nova/compute/manager.py:3010
 msgid "Updating volume usage cache with totals"
 msgstr ""
 
-#: nova/compute/manager.py:3043
+#: nova/compute/manager.py:3048
 #, fuzzy, python-format
 msgid "allocate_port_for_instance returned %(ports)s ports"
 msgstr "实例 %s 的网络分配"
 
-#: nova/compute/manager.py:3063
+#: nova/compute/manager.py:3068
 #, fuzzy, python-format
 msgid "Port %(port_id)s is not attached"
 msgstr "网络 %(network_id)s 没有找到。"
 
-#: nova/compute/manager.py:3077
+#: nova/compute/manager.py:3082
 #, fuzzy, python-format
 msgid "Host %(host)s not found"
 msgstr "主机 %(host)s 没有找到。"
 
-#: nova/compute/manager.py:3214
+#: nova/compute/manager.py:3219
 #, python-format
 msgid "Pre live migration failed at  %(dest)s"
 msgstr "预在线迁移在%(dest)s失败"
 
-#: nova/compute/manager.py:3242
+#: nova/compute/manager.py:3247
 #, fuzzy
 msgid "_post_live_migration() is started.."
 msgstr "post_live_migration()已经启动。"
 
-#: nova/compute/manager.py:3297
+#: nova/compute/manager.py:3302
 #, python-format
 msgid "Migrating instance to %(dest)s finished successfully."
 msgstr "把实例迁移到 %(dest)s 成功完成。"
 
-#: nova/compute/manager.py:3299
+#: nova/compute/manager.py:3304
 msgid ""
 "You may see the error \"libvirt: QEMU error: Domain not found: no domain "
 "with matching name.\" This error can be safely ignored."
@@ -4783,161 +4783,161 @@ msgstr ""
 "你会看到错误“libvirt: QEMU error: Domain not found: no domain with matching "
 "name。”这个错误可以放心的忽略。"
 
-#: nova/compute/manager.py:3313
+#: nova/compute/manager.py:3318
 #, fuzzy
 msgid "Post operation of migration started"
 msgstr "迁移后操作启动"
 
-#: nova/compute/manager.py:3453
+#: nova/compute/manager.py:3458
 msgid "Updated the info_cache for instance"
 msgstr ""
 
-#: nova/compute/manager.py:3498
+#: nova/compute/manager.py:3503
 #, python-format
 msgid ""
 "Found %(migration_count)d unconfirmed migrations older than "
 "%(confirm_window)d seconds"
 msgstr "发现 %(migration_count)d 个超过 %(confirm_window)d 秒未经确认的迁移"
 
-#: nova/compute/manager.py:3504
+#: nova/compute/manager.py:3509
 #, python-format
 msgid "Setting migration %(migration_id)s to error: %(reason)s"
 msgstr ""
 
-#: nova/compute/manager.py:3513
+#: nova/compute/manager.py:3518
 #, fuzzy, python-format
 msgid ""
 "Automatically confirming migration %(migration_id)s for instance "
 "%(instance_uuid)s"
 msgstr "为实例 %(instance_uuid)s 关闭虚拟机"
 
-#: nova/compute/manager.py:3520
+#: nova/compute/manager.py:3525
 #, fuzzy, python-format
 msgid "Instance %(instance_uuid)s not found"
 msgstr "没有找到实例 %(instance_id)s"
 
-#: nova/compute/manager.py:3524
+#: nova/compute/manager.py:3529
 #, fuzzy
 msgid "In ERROR state"
 msgstr "节点处于未知的错误状态。"
 
-#: nova/compute/manager.py:3531
+#: nova/compute/manager.py:3536
 #, python-format
 msgid "In states %(vm_state)s/%(task_state)s, not RESIZED/None"
 msgstr ""
 
-#: nova/compute/manager.py:3540
+#: nova/compute/manager.py:3545
 #, python-format
 msgid "Error auto-confirming resize: %(e)s. Will retry later."
 msgstr ""
 
-#: nova/compute/manager.py:3557
+#: nova/compute/manager.py:3562
 #, python-format
 msgid ""
 "Running instance usage audit for host %(host)s from %(begin_time)s to "
 "%(end_time)s. %(number_instances)s instances."
 msgstr ""
 
-#: nova/compute/manager.py:3576
+#: nova/compute/manager.py:3581
 #, python-format
 msgid "Failed to generate usage audit for instance on host %s"
 msgstr ""
 
-#: nova/compute/manager.py:3600
+#: nova/compute/manager.py:3605
 msgid "Updating bandwidth usage cache"
 msgstr "更新带宽使用缓存"
 
-#: nova/compute/manager.py:3718
+#: nova/compute/manager.py:3723
 #, fuzzy
 msgid "Updating volume usage cache"
 msgstr "更新带宽使用缓存"
 
-#: nova/compute/manager.py:3736
+#: nova/compute/manager.py:3741
 msgid "Updating host status"
 msgstr "更新主机状态"
 
-#: nova/compute/manager.py:3763
+#: nova/compute/manager.py:3768
 #, python-format
 msgid ""
 "Found %(num_db_instances)s in the database and %(num_vm_instances)s on "
 "the hypervisor."
 msgstr "在数据库中找到 %(num_db_instances)s个实例，在虚拟机管理程序找到 %(num_vm_instances)s 个实例。"
 
-#: nova/compute/manager.py:3768 nova/compute/manager.py:3817
+#: nova/compute/manager.py:3773 nova/compute/manager.py:3822
 msgid "During sync_power_state the instance has a pending task. Skip."
 msgstr ""
 
-#: nova/compute/manager.py:3804
+#: nova/compute/manager.py:3809
 #, python-format
 msgid ""
 "During the sync_power process the instance has moved from host %(src)s to"
 " host %(dst)s"
 msgstr ""
 
-#: nova/compute/manager.py:3842
+#: nova/compute/manager.py:3847
 msgid "Instance shutdown by itself. Calling the stop API."
 msgstr ""
 
-#: nova/compute/manager.py:3854 nova/compute/manager.py:3863
-#: nova/compute/manager.py:3893
+#: nova/compute/manager.py:3859 nova/compute/manager.py:3868
+#: nova/compute/manager.py:3898
 msgid "error during stop() in sync_power_state."
 msgstr ""
 
-#: nova/compute/manager.py:3858
+#: nova/compute/manager.py:3863
 msgid "Instance is suspended unexpectedly. Calling the stop API."
 msgstr ""
 
-#: nova/compute/manager.py:3874
+#: nova/compute/manager.py:3879
 msgid "Instance is paused unexpectedly. Ignore."
 msgstr ""
 
-#: nova/compute/manager.py:3880
+#: nova/compute/manager.py:3885
 msgid "Instance is unexpectedly not found. Ignore."
 msgstr ""
 
-#: nova/compute/manager.py:3886
+#: nova/compute/manager.py:3891
 msgid "Instance is not stopped. Calling the stop API."
 msgstr ""
 
-#: nova/compute/manager.py:3902
+#: nova/compute/manager.py:3907
 #, fuzzy
 msgid "Instance is not (soft-)deleted."
 msgstr "实例未启动"
 
-#: nova/compute/manager.py:3910
+#: nova/compute/manager.py:3915
 #, fuzzy
 msgid "CONF.reclaim_instance_interval <= 0, skipping..."
 msgstr "FLAGS.reclaim_instance_interval <= 0，跳过..."
 
-#: nova/compute/manager.py:3930
+#: nova/compute/manager.py:3935
 msgid "Reclaiming deleted instance"
 msgstr "回收删除的实例"
 
-#: nova/compute/manager.py:3957
+#: nova/compute/manager.py:3962
 #, fuzzy, python-format
 msgid "Deleting orphan compute node %s"
 msgstr "LoggingVolumeDriver: %s"
 
-#: nova/compute/manager.py:3967 nova/compute/resource_tracker.py:314
+#: nova/compute/manager.py:3972 nova/compute/resource_tracker.py:314
 #, fuzzy, python-format
 msgid "No service record for host %s"
 msgstr "计算节点 %s 没有服务"
 
-#: nova/compute/manager.py:4007
+#: nova/compute/manager.py:4012
 #, fuzzy, python-format
 msgid ""
 "Detected instance with name label '%(name)s' which is marked as DELETED "
 "but still present on host."
 msgstr "检测标签名为 '%(name_label)s' 的实例，这些实例被标识为DELETED却仍然存在于主机上。"
 
-#: nova/compute/manager.py:4014
+#: nova/compute/manager.py:4019
 #, fuzzy, python-format
 msgid ""
 "Destroying instance with name label '%(name)s' which is marked as DELETED"
 " but still present on host."
 msgstr "销毁标签名为 '%(name_label)s' 的实例，这些实例被标识为DELETED却仍然存在于主机上。"
 
-#: nova/compute/manager.py:4021
+#: nova/compute/manager.py:4026
 #, fuzzy, python-format
 msgid "Unrecognized value '%(action)s' for CONF.running_deleted_instance_action"
 msgstr "无法识别的FLAGS.running_deleted_instance_action的取值 '%(action)s'"
@@ -5053,7 +5053,7 @@ msgstr "无法找到实例 %s 的宿主机"
 msgid "Using %(prefix)s instead of %(req_prefix)s"
 msgstr ""
 
-#: nova/conductor/api.py:379
+#: nova/conductor/api.py:382
 msgid ""
 "Timed out waiting for nova-conductor. Is it running? Or did this service "
 "start before nova-conductor?"
@@ -6904,7 +6904,7 @@ msgstr "内部错误"
 msgid "After force-killing instances: %s"
 msgstr "强制杀死实例后：%s"
 
-#: nova/tests/compute/test_compute.py:3979
+#: nova/tests/compute/test_compute.py:3980
 msgid "wrong host/node"
 msgstr ""
 
