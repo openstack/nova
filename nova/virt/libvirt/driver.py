@@ -2730,20 +2730,28 @@ class LibvirtDriver(driver.ComputeDriver):
                 mountpoint = bdm['device_name']
                 if mountpoint.startswith('/dev/'):
                     mountpoint = mountpoint[5:]
+                volume_id = bdm['volume_id']
 
                 LOG.debug(_("Trying to get stats for the volume %s"),
-                            bdm['volume_id'])
+                            volume_id)
                 vol_stats = self.block_stats(instance['name'], mountpoint)
 
                 if vol_stats:
-                    rd_req, rd_bytes, wr_req, wr_bytes, flush_ops = vol_stats
-                    vol_usage.append(dict(volume=bdm['volume_id'],
-                                          instance=instance,
-                                          rd_req=rd_req,
-                                          rd_bytes=rd_bytes,
-                                          wr_req=wr_req,
-                                          wr_bytes=wr_bytes,
-                                          flush_operations=flush_ops))
+                    stats = dict(volume=volume_id,
+                                 instance=instance,
+                                 rd_req=vol_stats[0],
+                                 rd_bytes=vol_stats[1],
+                                 wr_req=vol_stats[2],
+                                 wr_bytes=vol_stats[3],
+                                 flush_operations=vol_stats[4])
+                    LOG.debug(
+                        _("Got volume usage stats for the volume=%(volume)s,"
+                          " instance=%(instance)s, rd_req=%(rd_req)d,"
+                          " rd_bytes=%(rd_bytes)d, wr_req=%(wr_req)d,"
+                          " wr_bytes=%(wr_bytes)d")
+                        % stats)
+                    vol_usage.append(stats)
+
         return vol_usage
 
     def block_stats(self, instance_name, disk):
@@ -2756,7 +2764,8 @@ class LibvirtDriver(driver.ComputeDriver):
         except libvirt.libvirtError as e:
             errcode = e.get_error_code()
             LOG.info(_("Getting block stats failed, device might have "
-                       "been detached. Code=%(errcode)s Error=%(e)s")
+                       "been detached. Instance=%(instance_name)s "
+                       "Disk=%(disk)s Code=%(errcode)s Error=%(e)s")
                        % locals())
         except exception.InstanceNotFound:
             LOG.info(_("Could not find domain in libvirt for instance %s. "
