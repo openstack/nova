@@ -1215,3 +1215,12 @@ class UnsupportedHardware(Invalid):
 
 class Base64Exception(NovaException):
     message = _("Invalid Base 64 data for file %(path)s")
+
+
+class BuildAbortException(NovaException):
+    message = _("Build of instance %(instance_uuid)s aborted: %(reason)s")
+
+
+class RescheduledException(NovaException):
+    message = _("Build of instance %(instance_uuid)s was re-scheduled: "
+                "%(reason)s")
