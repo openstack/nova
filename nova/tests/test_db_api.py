@@ -2664,16 +2664,18 @@ class InstanceDestroyConstraints(test.TestCase):
 
 
 class VolumeUsageDBApiTestCase(test.TestCase):
+
     def setUp(self):
         super(VolumeUsageDBApiTestCase, self).setUp()
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id, self.project_id)
 
+        self.useFixture(test.TimeOverride())
+
     def test_vol_usage_update_no_totals_update(self):
         ctxt = context.get_admin_context()
         now = timeutils.utcnow()
-        timeutils.set_time_override(now)
         start_time = now - datetime.timedelta(seconds=10)
         refreshed_time = now - datetime.timedelta(seconds=5)
 
@@ -2684,7 +2686,11 @@ class VolumeUsageDBApiTestCase(test.TestCase):
                                 'curr_reads': 1000,
                                 'curr_read_bytes': 2000,
                                 'curr_writes': 3000,
-                                'curr_write_bytes': 4000},
+                                'curr_write_bytes': 4000,
+                                'tot_reads': 0,
+                                'tot_read_bytes': 0,
+                                'tot_writes': 0,
+                                'tot_write_bytes': 0},
                                {'volume_id': u'2',
                                 'instance_uuid': 'fake-instance-uuid2',
                                 'project_id': 'fake-project-uuid2',
@@ -2692,7 +2698,11 @@ class VolumeUsageDBApiTestCase(test.TestCase):
                                 'curr_reads': 100,
                                 'curr_read_bytes': 200,
                                 'curr_writes': 300,
-                                'curr_write_bytes': 400}]
+                                'curr_write_bytes': 400,
+                                'tot_reads': 0,
+                                'tot_read_bytes': 0,
+                                'tot_writes': 0,
+                                'tot_write_bytes': 0}]
 
         def _compare(vol_usage, expected):
             for key, value in expected.items():
@@ -2725,13 +2735,53 @@ class VolumeUsageDBApiTestCase(test.TestCase):
         self.assertEqual(len(vol_usages), 2)
         _compare(vol_usages[0], expected_vol_usages[0])
         _compare(vol_usages[1], expected_vol_usages[1])
-        timeutils.clear_time_override()
 
     def test_vol_usage_update_totals_update(self):
         ctxt = context.get_admin_context()
         now = timeutils.utcnow()
-        timeutils.set_time_override(now)
         start_time = now - datetime.timedelta(seconds=10)
+
+        vol_usage = db.vol_usage_update(ctxt, 1, rd_req=100, rd_bytes=200,
+                                        wr_req=300, wr_bytes=400,
+                                        instance_id='fake-instance-uuid',
+                                        project_id='fake-project-uuid',
+                                        user_id='fake-user-uuid',
+                                        availability_zone='fake-az')
+        current_usage = db.vol_get_usage_by_time(ctxt, start_time)[0]
+        self.assertEqual(current_usage['tot_reads'], 0)
+        self.assertEqual(current_usage['curr_reads'], 100)
+
+        vol_usage = db.vol_usage_update(ctxt, 1, rd_req=200, rd_bytes=300,
+                                        wr_req=400, wr_bytes=500,
+                                        instance_id='fake-instance-uuid',
+                                        project_id='fake-project-uuid',
+                                        user_id='fake-user-uuid',
+                                        availability_zone='fake-az',
+                                        update_totals=True)
+        current_usage = db.vol_get_usage_by_time(ctxt, start_time)[0]
+        self.assertEqual(current_usage['tot_reads'], 200)
+        self.assertEqual(current_usage['curr_reads'], 0)
+
+        vol_usage = db.vol_usage_update(ctxt, 1, rd_req=300, rd_bytes=400,
+                                        wr_req=500, wr_bytes=600,
+                                        instance_id='fake-instance-uuid',
+                                        project_id='fake-project-uuid',
+                                        availability_zone='fake-az',
+                                        user_id='fake-user-uuid')
+        current_usage = db.vol_get_usage_by_time(ctxt, start_time)[0]
+        self.assertEqual(current_usage['tot_reads'], 200)
+        self.assertEqual(current_usage['curr_reads'], 300)
+
+        vol_usage = db.vol_usage_update(ctxt, 1, rd_req=400, rd_bytes=500,
+                                        wr_req=600, wr_bytes=700,
+                                        instance_id='fake-instance-uuid',
+                                        project_id='fake-project-uuid',
+                                        user_id='fake-user-uuid',
+                                        availability_zone='fake-az',
+                                        update_totals=True)
+
+        vol_usages = db.vol_get_usage_by_time(ctxt, start_time)
+
         expected_vol_usages = {'volume_id': u'1',
                                'project_id': 'fake-project-uuid',
                                'user_id': 'fake-user-uuid',
@@ -2746,39 +2796,107 @@ class VolumeUsageDBApiTestCase(test.TestCase):
                                'curr_writes': 0,
                                'curr_write_bytes': 0}
 
-        vol_usage = db.vol_usage_update(ctxt, 1, rd_req=100, rd_bytes=200,
-                                        wr_req=300, wr_bytes=400,
-                                        instance_id='fake-instance-uuid',
-                                        project_id='fake-project-uuid',
-                                        user_id='fake-user-uuid',
-                                        availability_zone='fake-az')
-        vol_usage = db.vol_usage_update(ctxt, 1, rd_req=200, rd_bytes=300,
-                                        wr_req=400, wr_bytes=500,
-                                        instance_id='fake-instance-uuid',
-                                        project_id='fake-project-uuid',
-                                        user_id='fake-user-uuid',
-                                        availability_zone='fake-az',
-                                        update_totals=True)
-        vol_usage = db.vol_usage_update(ctxt, 1, rd_req=300, rd_bytes=400,
-                                        wr_req=500, wr_bytes=600,
-                                        instance_id='fake-instance-uuid',
-                                        project_id='fake-project-uuid',
-                                        availability_zone='fake-az',
-                                        user_id='fake-user-uuid')
-        vol_usage = db.vol_usage_update(ctxt, 1, rd_req=400, rd_bytes=500,
-                                        wr_req=600, wr_bytes=700,
-                                        instance_id='fake-instance-uuid',
-                                        project_id='fake-project-uuid',
-                                        user_id='fake-user-uuid',
-                                        availability_zone='fake-az',
-                                        update_totals=True)
-
-        vol_usages = db.vol_get_usage_by_time(ctxt, start_time)
-
         self.assertEquals(1, len(vol_usages))
         for key, value in expected_vol_usages.items():
             self.assertEqual(vol_usages[0][key], value)
-        timeutils.clear_time_override()
+
+    def test_vol_usage_update_when_blockdevicestats_reset(self):
+        ctxt = context.get_admin_context()
+        now = timeutils.utcnow()
+        start_time = now - datetime.timedelta(seconds=10)
+
+        vol_usages = db.vol_get_usage_by_time(ctxt, start_time)
+        self.assertEqual(len(vol_usages), 0)
+
+        db.vol_usage_update(ctxt, 1,
+                            rd_req=10000, rd_bytes=20000,
+                            wr_req=30000, wr_bytes=40000,
+                            instance_id='fake-instance-uuid1',
+                            project_id='fake-project-uuid1',
+                            availability_zone='fake-az',
+                            user_id='fake-user-uuid1')
+
+        # Instance rebooted or crashed. block device stats were reset and are
+        # less then the previous values
+        db.vol_usage_update(ctxt, 1,
+                            rd_req=100, rd_bytes=200,
+                            wr_req=300, wr_bytes=400,
+                            instance_id='fake-instance-uuid1',
+                            project_id='fake-project-uuid1',
+                            availability_zone='fake-az',
+                            user_id='fake-user-uuid1')
+
+        db.vol_usage_update(ctxt, 1,
+                            rd_req=200, rd_bytes=300,
+                            wr_req=400, wr_bytes=500,
+                            instance_id='fake-instance-uuid1',
+                            project_id='fake-project-uuid1',
+                            availability_zone='fake-az',
+                            user_id='fake-user-uuid1')
+
+        vol_usage = db.vol_get_usage_by_time(ctxt, start_time)[0]
+        expected_vol_usage = {'volume_id': u'1',
+                              'instance_uuid': 'fake-instance-uuid1',
+                              'project_id': 'fake-project-uuid1',
+                              'availability_zone': 'fake-az',
+                              'user_id': 'fake-user-uuid1',
+                              'curr_reads': 200,
+                              'curr_read_bytes': 300,
+                              'curr_writes': 400,
+                              'curr_write_bytes': 500,
+                              'tot_reads': 10000,
+                              'tot_read_bytes': 20000,
+                              'tot_writes': 30000,
+                              'tot_write_bytes': 40000}
+        for key, value in expected_vol_usage.items():
+            self.assertEqual(vol_usage[key], value, key)
+
+    def test_vol_usage_update_totals_update_when_blockdevicestats_reset(self):
+        # This is unlikely to happen, but could when a volume is detached
+        # right after a instance has rebooted / recovered and before
+        # the system polled and updated the volume usage cache table.
+        ctxt = context.get_admin_context()
+        now = timeutils.utcnow()
+        start_time = now - datetime.timedelta(seconds=10)
+
+        vol_usages = db.vol_get_usage_by_time(ctxt, start_time)
+        self.assertEqual(len(vol_usages), 0)
+
+        db.vol_usage_update(ctxt, 1,
+                            rd_req=10000, rd_bytes=20000,
+                            wr_req=30000, wr_bytes=40000,
+                            instance_id='fake-instance-uuid1',
+                            project_id='fake-project-uuid1',
+                            availability_zone='fake-az',
+                            user_id='fake-user-uuid1')
+
+        # Instance rebooted or crashed. block device stats were reset and are
+        # less then the previous values
+        db.vol_usage_update(ctxt, 1,
+                            rd_req=100, rd_bytes=200,
+                            wr_req=300, wr_bytes=400,
+                            instance_id='fake-instance-uuid1',
+                            project_id='fake-project-uuid1',
+                            availability_zone='fake-az',
+                            user_id='fake-user-uuid1',
+                            update_totals=True)
+
+        vol_usage = db.vol_get_usage_by_time(ctxt, start_time)[0]
+        expected_vol_usage = {'volume_id': u'1',
+                              'instance_uuid': 'fake-instance-uuid1',
+                              'project_id': 'fake-project-uuid1',
+                              'availability_zone': 'fake-az',
+                              'user_id': 'fake-user-uuid1',
+                              'curr_reads': 0,
+                              'curr_read_bytes': 0,
+                              'curr_writes': 0,
+                              'curr_write_bytes': 0,
+                              'tot_reads': 10100,
+                              'tot_read_bytes': 20200,
+                              'tot_writes': 30300,
+                              'tot_write_bytes': 40400}
+        for key, value in expected_vol_usage.items():
+            self.assertEqual(vol_usage[key], value, key)
 
 
 class TaskLogTestCase(test.TestCase):

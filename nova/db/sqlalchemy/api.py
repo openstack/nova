@@ -4339,12 +4339,45 @@ def vol_usage_update(context, id, rd_req, rd_bytes, wr_req, wr_bytes,
                       'user_id': user_id,
                       'availability_zone': availability_zone}
 
-        rows = model_query(context, models.VolumeUsage,
-                           session=session, read_deleted="yes").\
-                           filter_by(volume_id=id).\
-                           update(values, synchronize_session=False)
+        current_usage = model_query(context, models.VolumeUsage,
+                            session=session, read_deleted="yes").\
+                            filter_by(volume_id=id).\
+                            first()
+        if current_usage:
+            if (rd_req < current_usage['curr_reads'] or
+                rd_bytes < current_usage['curr_read_bytes'] or
+                wr_req < current_usage['curr_writes'] or
+                wr_bytes < current_usage['curr_write_bytes']):
+                LOG.info(_("Volume(%s) has lower stats then what is in "
+                           "the database. Instance must have been rebooted "
+                           "or crashed. Updating totals.") % id)
+                if not update_totals:
+                    values['tot_last_refreshed'] = last_refreshed
+                    values['tot_reads'] = (models.VolumeUsage.tot_reads +
+                                           current_usage['curr_reads'])
+                    values['tot_read_bytes'] = (
+                        models.VolumeUsage.tot_read_bytes +
+                        current_usage['curr_read_bytes'])
+                    values['tot_writes'] = (models.VolumeUsage.tot_writes +
+                                            current_usage['curr_writes'])
+                    values['tot_write_bytes'] = (
+                        models.VolumeUsage.tot_write_bytes +
+                        current_usage['curr_write_bytes'])
+                else:
+                    values['tot_reads'] = (models.VolumeUsage.tot_reads +
+                                           current_usage['curr_reads'] +
+                                           rd_req)
+                    values['tot_read_bytes'] = (
+                        models.VolumeUsage.tot_read_bytes +
+                        current_usage['curr_read_bytes'] + rd_bytes)
+                    values['tot_writes'] = (models.VolumeUsage.tot_writes +
+                                            current_usage['curr_writes'] +
+                                            wr_req)
+                    values['tot_write_bytes'] = (
+                        models.VolumeUsage.tot_write_bytes +
+                        current_usage['curr_write_bytes'] + wr_bytes)
 
-        if rows:
+            current_usage.update(values)
             return
 
         vol_usage = models.VolumeUsage()
@@ -4368,8 +4401,6 @@ def vol_usage_update(context, id, rd_req, rd_bytes, wr_req, wr_bytes,
             vol_usage.tot_write_bytes = wr_bytes
 
         vol_usage.save(session=session)
-
-    return
 
 
 ####################
