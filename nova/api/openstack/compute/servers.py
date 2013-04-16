@@ -1357,6 +1357,8 @@ class Controller(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                         'createImage')
+        except exception.Invalid as err:
+            raise exc.HTTPBadRequest(explanation=str(err))
 
         # build location of newly-created image entity
         image_id = str(image['id'])

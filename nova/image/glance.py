@@ -290,8 +290,11 @@ class GlanceImageService(object):
         if data:
             sent_service_image_meta['data'] = data
 
-        recv_service_image_meta = self._client.call(context, 1, 'create',
-                                                    **sent_service_image_meta)
+        try:
+            recv_service_image_meta = self._client.call(
+                context, 1, 'create', **sent_service_image_meta)
+        except glanceclient.exc.HTTPException:
+            _reraise_translated_exception()
 
         return self._translate_from_glance(recv_service_image_meta)
 
