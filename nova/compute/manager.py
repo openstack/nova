@@ -3705,33 +3705,31 @@ class ComputeManager(manager.SchedulerDependentManager):
     def _poll_volume_usage(self, context, start_time=None):
         if CONF.volume_usage_poll_interval == 0:
             return
-        else:
-            if not start_time:
-                start_time = utils.last_completed_audit_period()[1]
 
-            curr_time = time.time()
-            if (curr_time - self._last_vol_usage_poll) < \
-                    CONF.volume_usage_poll_interval:
-                return
-            else:
-                self._last_vol_usage_poll = curr_time
-                compute_host_bdms = self._get_host_volume_bdms(context,
-                                                               self.host)
-                if not compute_host_bdms:
-                    return
-                else:
-                    LOG.debug(_("Updating volume usage cache"))
-                    try:
-                        vol_usages = self.driver.get_all_volume_usage(context,
-                              compute_host_bdms)
-                    except NotImplementedError:
-                        return
+        if not start_time:
+            start_time = utils.last_completed_audit_period()[1]
 
-                    refreshed = timeutils.utcnow()
-                    self._update_volume_usage_cache(context, vol_usages,
-                                                    refreshed)
+        curr_time = time.time()
+        if (curr_time - self._last_vol_usage_poll) < \
+                CONF.volume_usage_poll_interval:
+            return
 
-                self._send_volume_usage_notifications(context, start_time)
+        self._last_vol_usage_poll = curr_time
+        compute_host_bdms = self._get_host_volume_bdms(context, self.host)
+        if not compute_host_bdms:
+            return
+
+        LOG.debug(_("Updating volume usage cache"))
+        try:
+            vol_usages = self.driver.get_all_volume_usage(context,
+                                                          compute_host_bdms)
+        except NotImplementedError:
+            return
+
+        refreshed = timeutils.utcnow()
+        self._update_volume_usage_cache(context, vol_usages, refreshed)
+
+        self._send_volume_usage_notifications(context, start_time)
 
     @manager.periodic_task
     def _report_driver_status(self, context):
