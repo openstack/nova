@@ -51,7 +51,8 @@
             "progress": 0,
             "status": "ACTIVE",
             "tenant_id": "openstack",
-            "user_id": "fake"
+            "user_id": "fake",
+            "volumes_attached": []
         }
     ]
 }

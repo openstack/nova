@@ -108,6 +108,8 @@ class ViewBuilder(common.ViewBuilder):
                 "links": self._get_links(request,
                                          instance["uuid"],
                                          self._collection_name),
+                "volumes_attached": [{'id': vol_id} for vol_id in
+                                     instance.get("volumes_attached", [])],
             },
         }
         _inst_fault = self._get_fault(request, instance)

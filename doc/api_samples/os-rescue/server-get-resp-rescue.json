@@ -48,6 +48,7 @@
         "status": "RESCUE",
         "tenant_id": "openstack",
         "updated": "2012-09-19T09:22:27Z",
-        "user_id": "fake"
+        "user_id": "fake",
+        "volumes_attached": []
     }
 }
