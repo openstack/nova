@@ -73,6 +73,16 @@ CONF.import_opt('my_ip', 'nova.netconf')
 
 class S3ImageService(object):
     """Wraps an existing image service to support s3 based register."""
+    # translate our internal state to states valid by the EC2 API documentation
+    image_state_map = {'downloading': 'pending',
+                       'failed_download': 'failed',
+                       'decrypting': 'pending',
+                       'failed_decrypt': 'failed',
+                       'untarring': 'pending',
+                       'failed_untar': 'failed',
+                       'uploading': 'pending',
+                       'failed_upload': 'failed',
+                       'available': 'available'}
 
     def __init__(self, service=None, *args, **kwargs):
         self.cert_rpcapi = nova.cert.rpcapi.CertAPI()
@@ -100,6 +110,12 @@ class S3ImageService(object):
             else:
                 image_id = ec2utils.glance_id_to_id(context, image_uuid)
                 image_copy['properties'][prop] = image_id
+
+        try:
+            image_copy['properties']['image_state'] = self.image_state_map[
+                image['properties']['image_state']]
+        except (KeyError, ValueError):
+            pass
 
         return image_copy
 
