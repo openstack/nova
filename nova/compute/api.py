@@ -1615,7 +1615,7 @@ class API(base.Base):
                 snapshot = self.volume_api.create_snapshot_force(
                     context, volume, name, volume['display_description'])
                 bdm['snapshot_id'] = snapshot['id']
-                del bdm['volume_id']
+                bdm['volume_id'] = None
 
             mapping.append(bdm)
 
