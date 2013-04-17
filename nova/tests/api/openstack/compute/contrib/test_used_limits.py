@@ -17,8 +17,10 @@
 
 from nova.api.openstack.compute.contrib import used_limits
 from nova.api.openstack.compute import limits
+from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 import nova.context
+from nova import exception
 from nova import quota
 from nova import test
 
@@ -31,13 +33,15 @@ class FakeRequest(object):
 
 
 class UsedLimitsTestCase(test.TestCase):
-
     def setUp(self):
         """Run before each test."""
         super(UsedLimitsTestCase, self).setUp()
-        self.controller = used_limits.UsedLimitsController()
+        self.ext_mgr = self.mox.CreateMock(extensions.ExtensionManager)
+        self.controller = used_limits.UsedLimitsController(self.ext_mgr)
 
         self.fake_context = nova.context.RequestContext('fake', 'fake')
+        self.mox.StubOutWithMock(used_limits, 'authorize_for_admin')
+        self.authorize_for_admin = used_limits.authorize_for_admin
 
     def _do_test_used_limits(self, reserved):
         fake_req = FakeRequest(self.fake_context, reserved=reserved)
@@ -63,8 +67,11 @@ class UsedLimitsTestCase(test.TestCase):
 
         def stub_get_project_quotas(context, project_id, usages=True):
             return limits
+
         self.stubs.Set(quota.QUOTAS, "get_project_quotas",
                        stub_get_project_quotas)
+        self.ext_mgr.is_loaded('os-used-limits-for-admin').AndReturn(False)
+        self.mox.ReplayAll()
 
         self.controller.index(fake_req, res)
         abs_limits = res.obj['limits']['absolute']
@@ -79,6 +86,100 @@ class UsedLimitsTestCase(test.TestCase):
     def test_used_limits_with_reserved(self):
         self._do_test_used_limits(True)
 
+    def test_admin_can_fetch_limits_for_a_given_tenant_id(self):
+        project_id = "123456"
+        user_id = "A1234"
+        tenant_id = 'abcd'
+        self.fake_context.project_id = project_id
+        self.fake_context.user_id = user_id
+        obj = {
+            "limits": {
+                "rate": [],
+                "absolute": {},
+            },
+        }
+        target = {
+            "project_id": tenant_id,
+            "user_id": user_id
+        }
+        fake_req = FakeRequest(self.fake_context)
+        fake_req.GET = {'tenant_id': tenant_id}
+        self.ext_mgr.is_loaded('os-used-limits-for-admin').AndReturn(True)
+        self.authorize_for_admin(self.fake_context, target=target)
+        self.mox.StubOutWithMock(quota.QUOTAS, 'get_project_quotas')
+        quota.QUOTAS.get_project_quotas(self.fake_context, '%s' % tenant_id,
+                                        usages=True).AndReturn({})
+        self.mox.ReplayAll()
+        res = wsgi.ResponseObject(obj)
+        self.controller.index(fake_req, res)
+
+    def test_admin_can_fetch_used_limits_for_own_project(self):
+        project_id = "123456"
+        user_id = "A1234"
+        self.fake_context.project_id = project_id
+        self.fake_context.user_id = user_id
+        obj = {
+            "limits": {
+                "rate": [],
+                "absolute": {},
+            },
+        }
+        fake_req = FakeRequest(self.fake_context)
+        fake_req.GET = {}
+        self.ext_mgr.is_loaded('os-used-limits-for-admin').AndReturn(True)
+        self.mox.StubOutWithMock(extensions, 'extension_authorizer')
+        self.mox.StubOutWithMock(quota.QUOTAS, 'get_project_quotas')
+        quota.QUOTAS.get_project_quotas(self.fake_context, '%s' % project_id,
+                                        usages=True).AndReturn({})
+        self.mox.ReplayAll()
+        res = wsgi.ResponseObject(obj)
+        self.controller.index(fake_req, res)
+
+    def test_non_admin_cannot_fetch_used_limits_for_any_other_project(self):
+        project_id = "123456"
+        user_id = "A1234"
+        tenant_id = "abcd"
+        self.fake_context.project_id = project_id
+        self.fake_context.user_id = user_id
+        obj = {
+            "limits": {
+                "rate": [],
+                "absolute": {},
+            },
+        }
+        target = {
+            "project_id": tenant_id,
+            "user_id": user_id
+        }
+        fake_req = FakeRequest(self.fake_context)
+        fake_req.GET = {'tenant_id': tenant_id}
+        self.ext_mgr.is_loaded('os-used-limits-for-admin').AndReturn(True)
+        self.authorize_for_admin(self.fake_context, target=target). \
+            AndRaise(exception.PolicyNotAuthorized(
+            action="compute_extension:used_limits_for_admin"))
+        self.mox.ReplayAll()
+        res = wsgi.ResponseObject(obj)
+        self.assertRaises(exception.PolicyNotAuthorized, self.controller.index,
+                          fake_req, res)
+
+    def test_used_limits_fetched_for_context_project_id(self):
+        project_id = "123456"
+        self.fake_context.project_id = project_id
+        obj = {
+            "limits": {
+                "rate": [],
+                "absolute": {},
+            },
+        }
+        fake_req = FakeRequest(self.fake_context)
+        self.ext_mgr.is_loaded('os-used-limits-for-admin').AndReturn(False)
+        self.mox.StubOutWithMock(quota.QUOTAS, 'get_project_quotas')
+        quota.QUOTAS.get_project_quotas(self.fake_context, project_id,
+                                        usages=True).AndReturn({})
+        self.mox.ReplayAll()
+        res = wsgi.ResponseObject(obj)
+        self.controller.index(fake_req, res)
+
     def test_used_ram_added(self):
         fake_req = FakeRequest(self.fake_context)
         obj = {
@@ -86,15 +187,19 @@ class UsedLimitsTestCase(test.TestCase):
                 "rate": [],
                 "absolute": {
                     "maxTotalRAMSize": 512,
-                    },
+                },
             },
         }
         res = wsgi.ResponseObject(obj)
 
         def stub_get_project_quotas(context, project_id, usages=True):
             return {'ram': {'limit': 512, 'in_use': 256}}
+
+        self.ext_mgr.is_loaded('os-used-limits-for-admin').AndReturn(False)
         self.stubs.Set(quota.QUOTAS, "get_project_quotas",
                        stub_get_project_quotas)
+        self.mox.ReplayAll()
+
         self.controller.index(fake_req, res)
         abs_limits = res.obj['limits']['absolute']
         self.assertTrue('totalRAMUsed' in abs_limits)
@@ -112,8 +217,12 @@ class UsedLimitsTestCase(test.TestCase):
 
         def stub_get_project_quotas(context, project_id, usages=True):
             return {}
+
+        self.ext_mgr.is_loaded('os-used-limits-for-admin').AndReturn(False)
         self.stubs.Set(quota.QUOTAS, "get_project_quotas",
                        stub_get_project_quotas)
+        self.mox.ReplayAll()
+
         self.controller.index(fake_req, res)
         abs_limits = res.obj['limits']['absolute']
         self.assertFalse('totalRAMUsed' in abs_limits)
@@ -131,8 +240,12 @@ class UsedLimitsTestCase(test.TestCase):
 
         def stub_get_project_quotas(context, project_id, usages=True):
             return {}
+
+        self.ext_mgr.is_loaded('os-used-limits-for-admin').AndReturn(False)
         self.stubs.Set(quota.QUOTAS, "get_project_quotas",
                        stub_get_project_quotas)
+        self.mox.ReplayAll()
+
         self.controller.index(fake_req, res)
         response = res.serialize(None, 'xml')
         self.assertTrue(used_limits.XMLNS in response.body)

@@ -497,6 +497,14 @@
             "updated": "2012-07-13T00:00:00+00:00"
         },
         {
+            "alias": "os-used-limits-for-admin",
+            "description": "Provide data to admin on limited resources used by other tenants.",
+            "links": [],
+            "name": "UsedLimitsForAdmin",
+            "namespace": "http://docs.openstack.org/compute/ext/used_limits_for_admin/api/v1.1",
+            "updated": "2013-05-02T00:00:00+00:00"
+        },
+        {
             "alias": "os-user-data",
             "description": "Add user_data to the Create Server v1.1 API.",
             "links": [],

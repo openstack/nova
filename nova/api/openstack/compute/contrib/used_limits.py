@@ -26,6 +26,8 @@ QUOTAS = quota.QUOTAS
 XMLNS = "http://docs.openstack.org/compute/ext/used_limits/api/v1.1"
 ALIAS = "os-used-limits"
 authorize = extensions.soft_extension_authorizer('compute', 'used_limits')
+authorize_for_admin = extensions.extension_authorizer('compute',
+                                                      'used_limits_for_admin')
 
 
 class UsedLimitsTemplate(xmlutil.TemplateBuilder):
@@ -36,6 +38,9 @@ class UsedLimitsTemplate(xmlutil.TemplateBuilder):
 
 
 class UsedLimitsController(wsgi.Controller):
+
+    def __init__(self, ext_mgr):
+        self.ext_mgr = ext_mgr
 
     @staticmethod
     def _reserved(req):
@@ -48,8 +53,8 @@ class UsedLimitsController(wsgi.Controller):
     def index(self, req, resp_obj):
         resp_obj.attach(xml=UsedLimitsTemplate())
         context = req.environ['nova.context']
-        quotas = QUOTAS.get_project_quotas(context, context.project_id,
-                                           usages=True)
+        project_id = self._project_id(context, req)
+        quotas = QUOTAS.get_project_quotas(context, project_id, usages=True)
         quota_map = {
             'totalRAMUsed': 'ram',
             'totalCoresUsed': 'cores',
@@ -66,6 +71,18 @@ class UsedLimitsController(wsgi.Controller):
 
         resp_obj.obj['limits']['absolute'].update(used_limits)
 
+    def _project_id(self, context, req):
+        if self.ext_mgr.is_loaded('os-used-limits-for-admin'):
+            if 'tenant_id' in req.GET:
+                tenant_id = req.GET.get('tenant_id')
+                target = {
+                    'project_id': tenant_id,
+                    'user_id': context.user_id
+                    }
+                authorize_for_admin(context, target=target)
+                return tenant_id
+        return context.project_id
+
 
 class Used_limits(extensions.ExtensionDescriptor):
     """Provide data on limited resources that are being used."""
@@ -76,7 +93,7 @@ class Used_limits(extensions.ExtensionDescriptor):
     updated = "2012-07-13T00:00:00+00:00"
 
     def get_controller_extensions(self):
-        controller = UsedLimitsController()
+        controller = UsedLimitsController(self.ext_mgr)
         limits_ext = extensions.ControllerExtension(self, 'limits',
                                                     controller=controller)
         return [limits_ext]

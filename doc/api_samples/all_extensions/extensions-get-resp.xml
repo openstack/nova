@@ -204,6 +204,9 @@
   <extension alias="os-used-limits" updated="2012-07-13T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/used_limits/api/v1.1" name="UsedLimits">
     <description>Provide data on limited resources that are being used.</description>
   </extension>
+  <extension alias="os-used-limits-for-admin" updated="2013-05-02T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/used_limits_for_admin/api/v1.1" name="UsedLimitsForAdmin">
+    <description>Provide data to admin on limited resources used by other tenants.</description>
+  </extension>
   <extension alias="os-user-data" updated="2012-08-07T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/userdata/api/v1.1" name="UserData">
     <description>Add user_data to the Create Server v1.1 API.</description>
   </extension>

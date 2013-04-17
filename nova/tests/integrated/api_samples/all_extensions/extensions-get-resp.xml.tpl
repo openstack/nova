@@ -183,6 +183,9 @@
   <extension alias="os-used-limits" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/used_limits/api/v1.1" name="UsedLimits">
     <description>%(text)s</description>
   </extension>
+  <extension alias="os-used-limits-for-admin" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/used_limits_for_admin/api/v1.1" name="UsedLimitsForAdmin">
+    <description>%(text)s</description>
+  </extension>
   <extension alias="os-user-data" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/userdata/api/v1.1" name="UserData">
     <description>%(text)s</description>
   </extension>
