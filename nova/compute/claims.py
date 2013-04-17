@@ -18,11 +18,9 @@ Claim objects for use with resource tracking.
 """
 
 from nova.openstack.common import jsonutils
-from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
-COMPUTE_RESOURCE_SEMAPHORE = "compute_resources"
 
 
 class NopClaim(object):
@@ -86,7 +84,6 @@ class Claim(NopClaim):
     def vcpus(self):
         return self.instance['vcpus']
 
-    @lockutils.synchronized(COMPUTE_RESOURCE_SEMAPHORE, 'nova-')
     def abort(self):
         """Compute operation requiring claimed resources has failed or
         been aborted.
@@ -210,11 +207,9 @@ class ResizeClaim(Claim):
     def vcpus(self):
         return self.instance_type['vcpus']
 
-    @lockutils.synchronized(COMPUTE_RESOURCE_SEMAPHORE, 'nova-')
     def abort(self):
         """Compute operation requiring claimed resources has failed or
         been aborted.
         """
         LOG.debug(_("Aborting claim: %s") % self, instance=self.instance)
-        self.tracker.abort_resize_claim(self.instance['uuid'],
-                self.instance_type)
+        self.tracker.drop_resize_claim(self.instance, self.instance_type)
