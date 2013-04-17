@@ -1000,7 +1000,6 @@ class HyperVAPITestCase(test.TestCase):
 
         fake_mounted_disk = "fake_mounted_disk"
         fake_device_number = 0
-        fake_free_slot = 1
         m = volumeutils.VolumeUtils.get_device_number_for_target(target_iqn,
                                                                  target_lun)
         m.AndReturn(fake_device_number)
