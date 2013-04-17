@@ -42,7 +42,7 @@ CONF = cfg.CONF
 class CoverageController(object):
     """The Coverage report API controller for the OpenStack API."""
     def __init__(self):
-        self.data_path = tempfile.mkdtemp(prefix='nova-coverage_')
+        self.data_path = None
         self.services = []
         self.combine = False
         self._cover_inst = None
@@ -54,6 +54,8 @@ class CoverageController(object):
         if not self._cover_inst:
             try:
                 import coverage
+                if self.data_path is None:
+                    self.data_path = tempfile.mkdtemp(prefix='nova-coverage_')
                 data_out = os.path.join(self.data_path, '.nova-coverage.api')
                 self._cover_inst = coverage.coverage(data_file=data_out)
             except ImportError:
