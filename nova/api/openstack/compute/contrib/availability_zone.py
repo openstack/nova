@@ -76,24 +76,28 @@ class AvailabilityZoneController(wsgi.Controller):
         super(AvailabilityZoneController, self).__init__()
         self.servicegroup_api = servicegroup.API()
 
+    def _get_filtered_availability_zones(self, zones, is_available):
+        result = []
+        for zone in zones:
+            # Hide internal_service_availability_zone
+            if zone == CONF.internal_service_availability_zone:
+                continue
+            result.append({'zoneName': zone,
+                           'zoneState': {'available': is_available},
+                           "hosts": None})
+        return result
+
     def _describe_availability_zones(self, context, **kwargs):
         ctxt = context.elevated()
         available_zones, not_available_zones = \
             availability_zones.get_availability_zones(ctxt)
 
-        result = []
-        for zone in available_zones:
-            # Hide internal_service_availability_zone
-            if zone == CONF.internal_service_availability_zone:
-                continue
-            result.append({'zoneName': zone,
-                           'zoneState': {'available': True},
-                           "hosts": None})
-        for zone in not_available_zones:
-            result.append({'zoneName': zone,
-                           'zoneState': {'available': False},
-                           "hosts": None})
-        return {'availabilityZoneInfo': result}
+        filtered_available_zones = \
+            self._get_filtered_availability_zones(available_zones, True)
+        filtered_not_available_zones = \
+            self._get_filtered_availability_zones(not_available_zones, False)
+        return {'availabilityZoneInfo': filtered_available_zones +
+                                        filtered_not_available_zones}
 
     def _describe_availability_zones_verbose(self, context, **kwargs):
         ctxt = context.elevated()
