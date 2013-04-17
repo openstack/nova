@@ -945,7 +945,7 @@ class ImageCacheManagerTestCase(test.TestCase):
     def test_compute_manager(self):
         was = {'called': False}
 
-        def fake_get_all(context, *args, **kwargs):
+        def fake_get_all_by_filters(context, *args, **kwargs):
             was['called'] = True
             return [{'image_ref': '1',
                      'host': CONF.host,
@@ -963,7 +963,8 @@ class ImageCacheManagerTestCase(test.TestCase):
         with utils.tempdir() as tmpdir:
             self.flags(instances_path=tmpdir)
 
-            self.stubs.Set(db, 'instance_get_all', fake_get_all)
+            self.stubs.Set(db, 'instance_get_all_by_filters',
+                           fake_get_all_by_filters)
             compute = importutils.import_object(CONF.compute_manager)
             self.flags(use_local=True, group='conductor')
             compute.conductor_api = conductor.API()

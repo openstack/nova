@@ -393,15 +393,17 @@ class ComputeManager(manager.SchedulerDependentManager):
                         'trying to set it to ERROR'),
                       instance_uuid=instance_uuid)
 
-    def _get_instances_on_driver(self, context):
+    def _get_instances_on_driver(self, context, filters=None):
         """Return a list of instance records that match the instances found
         on the hypervisor.
         """
+        if not filters:
+            filters = {}
         try:
             driver_uuids = self.driver.list_instance_uuids()
+            filters['uuid'] = driver_uuids
             local_instances = self.conductor_api.instance_get_all_by_filters(
-                    context, {'uuid': driver_uuids},
-                    columns_to_join=[])
+                    context, filters, columns_to_join=[])
             local_instance_uuids = [inst['uuid'] for inst in local_instances]
             for uuid in set(driver_uuids) - set(local_instance_uuids):
                 LOG.error(_('Instance %(uuid)s found in the hypervisor, but '
@@ -413,8 +415,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         # The driver doesn't support uuids listing, so we'll have
         # to brute force.
         driver_instances = self.driver.list_instances()
-        instances = self.conductor_api.instance_get_all_by_host(
-            context, self.host, columns_to_join=[])
+        instances = self.conductor_api.instance_get_all_by_filters(
+            context, filters, columns_to_join=[])
         name_map = dict((instance['name'], instance) for instance in instances)
         local_instances = []
         for driver_instance in driver_instances:
@@ -436,11 +438,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         not, destroy them.
         """
         our_host = self.host
-        local_instances = self._get_instances_on_driver(context)
+        filters = {'deleted': False}
+        local_instances = self._get_instances_on_driver(context, filters)
         for instance in local_instances:
             instance_host = instance['host']
-            instance_name = instance['name']
-            if instance['host'] != our_host:
+            if instance_host != our_host:
                 LOG.info(_('Deleting instance as its host ('
                            '%(instance_host)s) is not equal to our '
                            'host (%(our_host)s).'),
@@ -3464,21 +3466,26 @@ class ComputeManager(manager.SchedulerDependentManager):
     @manager.periodic_task
     def _poll_rebooting_instances(self, context):
         if CONF.reboot_timeout > 0:
-            instances = self.conductor_api.instance_get_all_hung_in_rebooting(
-                context, CONF.reboot_timeout)
-            self.driver.poll_rebooting_instances(CONF.reboot_timeout,
-                                                 instances)
+            filters = {'task_state': task_states.REBOOTING,
+                       'host': self.host}
+            rebooting = self.conductor_api.instance_get_all_by_filters(
+                context, filters, columns_to_join=[])
+
+            to_poll = []
+            for instance in rebooting:
+                if timeutils.is_older_than(instance['updated_at'],
+                                           CONF.reboot_timeout):
+                    to_poll.append(instance)
+
+            self.driver.poll_rebooting_instances(CONF.reboot_timeout, to_poll)
 
     @manager.periodic_task
     def _poll_rescued_instances(self, context):
         if CONF.rescue_timeout > 0:
-            instances = self.conductor_api.instance_get_all_by_host(
-                context, self.host, columns_to_join=[])
-
-            rescued_instances = []
-            for instance in instances:
-                if instance['vm_state'] == vm_states.RESCUED:
-                    rescued_instances.append(instance)
+            filters = {'vm_state': vm_states.RESCUED,
+                       'host': self.host}
+            rescued_instances = self.conductor_api.instance_get_all_by_filters(
+                context, filters, columns_to_join=[])
 
             to_unrescue = []
             for instance in rescued_instances:
@@ -3915,23 +3922,15 @@ class ComputeManager(manager.SchedulerDependentManager):
             LOG.debug(_("CONF.reclaim_instance_interval <= 0, skipping..."))
             return
 
-        instances = self.conductor_api.instance_get_all_by_host(
-            context, self.host, columns_to_join=[])
+        filters = {'vm_state': vm_states.SOFT_DELETED,
+                   'host': self.host}
+        instances = self.conductor_api.instance_get_all_by_filters(context,
+                                                                   filters)
         for instance in instances:
-            old_enough = (not instance['deleted_at'] or
-                          timeutils.is_older_than(instance['deleted_at'],
-                                                  interval))
-            soft_deleted = instance['vm_state'] == vm_states.SOFT_DELETED
-
-            if soft_deleted and old_enough:
+            if self._deleted_old_enough(instance, interval):
                 capi = self.conductor_api
                 bdms = capi.block_device_mapping_get_all_by_instance(
                     context, instance)
-                # NOTE(danms): We fetched instances above without the
-                # system_metadata for efficiency. If we get here, we need
-                # to re-fetch with it so that _delete_instace() can extract
-                # instance_type information.
-                instance = capi.instance_get_by_uuid(context, instance['uuid'])
                 LOG.info(_('Reclaiming deleted instance'), instance=instance)
                 # NOTE(comstud): Quotas were already accounted for when
                 # the instance was soft deleted, so there's no need to
@@ -4033,18 +4032,15 @@ class ComputeManager(manager.SchedulerDependentManager):
         but the hypervisor thinks is still running.
         """
         timeout = CONF.running_deleted_instance_timeout
+        filters = {'deleted': True,
+                   'soft_deleted': False,
+                   'host': self.host}
+        instances = self._get_instances_on_driver(context, filters)
+        return [i for i in instances if self._deleted_old_enough(i, timeout)]
 
-        def deleted_instance(instance):
-            erroneously_running = instance['deleted']
-            old_enough = (not instance['deleted_at'] or
-                          timeutils.is_older_than(instance['deleted_at'],
-                                                  timeout))
-            if erroneously_running and old_enough:
-                return True
-            return False
-
-        instances = self._get_instances_on_driver(context)
-        return [i for i in instances if deleted_instance(i)]
+    def _deleted_old_enough(self, instance, timeout):
+        return (not instance['deleted_at'] or
+                timeutils.is_older_than(instance['deleted_at'], timeout))
 
     @contextlib.contextmanager
     def _error_out_instance_on_exception(self, context, instance_uuid,
@@ -4104,8 +4100,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         if CONF.image_cache_manager_interval == 0:
             return
 
-        all_instances = self.conductor_api.instance_get_all(context)
-
         # Determine what other nodes use this storage
         storage_users.register_storage_use(CONF.instances_path, CONF.host)
         nodes = storage_users.get_storage_users(CONF.instances_path)
@@ -4115,9 +4109,10 @@ class ComputeManager(manager.SchedulerDependentManager):
         # TODO(mikal): this should be further refactored so that the cache
         # cleanup code doesn't know what those instances are, just a remote
         # count, and then this logic should be pushed up the stack.
-        filtered_instances = []
-        for instance in all_instances:
-            if instance['host'] in nodes:
-                filtered_instances.append(instance)
+        filters = {'deleted': False,
+                   'soft_deleted': True,
+                   'host': nodes}
+        filtered_instances = self.conductor_api.instance_get_all_by_filters(
+            context, filters, columns_to_join=[])
 
         self.driver.manage_image_cache(context, filtered_instances)

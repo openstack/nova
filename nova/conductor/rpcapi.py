@@ -257,11 +257,6 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                             sort_dir=sort_dir, columns_to_join=columns_to_join)
         return self.call(context, msg, version='1.47')
 
-    def instance_get_all_hung_in_rebooting(self, context, timeout):
-        msg = self.make_msg('instance_get_all_hung_in_rebooting',
-                            timeout=timeout)
-        return self.call(context, msg, version='1.15')
-
     def instance_get_active_by_window_joined(self, context, begin, end=None,
                                              project_id=None, host=None):
         msg = self.make_msg('instance_get_active_by_window_joined',
@@ -304,10 +299,6 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         msg = self.make_msg('service_get_all_by', topic=topic, host=host,
                             binary=binary)
         return self.call(context, msg, version='1.28')
-
-    def instance_get_all(self, context):
-        msg = self.make_msg('instance_get_all')
-        return self.call(context, msg, version='1.23')
 
     def instance_get_all_by_host(self, context, host, node=None,
                                  columns_to_join=None):

@@ -341,12 +341,6 @@ class _BaseTestCase(object):
             self.context, fake_inst)
         self.assertEqual(result, 'fake-result')
 
-    def test_instance_get_all_hung_in_rebooting(self):
-        self.mox.StubOutWithMock(db, 'instance_get_all_hung_in_rebooting')
-        db.instance_get_all_hung_in_rebooting(self.context, 123)
-        self.mox.ReplayAll()
-        self.conductor.instance_get_all_hung_in_rebooting(self.context, 123)
-
     def test_instance_get_active_by_window_joined(self):
         self.mox.StubOutWithMock(db, 'instance_get_active_by_window_joined')
         db.instance_get_active_by_window_joined(self.context, 'fake-begin',
@@ -977,18 +971,6 @@ class ConductorAPITestCase(_BaseTestCase, test.TestCase):
             self.context, fake_inst, 'fake-device')
         self.conductor.block_device_mapping_destroy_by_instance_and_volume(
             self.context, fake_inst, 'fake-volume')
-
-    def test_instance_get_all(self):
-        self.mox.StubOutWithMock(db, 'instance_get_all_by_filters')
-        db.instance_get_all(self.context)
-        db.instance_get_all_by_filters(self.context, {'name': 'fake-inst'},
-                                       'updated_at', 'asc',
-                                       columns_to_join=None)
-        self.mox.ReplayAll()
-        self.conductor.instance_get_all(self.context)
-        self.conductor.instance_get_all_by_filters(self.context,
-                                                   {'name': 'fake-inst'},
-                                                   'updated_at', 'asc')
 
     def _test_stubbed(self, name, *args, **kwargs):
         if args and isinstance(args[0], FakeContext):
