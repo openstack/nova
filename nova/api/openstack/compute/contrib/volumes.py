@@ -617,7 +617,7 @@ class SnapshotController(wsgi.Controller):
                 context=context)
 
         if not utils.is_valid_boolstr(force):
-            msg = _("Invalid value '%s' for force. ") % force
+            msg = _("Invalid value '%s' for force.") % force
             raise exception.InvalidParameterValue(err=msg)
 
         if utils.bool_from_str(force):
