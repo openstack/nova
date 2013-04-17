@@ -185,6 +185,18 @@ class API(base.Base):
             return exception.InvalidInput(reason=exc_value.message)
         return exc_value
 
+    def _reraise_translated_snapshot_exception(self, snapshot_id=None):
+        """Transform the exception for the snapshot but keep its traceback
+        intact."""
+        exc_type, exc_value, exc_trace = sys.exc_info()
+        new_exc = self._translate_snapshot_exception(snapshot_id, exc_value)
+        raise new_exc, None, exc_trace
+
+    def _translate_snapshot_exception(self, snapshot_id, exc_value):
+        if isinstance(exc_value, cinder_exception.NotFound):
+            return exception.SnapshotNotFound(snapshot_id=snapshot_id)
+        return exc_value
+
     def get(self, context, volume_id):
         try:
             item = cinderclient(context).volumes.get(volume_id)
@@ -280,7 +292,10 @@ class API(base.Base):
         raise NotImplementedError()
 
     def get_snapshot(self, context, snapshot_id):
-        item = cinderclient(context).volume_snapshots.get(snapshot_id)
+        try:
+            item = cinderclient(context).volume_snapshots.get(snapshot_id)
+        except Exception:
+            self._reraise_translated_snapshot_exception(snapshot_id)
         return _untranslate_snapshot_summary_view(context, item)
 
     def get_all_snapshots(self, context):

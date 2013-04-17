@@ -229,6 +229,14 @@ class CinderApiTestCase(test.TestCase):
 
         self.api.get_snapshot(self.ctx, snapshot_id)
 
+    def test_get_snapshot_failed(self):
+        snapshot_id = 'snapshot_id'
+        cinder.cinderclient(self.ctx).AndRaise(cinder_exception.NotFound(''))
+        self.mox.ReplayAll()
+
+        self.assertRaises(exception.SnapshotNotFound,
+                          self.api.get_snapshot, self.ctx, snapshot_id)
+
     def test_get_all_snapshots(self):
         cinder.cinderclient(self.ctx).AndReturn(self.cinderclient)
         cinder._untranslate_snapshot_summary_view(self.ctx,
