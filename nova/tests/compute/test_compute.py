@@ -1341,7 +1341,8 @@ class ComputeTestCase(BaseTestCase):
         self.compute.terminate_instance(self.context,
                 instance=jsonutils.to_primitive(instance))
 
-    def _test_reboot(self, soft, legacy_nwinfo_driver, test_delete=False):
+    def _test_reboot(self, soft, legacy_nwinfo_driver,
+                     test_delete=False, test_unrescue=False):
         # This is a true unit test, so we don't need the network stubs.
         fake_network.unset_stub_network_methods(self.stubs)
 
@@ -1353,11 +1354,15 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute.driver, 'reboot')
 
         instance = dict(uuid='fake-instance',
-                        power_state='unknown')
+                        power_state='unknown',
+                        vm_state=vm_states.ACTIVE)
         updated_instance1 = dict(uuid='updated-instance1',
                                  power_state='fake')
         updated_instance2 = dict(uuid='updated-instance2',
                                  power_state='fake')
+
+        if test_unrescue:
+            instance['vm_state'] = vm_states.RESCUED
 
         fake_nw_model = network_model.NetworkInfo()
         self.mox.StubOutWithMock(fake_nw_model, 'legacy')
@@ -1388,7 +1393,7 @@ class ComputeTestCase(BaseTestCase):
                 instance).AndReturn(fake_power_state1)
         self.compute._instance_update(econtext, instance['uuid'],
                 power_state=fake_power_state1,
-                vm_state=vm_states.ACTIVE).AndReturn(updated_instance1)
+                vm_state=instance['vm_state']).AndReturn(updated_instance1)
 
         # Reboot should check the driver to see if legacy nwinfo is
         # needed.  If it is, the model's legacy() method should be
@@ -1456,11 +1461,23 @@ class ComputeTestCase(BaseTestCase):
     def test_reboot_soft_and_delete(self):
         self._test_reboot(True, False, True)
 
+    def test_reboot_soft_and_rescued(self):
+        self._test_reboot(True, False, False, True)
+
+    def test_reboot_soft_and_delete_and_rescued(self):
+        self._test_reboot(True, False, True, True)
+
     def test_reboot_hard(self):
         self._test_reboot(False, False)
 
     def test_reboot_hard_and_delete(self):
         self._test_reboot(False, False, True)
+
+    def test_reboot_hard_and_rescued(self):
+        self._test_reboot(False, False, False, True)
+
+    def test_reboot_hard_and_delete_and_rescued(self):
+        self._test_reboot(False, False, True, True)
 
     def test_reboot_soft_legacy_nwinfo_driver(self):
         self._test_reboot(True, True)

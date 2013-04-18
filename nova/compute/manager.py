@@ -1751,9 +1751,15 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._notify_about_instance_usage(context, instance, "reboot.start")
 
         current_power_state = self._get_power_state(context, instance)
+
+        # Don't change it out of rescue mode
+        new_vm_state = vm_states.ACTIVE
+        if instance['vm_state'] == vm_states.RESCUED:
+            new_vm_state = vm_states.RESCUED
+
         instance = self._instance_update(context, instance['uuid'],
                                          power_state=current_power_state,
-                                         vm_state=vm_states.ACTIVE)
+                                         vm_state=new_vm_state)
 
         if instance['power_state'] != power_state.RUNNING:
             state = instance['power_state']
