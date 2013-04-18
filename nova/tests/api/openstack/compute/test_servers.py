@@ -1636,6 +1636,20 @@ class ServerStatusTest(test.TestCase):
                                         task_states.REBOOTING_HARD)
         self.assertEqual(response['server']['status'], 'HARD_REBOOT')
 
+    def test_reboot_resize_policy_fail(self):
+        def fake_get_server(context, req, id):
+            return fakes.stub_instance(id)
+
+        self.stubs.Set(self.controller, '_get_server', fake_get_server)
+
+        rule = {'compute:reboot':
+                common_policy.parse_rule('role:admin')}
+        common_policy.set_rules(common_policy.Rules(rule))
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/1234/action')
+        self.assertRaises(exception.PolicyNotAuthorized,
+                self.controller._action_reboot, req, '1234',
+                {'reboot': {'type': 'HARD'}})
+
     def test_rebuild(self):
         response = self._get_with_state(vm_states.ACTIVE,
                                         task_states.REBUILDING)
@@ -1650,6 +1664,19 @@ class ServerStatusTest(test.TestCase):
                                         task_states.RESIZE_PREP)
         self.assertEqual(response['server']['status'], 'RESIZE')
 
+    def test_confirm_resize_policy_fail(self):
+        def fake_get_server(context, req, id):
+            return fakes.stub_instance(id)
+
+        self.stubs.Set(self.controller, '_get_server', fake_get_server)
+
+        rule = {'compute:confirm_resize':
+                common_policy.parse_rule('role:admin')}
+        common_policy.set_rules(common_policy.Rules(rule))
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/1234/action')
+        self.assertRaises(exception.PolicyNotAuthorized,
+                self.controller._action_confirm_resize, req, '1234', {})
+
     def test_verify_resize(self):
         response = self._get_with_state(vm_states.RESIZED, None)
         self.assertEqual(response['server']['status'], 'VERIFY_RESIZE')
@@ -1658,6 +1685,19 @@ class ServerStatusTest(test.TestCase):
         response = self._get_with_state(vm_states.RESIZED,
                                         task_states.RESIZE_REVERTING)
         self.assertEqual(response['server']['status'], 'REVERT_RESIZE')
+
+    def test_revert_resize_policy_fail(self):
+        def fake_get_server(context, req, id):
+            return fakes.stub_instance(id)
+
+        self.stubs.Set(self.controller, '_get_server', fake_get_server)
+
+        rule = {'compute:revert_resize':
+                common_policy.parse_rule('role:admin')}
+        common_policy.set_rules(common_policy.Rules(rule))
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/1234/action')
+        self.assertRaises(exception.PolicyNotAuthorized,
+                self.controller._action_revert_resize, req, '1234', {})
 
     def test_password_update(self):
         response = self._get_with_state(vm_states.ACTIVE,
