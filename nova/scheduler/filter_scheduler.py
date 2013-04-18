@@ -53,7 +53,6 @@ class FilterScheduler(driver.Scheduler):
     """Scheduler that can be used for filtering and weighing."""
     def __init__(self, *args, **kwargs):
         super(FilterScheduler, self).__init__(*args, **kwargs)
-        self.cost_function_cache = None
         self.options = scheduler_options.SchedulerOptions()
 
     def schedule_run_instance(self, context, request_spec,
