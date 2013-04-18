@@ -63,6 +63,33 @@ class LookupTestCase(test.TestCase):
                           vm_utils.lookup,
                           self.session, self.name_label)
 
+    def test_rescue_none(self):
+        self.session.call_xenapi(
+            "VM.get_by_name_label", self.name_label + '-rescue').AndReturn([])
+        self._do_mock(['x'])
+        result = vm_utils.lookup(self.session, self.name_label,
+                                 check_rescue=True)
+        self.assertEqual('x', result)
+
+    def test_rescue_found(self):
+        self.session.call_xenapi(
+            "VM.get_by_name_label",
+            self.name_label + '-rescue').AndReturn(['y'])
+        self.mox.ReplayAll()
+        result = vm_utils.lookup(self.session, self.name_label,
+                                 check_rescue=True)
+        self.assertEqual('y', result)
+
+    def test_rescue_too_many(self):
+        self.session.call_xenapi(
+            "VM.get_by_name_label",
+            self.name_label + '-rescue').AndReturn(['a', 'b', 'c'])
+        self.mox.ReplayAll()
+        self.assertRaises(exception.InstanceExists,
+                          vm_utils.lookup,
+                          self.session, self.name_label,
+                          check_rescue=True)
+
 
 class GenerateConfigDriveTestCase(test.TestCase):
     def test_no_admin_pass(self):

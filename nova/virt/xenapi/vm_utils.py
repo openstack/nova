@@ -1394,8 +1394,15 @@ def lookup_vm_vdis(session, vm_ref):
     return vdi_refs
 
 
-def lookup(session, name_label):
-    """Look the instance up and return it if available."""
+def lookup(session, name_label, check_rescue=False):
+    """Look the instance up and return it if available.
+    :param check_rescue: if True will return the 'name'-rescue vm if it
+                         exists, instead of just 'name'
+    """
+    if check_rescue:
+        result = lookup(session, name_label + '-rescue', False)
+        if result:
+            return result
     vm_refs = session.call_xenapi("VM.get_by_name_label", name_label)
     n = len(vm_refs)
     if n == 0:
