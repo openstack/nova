@@ -176,6 +176,7 @@ class CinderCloudTestCase(test.TestCase):
                                         size=1,
                                         name='test-1',
                                         description='test volume 1')
+        self.assertEqual(vol1['status'], 'available')
         vol2 = self.cloud.create_volume(self.context,
                                         size=1,
                                         name='test-2',

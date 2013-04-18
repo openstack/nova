@@ -805,14 +805,6 @@ class CloudController(object):
         v['size'] = volume['size']
         v['availabilityZone'] = volume['availability_zone']
         v['createTime'] = volume['created_at']
-        if context.is_admin:
-            # NOTE(dprince): project_id and host_id are unset w/ Cinder
-            v['status'] = '%s (%s, %s, %s, %s)' % (
-                volume['status'],
-                volume.get('project_id', ''),
-                volume.get('host', ''),
-                instance_data,
-                volume['mountpoint'])
         if volume['attach_status'] == 'attached':
             v['attachmentSet'] = [{'attachTime': volume['attach_time'],
                                    'deleteOnTermination': False,
