@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  nova\n"
 "Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
-"POT-Creation-Date: 2013-04-15 00:04+0000\n"
+"POT-Creation-Date: 2013-04-18 00:04+0000\n"
 "PO-Revision-Date: 2012-05-07 06:51+0000\n"
 "Last-Translator: Edward <Unknown>\n"
 "Language-Team: Chinese (Simplified) <zh_CN@li.org>\n"
@@ -5145,20 +5145,20 @@ msgstr "检查令牌：%(token)s, %(token_valid)s)"
 msgid "Failed to notify cells of instance destroy"
 msgstr ""
 
-#: nova/db/api.py:677 nova/db/api.py:698
+#: nova/db/api.py:668 nova/db/api.py:689
 #, fuzzy
 msgid "Failed to notify cells of instance update"
 msgstr "重新启动实例失败"
 
-#: nova/db/api.py:738
+#: nova/db/api.py:729
 msgid "Failed to notify cells of instance info cache update"
 msgstr ""
 
-#: nova/db/api.py:1437
+#: nova/db/api.py:1428
 msgid "Failed to notify cells of bw_usage update"
 msgstr ""
 
-#: nova/db/api.py:1592
+#: nova/db/api.py:1583
 #, fuzzy
 msgid "Failed to notify cells of instance fault"
 msgstr "重新启动实例失败"
@@ -5724,76 +5724,76 @@ msgstr "遗留的网络信息 nw_info 要求使用 IPv4 子网"
 msgid "Quantum client authentication failed: %s"
 msgstr ""
 
-#: nova/network/quantumv2/api.py:151
+#: nova/network/quantumv2/api.py:152
 #, fuzzy, python-format
 msgid "allocate_for_instance() for %s"
 msgstr "实例 %s 的网络分配"
 
-#: nova/network/quantumv2/api.py:154
+#: nova/network/quantumv2/api.py:155
 #, fuzzy, python-format
 msgid "empty project id for instance %s"
 msgstr "实例 %s 的网络分配"
 
-#: nova/network/quantumv2/api.py:200
+#: nova/network/quantumv2/api.py:201
 #, python-format
 msgid ""
 "Multiple security groups found matching '%s'. Use an ID to be more "
 "specific."
 msgstr ""
 
-#: nova/network/quantumv2/api.py:269
+#: nova/network/quantumv2/api.py:270
 #, fuzzy
 msgid "Port not found"
 msgstr "没有找到主机"
 
-#: nova/network/quantumv2/api.py:277
+#: nova/network/quantumv2/api.py:278
 #, python-format
 msgid "Fail to delete port %(portid)s with failure: %(exception)s"
 msgstr ""
 
-#: nova/network/quantumv2/api.py:315
+#: nova/network/quantumv2/api.py:321
 #, fuzzy, python-format
 msgid "deallocate_for_instance() for %s"
 msgstr "为实例 |%s| 解除网络分配"
 
-#: nova/network/quantumv2/api.py:324
+#: nova/network/quantumv2/api.py:330
 #, fuzzy, python-format
 msgid "Failed to delete quantum port %(portid)s "
 msgstr "在数据库删除卷失败"
 
-#: nova/network/quantumv2/api.py:343
+#: nova/network/quantumv2/api.py:354
 #, fuzzy, python-format
 msgid "Failed to delete quantum port %(port_id)s "
 msgstr "在数据库删除卷失败"
 
-#: nova/network/quantumv2/api.py:365
+#: nova/network/quantumv2/api.py:381
 #, fuzzy, python-format
 msgid "get_instance_nw_info() for %s"
 msgstr "实例的network_info：|%s|"
 
-#: nova/network/quantumv2/api.py:397
+#: nova/network/quantumv2/api.py:413
 #, python-format
 msgid ""
 "Unable to update port %(portid)s on subnet %(subnet_id)s with failure: "
 "%(exception)s"
 msgstr ""
 
-#: nova/network/quantumv2/api.py:427
+#: nova/network/quantumv2/api.py:443
 #, python-format
 msgid "Unable to update port %(portid)s with failure: %(exception)s"
 msgstr ""
 
-#: nova/network/quantumv2/api.py:437
+#: nova/network/quantumv2/api.py:453
 #, fuzzy, python-format
 msgid "validate_networks() for %s"
 msgstr "错误的网络格式"
 
-#: nova/network/quantumv2/api.py:694
+#: nova/network/quantumv2/api.py:722
 #, fuzzy, python-format
 msgid "Multiple floating IP pools matches found for name '%s'"
 msgstr "找不到适合id %(id)s 的浮动IP。"
 
-#: nova/network/quantumv2/api.py:807
+#: nova/network/quantumv2/api.py:835
 #, fuzzy, python-format
 msgid "Network %(net)s for port %(port_id)s not found!"
 msgstr "网络 %(network_id)s 没有找到。"
@@ -10040,7 +10040,7 @@ msgstr ""
 msgid "Unable to discovered iSCSI target %(target_iqn)s from %(target_portal)s."
 msgstr ""
 
-#: nova/virt/vmwareapi/volumeops.py:127 nova/virt/xenapi/volumeops.py:46
+#: nova/virt/vmwareapi/volumeops.py:127 nova/virt/xenapi/volumeops.py:47
 #, python-format
 msgid "Attach_volume: %(connection_info)s, %(instance_name)s, %(mountpoint)s"
 msgstr "Attach_volume: %(connection_info)s, %(instance_name)s, %(mountpoint)s"
@@ -10050,12 +10050,12 @@ msgstr "Attach_volume: %(connection_info)s, %(instance_name)s, %(mountpoint)s"
 msgid "Unable to find iSCSI Target"
 msgstr "无法找到地址 %r"
 
-#: nova/virt/vmwareapi/volumeops.py:156 nova/virt/xenapi/volumeops.py:59
+#: nova/virt/vmwareapi/volumeops.py:156 nova/virt/xenapi/volumeops.py:60
 #, python-format
 msgid "Mountpoint %(mountpoint)s attached to instance %(instance_name)s"
 msgstr "挂载点 %(mountpoint)s 附加到实例 %(instance_name)s"
 
-#: nova/virt/vmwareapi/volumeops.py:166 nova/virt/xenapi/volumeops.py:102
+#: nova/virt/vmwareapi/volumeops.py:166 nova/virt/xenapi/volumeops.py:104
 #, python-format
 msgid "Detach_volume: %(instance_name)s, %(mountpoint)s"
 msgstr "分离_volume: %(instance_name)s, %(mountpoint)s"
@@ -10065,7 +10065,7 @@ msgstr "分离_volume: %(instance_name)s, %(mountpoint)s"
 msgid "Unable to find volume"
 msgstr "没有在数据库找到卷"
 
-#: nova/virt/vmwareapi/volumeops.py:187 nova/virt/xenapi/volumeops.py:122
+#: nova/virt/vmwareapi/volumeops.py:187 nova/virt/xenapi/volumeops.py:124
 #, python-format
 msgid "Mountpoint %(mountpoint)s detached from instance %(instance_name)s"
 msgstr "挂载点 %(mountpoint)s 从实例 %(instance_name)s 分离"
@@ -11063,7 +11063,7 @@ msgstr "无法获得目标信息 %(data)s, %(mountpoint)s"
 msgid "Unable to obtain target information %(connection_data)s"
 msgstr "无法获得目标信息 %(data)s, %(mountpoint)s"
 
-#: nova/virt/xenapi/volumeops.py:114
+#: nova/virt/xenapi/volumeops.py:116
 #, fuzzy, python-format
 msgid "Skipping detach because VBD for %(instance_name)s was not found"
 msgstr "实例 %(instance_id)s 没有找到。"

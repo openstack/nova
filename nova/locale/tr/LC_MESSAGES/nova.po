@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  nova\n"
 "Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
-"POT-Creation-Date: 2013-04-15 00:04+0000\n"
+"POT-Creation-Date: 2013-04-18 00:04+0000\n"
 "PO-Revision-Date: 2011-12-14 18:10+0000\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: Turkish <tr@li.org>\n"
@@ -4987,19 +4987,19 @@ msgstr ""
 msgid "Failed to notify cells of instance destroy"
 msgstr ""
 
-#: nova/db/api.py:677 nova/db/api.py:698
+#: nova/db/api.py:668 nova/db/api.py:689
 msgid "Failed to notify cells of instance update"
 msgstr ""
 
-#: nova/db/api.py:738
+#: nova/db/api.py:729
 msgid "Failed to notify cells of instance info cache update"
 msgstr ""
 
-#: nova/db/api.py:1437
+#: nova/db/api.py:1428
 msgid "Failed to notify cells of bw_usage update"
 msgstr ""
 
-#: nova/db/api.py:1592
+#: nova/db/api.py:1583
 msgid "Failed to notify cells of instance fault"
 msgstr ""
 
@@ -5555,75 +5555,75 @@ msgstr ""
 msgid "Quantum client authentication failed: %s"
 msgstr ""
 
-#: nova/network/quantumv2/api.py:151
+#: nova/network/quantumv2/api.py:152
 #, python-format
 msgid "allocate_for_instance() for %s"
 msgstr ""
 
-#: nova/network/quantumv2/api.py:154
+#: nova/network/quantumv2/api.py:155
 #, python-format
 msgid "empty project id for instance %s"
 msgstr ""
 
-#: nova/network/quantumv2/api.py:200
+#: nova/network/quantumv2/api.py:201
 #, python-format
 msgid ""
 "Multiple security groups found matching '%s'. Use an ID to be more "
 "specific."
 msgstr ""
 
-#: nova/network/quantumv2/api.py:269
+#: nova/network/quantumv2/api.py:270
 msgid "Port not found"
 msgstr ""
 
-#: nova/network/quantumv2/api.py:277
+#: nova/network/quantumv2/api.py:278
 #, python-format
 msgid "Fail to delete port %(portid)s with failure: %(exception)s"
 msgstr ""
 
-#: nova/network/quantumv2/api.py:315
+#: nova/network/quantumv2/api.py:321
 #, python-format
 msgid "deallocate_for_instance() for %s"
 msgstr ""
 
-#: nova/network/quantumv2/api.py:324
+#: nova/network/quantumv2/api.py:330
 #, python-format
 msgid "Failed to delete quantum port %(portid)s "
 msgstr ""
 
-#: nova/network/quantumv2/api.py:343
+#: nova/network/quantumv2/api.py:354
 #, python-format
 msgid "Failed to delete quantum port %(port_id)s "
 msgstr ""
 
-#: nova/network/quantumv2/api.py:365
+#: nova/network/quantumv2/api.py:381
 #, python-format
 msgid "get_instance_nw_info() for %s"
 msgstr ""
 
-#: nova/network/quantumv2/api.py:397
+#: nova/network/quantumv2/api.py:413
 #, python-format
 msgid ""
 "Unable to update port %(portid)s on subnet %(subnet_id)s with failure: "
 "%(exception)s"
 msgstr ""
 
-#: nova/network/quantumv2/api.py:427
+#: nova/network/quantumv2/api.py:443
 #, python-format
 msgid "Unable to update port %(portid)s with failure: %(exception)s"
 msgstr ""
 
-#: nova/network/quantumv2/api.py:437
+#: nova/network/quantumv2/api.py:453
 #, python-format
 msgid "validate_networks() for %s"
 msgstr ""
 
-#: nova/network/quantumv2/api.py:694
+#: nova/network/quantumv2/api.py:722
 #, python-format
 msgid "Multiple floating IP pools matches found for name '%s'"
 msgstr ""
 
-#: nova/network/quantumv2/api.py:807
+#: nova/network/quantumv2/api.py:835
 #, python-format
 msgid "Network %(net)s for port %(port_id)s not found!"
 msgstr ""
@@ -9731,7 +9731,7 @@ msgstr ""
 msgid "Unable to discovered iSCSI target %(target_iqn)s from %(target_portal)s."
 msgstr ""
 
-#: nova/virt/vmwareapi/volumeops.py:127 nova/virt/xenapi/volumeops.py:46
+#: nova/virt/vmwareapi/volumeops.py:127 nova/virt/xenapi/volumeops.py:47
 #, python-format
 msgid "Attach_volume: %(connection_info)s, %(instance_name)s, %(mountpoint)s"
 msgstr ""
@@ -9740,12 +9740,12 @@ msgstr ""
 msgid "Unable to find iSCSI Target"
 msgstr ""
 
-#: nova/virt/vmwareapi/volumeops.py:156 nova/virt/xenapi/volumeops.py:59
+#: nova/virt/vmwareapi/volumeops.py:156 nova/virt/xenapi/volumeops.py:60
 #, python-format
 msgid "Mountpoint %(mountpoint)s attached to instance %(instance_name)s"
 msgstr ""
 
-#: nova/virt/vmwareapi/volumeops.py:166 nova/virt/xenapi/volumeops.py:102
+#: nova/virt/vmwareapi/volumeops.py:166 nova/virt/xenapi/volumeops.py:104
 #, python-format
 msgid "Detach_volume: %(instance_name)s, %(mountpoint)s"
 msgstr ""
@@ -9754,7 +9754,7 @@ msgstr ""
 msgid "Unable to find volume"
 msgstr ""
 
-#: nova/virt/vmwareapi/volumeops.py:187 nova/virt/xenapi/volumeops.py:122
+#: nova/virt/vmwareapi/volumeops.py:187 nova/virt/xenapi/volumeops.py:124
 #, python-format
 msgid "Mountpoint %(mountpoint)s detached from instance %(instance_name)s"
 msgstr ""
@@ -10719,7 +10719,7 @@ msgstr ""
 msgid "Unable to obtain target information %(connection_data)s"
 msgstr ""
 
-#: nova/virt/xenapi/volumeops.py:114
+#: nova/virt/xenapi/volumeops.py:116
 #, python-format
 msgid "Skipping detach because VBD for %(instance_name)s was not found"
 msgstr ""
