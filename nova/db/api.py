@@ -1313,6 +1313,11 @@ def instance_type_extra_specs_get(context, flavor_id):
     return IMPL.instance_type_extra_specs_get(context, flavor_id)
 
 
+def instance_type_extra_specs_get_item(context, flavor_id, key):
+    """Get extra specs by key and flavor_id."""
+    return IMPL.instance_type_extra_specs_get_item(context, flavor_id, key)
+
+
 def instance_type_extra_specs_delete(context, flavor_id, key):
     """Delete the given extra specs item."""
     IMPL.instance_type_extra_specs_delete(context, flavor_id, key)

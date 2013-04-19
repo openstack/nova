@@ -3875,6 +3875,18 @@ def instance_type_extra_specs_get(context, flavor_id):
 
 
 @require_context
+def instance_type_extra_specs_get_item(context, flavor_id, key):
+    result = _instance_type_extra_specs_get_query(context, flavor_id).\
+                filter(models.InstanceTypeExtraSpecs.key == key).\
+                first()
+    if not result:
+        raise exception.InstanceTypeExtraSpecsNotFound(
+                extra_specs_key=key, instance_type_id=flavor_id)
+
+    return {result["key"]: result["value"]}
+
+
+@require_context
 def instance_type_extra_specs_delete(context, flavor_id, key):
     _instance_type_extra_specs_get_query(context, flavor_id).\
             filter(models.InstanceTypeExtraSpecs.key == key).\

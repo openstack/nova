@@ -48,10 +48,7 @@ class FlavorExtraSpecsController(object):
 
     def _get_extra_specs(self, context, flavor_id):
         extra_specs = db.instance_type_extra_specs_get(context, flavor_id)
-        specs_dict = {}
-        for key, value in extra_specs.iteritems():
-            specs_dict[key] = value
-        return dict(extra_specs=specs_dict)
+        return dict(extra_specs=extra_specs)
 
     def _check_body(self, body):
         if body is None or body == "":
@@ -103,10 +100,11 @@ class FlavorExtraSpecsController(object):
         """Return a single extra spec item."""
         context = req.environ['nova.context']
         authorize(context, action='show')
-        specs = self._get_extra_specs(context, flavor_id)
-        if id in specs['extra_specs']:
-            return {id: specs['extra_specs'][id]}
-        else:
+        try:
+            extra_spec = db.instance_type_extra_specs_get_item(context,
+                                                               flavor_id, id)
+            return extra_spec
+        except exception.InstanceTypeExtraSpecsNotFound as e:
             raise exc.HTTPNotFound()
 
     def delete(self, req, flavor_id, id):

@@ -2241,6 +2241,16 @@ class InstanceTypeExtraSpecsTestCase(BaseInstanceTypeTestCase):
                                                           it['flavorid'])
             self._assertEqualObjects(it['extra_specs'], real_specs)
 
+    def test_instance_type_extra_specs_get_item(self):
+        expected = dict(f1=dict(a='a', b='b', c='c'),
+                        f2=dict(d='d', e='e', f='f'))
+
+        for flavor, specs in expected.iteritems():
+            for key, val in specs.iteritems():
+                spec = db.instance_type_extra_specs_get_item(self.ctxt, flavor,
+                                                             key)
+                self.assertEqual(spec[key], val)
+
     def test_instance_type_extra_specs_delete(self):
         for it in self.inst_types:
             specs = it['extra_specs']
