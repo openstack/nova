@@ -767,6 +767,14 @@ def floating_forward_rules(floating_ip, fixed_ip, device):
     return rules
 
 
+def clean_conntrack(fixed_ip):
+    try:
+        _execute('conntrack', '-D', '-r', fixed_ip, run_as_root=True,
+                 check_exit_code=[0, 1])
+    except exception.ProcessExecutionError:
+        LOG.exception(_('Error deleting conntrack entries for %s'), fixed_ip)
+
+
 def initialize_gateway_device(dev, network_ref):
     if not network_ref:
         return

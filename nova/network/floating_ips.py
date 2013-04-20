@@ -548,6 +548,10 @@ class FloatingIP(object):
                                              interface,
                                              fixed_ip['network'])
 
+            # NOTE(ivoks): Destroy conntrack entries on source compute
+            # host.
+            self.l3driver.clean_conntrack(fixed_ip['address'])
+
             # NOTE(wenjianhn): Make this address will not be bound to public
             # interface when restarts nova-network on dest compute node
             self.db.floating_ip_update(context,
