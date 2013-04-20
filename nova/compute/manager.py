@@ -2007,7 +2007,6 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
     @wrap_instance_event
-    @wrap_instance_fault
     def rescue_instance(self, context, instance, rescue_password=None):
         """
         Rescue an instance on this host.
@@ -2028,10 +2027,16 @@ class ComputeManager(manager.SchedulerDependentManager):
         else:
             rescue_image_meta = {}
 
-        with self._error_out_instance_on_exception(context, instance['uuid']):
+        try:
             self.driver.rescue(context, instance,
                                self._legacy_nw_info(network_info),
                                rescue_image_meta, admin_password)
+        except Exception as e:
+            LOG.exception(_("Error trying to Rescue Instance"),
+                          instance=instance)
+            raise exception.InstanceNotRescuable(
+                instance_id=instance['uuid'],
+                reason=_("Driver Error: %s") % unicode(e))
 
         current_power_state = self._get_power_state(context, instance)
         self._instance_update(context,

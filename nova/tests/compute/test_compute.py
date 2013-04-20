@@ -22,6 +22,7 @@ import base64
 import copy
 import datetime
 import sys
+import testtools
 import time
 import traceback
 import uuid
@@ -1264,6 +1265,33 @@ class ComputeTestCase(BaseTestCase):
         self.assertTrue(called['unrescued'])
 
         self.compute.terminate_instance(self.context, instance=instance)
+
+    def test_rescue_handle_err(self):
+        # If the driver fails to rescue, instance state should remain the same
+        # and the exception should be converted to InstanceNotRescuable
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+        self.mox.StubOutWithMock(self.compute, '_get_rescue_image_ref')
+        self.mox.StubOutWithMock(nova.virt.fake.FakeDriver, 'rescue')
+
+        self.compute._get_rescue_image_ref(
+            mox.IgnoreArg(), instance).AndReturn('resc_image_ref')
+        nova.virt.fake.FakeDriver.rescue(
+            mox.IgnoreArg(), instance, [], mox.IgnoreArg(), 'password'
+            ).AndRaise(RuntimeError("Try again later"))
+
+        self.mox.ReplayAll()
+
+        expected_message = ('Instance %s cannot be rescued: '
+                            'Driver Error: Try again later' % instance['uuid'])
+        instance['vm_state'] = 'some_random_state'
+
+        with testtools.ExpectedException(
+            exception.InstanceNotRescuable, expected_message):
+                self.compute.rescue_instance(
+                    self.context, instance=instance,
+                    rescue_password='password')
+
+        self.assertEqual('some_random_state', instance['vm_state'])
 
     def test_power_on(self):
         # Ensure instance can be powered on.
