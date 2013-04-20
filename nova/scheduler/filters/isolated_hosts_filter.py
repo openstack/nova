@@ -33,9 +33,27 @@ class IsolatedHostsFilter(filters.BaseHostFilter):
     """Returns host."""
 
     def host_passes(self, host_state, filter_properties):
+        """
+        Result Matrix:
+                     | isolated_image | non_isolated_image
+        -------------+----------------+-------------------
+        iso_host     |    True        |     False
+        non_iso_host |    False       |      True
+
+        """
+        # If the configuration does not list any hosts, the filter will always
+        # return True, assuming a configuration error, so letting all hosts
+        # through.
+        isolated_hosts = CONF.isolated_hosts
+        isolated_images = CONF.isolated_images
+        if not isolated_images:
+            # As there are no images to match, return False if the host is in
+            # the isolation list
+            return host_state.host not in isolated_hosts
+
         spec = filter_properties.get('request_spec', {})
         props = spec.get('instance_properties', {})
         image_ref = props.get('image_ref')
-        image_isolated = image_ref in CONF.isolated_images
-        host_isolated = host_state.host in CONF.isolated_hosts
+        image_isolated = image_ref in isolated_images
+        host_isolated = host_state.host in isolated_hosts
         return image_isolated == host_isolated
