@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  Nova\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/nova\n"
-"POT-Creation-Date: 2013-04-19 00:03+0000\n"
+"POT-Creation-Date: 2013-04-20 00:04+0000\n"
 "PO-Revision-Date: 2013-02-02 18:03+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: en_US <LL@li.org>\n"
@@ -202,7 +202,7 @@ msgstr "Geçersiz giriş yapıldı"
 msgid "Invalid volume"
 msgstr "Geçersiz bölüm"
 
-#: nova/exception.py:270 nova/api/openstack/compute/servers.py:1341
+#: nova/exception.py:270 nova/api/openstack/compute/servers.py:1332
 #: nova/api/openstack/compute/contrib/admin_actions.py:242
 msgid "Invalid metadata"
 msgstr "Geçersiz metadata"
@@ -2459,8 +2459,8 @@ msgstr "%(flavor_id)s örnek türü bulunamadı."
 #: nova/api/openstack/compute/servers.py:574
 #: nova/api/openstack/compute/servers.py:741
 #: nova/api/openstack/compute/servers.py:1011
-#: nova/api/openstack/compute/servers.py:1117
-#: nova/api/openstack/compute/servers.py:1290
+#: nova/api/openstack/compute/servers.py:1108
+#: nova/api/openstack/compute/servers.py:1281
 msgid "Instance could not be found"
 msgstr "Örnek bulunamadı."
 
@@ -2574,108 +2574,93 @@ msgid "Personality cannot be updated."
 msgstr "%s için kişisel içerik çözümlenemedi"
 
 #: nova/api/openstack/compute/servers.py:1029
-#: nova/api/openstack/compute/servers.py:1049
+#: nova/api/openstack/compute/servers.py:1046
 msgid "Instance has not been resized."
 msgstr "Örnek tekrar boyutlandırılacak şekilde ayarlanmadı."
 
-#: nova/api/openstack/compute/servers.py:1035
-#, python-format
-msgid "Error in confirm-resize %s"
-msgstr "Yeniden boyutlandırma onayında hata %s"
-
-#: nova/api/openstack/compute/servers.py:1052
+#: nova/api/openstack/compute/servers.py:1049
 #, fuzzy
 msgid "Flavor used by the instance could not be found."
 msgstr "%(instance_id)s örneği bulunamadı."
 
-#: nova/api/openstack/compute/servers.py:1058
-#, python-format
-msgid "Error in revert-resize %s"
-msgstr "Yeniden boyutlandırma dönüşünde hata %s"
-
-#: nova/api/openstack/compute/servers.py:1071
+#: nova/api/openstack/compute/servers.py:1065
 msgid "Argument 'type' for reboot is not HARD or SOFT"
 msgstr "Önyükleme için argüman türü HARD veya SOFT değil"
 
-#: nova/api/openstack/compute/servers.py:1075
+#: nova/api/openstack/compute/servers.py:1069
 msgid "Missing argument 'type' for reboot"
 msgstr "Önyükleme için tür argümanı eksik"
 
-#: nova/api/openstack/compute/servers.py:1088
-#, python-format
-msgid "Error in reboot %s"
-msgstr "Önyükleme sırasında hata %s"
-
-#: nova/api/openstack/compute/servers.py:1100
+#: nova/api/openstack/compute/servers.py:1091
 msgid "Unable to locate requested flavor."
 msgstr "İstenilen örnek türü konumlandırılamıyor."
 
-#: nova/api/openstack/compute/servers.py:1103
+#: nova/api/openstack/compute/servers.py:1094
 msgid "Resize requires a flavor change."
 msgstr ""
 
-#: nova/api/openstack/compute/servers.py:1127
+#: nova/api/openstack/compute/servers.py:1118
 msgid "Missing imageRef attribute"
 msgstr "İmaj referans özelliği eksik"
 
-#: nova/api/openstack/compute/servers.py:1136
+#: nova/api/openstack/compute/servers.py:1127
 msgid "Invalid imageRef provided."
 msgstr "Geçersiz imaj referansı verildi."
 
-#: nova/api/openstack/compute/servers.py:1163
+#: nova/api/openstack/compute/servers.py:1154
 msgid "Missing flavorRef attribute"
 msgstr "Örnek türü referans özelliği eksik"
 
-#: nova/api/openstack/compute/servers.py:1176
+#: nova/api/openstack/compute/servers.py:1167
 msgid "No adminPass was specified"
 msgstr "Belirlenmiş bir yönetici parolası yok"
 
-#: nova/api/openstack/compute/servers.py:1180
-#: nova/api/openstack/compute/servers.py:1389
+#: nova/api/openstack/compute/servers.py:1171
+#: nova/api/openstack/compute/servers.py:1380
 msgid "Invalid adminPass"
 msgstr "Geçersiz yönetici parolası"
 
-#: nova/api/openstack/compute/servers.py:1186
+#: nova/api/openstack/compute/servers.py:1177
 #, fuzzy
 msgid "Unable to set password on instance"
 msgstr "Örnek kapatmada hata oluştu."
 
-#: nova/api/openstack/compute/servers.py:1195
+#: nova/api/openstack/compute/servers.py:1186
 msgid "Unable to parse metadata key/value pairs."
 msgstr "Çözümlenemeyen metadata anahtar/değer çifti."
 
-#: nova/api/openstack/compute/servers.py:1208
+#: nova/api/openstack/compute/servers.py:1199
 msgid "Resize request has invalid 'flavorRef' attribute."
 msgstr ""
 "Yeniden boyutlandırma isteği geçersiz örnek türü referansı özelliğine "
 "sahip."
 
-#: nova/api/openstack/compute/servers.py:1211
+#: nova/api/openstack/compute/servers.py:1202
 msgid "Resize requests require 'flavorRef' attribute."
 msgstr ""
 "Yeniden boyutlandırma isteği geçersiz örnek türü referansı özelliği "
 "gerektirir."
 
-#: nova/api/openstack/compute/servers.py:1229
+#: nova/api/openstack/compute/servers.py:1220
 #: nova/api/openstack/compute/contrib/aggregates.py:143
 #: nova/api/openstack/compute/contrib/coverage_ext.py:303
 #: nova/api/openstack/compute/contrib/keypairs.py:78
 msgid "Invalid request body"
 msgstr "Geçersiz istek gövdesi"
 
-#: nova/api/openstack/compute/servers.py:1235
+#: nova/api/openstack/compute/servers.py:1226
 msgid "Could not parse imageRef from request."
 msgstr "İstekte bulunulan imaj referansı çözümlenemedi."
 
-#: nova/api/openstack/compute/servers.py:1299
+#: nova/api/openstack/compute/servers.py:1290
 msgid "Cannot find image for rebuild"
 msgstr "Yeniden kurulum için imaj dosyası bulunamadı."
 
-#: nova/api/openstack/compute/servers.py:1332
+#: nova/api/openstack/compute/servers.py:1323
 msgid "createImage entity requires name attribute"
 msgstr "createImage varlığının isim özelliğine ihtiyacı var"
 
-#: nova/api/openstack/compute/servers.py:1416
+#: nova/api/openstack/compute/servers.py:1407
 #, python-format
 msgid "Removing options '%(unk_opt_str)s' from query"
 msgstr "Sorgudan '%(unk_opt_str)s' seçenekleri kaldırılıyor"
@@ -6775,17 +6760,17 @@ msgstr ""
 msgid "unexpected role header"
 msgstr ""
 
-#: nova/tests/api/openstack/compute/test_servers.py:3275
+#: nova/tests/api/openstack/compute/test_servers.py:3315
 msgid ""
 "Quota exceeded for instances: Requested 1, but already used 10 of 10 "
 "instances"
 msgstr ""
 
-#: nova/tests/api/openstack/compute/test_servers.py:3280
+#: nova/tests/api/openstack/compute/test_servers.py:3320
 msgid "Quota exceeded for ram: Requested 4096, but already used 8192 of 10240 ram"
 msgstr ""
 
-#: nova/tests/api/openstack/compute/test_servers.py:3285
+#: nova/tests/api/openstack/compute/test_servers.py:3325
 msgid "Quota exceeded for cores: Requested 2, but already used 9 of 10 cores"
 msgstr ""
 
@@ -10917,9 +10902,12 @@ msgstr ""
 msgid "status must be 'available'"
 msgstr "İmaj müsait olmak zorunda"
 
-#~ msgid "Scheduler cost function %(cost_fn_str)s could not be found."
-#~ msgstr "%(cost_fn_str)s zamanlayıcı maliyet fonksiyonu bulunamadı."
+#~ msgid "Error in confirm-resize %s"
+#~ msgstr "Yeniden boyutlandırma onayında hata %s"
 
-#~ msgid "Scheduler weight flag not found: %(flag_name)s"
-#~ msgstr "Zamanlayıcı yük bayrağı bulunamadı: %(flag_name)s"
+#~ msgid "Error in revert-resize %s"
+#~ msgstr "Yeniden boyutlandırma dönüşünde hata %s"
+
+#~ msgid "Error in reboot %s"
+#~ msgstr "Önyükleme sırasında hata %s"
 

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  nova\n"
 "Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
-"POT-Creation-Date: 2013-04-19 00:03+0000\n"
+"POT-Creation-Date: 2013-04-20 00:04+0000\n"
 "PO-Revision-Date: 2012-05-07 06:51+0000\n"
 "Last-Translator: Edward <Unknown>\n"
 "Language-Team: Chinese (Simplified) <zh_CN@li.org>\n"
@@ -206,7 +206,7 @@ msgstr "收到无效的输入"
 msgid "Invalid volume"
 msgstr "无效的卷"
 
-#: nova/exception.py:270 nova/api/openstack/compute/servers.py:1341
+#: nova/exception.py:270 nova/api/openstack/compute/servers.py:1332
 #: nova/api/openstack/compute/contrib/admin_actions.py:242
 msgid "Invalid metadata"
 msgstr "无效的元数据"
@@ -2463,8 +2463,8 @@ msgstr "主机 %(host)s 没有找到。"
 #: nova/api/openstack/compute/servers.py:574
 #: nova/api/openstack/compute/servers.py:741
 #: nova/api/openstack/compute/servers.py:1011
-#: nova/api/openstack/compute/servers.py:1117
-#: nova/api/openstack/compute/servers.py:1290
+#: nova/api/openstack/compute/servers.py:1108
+#: nova/api/openstack/compute/servers.py:1281
 msgid "Instance could not be found"
 msgstr "无法找到实例"
 
@@ -2583,105 +2583,90 @@ msgid "Personality cannot be updated."
 msgstr "id不能是None"
 
 #: nova/api/openstack/compute/servers.py:1029
-#: nova/api/openstack/compute/servers.py:1049
+#: nova/api/openstack/compute/servers.py:1046
 msgid "Instance has not been resized."
 msgstr "实例还没有调整大小。"
 
-#: nova/api/openstack/compute/servers.py:1035
-#, python-format
-msgid "Error in confirm-resize %s"
-msgstr "confirm-resize中的错误 %s"
-
-#: nova/api/openstack/compute/servers.py:1052
+#: nova/api/openstack/compute/servers.py:1049
 #, fuzzy
 msgid "Flavor used by the instance could not be found."
 msgstr "实例 %(instance_id)s 没有找到。"
 
-#: nova/api/openstack/compute/servers.py:1058
-#, python-format
-msgid "Error in revert-resize %s"
-msgstr "revert-resize中的错误 %s"
-
-#: nova/api/openstack/compute/servers.py:1071
+#: nova/api/openstack/compute/servers.py:1065
 msgid "Argument 'type' for reboot is not HARD or SOFT"
 msgstr "重启的参数'type'既不是HARD也不是SOFT"
 
-#: nova/api/openstack/compute/servers.py:1075
+#: nova/api/openstack/compute/servers.py:1069
 msgid "Missing argument 'type' for reboot"
 msgstr "缺少重启的参数'type'"
 
-#: nova/api/openstack/compute/servers.py:1088
-#, python-format
-msgid "Error in reboot %s"
-msgstr "重启中错误 %s"
-
-#: nova/api/openstack/compute/servers.py:1100
+#: nova/api/openstack/compute/servers.py:1091
 msgid "Unable to locate requested flavor."
 msgstr "无法找到请求的类型。"
 
-#: nova/api/openstack/compute/servers.py:1103
+#: nova/api/openstack/compute/servers.py:1094
 #, fuzzy
 msgid "Resize requires a flavor change."
 msgstr "调整大小需要尺寸的改变。"
 
-#: nova/api/openstack/compute/servers.py:1127
+#: nova/api/openstack/compute/servers.py:1118
 msgid "Missing imageRef attribute"
 msgstr "缺少属性imageRef"
 
-#: nova/api/openstack/compute/servers.py:1136
+#: nova/api/openstack/compute/servers.py:1127
 msgid "Invalid imageRef provided."
 msgstr "提供了无效的imageRef。"
 
-#: nova/api/openstack/compute/servers.py:1163
+#: nova/api/openstack/compute/servers.py:1154
 msgid "Missing flavorRef attribute"
 msgstr "缺少属性flavorRef"
 
-#: nova/api/openstack/compute/servers.py:1176
+#: nova/api/openstack/compute/servers.py:1167
 msgid "No adminPass was specified"
 msgstr "没有确定adminPass"
 
-#: nova/api/openstack/compute/servers.py:1180
-#: nova/api/openstack/compute/servers.py:1389
+#: nova/api/openstack/compute/servers.py:1171
+#: nova/api/openstack/compute/servers.py:1380
 msgid "Invalid adminPass"
 msgstr "无效的adminPass"
 
-#: nova/api/openstack/compute/servers.py:1186
+#: nova/api/openstack/compute/servers.py:1177
 #, fuzzy
 msgid "Unable to set password on instance"
 msgstr "重新启动实例失败"
 
-#: nova/api/openstack/compute/servers.py:1195
+#: nova/api/openstack/compute/servers.py:1186
 msgid "Unable to parse metadata key/value pairs."
 msgstr "无法解析元数据键/值对"
 
-#: nova/api/openstack/compute/servers.py:1208
+#: nova/api/openstack/compute/servers.py:1199
 msgid "Resize request has invalid 'flavorRef' attribute."
 msgstr "调整大小请求中的属性'flavorRef'无效。"
 
-#: nova/api/openstack/compute/servers.py:1211
+#: nova/api/openstack/compute/servers.py:1202
 msgid "Resize requests require 'flavorRef' attribute."
 msgstr "调整大小请求要求有属性'flavorRef'。"
 
-#: nova/api/openstack/compute/servers.py:1229
+#: nova/api/openstack/compute/servers.py:1220
 #: nova/api/openstack/compute/contrib/aggregates.py:143
 #: nova/api/openstack/compute/contrib/coverage_ext.py:303
 #: nova/api/openstack/compute/contrib/keypairs.py:78
 msgid "Invalid request body"
 msgstr "无效的请求主体"
 
-#: nova/api/openstack/compute/servers.py:1235
+#: nova/api/openstack/compute/servers.py:1226
 msgid "Could not parse imageRef from request."
 msgstr "无法解析请求中的imageRef。"
 
-#: nova/api/openstack/compute/servers.py:1299
+#: nova/api/openstack/compute/servers.py:1290
 msgid "Cannot find image for rebuild"
 msgstr "无法找到用来重新创建的镜像"
 
-#: nova/api/openstack/compute/servers.py:1332
+#: nova/api/openstack/compute/servers.py:1323
 msgid "createImage entity requires name attribute"
 msgstr "实体createImage需要属性name"
 
-#: nova/api/openstack/compute/servers.py:1416
+#: nova/api/openstack/compute/servers.py:1407
 #, python-format
 msgid "Removing options '%(unk_opt_str)s' from query"
 msgstr "正在从查询语句中移除选项 '%(unk_opt_str)s'"
@@ -6852,18 +6837,18 @@ msgstr ""
 msgid "unexpected role header"
 msgstr ""
 
-#: nova/tests/api/openstack/compute/test_servers.py:3275
+#: nova/tests/api/openstack/compute/test_servers.py:3315
 #, fuzzy
 msgid ""
 "Quota exceeded for instances: Requested 1, but already used 10 of 10 "
 "instances"
 msgstr "%(pid)s 已经超过配额，试图运行 %(min_count)s 个实例"
 
-#: nova/tests/api/openstack/compute/test_servers.py:3280
+#: nova/tests/api/openstack/compute/test_servers.py:3320
 msgid "Quota exceeded for ram: Requested 4096, but already used 8192 of 10240 ram"
 msgstr ""
 
-#: nova/tests/api/openstack/compute/test_servers.py:3285
+#: nova/tests/api/openstack/compute/test_servers.py:3325
 msgid "Quota exceeded for cores: Requested 2, but already used 9 of 10 cores"
 msgstr ""
 
@@ -11116,9 +11101,12 @@ msgstr ""
 msgid "status must be 'available'"
 msgstr "状态必须可用"
 
-#~ msgid "Scheduler cost function %(cost_fn_str)s could not be found."
-#~ msgstr "调度器的成本函数 %(cost_fn_str)s 没有找到。"
+#~ msgid "Error in confirm-resize %s"
+#~ msgstr "confirm-resize中的错误 %s"
 
-#~ msgid "Scheduler weight flag not found: %(flag_name)s"
-#~ msgstr "未找到调度器的权重标记：%(flag_name)s"
+#~ msgid "Error in revert-resize %s"
+#~ msgstr "revert-resize中的错误 %s"
+
+#~ msgid "Error in reboot %s"
+#~ msgstr "重启中错误 %s"
 
