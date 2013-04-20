@@ -276,7 +276,8 @@ class InternalContext(object):
 
         try:
             result = proxy.dispatch(
-                ctx, data['version'], data['method'], **data['args'])
+                ctx, data['version'], data['method'],
+                data.get('namespace'), **data['args'])
             return ConsumerBase.normalize_reply(result, ctx.replies)
         except greenlet.GreenletExit:
             # ignore these since they are just from shutdowns
@@ -351,7 +352,7 @@ class ConsumerBase(object):
             return
 
         proxy.dispatch(ctx, data['version'],
-                       data['method'], **data['args'])
+                       data['method'], data.get('namespace'), **data['args'])
 
 
 class ZmqBaseReactor(ConsumerBase):

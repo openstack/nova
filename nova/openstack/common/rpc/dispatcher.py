@@ -103,13 +103,16 @@ class RpcDispatcher(object):
         self.callbacks = callbacks
         super(RpcDispatcher, self).__init__()
 
-    def dispatch(self, ctxt, version, method, **kwargs):
+    def dispatch(self, ctxt, version, method, namespace, **kwargs):
         """Dispatch a message based on a requested version.
 
         :param ctxt: The request context
         :param version: The requested API version from the incoming message
         :param method: The method requested to be called by the incoming
                        message.
+        :param namespace: The namespace for the requested method.  If None,
+                          the dispatcher will look for a method on a callback
+                          object with no namespace set.
         :param kwargs: A dict of keyword arguments to be passed to the method.
 
         :returns: Whatever is returned by the underlying method that gets
@@ -120,13 +123,25 @@ class RpcDispatcher(object):
 
         had_compatible = False
         for proxyobj in self.callbacks:
-            if hasattr(proxyobj, 'RPC_API_VERSION'):
+            # Check for namespace compatibility
+            try:
+                cb_namespace = proxyobj.RPC_API_NAMESPACE
+            except AttributeError:
+                cb_namespace = None
+
+            if namespace != cb_namespace:
+                continue
+
+            # Check for version compatibility
+            try:
                 rpc_api_version = proxyobj.RPC_API_VERSION
-            else:
+            except AttributeError:
                 rpc_api_version = '1.0'
+
             is_compatible = rpc_common.version_is_compatible(rpc_api_version,
                                                              version)
             had_compatible = had_compatible or is_compatible
+
             if not hasattr(proxyobj, method):
                 continue
             if is_compatible:

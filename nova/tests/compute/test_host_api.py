@@ -47,6 +47,7 @@ class ComputeHostAPITestCase(test.TestCase):
         self._mock_assert_host_exists()
         self._mock_rpc_call(
                 {'method': 'set_host_enabled',
+                 'namespace': None,
                  'args': {'enabled': 'fake_enabled'},
                  'version': compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION})
 
@@ -59,6 +60,7 @@ class ComputeHostAPITestCase(test.TestCase):
         self._mock_assert_host_exists()
         self._mock_rpc_call(
                 {'method': 'set_host_enabled',
+                 'namespace': None,
                  'args': {'enabled': 'fake_enabled'},
                  'version': compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION})
 
@@ -71,6 +73,7 @@ class ComputeHostAPITestCase(test.TestCase):
         self._mock_assert_host_exists()
         self._mock_rpc_call(
                 {'method': 'get_host_uptime',
+                 'namespace': None,
                  'args': {},
                  'version': compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION})
         self.mox.ReplayAll()
@@ -81,6 +84,7 @@ class ComputeHostAPITestCase(test.TestCase):
         self._mock_assert_host_exists()
         self._mock_rpc_call(
                 {'method': 'host_power_action',
+                 'namespace': None,
                  'args': {'action': 'fake_action'},
                  'version': compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION})
         self.mox.ReplayAll()
@@ -92,6 +96,7 @@ class ComputeHostAPITestCase(test.TestCase):
         self._mock_assert_host_exists()
         self._mock_rpc_call(
                 {'method': 'host_maintenance_mode',
+                 'namespace': None,
                  'args': {'host': 'fake_host', 'mode': 'fake_mode'},
                  'version': compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION})
         self.mox.ReplayAll()
@@ -234,6 +239,7 @@ class ComputeHostAPICellsTestCase(ComputeHostAPITestCase):
             result = 'fake-result'
         # Wrapped with cells call
         expected_message = {'method': 'proxy_rpc_to_manager',
+                            'namespace': None,
                             'args': {'topic': 'compute.fake_host',
                                      'rpc_message': expected_message,
                                      'call': True,

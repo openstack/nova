@@ -391,6 +391,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         rpc.call(self.context, "compute.fake_host2",
                    {"method": 'check_can_live_migrate_destination',
+                    "namespace": None,
                     "args": {'instance': instance,
                              'block_migration': block_migration,
                              'disk_over_commit': disk_over_commit},

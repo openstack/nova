@@ -525,6 +525,7 @@ class SchedulerTestCase(test.TestCase):
 
         rpc.call(self.context, "compute.fake_host2",
                    {"method": 'check_can_live_migrate_destination',
+                    "namespace": None,
                     "args": {'instance': instance,
                              'block_migration': block_migration,
                              'disk_over_commit': disk_over_commit},
@@ -838,6 +839,7 @@ class SchedulerTestCase(test.TestCase):
                                                  'fake_host3')
         rpc.call(self.context, "compute.fake_host3",
                    {"method": 'check_can_live_migrate_destination',
+                    "namespace": None,
                     "args": {'instance': instance,
                              'block_migration': block_migration,
                              'disk_over_commit': disk_over_commit},
@@ -853,6 +855,7 @@ class SchedulerTestCase(test.TestCase):
                                                  'fake_host4')
         rpc.call(self.context, "compute.fake_host4",
                    {"method": 'check_can_live_migrate_destination',
+                    "namespace": None,
                     "args": {'instance': instance,
                              'block_migration': block_migration,
                              'disk_over_commit': disk_over_commit},
