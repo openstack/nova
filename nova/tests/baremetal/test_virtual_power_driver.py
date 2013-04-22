@@ -71,12 +71,12 @@ class BareMetalVPDTestCase(bm_db_base.BMDBTestCase):
                 service_host='test_host',
                 cpus=2,
                 memory_mb=2048,
-                prov_mac_address='11:11:11:11:11:11',
+                prov_mac_address='aa:bb:cc:dd:ee:ff',
             )
         self.nic_info = [
-                {'address': '22:22:22:22:22:22', 'datapath_id': '0x1',
+                {'address': '11:11:11:11:11:11', 'datapath_id': '0x1',
                     'port_no': 1},
-                {'address': '33:33:33:33:33:33', 'datapath_id': '0x2',
+                {'address': '22:22:22:22:22:22', 'datapath_id': '0x2',
                     'port_no': 2},
             ]
         self.addCleanup(fake_image.FakeImageService_reset)
@@ -200,6 +200,8 @@ class VPDClassMethodsTestCase(BareMetalVPDTestCase):
 
         self.mox.StubOutWithMock(self.pm, '_run_command')
         cmd = self.pm._vp_cmd.get_node_macs.replace('{_NodeName_}', 'testNode')
+        # aa:bb:cc:dd:ee:ff is prov_mac_adress. Check it is not used to
+        # find the node.
         self.pm._run_command(cmd).AndReturn(["aabbccddeeff", "ffeeddccbbaa"])
 
         self.mox.ReplayAll()
