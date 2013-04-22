@@ -189,6 +189,35 @@ class CinderCloudTestCase(test.TestCase):
         self.cloud.delete_volume(self.context, vol1['volumeId'])
         self.cloud.delete_volume(self.context, vol2['volumeId'])
 
+    def test_format_volume_maps_status(self):
+        fake_volume = {'id': 1,
+                       'status': 'creating',
+                       'availability_zone': 'nova',
+                       'volumeId': 'vol-0000000a',
+                       'attachmentSet': [{}],
+                       'snapshotId': None,
+                       'created_at': '2013-04-18T06:03:35.025626',
+                       'size': 1,
+                       'mountpoint': None,
+                       'attach_status': None}
+
+        self.assertEqual(self.cloud._format_volume(self.context,
+                                                   fake_volume)['status'],
+                                                   'creating')
+
+        fake_volume['status'] = 'attaching'
+        self.assertEqual(self.cloud._format_volume(self.context,
+                                                   fake_volume)['status'],
+                                                   'in-use')
+        fake_volume['status'] = 'detaching'
+        self.assertEqual(self.cloud._format_volume(self.context,
+                                                   fake_volume)['status'],
+                                                   'in-use')
+        fake_volume['status'] = 'banana'
+        self.assertEqual(self.cloud._format_volume(self.context,
+                                                   fake_volume)['status'],
+                                                   'banana')
+
     def test_create_volume_in_availability_zone(self):
         """Makes sure create_volume works when we specify an availability
         zone
