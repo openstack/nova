@@ -4,48 +4,48 @@
 [Filters]
 # nova/virt/disk/mount/api.py: 'kpartx', '-a', device
 # nova/virt/disk/mount/api.py: 'kpartx', '-d', device
-kpartx: CommandFilter, /sbin/kpartx, root
+kpartx: CommandFilter, kpartx, root
 
 # nova/virt/xenapi/vm_utils.py: tune2fs, -O ^has_journal, part_path
 # nova/virt/xenapi/vm_utils.py: tune2fs, -j, partition_path
-tune2fs: CommandFilter, /sbin/tune2fs, root
+tune2fs: CommandFilter, tune2fs, root
 
 # nova/virt/disk/mount/api.py: 'mount', mapped_device
 # nova/virt/disk/api.py: 'mount', '-o', 'bind', src, target
 # nova/virt/xenapi/vm_utils.py: 'mount', '-t', 'ext2,ext3,ext4,reiserfs'..
 # nova/virt/configdrive.py: 'mount', device, mountdir
 # nova/virt/libvirt/volume.py: 'mount', '-t', 'sofs' ...
-mount: CommandFilter, /bin/mount, root
+mount: CommandFilter, mount, root
 
 # nova/virt/disk/mount/api.py: 'umount', mapped_device
 # nova/virt/disk/api.py: 'umount' target
 # nova/virt/xenapi/vm_utils.py: 'umount', dev_path
 # nova/virt/configdrive.py: 'umount', mountdir
-umount: CommandFilter, /bin/umount, root
+umount: CommandFilter, umount, root
 
 # nova/virt/disk/mount/nbd.py: 'qemu-nbd', '-c', device, image
 # nova/virt/disk/mount/nbd.py: 'qemu-nbd', '-d', device
-qemu-nbd: CommandFilter, /usr/bin/qemu-nbd, root
+qemu-nbd: CommandFilter, qemu-nbd, root
 
 # nova/virt/disk/mount/loop.py: 'losetup', '--find', '--show', image
 # nova/virt/disk/mount/loop.py: 'losetup', '--detach', device
-losetup: CommandFilter, /sbin/losetup, root
+losetup: CommandFilter, losetup, root
 
 # nova/virt/disk/vfs/localfs.py: 'tee', canonpath
-tee: CommandFilter, /usr/bin/tee, root
+tee: CommandFilter, tee, root
 
 # nova/virt/disk/vfs/localfs.py: 'mkdir', canonpath
-mkdir: CommandFilter, /bin/mkdir, root
+mkdir: CommandFilter, mkdir, root
 
 # nova/virt/disk/vfs/localfs.py: 'chown'
 # nova/virt/libvirt/connection.py: 'chown', os.getuid( console_log
 # nova/virt/libvirt/connection.py: 'chown', os.getuid( console_log
 # nova/virt/libvirt/connection.py: 'chown', 'root', basepath('disk')
 # nova/utils.py: 'chown', owner_uid, path
-chown: CommandFilter, /bin/chown, root
+chown: CommandFilter, chown, root
 
 # nova/virt/disk/vfs/localfs.py: 'chmod'
-chmod: CommandFilter, /bin/chmod, root
+chmod: CommandFilter, chmod, root
 
 # nova/virt/libvirt/vif.py: 'ip', 'tuntap', 'add', dev, 'mode', 'tap'
 # nova/virt/libvirt/vif.py: 'ip', 'link', 'set', dev, 'up'
@@ -69,7 +69,7 @@ chmod: CommandFilter, /bin/chmod, root
 # nova/network/linux_net.py: 'ip', 'route', 'add', ..
 # nova/network/linux_net.py: 'ip', 'route', 'del', .
 # nova/network/linux_net.py: 'ip', 'route', 'show', 'dev', dev
-ip: CommandFilter, /sbin/ip, root
+ip: CommandFilter, ip, root
 
 # nova/virt/libvirt/vif.py: 'tunctl', '-b', '-t', dev
 # nova/network/linux_net.py: 'tunctl', '-b', '-t', dev
@@ -78,39 +78,39 @@ tunctl: CommandFilter, tunctl, root
 # nova/virt/libvirt/vif.py: 'ovs-vsctl', ...
 # nova/virt/libvirt/vif.py: 'ovs-vsctl', 'del-port', ...
 # nova/network/linux_net.py: 'ovs-vsctl', ....
-ovs-vsctl: CommandFilter, /usr/bin/ovs-vsctl, root
+ovs-vsctl: CommandFilter, ovs-vsctl, root
 
 # nova/network/linux_net.py: 'ovs-ofctl', ....
-ovs-ofctl: CommandFilter, /usr/bin/ovs-ofctl, root
+ovs-ofctl: CommandFilter, ovs-ofctl, root
 
 # nova/virt/libvirt/connection.py: 'dd', if=%s % virsh_output, ...
-dd: CommandFilter, /bin/dd, root
+dd: CommandFilter, dd, root
 
 # nova/virt/xenapi/volume_utils.py: 'iscsiadm', '-m', ...
 iscsiadm: CommandFilter, iscsiadm, root
 
 # nova/virt/libvirt/volume.py: 'aoe-revalidate', aoedev
 # nova/virt/libvirt/volume.py: 'aoe-discover'
-aoe-revalidate: CommandFilter, /usr/sbin/aoe-revalidate, root
-aoe-discover: CommandFilter, /usr/sbin/aoe-discover, root
+aoe-revalidate: CommandFilter, aoe-revalidate, root
+aoe-discover: CommandFilter, aoe-discover, root
 
 # nova/virt/xenapi/vm_utils.py: parted, --script, ...
 # nova/virt/xenapi/vm_utils.py: 'parted', '--script', dev_path, ..*.
 parted: CommandFilter, parted, root
 
 # nova/virt/xenapi/vm_utils.py: 'pygrub', '-qn', dev_path
-pygrub: CommandFilter, /usr/bin/pygrub, root
+pygrub: CommandFilter, pygrub, root
 
 # nova/virt/xenapi/vm_utils.py: fdisk %(dev_path)s
-fdisk: CommandFilter, /sbin/fdisk, root
+fdisk: CommandFilter, fdisk, root
 
 # nova/virt/xenapi/vm_utils.py: e2fsck, -f, -p, partition_path
 # nova/virt/disk/api.py: e2fsck, -f, -p, image
-e2fsck: CommandFilter, /sbin/e2fsck, root
+e2fsck: CommandFilter, e2fsck, root
 
 # nova/virt/xenapi/vm_utils.py: resize2fs, partition_path
 # nova/virt/disk/api.py: resize2fs, image
-resize2fs: CommandFilter, /sbin/resize2fs, root
+resize2fs: CommandFilter, resize2fs, root
 
 # nova/network/linux_net.py: 'ip[6]tables-save' % (cmd, '-t', ...
 iptables-save: CommandFilter, iptables-save, root
@@ -125,7 +125,7 @@ ip6tables-restore: CommandFilter, ip6tables-restore, root
 arping: CommandFilter, arping, root
 
 # nova/network/linux_net.py: 'dhcp_release', dev, address, mac_address
-dhcp_release: CommandFilter, /usr/bin/dhcp_release, root
+dhcp_release: CommandFilter, dhcp_release, root
 
 # nova/network/linux_net.py: 'kill', '-9', pid
 # nova/network/linux_net.py: 'kill', '-HUP', pid
@@ -139,7 +139,7 @@ dnsmasq: DnsmasqFilter, /usr/sbin/dnsmasq, root
 dnsmasq_deprecated: DeprecatedDnsmasqFilter, /usr/sbin/dnsmasq, root
 
 # nova/network/linux_net.py: 'radvd', '-C', '%s' % _ra_file(dev, 'conf'..
-radvd: CommandFilter, /usr/sbin/radvd, root
+radvd: CommandFilter, radvd, root
 
 # nova/network/linux_net.py: 'brctl', 'addbr', bridge
 # nova/network/linux_net.py: 'brctl', 'setfd', bridge, 0
@@ -149,41 +149,41 @@ brctl: CommandFilter, brctl, root
 
 # nova/virt/libvirt/utils.py: 'mkswap'
 # nova/virt/xenapi/vm_utils.py: 'mkswap'
-mkswap: CommandFilter, /sbin/mkswap, root
+mkswap: CommandFilter, mkswap, root
 
 # nova/virt/xenapi/vm_utils.py: 'mkfs'
-mkfs: CommandFilter, /sbin/mkfs, root
+mkfs: CommandFilter, mkfs, root
 
 # nova/virt/libvirt/utils.py: 'qemu-img'
-qemu-img: CommandFilter, /usr/bin/qemu-img, root
+qemu-img: CommandFilter, qemu-img, root
 
 # nova/virt/disk/vfs/localfs.py: 'readlink', '-e'
 readlink: CommandFilter, readlink, root
 
 # nova/virt/disk/api.py: 'touch', target
-touch: CommandFilter, /usr/bin/touch, root
+touch: CommandFilter, touch, root
 
 # nova/virt/disk/api.py:
-mkfs.ext3: CommandFilter, /sbin/mkfs.ext3, root
-mkfs.ntfs: CommandFilter, /sbin/mkfs.ntfs, root
+mkfs.ext3: CommandFilter, mkfs.ext3, root
+mkfs.ntfs: CommandFilter, mkfs.ntfs, root
 
 # nova/virt/libvirt/connection.py:
 read_initiator: ReadFileFilter, /etc/iscsi/initiatorname.iscsi
 
 # nova/virt/libvirt/connection.py:
-lvremove: CommandFilter, /sbin/lvremove, root
+lvremove: CommandFilter, lvremove, root
 
 # nova/virt/libvirt/utils.py:
-lvcreate: CommandFilter, /sbin/lvcreate, root
+lvcreate: CommandFilter, lvcreate, root
 
 # nova/virt/libvirt/utils.py:
-lvs: CommandFilter, /sbin/lvs, root
+lvs: CommandFilter, lvs, root
 
 # nova/virt/libvirt/utils.py:
-vgs: CommandFilter, /sbin/vgs, root
+vgs: CommandFilter, vgs, root
 
 # nova/virt/baremetal/volume_driver.py: 'tgtadm', '--lld', 'iscsi', ...
-tgtadm: CommandFilter, /usr/sbin/tgtadm, root
+tgtadm: CommandFilter, tgtadm, root
 
 # nova/utils.py:read_file_as_root: 'cat', file_path
 # (called from nova/virt/disk/vfs/localfs.py:VFSLocalFS.read_file)
@@ -191,17 +191,17 @@ read_passwd: RegExpFilter, cat, root, cat, (/var|/usr)?/tmp/openstack-vfs-localf
 read_shadow: RegExpFilter, cat, root, cat, (/var|/usr)?/tmp/openstack-vfs-localfs[^/]+/etc/shadow
 
 # nova/virt/libvirt/volume.py: 'multipath' '-R'
-multipath: CommandFilter, /sbin/multipath, root
+multipath: CommandFilter, multipath, root
 
 # nova/virt/libvirt/utils.py:
-systool: CommandFilter, /usr/bin/systool, root
+systool: CommandFilter, systool, root
 
 # nova/virt/libvirt/volume.py:
-sginfo: CommandFilter, /usr/bin/sginfo, root
-sg_scan: CommandFilter, /usr/bin/sg_scan, root
+sginfo: CommandFilter, sginfo, root
+sg_scan: CommandFilter, sg_scan, root
 
 # nova/virt/xenapi/vm_utils.py:
-xenstore-read: CommandFilter, /usr/bin/xenstore-read, root
+xenstore-read: CommandFilter, xenstore-read, root
 
-# nova/virt/baremetal/tilera.py: '/usr/sbin/rpc.mountd'
-rpc.mountd: CommandFilter, /usr/sbin/rpc.mountd, root
+# nova/virt/baremetal/tilera.py: 'rpc.mountd'
+rpc.mountd: CommandFilter, rpc.mountd, root

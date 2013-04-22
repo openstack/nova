@@ -24,20 +24,20 @@
 # nova/network/linux_net.py: 'ip', 'route', 'add', ..
 # nova/network/linux_net.py: 'ip', 'route', 'del', .
 # nova/network/linux_net.py: 'ip', 'route', 'show', 'dev', dev
-ip: CommandFilter, /sbin/ip, root
+ip: CommandFilter, ip, root
 
 # nova/virt/libvirt/vif.py: 'ovs-vsctl', ...
 # nova/virt/libvirt/vif.py: 'ovs-vsctl', 'del-port', ...
 # nova/network/linux_net.py: 'ovs-vsctl', ....
-ovs-vsctl: CommandFilter, /usr/bin/ovs-vsctl, root
+ovs-vsctl: CommandFilter, ovs-vsctl, root
 
 # nova/network/linux_net.py: 'ovs-ofctl', ....
-ovs-ofctl: CommandFilter, /usr/bin/ovs-ofctl, root
+ovs-ofctl: CommandFilter, ovs-ofctl, root
 
 # nova/network/linux_net.py: 'ebtables', '-D' ...
 # nova/network/linux_net.py: 'ebtables', '-I' ...
-ebtables: CommandFilter, /sbin/ebtables, root
-ebtables_usr: CommandFilter, /usr/sbin/ebtables, root
+ebtables: CommandFilter, ebtables, root
+ebtables_usr: CommandFilter, ebtables, root
 
 # nova/network/linux_net.py: 'ip[6]tables-save' % (cmd, '-t', ...
 iptables-save: CommandFilter, iptables-save, root
@@ -52,7 +52,7 @@ ip6tables-restore: CommandFilter, ip6tables-restore, root
 arping: CommandFilter, arping, root
 
 # nova/network/linux_net.py: 'dhcp_release', dev, address, mac_address
-dhcp_release: CommandFilter, /usr/bin/dhcp_release, root
+dhcp_release: CommandFilter, dhcp_release, root
 
 # nova/network/linux_net.py: 'kill', '-9', pid
 # nova/network/linux_net.py: 'kill', '-HUP', pid
@@ -66,7 +66,7 @@ dnsmasq: DnsmasqFilter, /usr/sbin/dnsmasq, root
 dnsmasq_deprecated: DeprecatedDnsmasqFilter, /usr/sbin/dnsmasq, root
 
 # nova/network/linux_net.py: 'radvd', '-C', '%s' % _ra_file(dev, 'conf'..
-radvd: CommandFilter, /usr/sbin/radvd, root
+radvd: CommandFilter, radvd, root
 
 # nova/network/linux_net.py: 'brctl', 'addbr', bridge
 # nova/network/linux_net.py: 'brctl', 'setfd', bridge, 0
@@ -75,7 +75,7 @@ radvd: CommandFilter, /usr/sbin/radvd, root
 brctl: CommandFilter, brctl, root
 
 # nova/network/linux_net.py: 'sysctl', ....
-sysctl: CommandFilter, /sbin/sysctl, root
+sysctl: CommandFilter, sysctl, root
 
 # nova/network/linux_net.py: 'conntrack'
 conntrack: CommandFilter, conntrack, root
