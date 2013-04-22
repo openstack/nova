@@ -2443,7 +2443,6 @@ class FixedIPTestCase(BaseInstanceTypeTestCase):
         ips_list = db.fixed_ips_by_virtual_interface(self.ctxt, vif.id)
         self.assertEquals(0, len(ips_list))
 
-    @test.testtools.skip("bug #1171161")
     def test_fixed_ip_count_by_project_one_ip(self):
         PROJECT_ID = "project_id"
         instance_uuid = self._create_instance(PROJECT_ID)
@@ -2453,7 +2452,6 @@ class FixedIPTestCase(BaseInstanceTypeTestCase):
         ips_count = db.fixed_ip_count_by_project(self.ctxt, PROJECT_ID)
         self.assertEquals(1, ips_count)
 
-    @test.testtools.skip("bug #1171161")
     def test_fixed_ip_count_by_project_two_ips_for_different_instances(self):
         PROJECT_ID = "project_id"
         instance_uuid = self._create_instance(PROJECT_ID)
