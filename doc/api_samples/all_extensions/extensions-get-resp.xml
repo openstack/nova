@@ -171,6 +171,9 @@
   <extension alias="os-quota-class-sets" updated="2012-03-12T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/quota-classes-sets/api/v1.1" name="QuotaClasses">
     <description>Quota classes management support.</description>
   </extension>
+  <extension alias="os-extended-quotas" updated="2013-05-23T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/quota-delete/api/v1.1" name="ExtendedQuotas">
+    <description>Adds ability for admins to delete quota.</description>
+  </extension>
   <extension alias="os-quota-sets" updated="2011-08-08T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/quotas-sets/api/v1.1" name="Quotas">
     <description>Quotas management support.</description>
   </extension>

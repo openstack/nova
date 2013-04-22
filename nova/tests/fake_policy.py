@@ -159,6 +159,7 @@ policy_data = """
     "compute_extension:os-tenant-networks": "",
     "compute_extension:quotas:show": "",
     "compute_extension:quotas:update": "",
+    "compute_extension:quotas:delete": "",
     "compute_extension:quota_classes": "",
     "compute_extension:rescue": "",
     "compute_extension:security_group_default_rules": "",

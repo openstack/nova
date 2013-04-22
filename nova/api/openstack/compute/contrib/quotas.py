@@ -33,6 +33,7 @@ LOG = logging.getLogger(__name__)
 
 authorize_update = extensions.extension_authorizer('compute', 'quotas:update')
 authorize_show = extensions.extension_authorizer('compute', 'quotas:show')
+authorize_delete = extensions.extension_authorizer('compute', 'quotas:delete')
 
 
 class QuotaTemplate(xmlutil.TemplateBuilder):
@@ -48,6 +49,9 @@ class QuotaTemplate(xmlutil.TemplateBuilder):
 
 
 class QuotaSetsController(object):
+
+    def __init__(self, ext_mgr):
+        self.ext_mgr = ext_mgr
 
     def _format_quota_set(self, project_id, quota_set):
         """Convert the quota object to a result dict."""
@@ -124,6 +128,18 @@ class QuotaSetsController(object):
         authorize_show(context)
         return self._format_quota_set(id, QUOTAS.get_defaults(context))
 
+    def delete(self, req, id):
+        if self.ext_mgr.is_loaded('os-extended-quotas'):
+            context = req.environ['nova.context']
+            authorize_delete(context)
+            try:
+                nova.context.authorize_project_context(context, id)
+                QUOTAS.destroy_all_by_project(context, id)
+                return webob.Response(status_int=202)
+            except exception.NotAuthorized:
+                raise webob.exc.HTTPForbidden()
+        raise webob.exc.HTTPNotFound()
+
 
 class Quotas(extensions.ExtensionDescriptor):
     """Quotas management support."""
@@ -137,7 +153,7 @@ class Quotas(extensions.ExtensionDescriptor):
         resources = []
 
         res = extensions.ResourceExtension('os-quota-sets',
-                                            QuotaSetsController(),
+                                            QuotaSetsController(self.ext_mgr),
                                             member_actions={'defaults': 'GET'})
         resources.append(res)
 

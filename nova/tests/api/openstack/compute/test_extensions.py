@@ -195,6 +195,7 @@ class ExtensionControllerTest(ExtensionTestCase):
             "MultipleCreate",
             "QuotaClasses",
             "Quotas",
+            "ExtendedQuotas",
             "Rescue",
             "SchedulerHints",
             "SecurityGroupDefaultRules",

@@ -156,6 +156,9 @@
   <extension alias="os-quota-class-sets" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/quota-classes-sets/api/v1.1" name="QuotaClasses">
     <description>%(text)s</description>
   </extension>
+  <extension alias="os-extended-quotas" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/quota-delete/api/v1.1" name="ExtendedQuotas">
+    <description>%(text)s</description>
+  </extension>
   <extension alias="os-quota-sets" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/quotas-sets/api/v1.1" name="Quotas">
     <description>%(text)s</description>
   </extension>
