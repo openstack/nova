@@ -696,9 +696,12 @@ class VMOps(object):
             self._session.call_xenapi('VM.add_to_VCPUs_params', vm_ref,
                                       'weight', str(vcpu_weight))
 
-    def _get_vm_opaque_ref(self, instance):
-        """Get xapi OpaqueRef from a db record."""
-        vm_ref = vm_utils.lookup(self._session, instance['name'])
+    def _get_vm_opaque_ref(self, instance, check_rescue=False):
+        """Get xapi OpaqueRef from a db record.
+        :param check_rescue: if True will return the 'name'-rescue vm if it
+                             exists, instead of just 'name'
+        """
+        vm_ref = vm_utils.lookup(self._session, instance['name'], check_rescue)
         if vm_ref is None:
             raise exception.NotFound(_('Could not find VM with name %s') %
                                      instance['name'])
@@ -975,7 +978,7 @@ class VMOps(object):
         # Note (salvatore-orlando): security group rules are not re-enforced
         # upon reboot, since this action on the XenAPI drivers does not
         # remove existing filters
-        vm_ref = self._get_vm_opaque_ref(instance)
+        vm_ref = self._get_vm_opaque_ref(instance, check_rescue=True)
 
         try:
             if reboot_type == "HARD":

@@ -1103,6 +1103,20 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self.assertRaises(xenapi_fake.Failure, conn.reboot, self.context,
                           instance, None, "SOFT")
 
+    def test_reboot_rescued(self):
+        instance = self._create_instance()
+        instance['vm_state'] = vm_states.RESCUED
+        conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
+
+        real_result = vm_utils.lookup(conn._session, instance['name'])
+
+        self.mox.StubOutWithMock(vm_utils, 'lookup')
+        vm_utils.lookup(conn._session, instance['name'],
+                        True).AndReturn(real_result)
+        self.mox.ReplayAll()
+
+        conn.reboot(self.context, instance, None, "SOFT")
+
     def _test_maintenance_mode(self, find_host, find_aggregate):
         real_call_xenapi = self.conn._session.call_xenapi
         instance = self._create_instance(spawn=True)
