@@ -134,7 +134,7 @@ def create(name, memory, vcpus, root_gb, ephemeral_gb=None, flavorid=None,
 
     try:
         return db.instance_type_create(context.get_admin_context(), kwargs)
-    except db_exc.DBError, e:
+    except db_exc.DBError as e:
         LOG.exception(_('DB error: %s') % e)
         raise exception.InstanceTypeCreateFailed()
 

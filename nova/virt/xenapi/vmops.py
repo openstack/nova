@@ -982,7 +982,7 @@ class VMOps(object):
                 self._session.call_xenapi('VM.hard_reboot', vm_ref)
             else:
                 self._session.call_xenapi('VM.clean_reboot', vm_ref)
-        except self._session.XenAPI.Failure, exc:
+        except self._session.XenAPI.Failure as exc:
             details = exc.details
             if (details[0] == 'VM_BAD_POWER_STATE' and
                     details[-1] == 'halted'):
@@ -1558,7 +1558,7 @@ class VMOps(object):
         args.update(addl_args)
         try:
             return self._session.call_plugin(plugin, method, args)
-        except self._session.XenAPI.Failure, e:
+        except self._session.XenAPI.Failure as e:
             err_msg = e.details[-1].splitlines()[-1]
             if 'TIMEOUT:' in err_msg:
                 LOG.error(_('TIMEOUT: The call to %(method)s timed out. '

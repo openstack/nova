@@ -68,7 +68,7 @@ def start_transfer(context, read_file_handle, data_size,
         # Wait on the read and write events to signal their end
         read_event.wait()
         write_event.wait()
-    except Exception, exc:
+    except Exception as exc:
         # In case of any of the reads or writes raising an exception,
         # stop the threads so that we un-necessarily don't keep the other one
         # waiting.

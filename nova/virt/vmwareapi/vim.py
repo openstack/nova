@@ -129,24 +129,24 @@ class Vim:
                 return response
             # Catch the VimFaultException that is raised by the fault
             # check of the SOAP response
-            except error_util.VimFaultException, excep:
+            except error_util.VimFaultException as excep:
                 raise
-            except suds.WebFault, excep:
+            except suds.WebFault as excep:
                 doc = excep.document
                 detail = doc.childAtPath("/Envelope/Body/Fault/detail")
                 fault_list = []
                 for child in detail.getChildren():
                     fault_list.append(child.get("type"))
                 raise error_util.VimFaultException(fault_list, excep)
-            except AttributeError, excep:
+            except AttributeError as excep:
                 raise error_util.VimAttributeError(_("No such SOAP method "
                      "'%s' provided by VI SDK") % (attr_name), excep)
             except (httplib.CannotSendRequest,
                     httplib.ResponseNotReady,
-                    httplib.CannotSendHeader), excep:
+                    httplib.CannotSendHeader) as excep:
                 raise error_util.SessionOverLoadException(_("httplib "
                                 "error in %s: ") % (attr_name), excep)
-            except Exception, excep:
+            except Exception as excep:
                 # Socket errors which need special handling for they
                 # might be caused by ESX API call overload
                 if (str(excep).find(ADDRESS_IN_USE_ERROR) != -1 or

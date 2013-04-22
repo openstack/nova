@@ -106,7 +106,7 @@ class VFSGuestFS(vfs.VFS):
             self.setup_os()
 
             self.handle.aug_init("/", 0)
-        except RuntimeError, e:
+        except RuntimeError as e:
             # dereference object and implicitly close()
             self.handle = None
             raise exception.NovaException(
@@ -122,7 +122,7 @@ class VFSGuestFS(vfs.VFS):
         try:
             try:
                 self.handle.aug_close()
-            except RuntimeError, e:
+            except RuntimeError as e:
                 LOG.warn(_("Failed to close augeas %s"), e)
 
             try:
@@ -130,7 +130,7 @@ class VFSGuestFS(vfs.VFS):
             except AttributeError:
                 # Older libguestfs versions haven't an explicit shutdown
                 pass
-            except RuntimeError, e:
+            except RuntimeError as e:
                 LOG.warn(_("Failed to shutdown appliance %s"), e)
 
             try:
@@ -138,7 +138,7 @@ class VFSGuestFS(vfs.VFS):
             except AttributeError:
                 # Older libguestfs versions haven't an explicit close
                 pass
-            except RuntimeError, e:
+            except RuntimeError as e:
                 LOG.warn(_("Failed to close guest handle %s"), e)
         finally:
             # dereference object and implicitly close()

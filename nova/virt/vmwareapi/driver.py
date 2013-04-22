@@ -443,7 +443,7 @@ class VMwareAPISession(object):
                         self.vim.TerminateSession(
                                 self.vim.get_service_content().sessionManager,
                                 sessionId=[self._session_id])
-                    except Exception, excep:
+                    except Exception as excep:
                         # This exception is something we can live with. It is
                         # just an extra caution on our side. The session may
                         # have been cleared. We could have made a call to
@@ -452,7 +452,7 @@ class VMwareAPISession(object):
                         LOG.debug(excep)
                 self._session_id = session.key
                 return
-            except Exception, excep:
+            except Exception as excep:
                 LOG.critical(_("In vmwareapi:_create_session, "
                               "got this exception: %s") % excep)
                 raise exception.NovaException(excep)
@@ -463,7 +463,7 @@ class VMwareAPISession(object):
         # ESX host
         try:
             self.vim.Logout(self.vim.get_service_content().sessionManager)
-        except Exception, excep:
+        except Exception as excep:
             # It is just cautionary on our part to do a logout in del just
             # to ensure that the session is not left active.
             LOG.debug(excep)
@@ -496,7 +496,7 @@ class VMwareAPISession(object):
                     temp_module = getattr(temp_module, method_elem)
 
                 return temp_module(*args, **kwargs)
-            except error_util.VimFaultException, excep:
+            except error_util.VimFaultException as excep:
                 # If it is a Session Fault Exception, it may point
                 # to a session gone bad. So we try re-creating a session
                 # and then proceeding ahead with the call.
@@ -520,11 +520,11 @@ class VMwareAPISession(object):
                     # and is the caller's fault. Caller should handle these
                     # errors. e.g, InvalidArgument fault.
                     break
-            except error_util.SessionOverLoadException, excep:
+            except error_util.SessionOverLoadException as excep:
                 # For exceptions which may come because of session overload,
                 # we retry
                 exc = excep
-            except Exception, excep:
+            except Exception as excep:
                 # If it is a proper exception, say not having furnished
                 # proper data in the SOAP call or the retry limit having
                 # exceeded, we raise the exception
@@ -579,6 +579,6 @@ class VMwareAPISession(object):
                 LOG.warn(_("Task [%(task_name)s] %(task_ref)s "
                           "status: error %(error_info)s") % locals())
                 done.send_exception(exception.NovaException(error_info))
-        except Exception, excep:
+        except Exception as excep:
             LOG.warn(_("In vmwareapi:_poll_task, Got this error %s") % excep)
             done.send_exception(excep)

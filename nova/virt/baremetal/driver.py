@@ -307,7 +307,7 @@ class BareMetalDriver(driver.ComputeDriver):
             self._unplug_vifs(instance, network_info)
 
             _update_state(context, node, None, baremetal_states.DELETED)
-        except Exception, e:
+        except Exception as e:
             with excutils.save_and_reraise_exception():
                 try:
                     LOG.error(_("Error from baremetal driver "

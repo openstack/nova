@@ -124,7 +124,7 @@ class GlanceWriteThread(object):
                                             "state": image_status}
                         LOG.error(msg)
                         self.done.send_exception(exception.NovaException(msg))
-                except Exception, exc:
+                except Exception as exc:
                     self.stop()
                     self.done.send_exception(exc)
 
@@ -166,7 +166,7 @@ class IOThread(object):
                         self.done.send(True)
                     self.output.write(data)
                     greenthread.sleep(IO_THREAD_SLEEP_TIME)
-                except Exception, exc:
+                except Exception as exc:
                     self.stop()
                     LOG.exception(exc)
                     self.done.send_exception(exc)

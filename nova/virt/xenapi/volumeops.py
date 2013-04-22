@@ -172,7 +172,7 @@ class VolumeOps(object):
                 # within XenServer, update this to fail-fast when this is fixed
                 # upstream
                 self._session.call_xenapi("SR.scan", sr_ref)
-            except self._session.XenAPI.Failure, exc:
+            except self._session.XenAPI.Failure as exc:
                 if exc.details[0] == 'SR_BACKEND_FAILURE_40':
                     vbd_rec = vbd_rec = self._session.call_xenapi(
                             "VBD.get_record", vbd_ref)

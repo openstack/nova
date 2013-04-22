@@ -99,7 +99,7 @@ def find_sr_from_vbd(session, vbd_ref):
     try:
         vdi_ref = session.call_xenapi("VBD.get_VDI", vbd_ref)
         sr_ref = session.call_xenapi("VDI.get_SR", vdi_ref)
-    except session.XenAPI.Failure, exc:
+    except session.XenAPI.Failure as exc:
         LOG.exception(exc)
         raise StorageError(_('Unable to find SR from VBD %s') % vbd_ref)
     return sr_ref
@@ -117,7 +117,7 @@ def create_pbd(session, sr_ref, params):
 def unplug_pbds(session, sr_ref):
     try:
         pbds = session.call_xenapi("SR.get_PBDs", sr_ref)
-    except session.XenAPI.Failure, exc:
+    except session.XenAPI.Failure as exc:
         LOG.warn(_('Ignoring exception %(exc)s when getting PBDs'
                    ' for %(sr_ref)s') % locals())
         return
@@ -125,7 +125,7 @@ def unplug_pbds(session, sr_ref):
     for pbd in pbds:
         try:
             session.call_xenapi("PBD.unplug", pbd)
-        except session.XenAPI.Failure, exc:
+        except session.XenAPI.Failure as exc:
             LOG.warn(_('Ignoring exception %(exc)s when unplugging'
                        ' PBD %(pbd)s') % locals())
 
@@ -148,7 +148,7 @@ def introduce_vdi(session, sr_ref, vdi_uuid=None, target_lun=None):
                     break
         else:
             vdi_ref = (session.call_xenapi("SR.get_VDIs", sr_ref))[0]
-    except session.XenAPI.Failure, exc:
+    except session.XenAPI.Failure as exc:
         LOG.exception(exc)
         raise StorageError(_('Unable to introduce VDI on SR %s') % sr_ref)
 
@@ -156,7 +156,7 @@ def introduce_vdi(session, sr_ref, vdi_uuid=None, target_lun=None):
         vdi_rec = session.call_xenapi("VDI.get_record", vdi_ref)
         LOG.debug(vdi_rec)
         LOG.debug(type(vdi_rec))
-    except session.XenAPI.Failure, exc:
+    except session.XenAPI.Failure as exc:
         LOG.exception(exc)
         raise StorageError(_('Unable to get record'
                              ' of VDI %s on') % vdi_ref)
@@ -178,7 +178,7 @@ def introduce_vdi(session, sr_ref, vdi_uuid=None, target_lun=None):
                                     vdi_rec['location'],
                                     vdi_rec['xenstore_data'],
                                     vdi_rec['sm_config'])
-    except session.XenAPI.Failure, exc:
+    except session.XenAPI.Failure as exc:
         LOG.exception(exc)
         raise StorageError(_('Unable to introduce VDI for SR %s')
                             % sr_ref)

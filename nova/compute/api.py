@@ -2655,7 +2655,7 @@ class AggregateAPI(base.Base):
                     self.db.aggregate_metadata_delete(context,
                                                       aggregate_id, key)
                     metadata.pop(key)
-                except exception.AggregateMetadataNotFound, e:
+                except exception.AggregateMetadataNotFound as e:
                     LOG.warn(e.message)
         self.db.aggregate_metadata_add(context, aggregate_id, metadata)
         return self.get_aggregate(context, aggregate_id)

@@ -45,7 +45,7 @@ def inject_into_image(image, key, net, metadata, admin_password,
 def unlink_without_raise(path):
     try:
         os.unlink(path)
-    except OSError, e:
+    except OSError as e:
         if e.errno == errno.ENOENT:
             return
         else:
@@ -56,7 +56,7 @@ def rmtree_without_raise(path):
     try:
         if os.path.isdir(path):
             shutil.rmtree(path)
-    except OSError, e:
+    except OSError as e:
         LOG.warn(_("Failed to remove dir %(path)s, error: %(e)s") % locals())
 
 
@@ -68,7 +68,7 @@ def write_to_file(path, contents):
 def create_link_without_raise(source, link):
     try:
         os.symlink(source, link)
-    except OSError, e:
+    except OSError as e:
         if e.errno == errno.EEXIST:
             return
         else:

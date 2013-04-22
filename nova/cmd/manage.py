@@ -839,7 +839,7 @@ class InstanceTypeCommands(object):
             instance_types.create(name, memory, vcpus, root_gb,
                                   ephemeral_gb, flavorid, swap, rxtx_factor,
                                   is_public)
-        except exception.InvalidInput, e:
+        except exception.InvalidInput as e:
             print _("Must supply valid parameters to create instance_type")
             print e
             return(1)
@@ -865,7 +865,7 @@ class InstanceTypeCommands(object):
         except exception.InstanceTypeNotFound:
             print _("Valid instance type name is required")
             return(1)
-        except db_exc.DBError, e:
+        except db_exc.DBError as e:
             print _("DB Error: %s") % e
             return(2)
         except Exception:
@@ -881,7 +881,7 @@ class InstanceTypeCommands(object):
                 inst_types = instance_types.get_all_types()
             else:
                 inst_types = instance_types.get_instance_type_by_name(name)
-        except db_exc.DBError, e:
+        except db_exc.DBError as e:
             _db_error(e)
         if isinstance(inst_types.values()[0], dict):
             for k, v in inst_types.iteritems():
@@ -897,7 +897,7 @@ class InstanceTypeCommands(object):
         try:
             try:
                 inst_type = instance_types.get_instance_type_by_name(name)
-            except exception.InstanceTypeNotFoundByName, e:
+            except exception.InstanceTypeNotFoundByName as e:
                 print e
                 return(2)
 
@@ -909,7 +909,7 @@ class InstanceTypeCommands(object):
                             ext_spec)
             print _("Key %(key)s set to %(value)s on instance"
                     " type %(name)s") % locals()
-        except db_exc.DBError, e:
+        except db_exc.DBError as e:
             _db_error(e)
 
     @args('--name', metavar='<name>', help='Name of instance type/flavor')
@@ -919,7 +919,7 @@ class InstanceTypeCommands(object):
         try:
             try:
                 inst_type = instance_types.get_instance_type_by_name(name)
-            except exception.InstanceTypeNotFoundByName, e:
+            except exception.InstanceTypeNotFoundByName as e:
                 print e
                 return(2)
 
@@ -930,7 +930,7 @@ class InstanceTypeCommands(object):
                         key)
 
             print _("Key %(key)s on instance type %(name)s unset") % locals()
-        except db_exc.DBError, e:
+        except db_exc.DBError as e:
             _db_error(e)
 
 

@@ -80,7 +80,7 @@ class VMwareHTTPFile(object):
         """Close the file handle."""
         try:
             self.file_handle.close()
-        except Exception, exc:
+        except Exception as exc:
             LOG.exception(exc)
 
     def __del__(self):
@@ -138,7 +138,7 @@ class VMwareHTTPWriteFile(VMwareHTTPFile):
         """Get the response and close the connection."""
         try:
             self.conn.getresponse()
-        except Exception, excep:
+        except Exception as excep:
             LOG.debug(_("Exception during HTTP connection close in "
                       "VMwareHTTPWrite. Exception is %s") % excep)
         super(VMwareHTTPWriteFile, self).close()

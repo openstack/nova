@@ -145,7 +145,7 @@ def can_resize_fs(image, size, use_cow=False):
             fs = vfs.VFS.instance_for_image(image, 'qcow2', None)
             fs.setup()
             fs.teardown()
-        except exception.NovaException, e:
+        except exception.NovaException as e:
             LOG.debug(_('Unable to mount image %(image)s with '
                         'error %(error)s. Cannot resize.'),
                       {'image': image,
@@ -155,7 +155,7 @@ def can_resize_fs(image, size, use_cow=False):
         # For raw, we can directly inspect the file system
         try:
             utils.execute('e2label', image)
-        except exception.ProcessExecutionError, e:
+        except exception.ProcessExecutionError as e:
             LOG.debug(_('Unable to determine label for image %(image)s with '
                         'error %(errror)s. Cannot resize.'),
                       {'image': image,
@@ -331,7 +331,7 @@ def teardown_container(container_dir):
     try:
         img = _DiskImage(image=None, mount_dir=container_dir)
         img.teardown()
-    except Exception, exn:
+    except Exception as exn:
         LOG.exception(_('Failed to teardown ntainer filesystem: %s'), exn)
 
 
@@ -344,7 +344,7 @@ def clean_lxc_namespace(container_dir):
     try:
         img = _DiskImage(image=None, mount_dir=container_dir)
         img.umount()
-    except Exception, exn:
+    except Exception as exn:
         LOG.exception(_('Failed to umount container filesystem: %s'), exn)
 
 

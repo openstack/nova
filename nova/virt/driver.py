@@ -926,7 +926,7 @@ class ComputeDriver(object):
         try:
             LOG.debug("Emitting event %s" % str(event))
             self._compute_event_callback(event)
-        except Exception, ex:
+        except Exception as ex:
             LOG.error(_("Exception dispatching event %(event)s: %(ex)s")
                         % locals())
 

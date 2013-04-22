@@ -654,13 +654,13 @@ class VMwareVMOps(object):
                     "Destroy_Task", vm_ref)
                 self._session._wait_for_task(instance['uuid'], destroy_task)
                 LOG.debug(_("Destroyed the VM"), instance=instance)
-            except Exception, excep:
+            except Exception as excep:
                 LOG.warn(_("In vmwareapi:vmops:delete, got this exception"
                            " while destroying the VM: %s") % str(excep))
 
             if network_info:
                 self.unplug_vifs(instance, network_info)
-        except Exception, exc:
+        except Exception as exc:
             LOG.exception(exc, instance=instance)
 
     def destroy(self, instance, network_info, destroy_disks=True):
@@ -706,7 +706,7 @@ class VMwareVMOps(object):
                 self._session._call_method(self._session._get_vim(),
                                            "UnregisterVM", vm_ref)
                 LOG.debug(_("Unregistered the VM"), instance=instance)
-            except Exception, excep:
+            except Exception as excep:
                 LOG.warn(_("In vmwareapi:vmops:destroy, got this exception"
                            " while un-registering the VM: %s") % str(excep))
 
@@ -736,12 +736,12 @@ class VMwareVMOps(object):
                                 "datastore %(datastore_name)s") %
                                {'datastore_name': datastore_name},
                               instance=instance)
-                except Exception, excep:
+                except Exception as excep:
                     LOG.warn(_("In vmwareapi:vmops:destroy, "
                                  "got this exception while deleting"
                                  " the VM contents from the disk: %s")
                                  % str(excep))
-        except Exception, exc:
+        except Exception as exc:
             LOG.exception(exc, instance=instance)
 
     def pause(self, instance):
@@ -977,7 +977,7 @@ class VMwareVMOps(object):
                                         "Destroy_Task", vm_ref)
             self._session._wait_for_task(instance['uuid'], destroy_task)
             LOG.debug(_("Destroyed the VM"), instance=instance)
-        except Exception, excep:
+        except Exception as excep:
             LOG.warn(_("In vmwareapi:vmops:confirm_migration, got this "
                      "exception while destroying the VM: %s") % str(excep))
 

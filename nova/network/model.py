@@ -69,7 +69,7 @@ class IP(Model):
         if self['address'] and not self['version']:
             try:
                 self['version'] = netaddr.IPAddress(self['address']).version
-            except netaddr.AddrFormatError, e:
+            except netaddr.AddrFormatError as e:
                 raise exception.InvalidIpAddressError(self['address'])
 
     def __eq__(self, other):

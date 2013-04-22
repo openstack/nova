@@ -228,7 +228,7 @@ def wrap_instance_fault(function):
             return function(self, context, *args, **kwargs)
         except exception.InstanceNotFound:
             raise
-        except Exception, e:
+        except Exception as e:
             # NOTE(gtt): If argument 'instance' is in args rather than kwargs,
             # we will get a KeyError exception which will cover up the real
             # exception. So, we update kwargs with the values from args first.
@@ -525,7 +525,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                     instance, self._legacy_nw_info(net_info),
                     self._get_instance_volume_block_device_info(context,
                                                                 instance))
-            except Exception, e:
+            except Exception as e:
                 LOG.exception(_('Failed to revert crashed migration'),
                               instance=instance)
             finally:
@@ -1948,7 +1948,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 # interrupted by another (most likely delete) task
                 # do not retry
                 raise
-            except Exception, e:
+            except Exception as e:
                 # Catch all here because this could be anything.
                 LOG.exception(_('set_admin_password failed: %s') % e,
                               instance=instance)
@@ -3541,7 +3541,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 try:
                     self.conductor_api.compute_confirm_resize(
                         context, instance, migration_ref=migration)
-                except Exception, e:
+                except Exception as e:
                     msg = _("Error auto-confirming resize: %(e)s. "
                             "Will retry later.")
                     LOG.error(msg % locals(), instance=instance)

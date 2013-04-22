@@ -82,7 +82,7 @@ def _call_agent(session, instance, vm_ref, method, addl_args=None,
 
     try:
         ret = session.call_plugin('agent', method, args)
-    except session.XenAPI.Failure, e:
+    except session.XenAPI.Failure as e:
         err_msg = e.details[-1].splitlines()[-1]
         if 'TIMEOUT:' in err_msg:
             LOG.error(_('TIMEOUT: The call to %(method)s timed out. '

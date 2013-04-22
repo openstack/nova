@@ -276,7 +276,7 @@ def destroy_vm(session, instance, vm_ref):
     """Destroys a VM record."""
     try:
         session.call_xenapi('VM.destroy', vm_ref)
-    except session.XenAPI.Failure, exc:
+    except session.XenAPI.Failure as exc:
         LOG.exception(exc)
         return
 
@@ -292,7 +292,7 @@ def clean_shutdown_vm(session, instance, vm_ref):
     LOG.debug(_("Shutting down VM (cleanly)"), instance=instance)
     try:
         session.call_xenapi('VM.clean_shutdown', vm_ref)
-    except session.XenAPI.Failure, exc:
+    except session.XenAPI.Failure as exc:
         LOG.exception(exc)
         return False
     return True
@@ -307,7 +307,7 @@ def hard_shutdown_vm(session, instance, vm_ref):
     LOG.debug(_("Shutting down VM (hard)"), instance=instance)
     try:
         session.call_xenapi('VM.hard_shutdown', vm_ref)
-    except session.XenAPI.Failure, exc:
+    except session.XenAPI.Failure as exc:
         LOG.exception(exc)
         return False
     return True
@@ -339,7 +339,7 @@ def find_vbd_by_number(session, vm_ref, number):
                 vbd_rec = session.call_xenapi("VBD.get_record", vbd_ref)
                 if vbd_rec['userdevice'] == str(number):
                     return vbd_ref
-            except session.XenAPI.Failure, exc:
+            except session.XenAPI.Failure as exc:
                 LOG.exception(exc)
     raise volume_utils.StorageError(
             _('VBD not found in instance %s') % vm_ref)
@@ -356,7 +356,7 @@ def unplug_vbd(session, vbd_ref):
         try:
             session.call_xenapi('VBD.unplug', vbd_ref)
             return
-        except session.XenAPI.Failure, exc:
+        except session.XenAPI.Failure as exc:
             err = len(exc.details) > 0 and exc.details[0]
             if err == 'DEVICE_ALREADY_DETACHED':
                 LOG.info(_('VBD %s already detached'), vbd_ref)
@@ -380,7 +380,7 @@ def destroy_vbd(session, vbd_ref):
     """Destroy VBD from host database."""
     try:
         session.call_xenapi('VBD.destroy', vbd_ref)
-    except session.XenAPI.Failure, exc:
+    except session.XenAPI.Failure as exc:
         LOG.exception(exc)
         raise volume_utils.StorageError(
                 _('Unable to destroy VBD %s') % vbd_ref)
@@ -431,7 +431,7 @@ def attach_cd(session, vm_ref, vdi_ref, userdevice):
 def destroy_vdi(session, vdi_ref):
     try:
         session.call_xenapi('VDI.destroy', vdi_ref)
-    except session.XenAPI.Failure, exc:
+    except session.XenAPI.Failure as exc:
         LOG.exception(exc)
         raise volume_utils.StorageError(
                 _('Unable to destroy VDI %s') % vdi_ref)
@@ -493,7 +493,7 @@ def get_vdi_uuid_for_volume(session, connection_data):
             vdi_ref = volume_utils.introduce_vdi(session, sr_ref)
             vdi_rec = session.call_xenapi("VDI.get_record", vdi_ref)
             vdi_uuid = vdi_rec['uuid']
-        except volume_utils.StorageError, exc:
+        except volume_utils.StorageError as exc:
             LOG.exception(exc)
             volume_utils.forget_sr(session, sr_ref)
 
@@ -1389,7 +1389,7 @@ def lookup_vm_vdis(session, vm_ref):
                 if not vbd_other_config.get('osvol'):
                     # This is not an attached volume
                     vdi_refs.append(vdi_ref)
-            except session.XenAPI.Failure, exc:
+            except session.XenAPI.Failure as exc:
                 LOG.exception(exc)
     return vdi_refs
 
@@ -1892,7 +1892,7 @@ def cleanup_attached_vdis(session):
         try:
             vbd_rec = session.call_xenapi('VBD.get_record', vbd_ref)
             vdi_rec = session.call_xenapi('VDI.get_record', vbd_rec['VDI'])
-        except session.XenAPI.Failure, e:
+        except session.XenAPI.Failure as e:
             if e.details[0] != 'HANDLE_INVALID':
                 raise
             continue

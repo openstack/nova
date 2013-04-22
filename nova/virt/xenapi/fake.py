@@ -864,7 +864,7 @@ class SessionBase(object):
                 result = as_value(result)
             task['result'] = result
             task['status'] = 'success'
-        except Failure, exc:
+        except Failure as exc:
             task['error_info'] = exc.details
             task['status'] = 'failed'
         task['finished'] = timeutils.utcnow()

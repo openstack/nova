@@ -638,7 +638,7 @@ class XenAPISession(object):
             session = self._create_session(url)
             with timeout.Timeout(CONF.xenapi_login_timeout, exception):
                 session.login_with_password(user, pw)
-        except self.XenAPI.Failure, e:
+        except self.XenAPI.Failure as e:
             # if user and pw of the master are different, we're doomed!
             if e.details[0] == 'HOST_IS_SLAVE':
                 master = e.details[1]
@@ -747,7 +747,7 @@ class XenAPISession(object):
         """Parse exception details."""
         try:
             return func(*args, **kwargs)
-        except self.XenAPI.Failure, exc:
+        except self.XenAPI.Failure as exc:
             LOG.debug(_("Got exception: %s"), exc)
             if (len(exc.details) == 4 and
                 exc.details[0] == 'XENAPI_PLUGIN_EXCEPTION' and
@@ -761,14 +761,14 @@ class XenAPISession(object):
                 raise self.XenAPI.Failure(params)
             else:
                 raise
-        except xmlrpclib.ProtocolError, exc:
+        except xmlrpclib.ProtocolError as exc:
             LOG.debug(_("Got exception: %s"), exc)
             raise
 
     def get_rec(self, record_type, ref):
         try:
             return self.call_xenapi('%s.get_record' % record_type, ref)
-        except self.XenAPI.Failure, e:
+        except self.XenAPI.Failure as e:
             if e.details[0] != 'HANDLE_INVALID':
                 raise
 

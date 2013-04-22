@@ -60,7 +60,7 @@ def _load_config():
         NOVA_PACKAGE = cfg.get("Nova", "package")
         if cfg.has_option("Nova", "package"):
             NOVA_PACKAGE = cfg.get("Nova", "package")
-    except Exception, ex:
+    except Exception as ex:
         LOG = logging.getLogger(__name__)
         LOG.error("Failed to load %(cfgfile)s: %(ex)s" % locals())
 

@@ -229,7 +229,7 @@ class VMOps(object):
         with configdrive.ConfigDriveBuilder(instance_md=inst_md) as cdb:
             try:
                 cdb.make_drive(configdrive_path_iso)
-            except exception.ProcessExecutionError, e:
+            except exception.ProcessExecutionError as e:
                 with excutils.save_and_reraise_exception():
                     LOG.error(_('Creating config drive failed with error: %s'),
                               e, instance=instance)

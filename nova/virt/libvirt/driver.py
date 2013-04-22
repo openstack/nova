@@ -566,7 +566,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     libvirt.VIR_DOMAIN_EVENT_ID_LIFECYCLE,
                     self._event_lifecycle_callback,
                     self)
-            except Exception, e:
+            except Exception as e:
                 LOG.warn(_("URI %s does not support events"),
                          self.uri())
 
@@ -853,7 +853,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 # the instance as whole.
                 try:
                     shutil.rmtree(target)
-                except OSError, e:
+                except OSError as e:
                     LOG.error(_("Failed to cleanup directory %(target)s: %(e)s"
                                 ) % locals())
 
@@ -966,7 +966,7 @@ class LibvirtDriver(driver.ComputeDriver):
             if state == power_state.RUNNING:
                 flags |= libvirt.VIR_DOMAIN_AFFECT_LIVE
             virt_dom.attachDeviceFlags(conf.to_xml(), flags)
-        except Exception, ex:
+        except Exception as ex:
             if isinstance(ex, libvirt.libvirtError):
                 errcode = ex.get_error_code()
                 if errcode == libvirt.VIR_ERR_OPERATION_FAILED:
@@ -1671,7 +1671,7 @@ class LibvirtDriver(driver.ComputeDriver):
             os.close(f)
             LOG.debug(_("Path '%(path)s' supports direct I/O") %
                       {'path': dirpath})
-        except OSError, e:
+        except OSError as e:
             if e.errno == errno.EINVAL:
                 LOG.debug(_("Path '%(path)s' does not support direct I/O: "
                             "'%(ex)s'") % {'path': dirpath, 'ex': str(e)})
@@ -1681,7 +1681,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     LOG.error(_("Error on '%(path)s' while checking "
                                 "direct I/O: '%(ex)s'") %
                                 {'path': dirpath, 'ex': str(e)})
-        except Exception, e:
+        except Exception as e:
             with excutils.save_and_reraise_exception():
                 LOG.error(_("Error on '%(path)s' while checking direct I/O: "
                             "'%(ex)s'") % {'path': dirpath, 'ex': str(e)})
@@ -1869,7 +1869,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
                 try:
                     cdb.make_drive(configdrive_path)
-                except exception.ProcessExecutionError, e:
+                except exception.ProcessExecutionError as e:
                     with excutils.save_and_reraise_exception():
                         LOG.error(_('Creating config drive failed '
                                   'with error: %s'),
@@ -3001,7 +3001,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # unknown character exists in xml, then libvirt complains
         try:
             ret = self._conn.compareCPU(cpu.to_xml(), 0)
-        except libvirt.libvirtError, e:
+        except libvirt.libvirtError as e:
             with excutils.save_and_reraise_exception():
                 ret = e.message
                 LOG.error(m % locals())

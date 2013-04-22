@@ -173,7 +173,7 @@ class ConfigDriveBuilder(object):
 
         try:
             shutil.rmtree(self.tempdir)
-        except OSError, e:
+        except OSError as e:
             LOG.error(_('Could not remove tmpdir: %s'), str(e))
 
 

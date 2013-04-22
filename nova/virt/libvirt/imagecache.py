@@ -136,7 +136,7 @@ def _read_possible_json(serialized, info_file):
     try:
         d = jsonutils.loads(serialized)
 
-    except ValueError, e:
+    except ValueError as e:
         LOG.error(_('Error reading image info file %(filename)s: '
                     '%(error)s'),
                   {'filename': info_file,
@@ -478,7 +478,7 @@ class ImageCacheManager(object):
                 signature = get_info_filename(base_file)
                 if os.path.exists(signature):
                     os.remove(signature)
-            except OSError, e:
+            except OSError as e:
                 LOG.error(_('Failed to remove %(base_file)s, '
                             'error was %(error)s'),
                           {'base_file': base_file,

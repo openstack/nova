@@ -183,7 +183,7 @@ class PowerVMOperator(object):
                 vhost = self._operator.get_vhost_by_instance_id(lpar_id)
                 self._operator.attach_disk_to_vhost(
                         root_volume['device_name'], vhost)
-            except Exception, e:
+            except Exception as e:
                 LOG.exception(_("PowerVM image creation failed: %s") % str(e))
                 raise exception.PowerVMImageCreationFailed()
 
