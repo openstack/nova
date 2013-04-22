@@ -1331,8 +1331,10 @@ class NetworkManager(manager.Manager):
                                    project_only="allow_none")
 
     def _get_networks_by_uuids(self, context, network_uuids):
-        return self.db.network_get_all_by_uuids(context, network_uuids,
-                                                project_only="allow_none")
+        networks = self.db.network_get_all_by_uuids(context, network_uuids,
+                                                    project_only="allow_none")
+        networks.sort(key=lambda x: network_uuids.index(x['uuid']))
+        return networks
 
     def get_vifs_by_instance(self, context, instance_id):
         """Returns the vifs associated with an instance."""
@@ -1766,8 +1768,10 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
         # NOTE(vish): Don't allow access to networks with project_id=None as
         #             these are networks that haven't been allocated to a
         #             project yet.
-        return self.db.network_get_all_by_uuids(context, network_uuids,
-                                                project_only=True)
+        networks = self.db.network_get_all_by_uuids(context, network_uuids,
+                                                    project_only=True)
+        networks.sort(key=lambda x: network_uuids.index(x['uuid']))
+        return networks
 
     def _get_networks_for_instance(self, context, instance_id, project_id,
                                    requested_networks=None):
