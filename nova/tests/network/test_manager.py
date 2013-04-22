@@ -2,6 +2,7 @@
 
 # Copyright 2011 Rackspace
 # Copyright (c) 2011 X.commerce, a business unit of eBay Inc.
+# Copyright 2013 IBM Corp.
 # All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -212,14 +213,24 @@ class FlatNetworkTestCase(test.TestCase):
         self.mox.StubOutWithMock(db, 'fixed_ip_get_by_address')
 
         requested_networks = [('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
-                               '192.168.1.100')]
+                               '192.168.1.100'),
+                              ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+                               '192.168.0.100')]
         db.network_get_all_by_uuids(mox.IgnoreArg(), mox.IgnoreArg(),
-                project_only=mox.IgnoreArg()).AndReturn(networks)
+                project_only=mox.IgnoreArg()).AndReturn(networks[:])
+
         db.network_get(mox.IgnoreArg(),
                        mox.IgnoreArg(),
                        project_only=mox.IgnoreArg()).AndReturn(networks[1])
+        db.network_get(mox.IgnoreArg(),
+                       mox.IgnoreArg(),
+                       project_only=mox.IgnoreArg()).AndReturn(networks[0])
 
         ip = fixed_ips[1].copy()
+        ip['instance_uuid'] = None
+        db.fixed_ip_get_by_address(mox.IgnoreArg(),
+                                   mox.IgnoreArg()).AndReturn(ip)
+        ip = fixed_ips[0].copy()
         ip['instance_uuid'] = None
         db.fixed_ip_get_by_address(mox.IgnoreArg(),
                                    mox.IgnoreArg()).AndReturn(ip)
@@ -249,9 +260,12 @@ class FlatNetworkTestCase(test.TestCase):
 
     def test_validate_networks_invalid_fixed_ip(self):
         self.mox.StubOutWithMock(db, 'network_get_all_by_uuids')
-        requested_networks = [(1, "192.168.0.100.1")]
+        requested_networks = [('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+                               '192.168.1.100.1'),
+                              ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+                               '192.168.0.100.1')]
         db.network_get_all_by_uuids(mox.IgnoreArg(), mox.IgnoreArg(),
-                project_only=mox.IgnoreArg()).AndReturn(networks)
+                project_only=mox.IgnoreArg()).AndReturn(networks[:])
         self.mox.ReplayAll()
 
         self.assertRaises(exception.FixedIpInvalid,
@@ -261,9 +275,12 @@ class FlatNetworkTestCase(test.TestCase):
     def test_validate_networks_empty_fixed_ip(self):
         self.mox.StubOutWithMock(db, 'network_get_all_by_uuids')
 
-        requested_networks = [(1, "")]
+        requested_networks = [('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+                               ''),
+                              ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+                               '')]
         db.network_get_all_by_uuids(mox.IgnoreArg(), mox.IgnoreArg(),
-                project_only=mox.IgnoreArg()).AndReturn(networks)
+                project_only=mox.IgnoreArg()).AndReturn(networks[:])
         self.mox.ReplayAll()
 
         self.assertRaises(exception.FixedIpInvalid,
@@ -273,9 +290,12 @@ class FlatNetworkTestCase(test.TestCase):
     def test_validate_networks_none_fixed_ip(self):
         self.mox.StubOutWithMock(db, 'network_get_all_by_uuids')
 
-        requested_networks = [(1, None)]
+        requested_networks = [('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+                               None),
+                              ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+                               None)]
         db.network_get_all_by_uuids(mox.IgnoreArg(), mox.IgnoreArg(),
-                project_only=mox.IgnoreArg()).AndReturn(networks)
+                project_only=mox.IgnoreArg()).AndReturn(networks[:])
         self.mox.ReplayAll()
 
         self.network.validate_networks(self.context, requested_networks)
@@ -488,6 +508,21 @@ class FlatNetworkTestCase(test.TestCase):
                                                                None, None),
                          None)
 
+    def test_get_networks_by_uuids_ordering(self):
+        self.mox.StubOutWithMock(db, 'network_get_all_by_uuids')
+
+        requested_networks = ['bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+                              'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa']
+        db.network_get_all_by_uuids(mox.IgnoreArg(), mox.IgnoreArg(),
+                project_only=mox.IgnoreArg()).AndReturn(networks[:])
+
+        self.mox.ReplayAll()
+        res = self.network._get_networks_by_uuids(self.context,
+                                                  requested_networks)
+
+        self.assertEqual(res[0]['id'], 1)
+        self.assertEqual(res[1]['id'], 0)
+
 
 class VlanNetworkTestCase(test.TestCase):
     def setUp(self):
@@ -581,15 +616,21 @@ class VlanNetworkTestCase(test.TestCase):
         self.mox.StubOutWithMock(db, 'network_get_all_by_uuids')
         self.mox.StubOutWithMock(db, "fixed_ip_get_by_address")
 
-        requested_networks = [("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
-                               "192.168.1.100")]
+        requested_networks = [('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+                               '192.168.1.100'),
+                              ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+                               '192.168.0.100')]
         db.network_get_all_by_uuids(mox.IgnoreArg(), mox.IgnoreArg(),
-                project_only=mox.IgnoreArg()).AndReturn(networks)
+                project_only=mox.IgnoreArg()).AndReturn(networks[:])
 
         fixed_ips[1]['network_id'] = networks[1]['id']
         fixed_ips[1]['instance_uuid'] = None
         db.fixed_ip_get_by_address(mox.IgnoreArg(),
-                                    mox.IgnoreArg()).AndReturn(fixed_ips[1])
+                                   mox.IgnoreArg()).AndReturn(fixed_ips[1])
+        fixed_ips[0]['network_id'] = networks[0]['id']
+        fixed_ips[0]['instance_uuid'] = None
+        db.fixed_ip_get_by_address(mox.IgnoreArg(),
+                                   mox.IgnoreArg()).AndReturn(fixed_ips[0])
 
         self.mox.ReplayAll()
         self.network.validate_networks(self.context, requested_networks)
@@ -605,9 +646,12 @@ class VlanNetworkTestCase(test.TestCase):
 
     def test_validate_networks_invalid_fixed_ip(self):
         self.mox.StubOutWithMock(db, 'network_get_all_by_uuids')
-        requested_networks = [(1, "192.168.0.100.1")]
+        requested_networks = [('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+                               '192.168.1.100.1'),
+                              ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+                               '192.168.0.100.1')]
         db.network_get_all_by_uuids(mox.IgnoreArg(), mox.IgnoreArg(),
-                project_only=mox.IgnoreArg()).AndReturn(networks)
+                project_only=mox.IgnoreArg()).AndReturn(networks[:])
         self.mox.ReplayAll()
 
         self.assertRaises(exception.FixedIpInvalid,
@@ -617,9 +661,10 @@ class VlanNetworkTestCase(test.TestCase):
     def test_validate_networks_empty_fixed_ip(self):
         self.mox.StubOutWithMock(db, 'network_get_all_by_uuids')
 
-        requested_networks = [(1, "")]
+        requested_networks = [('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', ''),
+                              ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '')]
         db.network_get_all_by_uuids(mox.IgnoreArg(), mox.IgnoreArg(),
-                project_only=mox.IgnoreArg()).AndReturn(networks)
+                project_only=mox.IgnoreArg()).AndReturn(networks[:])
         self.mox.ReplayAll()
 
         self.assertRaises(exception.FixedIpInvalid,
@@ -629,9 +674,10 @@ class VlanNetworkTestCase(test.TestCase):
     def test_validate_networks_none_fixed_ip(self):
         self.mox.StubOutWithMock(db, 'network_get_all_by_uuids')
 
-        requested_networks = [(1, None)]
+        requested_networks = [('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', None),
+                              ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', None)]
         db.network_get_all_by_uuids(mox.IgnoreArg(), mox.IgnoreArg(),
-                project_only=mox.IgnoreArg()).AndReturn(networks)
+                project_only=mox.IgnoreArg()).AndReturn(networks[:])
         self.mox.ReplayAll()
         self.network.validate_networks(self.context, requested_networks)
 
@@ -1144,7 +1190,6 @@ class VlanNetworkTestCase(test.TestCase):
                   'instance_uuid': delfixed['instance_uuid']}
         db.fixed_ip_create(elevated, values)
         elevated.read_deleted = 'no'
-        newfixed = db.fixed_ip_get_by_address(elevated, fix_addr)
         elevated.read_deleted = 'yes'
 
         deallocate = self.network.deallocate_fixed_ip
@@ -1196,8 +1241,6 @@ class VlanNetworkTestCase(test.TestCase):
         values = {'allocated': True,
                   'virtual_interface_id': 3}
         db.fixed_ip_update(elevated, fix_addr, values)
-        fixed = db.fixed_ip_get_by_address(elevated, fix_addr)
-        network = db.network_get(elevated, fixed['network_id'])
 
         def fake_refresh(instance_uuid):
             raise test.TestingException()
@@ -1209,6 +1252,21 @@ class VlanNetworkTestCase(test.TestCase):
                           context1, fix_addr, 'fake')
         fixed = db.fixed_ip_get_by_address(elevated, fix_addr)
         self.assertTrue(fixed['allocated'])
+
+    def test_get_networks_by_uuids_ordering(self):
+        self.mox.StubOutWithMock(db, 'network_get_all_by_uuids')
+
+        requested_networks = ['bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+                              'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa']
+        db.network_get_all_by_uuids(mox.IgnoreArg(), mox.IgnoreArg(),
+                project_only=mox.IgnoreArg()).AndReturn(networks[:])
+
+        self.mox.ReplayAll()
+        res = self.network._get_networks_by_uuids(self.context,
+                                                  requested_networks)
+
+        self.assertEqual(res[0]['id'], 1)
+        self.assertEqual(res[1]['id'], 0)
 
 
 class CommonNetworkTestCase(test.TestCase):
@@ -2225,7 +2283,6 @@ class FloatingIPTestCase(test.TestCase):
         zone = "example.org"
         address1 = "10.10.10.11"
         name1 = "foo"
-        name2 = "bar"
 
         self.network.add_dns_entry(self.context, address1, name1, "A", zone)
 
@@ -2507,7 +2564,6 @@ class LdapDNSTestCase(test.TestCase):
     def test_ldap_dns_create_conflict(self):
         address1 = "10.10.10.11"
         name1 = "foo"
-        name2 = "bar"
 
         self.driver.create_entry(name1, address1, "A", domain1)
 
