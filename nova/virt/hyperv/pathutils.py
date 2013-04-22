@@ -68,7 +68,8 @@ class PathUtils(object):
         # It can be replaced with Win32 API calls to avoid the process
         # spawning overhead.
         if subprocess.call(['cmd.exe', '/C', 'copy', '/Y', src, dest]):
-            raise IOError(_('The file copy from %(src)s to %(dest)s failed'))
+            raise IOError(_('The file copy from %(src)s to %(dest)s failed')
+                           % locals())
 
     def rmtree(self, path):
         shutil.rmtree(path)
