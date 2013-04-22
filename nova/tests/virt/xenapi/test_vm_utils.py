@@ -20,6 +20,7 @@ import contextlib
 import fixtures
 import mox
 
+from nova import exception
 from nova import test
 from nova import utils
 from nova.virt.xenapi import vm_utils
@@ -32,6 +33,35 @@ def contextified(result):
 
 def _fake_noop(*args, **kwargs):
     return
+
+
+class LookupTestCase(test.TestCase):
+
+    def setUp(self):
+        super(LookupTestCase, self).setUp()
+        self.session = self.mox.CreateMockAnything('Fake Session')
+        self.name_label = 'my_vm'
+
+    def _do_mock(self, result):
+        self.session.call_xenapi(
+            "VM.get_by_name_label", self.name_label).AndReturn(result)
+        self.mox.ReplayAll()
+
+    def test_normal(self):
+        self._do_mock(['x'])
+        result = vm_utils.lookup(self.session, self.name_label)
+        self.assertEqual('x', result)
+
+    def test_no_result(self):
+        self._do_mock([])
+        result = vm_utils.lookup(self.session, self.name_label)
+        self.assertEqual(None, result)
+
+    def test_too_many(self):
+        self._do_mock(['a', 'b'])
+        self.assertRaises(exception.InstanceExists,
+                          vm_utils.lookup,
+                          self.session, self.name_label)
 
 
 class GenerateConfigDriveTestCase(test.TestCase):
