@@ -457,15 +457,15 @@ class API(base.Base):
         net_ids = []
 
         for (net_id, _i, port_id) in requested_networks:
-            if not port_id:
-                net_ids.append(net_id)
-                continue
-            port = quantumv2.get_client(context).show_port(port_id).get('port')
-            if not port:
-                raise exception.PortNotFound(port_id=port_id)
-            if port.get('device_id', None):
-                raise exception.PortInUse(port_id=port_id)
-            net_id = port['network_id']
+            if port_id:
+                port = (quantumv2.get_client(context)
+                                 .show_port(port_id)
+                                 .get('port'))
+                if not port:
+                    raise exception.PortNotFound(port_id=port_id)
+                if port.get('device_id', None):
+                    raise exception.PortInUse(port_id=port_id)
+                net_id = port['network_id']
             if net_id in net_ids:
                 raise exception.NetworkDuplicated(network_id=net_id)
             net_ids.append(net_id)
