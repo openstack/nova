@@ -279,6 +279,7 @@ class BaseTestCase(test.TestCase):
 
 
 class ComputeVolumeTestCase(BaseTestCase):
+
     def setUp(self):
         super(ComputeVolumeTestCase, self).setUp()
         self.volume_id = 'fake'
@@ -293,11 +294,13 @@ class ComputeVolumeTestCase(BaseTestCase):
                        {'id': self.volume_id})
         self.stubs.Set(self.compute.driver, 'get_volume_connector',
                        lambda *a, **kw: None)
-        self.stubs.Set(self.compute.driver, 'attach_volume',
-                       lambda *a, **kw: None)
         self.stubs.Set(self.compute.volume_api, 'initialize_connection',
                        lambda *a, **kw: {})
+        self.stubs.Set(self.compute.volume_api, 'terminate_connection',
+                       lambda *a, **kw: None)
         self.stubs.Set(self.compute.volume_api, 'attach',
+                       lambda *a, **kw: None)
+        self.stubs.Set(self.compute.volume_api, 'detach',
                        lambda *a, **kw: None)
         self.stubs.Set(self.compute.volume_api, 'check_attach',
                        lambda *a, **kw: None)
@@ -479,6 +482,61 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.assertEquals(payload['read_bytes'], 77)
         self.assertEquals(payload['writes'], 121)
         self.assertEquals(payload['write_bytes'], 165)
+
+    def test_detach_volume_usage(self):
+        # Test that detach volume update the volume usage cache table correctly
+        instance = self._create_fake_instance()
+        vol = {'id': 1,
+               'attach_status': 'in-use',
+               'instance_uuid': instance['uuid']}
+        bdm = {'id': 1,
+               'device_name': '/dev/vdb',
+               'connection_info': '{}',
+               'instance_uuid': instance['uuid'],
+               'volume_id': 1}
+
+        self.mox.StubOutWithMock(self.compute, '_get_instance_volume_bdm')
+        self.mox.StubOutWithMock(self.compute.driver, 'block_stats')
+        self.mox.StubOutWithMock(self.compute, '_get_host_volume_bdms')
+        self.mox.StubOutWithMock(self.compute.driver, 'get_all_volume_usage')
+
+        # The following methods will be called
+        self.compute._get_instance_volume_bdm(self.context, instance, 1).\
+            AndReturn(bdm)
+        self.compute.driver.block_stats(instance['name'], 'vdb').\
+            AndReturn([1L, 30L, 1L, 20L, None])
+        self.compute._get_host_volume_bdms(self.context, 'fake-mini').\
+            AndReturn(bdm)
+        self.compute.driver.get_all_volume_usage(self.context, bdm).\
+            AndReturn([{'volume': 1,
+                        'rd_req': 1,
+                        'rd_bytes': 10,
+                        'wr_req': 1,
+                        'wr_bytes': 5,
+                        'instance': instance}])
+
+        self.mox.ReplayAll()
+
+        self.compute.attach_volume(self.context, 1, '/dev/vdb', instance)
+
+        # Poll volume usage & then detach the volume. This will update the
+        # total fields in the volume usage cache.
+        CONF.volume_usage_poll_interval = 10
+        self.compute._poll_volume_usage(self.context)
+        self.compute.detach_volume(self.context, 1, instance)
+
+        # Check the database for the
+        volume_usages = db.vol_get_usage_by_time(self.context, 0)
+        self.assertEqual(1, len(volume_usages))
+        volume_usage = volume_usages[0]
+        self.assertEqual(0, volume_usage['curr_reads'])
+        self.assertEqual(0, volume_usage['curr_read_bytes'])
+        self.assertEqual(0, volume_usage['curr_writes'])
+        self.assertEqual(0, volume_usage['curr_write_bytes'])
+        self.assertEqual(1, volume_usage['tot_reads'])
+        self.assertEqual(30, volume_usage['tot_read_bytes'])
+        self.assertEqual(1, volume_usage['tot_writes'])
+        self.assertEqual(20, volume_usage['tot_write_bytes'])
 
 
 class ComputeTestCase(BaseTestCase):

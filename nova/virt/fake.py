@@ -274,8 +274,7 @@ class FakeDriver(driver.ComputeDriver):
         bw = []
         return bw
 
-    def get_all_volume_usage(self, context, instances, start_time,
-                             stop_time=None):
+    def get_all_volume_usage(self, context, compute_host_bdms):
         """Return usage info for volumes attached to vms on
            a given host"""
         volusage = []
