@@ -13,11 +13,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 """
-Tests For CellsStateManager
+Tests For CellStateManager
 """
 
 from nova.cells import state
 from nova import db
+from nova.db.sqlalchemy import models
+from nova import exception
 from nova import test
 
 
@@ -120,9 +122,47 @@ class TestCellsStateManager(test.TestCase):
         units = 2  # 2 on host 3
         self.assertEqual(units, cap['disk_free']['units_by_mb'][str(sz)])
 
-    def _capacity(self, reserve_percent):
+    def _get_state_manager(self, reserve_percent=0.0):
         self.flags(reserve_percent=reserve_percent, group='cells')
+        return state.CellStateManager()
 
-        mgr = state.CellStateManager()
-        my_state = mgr.get_my_state()
+    def _capacity(self, reserve_percent):
+        state_manager = self._get_state_manager(reserve_percent)
+        my_state = state_manager.get_my_state()
         return my_state.capacities
+
+
+class TestCellsGetCapacity(TestCellsStateManager):
+    def setUp(self):
+        super(TestCellsGetCapacity, self).setUp()
+        self.capacities = {"ram_free": 1234}
+        self.state_manager = self._get_state_manager()
+        cell = models.Cell(name="cell_name")
+        other_cell = models.Cell(name="other_cell_name")
+        cell.capacities = self.capacities
+        other_cell.capacities = self.capacities
+        self.stubs.Set(self.state_manager, 'child_cells',
+                        {"cell_name": cell,
+                        "other_cell_name": other_cell})
+
+    def test_get_cell_capacity_for_all_cells(self):
+        self.stubs.Set(self.state_manager.my_cell_state, 'capacities',
+                                                        self.capacities)
+        capacities = self.state_manager.get_capacities()
+        self.assertEqual({"ram_free": 3702}, capacities)
+
+    def test_get_cell_capacity_for_the_parent_cell(self):
+        self.stubs.Set(self.state_manager.my_cell_state, 'capacities',
+                                                        self.capacities)
+        capacities = self.state_manager.\
+                     get_capacities(self.state_manager.my_cell_state.name)
+        self.assertEqual({"ram_free": 3702}, capacities)
+
+    def test_get_cell_capacity_for_a_cell(self):
+        self.assertEqual(self.capacities,
+                self.state_manager.get_capacities(cell_name="cell_name"))
+
+    def test_get_cell_capacity_for_non_existing_cell(self):
+        self.assertRaises(exception.CellNotFound,
+                          self.state_manager.get_capacities,
+                          cell_name="invalid_cell_name")

@@ -64,7 +64,7 @@ class CellsManager(manager.Manager):
 
     Scheduling requests get passed to the scheduler class.
     """
-    RPC_API_VERSION = '1.8'
+    RPC_API_VERSION = '1.9'
 
     def __init__(self, *args, **kwargs):
         # Mostly for tests.
@@ -387,3 +387,6 @@ class CellsManager(manager.Manager):
                 instance['cell_name'], instance_uuid, console_port,
                 console_type)
         return response.value_or_raise()
+
+    def get_capacities(self, ctxt, cell_name):
+        return self.state_manager.get_capacities(cell_name)

@@ -68,6 +68,9 @@
     listing neighbor cells, and getting the capabilities of the local cell.
     </description>
   </extension>
+  <extension alias="os-cell-capacities" updated="2013-05-27T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/cell_capacities/api/v1.1" name="CellCapacities">
+    <description>Adds functionality to get cell capacities.</description>
+  </extension>
   <extension alias="os-certificates" updated="2012-01-19T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/certificates/api/v1.1" name="Certificates">
     <description>Certificates support.</description>
   </extension>

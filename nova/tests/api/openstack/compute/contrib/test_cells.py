@@ -19,6 +19,7 @@ from lxml import etree
 from webob import exc
 
 from nova.api.openstack.compute.contrib import cells as cells_ext
+from nova.api.openstack import extensions
 from nova.api.openstack import xmlutil
 from nova.cells import rpcapi as cells_rpcapi
 from nova import context
@@ -87,7 +88,8 @@ class CellsTest(test.TestCase):
         self.stubs.Set(cells_rpcapi.CellsAPI, 'get_cell_info_for_neighbors',
                 fake_cells_api_get_all_cell_info)
 
-        self.controller = cells_ext.Controller()
+        self.ext_mgr = self.mox.CreateMock(extensions.ExtensionManager)
+        self.controller = cells_ext.Controller(self.ext_mgr)
         self.context = context.get_admin_context()
 
     def _get_request(self, resource):
@@ -280,6 +282,74 @@ class CellsTest(test.TestCase):
         self.assertEqual(cell['name'], 'darksecret')
         self.assertEqual(cell_caps['cap1'], 'a;b')
         self.assertEqual(cell_caps['cap2'], 'c;d')
+
+    def test_show_capacities(self):
+        self.ext_mgr.is_loaded('os-cell-capacities').AndReturn(True)
+        self.mox.StubOutWithMock(self.controller.cells_rpcapi,
+                                 'get_capacities')
+        response = {"ram_free":
+                        {"units_by_mb": {"8192": 0, "512": 13,
+                                "4096": 1, "2048": 3, "16384": 0},
+                        "total_mb": 7680},
+                    "disk_free":
+                        {"units_by_mb": {"81920": 11, "20480": 46,
+                                "40960": 23, "163840": 5, "0": 0},
+                        "total_mb": 1052672}
+                    }
+        self.controller.cells_rpcapi.\
+            get_capacities(self.context, cell_name=None).AndReturn(response)
+        self.mox.ReplayAll()
+        req = self._get_request("cells/capacities")
+        req.environ["nova.context"] = self.context
+        res_dict = self.controller.capacities(req)
+        self.assertEqual(response, res_dict['cell']['capacities'])
+
+    def test_show_capacity_fails_with_non_admin_context(self):
+        self.ext_mgr.is_loaded('os-cell-capacities').AndReturn(True)
+        rules = {"compute_extension:cells": "is_admin:true"}
+        self.policy.set_rules(rules)
+
+        self.mox.ReplayAll()
+        req = self._get_request("cells/capacities")
+        req.environ["nova.context"] = self.context
+        req.environ["nova.context"].is_admin = False
+        self.assertRaises(exception.PolicyNotAuthorized,
+                          self.controller.capacities, req)
+
+    def test_show_capacities_for_invalid_cell(self):
+        self.ext_mgr.is_loaded('os-cell-capacities').AndReturn(True)
+        self.mox.StubOutWithMock(self.controller.cells_rpcapi,
+                                 'get_capacities')
+        self.controller.cells_rpcapi. \
+            get_capacities(self.context, cell_name="invalid_cell").AndRaise(
+            exception.CellNotFound(cell_name="invalid_cell"))
+        self.mox.ReplayAll()
+        req = self._get_request("cells/invalid_cell/capacities")
+        req.environ["nova.context"] = self.context
+        self.assertRaises(exc.HTTPNotFound,
+                          self.controller.capacities, req, "invalid_cell")
+
+    def test_show_capacities_for_cell(self):
+        self.ext_mgr.is_loaded('os-cell-capacities').AndReturn(True)
+        self.mox.StubOutWithMock(self.controller.cells_rpcapi,
+                                 'get_capacities')
+        response = {"ram_free":
+                        {"units_by_mb": {"8192": 0, "512": 13,
+                                "4096": 1, "2048": 3, "16384": 0},
+                        "total_mb": 7680},
+                    "disk_free":
+                        {"units_by_mb": {"81920": 11, "20480": 46,
+                                "40960": 23, "163840": 5, "0": 0},
+                        "total_mb": 1052672}
+                    }
+        self.controller.cells_rpcapi.\
+                        get_capacities(self.context, cell_name='cell_name').\
+                            AndReturn(response)
+        self.mox.ReplayAll()
+        req = self._get_request("cells/capacities")
+        req.environ["nova.context"] = self.context
+        res_dict = self.controller.capacities(req, 'cell_name')
+        self.assertEqual(response, res_dict['cell']['capacities'])
 
     def test_sync_instances(self):
         call_info = {}

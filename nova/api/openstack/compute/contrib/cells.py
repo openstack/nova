@@ -52,7 +52,32 @@ def make_cell(elem):
     cap = xmlutil.SubTemplateElement(caps, xmlutil.Selector(0),
             selector=xmlutil.get_items)
     cap.text = 1
+    make_capacity(elem)
 
+
+def make_capacity(cell):
+
+    def get_units_by_mb(capacity_info):
+        return capacity_info['units_by_mb'].items()
+
+    capacity = xmlutil.SubTemplateElement(cell, 'capacities',
+                                          selector='capacities')
+
+    ram_free = xmlutil.SubTemplateElement(capacity, 'ram_free',
+                                          selector='ram_free')
+    ram_free.set('total_mb', 'total_mb')
+    unit_by_mb = xmlutil.SubTemplateElement(ram_free, 'unit_by_mb',
+                                            selector=get_units_by_mb)
+    unit_by_mb.set('mb', 0)
+    unit_by_mb.set('unit', 1)
+
+    disk_free = xmlutil.SubTemplateElement(capacity, 'disk_free',
+                                           selector='disk_free')
+    disk_free.set('total_mb', 'total_mb')
+    unit_by_mb = xmlutil.SubTemplateElement(disk_free, 'unit_by_mb',
+                                            selector=get_units_by_mb)
+    unit_by_mb.set('mb', 0)
+    unit_by_mb.set('unit', 1)
 
 cell_nsmap = {None: wsgi.XMLNS_V10}
 
@@ -123,9 +148,10 @@ def _scrub_cell(cell, detail=False):
 class Controller(object):
     """Controller for Cell resources."""
 
-    def __init__(self):
+    def __init__(self, ext_mgr):
         self.compute_api = compute.API()
         self.cells_rpcapi = cells_rpcapi.CellsAPI()
+        self.ext_mgr = ext_mgr
 
     def _get_cells(self, ctxt, req, detail=False):
         """Return all cells."""
@@ -166,6 +192,25 @@ class Controller(object):
                 'username': None,
                 'capabilities': cell_capabs}
         return dict(cell=cell)
+
+    @wsgi.serializers(xml=CellTemplate)
+    def capacities(self, req, id=None):
+        """Return capacities for a given cell or all cells."""
+        # TODO(kaushikc): return capacities as a part of cell info and
+        # cells detail calls in v3, along with capabilities
+        if not self.ext_mgr.is_loaded('os-cell-capacities'):
+            raise exc.HTTPNotFound()
+
+        context = req.environ['nova.context']
+        authorize(context)
+        try:
+            capacities = self.cells_rpcapi.get_capacities(context,
+                                                          cell_name=id)
+        except exception.CellNotFound:
+            msg = (_("Cell %(id)s not found.") % {'id': id})
+            raise exc.HTTPNotFound(explanation=msg)
+
+        return dict(cell={"capacities": capacities})
 
     @wsgi.serializers(xml=CellTemplate)
     def show(self, req, id):
@@ -283,15 +328,20 @@ class Cells(extensions.ExtensionDescriptor):
     name = "Cells"
     alias = "os-cells"
     namespace = "http://docs.openstack.org/compute/ext/cells/api/v1.1"
-    updated = "2011-09-21T00:00:00+00:00"
+    updated = "2013-05-14T00:00:00+00:00"
 
     def get_resources(self):
         coll_actions = {
                 'detail': 'GET',
                 'info': 'GET',
                 'sync_instances': 'POST',
-        }
+                'capacities': 'GET',
+                }
+        memb_actions = {
+                'capacities': 'GET',
+                }
 
         res = extensions.ResourceExtension('os-cells',
-                Controller(), collection_actions=coll_actions)
+                Controller(self.ext_mgr), collection_actions=coll_actions,
+                member_actions=memb_actions)
         return [res]

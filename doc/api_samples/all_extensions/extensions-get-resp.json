@@ -161,6 +161,14 @@
             "updated": "2011-09-21T00:00:00+00:00"
         },
         {
+            "alias": "os-cell-capacities",
+            "description": "Adding functionality to get cell capacities.",
+            "links": [],
+            "name": "CellCapacities",
+            "namespace": "http://docs.openstack.org/compute/ext/cell_capacities/api/v1.1",
+            "updated": "2013-05-27T00:00:00+00:00"
+        },
+        {
             "alias": "os-certificates",
             "description": "Certificates support.",
             "links": [],
