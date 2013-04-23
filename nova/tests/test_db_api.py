@@ -335,36 +335,6 @@ class DbApiTestCase(DbTestCase):
         self.assertEqual(0, len(results))
         db.instance_update(ctxt, instance['uuid'], {"task_state": None})
 
-    def test_multi_associate_disassociate(self):
-        ctxt = context.get_admin_context()
-        values = {'address': 'floating'}
-        floating = db.floating_ip_create(ctxt, values)
-        values = {'address': 'fixed'}
-        fixed = db.fixed_ip_create(ctxt, values)
-        res = db.floating_ip_fixed_ip_associate(ctxt, floating, fixed, 'foo')
-        self.assertEqual(res['address'], fixed)
-        res = db.floating_ip_fixed_ip_associate(ctxt, floating, fixed, 'foo')
-        self.assertEqual(res, None)
-        res = db.floating_ip_disassociate(ctxt, floating)
-        self.assertEqual(res['address'], fixed)
-        res = db.floating_ip_disassociate(ctxt, floating)
-        self.assertEqual(res, None)
-
-    def test_floating_ip_get_by_fixed_address(self):
-        ctxt = context.get_admin_context()
-        values = {'address': 'fixed'}
-        fixed = db.fixed_ip_create(ctxt, values)
-        fixed_ip_ref = db.fixed_ip_get_by_address(ctxt, fixed)
-        values = {'address': 'floating1',
-                  'fixed_ip_id': fixed_ip_ref['id']}
-        floating1 = db.floating_ip_create(ctxt, values)
-        values = {'address': 'floating2',
-                  'fixed_ip_id': fixed_ip_ref['id']}
-        floating2 = db.floating_ip_create(ctxt, values)
-        floating_ip_refs = db.floating_ip_get_by_fixed_address(ctxt, fixed)
-        self.assertEqual(floating1, floating_ip_refs[0]['address'])
-        self.assertEqual(floating2, floating_ip_refs[1]['address'])
-
     def test_network_create_safe(self):
         ctxt = context.get_admin_context()
         values = {'host': 'localhost', 'project_id': 'project1'}
@@ -2398,7 +2368,7 @@ class FixedIPTestCase(BaseInstanceTypeTestCase):
         fixed_ip_ref = db.fixed_ip_get_by_address(self.ctxt, fixed)
         values = {'address': 'floating',
                   'fixed_ip_id': fixed_ip_ref['id']}
-        floating = db.floating_ip_create(self.ctxt, values)
+        floating = db.floating_ip_create(self.ctxt, values)['address']
         fixed_ip_ref = db.fixed_ip_get_by_floating_address(self.ctxt, floating)
         self.assertEqual(fixed, fixed_ip_ref['address'])
 
@@ -2619,6 +2589,405 @@ class FixedIPTestCase(BaseInstanceTypeTestCase):
         fixed_ip = db.fixed_ip_get_by_address(self.ctxt, address)
         self.assertEqual(fixed_ip['instance_uuid'], instance_uuid)
         self.assertEqual(fixed_ip['network_id'], network['id'])
+
+
+class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
+
+    def setUp(self):
+        super(FloatingIpTestCase, self).setUp()
+        self.ctxt = context.get_admin_context()
+
+    def _get_base_values(self):
+        return {
+            'address': '1.1.1.1',
+            'fixed_ip_id': None,
+            'project_id': 'fake_project',
+            'host': 'fake_host',
+            'auto_assigned': False,
+            'pool': 'fake_pool',
+            'interface': 'fake_interface',
+        }
+
+    def _create_floating_ip(self, values):
+        if not values:
+            values = {}
+        vals = self._get_base_values()
+        vals.update(values)
+        return db.floating_ip_create(self.ctxt, vals)
+
+    def test_floating_ip_get(self):
+        values = [{'address': '0.0.0.0'}, {'address': '1.1.1.1'}]
+        floating_ips = [self._create_floating_ip(val) for val in values]
+
+        for floating_ip in floating_ips:
+            real_floating_ip = db.floating_ip_get(self.ctxt, floating_ip['id'])
+            self._assertEqualObjects(floating_ip, real_floating_ip,
+                                     ignored_keys=['fixed_ip'])
+
+    def test_floating_ip_get_not_found(self):
+        self.assertRaises(exception.FloatingIpNotFound,
+                          db.floating_ip_get, self.ctxt, 100500)
+
+    def test_floating_ip_get_pools(self):
+        values = [
+            {'address': '0.0.0.0', 'pool': 'abc'},
+            {'address': '1.1.1.1', 'pool': 'abc'},
+            {'address': '2.2.2.2', 'pool': 'def'},
+            {'address': '3.3.3.3', 'pool': 'ghi'},
+        ]
+        for val in values:
+            self._create_floating_ip(val)
+        expected_pools = [{'name': x}
+                          for x in set(map(lambda x: x['pool'], values))]
+        real_pools = db.floating_ip_get_pools(self.ctxt)
+        self._assertEqualListsOfPrimitivesAsSets(real_pools, expected_pools)
+
+    def test_floating_ip_allocate_address(self):
+        pools = {
+            'pool1': ['0.0.0.0', '1.1.1.1'],
+            'pool2': ['2.2.2.2'],
+            'pool3': ['3.3.3.3', '4.4.4.4', '5.5.5.5']
+        }
+        for pool, addresses in pools.iteritems():
+            for address in addresses:
+                vals = {'pool': pool, 'address': address, 'project_id': None}
+                self._create_floating_ip(vals)
+
+        project_id = self._get_base_values()['project_id']
+        for pool, addresses in pools.iteritems():
+            alloc_addrs = []
+            for i in addresses:
+                float_addr = db.floating_ip_allocate_address(self.ctxt,
+                                                             project_id, pool)
+                alloc_addrs.append(float_addr)
+            self._assertEqualListsOfPrimitivesAsSets(alloc_addrs, addresses)
+
+    def test_floating_ip_allocate_address_no_more_floating_ips(self):
+        self.assertRaises(exception.NoMoreFloatingIps,
+                          db.floating_ip_allocate_address,
+                          self.ctxt, 'any_project_id', 'no_such_pool')
+
+    def test_floating_ip_allocate_not_authorized(self):
+        ctxt = context.RequestContext(user_id='a', project_id='abc',
+                                      is_admin=False)
+        self.assertRaises(exception.NotAuthorized,
+                          db.floating_ip_allocate_address,
+                          ctxt, 'other_project_id', 'any_pool')
+
+    def _get_existing_ips(self):
+        return [ip['address'] for ip in db.floating_ip_get_all(self.ctxt)]
+
+    def test_floating_ip_bulk_create(self):
+        expected_ips = ['1.1.1.1', '1.1.1.2', '1.1.1.3', '1.1.1.4']
+        db.floating_ip_bulk_create(self.ctxt,
+                                   map(lambda x: {'address': x}, expected_ips))
+        self._assertEqualListsOfPrimitivesAsSets(self._get_existing_ips(),
+                                                 expected_ips)
+
+    def test_floating_ip_bulk_create_duplicate(self):
+        ips = ['1.1.1.1', '1.1.1.2', '1.1.1.3', '1.1.1.4']
+        prepare_ips = lambda x: {'address': x}
+
+        db.floating_ip_bulk_create(self.ctxt, map(prepare_ips, ips))
+        self.assertRaises(exception.FloatingIpExists,
+                          db.floating_ip_bulk_create,
+                          self.ctxt, map(prepare_ips, ['1.1.1.5', '1.1.1.4']))
+        self.assertRaises(exception.FloatingIpNotFoundForAddress,
+                          db.floating_ip_get_by_address,
+                          self.ctxt, '1.1.1.5')
+
+    def test_floating_ip_bulk_destroy(self):
+        ips_for_delete = []
+        ips_for_non_delete = []
+
+        def create_ips(i):
+            return [{'address': '1.1.%s.%s' % (i, k)} for k in xrange(1, 256)]
+
+        # NOTE(boris-42): Create more then 256 ip to check that
+        #                 _ip_range_splitter works properly.
+        for i in xrange(1, 3):
+            ips_for_delete.extend(create_ips(i))
+        ips_for_non_delete.extend(create_ips(3))
+
+        db.floating_ip_bulk_create(self.ctxt,
+                                   ips_for_delete + ips_for_non_delete)
+        db.floating_ip_bulk_destroy(self.ctxt, ips_for_delete)
+
+        expected_addresses = map(lambda x: x['address'], ips_for_non_delete)
+        self._assertEqualListsOfPrimitivesAsSets(self._get_existing_ips(),
+                                                 expected_addresses)
+
+    def test_floating_ip_create(self):
+        floating_ip = self._create_floating_ip({})
+        ignored_keys = ['id', 'deleted', 'deleted_at', 'updated_at',
+                        'created_at']
+
+        self.assertFalse(floating_ip['id'] is None)
+        self._assertEqualObjects(floating_ip, self._get_base_values(),
+                                 ignored_keys)
+
+    def test_floating_ip_create_duplicate(self):
+        self._create_floating_ip({})
+        self.assertRaises(exception.FloatingIpExists,
+                          self._create_floating_ip, {})
+
+    def test_floating_ip_count_by_project(self):
+        projects = {
+            'project1': ['1.1.1.1', '2.2.2.2', '3.3.3.3'],
+            'project2': ['4.4.4.4', '5.5.5.5'],
+            'project3': ['6.6.6.6']
+        }
+        for project_id, addresses in projects.iteritems():
+            for address in addresses:
+                self._create_floating_ip({'project_id': project_id,
+                                          'address': address})
+        for project_id, addresses in projects.iteritems():
+            real_count = db.floating_ip_count_by_project(self.ctxt, project_id)
+            self.assertEqual(len(addresses), real_count)
+
+    def test_floating_ip_count_by_project_not_authorized(self):
+        ctxt = context.RequestContext(user_id='a', project_id='abc',
+                                      is_admin=False)
+        self.assertRaises(exception.NotAuthorized,
+                          db.floating_ip_count_by_project,
+                          ctxt, 'def', 'does_not_matter')
+
+    def _create_fixed_ip(self, params):
+        default_params = {'address': '192.168.0.1'}
+        default_params.update(params)
+        return db.fixed_ip_create(self.ctxt, default_params)
+
+    def test_floating_ip_fixed_ip_associate(self):
+        float_addresses = ['1.1.1.1', '1.1.1.2', '1.1.1.3']
+        fixed_addresses = ['2.2.2.1', '2.2.2.2', '2.2.2.3']
+
+        float_ips = [self._create_floating_ip({'address': address})
+                        for address in float_addresses]
+        fixed_addrs = [self._create_fixed_ip({'address': address})
+                        for address in fixed_addresses]
+
+        for float_ip, fixed_addr in zip(float_ips, fixed_addrs):
+            fixed_ip = db.floating_ip_fixed_ip_associate(self.ctxt,
+                                                         float_ip.address,
+                                                         fixed_addr, 'host')
+            self.assertEqual(fixed_ip.address, fixed_addr)
+
+            updated_float_ip = db.floating_ip_get(self.ctxt, float_ip.id)
+            self.assertEqual(fixed_ip.id, updated_float_ip.fixed_ip_id)
+            self.assertEqual('host', updated_float_ip.host)
+
+        # Test that already allocated float_ip returns None
+        result = db.floating_ip_fixed_ip_associate(self.ctxt,
+                                                   float_addresses[0],
+                                                   fixed_addresses[0], 'host')
+        self.assertTrue(result is None)
+
+    def test_floating_ip_fixed_ip_associate_float_ip_not_found(self):
+        self.assertRaises(exception.FloatingIpNotFoundForAddress,
+                          db.floating_ip_fixed_ip_associate,
+                          self.ctxt, 'non exist', 'some', 'some')
+
+    def test_floating_ip_deallocate(self):
+        values = {'address': '1.1.1.1', 'project_id': 'fake', 'host': 'fake'}
+        float_ip = self._create_floating_ip(values)
+        db.floating_ip_deallocate(self.ctxt, float_ip.address)
+
+        updated_float_ip = db.floating_ip_get(self.ctxt, float_ip.id)
+        self.assertTrue(updated_float_ip.project_id is None)
+        self.assertTrue(updated_float_ip.host is None)
+        self.assertFalse(updated_float_ip.auto_assigned)
+
+    def test_floating_ip_destroy(self):
+        addresses = ['1.1.1.1', '1.1.1.2', '1.1.1.3']
+        float_ips = [self._create_floating_ip({'address': addr})
+                        for addr in addresses]
+
+        expected_len = len(addresses)
+        for float_ip in float_ips:
+            db.floating_ip_destroy(self.ctxt, float_ip.address)
+            self.assertRaises(exception.FloatingIpNotFound,
+                              db.floating_ip_get, self.ctxt, float_ip.id)
+            expected_len -= 1
+            if expected_len > 0:
+                self.assertEqual(expected_len,
+                                 len(db.floating_ip_get_all(self.ctxt)))
+            else:
+                self.assertRaises(exception.NoFloatingIpsDefined,
+                                  db.floating_ip_get_all, self.ctxt)
+
+    def test_floating_ip_disassociate(self):
+        float_addresses = ['1.1.1.1', '1.1.1.2', '1.1.1.3']
+        fixed_addresses = ['2.2.2.1', '2.2.2.2', '2.2.2.3']
+
+        float_ips = [self._create_floating_ip({'address': address})
+                        for address in float_addresses]
+        fixed_addrs = [self._create_fixed_ip({'address': address})
+                        for address in fixed_addresses]
+
+        for float_ip, fixed_addr in zip(float_ips, fixed_addrs):
+            db.floating_ip_fixed_ip_associate(self.ctxt,
+                                              float_ip.address,
+                                              fixed_addr, 'host')
+
+        for float_ip, fixed_addr in zip(float_ips, fixed_addrs):
+            fixed = db.floating_ip_disassociate(self.ctxt, float_ip.address)
+            self.assertEqual(fixed.address, fixed_addr)
+            updated_float_ip = db.floating_ip_get(self.ctxt, float_ip.id)
+            self.assertTrue(updated_float_ip.fixed_ip_id is None)
+            self.assertTrue(updated_float_ip.host is None)
+
+    def test_floating_ip_disassociate_not_found(self):
+        self.assertRaises(exception.FloatingIpNotFoundForAddress,
+                          db.floating_ip_disassociate, self.ctxt, 'non exist')
+
+    def test_floating_ip_set_auto_assigned(self):
+        addresses = ['1.1.1.1', '1.1.1.2', '1.1.1.3']
+        float_ips = [self._create_floating_ip({'address': addr,
+                                               'auto_assigned': False})
+                        for addr in addresses]
+
+        for i in xrange(2):
+            db.floating_ip_set_auto_assigned(self.ctxt, float_ips[i].address)
+        for i in xrange(2):
+            float_ip = db.floating_ip_get(self.ctxt, float_ips[i].id)
+            self.assertTrue(float_ip.auto_assigned)
+
+        float_ip = db.floating_ip_get(self.ctxt, float_ips[2].id)
+        self.assertFalse(float_ip.auto_assigned)
+
+    def test_floating_ip_get_all(self):
+        addresses = ['1.1.1.1', '1.1.1.2', '1.1.1.3']
+        float_ips = [self._create_floating_ip({'address': addr})
+                        for addr in addresses]
+        self._assertEqualListsOfObjects(float_ips,
+                                        db.floating_ip_get_all(self.ctxt))
+
+    def test_floating_ip_get_all_not_found(self):
+        self.assertRaises(exception.NoFloatingIpsDefined,
+                          db.floating_ip_get_all, self.ctxt)
+
+    def test_floating_ip_get_all_by_host(self):
+        hosts = {
+            'host1': ['1.1.1.1', '1.1.1.2'],
+            'host2': ['2.1.1.1', '2.1.1.2'],
+            'host3': ['3.1.1.1', '3.1.1.2', '3.1.1.3']
+        }
+
+        hosts_with_float_ips = {}
+        for host, addresses in hosts.iteritems():
+            hosts_with_float_ips[host] = []
+            for address in addresses:
+                float_ip = self._create_floating_ip({'host': host,
+                                                     'address': address})
+                hosts_with_float_ips[host].append(float_ip)
+
+        for host, float_ips in hosts_with_float_ips.iteritems():
+            real_float_ips = db.floating_ip_get_all_by_host(self.ctxt, host)
+            self._assertEqualListsOfObjects(float_ips, real_float_ips)
+
+    def test_floating_ip_get_all_by_host_not_found(self):
+        self.assertRaises(exception.FloatingIpNotFoundForHost,
+                          db.floating_ip_get_all_by_host,
+                          self.ctxt, 'non_exists_host')
+
+    def test_floating_ip_get_all_by_project(self):
+        projects = {
+            'pr1': ['1.1.1.1', '1.1.1.2'],
+            'pr2': ['2.1.1.1', '2.1.1.2'],
+            'pr3': ['3.1.1.1', '3.1.1.2', '3.1.1.3']
+        }
+
+        projects_with_float_ips = {}
+        for project_id, addresses in projects.iteritems():
+            projects_with_float_ips[project_id] = []
+            for address in addresses:
+                float_ip = self._create_floating_ip({'project_id': project_id,
+                                                     'address': address})
+                projects_with_float_ips[project_id].append(float_ip)
+
+        for project_id, float_ips in projects_with_float_ips.iteritems():
+            real_float_ips = db.floating_ip_get_all_by_project(self.ctxt,
+                                                               project_id)
+            self._assertEqualListsOfObjects(float_ips, real_float_ips,
+                                            ignored_keys='fixed_ip')
+
+    def test_floating_ip_get_all_by_project_not_authorized(self):
+        ctxt = context.RequestContext(user_id='a', project_id='abc',
+                                      is_admin=False)
+        self.assertRaises(exception.NotAuthorized,
+                          db.floating_ip_get_all_by_project,
+                          ctxt, 'other_project')
+
+    def test_floating_ip_get_by_address(self):
+        addresses = ['1.1.1.1', '1.1.1.2', '1.1.1.3']
+        float_ips = [self._create_floating_ip({'address': addr})
+                        for addr in addresses]
+
+        for float_ip in float_ips:
+            real_float_ip = db.floating_ip_get_by_address(self.ctxt,
+                                                          float_ip.address)
+            self._assertEqualObjects(float_ip, real_float_ip,
+                                     ignored_keys='fixed_ip')
+
+    def test_floating_ip_get_by_address_not_found(self):
+        self.assertRaises(exception.FloatingIpNotFoundForAddress,
+                          db.floating_ip_get_by_address,
+                          self.ctxt, 'non_exists_host')
+
+    def test_floating_ip_get_by_fixed_address(self):
+        fixed_float = [
+            ('1.1.1.1', '2.2.2.1'),
+            ('1.1.1.2', '2.2.2.2'),
+            ('1.1.1.3', '2.2.2.3')
+        ]
+
+        for fixed_addr, float_addr in fixed_float:
+            self._create_floating_ip({'address': float_addr})
+            self._create_fixed_ip({'address': fixed_addr})
+            db.floating_ip_fixed_ip_associate(self.ctxt, float_addr,
+                                              fixed_addr, 'some_host')
+
+        for fixed_addr, float_addr in fixed_float:
+            float_ip = db.floating_ip_get_by_fixed_address(self.ctxt,
+                                                           fixed_addr)
+            self.assertEqual(float_addr, float_ip[0]['address'])
+
+    def test_floating_ip_get_by_fixed_ip_id(self):
+        fixed_float = [
+            ('1.1.1.1', '2.2.2.1'),
+            ('1.1.1.2', '2.2.2.2'),
+            ('1.1.1.3', '2.2.2.3')
+        ]
+
+        for fixed_addr, float_addr in fixed_float:
+            self._create_floating_ip({'address': float_addr})
+            self._create_fixed_ip({'address': fixed_addr})
+            db.floating_ip_fixed_ip_associate(self.ctxt, float_addr,
+                                              fixed_addr, 'some_host')
+
+        for fixed_addr, float_addr in fixed_float:
+            fixed_ip = db.fixed_ip_get_by_address(self.ctxt, fixed_addr)
+            float_ip = db.floating_ip_get_by_fixed_ip_id(self.ctxt,
+                                                         fixed_ip['id'])
+            self.assertEqual(float_addr, float_ip[0]['address'])
+
+    def test_floating_ip_update(self):
+        float_ip = self._create_floating_ip({})
+
+        values = {
+            'project_id': 'some_pr',
+            'host': 'some_host',
+            'auto_assigned': True,
+            'interface': 'some_interface',
+            'pool': 'some_pool'
+        }
+        db.floating_ip_update(self.ctxt, float_ip['address'], values)
+        updated_float_ip = db.floating_ip_get(self.ctxt, float_ip['id'])
+        self._assertEqualObjects(updated_float_ip, values,
+                                 ignored_keys=['id', 'address', 'updated_at',
+                                               'deleted_at', 'created_at',
+                                               'deleted', 'fixed_ip_id',
+                                               'fixed_ip'])
 
 
 class InstanceDestroyConstraints(test.TestCase):

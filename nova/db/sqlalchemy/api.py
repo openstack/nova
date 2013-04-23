@@ -750,7 +750,7 @@ def floating_ip_create(context, values, session=None):
                 raise exception.FloatingIpExists(**dict(floating_ip_ref))
 
     floating_ip_ref.save(session=session)
-    return floating_ip_ref['address']
+    return floating_ip_ref
 
 
 @require_context
