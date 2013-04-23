@@ -112,9 +112,9 @@ generic_log_opts = [
 
 log_opts = [
     cfg.StrOpt('logging_context_format_string',
-               default='%(asctime)s.%(msecs)03d %(levelname)s %(name)s '
-                       '[%(request_id)s %(user)s %(tenant)s] %(instance)s'
-                       '%(message)s',
+               default='%(asctime)s.%(msecs)03d %(process)d %(levelname)s '
+                       '%(name)s [%(request_id)s %(user)s %(tenant)s] '
+                       '%(instance)s%(message)s',
                help='format string to use for log messages with context'),
     cfg.StrOpt('logging_default_format_string',
                default='%(asctime)s.%(msecs)03d %(process)d %(levelname)s '
@@ -432,14 +432,11 @@ def _setup_logging_from_conf():
     else:
         log_root.setLevel(logging.WARNING)
 
-    level = logging.NOTSET
     for pair in CONF.default_log_levels:
         mod, _sep, level_name = pair.partition('=')
         level = logging.getLevelName(level_name)
         logger = logging.getLogger(mod)
         logger.setLevel(level)
-        for handler in log_root.handlers:
-            logger.addHandler(handler)
 
 _loggers = {}
 
