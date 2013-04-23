@@ -49,7 +49,7 @@ datetime_fields = ['launched_at', 'terminated_at', 'updated_at']
 class ConductorManager(manager.Manager):
     """Mission: TBD."""
 
-    RPC_API_VERSION = '1.48'
+    RPC_API_VERSION = '1.49'
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(*args, **kwargs)
@@ -102,9 +102,11 @@ class ConductorManager(manager.Manager):
             self.db.instance_get(context, instance_id))
 
     @rpc_common.client_exceptions(exception.InstanceNotFound)
-    def instance_get_by_uuid(self, context, instance_uuid):
+    def instance_get_by_uuid(self, context, instance_uuid,
+                             columns_to_join=None):
         return jsonutils.to_primitive(
-            self.db.instance_get_by_uuid(context, instance_uuid))
+            self.db.instance_get_by_uuid(context, instance_uuid,
+                columns_to_join))
 
     def instance_get_all(self, context):
         return jsonutils.to_primitive(self.db.instance_get_all(context))

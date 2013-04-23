@@ -3888,7 +3888,8 @@ class ComputeTestCase(BaseTestCase):
                                'instance_uuid': instance['uuid'],
                                'status': None})
 
-        def fake_instance_get_by_uuid(context, instance_uuid):
+        def fake_instance_get_by_uuid(context, instance_uuid,
+                cols_to_join=None):
             # raise InstanceNotFound exception for uuid 'noexist'
             if instance_uuid == 'noexist':
                 raise exception.InstanceNotFound(instance_id=instance_uuid)
