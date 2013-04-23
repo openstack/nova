@@ -33,6 +33,10 @@ from nova import manager
 class CertManager(manager.Manager):
     RPC_API_VERSION = '1.1'
 
+    def __init__(self, *args, **kwargs):
+        super(CertManager, self).__init__(service_name='cert',
+                                          *args, **kwargs)
+
     def init_host(self):
         crypto.ensure_ca_filesystem()
 

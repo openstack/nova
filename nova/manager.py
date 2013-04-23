@@ -57,6 +57,7 @@ import datetime
 import eventlet
 from oslo.config import cfg
 
+from nova import baserpc
 from nova.db import base
 from nova import exception
 from nova.openstack.common import log as logging
@@ -195,12 +196,13 @@ class Manager(base.Base):
     # Set RPC API version to 1.0 by default.
     RPC_API_VERSION = '1.0'
 
-    def __init__(self, host=None, db_driver=None):
+    def __init__(self, host=None, db_driver=None, service_name='undefined'):
         if not host:
             host = CONF.host
         self.host = host
         self.load_plugins()
         self.backdoor_port = None
+        self.service_name = service_name
         super(Manager, self).__init__(db_driver)
 
     def load_plugins(self):
@@ -213,7 +215,8 @@ class Manager(base.Base):
         If a manager would like to set an rpc API version, or support more than
         one class as the target of rpc messages, override this method.
         '''
-        return rpc_dispatcher.RpcDispatcher([self])
+        base_rpc = baserpc.BaseRPCAPI(self.service_name)
+        return rpc_dispatcher.RpcDispatcher([self, base_rpc])
 
     def periodic_tasks(self, context, raise_on_error=False):
         """Tasks to be run at a periodic interval."""
@@ -292,7 +295,8 @@ class SchedulerDependentManager(Manager):
         self.last_capabilities = None
         self.service_name = service_name
         self.scheduler_rpcapi = scheduler_rpcapi.SchedulerAPI()
-        super(SchedulerDependentManager, self).__init__(host, db_driver)
+        super(SchedulerDependentManager, self).__init__(host, db_driver,
+                service_name)
 
     def load_plugins(self):
         pluginmgr = pluginmanager.PluginManager('nova', self.service_name)
