@@ -3761,6 +3761,10 @@ def instance_type_destroy(context, name):
         session.query(models.InstanceTypeExtraSpecs).\
                 filter_by(instance_type_id=instance_type_id).\
                 soft_delete()
+        model_query(context, models.InstanceTypeProjects,
+                    session=session, read_deleted="no").\
+                filter_by(instance_type_id=instance_type_id).\
+                soft_delete()
 
 
 @require_context
@@ -3775,7 +3779,8 @@ def instance_type_access_get_by_flavor_id(context, flavor_id):
     instance_type_ref = _instance_type_get_query(context).\
                     filter_by(flavorid=flavor_id).\
                     first()
-
+    if not instance_type_ref:
+        return []
     return [r for r in instance_type_ref.projects]
 
 

@@ -2307,6 +2307,26 @@ class InstanceTypeAccessTestCase(BaseInstanceTypeTestCase):
                           db.instance_type_access_remove,
                           self.ctxt, inst_type['flavorid'], 'p2')
 
+    def test_instance_type_access_removed_after_instance_type_destroy(self):
+        inst_type1 = self._create_inst_type({'flavorid': 'f1', 'name': 'n1'})
+        inst_type2 = self._create_inst_type({'flavorid': 'f2', 'name': 'n2'})
+        values = [
+            (inst_type1['flavorid'], 'p1'),
+            (inst_type1['flavorid'], 'p2'),
+            (inst_type2['flavorid'], 'p3')
+        ]
+        for v in values:
+            self._create_inst_type_access(*v)
+
+        db.instance_type_destroy(self.ctxt, inst_type1['name'])
+
+        p = (self.ctxt, inst_type1['flavorid'])
+        self.assertEqual(0, len(db.instance_type_access_get_by_flavor_id(*p)))
+        p = (self.ctxt, inst_type2['flavorid'])
+        self.assertEqual(1, len(db.instance_type_access_get_by_flavor_id(*p)))
+        db.instance_type_destroy(self.ctxt, inst_type2['name'])
+        self.assertEqual(0, len(db.instance_type_access_get_by_flavor_id(*p)))
+
 
 class FixedIPTestCase(BaseInstanceTypeTestCase):
     def _timeout_test(self, ctxt, timeout, multi_host):
