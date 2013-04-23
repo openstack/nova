@@ -2083,6 +2083,10 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
         r_inst_type2 = db.instance_type_get(self.ctxt, inst_type2['id'])
         self._assertEqualObjects(inst_type2, r_inst_type2, 'extra_specs')
 
+    def test_instance_type_destroy_not_found(self):
+        self.assertRaises(exception.InstanceTypeNotFound,
+                          db.instance_type_destroy, self.ctxt, 'nonexists')
+
     def test_instance_type_create_duplicate_name(self):
         self._create_inst_type({})
         self.assertRaises(exception.InstanceTypeExists,
