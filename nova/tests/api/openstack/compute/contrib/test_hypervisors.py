@@ -19,6 +19,7 @@ from webob import exc
 from nova.api.openstack.compute.contrib import hypervisors
 from nova import context
 from nova import db
+from nova.db.sqlalchemy import api as db_api
 from nova import exception
 from nova import test
 from nova.tests.api.openstack import fakes
@@ -79,6 +80,7 @@ TEST_SERVERS = [dict(name="inst1", uuid="uuid1", host="compute1"),
                 dict(name="inst4", uuid="uuid4", host="compute2")]
 
 
+@db_api.require_admin_context
 def fake_compute_node_get_all(context):
     return TEST_HYPERS
 
@@ -185,7 +187,8 @@ class HypervisorsTest(test.TestCase):
                     dict(name="inst4", uuid="uuid4")]))
 
     def test_index(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/os-hypervisors')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-hypervisors',
+                                      use_admin_context=True)
         result = self.controller.index(req)
 
         self.assertEqual(result, dict(hypervisors=[
@@ -193,7 +196,8 @@ class HypervisorsTest(test.TestCase):
                     dict(id=2, hypervisor_hostname="hyper2")]))
 
     def test_detail(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/os-hypervisors/detail')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-hypervisors/detail',
+                                      use_admin_context=True)
         result = self.controller.detail(req)
 
         self.assertEqual(result, dict(hypervisors=[
