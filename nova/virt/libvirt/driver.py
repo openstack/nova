@@ -3374,15 +3374,18 @@ class LibvirtDriver(driver.ComputeDriver):
             if disk_type == "qcow2":
                 backing_file = libvirt_utils.get_disk_backing_file(path)
                 virt_size = disk.get_disk_size(path)
+                over_commit_size = int(virt_size) - dk_size
             else:
                 backing_file = ""
                 virt_size = 0
+                over_commit_size = 0
 
             disk_info.append({'type': disk_type,
                               'path': path,
                               'virt_disk_size': virt_size,
                               'backing_file': backing_file,
-                              'disk_size': dk_size})
+                              'disk_size': dk_size,
+                              'over_committed_disk_size': over_commit_size})
         return jsonutils.dumps(disk_info)
 
     def get_disk_over_committed_size_total(self):
@@ -3395,9 +3398,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 disk_infos = jsonutils.loads(
                         self.get_instance_disk_info(i_name))
                 for info in disk_infos:
-                    i_vt_sz = int(info['virt_disk_size'])
-                    i_dk_sz = int(info['disk_size'])
-                    disk_over_committed_size += i_vt_sz - i_dk_sz
+                    disk_over_committed_size += int(
+                        info['over_committed_disk_size'])
             except OSError as e:
                 if e.errno == errno.ENOENT:
                     LOG.error(_("Getting disk size of %(i_name)s: %(e)s") %
