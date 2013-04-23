@@ -3661,7 +3661,7 @@ def _dict_with_extra_specs(inst_type_query):
 def _instance_type_get_query(context, session=None, read_deleted=None):
     return model_query(context, models.InstanceTypes, session=session,
                        read_deleted=read_deleted).\
-                     options(joinedload('extra_specs'))
+                    options(joinedload('extra_specs'))
 
 
 @require_context
@@ -3709,41 +3709,53 @@ def instance_type_get_all(context, inactive=False, filters=None):
 
 
 @require_context
-def instance_type_get(context, id, session=None):
-    """Returns a dict describing specific instance_type."""
-    result = _instance_type_get_query(context, session=session).\
-                    filter_by(id=id).\
-                    first()
-
-    if not result:
-        raise exception.InstanceTypeNotFound(instance_type_id=id)
-
-    return _dict_with_extra_specs(result)
+def _instance_type_get_id_from_flavor_query(context, flavor_id, session=None):
+    return model_query(context, models.InstanceTypes.id, read_deleted="no",
+                       session=session, base_model=models.InstanceTypes).\
+                filter_by(flavorid=flavor_id)
 
 
 @require_context
-def instance_type_get_by_name(context, name, session=None):
-    """Returns a dict describing specific instance_type."""
-    result = _instance_type_get_query(context, session=session).\
-                    filter_by(name=name).\
+def _instance_type_get_id_from_flavor(context, flavor_id, session=None):
+    result = _instance_type_get_id_from_flavor_query(context, flavor_id,
+                                                     session=session).\
                     first()
-
-    if not result:
-        raise exception.InstanceTypeNotFoundByName(instance_type_name=name)
-
-    return _dict_with_extra_specs(result)
-
-
-@require_context
-def instance_type_get_by_flavor_id(context, flavor_id, session=None):
-    """Returns a dict describing specific flavor_id."""
-    result = _instance_type_get_query(context, session=session).\
-                    filter_by(flavorid=flavor_id).\
-                    first()
-
     if not result:
         raise exception.FlavorNotFound(flavor_id=flavor_id)
+    instance_type_id = result[0]
+    return instance_type_id
 
+
+@require_context
+def instance_type_get(context, id):
+    """Returns a dict describing specific instance_type."""
+    result = _instance_type_get_query(context).\
+                        filter_by(id=id).\
+                        first()
+    if not result:
+        raise exception.InstanceTypeNotFound(instance_type_id=id)
+    return _dict_with_extra_specs(result)
+
+
+@require_context
+def instance_type_get_by_name(context, name):
+    """Returns a dict describing specific instance_type."""
+    result = _instance_type_get_query(context).\
+                        filter_by(name=name).\
+                        first()
+    if not result:
+        raise exception.InstanceTypeNotFoundByName(instance_type_name=name)
+    return _dict_with_extra_specs(result)
+
+
+@require_context
+def instance_type_get_by_flavor_id(context, flavor_id):
+    """Returns a dict describing specific flavor_id."""
+    result = _instance_type_get_query(context).\
+                        filter_by(flavorid=flavor_id).\
+                        first()
+    if not result:
+        raise exception.FlavorNotFound(flavor_id=flavor_id)
     return _dict_with_extra_specs(result)
 
 
@@ -3752,18 +3764,21 @@ def instance_type_destroy(context, name):
     """Marks specific instance_type as deleted."""
     session = get_session()
     with session.begin():
-        instance_type_ref = instance_type_get_by_name(context, name,
-                                                      session=session)
-        instance_type_id = instance_type_ref['id']
-        session.query(models.InstanceTypes).\
-                filter_by(id=instance_type_id).\
-                soft_delete()
-        session.query(models.InstanceTypeExtraSpecs).\
-                filter_by(instance_type_id=instance_type_id).\
+        ref = model_query(context, models.InstanceTypes, session=session,
+                          read_deleted="no").\
+                    filter_by(name=name).\
+                    first()
+        if not ref:
+            raise exception.InstanceTypeNotFoundByName(instance_type_name=name)
+
+        ref.soft_delete(session=session)
+        model_query(context, models.InstanceTypeExtraSpecs,
+                    session=session, read_deleted="no").\
+                filter_by(instance_type_id=ref['id']).\
                 soft_delete()
         model_query(context, models.InstanceTypeProjects,
                     session=session, read_deleted="no").\
-                filter_by(instance_type_id=instance_type_id).\
+                filter_by(instance_type_id=ref['id']).\
                 soft_delete()
 
 
@@ -3776,85 +3791,64 @@ def _instance_type_access_query(context, session=None):
 @require_admin_context
 def instance_type_access_get_by_flavor_id(context, flavor_id):
     """Get flavor access list by flavor id."""
-    instance_type_ref = _instance_type_get_query(context).\
-                    filter_by(flavorid=flavor_id).\
-                    first()
-    if not instance_type_ref:
-        return []
-    return [r for r in instance_type_ref.projects]
+    instance_type_id_subq = \
+            _instance_type_get_id_from_flavor_query(context, flavor_id)
+    access_refs = _instance_type_access_query(context).\
+                        filter_by(instance_type_id=instance_type_id_subq).\
+                        all()
+    return access_refs
 
 
 @require_admin_context
 def instance_type_access_add(context, flavor_id, project_id):
     """Add given tenant to the flavor access list."""
-    session = get_session()
-    with session.begin():
-        instance_type_ref = instance_type_get_by_flavor_id(context, flavor_id,
-                                                           session=session)
-        instance_type_id = instance_type_ref['id']
+    instance_type_id = _instance_type_get_id_from_flavor(context, flavor_id)
 
-        access_ref = models.InstanceTypeProjects()
-        access_ref.update({"instance_type_id": instance_type_id,
-                           "project_id": project_id})
-        try:
-            access_ref.save(session=session)
-        except db_exc.DBDuplicateEntry:
-            raise exception.FlavorAccessExists(flavor_id=flavor_id,
-                                               project_id=project_id)
-        return access_ref
+    access_ref = models.InstanceTypeProjects()
+    access_ref.update({"instance_type_id": instance_type_id,
+                       "project_id": project_id})
+    try:
+        access_ref.save()
+    except db_exc.DBDuplicateEntry:
+        raise exception.FlavorAccessExists(flavor_id=flavor_id,
+                                            project_id=project_id)
+    return access_ref
 
 
 @require_admin_context
 def instance_type_access_remove(context, flavor_id, project_id):
     """Remove given tenant from the flavor access list."""
-    session = get_session()
-    with session.begin():
-        instance_type_ref = instance_type_get_by_flavor_id(context, flavor_id,
-                                                           session=session)
-        instance_type_id = instance_type_ref['id']
-        count = _instance_type_access_query(context, session=session).\
-                        filter_by(instance_type_id=instance_type_id).\
-                        filter_by(project_id=project_id).\
-                        soft_delete()
-        if count == 0:
-            raise exception.FlavorAccessNotFound(flavor_id=flavor_id,
-                                                 project_id=project_id)
+    instance_type_id = _instance_type_get_id_from_flavor(context, flavor_id)
+
+    count = _instance_type_access_query(context).\
+                    filter_by(instance_type_id=instance_type_id).\
+                    filter_by(project_id=project_id).\
+                    soft_delete(synchronize_session=False)
+    if count == 0:
+        raise exception.FlavorAccessNotFound(flavor_id=flavor_id,
+                                             project_id=project_id)
 
 
-def _instance_type_extra_specs_get_query(context, flavor_id,
-                                         session=None):
-    # Two queries necessary because join with update doesn't work.
-    t = model_query(context, models.InstanceTypes.id,
-                    base_model=models.InstanceTypes, session=session,
-                    read_deleted="no").\
-              filter(models.InstanceTypes.flavorid == flavor_id).\
-              subquery()
-    return model_query(context, models.InstanceTypeExtraSpecs,
-                       session=session, read_deleted="no").\
-                       filter(models.InstanceTypeExtraSpecs.
-                              instance_type_id.in_(t))
+def _instance_type_extra_specs_get_query(context, flavor_id, session=None):
+    instance_type_id_subq = \
+            _instance_type_get_id_from_flavor_query(context, flavor_id)
+
+    return model_query(context, models.InstanceTypeExtraSpecs, session=session,
+                       read_deleted="no").\
+                filter_by(instance_type_id=instance_type_id_subq)
 
 
 @require_context
 def instance_type_extra_specs_get(context, flavor_id):
-    rows = _instance_type_extra_specs_get_query(
-                            context, flavor_id).\
-                    all()
-
-    result = {}
-    for row in rows:
-        result[row['key']] = row['value']
-
-    return result
+    rows = _instance_type_extra_specs_get_query(context, flavor_id).all()
+    return dict([(row['key'], row['value']) for row in rows])
 
 
 @require_context
 def instance_type_extra_specs_delete(context, flavor_id, key):
-    # Don't need synchronize the session since we will not use the query result
-    _instance_type_extra_specs_get_query(
-                            context, flavor_id).\
-        filter(models.InstanceTypeExtraSpecs.key == key).\
-        soft_delete(synchronize_session=False)
+    _instance_type_extra_specs_get_query(context, flavor_id).\
+            filter(models.InstanceTypeExtraSpecs.key == key).\
+            soft_delete(synchronize_session=False)
 
 
 @require_context
@@ -3865,15 +3859,8 @@ def instance_type_extra_specs_update_or_create(context, flavor_id, specs):
     #                 possible after bp/db-unique-keys implementation.
     session = get_session()
     with session.begin():
-        instance_type_id = model_query(context, models.InstanceTypes.id,
-                                       base_model=models.InstanceTypes,
-                                       session=session, read_deleted="no").\
-            filter(models.InstanceTypes.flavorid == flavor_id).\
-            first()
-        if not instance_type_id:
-            raise exception.FlavorNotFound(flavor_id=flavor_id)
-
-        instance_type_id = instance_type_id.id
+        instance_type_id = \
+                _instance_type_get_id_from_flavor(context, flavor_id, session)
 
         spec_refs = model_query(context, models.InstanceTypeExtraSpecs,
                                 session=session, read_deleted="no").\
@@ -3894,7 +3881,6 @@ def instance_type_extra_specs_update_or_create(context, flavor_id, specs):
             spec_ref.update({"key": key, "value": value,
                              "instance_type_id": instance_type_id})
             session.add(spec_ref)
-
     return specs
 
 
