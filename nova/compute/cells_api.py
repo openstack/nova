@@ -603,6 +603,19 @@ class HostAPI(compute_api.HostAPI):
         return self.cells_rpcapi.service_get_by_compute_host(context,
                                                              host_name)
 
+    def service_update(self, context, host_name, binary, params_to_update):
+        """
+        Used to enable/disable a service. For compute services, setting to
+        disabled stops new builds arriving on that host.
+
+        :param host_name: the name of the host machine that the service is
+                          running
+        :param binary: The name of the executable that the service runs as
+        :param params_to_update: eg. {'disabled': True}
+        """
+        return self.cells_rpcapi.service_update(
+            context, host_name, binary, params_to_update)
+
     def instance_get_all_by_host(self, context, host_name):
         """Get all instances by host.  Host might have a cell prepended
         to it, so we'll need to strip it out.  We don't need to proxy

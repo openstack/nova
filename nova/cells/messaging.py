@@ -603,6 +603,7 @@ class _BaseMessageMethods(base.Base):
         self.compute_api = compute.API()
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.consoleauth_rpcapi = consoleauth_rpcapi.ConsoleAuthAPI()
+        self.host_api = compute.HostAPI()
 
     def task_log_get_all(self, message, task_name, period_beginning,
                          period_ending, host, state):
@@ -704,6 +705,20 @@ class _TargetedMessageMethods(_BaseMessageMethods):
         service = self.db.service_get_by_compute_host(message.ctxt,
                                                       host_name)
         return jsonutils.to_primitive(service)
+
+    def service_update(self, message, host_name, binary, params_to_update):
+        """
+        Used to enable/disable a service. For compute services, setting to
+        disabled stops new builds arriving on that host.
+
+        :param host_name: the name of the host machine that the service is
+                          running
+        :param binary: The name of the executable that the service runs as
+        :param params_to_update: eg. {'disabled': True}
+        """
+        return jsonutils.to_primitive(
+            self.host_api.service_update(message.ctxt, host_name, binary,
+                                         params_to_update))
 
     def proxy_rpc_to_manager(self, message, host_name, rpc_message,
                              topic, timeout):
@@ -1164,6 +1179,26 @@ class MessageRunner(object):
         method_kwargs = dict(host_name=host_name)
         message = _TargetedMessage(self, ctxt,
                                   'service_get_by_compute_host',
+                                  method_kwargs, 'down', cell_name,
+                                  need_response=True)
+        return message.process()
+
+    def service_update(self, ctxt, cell_name, host_name, binary,
+                       params_to_update):
+        """
+        Used to enable/disable a service. For compute services, setting to
+        disabled stops new builds arriving on that host.
+
+        :param host_name: the name of the host machine that the service is
+                          running
+        :param binary: The name of the executable that the service runs as
+        :param params_to_update: eg. {'disabled': True}
+        :returns: the update service object
+        """
+        method_kwargs = dict(host_name=host_name, binary=binary,
+                             params_to_update=params_to_update)
+        message = _TargetedMessage(self, ctxt,
+                                  'service_update',
                                   method_kwargs, 'down', cell_name,
                                   need_response=True)
         return message.process()

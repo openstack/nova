@@ -248,6 +248,20 @@ class CellsAPITestCase(test.TestCase):
                            version='1.2')
         self.assertEqual(result, 'fake_response')
 
+    def test_service_update(self):
+        call_info = self._stub_rpc_method('call', 'fake_response')
+        result = self.cells_rpcapi.service_update(
+            self.fake_context, host_name='fake-host-name',
+            binary='nova-api', params_to_update={'disabled': True})
+        expected_args = {
+            'host_name': 'fake-host-name',
+            'binary': 'nova-api',
+            'params_to_update': {'disabled': True}}
+        self._check_result(call_info, 'service_update',
+                           expected_args,
+                           version='1.7')
+        self.assertEqual(result, 'fake_response')
+
     def test_proxy_rpc_to_manager(self):
         call_info = self._stub_rpc_method('call', 'fake_response')
         result = self.cells_rpcapi.proxy_rpc_to_manager(
