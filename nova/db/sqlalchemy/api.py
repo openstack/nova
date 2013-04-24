@@ -3816,6 +3816,83 @@ def instance_type_access_remove(context, flavor_id, project_id):
                                                  project_id=project_id)
 
 
+def _instance_type_extra_specs_get_query(context, flavor_id,
+                                         session=None):
+    # Two queries necessary because join with update doesn't work.
+    t = model_query(context, models.InstanceTypes.id,
+                    base_model=models.InstanceTypes, session=session,
+                    read_deleted="no").\
+              filter(models.InstanceTypes.flavorid == flavor_id).\
+              subquery()
+    return model_query(context, models.InstanceTypeExtraSpecs,
+                       session=session, read_deleted="no").\
+                       filter(models.InstanceTypeExtraSpecs.
+                              instance_type_id.in_(t))
+
+
+@require_context
+def instance_type_extra_specs_get(context, flavor_id):
+    rows = _instance_type_extra_specs_get_query(
+                            context, flavor_id).\
+                    all()
+
+    result = {}
+    for row in rows:
+        result[row['key']] = row['value']
+
+    return result
+
+
+@require_context
+def instance_type_extra_specs_delete(context, flavor_id, key):
+    # Don't need synchronize the session since we will not use the query result
+    _instance_type_extra_specs_get_query(
+                            context, flavor_id).\
+        filter(models.InstanceTypeExtraSpecs.key == key).\
+        soft_delete(synchronize_session=False)
+
+
+@require_context
+def instance_type_extra_specs_update_or_create(context, flavor_id, specs):
+    # NOTE(boris-42): There is a race condition in this method. We should add
+    #                 UniqueConstraint on (instance_type_id, key, deleted) to
+    #                 avoid duplicated instance_type_extra_specs. This will be
+    #                 possible after bp/db-unique-keys implementation.
+    session = get_session()
+    with session.begin():
+        instance_type_id = model_query(context, models.InstanceTypes.id,
+                                       base_model=models.InstanceTypes,
+                                       session=session, read_deleted="no").\
+            filter(models.InstanceTypes.flavorid == flavor_id).\
+            first()
+        if not instance_type_id:
+            raise exception.FlavorNotFound(flavor_id=flavor_id)
+
+        instance_type_id = instance_type_id.id
+
+        spec_refs = model_query(context, models.InstanceTypeExtraSpecs,
+                                session=session, read_deleted="no").\
+            filter_by(instance_type_id=instance_type_id).\
+            filter(models.InstanceTypeExtraSpecs.key.in_(specs.keys())).\
+            all()
+
+        existing_keys = set()
+        for spec_ref in spec_refs:
+            key = spec_ref["key"]
+            existing_keys.add(key)
+            spec_ref.update({"value": specs[key]})
+
+        for key, value in specs.iteritems():
+            if key in existing_keys:
+                continue
+            spec_ref = models.InstanceTypeExtraSpecs()
+            spec_ref.update({"key": key, "value": value,
+                             "instance_type_id": instance_type_id})
+            session.add(spec_ref)
+
+    return specs
+
+
 ####################
 
 
@@ -4171,86 +4248,6 @@ def bw_usage_update(context, uuid, mac, start_period, bw_in, bw_out,
         bwusage.last_ctr_in = last_ctr_in
         bwusage.last_ctr_out = last_ctr_out
         bwusage.save(session=session)
-
-
-####################
-
-
-def _instance_type_extra_specs_get_query(context, flavor_id,
-                                         session=None):
-    # Two queries necessary because join with update doesn't work.
-    t = model_query(context, models.InstanceTypes.id,
-                    base_model=models.InstanceTypes, session=session,
-                    read_deleted="no").\
-              filter(models.InstanceTypes.flavorid == flavor_id).\
-              subquery()
-    return model_query(context, models.InstanceTypeExtraSpecs,
-                       session=session, read_deleted="no").\
-                       filter(models.InstanceTypeExtraSpecs.
-                              instance_type_id.in_(t))
-
-
-@require_context
-def instance_type_extra_specs_get(context, flavor_id):
-    rows = _instance_type_extra_specs_get_query(
-                            context, flavor_id).\
-                    all()
-
-    result = {}
-    for row in rows:
-        result[row['key']] = row['value']
-
-    return result
-
-
-@require_context
-def instance_type_extra_specs_delete(context, flavor_id, key):
-    # Don't need synchronize the session since we will not use the query result
-    _instance_type_extra_specs_get_query(
-                            context, flavor_id).\
-        filter(models.InstanceTypeExtraSpecs.key == key).\
-        soft_delete(synchronize_session=False)
-
-
-@require_context
-def instance_type_extra_specs_update_or_create(context, flavor_id, specs):
-    # NOTE(boris-42): There is a race condition in this method. We should add
-    #                 UniqueConstraint on (instance_type_id, key, deleted) to
-    #                 avoid duplicated instance_type_extra_specs. This will be
-    #                 possible after bp/db-unique-keys implementation.
-    session = get_session()
-    with session.begin():
-        instance_type_id = model_query(context, models.InstanceTypes.id,
-                                       base_model=models.InstanceTypes,
-                                       session=session, read_deleted="no").\
-            filter(models.InstanceTypes.flavorid == flavor_id).\
-            first()
-        if not instance_type_id:
-            raise exception.FlavorNotFound(flavor_id=flavor_id)
-
-        instance_type_id = instance_type_id.id
-
-        spec_refs = model_query(context, models.InstanceTypeExtraSpecs,
-                                session=session, read_deleted="no").\
-            filter_by(instance_type_id=instance_type_id).\
-            filter(models.InstanceTypeExtraSpecs.key.in_(specs.keys())).\
-            all()
-
-        existing_keys = set()
-        for spec_ref in spec_refs:
-            key = spec_ref["key"]
-            existing_keys.add(key)
-            spec_ref.update({"value": specs[key]})
-
-        for key, value in specs.iteritems():
-            if key in existing_keys:
-                continue
-            spec_ref = models.InstanceTypeExtraSpecs()
-            spec_ref.update({"key": key, "value": value,
-                             "instance_type_id": instance_type_id})
-            session.add(spec_ref)
-
-    return specs
 
 
 ####################
