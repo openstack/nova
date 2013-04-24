@@ -47,7 +47,7 @@ CONF = cfg.CONF
 CONF.register_opts(resource_tracker_opts)
 
 LOG = logging.getLogger(__name__)
-COMPUTE_RESOURCE_SEMAPHORE = claims.COMPUTE_RESOURCE_SEMAPHORE
+COMPUTE_RESOURCE_SEMAPHORE = "compute_resources"
 
 
 class ResourceTracker(object):
@@ -183,6 +183,7 @@ class ResourceTracker(object):
         instance_ref['launched_on'] = self.host
         instance_ref['node'] = self.nodename
 
+    @lockutils.synchronized(COMPUTE_RESOURCE_SEMAPHORE, 'nova-')
     def abort_instance_claim(self, instance):
         """Remove usage from the given instance."""
         # flag the instance as deleted to revert the resource usage
@@ -193,14 +194,20 @@ class ResourceTracker(object):
         ctxt = context.get_admin_context()
         self._update(ctxt, self.compute_node)
 
-    def abort_resize_claim(self, instance_uuid, instance_type):
-        """Remove usage for an incoming migration."""
-        if instance_uuid in self.tracked_migrations:
-            migration, itype = self.tracked_migrations.pop(instance_uuid)
+    @lockutils.synchronized(COMPUTE_RESOURCE_SEMAPHORE, 'nova-')
+    def drop_resize_claim(self, instance, instance_type=None, prefix='new_'):
+        """Remove usage for an incoming/outgoing migration."""
+        if instance['uuid'] in self.tracked_migrations:
+            migration, itype = self.tracked_migrations.pop(instance['uuid'])
 
-            if instance_type['id'] == migration['new_instance_type_id']:
+            if not instance_type:
+                ctxt = context.get_admin_context()
+                instance_type = self._get_instance_type(ctxt, instance, prefix)
+
+            if instance_type['id'] == itype['id']:
                 self.stats.update_stats_for_migration(itype, sign=-1)
                 self._update_usage(self.compute_node, itype, sign=-1)
+                self.compute_node['stats'] = self.stats
 
                 ctxt = context.get_admin_context()
                 self._update(ctxt, self.compute_node)
@@ -352,16 +359,6 @@ class ResourceTracker(object):
             del self.compute_node['service']
         self.compute_node = self.conductor_api.compute_node_update(
             context, self.compute_node, values, prune_stats)
-
-    def confirm_resize(self, context, migration, status='confirmed'):
-        """Cleanup usage for a confirmed resize."""
-        elevated = context.elevated()
-        self.conductor_api.migration_update(elevated, migration, status)
-        self.update_available_resource(elevated)
-
-    def revert_resize(self, context, migration, status='reverted'):
-        """Cleanup usage for a reverted resize."""
-        self.confirm_resize(context, migration, status)
 
     def _update_usage(self, resources, usage, sign=1):
         resources['memory_mb_used'] += sign * usage['memory_mb']

@@ -2130,8 +2130,11 @@ class ComputeManager(manager.SchedulerDependentManager):
             self.driver.confirm_migration(migration, instance,
                                           self._legacy_nw_info(network_info))
 
+            self.conductor_api.migration_update(context, migration,
+                                                'confirmed')
+
             rt = self._get_resource_tracker(migration['source_node'])
-            rt.confirm_resize(context, migration)
+            rt.drop_resize_claim(instance, prefix='old_')
 
             instance = self._instance_update(context, instance['uuid'],
                                              vm_state=vm_states.ACTIVE,
@@ -2183,8 +2186,10 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             self._terminate_volume_connections(context, instance)
 
+            self.conductor_api.migration_update(context, migration, 'reverted')
+
             rt = self._get_resource_tracker(instance.get('node'))
-            rt.revert_resize(context, migration, status='reverted_dest')
+            rt.drop_resize_claim(instance)
 
             self.compute_rpcapi.finish_revert_resize(context, instance,
                     migration, migration['source_compute'],
@@ -2272,9 +2277,6 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             instance = self._instance_update(context, instance['uuid'],
                     vm_state=vm_states.ACTIVE, task_state=None)
-
-            rt = self._get_resource_tracker(instance.get('node'))
-            rt.revert_resize(context, migration)
 
             self._notify_about_instance_usage(
                     context, instance, "resize.revert.end")

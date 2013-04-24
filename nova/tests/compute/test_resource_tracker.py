@@ -770,9 +770,7 @@ class ResizeClaimTestCase(BaseTrackerTestCase):
     def test_revert(self):
         self.tracker.resize_claim(self.context, self.instance,
                 self.instance_type, self.limits)
-        migration, itype = self.tracker.tracked_migrations[
-                self.instance['uuid']]
-        self.tracker.revert_resize(self.context, migration)
+        self.tracker.drop_resize_claim(self.instance)
 
         self.assertEqual(0, len(self.tracker.tracked_instances))
         self.assertEqual(0, len(self.tracker.tracked_migrations))

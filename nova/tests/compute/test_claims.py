@@ -30,7 +30,7 @@ class DummyTracker(object):
     def abort_instance_claim(self, *args, **kwargs):
         self.icalled = True
 
-    def abort_resize_claim(self, *args, **kwargs):
+    def drop_resize_claim(self, *args, **kwargs):
         self.rcalled = True
 
 
