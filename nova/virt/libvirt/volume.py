@@ -29,6 +29,7 @@ from oslo.config import cfg
 from nova import exception
 from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
+from nova.openstack.common import loopingcall
 from nova import paths
 from nova.storage import linuxscsi
 from nova import utils
@@ -538,7 +539,7 @@ class LibvirtAOEVolumeDriver(LibvirtBaseVolumeDriver):
         def _wait_for_device_discovery(aoedevpath, mount_device):
             tries = self.tries
             if os.path.exists(aoedevpath):
-                raise utils.LoopingCallDone()
+                raise loopingcall.LoopingCallDone()
 
             if self.tries >= CONF.num_aoe_discover_tries:
                 raise exception.NovaException(_("AoE device not found at %s") %
@@ -551,8 +552,8 @@ class LibvirtAOEVolumeDriver(LibvirtBaseVolumeDriver):
             self.tries = self.tries + 1
 
         self.tries = 0
-        timer = utils.FixedIntervalLoopingCall(_wait_for_device_discovery,
-                                               aoedevpath, mount_device)
+        timer = loopingcall.FixedIntervalLoopingCall(
+            _wait_for_device_discovery, aoedevpath, mount_device)
         timer.start(interval=2).wait()
 
         tries = self.tries
@@ -701,7 +702,7 @@ class LibvirtFibreChannelVolumeDriver(LibvirtBaseVolumeDriver):
                     # get the /dev/sdX device.  This is used
                     # to find the multipath device.
                     self.device_name = os.path.realpath(device)
-                    raise utils.LoopingCallDone()
+                    raise loopingcall.LoopingCallDone()
 
             if self.tries >= CONF.num_iscsi_scan_tries:
                 msg = _("Fibre Channel device not found.")
@@ -717,8 +718,8 @@ class LibvirtFibreChannelVolumeDriver(LibvirtBaseVolumeDriver):
         self.host_device = None
         self.device_name = None
         self.tries = 0
-        timer = utils.FixedIntervalLoopingCall(_wait_for_device_discovery,
-                                               host_devices, mount_device)
+        timer = loopingcall.FixedIntervalLoopingCall(
+            _wait_for_device_discovery, host_devices, mount_device)
         timer.start(interval=2).wait()
 
         tries = self.tries

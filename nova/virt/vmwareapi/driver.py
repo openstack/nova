@@ -46,7 +46,7 @@ from oslo.config import cfg
 from nova import exception
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
-from nova import utils
+from nova.openstack.common import loopingcall
 from nova.virt import driver
 from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import host
@@ -552,8 +552,9 @@ class VMwareAPISession(object):
         The task is polled until it completes.
         """
         done = event.Event()
-        loop = utils.FixedIntervalLoopingCall(self._poll_task, instance_uuid,
-                                              task_ref, done)
+        loop = loopingcall.FixedIntervalLoopingCall(self._poll_task,
+                                                    instance_uuid,
+                                                    task_ref, done)
         loop.start(CONF.vmwareapi_task_poll_interval)
         ret_val = done.wait()
         loop.stop()

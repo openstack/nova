@@ -37,6 +37,7 @@ from nova import exception
 from nova.openstack.common import eventlet_backdoor
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
+from nova.openstack.common import loopingcall
 from nova.openstack.common import rpc
 from nova import servicegroup
 from nova import utils
@@ -473,7 +474,7 @@ class Service(object):
             else:
                 initial_delay = None
 
-            periodic = utils.DynamicLoopingCall(self.periodic_tasks)
+            periodic = loopingcall.DynamicLoopingCall(self.periodic_tasks)
             periodic.start(initial_delay=initial_delay,
                            periodic_interval_max=self.periodic_interval_max)
             self.timers.append(periodic)

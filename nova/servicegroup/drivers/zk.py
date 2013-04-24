@@ -22,8 +22,8 @@ from oslo.config import cfg
 from nova import exception
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
+from nova.openstack.common import loopingcall
 from nova.servicegroup import api
-from nova import utils
 
 evzookeeper = importutils.try_import('evzookeeper')
 membership = importutils.try_import('evzookeeper.membersip')
@@ -139,7 +139,7 @@ class ZooKeeperDriver(api.ServiceGroupDriver):
         return all_members
 
 
-class FakeLoopingCall(utils.LoopingCallBase):
+class FakeLoopingCall(loopingcall.LoopingCallBase):
     """The fake Looping Call implementation, created for backward
     compatibility with a membership based on DB.
     """

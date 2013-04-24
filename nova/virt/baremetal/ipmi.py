@@ -29,6 +29,7 @@ from oslo.config import cfg
 
 from nova import exception
 from nova.openstack.common import log as logging
+from nova.openstack.common import loopingcall
 from nova import paths
 from nova import utils
 from nova.virt.baremetal import baremetal_states
@@ -149,10 +150,10 @@ class IPMI(base.PowerManager):
 
             if self._is_power("on"):
                 self.state = baremetal_states.ACTIVE
-                raise utils.LoopingCallDone()
+                raise loopingcall.LoopingCallDone()
             if self.retries > CONF.baremetal.ipmi_power_retry:
                 self.state = baremetal_states.ERROR
-                raise utils.LoopingCallDone()
+                raise loopingcall.LoopingCallDone()
             try:
                 self.retries += 1
                 self._exec_ipmitool("power on")
@@ -160,7 +161,7 @@ class IPMI(base.PowerManager):
                 LOG.exception(_("IPMI power on failed"))
 
         self.retries = 0
-        timer = utils.FixedIntervalLoopingCall(_wait_for_power_on)
+        timer = loopingcall.FixedIntervalLoopingCall(_wait_for_power_on)
         timer.start(interval=0.5).wait()
 
     def _power_off(self):
@@ -171,10 +172,10 @@ class IPMI(base.PowerManager):
 
             if self._is_power("off"):
                 self.state = baremetal_states.DELETED
-                raise utils.LoopingCallDone()
+                raise loopingcall.LoopingCallDone()
             if self.retries > CONF.baremetal.ipmi_power_retry:
                 self.state = baremetal_states.ERROR
-                raise utils.LoopingCallDone()
+                raise loopingcall.LoopingCallDone()
             try:
                 self.retries += 1
                 self._exec_ipmitool("power off")
@@ -182,7 +183,7 @@ class IPMI(base.PowerManager):
                 LOG.exception(_("IPMI power off failed"))
 
         self.retries = 0
-        timer = utils.FixedIntervalLoopingCall(_wait_for_power_off)
+        timer = loopingcall.FixedIntervalLoopingCall(_wait_for_power_off)
         timer.start(interval=0.5).wait()
 
     def _set_pxe_for_next_boot(self):

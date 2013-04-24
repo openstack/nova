@@ -30,8 +30,8 @@ from nova import exception
 from nova.openstack.common.db import exception as db_exc
 from nova.openstack.common import fileutils
 from nova.openstack.common import log as logging
+from nova.openstack.common import loopingcall
 from nova.openstack.common import timeutils
-from nova import utils
 from nova.virt.baremetal import baremetal_states
 from nova.virt.baremetal import base
 from nova.virt.baremetal import db
@@ -458,7 +458,7 @@ class PXE(base.NodeDriver):
                 if instance['uuid'] != row.get('instance_uuid'):
                     locals['error'] = _("Node associated with another instance"
                                         " while waiting for deploy of %s")
-                    raise utils.LoopingCallDone()
+                    raise loopingcall.LoopingCallDone()
 
                 status = row.get('task_state')
                 if (status == baremetal_states.DEPLOYING
@@ -470,7 +470,7 @@ class PXE(base.NodeDriver):
                                 baremetal_states.ACTIVE):
                     LOG.info(_("PXE deploy completed for instance %s")
                                 % instance['uuid'])
-                    raise utils.LoopingCallDone()
+                    raise loopingcall.LoopingCallDone()
                 elif status == baremetal_states.DEPLOYFAIL:
                     locals['error'] = _("PXE deploy failed for instance %s")
             except exception.NodeNotFound:
@@ -482,11 +482,11 @@ class PXE(base.NodeDriver):
                 locals['error'] = _("Timeout reached while waiting for "
                                      "PXE deploy of instance %s")
             if locals['error']:
-                raise utils.LoopingCallDone()
+                raise loopingcall.LoopingCallDone()
 
         expiration = timeutils.utcnow() + datetime.timedelta(
                             seconds=CONF.baremetal.pxe_deploy_timeout)
-        timer = utils.FixedIntervalLoopingCall(_wait_for_deploy)
+        timer = loopingcall.FixedIntervalLoopingCall(_wait_for_deploy)
         timer.start(interval=1).wait()
 
         if locals['error']:

@@ -42,6 +42,7 @@ from nova import exception
 from nova.openstack.common import fileutils
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
+from nova.openstack.common import loopingcall
 from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests import fake_libvirt_utils
@@ -4848,7 +4849,7 @@ class LibvirtDriverTestCase(test.TestCase):
                      'uuid': 'not_found_uuid'})
 
         # instance is running case
-        self.assertRaises(utils.LoopingCallDone,
+        self.assertRaises(loopingcall.LoopingCallDone,
                 self.libvirtconnection._wait_for_running,
                     {'name': 'running',
                      'uuid': 'running_uuid'})
@@ -4988,7 +4989,7 @@ class LibvirtDriverTestCase(test.TestCase):
         self.stubs.Set(self.libvirtconnection, 'to_xml', lambda *a, **k: None)
         self.stubs.Set(self.libvirtconnection, '_create_domain_and_network',
                        lambda *a: None)
-        self.stubs.Set(utils, 'FixedIntervalLoopingCall',
+        self.stubs.Set(loopingcall, 'FixedIntervalLoopingCall',
                        lambda *a, **k: FakeLoopingCall())
 
         libvirt_utils.get_instance_path({}).AndReturn('/fake/foo')
