@@ -1068,7 +1068,7 @@ class VMwareVMOps(object):
         """Return snapshot of console."""
         vm_ref = vm_util.get_vm_ref(self._session, instance)
 
-        param_list = {"id": str(vm_ref)}
+        param_list = {"id": str(vm_ref.value)}
         base_url = "%s://%s/screen?%s" % (self._session._scheme,
                                          self._session._host_ip,
                                          urllib.urlencode(param_list))
