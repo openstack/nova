@@ -2134,6 +2134,8 @@ class LibvirtDriver(driver.ComputeDriver):
         inst_path = libvirt_utils.get_instance_path(instance)
         disk_mapping = disk_info['mapping']
 
+        CONSOLE = "console=tty0 console=ttyS0"
+
         guest = vconfig.LibvirtConfigGuest()
         guest.virt_type = CONF.libvirt_type
         guest.name = instance['name']
@@ -2186,7 +2188,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if CONF.libvirt_type == "lxc":
             guest.os_type = vm_mode.EXE
             guest.os_init_path = "/sbin/init"
-            guest.os_cmdline = "console=ttyS0"
+            guest.os_cmdline = CONSOLE
         elif CONF.libvirt_type == "uml":
             guest.os_type = vm_mode.UML
             guest.os_kernel = "/usr/bin/linux"
@@ -2203,8 +2205,8 @@ class LibvirtDriver(driver.ComputeDriver):
                     if CONF.libvirt_type == "xen":
                         guest.os_cmdline = "ro"
                     else:
-                        guest.os_cmdline = ("root=%s console=ttyS0" %
-                                            root_device_name)
+                        guest.os_cmdline = ("root=%s %s" % (root_device_name,
+                                                            CONSOLE))
 
                 if rescue.get('ramdisk_id'):
                     guest.os_initrd = os.path.join(inst_path, "ramdisk.rescue")
@@ -2213,8 +2215,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 if CONF.libvirt_type == "xen":
                     guest.os_cmdline = "ro"
                 else:
-                    guest.os_cmdline = ("root=%s console=ttyS0" %
-                                        root_device_name)
+                    guest.os_cmdline = ("root=%s %s" % (root_device_name,
+                                                        CONSOLE))
                 if instance['ramdisk_id']:
                     guest.os_initrd = os.path.join(inst_path, "ramdisk")
             else:
