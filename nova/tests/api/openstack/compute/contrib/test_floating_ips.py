@@ -213,6 +213,28 @@ class FloatingIpTest(test.TestCase):
                                          'for id 9876", "code": 404}}')
         self.assertEqual(res.body, expected_msg)
 
+    def test_floating_ip_release_race_cond(self):
+        def fake_get_floating_ip(*args, **kwargs):
+            return {'fixed_ip_id': 1, 'address': self.floating_ip}
+
+        def fake_get_instance_by_floating_ip_addr(*args, **kwargs):
+            return 'test-inst'
+
+        def fake_disassociate_floating_ip(*args, **kwargs):
+            raise exception.FloatingIpNotAssociated(args[3])
+
+        self.stubs.Set(network.api.API, "get_floating_ip",
+                fake_get_floating_ip)
+        self.stubs.Set(floating_ips, "get_instance_by_floating_ip_addr",
+                fake_get_instance_by_floating_ip_addr)
+        self.stubs.Set(floating_ips, "disassociate_floating_ip",
+                fake_disassociate_floating_ip)
+
+        req = fakes.HTTPRequest.blank('/v2/fake/os-floating-ips/1')
+        req.method = 'DELETE'
+        res = req.get_response(fakes.wsgi_app(init_only=('os-floating-ips',)))
+        self.assertEqual(res.status_int, 202)
+
     def test_floating_ip_show(self):
         req = fakes.HTTPRequest.blank('/v2/fake/os-floating-ips/1')
         res_dict = self.controller.show(req, 1)
