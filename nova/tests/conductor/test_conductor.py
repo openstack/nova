@@ -266,30 +266,6 @@ class _BaseTestCase(object):
         result = self.conductor.bw_usage_update(*update_args)
         self.assertEqual(result, 'foo')
 
-    def test_get_backdoor_port(self):
-        backdoor_port = 59697
-
-        def fake_get_backdoor_port(self, context):
-            return backdoor_port
-
-        if isinstance(self.conductor, conductor_api.API):
-            self.stubs.Set(conductor_manager.ConductorManager,
-                          'get_backdoor_port', fake_get_backdoor_port)
-            port = self.conductor.get_backdoor_port(self.context, 'fake_host')
-        elif isinstance(self.conductor, conductor_api.LocalAPI):
-            try:
-                self.conductor.get_backdoor_port(self.context, 'fake_host')
-            except exc.InvalidRequest:
-                port = backdoor_port
-        else:
-            if isinstance(self.conductor, conductor_rpcapi.ConductorAPI):
-                self.stubs.Set(conductor_manager.ConductorManager,
-                              'get_backdoor_port', fake_get_backdoor_port)
-            self.conductor.backdoor_port = backdoor_port
-            port = self.conductor.get_backdoor_port(self.context)
-
-        self.assertEqual(port, backdoor_port)
-
     def test_security_group_get_by_instance(self):
         fake_instance = {'id': 'fake-instance'}
         self.mox.StubOutWithMock(db, 'security_group_get_by_instance')

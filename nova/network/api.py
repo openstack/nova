@@ -173,10 +173,6 @@ class API(base.Base):
         return [floating_ip['address'] for floating_ip in floating_ips]
 
     @wrap_check_policy
-    def get_backdoor_port(self, context, host):
-        return self.network_rpcapi.get_backdoor_port(context, host)
-
-    @wrap_check_policy
     def get_instance_id_by_floating_address(self, context, address):
         fixed_ip = self.db.fixed_ip_get_by_floating_address(context, address)
         if fixed_ip is None:

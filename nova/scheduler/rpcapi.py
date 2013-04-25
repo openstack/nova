@@ -116,10 +116,6 @@ class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 capabilities=capabilities),
                 version='2.4')
 
-    def get_backdoor_port(self, context, host):
-        return self.call(context, self.make_msg('get_backdoor_port'),
-                         version='2.5')
-
     def select_hosts(self, ctxt, request_spec, filter_properties):
         return self.call(ctxt, self.make_msg('select_hosts',
                 request_spec=request_spec,

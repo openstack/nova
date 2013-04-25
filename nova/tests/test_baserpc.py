@@ -43,3 +43,8 @@ class BaseAPITestCase(test.TestCase):
     def test_ping(self):
         res = self.base_rpcapi.ping(self.context, 'foo')
         self.assertEqual(res, {'service': 'compute', 'arg': 'foo'})
+
+    def test_get_backdoor_port(self):
+        res = self.base_rpcapi.get_backdoor_port(self.context,
+                self.compute.host)
+        self.assertEqual(res, self.compute.backdoor_port)

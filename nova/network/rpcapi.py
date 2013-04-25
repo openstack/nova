@@ -124,11 +124,6 @@ class NetworkAPI(rpc_proxy.RpcProxy):
                 'get_instance_id_by_floating_address',
                 address=address))
 
-    def get_backdoor_port(self, ctxt, host):
-        return self.call(ctxt, self.make_msg('get_backdoor_port'),
-                         topic=rpc.queue_get_for(ctxt, self.topic, host),
-                         version='1.4')
-
     def get_vifs_by_instance(self, ctxt, instance_id):
         # NOTE(vish): When the db calls are converted to store network
         #             data by instance_uuid, this should pass uuid instead.

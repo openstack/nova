@@ -148,9 +148,6 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
     def test_live_migrate(self):
         self.skipTest("Test is incompatible with cells.")
 
-    def test_get_backdoor_port(self):
-        self.skipTest("Test is incompatible with cells.")
-
     def test_snapshot_given_image_uuid(self):
         self.skipTest("Test doesn't apply to API cell.")
 

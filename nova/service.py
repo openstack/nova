@@ -446,7 +446,7 @@ class Service(object):
 
         self.manager.pre_start_hook(rpc_connection=self.conn)
 
-        rpc_dispatcher = self.manager.create_rpc_dispatcher()
+        rpc_dispatcher = self.manager.create_rpc_dispatcher(self.backdoor_port)
 
         # Share this same connection for these Consumers
         self.conn.create_consumer(self.topic, rpc_dispatcher, fanout=False)

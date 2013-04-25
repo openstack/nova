@@ -62,7 +62,3 @@ class ConsoleAPI(nova.openstack.common.rpc.proxy.RpcProxy):
 
     def remove_console(self, ctxt, console_id):
         self.cast(ctxt, self.make_msg('remove_console', console_id=console_id))
-
-    def get_backdoor_port(self, ctxt, host):
-        return self.call(ctxt, self.make_msg('get_backdoor_port'),
-                         version='1.1')

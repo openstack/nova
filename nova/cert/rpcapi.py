@@ -86,7 +86,3 @@ class CertAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         return self.call(ctxt, self.make_msg('decrypt_text',
                                              project_id=project_id,
                                              text=text))
-
-    def get_backdoor_port(self, context, host):
-        return self.call(context, self.make_msg('get_backdoor_port'),
-                         version='1.1')

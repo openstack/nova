@@ -291,6 +291,8 @@ class SchedulerManager(manager.Manager):
     def _expire_reservations(self, context):
         QUOTAS.expire(context)
 
+    # NOTE(russellb) This method can be removed in 3.0 of this API.  It is
+    # deprecated in favor of the method in the base API.
     def get_backdoor_port(self, context):
         return self.backdoor_port
 

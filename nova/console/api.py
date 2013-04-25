@@ -69,8 +69,3 @@ class API(base.Base):
         else:
             instance = self.db.instance_get(context, instance_uuid)
         return instance
-
-    def get_backdoor_port(self, context, host):
-        topic = self._get_console_topic(context, host)
-        rpcapi = console_rpcapi.ConsoleAPI(topic=topic)
-        return rpcapi.get_backdoor_port(context, host)

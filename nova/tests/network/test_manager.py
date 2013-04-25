@@ -1870,19 +1870,6 @@ class RPCAllocateTestCase(test.TestCase):
         self.assertEqual(rval, address)
 
 
-class BackdoorPortTestCase(test.TestCase):
-    """Tests nova.network.manager.get_backdoor_port."""
-    def setUp(self):
-        super(BackdoorPortTestCase, self).setUp()
-        self.manager = network_manager.NetworkManager()
-        self.manager.backdoor_port = 59697
-        self.context = context.RequestContext('fake', 'fake')
-
-    def test_backdoor_port(self):
-        port = self.manager.get_backdoor_port(self.context)
-        self.assertEqual(port, self.manager.backdoor_port)
-
-
 class TestFloatingIPManager(floating_ips.FloatingIP,
         network_manager.NetworkManager):
     """Dummy manager that implements FloatingIP."""

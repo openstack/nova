@@ -777,6 +777,8 @@ class NetworkManager(manager.Manager):
         return self.get_instance_nw_info(context, instance_id, rxtx_factor,
                                          host)
 
+    # NOTE(russellb) This method can be removed in 2.0 of this API.  It is
+    # deprecated in favor of the method in the base API.
     def get_backdoor_port(self, context):
         """Return backdoor port for eventlet_backdoor."""
         return self.backdoor_port
