@@ -160,12 +160,12 @@ class FloatingIPController(object):
         try:
             address = self.network_api.allocate_floating_ip(context, pool)
             ip = self.network_api.get_floating_ip_by_address(context, address)
-        except exception.NoMoreFloatingIps, nmfi:
+        except exception.NoMoreFloatingIps:
             if pool:
-                nmfi.message = _("No more floating ips in pool %s.") % pool
+                msg = _("No more floating ips in pool %s.") % pool
             else:
-                nmfi.message = _("No more floating ips available.")
-            raise
+                msg = _("No more floating ips available.")
+            raise webob.exc.HTTPNotFound(explanation=msg)
 
         return _translate_floating_ip_view(ip)
 

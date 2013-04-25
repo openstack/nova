@@ -17,6 +17,7 @@
 import uuid
 
 from lxml import etree
+import testtools
 import webob
 
 from nova.api.openstack.compute.contrib import floating_ips
@@ -281,9 +282,21 @@ class FloatingIpTest(test.TestCase):
         self.stubs.Set(network.api.API, "allocate_floating_ip", fake_allocate)
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-floating-ips')
-        self.assertRaises(exception.NoMoreFloatingIps,
-                          self.controller.create,
-                          req)
+        with testtools.ExpectedException(webob.exc.HTTPNotFound,
+                                         'No more floating ips'):
+            self.controller.create(req)
+
+    def test_floating_ip_allocate_no_free_ips_pool(self):
+        def fake_allocate(*args, **kwargs):
+            raise exception.NoMoreFloatingIps()
+
+        self.stubs.Set(network.api.API, "allocate_floating_ip", fake_allocate)
+
+        req = fakes.HTTPRequest.blank('/v2/fake/os-floating-ips')
+        with testtools.ExpectedException(
+                webob.exc.HTTPNotFound,
+                'No more floating ips in pool non_existant_pool'):
+            self.controller.create(req, {'pool': 'non_existant_pool'})
 
     def test_floating_ip_allocate(self):
         def fake1(*args, **kwargs):
