@@ -16,6 +16,7 @@
 
 from oslo.config import cfg
 
+from nova import baserpc
 from nova.conductor import manager
 from nova.conductor import rpcapi
 from nova import exception as exc
@@ -55,9 +56,6 @@ class LocalAPI(object):
     def wait_until_ready(self, context, *args, **kwargs):
         # nothing to wait for in the local case.
         pass
-
-    def ping(self, context, arg, timeout=None):
-        return self._manager.ping(context, arg)
 
     def instance_update(self, context, instance_uuid, **updates):
         """Perform an instance update in the database."""
@@ -355,6 +353,7 @@ class API(object):
 
     def __init__(self):
         self.conductor_rpcapi = rpcapi.ConductorAPI()
+        self.base_rpcapi = baserpc.BaseAPI(topic=CONF.conductor.topic)
 
     def wait_until_ready(self, context, early_timeout=10, early_attempts=10):
         '''Wait until a conductor service is up and running.
@@ -378,15 +377,13 @@ class API(object):
             # This may fail the first time around if nova-conductor wasn't
             # running when this service started.
             try:
-                self.ping(context, '1.21 GigaWatts', timeout=timeout)
+                self.base_rpcapi.ping(context, '1.21 GigaWatts',
+                                      timeout=timeout)
                 break
             except rpc_common.Timeout as e:
                 LOG.warning(_('Timed out waiting for nova-conductor. '
                                 'Is it running? Or did this service start '
                                 'before nova-conductor?'))
-
-    def ping(self, context, arg, timeout=None):
-        return self.conductor_rpcapi.ping(context, arg, timeout)
 
     def instance_update(self, context, instance_uuid, **updates):
         """Perform an instance update in the database."""
