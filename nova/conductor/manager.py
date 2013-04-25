@@ -52,7 +52,8 @@ class ConductorManager(manager.Manager):
     RPC_API_VERSION = '1.49'
 
     def __init__(self, *args, **kwargs):
-        super(ConductorManager, self).__init__(*args, **kwargs)
+        super(ConductorManager, self).__init__(service_name='conductor',
+                                               *args, **kwargs)
         self.security_group_api = (
             openstack_driver.get_openstack_security_group_driver())
         self._network_api = None

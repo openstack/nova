@@ -59,7 +59,8 @@ class ConsoleProxyManager(manager.Manager):
         if not console_driver:
             console_driver = CONF.console_driver
         self.driver = importutils.import_object(console_driver)
-        super(ConsoleProxyManager, self).__init__(*args, **kwargs)
+        super(ConsoleProxyManager, self).__init__(service_name='console',
+                                                  *args, **kwargs)
         self.driver.host = self.host
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
 

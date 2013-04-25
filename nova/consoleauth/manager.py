@@ -53,7 +53,8 @@ class ConsoleAuthManager(manager.Manager):
     RPC_API_VERSION = '1.2'
 
     def __init__(self, scheduler_driver=None, *args, **kwargs):
-        super(ConsoleAuthManager, self).__init__(*args, **kwargs)
+        super(ConsoleAuthManager, self).__init__(service_name='consoleauth',
+                                                 *args, **kwargs)
         self.mc = memorycache.get_client()
         self.conductor_api = conductor_api.API()
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()

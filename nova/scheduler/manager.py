@@ -63,7 +63,8 @@ class SchedulerManager(manager.Manager):
         if not scheduler_driver:
             scheduler_driver = CONF.scheduler_driver
         self.driver = importutils.import_object(scheduler_driver)
-        super(SchedulerManager, self).__init__(*args, **kwargs)
+        super(SchedulerManager, self).__init__(service_name='scheduler',
+                                               *args, **kwargs)
 
     def post_start_hook(self):
         """After we start up and can receive messages via RPC, tell all

@@ -68,7 +68,8 @@ class CellsManager(manager.Manager):
     def __init__(self, *args, **kwargs):
         # Mostly for tests.
         cell_state_manager = kwargs.pop('cell_state_manager', None)
-        super(CellsManager, self).__init__(*args, **kwargs)
+        super(CellsManager, self).__init__(service_name='cells',
+                                           *args, **kwargs)
         if cell_state_manager is None:
             cell_state_manager = cells_state.CellStateManager
         self.state_manager = cell_state_manager()
