@@ -22,9 +22,9 @@ from oslo.config import cfg
 
 spice_opts = [
     cfg.StrOpt('html5proxy_base_url',
-               default='http://127.0.0.1:6080/spice_auto.html',
+               default='http://127.0.0.1:6082/spice_auto.html',
                help='location of spice html5 console proxy, in the form '
-                    '"http://127.0.0.1:6080/spice_auto.html"'),
+                    '"http://127.0.0.1:6082/spice_auto.html"'),
     cfg.StrOpt('server_listen',
                default='127.0.0.1',
                help='IP address on which instance spice server should listen'),
