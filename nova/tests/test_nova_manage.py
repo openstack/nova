@@ -15,6 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import fixtures
 import StringIO
 import sys
 
@@ -49,6 +50,24 @@ class FixedIpCommandsTestCase(test.TestCase):
 
     def test_unreserve_nonexistent_address(self):
         self.assertEqual(2, self.commands.unreserve('55.55.55.55'))
+
+    def test_list(self):
+        self.useFixture(fixtures.MonkeyPatch('sys.stdout',
+                                             StringIO.StringIO()))
+        self.commands.list()
+        self.assertTrue(sys.stdout.getvalue().find('192.168.0.100') != -1)
+
+    def test_list_just_one_host(self):
+        def fake_fixed_ip_get_by_host(*args, **kwargs):
+            return [db_fakes.fixed_ip_fields]
+
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.db.fixed_ip_get_by_host',
+            fake_fixed_ip_get_by_host))
+        self.useFixture(fixtures.MonkeyPatch('sys.stdout',
+                                             StringIO.StringIO()))
+        self.commands.list('banana')
+        self.assertTrue(sys.stdout.getvalue().find('192.168.0.100') != -1)
 
 
 class FloatingIpCommandsTestCase(test.TestCase):
