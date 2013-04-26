@@ -245,9 +245,14 @@ def notify_about_instance_usage(context, instance, event_suffix,
     usage_info = notifications.info_from_instance(context, instance,
             network_info, system_metadata, **extra_usage_info)
 
+    if event_suffix.endswith("error"):
+        level = notifier_api.ERROR
+    else:
+        level = notifier_api.INFO
+
     notifier_api.notify(context, 'compute.%s' % host,
-                        'compute.instance.%s' % event_suffix,
-                        notifier_api.INFO, usage_info)
+                        'compute.instance.%s' % event_suffix, level,
+                        usage_info)
 
 
 def get_nw_info_for_instance(instance):
