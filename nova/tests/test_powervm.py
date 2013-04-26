@@ -22,6 +22,7 @@ import contextlib
 
 from nova import context
 from nova import db
+from nova import exception as nova_exception
 from nova import test
 
 from nova.compute import instance_types
@@ -213,6 +214,27 @@ class PowerVMDriverTestCase(test.TestCase):
                                       fake_net_info)
         state = self.powervm_connection.get_info(self.instance)['state']
         self.assertEqual(state, power_state.RUNNING)
+
+    def test_spawn_create_lpar_fail(self):
+        # Verify on a failed spawn, we get the original exception raised.
+        # helper function
+        def raise_(ex):
+            raise ex
+
+        self.flags(powervm_img_local_path='/images/')
+        self.stubs.Set(images, 'fetch', lambda *x, **y: None)
+        self.stubs.Set(
+            self.powervm_connection._powervm,
+            'get_host_stats',
+            lambda *x, **y: raise_(
+                (nova_exception.ProcessExecutionError('instance_name'))))
+        fake_net_info = network_model.NetworkInfo([
+                                     fake_network_cache_model.new_vif()])
+        self.assertRaises(exception.PowerVMLPARCreationFailed,
+                          self.powervm_connection.spawn,
+                          context.get_admin_context(),
+                          self.instance,
+                          {'id': 'ANY_ID'}, [], 's3cr3t', fake_net_info)
 
     def test_spawn_cleanup_on_fail(self):
         # Verify on a failed spawn, we get the original exception raised.

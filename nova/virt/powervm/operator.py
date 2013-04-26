@@ -202,7 +202,8 @@ class PowerVMOperator(object):
             except nova_exception.ProcessExecutionError:
                 LOG.exception(_("LPAR instance '%s' creation failed") %
                         instance['name'])
-                raise exception.PowerVMLPARCreationFailed()
+                raise exception.PowerVMLPARCreationFailed(
+                    instance_name=instance['name'])
 
             _create_image(context, instance, image_id)
             LOG.debug(_("Activating the LPAR instance '%s'")
