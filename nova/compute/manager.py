@@ -840,10 +840,14 @@ class ComputeManager(manager.SchedulerDependentManager):
         extra_usage_info = {}
 
         def notify(status, msg=None):
-            """Send a create.{start,end} notification."""
+            """Send a create.{start,error,end} notification."""
             type_ = "create.%(status)s" % dict(status=status)
+            info = extra_usage_info.copy()
+            if not msg:
+                msg = ""
+            info['message'] = msg
             self._notify_about_instance_usage(context, instance, type_,
-                    extra_usage_info=extra_usage_info)
+                    extra_usage_info=info)
 
         try:
             image_meta = self._prebuild_instance(context, instance)
@@ -855,20 +859,22 @@ class ComputeManager(manager.SchedulerDependentManager):
             instance = self._build_instance(context, request_spec,
                     filter_properties, requested_networks, injected_files,
                     admin_password, is_first_time, node, instance, image_meta)
-            notify("end")  # notify that build is done
+            notify("end", msg=_("Success"))  # notify that build is done
 
         except exception.RescheduledException as e:
             # Instance build encountered an error, and has been rescheduled.
-            pass
+            notify("error", msg=unicode(e))  # notify that build failed
 
         except exception.BuildAbortException as e:
             # Instance build aborted due to a non-failure
             LOG.info(e)
+            notify("end", msg=unicode(e))  # notify that build is done
 
         except Exception as e:
             # Instance build encountered a non-recoverable error:
             with excutils.save_and_reraise_exception():
                 self._set_instance_error_state(context, instance['uuid'])
+                notify("error", msg=unicode(e))  # notify that build failed
 
     def _prebuild_instance(self, context, instance):
         self._check_instance_exists(context, instance)

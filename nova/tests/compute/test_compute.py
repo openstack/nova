@@ -2114,8 +2114,80 @@ class ComputeTestCase(BaseTestCase):
         self.assertTrue(payload['launched_at'])
         image_ref_url = glance.generate_image_url(FAKE_IMAGE_REF)
         self.assertEquals(payload['image_ref_url'], image_ref_url)
+        self.assertEqual('Success', payload['message'])
         self.compute.terminate_instance(self.context,
                 instance=jsonutils.to_primitive(inst_ref))
+
+    def test_run_instance_end_notification_on_abort(self):
+        # Test that an end notif is sent if the build is aborted
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+        instance_uuid = instance['uuid']
+
+        def build_inst_abort(*args, **kwargs):
+            raise exception.BuildAbortException(reason="already deleted",
+                    instance_uuid=instance_uuid)
+
+        self.stubs.Set(self.compute, '_build_instance', build_inst_abort)
+
+        self.compute.run_instance(self.context, instance=instance)
+        self.assertEquals(len(test_notifier.NOTIFICATIONS), 2)
+        msg = test_notifier.NOTIFICATIONS[0]
+        self.assertEquals(msg['event_type'], 'compute.instance.create.start')
+        msg = test_notifier.NOTIFICATIONS[1]
+
+        self.assertEquals(msg['event_type'], 'compute.instance.create.end')
+        self.assertEquals('INFO', msg['priority'])
+        payload = msg['payload']
+        message = payload['message']
+        self.assertTrue(message.find("already deleted") != -1)
+
+    def test_run_instance_error_notification_on_reschedule(self):
+        # Test that error notif is sent if the build got rescheduled
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+        instance_uuid = instance['uuid']
+
+        def build_inst_fail(*args, **kwargs):
+            raise exception.RescheduledException(instance_uuid=instance_uuid,
+                    reason="something bad happened")
+
+        self.stubs.Set(self.compute, '_build_instance', build_inst_fail)
+
+        self.compute.run_instance(self.context, instance=instance)
+
+        self.assertTrue(len(test_notifier.NOTIFICATIONS) >= 2)
+        msg = test_notifier.NOTIFICATIONS[0]
+        self.assertEquals(msg['event_type'], 'compute.instance.create.start')
+        msg = test_notifier.NOTIFICATIONS[1]
+
+        self.assertEquals(msg['event_type'], 'compute.instance.create.error')
+        self.assertEquals('ERROR', msg['priority'])
+        payload = msg['payload']
+        message = payload['message']
+        self.assertTrue(message.find("something bad happened") != -1)
+
+    def test_run_instance_error_notification_on_failure(self):
+        # Test that error notif is sent if build fails hard
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+        instance_uuid = instance['uuid']
+
+        def build_inst_fail(*args, **kwargs):
+            raise test.TestingException("i'm dying")
+
+        self.stubs.Set(self.compute, '_build_instance', build_inst_fail)
+
+        self.assertRaises(test.TestingException, self.compute.run_instance,
+                self.context, instance=instance)
+
+        self.assertTrue(len(test_notifier.NOTIFICATIONS) >= 2)
+        msg = test_notifier.NOTIFICATIONS[0]
+        self.assertEquals(msg['event_type'], 'compute.instance.create.start')
+        msg = test_notifier.NOTIFICATIONS[1]
+
+        self.assertEquals(msg['event_type'], 'compute.instance.create.error')
+        self.assertEquals('ERROR', msg['priority'])
+        payload = msg['payload']
+        message = payload['message']
+        self.assertTrue(message.find("i'm dying") != -1)
 
     def test_terminate_usage_notification(self):
         # Ensure terminate_instance generates correct usage notification.
