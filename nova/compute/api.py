@@ -1182,18 +1182,17 @@ class API(base.Base):
         # cleanup volumes
         for bdm in bdms:
             if bdm['volume_id']:
-                volume = self.volume_api.get(context, bdm['volume_id'])
                 # NOTE(vish): We don't have access to correct volume
                 #             connector info, so just pass a fake
                 #             connector. This can be improved when we
                 #             expose get_volume_connector to rpc.
                 connector = {'ip': '127.0.0.1', 'initiator': 'iqn.fake'}
                 self.volume_api.terminate_connection(context,
-                                                     volume,
+                                                     bdm['volume_id'],
                                                      connector)
-                self.volume_api.detach(elevated, volume)
+                self.volume_api.detach(elevated, bdm['volume_id'])
                 if bdm['delete_on_termination']:
-                    self.volume_api.delete(context, volume)
+                    self.volume_api.delete(context, bdm['volume_id'])
             self.db.block_device_mapping_destroy(context, bdm['id'])
         instance = self._instance_update(context,
                                          instance_uuid,
@@ -1613,7 +1612,7 @@ class API(base.Base):
                 #                 short time, it doesn't matter for now.
                 name = _('snapshot for %s') % image_meta['name']
                 snapshot = self.volume_api.create_snapshot_force(
-                    context, volume, name, volume['display_description'])
+                    context, volume['id'], name, volume['display_description'])
                 bdm['snapshot_id'] = snapshot['id']
                 del bdm['volume_id']
 
@@ -2306,7 +2305,7 @@ class API(base.Base):
         try:
             volume = self.volume_api.get(context, volume_id)
             self.volume_api.check_attach(context, volume, instance=instance)
-            self.volume_api.reserve_volume(context, volume)
+            self.volume_api.reserve_volume(context, volume_id)
             self.compute_rpcapi.attach_volume(context, instance=instance,
                     volume_id=volume_id, mountpoint=device)
         except Exception:
@@ -2321,7 +2320,7 @@ class API(base.Base):
         it easier for cells version to override.
         """
         self.volume_api.check_detach(context, volume)
-        self.volume_api.begin_detaching(context, volume)
+        self.volume_api.begin_detaching(context, volume['id'])
         self.compute_rpcapi.detach_volume(context, instance=instance,
                 volume_id=volume['id'])
 

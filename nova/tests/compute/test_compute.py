@@ -7044,11 +7044,6 @@ class ComputeAPITestCase(BaseTestCase):
         def fake_roll_detaching(*args, **kwargs):
             called['fake_roll_detaching'] = True
 
-        def fake_volume_get(self, context, volume_id):
-            called['fake_volume_get'] = True
-            return {'id': volume_id, 'attach_status': 'in-use'}
-
-        self.stubs.Set(cinder.API, 'get', fake_volume_get)
         self.stubs.Set(cinder.API, 'roll_detaching', fake_roll_detaching)
         self.stubs.Set(self.compute, "_get_instance_volume_bdm",
                        fake_get_instance_volume_bdm)
@@ -7060,7 +7055,6 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertRaises(AttributeError, self.compute.detach_volume,
                           self.context, 1, instance)
         self.assertTrue(called.get('fake_libvirt_driver_instance_exists'))
-        self.assertTrue(called.get('fake_volume_get'))
         self.assertTrue(called.get('fake_roll_detaching'))
 
     def test_terminate_with_volumes(self):
@@ -7076,18 +7070,18 @@ class ComputeAPITestCase(BaseTestCase):
                   }
         db.block_device_mapping_create(admin, values)
 
-        def fake_volume_get(self, context, volume):
+        def fake_volume_get(self, context, volume_id):
             return {'id': volume_id}
         self.stubs.Set(cinder.API, "get", fake_volume_get)
 
         # Stub out and record whether it gets detached
         result = {"detached": False}
 
-        def fake_detach(self, context, volume):
-            result["detached"] = volume["id"] == volume_id
+        def fake_detach(self, context, volume_id_param):
+            result["detached"] = volume_id_param == volume_id
         self.stubs.Set(cinder.API, "detach", fake_detach)
 
-        def fake_terminate_connection(self, context, volume, connector):
+        def fake_terminate_connection(self, context, volume_id, connector):
             return {}
         self.stubs.Set(cinder.API, "terminate_connection",
                        fake_terminate_connection)

@@ -793,7 +793,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             if bdm['volume_id'] is not None:
                 volume = self.volume_api.get(context, bdm['volume_id'])
                 self.volume_api.check_attach(context, volume,
-                                                      instance=instance)
+                                             instance=instance)
                 cinfo = self._attach_volume_boot(context,
                                                  instance,
                                                  volume,
@@ -1316,12 +1316,11 @@ class ComputeManager(manager.SchedulerDependentManager):
             try:
                 # NOTE(vish): actual driver detach done in driver.destroy, so
                 #             just tell nova-volume that we are done with it.
-                volume = self.volume_api.get(context, bdm['volume_id'])
                 connector = self.driver.get_volume_connector(instance)
                 self.volume_api.terminate_connection(context,
-                                                     volume,
+                                                     bdm['volume_id'],
                                                      connector)
-                self.volume_api.detach(context, volume)
+                self.volume_api.detach(context, bdm['volume_id'])
             except exception.DiskNotFound as exc:
                 LOG.warn(_('Ignoring DiskNotFound: %s') % exc,
                          instance=instance)
@@ -1336,8 +1335,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             LOG.debug(_("terminating bdm %s") % bdm,
                       instance_uuid=instance_uuid)
             if bdm['volume_id'] and bdm['delete_on_termination']:
-                volume = self.volume_api.get(context, bdm['volume_id'])
-                self.volume_api.delete(context, volume)
+                self.volume_api.delete(context, bdm['volume_id'])
             # NOTE(vish): bdms will be deleted on instance destroy
 
     @hooks.add_hook("delete_instance")
@@ -1652,8 +1650,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             # NOTE(sirp): this detach is necessary b/c we will reattach the
             # volumes in _prep_block_devices below.
             for bdm in self._get_volume_bdms(bdms):
-                volume = self.volume_api.get(context, bdm['volume_id'])
-                self.volume_api.detach(context, volume)
+                self.volume_api.detach(context, bdm['volume_id'])
 
             if not recreate:
                 block_device_info = self._get_volume_block_device_info(
@@ -1726,7 +1723,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 LOG.info(_("Detaching from volume api: %s") % volume_id)
                 volume = self.volume_api.get(context, volume_id)
                 self.volume_api.check_detach(context, volume)
-                self.volume_api.begin_detaching(context, volume)
+                self.volume_api.begin_detaching(context, volume_id)
 
                 # Manager-detach
                 self.detach_volume(context, volume_id, instance)
@@ -2209,9 +2206,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         connector = self.driver.get_volume_connector(instance)
 
         for bdm in bdms:
-            volume = self.volume_api.get(context, bdm['volume_id'])
             cinfo = self.volume_api.initialize_connection(
-                    context, volume, connector)
+                    context, bdm['volume_id'], connector)
 
             self.conductor_api.block_device_mapping_update(
                 context, bdm['id'],
@@ -2473,9 +2469,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         if bdms:
             connector = self.driver.get_volume_connector(instance)
             for bdm in bdms:
-                volume = self.volume_api.get(context, bdm['volume_id'])
-                self.volume_api.terminate_connection(context, volume,
-                        connector)
+                self.volume_api.terminate_connection(context, bdm['volume_id'],
+                                                     connector)
 
     def _finish_resize(self, context, instance, migration, disk_info,
                        image):
@@ -2880,9 +2875,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                   locals(), context=context, instance=instance)
         connector = self.driver.get_volume_connector(instance)
         connection_info = self.volume_api.initialize_connection(context,
-                                                                volume,
+                                                                volume_id,
                                                                 connector)
-        self.volume_api.attach(context, volume, instance_uuid, mountpoint)
+        self.volume_api.attach(context, volume_id, instance_uuid, mountpoint)
         return connection_info
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
@@ -2925,14 +2920,13 @@ class ComputeManager(manager.SchedulerDependentManager):
                         context, instance, mountpoint)
 
     def _attach_volume(self, context, volume_id, mountpoint, instance):
-        volume = self.volume_api.get(context, volume_id)
         context = context.elevated()
         LOG.audit(_('Attaching volume %(volume_id)s to %(mountpoint)s'),
                   locals(), context=context, instance=instance)
         try:
             connector = self.driver.get_volume_connector(instance)
             connection_info = self.volume_api.initialize_connection(context,
-                                                                    volume,
+                                                                    volume_id,
                                                                     connector)
         except Exception:  # pylint: disable=W0702
             with excutils.save_and_reraise_exception():
@@ -2940,7 +2934,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                         "while attaching at %(mountpoint)s")
                 LOG.exception(msg % locals(), context=context,
                               instance=instance)
-                self.volume_api.unreserve_volume(context, volume)
+                self.volume_api.unreserve_volume(context, volume_id)
 
         if 'serial' not in connection_info:
             connection_info['serial'] = volume_id
@@ -2956,11 +2950,11 @@ class ComputeManager(manager.SchedulerDependentManager):
                 LOG.exception(msg % locals(), context=context,
                               instance=instance)
                 self.volume_api.terminate_connection(context,
-                                                     volume,
+                                                     volume_id,
                                                      connector)
 
         self.volume_api.attach(context,
-                               volume,
+                               volume_id,
                                instance['uuid'],
                                mountpoint)
         values = {
@@ -3001,8 +2995,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 msg = _("Failed to detach volume %(volume_id)s from %(mp)s")
                 LOG.exception(msg % locals(), context=context,
                               instance=instance)
-                volume = self.volume_api.get(context, volume_id)
-                self.volume_api.roll_detaching(context, volume)
+                self.volume_api.roll_detaching(context, volume_id)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
@@ -3031,10 +3024,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                     update_totals=True)
 
         self._detach_volume(context, instance, bdm)
-        volume = self.volume_api.get(context, volume_id)
         connector = self.driver.get_volume_connector(instance)
-        self.volume_api.terminate_connection(context, volume, connector)
-        self.volume_api.detach(context.elevated(), volume)
+        self.volume_api.terminate_connection(context, volume_id, connector)
+        self.volume_api.detach(context.elevated(), volume_id)
         self.conductor_api.block_device_mapping_destroy_by_instance_and_volume(
             context, instance, volume_id)
 
@@ -3047,9 +3039,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         try:
             bdm = self._get_instance_volume_bdm(context, instance, volume_id)
             self._detach_volume(context, instance, bdm)
-            volume = self.volume_api.get(context, volume_id)
             connector = self.driver.get_volume_connector(instance)
-            self.volume_api.terminate_connection(context, volume, connector)
+            self.volume_api.terminate_connection(context, volume_id, connector)
         except exception.NotFound:
             pass
 
@@ -3271,8 +3262,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             # remove the volume connection without detaching from hypervisor
             # because the instance is not running anymore on the current host
-            volume = self.volume_api.get(ctxt, bdm['volume_id'])
-            self.volume_api.terminate_connection(ctxt, volume, connector)
+            self.volume_api.terminate_connection(ctxt, bdm['volume_id'],
+                                                 connector)
 
         # Releasing vlan.
         # (not necessary in current implementation?)
