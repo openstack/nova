@@ -1281,7 +1281,7 @@ def fixed_ip_count_by_project(context, project_id, session=None):
                        session=session).\
                 join((models.Instance,
                       models.Instance.uuid == models.FixedIp.instance_uuid)).\
-                filter(models.Instance.uuid == project_id).\
+                filter(models.Instance.project_id == project_id).\
                 count()
 
 
