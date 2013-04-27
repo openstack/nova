@@ -99,13 +99,12 @@ class InstanceMetadata():
         self.extra_md = extra_md
 
         if conductor_api:
-            self.conductor_api = conductor_api
+            capi = conductor_api
         else:
-            self.conductor_api = conductor.API()
+            capi = conductor.API()
 
         ctxt = context.get_admin_context()
 
-        capi = self.conductor_api
         self.availability_zone = ec2utils.get_availability_zone_by_host(
                 instance['host'], capi)
 
