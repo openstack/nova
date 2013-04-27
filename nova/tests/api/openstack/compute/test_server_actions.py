@@ -195,18 +195,6 @@ class ServerActionsControllerTest(test.TestCase):
                           self.controller._action_reboot,
                           req, FAKE_UUID, body)
 
-    def test_reboot_raises_unprocessable_entity(self):
-        body = dict(reboot=dict(type="HARD"))
-
-        def fake_reboot(*args, **kwargs):
-            raise NotImplementedError()
-
-        self.stubs.Set(compute_api.API, 'reboot', fake_reboot)
-        req = fakes.HTTPRequest.blank(self.url)
-        self.assertRaises(webob.exc.HTTPUnprocessableEntity,
-                          self.controller._action_reboot,
-                          req, FAKE_UUID, body)
-
     def test_rebuild_accepted_minimum(self):
         return_server = fakes.fake_instance_get(image_ref='2',
                 vm_state=vm_states.ACTIVE, host='fake_host')

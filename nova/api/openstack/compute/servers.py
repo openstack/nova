@@ -1031,9 +1031,6 @@ class Controller(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'confirmResize')
-        except Exception, e:
-            LOG.exception(_("Error in confirm-resize %s"), e)
-            raise exc.HTTPBadRequest()
         return exc.HTTPNoContent()
 
     @wsgi.response(202)
@@ -1054,9 +1051,6 @@ class Controller(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'revertResize')
-        except Exception, e:
-            LOG.exception(_("Error in revert-resize %s"), e)
-            raise exc.HTTPBadRequest()
         return webob.Response(status_int=202)
 
     @wsgi.response(202)
@@ -1084,9 +1078,6 @@ class Controller(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'reboot')
-        except Exception, e:
-            LOG.exception(_("Error in reboot %s"), e, instance=instance)
-            raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
     def _resize(self, req, instance_id, flavor_id, **kwargs):
