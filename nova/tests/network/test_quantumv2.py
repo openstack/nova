@@ -826,6 +826,20 @@ class TestQuantumv2(test.TestCase):
         except exception.NetworkNotFound as ex:
             self.assertTrue("my_netid2, my_netid3" in str(ex))
 
+    def test_validate_networks_duplicate(self):
+        """Verify that the correct exception is thrown when duplicate
+           network ids are passed to validate_networks.
+        """
+        requested_networks = [('my_netid1', None, None),
+                              ('my_netid1', None, None)]
+        self.mox.ReplayAll()
+        # Expected call from setUp.
+        quantumv2.get_client(None)
+        api = quantumapi.API()
+        self.assertRaises(exception.NetworkDuplicated,
+                          api.validate_networks,
+                          self.context, requested_networks)
+
     def _mock_list_ports(self, port_data=None):
         if port_data is None:
             port_data = self.port_data2
