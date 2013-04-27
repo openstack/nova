@@ -3877,13 +3877,25 @@ class ComputeManager(manager.SchedulerDependentManager):
             rt.update_available_resource(context)
             new_resource_tracker_dict[nodename] = rt
 
-        # delete nodes that the driver no longer reports
-        known_nodes = set(self._resource_tracker_dict.keys())
-        for nodename in known_nodes - nodenames:
-            rt = self._get_resource_tracker(nodename)
-            rt.update_available_resource(context, delete=True)
+        # Delete orphan compute node not reported by driver but still in db
+        compute_nodes_in_db = self._get_compute_nodes_in_db(context)
+
+        for cn in compute_nodes_in_db:
+            if cn.get('hypervisor_hostname') not in nodenames:
+                LOG.audit(_("Deleting orphan compute node %s") % cn['id'])
+                self.conductor_api.compute_node_delete(context, cn)
 
         self._resource_tracker_dict = new_resource_tracker_dict
+
+    def _get_compute_nodes_in_db(self, context):
+        service_ref = self.conductor_api.service_get_by_compute_host(
+            context, self.host)
+
+        if not service_ref:
+            LOG.error(_("No service record for host %s"), self.host)
+            return []
+
+        return service_ref['compute_node']
 
     @manager.periodic_task(spacing=CONF.running_deleted_instance_poll_interval)
     def _cleanup_running_deleted_instances(self, context):

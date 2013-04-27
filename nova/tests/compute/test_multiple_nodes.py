@@ -84,6 +84,39 @@ class MultiNodeComputeTestCase(BaseTestCase):
         self.conductor = self.start_service('conductor',
                                             manager=CONF.conductor.manager)
 
+        def fake_get_compute_nodes_in_db(context):
+            fake_compute_nodes = [{'local_gb': 259,
+                                   'vcpus_used': 0,
+                                   'deleted': 0,
+                                   'hypervisor_type': 'powervm',
+                                   'created_at': '2013-04-01T00:27:06.000000',
+                                   'local_gb_used': 0,
+                                   'updated_at': '2013-04-03T00:35:41.000000',
+                                   'hypervisor_hostname': 'fake_phyp1',
+                                   'memory_mb_used': 512,
+                                   'memory_mb': 131072,
+                                   'current_workload': 0,
+                                   'vcpus': 16,
+                                   'cpu_info':'ppc64,powervm,3940',
+                                   'running_vms': 0,
+                                   'free_disk_gb': 259,
+                                   'service_id': 7,
+                                   'hypervisor_version': 7,
+                                   'disk_available_least': 265856,
+                                   'deleted_at': None,
+                                   'free_ram_mb': 130560,
+                                   'id': 2}]
+            return fake_compute_nodes
+
+        def fake_compute_node_delete(context, compute_node):
+            self.assertEqual(compute_node.get('hypervisor_hostname'),
+                             'fake_phyp1')
+
+        self.stubs.Set(self.compute, '_get_compute_nodes_in_db',
+                fake_get_compute_nodes_in_db)
+        self.stubs.Set(self.compute.conductor_api, 'compute_node_delete',
+                fake_compute_node_delete)
+
     def test_update_available_resource_add_remove_node(self):
         ctx = context.get_admin_context()
         fake.set_nodes(['A', 'B', 'C'])
@@ -104,18 +137,39 @@ class MultiNodeComputeTestCase(BaseTestCase):
     def test_compute_manager_removes_deleted_node(self):
         ctx = context.get_admin_context()
         fake.set_nodes(['A', 'B'])
+
+        fake_compute_nodes = [{'hypervisor_hostname': 'A',
+                                   'id': 2},
+                              {'hypervisor_hostname': 'B',
+                                   'id': 3}]
+
+        def fake_get_compute_nodes_in_db(context):
+            return fake_compute_nodes
+
+        def fake_compute_node_delete(context, compute_node):
+            for cn in fake_compute_nodes:
+                if (compute_node['hypervisor_hostname'] ==
+                                    cn['hypervisor_hostname']):
+                    fake_compute_nodes.remove(cn)
+                    return
+
+        self.stubs.Set(self.compute, '_get_compute_nodes_in_db',
+                fake_get_compute_nodes_in_db)
+        self.stubs.Set(self.compute.conductor_api, 'compute_node_delete',
+                fake_compute_node_delete)
+
         self.compute.update_available_resource(ctx)
 
-        rt_A = self.compute._resource_tracker_dict['A']
-        rt_B = self.compute._resource_tracker_dict['B']
-        self.mox.StubOutWithMock(rt_A, 'update_available_resource')
-        self.mox.StubOutWithMock(rt_B, 'update_available_resource')
-        rt_A.update_available_resource(ctx)
-        rt_B.update_available_resource(ctx, delete=True)
-        self.mox.ReplayAll()
+        # Verify nothing is deleted if driver and db compute nodes match
+        self.assertEqual(len(fake_compute_nodes), 2)
+        self.assertEqual(sorted(self.compute._resource_tracker_dict.keys()),
+                         ['A', 'B'])
 
         fake.set_nodes(['A'])
         self.compute.update_available_resource(ctx)
-        self.mox.VerifyAll()
+
+        # Verify B gets deleted since now only A is reported by driver
+        self.assertEqual(len(fake_compute_nodes), 1)
+        self.assertEqual(fake_compute_nodes[0]['hypervisor_hostname'], 'A')
         self.assertEqual(sorted(self.compute._resource_tracker_dict.keys()),
                         ['A'])
