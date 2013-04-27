@@ -935,10 +935,10 @@ class ServersControllerTest(test.TestCase):
             self.assertNotEqual(search_opts, None)
             # Allowed by user
             self.assertTrue('name' in search_opts)
+            self.assertTrue('ip' in search_opts)
             # OSAPI converts status to vm_state
             self.assertTrue('vm_state' in search_opts)
             # Allowed only by admins with admin API on
-            self.assertFalse('ip' in search_opts)
             self.assertFalse('unknown_option' in search_opts)
             return [fakes.stub_instance(100, uuid=server_uuid)]
 
@@ -981,10 +981,8 @@ class ServersControllerTest(test.TestCase):
         self.assertEqual(len(servers), 1)
         self.assertEqual(servers[0]['id'], server_uuid)
 
-    def test_get_servers_admin_allows_ip(self):
-        """Test getting servers by ip with admin_api enabled and
-        admin context
-        """
+    def test_get_servers_allows_ip(self):
+        """Test getting servers by ip."""
         server_uuid = str(uuid.uuid4())
 
         def fake_get_all(compute_self, context, search_opts=None,
@@ -997,8 +995,7 @@ class ServersControllerTest(test.TestCase):
 
         self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
 
-        req = fakes.HTTPRequest.blank('/v2/fake/servers?ip=10\..*',
-                                      use_admin_context=True)
+        req = fakes.HTTPRequest.blank('/v2/fake/servers?ip=10\..*')
         servers = self.controller.index(req)['servers']
 
         self.assertEqual(len(servers), 1)
