@@ -118,7 +118,7 @@ class ConsoleAuthManager(manager.Manager):
     def delete_tokens_for_instance(self, context, instance_uuid):
         tokens = self._get_tokens_for_instance(instance_uuid)
         for token in tokens:
-            self.mc.delete(token)
+            self.mc.delete(token.encode('UTF-8'))
         self.mc.delete(instance_uuid.encode('UTF-8'))
 
     def get_backdoor_port(self, context):
