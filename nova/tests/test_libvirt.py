@@ -2469,7 +2469,7 @@ class LibvirtConnTestCase(test.TestCase):
 
         self.mox.StubOutWithMock(os.path, "getsize")
         os.path.getsize('/test/disk').AndReturn((10737418240))
-        os.path.getsize('/test/disk.local').AndReturn((21474836480))
+        os.path.getsize('/test/disk.local').AndReturn((3328599655))
 
         ret = ("image: /test/disk\n"
                "file format: raw\n"
@@ -2493,10 +2493,12 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEquals(info[0]['path'], '/test/disk')
         self.assertEquals(info[0]['disk_size'], 10737418240)
         self.assertEquals(info[0]['backing_file'], "")
+        self.assertEquals(info[0]['over_committed_disk_size'], 0)
         self.assertEquals(info[1]['type'], 'qcow2')
         self.assertEquals(info[1]['path'], '/test/disk.local')
         self.assertEquals(info[1]['virt_disk_size'], 21474836480)
         self.assertEquals(info[1]['backing_file'], "file")
+        self.assertEquals(info[1]['over_committed_disk_size'], 18146236825)
 
         db.instance_destroy(self.context, instance_ref['uuid'])
 
@@ -3100,11 +3102,13 @@ class LibvirtConnTestCase(test.TestCase):
         fake_disks = {'fake1': [{'type': 'qcow2', 'path': '/somepath/disk1',
                                  'virt_disk_size': '10737418240',
                                  'backing_file': '/somepath/disk1',
-                                 'disk_size':'83886080'}],
+                                 'disk_size':'83886080',
+                                 'over_committed_disk_size':'10653532160'}],
                       'fake2': [{'type': 'raw', 'path': '/somepath/disk2',
-                                 'virt_disk_size': '10737418240',
+                                 'virt_disk_size': '0',
                                  'backing_file': '/somepath/disk2',
-                                 'disk_size':'10737418240'}]}
+                                 'disk_size':'10737418240',
+                                 'over_committed_disk_size':'0'}]}
 
         def get_info(instance_name):
             return jsonutils.dumps(fake_disks.get(instance_name))
