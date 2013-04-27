@@ -84,6 +84,8 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.44 - Added compute_node_delete
     1.45 - Added project_id to quota_commit and quota_rollback
     1.46 - Added compute_confirm_resize
+    1.47 - Added columns_to_join to instance_get_all_by_host and
+                 instance_get_all_by_filters
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -248,11 +250,11 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         return self.call(context, msg, version='1.14')
 
     def instance_get_all_by_filters(self, context, filters, sort_key,
-                                    sort_dir):
+                                    sort_dir, columns_to_join=None):
         msg = self.make_msg('instance_get_all_by_filters',
                             filters=filters, sort_key=sort_key,
-                            sort_dir=sort_dir)
-        return self.call(context, msg, version='1.15')
+                            sort_dir=sort_dir, columns_to_join=columns_to_join)
+        return self.call(context, msg, version='1.47')
 
     def instance_get_all_hung_in_rebooting(self, context, timeout):
         msg = self.make_msg('instance_get_all_hung_in_rebooting',
@@ -306,9 +308,11 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         msg = self.make_msg('instance_get_all')
         return self.call(context, msg, version='1.23')
 
-    def instance_get_all_by_host(self, context, host, node=None):
-        msg = self.make_msg('instance_get_all_by_host', host=host, node=node)
-        return self.call(context, msg, version='1.32')
+    def instance_get_all_by_host(self, context, host, node=None,
+                                 columns_to_join=None):
+        msg = self.make_msg('instance_get_all_by_host', host=host, node=node,
+                            columns_to_join=columns_to_join)
+        return self.call(context, msg, version='1.47')
 
     def instance_fault_create(self, context, values):
         msg = self.make_msg('instance_fault_create', values=values)
