@@ -130,7 +130,7 @@ class TestQuantumSecurityGroups(
         net = self._create_network()
         self._create_port(
             network_id=net['network']['id'], security_groups=[sg['id']],
-            device_id=test_security_groups.FAKE_UUID)
+            device_id=test_security_groups.FAKE_UUID1)
         expected = [{'rules': [], 'tenant_id': 'fake_tenant', 'id': sg['id'],
                     'name': 'test', 'description': 'test-description'}]
         self.stubs.Set(nova.db, 'instance_get',
@@ -138,9 +138,9 @@ class TestQuantumSecurityGroups(
         self.stubs.Set(nova.db, 'instance_get_by_uuid',
                        test_security_groups.return_server_by_uuid)
         req = fakes.HTTPRequest.blank('/v2/fake/servers/%s/os-security-groups'
-                                      % test_security_groups.FAKE_UUID)
+                                      % test_security_groups.FAKE_UUID1)
         res_dict = self.server_controller.index(
-            req, test_security_groups.FAKE_UUID)['security_groups']
+            req, test_security_groups.FAKE_UUID1)['security_groups']
         self.assertEquals(expected, res_dict)
 
     def test_get_security_group_by_id(self):
@@ -192,7 +192,7 @@ class TestQuantumSecurityGroups(
         net = self._create_network()
         self._create_port(
             network_id=net['network']['id'], security_groups=[sg['id']],
-            device_id=test_security_groups.FAKE_UUID)
+            device_id=test_security_groups.FAKE_UUID1)
 
         self.stubs.Set(nova.db, 'instance_get',
                        test_security_groups.return_server)
@@ -229,7 +229,7 @@ class TestQuantumSecurityGroups(
         net = self._create_network()
         self._create_port(
             network_id=net['network']['id'], security_groups=[sg['id']],
-            device_id=test_security_groups.FAKE_UUID)
+            device_id=test_security_groups.FAKE_UUID1)
 
         self.stubs.Set(nova.db, 'instance_get',
                        test_security_groups.return_server)
@@ -239,6 +239,34 @@ class TestQuantumSecurityGroups(
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers/1/action')
         self.manager._removeSecurityGroup(req, '1', body)
+
+    def test_get_instances_security_groups_bindings(self):
+        sg1 = self._create_sg_template(name='test1').get('security_group')
+        sg2 = self._create_sg_template(name='test2').get('security_group')
+        # test name='' is replaced with id
+        sg3 = self._create_sg_template(name='').get('security_group')
+        net = self._create_network()
+        self._create_port(
+            network_id=net['network']['id'], security_groups=[sg1['id'],
+                                                              sg2['id']],
+            device_id=test_security_groups.FAKE_UUID1)
+        self._create_port(
+            network_id=net['network']['id'], security_groups=[sg2['id'],
+                                                              sg3['id']],
+            device_id=test_security_groups.FAKE_UUID2)
+        expected = {test_security_groups.FAKE_UUID1: [{'name': sg1['name']},
+                                                      {'name': sg2['name']}],
+                    test_security_groups.FAKE_UUID2: [{'name': sg2['name']},
+                                                      {'name': sg3['id']}]}
+        self.stubs.Set(nova.db, 'instance_get',
+                       test_security_groups.return_server)
+        self.stubs.Set(nova.db, 'instance_get_by_uuid',
+                       test_security_groups.return_server_by_uuid)
+        security_group_api = self.controller.security_group_api
+        bindings = (
+            security_group_api.get_instances_security_groups_bindings(
+                context.get_admin_context()))
+        self.assertEquals(bindings, expected)
 
 
 class TestQuantumSecurityGroupRulesTestCase(TestQuantumSecurityGroupsTestCase):
@@ -329,8 +357,9 @@ class TestQuantumSecurityGroupsOutputTest(TestQuantumSecurityGroupsTestCase):
         self.stubs.Set(compute.api.API, 'create',
                        test_security_groups.fake_compute_create)
         self.stubs.Set(quantum_driver.SecurityGroupAPI,
-                       'get_instance_security_groups',
-                       test_security_groups.fake_get_instance_security_groups)
+                       'get_instances_security_groups_bindings',
+                       (test_security_groups.
+                       fake_get_instances_security_groups_bindings))
         self.flags(
             osapi_compute_extension=[
                 'nova.api.openstack.compute.contrib.select_extensions'],
