@@ -112,7 +112,7 @@ class SecurityGroupDefaultRulesController(sg.SecurityGroupControllerBase):
     @wsgi.serializers(xml=SecurityGroupDefaultRuleTemplate)
     @wsgi.deserializers(xml=SecurityGroupDefaultRulesXMLDeserializer)
     def create(self, req, body):
-        context = self._authorize_context(req)
+        context = sg._authorize_context(req)
         authorize(context)
 
         sg_rule = self._from_body(body, 'security_group_default_rule')
@@ -146,7 +146,7 @@ class SecurityGroupDefaultRulesController(sg.SecurityGroupControllerBase):
 
     @wsgi.serializers(xml=SecurityGroupDefaultRuleTemplate)
     def show(self, req, id):
-        context = self._authorize_context(req)
+        context = sg._authorize_context(req)
         authorize(context)
 
         id = self.security_group_api.validate_id(id)
@@ -161,7 +161,7 @@ class SecurityGroupDefaultRulesController(sg.SecurityGroupControllerBase):
         return {"security_group_default_rule": fmt_rule}
 
     def delete(self, req, id):
-        context = self._authorize_context(req)
+        context = sg._authorize_context(req)
         authorize(context)
 
         id = self.security_group_api.validate_id(id)
@@ -175,7 +175,7 @@ class SecurityGroupDefaultRulesController(sg.SecurityGroupControllerBase):
     @wsgi.serializers(xml=SecurityGroupDefaultRulesTemplate)
     def index(self, req):
 
-        context = self._authorize_context(req)
+        context = sg._authorize_context(req)
         authorize(context)
 
         ret = {'security_group_default_rules': []}
