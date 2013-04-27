@@ -161,14 +161,18 @@ class BaseTestCase(test.TestCase):
                              'value': instance_type[key]})
         return sys_meta
 
-    def _fake_instance(self, *args, **kwargs):
+    def _fake_instance(self, stash=True, **kwargs):
 
         # Default to an instance ready to resize to or from the same
         # instance_type
         itype = self._fake_instance_type_create()
-        sys_meta = (self._fake_instance_system_metadata(itype) +
-                    self._fake_instance_system_metadata(itype, 'new_') +
-                    self._fake_instance_system_metadata(itype, 'old_'))
+        sys_meta = self._fake_instance_system_metadata(itype)
+
+        if stash:
+            # stash instance types in system metadata.
+            sys_meta = (sys_meta +
+                        self._fake_instance_system_metadata(itype, 'new_') +
+                        self._fake_instance_system_metadata(itype, 'old_'))
 
         instance_uuid = str(uuid.uuid1())
         instance = {
@@ -874,6 +878,20 @@ class ResizeClaimTestCase(BaseTrackerTestCase):
         self.assertEqual('fakehost', instance['host'])
         self.assertEqual('fakehost', instance['launched_on'])
         self.assertEqual('fakenode', instance['node'])
+
+
+class NoInstanceTypesInSysMetadata(ResizeClaimTestCase):
+    """Make sure we handle the case where the following are true:
+    1) Compute node C gets upgraded to code that looks for instance types in
+       system metadata. AND
+    2) C already has instances in the process of migrating that do not have
+       stashed instance types.
+
+    bug 1164110
+    """
+    def setUp(self):
+        super(NoInstanceTypesInSysMetadata, self).setUp()
+        self.instance = self._fake_instance(stash=False)
 
 
 class OrphanTestCase(BaseTrackerTestCase):
