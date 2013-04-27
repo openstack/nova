@@ -3145,7 +3145,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                           instance['user_id'],
                                           instance['project_id'])
 
-    def pre_live_migration(self, context, instance_ref, block_device_info,
+    def pre_live_migration(self, context, instance, block_device_info,
                            network_info, migrate_data=None):
         """Preparation live migration."""
         # Steps for volume backed instance live migration w/o shared storage.
@@ -3160,18 +3160,18 @@ class LibvirtDriver(driver.ComputeDriver):
         if is_volume_backed and not (is_block_migration or is_shared_storage):
 
             # Create the instance directory on destination compute node.
-            instance_dir = libvirt_utils.get_instance_path(instance_ref)
+            instance_dir = libvirt_utils.get_instance_path(instance)
             if os.path.exists(instance_dir):
                 raise exception.DestinationDiskExists(path=instance_dir)
             os.mkdir(instance_dir)
 
             # Touch the console.log file, required by libvirt.
-            console_file = self._get_console_log_path(instance_ref)
+            console_file = self._get_console_log_path(instance)
             libvirt_utils.file_open(console_file, 'a').close()
 
             # if image has kernel and ramdisk, just download
             # following normal way.
-            self._fetch_instance_kernel_ramdisk(context, instance_ref)
+            self._fetch_instance_kernel_ramdisk(context, instance)
 
         # Establishing connection to volume server.
         block_device_mapping = driver.block_device_info_get_mapping(
@@ -3196,15 +3196,17 @@ class LibvirtDriver(driver.ComputeDriver):
         max_retry = CONF.live_migration_retry_count
         for cnt in range(max_retry):
             try:
-                self.plug_vifs(instance_ref, network_info)
+                self.plug_vifs(instance, network_info)
                 break
             except exception.ProcessExecutionError:
                 if cnt == max_retry - 1:
                     raise
                 else:
-                    LOG.warn(_("plug_vifs() failed %(cnt)d."
-                               "Retry up to %(max_retry)d for %(hostname)s.")
-                               % locals())
+                    LOG.warn(_('plug_vifs() failed %(cnt)d. Retry up to '
+                               '%(max_retry)d.'),
+                             {'cnt': cnt,
+                              'max_retry': max_retry},
+                             instance=instance)
                     greenthread.sleep(1)
 
     def pre_block_migration(self, ctxt, instance, disk_info_json):
