@@ -258,6 +258,61 @@ class PowerVMDriverTestCase(test.TestCase):
         self.assertTrue(self._loc_task_state == task_states.IMAGE_UPLOADING and
             self._loc_expected_task_state == task_states.IMAGE_PENDING_UPLOAD)
 
+    def _set_get_info_stub(self, state):
+        def fake_get_instance(instance_name):
+            return {'state': state,
+                    'max_mem': 512,
+                    'desired_mem': 256,
+                    'max_procs': 2,
+                    'uptime': 2000}
+        self.stubs.Set(self.powervm_connection._powervm, '_get_instance',
+                       fake_get_instance)
+
+    def test_get_info_state_nostate(self):
+        self._set_get_info_stub('')
+        info_dict = self.powervm_connection.get_info(self.instance)
+        self.assertEqual(info_dict['state'], power_state.NOSTATE)
+
+    def test_get_info_state_running(self):
+        self._set_get_info_stub('Running')
+        info_dict = self.powervm_connection.get_info(self.instance)
+        self.assertEqual(info_dict['state'], power_state.RUNNING)
+
+    def test_get_info_state_starting(self):
+        self._set_get_info_stub('Starting')
+        info_dict = self.powervm_connection.get_info(self.instance)
+        self.assertEqual(info_dict['state'], power_state.RUNNING)
+
+    def test_get_info_state_shutdown(self):
+        self._set_get_info_stub('Not Activated')
+        info_dict = self.powervm_connection.get_info(self.instance)
+        self.assertEqual(info_dict['state'], power_state.SHUTDOWN)
+
+    def test_get_info_state_shutting_down(self):
+        self._set_get_info_stub('Shutting Down')
+        info_dict = self.powervm_connection.get_info(self.instance)
+        self.assertEqual(info_dict['state'], power_state.SHUTDOWN)
+
+    def test_get_info_state_error(self):
+        self._set_get_info_stub('Error')
+        info_dict = self.powervm_connection.get_info(self.instance)
+        self.assertEqual(info_dict['state'], power_state.CRASHED)
+
+    def test_get_info_state_not_available(self):
+        self._set_get_info_stub('Not Available')
+        info_dict = self.powervm_connection.get_info(self.instance)
+        self.assertEqual(info_dict['state'], power_state.CRASHED)
+
+    def test_get_info_state_open_firmware(self):
+        self._set_get_info_stub('Open Firmware')
+        info_dict = self.powervm_connection.get_info(self.instance)
+        self.assertEqual(info_dict['state'], power_state.CRASHED)
+
+    def test_get_info_state_unmapped(self):
+        self._set_get_info_stub('The Universe')
+        info_dict = self.powervm_connection.get_info(self.instance)
+        self.assertEqual(info_dict['state'], power_state.NOSTATE)
+
     def test_destroy(self):
         self.powervm_connection.destroy(self.instance, None)
         self.stubs.Set(FakeIVMOperator, 'get_lpar', lambda x, y: None)
