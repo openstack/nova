@@ -70,9 +70,8 @@ class FilterScheduler(driver.Scheduler):
                         'scheduler.run_instance.start', notifier.INFO, payload)
 
         instance_uuids = request_spec.pop('instance_uuids')
-        num_instances = len(instance_uuids)
-        LOG.debug(_("Attempting to build %(num_instances)d instance(s)") %
-                locals())
+        LOG.debug(_("Attempting to build %(num_instances)d instance(s)"),
+                  {'num_instances': len(instance_uuids)})
 
         weighed_hosts = self._schedule(context, request_spec,
                 filter_properties, instance_uuids)
