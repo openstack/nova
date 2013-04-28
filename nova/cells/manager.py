@@ -28,6 +28,7 @@ from nova import context
 from nova import exception
 from nova import manager
 from nova.openstack.common import importutils
+from nova.openstack.common import periodic_task
 from nova.openstack.common import timeutils
 
 cell_manager_opts = [
@@ -97,7 +98,7 @@ class CellsManager(manager.Manager):
         else:
             self._update_our_parents(ctxt)
 
-    @manager.periodic_task
+    @periodic_task.periodic_task
     def _update_our_parents(self, ctxt):
         """Update our parent cells with our capabilities and capacity
         if we're at the bottom of the tree.
@@ -105,7 +106,7 @@ class CellsManager(manager.Manager):
         self.msg_runner.tell_parents_our_capabilities(ctxt)
         self.msg_runner.tell_parents_our_capacities(ctxt)
 
-    @manager.periodic_task
+    @periodic_task.periodic_task
     def _heal_instances(self, ctxt):
         """Periodic task to send updates for a number of instances to
         parent cells.
