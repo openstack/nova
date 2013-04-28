@@ -74,7 +74,7 @@ class FilterScheduler(driver.Scheduler):
                   {'num_instances': len(instance_uuids)})
 
         weighed_hosts = self._schedule(context, request_spec,
-                filter_properties, instance_uuids)
+                                       filter_properties, instance_uuids)
 
         # NOTE(comstud): Make sure we do not pass this through.  It
         # contains an instance of RpcContext that cannot be serialized.
