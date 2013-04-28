@@ -88,9 +88,13 @@ class TestS3ImageService(test.TestCase):
         self.context = context.RequestContext(None, None)
         self.useFixture(fixtures.FakeLogger('boto'))
 
-        # set up one fixture to test shows, should have id '1'
+        # set up 3 fixtures to test shows, should have id '1', '2', and '3'
         nova.db.api.s3_image_create(self.context,
                                     '155d900f-4e14-4e4c-a73d-069cbf4541e6')
+        nova.db.api.s3_image_create(self.context,
+                                    'a2459075-d96c-40d5-893e-577ff92e721c')
+        nova.db.api.s3_image_create(self.context,
+                                    '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6')
 
         fake.stub_out_image_service(self.stubs)
         self.image_service = s3.S3ImageService()
@@ -119,6 +123,37 @@ class TestS3ImageService(test.TestCase):
 
     def test_show_translates_correctly(self):
         self.image_service.show(self.context, '1')
+
+    def test_show_translates_image_state_correctly(self):
+        def my_fake_show(self, context, image_id):
+            fake_state_map = {
+                '155d900f-4e14-4e4c-a73d-069cbf4541e6': 'downloading',
+                'a2459075-d96c-40d5-893e-577ff92e721c': 'failed_decrypt',
+                '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6': 'available'}
+            return {'id': image_id,
+                    'name': 'fakeimage123456',
+                    'deleted_at': None,
+                    'deleted': False,
+                    'status': 'active',
+                    'is_public': False,
+                    'container_format': 'raw',
+                    'disk_format': 'raw',
+                    'size': '25165824',
+                    'properties': {'image_state': fake_state_map[image_id]}}
+
+        # Override part of the fake image service as well just for
+        # this test so we can set the image_state to various values
+        # and test that S3ImageService does the correct mapping for
+        # us. We can't put fake bad or pending states in the real fake
+        # image service as it causes other tests to fail
+        self.stubs.Set(nova.tests.image.fake._FakeImageService, 'show',
+                       my_fake_show)
+        ret_image = self.image_service.show(self.context, '1')
+        self.assertEqual(ret_image['properties']['image_state'], 'pending')
+        ret_image = self.image_service.show(self.context, '2')
+        self.assertEqual(ret_image['properties']['image_state'], 'failed')
+        ret_image = self.image_service.show(self.context, '3')
+        self.assertEqual(ret_image['properties']['image_state'], 'available')
 
     def test_detail(self):
         self.image_service.detail(self.context)
