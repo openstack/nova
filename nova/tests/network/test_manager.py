@@ -2148,6 +2148,10 @@ class FloatingIPTestCase(test.TestCase):
                                     network):
             called['count'] += 1
 
+        def fake_clean_conntrack(fixed_ip):
+            if not fixed_ip == "10.0.0.2":
+                raise exception.FixedIpInvalid(address=fixed_ip)
+
         def fake_floating_ip_update(context, address, args):
             pass
 
@@ -2160,6 +2164,8 @@ class FloatingIPTestCase(test.TestCase):
                        fake_floating_ip_update)
         self.stubs.Set(self.network.l3driver, 'remove_floating_ip',
                        fake_remove_floating_ip)
+        self.stubs.Set(self.network.l3driver, 'clean_conntrack',
+                       fake_clean_conntrack)
         self.mox.ReplayAll()
         addresses = ['172.24.4.23', '172.24.4.24', '172.24.4.25']
         self.network.migrate_instance_start(self.context,

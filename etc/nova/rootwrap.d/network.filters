@@ -76,3 +76,6 @@ brctl: CommandFilter, brctl, root
 
 # nova/network/linux_net.py: 'sysctl', ....
 sysctl: CommandFilter, /sbin/sysctl, root
+
+# nova/network/linux_net.py: 'conntrack'
+conntrack: CommandFilter, conntrack, root

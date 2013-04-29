@@ -66,6 +66,9 @@ class L3Driver(object):
     def remove_vpn(self, public_ip, port, private_ip):
         raise NotImplementedError()
 
+    def clean_conntrack(self, fixed_ip):
+        raise NotImplementedError()
+
     def teardown(self):
         raise NotImplementedError()
 
@@ -125,6 +128,9 @@ class LinuxNetL3(L3Driver):
         # the VPN forwarding rules
         pass
 
+    def clean_conntrack(self, fixed_ip):
+        linux_net.clean_conntrack(fixed_ip)
+
     def teardown(self):
         pass
 
@@ -163,6 +169,9 @@ class NullL3(L3Driver):
         pass
 
     def remove_vpn(self, public_ip, port, private_ip):
+        pass
+
+    def clean_conntrack(self, fixed_ip):
         pass
 
     def teardown(self):
