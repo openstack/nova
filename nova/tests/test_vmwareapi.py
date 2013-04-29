@@ -19,6 +19,8 @@
 """
 Test suite for VMwareAPI.
 """
+import mox
+import urllib2
 
 from nova.compute import power_state
 from nova.compute import task_states
@@ -33,6 +35,21 @@ from nova.tests.vmwareapi import db_fakes
 from nova.tests.vmwareapi import stubs
 from nova.virt.vmwareapi import driver
 from nova.virt.vmwareapi import fake as vmwareapi_fake
+from nova.virt.vmwareapi import vm_util
+
+
+class fake_vm_ref(object):
+    def __init__(self):
+        self.value = 4
+        self._type = 'VirtualMachine'
+
+
+class fake_http_resp(object):
+    def __init__(self):
+        self.code = 200
+
+    def read(self):
+        return "console log"
 
 
 class VMwareAPIVMTestCase(test.TestCase):
@@ -308,7 +325,17 @@ class VMwareAPIVMTestCase(test.TestCase):
         pass
 
     def test_get_console_output(self):
-        pass
+        vm_ref = fake_vm_ref()
+        result = fake_http_resp()
+        self._create_instance_in_the_db()
+        self.mox.StubOutWithMock(vm_util, 'get_vm_ref_from_name')
+        self.mox.StubOutWithMock(urllib2, 'urlopen')
+        vm_util.get_vm_ref_from_name(mox.IgnoreArg(), self.instance['name']).\
+        AndReturn(vm_ref)
+        urllib2.urlopen(mox.IgnoreArg()).AndReturn(result)
+
+        self.mox.ReplayAll()
+        self.conn.get_console_output(self.instance)
 
 
 class VMwareAPIHostTestCase(test.TestCase):

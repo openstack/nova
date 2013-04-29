@@ -1086,7 +1086,7 @@ class VMwareVMOps(object):
         vm_ref = vm_util.get_vm_ref_from_name(self._session, instance['name'])
         if vm_ref is None:
             raise exception.InstanceNotFound(instance_id=instance['uuid'])
-        param_list = {"id": str(vm_ref)}
+        param_list = {"id": str(vm_ref.value)}
         base_url = "%s://%s/screen?%s" % (self._session._scheme,
                                          self._session._host_ip,
                                          urllib.urlencode(param_list))
