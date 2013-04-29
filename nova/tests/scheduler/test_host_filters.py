@@ -815,49 +815,59 @@ class HostFiltersTestCase(test.TestCase):
                     'trust:trusted_host': 'true'},
             passes=False)
 
-    def test_isolated_hosts_fails_isolated_on_non_isolated(self):
-        self.flags(isolated_images=['isolated'], isolated_hosts=['isolated'])
-        filt_cls = self.class_map['IsolatedHostsFilter']()
+    def _do_test_isolated_hosts(self, host_in_list, image_in_list,
+                                set_flags=True):
+        if set_flags:
+            self.flags(isolated_images=['isolated_image'],
+                       isolated_hosts=['isolated_host'])
+        host_name = 'isolated_host' if host_in_list else 'free_host'
+        image_ref = 'isolated_image' if image_in_list else 'free_image'
         filter_properties = {
             'request_spec': {
-                'instance_properties': {'image_ref': 'isolated'}
+                'instance_properties': {'image_ref': image_ref}
             }
         }
-        host = fakes.FakeHostState('non-isolated', 'node', {})
-        self.assertFalse(filt_cls.host_passes(host, filter_properties))
+        filt_cls = self.class_map['IsolatedHostsFilter']()
+        host = fakes.FakeHostState(host_name, 'node', {})
+        return filt_cls.host_passes(host, filter_properties)
+
+    def test_isolated_hosts_fails_isolated_on_non_isolated(self):
+        self.assertFalse(self._do_test_isolated_hosts(False, True))
 
     def test_isolated_hosts_fails_non_isolated_on_isolated(self):
-        self.flags(isolated_images=['isolated'], isolated_hosts=['isolated'])
-        filt_cls = self.class_map['IsolatedHostsFilter']()
-        filter_properties = {
-            'request_spec': {
-                'instance_properties': {'image_ref': 'non-isolated'}
-            }
-        }
-        host = fakes.FakeHostState('isolated', 'node', {})
-        self.assertFalse(filt_cls.host_passes(host, filter_properties))
+        self.assertFalse(self._do_test_isolated_hosts(True, False))
 
     def test_isolated_hosts_passes_isolated_on_isolated(self):
-        self.flags(isolated_images=['isolated'], isolated_hosts=['isolated'])
-        filt_cls = self.class_map['IsolatedHostsFilter']()
-        filter_properties = {
-            'request_spec': {
-                'instance_properties': {'image_ref': 'isolated'}
-            }
-        }
-        host = fakes.FakeHostState('isolated', 'node', {})
-        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+        self.assertTrue(self._do_test_isolated_hosts(True, True))
 
     def test_isolated_hosts_passes_non_isolated_on_non_isolated(self):
-        self.flags(isolated_images=['isolated'], isolated_hosts=['isolated'])
-        filt_cls = self.class_map['IsolatedHostsFilter']()
-        filter_properties = {
-            'request_spec': {
-                'instance_properties': {'image_ref': 'non-isolated'}
-            }
-        }
-        host = fakes.FakeHostState('non-isolated', 'node', {})
-        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+        self.assertTrue(self._do_test_isolated_hosts(False, False))
+
+    def test_isolated_hosts_no_config(self):
+        # If there are no hosts nor isolated images in the config, it should
+        # not filter at all. This is the default config.
+        self.assertTrue(self._do_test_isolated_hosts(False, True, False))
+        self.assertTrue(self._do_test_isolated_hosts(True, False, False))
+        self.assertTrue(self._do_test_isolated_hosts(True, True, False))
+        self.assertTrue(self._do_test_isolated_hosts(False, False, False))
+
+    def test_isolated_hosts_no_hosts_config(self):
+        self.flags(isolated_images=['isolated_image'])
+        # If there are no hosts in the config, it should only filter out
+        # images that are listed
+        self.assertFalse(self._do_test_isolated_hosts(False, True, False))
+        self.assertTrue(self._do_test_isolated_hosts(True, False, False))
+        self.assertFalse(self._do_test_isolated_hosts(True, True, False))
+        self.assertTrue(self._do_test_isolated_hosts(False, False, False))
+
+    def test_isolated_hosts_no_images_config(self):
+        self.flags(isolated_hosts=['isolated_host'])
+        # If there are no images in the config, it should only filter out
+        # isolated_hosts
+        self.assertTrue(self._do_test_isolated_hosts(False, True, False))
+        self.assertFalse(self._do_test_isolated_hosts(True, False, False))
+        self.assertFalse(self._do_test_isolated_hosts(True, True, False))
+        self.assertTrue(self._do_test_isolated_hosts(False, False, False))
 
     def test_json_filter_passes(self):
         filt_cls = self.class_map['JsonFilter']()
