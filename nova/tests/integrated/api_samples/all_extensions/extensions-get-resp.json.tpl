@@ -465,6 +465,14 @@
             "updated": "%(timestamp)s"
         },
         {
+            "alias": "os-user-quotas",
+            "description": "%(text)s",
+            "links": [],
+            "name": "UserQuotas",
+            "namespace": "http://docs.openstack.org/compute/ext/user_quotas/api/v1.1",
+            "updated": "%(timestamp)s"
+        },
+        {
             "alias": "os-rescue",
             "description": "%(text)s",
             "links": [],

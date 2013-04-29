@@ -174,6 +174,9 @@
   <extension alias="os-quota-sets" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/quotas-sets/api/v1.1" name="Quotas">
     <description>%(text)s</description>
   </extension>
+  <extension alias="os-user-quotas" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/user_quotas/api/v1.1" name="UserQuotas">
+    <description>%(text)s</description>
+  </extension>
   <extension alias="os-rescue" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/rescue/api/v1.1" name="Rescue">
     <description>%(text)s</description>
   </extension>

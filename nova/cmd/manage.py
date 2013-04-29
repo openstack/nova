@@ -215,11 +215,13 @@ class ProjectCommands(object):
 
     @args('--project', dest='project_id', metavar='<Project name>',
             help='Project name')
+    @args('--user', dest='user_id', metavar='<User name>',
+            help='User name')
     @args('--key', metavar='<key>', help='Key')
     @args('--value', metavar='<value>', help='Value')
-    def quota(self, project_id, key=None, value=None):
+    def quota(self, project_id, user_id=None, key=None, value=None):
         """
-        Create, update or display quotas for project
+        Create, update or display quotas for project/user
 
         If no quota key is provided, the quota will be displayed.
         If a valid quota key is provided and it does not exist,
@@ -227,21 +229,42 @@ class ProjectCommands(object):
         """
 
         ctxt = context.get_admin_context()
-        project_quota = QUOTAS.get_project_quotas(ctxt, project_id)
+        if user_id:
+            quota = QUOTAS.get_user_quotas(ctxt, project_id, user_id)
+        else:
+            user_id = None
+            quota = QUOTAS.get_project_quotas(ctxt, project_id)
         # if key is None, that means we need to show the quotas instead
         # of updating them
         if key:
-            if key in project_quota:
+            settable_quotas = QUOTAS.get_settable_quotas(ctxt,
+                                                         project_id,
+                                                         user_id=user_id)
+            if key in quota:
+                minimum = settable_quotas[key]['minimum']
+                maximum = settable_quotas[key]['maximum']
                 if value.lower() == 'unlimited':
                     value = -1
+                if int(value) < -1:
+                    print _('Quota limit must be -1 or greater.')
+                    return(2)
+                if ((int(value) < minimum) and
+                   (maximum != -1 or (maximum == -1 and int(value) != -1))):
+                    print _('Quota limit must greater than %s.') % minimum
+                    return(2)
+                if maximum != -1 and int(value) > maximum:
+                    print _('Quota limit must less than %s.') % maximum
+                    return(2)
                 try:
-                    db.quota_create(ctxt, project_id, key, value)
+                    db.quota_create(ctxt, project_id, key, value,
+                                    user_id=user_id)
                 except exception.QuotaExists:
-                    db.quota_update(ctxt, project_id, key, value)
+                    db.quota_update(ctxt, project_id, key, value,
+                                    user_id=user_id)
             else:
                 print _('%(key)s is not a valid quota key. Valid options are: '
                         '%(options)s.') % {'key': key,
-                                           'options': ', '.join(project_quota)}
+                                           'options': ', '.join(quota)}
                 return(2)
         print_format = "%-36s %-10s %-10s %-10s"
         print print_format % (
@@ -250,8 +273,11 @@ class ProjectCommands(object):
                     _('In Use'),
                     _('Reserved'))
         # Retrieve the quota after update
-        project_quota = QUOTAS.get_project_quotas(ctxt, project_id)
-        for key, value in project_quota.iteritems():
+        if user_id:
+            quota = QUOTAS.get_user_quotas(ctxt, project_id, user_id)
+        else:
+            quota = QUOTAS.get_project_quotas(ctxt, project_id)
+        for key, value in quota.iteritems():
             if value['limit'] < 0 or value['limit'] is None:
                 value['limit'] = 'unlimited'
             print print_format % (key, value['limit'], value['in_use'],

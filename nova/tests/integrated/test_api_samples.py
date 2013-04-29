@@ -2403,6 +2403,39 @@ class ExtendedQuotasSampleXmlTests(ExtendedQuotasSampleJsonTests):
     ctype = "xml"
 
 
+class UserQuotasSampleJsonTests(ApiSampleTestBase):
+    extends_name = "nova.api.openstack.compute.contrib.quotas.Quotas"
+    extension_name = ("nova.api.openstack.compute.contrib"
+                      ".user_quotas.User_quotas")
+
+    def fake_load(self, *args):
+        return True
+
+    def test_show_quotas_for_user(self):
+        # Get api sample to show quotas for user.
+        response = self._do_get('os-quota-sets/fake_tenant?user_id=1')
+        self._verify_response('user-quotas-show-get-resp', {}, response, 200)
+
+    def test_delete_quotas_for_user(self):
+        # Get api sample to delete quota for user.
+        self.stubs.Set(ext_mgr, "is_loaded", self.fake_load)
+        response = self._do_delete('os-quota-sets/fake_tenant?user_id=1')
+        self.assertEqual(response.status, 202)
+        self.assertEqual(response.read(), '')
+
+    def test_update_quotas_for_user(self):
+        # Get api sample to update quotas for user.
+        response = self._do_put('os-quota-sets/fake_tenant?user_id=1',
+                                'user-quotas-update-post-req',
+                                {})
+        return self._verify_response('user-quotas-update-post-resp', {},
+                                     response, 200)
+
+
+class UserQuotasSampleXmlTests(UserQuotasSampleJsonTests):
+    ctype = "xml"
+
+
 class ExtendedIpsSampleJsonTests(ServersSampleBase):
     extension_name = ("nova.api.openstack.compute.contrib"
                       ".extended_ips.Extended_ips")

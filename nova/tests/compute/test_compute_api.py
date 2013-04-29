@@ -388,7 +388,7 @@ class _ComputeAPIUnitTestMixIn(object):
         db.instance_update_and_get_original(
             self.context, inst.uuid, updates).AndReturn((db_inst, new_inst))
         self.compute_api._create_reservations(
-            self.context, db_inst, new_inst, inst.project_id
+            self.context, db_inst, new_inst, inst.project_id, inst.user_id
             ).AndReturn('fake-resv')
 
         if inst.vm_state == vm_states.RESIZED:
@@ -422,7 +422,8 @@ class _ComputeAPIUnitTestMixIn(object):
                 system_metadata='sys-meta')
         if inst.host == 'down-host':
             quota.QUOTAS.commit(self.context, 'fake-resv',
-                                project_id=inst.project_id)
+                                project_id=inst.project_id,
+                                user_id=inst.user_id)
         elif delete_type == 'soft_delete':
             self.compute_api._record_action_start(self.context, db_inst,
                                                   instance_actions.DELETE)
@@ -485,7 +486,8 @@ class _ComputeAPIUnitTestMixIn(object):
             self.context, inst.uuid, updates).AndReturn((db_inst, new_inst))
         self.compute_api._create_reservations(self.context,
                                               db_inst, new_inst,
-                                              inst.project_id).AndReturn(None)
+                                              inst.project_id,
+                                              inst.user_id).AndReturn(None)
         db.constraint(host=mox.IgnoreArg()).AndReturn('constraint')
         db.instance_destroy(self.context, inst.uuid, 'constraint')
 

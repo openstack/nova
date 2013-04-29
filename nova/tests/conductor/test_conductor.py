@@ -540,19 +540,25 @@ class _BaseTestCase(object):
 
     def test_quota_commit(self):
         self.mox.StubOutWithMock(quota.QUOTAS, 'commit')
-        quota.QUOTAS.commit(self.context, 'reservations', project_id=None)
-        quota.QUOTAS.commit(self.context, 'reservations', project_id='proj')
+        quota.QUOTAS.commit(self.context, 'reservations', project_id=None,
+                            user_id=None)
+        quota.QUOTAS.commit(self.context, 'reservations', project_id='proj',
+                            user_id='user')
         self.mox.ReplayAll()
         self.conductor.quota_commit(self.context, 'reservations')
-        self.conductor.quota_commit(self.context, 'reservations', 'proj')
+        self.conductor.quota_commit(self.context, 'reservations', 'proj',
+                                    'user')
 
     def test_quota_rollback(self):
         self.mox.StubOutWithMock(quota.QUOTAS, 'rollback')
-        quota.QUOTAS.rollback(self.context, 'reservations', project_id=None)
-        quota.QUOTAS.rollback(self.context, 'reservations', project_id='proj')
+        quota.QUOTAS.rollback(self.context, 'reservations', project_id=None,
+                              user_id=None)
+        quota.QUOTAS.rollback(self.context, 'reservations', project_id='proj',
+                              user_id='user')
         self.mox.ReplayAll()
         self.conductor.quota_rollback(self.context, 'reservations')
-        self.conductor.quota_rollback(self.context, 'reservations', 'proj')
+        self.conductor.quota_rollback(self.context, 'reservations', 'proj',
+                                      'user')
 
     def test_get_ec2_ids(self):
         expected = {

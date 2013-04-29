@@ -2332,6 +2332,63 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
                           {'instance_type_id': 35, 'key': 'key1',
                            'deleted': 0})
 
+    # migration 203 - make user quotas key and value
+    def _pre_upgrade_203(self, engine):
+        quota_usages = db_utils.get_table(engine, 'quota_usages')
+        reservations = db_utils.get_table(engine, 'reservations')
+        fake_quota_usages = {'id': 5,
+                             'resource': 'instances',
+                             'in_use': 1,
+                             'reserved': 1}
+        fake_reservations = {'id': 6,
+                             'uuid': 'fake_reservationo_uuid',
+                             'usage_id': 5,
+                             'resource': 'instances',
+                             'delta': 1,
+                             'expire': timeutils.utcnow()}
+        quota_usages.insert().execute(fake_quota_usages)
+        reservations.insert().execute(fake_reservations)
+
+    def _check_203(self, engine, data):
+        project_user_quotas = db_utils.get_table(engine, 'project_user_quotas')
+        fake_quotas = {'id': 4,
+                       'project_id': 'fake_project',
+                       'user_id': 'fake_user',
+                       'resource': 'instances',
+                       'hard_limit': 10}
+        project_user_quotas.insert().execute(fake_quotas)
+        quota_usages = db_utils.get_table(engine, 'quota_usages')
+        reservations = db_utils.get_table(engine, 'reservations')
+        # Get the record
+        quota = project_user_quotas.select().execute().first()
+        quota_usage = quota_usages.select().execute().first()
+        reservation = reservations.select().execute().first()
+
+        self.assertEqual(quota['id'], 4)
+        self.assertEqual(quota['project_id'], 'fake_project')
+        self.assertEqual(quota['user_id'], 'fake_user')
+        self.assertEqual(quota['resource'], 'instances')
+        self.assertEqual(quota['hard_limit'], 10)
+        self.assertEqual(quota_usage['user_id'], None)
+        self.assertEqual(reservation['user_id'], None)
+
+    def _post_downgrade_203(self, engine):
+        try:
+            table_exist = True
+            db_utils.get_table(engine, 'project_user_quotas')
+        except Exception:
+            table_exist = False
+        quota_usages = db_utils.get_table(engine, 'quota_usages')
+        reservations = db_utils.get_table(engine, 'reservations')
+
+        # Get the record
+        quota_usage = quota_usages.select().execute().first()
+        reservation = reservations.select().execute().first()
+
+        self.assertFalse('user_id' in quota_usage)
+        self.assertFalse('user_id' in reservation)
+        self.assertFalse(table_exist)
+
 
 class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""

@@ -492,11 +492,15 @@ class ConductorManager(manager.Manager):
     def network_migrate_instance_finish(self, context, instance, migration):
         self.network_api.migrate_instance_finish(context, instance, migration)
 
-    def quota_commit(self, context, reservations, project_id=None):
-        quota.QUOTAS.commit(context, reservations, project_id=project_id)
+    def quota_commit(self, context, reservations, project_id=None,
+                     user_id=None):
+        quota.QUOTAS.commit(context, reservations, project_id=project_id,
+                            user_id=user_id)
 
-    def quota_rollback(self, context, reservations, project_id=None):
-        quota.QUOTAS.rollback(context, reservations, project_id=project_id)
+    def quota_rollback(self, context, reservations, project_id=None,
+                       user_id=None):
+        quota.QUOTAS.rollback(context, reservations, project_id=project_id,
+                              user_id=user_id)
 
     def get_ec2_ids(self, context, instance):
         ec2_ids = {}

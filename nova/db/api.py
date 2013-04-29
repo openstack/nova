@@ -951,14 +951,20 @@ def network_update(context, network_id, values):
 ###############
 
 
-def quota_create(context, project_id, resource, limit):
+def quota_create(context, project_id, resource, limit, user_id=None):
     """Create a quota for the given project and resource."""
-    return IMPL.quota_create(context, project_id, resource, limit)
+    return IMPL.quota_create(context, project_id, resource, limit,
+                             user_id=user_id)
 
 
-def quota_get(context, project_id, resource):
+def quota_get(context, project_id, resource, user_id=None):
     """Retrieve a quota or raise if it does not exist."""
-    return IMPL.quota_get(context, project_id, resource)
+    return IMPL.quota_get(context, project_id, resource, user_id=user_id)
+
+
+def quota_get_all_by_project_and_user(context, project_id, user_id):
+    """Retrieve all quotas associated with a given project and user."""
+    return IMPL.quota_get_all_by_project_and_user(context, project_id, user_id)
 
 
 def quota_get_all_by_project(context, project_id):
@@ -966,9 +972,15 @@ def quota_get_all_by_project(context, project_id):
     return IMPL.quota_get_all_by_project(context, project_id)
 
 
-def quota_update(context, project_id, resource, limit):
+def quota_get_all(context, project_id):
+    """Retrieve all user quotas associated with a given project."""
+    return IMPL.quota_get_all(context, project_id)
+
+
+def quota_update(context, project_id, resource, limit, user_id=None):
     """Update a quota or raise if it does not exist."""
-    return IMPL.quota_update(context, project_id, resource, limit)
+    return IMPL.quota_update(context, project_id, resource, limit,
+                             user_id=user_id)
 
 
 ###################
@@ -1002,9 +1014,15 @@ def quota_class_update(context, class_name, resource, limit):
 ###################
 
 
-def quota_usage_get(context, project_id, resource):
+def quota_usage_get(context, project_id, resource, user_id=None):
     """Retrieve a quota usage or raise if it does not exist."""
-    return IMPL.quota_usage_get(context, project_id, resource)
+    return IMPL.quota_usage_get(context, project_id, resource, user_id=user_id)
+
+
+def quota_usage_get_all_by_project_and_user(context, project_id, user_id):
+    """Retrieve all usage associated with a given resource."""
+    return IMPL.quota_usage_get_all_by_project_and_user(context,
+                                                        project_id, user_id)
 
 
 def quota_usage_get_all_by_project(context, project_id):
@@ -1012,19 +1030,20 @@ def quota_usage_get_all_by_project(context, project_id):
     return IMPL.quota_usage_get_all_by_project(context, project_id)
 
 
-def quota_usage_update(context, project_id, resource, **kwargs):
+def quota_usage_update(context, project_id, user_id, resource, **kwargs):
     """Update a quota usage or raise if it does not exist."""
-    return IMPL.quota_usage_update(context, project_id, resource, **kwargs)
+    return IMPL.quota_usage_update(context, project_id, user_id, resource,
+                                   **kwargs)
 
 
 ###################
 
 
-def reservation_create(context, uuid, usage, project_id, resource, delta,
-                       expire):
+def reservation_create(context, uuid, usage, project_id, user_id, resource,
+                       delta, expire):
     """Create a reservation for the given project and resource."""
     return IMPL.reservation_create(context, uuid, usage, project_id,
-                                   resource, delta, expire)
+                                   user_id, resource, delta, expire)
 
 
 def reservation_get(context, uuid):
@@ -1035,23 +1054,32 @@ def reservation_get(context, uuid):
 ###################
 
 
-def quota_reserve(context, resources, quotas, deltas, expire,
-                  until_refresh, max_age, project_id=None):
+def quota_reserve(context, resources, quotas, user_quotas, deltas, expire,
+                  until_refresh, max_age, project_id=None, user_id=None):
     """Check quotas and create appropriate reservations."""
-    return IMPL.quota_reserve(context, resources, quotas, deltas, expire,
-                              until_refresh, max_age, project_id=project_id)
+    return IMPL.quota_reserve(context, resources, quotas, user_quotas, deltas,
+                              expire, until_refresh, max_age,
+                              project_id=project_id, user_id=user_id)
 
 
-def reservation_commit(context, reservations, project_id=None):
+def reservation_commit(context, reservations, project_id=None, user_id=None):
     """Commit quota reservations."""
     return IMPL.reservation_commit(context, reservations,
-                                   project_id=project_id)
+                                   project_id=project_id,
+                                   user_id=user_id)
 
 
-def reservation_rollback(context, reservations, project_id=None):
+def reservation_rollback(context, reservations, project_id=None, user_id=None):
     """Roll back quota reservations."""
     return IMPL.reservation_rollback(context, reservations,
-                                     project_id=project_id)
+                                     project_id=project_id,
+                                     user_id=user_id)
+
+
+def quota_destroy_all_by_project_and_user(context, project_id, user_id):
+    """Destroy all quotas associated with a given project and user."""
+    return IMPL.quota_destroy_all_by_project_and_user(context,
+                                                      project_id, user_id)
 
 
 def quota_destroy_all_by_project(context, project_id):

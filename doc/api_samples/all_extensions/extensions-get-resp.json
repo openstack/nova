@@ -449,6 +449,14 @@
             "updated": "2011-08-08T00:00:00+00:00"
         },
         {
+            "alias": "os-user-quotas",
+            "description": "Project user quota support.",
+            "links": [],
+            "name": "UserQuotas",
+            "namespace": "http://docs.openstack.org/compute/ext/user_quotas/api/v1.1",
+            "updated": "2013-07-18T00:00:00+00:00"
+        },
+        {
             "alias": "os-rescue",
             "description": "Instance rescue mode.",
             "links": [],

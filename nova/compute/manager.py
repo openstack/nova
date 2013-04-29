@@ -543,12 +543,18 @@ class ComputeManager(manager.SchedulerDependentManager):
         """
         self.conductor_api.instance_destroy(context, instance)
         project_id = instance['project_id']
+        if (instance.get('user_id', None) and
+                (context.user_id != instance['user_id'])):
+            user_id = instance['user_id']
+        else:
+            user_id = context.user_id
         system_meta = utils.metadata_to_dict(instance['system_metadata'])
         bdms = self._get_instance_volume_bdms(context, instance)
         instance_vcpus = instance['vcpus']
         instance_memory_mb = instance['memory_mb']
         reservations = quota.QUOTAS.reserve(context,
                                             project_id=project_id,
+                                            user_id=user_id,
                                             instances=-1,
                                             cores=-instance_vcpus,
                                             ram=-instance_memory_mb)
@@ -557,12 +563,14 @@ class ComputeManager(manager.SchedulerDependentManager):
                                 bdms,
                                 reservations,
                                 project_id,
-                                system_meta)
+                                system_meta,
+                                user_id=user_id)
 
     def _complete_deletion(self, context, instance, bdms,
-                           reservations, prj_id, system_meta):
+                           reservations, prj_id, system_meta, user_id=None):
 
-        self._quota_commit(context, reservations, project_id=prj_id)
+        self._quota_commit(context, reservations, project_id=prj_id,
+                           user_id=user_id)
         # ensure block device mappings are not leaked
         self.conductor_api.block_device_mapping_destroy(context, bdms)
 
@@ -1542,6 +1550,10 @@ class ComputeManager(manager.SchedulerDependentManager):
             project_id = instance['project_id']
         else:
             project_id = context.project_id
+        if context.user_id != instance['user_id']:
+            user_id = instance['user_id']
+        else:
+            user_id = context.user_id
 
         was_soft_deleted = instance['vm_state'] == vm_states.SOFT_DELETED
         if was_soft_deleted:
@@ -1549,7 +1561,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             # decremented.
             try:
                 self._quota_rollback(context, reservations,
-                                     project_id=project_id)
+                                     project_id=project_id,
+                                     user_id=user_id)
             except Exception:
                 pass
             reservations = None
@@ -1585,14 +1598,16 @@ class ComputeManager(manager.SchedulerDependentManager):
         except Exception:
             with excutils.save_and_reraise_exception():
                 self._quota_rollback(context, reservations,
-                                     project_id=project_id)
+                                     project_id=project_id,
+                                     user_id=user_id)
 
         self._complete_deletion(context,
                                 instance,
                                 bdms,
                                 reservations,
                                 project_id,
-                                system_meta)
+                                system_meta,
+                                user_id=user_id)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @wrap_instance_event
@@ -1683,6 +1698,10 @@ class ComputeManager(manager.SchedulerDependentManager):
             project_id = instance['project_id']
         else:
             project_id = context.project_id
+        if context.user_id != instance['user_id']:
+            user_id = instance['user_id']
+        else:
+            user_id = context.user_id
 
         try:
             self._notify_about_instance_usage(context, instance,
@@ -1702,8 +1721,10 @@ class ComputeManager(manager.SchedulerDependentManager):
         except Exception:
             with excutils.save_and_reraise_exception():
                 self._quota_rollback(context, reservations,
-                                     project_id=project_id)
-        self._quota_commit(context, reservations, project_id=project_id)
+                                     project_id=project_id,
+                                     user_id=user_id)
+        self._quota_commit(context, reservations, project_id=project_id,
+                           user_id=user_id)
         self._notify_about_instance_usage(context, instance, "soft_delete.end")
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
@@ -2603,15 +2624,19 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             self._quota_commit(context, reservations)
 
-    def _quota_commit(self, context, reservations, project_id=None):
+    def _quota_commit(self, context, reservations, project_id=None,
+                      user_id=None):
         if reservations:
             self.conductor_api.quota_commit(context, reservations,
-                                            project_id=project_id)
+                                            project_id=project_id,
+                                            user_id=user_id)
 
-    def _quota_rollback(self, context, reservations, project_id=None):
+    def _quota_rollback(self, context, reservations, project_id=None,
+                        user_id=None):
         if reservations:
             self.conductor_api.quota_rollback(context, reservations,
-                                              project_id=project_id)
+                                              project_id=project_id,
+                                              user_id=user_id)
 
     def _prep_resize(self, context, image, instance, instance_type,
             reservations, request_spec, filter_properties, node):
