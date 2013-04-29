@@ -98,7 +98,7 @@ class TestS3ImageService(test.TestCase):
 
         fake.stub_out_image_service(self.stubs)
         self.image_service = s3.S3ImageService()
-        self.addCleanup(ec2utils.reset_cache)
+        ec2utils.reset_cache()
 
     def tearDown(self):
         super(TestS3ImageService, self).tearDown()
