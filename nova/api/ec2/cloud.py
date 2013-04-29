@@ -788,6 +788,10 @@ class CloudController(object):
         return {'volumeSet': volumes}
 
     def _format_volume(self, context, volume):
+        valid_ec2_api_volume_status_map = {
+            'attaching': 'in-use',
+            'detaching': 'in-use'}
+
         instance_ec2_id = None
         instance_data = None
 
@@ -801,7 +805,8 @@ class CloudController(object):
                                         instance['host'])
         v = {}
         v['volumeId'] = ec2utils.id_to_ec2_vol_id(volume['id'])
-        v['status'] = volume['status']
+        v['status'] = valid_ec2_api_volume_status_map.get(volume['status'],
+                                                          volume['status'])
         v['size'] = volume['size']
         v['availabilityZone'] = volume['availability_zone']
         v['createTime'] = volume['created_at']
