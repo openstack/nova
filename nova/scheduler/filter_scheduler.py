@@ -392,4 +392,4 @@ class FilterScheduler(driver.Scheduler):
                         "Lack of memory")
                       % {'instance_uuid': instance_uuid,
                          'dest': dest})
-            raise exception.MigrationError(reason=reason)
+            raise exception.MigrationPreCheckError(reason=reason)
