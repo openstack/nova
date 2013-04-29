@@ -1607,7 +1607,7 @@ class VMOps(object):
         except KeyError:
             reason = _('Destination host:%(hostname)s must be in the same '
                        'aggregate as the source server')
-            raise exception.MigrationError(reason=reason % locals())
+            raise exception.MigrationPreCheckError(reason=reason % locals())
 
     def _ensure_host_in_aggregate(self, context, hostname):
         self._get_host_uuid_from_aggregate(context, hostname)
@@ -1626,7 +1626,8 @@ class VMOps(object):
         pifs = self._session.call_xenapi('PIF.get_all_records_where',
                                          expr)
         if len(pifs) != 1:
-            raise exception.MigrationError('No suitable network for migrate')
+            msg = _('No suitable network for migrate')
+            raise exception.MigrationPreCheckError(reason=msg)
 
         nwref = pifs[pifs.keys()[0]]['network']
         try:
@@ -1637,7 +1638,8 @@ class VMOps(object):
                                                      options)
         except self._session.XenAPI.Failure as exc:
             LOG.exception(exc)
-            raise exception.MigrationError(_('Migrate Receive failed'))
+            msg = _('Migrate Receive failed')
+            raise exception.MigrationPreCheckError(reason=msg)
         return migrate_data
 
     def check_can_live_migrate_destination(self, ctxt, instance_ref,
@@ -1686,8 +1688,8 @@ class VMOps(object):
                 return dest_check_data
             except self._session.XenAPI.Failure as exc:
                 LOG.exception(exc)
-                raise exception.MigrationError(_('VM.assert_can_migrate'
-                                                 'failed'))
+                msg = _('VM.assert_can_migrate failed')
+                raise exception.MigrationPreCheckError(reason=msg)
 
     def _generate_vdi_map(self, destination_sr_ref, vm_ref):
         """generate a vdi_map for _call_live_migrate_command."""
