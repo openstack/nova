@@ -18,6 +18,7 @@
 
 import base64
 import datetime
+import testtools
 import urlparse
 import uuid
 
@@ -40,6 +41,7 @@ from nova import context
 from nova import db
 from nova.db.sqlalchemy import models
 from nova import exception
+from nova.image import glance
 from nova.network import manager
 from nova.network.quantumv2 import api as quantum_api
 from nova.openstack.common import jsonutils
@@ -1857,6 +1859,27 @@ class ServersControllerCreateTest(test.TestCase):
                           self.controller.create,
                           req,
                           body)
+
+    def test_create_server_with_deleted_image(self):
+        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        # Get the fake image service so we can set the status to deleted
+        (image_service, image_id) = glance.get_remote_image_service(
+                context, '')
+        image_service.update(context, image_uuid, {'status': 'DELETED'})
+
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
+        req.method = 'POST'
+        body = dict(server=dict(
+            name='server_test', imageRef=image_uuid, flavorRef=2,
+            metadata={'hello': 'world', 'open': 'stack'},
+            personality={}))
+        req.body = jsonutils.dumps(body)
+
+        req.headers["content-type"] = "application/json"
+        with testtools.ExpectedException(
+            webob.exc.HTTPBadRequest,
+            'Image 76fa36fc-c930-4bf3-8c8a-ea2a2420deb6 is not active.'):
+                self.controller.create(req, body)
 
     def test_create_instance_invalid_negative_min(self):
         self.ext_mgr.extensions = {'os-multiple-create': 'fake'}
