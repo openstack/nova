@@ -20,6 +20,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import errno
 import os
 
 from lxml import etree
@@ -59,11 +60,21 @@ def get_iscsi_initiator():
 
 def get_fc_hbas():
     """Get the Fibre Channel HBA information."""
+    out = None
     try:
         out, err = execute('systool', '-c', 'fc_host', '-v',
                            run_as_root=True)
     except exception.ProcessExecutionError as exc:
+        # This handles the case where rootwrap is used
+        # and systool is not installed
+        # 96 = nova.cmd.rootwrap.RC_NOEXECFOUND:
         if exc.exit_code == 96:
+            LOG.warn(_("systool is not installed"))
+        return []
+    except OSError as exc:
+        # This handles the case where rootwrap is NOT used
+        # and systool is not installed
+        if exc.errno == errno.ENOENT:
             LOG.warn(_("systool is not installed"))
         return []
 
