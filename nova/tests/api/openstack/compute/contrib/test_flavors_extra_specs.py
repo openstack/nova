@@ -32,6 +32,10 @@ def return_flavor_extra_specs(context, flavor_id):
     return stub_flavor_extra_specs()
 
 
+def return_flavor_extra_specs_item(context, flavor_id, key):
+    return {key: stub_flavor_extra_specs()[key]}
+
+
 def return_empty_flavor_extra_specs(context, flavor_id):
     return {}
 
@@ -76,8 +80,8 @@ class FlavorsExtraSpecsTest(test.TestCase):
         self.assertEqual(0, len(res_dict['extra_specs']))
 
     def test_show(self):
-        self.stubs.Set(nova.db, 'instance_type_extra_specs_get',
-                       return_flavor_extra_specs)
+        self.stubs.Set(nova.db, 'instance_type_extra_specs_get_item',
+                       return_flavor_extra_specs_item)
 
         req = fakes.HTTPRequest.blank('/v2/fake/flavors/1/os-extra_specs' +
                                       '/key5')
