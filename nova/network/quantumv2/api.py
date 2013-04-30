@@ -807,6 +807,63 @@ class API(base.Base):
         """Force add a network to the project."""
         raise NotImplementedError()
 
+    def _nw_info_get_ips(self, client, port):
+        network_IPs = []
+        for fixed_ip in port['fixed_ips']:
+            fixed = network_model.FixedIP(address=fixed_ip['ip_address'])
+            floats = self._get_floating_ips_by_fixed_and_port(
+                client, fixed_ip['ip_address'], port['id'])
+            for ip in floats:
+                fip = network_model.IP(address=ip['floating_ip_address'],
+                                       type='floating')
+                fixed.add_floating_ip(fip)
+            network_IPs.append(fixed)
+        return network_IPs
+
+    def _nw_info_get_subnets(self, context, port, network_IPs):
+        subnets = self._get_subnets_from_port(context, port)
+        for subnet in subnets:
+            subnet['ips'] = [fixed_ip for fixed_ip in network_IPs
+                             if fixed_ip.is_in_subnet(subnet)]
+        return subnets
+
+    def _nw_info_build_network(self, port, networks, subnets):
+        # NOTE(danms): This loop can't fail to find a network since we
+        # filtered ports to only the ones matching networks in our parent
+        for net in networks:
+            if port['network_id'] == net['id']:
+                network_name = net['name']
+                break
+
+        bridge = None
+        ovs_interfaceid = None
+        # Network model metadata
+        should_create_bridge = None
+        vif_type = port.get('binding:vif_type')
+        # TODO(berrange) Quantum should pass the bridge name
+        # in another binding metadata field
+        if vif_type == network_model.VIF_TYPE_OVS:
+            bridge = CONF.quantum_ovs_bridge
+            ovs_interfaceid = port['id']
+        elif vif_type == network_model.VIF_TYPE_BRIDGE:
+            bridge = "brq" + port['network_id']
+            should_create_bridge = True
+
+        if bridge is not None:
+            bridge = bridge[:network_model.NIC_NAME_LEN]
+
+        network = network_model.Network(
+            id=port['network_id'],
+            bridge=bridge,
+            injected=CONF.flat_injected,
+            label=network_name,
+            tenant_id=net['tenant_id']
+            )
+        network['subnets'] = subnets
+        if should_create_bridge is not None:
+            network['should_create_bridge'] = should_create_bridge
+        return network, ovs_interfaceid
+
     def _build_network_info_model(self, context, instance, networks=None):
         search_opts = {'tenant_id': instance['project_id'],
                        'device_id': instance['uuid'], }
@@ -826,59 +883,16 @@ class API(base.Base):
 
         nw_info = network_model.NetworkInfo()
         for port in ports:
-            # NOTE(danms): This loop can't fail to find a network since we
-            # filtered ports to only the ones matching networks above.
-            for net in networks:
-                if port['network_id'] == net['id']:
-                    network_name = net['name']
-                    break
-
-            network_IPs = []
-            for fixed_ip in port['fixed_ips']:
-                fixed = network_model.FixedIP(address=fixed_ip['ip_address'])
-                floats = self._get_floating_ips_by_fixed_and_port(
-                        client, fixed_ip['ip_address'], port['id'])
-                for ip in floats:
-                    fip = network_model.IP(address=ip['floating_ip_address'],
-                                           type='floating')
-                    fixed.add_floating_ip(fip)
-                network_IPs.append(fixed)
-
-            subnets = self._get_subnets_from_port(context, port)
-            for subnet in subnets:
-                subnet['ips'] = [fixed_ip for fixed_ip in network_IPs
-                                 if fixed_ip.is_in_subnet(subnet)]
-
-            bridge = None
-            ovs_interfaceid = None
-            # Network model metadata
-            should_create_bridge = None
-            vif_type = port.get('binding:vif_type')
-            # TODO(berrange) Quantum should pass the bridge name
-            # in another binding metadata field
-            if vif_type == network_model.VIF_TYPE_OVS:
-                bridge = CONF.quantum_ovs_bridge
-                ovs_interfaceid = port['id']
-            elif vif_type == network_model.VIF_TYPE_BRIDGE:
-                bridge = "brq" + port['network_id']
-                should_create_bridge = True
-
-            if bridge is not None:
-                bridge = bridge[:network_model.NIC_NAME_LEN]
+            network_IPs = self._nw_info_get_ips(client, port)
+            subnets = self._nw_info_get_subnets(context, port, network_IPs)
 
             devname = "tap" + port['id']
             devname = devname[:network_model.NIC_NAME_LEN]
 
-            network = network_model.Network(
-                id=port['network_id'],
-                bridge=bridge,
-                injected=CONF.flat_injected,
-                label=network_name,
-                tenant_id=net['tenant_id']
-            )
-            network['subnets'] = subnets
-            if should_create_bridge is not None:
-                network['should_create_bridge'] = should_create_bridge
+            network, ovs_interfaceid = self._nw_info_build_network(port,
+                                                                   networks,
+                                                                   subnets)
+
             nw_info.append(network_model.VIF(
                 id=port['id'],
                 address=port['mac_address'],

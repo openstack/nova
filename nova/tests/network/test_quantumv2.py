@@ -1233,6 +1233,130 @@ class TestQuantumv2(test.TestCase):
             self.moxed_client, '1.1.1.1', 1)
         self.assertEqual(floatingips, [])
 
+    def test_nw_info_get_ips(self):
+        fake_port = {
+            'fixed_ips': [
+                {'ip_address': '1.1.1.1'}],
+            'id': 'port-id',
+            }
+        api = quantumapi.API()
+        self.mox.StubOutWithMock(api, '_get_floating_ips_by_fixed_and_port')
+        api._get_floating_ips_by_fixed_and_port(
+            self.moxed_client, '1.1.1.1', 'port-id').AndReturn(
+                [{'floating_ip_address': '10.0.0.1'}])
+        self.mox.ReplayAll()
+        quantumv2.get_client('fake')
+        result = api._nw_info_get_ips(self.moxed_client, fake_port)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]['address'], '1.1.1.1')
+        self.assertEqual(result[0]['floating_ips'][0]['address'], '10.0.0.1')
+
+    def test_nw_info_get_subnets(self):
+        fake_port = {
+            'fixed_ips': [
+                {'ip_address': '1.1.1.1'},
+                {'ip_address': '2.2.2.2'}],
+            'id': 'port-id',
+            }
+        fake_subnet = model.Subnet(cidr='1.0.0.0/8')
+        fake_ips = [model.IP(x['ip_address']) for x in fake_port['fixed_ips']]
+        api = quantumapi.API()
+        self.mox.StubOutWithMock(api, '_get_subnets_from_port')
+        api._get_subnets_from_port(self.context, fake_port).AndReturn(
+            [fake_subnet])
+        self.mox.ReplayAll()
+        quantumv2.get_client('fake')
+        subnets = api._nw_info_get_subnets(self.context, fake_port, fake_ips)
+        self.assertEqual(len(subnets), 1)
+        self.assertEqual(len(subnets[0]['ips']), 1)
+        self.assertEqual(subnets[0]['ips'][0]['address'], '1.1.1.1')
+
+    def _test_nw_info_build_network(self, vif_type):
+        fake_port = {
+            'fixed_ips': [{'ip_address': '1.1.1.1'}],
+            'id': 'port-id',
+            'network_id': 'net-id',
+            'binding:vif_type': vif_type,
+            }
+        fake_subnets = [model.Subnet(cidr='1.0.0.0/8')]
+        fake_nets = [{'id': 'net-id', 'name': 'foo', 'tenant_id': 'tenant'}]
+        api = quantumapi.API()
+        self.mox.ReplayAll()
+        quantumv2.get_client('fake')
+        net, iid = api._nw_info_build_network(fake_port, fake_nets,
+                                              fake_subnets)
+        self.assertEqual(net['subnets'], fake_subnets)
+        self.assertEqual(net['id'], 'net-id')
+        self.assertEqual(net['label'], 'foo')
+        self.assertEqual(net.get_meta('tenant_id'), 'tenant')
+        self.assertEqual(net.get_meta('injected'), CONF.flat_injected)
+        return net, iid
+
+    def test_nw_info_build_network_ovs(self):
+        net, iid = self._test_nw_info_build_network(model.VIF_TYPE_OVS)
+        self.assertEqual(net['bridge'], CONF.quantum_ovs_bridge)
+        self.assertFalse('should_create_bridge' in net)
+        self.assertEqual(iid, 'port-id')
+
+    def test_nw_info_build_network_bridge(self):
+        net, iid = self._test_nw_info_build_network(model.VIF_TYPE_BRIDGE)
+        self.assertEqual(net['bridge'], 'brqnet-id')
+        self.assertTrue(net['should_create_bridge'])
+        self.assertEqual(iid, None)
+
+    def test_nw_info_build_network_other(self):
+        net, iid = self._test_nw_info_build_network(None)
+        self.assertEqual(net['bridge'], None)
+        self.assertFalse('should_create_bridge' in net)
+        self.assertEqual(iid, None)
+
+    def test_build_network_info_model(self):
+        api = quantumapi.API()
+        fake_inst = {'project_id': 'fake', 'uuid': 'uuid'}
+        fake_ports = [
+            {'id': 'port0',
+             'network_id': 'net-id',
+             'fixed_ips': [{'ip_address': '1.1.1.1'}],
+             'mac_address': 'de:ad:be:ef:00:01',
+             'binding:vif_type': model.VIF_TYPE_BRIDGE,
+             },
+            # This does not match the networks we provide below,
+            # so it should be ignored (and is here to verify that)
+            {'id': 'port1',
+             'network_id': 'other-net-id',
+             },
+            ]
+        fake_subnets = [model.Subnet(cidr='1.0.0.0/8')]
+        fake_nets = [
+            {'id': 'net-id',
+             'name': 'foo',
+             'tenant_id': 'fake',
+             }
+            ]
+        quantumv2.get_client(mox.IgnoreArg(), admin=True).MultipleTimes(
+            ).AndReturn(self.moxed_client)
+        self.moxed_client.list_ports(
+            tenant_id='fake', device_id='uuid').AndReturn(
+                {'ports': fake_ports})
+        self.mox.StubOutWithMock(api, '_get_floating_ips_by_fixed_and_port')
+        api._get_floating_ips_by_fixed_and_port(
+            self.moxed_client, '1.1.1.1', 'port0').AndReturn(
+                [{'floating_ip_address': '10.0.0.1'}])
+        self.mox.StubOutWithMock(api, '_get_subnets_from_port')
+        api._get_subnets_from_port(self.context, fake_ports[0]).AndReturn(
+            fake_subnets)
+        self.mox.ReplayAll()
+        quantumv2.get_client('fake')
+        nw_info = api._build_network_info_model(self.context, fake_inst,
+                                                fake_nets)
+        self.assertEqual(len(nw_info), 1)
+        self.assertEqual(nw_info[0]['id'], 'port0')
+        self.assertEqual(nw_info[0]['address'], 'de:ad:be:ef:00:01')
+        self.assertEqual(nw_info[0]['devname'], 'tapport0')
+        self.assertEqual(nw_info[0]['ovs_interfaceid'], None)
+        self.assertEqual(nw_info[0]['type'], model.VIF_TYPE_BRIDGE)
+        self.assertEqual(nw_info[0]['network']['bridge'], 'brqnet-id')
+
 
 class TestQuantumv2ModuleMethods(test.TestCase):
     def test_ensure_requested_network_ordering_no_preference_ids(self):
