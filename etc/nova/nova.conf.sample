@@ -2256,10 +2256,8 @@
 # Options defined in nova.virt.vmwareapi.vim
 #
 
-# VIM Service WSDL Location e.g
-# http://<server>/vimService.wsdl. Due to a bug in vSphere ESX
-# 4.1 default wsdl. Refer readme-vmware to setup (string
-# value)
+# Optional VIM Service WSDL Location e.g
+# http://<server>/vimService.wsdl
 #vmwareapi_wsdl_loc=<None>
 
 
