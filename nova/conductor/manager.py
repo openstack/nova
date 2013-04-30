@@ -314,6 +314,7 @@ class ConductorManager(manager.Manager):
         self.db.vol_usage_update(context, vol_id, rd_req, rd_bytes, wr_req,
                                  wr_bytes, instance['uuid'],
                                  instance['project_id'], instance['user_id'],
+                                 instance['availability_zone'],
                                  last_refreshed, update_totals)
 
     @rpc_common.client_exceptions(exception.ComputeHostNotFound,

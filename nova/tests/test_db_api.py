@@ -2705,17 +2705,20 @@ class VolumeUsageDBApiTestCase(test.TestCase):
                                         wr_req=30, wr_bytes=40,
                                         instance_id='fake-instance-uuid1',
                                         project_id='fake-project-uuid1',
-                                        user_id='fake-user-uuid1')
+                                        user_id='fake-user-uuid1',
+                                        availability_zone='fake-az')
         vol_usage = db.vol_usage_update(ctxt, 2, rd_req=100, rd_bytes=200,
                                         wr_req=300, wr_bytes=400,
                                         instance_id='fake-instance-uuid2',
                                         project_id='fake-project-uuid2',
-                                        user_id='fake-user-uuid2')
+                                        user_id='fake-user-uuid2',
+                                        availability_zone='fake-az')
         vol_usage = db.vol_usage_update(ctxt, 1, rd_req=1000, rd_bytes=2000,
                                         wr_req=3000, wr_bytes=4000,
                                         instance_id='fake-instance-uuid1',
                                         project_id='fake-project-uuid1',
                                         user_id='fake-user-uuid1',
+                                        availability_zone='fake-az',
                                         last_refreshed=refreshed_time)
 
         vol_usages = db.vol_get_usage_by_time(ctxt, start_time)
@@ -2733,6 +2736,7 @@ class VolumeUsageDBApiTestCase(test.TestCase):
                                'project_id': 'fake-project-uuid',
                                'user_id': 'fake-user-uuid',
                                'instance_uuid': 'fake-instance-uuid',
+                               'availability_zone': 'fake-az',
                                'tot_reads': 600,
                                'tot_read_bytes': 800,
                                'tot_writes': 1000,
@@ -2746,23 +2750,27 @@ class VolumeUsageDBApiTestCase(test.TestCase):
                                         wr_req=300, wr_bytes=400,
                                         instance_id='fake-instance-uuid',
                                         project_id='fake-project-uuid',
-                                        user_id='fake-user-uuid')
+                                        user_id='fake-user-uuid',
+                                        availability_zone='fake-az')
         vol_usage = db.vol_usage_update(ctxt, 1, rd_req=200, rd_bytes=300,
                                         wr_req=400, wr_bytes=500,
                                         instance_id='fake-instance-uuid',
                                         project_id='fake-project-uuid',
                                         user_id='fake-user-uuid',
+                                        availability_zone='fake-az',
                                         update_totals=True)
         vol_usage = db.vol_usage_update(ctxt, 1, rd_req=300, rd_bytes=400,
                                         wr_req=500, wr_bytes=600,
                                         instance_id='fake-instance-uuid',
                                         project_id='fake-project-uuid',
+                                        availability_zone='fake-az',
                                         user_id='fake-user-uuid')
         vol_usage = db.vol_usage_update(ctxt, 1, rd_req=400, rd_bytes=500,
                                         wr_req=600, wr_bytes=700,
                                         instance_id='fake-instance-uuid',
                                         project_id='fake-project-uuid',
                                         user_id='fake-user-uuid',
+                                        availability_zone='fake-az',
                                         update_totals=True)
 
         vol_usages = db.vol_get_usage_by_time(ctxt, start_time)
