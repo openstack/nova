@@ -403,17 +403,32 @@ class API(base.Base):
     @staticmethod
     def _handle_availability_zone(availability_zone):
         # NOTE(vish): We have a legacy hack to allow admins to specify hosts
-        #             via az using az:host. It might be nice to expose an
+        #             via az using az:host:node. It might be nice to expose an
         #             api to specify specific hosts to force onto, but for
         #             now it just supports this legacy hack.
+        # NOTE(deva): It is also possible to specify az::node, in which case
+        #             the host manager will determine the correct host.
         forced_host = None
+        forced_node = None
         if availability_zone and ':' in availability_zone:
-            availability_zone, forced_host = availability_zone.split(':')
+            c = availability_zone.count(':')
+            if c == 1:
+                availability_zone, forced_host = availability_zone.split(':')
+            elif c == 2:
+                if '::' in availability_zone:
+                    availability_zone, forced_node = \
+                            availability_zone.split('::')
+                else:
+                    availability_zone, forced_host, forced_node = \
+                            availability_zone.split(':')
+            else:
+                raise exception.InvalidInput(
+                        reason="Unable to parse availability_zone")
 
         if not availability_zone:
             availability_zone = CONF.default_schedule_zone
 
-        return availability_zone, forced_host
+        return availability_zone, forced_host, forced_node
 
     @staticmethod
     def _inherit_properties_from_image(image, auto_disk_config):
@@ -562,8 +577,8 @@ class API(base.Base):
             root_device_name = block_device.properties_root_device_name(
                 image.get('properties', {}))
 
-            availability_zone, forced_host = self._handle_availability_zone(
-                    availability_zone)
+            availability_zone, forced_host, forced_node = \
+                    self._handle_availability_zone(availability_zone)
 
             system_metadata = instance_types.save_instance_type_info(
                 dict(), instance_type)
@@ -611,6 +626,9 @@ class API(base.Base):
             if forced_host:
                 check_policy(context, 'create:forced_host', {})
                 filter_properties['force_hosts'] = [forced_host]
+            if forced_node:
+                check_policy(context, 'create:forced_host', {})
+                filter_properties['force_nodes'] = [forced_node]
 
             for i in xrange(num_instances):
                 options = base_options.copy()
