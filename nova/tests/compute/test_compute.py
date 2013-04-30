@@ -4761,6 +4761,23 @@ class ComputeAPITestCase(BaseTestCase):
                 inst_type, self.fake_image['id'])
         db.instance_destroy(self.context, refs[0]['uuid'])
 
+    def test_create_with_deleted_image(self):
+        # If we're given a deleted image by glance, we should not be able to
+        # build from it
+        inst_type = instance_types.get_default_instance_type()
+
+        self.fake_image['name'] = 'fake_name'
+        self.fake_image['status'] = 'DELETED'
+        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
+
+        expected_message = (
+            exception.ImageNotActive.message % {'image_id':
+            self.fake_image['id']})
+        with testtools.ExpectedException(exception.ImageNotActive,
+                                         expected_message):
+            self.compute_api.create(self.context, inst_type,
+                                    self.fake_image['id'])
+
     def test_create_instance_defaults_display_name(self):
         # Verify that an instance cannot be created without a display_name.
         cases = [dict(), dict(display_name=None)]
