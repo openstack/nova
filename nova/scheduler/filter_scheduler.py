@@ -241,9 +241,12 @@ class FilterScheduler(driver.Scheduler):
             return  # no previously attempted hosts, skip
 
         last_host, last_node = hosts[-1]
-        msg = _("Error from last host: %(last_host)s (node %(last_node)s): "
-                "%(exc)s") % locals()
-        LOG.error(msg, instance_uuid=instance_uuid)
+        LOG.error(_('Error from last host: %(last_host)s (node %(last_node)s):'
+                    ' %(exc)s'),
+                  {'last_host': last_host,
+                   'last_node': last_node,
+                   'exc': exc},
+                  instance_uuid=instance_uuid)
 
     def _populate_retry(self, filter_properties, instance_properties):
         """Populate filter properties with history of retries for this
@@ -270,8 +273,10 @@ class FilterScheduler(driver.Scheduler):
         self._log_compute_error(instance_uuid, retry)
 
         if retry['num_attempts'] > max_attempts:
-            msg = _("Exceeded max scheduling attempts %(max_attempts)d for "
-                    "instance %(instance_uuid)s") % locals()
+            msg = (_('Exceeded max scheduling attempts %(max_attempts)d for '
+                     'instance %(instance_uuid)s')
+                   % {'max_attempts': max_attempts,
+                      'instance_uuid': instance_uuid})
             raise exception.NoValidHost(reason=msg)
 
     def _schedule(self, context, request_spec, filter_properties,
@@ -336,7 +341,7 @@ class FilterScheduler(driver.Scheduler):
                 # Can't get any more locally.
                 break
 
-            LOG.debug(_("Filtered %(hosts)s") % locals())
+            LOG.debug(_("Filtered %(hosts)s"), {'hosts': hosts})
 
             weighed_hosts = self.host_manager.get_weighed_hosts(hosts,
                     filter_properties)
@@ -349,7 +354,8 @@ class FilterScheduler(driver.Scheduler):
 
             chosen_host = random.choice(
                 weighed_hosts[0:scheduler_host_subset_size])
-            LOG.debug(_("Choosing host %(chosen_host)s") % locals())
+            LOG.debug(_("Choosing host %(chosen_host)s"),
+                      {'chosen_host': chosen_host})
             selected_hosts.append(chosen_host)
 
             # Now consume the resources so the filter/weights
@@ -382,6 +388,8 @@ class FilterScheduler(driver.Scheduler):
                                                      'RamFilter')
         if not hosts:
             instance_uuid = instance_ref['uuid']
-            reason = _("Unable to migrate %(instance_uuid)s to %(dest)s: "
-                       "Lack of memory")
-            raise exception.MigrationError(reason=reason % locals())
+            reason = (_("Unable to migrate %(instance_uuid)s to %(dest)s: "
+                        "Lack of memory")
+                      % {'instance_uuid': instance_uuid,
+                         'dest': dest})
+            raise exception.MigrationError(reason=reason)
