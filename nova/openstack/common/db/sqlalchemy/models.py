@@ -33,9 +33,6 @@ from nova.openstack.common import timeutils
 class ModelBase(object):
     """Base class for models."""
     __table_initialized__ = False
-    created_at = Column(DateTime, default=timeutils.utcnow)
-    updated_at = Column(DateTime, onupdate=timeutils.utcnow)
-    metadata = None
 
     def save(self, session=None):
         """Save this object."""
@@ -90,6 +87,11 @@ class ModelBase(object):
                       if not k[0] == '_'])
         local.update(joined)
         return local.iteritems()
+
+
+class TimestampMixin(object):
+    created_at = Column(DateTime, default=timeutils.utcnow)
+    updated_at = Column(DateTime, onupdate=timeutils.utcnow)
 
 
 class SoftDeleteMixin(object):

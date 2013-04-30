@@ -248,6 +248,7 @@ from eventlet import greenthread
 from oslo.config import cfg
 from sqlalchemy import exc as sqla_exc
 import sqlalchemy.interfaces
+from sqlalchemy.interfaces import PoolListener
 import sqlalchemy.orm
 from sqlalchemy.pool import NullPool, StaticPool
 from sqlalchemy.sql.expression import literal_column
@@ -317,12 +318,36 @@ def set_defaults(sql_connection, sqlite_db):
                      sqlite_db=sqlite_db)
 
 
-def get_session(autocommit=True, expire_on_commit=False):
+def cleanup():
+    global _ENGINE, _MAKER
+
+    if _MAKER:
+        _MAKER.close_all()
+        _MAKER = None
+    if _ENGINE:
+        _ENGINE.dispose()
+        _ENGINE = None
+
+
+class SqliteForeignKeysListener(PoolListener):
+    """
+    Ensures that the foreign key constraints are enforced in SQLite.
+
+    The foreign key constraints are disabled by default in SQLite,
+    so the foreign key constraints will be enabled here for every
+    database connection
+    """
+    def connect(self, dbapi_con, con_record):
+        dbapi_con.execute('pragma foreign_keys=ON')
+
+
+def get_session(autocommit=True, expire_on_commit=False,
+                sqlite_fk=False):
     """Return a SQLAlchemy session."""
     global _MAKER
 
     if _MAKER is None:
-        engine = get_engine()
+        engine = get_engine(sqlite_fk=sqlite_fk)
         _MAKER = get_maker(engine, autocommit, expire_on_commit)
 
     session = _MAKER()
@@ -354,7 +379,7 @@ _DUP_KEY_RE_DB = {
 }
 
 
-def raise_if_duplicate_entry_error(integrity_error, engine_name):
+def _raise_if_duplicate_entry_error(integrity_error, engine_name):
     """
     In this function will be raised DBDuplicateEntry exception if integrity
     error wrap unique constraint violation.
@@ -396,7 +421,7 @@ _DEADLOCK_RE_DB = {
 }
 
 
-def raise_if_deadlock_error(operational_error, engine_name):
+def _raise_if_deadlock_error(operational_error, engine_name):
     """
     Raise DBDeadlock exception if OperationalError contains a Deadlock
     condition.
@@ -410,7 +435,7 @@ def raise_if_deadlock_error(operational_error, engine_name):
     raise exception.DBDeadlock(operational_error)
 
 
-def wrap_db_error(f):
+def _wrap_db_error(f):
     def _wrap(*args, **kwargs):
         try:
             return f(*args, **kwargs)
@@ -419,40 +444,41 @@ def wrap_db_error(f):
         # note(boris-42): We should catch unique constraint violation and
         # wrap it by our own DBDuplicateEntry exception. Unique constraint
         # violation is wrapped by IntegrityError.
-        except sqla_exc.OperationalError, e:
-            raise_if_deadlock_error(e, get_engine().name)
+        except sqla_exc.OperationalError as e:
+            _raise_if_deadlock_error(e, get_engine().name)
             # NOTE(comstud): A lot of code is checking for OperationalError
             # so let's not wrap it for now.
             raise
-        except sqla_exc.IntegrityError, e:
+        except sqla_exc.IntegrityError as e:
             # note(boris-42): SqlAlchemy doesn't unify errors from different
             # DBs so we must do this. Also in some tables (for example
             # instance_types) there are more than one unique constraint. This
             # means we should get names of columns, which values violate
             # unique constraint, from error message.
-            raise_if_duplicate_entry_error(e, get_engine().name)
+            _raise_if_duplicate_entry_error(e, get_engine().name)
             raise exception.DBError(e)
-        except Exception, e:
+        except Exception as e:
             LOG.exception(_('DB exception wrapped.'))
             raise exception.DBError(e)
     _wrap.func_name = f.func_name
     return _wrap
 
 
-def get_engine():
+def get_engine(sqlite_fk=False):
     """Return a SQLAlchemy engine."""
     global _ENGINE
     if _ENGINE is None:
-        _ENGINE = create_engine(CONF.sql_connection)
+        _ENGINE = create_engine(CONF.sql_connection,
+                                sqlite_fk=sqlite_fk)
     return _ENGINE
 
 
-def synchronous_switch_listener(dbapi_conn, connection_rec):
+def _synchronous_switch_listener(dbapi_conn, connection_rec):
     """Switch sqlite connections to non-synchronous mode."""
     dbapi_conn.execute("PRAGMA synchronous = OFF")
 
 
-def add_regexp_listener(dbapi_con, con_record):
+def _add_regexp_listener(dbapi_con, con_record):
     """Add REGEXP function to sqlite connections."""
 
     def regexp(expr, item):
@@ -461,7 +487,7 @@ def add_regexp_listener(dbapi_con, con_record):
     dbapi_con.create_function('regexp', 2, regexp)
 
 
-def greenthread_yield(dbapi_con, con_record):
+def _greenthread_yield(dbapi_con, con_record):
     """
     Ensure other greenthreads get a chance to execute by forcing a context
     switch. With common database backends (eg MySQLdb and sqlite), there is
@@ -471,7 +497,7 @@ def greenthread_yield(dbapi_con, con_record):
     greenthread.sleep(0)
 
 
-def ping_listener(dbapi_conn, connection_rec, connection_proxy):
+def _ping_listener(dbapi_conn, connection_rec, connection_proxy):
     """
     Ensures that MySQL connections checked out of the
     pool are alive.
@@ -481,7 +507,7 @@ def ping_listener(dbapi_conn, connection_rec, connection_proxy):
     """
     try:
         dbapi_conn.cursor().execute('select 1')
-    except dbapi_conn.OperationalError, ex:
+    except dbapi_conn.OperationalError as ex:
         if ex.args[0] in (2006, 2013, 2014, 2045, 2055):
             LOG.warn(_('Got mysql server has gone away: %s'), ex)
             raise sqla_exc.DisconnectionError("Database server went away")
@@ -489,7 +515,7 @@ def ping_listener(dbapi_conn, connection_rec, connection_proxy):
             raise
 
 
-def is_db_connection_error(args):
+def _is_db_connection_error(args):
     """Return True if error in connecting to db."""
     # NOTE(adam_g): This is currently MySQL specific and needs to be extended
     #               to support Postgres and others.
@@ -500,7 +526,7 @@ def is_db_connection_error(args):
     return False
 
 
-def create_engine(sql_connection):
+def create_engine(sql_connection, sqlite_fk=False):
     """Return a new SQLAlchemy engine."""
     connection_dict = sqlalchemy.engine.url.make_url(sql_connection)
 
@@ -517,6 +543,8 @@ def create_engine(sql_connection):
         engine_args['echo'] = True
 
     if "sqlite" in connection_dict.drivername:
+        if sqlite_fk:
+            engine_args["listeners"] = [SqliteForeignKeysListener()]
         engine_args["poolclass"] = NullPool
 
         if CONF.sql_connection == "sqlite://":
@@ -529,24 +557,24 @@ def create_engine(sql_connection):
 
     engine = sqlalchemy.create_engine(sql_connection, **engine_args)
 
-    sqlalchemy.event.listen(engine, 'checkin', greenthread_yield)
+    sqlalchemy.event.listen(engine, 'checkin', _greenthread_yield)
 
     if 'mysql' in connection_dict.drivername:
-        sqlalchemy.event.listen(engine, 'checkout', ping_listener)
+        sqlalchemy.event.listen(engine, 'checkout', _ping_listener)
     elif 'sqlite' in connection_dict.drivername:
         if not CONF.sqlite_synchronous:
             sqlalchemy.event.listen(engine, 'connect',
-                                    synchronous_switch_listener)
-        sqlalchemy.event.listen(engine, 'connect', add_regexp_listener)
+                                    _synchronous_switch_listener)
+        sqlalchemy.event.listen(engine, 'connect', _add_regexp_listener)
 
     if (CONF.sql_connection_trace and
             engine.dialect.dbapi.__name__ == 'MySQLdb'):
-        patch_mysqldb_with_stacktrace_comments()
+        _patch_mysqldb_with_stacktrace_comments()
 
     try:
         engine.connect()
-    except sqla_exc.OperationalError, e:
-        if not is_db_connection_error(e.args[0]):
+    except sqla_exc.OperationalError as e:
+        if not _is_db_connection_error(e.args[0]):
             raise
 
         remaining = CONF.sql_max_retries
@@ -561,9 +589,9 @@ def create_engine(sql_connection):
             try:
                 engine.connect()
                 break
-            except sqla_exc.OperationalError, e:
+            except sqla_exc.OperationalError as e:
                 if (remaining != 'infinite' and remaining == 0) or \
-                        not is_db_connection_error(e.args[0]):
+                        not _is_db_connection_error(e.args[0]):
                     raise
     return engine
 
@@ -579,15 +607,15 @@ class Query(sqlalchemy.orm.query.Query):
 
 class Session(sqlalchemy.orm.session.Session):
     """Custom Session class to avoid SqlAlchemy Session monkey patching."""
-    @wrap_db_error
+    @_wrap_db_error
     def query(self, *args, **kwargs):
         return super(Session, self).query(*args, **kwargs)
 
-    @wrap_db_error
+    @_wrap_db_error
     def flush(self, *args, **kwargs):
         return super(Session, self).flush(*args, **kwargs)
 
-    @wrap_db_error
+    @_wrap_db_error
     def execute(self, *args, **kwargs):
         return super(Session, self).execute(*args, **kwargs)
 
@@ -601,7 +629,7 @@ def get_maker(engine, autocommit=True, expire_on_commit=False):
                                        query_cls=Query)
 
 
-def patch_mysqldb_with_stacktrace_comments():
+def _patch_mysqldb_with_stacktrace_comments():
     """Adds current stack trace as a comment in queries by patching
     MySQLdb.cursors.BaseCursor._do_query.
     """

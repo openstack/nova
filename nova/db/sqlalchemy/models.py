@@ -35,8 +35,10 @@ CONF = cfg.CONF
 BASE = declarative_base()
 
 
-class NovaBase(models.SoftDeleteMixin, models.ModelBase):
-    pass
+class NovaBase(models.SoftDeleteMixin,
+               models.TimestampMixin,
+               models.ModelBase):
+    metadata = None
 
 
 class Service(BASE, NovaBase):
