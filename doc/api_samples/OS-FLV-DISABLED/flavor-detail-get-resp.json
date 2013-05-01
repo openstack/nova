@@ -2,7 +2,7 @@
     "flavors": [
         {
             "OS-FLV-DISABLED:disabled": false,
-            "disk": 0,
+            "disk": 1,
             "id": "1",
             "links": [
                 {

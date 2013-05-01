@@ -6,7 +6,7 @@
                 "flavor": "m1.tiny",
                 "hours": 1.0,
                 "instance_id": "1f1deceb-17b5-4c04-84c7-e0d4499c8fe0",
-                "local_gb": 0,
+                "local_gb": 1,
                 "memory_mb": 512,
                 "name": "new-server-test",
                 "started_at": "2012-10-08T20:10:44.541277",
@@ -20,7 +20,7 @@
         "stop": "2012-10-08T21:10:44.587336",
         "tenant_id": "openstack",
         "total_hours": 1.0,
-        "total_local_gb_usage": 0.0,
+        "total_local_gb_usage": 1.0,
         "total_memory_mb_usage": 512.0,
         "total_vcpus_usage": 1.0
     }

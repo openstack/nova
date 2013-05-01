@@ -1,7 +1,7 @@
 {
     "flavors": [
         {
-            "disk": 0,
+            "disk": 1,
             "id": "1",
             "links": [
                 {

@@ -1,6 +1,6 @@
 {
     "flavor": {
-        "disk": 0,
+        "disk": 1,
         "id": "%(flavor_id)s",
         "links": [
             {
