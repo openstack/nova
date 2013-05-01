@@ -78,7 +78,6 @@ from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
 from nova.openstack.common import timeutils
 from nova import quota
-from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import servicegroup
 from nova import version
 
@@ -700,6 +699,60 @@ class ServiceCommands(object):
             return(2)
         print _("Service %(service)s on host %(host)s disabled.") % locals()
 
+    def _show_host_resources(self, context, host):
+        """Shows the physical/usage resource given by hosts.
+
+        :param context: security context
+        :param host: hostname
+        :returns:
+            example format is below::
+
+                {'resource':D, 'usage':{proj_id1:D, proj_id2:D}}
+                D: {'vcpus': 3, 'memory_mb': 2048, 'local_gb': 2048,
+                    'vcpus_used': 12, 'memory_mb_used': 10240,
+                    'local_gb_used': 64}
+
+        """
+        # Getting compute node info and related instances info
+        service_ref = db.service_get_by_compute_host(context, host)
+        instance_refs = db.instance_get_all_by_host(context,
+                                                    service_ref['host'])
+
+        # Getting total available/used resource
+        compute_ref = service_ref['compute_node'][0]
+        resource = {'vcpus': compute_ref['vcpus'],
+                    'memory_mb': compute_ref['memory_mb'],
+                    'local_gb': compute_ref['local_gb'],
+                    'vcpus_used': compute_ref['vcpus_used'],
+                    'memory_mb_used': compute_ref['memory_mb_used'],
+                    'local_gb_used': compute_ref['local_gb_used']}
+        usage = dict()
+        if not instance_refs:
+            return {'resource': resource, 'usage': usage}
+
+        # Getting usage resource per project
+        project_ids = [i['project_id'] for i in instance_refs]
+        project_ids = list(set(project_ids))
+        for project_id in project_ids:
+            vcpus = [i['vcpus'] for i in instance_refs
+                     if i['project_id'] == project_id]
+
+            mem = [i['memory_mb'] for i in instance_refs
+                   if i['project_id'] == project_id]
+
+            root = [i['root_gb'] for i in instance_refs
+                    if i['project_id'] == project_id]
+
+            ephemeral = [i['ephemeral_gb'] for i in instance_refs
+                         if i['project_id'] == project_id]
+
+            usage[project_id] = {'vcpus': sum(vcpus),
+                                 'memory_mb': sum(mem),
+                                 'root_gb': sum(root),
+                                 'ephemeral_gb': sum(ephemeral)}
+
+        return {'resource': resource, 'usage': usage}
+
     @args('--host', metavar='<host>', help='Host')
     def describe_resource(self, host):
         """Describes cpu/memory/hdd info for host.
@@ -707,9 +760,8 @@ class ServiceCommands(object):
         :param host: hostname.
 
         """
-        rpcapi = scheduler_rpcapi.SchedulerAPI()
-        result = rpcapi.show_host_resources(context.get_admin_context(),
-                                            host=host)
+        result = self._show_host_resources(context.get_admin_context(),
+                                           host=host)
 
         if not isinstance(result, dict):
             print _('An unexpected error has occurred.')
