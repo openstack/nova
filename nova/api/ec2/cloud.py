@@ -1057,10 +1057,10 @@ class CloudController(object):
             vol = self.volume_api.get(context, volume_id)
             LOG.debug(_("vol = %s\n"), vol)
             # TODO(yamahata): volume attach time
-            ebs = {'volumeId': volume_id,
+            ebs = {'volumeId': ec2utils.id_to_ec2_vol_id(volume_id),
                    'deleteOnTermination': bdm['delete_on_termination'],
                    'attachTime': vol['attach_time'] or '',
-                   'status': vol['status'], }
+                   'status': vol['attach_status'], }
             res = {'deviceName': bdm['device_name'],
                    'ebs': ebs, }
             mapping.append(res)
