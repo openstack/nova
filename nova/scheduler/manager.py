@@ -39,6 +39,7 @@ from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.notifier import api as notifier
+from nova.openstack.common import periodic_task
 from nova import quota
 
 
@@ -287,7 +288,7 @@ class SchedulerManager(manager.Manager):
 
         return {'resource': resource, 'usage': usage}
 
-    @manager.periodic_task
+    @periodic_task.periodic_task
     def _expire_reservations(self, context):
         QUOTAS.expire(context)
 

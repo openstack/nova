@@ -65,6 +65,7 @@ from nova.openstack.common import jsonutils
 from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.notifier import api as notifier
+from nova.openstack.common import periodic_task
 from nova.openstack.common import rpc
 from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import timeutils
@@ -1059,7 +1060,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         scheduler_method(context, *method_args)
         return True
 
-    @manager.periodic_task
+    @periodic_task.periodic_task
     def _check_instance_build_time(self, context):
         """Ensure that instances are not stuck in build."""
         timeout = CONF.instance_build_timeout
@@ -3458,7 +3459,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.driver.destroy(instance, self._legacy_nw_info(network_info),
                             block_device_info)
 
-    @manager.periodic_task
+    @periodic_task.periodic_task
     def _heal_instance_info_cache(self, context):
         """Called periodically.  On every call, try to update the
         info_cache's network information for another instance by
@@ -3511,7 +3512,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             # We don't care about any failures
             pass
 
-    @manager.periodic_task
+    @periodic_task.periodic_task
     def _poll_rebooting_instances(self, context):
         if CONF.reboot_timeout > 0:
             instances = self.conductor_api.instance_get_all_hung_in_rebooting(
@@ -3519,7 +3520,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             self.driver.poll_rebooting_instances(CONF.reboot_timeout,
                                                  instances)
 
-    @manager.periodic_task
+    @periodic_task.periodic_task
     def _poll_rescued_instances(self, context):
         if CONF.rescue_timeout > 0:
             instances = self.conductor_api.instance_get_all_by_host(
@@ -3539,7 +3540,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             for instance in to_unrescue:
                 self.conductor_api.compute_unrescue(context, instance)
 
-    @manager.periodic_task
+    @periodic_task.periodic_task
     def _poll_unconfirmed_resizes(self, context):
         if CONF.resize_confirm_window > 0:
             capi = self.conductor_api
@@ -3596,7 +3597,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                             "Will retry later.")
                     LOG.error(msg % locals(), instance=instance)
 
-    @manager.periodic_task
+    @periodic_task.periodic_task
     def _instance_usage_audit(self, context):
         if CONF.instance_usage_audit:
             if not compute_utils.has_audit_been_run(context,
@@ -3644,7 +3645,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                               num_instances,
                                               time.time() - start_time))
 
-    @manager.periodic_task
+    @periodic_task.periodic_task
     def _poll_bandwidth_usage(self, context):
         prev_time, start_time = utils.last_completed_audit_period()
 
@@ -3751,7 +3752,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                             notifier.INFO,
                             compute_utils.usage_volume_info(vol_usage))
 
-    @manager.periodic_task
+    @periodic_task.periodic_task
     def _poll_volume_usage(self, context, start_time=None):
         if CONF.volume_usage_poll_interval == 0:
             return
@@ -3781,7 +3782,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         self._send_volume_usage_notifications(context, start_time)
 
-    @manager.periodic_task
+    @periodic_task.periodic_task
     def _report_driver_status(self, context):
         curr_time = time.time()
         if curr_time - self._last_host_check > CONF.host_state_interval:
@@ -3795,8 +3796,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                 capability['host_ip'] = CONF.my_ip
             self.update_service_capabilities(capabilities)
 
-    @manager.periodic_task(spacing=CONF.sync_power_state_interval,
-                           run_immediately=True)
+    @periodic_task.periodic_task(spacing=CONF.sync_power_state_interval,
+                                 run_immediately=True)
     def _sync_power_states(self, context):
         """Align power states between the database and the hypervisor.
 
@@ -3956,7 +3957,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 LOG.warn(_("Instance is not (soft-)deleted."),
                          instance=db_instance)
 
-    @manager.periodic_task
+    @periodic_task.periodic_task
     def _reclaim_queued_deletes(self, context):
         """Reclaim instances that are queued for deletion."""
         interval = CONF.reclaim_instance_interval
@@ -3987,7 +3988,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 # pass reservations here.
                 self._delete_instance(context, instance, bdms)
 
-    @manager.periodic_task
+    @periodic_task.periodic_task
     def update_available_resource(self, context):
         """See driver.get_available_resource()
 
@@ -4023,7 +4024,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         return service_ref['compute_node']
 
-    @manager.periodic_task(spacing=CONF.running_deleted_instance_poll_interval)
+    @periodic_task.periodic_task(
+        spacing=CONF.running_deleted_instance_poll_interval)
     def _cleanup_running_deleted_instances(self, context):
         """Cleanup any instances which are erroneously still running after
         having been deleted.
@@ -4143,8 +4145,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                                     aggregate, host,
                                     isinstance(e, exception.AggregateError))
 
-    @manager.periodic_task(spacing=CONF.image_cache_manager_interval,
-                           external_process_ok=True)
+    @periodic_task.periodic_task(spacing=CONF.image_cache_manager_interval,
+                                 external_process_ok=True)
     def _run_image_cache_manager_pass(self, context):
         """Run a single pass of the image cache manager."""
 

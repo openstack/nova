@@ -68,6 +68,7 @@ from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
+from nova.openstack.common import periodic_task
 from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
@@ -350,7 +351,7 @@ class NetworkManager(manager.Manager):
                 dev = self.driver.get_dev(network)
                 self.driver.update_dns(ctxt, dev, network)
 
-    @manager.periodic_task
+    @periodic_task.periodic_task
     def _disassociate_stale_fixed_ips(self, context):
         if self.timeout_fixed_ips:
             now = timeutils.utcnow()
@@ -1408,7 +1409,7 @@ class NetworkManager(manager.Manager):
             vif['net_uuid'] = network['uuid']
         return vif
 
-    @manager.periodic_task(
+    @periodic_task.periodic_task(
         spacing=CONF.dns_update_periodic_interval)
     def _periodic_update_dns(self, context):
         """Update local DNS entries of all networks on this host."""
