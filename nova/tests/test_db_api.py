@@ -350,38 +350,6 @@ class DbApiTestCase(DbTestCase):
         res = db.floating_ip_disassociate(ctxt, floating)
         self.assertEqual(res, None)
 
-    def test_fixed_ip_get_by_floating_address(self):
-        ctxt = context.get_admin_context()
-        values = {'address': 'fixed'}
-        fixed = db.fixed_ip_create(ctxt, values)
-        fixed_ip_ref = db.fixed_ip_get_by_address(ctxt, fixed)
-        values = {'address': 'floating',
-                  'fixed_ip_id': fixed_ip_ref['id']}
-        floating = db.floating_ip_create(ctxt, values)
-        fixed_ip_ref = db.fixed_ip_get_by_floating_address(ctxt, floating)
-        self.assertEqual(fixed, fixed_ip_ref['address'])
-
-    def test_fixed_ip_get_by_host(self):
-        ctxt = context.get_admin_context()
-
-        values = {'address': 'fixed1'}
-        fixed1 = db.fixed_ip_create(ctxt, values)
-        instance1 = self.create_instances_with_args()
-        db.fixed_ip_associate(ctxt, 'fixed1', instance1['uuid'])
-
-        values = {'address': 'fixed2'}
-        fixed2 = db.fixed_ip_create(ctxt, values)
-        instance2 = self.create_instances_with_args()
-        db.fixed_ip_associate(ctxt, 'fixed2', instance2['uuid'])
-
-        values = {'address': 'fixed3'}
-        fixed3 = db.fixed_ip_create(ctxt, values)
-        instance3 = self.create_instances_with_args(host='host2')
-        db.fixed_ip_associate(ctxt, 'fixed3', instance3['uuid'])
-
-        result = db.fixed_ip_get_by_host(ctxt, 'host1')
-        self.assertEqual(2, len(result))
-
     def test_floating_ip_get_by_fixed_address(self):
         ctxt = context.get_admin_context()
         values = {'address': 'fixed'}
@@ -2425,6 +2393,33 @@ class FixedIPTestCase(BaseInstanceTypeTestCase):
         result = db.fixed_ip_disassociate_all_by_timeout(self.ctxt, 'bar', now)
         self.assertEqual(result, 0)
 
+    def test_fixed_ip_get_by_floating_address(self):
+        fixed = db.fixed_ip_create(self.ctxt, {'address': 'fixed'})
+        fixed_ip_ref = db.fixed_ip_get_by_address(self.ctxt, fixed)
+        values = {'address': 'floating',
+                  'fixed_ip_id': fixed_ip_ref['id']}
+        floating = db.floating_ip_create(self.ctxt, values)
+        fixed_ip_ref = db.fixed_ip_get_by_floating_address(self.ctxt, floating)
+        self.assertEqual(fixed, fixed_ip_ref['address'])
+
+    def test_fixed_ip_get_by_host(self):
+        host_ips = {
+            'host1': ['1.1.1.1', '1.1.1.2', '1.1.1.3'],
+            'host2': ['1.1.1.4', '1.1.1.5'],
+            'host3': ['1.1.1.6']
+        }
+
+        for host, ips in host_ips.iteritems():
+            for ip in ips:
+                instance_uuid = self._create_instance(host=host)
+                db.fixed_ip_create(self.ctxt, {'address': ip})
+                db.fixed_ip_associate(self.ctxt, ip, instance_uuid)
+
+        for host, ips in host_ips.iteritems():
+            ips_on_host = map(lambda x: x['address'],
+                                db.fixed_ip_get_by_host(self.ctxt, host))
+            self._assertEqualListsOfPrimitivesAsSets(ips_on_host, ips)
+
     def test_fixed_ip_get_by_network_host_not_found_exception(self):
         self.assertRaises(
             exception.FixedIpNotFoundForNetworkHost,
@@ -2439,8 +2434,8 @@ class FixedIPTestCase(BaseInstanceTypeTestCase):
         self.assertEquals(1, fip['network_id'])
         self.assertEquals('host', fip['host'])
 
-    def _create_instance(self, project_id=None):
-        instance = db.instance_create(self.ctxt, dict(project_id=project_id))
+    def _create_instance(self, **kwargs):
+        instance = db.instance_create(self.ctxt, kwargs)
         return instance['uuid']
 
     def test_fixed_ip_get_by_instance_fixed_ip_found(self):
@@ -2561,7 +2556,7 @@ class FixedIPTestCase(BaseInstanceTypeTestCase):
 
     def test_fixed_ip_count_by_project_one_ip(self):
         PROJECT_ID = "project_id"
-        instance_uuid = self._create_instance(PROJECT_ID)
+        instance_uuid = self._create_instance(project_id=PROJECT_ID)
         db.fixed_ip_create(self.ctxt, dict(
             instance_uuid=instance_uuid, address='address'))
 
@@ -2570,7 +2565,7 @@ class FixedIPTestCase(BaseInstanceTypeTestCase):
 
     def test_fixed_ip_count_by_project_two_ips_for_different_instances(self):
         PROJECT_ID = "project_id"
-        instance_uuid = self._create_instance(PROJECT_ID)
+        instance_uuid = self._create_instance(project_id=PROJECT_ID)
 
         db.fixed_ip_create(self.ctxt, dict(
             instance_uuid=instance_uuid, address='address_1'))
