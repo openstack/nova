@@ -42,6 +42,7 @@ def memoize(func):
         if not _CACHE:
             _CACHE = memorycache.get_client()
         key = "%s:%s" % (func.__name__, reqid)
+        key = str(key)
         value = _CACHE.get(key)
         if value is None:
             value = func(context, reqid)
