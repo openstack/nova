@@ -362,6 +362,9 @@ class VMwareAPIHostTestCase(test.TestCase):
         self.assertEquals(stats['disk_used'], 1024 - 500)
         self.assertEquals(stats['host_memory_total'], 1024)
         self.assertEquals(stats['host_memory_free'], 1024 - 500)
+        supported_instances = [('i686', 'vmware', 'hvm'),
+                               ('x86_64', 'vmware', 'hvm')]
+        self.assertEquals(stats['supported_instances'], supported_instances)
 
     def _test_host_action(self, method, action, expected=None):
         result = method('host', action)
