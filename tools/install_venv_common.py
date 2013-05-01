@@ -180,10 +180,6 @@ class Fedora(Distro):
         return self.run_command_with_code(['rpm', '-q', pkg],
                                           check_exit_code=False)[1] == 0
 
-    def yum_install(self, pkg, **kwargs):
-        print "Attempting to install '%s' via yum" % pkg
-        self.run_command(['sudo', 'yum', 'install', '-y', pkg], **kwargs)
-
     def apply_patch(self, originalfile, patchfile):
         self.run_command(['patch', '-N', originalfile, patchfile],
                          check_exit_code=False)
@@ -193,7 +189,7 @@ class Fedora(Distro):
             return
 
         if not self.check_pkg('python-virtualenv'):
-            self.yum_install('python-virtualenv', check_exit_code=False)
+            self.die("Please install 'python-virtualenv'.")
 
         super(Fedora, self).install_virtualenv()
 
@@ -211,7 +207,7 @@ class Fedora(Distro):
 
         # Install "patch" program if it's not there
         if not self.check_pkg('patch'):
-            self.yum_install('patch')
+            self.die("Please install 'patch'.")
 
         # Apply the eventlet patch
         self.apply_patch(os.path.join(self.venv, 'lib', self.py_version,

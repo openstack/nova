@@ -19,7 +19,6 @@
 System-level utilities and helper functions.
 """
 
-import logging
 import random
 import shlex
 
@@ -27,6 +26,7 @@ from eventlet.green import subprocess
 from eventlet import greenthread
 
 from nova.openstack.common.gettextutils import _
+from nova.openstack.common import log as logging
 
 
 LOG = logging.getLogger(__name__)

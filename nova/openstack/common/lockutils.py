@@ -82,7 +82,7 @@ class _InterProcessLock(object):
                 # to have a laughable 10 attempts "blocking" mechanism.
                 self.trylock()
                 return self
-            except IOError, e:
+            except IOError as e:
                 if e.errno in (errno.EACCES, errno.EAGAIN):
                     # external locks synchronise things like iptables
                     # updates - give it some time to prevent busy spinning
