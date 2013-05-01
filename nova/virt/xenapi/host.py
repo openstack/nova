@@ -148,13 +148,7 @@ class HostState(object):
         LOG.debug(_("Updating host stats"))
         data = call_xenhost(self._session, "host_data", {})
         if data:
-            try:
-                # Get the SR usage
-                sr_ref = vm_utils.safe_find_sr(self._session)
-            except exception.NotFound as e:
-                # No SR configured
-                LOG.error(_("Unable to get SR for this host: %s") % e)
-                return
+            sr_ref = vm_utils.safe_find_sr(self._session)
             self._session.call_xenapi("SR.scan", sr_ref)
             sr_rec = self._session.call_xenapi("SR.get_record", sr_ref)
             total = int(sr_rec["physical_size"])
