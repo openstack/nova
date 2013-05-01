@@ -282,7 +282,7 @@ class InternalContext(object):
         except greenlet.GreenletExit:
             # ignore these since they are just from shutdowns
             pass
-        except rpc_common.ClientException, e:
+        except rpc_common.ClientException as e:
             LOG.debug(_("Expected exception during message handling (%s)") %
                       e._exc_info[1])
             return {'exc':

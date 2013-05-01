@@ -176,7 +176,7 @@ class ConsumerBase(object):
         """Cancel the consuming from the queue, if it has started"""
         try:
             self.queue.cancel(self.tag)
-        except KeyError, e:
+        except KeyError as e:
             # NOTE(comstud): Kludge to get around a amqplib bug
             if str(e) != "u'%s'" % self.tag:
                 raise
@@ -520,7 +520,7 @@ class Connection(object):
                 return
             except (IOError, self.connection_errors) as e:
                 pass
-            except Exception, e:
+            except Exception as e:
                 # NOTE(comstud): Unfortunately it's possible for amqplib
                 # to return an error not covered by its transport
                 # connection_errors in the case of a timeout waiting for
@@ -561,10 +561,10 @@ class Connection(object):
         while True:
             try:
                 return method(*args, **kwargs)
-            except (self.connection_errors, socket.timeout, IOError), e:
+            except (self.connection_errors, socket.timeout, IOError) as e:
                 if error_callback:
                     error_callback(e)
-            except Exception, e:
+            except Exception as e:
                 # NOTE(comstud): Unfortunately it's possible for amqplib
                 # to return an error not covered by its transport
                 # connection_errors in the case of a timeout waiting for

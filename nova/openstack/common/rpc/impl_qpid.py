@@ -346,7 +346,7 @@ class Connection(object):
             try:
                 self.connection_create(broker)
                 self.connection.open()
-            except qpid_exceptions.ConnectionError, e:
+            except qpid_exceptions.ConnectionError as e:
                 msg_dict = dict(e=e, delay=delay)
                 msg = _("Unable to connect to AMQP server: %(e)s. "
                         "Sleeping %(delay)s seconds") % msg_dict
