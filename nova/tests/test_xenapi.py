@@ -1639,6 +1639,15 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
         self.assertEquals(stats['host_memory_overhead'], 20)
         self.assertEquals(stats['host_memory_free'], 30)
         self.assertEquals(stats['host_memory_free_computed'], 40)
+        self.assertEquals(stats['hypervisor_hostname'], 'fake-xenhost')
+
+    def test_host_state_missing_sr(self):
+        def fake_safe_find_sr(session):
+            raise exception.StorageRepositoryNotFound('not there')
+
+        self.stubs.Set(vm_utils, 'safe_find_sr', fake_safe_find_sr)
+        self.assertRaises(exception.StorageRepositoryNotFound,
+                          self.conn.get_host_stats)
 
     def _test_host_action(self, method, action, expected=None):
         result = method('host', action)
