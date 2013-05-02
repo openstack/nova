@@ -2854,8 +2854,8 @@
 #
 
 # location of spice html5 console proxy, in the form
-# "http://127.0.0.1:6080/spice_auto.html" (string value)
-#html5proxy_base_url=http://127.0.0.1:6080/spice_auto.html
+# "http://127.0.0.1:6082/spice_auto.html" (string value)
+#html5proxy_base_url=http://127.0.0.1:6082/spice_auto.html
 
 # IP address on which instance spice server should listen
 # (string value)
