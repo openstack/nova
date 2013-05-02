@@ -39,12 +39,27 @@ class FakeModel(object):
     def __repr__(self):
         return '<FakeModel: %s>' % self.values
 
+    def get(self, name):
+        return self.values[name]
+
 
 def stub_out(stubs, funcs):
     """Set the stubs in mapping in the db api."""
     for func in funcs:
         func_name = '_'.join(func.__name__.split('_')[1:])
         stubs.Set(db, func_name, func)
+        stubs.Set(db.sqlalchemy.api, func_name, func)
+
+
+fixed_ip_fields = {'id': 0,
+                   'network_id': 0,
+                   'address': '192.168.0.100',
+                   'instance': False,
+                   'instance_uuid': 'eb57d790-fc60-4119-a51a-f2b0913bdc93',
+                   'allocated': False,
+                   'virtual_interface_id': 0,
+                   'virtual_interface': None,
+                   'floating_ips': []}
 
 
 def stub_out_db_network_api(stubs):
@@ -65,16 +80,6 @@ def stub_out_db_network_api(stubs):
                       'host': None,
                       'injected': False,
                       'vpn_public_address': '192.168.0.2'}
-
-    fixed_ip_fields = {'id': 0,
-                       'network_id': 0,
-                       'address': '192.168.0.100',
-                       'instance': False,
-                       'instance_id': 0,
-                       'allocated': False,
-                       'virtual_interface_id': 0,
-                       'virtual_interface': None,
-                       'floating_ips': []}
 
     flavor_fields = {'id': 0,
                      'rxtx_cap': 3}
@@ -196,8 +201,11 @@ def stub_out_db_network_api(stubs):
     def fake_fixed_ip_disassociate_all_by_timeout(context, host, time):
         return 0
 
-    def fake_fixed_ip_get_by_instance(context, instance_id):
-        ips = filter(lambda i: i['instance_id'] == instance_id,
+    def fake_fixed_ip_get_all(context):
+        return [FakeModel(i) for i in fixed_ips]
+
+    def fake_fixed_ip_get_by_instance(context, instance_uuid):
+        ips = filter(lambda i: i['instance_uuid'] == instance_uuid,
                      fixed_ips)
         return [FakeModel(i) for i in ips]
 
@@ -306,6 +314,7 @@ def stub_out_db_network_api(stubs):
              fake_fixed_ip_create,
              fake_fixed_ip_disassociate,
              fake_fixed_ip_disassociate_all_by_timeout,
+             fake_fixed_ip_get_all,
              fake_fixed_ip_get_by_instance,
              fake_fixed_ip_get_by_address,
              fake_fixed_ip_update,
