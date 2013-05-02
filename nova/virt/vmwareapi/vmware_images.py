@@ -122,13 +122,17 @@ def upload_image(context, image, instance, **kwargs):
     (image_service, image_id) = glance.get_remote_image_service(context, image)
     # The properties and other fields that we need to set for the image.
     image_metadata = {"disk_format": "vmdk",
+                      "is_public": "false",
+                      "name": kwargs.get("snapshot_name"),
+                      "status": "active",
                       "container_format": "bare",
                       "size": file_size,
                       "properties": {"vmware_adaptertype":
                                             kwargs.get("adapter_type"),
                                      "vmware_ostype": kwargs.get("os_type"),
                                      "vmware_image_version":
-                                            kwargs.get("image_version")}}
+                                            kwargs.get("image_version"),
+                                     "owner_id": instance['project_id']}}
     start_transfer(context, read_file_handle, file_size,
                    image_service=image_service,
                    image_id=image_id, image_meta=image_metadata)
