@@ -816,26 +816,22 @@ class API(base.Base):
         if networks is None:
             networks = self._get_available_networks(context,
                                                     instance['project_id'])
-        else:
-            # ensure ports are in preferred network order
-            _ensure_requested_network_ordering(
-                lambda x: x['network_id'],
-                ports,
-                [n['id'] for n in networks])
+
+        # ensure ports are in preferred network order, and filter out
+        # those not attached to one of the provided list of networks
+        net_ids = [n['id'] for n in networks]
+        ports = [port for port in ports if port['network_id'] in net_ids]
+        _ensure_requested_network_ordering(lambda x: x['network_id'],
+                                           ports, net_ids)
 
         nw_info = network_model.NetworkInfo()
         for port in ports:
-            network_name = None
+            # NOTE(danms): This loop can't fail to find a network since we
+            # filtered ports to only the ones matching networks above.
             for net in networks:
                 if port['network_id'] == net['id']:
                     network_name = net['name']
                     break
-
-            if network_name is None:
-                raise exception.NotFound(_('Network %(net)s for '
-                                           'port %(port_id)s not found!') %
-                                         {'net': port['network_id'],
-                                          'port': port['id']})
 
             network_IPs = []
             for fixed_ip in port['fixed_ips']:
