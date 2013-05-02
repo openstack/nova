@@ -888,7 +888,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             raise exception.BuildAbortException(instance_uuid=instance['uuid'],
                     reason=msg)
 
-        return self._check_image_size(context, instance)
+        return self._get_and_check_image_metadata(context, instance)
 
     def _build_instance(self, context, request_spec, filter_properties,
             requested_networks, injected_files, admin_password, is_first_time,
@@ -1083,9 +1083,10 @@ class ComputeManager(manager.SchedulerDependentManager):
         if self.driver.instance_exists(instance['name']):
             raise exception.InstanceExists(name=instance['name'])
 
-    def _check_image_size(self, context, instance):
-        """Ensure image is smaller than the maximum size allowed by the
-        instance_type.
+    def _get_and_check_image_metadata(self, context, instance):
+        """Get the image metadata and do basic sanity checks on said image
+        like ensuring the image is smaller than the maximum size allowed by
+        the instance_type.
 
         The image stored in Glance is potentially compressed, so we use two
         checks to ensure that the size isn't exceeded:
