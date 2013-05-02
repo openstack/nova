@@ -331,15 +331,16 @@ class Connection(object):
 
     def reconnect(self):
         """Handles reconnecting and re-establishing sessions and queues"""
-        if self.connection.opened():
-            try:
-                self.connection.close()
-            except qpid_exceptions.ConnectionError:
-                pass
-
         attempt = 0
         delay = 1
         while True:
+            # Close the session if necessary
+            if self.connection.opened():
+                try:
+                    self.connection.close()
+                except qpid_exceptions.ConnectionError:
+                    pass
+
             broker = self.brokers[attempt % len(self.brokers)]
             attempt += 1
 
