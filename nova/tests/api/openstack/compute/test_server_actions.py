@@ -745,6 +745,19 @@ class ServerActionsControllerTest(test.TestCase):
         location = response.headers['Location']
         self.assertEqual('http://localhost/v2/fake/images/123', location)
 
+    def test_create_image_name_too_long(self):
+        long_name = 'a' * 260
+        body = {
+            'createImage': {
+                'name': long_name,
+            },
+        }
+
+        req = fakes.HTTPRequest.blank(self.url)
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller._action_create_image, req,
+                          FAKE_UUID, body)
+
     def _do_test_create_volume_backed_image(self, extra_properties):
 
         def _fake_id(x):
