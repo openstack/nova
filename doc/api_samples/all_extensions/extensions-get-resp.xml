@@ -33,6 +33,9 @@
   <extension alias="OS-FLV-EXT-DATA" updated="2011-09-14T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/flavor_extra_data/api/v1.1" name="FlavorExtraData">
     <description>Provide additional data for flavors.</description>
   </extension>
+  <extension alias="OS-SRV-USG" updated="2013-04-29T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/server_usage/api/v1.1" name="ServerUsage">
+    <description>Adds launched_at and terminated_at on Servers.</description>
+  </extension>
   <extension alias="OS-SCH-HNT" updated="2011-07-19T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/scheduler-hints/api/v2" name="SchedulerHints">
     <description>Pass arbitrary key/value pairs to the scheduler.</description>
   </extension>
