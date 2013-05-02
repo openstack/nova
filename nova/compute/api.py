@@ -2148,6 +2148,12 @@ class API(base.Base):
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED])
     def rescue(self, context, instance, rescue_password=None):
         """Rescue the given instance."""
+
+        bdms = self.get_instance_bdms(context, instance)
+        for bdm in bdms:
+            if bdm['volume_id']:
+                volume = self.volume_api.get(context, bdm['volume_id'])
+                self.volume_api.check_attached(context, volume)
         # TODO(ndipanov): This check can be generalized as a decorator to
         # check for valid combinations of src and dests - for now check
         # if it's booted from volume only

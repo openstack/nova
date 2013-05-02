@@ -213,6 +213,12 @@ class API(base.Base):
 
         return rval
 
+    def check_attached(self, context, volume):
+        """Raise exception if volume in use."""
+        if volume['status'] != "in-use":
+            msg = _("status must be 'in-use'")
+            raise exception.InvalidVolume(reason=msg)
+
     def check_attach(self, context, volume, instance=None):
         # TODO(vish): abstract status checking?
         if volume['status'] != "available":

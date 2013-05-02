@@ -5645,10 +5645,16 @@ class ComputeAPITestCase(BaseTestCase):
         volume_backed_uuid_2 = volume_backed_inst_2['uuid']
 
         def fake_get_instance_bdms(*args, **kwargs):
-            return [{'device_name': '/dev/vda'}]
+            return [{'device_name': '/dev/vda',
+                     'volume_id':'bf0b6b00-a20c-11e2-9e96-0800200c9a66'}]
 
         self.stubs.Set(self.compute_api, 'get_instance_bdms',
                        fake_get_instance_bdms)
+
+        def fake_volume_get(self, context, volume_id):
+            return {'id': volume_id, 'status': 'in-use'}
+
+        self.stubs.Set(cinder.API, 'get', fake_volume_get)
 
         self.compute.run_instance(self.context,
                                   instance=volume_backed_inst_1)
@@ -6899,6 +6905,28 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertRaises(exception.InstanceInvalidState,
                 self.compute_api.detach_volume,
                 self.context, instance, volume)
+
+    def test_no_rescue_in_volume_state_attaching(self):
+        # Make sure a VM cannot be rescued while volume is being attached
+        instance = self._create_fake_instance()
+
+        def fake_get_instance_bdms(*args, **kwargs):
+            return [{'device_name': '/dev/vda',
+                     'volume_id':'bf0b6b00-a20c-11e2-9e96-0800200c9a66'}]
+
+        self.stubs.Set(self.compute_api, 'get_instance_bdms',
+                       fake_get_instance_bdms)
+
+        def fake_volume_get(self, context, volume_id):
+            return {'id': volume_id, 'status': 'attaching'}
+
+        self.stubs.Set(cinder.API, 'get', fake_volume_get)
+
+        volume = {'id': 'bf0b6b00-a20c-11e2-9e96-0800200c9a66',
+                  'state': 'active', 'instance_uuid': instance['uuid']}
+
+        self.assertRaises(exception.InvalidVolume,
+                self.compute_api.rescue, self.context, instance)
 
     def test_vnc_console(self):
         # Make sure we can a vnc console for an instance.
