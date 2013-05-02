@@ -1682,6 +1682,56 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEquals(snapshot['status'], 'active')
         self.assertEquals(snapshot['name'], snapshot_name)
 
+    def test_snapshot_metadata_image(self):
+        expected_calls = [
+            {'args': (),
+             'kwargs':
+                 {'task_state': task_states.IMAGE_PENDING_UPLOAD}},
+            {'args': (),
+             'kwargs':
+                 {'task_state': task_states.IMAGE_UPLOADING,
+                  'expected_state': task_states.IMAGE_PENDING_UPLOAD}}]
+        func_call_matcher = matchers.FunctionCallMatcher(expected_calls)
+
+        self.flags(libvirt_snapshots_directory='./')
+
+        image_service = nova.tests.image.fake.FakeImageService()
+
+        # Assign an image with an architecture defined (x86_64)
+        test_instance = copy.deepcopy(self.test_instance)
+        test_instance["image_ref"] = 'a440c04b-79fa-479c-bed1-0b816eaec379'
+
+        instance_ref = db.instance_create(self.context, test_instance)
+        properties = {'instance_id': instance_ref['id'],
+                      'user_id': str(self.context.user_id),
+                      'architecture': 'fake_arch',
+                      'key_a': 'value_a',
+                      'key_b': 'value_b'}
+        snapshot_name = 'test-snap'
+        sent_meta = {'name': snapshot_name, 'is_public': False,
+                     'status': 'creating', 'properties': properties}
+        recv_meta = image_service.create(context, sent_meta)
+
+        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
+        libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
+        self.mox.StubOutWithMock(libvirt_driver.utils, 'execute')
+        libvirt_driver.utils.execute = self.fake_execute
+
+        self.mox.ReplayAll()
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        conn.snapshot(self.context, instance_ref, recv_meta['id'],
+                      func_call_matcher.call)
+
+        snapshot = image_service.show(context, recv_meta['id'])
+        self.assertIsNone(func_call_matcher.match())
+        self.assertEquals(snapshot['properties']['image_state'], 'available')
+        self.assertEquals(snapshot['properties']['architecture'], 'fake_arch')
+        self.assertEquals(snapshot['properties']['key_a'], 'value_a')
+        self.assertEquals(snapshot['properties']['key_b'], 'value_b')
+        self.assertEquals(snapshot['status'], 'active')
+        self.assertEquals(snapshot['name'], snapshot_name)
+
     def test_attach_invalid_volume_type(self):
         self.create_fake_libvirt_mock()
         libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
