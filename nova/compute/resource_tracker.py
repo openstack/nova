@@ -453,6 +453,7 @@ class ResourceTracker(object):
                 filtered[uuid] = migration
 
         for migration in filtered.values():
+            instance = migration['instance']
             try:
                 self._update_usage_from_migration(context, instance, resources,
                                                   migration)
