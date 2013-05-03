@@ -1040,10 +1040,11 @@ class VlanNetworkTestCase(test.TestCase):
         context1 = context.RequestContext('user', 'project1')
         context2 = context.RequestContext('user', 'project2')
 
-        address = '1.2.3.4'
-        float_addr = db.floating_ip_create(context1.elevated(),
-                                           {'address': address,
-                                            'project_id': context1.project_id})
+        float_ip = db.floating_ip_create(context1.elevated(),
+                                         {'address': '1.2.3.4',
+                                          'project_id': context1.project_id})
+
+        float_addr = float_ip['address']
 
         instance = db.instance_create(context1,
                                       {'project_id': 'project1'})
