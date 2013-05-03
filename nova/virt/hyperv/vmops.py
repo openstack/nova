@@ -28,6 +28,7 @@ from nova import exception
 from nova.openstack.common import excutils
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
+from nova.openstack.common import processutils
 from nova import utils
 from nova.virt import configdrive
 from nova.virt.hyperv import constants
@@ -229,7 +230,7 @@ class VMOps(object):
         with configdrive.ConfigDriveBuilder(instance_md=inst_md) as cdb:
             try:
                 cdb.make_drive(configdrive_path_iso)
-            except exception.ProcessExecutionError as e:
+            except processutils.ProcessExecutionError as e:
                 with excutils.save_and_reraise_exception():
                     LOG.error(_('Creating config drive failed with error: %s'),
                               e, instance=instance)

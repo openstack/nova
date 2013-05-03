@@ -22,6 +22,7 @@ import mox
 from oslo.config import cfg
 
 from nova import exception
+from nova.openstack.common import processutils
 from nova.tests.baremetal.db import base as bm_db_base
 from nova.tests.baremetal.db import utils as bm_db_utils
 from nova.tests.image import fake as fake_image
@@ -371,7 +372,7 @@ class VPDClassMethodsTestCase(BareMetalVPDTestCase):
         self.pm._set_connection().AndReturn(True)
         nutils.ssh_execute(None, '/usr/bin/VBoxManage test return',
                 check_exit_code=True).\
-                AndRaise(exception.ProcessExecutionError)
+                AndRaise(processutils.ProcessExecutionError)
         self.mox.ReplayAll()
 
         result = self.pm._run_command("test return")
@@ -389,10 +390,10 @@ class VPDClassMethodsTestCase(BareMetalVPDTestCase):
         self.pm._check_for_node().AndReturn(['"testNode"'])
         nutils.ssh_execute('test', '/usr/bin/VBoxManage startvm ',
                 check_exit_code=True).\
-                AndRaise(exception.ProcessExecutionError)
+                AndRaise(processutils.ProcessExecutionError)
         nutils.ssh_execute('test', '/usr/bin/VBoxManage list runningvms',
                 check_exit_code=True).\
-                AndRaise(exception.ProcessExecutionError)
+                AndRaise(processutils.ProcessExecutionError)
 
         self.mox.ReplayAll()
         self.pm._connection = 'test'

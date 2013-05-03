@@ -21,8 +21,8 @@ import uuid
 
 import paramiko
 
-from nova import exception as nova_exception
 from nova.openstack.common import log as logging
+from nova.openstack.common import processutils
 from nova import utils
 from nova.virt.powervm import constants
 from nova.virt.powervm import exception
@@ -68,7 +68,7 @@ def ssh_command_as_root(ssh_connection, cmd, check_exit_code=True):
     :param connection: an active paramiko.SSHClient connection.
     :param command: string containing the command to run.
     :returns: Tuple -- a tuple of (stdout, stderr)
-    :raises: nova.exception.ProcessExecutionError
+    :raises: processutils.ProcessExecutionError
     """
     LOG.debug(_('Running cmd (SSH-as-root): %s') % cmd)
     chan = ssh_connection._transport.open_session()
@@ -89,10 +89,13 @@ def ssh_command_as_root(ssh_connection, cmd, check_exit_code=True):
     if exit_status != -1:
         LOG.debug(_('Result was %s') % exit_status)
         if check_exit_code and exit_status != 0:
-            raise nova_exception.ProcessExecutionError(exit_code=exit_status,
-                                                       stdout=stdout,
-                                                       stderr=stderr,
-                                                       cmd=''.join(cmd))
+            # TODO(mikal): I know this is weird, but it needs to be consistent
+            # with processutils.execute. I will move this method to oslo in
+            # a later commit.
+            raise processutils.ProcessExecutionError(exit_code=exit_status,
+                                                     stdout=stdout,
+                                                     stderr=stderr,
+                                                     cmd=''.join(cmd))
 
     return (stdout, stderr)
 

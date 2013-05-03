@@ -20,8 +20,8 @@ import re
 
 from eventlet import greenthread
 
-from nova import exception
 from nova.openstack.common import log as logging
+from nova.openstack.common import processutils
 from nova import utils
 
 LOG = logging.getLogger(__name__)
@@ -92,7 +92,7 @@ def fake_execute(*cmd_parts, **kwargs):
                                   attempts=attempts,
                                   run_as_root=run_as_root,
                                   check_exit_code=check_exit_code)
-        except exception.ProcessExecutionError as e:
+        except processutils.ProcessExecutionError as e:
             LOG.debug(_('Faked command raised an exception %s'), e)
             raise
 

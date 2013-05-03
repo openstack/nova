@@ -77,6 +77,7 @@ from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import loopingcall
 from nova.openstack.common.notifier import api as notifier
+from nova.openstack.common import processutils
 from nova import utils
 from nova import version
 from nova.virt import configdrive
@@ -1871,7 +1872,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
                 try:
                     cdb.make_drive(configdrive_path)
-                except exception.ProcessExecutionError as e:
+                except processutils.ProcessExecutionError as e:
                     with excutils.save_and_reraise_exception():
                         LOG.error(_('Creating config drive failed '
                                   'with error: %s'),
@@ -3236,7 +3237,7 @@ class LibvirtDriver(driver.ComputeDriver):
             try:
                 self.plug_vifs(instance, network_info)
                 break
-            except exception.ProcessExecutionError:
+            except processutils.ProcessExecutionError:
                 if cnt == max_retry - 1:
                     raise
                 else:

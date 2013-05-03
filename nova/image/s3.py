@@ -35,6 +35,7 @@ import nova.cert.rpcapi
 from nova import exception
 from nova.image import glance
 from nova.openstack.common import log as logging
+from nova.openstack.common import processutils
 from nova import utils
 
 
@@ -409,7 +410,7 @@ class S3ImageService(object):
                           '-K', '%s' % (key,),
                           '-iv', '%s' % (iv,),
                           '-out', '%s' % (decrypted_filename,))
-        except exception.ProcessExecutionError, exc:
+        except processutils.ProcessExecutionError, exc:
             raise exception.NovaException(_('Failed to decrypt image file '
                                     '%(image_file)s: %(err)s') %
                                     {'image_file': encrypted_filename,

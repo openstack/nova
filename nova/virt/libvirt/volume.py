@@ -30,6 +30,7 @@ from nova import exception
 from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import loopingcall
+from nova.openstack.common import processutils
 from nova import paths
 from nova.storage import linuxscsi
 from nova import utils
@@ -314,7 +315,7 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
         #             volume is using the same target.
         try:
             self._run_iscsiadm(iscsi_properties, ())
-        except exception.ProcessExecutionError as exc:
+        except processutils.ProcessExecutionError as exc:
             # iscsiadm returns 21 for "No records found" after version 2.0-871
             if exc.exit_code in [21, 255]:
                 self._run_iscsiadm(iscsi_properties, ('--op', 'new'))
@@ -353,7 +354,7 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
                 self._run_iscsiadm(iscsi_properties,
                                    ("--login",),
                                    check_exit_code=[0, 255])
-            except exception.ProcessExecutionError as err:
+            except processutils.ProcessExecutionError as err:
                 #as this might be one of many paths,
                 #only set successfull logins to startup automatically
                 if err.exit_code in [15]:
@@ -484,7 +485,7 @@ class LibvirtNFSVolumeDriver(LibvirtBaseVolumeDriver):
 
         try:
             utils.execute(*nfs_cmd, run_as_root=True)
-        except exception.ProcessExecutionError as exc:
+        except processutils.ProcessExecutionError as exc:
             if ensure and 'already mounted' in exc.message:
                 LOG.warn(_("%s is already mounted"), nfs_share)
             else:
@@ -500,7 +501,7 @@ class LibvirtNFSVolumeDriver(LibvirtBaseVolumeDriver):
         """Check path."""
         try:
             return utils.execute('stat', path, run_as_root=True)
-        except exception.ProcessExecutionError:
+        except processutils.ProcessExecutionError:
             return False
 
 
@@ -605,7 +606,7 @@ class LibvirtGlusterfsVolumeDriver(LibvirtBaseVolumeDriver):
             utils.execute('mount', '-t', 'glusterfs', glusterfs_share,
                           mount_path,
                           run_as_root=True)
-        except exception.ProcessExecutionError as exc:
+        except processutils.ProcessExecutionError as exc:
             if ensure and 'already mounted' in exc.message:
                 LOG.warn(_("%s is already mounted"), glusterfs_share)
             else:
@@ -621,7 +622,7 @@ class LibvirtGlusterfsVolumeDriver(LibvirtBaseVolumeDriver):
         """Check path."""
         try:
             return utils.execute('stat', path, run_as_root=True)
-        except exception.ProcessExecutionError:
+        except processutils.ProcessExecutionError:
             return False
 
 

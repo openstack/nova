@@ -44,6 +44,7 @@ from nova import exception
 from nova.image import glance
 from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
+from nova.openstack.common import processutils
 from nova import utils
 from nova.virt import configdrive
 from nova.virt.disk import api as disk
@@ -1979,7 +1980,7 @@ def _is_vdi_pv(dev):
                 LOG.debug(_("Found Xen kernel %s") % m.group(0))
                 return True
         LOG.debug(_("No Xen kernel found.  Booting HVM."))
-    except exception.ProcessExecutionError:
+    except processutils.ProcessExecutionError:
         LOG.exception(_("Error while executing pygrub! Please, ensure the "
                         "binary is installed correctly, and available in your "
                         "PATH; on some Linux distros, pygrub may be installed "
@@ -2161,7 +2162,7 @@ def _mount_filesystem(dev_path, dir):
         _out, err = utils.execute('mount',
                                  '-t', 'ext2,ext3,ext4,reiserfs',
                                  dev_path, dir, run_as_root=True)
-    except exception.ProcessExecutionError as e:
+    except processutils.ProcessExecutionError as e:
         err = str(e)
     return err
 

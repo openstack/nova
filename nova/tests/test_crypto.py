@@ -23,6 +23,7 @@ import mox
 from nova import crypto
 from nova import db
 from nova import exception
+from nova.openstack.common import processutils
 from nova import test
 from nova import utils
 
@@ -200,7 +201,7 @@ e6fCXWECgYEAqgpGvva5kJ1ISgNwnJbwiNw0sOT9BMOsdNZBElf0kJIIy6FMPvap
                                           '-inkey', sshkey,
                                           process_input=text)
                 return dec
-            except exception.ProcessExecutionError as exc:
+            except processutils.ProcessExecutionError as exc:
                 raise exception.DecryptionFailure(reason=exc.stderr)
 
     def test_ssh_encrypt_decrypt_text(self):
