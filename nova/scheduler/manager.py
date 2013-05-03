@@ -241,9 +241,7 @@ class SchedulerManager(manager.Manager):
             notifier.notify(context, notifier.publisher_id("scheduler"),
                             'scheduler.' + method, notifier.ERROR, payload)
 
-    # NOTE (masumotok) : This method should be moved to nova.api.ec2.admin.
-    # Based on bexar design summit discussion,
-    # just put this here for bexar release.
+    # NOTE(hanlind): This method can be removed in v3.0 of the RPC API.
     def show_host_resources(self, context, host):
         """Shows the physical/usage resource given by hosts.
 

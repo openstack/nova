@@ -69,10 +69,6 @@ class SchedulerRpcAPITestCase(test.TestCase):
                 request_spec='fake_request_spec',
                 filter_properties='fake_props', reservations=list('fake_res'))
 
-    def test_show_host_resources(self):
-        self._test_scheduler_api('show_host_resources', rpc_method='call',
-                host='fake_host')
-
     def test_live_migration(self):
         self._test_scheduler_api('live_migration', rpc_method='call',
                 block_migration='fake_block_migration',

@@ -96,9 +96,6 @@ class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 filter_properties=filter_properties,
                 reservations=reservations_p))
 
-    def show_host_resources(self, ctxt, host):
-        return self.call(ctxt, self.make_msg('show_host_resources', host=host))
-
     def live_migration(self, ctxt, block_migration, disk_over_commit,
             instance, dest):
         # NOTE(comstud): Call vs cast so we can get exceptions back, otherwise
