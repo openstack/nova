@@ -1054,7 +1054,7 @@ def restart_dhcp(context, dev, network_ref):
     if network_ref['multi_host'] or dns_servers:
         cmd.append('--no-hosts')
     if network_ref['multi_host']:
-        '--addn-hosts=%s' % _dhcp_file(dev, 'hosts')
+        cmd.append('--addn-hosts=%s' % _dhcp_file(dev, 'hosts'))
     if dns_servers:
         cmd.append('--no-resolv')
     for dns_server in dns_servers:
