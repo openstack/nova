@@ -19,8 +19,10 @@
 """
 Test suite for VMwareAPI.
 """
-import mox
 import urllib2
+
+import mox
+from oslo.config import cfg
 
 from nova.compute import power_state
 from nova.compute import task_states
@@ -35,6 +37,7 @@ from nova.tests.vmwareapi import db_fakes
 from nova.tests.vmwareapi import stubs
 from nova.virt.vmwareapi import driver
 from nova.virt.vmwareapi import fake as vmwareapi_fake
+from nova.virt.vmwareapi import vim
 from nova.virt.vmwareapi import vm_util
 
 
@@ -50,6 +53,47 @@ class fake_http_resp(object):
 
     def read(self):
         return "console log"
+
+
+class VMwareAPIConfTestCase(test.TestCase):
+    """Unit tests for VMWare API configurations."""
+    def setUp(self):
+        super(VMwareAPIConfTestCase, self).setUp()
+
+    def tearDown(self):
+        super(VMwareAPIConfTestCase, self).tearDown()
+
+    def test_configure_without_wsdl_loc_override(self):
+        # Test the default configuration behavior. By default,
+        # use the WSDL sitting on the host we are talking to in
+        # order to bind the SOAP client.
+        wsdl_loc = cfg.CONF.vmwareapi_wsdl_loc
+        self.assertIsNone(wsdl_loc)
+        wsdl_url = vim.Vim.get_wsdl_url("https", "www.example.com")
+        url = vim.Vim.get_soap_url("https", "www.example.com")
+        self.assertEqual("https://www.example.com/sdk/vimService.wsdl",
+                         wsdl_url)
+        self.assertEqual("https://www.example.com/sdk", url)
+
+    def test_configure_with_wsdl_loc_override(self):
+        # Use the setting vmwareapi_wsdl_loc to override the
+        # default path to the WSDL.
+        #
+        # This is useful as a work-around for XML parsing issues
+        # found when using some WSDL in combination with some XML
+        # parsers.
+        #
+        # The wsdl_url should point to a different host than the one we
+        # are actually going to send commands to.
+        fake_wsdl = "https://www.test.com/sdk/foo.wsdl"
+        self.flags(vmwareapi_wsdl_loc=fake_wsdl)
+        wsdl_loc = cfg.CONF.vmwareapi_wsdl_loc
+        self.assertIsNotNone(wsdl_loc)
+        self.assertEqual(fake_wsdl, wsdl_loc)
+        wsdl_url = vim.Vim.get_wsdl_url("https", "www.example.com")
+        url = vim.Vim.get_soap_url("https", "www.example.com")
+        self.assertEqual(fake_wsdl, wsdl_url)
+        self.assertEqual("https://www.example.com/sdk", url)
 
 
 class VMwareAPIVMTestCase(test.TestCase):
