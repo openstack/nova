@@ -70,8 +70,11 @@ class FilterScheduler(driver.Scheduler):
                         'scheduler.run_instance.start', notifier.INFO, payload)
 
         instance_uuids = request_spec.pop('instance_uuids')
-        LOG.debug(_("Attempting to build %(num_instances)d instance(s)"),
-                  {'num_instances': len(instance_uuids)})
+        LOG.info(_("Attempting to build %(num_instances)d instance(s) "
+                    "uuids: %(instance_uuids)s"),
+                  {'num_instances': len(instance_uuids),
+                   'instance_uuids': instance_uuids})
+        LOG.debug(_("Request Spec: %s") % request_spec)
 
         weighed_hosts = self._schedule(context, request_spec,
                                        filter_properties, instance_uuids)
@@ -86,6 +89,10 @@ class FilterScheduler(driver.Scheduler):
             try:
                 try:
                     weighed_host = weighed_hosts.pop(0)
+                    LOG.info(_("Choosing host %(weighed_host)s "
+                                "for instance %(instance_uuid)s"),
+                              {'weighed_host': weighed_host,
+                               'instance_uuid': instance_uuid})
                 except IndexError:
                     raise exception.NoValidHost(reason="")
 
@@ -346,6 +353,8 @@ class FilterScheduler(driver.Scheduler):
             weighed_hosts = self.host_manager.get_weighed_hosts(hosts,
                     filter_properties)
 
+            LOG.debug(_("Weighed %(hosts)s"), {'hosts': weighed_hosts})
+
             scheduler_host_subset_size = CONF.scheduler_host_subset_size
             if scheduler_host_subset_size > len(weighed_hosts):
                 scheduler_host_subset_size = len(weighed_hosts)
@@ -354,8 +363,6 @@ class FilterScheduler(driver.Scheduler):
 
             chosen_host = random.choice(
                 weighed_hosts[0:scheduler_host_subset_size])
-            LOG.debug(_("Choosing host %(chosen_host)s"),
-                      {'chosen_host': chosen_host})
             selected_hosts.append(chosen_host)
 
             # Now consume the resources so the filter/weights
