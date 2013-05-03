@@ -19,8 +19,10 @@
 System-level utilities and helper functions.
 """
 
+import os
 import random
 import shlex
+import signal
 
 from eventlet.green import subprocess
 from eventlet import greenthread
@@ -49,6 +51,17 @@ class ProcessExecutionError(Exception):
         super(ProcessExecutionError, self).__init__(message)
 
 
+class NoRootWrapSpecified(Exception):
+    def __init__(self, message=None):
+        super(NoRootWrapSpecified, self).__init__(message)
+
+
+def _subprocess_setup():
+    # Python installs a SIGPIPE handler by default. This is usually not what
+    # non-Python subprocesses expect.
+    signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+
+
 def execute(*cmd, **kwargs):
     """
     Helper method to shell out and execute a command through subprocess with
@@ -58,11 +71,11 @@ def execute(*cmd, **kwargs):
     :type cmd:              string
     :param process_input:   Send to opened process.
     :type proces_input:     string
-    :param check_exit_code: Defaults to 0. Will raise
-                            :class:`ProcessExecutionError`
-                            if the command exits without returning this value
-                            as a returncode
-    :type check_exit_code:  int
+    :param check_exit_code: Single bool, int, or list of allowed exit
+                            codes.  Defaults to [0].  Raise
+                            :class:`ProcessExecutionError` unless
+                            program exits with one of these code.
+    :type check_exit_code:  boolean, int, or [int]
     :param delay_on_retry:  True | False. Defaults to True. If set to True,
                             wait a short amount of time before retrying.
     :type delay_on_retry:   boolean
@@ -72,8 +85,12 @@ def execute(*cmd, **kwargs):
                             the command is prefixed by the command specified
                             in the root_helper kwarg.
     :type run_as_root:      boolean
-    :param root_helper:     command to prefix all cmd's with
+    :param root_helper:     command to prefix to commands called with
+                            run_as_root=True
     :type root_helper:      string
+    :param shell:           whether or not there should be a shell used to
+                            execute this command. Defaults to false.
+    :type shell:            boolean
     :returns:               (stdout, stderr) from process execution
     :raises:                :class:`UnknownArgumentError` on
                             receiving unknown arguments
@@ -81,16 +98,31 @@ def execute(*cmd, **kwargs):
     """
 
     process_input = kwargs.pop('process_input', None)
-    check_exit_code = kwargs.pop('check_exit_code', 0)
+    check_exit_code = kwargs.pop('check_exit_code', [0])
+    ignore_exit_code = False
     delay_on_retry = kwargs.pop('delay_on_retry', True)
     attempts = kwargs.pop('attempts', 1)
     run_as_root = kwargs.pop('run_as_root', False)
     root_helper = kwargs.pop('root_helper', '')
+    shell = kwargs.pop('shell', False)
+
+    if isinstance(check_exit_code, bool):
+        ignore_exit_code = not check_exit_code
+        check_exit_code = [0]
+    elif isinstance(check_exit_code, int):
+        check_exit_code = [check_exit_code]
+
     if len(kwargs):
         raise UnknownArgumentError(_('Got unknown keyword args '
                                      'to utils.execute: %r') % kwargs)
-    if run_as_root:
+
+    if run_as_root and os.geteuid() != 0:
+        if not root_helper:
+            raise NoRootWrapSpecified(
+                message=('Command requested root, but did not specify a root '
+                         'helper.'))
         cmd = shlex.split(root_helper) + list(cmd)
+
     cmd = map(str, cmd)
 
     while attempts > 0:
@@ -98,11 +130,21 @@ def execute(*cmd, **kwargs):
         try:
             LOG.debug(_('Running cmd (subprocess): %s'), ' '.join(cmd))
             _PIPE = subprocess.PIPE  # pylint: disable=E1101
+
+            if os.name == 'nt':
+                preexec_fn = None
+                close_fds = False
+            else:
+                preexec_fn = _subprocess_setup
+                close_fds = True
+
             obj = subprocess.Popen(cmd,
                                    stdin=_PIPE,
                                    stdout=_PIPE,
                                    stderr=_PIPE,
-                                   close_fds=True)
+                                   close_fds=close_fds,
+                                   preexec_fn=preexec_fn,
+                                   shell=shell)
             result = None
             if process_input is not None:
                 result = obj.communicate(process_input)
@@ -112,9 +154,7 @@ def execute(*cmd, **kwargs):
             _returncode = obj.returncode  # pylint: disable=E1101
             if _returncode:
                 LOG.debug(_('Result was %s') % _returncode)
-                if (isinstance(check_exit_code, int) and
-                    not isinstance(check_exit_code, bool) and
-                        _returncode != check_exit_code):
+                if not ignore_exit_code and _returncode not in check_exit_code:
                     (stdout, stderr) = result
                     raise ProcessExecutionError(exit_code=_returncode,
                                                 stdout=stdout,
