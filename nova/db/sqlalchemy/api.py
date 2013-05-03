@@ -685,21 +685,18 @@ def floating_ip_allocate_address(context, project_id, pool):
 
 @require_context
 def floating_ip_bulk_create(context, ips):
-    existing_ips = {}
-    for floating in _floating_ip_get_all(context).all():
-        existing_ips[floating['address']] = floating
-
     session = get_session()
     with session.begin():
         for ip in ips:
-            addr = ip['address']
-            if (addr in existing_ips and
-                ip.get('id') != existing_ips[addr]['id']):
-                raise exception.FloatingIpExists(**dict(existing_ips[addr]))
-
             model = models.FloatingIp()
             model.update(ip)
-            session.add(model)
+            try:
+                # NOTE(boris-42): To get existing address we have to do each
+                #                  time session.flush()..
+                session.add(model)
+                session.flush()
+            except db_exc.DBDuplicateEntry:
+                raise exception.FloatingIpExists(address=ip['address'])
 
 
 def _ip_range_splitter(ips, block_size=256):
@@ -731,25 +728,12 @@ def floating_ip_bulk_destroy(context, ips):
 
 @require_context
 def floating_ip_create(context, values, session=None):
-    if not session:
-        session = get_session()
-
     floating_ip_ref = models.FloatingIp()
     floating_ip_ref.update(values)
-
-    # check uniqueness for not deleted addresses
-    if not floating_ip_ref.deleted:
-        try:
-            floating_ip = _floating_ip_get_by_address(context,
-                                                      floating_ip_ref.address,
-                                                      session)
-        except exception.FloatingIpNotFoundForAddress:
-            pass
-        else:
-            if floating_ip.id != floating_ip_ref.id:
-                raise exception.FloatingIpExists(**dict(floating_ip_ref))
-
-    floating_ip_ref.save(session=session)
+    try:
+        floating_ip_ref.save()
+    except db_exc.DBDuplicateEntry:
+        raise exception.FloatingIpExists(address=values['address'])
     return floating_ip_ref
 
 
@@ -916,12 +900,12 @@ def floating_ip_get_by_fixed_ip_id(context, fixed_ip_id, session=None):
 def floating_ip_update(context, address, values):
     session = get_session()
     with session.begin():
-        floating_ip_ref = _floating_ip_get_by_address(context,
-                                                      address,
-                                                      session)
-        for (key, value) in values.iteritems():
-            floating_ip_ref[key] = value
-        floating_ip_ref.save(session=session)
+        float_ip_ref = _floating_ip_get_by_address(context, address, session)
+        float_ip_ref.update(values)
+        try:
+            float_ip_ref.save(session=session)
+        except db_exc.DBDuplicateEntry:
+            raise exception.FloatingIpExists(address=values['address'])
 
 
 @require_context
