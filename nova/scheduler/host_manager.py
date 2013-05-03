@@ -300,40 +300,66 @@ class HostManager(object):
         def _strip_ignore_hosts(host_map, hosts_to_ignore):
             ignored_hosts = []
             for host in hosts_to_ignore:
-                if host in host_map:
-                    del host_map[host]
-                    ignored_hosts.append(host)
+                for (hostname, nodename) in host_map.keys():
+                    if host == hostname:
+                        del host_map[(hostname, nodename)]
+                        ignored_hosts.append(host)
             ignored_hosts_str = ', '.join(ignored_hosts)
-            msg = _('Host filter ignoring hosts: %(ignored_hosts_str)s')
-            LOG.debug(msg, locals())
+            msg = _('Host filter ignoring hosts: %s')
+            LOG.debug(msg % ignored_hosts_str)
 
         def _match_forced_hosts(host_map, hosts_to_force):
-            for host in host_map.keys():
-                if host not in hosts_to_force:
-                    del host_map[host]
-            if not host_map:
+            forced_hosts = []
+            for (hostname, nodename) in host_map.keys():
+                if hostname not in hosts_to_force:
+                    del host_map[(hostname, nodename)]
+                else:
+                    forced_hosts.append(hostname)
+            if host_map:
+                forced_hosts_str = ', '.join(forced_hosts)
+                msg = _('Host filter forcing available hosts to %s')
+            else:
                 forced_hosts_str = ', '.join(hosts_to_force)
-                msg = _("No hosts matched due to not matching 'force_hosts'"
-                        "value of '%(forced_hosts_str)s'")
-                LOG.debug(msg, locals())
-                return
-            forced_hosts_str = ', '.join(host_map.iterkeys())
-            msg = _('Host filter forcing available hosts to '
-                    '%(forced_hosts_str)s')
-            LOG.debug(msg, locals())
+                msg = _("No hosts matched due to not matching "
+                        "'force_hosts' value of '%s'")
+            LOG.debug(msg % forced_hosts_str)
+
+        def _match_forced_nodes(host_map, nodes_to_force):
+            forced_nodes = []
+            for (hostname, nodename) in host_map.keys():
+                if nodename not in nodes_to_force:
+                    del host_map[(hostname, nodename)]
+                else:
+                    forced_nodes.append(nodename)
+            if host_map:
+                forced_nodes_str = ', '.join(forced_nodes)
+                msg = _('Host filter forcing available nodes to %s')
+            else:
+                forced_nodes_str = ', '.join(nodes_to_force)
+                msg = _("No nodes matched due to not matching "
+                        "'force_nodes' value of '%s'")
+            LOG.debug(msg % forced_nodes_str)
 
         filter_classes = self._choose_host_filters(filter_class_names)
         ignore_hosts = filter_properties.get('ignore_hosts', [])
         force_hosts = filter_properties.get('force_hosts', [])
-        if ignore_hosts or force_hosts:
-            name_to_cls_map = dict([(x.host, x) for x in hosts])
+        force_nodes = filter_properties.get('force_nodes', [])
+
+        if ignore_hosts or force_hosts or force_nodes:
+            # NOTE(deva): we can't assume "host" is unique because
+            #             one host may have many nodes.
+            name_to_cls_map = dict([((x.host, x.nodename), x) for x in hosts])
             if ignore_hosts:
                 _strip_ignore_hosts(name_to_cls_map, ignore_hosts)
                 if not name_to_cls_map:
                     return []
+            # NOTE(deva): allow force_hosts and force_nodes independently
             if force_hosts:
                 _match_forced_hosts(name_to_cls_map, force_hosts)
-                # NOTE(vish): Skip filters on forced hosts.
+            if force_nodes:
+                _match_forced_nodes(name_to_cls_map, force_nodes)
+            if force_hosts or force_nodes:
+                # NOTE(deva): Skip filters when forcing host or node
                 if name_to_cls_map:
                     return name_to_cls_map.values()
             hosts = name_to_cls_map.itervalues()
