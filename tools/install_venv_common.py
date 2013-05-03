@@ -18,10 +18,13 @@
 """Provides methods needed by installation script for OpenStack development
 virtual environments.
 
+Since this script is used to bootstrap a virtualenv from the system's Python
+environment, it should be kept strictly compatible with Python 2.6.
+
 Synced in from openstack-common
 """
 
-import argparse
+import optparse
 import os
 import subprocess
 import sys
@@ -131,12 +134,12 @@ class InstallVenv(object):
 
     def parse_args(self, argv):
         """Parses command-line arguments."""
-        parser = argparse.ArgumentParser()
-        parser.add_argument('-n', '--no-site-packages',
-                            action='store_true',
-                            help="Do not inherit packages from global Python "
-                                 "install")
-        return parser.parse_args(argv[1:])
+        parser = optparse.OptionParser()
+        parser.add_option('-n', '--no-site-packages',
+                          action='store_true',
+                          help="Do not inherit packages from global Python "
+                               "install")
+        return parser.parse_args(argv[1:])[0]
 
 
 class Distro(InstallVenv):
