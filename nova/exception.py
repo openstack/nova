@@ -248,6 +248,10 @@ class InvalidAttribute(Invalid):
     msg_fmt = _("Attribute not supported: %(attr)s")
 
 
+class ValidationError(Invalid):
+    msg_fmt = "%(detail)s"
+
+
 class VolumeUnattached(Invalid):
     ec2_code = 'IncorrectState'
     msg_fmt = _("Volume %(volume_id)s is not attached to anything")
