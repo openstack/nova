@@ -727,7 +727,7 @@ def floating_ip_bulk_destroy(context, ips):
 
 
 @require_context
-def floating_ip_create(context, values, session=None):
+def floating_ip_create(context, values):
     floating_ip_ref = models.FloatingIp()
     floating_ip_ref.update(values)
     try:
@@ -887,13 +887,10 @@ def floating_ip_get_by_fixed_address(context, fixed_address):
 
 
 @require_context
-def floating_ip_get_by_fixed_ip_id(context, fixed_ip_id, session=None):
-    if not session:
-        session = get_session()
-
-    return model_query(context, models.FloatingIp, session=session).\
-                   filter_by(fixed_ip_id=fixed_ip_id).\
-                   all()
+def floating_ip_get_by_fixed_ip_id(context, fixed_ip_id):
+    return model_query(context, models.FloatingIp).\
+                filter_by(fixed_ip_id=fixed_ip_id).\
+                all()
 
 
 @require_context
@@ -1918,8 +1915,7 @@ def instance_floating_address_get_all(context, instance_uuid):
 
     floating_ips = []
     for fixed_ip in fixed_ips:
-        _floating_ips = floating_ip_get_by_fixed_ip_id(context,
-                                                    fixed_ip['id'])
+        _floating_ips = floating_ip_get_by_fixed_ip_id(context, fixed_ip['id'])
         floating_ips += _floating_ips
 
     return floating_ips
