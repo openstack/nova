@@ -90,7 +90,8 @@ def get_injected_network_template(network_info, use_ipv6=CONF.use_ipv6,
         address_v6 = None
         gateway_v6 = None
         netmask_v6 = None
-        if use_ipv6:
+        ipv6_is_available = use_ipv6 and 'ip6s' in mapping
+        if ipv6_is_available:
             address_v6 = mapping['ip6s'][0]['ip']
             netmask_v6 = mapping['ip6s'][0]['netmask']
             gateway_v6 = mapping['gateway_v6']
@@ -116,4 +117,4 @@ def get_injected_network_template(network_info, use_ipv6=CONF.use_ipv6,
     ifc_template = open(template).read()
     return str(Template(ifc_template,
                         searchList=[{'interfaces': nets,
-                                     'use_ipv6': use_ipv6}]))
+                                     'use_ipv6': ipv6_is_available}]))
