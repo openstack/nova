@@ -3643,51 +3643,74 @@ class ComputeTestCase(BaseTestCase):
         self.mox.ReplayAll()
         self.compute._post_live_migration(c, inst_ref, dest)
 
-    def test_post_live_migration_at_destination(self):
+    def _begin_post_live_migration_at_destination(self):
         self.mox.StubOutWithMock(self.compute.network_api,
                                  'setup_networks_on_host')
         self.mox.StubOutWithMock(self.compute.conductor_api,
                                  'network_migrate_instance_finish')
         self.mox.StubOutWithMock(self.compute, '_get_power_state')
-        self.mox.StubOutWithMock(self.compute, '_instance_update')
+        self.mox.StubOutWithMock(self.compute, '_get_compute_info')
 
         params = {'task_state': task_states.MIGRATING,
                   'power_state': power_state.PAUSED, }
-        instance = jsonutils.to_primitive(self._create_fake_instance(params))
+        self.instance = jsonutils.to_primitive(
+                                  self._create_fake_instance(params))
 
-        admin_ctxt = context.get_admin_context()
-        instance = db.instance_get_by_uuid(admin_ctxt, instance['uuid'])
+        self.admin_ctxt = context.get_admin_context()
+        self.instance = db.instance_get_by_uuid(self.admin_ctxt,
+                                                self.instance['uuid'])
 
-        self.compute.network_api.setup_networks_on_host(admin_ctxt, instance,
+        self.compute.network_api.setup_networks_on_host(self.admin_ctxt,
+                                                        self.instance,
                                                         self.compute.host)
-        migration = {'source_compute': instance['host'],
+        migration = {'source_compute': self.instance['host'],
                      'dest_compute': self.compute.host, }
-        self.compute.conductor_api.network_migrate_instance_finish(admin_ctxt,
-                instance, migration)
+        self.compute.conductor_api.network_migrate_instance_finish(
+                self.admin_ctxt, self.instance, migration)
         fake_net_info = []
         fake_block_dev_info = {'foo': 'bar'}
-        self.compute.driver.post_live_migration_at_destination(admin_ctxt,
-                instance,
+        self.compute.driver.post_live_migration_at_destination(self.admin_ctxt,
+                self.instance,
                 fake_net_info,
                 False,
                 fake_block_dev_info)
-        self.compute._get_power_state(admin_ctxt, instance).AndReturn(
-                'fake_power_state')
+        self.compute._get_power_state(self.admin_ctxt,
+                                      self.instance).AndReturn(
+                                                     'fake_power_state')
 
-        updated_instance = 'fake_updated_instance'
-        self.compute._instance_update(admin_ctxt, instance['uuid'],
-                host=self.compute.host,
-                power_state='fake_power_state',
-                vm_state=vm_states.ACTIVE,
-                task_state=None,
-                expected_task_state=task_states.MIGRATING).AndReturn(
-                        updated_instance)
-        self.compute.network_api.setup_networks_on_host(admin_ctxt,
-                updated_instance, self.compute.host)
+    def _finish_post_live_migration_at_destination(self):
+        self.compute.network_api.setup_networks_on_host(self.admin_ctxt,
+                mox.IgnoreArg(), self.compute.host)
 
         self.mox.ReplayAll()
 
-        self.compute.post_live_migration_at_destination(admin_ctxt, instance)
+        self.compute.post_live_migration_at_destination(self.admin_ctxt,
+                                                        self.instance)
+
+        return self.compute.conductor_api.instance_get_by_uuid(self.admin_ctxt,
+                                                        self.instance['uuid'])
+
+    def test_post_live_migration_at_destination_with_compute_info(self):
+        """The instance's node property should be updated correctly."""
+        self._begin_post_live_migration_at_destination()
+        hypervisor_hostname = 'fake_hypervisor_hostname'
+        fake_compute_info = {'hypervisor_hostname': hypervisor_hostname}
+        self.compute._get_compute_info(mox.IgnoreArg(),
+                                       mox.IgnoreArg()).AndReturn(
+                                                        fake_compute_info)
+        updated = self._finish_post_live_migration_at_destination()
+        self.assertEqual(updated['node'], hypervisor_hostname)
+
+    def test_post_live_migration_at_destination_without_compute_info(self):
+        """The instance's node property should be set to None if we fail to
+           get compute_info.
+        """
+        self._begin_post_live_migration_at_destination()
+        self.compute._get_compute_info(mox.IgnoreArg(),
+                                       mox.IgnoreArg()).AndRaise(
+                                                        exception.NotFound())
+        updated = self._finish_post_live_migration_at_destination()
+        self.assertIsNone(updated['node'])
 
     def test_run_kill_vm(self):
         # Detect when a vm is terminated behind the scenes.

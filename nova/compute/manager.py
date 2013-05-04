@@ -3391,10 +3391,18 @@ class ComputeManager(manager.SchedulerDependentManager):
                                             block_migration, block_device_info)
         # Restore instance state
         current_power_state = self._get_power_state(context, instance)
-        instance = self._instance_update(context, instance['uuid'],
-                host=self.host, power_state=current_power_state,
-                vm_state=vm_states.ACTIVE, task_state=None,
-                expected_task_state=task_states.MIGRATING)
+        node_name = None
+        try:
+            compute_node = self._get_compute_info(context, self.host)
+            node_name = compute_node['hypervisor_hostname']
+        except exception.NotFound:
+            LOG.exception(_('Failed to get compute_info for %s') % self.host)
+        finally:
+            instance = self._instance_update(context, instance['uuid'],
+                    host=self.host, power_state=current_power_state,
+                    vm_state=vm_states.ACTIVE, task_state=None,
+                    expected_task_state=task_states.MIGRATING,
+                    node=node_name)
 
         # NOTE(vish): this is necessary to update dhcp
         self.network_api.setup_networks_on_host(context, instance, self.host)
