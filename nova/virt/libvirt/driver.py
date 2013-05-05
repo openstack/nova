@@ -3413,15 +3413,38 @@ class LibvirtDriver(driver.ComputeDriver):
         """Manage the local cache of images."""
         self.image_cache_manager.verify_base_images(context, all_instances)
 
-    def _cleanup_remote_migration(self, dest, inst_base, inst_base_resize):
+    def _cleanup_remote_migration(self, dest, inst_base, inst_base_resize,
+                                  shared_storage=False):
         """Used only for cleanup in case migrate_disk_and_power_off fails."""
         try:
             if os.path.exists(inst_base_resize):
                 utils.execute('rm', '-rf', inst_base)
                 utils.execute('mv', inst_base_resize, inst_base)
-                utils.execute('ssh', dest, 'rm', '-rf', inst_base)
+                if not shared_storage:
+                    utils.execute('ssh', dest, 'rm', '-rf', inst_base)
         except Exception:
             pass
+
+    def _is_storage_shared_with(self, dest, inst_base):
+        # NOTE (rmk): There are two methods of determining whether we are
+        #             on the same filesystem: the source and dest IP are the
+        #             same, or we create a file on the dest system via SSH
+        #             and check whether the source system can also see it.
+        shared_storage = (dest == self.get_host_ip_addr())
+        if not shared_storage:
+            tmp_file = uuid.uuid4().hex + '.tmp'
+            tmp_path = os.path.join(inst_base, tmp_file)
+
+            try:
+                utils.execute('ssh', dest, 'touch', tmp_path)
+                if os.path.exists(tmp_path):
+                    shared_storage = True
+                    os.unlink(tmp_path)
+                else:
+                    utils.execute('ssh', dest, 'rm', tmp_path)
+            except Exception:
+                pass
+        return shared_storage
 
     def migrate_disk_and_power_off(self, context, instance, dest,
                                    instance_type, network_info,
@@ -3445,12 +3468,13 @@ class LibvirtDriver(driver.ComputeDriver):
         # copy disks to destination
         # rename instance dir to +_resize at first for using
         # shared storage for instance dir (eg. NFS).
-        same_host = (dest == self.get_host_ip_addr())
         inst_base = libvirt_utils.get_instance_path(instance)
         inst_base_resize = inst_base + "_resize"
+
+        shared_storage = self._is_storage_shared_with(dest, inst_base)
         try:
             utils.execute('mv', inst_base, inst_base_resize)
-            if same_host:
+            if shared_storage:
                 dest = None
                 utils.execute('mkdir', '-p', inst_base)
             else:
@@ -3466,7 +3490,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     utils.execute('qemu-img', 'convert', '-f', 'qcow2',
                                   '-O', 'qcow2', from_path, tmp_path)
 
-                    if same_host:
+                    if shared_storage:
                         utils.execute('mv', tmp_path, img_path)
                     else:
                         libvirt_utils.copy_image(tmp_path, img_path, host=dest)
@@ -3477,7 +3501,8 @@ class LibvirtDriver(driver.ComputeDriver):
         except Exception:
             with excutils.save_and_reraise_exception():
                 self._cleanup_remote_migration(dest, inst_base,
-                                               inst_base_resize)
+                                               inst_base_resize,
+                                               shared_storage)
 
         return disk_info_text
 
