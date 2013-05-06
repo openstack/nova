@@ -1,17 +1,18 @@
-# German translation for nova
-# Copyright (c) 2011 Rosetta Contributors and Canonical Ltd 2011
-# This file is distributed under the same license as the nova package.
-# FIRST AUTHOR <EMAIL@ADDRESS>, 2011.
+# English (United States) translations for nova.
+# Copyright (C) 2012 ORGANIZATION
+# This file is distributed under the same license as the nova project.
 #
+# Translators:
+# Sungjin Gang <potopro@gmail.com>, 2013
 msgid ""
 msgstr ""
-"Project-Id-Version:  nova\n"
-"Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
+"Project-Id-Version:  Nova\n"
+"Report-Msgid-Bugs-To: https://bugs.launchpad.net/nova\n"
 "POT-Creation-Date: 2013-05-06 19:37+0000\n"
-"PO-Revision-Date: 2011-08-23 11:23+0000\n"
-"Last-Translator: Thierry Carrez <thierry.carrez+lp@gmail.com>\n"
-"Language-Team: German <de@li.org>\n"
-"Plural-Forms: nplurals=2; plural=(n != 1)\n"
+"PO-Revision-Date: 2013-05-06 16:05+0000\n"
+"Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
+"Language-Team: en_US <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -34,19 +35,19 @@ msgstr ""
 
 #: nova/crypto.py:55
 msgid "Filename of root CA"
-msgstr "Dateiname der Root CA"
+msgstr "root CA의 파일 이름"
 
 #: nova/crypto.py:58
 msgid "Filename of private key"
-msgstr "Dateiname des Private Key"
+msgstr "개인 Key의 파일 이름"
 
 #: nova/crypto.py:61
 msgid "Filename of root Certificate Revocation List"
-msgstr ""
+msgstr "Root 증서 폐기 목록 파일 이름"
 
 #: nova/crypto.py:64
 msgid "Where we keep our keys"
-msgstr "Wo wir unsere Schlüssel aufbewahren"
+msgstr ""
 
 #: nova/crypto.py:67
 msgid "Where we keep our root CA"
@@ -54,7 +55,7 @@ msgstr ""
 
 #: nova/crypto.py:70
 msgid "Should we use a CA for each project?"
-msgstr "Soll eine eigenständige CA für jedes Projekt verwendet werden?"
+msgstr ""
 
 #: nova/crypto.py:74
 #, python-format
@@ -103,7 +104,7 @@ msgstr ""
 
 #: nova/exception.py:171
 msgid "Virtual Interface creation failed"
-msgstr ""
+msgstr "가상 인터페이스 생성 실패"
 
 #: nova/exception.py:175
 msgid "5 attempts to create virtual interfacewith unique mac address failed"
@@ -116,7 +117,7 @@ msgstr ""
 
 #: nova/exception.py:185
 msgid "Not authorized."
-msgstr ""
+msgstr "인증되지 않음."
 
 #: nova/exception.py:190
 msgid "User does not have admin privileges"
@@ -133,9 +134,9 @@ msgid "Image %(image_id)s is not active."
 msgstr ""
 
 #: nova/exception.py:202
-#, fuzzy, python-format
+#, python-format
 msgid "Not authorized for image %(image_id)s."
-msgstr "keine Methode für diese Nachricht gefunden: %s"
+msgstr ""
 
 #: nova/exception.py:206
 msgid "Unacceptable parameters."
@@ -170,15 +171,15 @@ msgstr ""
 #: nova/exception.py:235 nova/api/ec2/cloud.py:463
 #: nova/api/openstack/compute/contrib/keypairs.py:98 nova/compute/api.py:2769
 msgid "Keypair data is invalid"
-msgstr ""
+msgstr "Keypair 데이터가 맞지 않습니다"
 
 #: nova/exception.py:239
 msgid "The request is invalid."
-msgstr ""
+msgstr "그 요청은 맞지 않습니다."
 
 #: nova/exception.py:243
 msgid "Invalid input received"
-msgstr ""
+msgstr "입력 값이 정확하지 않습니다."
 
 #: nova/exception.py:247
 msgid "Invalid volume"
@@ -220,7 +221,7 @@ msgstr ""
 #: nova/exception.py:282
 #, python-format
 msgid "%(err)s"
-msgstr ""
+msgstr "%(err)s"
 
 #: nova/exception.py:286
 #, python-format
@@ -267,12 +268,12 @@ msgstr ""
 
 #: nova/exception.py:320
 msgid "Failed to suspend instance"
-msgstr ""
+msgstr "인스턴스 잠자기 실패"
 
 #: nova/exception.py:324
-#, fuzzy, python-format
+#, python-format
 msgid "Failed to resume instance: %(reason)s."
-msgstr "Nicht möglich Volumen zur Instanze %s hinzuzufügen"
+msgstr ""
 
 #: nova/exception.py:328
 #, python-format
@@ -286,7 +287,7 @@ msgstr ""
 
 #: nova/exception.py:336
 msgid "Failed to reboot instance"
-msgstr ""
+msgstr "인스턴스 재시작 실패"
 
 #: nova/exception.py:340
 msgid "Failed to terminate instance"
@@ -346,12 +347,12 @@ msgstr ""
 
 #: nova/exception.py:392
 msgid "Unacceptable CPU info"
-msgstr ""
+msgstr "CPU 정보를 받을수 없습니다."
 
 #: nova/exception.py:396
 #, python-format
 msgid "%(address)s is not a valid IP v4/6 address."
-msgstr ""
+msgstr "%(address)s는 v4/6주소에 맞지 않은 IP입니다."
 
 #: nova/exception.py:400
 #, python-format
@@ -371,7 +372,7 @@ msgstr ""
 #: nova/exception.py:413
 #, python-format
 msgid "Disk format %(disk_format)s is not acceptable"
-msgstr ""
+msgstr "Disk format %(disk_format)s를 알 수 없습니다."
 
 #: nova/exception.py:417
 #, python-format
@@ -399,9 +400,8 @@ msgid "Invalid ID received %(id)s."
 msgstr ""
 
 #: nova/exception.py:437
-#, fuzzy
 msgid "Constraint not met."
-msgstr "Instanz %s: Rettung"
+msgstr ""
 
 #: nova/exception.py:442
 msgid "Resource could not be found."
@@ -530,9 +530,9 @@ msgid "Port %(port_id)s is still in use."
 msgstr ""
 
 #: nova/exception.py:547
-#, fuzzy, python-format
+#, python-format
 msgid "Port %(port_id)s not usable for instance %(instance)s."
-msgstr "Einhängepunkt%(mountpoint)s  zur Instanze %(instance_name)s hinzugefügt"
+msgstr ""
 
 #: nova/exception.py:551
 #, python-format
@@ -1159,14 +1159,14 @@ msgid "Invalid id: %(val)s (expecting \"i-...\")."
 msgstr ""
 
 #: nova/exception.py:1095
-#, fuzzy, python-format
+#, python-format
 msgid "Could not fetch image %(image_id)s"
-msgstr "keine Methode für diese Nachricht gefunden: %s"
+msgstr ""
 
 #: nova/exception.py:1099
-#, fuzzy, python-format
+#, python-format
 msgid "Could not upload image %(image_id)s"
-msgstr "keine Methode für diese Nachricht gefunden: %s"
+msgstr ""
 
 #: nova/exception.py:1103
 #, python-format
@@ -1194,9 +1194,9 @@ msgid "Unknown config drive format %(format)s. Select one of iso9660 or vfat."
 msgstr ""
 
 #: nova/exception.py:1125
-#, fuzzy, python-format
+#, python-format
 msgid "Failed to attach network adapter device to %(instance)s"
-msgstr "Nicht möglich Volumen zur Instanze %s hinzuzufügen"
+msgstr ""
 
 #: nova/exception.py:1129
 #, python-format
@@ -1275,14 +1275,14 @@ msgid "Invalid Base 64 data for file %(path)s"
 msgstr ""
 
 #: nova/exception.py:1193
-#, fuzzy, python-format
+#, python-format
 msgid "Build of instance %(instance_uuid)s aborted: %(reason)s"
-msgstr "Einhängepunkt%(mountpoint)s  zur Instanze %(instance_name)s hinzugefügt"
+msgstr ""
 
 #: nova/exception.py:1197
-#, fuzzy, python-format
+#, python-format
 msgid "Build of instance %(instance_uuid)s was re-scheduled: %(reason)s"
-msgstr "Einhängepunkt%(mountpoint)s  zur Instanze %(instance_name)s hinzugefügt"
+msgstr ""
 
 #: nova/hooks.py:62
 #, python-format
@@ -1340,9 +1340,8 @@ msgid "Rolled back reservations %(reservations)s"
 msgstr ""
 
 #: nova/service.py:197
-#, fuzzy
 msgid "Full set of CONF:"
-msgstr "Alle vorhandenen FLAGS:"
+msgstr ""
 
 #: nova/service.py:204
 #, python-format
@@ -1451,7 +1450,7 @@ msgstr ""
 #: nova/virt/powervm/common.py:90
 #, python-format
 msgid "Result was %s"
-msgstr "Ergebnis war %s"
+msgstr ""
 
 #: nova/utils.py:231
 #, python-format
@@ -1524,19 +1523,19 @@ msgid "%(name)s listening on %(host)s:%(port)s"
 msgstr ""
 
 #: nova/wsgi.py:137
-#, fuzzy, python-format
+#, python-format
 msgid "Unable to find cert_file : %s"
-msgstr "Nicht möglich volume %s zufinden"
+msgstr ""
 
 #: nova/wsgi.py:141
-#, fuzzy, python-format
+#, python-format
 msgid "Unable to find ca_file : %s"
-msgstr "Nicht möglich volume %s zufinden"
+msgstr ""
 
 #: nova/wsgi.py:145
-#, fuzzy, python-format
+#, python-format
 msgid "Unable to find key_file : %s"
-msgstr "Nicht möglich volume %s zufinden"
+msgstr ""
 
 #: nova/wsgi.py:149
 msgid ""
@@ -1820,11 +1819,11 @@ msgstr ""
 #: nova/api/ec2/cloud.py:1073
 #, python-format
 msgid "vol = %s\n"
-msgstr ""
+msgstr "vol = %s\n"
 
 #: nova/api/ec2/cloud.py:1233
 msgid "Allocate address"
-msgstr ""
+msgstr "주소 할당"
 
 #: nova/api/ec2/cloud.py:1237
 msgid "No more floating IPs available"
@@ -1833,7 +1832,7 @@ msgstr ""
 #: nova/api/ec2/cloud.py:1241
 #, python-format
 msgid "Release address %s"
-msgstr ""
+msgstr "주소 릴리즈 %s"
 
 #: nova/api/ec2/cloud.py:1246
 msgid "Unable to release IP Address."
@@ -1963,9 +1962,8 @@ msgid "Expecting a list of resources"
 msgstr ""
 
 #: nova/api/ec2/cloud.py:1698 nova/api/ec2/cloud.py:1743
-#, fuzzy
 msgid "Only instances implemented"
-msgstr "Instanz %s: Rettung"
+msgstr ""
 
 #: nova/api/ec2/cloud.py:1701 nova/api/ec2/cloud.py:1746
 msgid "Expecting a list of tagSets"
@@ -2020,9 +2018,9 @@ msgid "Invalid proxy request signature."
 msgstr ""
 
 #: nova/api/metadata/handler.py:181 nova/api/metadata/handler.py:188
-#, fuzzy, python-format
+#, python-format
 msgid "Failed to get metadata for instance id: %s"
-msgstr "Nicht möglich Volumen zur Instanze %s hinzuzufügen"
+msgstr ""
 
 #: nova/api/openstack/__init__.py:51
 #, python-format
@@ -2717,9 +2715,8 @@ msgid "Network driver does not support this function."
 msgstr ""
 
 #: nova/api/openstack/compute/contrib/attach_interfaces.py:113
-#, fuzzy
 msgid "Failed to attach interface"
-msgstr "Nicht möglich Volumen zur Instanze %s hinzuzufügen"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/attach_interfaces.py:121
 msgid "Attachments update is not supported"
@@ -2787,9 +2784,8 @@ msgid "Unable to get console"
 msgstr ""
 
 #: nova/api/openstack/compute/contrib/consoles.py:51
-#, fuzzy
 msgid "Instance not yet ready"
-msgstr "Instanz %s: Rettung"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/coverage_ext.py:97
 #, python-format
@@ -2858,9 +2854,9 @@ msgid "Fixed IP %s has been deleted"
 msgstr ""
 
 #: nova/api/openstack/compute/contrib/fixed_ips.py:71
-#, fuzzy, python-format
+#, python-format
 msgid "Fixed IP %s not found"
-msgstr "Instanz %s pausiert"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/flavor_access.py:76
 #: nova/api/openstack/compute/contrib/flavor_access.py:100
@@ -2880,9 +2876,8 @@ msgid "No Request Body"
 msgstr ""
 
 #: nova/api/openstack/compute/contrib/floating_ip_dns.py:223
-#, fuzzy
 msgid "DNS entries not found."
-msgstr "Instanz %s pausiert"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/floating_ips.py:129
 #: nova/api/openstack/compute/contrib/floating_ips.py:177
@@ -3275,9 +3270,9 @@ msgid "Unknown %(cell_type)s when routing to %(target_cell)s"
 msgstr ""
 
 #: nova/cells/messaging.py:397
-#, fuzzy, python-format
+#, python-format
 msgid "Error locating next hop for message: %(exc)s"
-msgstr "keine Methode für diese Nachricht gefunden: %s"
+msgstr ""
 
 #: nova/cells/messaging.py:424
 #, python-format
@@ -3285,9 +3280,9 @@ msgid "Failed to send message to cell: %(next_hop)s: %(exc)s"
 msgstr ""
 
 #: nova/cells/messaging.py:503
-#, fuzzy, python-format
+#, python-format
 msgid "Error locating next hops for message: %(exc)s"
-msgstr "keine Methode für diese Nachricht gefunden: %s"
+msgstr ""
 
 #: nova/cells/messaging.py:523
 #, python-format
@@ -3315,14 +3310,14 @@ msgid "Received capacities from child cell %(cell_name)s: %(capacities)s"
 msgstr ""
 
 #: nova/cells/messaging.py:810
-#, fuzzy, python-format
+#, python-format
 msgid "Got update for instance %(instance_uuid)s: %(instance)s"
-msgstr "Einhängepunkt%(mountpoint)s  zur Instanze %(instance_name)s hinzugefügt"
+msgstr ""
 
 #: nova/cells/messaging.py:838
-#, fuzzy, python-format
+#, python-format
 msgid "Got update to delete instance %(instance_uuid)s"
-msgstr "Einhängepunkt%(mountpoint)s  zur Instanze %(instance_name)s hinzugefügt"
+msgstr ""
 
 #: nova/cells/messaging.py:853
 #, python-format
@@ -3404,9 +3399,9 @@ msgid "Launching VPN for %s"
 msgstr ""
 
 #: nova/cmd/all.py:61 nova/cmd/all.py:67 nova/cmd/all.py:90
-#, fuzzy, python-format
+#, python-format
 msgid "Failed to load %s"
-msgstr "Nicht möglich volume %s zufinden"
+msgstr ""
 
 #: nova/cmd/baremetal_deploy_helper.py:236
 #, python-format
@@ -3695,9 +3690,8 @@ msgid "Must supply valid parameters to create instance_type"
 msgstr ""
 
 #: nova/cmd/manage.py:900
-#, fuzzy
 msgid "Instance Type exists."
-msgstr "Instanz %s: Rettung"
+msgstr ""
 
 #: nova/cmd/manage.py:901
 msgid "Please ensure instance_type name and flavorid are unique."
@@ -3807,9 +3801,8 @@ msgid "Failed to set instance name using multi_instance_display_name_template."
 msgstr ""
 
 #: nova/compute/api.py:509
-#, fuzzy
 msgid "Cannot attach one or more volumes to multiple instances"
-msgstr "Nicht möglich Volumen zur Instanze %s hinzuzufügen"
+msgstr ""
 
 #: nova/compute/api.py:623
 #, python-format
@@ -3963,9 +3956,9 @@ msgid "Security group %s already exists"
 msgstr ""
 
 #: nova/compute/api.py:2962
-#, fuzzy, python-format
+#, python-format
 msgid "Unable to delete system group '%s'"
-msgstr "Nicht möglich volume %s zufinden"
+msgstr ""
 
 #: nova/compute/api.py:2967
 msgid "Security group is still in use"
@@ -4132,9 +4125,8 @@ msgid ""
 msgstr ""
 
 #: nova/compute/manager.py:487
-#, fuzzy
 msgid "Failed to check if instance shared"
-msgstr "Volume %s: erstelle Export"
+msgstr ""
 
 #: nova/compute/manager.py:530
 msgid "Failed to revert crashed migration"
@@ -4158,9 +4150,8 @@ msgid "Hypervisor driver does not support resume guests"
 msgstr ""
 
 #: nova/compute/manager.py:568
-#, fuzzy
 msgid "Failed to resume instance"
-msgstr "Nicht möglich Volumen zur Instanze %s hinzuzufügen"
+msgstr ""
 
 #: nova/compute/manager.py:578
 msgid "Hypervisor driver does not support firewall rules"
@@ -4343,9 +4334,9 @@ msgid "bringing vm to original state: '%s'"
 msgstr ""
 
 #: nova/compute/manager.py:1763
-#, fuzzy, python-format
+#, python-format
 msgid "Detaching from volume api: %s"
-msgstr "Nicht möglich Volumen zur Instanze %s hinzuzufügen"
+msgstr ""
 
 #: nova/compute/manager.py:1781
 msgid "Rebooting instance"
@@ -4359,18 +4350,17 @@ msgid ""
 msgstr ""
 
 #: nova/compute/manager.py:1822
-#, fuzzy, python-format
+#, python-format
 msgid "Cannot reboot instance: %(exc)s"
-msgstr "Nicht möglich Volumen zur Instanze %s hinzuzufügen"
+msgstr ""
 
 #: nova/compute/manager.py:1835
 msgid "Instance disappeared during reboot"
 msgstr ""
 
 #: nova/compute/manager.py:1862
-#, fuzzy
 msgid "instance snapshotting"
-msgstr "Instanz %s: Rettung"
+msgstr ""
 
 #: nova/compute/manager.py:1868
 #, python-format
@@ -4439,9 +4429,8 @@ msgid "Rescuing"
 msgstr ""
 
 #: nova/compute/manager.py:2074
-#, fuzzy
 msgid "Error trying to Rescue Instance"
-msgstr "Nicht möglich Volumen zur Instanze %s hinzuzufügen"
+msgstr ""
 
 #: nova/compute/manager.py:2078
 #, python-format
@@ -4458,9 +4447,8 @@ msgid "Changing instance metadata according to %(diff)r"
 msgstr ""
 
 #: nova/compute/manager.py:2343
-#, fuzzy
 msgid "Instance has no source host"
-msgstr "Instanz %s: Rettung"
+msgstr ""
 
 #: nova/compute/manager.py:2349
 msgid "destination same as source!"
@@ -4544,14 +4532,13 @@ msgid "Detach volume %(volume_id)s from mountpoint %(mp)s"
 msgstr ""
 
 #: nova/compute/manager.py:3031
-#, fuzzy
 msgid "Detaching volume from unknown instance"
-msgstr "Nicht möglich Volumen zur Instanze %s hinzuzufügen"
+msgstr ""
 
 #: nova/compute/manager.py:3038
-#, fuzzy, python-format
+#, python-format
 msgid "Failed to detach volume %(volume_id)s from %(mp)s"
-msgstr "Nicht möglich volume %s zufinden"
+msgstr ""
 
 #: nova/compute/manager.py:3062
 msgid "Updating volume usage cache with totals"
@@ -4568,9 +4555,9 @@ msgid "Port %(port_id)s is not attached"
 msgstr ""
 
 #: nova/compute/manager.py:3134
-#, fuzzy, python-format
+#, python-format
 msgid "Host %(host)s not found"
-msgstr "Instanz %s pausiert"
+msgstr ""
 
 #: nova/compute/manager.py:3271
 #, python-format
@@ -4711,9 +4698,8 @@ msgid "Instance is not stopped. Calling the stop API."
 msgstr ""
 
 #: nova/compute/manager.py:3966
-#, fuzzy
 msgid "Instance is not (soft-)deleted."
-msgstr "Instanz %s: Rettung"
+msgstr ""
 
 #: nova/compute/manager.py:3974
 msgid "CONF.reclaim_instance_interval <= 0, skipping..."
@@ -5047,9 +5033,9 @@ msgid "volume_usage_cache table not dropped"
 msgstr ""
 
 #: nova/db/sqlalchemy/migrate_repo/versions/154_add_shadow_tables.py:77
-#, fuzzy, python-format
+#, python-format
 msgid "table '%s' not dropped"
-msgstr "Instanz %s pausiert"
+msgstr ""
 
 #: nova/image/glance.py:187
 #, python-format
@@ -5523,9 +5509,8 @@ msgid ""
 msgstr ""
 
 #: nova/network/quantumv2/api.py:270
-#, fuzzy
 msgid "Port not found"
-msgstr "Instanz %s pausiert"
+msgstr ""
 
 #: nova/network/quantumv2/api.py:278
 #, python-format
@@ -5765,7 +5750,7 @@ msgstr ""
 #: nova/openstack/common/processutils.py:137
 #, python-format
 msgid "Running cmd (subprocess): %s"
-msgstr "Führe Kommando (subprocess) aus: %s"
+msgstr ""
 
 #: nova/openstack/common/processutils.py:174
 #, python-format
@@ -5868,12 +5853,12 @@ msgstr ""
 #: nova/openstack/common/rpc/amqp.py:414
 #, python-format
 msgid "no method for message: %s"
-msgstr "keine Methode für diese Nachricht gefunden: %s"
+msgstr ""
 
 #: nova/openstack/common/rpc/amqp.py:415
 #, python-format
 msgid "No method for message: %s"
-msgstr "keine Methode für diese Nachricht gefunden: %s"
+msgstr ""
 
 #: nova/openstack/common/rpc/amqp.py:443
 #: nova/openstack/common/rpc/impl_zmq.py:286
@@ -5894,7 +5879,7 @@ msgstr ""
 #: nova/openstack/common/rpc/amqp.py:589
 #, python-format
 msgid "MSG_ID is %s"
-msgstr "MSG_ID ist %s"
+msgstr ""
 
 #: nova/openstack/common/rpc/amqp.py:623
 #, python-format
@@ -6112,9 +6097,9 @@ msgid "CONSUMER GOT %s"
 msgstr ""
 
 #: nova/openstack/common/rpc/impl_zmq.py:465
-#, fuzzy, python-format
+#, python-format
 msgid "Creating proxy for topic: %s"
-msgstr "Nicht möglich Volumen zur Instanze %s hinzuzufügen"
+msgstr ""
 
 #: nova/openstack/common/rpc/impl_zmq.py:471
 msgid "Topic contained dangerous characters."
@@ -6188,9 +6173,9 @@ msgid "Cast sent; Waiting reply"
 msgstr ""
 
 #: nova/openstack/common/rpc/impl_zmq.py:719
-#, fuzzy, python-format
+#, python-format
 msgid "Received message: %s"
-msgstr "keine Methode für diese Nachricht gefunden: %s"
+msgstr ""
 
 #: nova/openstack/common/rpc/impl_zmq.py:720
 msgid "Unpacking response"
@@ -6969,14 +6954,9 @@ msgid "Password not supplied to IPMI"
 msgstr ""
 
 #: nova/virt/baremetal/ipmi.py:135
-#, fuzzy, python-format
+#, python-format
 msgid "ipmitool stdout: '%(out)s', stderr: '%(err)s'"
 msgstr ""
-"%(description)s\n"
-"Befehl: %(cmd)s\n"
-"Exit-Code: %(exit_code)s\n"
-"Stdout: %(stdout)r\n"
-"Stderr: %(stderr)r"
 
 #: nova/virt/baremetal/ipmi.py:161
 msgid "IPMI power on failed"
@@ -7008,9 +6988,9 @@ msgid ""
 msgstr ""
 
 #: nova/virt/baremetal/pxe.py:255 nova/virt/baremetal/tilera.py:179
-#, fuzzy, python-format
+#, python-format
 msgid "Fetching kernel and ramdisk for instance %s"
-msgstr "Nicht möglich Volumen zur Instanze %s hinzuzufügen"
+msgstr ""
 
 #: nova/virt/baremetal/pxe.py:287 nova/virt/baremetal/tilera.py:210
 #, python-format
@@ -7018,9 +6998,9 @@ msgid "Fetching image %(ami)s for instance %(name)s"
 msgstr ""
 
 #: nova/virt/baremetal/pxe.py:327 nova/virt/baremetal/tilera.py:246
-#, fuzzy, python-format
+#, python-format
 msgid "Injecting files into image for instance %(name)s"
-msgstr "Nicht möglich Volumen zur Instanze %s hinzuzufügen"
+msgstr ""
 
 #: nova/virt/baremetal/pxe.py:459 nova/virt/baremetal/tilera.py:365
 #, python-format
@@ -7028,9 +7008,9 @@ msgid "Node associated with another instance while waiting for deploy of %s"
 msgstr ""
 
 #: nova/virt/baremetal/pxe.py:466
-#, fuzzy, python-format
+#, python-format
 msgid "PXE deploy started for instance %s"
-msgstr "Nicht möglich Volumen zur Instanze %s hinzuzufügen"
+msgstr ""
 
 #: nova/virt/baremetal/pxe.py:471
 #, python-format
@@ -7060,14 +7040,14 @@ msgid ""
 msgstr ""
 
 #: nova/virt/baremetal/tilera.py:371
-#, fuzzy, python-format
+#, python-format
 msgid "Tilera deploy started for instance %s"
-msgstr "Nicht möglich Volumen zur Instanze %s hinzuzufügen"
+msgstr ""
 
 #: nova/virt/baremetal/tilera.py:377
-#, fuzzy, python-format
+#, python-format
 msgid "Tilera deploy completed for instance %s"
-msgstr "Nicht möglich Volumen zur Instanze %s hinzuzufügen"
+msgstr ""
 
 #: nova/virt/baremetal/tilera.py:385
 msgid "Node is unknown error state."
@@ -7205,9 +7185,9 @@ msgstr ""
 
 #: nova/virt/baremetal/db/sqlalchemy/api.py:351
 #: nova/virt/baremetal/db/sqlalchemy/api.py:393
-#, fuzzy, python-format
+#, python-format
 msgid "Baremetal interface %s not found"
-msgstr "Instanz %s pausiert"
+msgstr ""
 
 #: nova/virt/baremetal/db/sqlalchemy/api.py:403
 #, python-format
@@ -7531,9 +7511,9 @@ msgid "Tearing down appliance"
 msgstr ""
 
 #: nova/virt/disk/vfs/guestfs.py:126
-#, fuzzy, python-format
+#, python-format
 msgid "Failed to close augeas %s"
-msgstr "Nicht möglich volume %s zufinden"
+msgstr ""
 
 #: nova/virt/disk/vfs/guestfs.py:134
 #, python-format
@@ -7541,9 +7521,9 @@ msgid "Failed to shutdown appliance %s"
 msgstr ""
 
 #: nova/virt/disk/vfs/guestfs.py:142
-#, fuzzy, python-format
+#, python-format
 msgid "Failed to close guest handle %s"
-msgstr "Nicht möglich volume %s zufinden"
+msgstr ""
 
 #: nova/virt/disk/vfs/guestfs.py:154 nova/virt/disk/vfs/localfs.py:102
 #, python-format
@@ -7591,9 +7571,9 @@ msgid "File path %s not valid"
 msgstr ""
 
 #: nova/virt/disk/vfs/localfs.py:80
-#, fuzzy, python-format
+#, python-format
 msgid "Failed to mount image %(ex)s)"
-msgstr "Nicht möglich volume %s zufinden"
+msgstr ""
 
 #: nova/virt/disk/vfs/localfs.py:90
 #, python-format
@@ -7601,9 +7581,9 @@ msgid "Failed to unmount %(imgdir)s: %(ex)s"
 msgstr ""
 
 #: nova/virt/disk/vfs/localfs.py:96
-#, fuzzy, python-format
+#, python-format
 msgid "Failed to remove %(imgdir)s: %(ex)s"
-msgstr "Nicht möglich volume %s zufinden"
+msgstr ""
 
 #: nova/virt/disk/vfs/localfs.py:139
 #, python-format
@@ -7831,9 +7811,9 @@ msgid "Merging base disk %(base_vhd_copy_path)s and diff disk %(diff_vhd_path)s"
 msgstr ""
 
 #: nova/virt/hyperv/migrationops.py:174
-#, fuzzy, python-format
+#, python-format
 msgid "Getting info for disk: %s"
-msgstr "Nicht möglich Volumen zur Instanze %s hinzuzufügen"
+msgstr ""
 
 #: nova/virt/hyperv/migrationops.py:179
 #, python-format
@@ -7886,9 +7866,9 @@ msgid "Removing directory: %s"
 msgstr ""
 
 #: nova/virt/hyperv/snapshotops.py:56
-#, fuzzy, python-format
+#, python-format
 msgid "Creating snapshot for instance %s"
-msgstr "Nicht möglich Volumen zur Instanze %s hinzuzufügen"
+msgstr ""
 
 #: nova/virt/hyperv/snapshotops.py:65
 #, python-format
@@ -7940,9 +7920,9 @@ msgid "Failed to remove snapshot for VM %s"
 msgstr ""
 
 #: nova/virt/hyperv/vif.py:75
-#, fuzzy, python-format
+#, python-format
 msgid "Creating vswitch port for instance: %s"
-msgstr "Nicht möglich Volumen zur Instanze %s hinzuzufügen"
+msgstr ""
 
 #: nova/virt/hyperv/vmops.py:91
 #, python-format
@@ -7979,9 +7959,9 @@ msgid "Spawn instance failed"
 msgstr ""
 
 #: nova/virt/hyperv/vmops.py:203
-#, fuzzy, python-format
+#, python-format
 msgid "Creating nic for instance: %s"
-msgstr "Nicht möglich Volumen zur Instanze %s hinzuzufügen"
+msgstr ""
 
 #: nova/virt/hyperv/vmops.py:211
 #, python-format
@@ -7989,9 +7969,9 @@ msgid "Invalid config_drive_format \"%s\""
 msgstr ""
 
 #: nova/virt/hyperv/vmops.py:214
-#, fuzzy, python-format
+#, python-format
 msgid "Using config drive for instance: %s"
-msgstr "Nicht möglich Volumen zur Instanze %s hinzuzufügen"
+msgstr ""
 
 #: nova/virt/hyperv/vmops.py:227 nova/virt/libvirt/driver.py:1870
 #, python-format
@@ -8004,24 +7984,23 @@ msgid "Creating config drive failed with error: %s"
 msgstr ""
 
 #: nova/virt/hyperv/vmops.py:271
-#, fuzzy, python-format
+#, python-format
 msgid "Got request to destroy instance: %s"
-msgstr "Nicht möglich Volumen zur Instanze %s hinzuzufügen"
+msgstr ""
 
 #: nova/virt/hyperv/vmops.py:284
-#, fuzzy, python-format
+#, python-format
 msgid "Instance not found: %s"
-msgstr "Instanz %s pausiert"
+msgstr ""
 
 #: nova/virt/hyperv/vmops.py:290
-#, fuzzy, python-format
+#, python-format
 msgid "Failed to destroy instance: %s"
-msgstr "Volume %s: erstelle Export"
+msgstr ""
 
 #: nova/virt/hyperv/vmops.py:295
-#, fuzzy
 msgid "reboot instance"
-msgstr "Nicht möglich Volumen zur Instanze %s hinzuzufügen"
+msgstr ""
 
 #: nova/virt/hyperv/vmops.py:301
 msgid "Pause instance"
@@ -8078,9 +8057,8 @@ msgid "Set vCPUs for vm %s"
 msgstr ""
 
 #: nova/virt/hyperv/vmutils.py:262
-#, fuzzy
 msgid "Controller not found"
-msgstr "Instanz %s pausiert"
+msgstr ""
 
 #: nova/virt/hyperv/vmutils.py:324
 #, python-format
@@ -8134,14 +8112,14 @@ msgid "Attach_volume: %(connection_info)s to %(instance_name)s"
 msgstr ""
 
 #: nova/virt/hyperv/volumeops.py:145
-#, fuzzy, python-format
+#, python-format
 msgid "Attach volume failed: %s"
-msgstr "Nicht möglich Volumen zur Instanze %s hinzuzufügen"
+msgstr ""
 
 #: nova/virt/hyperv/volumeops.py:147
 #, python-format
 msgid "Unable to attach volume to instance %s"
-msgstr "Nicht möglich Volumen zur Instanze %s hinzuzufügen"
+msgstr ""
 
 #: nova/virt/hyperv/volumeops.py:160
 #, python-format
@@ -8154,9 +8132,9 @@ msgid "Detach_volume: %(connection_info)s from %(instance_name)s"
 msgstr ""
 
 #: nova/virt/hyperv/volumeops.py:176
-#, fuzzy, python-format
+#, python-format
 msgid "Detaching physical disk from instance: %s"
-msgstr "Nicht möglich Volumen zur Instanze %s hinzuzufügen"
+msgstr ""
 
 #: nova/virt/hyperv/volumeops.py:186 nova/virt/libvirt/driver.py:897
 msgid "Could not determine iscsi initiator name"
@@ -8320,9 +8298,8 @@ msgid "Snapshot image upload complete"
 msgstr ""
 
 #: nova/virt/libvirt/driver.py:1291
-#, fuzzy
 msgid "Instance soft rebooted successfully."
-msgstr "Volume %s: erfolgreich erstellt"
+msgstr ""
 
 #: nova/virt/libvirt/driver.py:1295
 msgid "Failed to soft reboot instance."
@@ -8969,9 +8946,9 @@ msgid "Cannot mount Scality SOFS, check syslog for errors"
 msgstr ""
 
 #: nova/virt/powervm/blockdev.py:147
-#, fuzzy, python-format
+#, python-format
 msgid "Removing the logical volume '%s'"
-msgstr "Nicht möglich volume %s zufinden"
+msgstr ""
 
 #: nova/virt/powervm/blockdev.py:165
 #, python-format
@@ -8989,9 +8966,9 @@ msgid "Ensuring image '%s' exists on IVM"
 msgstr ""
 
 #: nova/virt/powervm/blockdev.py:183
-#, fuzzy, python-format
+#, python-format
 msgid "Creating logical volume of size %s bytes"
-msgstr "Nicht möglich volume %s zufinden"
+msgstr ""
 
 #: nova/virt/powervm/blockdev.py:186
 #, python-format
@@ -9051,9 +9028,9 @@ msgid "Connection error connecting PowerVM manager"
 msgstr ""
 
 #: nova/virt/powervm/common.py:73
-#, fuzzy, python-format
+#, python-format
 msgid "Running cmd (SSH-as-root): %s"
-msgstr "Führe Kommando (subprocess) aus: %s"
+msgstr ""
 
 #: nova/virt/powervm/common.py:122
 msgid "File transfer to PowerVM manager failed"
@@ -9156,9 +9133,9 @@ msgid ""
 msgstr ""
 
 #: nova/virt/powervm/operator.py:99
-#, fuzzy, python-format
+#, python-format
 msgid "LPAR instance '%s' not found"
-msgstr "Instanz %s pausiert"
+msgstr ""
 
 #: nova/virt/powervm/operator.py:187
 #, python-format
@@ -9200,9 +9177,9 @@ msgid "During destroy, LPAR instance '%s' was not found on PowerVM system."
 msgstr ""
 
 #: nova/virt/powervm/operator.py:272
-#, fuzzy, python-format
+#, python-format
 msgid "Stopping instance %s for snapshot."
-msgstr "Instanz %s: Rettung"
+msgstr ""
 
 #: nova/virt/powervm/operator.py:295
 #, python-format
@@ -9514,9 +9491,8 @@ msgstr ""
 
 #: nova/virt/vmwareapi/vmops.py:639 nova/virt/vmwareapi/vmops.py:671
 #: nova/virt/vmwareapi/vmops.py:964
-#, fuzzy
 msgid "instance not present"
-msgstr "Instanz %s: Rettung"
+msgstr ""
 
 #: nova/virt/vmwareapi/vmops.py:645 nova/virt/vmwareapi/vmops.py:968
 msgid "Destroying the VM"
@@ -9665,9 +9641,9 @@ msgid "Renaming the VM from %s"
 msgstr ""
 
 #: nova/virt/vmwareapi/vmops.py:996
-#, fuzzy, python-format
+#, python-format
 msgid "Renamed the VM from %s"
-msgstr "Nicht möglich volume %s zufinden"
+msgstr ""
 
 #: nova/virt/vmwareapi/vmops.py:1019
 #, python-format
@@ -9815,14 +9791,13 @@ msgid "Attach_volume: %(connection_info)s, %(instance_name)s, %(mountpoint)s"
 msgstr ""
 
 #: nova/virt/vmwareapi/volumeops.py:138 nova/virt/vmwareapi/volumeops.py:177
-#, fuzzy
 msgid "Unable to find iSCSI Target"
-msgstr "Nicht möglich volume %s zufinden"
+msgstr ""
 
 #: nova/virt/vmwareapi/volumeops.py:156 nova/virt/xenapi/volumeops.py:60
 #, python-format
 msgid "Mountpoint %(mountpoint)s attached to instance %(instance_name)s"
-msgstr "Einhängepunkt%(mountpoint)s  zur Instanze %(instance_name)s hinzugefügt"
+msgstr ""
 
 #: nova/virt/vmwareapi/volumeops.py:166 nova/virt/xenapi/volumeops.py:104
 #, python-format
@@ -9830,9 +9805,8 @@ msgid "Detach_volume: %(instance_name)s, %(mountpoint)s"
 msgstr ""
 
 #: nova/virt/vmwareapi/volumeops.py:185
-#, fuzzy
 msgid "Unable to find volume"
-msgstr "Nicht möglich volume %s zufinden"
+msgstr ""
 
 #: nova/virt/vmwareapi/volumeops.py:187 nova/virt/xenapi/volumeops.py:124
 #, python-format
@@ -10027,9 +10001,9 @@ msgid "Unable to migrate VM %(vm_ref)sfrom %(host)s"
 msgstr ""
 
 #: nova/virt/xenapi/host.py:185
-#, fuzzy, python-format
+#, python-format
 msgid "Failed to extract instance support from %s"
-msgstr "Volume %s: erstelle Export"
+msgstr ""
 
 #: nova/virt/xenapi/host.py:202
 msgid "Unable to get updated status"
@@ -10271,9 +10245,9 @@ msgid "Fetching image %(image_id)s, type %(image_type_str)s"
 msgstr ""
 
 #: nova/virt/xenapi/vm_utils.py:1223
-#, fuzzy, python-format
+#, python-format
 msgid "Size for image %(image_id)s: %(virtual_size)d"
-msgstr "keine Methode für diese Nachricht gefunden: %s"
+msgstr ""
 
 #: nova/virt/xenapi/vm_utils.py:1232
 #, python-format
@@ -10743,9 +10717,8 @@ msgid "Introducing SR %(label)s"
 msgstr ""
 
 #: nova/virt/xenapi/volume_utils.py:68
-#, fuzzy
 msgid "Creating PBD for SR"
-msgstr "Volume %s: erstelle Export"
+msgstr ""
 
 #: nova/virt/xenapi/volume_utils.py:71
 msgid "Plugging SR"
@@ -10864,71 +10837,4 @@ msgstr ""
 #: nova/volume/cinder.py:225
 msgid "status must be 'available'"
 msgstr ""
-
-#~ msgid "Unexpected error while running command."
-#~ msgstr "Unerwarteter Fehler bei Ausführung des Kommandos."
-
-#~ msgid ""
-#~ "%(description)s\n"
-#~ "Command: %(cmd)s\n"
-#~ "Exit code: %(exit_code)s\n"
-#~ "Stdout: %(stdout)r\n"
-#~ "Stderr: %(stderr)r"
-#~ msgstr ""
-#~ "%(description)s\n"
-#~ "Befehl: %(cmd)s\n"
-#~ "Exit-Code: %(exit_code)s\n"
-#~ "Stdout: %(stdout)r\n"
-#~ "Stderr: %(stderr)r"
-
-#~ msgid "Error clearing stale veth %s"
-#~ msgstr ""
-
-#~ msgid "Failed unplugging VLAN interface '%s'"
-#~ msgstr ""
-
-#~ msgid "Unplugged VLAN interface '%s'"
-#~ msgstr ""
-
-#~ msgid "Failed unplugging bridge interface '%s'"
-#~ msgstr ""
-
-#~ msgid "Unplugged bridge interface '%s'"
-#~ msgstr ""
-
-#~ msgid "Failed unplugging gateway interface '%s'"
-#~ msgstr ""
-
-#~ msgid "Unplugged gateway interface '%s'"
-#~ msgstr ""
-
-#~ msgid "Network %(net)s for port %(port_id)s not found!"
-#~ msgstr ""
-
-#~ msgid "Host filter ignoring hosts: %(ignored_hosts_str)s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "No hosts matched due to not "
-#~ "matching 'force_hosts'value of "
-#~ "'%(forced_hosts_str)s'"
-#~ msgstr ""
-
-#~ msgid "Host filter forcing available hosts to %(forced_hosts_str)s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Getting block stats failed, device might"
-#~ " have been detached. Code=%(errcode)s "
-#~ "Error=%(e)s"
-#~ msgstr ""
-
-#~ msgid "Must specify vmwareapi_wsdl_loc"
-#~ msgstr ""
-
-#~ msgid "Unable to get SR for this host: %s"
-#~ msgstr ""
-
-#~ msgid "VM.assert_can_migratefailed"
-#~ msgstr ""
 
