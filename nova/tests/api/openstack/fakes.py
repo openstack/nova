@@ -504,7 +504,14 @@ def stub_instance(id, user_id=None, project_id=None, host=None,
         "disable_terminate": False,
         "security_groups": security_groups,
         "root_device_name": root_device_name,
-        "system_metadata": utils.dict_to_metadata(sys_meta)}
+        "system_metadata": utils.dict_to_metadata(sys_meta),
+        "vm_mode": "",
+        "default_swap_device": "",
+        "default_ephemeral_device": "",
+        "launched_on": "",
+        "cell_name": "",
+        "architecture": "",
+        "os_type": ""}
 
     instance.update(info_cache)
 
