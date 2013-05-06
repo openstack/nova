@@ -56,6 +56,7 @@ from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects import sqlite
 import sqlalchemy.exc
 
+from nova.db.sqlalchemy import api as db
 import nova.db.sqlalchemy.migrate_repo
 from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
@@ -855,13 +856,13 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         meta.reflect(engine)
         table_names = set(meta.tables.keys())
         for table_name in table_names:
-            if table_name.startswith("shadow_"):
+            if table_name.startswith(db._SHADOW_TABLE_PREFIX):
                 shadow_name = table_name
-                base_name = table_name.replace("shadow_", "")
+                base_name = table_name.replace(db._SHADOW_TABLE_PREFIX, "")
                 self.assertIn(base_name, table_names)
             else:
                 base_name = table_name
-                shadow_name = "shadow_" + table_name
+                shadow_name = db._SHADOW_TABLE_PREFIX + table_name
                 self.assertIn(shadow_name, table_names)
             shadow_table = get_table(engine, shadow_name)
             base_table = get_table(engine, base_name)

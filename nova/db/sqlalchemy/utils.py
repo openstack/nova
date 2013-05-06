@@ -24,7 +24,7 @@ from sqlalchemy.sql.expression import UpdateBase, literal_column
 from sqlalchemy.sql import select
 from sqlalchemy.types import NullType
 
-
+from nova.db.sqlalchemy import api as db
 from nova import exception
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
@@ -166,3 +166,41 @@ def drop_old_duplicate_entries_from_table(migrate_engine, table_name,
         else:
             delete_statement = table.delete().where(delete_condition)
         migrate_engine.execute(delete_statement)
+
+
+def check_shadow_table(migrate_engine, table_name):
+    """
+    This method checks that table with ``table_name`` and corresponding shadow
+    table have same columns.
+    """
+    meta = MetaData()
+    meta.bind = migrate_engine
+
+    table = Table(table_name, meta, autoload=True)
+    shadow_table = Table(db._SHADOW_TABLE_PREFIX + table_name, meta,
+                         autoload=True)
+
+    columns = dict([(c.name, c) for c in table.columns])
+    shadow_columns = dict([(c.name, c) for c in shadow_table.columns])
+
+    for name, column in columns.iteritems():
+        if name not in shadow_columns:
+            raise exception.NovaException(
+                _("Missing column %(table)s.%(column)s in shadow table")
+                        % {'column': name, 'table': shadow_table.name})
+        shadow_column = shadow_columns[name]
+
+        if not isinstance(shadow_column.type, type(column.type)):
+            raise exception.NovaException(
+                _("Different types in %(table)s.%(column)s and shadow table: "
+                  "%(c_type)s %(shadow_c_type)s")
+                        % {'column': name, 'table': table.name,
+                           'c_type': column.type,
+                           'shadow_c_type': shadow_column.type})
+
+    for name, column in shadow_columns.iteritems():
+        if name not in columns:
+            raise exception.NovaException(
+                _("Extra column %(table)%.%(column)s in shadow table")
+                        % {'column': name, 'table': shadow_table.name})
+    return True
