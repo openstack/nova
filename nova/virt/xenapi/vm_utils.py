@@ -450,11 +450,6 @@ def safe_destroy_vdis(session, vdi_refs):
 def create_vdi(session, sr_ref, instance, name_label, disk_type, virtual_size,
                read_only=False):
     """Create a VDI record and returns its reference."""
-    # create_vdi may be called simply while creating a volume
-    # hence information about instance may or may not be present
-    otherconf = {'nova_disk_type': disk_type}
-    if instance:
-        otherconf['nova_instance_uuid'] = instance['uuid']
     vdi_ref = session.call_xenapi("VDI.create",
          {'name_label': name_label,
           'name_description': disk_type,
@@ -464,7 +459,7 @@ def create_vdi(session, sr_ref, instance, name_label, disk_type, virtual_size,
           'sharable': False,
           'read_only': read_only,
           'xenstore_data': {},
-          'other_config': otherconf,
+          'other_config': _get_vdi_other_config(disk_type, instance=instance),
           'sm_config': {},
           'tags': []})
     LOG.debug(_('Created VDI %(vdi_ref)s (%(name_label)s,'
@@ -597,10 +592,35 @@ def _clone_vdi(session, vdi_to_clone_ref):
     return vdi_ref
 
 
-def set_vdi_name(session, vdi_uuid, label, description, vdi_ref=None):
-    vdi_ref = vdi_ref or session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
-    session.call_xenapi('VDI.set_name_label', vdi_ref, label)
+def _get_vdi_other_config(disk_type, instance=None):
+    """Return metadata to store in VDI's other_config attribute.
+
+    `nova_instance_uuid` is used to associate a VDI with a particular instance
+    so that, if it becomes orphaned from an unclean shutdown of a
+    compute-worker, we can safely detach it.
+    """
+    other_config = {'nova_disk_type': disk_type}
+
+    # create_vdi may be called simply while creating a volume
+    # hence information about instance may or may not be present
+    if instance:
+        other_config['nova_instance_uuid'] = instance['uuid']
+
+    return other_config
+
+
+def _set_vdi_info(session, vdi_ref, vdi_type, name_label, description,
+                  instance):
+    vdi_rec = session.call_xenapi('VDI.get_record', vdi_ref)
+
+    session.call_xenapi('VDI.set_name_label', vdi_ref, name_label)
     session.call_xenapi('VDI.set_name_description', vdi_ref, description)
+
+    other_config = _get_vdi_other_config(vdi_type, instance=instance)
+    for key, value in other_config.iteritems():
+        if key not in vdi_rec['other_config']:
+            session.call_xenapi(
+                    "VDI.add_to_other_config", vdi_ref, key, value)
 
 
 def get_vdi_for_vm_safely(session, vm_ref):
@@ -933,25 +953,25 @@ def _create_cached_image(context, session, instance, name_label,
                       "type %(sr_type)s. Ignoring the cow flag.")
                       % locals())
 
-    root_vdi_ref = _find_cached_image(session, image_id, sr_ref)
-    if root_vdi_ref is None:
+    cache_vdi_ref = _find_cached_image(session, image_id, sr_ref)
+    if cache_vdi_ref is None:
         vdis = _fetch_image(context, session, instance, name_label,
                             image_id, image_type)
-        root_vdi = vdis['root']
-        root_vdi_ref = session.call_xenapi('VDI.get_by_uuid',
-                                           root_vdi['uuid'])
-        set_vdi_name(session, root_vdi['uuid'], 'Glance Image %s' % image_id,
-                     'root', vdi_ref=root_vdi_ref)
+
+        cache_vdi_ref = session.call_xenapi(
+                'VDI.get_by_uuid', vdis['root']['uuid'])
+
+        session.call_xenapi('VDI.set_name_label', cache_vdi_ref,
+                            'Glance Image %s' % image_id)
+        session.call_xenapi('VDI.set_name_description', cache_vdi_ref, 'root')
         session.call_xenapi('VDI.add_to_other_config',
-                            root_vdi_ref, 'image-id', str(image_id))
+                            cache_vdi_ref, 'image-id', str(image_id))
 
     if CONF.use_cow_images and sr_type == 'ext':
-        new_vdi_ref = _clone_vdi(session, root_vdi_ref)
+        new_vdi_ref = _clone_vdi(session, cache_vdi_ref)
     else:
-        new_vdi_ref = _safe_copy_vdi(session, sr_ref, instance, root_vdi_ref)
+        new_vdi_ref = _safe_copy_vdi(session, sr_ref, instance, cache_vdi_ref)
 
-    # Set the name label for the image we just created and remove image id
-    # field from other-config.
     session.call_xenapi('VDI.remove_from_other_config',
                         new_vdi_ref, 'image-id')
 
@@ -996,10 +1016,10 @@ def _create_image(context, session, instance, name_label, image_id,
         vdis = _fetch_image(context, session, instance, name_label,
                             image_id, image_type)
 
-    # Set the name label and description to easily identify what
-    # instance and disk it's for
     for vdi_type, vdi in vdis.iteritems():
-        set_vdi_name(session, vdi['uuid'], name_label, vdi_type)
+        vdi_ref = session.call_xenapi('VDI.get_by_uuid', vdi['uuid'])
+        _set_vdi_info(session, vdi_ref, vdi_type, name_label, vdi_type,
+                      instance)
 
     return vdis
 
@@ -1131,13 +1151,7 @@ def _fetch_vhd_image(context, session, instance, image_id):
     sr_ref = safe_find_sr(session)
     _scan_sr(session, sr_ref)
 
-    # Pull out the UUID of the root VDI
-    root_vdi_uuid = vdis['root']['uuid']
-
-    # Set the name-label to ease debugging
-    set_vdi_name(session, root_vdi_uuid, instance['name'], 'root')
-
-    _check_vdi_size(context, session, instance, root_vdi_uuid)
+    _check_vdi_size(context, session, instance, vdis['root']['uuid'])
     return vdis
 
 
@@ -2315,12 +2329,12 @@ def move_disks(session, instance, disk_info):
     # Now we rescan the SR so we find the VHDs
     scan_default_sr(session)
 
-    # Set name-label so we can find if we need to clean up a failed
-    # migration
     root_uuid = imported_vhds['root']['uuid']
-    set_vdi_name(session, root_uuid, instance['name'], 'root')
-
     root_vdi_ref = session.call_xenapi('VDI.get_by_uuid', root_uuid)
+
+    # Set name-label so we can find if we need to clean up a failed migration
+    _set_vdi_info(session, root_vdi_ref, 'root', instance['name'], 'root',
+                  instance)
 
     return {'uuid': root_uuid, 'ref': root_vdi_ref}
 
