@@ -222,17 +222,24 @@ class APIRouterV3(base_wsgi.Router):
         """Simple paste factory, :class:`nova.wsgi.Router` doesn't have one."""
         return cls()
 
-    def __init__(self):
+    def __init__(self, init_only=None):
         # TODO(cyeoh): bp v3-api-extension-framework. Currently load
         # all extensions but eventually should be able to exclude
         # based on a config file
         def _check_load_extension(ext):
-            return isinstance(ext.obj, extensions.V3APIExtensionBase)
+            if (self.init_only is None or ext.obj.alias in
+                self.init_only) and isinstance(ext.obj,
+                                               extensions.V3APIExtensionBase):
+                return self._register_extension(ext)
+            else:
+                return False
 
+        self.init_only = init_only
         self.api_extension_manager = stevedore.enabled.EnabledExtensionManager(
             namespace=self.API_EXTENSION_NAMESPACE,
             check_func=_check_load_extension,
-            invoke_on_load=True)
+            invoke_on_load=True,
+            invoke_kwds={"extension_info": self.loaded_extension_info})
 
         mapper = PlainMapper()
         self.resources = {}
@@ -242,14 +249,17 @@ class APIRouterV3(base_wsgi.Router):
         if list(self.api_extension_manager):
             # NOTE(cyeoh): Stevedore raises an exception if there are
             # no plugins detected. I wonder if this is a bug.
-            self.api_extension_manager.map(self._register_extensions)
             self.api_extension_manager.map(self._register_resources,
                                            mapper=mapper)
             self.api_extension_manager.map(self._register_controllers)
 
         super(APIRouterV3, self).__init__(mapper)
 
-    def _register_extensions(self, ext):
+    @property
+    def loaded_extension_info(self):
+        raise NotImplementedError
+
+    def _register_extension(self, ext):
         raise NotImplementedError()
 
     def _register_resources(self, ext, mapper):
@@ -281,7 +291,14 @@ class APIRouterV3(base_wsgi.Router):
             if resource.parent:
                 kargs['parent_resource'] = resource.parent
 
-            mapper.resource(resource.collection, resource.collection,
+            # non core-API plugins use the collection name as the
+            # member name, but the core-API plugins use the
+            # singular/plural convention for member/collection names
+            if resource.member_name:
+                member_name = resource.member_name
+            else:
+                member_name = resource.collection
+            mapper.resource(member_name, resource.collection,
                             **kargs)
 
             if resource.custom_routes_fn:

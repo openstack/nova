@@ -74,6 +74,7 @@
     "compute_extension:instance_actions:events": "rule:admin_api",
     "compute_extension:instance_usage_audit_log": "rule:admin_api",
     "compute_extension:keypairs": "",
+    "compute_extension:v3:os-keypairs": "",
     "compute_extension:multinic": "",
     "compute_extension:networks": "rule:admin_api",
     "compute_extension:networks:view": "",
