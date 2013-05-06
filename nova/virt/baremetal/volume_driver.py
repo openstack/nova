@@ -24,6 +24,7 @@ from nova import context as nova_context
 from nova import exception
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
+from nova.openstack.common import processutils
 from nova import utils
 from nova.virt.baremetal import db as bmdb
 from nova.virt.libvirt import utils as libvirt_utils
@@ -91,7 +92,7 @@ def _delete_iscsi_export_tgtadm(tid):
                       '--tid', tid,
                       '--lun', '1',
                       run_as_root=True)
-    except exception.ProcessExecutionError:
+    except processutils.ProcessExecutionError:
         pass
     try:
         utils.execute('tgtadm', '--lld', 'iscsi',
@@ -99,7 +100,7 @@ def _delete_iscsi_export_tgtadm(tid):
                       '--op', 'delete',
                       '--tid', tid,
                       run_as_root=True)
-    except exception.ProcessExecutionError:
+    except processutils.ProcessExecutionError:
         pass
     # Check if the tid is deleted, that is, check the tid no longer exists.
     # If the tid dose not exist, tgtadm returns with exit_code 22.
@@ -113,7 +114,7 @@ def _delete_iscsi_export_tgtadm(tid):
                       '--op', 'show',
                       '--tid', tid,
                       run_as_root=True)
-    except exception.ProcessExecutionError as e:
+    except processutils.ProcessExecutionError as e:
         if e.exit_code == 22:
             # OK, the tid is deleted
             return

@@ -22,13 +22,13 @@ import contextlib
 
 from nova import context
 from nova import db
-from nova import exception as nova_exception
 from nova import test
 
 from nova.compute import instance_types
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.network import model as network_model
+from nova.openstack.common import processutils
 from nova.tests import fake_network_cache_model
 from nova.tests.image import fake
 from nova.virt import images
@@ -227,7 +227,7 @@ class PowerVMDriverTestCase(test.TestCase):
             self.powervm_connection._powervm,
             'get_host_stats',
             lambda *x, **y: raise_(
-                (nova_exception.ProcessExecutionError('instance_name'))))
+                (processutils.ProcessExecutionError('instance_name'))))
         fake_net_info = network_model.NetworkInfo([
                                      fake_network_cache_model.new_vif()])
         self.assertRaises(exception.PowerVMLPARCreationFailed,

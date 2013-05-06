@@ -33,6 +33,7 @@ from nova.network import model as net_model
 from nova.openstack.common.db import exception as db_exc
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
+from nova.openstack.common import processutils
 from nova.openstack.common import rpc
 from nova.openstack.common.rpc import common as rpc_common
 from nova import quota
@@ -809,7 +810,7 @@ class VlanNetworkTestCase(test.TestCase):
             self.local = True
 
         def fake8(*args, **kwargs):
-            raise exception.ProcessExecutionError('',
+            raise processutils.ProcessExecutionError('',
                     'Cannot find device "em0"\n')
 
         def fake9(*args, **kwargs):

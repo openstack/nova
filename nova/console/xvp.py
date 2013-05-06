@@ -25,9 +25,9 @@ from oslo.config import cfg
 
 from nova import context
 from nova import db
-from nova import exception
 from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
+from nova.openstack.common import processutils
 from nova import paths
 from nova import utils
 
@@ -143,7 +143,7 @@ class XVPConsoleProxy(object):
                           '-p', CONF.console_xvp_pid,
                           '-c', CONF.console_xvp_conf,
                           '-l', CONF.console_xvp_log)
-        except exception.ProcessExecutionError, err:
+        except processutils.ProcessExecutionError, err:
             LOG.error(_('Error starting xvp: %s') % err)
 
     def _xvp_restart(self):
@@ -200,5 +200,5 @@ class XVPConsoleProxy(object):
         password = password[:maxlen]
         out, err = utils.execute('xvp', flag, process_input=password)
         if err:
-            raise exception.ProcessExecutionError(_("Failed to run xvp."))
+            raise processutils.ProcessExecutionError(_("Failed to run xvp."))
         return out.strip()

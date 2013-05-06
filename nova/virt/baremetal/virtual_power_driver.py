@@ -23,6 +23,7 @@ from nova import context as nova_context
 from nova import exception
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
+from nova.openstack.common import processutils
 from nova import utils
 from nova.virt.baremetal import baremetal_states
 from nova.virt.baremetal import base
@@ -233,7 +234,7 @@ class VirtualPowerManager(base.PowerManager):
                                            check_exit_code=check_exit_code)
             result = stdout.strip().splitlines()
             LOG.debug('Result for run_command: %s' % result)
-        except exception.ProcessExecutionError:
+        except processutils.ProcessExecutionError:
             result = []
             LOG.exception("Error running command: %s" % cmd)
         return result

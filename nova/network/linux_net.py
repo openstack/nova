@@ -35,6 +35,7 @@ from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
+from nova.openstack.common import processutils
 from nova.openstack.common import timeutils
 from nova import paths
 from nova import utils
@@ -771,7 +772,7 @@ def clean_conntrack(fixed_ip):
     try:
         _execute('conntrack', '-D', '-r', fixed_ip, run_as_root=True,
                  check_exit_code=[0, 1])
-    except exception.ProcessExecutionError:
+    except processutils.ProcessExecutionError:
         LOG.exception(_('Error deleting conntrack entries for %s'), fixed_ip)
 
 
@@ -1260,7 +1261,7 @@ def create_tap_dev(dev, mac_address=None):
             # First, try with 'ip'
             utils.execute('ip', 'tuntap', 'add', dev, 'mode', 'tap',
                           run_as_root=True, check_exit_code=[0, 2, 254])
-        except exception.ProcessExecutionError:
+        except processutils.ProcessExecutionError:
             # Second option: tunctl
             utils.execute('tunctl', '-b', '-t', dev, run_as_root=True)
         if mac_address:
@@ -1277,7 +1278,7 @@ def delete_net_dev(dev):
             utils.execute('ip', 'link', 'delete', dev, run_as_root=True,
                           check_exit_code=[0, 2, 254])
             LOG.debug(_("Net device removed: '%s'"), dev)
-        except exception.ProcessExecutionError:
+        except processutils.ProcessExecutionError:
             with excutils.save_and_reraise_exception():
                 LOG.error(_("Failed removing net device: '%s'"), dev)
 

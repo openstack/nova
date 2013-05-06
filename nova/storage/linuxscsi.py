@@ -16,9 +16,9 @@
 
 """Generic linux scsi subsystem utilities."""
 
-from nova import exception
 from nova.openstack.common import log as logging
 from nova.openstack.common import loopingcall
+from nova.openstack.common import processutils
 from nova import utils
 
 LOG = logging.getLogger(__name__)
@@ -97,7 +97,7 @@ def find_multipath_device(device):
     try:
         (out, err) = utils.execute('multipath', '-l', device,
                                run_as_root=True)
-    except exception.ProcessExecutionError as exc:
+    except processutils.ProcessExecutionError as exc:
         LOG.warn(_("Multipath call failed exit (%(code)s)")
                  % {'code': exc.exit_code})
         return None

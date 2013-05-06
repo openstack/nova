@@ -22,9 +22,9 @@ import time
 from oslo.config import cfg
 
 from nova.compute import power_state
-from nova import exception as nova_exception
 from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
+from nova.openstack.common import processutils
 from nova import utils
 from nova.virt.powervm import blockdev
 from nova.virt.powervm import command
@@ -199,7 +199,7 @@ class PowerVMOperator(object):
                 #             system (1 in 2^28)
                 self._operator.create_lpar(lpar_inst)
                 LOG.debug(_("Creating LPAR instance '%s'") % instance['name'])
-            except nova_exception.ProcessExecutionError:
+            except processutils.ProcessExecutionError:
                 LOG.exception(_("LPAR instance '%s' creation failed") %
                         instance['name'])
                 raise exception.PowerVMLPARCreationFailed(

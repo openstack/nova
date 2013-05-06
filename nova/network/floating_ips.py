@@ -28,6 +28,7 @@ from nova.openstack.common import importutils
 from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.notifier import api as notifier
+from nova.openstack.common import processutils
 from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import uuidutils
 from nova import quota
@@ -93,7 +94,7 @@ class FloatingIP(object):
                                                   fixed_ip['address'],
                                                   interface,
                                                   fixed_ip['network'])
-                except exception.ProcessExecutionError:
+                except processutils.ProcessExecutionError:
                     LOG.debug(_('Interface %(interface)s not found'), locals())
                     raise exception.NoFloatingIpInterface(interface=interface)
 
@@ -367,7 +368,7 @@ class FloatingIP(object):
                 # gogo driver time
                 self.l3driver.add_floating_ip(floating_address, fixed_address,
                         interface, fixed['network'])
-            except exception.ProcessExecutionError as e:
+            except processutils.ProcessExecutionError as e:
                 self.db.floating_ip_disassociate(context, floating_address)
                 if "Cannot find device" in str(e):
                     LOG.error(_('Interface %(interface)s not found'), locals())
