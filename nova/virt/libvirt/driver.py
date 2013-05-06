@@ -1432,6 +1432,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
             ignored_states = (power_state.RUNNING,
                               power_state.SUSPENDED,
+                              power_state.NOSTATE,
                               power_state.PAUSED)
 
             if state in ignored_states:
