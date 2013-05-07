@@ -26,13 +26,14 @@ import uuid as stdlib_uuid
 
 from oslo.config import cfg
 from sqlalchemy.dialects import sqlite
-from sqlalchemy import MetaData
-from sqlalchemy.schema import Table
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.sql.expression import select
 
 from nova import context
 from nova import db
 from nova.db.sqlalchemy import api as sqlalchemy_api
+from nova.db.sqlalchemy import models
+from nova.db.sqlalchemy import utils as db_utils
 from nova import exception
 from nova.openstack.common.db.sqlalchemy import session as db_session
 from nova.openstack.common import timeutils
@@ -3611,167 +3612,186 @@ class ArchiveTestCase(test.TestCase):
         self.context = context.get_admin_context()
         self.engine = get_engine()
         self.conn = self.engine.connect()
-        self.metadata = MetaData()
-        self.metadata.bind = self.engine
-        self.table1 = Table("instance_id_mappings",
-                           self.metadata,
-                           autoload=True)
-        self.shadow_table1 = Table("shadow_instance_id_mappings",
-                                  self.metadata,
-                                  autoload=True)
-        self.table2 = Table("dns_domains",
-                           self.metadata,
-                           autoload=True)
-        self.shadow_table2 = Table("shadow_dns_domains",
-                                  self.metadata,
-                                  autoload=True)
-        self.consoles = Table("consoles",
-                              self.metadata,
-                              autoload=True)
-        self.console_pools = Table("console_pools",
-                                   self.metadata,
-                                   autoload=True)
-        self.shadow_consoles = Table("shadow_consoles",
-                                     self.metadata,
-                                     autoload=True)
-        self.shadow_console_pools = Table("shadow_console_pools",
-                                          self.metadata,
-                                          autoload=True)
+        self.instance_id_mappings = db_utils.get_table(self.engine,
+                                                       "instance_id_mappings")
+        self.shadow_instance_id_mappings = db_utils.get_table(self.engine,
+                                                "shadow_instance_id_mappings")
+        self.dns_domains = db_utils.get_table(self.engine, "dns_domains")
+        self.shadow_dns_domains = db_utils.get_table(self.engine,
+                                                     "shadow_dns_domains")
+        self.consoles = db_utils.get_table(self.engine, "consoles")
+        self.console_pools = db_utils.get_table(self.engine, "console_pools")
+        self.shadow_consoles = db_utils.get_table(self.engine,
+                                                  "shadow_consoles")
+        self.shadow_console_pools = db_utils.get_table(self.engine,
+                                                       "shadow_console_pools")
+        self.instances = db_utils.get_table(self.engine, "instances")
+        self.shadow_instances = db_utils.get_table(self.engine,
+                                                   "shadow_instances")
         self.uuidstrs = []
         for unused in xrange(6):
             self.uuidstrs.append(stdlib_uuid.uuid4().hex)
         self.ids = []
+        self.id_tablenames_to_cleanup = set(["console_pools", "consoles"])
+        self.uuid_tablenames_to_cleanup = set(["instance_id_mappings",
+                                               "instances"])
+        self.domain_tablenames_to_cleanup = set(["dns_domains"])
 
     def tearDown(self):
         super(ArchiveTestCase, self).tearDown()
-        delete_statement1 = self.table1.delete(
-                                self.table1.c.uuid.in_(self.uuidstrs))
-        self.conn.execute(delete_statement1)
-        delete_statement2 = self.shadow_table1.delete(
-                                self.shadow_table1.c.uuid.in_(self.uuidstrs))
-        self.conn.execute(delete_statement2)
-        delete_statement3 = self.table2.delete(self.table2.c.domain.in_(
-                                               self.uuidstrs))
-        self.conn.execute(delete_statement3)
-        delete_statement4 = self.shadow_table2.delete(
-                                self.shadow_table2.c.domain.in_(self.uuidstrs))
-        self.conn.execute(delete_statement4)
-        for table in [self.console_pools, self.consoles, self.shadow_consoles,
-                      self.shadow_console_pools]:
-            delete_statement5 = table.delete(table.c.id.in_(self.ids))
-            self.conn.execute(delete_statement5)
+        for tablename in self.id_tablenames_to_cleanup:
+            for name in [tablename, "shadow_" + tablename]:
+                table = db_utils.get_table(self.engine, name)
+                del_statement = table.delete(table.c.id.in_(self.ids))
+                self.conn.execute(del_statement)
+        for tablename in self.uuid_tablenames_to_cleanup:
+            for name in [tablename, "shadow_" + tablename]:
+                table = db_utils.get_table(self.engine, name)
+                del_statement = table.delete(table.c.uuid.in_(self.uuidstrs))
+                self.conn.execute(del_statement)
+        for tablename in self.domain_tablenames_to_cleanup:
+            for name in [tablename, "shadow_" + tablename]:
+                table = db_utils.get_table(self.engine, name)
+                del_statement = table.delete(table.c.domain.in_(self.uuidstrs))
+                self.conn.execute(del_statement)
 
     def test_archive_deleted_rows(self):
         # Add 6 rows to table
         for uuidstr in self.uuidstrs:
-            insert_statement = self.table1.insert().values(uuid=uuidstr)
-            self.conn.execute(insert_statement)
+            ins_stmt = self.instance_id_mappings.insert().values(uuid=uuidstr)
+            self.conn.execute(ins_stmt)
         # Set 4 to deleted
-        update_statement = self.table1.update().\
-                where(self.table1.c.uuid.in_(self.uuidstrs[:4]))\
+        update_statement = self.instance_id_mappings.update().\
+                where(self.instance_id_mappings.c.uuid.in_(self.uuidstrs[:4]))\
                 .values(deleted=1)
         self.conn.execute(update_statement)
-        query1 = select([self.table1]).where(self.table1.c.uuid.in_(
-                                             self.uuidstrs))
-        rows1 = self.conn.execute(query1).fetchall()
+        qiim = select([self.instance_id_mappings]).where(self.
+                                instance_id_mappings.c.uuid.in_(self.uuidstrs))
+        rows = self.conn.execute(qiim).fetchall()
         # Verify we have 6 in main
-        self.assertEqual(len(rows1), 6)
-        query2 = select([self.shadow_table1]).\
-                where(self.shadow_table1.c.uuid.in_(self.uuidstrs))
-        rows2 = self.conn.execute(query2).fetchall()
+        self.assertEqual(len(rows), 6)
+        qsiim = select([self.shadow_instance_id_mappings]).\
+                where(self.shadow_instance_id_mappings.c.uuid.in_(
+                                                                self.uuidstrs))
+        rows = self.conn.execute(qsiim).fetchall()
         # Verify we have 0 in shadow
-        self.assertEqual(len(rows2), 0)
+        self.assertEqual(len(rows), 0)
         # Archive 2 rows
         db.archive_deleted_rows(self.context, max_rows=2)
-        rows3 = self.conn.execute(query1).fetchall()
+        rows = self.conn.execute(qiim).fetchall()
         # Verify we have 4 left in main
-        self.assertEqual(len(rows3), 4)
-        rows4 = self.conn.execute(query2).fetchall()
+        self.assertEqual(len(rows), 4)
+        rows = self.conn.execute(qsiim).fetchall()
         # Verify we have 2 in shadow
-        self.assertEqual(len(rows4), 2)
+        self.assertEqual(len(rows), 2)
         # Archive 2 more rows
         db.archive_deleted_rows(self.context, max_rows=2)
-        rows5 = self.conn.execute(query1).fetchall()
+        rows = self.conn.execute(qiim).fetchall()
         # Verify we have 2 left in main
-        self.assertEqual(len(rows5), 2)
-        rows6 = self.conn.execute(query2).fetchall()
+        self.assertEqual(len(rows), 2)
+        rows = self.conn.execute(qsiim).fetchall()
         # Verify we have 4 in shadow
-        self.assertEqual(len(rows6), 4)
+        self.assertEqual(len(rows), 4)
         # Try to archive more, but there are no deleted rows left.
         db.archive_deleted_rows(self.context, max_rows=2)
-        rows7 = self.conn.execute(query1).fetchall()
+        rows = self.conn.execute(qiim).fetchall()
         # Verify we still have 2 left in main
-        self.assertEqual(len(rows7), 2)
-        rows8 = self.conn.execute(query2).fetchall()
+        self.assertEqual(len(rows), 2)
+        rows = self.conn.execute(qsiim).fetchall()
         # Verify we still have 4 in shadow
-        self.assertEqual(len(rows8), 4)
+        self.assertEqual(len(rows), 4)
 
-    def test_archive_deleted_rows_for_table(self):
-        tablename = "instance_id_mappings"
+    def test_archive_deleted_rows_for_every_uuid_table(self):
+        tablenames = []
+        for model_class in models.__dict__.itervalues():
+            if hasattr(model_class, "__tablename__"):
+                tablenames.append(model_class.__tablename__)
+        tablenames.sort()
+        for tablename in tablenames:
+            ret = self._test_archive_deleted_rows_for_one_uuid_table(tablename)
+            if ret == 0:
+                self.uuid_tablenames_to_cleanup.add(tablename)
+
+    def _test_archive_deleted_rows_for_one_uuid_table(self, tablename):
+        """
+        :returns: 0 on success, 1 if no uuid column, 2 if insert failed
+        """
+        main_table = db_utils.get_table(self.engine, tablename)
+        if not hasattr(main_table.c, "uuid"):
+            # Not a uuid table, so skip it.
+            return 1
+        shadow_table = db_utils.get_table(self.engine, "shadow_" + tablename)
         # Add 6 rows to table
         for uuidstr in self.uuidstrs:
-            insert_statement = self.table1.insert().values(uuid=uuidstr)
-            self.conn.execute(insert_statement)
+            ins_stmt = main_table.insert().values(uuid=uuidstr)
+            try:
+                self.conn.execute(ins_stmt)
+            except IntegrityError:
+                # This table has constraints that require a table-specific
+                # insert, so skip it.
+                return 2
         # Set 4 to deleted
-        update_statement = self.table1.update().\
-                where(self.table1.c.uuid.in_(self.uuidstrs[:4]))\
+        update_statement = main_table.update().\
+                where(main_table.c.uuid.in_(self.uuidstrs[:4]))\
                 .values(deleted=1)
         self.conn.execute(update_statement)
-        query1 = select([self.table1]).where(self.table1.c.uuid.in_(
+        qmt = select([main_table]).where(main_table.c.uuid.in_(
                                              self.uuidstrs))
-        rows1 = self.conn.execute(query1).fetchall()
+        rows = self.conn.execute(qmt).fetchall()
         # Verify we have 6 in main
-        self.assertEqual(len(rows1), 6)
-        query2 = select([self.shadow_table1]).\
-                where(self.shadow_table1.c.uuid.in_(self.uuidstrs))
-        rows2 = self.conn.execute(query2).fetchall()
+        self.assertEqual(len(rows), 6)
+        qst = select([shadow_table]).\
+                where(shadow_table.c.uuid.in_(self.uuidstrs))
+        rows = self.conn.execute(qst).fetchall()
         # Verify we have 0 in shadow
-        self.assertEqual(len(rows2), 0)
+        self.assertEqual(len(rows), 0)
         # Archive 2 rows
         db.archive_deleted_rows_for_table(self.context, tablename, max_rows=2)
-        rows3 = self.conn.execute(query1).fetchall()
         # Verify we have 4 left in main
-        self.assertEqual(len(rows3), 4)
-        rows4 = self.conn.execute(query2).fetchall()
+        rows = self.conn.execute(qmt).fetchall()
+        self.assertEqual(len(rows), 4)
         # Verify we have 2 in shadow
-        self.assertEqual(len(rows4), 2)
+        rows = self.conn.execute(qst).fetchall()
+        self.assertEqual(len(rows), 2)
         # Archive 2 more rows
         db.archive_deleted_rows_for_table(self.context, tablename, max_rows=2)
-        rows5 = self.conn.execute(query1).fetchall()
         # Verify we have 2 left in main
-        self.assertEqual(len(rows5), 2)
-        rows6 = self.conn.execute(query2).fetchall()
+        rows = self.conn.execute(qmt).fetchall()
+        self.assertEqual(len(rows), 2)
         # Verify we have 4 in shadow
-        self.assertEqual(len(rows6), 4)
+        rows = self.conn.execute(qst).fetchall()
+        self.assertEqual(len(rows), 4)
         # Try to archive more, but there are no deleted rows left.
         db.archive_deleted_rows_for_table(self.context, tablename, max_rows=2)
-        rows7 = self.conn.execute(query1).fetchall()
         # Verify we still have 2 left in main
-        self.assertEqual(len(rows7), 2)
-        rows8 = self.conn.execute(query2).fetchall()
+        rows = self.conn.execute(qmt).fetchall()
+        self.assertEqual(len(rows), 2)
         # Verify we still have 4 in shadow
-        self.assertEqual(len(rows8), 4)
+        rows = self.conn.execute(qst).fetchall()
+        self.assertEqual(len(rows), 4)
+        return 0
 
     def test_archive_deleted_rows_no_id_column(self):
         uuidstr0 = self.uuidstrs[0]
-        insert_statement = self.table2.insert().values(domain=uuidstr0)
-        self.conn.execute(insert_statement)
-        update_statement = self.table2.update().\
-                           where(self.table2.c.domain == uuidstr0).\
+        ins_stmt = self.dns_domains.insert().values(domain=uuidstr0)
+        self.conn.execute(ins_stmt)
+        update_statement = self.dns_domains.update().\
+                           where(self.dns_domains.c.domain == uuidstr0).\
                            values(deleted=1)
         self.conn.execute(update_statement)
-        query1 = select([self.table2], self.table2.c.domain == uuidstr0)
-        rows1 = self.conn.execute(query1).fetchall()
-        self.assertEqual(len(rows1), 1)
-        query2 = select([self.shadow_table2],
-                        self.shadow_table2.c.domain == uuidstr0)
-        rows2 = self.conn.execute(query2).fetchall()
-        self.assertEqual(len(rows2), 0)
+        qdd = select([self.dns_domains], self.dns_domains.c.domain ==
+                                            uuidstr0)
+        rows = self.conn.execute(qdd).fetchall()
+        self.assertEqual(len(rows), 1)
+        qsdd = select([self.shadow_dns_domains],
+                        self.shadow_dns_domains.c.domain == uuidstr0)
+        rows = self.conn.execute(qsdd).fetchall()
+        self.assertEqual(len(rows), 0)
         db.archive_deleted_rows(self.context, max_rows=1)
-        rows3 = self.conn.execute(query1).fetchall()
-        self.assertEqual(len(rows3), 0)
-        rows4 = self.conn.execute(query2).fetchall()
-        self.assertEqual(len(rows4), 1)
+        rows = self.conn.execute(qdd).fetchall()
+        self.assertEqual(len(rows), 0)
+        rows = self.conn.execute(qsdd).fetchall()
+        self.assertEqual(len(rows), 1)
 
     def test_archive_deleted_rows_fk_constraint(self):
         # consoles.pool_id depends on console_pools.id
@@ -3788,13 +3808,13 @@ class ArchiveTestCase(test.TestCase):
                 self.skipTest(
                     'sqlite version too old for reliable SQLA foreign_keys')
             self.conn.execute("PRAGMA foreign_keys = ON")
-        insert_statement = self.console_pools.insert().values(deleted=1)
-        result = self.conn.execute(insert_statement)
+        ins_stmt = self.console_pools.insert().values(deleted=1)
+        result = self.conn.execute(ins_stmt)
         id1 = result.inserted_primary_key[0]
         self.ids.append(id1)
-        insert_statement = self.consoles.insert().values(deleted=1,
+        ins_stmt = self.consoles.insert().values(deleted=1,
                                                          pool_id=id1)
-        result = self.conn.execute(insert_statement)
+        result = self.conn.execute(ins_stmt)
         id2 = result.inserted_primary_key[0]
         self.ids.append(id2)
         # The first try to archive console_pools should fail, due to FK.
@@ -3806,3 +3826,69 @@ class ArchiveTestCase(test.TestCase):
         # Then archiving console_pools should work.
         num = db.archive_deleted_rows_for_table(self.context, "console_pools")
         self.assertEqual(num, 1)
+
+    def test_archive_deleted_rows_2_tables(self):
+        # Add 6 rows to each table
+        for uuidstr in self.uuidstrs:
+            ins_stmt = self.instance_id_mappings.insert().values(uuid=uuidstr)
+            self.conn.execute(ins_stmt)
+            ins_stmt2 = self.instances.insert().values(uuid=uuidstr)
+            self.conn.execute(ins_stmt2)
+        # Set 4 of each to deleted
+        update_statement = self.instance_id_mappings.update().\
+                where(self.instance_id_mappings.c.uuid.in_(self.uuidstrs[:4]))\
+                .values(deleted=1)
+        self.conn.execute(update_statement)
+        update_statement2 = self.instances.update().\
+                where(self.instances.c.uuid.in_(self.uuidstrs[:4]))\
+                .values(deleted=1)
+        self.conn.execute(update_statement2)
+        # Verify we have 6 in each main table
+        qiim = select([self.instance_id_mappings]).where(
+                         self.instance_id_mappings.c.uuid.in_(self.uuidstrs))
+        rows = self.conn.execute(qiim).fetchall()
+        self.assertEqual(len(rows), 6)
+        qi = select([self.instances]).where(self.instances.c.uuid.in_(
+                                             self.uuidstrs))
+        rows = self.conn.execute(qi).fetchall()
+        self.assertEqual(len(rows), 6)
+        # Verify we have 0 in each shadow table
+        qsiim = select([self.shadow_instance_id_mappings]).\
+                where(self.shadow_instance_id_mappings.c.uuid.in_(
+                                                            self.uuidstrs))
+        rows = self.conn.execute(qsiim).fetchall()
+        self.assertEqual(len(rows), 0)
+        qsi = select([self.shadow_instances]).\
+                where(self.shadow_instances.c.uuid.in_(self.uuidstrs))
+        rows = self.conn.execute(qsi).fetchall()
+        self.assertEqual(len(rows), 0)
+        # Archive 7 rows, which should be 4 in one table and 3 in the other.
+        db.archive_deleted_rows(self.context, max_rows=7)
+        # Verify we have 5 left in the two main tables combined
+        iim_rows = self.conn.execute(qiim).fetchall()
+        i_rows = self.conn.execute(qi).fetchall()
+        self.assertEqual(len(iim_rows) + len(i_rows), 5)
+        # Verify we have 7 in the two shadow tables combined.
+        siim_rows = self.conn.execute(qsiim).fetchall()
+        si_rows = self.conn.execute(qsi).fetchall()
+        self.assertEqual(len(siim_rows) + len(si_rows), 7)
+        # Archive the remaining deleted rows.
+        db.archive_deleted_rows(self.context, max_rows=1)
+        # Verify we have 4 total left in both main tables.
+        iim_rows = self.conn.execute(qiim).fetchall()
+        i_rows = self.conn.execute(qi).fetchall()
+        self.assertEqual(len(iim_rows) + len(i_rows), 4)
+        # Verify we have 8 in shadow
+        siim_rows = self.conn.execute(qsiim).fetchall()
+        si_rows = self.conn.execute(qsi).fetchall()
+        self.assertEqual(len(siim_rows) + len(si_rows), 8)
+        # Try to archive more, but there are no deleted rows left.
+        db.archive_deleted_rows(self.context, max_rows=500)
+        # Verify we have 4 total left in both main tables.
+        iim_rows = self.conn.execute(qiim).fetchall()
+        i_rows = self.conn.execute(qi).fetchall()
+        self.assertEqual(len(iim_rows) + len(i_rows), 4)
+        # Verify we have 8 in shadow
+        siim_rows = self.conn.execute(qsiim).fetchall()
+        si_rows = self.conn.execute(qsi).fetchall()
+        self.assertEqual(len(siim_rows) + len(si_rows), 8)
