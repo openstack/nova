@@ -21,7 +21,7 @@ the system.
 
 from oslo.config import cfg
 
-from nova.compute import instance_types
+from nova.compute import flavors
 import nova.context
 from nova import db
 from nova.image import glance
@@ -284,7 +284,7 @@ def info_from_instance(context, instance_ref, network_info,
 
     image_ref_url = glance.generate_image_url(instance_ref['image_ref'])
 
-    instance_type = instance_types.extract_instance_type(instance_ref)
+    instance_type = flavors.extract_instance_type(instance_ref)
     instance_type_name = instance_type.get('name', '')
 
     if system_metadata is None:

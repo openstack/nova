@@ -68,7 +68,7 @@ variables / types used
 from oslo.config import cfg
 
 from nova import block_device
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova import exception
 from nova.virt import configdrive
 from nova.virt import driver
@@ -300,7 +300,7 @@ def get_disk_mapping(virt_type, instance,
 
        Returns the guest disk mapping for the devices."""
 
-    inst_type = instance_types.extract_instance_type(instance)
+    inst_type = flavors.extract_instance_type(instance)
 
     mapping = {}
 

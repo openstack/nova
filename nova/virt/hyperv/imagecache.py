@@ -19,7 +19,7 @@ Image caching and management.
 """
 import os
 
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova.openstack.common import excutils
 from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
@@ -51,7 +51,7 @@ class ImageCache(object):
     def _get_root_vhd_size_gb(self, instance):
         try:
             # In case of resizes we need the old root disk size
-            old_instance_type = instance_types.extract_instance_type(
+            old_instance_type = flavors.extract_instance_type(
                 instance, prefix='old_')
             return old_instance_type['root_gb']
         except KeyError:

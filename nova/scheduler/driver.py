@@ -25,7 +25,7 @@ import sys
 
 from oslo.config import cfg
 
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova.compute import power_state
 from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import utils as compute_utils
@@ -257,7 +257,7 @@ class Scheduler(object):
 
         # If dest is not specified, have scheduler pick one.
         if dest is None:
-            instance_type = instance_types.extract_instance_type(instance_ref)
+            instance_type = flavors.extract_instance_type(instance_ref)
             image = self.image_service.show(context, instance_ref['image_ref'])
             request_spec = {'instance_properties': instance_ref,
                             'instance_type': instance_type,

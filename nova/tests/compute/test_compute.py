@@ -33,7 +33,7 @@ from oslo.config import cfg
 import nova
 from nova import compute
 from nova.compute import api as compute_api
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova.compute import manager as compute_manager
 from nova.compute import power_state
 from nova.compute import rpcapi as compute_rpcapi
@@ -220,8 +220,8 @@ class BaseTestCase(test.TestCase):
 
         def make_fake_sys_meta():
             sys_meta = {}
-            inst_type = instance_types.get_instance_type_by_name(type_name)
-            for key in instance_types.system_metadata_instance_type_props:
+            inst_type = flavors.get_instance_type_by_name(type_name)
+            for key in flavors.system_metadata_instance_type_props:
                 sys_meta['instance_type_%s' % key] = inst_type[key]
             return sys_meta
 
@@ -234,7 +234,7 @@ class BaseTestCase(test.TestCase):
         inst['project_id'] = self.project_id
         inst['host'] = 'fake_host'
         inst['node'] = NODENAME
-        type_id = instance_types.get_instance_type_by_name(type_name)['id']
+        type_id = flavors.get_instance_type_by_name(type_name)['id']
         inst['instance_type_id'] = type_id
         inst['ami_launch_index'] = 0
         inst['memory_mb'] = 0
@@ -2160,7 +2160,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertEquals(payload['user_id'], self.user_id)
         self.assertEquals(payload['instance_id'], inst_ref['uuid'])
         self.assertEquals(payload['instance_type'], 'm1.tiny')
-        type_id = instance_types.get_instance_type_by_name('m1.tiny')['id']
+        type_id = flavors.get_instance_type_by_name('m1.tiny')['id']
         self.assertEquals(str(payload['instance_type_id']), str(type_id))
         self.assertEquals(payload['state'], 'active')
         self.assertTrue('display_name' in payload)
@@ -2273,7 +2273,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertEquals(payload['user_id'], self.user_id)
         self.assertEquals(payload['instance_id'], instance['uuid'])
         self.assertEquals(payload['instance_type'], 'm1.tiny')
-        type_id = instance_types.get_instance_type_by_name('m1.tiny')['id']
+        type_id = flavors.get_instance_type_by_name('m1.tiny')['id']
         self.assertEquals(str(payload['instance_type_id']), str(type_id))
         self.assertTrue('display_name' in payload)
         self.assertTrue('created_at' in payload)
@@ -2647,7 +2647,7 @@ class ComputeTestCase(BaseTestCase):
         reservations = self._ensure_quota_reservations_committed()
 
         instance = jsonutils.to_primitive(self._create_fake_instance())
-        instance_type = instance_types.get_default_instance_type()
+        instance_type = flavors.get_default_instance_type()
         db.instance_update(self.context, instance["uuid"],
                           {"task_state": task_states.RESIZE_PREP})
         self.compute.prep_resize(self.context, instance=instance,
@@ -2727,7 +2727,7 @@ class ComputeTestCase(BaseTestCase):
                               jsonutils.dumps(connection_info))
 
         # begin resize
-        instance_type = instance_types.get_default_instance_type()
+        instance_type = flavors.get_default_instance_type()
         db.instance_update(self.context, instance["uuid"],
                           {"task_state": task_states.RESIZE_PREP})
         self.compute.prep_resize(self.context, instance=instance,
@@ -2821,7 +2821,7 @@ class ComputeTestCase(BaseTestCase):
         reservations = self._ensure_quota_reservations_rolledback()
 
         instance = jsonutils.to_primitive(self._create_fake_instance())
-        instance_type = instance_types.get_default_instance_type()
+        instance_type = flavors.get_default_instance_type()
         self.compute.prep_resize(self.context, instance=instance,
                                  instance_type=instance_type,
                                  image={}, reservations=reservations)
@@ -2899,7 +2899,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertEquals(payload['user_id'], self.user_id)
         self.assertEquals(payload['instance_id'], inst_ref['uuid'])
         self.assertEquals(payload['instance_type'], 'm1.tiny')
-        type_id = instance_types.get_instance_type_by_name('m1.tiny')['id']
+        type_id = flavors.get_instance_type_by_name('m1.tiny')['id']
         self.assertEquals(str(payload['instance_type_id']), str(type_id))
         self.assertTrue('display_name' in payload)
         self.assertTrue('created_at' in payload)
@@ -2915,7 +2915,7 @@ class ComputeTestCase(BaseTestCase):
         cur_time = datetime.datetime(2012, 12, 21, 12, 21)
         timeutils.set_time_override(old_time)
         instance = jsonutils.to_primitive(self._create_fake_instance())
-        new_type = instance_types.get_instance_type_by_name('m1.small')
+        new_type = flavors.get_instance_type_by_name('m1.small')
         new_type = jsonutils.to_primitive(new_type)
         new_type_id = new_type['id']
         self.compute.run_instance(self.context, instance=instance)
@@ -2977,7 +2977,7 @@ class ComputeTestCase(BaseTestCase):
         new_instance = db.instance_update(self.context, instance['uuid'],
                                       {'host': 'foo'})
         new_instance = jsonutils.to_primitive(new_instance)
-        instance_type = instance_types.get_default_instance_type()
+        instance_type = flavors.get_default_instance_type()
         self.compute.prep_resize(self.context, instance=new_instance,
                 instance_type=instance_type, image={})
         db.migration_get_by_instance_and_status(self.context.elevated(),
@@ -3000,7 +3000,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertEquals(payload['user_id'], self.user_id)
         self.assertEquals(payload['instance_id'], new_instance['uuid'])
         self.assertEquals(payload['instance_type'], 'm1.tiny')
-        type_id = instance_types.get_instance_type_by_name('m1.tiny')['id']
+        type_id = flavors.get_instance_type_by_name('m1.tiny')['id']
         self.assertEquals(str(payload['instance_type_id']), str(type_id))
         self.assertTrue('display_name' in payload)
         self.assertTrue('created_at' in payload)
@@ -3023,7 +3023,7 @@ class ComputeTestCase(BaseTestCase):
         new_instance = db.instance_update(self.context, instance['uuid'],
                                           {'host': self.compute.host})
         new_instance = jsonutils.to_primitive(new_instance)
-        instance_type = instance_types.get_default_instance_type()
+        instance_type = flavors.get_default_instance_type()
 
         self.assertRaises(exception.MigrationError, self.compute.prep_resize,
                           self.context, instance=new_instance,
@@ -3043,7 +3043,7 @@ class ComputeTestCase(BaseTestCase):
         new_instance = db.instance_update(self.context, instance['uuid'],
                                           {'host': None})
         new_instance = jsonutils.to_primitive(new_instance)
-        instance_type = instance_types.get_default_instance_type()
+        instance_type = flavors.get_default_instance_type()
 
         self.assertRaises(exception.MigrationError, self.compute.prep_resize,
                           self.context, instance=new_instance,
@@ -3061,7 +3061,7 @@ class ComputeTestCase(BaseTestCase):
                        throw_up)
 
         instance = jsonutils.to_primitive(self._create_fake_instance())
-        instance_type = instance_types.get_default_instance_type()
+        instance_type = flavors.get_default_instance_type()
 
         reservations = self._ensure_quota_reservations_rolledback()
 
@@ -3092,7 +3092,7 @@ class ComputeTestCase(BaseTestCase):
     def test_resize_instance(self):
         # Ensure instance can be migrated/resized.
         instance = jsonutils.to_primitive(self._create_fake_instance())
-        instance_type = instance_types.get_default_instance_type()
+        instance_type = flavors.get_default_instance_type()
 
         self.compute.run_instance(self.context, instance=instance)
         new_instance = db.instance_update(self.context, instance['uuid'],
@@ -3216,20 +3216,20 @@ class ComputeTestCase(BaseTestCase):
         instance['system_metadata'].append(dict(key='instance_type_id',
                                                 value=old))
         sys_meta = dict(instance_type_id=old)
-        self.mox.StubOutWithMock(instance_types, 'extract_instance_type')
-        self.mox.StubOutWithMock(instance_types, 'delete_instance_type_info')
-        self.mox.StubOutWithMock(instance_types, 'save_instance_type_info')
+        self.mox.StubOutWithMock(flavors, 'extract_instance_type')
+        self.mox.StubOutWithMock(flavors, 'delete_instance_type_info')
+        self.mox.StubOutWithMock(flavors, 'save_instance_type_info')
         if revert:
-            instance_types.extract_instance_type(instance, 'old_').AndReturn(
+            flavors.extract_instance_type(instance, 'old_').AndReturn(
                 {'instance_type_id': old})
-            instance_types.save_instance_type_info(
+            flavors.save_instance_type_info(
                 sys_meta, {'instance_type_id': old}).AndReturn(sys_meta)
         else:
-            instance_types.extract_instance_type(instance).AndReturn(
+            flavors.extract_instance_type(instance).AndReturn(
                 {'instance_type_id': new})
-        instance_types.delete_instance_type_info(
+        flavors.delete_instance_type_info(
             sys_meta, 'old_').AndReturn(sys_meta)
-        instance_types.delete_instance_type_info(
+        flavors.delete_instance_type_info(
             sys_meta, 'new_').AndReturn(sys_meta)
 
         self.mox.ReplayAll()
@@ -3252,7 +3252,7 @@ class ComputeTestCase(BaseTestCase):
         self._test_cleanup_stored_instance_types('1', '1', True)
 
     def test_get_by_flavor_id(self):
-        type = instance_types.get_instance_type_by_flavor_id(1)
+        type = flavors.get_instance_type_by_flavor_id(1)
         self.assertEqual(type['name'], 'm1.tiny')
 
     def test_resize_same_source_fails(self):
@@ -3262,7 +3262,7 @@ class ComputeTestCase(BaseTestCase):
         instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, instance=instance)
         instance = db.instance_get_by_uuid(self.context, instance['uuid'])
-        instance_type = instance_types.get_default_instance_type()
+        instance_type = flavors.get_default_instance_type()
         self.assertRaises(exception.MigrationError, self.compute.prep_resize,
                 self.context, instance=instance,
                 instance_type=instance_type, image={},
@@ -3281,7 +3281,7 @@ class ComputeTestCase(BaseTestCase):
         reservations = self._ensure_quota_reservations_rolledback()
 
         inst_ref = jsonutils.to_primitive(self._create_fake_instance())
-        instance_type = instance_types.get_default_instance_type()
+        instance_type = flavors.get_default_instance_type()
 
         self.compute.run_instance(self.context, instance=inst_ref)
         inst_ref = db.instance_update(self.context, inst_ref['uuid'],
@@ -4775,7 +4775,7 @@ class ComputeAPITestCase(BaseTestCase):
     def test_create_with_too_little_ram(self):
         # Test an instance type with too little memory.
 
-        inst_type = instance_types.get_default_instance_type()
+        inst_type = flavors.get_default_instance_type()
         inst_type['memory_mb'] = 1
 
         self.fake_image['min_ram'] = 2
@@ -4794,7 +4794,7 @@ class ComputeAPITestCase(BaseTestCase):
     def test_create_with_too_little_disk(self):
         # Test an instance type with too little disk space.
 
-        inst_type = instance_types.get_default_instance_type()
+        inst_type = flavors.get_default_instance_type()
         inst_type['root_gb'] = 1
 
         self.fake_image['min_disk'] = 2
@@ -4813,7 +4813,7 @@ class ComputeAPITestCase(BaseTestCase):
     def test_create_just_enough_ram_and_disk(self):
         # Test an instance type with just enough ram and disk space.
 
-        inst_type = instance_types.get_default_instance_type()
+        inst_type = flavors.get_default_instance_type()
         inst_type['root_gb'] = 2
         inst_type['memory_mb'] = 2
 
@@ -4829,7 +4829,7 @@ class ComputeAPITestCase(BaseTestCase):
     def test_create_with_no_ram_and_disk_reqs(self):
         # Test an instance type with no min_ram or min_disk.
 
-        inst_type = instance_types.get_default_instance_type()
+        inst_type = flavors.get_default_instance_type()
         inst_type['root_gb'] = 1
         inst_type['memory_mb'] = 1
 
@@ -4842,7 +4842,7 @@ class ComputeAPITestCase(BaseTestCase):
     def test_create_with_deleted_image(self):
         # If we're given a deleted image by glance, we should not be able to
         # build from it
-        inst_type = instance_types.get_default_instance_type()
+        inst_type = flavors.get_default_instance_type()
 
         self.fake_image['name'] = 'fake_name'
         self.fake_image['status'] = 'DELETED'
@@ -4861,7 +4861,7 @@ class ComputeAPITestCase(BaseTestCase):
         cases = [dict(), dict(display_name=None)]
         for instance in cases:
             (ref, resv_id) = self.compute_api.create(self.context,
-                instance_types.get_default_instance_type(),
+                flavors.get_default_instance_type(),
                 'fake-image-uuid', **instance)
             try:
                 self.assertNotEqual(ref[0]['display_name'], None)
@@ -4872,7 +4872,7 @@ class ComputeAPITestCase(BaseTestCase):
         # Make sure image properties are copied into system metadata.
         (ref, resv_id) = self.compute_api.create(
                 self.context,
-                instance_type=instance_types.get_default_instance_type(),
+                instance_type=flavors.get_default_instance_type(),
                 image_href='fake-image-uuid')
         try:
             sys_metadata = db.instance_system_metadata_get(self.context,
@@ -4889,7 +4889,7 @@ class ComputeAPITestCase(BaseTestCase):
             db.instance_destroy(self.context, ref[0]['uuid'])
 
     def test_create_saves_type_in_system_metadata(self):
-        instance_type = instance_types.get_default_instance_type()
+        instance_type = flavors.get_default_instance_type()
         (ref, resv_id) = self.compute_api.create(
                 self.context,
                 instance_type=instance_type,
@@ -4915,7 +4915,7 @@ class ComputeAPITestCase(BaseTestCase):
         group = self._create_group()
         (ref, resv_id) = self.compute_api.create(
                 self.context,
-                instance_type=instance_types.get_default_instance_type(),
+                instance_type=flavors.get_default_instance_type(),
                 image_href=None,
                 security_group=['testgroup'])
         try:
@@ -4928,7 +4928,7 @@ class ComputeAPITestCase(BaseTestCase):
             db.instance_destroy(self.context, ref[0]['uuid'])
 
     def test_create_instance_with_invalid_security_group_raises(self):
-        instance_type = instance_types.get_default_instance_type()
+        instance_type = flavors.get_default_instance_type()
 
         pre_build_len = len(db.instance_get_all(self.context))
         self.assertRaises(exception.SecurityGroupNotFoundForProject,
@@ -4943,7 +4943,7 @@ class ComputeAPITestCase(BaseTestCase):
     def test_create_with_large_user_data(self):
         # Test an instance type with too much user data.
 
-        inst_type = instance_types.get_default_instance_type()
+        inst_type = flavors.get_default_instance_type()
 
         self.fake_image['min_ram'] = 2
         self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
@@ -4955,7 +4955,7 @@ class ComputeAPITestCase(BaseTestCase):
     def test_create_with_malformed_user_data(self):
         # Test an instance type with malformed user data.
 
-        inst_type = instance_types.get_default_instance_type()
+        inst_type = flavors.get_default_instance_type()
 
         self.fake_image['min_ram'] = 2
         self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
@@ -4967,7 +4967,7 @@ class ComputeAPITestCase(BaseTestCase):
     def test_create_with_base64_user_data(self):
         # Test an instance type with ok much user data.
 
-        inst_type = instance_types.get_default_instance_type()
+        inst_type = flavors.get_default_instance_type()
 
         self.fake_image['min_ram'] = 2
         self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
@@ -4998,7 +4998,7 @@ class ComputeAPITestCase(BaseTestCase):
                  ('hello_server', 'hello-server')]
         for display_name, hostname in cases:
             (ref, resv_id) = self.compute_api.create(self.context,
-                instance_types.get_default_instance_type(), None,
+                flavors.get_default_instance_type(), None,
                 display_name=display_name)
             try:
                 self.assertEqual(ref[0]['hostname'], hostname)
@@ -5011,7 +5011,7 @@ class ComputeAPITestCase(BaseTestCase):
 
         (ref, resv_id) = self.compute_api.create(
                 self.context,
-                instance_type=instance_types.get_default_instance_type(),
+                instance_type=flavors.get_default_instance_type(),
                 image_href=None,
                 security_group=['testgroup'])
         try:
@@ -5027,7 +5027,7 @@ class ComputeAPITestCase(BaseTestCase):
 
         (ref, resv_id) = self.compute_api.create(
                 self.context,
-                instance_type=instance_types.get_default_instance_type(),
+                instance_type=flavors.get_default_instance_type(),
                 image_href=None,
                 security_group=['testgroup'])
 
@@ -5138,7 +5138,7 @@ class ComputeAPITestCase(BaseTestCase):
     def test_delete_in_resizing(self):
         def fake_quotas_reserve(context, expire=None, project_id=None,
                                                              **deltas):
-            old_type = instance_types.get_instance_type_by_name('m1.tiny')
+            old_type = flavors.get_instance_type_by_name('m1.tiny')
             # ensure using old instance type to create reservations
             self.assertEqual(deltas['cores'], -old_type['vcpus'])
             self.assertEqual(deltas['ram'], -old_type['memory_mb'])
@@ -5149,7 +5149,7 @@ class ComputeAPITestCase(BaseTestCase):
                 'host': CONF.host})
 
         # create a fake migration record (manager does this)
-        new_inst_type = instance_types.get_instance_type_by_name('m1.small')
+        new_inst_type = flavors.get_instance_type_by_name('m1.small')
         db.migration_create(self.context.elevated(),
                  {'instance_uuid': instance['uuid'],
                   'old_instance_type_id': instance['instance_type_id'],
@@ -5592,7 +5592,7 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_hostname_create(self):
         # Ensure instance hostname is set during creation.
-        inst_type = instance_types.get_instance_type_by_name('m1.tiny')
+        inst_type = flavors.get_instance_type_by_name('m1.tiny')
         (instances, _) = self.compute_api.create(self.context,
                                                  inst_type,
                                                  None,
@@ -5753,7 +5753,7 @@ class ComputeAPITestCase(BaseTestCase):
                                           {'extra_param': 'value1'})
 
         self.assertEqual(image['name'], 'snap1')
-        instance_type = instance_types.extract_instance_type(instance)
+        instance_type = flavors.extract_instance_type(instance)
         self.assertEqual(image['min_ram'], self.fake_image['min_ram'])
         self.assertEqual(image['min_disk'], instance_type['root_gb'])
         properties = image['properties']
@@ -5981,14 +5981,14 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute_api.resize(self.context, instance, '4')
 
         # Do the prep/finish_resize steps (manager does this)
-        old_type = instance_types.extract_instance_type(instance)
-        new_type = instance_types.get_instance_type_by_flavor_id('4')
+        old_type = flavors.extract_instance_type(instance)
+        new_type = flavors.get_instance_type_by_flavor_id('4')
         sys_meta = utils.metadata_to_dict(instance['system_metadata'])
-        sys_meta = instance_types.save_instance_type_info(sys_meta,
+        sys_meta = flavors.save_instance_type_info(sys_meta,
                                                           old_type, 'old_')
-        sys_meta = instance_types.save_instance_type_info(sys_meta,
+        sys_meta = flavors.save_instance_type_info(sys_meta,
                                                           new_type, 'new_')
-        sys_meta = instance_types.save_instance_type_info(sys_meta,
+        sys_meta = flavors.save_instance_type_info(sys_meta,
                                                           new_type)
 
         # create a fake migration record (manager does this)
@@ -6053,9 +6053,9 @@ class ComputeAPITestCase(BaseTestCase):
         memory_mb = 128
         root_gb = 0
         vcpus = 1
-        instance_types.create(name, memory_mb, vcpus, root_gb, 0,
+        flavors.create(name, memory_mb, vcpus, root_gb, 0,
                               flavorid, 0, 1.0, True)
-        instance_types.destroy(name)
+        flavors.destroy(name)
         self.assertRaises(exception.FlavorNotFound, self.compute_api.resize,
                 self.context, instance, flavorid)
 
@@ -6085,12 +6085,12 @@ class ComputeAPITestCase(BaseTestCase):
         memory_mb = 102400
         root_gb = 0
         vcpus = 1
-        instance_types.create(name, memory_mb, vcpus, root_gb, 0,
+        flavors.create(name, memory_mb, vcpus, root_gb, 0,
                               flavorid, 0, 1.0, True)
         self.assertRaises(exception.TooManyInstances, self.compute_api.resize,
                 self.context, instance, flavorid)
 
-        instance_types.destroy(name)
+        flavors.destroy(name)
         self.compute.terminate_instance(self.context, instance=instance)
 
     def test_resize_revert_deleted_flavor_fails(self):
@@ -6099,7 +6099,7 @@ class ComputeAPITestCase(BaseTestCase):
         memory_mb = 128
         root_gb = 0
         vcpus = 1
-        instance_types.create(orig_name, memory_mb, vcpus, root_gb, 0,
+        flavors.create(orig_name, memory_mb, vcpus, root_gb, 0,
                               orig_flavorid, 0, 1.0, True)
 
         instance = self._create_fake_instance(type_name=orig_name)
@@ -6108,7 +6108,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance=instance)
 
         old_instance_type_id = instance['instance_type_id']
-        new_flavor = instance_types.get_instance_type_by_name('m1.tiny')
+        new_flavor = flavors.get_instance_type_by_name('m1.tiny')
         new_flavorid = new_flavor['flavorid']
         new_instance_type_id = new_flavor['id']
         self.compute_api.resize(self.context, instance, new_flavorid)
@@ -6121,7 +6121,7 @@ class ComputeAPITestCase(BaseTestCase):
         instance = db.instance_update(self.context, instance['uuid'],
                                       {'task_state': None,
                                        'vm_state': vm_states.RESIZED})
-        instance_types.destroy(orig_name)
+        flavors.destroy(orig_name)
         self.assertRaises(exception.InstanceTypeNotFound,
                           self.compute_api.revert_resize,
                           self.context, instance)
@@ -6169,7 +6169,7 @@ class ComputeAPITestCase(BaseTestCase):
         instance = self._create_fake_instance(dict(host='host2'))
         instance = db.instance_get_by_uuid(self.context, instance['uuid'])
         instance = jsonutils.to_primitive(instance)
-        orig_instance_type = instance_types.extract_instance_type(instance)
+        orig_instance_type = flavors.extract_instance_type(instance)
         self.compute.run_instance(self.context, instance=instance)
         # We need to set the host to something 'known'.  Unfortunately,
         # the compute manager is using a cached copy of CONF.host,
@@ -6730,7 +6730,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertThat(bdms, matchers.DictListMatches(expected_result))
 
         self.compute_api._update_block_device_mapping(
-            self.context, instance_types.get_default_instance_type(),
+            self.context, flavors.get_default_instance_type(),
             instance['uuid'], block_device_mapping)
         bdms = [self._parse_db_block_device_mapping(bdm_ref)
                 for bdm_ref in db.block_device_mapping_get_all_by_instance(
@@ -6789,7 +6789,7 @@ class ComputeAPITestCase(BaseTestCase):
         """Verify building an instance has a reservation_id that
         matches return value from create"""
         (refs, resv_id) = self.compute_api.create(self.context,
-                instance_types.get_default_instance_type(), None)
+                flavors.get_default_instance_type(), None)
         try:
             self.assertEqual(len(refs), 1)
             self.assertEqual(refs[0]['reservation_id'], resv_id)
@@ -6802,7 +6802,7 @@ class ComputeAPITestCase(BaseTestCase):
         in both instances
         """
         (refs, resv_id) = self.compute_api.create(self.context,
-                instance_types.get_default_instance_type(), None,
+                flavors.get_default_instance_type(), None,
                 min_count=2, max_count=2)
         try:
             self.assertEqual(len(refs), 2)
@@ -6816,7 +6816,7 @@ class ComputeAPITestCase(BaseTestCase):
     def test_multi_instance_display_name_template(self):
         self.flags(multi_instance_display_name_template='%(name)s')
         (refs, resv_id) = self.compute_api.create(self.context,
-                instance_types.get_default_instance_type(), None,
+                flavors.get_default_instance_type(), None,
                 min_count=2, max_count=2, display_name='x')
         self.assertEqual(refs[0]['display_name'], 'x')
         self.assertEqual(refs[0]['hostname'], 'x')
@@ -6825,7 +6825,7 @@ class ComputeAPITestCase(BaseTestCase):
 
         self.flags(multi_instance_display_name_template='%(name)s-%(count)s')
         (refs, resv_id) = self.compute_api.create(self.context,
-                instance_types.get_default_instance_type(), None,
+                flavors.get_default_instance_type(), None,
                 min_count=2, max_count=2, display_name='x')
         self.assertEqual(refs[0]['display_name'], 'x-1')
         self.assertEqual(refs[0]['hostname'], 'x-1')
@@ -6834,7 +6834,7 @@ class ComputeAPITestCase(BaseTestCase):
 
         self.flags(multi_instance_display_name_template='%(name)s-%(uuid)s')
         (refs, resv_id) = self.compute_api.create(self.context,
-                instance_types.get_default_instance_type(), None,
+                flavors.get_default_instance_type(), None,
                 min_count=2, max_count=2, display_name='x')
         self.assertEqual(refs[0]['display_name'], 'x-%s' % refs[0]['uuid'])
         self.assertEqual(refs[0]['hostname'], 'x-%s' % refs[0]['uuid'])
@@ -7537,7 +7537,7 @@ class ComputeAPITestCase(BaseTestCase):
         inst['project_id'] = self.project_id
         inst['host'] = 'fake_host'
         inst['node'] = NODENAME
-        type_id = instance_types.get_instance_type_by_name('m1.tiny')['id']
+        type_id = flavors.get_instance_type_by_name('m1.tiny')['id']
         inst['instance_type_id'] = type_id
         inst['ami_launch_index'] = 0
         inst['memory_mb'] = 0
@@ -8046,7 +8046,7 @@ class DisabledInstanceTypesTestCase(BaseTestCase):
     def setUp(self):
         super(DisabledInstanceTypesTestCase, self).setUp()
         self.compute_api = compute.API()
-        self.inst_type = instance_types.get_default_instance_type()
+        self.inst_type = flavors.get_default_instance_type()
 
     def test_can_build_instance_from_visible_instance_type(self):
         self.inst_type['disabled'] = False
@@ -8061,7 +8061,7 @@ class DisabledInstanceTypesTestCase(BaseTestCase):
     def test_can_resize_to_visible_instance_type(self):
         instance = self._create_fake_instance()
         orig_get_instance_type_by_flavor_id =\
-                instance_types.get_instance_type_by_flavor_id
+                flavors.get_instance_type_by_flavor_id
 
         def fake_get_instance_type_by_flavor_id(flavor_id, ctxt=None,
                                                 read_deleted="yes"):
@@ -8071,7 +8071,7 @@ class DisabledInstanceTypesTestCase(BaseTestCase):
             instance_type['disabled'] = False
             return instance_type
 
-        self.stubs.Set(instance_types, 'get_instance_type_by_flavor_id',
+        self.stubs.Set(flavors, 'get_instance_type_by_flavor_id',
                        fake_get_instance_type_by_flavor_id)
 
         # FIXME(sirp): for legacy this raises FlavorNotFound instead of
@@ -8082,7 +8082,7 @@ class DisabledInstanceTypesTestCase(BaseTestCase):
     def test_cannot_resize_to_disabled_instance_type(self):
         instance = self._create_fake_instance()
         orig_get_instance_type_by_flavor_id = \
-                instance_types.get_instance_type_by_flavor_id
+                flavors.get_instance_type_by_flavor_id
 
         def fake_get_instance_type_by_flavor_id(flavor_id, ctxt=None,
                                                 read_deleted="yes"):
@@ -8092,7 +8092,7 @@ class DisabledInstanceTypesTestCase(BaseTestCase):
             instance_type['disabled'] = True
             return instance_type
 
-        self.stubs.Set(instance_types, 'get_instance_type_by_flavor_id',
+        self.stubs.Set(flavors, 'get_instance_type_by_flavor_id',
                        fake_get_instance_type_by_flavor_id)
 
         # FIXME(sirp): for legacy this raises FlavorNotFound instead of
@@ -8386,7 +8386,7 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
         super(ComputeRescheduleResizeOrReraiseTestCase, self).setUp()
         self.instance = self._create_fake_instance()
         self.instance_uuid = self.instance['uuid']
-        self.instance_type = instance_types.get_instance_type_by_name(
+        self.instance_type = flavors.get_instance_type_by_name(
                 "m1.tiny")
 
     def test_reschedule_resize_or_reraise_called(self):
@@ -8493,7 +8493,7 @@ class ComputeInactiveImageTestCase(BaseTestCase):
 
     def test_create_instance_with_deleted_image(self):
         # Make sure we can't start an instance with a deleted image.
-        inst_type = instance_types.get_instance_type_by_name('m1.tiny')
+        inst_type = flavors.get_instance_type_by_name('m1.tiny')
         self.assertRaises(exception.ImageNotActive,
                           self.compute_api.create,
                           self.context, inst_type, 'fake-image-uuid')

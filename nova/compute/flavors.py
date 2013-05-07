@@ -150,7 +150,7 @@ def destroy(name):
 
 
 def get_all_types(ctxt=None, inactive=False, filters=None):
-    """Get all non-deleted instance_types.
+    """Get all non-deleted flavors.
 
     Pass true as argument if you want deleted instance types returned also.
     """

@@ -18,7 +18,7 @@ Tests For Filter Scheduler.
 
 import mox
 
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
@@ -329,7 +329,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         instance = db.instance_create(self.context, {})
 
         instance_properties = {'project_id': 'fake', 'os_type': 'Linux'}
-        instance_type = instance_types.get_instance_type_by_name("m1.tiny")
+        instance_type = flavors.get_instance_type_by_name("m1.tiny")
         request_spec = {'instance_properties': instance_properties,
                         'instance_type': instance_type}
         retry = {'hosts': [], 'num_attempts': 1}

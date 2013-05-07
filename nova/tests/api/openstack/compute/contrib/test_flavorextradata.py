@@ -17,7 +17,7 @@ import datetime
 
 import webob
 
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
@@ -54,9 +54,9 @@ class FlavorextradataTest(test.TestCase):
         ext = ('nova.api.openstack.compute.contrib'
               '.flavorextradata.Flavorextradata')
         self.flags(osapi_compute_extension=[ext])
-        self.stubs.Set(instance_types, 'get_instance_type_by_flavor_id',
+        self.stubs.Set(flavors, 'get_instance_type_by_flavor_id',
                                         fake_get_instance_type_by_flavor_id)
-        self.stubs.Set(instance_types, 'get_all_types', fake_get_all_types)
+        self.stubs.Set(flavors, 'get_all_types', fake_get_all_types)
 
     def _verify_flavor_response(self, flavor, expected):
         for key in expected:

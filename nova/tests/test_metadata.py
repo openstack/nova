@@ -37,7 +37,7 @@ from nova.api.metadata import base
 from nova.api.metadata import handler
 from nova.api.metadata import password
 from nova import block_device
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova.conductor import api as conductor_api
 from nova import db
 from nova.db.sqlalchemy import api
@@ -77,8 +77,8 @@ INSTANCES = (
 
 def get_default_sys_meta():
     return utils.dict_to_metadata(
-        instance_types.save_instance_type_info(
-            {}, instance_types.get_default_instance_type()))
+        flavors.save_instance_type_info(
+            {}, flavors.get_default_instance_type()))
 
 
 def return_non_existing_address(*args, **kwarg):

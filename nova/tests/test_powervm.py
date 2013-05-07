@@ -24,7 +24,7 @@ from nova import context
 from nova import db
 from nova import test
 
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.network import model as network_model
@@ -180,7 +180,7 @@ class PowerVMDriverTestCase(test.TestCase):
         fake.stub_out_image_service(self.stubs)
         ctxt = context.get_admin_context()
         instance_type = db.instance_type_get(ctxt, 1)
-        sys_meta = instance_types.save_instance_type_info({}, instance_type)
+        sys_meta = flavors.save_instance_type_info({}, instance_type)
         return db.instance_create(ctxt,
                         {'user_id': 'fake',
                         'project_id': 'fake',

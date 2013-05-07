@@ -34,7 +34,7 @@ from nova.api.openstack.compute import views
 from nova.api.openstack import extensions
 from nova.api.openstack import xmlutil
 from nova.compute import api as compute_api
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context
@@ -1728,7 +1728,7 @@ class ServersControllerCreateTest(test.TestCase):
         self.controller = servers.Controller(self.ext_mgr)
 
         def instance_create(context, inst):
-            inst_type = instance_types.get_instance_type_by_flavor_id(3)
+            inst_type = flavors.get_instance_type_by_flavor_id(3)
             image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
             def_image_ref = 'http://localhost/images/%s' % image_uuid
             self.instance_cache_num += 1

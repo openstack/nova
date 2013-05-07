@@ -31,7 +31,7 @@ from oslo.config import cfg
 from xml.dom import minidom
 
 from nova.api.ec2 import cloud
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import vm_mode
@@ -320,7 +320,7 @@ class LibvirtConnTestCase(test.TestCase):
                        lambda *a, **k: self.conn)
 
         instance_type = db.instance_type_get(self.context, 5)
-        sys_meta = instance_types.save_instance_type_info({}, instance_type)
+        sys_meta = flavors.save_instance_type_info({}, instance_type)
 
         nova.tests.image.fake.stub_out_image_service(self.stubs)
         self.test_instance = {
@@ -2557,7 +2557,7 @@ class LibvirtConnTestCase(test.TestCase):
         instance_ref['image_ref'] = 123456  # we send an int to test sha1 call
         instance_type = db.instance_type_get(self.context,
                                              instance_ref['instance_type_id'])
-        sys_meta = instance_types.save_instance_type_info({}, instance_type)
+        sys_meta = flavors.save_instance_type_info({}, instance_type)
         instance_ref['system_metadata'] = sys_meta
         instance = db.instance_create(self.context, instance_ref)
 
@@ -4724,8 +4724,8 @@ class LibvirtDriverTestCase(test.TestCase):
         if not params:
             params = {}
 
-        sys_meta = instance_types.save_instance_type_info(
-            {}, instance_types.get_instance_type_by_name('m1.tiny'))
+        sys_meta = flavors.save_instance_type_info(
+            {}, flavors.get_instance_type_by_name('m1.tiny'))
 
         inst = {}
         inst['image_ref'] = '1'
@@ -4733,7 +4733,7 @@ class LibvirtDriverTestCase(test.TestCase):
         inst['launch_time'] = '10'
         inst['user_id'] = 'fake'
         inst['project_id'] = 'fake'
-        type_id = instance_types.get_instance_type_by_name('m1.tiny')['id']
+        type_id = flavors.get_instance_type_by_name('m1.tiny')['id']
         inst['instance_type_id'] = type_id
         inst['ami_launch_index'] = 0
         inst['host'] = 'host1'

@@ -26,7 +26,7 @@ from oslo.config import cfg
 from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils
 from nova.compute import api as compute_api
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova.compute import utils as compute_utils
 from nova import context
 from nova import db
@@ -40,7 +40,7 @@ from nova import volume
 
 CONF = cfg.CONF
 CONF.import_opt('compute_driver', 'nova.virt.driver')
-CONF.import_opt('default_instance_type', 'nova.compute.instance_types')
+CONF.import_opt('default_instance_type', 'nova.compute.flavors')
 CONF.import_opt('use_ipv6', 'nova.netconf')
 
 
@@ -413,8 +413,8 @@ class CinderCloudTestCase(test.TestCase):
 
     def _setUpBlockDeviceMapping(self):
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
-        sys_meta = instance_types.save_instance_type_info(
-            {}, instance_types.get_instance_type(1))
+        sys_meta = flavors.save_instance_type_info(
+            {}, flavors.get_instance_type(1))
         inst1 = db.instance_create(self.context,
                                   {'image_ref': image_uuid,
                                    'instance_type_id': 1,

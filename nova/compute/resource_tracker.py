@@ -22,7 +22,7 @@ model.
 from oslo.config import cfg
 
 from nova.compute import claims
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova import conductor
@@ -160,7 +160,7 @@ class ResourceTracker(object):
         be done while the COMPUTE_RESOURCES_SEMAPHORE is held so the resource
         claim will not be lost if the audit process starts.
         """
-        old_instance_type = instance_types.extract_instance_type(instance)
+        old_instance_type = flavors.extract_instance_type(instance)
 
         return self.conductor_api.migration_create(context, instance,
                 {'dest_compute': self.host,
@@ -580,7 +580,7 @@ class ResourceTracker(object):
             instance_type_id = instance['instance_type_id']
 
         try:
-            return instance_types.extract_instance_type(instance, prefix)
+            return flavors.extract_instance_type(instance, prefix)
         except KeyError:
             return self.conductor_api.instance_type_get(context,
                     instance_type_id)

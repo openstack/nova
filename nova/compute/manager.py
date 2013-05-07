@@ -43,7 +43,7 @@ from nova import block_device
 from nova.cells import rpcapi as cells_rpcapi
 from nova.cloudpipe import pipelib
 from nova import compute
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova.compute import power_state
 from nova.compute import resource_tracker
 from nova.compute import rpcapi as compute_rpcapi
@@ -1114,7 +1114,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             # TODO(jk0): Should size be required in the image service?
             return image_meta
 
-        instance_type = instance_types.extract_instance_type(instance)
+        instance_type = flavors.extract_instance_type(instance)
         allowed_size_gb = instance_type['root_gb']
 
         # NOTE(johannes): root_gb is allowed to be 0 for legacy reasons
@@ -2129,15 +2129,15 @@ class ComputeManager(manager.SchedulerDependentManager):
         """
         sys_meta = utils.metadata_to_dict(instance['system_metadata'])
         if restore_old:
-            instance_type = instance_types.extract_instance_type(instance,
+            instance_type = flavors.extract_instance_type(instance,
                                                                  'old_')
-            sys_meta = instance_types.save_instance_type_info(sys_meta,
+            sys_meta = flavors.save_instance_type_info(sys_meta,
                                                               instance_type)
         else:
-            instance_type = instance_types.extract_instance_type(instance)
+            instance_type = flavors.extract_instance_type(instance)
 
-        instance_types.delete_instance_type_info(sys_meta, 'old_')
-        instance_types.delete_instance_type_info(sys_meta, 'new_')
+        flavors.delete_instance_type_info(sys_meta, 'old_')
+        flavors.delete_instance_type_info(sys_meta, 'new_')
 
         return sys_meta, instance_type
 
@@ -2352,7 +2352,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         # NOTE(danms): Stash the new instance_type to avoid having to
         # look it up in the database later
         sys_meta = utils.metadata_to_dict(instance['system_metadata'])
-        instance_types.save_instance_type_info(sys_meta, instance_type,
+        flavors.save_instance_type_info(sys_meta, instance_type,
                                                 prefix='new_')
         instance = self._instance_update(context, instance['uuid'],
                                          system_metadata=sys_meta)
@@ -2519,15 +2519,15 @@ class ComputeManager(manager.SchedulerDependentManager):
         resize_instance = False
         old_instance_type_id = migration['old_instance_type_id']
         new_instance_type_id = migration['new_instance_type_id']
-        old_instance_type = instance_types.extract_instance_type(instance)
+        old_instance_type = flavors.extract_instance_type(instance)
         sys_meta = utils.metadata_to_dict(instance['system_metadata'])
-        instance_types.save_instance_type_info(sys_meta,
+        flavors.save_instance_type_info(sys_meta,
                                                old_instance_type,
                                                prefix='old_')
         if old_instance_type_id != new_instance_type_id:
-            instance_type = instance_types.extract_instance_type(instance,
+            instance_type = flavors.extract_instance_type(instance,
                                                                  prefix='new_')
-            instance_types.save_instance_type_info(sys_meta, instance_type)
+            flavors.save_instance_type_info(sys_meta, instance_type)
 
             instance = self._instance_update(
                     context,

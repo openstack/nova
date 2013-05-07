@@ -36,7 +36,7 @@ from nova import block_device
 from nova.cloudpipe import pipelib
 from nova import compute
 from nova.compute import api as compute_api
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova.compute import vm_states
 from nova import db
 from nova import exception
@@ -1091,7 +1091,7 @@ class CloudController(object):
 
     @staticmethod
     def _format_instance_type(instance, result):
-        instance_type = instance_types.extract_instance_type(instance)
+        instance_type = flavors.extract_instance_type(instance)
         result['instanceType'] = instance_type['name']
 
     @staticmethod
@@ -1323,7 +1323,7 @@ class CloudController(object):
             raise exception.EC2APIError(_('Image must be available'))
 
         (instances, resv_id) = self.compute_api.create(context,
-            instance_type=instance_types.get_instance_type_by_name(
+            instance_type=flavors.get_instance_type_by_name(
                 kwargs.get('instance_type', None)),
             image_href=image_uuid,
             max_count=int(kwargs.get('max_count', min_count)),

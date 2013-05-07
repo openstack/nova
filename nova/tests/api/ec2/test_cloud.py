@@ -33,7 +33,7 @@ from nova.api.ec2 import ec2utils
 from nova.api.ec2 import inst_state
 from nova.api.metadata import password
 from nova.compute import api as compute_api
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova.compute import power_state
 from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import utils as compute_utils
@@ -58,7 +58,7 @@ from nova import volume
 
 CONF = cfg.CONF
 CONF.import_opt('compute_driver', 'nova.virt.driver')
-CONF.import_opt('default_instance_type', 'nova.compute.instance_types')
+CONF.import_opt('default_instance_type', 'nova.compute.flavors')
 CONF.import_opt('use_ipv6', 'nova.netconf')
 LOG = logging.getLogger(__name__)
 
@@ -762,8 +762,8 @@ class CloudTestCase(test.TestCase):
         self._stub_instance_get_with_fixed_ips('get')
 
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
-        sys_meta = instance_types.save_instance_type_info(
-            {}, instance_types.get_instance_type(1))
+        sys_meta = flavors.save_instance_type_info(
+            {}, flavors.get_instance_type(1))
         inst1 = db.instance_create(self.context, {'reservation_id': 'a',
                                                   'image_ref': image_uuid,
                                                   'instance_type_id': 1,
@@ -868,8 +868,8 @@ class CloudTestCase(test.TestCase):
                        fake_change_instance_metadata)
 
         # Create some test images
-        sys_meta = instance_types.save_instance_type_info(
-            {}, instance_types.get_instance_type(1))
+        sys_meta = flavors.save_instance_type_info(
+            {}, flavors.get_instance_type(1))
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
         inst1_kwargs = {
                 'reservation_id': 'a',
@@ -1040,8 +1040,8 @@ class CloudTestCase(test.TestCase):
         self._stub_instance_get_with_fixed_ips('get')
 
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
-        sys_meta = instance_types.save_instance_type_info(
-            {}, instance_types.get_instance_type(1))
+        sys_meta = flavors.save_instance_type_info(
+            {}, flavors.get_instance_type(1))
         inst_base = {
                 'reservation_id': 'a',
                 'image_ref': image_uuid,
@@ -1095,8 +1095,8 @@ class CloudTestCase(test.TestCase):
         def test_instance_state(expected_code, expected_name,
                                 power_state_, vm_state_, values=None):
             image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
-            sys_meta = instance_types.save_instance_type_info(
-                {}, instance_types.get_instance_type(1))
+            sys_meta = flavors.save_instance_type_info(
+                {}, flavors.get_instance_type(1))
             values = values or {}
             values.update({'image_ref': image_uuid, 'instance_type_id': 1,
                            'power_state': power_state_, 'vm_state': vm_state_,
@@ -1130,8 +1130,8 @@ class CloudTestCase(test.TestCase):
         self._stub_instance_get_with_fixed_ips('get')
 
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
-        sys_meta = instance_types.save_instance_type_info(
-            {}, instance_types.get_instance_type(1))
+        sys_meta = flavors.save_instance_type_info(
+            {}, flavors.get_instance_type(1))
         inst1 = db.instance_create(self.context, {'reservation_id': 'a',
                                                   'image_ref': image_uuid,
                                                   'instance_type_id': 1,
@@ -1157,8 +1157,8 @@ class CloudTestCase(test.TestCase):
 
     def test_describe_instances_deleted(self):
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
-        sys_meta = instance_types.save_instance_type_info(
-            {}, instance_types.get_instance_type(1))
+        sys_meta = flavors.save_instance_type_info(
+            {}, flavors.get_instance_type(1))
         args1 = {'reservation_id': 'a',
                  'image_ref': image_uuid,
                  'instance_type_id': 1,
@@ -1182,8 +1182,8 @@ class CloudTestCase(test.TestCase):
 
     def test_describe_instances_with_image_deleted(self):
         image_uuid = 'aebef54a-ed67-4d10-912f-14455edce176'
-        sys_meta = instance_types.save_instance_type_info(
-            {}, instance_types.get_instance_type(1))
+        sys_meta = flavors.save_instance_type_info(
+            {}, flavors.get_instance_type(1))
         args1 = {'reservation_id': 'a',
                  'image_ref': image_uuid,
                  'instance_type_id': 1,
@@ -2256,9 +2256,9 @@ class CloudTestCase(test.TestCase):
                        self._fake_bdm_get)
 
         def fake_get(ctxt, instance_id):
-            inst_type = instance_types.get_default_instance_type()
+            inst_type = flavors.get_default_instance_type()
             inst_type['name'] = 'fake_type'
-            sys_meta = instance_types.save_instance_type_info({}, inst_type)
+            sys_meta = flavors.save_instance_type_info({}, inst_type)
             sys_meta = utils.dict_to_metadata(sys_meta)
             return {
                 'id': 0,

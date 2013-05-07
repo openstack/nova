@@ -65,7 +65,7 @@ gettext.install('nova', unicode=1)
 
 from nova.api.ec2 import ec2utils
 from nova import availability_zones
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova import config
 from nova import context
 from nova import db
@@ -621,7 +621,7 @@ class VmCommands(object):
                            context.get_admin_context(), host)
 
         for instance in instances:
-            instance_type = instance_types.extract_instance_type(instance)
+            instance_type = flavors.extract_instance_type(instance)
             print ("%-10s %-15s %-10s %-10s %-26s %-9s %-9s %-9s"
                    " %-10s %-10s %-10s %-5d" % (instance['display_name'],
                                                 instance['host'],
@@ -889,7 +889,7 @@ class InstanceTypeCommands(object):
                flavorid=None, swap=0, rxtx_factor=1.0, is_public=True):
         """Creates instance types / flavors."""
         try:
-            instance_types.create(name, memory, vcpus, root_gb,
+            flavors.create(name, memory, vcpus, root_gb,
                                   ephemeral_gb, flavorid, swap, rxtx_factor,
                                   is_public)
         except exception.InvalidInput as e:
@@ -914,7 +914,7 @@ class InstanceTypeCommands(object):
     def delete(self, name):
         """Marks instance types / flavors as deleted."""
         try:
-            instance_types.destroy(name)
+            flavors.destroy(name)
         except exception.InstanceTypeNotFound:
             print _("Valid instance type name is required")
             return(1)
@@ -931,9 +931,9 @@ class InstanceTypeCommands(object):
         """Lists all active or specific instance types / flavors."""
         try:
             if name is None:
-                inst_types = instance_types.get_all_types()
+                inst_types = flavors.get_all_types()
             else:
-                inst_types = instance_types.get_instance_type_by_name(name)
+                inst_types = flavors.get_instance_type_by_name(name)
         except db_exc.DBError as e:
             _db_error(e)
         if isinstance(inst_types.values()[0], dict):
@@ -949,7 +949,7 @@ class InstanceTypeCommands(object):
         """Add key/value pair to specified instance type's extra_specs."""
         try:
             try:
-                inst_type = instance_types.get_instance_type_by_name(name)
+                inst_type = flavors.get_instance_type_by_name(name)
             except exception.InstanceTypeNotFoundByName as e:
                 print e
                 return(2)
@@ -971,7 +971,7 @@ class InstanceTypeCommands(object):
         """Delete the specified extra spec for instance type."""
         try:
             try:
-                inst_type = instance_types.get_instance_type_by_name(name)
+                inst_type = flavors.get_instance_type_by_name(name)
             except exception.InstanceTypeNotFoundByName as e:
                 print e
                 return(2)

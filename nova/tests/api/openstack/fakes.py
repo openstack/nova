@@ -33,7 +33,7 @@ from nova.api.openstack.compute import versions
 from nova.api.openstack import urlmap
 from nova.api.openstack import wsgi as os_wsgi
 from nova.compute import api as compute_api
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova.compute import vm_states
 from nova import context
 from nova.db.sqlalchemy import models
@@ -437,8 +437,8 @@ def stub_instance(id, user_id=None, project_id=None, host=None,
     else:
         metadata = []
 
-    inst_type = instance_types.get_instance_type_by_flavor_id(int(flavor_id))
-    sys_meta = instance_types.save_instance_type_info({}, inst_type)
+    inst_type = flavors.get_instance_type_by_flavor_id(int(flavor_id))
+    sys_meta = flavors.save_instance_type_info({}, inst_type)
 
     if host is not None:
         host = str(host)

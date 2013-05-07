@@ -37,7 +37,7 @@ from oslo.config import cfg
 
 from nova.api.metadata import base as instance_metadata
 from nova import block_device
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova.compute import power_state
 from nova.compute import task_states
 from nova import exception
@@ -210,7 +210,7 @@ def create_vm(session, instance, name_label, kernel, ramdisk,
 
         3. Using hardware virtualization
     """
-    instance_type = instance_types.extract_instance_type(instance)
+    instance_type = flavors.extract_instance_type(instance)
     mem = str(long(instance_type['memory_mb']) * 1024 * 1024)
     vcpus = str(instance_type['vcpus'])
 
@@ -323,7 +323,7 @@ def _is_vm_shutdown(session, vm_ref):
 
 
 def ensure_free_mem(session, instance):
-    instance_type = instance_types.extract_instance_type(instance)
+    instance_type = flavors.extract_instance_type(instance)
     mem = long(instance_type['memory_mb']) * 1024 * 1024
     host = session.get_xenapi_host()
     host_free_mem = long(session.call_xenapi("host.compute_free_memory",
@@ -777,7 +777,7 @@ def resize_disk(session, instance, vdi_ref, instance_type):
 
 def auto_configure_disk(session, vdi_ref, new_gb):
     """Partition and resize FS to match the size specified by
-    instance_types.root_gb.
+    flavors.root_gb.
 
     This is a fail-safe to prevent accidentally destroying data on a disk
     erroneously marked as auto_disk_config=True.
@@ -1177,7 +1177,7 @@ def _check_vdi_size(context, session, instance, vdi_uuid):
 
     # FIXME(jk0): this was copied directly from compute.manager.py, let's
     # refactor this to a common area
-    instance_type = instance_types.extract_instance_type(instance)
+    instance_type = flavors.extract_instance_type(instance)
     allowed_size_gb = instance_type['root_gb']
     allowed_size_bytes = allowed_size_gb * 1024 * 1024 * 1024
 

@@ -28,7 +28,7 @@ from nova.api.openstack.compute.views import servers as views_servers
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import compute
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova import exception
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
@@ -872,7 +872,7 @@ class Controller(wsgi.Controller):
             scheduler_hints = server_dict.get('scheduler_hints', {})
 
         try:
-            _get_inst_type = instance_types.get_instance_type_by_flavor_id
+            _get_inst_type = flavors.get_instance_type_by_flavor_id
             inst_type = _get_inst_type(flavor_id, read_deleted="no")
 
             (instances, resv_id) = self.compute_api.create(context,

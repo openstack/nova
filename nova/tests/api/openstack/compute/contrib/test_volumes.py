@@ -22,7 +22,7 @@ from webob import exc
 
 from nova.api.openstack.compute.contrib import volumes
 from nova.compute import api as compute_api
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova import context
 from nova.openstack.common import jsonutils
 from nova.openstack.common import timeutils
@@ -46,7 +46,7 @@ def fake_compute_api_create(cls, context, instance_type, image_href, **kwargs):
     global _block_device_mapping_seen
     _block_device_mapping_seen = kwargs.get('block_device_mapping')
 
-    inst_type = instance_types.get_instance_type_by_flavor_id(2)
+    inst_type = flavors.get_instance_type_by_flavor_id(2)
     resv_id = None
     return ([{'id': 1,
              'display_name': 'test_server',
