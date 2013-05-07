@@ -56,7 +56,6 @@ class VMwareVMOpsTestCase(test.TestCase):
 
     def test_get_machine_id_str(self):
         result = vmops.VMwareVMOps._get_machine_id_str(self.network_info)
-        print result
         self.assertEqual(result,
                          'DE:AD:BE:EF:00:00;192.168.0.100;255.255.255.0;'
                          '192.168.0.1;192.168.0.255;192.168.0.1#')
