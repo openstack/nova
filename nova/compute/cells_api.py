@@ -559,6 +559,16 @@ class ComputeCellsAPI(compute_api.API):
             pass
         return rv
 
+    @validate_cell
+    def live_migrate(self, context, instance, block_migration,
+                     disk_over_commit, host_name):
+        """Migrate a server lively to a new host."""
+        super(ComputeCellsAPI, self).live_migrate(context,
+            instance, block_migration, disk_over_commit, host_name)
+
+        self._cast_to_cells(context, instance, 'live_migrate',
+                            block_migration, disk_over_commit, host_name)
+
 
 class HostAPI(compute_api.HostAPI):
     """HostAPI() class for cells.
