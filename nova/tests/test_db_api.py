@@ -408,7 +408,7 @@ class DbApiTestCase(DbTestCase):
         system_meta = db.instance_system_metadata_get(ctxt, instance['uuid'])
         self.assertEqual('baz', system_meta['original_image_ref'])
 
-    def test_delete_instance_metadata_on_instance_destroy(self):
+    def test_delete_instance_and_system_metadata_on_instance_destroy(self):
         ctxt = context.get_admin_context()
 
         # Create an instance with some metadata
@@ -420,8 +420,11 @@ class DbApiTestCase(DbTestCase):
         self.assertEqual('meow', instance_meta['key1'])
         db.instance_destroy(ctxt, instance['uuid'])
         instance_meta = db.instance_metadata_get(ctxt, instance['uuid'])
-        # Make sure instance metadata is deleted as well
+        instance_system_meta = db.instance_system_metadata_get(ctxt,
+                instance['uuid'])
+        # Make sure instance and system metadata is deleted as well
         self.assertEqual({}, instance_meta)
+        self.assertEqual({}, instance_system_meta)
 
     def test_instance_update_unique_name(self):
         otherprojectcontext = context.RequestContext(self.user_id,
