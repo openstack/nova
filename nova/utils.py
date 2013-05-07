@@ -155,71 +155,10 @@ def execute(*cmd, **kwargs):
 
 
 def trycmd(*args, **kwargs):
-    """
-    A wrapper around execute() to more easily handle warnings and errors.
-
-    Returns an (out, err) tuple of strings containing the output of
-    the command's stdout and stderr.  If 'err' is not empty then the
-    command can be considered to have failed.
-
-    :discard_warnings   True | False. Defaults to False. If set to True,
-                        then for succeeding commands, stderr is cleared
-
-    """
-    discard_warnings = kwargs.pop('discard_warnings', False)
-
-    try:
-        out, err = execute(*args, **kwargs)
-        failed = False
-    except processutils.ProcessExecutionError, exn:
-        out, err = '', str(exn)
-        failed = True
-
-    if not failed and discard_warnings and err:
-        # Handle commands that output to stderr but otherwise succeed
-        err = ''
-
-    return out, err
-
-
-def ssh_execute(ssh, cmd, process_input=None,
-                addl_env=None, check_exit_code=True):
-    LOG.debug(_('Running cmd (SSH): %s'), cmd)
-    if addl_env:
-        raise exception.NovaException(_('Environment not supported over SSH'))
-
-    if process_input:
-        # This is (probably) fixable if we need it...
-        msg = _('process_input not supported over SSH')
-        raise exception.NovaException(msg)
-
-    stdin_stream, stdout_stream, stderr_stream = ssh.exec_command(cmd)
-    channel = stdout_stream.channel
-
-    #stdin.write('process_input would go here')
-    #stdin.flush()
-
-    # NOTE(justinsb): This seems suspicious...
-    # ...other SSH clients have buffering issues with this approach
-    stdout = stdout_stream.read()
-    stderr = stderr_stream.read()
-    stdin_stream.close()
-
-    exit_status = channel.recv_exit_status()
-
-    # exit_status == -1 if no exit code was returned
-    if exit_status != -1:
-        LOG.debug(_('Result was %s') % exit_status)
-        if check_exit_code and exit_status != 0:
-            # TODO(mikal): I know this is a bit odd, but its needed for
-            # consistency. I will move this method into processutils in a
-            # later change.
-            raise processutils.ProcessExecutionError(exit_code=exit_status,
-                                                     stdout=stdout,
-                                                     stderr=stderr,
-                                                     cmd=cmd)
-
-    return (stdout, stderr)
+    """Convenience wrapper around oslo's trycmd() method."""
+    if 'run_as_root' in kwargs and not 'root_helper' in kwargs:
+        kwargs['root_helper'] = 'sudo nova-rootwrap %s' % CONF.rootwrap_config
+    return processutils.trycmd(*args, **kwargs)
 
 
 def novadir():
