@@ -1210,11 +1210,6 @@
 # The full class name of the security API class (string value)
 #security_group_api=nova
 
-# The full class name of the security group handler class
-# (string value)
-#security_group_handler=nova.network.sg.NullSecurityGroupHandler
-
-
 #
 # Options defined in bin.nova-clear-rabbit-queues
 #

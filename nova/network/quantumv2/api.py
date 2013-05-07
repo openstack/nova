@@ -280,9 +280,6 @@ class API(base.Base):
                             LOG.debug(msg, {'portid': port_id,
                                             'exception': ex})
 
-        self.trigger_security_group_members_refresh(context, instance)
-        self.trigger_instance_add_security_group_refresh(context, instance)
-
         nw_info = self._get_instance_nw_info(context, instance, networks=nets)
         # NOTE(danms): Only return info about ports we created in this run.
         # In the initial allocation case, this will be everything we created,
@@ -329,8 +326,6 @@ class API(base.Base):
             except Exception as ex:
                 LOG.exception(_("Failed to delete quantum port %(portid)s ")
                               % {'portid': port['id']})
-        self.trigger_security_group_members_refresh(context, instance)
-        self.trigger_instance_remove_security_group_refresh(context, instance)
 
     @refresh_cache
     def allocate_port_for_instance(self, context, instance, port_id,
@@ -353,9 +348,6 @@ class API(base.Base):
         except Exception as ex:
             LOG.exception(_("Failed to delete quantum port %(port_id)s ") %
                           locals())
-
-        self.trigger_security_group_members_refresh(context, instance)
-        self.trigger_instance_remove_security_group_refresh(context, instance)
 
         return self._get_instance_nw_info(context, instance)
 
@@ -506,32 +498,6 @@ class API(base.Base):
             ip = ip[:-1]
         ip = ip.replace('\\.', '.')
         return self._get_instance_uuids_by_ip(context, ip)
-
-    def trigger_instance_add_security_group_refresh(self, context,
-                                                    instance_ref):
-        """Refresh and add security groups given an instance reference."""
-        admin_context = context.elevated()
-        for group in instance_ref['security_groups']:
-            self.conductor_api.security_groups_trigger_handler(context,
-                'instance_add_security_group', instance_ref, group['name'])
-
-    def trigger_instance_remove_security_group_refresh(self, context,
-                                                       instance_ref):
-        """Refresh and remove security groups given an instance reference."""
-        admin_context = context.elevated()
-        for group in instance_ref['security_groups']:
-            self.conductor_api.security_groups_trigger_handler(context,
-                'instance_remove_security_group', instance_ref, group['name'])
-
-    def trigger_security_group_members_refresh(self, context, instance_ref):
-        """Refresh security group members."""
-        admin_context = context.elevated()
-        group_ids = [group['id'] for group in instance_ref['security_groups']]
-
-        self.conductor_api.security_groups_trigger_members_refresh(
-            admin_context, group_ids)
-        self.conductor_api.security_groups_trigger_handler(admin_context,
-            'security_group_members', group_ids)
 
     def _get_port_id_by_fixed_address(self, client,
                                       instance, address):

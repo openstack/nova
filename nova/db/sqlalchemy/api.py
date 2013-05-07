@@ -1441,7 +1441,7 @@ def instance_create(context, values):
 
     def _get_sec_group_models(session, security_groups):
         models = []
-        _existed, default_group = security_group_ensure_default(context,
+        default_group = security_group_ensure_default(context,
             session=session)
         if 'default' in security_groups:
             models.append(default_group)
@@ -3230,17 +3230,11 @@ def security_group_create(context, values, session=None):
 
 
 def security_group_ensure_default(context, session=None):
-    """Ensure default security group exists for a project_id.
-
-    Returns a tuple with the first element being a bool indicating
-    if the default security group previously existed. Second
-    element is the dict used to create the default security group.
-    """
+    """Ensure default security group exists for a project_id."""
     try:
         default_group = security_group_get_by_name(context,
                 context.project_id, 'default',
                 columns_to_join=[], session=session)
-        return (True, default_group)
     except exception.NotFound:
         values = {'name': 'default',
                   'description': 'default',
@@ -3258,7 +3252,7 @@ def security_group_ensure_default(context, session=None):
                            'parent_group_id': default_group.id,
             }
             security_group_rule_create(context, rule_values)
-        return (False, default_group)
+    return default_group
 
 
 @require_context
