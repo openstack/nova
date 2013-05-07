@@ -387,21 +387,6 @@ class NetworkManager(manager.Manager):
 
         self.security_group_api.trigger_members_refresh(admin_context,
                                                         group_ids)
-        self.security_group_api.trigger_handler('security_group_members',
-                                                admin_context, group_ids)
-
-    def _do_trigger_security_group_handler(self, handler, instance_id):
-        admin_context = context.get_admin_context(read_deleted="yes")
-        if uuidutils.is_uuid_like(instance_id):
-            instance_ref = self.db.instance_get_by_uuid(admin_context,
-                                                        instance_id)
-        else:
-            instance_ref = self.db.instance_get(admin_context,
-                                                instance_id)
-        for group_name in [group['name'] for group
-                in instance_ref['security_groups']]:
-            self.security_group_api.trigger_handler(handler, admin_context,
-                    instance_ref, group_name)
 
     def get_floating_ips_by_fixed_address(self, context, fixed_address):
         # NOTE(jkoelker) This is just a stub function. Managers supporting
@@ -856,8 +841,6 @@ class NetworkManager(manager.Manager):
                         context.elevated(), network['id'], instance_id)
                 self._do_trigger_security_group_members_refresh_for_instance(
                     instance_id)
-                self._do_trigger_security_group_handler(
-                    'instance_add_security_group', instance_id)
                 get_vif = self.db.virtual_interface_get_by_instance_and_network
                 vif = get_vif(context, instance_id, network['id'])
                 values = {'allocated': True,
@@ -898,8 +881,6 @@ class NetworkManager(manager.Manager):
 
         self._do_trigger_security_group_members_refresh_for_instance(
             instance_uuid)
-        self._do_trigger_security_group_handler(
-            'instance_remove_security_group', instance_uuid)
 
         # NOTE(vish) This db query could be removed if we pass az and name
         #            (or the whole instance object).

@@ -191,7 +191,6 @@ class API(base.Base):
         self.volume_api = volume_api or volume.API()
         self.security_group_api = (security_group_api or
             openstack_driver.get_openstack_security_group_driver())
-        self.sgh = openstack_driver.get_security_group_handler()
         self.consoleauth_rpcapi = consoleauth_rpcapi.ConsoleAuthAPI()
         self.scheduler_rpcapi = scheduler_rpcapi.SchedulerAPI()
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
@@ -921,9 +920,6 @@ class API(base.Base):
         self._populate_instance_shutdown_terminate(instance, image,
                                                    block_device_mapping)
 
-        # ensure_default security group is called before the instance
-        # is created so the creation of the default security group is
-        # proxied to the sgh.
         self.security_group_api.ensure_default(context)
         instance = self.db.instance_create(context, instance)
 
@@ -2833,7 +2829,6 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
     def __init__(self, **kwargs):
         super(SecurityGroupAPI, self).__init__(**kwargs)
         self.security_group_rpcapi = compute_rpcapi.SecurityGroupAPI()
-        self.sgh = openstack_driver.get_security_group_handler()
 
     def validate_property(self, value, property, allowed):
         """
@@ -2876,9 +2871,7 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
 
         :param context: the security context
         """
-        existed, group = self.db.security_group_ensure_default(context)
-        if not existed:
-            self.sgh.trigger_security_group_create_refresh(context, group)
+        self.db.security_group_ensure_default(context)
 
     def create_security_group(self, context, name, description):
         try:
@@ -2902,7 +2895,6 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
                      'name': name,
                      'description': description}
             group_ref = self.db.security_group_create(context, group)
-            self.sgh.trigger_security_group_create_refresh(context, group)
             # Commit the reservation
             QUOTAS.commit(context, reservations)
         except Exception:
@@ -2979,9 +2971,6 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
                   context=context)
         self.db.security_group_destroy(context, security_group['id'])
 
-        self.sgh.trigger_security_group_destroy_refresh(context,
-                                                        security_group['id'])
-
         # Commit the reservations
         if reservations:
             QUOTAS.commit(context, reservations)
@@ -3027,9 +3016,6 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
         self.security_group_rpcapi.refresh_security_group_rules(context,
                 security_group['id'], host=instance['host'])
 
-        self.trigger_handler('instance_add_security_group',
-                context, instance, security_group_name)
-
     @wrap_check_security_groups_policy
     def remove_from_instance(self, context, instance, security_group_name):
         """Remove the security group associated with the instance."""
@@ -3052,9 +3038,6 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
         # call
         self.security_group_rpcapi.refresh_security_group_rules(context,
                 security_group['id'], host=instance['host'])
-
-        self.trigger_handler('instance_remove_security_group',
-                context, instance, security_group_name)
 
     def get_rule(self, context, id):
         self.ensure_default(context)
@@ -3086,8 +3069,6 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
         rules = [self.db.security_group_rule_create(context, v) for v in vals]
 
         self.trigger_rules_refresh(context, id=id)
-        self.trigger_handler('security_group_rule_create', context,
-                             [r['id'] for r in rules])
         return rules
 
     def remove_rules(self, context, security_group, rule_ids):
@@ -3099,7 +3080,6 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
 
         # NOTE(vish): we removed some rules, so refresh
         self.trigger_rules_refresh(context, id=security_group['id'])
-        self.trigger_handler('security_group_rule_destroy', context, rule_ids)
 
     def remove_default_rules(self, context, rule_ids):
         for rule_id in rule_ids:
@@ -3147,10 +3127,6 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
         except ValueError:
             msg = _("Security group id should be integer")
             self.raise_invalid_property(msg)
-
-    def trigger_handler(self, event, *args):
-        handle = getattr(self.sgh, 'trigger_%s_refresh' % event)
-        handle(*args)
 
     def trigger_rules_refresh(self, context, id):
         """Called when a rule is added to or removed from a security_group."""

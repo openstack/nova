@@ -282,7 +282,7 @@ class TestSecurityGroupDefaultRules(test.TestCase):
 
         setattr(ctxt, 'project_id', 'new_project_id')
 
-        _, sg = nova.db.security_group_ensure_default(ctxt)
+        sg = nova.db.security_group_ensure_default(ctxt)
         rules = nova.db.security_group_rule_get_by_security_group(ctxt, sg.id)
         security_group_rule = rules[0]
         self.assertEqual(sgr['id'], security_group_rule.id)
