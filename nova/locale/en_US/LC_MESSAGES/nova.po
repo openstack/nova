@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  Nova\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/nova\n"
-"POT-Creation-Date: 2013-05-06 19:37+0000\n"
+"POT-Creation-Date: 2013-05-07 19:38+0000\n"
 "PO-Revision-Date: 2013-01-21 18:28+0000\n"
 "Last-Translator: Jeremy Stanley <fungi@yuggoth.org>\n"
 "Language-Team: en_US <LL@li.org>\n"
@@ -171,7 +171,7 @@ msgid ""
 msgstr ""
 
 #: nova/exception.py:235 nova/api/ec2/cloud.py:463
-#: nova/api/openstack/compute/contrib/keypairs.py:98 nova/compute/api.py:2769
+#: nova/api/openstack/compute/contrib/keypairs.py:98 nova/compute/api.py:2765
 msgid "Keypair data is invalid"
 msgstr "Keypair data is invalid"
 
@@ -2806,7 +2806,7 @@ msgstr "attribute not supported: %s"
 msgid "Detach interface %s"
 msgstr "Starting VLAN interface %s"
 
-#: nova/api/openstack/compute/contrib/baremetal_nodes.py:193
+#: nova/api/openstack/compute/contrib/baremetal_nodes.py:192
 msgid "Must specify id or address"
 msgstr ""
 
@@ -3879,16 +3879,16 @@ msgstr ""
 msgid "No nova entries in syslog!"
 msgstr ""
 
-#: nova/compute/api.py:282
+#: nova/compute/api.py:281
 msgid "Cannot run any more instances of this type."
 msgstr "Cannot run any more instances of this type."
 
-#: nova/compute/api.py:289
+#: nova/compute/api.py:288
 #, python-format
 msgid "Can only run %s more instances of this type."
 msgstr "Can only run %s more instances of this type."
 
-#: nova/compute/api.py:298
+#: nova/compute/api.py:297
 #, python-format
 msgid ""
 "%(overs)s quota exceeded for %(pid)s, tried to run %(min_count)s "
@@ -3897,7 +3897,7 @@ msgstr ""
 "%(overs)s quota exceeded for %(pid)s, tried to run %(min_count)s "
 "instances. %(msg)s"
 
-#: nova/compute/api.py:318
+#: nova/compute/api.py:317
 #, python-format
 msgid ""
 "Quota exceeded for %(pid)s, tried to set %(num_metadata)s metadata "
@@ -3906,93 +3906,93 @@ msgstr ""
 "Quota exceeded for %(pid)s, tried to set %(num_metadata)s metadata "
 "properties"
 
-#: nova/compute/api.py:328
+#: nova/compute/api.py:327
 msgid "Metadata property key blank"
 msgstr "Metadata property key blank"
 
-#: nova/compute/api.py:332
+#: nova/compute/api.py:331
 msgid "Metadata property key greater than 255 characters"
 msgstr "Metadata property key greater than 255 characters"
 
-#: nova/compute/api.py:336
+#: nova/compute/api.py:335
 msgid "Metadata property value greater than 255 characters"
 msgstr "Metadata property value greater than 255 characters"
 
-#: nova/compute/api.py:469
+#: nova/compute/api.py:468
 msgid "Failed to set instance name using multi_instance_display_name_template."
 msgstr ""
 
-#: nova/compute/api.py:509
+#: nova/compute/api.py:508
 #, fuzzy
 msgid "Cannot attach one or more volumes to multiple instances"
 msgstr "Unable to attach boot volume to instance %s"
 
-#: nova/compute/api.py:623
+#: nova/compute/api.py:622
 #, python-format
 msgid "Going to run %s instances..."
 msgstr "Going to run %s instances..."
 
-#: nova/compute/api.py:739
+#: nova/compute/api.py:738
 #, python-format
 msgid "bdm %s"
 msgstr "bdm %s"
 
-#: nova/compute/api.py:766
+#: nova/compute/api.py:765
 #, python-format
 msgid "block_device_mapping %s"
 msgstr "block_device_mapping %s"
 
-#: nova/compute/api.py:1040
+#: nova/compute/api.py:1036
 #, fuzzy
 msgid "instance termination disabled"
 msgstr "Going to start terminating instances"
 
-#: nova/compute/api.py:1176
+#: nova/compute/api.py:1172
 #, fuzzy, python-format
 msgid "instance type %(old_inst_type_id)d not found"
 msgstr "Instance type %(instance_type_id)s could not be found."
 
-#: nova/compute/api.py:1182
+#: nova/compute/api.py:1178
 #, fuzzy
 msgid "going to delete a resizing instance"
 msgstr "Going to start terminating instances"
 
-#: nova/compute/api.py:1192
+#: nova/compute/api.py:1188
 #, fuzzy, python-format
 msgid "instance's host %s is down, deleting from database"
 msgstr "host for instance is down, deleting from database"
 
-#: nova/compute/api.py:1236
+#: nova/compute/api.py:1232
 msgid "Going to try to soft delete instance"
 msgstr "Going to try to soft delete instance"
 
-#: nova/compute/api.py:1260
+#: nova/compute/api.py:1256
 msgid "Going to try to terminate instance"
 msgstr "Going to try to terminate instance"
 
-#: nova/compute/api.py:1310
+#: nova/compute/api.py:1306
 msgid "Going to try to stop instance"
 msgstr "Going to try to stop instance"
 
-#: nova/compute/api.py:1327
+#: nova/compute/api.py:1323
 msgid "Going to try to start instance"
 msgstr "Going to try to start instance"
 
-#: nova/compute/api.py:1400
+#: nova/compute/api.py:1396
 #, python-format
 msgid "Searching by: %s"
 msgstr "Searching by: %s"
 
-#: nova/compute/api.py:1637
+#: nova/compute/api.py:1633
 #, python-format
 msgid "snapshot for %s"
 msgstr "snapshot for %s"
 
-#: nova/compute/api.py:1988
+#: nova/compute/api.py:1984
 msgid "flavor_id is None. Assuming migration."
 msgstr "flavor_id is None. Assuming migration."
 
-#: nova/compute/api.py:1997
+#: nova/compute/api.py:1993
 #, python-format
 msgid ""
 "Old instance type %(current_instance_type_name)s,  new instance type "
@@ -4001,62 +4001,62 @@ msgstr ""
 "Old instance type %(current_instance_type_name)s,  new instance type "
 "%(new_instance_type_name)s"
 
-#: nova/compute/api.py:2039
+#: nova/compute/api.py:2035
 #, fuzzy, python-format
 msgid "%(overs)s quota exceeded for %(pid)s, tried to resize instance."
 msgstr "%(overs)s quota exceeded for %(pid)s, tried to resize instance. %(msg)s"
 
-#: nova/compute/api.py:2179
+#: nova/compute/api.py:2175
 msgid "Cannot rescue a volume-backed instance"
 msgstr ""
 
-#: nova/compute/api.py:2286
+#: nova/compute/api.py:2282
 msgid "Locking"
 msgstr "Locking"
 
-#: nova/compute/api.py:2294
+#: nova/compute/api.py:2290
 msgid "Unlocking"
 msgstr "Unlocking"
 
-#: nova/compute/api.py:2366
+#: nova/compute/api.py:2362
 msgid "Volume must be attached in order to detach."
 msgstr "Volume must be attached in order to detach."
 
-#: nova/compute/api.py:2479
+#: nova/compute/api.py:2475
 #, python-format
 msgid "Going to try to live migrate instance to %s"
 msgstr "Going to try to live migrate instance to %s"
 
-#: nova/compute/api.py:2498
+#: nova/compute/api.py:2494
 msgid "vm evacuation scheduled"
 msgstr ""
 
-#: nova/compute/api.py:2502
+#: nova/compute/api.py:2498
 #, python-format
 msgid ""
 "Instance compute service state on %(inst_host)s expected to be down, but "
 "it was up."
 msgstr ""
 
-#: nova/compute/api.py:2749
+#: nova/compute/api.py:2745
 msgid "Keypair name contains unsafe characters"
 msgstr "Keypair name contains unsafe characters"
 
-#: nova/compute/api.py:2753
+#: nova/compute/api.py:2749
 msgid "Keypair name must be between 1 and 255 characters long"
 msgstr "Keypair name must be between 1 and 255 characters long"
 
-#: nova/compute/api.py:2850
+#: nova/compute/api.py:2845
 #, python-format
 msgid "Security group %s is not a string or unicode"
 msgstr "Security group %s is not a string or unicode"
 
-#: nova/compute/api.py:2853
+#: nova/compute/api.py:2848
 #, python-format
 msgid "Security group %s cannot be empty."
 msgstr "Security group %s cannot be empty."
 
-#: nova/compute/api.py:2861
+#: nova/compute/api.py:2856
 #, python-format
 msgid ""
 "Value (%(value)s) for parameter Group%(property)s is invalid. Content "
@@ -4065,63 +4065,63 @@ msgstr ""
 "Value (%(value)s) for parameter Group%(property)s is invalid. Content "
 "limited to '%(allowed)'."
 
-#: nova/compute/api.py:2867
+#: nova/compute/api.py:2862
 #, python-format
 msgid "Security group %s should not be greater than 255 characters."
 msgstr "Security group %s should not be greater than 255 characters."
 
-#: nova/compute/api.py:2887
+#: nova/compute/api.py:2880
 msgid "Quota exceeded, too many security groups."
 msgstr "Quota exceeded, too many security groups."
 
-#: nova/compute/api.py:2890
+#: nova/compute/api.py:2883
 #, python-format
 msgid "Create Security Group %s"
 msgstr "Create Security Group %s"
 
-#: nova/compute/api.py:2897
+#: nova/compute/api.py:2890
 #, python-format
 msgid "Security group %s already exists"
 msgstr "Security group %s already exists"
 
-#: nova/compute/api.py:2962
+#: nova/compute/api.py:2954
 #, fuzzy, python-format
 msgid "Unable to delete system group '%s'"
 msgstr "Unable to destroy vbd %s"
 
-#: nova/compute/api.py:2967
+#: nova/compute/api.py:2959
 msgid "Security group is still in use"
 msgstr "Security group is still in use"
 
-#: nova/compute/api.py:2975
+#: nova/compute/api.py:2967
 msgid "Failed to update usages deallocating security group"
 msgstr "Failed to update usages deallocating security group"
 
-#: nova/compute/api.py:2978
+#: nova/compute/api.py:2970
 #, python-format
 msgid "Delete security group %s"
 msgstr "Delete security group %s"
 
-#: nova/compute/api.py:3064 nova/compute/api.py:3141
+#: nova/compute/api.py:3047 nova/compute/api.py:3121
 #, python-format
 msgid "Rule (%s) not found"
 msgstr "Rule (%s) not found"
 
-#: nova/compute/api.py:3080
+#: nova/compute/api.py:3063
 msgid "Quota exceeded, too many security group rules."
 msgstr "Quota exceeded, too many security group rules."
 
-#: nova/compute/api.py:3083
+#: nova/compute/api.py:3066
 #, python-format
 msgid "Authorize security group ingress %s"
 msgstr "Authorize security group ingress %s"
 
-#: nova/compute/api.py:3094
+#: nova/compute/api.py:3075
 #, python-format
 msgid "Revoke security group ingress %s"
 msgstr "Revoke security group ingress %s"
 
-#: nova/compute/api.py:3148
+#: nova/compute/api.py:3128
 msgid "Security group id should be integer"
 msgstr "Security group id should be integer"
 
@@ -5164,17 +5164,17 @@ msgid ""
 "empty, \"global\" or \"project\""
 msgstr ""
 
-#: nova/db/sqlalchemy/api.py:1543
+#: nova/db/sqlalchemy/api.py:1546
 #, fuzzy, python-format
 msgid "Invalid instance id %s in request"
 msgstr "instance %s: rescued"
 
-#: nova/db/sqlalchemy/api.py:2834
+#: nova/db/sqlalchemy/api.py:2837
 #, python-format
 msgid "Change will make usage less than 0 for the following resources: %(unders)s"
 msgstr "Change will make usage less than 0 for the following resources: %(unders)s"
 
-#: nova/db/sqlalchemy/api.py:4335
+#: nova/db/sqlalchemy/api.py:4332
 #, python-format
 msgid ""
 "Volume(%s) has lower stats then what is in the database. Instance must "
@@ -5540,20 +5540,20 @@ msgstr "Disassociated %s stale fixed ip(s)"
 msgid "setting network host"
 msgstr "setting network host"
 
-#: nova/network/manager.py:495
+#: nova/network/manager.py:480
 msgid "network allocations"
 msgstr "network allocations"
 
-#: nova/network/manager.py:502
+#: nova/network/manager.py:487
 #, fuzzy, python-format
 msgid "networks retrieved for instance: |%(networks_list)s|"
 msgstr "networks retrieved for instance: |%(networks)s|"
 
-#: nova/network/manager.py:550
+#: nova/network/manager.py:535
 msgid "network deallocation for instance"
 msgstr "network deallocation for instance"
 
-#: nova/network/manager.py:816
+#: nova/network/manager.py:801
 #, python-format
 msgid ""
 "instance-dns-zone is |%(domain)s|, which is in availability zone "
@@ -5564,61 +5564,61 @@ msgstr ""
 "|%(zone)s|. Instance is in zone |%(zone2)s|. No DNS record will be "
 "created."
 
-#: nova/network/manager.py:842
+#: nova/network/manager.py:827
 #, fuzzy, python-format
 msgid "Quota exceeded for %(pid)s, tried to allocate fixed IP"
 msgstr "Quota exceeded for %(pid)s, tried to allocate floating IP"
 
-#: nova/network/manager.py:896
+#: nova/network/manager.py:879
 #, fuzzy
 msgid "Failed to update usages deallocating fixed IP"
 msgstr "Failed to update usages deallocating floating IP"
 
-#: nova/network/manager.py:930
+#: nova/network/manager.py:911
 #, python-format
 msgid "Unable to release %s because vif doesn't exist."
 msgstr "Unable to release %s because vif doesn't exist."
 
-#: nova/network/manager.py:953
+#: nova/network/manager.py:934
 #, python-format
 msgid "Leased IP |%(address)s|"
 msgstr "Leased IP |%(address)s|"
 
-#: nova/network/manager.py:957
+#: nova/network/manager.py:938
 #, python-format
 msgid "IP %s leased that is not associated"
 msgstr "IP %s leased that is not associated"
 
-#: nova/network/manager.py:966
+#: nova/network/manager.py:947
 #, python-format
 msgid "IP |%s| leased that isn't allocated"
 msgstr "IP |%s| leased that isn't allocated"
 
-#: nova/network/manager.py:971
+#: nova/network/manager.py:952
 #, python-format
 msgid "Released IP |%(address)s|"
 msgstr "Released IP |%(address)s|"
 
-#: nova/network/manager.py:975
+#: nova/network/manager.py:956
 #, python-format
 msgid "IP %s released that is not associated"
 msgstr "IP %s released that is not associated"
 
-#: nova/network/manager.py:979
+#: nova/network/manager.py:960
 #, python-format
 msgid "IP %s released that was not leased"
 msgstr "IP %s released that was not leased"
 
-#: nova/network/manager.py:998
+#: nova/network/manager.py:979
 #, python-format
 msgid "%s must be an integer"
 msgstr "%s must be an integer"
 
-#: nova/network/manager.py:1022
+#: nova/network/manager.py:1003
 msgid "Maximum allowed length for 'label' is 255."
 msgstr "Maximum allowed length for 'label' is 255."
 
-#: nova/network/manager.py:1042
+#: nova/network/manager.py:1023
 #, python-format
 msgid ""
 "Subnet(s) too large, defaulting to /%s.  To override, specify "
@@ -5627,16 +5627,16 @@ msgstr ""
 "Subnet(s) too large, defaulting to /%s.  To override, specify "
 "network_size flag."
 
-#: nova/network/manager.py:1123
+#: nova/network/manager.py:1104
 msgid "cidr already in use"
 msgstr "cidr already in use"
 
-#: nova/network/manager.py:1126
+#: nova/network/manager.py:1107
 #, python-format
 msgid "requested cidr (%(cidr)s) conflicts with existing supernet (%(super)s)"
 msgstr "requested cidr (%(cidr)s) conflicts with existing supernet (%(super)s)"
 
-#: nova/network/manager.py:1137
+#: nova/network/manager.py:1118
 #, python-format
 msgid ""
 "requested cidr (%(cidr)s) conflicts with existing smaller cidr "
@@ -5645,16 +5645,16 @@ msgstr ""
 "requested cidr (%(cidr)s) conflicts with existing smaller cidr "
 "(%(smaller)s)"
 
-#: nova/network/manager.py:1194
+#: nova/network/manager.py:1175
 msgid "Network already exists!"
 msgstr "Network already exists!"
 
-#: nova/network/manager.py:1213
+#: nova/network/manager.py:1194
 #, python-format
 msgid "Network must be disassociated from project %s before delete"
 msgstr "Network must be disassociated from project %s before delete"
 
-#: nova/network/manager.py:1813
+#: nova/network/manager.py:1794
 msgid ""
 "The sum between the number of networks and the vlan start cannot be "
 "greater than 4094"
@@ -5662,7 +5662,7 @@ msgstr ""
 "The sum between the number of networks and the vlan start cannot be "
 "greater than 4094"
 
-#: nova/network/manager.py:1820
+#: nova/network/manager.py:1801
 #, fuzzy, python-format
 msgid ""
 "The network range is not big enough to fit %(num_networks)s networks. "
@@ -5736,44 +5736,44 @@ msgstr "Host not found"
 msgid "Fail to delete port %(portid)s with failure: %(exception)s"
 msgstr "Fail to delete port %(portid)s with failure: %(exception)s"
 
-#: nova/network/quantumv2/api.py:321
+#: nova/network/quantumv2/api.py:318
 #, python-format
 msgid "deallocate_for_instance() for %s"
 msgstr "deallocate_for_instance() for %s"
 
-#: nova/network/quantumv2/api.py:330
+#: nova/network/quantumv2/api.py:327
 #, python-format
 msgid "Failed to delete quantum port %(portid)s "
 msgstr "Failed to delete quantum port %(portid)s "
 
-#: nova/network/quantumv2/api.py:354
+#: nova/network/quantumv2/api.py:349
 #, fuzzy, python-format
 msgid "Failed to delete quantum port %(port_id)s "
 msgstr "Failed to delete quantum port %(portid)s "
 
-#: nova/network/quantumv2/api.py:381
+#: nova/network/quantumv2/api.py:373
 #, python-format
 msgid "get_instance_nw_info() for %s"
 msgstr "get_instance_nw_info() for %s"
 
-#: nova/network/quantumv2/api.py:413
+#: nova/network/quantumv2/api.py:405
 #, fuzzy, python-format
 msgid ""
 "Unable to update port %(portid)s on subnet %(subnet_id)s with failure: "
 "%(exception)s"
 msgstr "Fail to delete port %(portid)s with failure: %(exception)s"
 
-#: nova/network/quantumv2/api.py:443
+#: nova/network/quantumv2/api.py:435
 #, fuzzy, python-format
 msgid "Unable to update port %(portid)s with failure: %(exception)s"
 msgstr "Fail to delete port %(portid)s with failure: %(exception)s"
 
-#: nova/network/quantumv2/api.py:453
+#: nova/network/quantumv2/api.py:445
 #, python-format
 msgid "validate_networks() for %s"
 msgstr "validate_networks() for %s"
 
-#: nova/network/quantumv2/api.py:722
+#: nova/network/quantumv2/api.py:688
 #, python-format
 msgid "Multiple floating IP pools matches found for name '%s'"
 msgstr "Multiple floating IP pools matches found for name '%s'"
@@ -6980,7 +6980,7 @@ msgstr "After force-killing instances: %s"
 msgid "wrong host/node"
 msgstr ""
 
-#: nova/tests/compute/test_compute.py:8707
+#: nova/tests/compute/test_compute.py:8725
 #, fuzzy
 msgid "spawn error"
 msgstr "unknown guestmount error"
@@ -11299,62 +11299,4 @@ msgstr "status must be available"
 #, fuzzy
 msgid "status must be 'available'"
 msgstr "status must be available"
-
-#~ msgid "Unexpected error while running command."
-#~ msgstr "Unexpected error while running command."
-
-#~ msgid ""
-#~ "%(description)s\n"
-#~ "Command: %(cmd)s\n"
-#~ "Exit code: %(exit_code)s\n"
-#~ "Stdout: %(stdout)r\n"
-#~ "Stderr: %(stderr)r"
-#~ msgstr ""
-#~ "%(description)s\n"
-#~ "Command: %(cmd)s\n"
-#~ "Exit code: %(exit_code)s\n"
-#~ "Stdout: %(stdout)r\n"
-#~ "Stderr: %(stderr)r"
-
-#~ msgid "Error clearing stale veth %s"
-#~ msgstr "Error starting xvp: %s"
-
-#~ msgid "Failed unplugging VLAN interface '%s'"
-#~ msgstr "Failed unplugging gateway interface '%s'"
-
-#~ msgid "Unplugged VLAN interface '%s'"
-#~ msgstr "Unplugged gateway interface '%s'"
-
-#~ msgid "Failed unplugging bridge interface '%s'"
-#~ msgstr "Failed unplugging gateway interface '%s'"
-
-#~ msgid "Unplugged bridge interface '%s'"
-#~ msgstr "Unplugged gateway interface '%s'"
-
-#~ msgid "Failed unplugging gateway interface '%s'"
-#~ msgstr "Failed unplugging gateway interface '%s'"
-
-#~ msgid "Unplugged gateway interface '%s'"
-#~ msgstr "Unplugged gateway interface '%s'"
-
-#~ msgid "Network %(net)s for port %(port_id)s not found!"
-#~ msgstr "Network %(network_id)s could not be found."
-
-#~ msgid ""
-#~ "No hosts matched due to not "
-#~ "matching 'force_hosts'value of "
-#~ "'%(forced_hosts_str)s'"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Getting block stats failed, device might"
-#~ " have been detached. Code=%(errcode)s "
-#~ "Error=%(e)s"
-#~ msgstr ""
-
-#~ msgid "Must specify vmwareapi_wsdl_loc"
-#~ msgstr "Must specify vmwareapi_wsdl_loc"
-
-#~ msgid "Unable to get SR for this host: %s"
-#~ msgstr "Unable to get SR for this host: %s"
 
