@@ -8531,6 +8531,24 @@ class EvacuateHostTestCase(BaseTestCase):
         instance = db.instance_get(self.context, self.inst_ref['id'])
         self.assertEqual(instance['host'], self.compute.host)
 
+    def test_rebuild_with_instance_in_stopped_state(self):
+        """Confirm evacuate scenario updates vm_state to stopped
+        if instance is in stopped state
+        """
+        #Initialize the VM to stopped state
+        db.instance_update(self.context, self.inst_ref['uuid'],
+                           {"vm_state": vm_states.STOPPED})
+        self.inst_ref['vm_state'] = vm_states.STOPPED
+
+        self.stubs.Set(self.compute.driver, 'instance_on_disk', lambda x: True)
+        self.mox.ReplayAll()
+
+        self._rebuild()
+
+        #Check the vm state is reset to stopped
+        instance = db.instance_get(self.context, self.inst_ref['id'])
+        self.assertEqual(instance['vm_state'], vm_states.STOPPED)
+
     def test_rebuild_with_wrong_shared_storage(self):
         """Confirm evacuate scenario does not update host."""
         self.stubs.Set(self.compute.driver, 'instance_on_disk', lambda x: True)
