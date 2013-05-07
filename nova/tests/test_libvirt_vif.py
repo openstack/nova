@@ -584,7 +584,6 @@ class LibvirtVifTestCase(test.TestCase):
                                      self.mapping_8021qbg)
 
         doc = etree.fromstring(xml)
-        print xml
         ret = doc.findall('./devices/interface')
         self.assertEqual(len(ret), 1)
         node = ret[0]

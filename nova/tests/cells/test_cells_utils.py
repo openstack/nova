@@ -98,8 +98,6 @@ class CellsUtilsTestCase(test.TestCase):
         cell = None
         together = cells_utils.cell_with_item(cell, item)
         self.assertEqual(item, together)
-        print together
         result_cell, result_item = cells_utils.split_cell_and_item(together)
-        print result_cell, result_item
         self.assertEqual(cell, result_cell)
         self.assertEqual(item, result_item)
