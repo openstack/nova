@@ -553,7 +553,6 @@ def get_datastore_ref_and_name(session, cluster=None, host=None):
                                 "Datastore", data_store_mors,
                                 ["summary.type", "summary.name",
                                  "summary.capacity", "summary.freeSpace"])
-
     for elem in data_stores:
         ds_name = None
         ds_type = None
@@ -570,8 +569,6 @@ def get_datastore_ref_and_name(session, cluster=None, host=None):
                 ds_free = prop.val
         # Local storage identifier
         if ds_type == "VMFS" or ds_type == "NFS":
-            data_store_name = ds_name
-            return elem.obj, data_store_name, ds_cap, ds_free
+            return elem.obj, ds_name, ds_cap, ds_free
 
-    if data_store_name is None:
         raise exception.DatastoreNotFound()
