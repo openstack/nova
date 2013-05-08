@@ -1315,6 +1315,25 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
                           floating_ips.insert().execute,
                           dict(address='128.128.128.129', deleted=0))
 
+    # migration 179 - convert cells.deleted from boolean to int
+    def _pre_upgrade_179(self, engine):
+        cells_data = [
+            {'id': 4, 'deleted': True},
+            {'id': 5, 'deleted': False},
+        ]
+
+        cells = get_table(engine, 'cells')
+        engine.execute(cells.insert(), cells_data)
+
+        return dict(cells=cells_data)
+
+    def _check_179(self, engine, data):
+        cells = get_table(engine, 'cells')
+        cell = cells.select(cells.c.id == 4).execute().first()
+        self.assertEqual(4, cell.deleted)
+        cell = cells.select(cells.c.id == 5).execute().first()
+        self.assertEqual(0, cell.deleted)
+
 
 class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""
