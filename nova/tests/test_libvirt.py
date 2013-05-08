@@ -2190,9 +2190,9 @@ class LibvirtConnTestCase(test.TestCase):
         conn._check_shared_storage_test_file("file").AndReturn(False)
 
         self.mox.StubOutWithMock(conn, "_assert_dest_node_has_enough_disk")
-        conn._assert_dest_node_has_enough_disk(self.context, instance_ref,
-                                        dest_check_data['disk_available_mb'],
-                                               False)
+        conn._assert_dest_node_has_enough_disk(
+            self.context, instance_ref, dest_check_data['disk_available_mb'],
+            False)
 
         self.mox.ReplayAll()
         conn.check_can_live_migrate_source(self.context, instance_ref,
@@ -2393,13 +2393,14 @@ class LibvirtConnTestCase(test.TestCase):
             self.mox.ReplayAll()
             migrate_data = {'is_shared_storage': False,
                             'is_volume_backed': True,
-                            'block_migration': False
+                            'block_migration': False,
+                            'instance_relative_path': inst_ref['name']
                             }
             ret = conn.pre_live_migration(c, inst_ref, vol, nw_info,
                                           migrate_data)
             self.assertEqual(ret, None)
             self.assertTrue(os.path.exists('%s/%s/' % (tmpdir,
-                                                       inst_ref['uuid'])))
+                                                       inst_ref['name'])))
         db.instance_destroy(self.context, inst_ref['uuid'])
 
     def test_pre_block_migration_works_correctly(self):
