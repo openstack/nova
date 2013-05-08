@@ -1697,8 +1697,10 @@ class API(base.Base):
                                       task_states.SUSPENDING])
     def reboot(self, context, instance, reboot_type):
         """Reboot the given instance."""
-        if (reboot_type == 'SOFT' and
-            instance['task_state'] == task_states.REBOOTING):
+        if ((reboot_type == 'SOFT' and
+                instance['task_state'] == task_states.REBOOTING) or
+            (reboot_type == 'HARD' and
+                instance['task_state'] == task_states.REBOOTING_HARD)):
             raise exception.InstanceInvalidState(
                 attr='task_state',
                 instance_uuid=instance['uuid'],
