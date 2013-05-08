@@ -63,7 +63,7 @@ from xml.dom import minidom
 
 from nova.api.metadata import base as instance_metadata
 from nova import block_device
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import vm_mode
@@ -1789,7 +1789,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                      user_id=instance['user_id'],
                                      project_id=instance['project_id'])
 
-        inst_type = instance_types.extract_instance_type(instance)
+        inst_type = flavors.extract_instance_type(instance)
 
         # NOTE(ndipanov): Even if disk_mapping was passed in, which
         # currently happens only on rescue - we still don't want to

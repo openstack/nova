@@ -18,7 +18,7 @@ import datetime
 import webob
 
 from nova.api.openstack.compute.contrib import flavormanage
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova import exception
 from nova.openstack.common import jsonutils
 from nova import test
@@ -80,11 +80,11 @@ def fake_create(name, memory_mb, vcpus, root_gb, ephemeral_gb,
 class FlavorManageTest(test.TestCase):
     def setUp(self):
         super(FlavorManageTest, self).setUp()
-        self.stubs.Set(instance_types,
+        self.stubs.Set(flavors,
                        "get_instance_type_by_flavor_id",
                        fake_get_instance_type_by_flavor_id)
-        self.stubs.Set(instance_types, "destroy", fake_destroy)
-        self.stubs.Set(instance_types, "create", fake_create)
+        self.stubs.Set(flavors, "destroy", fake_destroy)
+        self.stubs.Set(flavors, "create", fake_create)
         self.flags(
             osapi_compute_extension=[
                 'nova.api.openstack.compute.contrib.select_extensions'],
@@ -156,7 +156,7 @@ class FlavorManageTest(test.TestCase):
             }
         }
 
-        self.stubs.Set(instance_types, "create", fake_create)
+        self.stubs.Set(flavors, "create", fake_create)
         url = '/v2/fake/flavors'
         req = webob.Request.blank(url)
         req.headers['Content-Type'] = 'application/json'
@@ -210,7 +210,7 @@ class FlavorManageTest(test.TestCase):
                         flavorid, swap, rxtx_factor, is_public):
             raise exception.InstanceTypeExists(name=name)
 
-        self.stubs.Set(instance_types, "create", fake_create)
+        self.stubs.Set(flavors, "create", fake_create)
         url = '/v2/fake/flavors'
         req = webob.Request.blank(url)
         req.headers['Content-Type'] = 'application/json'

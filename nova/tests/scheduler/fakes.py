@@ -18,7 +18,7 @@ Fakes For Scheduler tests.
 
 import mox
 
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova.compute import vm_states
 from nova import db
 from nova.scheduler import filter_scheduler
@@ -126,7 +126,7 @@ class FakeInstance(object):
         inst['launch_time'] = '10'
         inst['user_id'] = 'fake'
         inst['project_id'] = 'fake'
-        type_id = instance_types.get_instance_type_by_name(type_name)['id']
+        type_id = flavors.get_instance_type_by_name(type_name)['id']
         inst['instance_type_id'] = type_id
         inst['ami_launch_index'] = 0
         inst.update(params)

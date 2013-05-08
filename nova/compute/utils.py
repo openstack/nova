@@ -23,7 +23,7 @@ import traceback
 from oslo.config import cfg
 
 from nova import block_device
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova import exception
 from nova.network import model as network_model
 from nova import notifications
@@ -151,7 +151,7 @@ def get_device_name_for_instance(context, instance, bdms, device):
     # NOTE(vish): remove this when xenapi is properly setting
     #             default_ephemeral_device and default_swap_device
     if driver.compute_driver_matches('xenapi.XenAPIDriver'):
-        instance_type = instance_types.extract_instance_type(instance)
+        instance_type = flavors.extract_instance_type(instance)
         if instance_type['ephemeral_gb']:
             used_letters.add('b')
 

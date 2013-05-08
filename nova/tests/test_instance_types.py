@@ -17,7 +17,7 @@ Unit Tests for instance types code
 """
 import time
 
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova import context
 from nova import db
 from nova.db.sqlalchemy import models
@@ -31,7 +31,7 @@ class InstanceTypeTestCase(test.TestCase):
     def _generate_name(self):
         """return a name not in the DB."""
         nonexistent_flavor = str(int(time.time()))
-        flavors = instance_types.get_all_types()
+        flavors = flavors.get_all_types()
         while nonexistent_flavor in flavors:
             nonexistent_flavor += "z"
         else:
@@ -41,7 +41,7 @@ class InstanceTypeTestCase(test.TestCase):
         """return a flavorid not in the DB."""
         nonexistent_flavor = 2700
         flavor_ids = [value["id"] for key, value in
-                      instance_types.get_all_types().iteritems()]
+                      flavors.get_all_types().iteritems()]
         while nonexistent_flavor in flavor_ids:
             nonexistent_flavor += 1
         else:
@@ -49,17 +49,17 @@ class InstanceTypeTestCase(test.TestCase):
 
     def _existing_flavor(self):
         """return first instance type name."""
-        return instance_types.get_all_types().keys()[0]
+        return flavors.get_all_types().keys()[0]
 
     def test_instance_type_create(self):
         # Ensure instance types can be created.
         name = 'Instance create test'
         flavor_id = '512'
 
-        original_list = instance_types.get_all_types()
+        original_list = flavors.get_all_types()
 
         # create new type and make sure values stick
-        inst_type = instance_types.create(name, 256, 1, 120,
+        inst_type = flavors.create(name, 256, 1, 120,
                                           flavorid=flavor_id)
         self.assertEqual(inst_type['flavorid'], flavor_id)
         self.assertEqual(inst_type['name'], name)
@@ -71,7 +71,7 @@ class InstanceTypeTestCase(test.TestCase):
         self.assertEqual(inst_type['rxtx_factor'], 1.0)
 
         # make sure new type shows up in list
-        new_list = instance_types.get_all_types()
+        new_list = flavors.get_all_types()
         self.assertNotEqual(len(original_list), len(new_list),
                             'instance type was not created')
 
@@ -80,10 +80,10 @@ class InstanceTypeTestCase(test.TestCase):
         name = 'Small Flavor'
         flavorid = 'flavor1'
 
-        original_list = instance_types.get_all_types()
+        original_list = flavors.get_all_types()
 
         # create new type and make sure values stick
-        inst_type = instance_types.create(name, 256, 1, 120, 100, flavorid)
+        inst_type = flavors.create(name, 256, 1, 120, 100, flavorid)
         inst_type_id = inst_type['id']
         self.assertEqual(inst_type['flavorid'], flavorid)
         self.assertEqual(inst_type['name'], name)
@@ -95,21 +95,21 @@ class InstanceTypeTestCase(test.TestCase):
         self.assertEqual(inst_type['rxtx_factor'], 1.0)
 
         # make sure new type shows up in list
-        new_list = instance_types.get_all_types()
+        new_list = flavors.get_all_types()
         self.assertNotEqual(len(original_list), len(new_list),
                             'instance type was not created')
 
-        instance_types.destroy(name)
+        flavors.destroy(name)
         self.assertRaises(exception.InstanceTypeNotFound,
-                          instance_types.get_instance_type, inst_type_id)
+                          flavors.get_instance_type, inst_type_id)
 
         # deleted instance should not be in list anymoer
-        new_list = instance_types.get_all_types()
+        new_list = flavors.get_all_types()
         self.assertEqual(original_list, new_list)
 
     def test_instance_type_create_without_flavorid(self):
         name = 'Small Flavor'
-        inst_type = instance_types.create(name, 256, 1, 120, 100)
+        inst_type = flavors.create(name, 256, 1, 120, 100)
         self.assertNotEqual(inst_type['flavorid'], None)
         self.assertEqual(inst_type['name'], name)
         self.assertEqual(inst_type['memory_mb'], 256)
@@ -123,7 +123,7 @@ class InstanceTypeTestCase(test.TestCase):
         # Ensure that auto-generated uuid is assigned.
         name = 'Empty String ID Flavor'
         flavorid = ''
-        inst_type = instance_types.create(name, 256, 1, 120, 100, flavorid)
+        inst_type = flavors.create(name, 256, 1, 120, 100, flavorid)
         self.assertEqual(len(inst_type['flavorid']), 36)
         self.assertEqual(inst_type['name'], name)
         self.assertEqual(inst_type['memory_mb'], 256)
@@ -135,7 +135,7 @@ class InstanceTypeTestCase(test.TestCase):
 
     def test_instance_type_create_with_custom_rxtx_factor(self):
         name = 'Custom RXTX Factor'
-        inst_type = instance_types.create(name, 256, 1, 120, 100,
+        inst_type = flavors.create(name, 256, 1, 120, 100,
                                           rxtx_factor=9.9)
         self.assertNotEqual(inst_type['flavorid'], None)
         self.assertEqual(inst_type['name'], name)
@@ -150,18 +150,18 @@ class InstanceTypeTestCase(test.TestCase):
         # Ensure instance types raises InvalidInput for invalid characters.
         name = "foo.bar!@#$%^-test_name"
         flavorid = "flavor1"
-        self.assertRaises(exception.InvalidInput, instance_types.create,
+        self.assertRaises(exception.InvalidInput, flavors.create,
                 name, 256, 1, 120, 100, flavorid)
 
     def test_instance_type_create_with_long_flavor_name(self):
         # Flavor name with 255 characters or less is valid.
         name = 'a' * 255
-        inst_type = instance_types.create(name, 64, 1, 120, flavorid=11)
+        inst_type = flavors.create(name, 64, 1, 120, flavorid=11)
         self.assertEqual(inst_type['name'], name)
 
         # Flavor name which is more than 255 characters will cause error.
         name = 'a' * 256
-        self.assertRaises(exception.InvalidInput, instance_types.create,
+        self.assertRaises(exception.InvalidInput, flavors.create,
                           name, 64, 1, 120, flavorid=11)
 
     def test_add_instance_type_access(self):
@@ -169,9 +169,9 @@ class InstanceTypeTestCase(test.TestCase):
         project_id = 'fake'
         ctxt = context.RequestContext(user_id, project_id, is_admin=True)
         flavor_id = 'flavor1'
-        type_ref = instance_types.create('some flavor', 256, 1, 120, 100,
+        type_ref = flavors.create('some flavor', 256, 1, 120, 100,
                                           flavorid=flavor_id)
-        access_ref = instance_types.add_instance_type_access(flavor_id,
+        access_ref = flavors.add_instance_type_access(flavor_id,
                                                              project_id,
                                                              ctxt=ctxt)
         self.assertEqual(access_ref["project_id"], project_id)
@@ -182,13 +182,13 @@ class InstanceTypeTestCase(test.TestCase):
         project_id = 'fake'
         ctxt = context.RequestContext(user_id, project_id, is_admin=True)
         flavor_id = 'flavor1'
-        type_ref = instance_types.create('some flavor', 256, 1, 120, 100,
+        type_ref = flavors.create('some flavor', 256, 1, 120, 100,
                                           flavorid=flavor_id)
-        access_ref = instance_types.add_instance_type_access(flavor_id,
+        access_ref = flavors.add_instance_type_access(flavor_id,
                                                              project_id,
                                                              ctxt=ctxt)
         self.assertRaises(exception.FlavorAccessExists,
-                          instance_types.add_instance_type_access,
+                          flavors.add_instance_type_access,
                           flavor_id, project_id, ctxt)
 
     def test_add_instance_type_access_invalid_flavor(self):
@@ -197,7 +197,7 @@ class InstanceTypeTestCase(test.TestCase):
         ctxt = context.RequestContext(user_id, project_id, is_admin=True)
         flavor_id = 'no_such_flavor'
         self.assertRaises(exception.FlavorNotFound,
-                          instance_types.add_instance_type_access,
+                          flavors.add_instance_type_access,
                           flavor_id, project_id, ctxt)
 
     def test_remove_instance_type_access(self):
@@ -205,13 +205,14 @@ class InstanceTypeTestCase(test.TestCase):
         project_id = 'fake'
         ctxt = context.RequestContext(user_id, project_id, is_admin=True)
         flavor_id = 'flavor1'
-        it = instance_types
-        type_ref = it.create('some flavor', 256, 1, 120, 100,
+        type_ref = flavors.create('some flavor', 256, 1, 120, 100,
                                           flavorid=flavor_id)
-        access_ref = it.add_instance_type_access(flavor_id, project_id, ctxt)
-        it.remove_instance_type_access(flavor_id, project_id, ctxt)
+        access_ref = flavors.add_instance_type_access(flavor_id, project_id,
+                                                      ctxt)
+        flavors.remove_instance_type_access(flavor_id, project_id, ctxt)
 
-        projects = it.get_instance_type_access_by_flavor_id(flavor_id, ctxt)
+        projects = flavors.get_instance_type_access_by_flavor_id(flavor_id,
+                                                                 ctxt)
         self.assertEqual([], projects)
 
     def test_remove_instance_type_access_doesnt_exists(self):
@@ -219,17 +220,17 @@ class InstanceTypeTestCase(test.TestCase):
         project_id = 'fake'
         ctxt = context.RequestContext(user_id, project_id, is_admin=True)
         flavor_id = 'flavor1'
-        type_ref = instance_types.create('some flavor', 256, 1, 120, 100,
+        type_ref = flavors.create('some flavor', 256, 1, 120, 100,
                                           flavorid=flavor_id)
         self.assertRaises(exception.FlavorAccessNotFound,
-                          instance_types.remove_instance_type_access,
+                          flavors.remove_instance_type_access,
                           flavor_id, project_id, ctxt=ctxt)
 
     def test_get_all_instance_types(self):
         # Ensures that all instance types can be retrieved.
         session = sql_session.get_session()
         total_instance_types = session.query(models.InstanceTypes).count()
-        inst_types = instance_types.get_all_types()
+        inst_types = flavors.get_all_types()
         self.assertEqual(total_instance_types, len(inst_types))
 
     def test_invalid_create_args_should_fail(self):
@@ -257,78 +258,78 @@ class InstanceTypeTestCase(test.TestCase):
 
         for (args, kwargs) in invalid_sigs:
             self.assertRaises(exception.InvalidInput,
-                              instance_types.create, *args, **kwargs)
+                              flavors.create, *args, **kwargs)
 
     def test_non_existent_inst_type_shouldnt_delete(self):
         # Ensures that instance type creation fails with invalid args.
         self.assertRaises(exception.InstanceTypeNotFoundByName,
-                          instance_types.destroy,
+                          flavors.destroy,
                           'unknown_flavor')
 
     def test_duplicate_names_fail(self):
         # Ensures that name duplicates raise InstanceTypeCreateFailed.
         name = 'some_name'
-        instance_types.create(name, 256, 1, 120, 200, 'flavor1')
+        flavors.create(name, 256, 1, 120, 200, 'flavor1')
         self.assertRaises(exception.InstanceTypeExists,
-                          instance_types.create,
+                          flavors.create,
                           name, 256, 1, 120, 200, 'flavor2')
 
     def test_duplicate_flavorids_fail(self):
         # Ensures that flavorid duplicates raise InstanceTypeCreateFailed.
         flavorid = 'flavor1'
-        instance_types.create('name one', 256, 1, 120, 200, flavorid)
+        flavors.create('name one', 256, 1, 120, 200, flavorid)
         self.assertRaises(exception.InstanceTypeIdExists,
-                          instance_types.create,
+                          flavors.create,
                           'name two', 256, 1, 120, 200, flavorid)
 
     def test_will_not_destroy_with_no_name(self):
         # Ensure destroy said path of no name raises error.
         self.assertRaises(exception.InstanceTypeNotFoundByName,
-                          instance_types.destroy, None)
+                          flavors.destroy, None)
 
     def test_will_not_get_bad_default_instance_type(self):
         # ensures error raised on bad default instance type.
         self.flags(default_instance_type='unknown_flavor')
         self.assertRaises(exception.InstanceTypeNotFound,
-                          instance_types.get_default_instance_type)
+                          flavors.get_default_instance_type)
 
     def test_will_get_instance_type_by_id(self):
-        default_instance_type = instance_types.get_default_instance_type()
+        default_instance_type = flavors.get_default_instance_type()
         instance_type_id = default_instance_type['id']
-        fetched = instance_types.get_instance_type(instance_type_id)
+        fetched = flavors.get_instance_type(instance_type_id)
         self.assertEqual(default_instance_type, fetched)
 
     def test_will_not_get_instance_type_by_unknown_id(self):
         # Ensure get by name returns default flavor with no name.
         self.assertRaises(exception.InstanceTypeNotFound,
-                         instance_types.get_instance_type, 10000)
+                         flavors.get_instance_type, 10000)
 
     def test_will_not_get_instance_type_with_bad_id(self):
         # Ensure get by name returns default flavor with bad name.
         self.assertRaises(exception.InstanceTypeNotFound,
-                          instance_types.get_instance_type, 'asdf')
+                          flavors.get_instance_type, 'asdf')
 
     def test_instance_type_get_by_None_name_returns_default(self):
         # Ensure get by name returns default flavor with no name.
-        default = instance_types.get_default_instance_type()
-        actual = instance_types.get_instance_type_by_name(None)
+        default = flavors.get_default_instance_type()
+        actual = flavors.get_instance_type_by_name(None)
         self.assertEqual(default, actual)
 
     def test_will_not_get_instance_type_with_bad_name(self):
         # Ensure get by name returns default flavor with bad name.
         self.assertRaises(exception.InstanceTypeNotFound,
-                          instance_types.get_instance_type_by_name, 10000)
+                          flavors.get_instance_type_by_name, 10000)
 
     def test_will_not_get_instance_by_unknown_flavor_id(self):
         # Ensure get by flavor raises error with wrong flavorid.
         self.assertRaises(exception.FlavorNotFound,
-                          instance_types.get_instance_type_by_flavor_id,
+                          flavors.get_instance_type_by_flavor_id,
                           'unknown_flavor')
 
     def test_will_get_instance_by_flavor_id(self):
-        default_instance_type = instance_types.get_default_instance_type()
+        default_instance_type = flavors.get_default_instance_type()
         flavorid = default_instance_type['flavorid']
-        fetched = instance_types.get_instance_type_by_flavor_id(flavorid)
+        fetched = flavors.get_instance_type_by_flavor_id(flavorid)
         self.assertEqual(default_instance_type, fetched)
 
     def test_can_read_deleted_types_using_flavor_id(self):
@@ -336,15 +337,15 @@ class InstanceTypeTestCase(test.TestCase):
         inst_type_name = "test"
         inst_type_flavor_id = "test1"
 
-        inst_type = instance_types.create(inst_type_name, 256, 1, 120, 100,
+        inst_type = flavors.create(inst_type_name, 256, 1, 120, 100,
                 inst_type_flavor_id)
         self.assertEqual(inst_type_name, inst_type["name"])
 
         # NOTE(jk0): The deleted flavor will show up here because the context
         # in get_instance_type_by_flavor_id() is set to use read_deleted by
         # default.
-        instance_types.destroy(inst_type["name"])
-        deleted_inst_type = instance_types.get_instance_type_by_flavor_id(
+        flavors.destroy(inst_type["name"])
+        deleted_inst_type = flavors.get_instance_type_by_flavor_id(
                 inst_type_flavor_id)
         self.assertEqual(inst_type_name, deleted_inst_type["name"])
 
@@ -354,11 +355,11 @@ class InstanceTypeTestCase(test.TestCase):
         example when creating a server and attempting to translate from
         flavorid to instance_type_id.
         """
-        instance_types.create("instance_type1", 256, 1, 120, 100, "test1")
-        instance_types.destroy("instance_type1")
-        instance_types.create("instance_type1_redo", 256, 1, 120, 100, "test1")
+        flavors.create("instance_type1", 256, 1, 120, 100, "test1")
+        flavors.destroy("instance_type1")
+        flavors.create("instance_type1_redo", 256, 1, 120, 100, "test1")
 
-        instance_type = instance_types.get_instance_type_by_flavor_id(
+        instance_type = flavors.get_instance_type_by_flavor_id(
                 "test1", read_deleted="no")
         self.assertEqual("instance_type1_redo", instance_type["name"])
 
@@ -368,15 +369,15 @@ class InstanceTypeToolsTest(test.TestCase):
         return [{'key': key, 'value': value} for key, value in data.items()]
 
     def _test_extract_instance_type(self, prefix):
-        instance_type = instance_types.get_default_instance_type()
+        instance_type = flavors.get_default_instance_type()
 
         metadata = {}
-        instance_types.save_instance_type_info(metadata, instance_type,
+        flavors.save_instance_type_info(metadata, instance_type,
                                                prefix)
         instance = {'system_metadata': self._dict_to_metadata(metadata)}
-        _instance_type = instance_types.extract_instance_type(instance, prefix)
+        _instance_type = flavors.extract_instance_type(instance, prefix)
 
-        props = instance_types.system_metadata_instance_type_props.keys()
+        props = flavors.system_metadata_instance_type_props.keys()
         for key in instance_type.keys():
             if key not in props:
                 del instance_type[key]
@@ -390,29 +391,29 @@ class InstanceTypeToolsTest(test.TestCase):
         self._test_extract_instance_type('foo_')
 
     def test_save_instance_type_info(self):
-        instance_type = instance_types.get_default_instance_type()
+        instance_type = flavors.get_default_instance_type()
 
         example = {}
         example_prefix = {}
 
-        for key in instance_types.system_metadata_instance_type_props.keys():
+        for key in flavors.system_metadata_instance_type_props.keys():
             example['instance_type_%s' % key] = instance_type[key]
             example_prefix['fooinstance_type_%s' % key] = instance_type[key]
 
         metadata = {}
-        instance_types.save_instance_type_info(metadata, instance_type)
+        flavors.save_instance_type_info(metadata, instance_type)
         self.assertEqual(example, metadata)
 
         metadata = {}
-        instance_types.save_instance_type_info(metadata, instance_type, 'foo')
+        flavors.save_instance_type_info(metadata, instance_type, 'foo')
         self.assertEqual(example_prefix, metadata)
 
     def test_delete_instance_type_info(self):
-        instance_type = instance_types.get_default_instance_type()
+        instance_type = flavors.get_default_instance_type()
         metadata = {}
-        instance_types.save_instance_type_info(metadata, instance_type)
-        instance_types.save_instance_type_info(metadata, instance_type, '_')
-        instance_types.delete_instance_type_info(metadata, '', '_')
+        flavors.save_instance_type_info(metadata, instance_type)
+        flavors.save_instance_type_info(metadata, instance_type, '_')
+        flavors.delete_instance_type_info(metadata, '', '_')
         self.assertEqual(metadata, {})
 
 

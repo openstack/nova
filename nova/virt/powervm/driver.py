@@ -19,7 +19,7 @@ import time
 
 from oslo.config import cfg
 
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova.image import glance
 from nova.openstack.common import log as logging
 from nova.virt import driver
@@ -290,7 +290,7 @@ class PowerVMDriver(driver.ComputeDriver):
         """
         lpar_obj = self._powervm._create_lpar_instance(instance, network_info)
 
-        instance_type = instance_types.extract_instance_type(instance)
+        instance_type = flavors.extract_instance_type(instance)
         new_lv_size = instance_type['root_gb']
         old_lv_size = disk_info['old_lv_size']
         if 'root_disk_file' in disk_info:

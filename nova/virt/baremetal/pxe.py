@@ -25,7 +25,7 @@ import os
 
 from oslo.config import cfg
 
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova import exception
 from nova.openstack.common.db import exception as db_exc
 from nova.openstack.common import fileutils
@@ -174,7 +174,7 @@ def get_pxe_config_file_path(instance):
 
 
 def get_partition_sizes(instance):
-    instance_type = instance_types.extract_instance_type(instance)
+    instance_type = flavors.extract_instance_type(instance)
     root_mb = instance_type['root_gb'] * 1024
     swap_mb = instance_type['swap']
 

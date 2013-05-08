@@ -15,7 +15,7 @@
 from lxml import etree
 import webob
 
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
@@ -56,9 +56,9 @@ class FlavorSwapTest(test.TestCase):
               '.flavor_swap.Flavor_swap')
         self.flags(osapi_compute_extension=[ext])
         fakes.stub_out_nw_api(self.stubs)
-        self.stubs.Set(instance_types, "get_all_types",
+        self.stubs.Set(flavors, "get_all_types",
                        fake_instance_type_get_all)
-        self.stubs.Set(instance_types,
+        self.stubs.Set(flavors,
                        "get_instance_type_by_flavor_id",
                        fake_instance_type_get_by_flavor_id)
 

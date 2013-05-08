@@ -18,7 +18,7 @@ from nova.api.openstack.compute import flavors as flavors_api
 from nova.api.openstack.compute.views import flavors as flavors_view
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova import exception
 
 
@@ -40,12 +40,12 @@ class FlavorManageController(wsgi.Controller):
         authorize(context)
 
         try:
-            flavor = instance_types.get_instance_type_by_flavor_id(
+            flavor = flavors.get_instance_type_by_flavor_id(
                     id, read_deleted="no")
         except exception.NotFound, e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
-        instance_types.destroy(flavor['name'])
+        flavors.destroy(flavor['name'])
 
         return webob.Response(status_int=202)
 
@@ -67,7 +67,7 @@ class FlavorManageController(wsgi.Controller):
         is_public = vals.get('os-flavor-access:is_public', True)
 
         try:
-            flavor = instance_types.create(name, memory_mb, vcpus,
+            flavor = flavors.create(name, memory_mb, vcpus,
                                            root_gb, ephemeral_gb, flavorid,
                                            swap, rxtx_factor, is_public)
             req.cache_db_flavor(flavor)

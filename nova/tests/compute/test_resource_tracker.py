@@ -21,7 +21,7 @@ import uuid
 
 from oslo.config import cfg
 
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova.compute import resource_tracker
 from nova.compute import task_states
 from nova.compute import vm_states
@@ -153,7 +153,7 @@ class BaseTestCase(test.TestCase):
 
     def _fake_instance_system_metadata(self, instance_type, prefix=''):
         sys_meta = []
-        for key in instance_types.system_metadata_instance_type_props.keys():
+        for key in flavors.system_metadata_instance_type_props.keys():
             sys_meta.append({'key': '%sinstance_type_%s' % (prefix, key),
                              'value': instance_type[key]})
         return sys_meta

@@ -22,7 +22,7 @@ Tests For Scheduler
 import mox
 
 from nova.compute import api as compute_api
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova.compute import power_state
 from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import task_states
@@ -435,11 +435,11 @@ class SchedulerTestCase(test.TestCase):
         self.assertEqual(result, ['host2'])
 
     def _live_migration_instance(self):
-        inst_type = instance_types.get_instance_type(1)
+        inst_type = flavors.get_instance_type(1)
         # NOTE(danms): we have _got_ to stop doing this!
         inst_type['memory_mb'] = 1024
         sys_meta = utils.dict_to_metadata(
-            instance_types.save_instance_type_info({}, inst_type))
+            flavors.save_instance_type_info({}, inst_type))
         return {'id': 31337,
                 'uuid': 'fake_uuid',
                 'name': 'fake-instance',
@@ -788,7 +788,7 @@ class SchedulerTestCase(test.TestCase):
 
         # Confirm dest is picked by scheduler if not set.
         self.mox.StubOutWithMock(self.driver, 'select_hosts')
-        self.mox.StubOutWithMock(instance_types, 'extract_instance_type')
+        self.mox.StubOutWithMock(flavors, 'extract_instance_type')
 
         request_spec = {'instance_properties': instance,
                         'instance_type': {},
@@ -799,7 +799,7 @@ class SchedulerTestCase(test.TestCase):
         ignore_hosts = [instance['host']]
         filter_properties = {'ignore_hosts': ignore_hosts}
 
-        instance_types.extract_instance_type(instance).AndReturn({})
+        flavors.extract_instance_type(instance).AndReturn({})
         self.driver.select_hosts(self.context, request_spec,
                                  filter_properties).AndReturn(['fake_host2'])
 
@@ -812,7 +812,7 @@ class SchedulerTestCase(test.TestCase):
         instance = self._live_migration_instance()
 
         # Confirm scheduler picks target host if none given.
-        self.mox.StubOutWithMock(instance_types, 'extract_instance_type')
+        self.mox.StubOutWithMock(flavors, 'extract_instance_type')
         self.mox.StubOutWithMock(self.driver, '_live_migration_src_check')
         self.mox.StubOutWithMock(self.driver, 'select_hosts')
         self.mox.StubOutWithMock(self.driver, '_live_migration_common_check')
@@ -831,7 +831,7 @@ class SchedulerTestCase(test.TestCase):
 
         self.driver._live_migration_src_check(self.context, instance)
 
-        instance_types.extract_instance_type(
+        flavors.extract_instance_type(
                 instance).MultipleTimes().AndReturn({})
 
         # First selected host raises exception.InvalidHypervisorType

@@ -17,7 +17,7 @@
 import mox
 
 from nova.api.ec2 import ec2utils
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova import conductor
@@ -73,7 +73,7 @@ class _BaseTestCase(object):
         inst['user_id'] = self.user_id
         inst['project_id'] = self.project_id
         inst['host'] = 'fake_host'
-        type_id = instance_types.get_instance_type_by_name(type_name)['id']
+        type_id = flavors.get_instance_type_by_name(type_name)['id']
         inst['instance_type_id'] = type_id
         inst['ami_launch_index'] = 0
         inst['memory_mb'] = 0

@@ -21,7 +21,7 @@ from nova.api.openstack import common
 from nova.api.openstack.compute.views import flavors as flavors_view
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova import exception
 
 
@@ -70,21 +70,21 @@ class Controller(wsgi.Controller):
     @wsgi.serializers(xml=MinimalFlavorsTemplate)
     def index(self, req):
         """Return all flavors in brief."""
-        flavors = self._get_flavors(req)
-        return self._view_builder.index(req, flavors)
+        limited_flavors = self._get_flavors(req)
+        return self._view_builder.index(req, limited_flavors)
 
     @wsgi.serializers(xml=FlavorsTemplate)
     def detail(self, req):
         """Return all flavors in detail."""
-        flavors = self._get_flavors(req)
-        req.cache_db_flavors(flavors)
-        return self._view_builder.detail(req, flavors)
+        limited_flavors = self._get_flavors(req)
+        req.cache_db_flavors(limited_flavors)
+        return self._view_builder.detail(req, limited_flavors)
 
     @wsgi.serializers(xml=FlavorTemplate)
     def show(self, req, id):
         """Return data about the given flavor id."""
         try:
-            flavor = instance_types.get_instance_type_by_flavor_id(id)
+            flavor = flavors.get_instance_type_by_flavor_id(id)
             req.cache_db_flavor(flavor)
         except exception.NotFound:
             raise webob.exc.HTTPNotFound()
@@ -137,8 +137,8 @@ class Controller(wsgi.Controller):
                 msg = _('Invalid minDisk filter [%s]') % req.params['minDisk']
                 raise webob.exc.HTTPBadRequest(explanation=msg)
 
-        flavors = instance_types.get_all_types(context, filters=filters)
-        flavors_list = flavors.values()
+        limited_flavors = flavors.get_all_types(context, filters=filters)
+        flavors_list = limited_flavors.values()
         sorted_flavors = sorted(flavors_list,
                                 key=lambda item: item['flavorid'])
         limited_flavors = common.limited_by_marker(sorted_flavors, req)

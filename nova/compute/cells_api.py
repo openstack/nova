@@ -20,7 +20,7 @@ from nova import block_device
 from nova.cells import rpcapi as cells_rpcapi
 from nova.cells import utils as cells_utils
 from nova.compute import api as compute_api
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import vm_states
 from nova import exception
@@ -338,19 +338,19 @@ class ComputeCellsAPI(compute_api.API):
         # specified flavor_id is valid and exists. We'll need to load
         # it again, but that should be safe.
 
-        old_instance_type = instance_types.extract_instance_type(instance)
+        old_instance_type = flavors.extract_instance_type(instance)
 
         if not flavor_id:
             new_instance_type = old_instance_type
         else:
-            new_instance_type = instance_types.get_instance_type_by_flavor_id(
+            new_instance_type = flavors.get_instance_type_by_flavor_id(
                     flavor_id, read_deleted="no")
 
         # NOTE(johannes): Later, when the resize is confirmed or reverted,
         # the superclass implementations of those methods will need access
         # to a local migration record for quota reasons. We don't need
         # source and/or destination information, just the old and new
-        # instance_types. Status is set to 'finished' since nothing else
+        # flavors. Status is set to 'finished' since nothing else
         # will update the status along the way.
         self.db.migration_create(context.elevated(),
                     {'instance_uuid': instance['uuid'],

@@ -21,7 +21,7 @@ import mox
 from oslo.config import cfg
 from quantumclient.v2_0 import client
 
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova import context
 from nova import exception
 from nova.network import model
@@ -389,10 +389,10 @@ class TestQuantumv2(test.TestCase):
         self.moxed_client.list_extensions().AndReturn(
             {'extensions': [{'name': 'nvp-qos'}]})
         self.mox.ReplayAll()
-        instance_type = instance_types.get_default_instance_type()
+        instance_type = flavors.get_default_instance_type()
         instance_type['rxtx_factor'] = 1
         sys_meta = utils.dict_to_metadata(
-            instance_types.save_instance_type_info({}, instance_type))
+            flavors.save_instance_type_info({}, instance_type))
         instance = {'system_metadata': sys_meta}
         port_req_body = {'port': {}}
         api._populate_quantum_extension_values(instance, port_req_body)

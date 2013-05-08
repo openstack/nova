@@ -26,7 +26,7 @@ import re
 from oslo.config import cfg
 
 from nova.compute import api as compute_api
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import vm_states
@@ -179,7 +179,7 @@ def stub_vm_utils_with_vdi_attached_here(function, should_return=True):
 def create_instance_with_system_metadata(context, instance_values):
     instance_type = db.instance_type_get(context,
                                          instance_values['instance_type_id'])
-    sys_meta = instance_types.save_instance_type_info({},
+    sys_meta = flavors.save_instance_type_info({},
                                                       instance_type)
     instance_values['system_metadata'] = sys_meta
     return db.instance_create(context, instance_values)
@@ -1188,7 +1188,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
 
     def test_per_instance_usage_running(self):
         instance = self._create_instance(spawn=True)
-        instance_type = instance_types.get_instance_type(3)
+        instance_type = flavors.get_instance_type(3)
 
         expected = {instance['uuid']: {'memory_mb': instance_type['memory_mb'],
                                        'uuid': instance['uuid']}}
@@ -1461,7 +1461,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         self.assertEqual(self.fake_vm_start_called, True)
 
     def test_finish_migrate_no_local_storage(self):
-        tiny_type = instance_types.get_instance_type_by_name('m1.tiny')
+        tiny_type = flavors.get_instance_type_by_name('m1.tiny')
         tiny_type_id = tiny_type['id']
         self.instance_values.update({'instance_type_id': tiny_type_id,
                                      'root_gb': 0})

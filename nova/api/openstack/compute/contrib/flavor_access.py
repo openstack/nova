@@ -22,7 +22,7 @@ import webob
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova import exception
 
 
@@ -70,7 +70,7 @@ class FlavorAccessTemplate(xmlutil.TemplateBuilder):
 def _marshall_flavor_access(flavor_id):
     rval = []
     try:
-        access_list = instance_types.\
+        access_list = flavors.\
                       get_instance_type_access_by_flavor_id(flavor_id)
     except exception.FlavorNotFound:
         explanation = _("Flavor not found.")
@@ -95,7 +95,7 @@ class FlavorAccessController(object):
         authorize(context)
 
         try:
-            flavor = instance_types.get_instance_type_by_flavor_id(flavor_id)
+            flavor = flavors.get_instance_type_by_flavor_id(flavor_id)
         except exception.FlavorNotFound:
             explanation = _("Flavor not found.")
             raise webob.exc.HTTPNotFound(explanation=explanation)
@@ -119,7 +119,7 @@ class FlavorActionController(wsgi.Controller):
     def _get_flavor_refs(self, context):
         """Return a dictionary mapping flavorid to flavor_ref."""
 
-        flavor_refs = instance_types.get_all_types(context)
+        flavor_refs = flavors.get_all_types(context)
         rval = {}
         for name, obj in flavor_refs.iteritems():
             rval[obj['flavorid']] = obj
@@ -173,7 +173,7 @@ class FlavorActionController(wsgi.Controller):
         tenant = vals['tenant']
 
         try:
-            instance_types.add_instance_type_access(id, tenant, context)
+            flavors.add_instance_type_access(id, tenant, context)
         except exception.FlavorAccessExists as err:
             raise webob.exc.HTTPConflict(explanation=err.format_message())
 
@@ -190,7 +190,7 @@ class FlavorActionController(wsgi.Controller):
         tenant = vals['tenant']
 
         try:
-            instance_types.remove_instance_type_access(id, tenant, context)
+            flavors.remove_instance_type_access(id, tenant, context)
         except exception.FlavorAccessNotFound, e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
 

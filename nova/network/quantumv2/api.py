@@ -20,7 +20,7 @@ import time
 
 from oslo.config import cfg
 
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova import conductor
 from nova import context
 from nova.db import base
@@ -309,7 +309,7 @@ class API(base.Base):
         """
         self._refresh_quantum_extensions_cache()
         if 'nvp-qos' in self.extensions:
-            instance_type = instance_types.extract_instance_type(instance)
+            instance_type = flavors.extract_instance_type(instance)
             rxtx_factor = instance_type.get('rxtx_factor')
             port_req_body['port']['rxtx_factor'] = rxtx_factor
 

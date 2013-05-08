@@ -21,7 +21,7 @@
 import functools
 import inspect
 
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova.db import base
 from nova import exception
 from nova.network import floating_ips
@@ -266,7 +266,7 @@ class API(base.Base):
         #             this is called from compute.manager which shouldn't
         #             have db access so we do it on the other side of the
         #             rpc.
-        instance_type = instance_types.extract_instance_type(instance)
+        instance_type = flavors.extract_instance_type(instance)
         args = {}
         args['vpn'] = vpn
         args['requested_networks'] = requested_networks
@@ -316,7 +316,7 @@ class API(base.Base):
     def add_fixed_ip_to_instance(self, context, instance, network_id,
                                  conductor_api=None):
         """Adds a fixed ip to instance from specified network."""
-        instance_type = instance_types.extract_instance_type(instance)
+        instance_type = flavors.extract_instance_type(instance)
         args = {'instance_id': instance['uuid'],
                 'rxtx_factor': instance_type['rxtx_factor'],
                 'host': instance['host'],
@@ -329,7 +329,7 @@ class API(base.Base):
                                       conductor_api=None):
         """Removes a fixed ip from instance from specified network."""
 
-        instance_type = instance_types.extract_instance_type(instance)
+        instance_type = flavors.extract_instance_type(instance)
         args = {'instance_id': instance['uuid'],
                 'rxtx_factor': instance_type['rxtx_factor'],
                 'host': instance['host'],
@@ -374,7 +374,7 @@ class API(base.Base):
 
     def _get_instance_nw_info(self, context, instance):
         """Returns all network info related to an instance."""
-        instance_type = instance_types.extract_instance_type(instance)
+        instance_type = flavors.extract_instance_type(instance)
         args = {'instance_id': instance['uuid'],
                 'rxtx_factor': instance_type['rxtx_factor'],
                 'host': instance['host'],
@@ -491,7 +491,7 @@ class API(base.Base):
     @wrap_check_policy
     def migrate_instance_start(self, context, instance, migration):
         """Start to migrate the network of an instance."""
-        instance_type = instance_types.extract_instance_type(instance)
+        instance_type = flavors.extract_instance_type(instance)
         args = dict(
             instance_uuid=instance['uuid'],
             rxtx_factor=instance_type['rxtx_factor'],
@@ -511,7 +511,7 @@ class API(base.Base):
     @wrap_check_policy
     def migrate_instance_finish(self, context, instance, migration):
         """Finish migrating the network of an instance."""
-        instance_type = instance_types.extract_instance_type(instance)
+        instance_type = flavors.extract_instance_type(instance)
         args = dict(
             instance_uuid=instance['uuid'],
             rxtx_factor=instance_type['rxtx_factor'],
