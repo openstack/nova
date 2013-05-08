@@ -26,7 +26,7 @@ from nova.openstack.common import loopingcall
 from nova.servicegroup import api
 
 evzookeeper = importutils.try_import('evzookeeper')
-membership = importutils.try_import('evzookeeper.membersip')
+membership = importutils.try_import('evzookeeper.membership')
 zookeeper = importutils.try_import('zookeeper')
 
 zk_driver_opts = [
