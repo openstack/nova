@@ -462,7 +462,8 @@ def stub_instance(id, user_id=None, project_id=None, host=None,
                   security_groups=None, root_device_name=None,
                   limit=None, marker=None,
                   launched_at=datetime.datetime.utcnow(),
-                  terminated_at=datetime.datetime.utcnow()):
+                  terminated_at=datetime.datetime.utcnow(),
+                  availability_zone=''):
 
     if user_id is None:
         user_id = 'fake_user'
@@ -531,7 +532,7 @@ def stub_instance(id, user_id=None, project_id=None, host=None,
         "scheduled_at": timeutils.utcnow(),
         "launched_at": launched_at,
         "terminated_at": terminated_at,
-        "availability_zone": "",
+        "availability_zone": availability_zone,
         "display_name": display_name or server_name,
         "display_description": "",
         "locked": False,
