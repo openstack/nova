@@ -861,6 +861,9 @@ class HyperVAPITestCase(test.TestCase):
         m.AndReturn(boot_from_volume)
 
         if not boot_from_volume:
+            m = fake.PathUtils.get_instance_dir(mox.Func(self._check_vm_name))
+            m.AndReturn(self._test_instance_dir)
+
             m = vhdutils.VHDUtils.get_vhd_info(mox.Func(self._check_img_path))
             m.AndReturn({'MaxInternalSize': 1024})
 
@@ -883,10 +886,7 @@ class HyperVAPITestCase(test.TestCase):
         # TODO(alexpilotti) Based on where the exception is thrown
         # some of the above mock calls need to be skipped
         if with_exception:
-            m = vmutils.VMUtils.vm_exists(mox.Func(self._check_vm_name))
-            m.AndReturn(True)
-
-            vmutils.VMUtils.destroy_vm(mox.Func(self._check_vm_name))
+            self._setup_destroy_mocks()
         else:
             vmutils.VMUtils.set_vm_state(mox.Func(self._check_vm_name),
                                          constants.HYPERV_VM_STATE_ENABLED)
@@ -903,9 +903,6 @@ class HyperVAPITestCase(test.TestCase):
                                          with_exception,
                                          config_drive=config_drive,
                                          use_cdrom=use_cdrom)
-
-        m = fake.PathUtils.get_instance_dir(mox.IsA(str))
-        m.AndReturn(self._test_instance_dir)
 
         self._mox.ReplayAll()
         self._spawn_instance(cow)
