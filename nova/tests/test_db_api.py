@@ -2752,8 +2752,7 @@ class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
         ctxt = context.RequestContext(user_id='a', project_id='abc',
                                       is_admin=False)
         self.assertRaises(exception.NotAuthorized,
-                          db.floating_ip_count_by_project,
-                          ctxt, 'def', 'does_not_matter')
+                          db.floating_ip_count_by_project, ctxt, 'def')
 
     def _create_fixed_ip(self, params):
         default_params = {'address': '192.168.0.1'}
