@@ -798,6 +798,31 @@ class SchedulerTestCase(test.TestCase):
                                                         None, ignore_hosts)
         self.assertEqual('fake_host2', result)
 
+    def test_live_migration_dest_check_no_image(self):
+        instance = self._live_migration_instance()
+        instance['image_ref'] = ''
+
+        # Confirm dest is picked by scheduler if not set.
+        self.mox.StubOutWithMock(self.driver, 'select_hosts')
+        self.mox.StubOutWithMock(instance_types, 'extract_instance_type')
+
+        request_spec = {'instance_properties': instance,
+                        'instance_type': {},
+                        'instance_uuids': [instance['uuid']],
+                        'image': None
+                        }
+        ignore_hosts = [instance['host']]
+        filter_properties = {'ignore_hosts': ignore_hosts}
+
+        instance_types.extract_instance_type(instance).AndReturn({})
+        self.driver.select_hosts(self.context, request_spec,
+                                 filter_properties).AndReturn(['fake_host2'])
+
+        self.mox.ReplayAll()
+        result = self.driver._live_migration_dest_check(self.context, instance,
+                                                        None, ignore_hosts)
+        self.assertEqual('fake_host2', result)
+
     def test_live_migration_auto_set_dest(self):
         instance = self._live_migration_instance()
 
