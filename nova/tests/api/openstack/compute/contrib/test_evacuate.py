@@ -180,3 +180,19 @@ class EvacuateTest(test.TestCase):
 
         res = req.get_response(app)
         self.assertEqual(res.status_int, 200)
+
+    def test_not_admin(self):
+        ctxt = context.RequestContext('fake', 'fake', is_admin=False)
+        app = fakes.wsgi_app(fake_auth_context=ctxt)
+        uuid = self.UUID
+        req = webob.Request.blank('/v2/fake/servers/%s/action' % uuid)
+        req.method = 'POST'
+        req.body = jsonutils.dumps({
+            'evacuate': {
+                'host': 'my_host',
+                'onSharedStorage': 'True',
+            }
+        })
+        req.content_type = 'application/json'
+        res = req.get_response(app)
+        self.assertEqual(res.status_int, 403)
