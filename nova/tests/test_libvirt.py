@@ -1238,7 +1238,6 @@ class LibvirtConnTestCase(test.TestCase):
         snapshot = image_service.show(context, recv_meta['id'])
         self.assertIsNone(func_call_matcher.match())
         self.assertEquals(snapshot['properties']['image_state'], 'available')
-        self.assertEquals(snapshot['properties']['image_state'], 'available')
         self.assertEquals(snapshot['status'], 'active')
         self.assertEquals(snapshot['disk_format'], 'ami')
         self.assertEquals(snapshot['name'], snapshot_name)
