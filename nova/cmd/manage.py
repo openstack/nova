@@ -54,14 +54,11 @@
   CLI interface for nova management.
 """
 
-import gettext
 import netaddr
 import os
 import sys
 
 from oslo.config import cfg
-
-gettext.install('nova', unicode=1)
 
 from nova.api.ec2 import ec2utils
 from nova import availability_zones
