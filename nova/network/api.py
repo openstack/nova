@@ -486,7 +486,7 @@ class API(base.Base):
     def _get_floating_ip_addresses(self, context, instance):
         floating_ips = self.db.instance_floating_address_get_all(context,
                                                             instance['uuid'])
-        return [floating_ip['address'] for floating_ip in floating_ips]
+        return floating_ips
 
     @wrap_check_policy
     def migrate_instance_start(self, context, instance, migration):

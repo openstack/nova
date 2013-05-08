@@ -1023,6 +1023,34 @@ class DbApiTestCase(DbTestCase):
         self.assertEqual(db.network_in_use_on_host(ctxt, 1, 'foo'), True)
         self.assertEqual(db.network_in_use_on_host(ctxt, 1, 'bar'), False)
 
+    def test_instance_floating_address_get_all(self):
+        ctxt = context.get_admin_context()
+
+        instance1 = db.instance_create(ctxt, {'host': 'h1', 'hostname': 'n1'})
+        instance2 = db.instance_create(ctxt, {'host': 'h2', 'hostname': 'n2'})
+
+        fixed_addresses = ['1.1.1.1', '1.1.1.2', '1.1.1.3']
+        float_addresses = ['2.1.1.1', '2.1.1.2', '2.1.1.3']
+        instance_uuids = [instance1['uuid'], instance1['uuid'],
+                          instance2['uuid']]
+
+        for fixed_addr, float_addr, instance_uuid in zip(fixed_addresses,
+                                                         float_addresses,
+                                                         instance_uuids):
+            db.fixed_ip_create(ctxt, {'address': fixed_addr,
+                                      'instance_uuid': instance_uuid})
+            fixed_id = db.fixed_ip_get_by_address(ctxt, fixed_addr)['id']
+            db.floating_ip_create(ctxt,
+                                  {'address': float_addr,
+                                   'fixed_ip_id': fixed_id})
+
+        real_float_addresses = \
+                db.instance_floating_address_get_all(ctxt, instance_uuids[0])
+        self.assertEqual(set(float_addresses[:2]), set(real_float_addresses))
+        real_float_addresses = \
+                db.instance_floating_address_get_all(ctxt, instance_uuids[2])
+        self.assertEqual(set([float_addresses[2]]), set(real_float_addresses))
+
     def test_get_vol_mapping_non_admin(self):
         ref = db.ec2_volume_create(self.context, 'fake-uuid')
         ec2_id = db.get_ec2_volume_id_by_uuid(self.context, 'fake-uuid')

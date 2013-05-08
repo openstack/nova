@@ -1911,14 +1911,23 @@ def instance_get_floating_address(context, instance_id):
 
 @require_context
 def instance_floating_address_get_all(context, instance_uuid):
-    fixed_ips = fixed_ip_get_by_instance(context, instance_uuid)
+    if not uuidutils.is_uuid_like(instance_uuid):
+        raise exception.InvalidUUID(uuid=instance_uuid)
 
-    floating_ips = []
-    for fixed_ip in fixed_ips:
-        _floating_ips = floating_ip_get_by_fixed_ip_id(context, fixed_ip['id'])
-        floating_ips += _floating_ips
+    fixed_ip_ids = model_query(context, models.FixedIp.id,
+                               base_model=models.FixedIp).\
+                        filter_by(instance_uuid=instance_uuid).\
+                        all()
+    if not fixed_ip_ids:
+        raise exception.FixedIpNotFoundForInstance(instance_uuid=instance_uuid)
 
-    return floating_ips
+    fixed_ip_ids = [fixed_ip_id.id for fixed_ip_id in fixed_ip_ids]
+
+    floating_ips = model_query(context, models.FloatingIp.address,
+                               base_model=models.FloatingIp).\
+                    filter(models.FloatingIp.fixed_ip_id.in_(fixed_ip_ids)).\
+                    all()
+    return [floating_ip.address for floating_ip in floating_ips]
 
 
 @require_admin_context
