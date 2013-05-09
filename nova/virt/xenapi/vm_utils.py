@@ -1118,6 +1118,45 @@ def _fetch_vhd_image(context, session, instance, image_id):
     if _image_uses_bittorrent(context, instance):
         plugin_name = 'bittorrent'
         callback = None
+        _add_bittorrent_params(params)
+    else:
+        plugin_name = 'glance'
+        callback = _generate_glance_callback(context)
+
+    vdis = _fetch_using_dom0_plugin_with_retry(
+            context, session, image_id, plugin_name, params,
+            callback=callback)
+
+    sr_ref = safe_find_sr(session)
+    _scan_sr(session, sr_ref)
+
+    try:
+        _check_vdi_size(context, session, instance, vdis['root']['uuid'])
+    except Exception:
+        with excutils.save_and_reraise_exception():
+            for key in vdis:
+                vdi = vdis[key]
+                vdi_uuid = vdi['uuid']
+                vdi_ref = session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
+                destroy_vdi(session, vdi_ref)
+
+    return vdis
+
+
+def _generate_glance_callback(context):
+    glance_api_servers = glance.get_api_servers()
+
+    def pick_glance(params):
+        g_host, g_port, g_use_ssl = glance_api_servers.next()
+        params['glance_host'] = g_host
+        params['glance_port'] = g_port
+        params['glance_use_ssl'] = g_use_ssl
+        params['auth_token'] = getattr(context, 'auth_token', None)
+
+    return pick_glance
+
+
+def _add_bittorrent_params(params):
         params['torrent_base_url'] = CONF.xenapi_torrent_base_url
         params['torrent_seed_duration'] = CONF.xenapi_torrent_seed_duration
         params['torrent_seed_chance'] = CONF.xenapi_torrent_seed_chance
@@ -1131,28 +1170,6 @@ def _fetch_vhd_image(context, session, instance, image_id):
                 CONF.xenapi_torrent_download_stall_cutoff
         params['torrent_max_seeder_processes_per_host'] =\
                 CONF.xenapi_torrent_max_seeder_processes_per_host
-    else:
-        plugin_name = 'glance'
-        glance_api_servers = glance.get_api_servers()
-
-        def pick_glance(params):
-            g_host, g_port, g_use_ssl = glance_api_servers.next()
-            params['glance_host'] = g_host
-            params['glance_port'] = g_port
-            params['glance_use_ssl'] = g_use_ssl
-            params['auth_token'] = getattr(context, 'auth_token', None)
-
-        callback = pick_glance
-
-    vdis = _fetch_using_dom0_plugin_with_retry(
-            context, session, image_id, plugin_name, params,
-            callback=callback)
-
-    sr_ref = safe_find_sr(session)
-    _scan_sr(session, sr_ref)
-
-    _check_vdi_size(context, session, instance, vdis['root']['uuid'])
-    return vdis
 
 
 def _get_vdi_chain_size(session, vdi_uuid):
