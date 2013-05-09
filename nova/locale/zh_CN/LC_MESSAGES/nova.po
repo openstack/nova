@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  nova\n"
 "Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
-"POT-Creation-Date: 2013-05-07 19:38+0000\n"
+"POT-Creation-Date: 2013-05-09 19:38+0000\n"
 "PO-Revision-Date: 2012-05-07 06:51+0000\n"
 "Last-Translator: Edward <Unknown>\n"
 "Language-Team: Chinese (Simplified) <zh_CN@li.org>\n"
@@ -2263,7 +2263,7 @@ msgstr "没有该动作：%s"
 #: nova/api/openstack/compute/server_metadata.py:101
 #: nova/api/openstack/compute/server_metadata.py:126
 #: nova/api/openstack/compute/contrib/admin_actions.py:211
-#: nova/api/openstack/compute/contrib/evacuate.py:49
+#: nova/api/openstack/compute/contrib/evacuate.py:46
 msgid "Malformed request body"
 msgstr "错误格式的请求主体"
 
@@ -2889,21 +2889,16 @@ msgstr "网络不包含动作 %s"
 msgid "%s must be either 'MANUAL' or 'AUTO'."
 msgstr "%s 必须是'MANUAL' 或者 'AUTO'。"
 
-#: nova/api/openstack/compute/contrib/evacuate.py:43
-#, fuzzy
-msgid "Instance evacuate is admin only functionality"
-msgstr "Describe-resource是只有管理员才能执行的功能。"
-
-#: nova/api/openstack/compute/contrib/evacuate.py:61
+#: nova/api/openstack/compute/contrib/evacuate.py:58
 msgid "admin password can't be changed on existing disk"
 msgstr ""
 
-#: nova/api/openstack/compute/contrib/evacuate.py:69
+#: nova/api/openstack/compute/contrib/evacuate.py:66
 #, fuzzy
 msgid "host and onSharedStorage must be specified."
 msgstr "host与block_migration必须确定"
 
-#: nova/api/openstack/compute/contrib/evacuate.py:80
+#: nova/api/openstack/compute/contrib/evacuate.py:77
 #, fuzzy, python-format
 msgid "Error in evacuate, %s"
 msgstr "迁移错误 %s"
@@ -4160,35 +4155,35 @@ msgid ""
 "%(requested)d %(unit)s"
 msgstr ""
 
-#: nova/compute/instance_types.py:96
+#: nova/compute/flavors.py:96
 msgid "names can only contain [a-zA-Z0-9_.- ]"
 msgstr ""
 
-#: nova/compute/instance_types.py:105
+#: nova/compute/flavors.py:105
 #, fuzzy, python-format
 msgid "'%s' argument must be a positive integer"
 msgstr "创建参数必须是正整数"
 
-#: nova/compute/instance_types.py:113
+#: nova/compute/flavors.py:113
 #, fuzzy
 msgid "'rxtx_factor' argument must be a positive float"
 msgstr "创建参数必须是正整数"
 
-#: nova/compute/instance_types.py:121
+#: nova/compute/flavors.py:121
 #, python-format
 msgid "'%s' argument must be greater than 0"
 msgstr ""
 
-#: nova/compute/instance_types.py:131
+#: nova/compute/flavors.py:131
 msgid "is_public must be a boolean"
 msgstr ""
 
-#: nova/compute/instance_types.py:138
+#: nova/compute/flavors.py:138
 #, python-format
 msgid "DB error: %s"
 msgstr "数据库错误：%s"
 
-#: nova/compute/instance_types.py:148
+#: nova/compute/flavors.py:148
 #, python-format
 msgid "Instance type %s not found for deletion"
 msgstr "未找到要删除的实例类型 %s"
@@ -5122,24 +5117,24 @@ msgstr ""
 msgid "Unrecognized read_deleted value '%s'"
 msgstr "无法识别的 read_deleted 取值”%s“"
 
-#: nova/db/sqlalchemy/api.py:1408
+#: nova/db/sqlalchemy/api.py:1405
 #, python-format
 msgid ""
 "Unknown osapi_compute_unique_server_name_scope value: %s Flag must be "
 "empty, \"global\" or \"project\""
 msgstr ""
 
-#: nova/db/sqlalchemy/api.py:1546
+#: nova/db/sqlalchemy/api.py:1543
 #, fuzzy, python-format
 msgid "Invalid instance id %s in request"
 msgstr "实例 %s：已救援"
 
-#: nova/db/sqlalchemy/api.py:2837
+#: nova/db/sqlalchemy/api.py:2833
 #, python-format
 msgid "Change will make usage less than 0 for the following resources: %(unders)s"
 msgstr ""
 
-#: nova/db/sqlalchemy/api.py:4332
+#: nova/db/sqlalchemy/api.py:4328
 #, python-format
 msgid ""
 "Volume(%s) has lower stats then what is in the database. Instance must "
@@ -7834,7 +7829,7 @@ msgstr "实例代理版本：%s"
 msgid "get_available_resource called"
 msgstr ""
 
-#: nova/virt/hyperv/hostops.py:135 nova/virt/libvirt/driver.py:3740
+#: nova/virt/hyperv/hostops.py:135 nova/virt/libvirt/driver.py:3741
 #: nova/virt/xenapi/host.py:148
 msgid "Updating host stats"
 msgstr "正在更新主机状态"
@@ -8193,12 +8188,12 @@ msgstr ""
 msgid "Using config drive for instance: %s"
 msgstr "为实例 |%s| 分配浮动IP"
 
-#: nova/virt/hyperv/vmops.py:227 nova/virt/libvirt/driver.py:1870
+#: nova/virt/hyperv/vmops.py:227 nova/virt/libvirt/driver.py:1871
 #, fuzzy, python-format
 msgid "Creating config drive at %(path)s"
 msgstr "注入文件路径：'%s'"
 
-#: nova/virt/hyperv/vmops.py:235 nova/virt/libvirt/driver.py:1877
+#: nova/virt/hyperv/vmops.py:235 nova/virt/libvirt/driver.py:1878
 #, fuzzy, python-format
 msgid "Creating config drive failed with error: %s"
 msgstr "注入文件路径：'%s'"
@@ -8556,89 +8551,89 @@ msgstr ""
 msgid "Instance rebooted successfully."
 msgstr "实例成功重启。"
 
-#: nova/virt/libvirt/driver.py:1531
+#: nova/virt/libvirt/driver.py:1532
 msgid "Instance is running"
 msgstr "实例在运行"
 
-#: nova/virt/libvirt/driver.py:1538 nova/virt/powervm/operator.py:221
+#: nova/virt/libvirt/driver.py:1539 nova/virt/powervm/operator.py:221
 msgid "Instance spawned successfully."
 msgstr "实例成功生产。"
 
-#: nova/virt/libvirt/driver.py:1554
+#: nova/virt/libvirt/driver.py:1555
 #, python-format
 msgid "data: %(data)r, fpath: %(fpath)r"
 msgstr "data：%(data)r, fpath: %(fpath)r"
 
-#: nova/virt/libvirt/driver.py:1591 nova/virt/libvirt/driver.py:1617
+#: nova/virt/libvirt/driver.py:1592 nova/virt/libvirt/driver.py:1618
 #, python-format
 msgid "Truncated console log returned, %d bytes ignored"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1606
+#: nova/virt/libvirt/driver.py:1607
 #, fuzzy
 msgid "Guest does not have a console available"
 msgstr "用户没有管理员权限"
 
-#: nova/virt/libvirt/driver.py:1675
+#: nova/virt/libvirt/driver.py:1676
 #, python-format
 msgid "Path '%(path)s' supports direct I/O"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1679
+#: nova/virt/libvirt/driver.py:1680
 #, python-format
 msgid "Path '%(path)s' does not support direct I/O: '%(ex)s'"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1684 nova/virt/libvirt/driver.py:1689
+#: nova/virt/libvirt/driver.py:1685 nova/virt/libvirt/driver.py:1690
 #, python-format
 msgid "Error on '%(path)s' while checking direct I/O: '%(ex)s'"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1760
+#: nova/virt/libvirt/driver.py:1761
 msgid "Creating image"
 msgstr "正在创建镜像"
 
-#: nova/virt/libvirt/driver.py:1861
+#: nova/virt/libvirt/driver.py:1862
 msgid "Using config drive"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1910
+#: nova/virt/libvirt/driver.py:1911
 #, fuzzy, python-format
 msgid "Injecting %(inj)s into image %(img_id)s"
 msgstr "将 %(injection)s 注入到镜像 %(img_id)s"
 
-#: nova/virt/libvirt/driver.py:1920
+#: nova/virt/libvirt/driver.py:1921
 #, fuzzy, python-format
 msgid "Error injecting data into image %(img_id)s (%(e)s)"
 msgstr "忽略向镜像 %(img_id)s  注入的数据的错误 (%(e)s)"
 
-#: nova/virt/libvirt/driver.py:1977
+#: nova/virt/libvirt/driver.py:1978
 #, python-format
 msgid ""
 "Config requested an explicit CPU model, but the current libvirt "
 "hypervisor '%s' does not support selecting CPU models"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1983
+#: nova/virt/libvirt/driver.py:1984
 msgid "Config requested a custom CPU model, but no model name was provided"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1987
+#: nova/virt/libvirt/driver.py:1988
 msgid "A CPU model name should not be set when a host CPU model is requested"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1991
+#: nova/virt/libvirt/driver.py:1992
 #, python-format
 msgid "CPU mode '%(mode)s' model '%(model)s' was chosen"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2007
+#: nova/virt/libvirt/driver.py:2008
 msgid ""
 "Passthrough of the host CPU was requested but this libvirt version does "
 "not support this feature"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2330
+#: nova/virt/libvirt/driver.py:2331
 #, python-format
 msgid ""
 "Start to_xml instance=%(instance)s network_info=%(network_info)s "
@@ -8646,50 +8641,50 @@ msgid ""
 "rescue=%(rescue)sblock_device_info=%(block_device_info)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2345
+#: nova/virt/libvirt/driver.py:2346
 #, python-format
 msgid "End to_xml instance=%(instance)s xml=%(xml)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2362
+#: nova/virt/libvirt/driver.py:2363
 #, python-format
 msgid ""
 "Error from libvirt while looking up %(instance_name)s: [Error Code "
 "%(error_code)s] %(ex)s"
 msgstr "查找 %(instance_name)s时libvirt出错：[错误代码 %(error_code)s] %(ex)s"
 
-#: nova/virt/libvirt/driver.py:2530
+#: nova/virt/libvirt/driver.py:2531
 #, fuzzy
 msgid ""
 "Cannot get the number of cpu, because this function is not implemented "
 "for this platform. "
 msgstr "无法得到CPU的数目，因为这个函数不是给这个平台执行的。这个错误可以被放心忽略。"
 
-#: nova/virt/libvirt/driver.py:2581
+#: nova/virt/libvirt/driver.py:2582
 #, python-format
 msgid "couldn't obtain the vpu count from domain id: %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2587
+#: nova/virt/libvirt/driver.py:2588
 #, python-format
 msgid "List of domains returned by libVirt: %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2589
+#: nova/virt/libvirt/driver.py:2590
 #, python-format
 msgid "libVirt can't find a domain with id: %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2653
+#: nova/virt/libvirt/driver.py:2654
 msgid "libvirt version is too old (does not support getVersion)"
 msgstr "libvirt版本过旧(不支持getVersion)"
 
-#: nova/virt/libvirt/driver.py:2737
+#: nova/virt/libvirt/driver.py:2738
 #, fuzzy, python-format
 msgid "Trying to get stats for the volume %s"
 msgstr "正在获取镜像 %s 的大小"
 
-#: nova/virt/libvirt/driver.py:2750
+#: nova/virt/libvirt/driver.py:2751
 #, python-format
 msgid ""
 "Got volume usage stats for the volume=%(volume)s, instance=%(instance)s, "
@@ -8697,37 +8692,37 @@ msgid ""
 "wr_bytes=%(wr_bytes)d"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2768
+#: nova/virt/libvirt/driver.py:2769
 #, python-format
 msgid ""
 "Getting block stats failed, device might have been detached. "
 "Instance=%(instance_name)s Disk=%(disk)s Code=%(errcode)s Error=%(e)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2773
+#: nova/virt/libvirt/driver.py:2774
 #, python-format
 msgid ""
 "Could not find domain in libvirt for instance %s. Cannot get block stats "
 "for device"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2850
+#: nova/virt/libvirt/driver.py:2851
 #, fuzzy, python-format
 msgid ""
 "Creating tmpfile %s to verify with other compute node that the instance "
 "is on the same shared storage."
 msgstr "创建tmpfile %s 来通知其他的计算节点需要挂载相同的存储。"
 
-#: nova/virt/libvirt/driver.py:2932
+#: nova/virt/libvirt/driver.py:2933
 msgid "Block migration can not be used with shared storage."
 msgstr "块存储迁移无法在共享存储使用"
 
-#: nova/virt/libvirt/driver.py:2940
+#: nova/virt/libvirt/driver.py:2941
 #, fuzzy
 msgid "Live migration can not be used without shared storage."
 msgstr "块存储迁移无法在共享存储使用"
 
-#: nova/virt/libvirt/driver.py:2977
+#: nova/virt/libvirt/driver.py:2978
 #, fuzzy, python-format
 msgid ""
 "Unable to migrate %(instance_uuid)s: Disk of instance is too "
@@ -8736,7 +8731,7 @@ msgstr ""
 "无法迁移%(instance_id)s 到 %(dest)s 上：缺少磁盘(主机:%(available)s <= "
 "实例:%(necessary)s)"
 
-#: nova/virt/libvirt/driver.py:3002
+#: nova/virt/libvirt/driver.py:3003
 #, python-format
 msgid ""
 "Instance launched has CPU info:\n"
@@ -8745,7 +8740,7 @@ msgstr ""
 "已启动实例的CPU信息：\n"
 "%s"
 
-#: nova/virt/libvirt/driver.py:3014
+#: nova/virt/libvirt/driver.py:3015
 #, python-format
 msgid ""
 "CPU doesn't have compatibility.\n"
@@ -8760,71 +8755,71 @@ msgstr ""
 "\n"
 "参考 %(u)s"
 
-#: nova/virt/libvirt/driver.py:3031
+#: nova/virt/libvirt/driver.py:3032
 #, python-format
 msgid ""
 "Creating tmpfile %s to notify to other compute nodes that they should "
 "mount the same storage."
 msgstr "创建tmpfile %s 来通知其他的计算节点需要挂载相同的存储。"
 
-#: nova/virt/libvirt/driver.py:3079
+#: nova/virt/libvirt/driver.py:3080
 #, python-format
 msgid "The firewall filter for %s does not exist"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3151
+#: nova/virt/libvirt/driver.py:3152
 #, fuzzy, python-format
 msgid "Live Migration failure: %(e)s"
 msgstr "预在线迁移在%(dest)s失败"
 
-#: nova/virt/libvirt/driver.py:3244
+#: nova/virt/libvirt/driver.py:3245
 #, fuzzy, python-format
 msgid "plug_vifs() failed %(cnt)d. Retry up to %(max_retry)d."
 msgstr "plug_vifs() 失败%(cnt)d 次。最多重新尝试 %(max_retry)d 次在主机 %(hostname)s。"
 
-#: nova/virt/libvirt/driver.py:3356
+#: nova/virt/libvirt/driver.py:3357
 #, fuzzy, python-format
 msgid ""
 "Error from libvirt while getting description of %(instance_name)s: [Error"
 " Code %(error_code)s] %(ex)s"
 msgstr "查找 %(instance_name)s时libvirt出错：[错误代码 %(error_code)s] %(ex)s"
 
-#: nova/virt/libvirt/driver.py:3373
+#: nova/virt/libvirt/driver.py:3374
 #, python-format
 msgid "skipping %(path)s since it looks like volume"
 msgstr "因它像卷，所以跳过 %(path)s"
 
-#: nova/virt/libvirt/driver.py:3378
+#: nova/virt/libvirt/driver.py:3379
 #, python-format
 msgid "skipping disk for %(instance_name)s as it does not have a path"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3419
+#: nova/virt/libvirt/driver.py:3420
 #, python-format
 msgid "Getting disk size of %(i_name)s: %(e)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3465
+#: nova/virt/libvirt/driver.py:3466
 #, fuzzy
 msgid "Starting migrate_disk_and_power_off"
 msgstr "实例 %s：开始执行 migrate_disk_and_power_off"
 
-#: nova/virt/libvirt/driver.py:3524
+#: nova/virt/libvirt/driver.py:3525
 #, fuzzy
 msgid "Instance running successfully."
 msgstr "实例 %s 成功运行。"
 
-#: nova/virt/libvirt/driver.py:3530
+#: nova/virt/libvirt/driver.py:3531
 #, fuzzy
 msgid "Starting finish_migration"
 msgstr "实例 %s：开始执行 finish_migration"
 
-#: nova/virt/libvirt/driver.py:3592
+#: nova/virt/libvirt/driver.py:3593
 #, fuzzy
 msgid "Starting finish_revert_migration"
 msgstr "实例 %s：开始执行 finish_revert_migration"
 
-#: nova/virt/libvirt/driver.py:3713
+#: nova/virt/libvirt/driver.py:3714
 #, fuzzy, python-format
 msgid "Checking instance files accessability%(instance_path)s"
 msgstr "删除实例文件 %(target)s"
@@ -10546,236 +10541,236 @@ msgstr ""
 msgid "Asking xapi to fetch vhd image %(image_id)s"
 msgstr "请求 xapi 获取 vhd 镜像 %(image)s"
 
-#: nova/virt/xenapi/vm_utils.py:1169
+#: nova/virt/xenapi/vm_utils.py:1186
 #, python-format
 msgid "vdi_uuid=%(cur_vdi_uuid)s vdi_size_bytes=%(vdi_size_bytes)d"
 msgstr "vdi_uuid=%(cur_vdi_uuid)s vdi_size_bytes=%(vdi_size_bytes)d"
 
-#: nova/virt/xenapi/vm_utils.py:1184
+#: nova/virt/xenapi/vm_utils.py:1201
 #, python-format
 msgid "image_size_bytes=%(size_bytes)d, allowed_size_bytes=%(allowed_size_bytes)d"
 msgstr "image_size_bytes=%(size_bytes)d，allowed_size_bytes=%(allowed_size_bytes)d"
 
-#: nova/virt/xenapi/vm_utils.py:1188
+#: nova/virt/xenapi/vm_utils.py:1205
 #, python-format
 msgid ""
 "Image size %(size_bytes)d exceeded instance_type allowed size "
 "%(allowed_size_bytes)d"
 msgstr "镜像大小 %(size_bytes)d 超过instance_type所允许的小大 %(allowed_size_bytes)d"
 
-#: nova/virt/xenapi/vm_utils.py:1210
+#: nova/virt/xenapi/vm_utils.py:1227
 #, fuzzy, python-format
 msgid "Fetching image %(image_id)s, type %(image_type_str)s"
 msgstr "获取镜像 %(image)s"
 
-#: nova/virt/xenapi/vm_utils.py:1223
+#: nova/virt/xenapi/vm_utils.py:1240
 #, fuzzy, python-format
 msgid "Size for image %(image_id)s: %(virtual_size)d"
 msgstr "镜像 %(image)s 的大小：%(virtual_size)d"
 
-#: nova/virt/xenapi/vm_utils.py:1232
+#: nova/virt/xenapi/vm_utils.py:1249
 #, python-format
 msgid ""
 "Kernel/Ramdisk image is too large: %(vdi_size)d bytes, max %(max_size)d "
 "bytes"
 msgstr "内核/内存盘镜像太大：%(vdi_size)d 字节，最大 %(max_size)d 字节"
 
-#: nova/virt/xenapi/vm_utils.py:1251
+#: nova/virt/xenapi/vm_utils.py:1268
 #, python-format
 msgid "Copying VDI %s to /boot/guest on dom0"
 msgstr "将VDI %s 复制到dom0的/boot/guest下"
 
-#: nova/virt/xenapi/vm_utils.py:1265
+#: nova/virt/xenapi/vm_utils.py:1282
 #, python-format
 msgid "Kernel/Ramdisk VDI %s destroyed"
 msgstr "内核/内存盘 VDI %s 已销毁"
 
-#: nova/virt/xenapi/vm_utils.py:1274
+#: nova/virt/xenapi/vm_utils.py:1291
 #, fuzzy
 msgid "Failed to fetch glance image"
 msgstr "实例 %s：获取Glance镜像失败"
 
-#: nova/virt/xenapi/vm_utils.py:1315
+#: nova/virt/xenapi/vm_utils.py:1332
 #, python-format
 msgid "Detected %(image_type_str)s format for image %(image_ref)s"
 msgstr "检测到 %(image_type_str)s 格式，目标是镜像 %(image_ref)s"
 
-#: nova/virt/xenapi/vm_utils.py:1346
+#: nova/virt/xenapi/vm_utils.py:1363
 #, python-format
 msgid "Looking up vdi %s for PV kernel"
 msgstr "为PV内核查询vdi %s"
 
-#: nova/virt/xenapi/vm_utils.py:1364
+#: nova/virt/xenapi/vm_utils.py:1381
 #, python-format
 msgid ""
 "Image format is None: trying to determine PV status using pygrub; if "
 "instance with vdi %s does not boot correctly, try with image metadata."
 msgstr ""
 
-#: nova/virt/xenapi/vm_utils.py:1370
+#: nova/virt/xenapi/vm_utils.py:1387
 #, python-format
 msgid "Unknown image format %(disk_image_type)s"
 msgstr "未知的镜像格式 %(disk_image_type)s"
 
-#: nova/virt/xenapi/vm_utils.py:1401
+#: nova/virt/xenapi/vm_utils.py:1418
 #, python-format
 msgid "VDI %s is still available"
 msgstr "VDI %s 依然可用"
 
-#: nova/virt/xenapi/vm_utils.py:1504
+#: nova/virt/xenapi/vm_utils.py:1521
 #, python-format
 msgid "Unable to parse rrd of %(vm_uuid)s"
 msgstr ""
 
-#: nova/virt/xenapi/vm_utils.py:1531
+#: nova/virt/xenapi/vm_utils.py:1548
 #, python-format
 msgid "Re-scanning SR %s"
 msgstr "重新扫描存储库 %s"
 
-#: nova/virt/xenapi/vm_utils.py:1559
+#: nova/virt/xenapi/vm_utils.py:1576
 #, python-format
 msgid "Flag sr_matching_filter '%s' does not respect formatting convention"
 msgstr "标记sr_matching_filter '%s' 没有遵循格式要求"
 
-#: nova/virt/xenapi/vm_utils.py:1577
+#: nova/virt/xenapi/vm_utils.py:1594
 msgid ""
 "XenAPI is unable to find a Storage Repository to install guest instances "
 "on. Please check your configuration and/or configure the flag "
 "'sr_matching_filter'"
 msgstr "XenAPI无法找到安装客户实例的存储库。请检查你的配置或者配置标记'sr_matching_filter'"
 
-#: nova/virt/xenapi/vm_utils.py:1590
+#: nova/virt/xenapi/vm_utils.py:1607
 msgid "Cannot find SR of content-type ISO"
 msgstr "无法找到content-type ISO的存储库"
 
-#: nova/virt/xenapi/vm_utils.py:1598
+#: nova/virt/xenapi/vm_utils.py:1615
 #, python-format
 msgid "ISO: looking at SR %(sr_rec)s"
 msgstr "ISO：正在查看存储库 %(sr_rec)s"
 
-#: nova/virt/xenapi/vm_utils.py:1600
+#: nova/virt/xenapi/vm_utils.py:1617
 msgid "ISO: not iso content"
 msgstr "ISO：非iso内容"
 
-#: nova/virt/xenapi/vm_utils.py:1603
+#: nova/virt/xenapi/vm_utils.py:1620
 msgid "ISO: iso content_type, no 'i18n-key' key"
 msgstr "ISO：iso content_type，没有 'i18n-key' 键"
 
-#: nova/virt/xenapi/vm_utils.py:1606
+#: nova/virt/xenapi/vm_utils.py:1623
 msgid "ISO: iso content_type, i18n-key value not 'local-storage-iso'"
 msgstr "ISO：iso content_type，i18n-key的值不是 'local-storage-iso'"
 
-#: nova/virt/xenapi/vm_utils.py:1610
+#: nova/virt/xenapi/vm_utils.py:1627
 msgid "ISO: SR MATCHing our criteria"
 msgstr "ISO: 存储库符合标准"
 
-#: nova/virt/xenapi/vm_utils.py:1612
+#: nova/virt/xenapi/vm_utils.py:1629
 msgid "ISO: ISO, looking to see if it is host local"
 msgstr "ISO: ISO, 正在查看是否是本地的主机"
 
-#: nova/virt/xenapi/vm_utils.py:1615
+#: nova/virt/xenapi/vm_utils.py:1632
 #, python-format
 msgid "ISO: PBD %(pbd_ref)s disappeared"
 msgstr "ISO: PBD %(pbd_ref)s 消失了"
 
-#: nova/virt/xenapi/vm_utils.py:1618
+#: nova/virt/xenapi/vm_utils.py:1635
 #, python-format
 msgid "ISO: PBD matching, want %(pbd_rec)s, have %(host)s"
 msgstr "ISO: PBD匹配, 想要 %(pbd_rec)s, 目前有 %(host)s"
 
-#: nova/virt/xenapi/vm_utils.py:1621
+#: nova/virt/xenapi/vm_utils.py:1638
 msgid "ISO: SR with local PBD"
 msgstr "ISO：含有本地PBD的存储库"
 
-#: nova/virt/xenapi/vm_utils.py:1643
+#: nova/virt/xenapi/vm_utils.py:1660
 #, python-format
 msgid ""
 "Unable to obtain RRD XML for VM %(vm_uuid)s with server details: "
 "%(server)s."
 msgstr "无法为含服务器详细信息的虚拟机 %(vm_uuid)s 获取RRD XML：%(server)s。"
 
-#: nova/virt/xenapi/vm_utils.py:1659
+#: nova/virt/xenapi/vm_utils.py:1676
 #, python-format
 msgid "Unable to obtain RRD XML updates with server details: %(server)s."
 msgstr "无法获取包含服务器详细情况的RRD XML更新：%(server)s。"
 
-#: nova/virt/xenapi/vm_utils.py:1713
+#: nova/virt/xenapi/vm_utils.py:1730
 #, python-format
 msgid "Invalid statistics data from Xenserver: %s"
 msgstr "来自Xenserver无效的统计数据：%s"
 
-#: nova/virt/xenapi/vm_utils.py:1773
+#: nova/virt/xenapi/vm_utils.py:1790
 #, fuzzy, python-format
 msgid "VHD %(vdi_uuid)s has parent %(parent_uuid)s"
 msgstr "VHD %(vdi_uuid)s 有父 %(parent_ref)s"
 
-#: nova/virt/xenapi/vm_utils.py:1860
+#: nova/virt/xenapi/vm_utils.py:1877
 #, python-format
 msgid ""
 "Parent %(parent_uuid)s doesn't match original parent "
 "%(original_parent_uuid)s, waiting for coalesce..."
 msgstr "父标识 %(parent_uuid)s 和原先的父标识 %(original_parent_uuid)s 不匹配，正在等待合并..."
 
-#: nova/virt/xenapi/vm_utils.py:1870
+#: nova/virt/xenapi/vm_utils.py:1887
 #, python-format
 msgid "VHD coalesce attempts exceeded (%(max_attempts)d), giving up..."
 msgstr "VHD coalesce 将要超过(%(max_attempts)d)，放弃中..."
 
-#: nova/virt/xenapi/vm_utils.py:1905
+#: nova/virt/xenapi/vm_utils.py:1922
 #, python-format
 msgid "Timeout waiting for device %s to be created"
 msgstr "等待设备 %s 创建超时"
 
-#: nova/virt/xenapi/vm_utils.py:1925
+#: nova/virt/xenapi/vm_utils.py:1942
 #, python-format
 msgid "Disconnecting stale VDI %s from compute domU"
 msgstr ""
 
-#: nova/virt/xenapi/vm_utils.py:1938
+#: nova/virt/xenapi/vm_utils.py:1955
 #, python-format
 msgid "Plugging VBD %s ... "
 msgstr "插入VBD %s... "
 
-#: nova/virt/xenapi/vm_utils.py:1941
+#: nova/virt/xenapi/vm_utils.py:1958
 #, python-format
 msgid "Plugging VBD %s done."
 msgstr "插入VBD %s 完成。"
 
-#: nova/virt/xenapi/vm_utils.py:1943
+#: nova/virt/xenapi/vm_utils.py:1960
 #, python-format
 msgid "VBD %(vbd_ref)s plugged as %(orig_dev)s"
 msgstr "VBD %(vbd_ref)s 作为 %(orig_dev)s 插入"
 
-#: nova/virt/xenapi/vm_utils.py:1946
+#: nova/virt/xenapi/vm_utils.py:1963
 #, python-format
 msgid "VBD %(vbd_ref)s plugged into wrong dev, remapping to %(dev)s"
 msgstr "VBD %(vbd_ref)s 插入错误的设备，重新映射为 %(dev)s"
 
-#: nova/virt/xenapi/vm_utils.py:1951
+#: nova/virt/xenapi/vm_utils.py:1968
 #, python-format
 msgid "Destroying VBD for VDI %s ... "
 msgstr "正在销毁VDI为 %s 的 VBD "
 
-#: nova/virt/xenapi/vm_utils.py:1959
+#: nova/virt/xenapi/vm_utils.py:1976
 #, python-format
 msgid "Destroying VBD for VDI %s done."
 msgstr "已经销毁VDI为 %s 的 VBD"
 
-#: nova/virt/xenapi/vm_utils.py:1986
+#: nova/virt/xenapi/vm_utils.py:2003
 #, python-format
 msgid "Running pygrub against %s"
 msgstr "对 %s 运行pygrub"
 
-#: nova/virt/xenapi/vm_utils.py:1994
+#: nova/virt/xenapi/vm_utils.py:2011
 #, python-format
 msgid "Found Xen kernel %s"
 msgstr "找到Xen内核 %s"
 
-#: nova/virt/xenapi/vm_utils.py:1996
+#: nova/virt/xenapi/vm_utils.py:2013
 msgid "No Xen kernel found.  Booting HVM."
 msgstr "没有找到Xen内核。正在启动HVM。"
 
-#: nova/virt/xenapi/vm_utils.py:1998
+#: nova/virt/xenapi/vm_utils.py:2015
 msgid ""
 "Error while executing pygrub! Please, ensure the binary is installed "
 "correctly, and available in your PATH; on some Linux distros, pygrub may "
@@ -10783,51 +10778,51 @@ msgid ""
 "mode."
 msgstr ""
 
-#: nova/virt/xenapi/vm_utils.py:2015
+#: nova/virt/xenapi/vm_utils.py:2032
 msgid "Partitions:"
 msgstr "分区："
 
-#: nova/virt/xenapi/vm_utils.py:2021
+#: nova/virt/xenapi/vm_utils.py:2038
 #, python-format
 msgid "  %(num)s: %(ptype)s %(size)d sectors"
 msgstr "  %(num)s: %(ptype)s %(size)d sectors"
 
-#: nova/virt/xenapi/vm_utils.py:2046
+#: nova/virt/xenapi/vm_utils.py:2063
 #, python-format
 msgid ""
 "Writing partition table %(primary_first)d %(primary_last)d to "
 "%(dev_path)s..."
 msgstr "将分区表 %(primary_first)d %(primary_last)d 写入到 %(dev_path)s..."
 
-#: nova/virt/xenapi/vm_utils.py:2059
+#: nova/virt/xenapi/vm_utils.py:2076
 #, python-format
 msgid "Writing partition table %s done."
 msgstr "完成写入分区表 %s 。"
 
-#: nova/virt/xenapi/vm_utils.py:2113
+#: nova/virt/xenapi/vm_utils.py:2130
 #, python-format
 msgid ""
 "Starting sparse_copy src=%(src_path)s dst=%(dst_path)s "
 "virtual_size=%(virtual_size)d block_size=%(block_size)d"
 msgstr ""
 
-#: nova/virt/xenapi/vm_utils.py:2146
+#: nova/virt/xenapi/vm_utils.py:2163
 #, python-format
 msgid ""
 "Finished sparse_copy in %(duration).2f secs, %(compression_pct).2f%% "
 "reduction in size"
 msgstr ""
 
-#: nova/virt/xenapi/vm_utils.py:2198
+#: nova/virt/xenapi/vm_utils.py:2215
 msgid "Manipulating interface files directly"
 msgstr "直接操作接口文件"
 
-#: nova/virt/xenapi/vm_utils.py:2207
+#: nova/virt/xenapi/vm_utils.py:2224
 #, python-format
 msgid "Failed to mount filesystem (expected for non-linux instances): %s"
 msgstr "挂载文件系统失败(期望的是非Linux实例)：%s"
 
-#: nova/virt/xenapi/vm_utils.py:2319
+#: nova/virt/xenapi/vm_utils.py:2336
 msgid "This domU must be running on the host specified by xenapi_connection_url"
 msgstr ""
 
@@ -11183,4 +11178,7 @@ msgstr "状态必须可用"
 #, fuzzy
 msgid "status must be 'available'"
 msgstr "状态必须可用"
+
+#~ msgid "Instance evacuate is admin only functionality"
+#~ msgstr "Describe-resource是只有管理员才能执行的功能。"
 
