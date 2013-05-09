@@ -39,9 +39,6 @@ class Controller(wsgi.Controller):
         to a new one.
         """
         context = req.environ["nova.context"]
-        if not context.is_admin:
-            msg = _("Instance evacuate is admin only functionality")
-            raise exc.HTTPForbidden(explanation=msg)
         authorize(context)
 
         try:
