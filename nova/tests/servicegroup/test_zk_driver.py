@@ -36,13 +36,13 @@ class ZKServiceGroupTestCase(test.TestCase):
     def setUp(self):
         super(ZKServiceGroupTestCase, self).setUp()
         servicegroup.API._driver = None
+        from nova.servicegroup.drivers import zk
+        self.flags(servicegroup_driver='zk')
+        self.flags(address='localhost:2181', group="zookeeper")
         try:
-            from nova.servicegroup.drivers import zk
             _unused = zk.ZooKeeperDriver()
         except ImportError:
             self.skipTest("Unable to test due to lack of ZooKeeper")
-        self.flags(servicegroup_driver='zk')
-        self.flags(address='localhost:2181', group="zookeeper")
 
     def test_join_leave(self):
         self.servicegroup_api = servicegroup.API()
