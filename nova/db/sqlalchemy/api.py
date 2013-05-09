@@ -5187,3 +5187,357 @@ def archive_deleted_rows(context, max_rows=None):
         if rows_archived >= max_rows:
             break
     return rows_archived
+
+
+####################
+
+
+def _instance_group_get_query(context, model_class, id_field=None, id=None,
+                              session=None, read_deleted=None):
+    columns_to_join = {models.InstanceGroup: ['_policies', '_metadata',
+                                              '_members']}
+    query = model_query(context, model_class, session=session,
+                        read_deleted=read_deleted)
+
+    for c in columns_to_join.get(model_class, []):
+        query = query.options(joinedload(c))
+
+    if id and id_field:
+        query = query.filter(id_field == id)
+
+    return query
+
+
+def instance_group_create(context, values, policies=None, metadata=None,
+                          members=None):
+    """Create a new group with metadata."""
+    uuid = values.get('uuid', None)
+    if uuid is None:
+        uuid = uuidutils.generate_uuid()
+        values['uuid'] = uuid
+    session = get_session()
+    with session.begin():
+        try:
+            group = models.InstanceGroup()
+            group.update(values)
+            group.save(session=session)
+        except db_exc.DBDuplicateEntry:
+            raise exception.InstanceGroupIdExists(group_uuid=uuid)
+
+        # We don't want these to be lazy loaded later. We know there is
+        # nothing here since we just created this instance group.
+        group._policies = []
+        group._metadata = []
+        group._members = []
+        if policies:
+            _instance_group_policies_add(context, group.id, policies,
+                                         session=session)
+        if metadata:
+            _instance_group_metadata_add(context, group.id, metadata,
+                                         session=session)
+        if members:
+            _instance_group_members_add(context, group.id, members,
+                                        session=session)
+    return instance_group_get(context, uuid)
+
+
+def instance_group_get(context, group_uuid):
+    """Get a specific group by uuid."""
+    group = _instance_group_get_query(context,
+                                      models.InstanceGroup,
+                                      models.InstanceGroup.uuid,
+                                      group_uuid).\
+                            first()
+    if not group:
+        raise exception.InstanceGroupNotFound(group_uuid=group_uuid)
+    return group
+
+
+def instance_group_update(context, group_uuid, values):
+    """Update the attributes of an group.
+
+    If values contains a metadata key, it updates the aggregate metadata
+    too. Similary for the policies and members.
+    """
+    session = get_session()
+    with session.begin():
+        group = model_query(context,
+                            models.InstanceGroup,
+                            session=session).\
+                filter_by(uuid=group_uuid).\
+                first()
+        if not group:
+            raise exception.InstanceGroupNotFound(group_uuid=group_uuid)
+
+        policies = values.get('policies')
+        if policies is not None:
+            _instance_group_policies_add(context,
+                                         group.id,
+                                         values.pop('policies'),
+                                         set_delete=True,
+                                         session=session)
+        metadata = values.get('metadata')
+        if metadata is not None:
+            _instance_group_metadata_add(context,
+                                         group.id,
+                                         values.pop('metadata'),
+                                         set_delete=True,
+                                         session=session)
+        members = values.get('members')
+        if members is not None:
+            _instance_group_members_add(context,
+                                        group.id,
+                                        values.pop('members'),
+                                        set_delete=True,
+                                        session=session)
+
+        group.update(values)
+        group.save(session=session)
+        if policies:
+            values['policies'] = policies
+        if metadata:
+            values['metadata'] = metadata
+        if members:
+            values['members'] = members
+
+
+def instance_group_delete(context, group_uuid):
+    """Delete an group."""
+    session = get_session()
+    with session.begin():
+        count = _instance_group_get_query(context,
+                                          models.InstanceGroup,
+                                          models.InstanceGroup.uuid,
+                                          group_uuid,
+                                          session=session).soft_delete()
+        if count == 0:
+            raise exception.InstanceGroupNotFound(group_uuid=group_uuid)
+
+        # Delete policies, metadata and members
+        instance_models = [models.InstanceGroupPolicy,
+                           models.InstanceGroupMetadata,
+                           models.InstanceGroupMember]
+        for model in instance_models:
+            model_query(context, model, session=session).\
+                    filter_by(group_id=group_uuid).\
+                    soft_delete()
+
+
+def instance_group_get_all(context):
+    """Get all groups."""
+    return _instance_group_get_query(context, models.InstanceGroup).all()
+
+
+def instance_group_get_all_by_project_id(context, project_id):
+    """Get all groups."""
+    return _instance_group_get_query(context, models.InstanceGroup).\
+                            filter_by(project_id=project_id).\
+                            all()
+
+
+def _instance_group_model_get_query(context, model_class, group_uuid,
+                                    session=None, read_deleted='no'):
+    return model_query(context,
+                       model_class,
+                       read_deleted=read_deleted,
+                       session=session).\
+                filter_by(group_id=group_uuid)
+
+
+def _instance_group_id(context, group_uuid):
+    """Returns the group database ID for the group UUID."""
+
+    result = model_query(context,
+                         models.InstanceGroup.id,
+                         base_model=models.InstanceGroup).\
+                filter_by(uuid=group_uuid).\
+                first()
+    if not result:
+        raise exception.InstanceGroupNotFound(group_uuid=group_uuid)
+    return result.id
+
+
+def _instance_group_metadata_add(context, id, metadata, set_delete=False,
+                                 session=None):
+    if not session:
+        session = get_session()
+
+    with session.begin(subtransactions=True):
+        all_keys = metadata.keys()
+        query = _instance_group_model_get_query(context,
+                                                models.InstanceGroupMetadata,
+                                                id,
+                                                session=session)
+        if set_delete:
+            query.filter(~models.InstanceGroupMetadata.key.in_(all_keys)).\
+                         soft_delete(synchronize_session=False)
+
+        query = query.filter(models.InstanceGroupMetadata.key.in_(all_keys))
+        already_existing_keys = set()
+        for meta_ref in query.all():
+            key = meta_ref.key
+            meta_ref.update({'value': metadata[key]})
+            already_existing_keys.add(key)
+
+        for key, value in metadata.iteritems():
+            if key in already_existing_keys:
+                continue
+            meta_ref = models.InstanceGroupMetadata()
+            meta_ref.update({'key': key,
+                             'value': value,
+                             'group_id': id})
+            session.add(meta_ref)
+
+        return metadata
+
+
+def instance_group_metadata_add(context, group_uuid, metadata,
+                                set_delete=False):
+    id = _instance_group_id(context, group_uuid)
+    return _instance_group_metadata_add(context, id, metadata,
+                                        set_delete=set_delete)
+
+
+def instance_group_metadata_delete(context, group_uuid, key):
+    id = _instance_group_id(context, group_uuid)
+    count = _instance_group_get_query(context,
+                                      models.InstanceGroupMetadata,
+                                      models.InstanceGroupMetadata.group_id,
+                                      id).\
+                            filter_by(key=key).\
+                            soft_delete()
+    if count == 0:
+        raise exception.InstanceGroupMetadataNotFound(group_uuid=group_uuid,
+                                                      metadata_key=key)
+
+
+def instance_group_metadata_get(context, group_uuid):
+    id = _instance_group_id(context, group_uuid)
+    rows = model_query(context,
+                       models.InstanceGroupMetadata.key,
+                       models.InstanceGroupMetadata.value,
+                       base_model=models.InstanceGroupMetadata).\
+                filter_by(group_id=id).all()
+    return dict((r[0], r[1]) for r in rows)
+
+
+def _instance_group_members_add(context, id, members, set_delete=False,
+                                session=None):
+    if not session:
+        session = get_session()
+
+    all_members = set(members)
+    with session.begin(subtransactions=True):
+        query = _instance_group_model_get_query(context,
+                                                models.InstanceGroupMember,
+                                                id,
+                                                session=session)
+        if set_delete:
+            query.filter(~models.InstanceGroupMember.instance_id.in_(
+                         all_members)).\
+                  soft_delete(synchronize_session=False)
+
+        query = query.filter(
+                models.InstanceGroupMember.instance_id.in_(all_members))
+        already_existing = set()
+        for member_ref in query.all():
+            already_existing.add(member_ref.instance_id)
+
+        for instance_id in members:
+            if instance_id in already_existing:
+                continue
+            member_ref = models.InstanceGroupMember()
+            member_ref.update({'instance_id': instance_id,
+                               'group_id': id})
+            session.add(member_ref)
+
+        return members
+
+
+def instance_group_members_add(context, group_uuid, members,
+                               set_delete=False):
+    id = _instance_group_id(context, group_uuid)
+    return _instance_group_members_add(context, id, members,
+                                       set_delete=set_delete)
+
+
+def instance_group_member_delete(context, group_uuid, instance_id):
+    id = _instance_group_id(context, group_uuid)
+    count = _instance_group_get_query(context,
+                                      models.InstanceGroupMember,
+                                      models.InstanceGroupMember.group_id,
+                                      id).\
+                            filter_by(instance_id=instance_id).\
+                            soft_delete()
+    if count == 0:
+        raise exception.InstanceGroupMemberNotFound(group_uuid=group_uuid,
+                                                    instance_id=instance_id)
+
+
+def instance_group_members_get(context, group_uuid):
+    id = _instance_group_id(context, group_uuid)
+    instances = model_query(context,
+                            models.InstanceGroupMember.instance_id,
+                            base_model=models.InstanceGroupMember).\
+                    filter_by(group_id=id).all()
+    return [instance[0] for instance in instances]
+
+
+def _instance_group_policies_add(context, id, policies, set_delete=False,
+                                 session=None):
+    if not session:
+        session = get_session()
+
+    allpols = set(policies)
+    with session.begin(subtransactions=True):
+        query = _instance_group_model_get_query(context,
+                                                models.InstanceGroupPolicy,
+                                                id,
+                                                session=session)
+        if set_delete:
+            query.filter(~models.InstanceGroupPolicy.policy.in_(allpols)).\
+                soft_delete(synchronize_session=False)
+
+        query = query.filter(models.InstanceGroupPolicy.policy.in_(allpols))
+        already_existing = set()
+        for policy_ref in query.all():
+            already_existing.add(policy_ref.policy)
+
+        for policy in policies:
+            if policy in already_existing:
+                continue
+            policy_ref = models.InstanceGroupPolicy()
+            policy_ref.update({'policy': policy,
+                               'group_id': id})
+            session.add(policy_ref)
+
+        return policies
+
+
+def instance_group_policies_add(context, group_uuid, policies,
+                                set_delete=False):
+    id = _instance_group_id(context, group_uuid)
+    return _instance_group_policies_add(context, id, policies,
+                                        set_delete=set_delete)
+
+
+def instance_group_policy_delete(context, group_uuid, policy):
+    id = _instance_group_id(context, group_uuid)
+    count = _instance_group_get_query(context,
+                                      models.InstanceGroupPolicy,
+                                      models.InstanceGroupPolicy.group_id,
+                                      id).\
+                            filter_by(policy=policy).\
+                            soft_delete()
+    if count == 0:
+        raise exception.InstanceGroupPolicyNotFound(group_uuid=group_uuid,
+                                                    policy=policy)
+
+
+def instance_group_policies_get(context, group_uuid):
+    id = _instance_group_id(context, group_uuid)
+    policies = model_query(context,
+                           models.InstanceGroupPolicy.policy,
+                           base_model=models.InstanceGroupPolicy).\
+                    filter_by(group_id=id).all()
+    return [policy[0] for policy in policies]

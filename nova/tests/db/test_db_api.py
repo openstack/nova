@@ -4950,3 +4950,367 @@ class ArchiveTestCase(test.TestCase):
         siim_rows = self.conn.execute(qsiim).fetchall()
         si_rows = self.conn.execute(qsi).fetchall()
         self.assertEqual(len(siim_rows) + len(si_rows), 8)
+
+
+class InstanceGroupDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
+    def setUp(self):
+        super(InstanceGroupDBApiTestCase, self).setUp()
+        self.user_id = 'fake_user'
+        self.project_id = 'fake_project'
+        self.context = context.RequestContext(self.user_id, self.project_id)
+
+    def _get_default_values(self):
+        return {'name': 'fake_name',
+                'user_id': self.user_id,
+                'project_id': self.project_id}
+
+    def _create_instance_group(self, context, values, policies=None,
+                               metadata=None, members=None):
+        return db.instance_group_create(context, values, policies=policies,
+                                        metadata=metadata, members=members)
+
+    def test_instance_group_create_no_key(self):
+        values = self._get_default_values()
+        result = self._create_instance_group(self.context, values)
+        ignored_keys = ['id', 'uuid', 'deleted', 'deleted_at', 'updated_at',
+                        'created_at']
+        self._assertEqualObjects(result, values, ignored_keys)
+        self.assertTrue(uuidutils.is_uuid_like(result['uuid']))
+
+    def test_instance_group_create_with_key(self):
+        values = self._get_default_values()
+        values['uuid'] = 'fake_id'
+        result = self._create_instance_group(self.context, values)
+        ignored_keys = ['id', 'deleted', 'deleted_at', 'updated_at',
+                        'created_at']
+        self._assertEqualObjects(result, values, ignored_keys)
+
+    def test_instance_group_create_with_same_key(self):
+        values = self._get_default_values()
+        values['uuid'] = 'fake_id'
+        result = self._create_instance_group(self.context, values)
+        self.assertRaises(exception.InstanceGroupIdExists,
+                          self._create_instance_group, self.context, values)
+
+    def test_instance_group_get(self):
+        values = self._get_default_values()
+        result1 = self._create_instance_group(self.context, values)
+        result2 = db.instance_group_get(self.context, result1['uuid'])
+        self._assertEqualObjects(result1, result2)
+
+    def test_instance_group_update_simple(self):
+        values = self._get_default_values()
+        result1 = self._create_instance_group(self.context, values)
+        values = {'name': 'new_name', 'user_id': 'new_user',
+                  'project_id': 'new_project'}
+        db.instance_group_update(self.context, result1['uuid'],
+                                 values)
+        result2 = db.instance_group_get(self.context, result1['uuid'])
+        self.assertEquals(result1['uuid'], result2['uuid'])
+        ignored_keys = ['id', 'uuid', 'deleted', 'deleted_at', 'updated_at',
+                        'created_at']
+        self._assertEqualObjects(result2, values, ignored_keys)
+
+    def test_instance_group_delete(self):
+        values = self._get_default_values()
+        result = self._create_instance_group(self.context, values)
+        db.instance_group_delete(self.context, result['uuid'])
+        self.assertRaises(exception.InstanceGroupNotFound,
+                          db.instance_group_get, self.context, result['uuid'])
+
+    def test_instance_group_get_all(self):
+        groups = db.instance_group_get_all(self.context)
+        self.assertEquals(0, len(groups))
+        value = self._get_default_values()
+        result1 = self._create_instance_group(self.context, value)
+        groups = db.instance_group_get_all(self.context)
+        self.assertEquals(1, len(groups))
+        value = self._get_default_values()
+        result2 = self._create_instance_group(self.context, value)
+        groups = db.instance_group_get_all(self.context)
+        results = [result1, result2]
+        self._assertEqualListsOfObjects(results, groups)
+
+    def test_instance_group_get_all_by_project_id(self):
+        groups = db.instance_group_get_all_by_project_id(self.context,
+                                                         'invalid_project_id')
+        self.assertEquals(0, len(groups))
+        values = self._get_default_values()
+        result1 = self._create_instance_group(self.context, values)
+        groups = db.instance_group_get_all_by_project_id(self.context,
+                                                         'fake_project')
+        self.assertEquals(1, len(groups))
+        values = self._get_default_values()
+        values['project_id'] = 'new_project_id'
+        result2 = self._create_instance_group(self.context, values)
+        groups = db.instance_group_get_all(self.context)
+        results = [result1, result2]
+        self._assertEqualListsOfObjects(results, groups)
+        projects = [{'name': 'fake_project', 'value': [result1]},
+                    {'name': 'new_project_id', 'value': [result2]}]
+        for project in projects:
+            groups = db.instance_group_get_all_by_project_id(self.context,
+                                                             project['name'])
+            self._assertEqualListsOfObjects(project['value'], groups)
+
+    def test_instance_group_update(self):
+        values = self._get_default_values()
+        result = self._create_instance_group(self.context, values)
+        ignored_keys = ['id', 'uuid', 'deleted', 'deleted_at', 'updated_at',
+                        'created_at']
+        self._assertEqualObjects(result, values, ignored_keys)
+        self.assertTrue(uuidutils.is_uuid_like(result['uuid']))
+        id = result['uuid']
+        values = self._get_default_values()
+        values['name'] = 'new_fake_name'
+        db.instance_group_update(self.context, id, values)
+        result = db.instance_group_get(self.context, id)
+        self.assertEquals(result['name'], 'new_fake_name')
+        # update metadata
+        values = self._get_default_values()
+        metadataInput = {'key11': 'value1',
+                         'key12': 'value2'}
+        values['metadata'] = metadataInput
+        db.instance_group_update(self.context, id, values)
+        result = db.instance_group_get(self.context, id)
+        metadata = result['metadetails']
+        self._assertEqualObjects(metadata, metadataInput)
+        # update update members
+        values = self._get_default_values()
+        members = ['instance_id1', 'instance_id2']
+        values['members'] = members
+        db.instance_group_update(self.context, id, values)
+        result = db.instance_group_get(self.context, id)
+        self._assertEqualListsOfPrimitivesAsSets(result['members'], members)
+        # update update policies
+        values = self._get_default_values()
+        policies = ['policy1', 'policy2']
+        values['policies'] = policies
+        db.instance_group_update(self.context, id, values)
+        result = db.instance_group_get(self.context, id)
+        self._assertEqualListsOfPrimitivesAsSets(result['policies'], policies)
+        # test invalid ID
+        self.assertRaises(exception.InstanceGroupNotFound,
+                          db.instance_group_update, self.context,
+                          'invalid_id', values)
+
+
+class InstanceGroupMetadataDBApiTestCase(InstanceGroupDBApiTestCase):
+    def test_instance_group_metadata_on_create(self):
+        values = self._get_default_values()
+        values['uuid'] = 'fake_id'
+        metadata = {'key11': 'value1',
+                    'key12': 'value2'}
+        result = self._create_instance_group(self.context, values,
+                                             metadata=metadata)
+        ignored_keys = ['id', 'deleted', 'deleted_at', 'updated_at',
+                        'created_at']
+        self._assertEqualObjects(result, values, ignored_keys)
+        self._assertEqualObjects(metadata, result['metadetails'])
+
+    def test_instance_group_metadata_add(self):
+        values = self._get_default_values()
+        values['uuid'] = 'fake_id'
+        result = self._create_instance_group(self.context, values)
+        id = result['uuid']
+        metadata = db.instance_group_metadata_get(self.context, id)
+        self._assertEqualObjects(metadata, {})
+        metadata = {'key1': 'value1',
+                    'key2': 'value2'}
+        db.instance_group_metadata_add(self.context, id, metadata)
+        metadata2 = db.instance_group_metadata_get(self.context, id)
+        self._assertEqualObjects(metadata, metadata2)
+
+    def test_instance_group_update(self):
+        values = self._get_default_values()
+        values['uuid'] = 'fake_id'
+        result = self._create_instance_group(self.context, values)
+        id = result['uuid']
+        metadata = {'key1': 'value1',
+                    'key2': 'value2'}
+        db.instance_group_metadata_add(self.context, id, metadata)
+        metadata2 = db.instance_group_metadata_get(self.context, id)
+        self._assertEqualObjects(metadata, metadata2)
+        # check add with existing keys
+        metadata = {'key1': 'value1',
+                    'key2': 'value2',
+                    'key3': 'value3'}
+        db.instance_group_metadata_add(self.context, id, metadata)
+        metadata3 = db.instance_group_metadata_get(self.context, id)
+        self._assertEqualObjects(metadata, metadata3)
+
+    def test_instance_group_delete(self):
+        values = self._get_default_values()
+        values['uuid'] = 'fake_id'
+        result = self._create_instance_group(self.context, values)
+        id = result['uuid']
+        metadata = {'key1': 'value1',
+                    'key2': 'value2',
+                    'key3': 'value3'}
+        db.instance_group_metadata_add(self.context, id, metadata)
+        metadata3 = db.instance_group_metadata_get(self.context, id)
+        self._assertEqualObjects(metadata, metadata3)
+        db.instance_group_metadata_delete(self.context, id, 'key1')
+        metadata = db.instance_group_metadata_get(self.context, id)
+        self.assertTrue('key1' not in metadata)
+        db.instance_group_metadata_delete(self.context, id, 'key2')
+        metadata = db.instance_group_metadata_get(self.context, id)
+        self.assertTrue('key2' not in metadata)
+
+    def test_instance_group_metadata_invalid_ids(self):
+        values = self._get_default_values()
+        result = self._create_instance_group(self.context, values)
+        id = result['uuid']
+        self.assertRaises(exception.InstanceGroupNotFound,
+                          db.instance_group_metadata_get,
+                          self.context, 'invalid')
+        self.assertRaises(exception.InstanceGroupNotFound,
+                          db.instance_group_metadata_delete, self.context,
+                          'invalidid', 'key1')
+        metadata = {'key1': 'value1',
+                    'key2': 'value2'}
+        db.instance_group_metadata_add(self.context, id, metadata)
+        self.assertRaises(exception.InstanceGroupMetadataNotFound,
+                          db.instance_group_metadata_delete,
+                          self.context, id, 'invalidkey')
+
+
+class InstanceGroupMembersDBApiTestCase(InstanceGroupDBApiTestCase):
+    def test_instance_group_members_on_create(self):
+        values = self._get_default_values()
+        values['uuid'] = 'fake_id'
+        members = ['instance_id1', 'instance_id2']
+        result = self._create_instance_group(self.context, values,
+                                             members=members)
+        ignored_keys = ['id', 'deleted', 'deleted_at', 'updated_at',
+                        'created_at']
+        self._assertEqualObjects(result, values, ignored_keys)
+        self._assertEqualListsOfPrimitivesAsSets(result['members'], members)
+
+    def test_instance_group_members_add(self):
+        values = self._get_default_values()
+        values['uuid'] = 'fake_id'
+        result = self._create_instance_group(self.context, values)
+        id = result['uuid']
+        members = db.instance_group_members_get(self.context, id)
+        self.assertEquals(members, [])
+        members2 = ['instance_id1', 'instance_id2']
+        db.instance_group_members_add(self.context, id, members2)
+        members = db.instance_group_members_get(self.context, id)
+        self._assertEqualListsOfPrimitivesAsSets(members, members2)
+
+    def test_instance_group_members_update(self):
+        values = self._get_default_values()
+        values['uuid'] = 'fake_id'
+        result = self._create_instance_group(self.context, values)
+        id = result['uuid']
+        members2 = ['instance_id1', 'instance_id2']
+        db.instance_group_members_add(self.context, id, members2)
+        members = db.instance_group_members_get(self.context, id)
+        self._assertEqualListsOfPrimitivesAsSets(members, members2)
+        # check add with existing keys
+        members3 = ['instance_id1', 'instance_id2', 'instance_id3']
+        db.instance_group_members_add(self.context, id, members3)
+        members = db.instance_group_members_get(self.context, id)
+        self._assertEqualListsOfPrimitivesAsSets(members, members3)
+
+    def test_instance_group_members_delete(self):
+        values = self._get_default_values()
+        values['uuid'] = 'fake_id'
+        result = self._create_instance_group(self.context, values)
+        id = result['uuid']
+        members3 = ['instance_id1', 'instance_id2', 'instance_id3']
+        db.instance_group_members_add(self.context, id, members3)
+        members = db.instance_group_members_get(self.context, id)
+        self._assertEqualListsOfPrimitivesAsSets(members, members3)
+        for instance_id in members3[:]:
+            db.instance_group_member_delete(self.context, id, instance_id)
+            members3.remove(instance_id)
+            members = db.instance_group_members_get(self.context, id)
+            self._assertEqualListsOfPrimitivesAsSets(members, members3)
+
+    def test_instance_group_members_invalid_ids(self):
+        values = self._get_default_values()
+        result = self._create_instance_group(self.context, values)
+        id = result['uuid']
+        self.assertRaises(exception.InstanceGroupNotFound,
+                          db.instance_group_members_get,
+                          self.context, 'invalid')
+        self.assertRaises(exception.InstanceGroupNotFound,
+                          db.instance_group_member_delete, self.context,
+                          'invalidid', 'instance_id1')
+        members = ['instance_id1', 'instance_id2']
+        db.instance_group_members_add(self.context, id, members)
+        self.assertRaises(exception.InstanceGroupMemberNotFound,
+                          db.instance_group_member_delete,
+                          self.context, id, 'invalid_id')
+
+
+class InstanceGroupPoliciesDBApiTestCase(InstanceGroupDBApiTestCase):
+    def test_instance_group_policies_on_create(self):
+        values = self._get_default_values()
+        values['uuid'] = 'fake_id'
+        policies = ['policy1', 'policy2']
+        result = self._create_instance_group(self.context, values,
+                                             policies=policies)
+        ignored_keys = ['id', 'deleted', 'deleted_at', 'updated_at',
+                        'created_at']
+        self._assertEqualObjects(result, values, ignored_keys)
+        self._assertEqualListsOfPrimitivesAsSets(result['policies'], policies)
+
+    def test_instance_group_policies_add(self):
+        values = self._get_default_values()
+        values['uuid'] = 'fake_id'
+        result = self._create_instance_group(self.context, values)
+        id = result['uuid']
+        policies = db.instance_group_policies_get(self.context, id)
+        self.assertEquals(policies, [])
+        policies2 = ['policy1', 'policy2']
+        db.instance_group_policies_add(self.context, id, policies2)
+        policies = db.instance_group_policies_get(self.context, id)
+        self._assertEqualListsOfPrimitivesAsSets(policies, policies2)
+
+    def test_instance_group_policies_update(self):
+        values = self._get_default_values()
+        values['uuid'] = 'fake_id'
+        result = self._create_instance_group(self.context, values)
+        id = result['uuid']
+        policies2 = ['policy1', 'policy2']
+        db.instance_group_policies_add(self.context, id, policies2)
+        policies = db.instance_group_policies_get(self.context, id)
+        self._assertEqualListsOfPrimitivesAsSets(policies, policies2)
+        policies3 = ['policy1', 'policy2', 'policy3']
+        db.instance_group_policies_add(self.context, id, policies3)
+        policies = db.instance_group_policies_get(self.context, id)
+        self._assertEqualListsOfPrimitivesAsSets(policies, policies3)
+
+    def test_instance_group_policies_delete(self):
+        values = self._get_default_values()
+        values['uuid'] = 'fake_id'
+        result = self._create_instance_group(self.context, values)
+        id = result['uuid']
+        policies3 = ['policy1', 'policy2', 'policy3']
+        db.instance_group_policies_add(self.context, id, policies3)
+        policies = db.instance_group_policies_get(self.context, id)
+        self._assertEqualListsOfPrimitivesAsSets(policies, policies3)
+        for policy in policies3[:]:
+            db.instance_group_policy_delete(self.context, id, policy)
+            policies3.remove(policy)
+            policies = db.instance_group_policies_get(self.context, id)
+            self._assertEqualListsOfPrimitivesAsSets(policies, policies3)
+
+    def test_instance_group_policies_invalid_ids(self):
+        values = self._get_default_values()
+        result = self._create_instance_group(self.context, values)
+        id = result['uuid']
+        self.assertRaises(exception.InstanceGroupNotFound,
+                          db.instance_group_policies_get,
+                          self.context, 'invalid')
+        self.assertRaises(exception.InstanceGroupNotFound,
+                          db.instance_group_policy_delete, self.context,
+                          'invalidid', 'policy1')
+        policies = ['policy1', 'policy2']
+        db.instance_group_policies_add(self.context, id, policies)
+        self.assertRaises(exception.InstanceGroupPolicyNotFound,
+                          db.instance_group_policy_delete,
+                          self.context, id, 'invalid_policy')

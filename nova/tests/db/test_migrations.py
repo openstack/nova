@@ -62,6 +62,7 @@ import nova.db.sqlalchemy.migrate_repo
 from nova.db.sqlalchemy import utils as db_utils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
+from nova.openstack.common import uuidutils
 from nova import test
 from nova import utils
 import nova.virt.baremetal.db.sqlalchemy.migrate_repo
@@ -1581,6 +1582,49 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         self.assertEqual(bdm_3s[3].device_type, 'disk')
         self.assertEqual(bdm_3s[3].image_id, 'fake_image_2')
         self.assertEqual(bdm_3s[3].boot_index, 0)
+
+    # addition of the vm instance groups
+    def _check_no_group_instance_tables(self, engine):
+        self.assertRaises(sqlalchemy.exc.NoSuchTableError,
+                          db_utils.get_table, engine,
+                          'instance_groups')
+        self.assertRaises(sqlalchemy.exc.NoSuchTableError,
+                          db_utils.get_table, engine,
+                          'instance_group_member')
+        self.assertRaises(sqlalchemy.exc.NoSuchTableError,
+                          db_utils.get_table, engine,
+                          'instance_group_policy')
+        self.assertRaises(sqlalchemy.exc.NoSuchTableError,
+                          db_utils.get_table, engine,
+                          'instance_group_metadata')
+
+    def _check_group_instance_groups(self, engine):
+        groups = db_utils.get_table(engine, 'instance_groups')
+        uuid4 = uuidutils.generate_uuid()
+        uuid5 = uuidutils.generate_uuid()
+        group_data = [
+            {'id': 4, 'deleted': 4, 'uuid': uuid4},
+            {'id': 5, 'deleted': 0, 'uuid': uuid5},
+        ]
+        engine.execute(groups.insert(), group_data)
+        group = groups.select(groups.c.id == 4).execute().first()
+        self.assertEqual(4, group.deleted)
+        group = groups.select(groups.c.id == 5).execute().first()
+        self.assertEqual(0, group.deleted)
+
+    def _pre_upgrade_187(self, engine):
+        self._check_no_group_instance_tables(engine)
+
+    def _check_187(self, engine, data):
+        self._check_group_instance_groups(engine)
+        tables = ['instance_group_policy', 'instance_group_metadata',
+                  'instance_group_member']
+        for table in tables:
+            db_utils.get_table(engine, table)
+
+    def _post_downgrade_187(self, engine):
+        # check that groups does not exist
+        self._check_no_group_instance_tables(engine)
 
 
 class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):

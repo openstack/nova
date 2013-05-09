@@ -708,6 +708,96 @@ def instance_remove_security_group(context, instance_id, security_group_id):
                                             security_group_id)
 
 
+####################
+
+
+def instance_group_create(context, values, policies=None, metadata=None,
+                          members=None):
+    """Create a new group with metadata.
+
+    Each group will receive a unique uuid. This will be used for access to the
+    group.
+    """
+    return IMPL.instance_group_create(context, values, policies, metadata,
+                                      members)
+
+
+def instance_group_get(context, group_uuid):
+    """Get a specific group by id."""
+    return IMPL.instance_group_get(context, group_uuid)
+
+
+def instance_group_update(context, group_uuid, values):
+    """Update the attributes of an group."""
+    return IMPL.instance_group_update(context, group_uuid, values)
+
+
+def instance_group_delete(context, group_uuid):
+    """Delete an group."""
+    return IMPL.instance_group_delete(context, group_uuid)
+
+
+def instance_group_get_all(context):
+    """Get all groups."""
+    return IMPL.instance_group_get_all(context)
+
+
+def instance_group_get_all_by_project_id(context, project_id):
+    """Get all groups for a specific project_id."""
+    return IMPL.instance_group_get_all_by_project_id(context, project_id)
+
+
+def instance_group_metadata_add(context, group_uuid, metadata,
+                                set_delete=False):
+    """Add metadata to the group."""
+    return IMPL.instance_group_metadata_add(context, group_uuid, metadata,
+                                            set_delete)
+
+
+def instance_group_metadata_delete(context, group_uuid, key):
+    """Delete metadata from the group."""
+    return IMPL.instance_group_metadata_delete(context, group_uuid, key)
+
+
+def instance_group_metadata_get(context, group_uuid):
+    """Get the metadata from the group."""
+    return IMPL.instance_group_metadata_get(context, group_uuid)
+
+
+def instance_group_members_add(context, group_uuid, members,
+                               set_delete=False):
+    """Add members to the group."""
+    return IMPL.instance_group_members_add(context, group_uuid, members,
+                                           set_delete=set_delete)
+
+
+def instance_group_member_delete(context, group_uuid, instance_id):
+    """Delete a specific member from the group."""
+    return IMPL.instance_group_member_delete(context, group_uuid, instance_id)
+
+
+def instance_group_members_get(context, group_uuid):
+    """Get the members from the group."""
+    return IMPL.instance_group_members_get(context, group_uuid)
+
+
+def instance_group_policies_add(context, group_uuid, policies,
+                                set_delete=False):
+    """Add policies to the group."""
+    return IMPL.instance_group_policies_add(context, group_uuid, policies,
+                                            set_delete=set_delete)
+
+
+def instance_group_policy_delete(context, group_uuid, policy):
+    """Delete a specific policy from the group."""
+    return IMPL.instance_group_policy_delete(context, group_uuid, policy)
+
+
+def instance_group_policies_get(context, group_uuid):
+    """Get the policies from the group."""
+    return IMPL.instance_group_policies_get(context, group_uuid)
+
+
 ###################
 
 
