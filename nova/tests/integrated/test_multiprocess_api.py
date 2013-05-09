@@ -54,8 +54,8 @@ class MultiprocessWSGITest(integrated_helpers._IntegratedTestBase):
             # os._exit() which doesn't have this problem.
             status = 0
             try:
-                launcher = service.ProcessLauncher()
-                launcher.launch_server(self.osapi, workers=self.osapi.workers)
+                launcher = service.process_launcher()
+                launcher.launch_service(self.osapi, workers=self.osapi.workers)
                 launcher.wait()
             except SystemExit as exc:
                 status = exc.code
