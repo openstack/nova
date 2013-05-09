@@ -3497,7 +3497,7 @@ class ComputeTestCase(BaseTestCase):
                 instance['name']).AndReturn('fake_disk')
         self.compute.compute_rpcapi.pre_live_migration(c,
                 instance, True, 'fake_disk', dest_host,
-                None).AndRaise(test.TestingException())
+                {}).AndRaise(test.TestingException())
 
         self.compute._instance_update(c, instance['uuid'],
                 host=src_host, vm_state=vm_states.ACTIVE,
