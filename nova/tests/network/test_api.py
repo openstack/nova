@@ -255,3 +255,19 @@ class ApiTestCase(test.TestCase):
         instance = {'uuid': FAKE_UUID}
         result = self.network_api._is_multi_host(self.context, instance)
         self.assertEqual(is_multi_host, result)
+
+    def test_network_disassociate_project(self):
+        def fake_network_disassociate(ctx, network_id, disassociate_host,
+                                      disassociate_project):
+            self.assertEqual(network_id, 1)
+            self.assertEqual(disassociate_host, False)
+            self.assertEqual(disassociate_project, True)
+
+        def fake_get(context, network_uuid):
+            return {'id': 1}
+
+        self.stubs.Set(self.network_api.db, 'network_disassociate',
+                       fake_network_disassociate)
+        self.stubs.Set(self.network_api, 'get', fake_get)
+
+        self.network_api.associate(self.context, FAKE_UUID, project=None)
