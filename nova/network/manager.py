@@ -70,6 +70,7 @@ from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import periodic_task
 from nova.openstack.common.rpc import common as rpc_common
+from nova.openstack.common import strutils
 from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
 from nova import quota
@@ -1030,10 +1031,11 @@ class NetworkManager(manager.Manager):
             else:
                 kwargs["network_size"] = CONF.network_size
 
-        kwargs["multi_host"] = (CONF.multi_host
-                                if kwargs["multi_host"] is None
-                                else
-                                utils.bool_from_str(kwargs["multi_host"]))
+        kwargs["multi_host"] = (
+            CONF.multi_host
+            if kwargs["multi_host"] is None
+            else strutils.bool_from_string(kwargs["multi_host"]))
+
         kwargs["vlan_start"] = kwargs.get("vlan_start") or CONF.vlan_start
         kwargs["vpn_start"] = kwargs.get("vpn_start") or CONF.vpn_start
         kwargs["dns1"] = kwargs["dns1"] or CONF.flat_network_dns

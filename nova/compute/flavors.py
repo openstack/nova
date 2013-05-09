@@ -30,6 +30,7 @@ from nova import db
 from nova import exception
 from nova.openstack.common.db import exception as db_exc
 from nova.openstack.common import log as logging
+from nova.openstack.common import strutils
 from nova import utils
 
 instance_type_opts = [
@@ -130,7 +131,7 @@ def create(name, memory, vcpus, root_gb, ephemeral_gb=None, flavorid=None,
     if not utils.is_valid_boolstr(is_public):
         msg = _("is_public must be a boolean")
         raise exception.InvalidInput(reason=msg)
-    kwargs['is_public'] = utils.bool_from_str(is_public)
+    kwargs['is_public'] = strutils.bool_from_string(is_public)
 
     try:
         return db.instance_type_create(context.get_admin_context(), kwargs)

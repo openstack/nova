@@ -2436,7 +2436,7 @@ class ServersControllerCreateTest(test.TestCase):
                {'device_name': 'foo3', 'delete_on_termination': 'invalid'},
                {'device_name': 'foo4', 'delete_on_termination': 0},
                {'device_name': 'foo5', 'delete_on_termination': False}]
-        expected_dbm = [
+        expected_bdm = [
             {'device_name': 'foo1', 'delete_on_termination': True},
             {'device_name': 'foo2', 'delete_on_termination': True},
             {'device_name': 'foo3', 'delete_on_termination': False},
@@ -2446,7 +2446,7 @@ class ServersControllerCreateTest(test.TestCase):
         old_create = compute_api.API.create
 
         def create(*args, **kwargs):
-            self.assertEqual(kwargs['block_device_mapping'], expected_dbm)
+            self.assertEqual(expected_bdm, kwargs['block_device_mapping'])
             return old_create(*args, **kwargs)
 
         self.stubs.Set(compute_api.API, 'create', create)

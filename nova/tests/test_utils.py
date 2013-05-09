@@ -276,28 +276,6 @@ class GenericUtilsTestCase(test.TestCase):
         hostname = "<}\x1fh\x10e\x08l\x02l\x05o\x12!{>"
         self.assertEqual("hello", utils.sanitize_hostname(hostname))
 
-    def test_bool_from_str(self):
-        self.assertTrue(utils.bool_from_str('1'))
-        self.assertTrue(utils.bool_from_str('2'))
-        self.assertTrue(utils.bool_from_str('-1'))
-        self.assertTrue(utils.bool_from_str('true'))
-        self.assertTrue(utils.bool_from_str('True'))
-        self.assertTrue(utils.bool_from_str('tRuE'))
-        self.assertTrue(utils.bool_from_str('yes'))
-        self.assertTrue(utils.bool_from_str('Yes'))
-        self.assertTrue(utils.bool_from_str('YeS'))
-        self.assertTrue(utils.bool_from_str('y'))
-        self.assertTrue(utils.bool_from_str('Y'))
-        self.assertFalse(utils.bool_from_str('False'))
-        self.assertFalse(utils.bool_from_str('false'))
-        self.assertFalse(utils.bool_from_str('no'))
-        self.assertFalse(utils.bool_from_str('No'))
-        self.assertFalse(utils.bool_from_str('n'))
-        self.assertFalse(utils.bool_from_str('N'))
-        self.assertFalse(utils.bool_from_str('0'))
-        self.assertFalse(utils.bool_from_str(None))
-        self.assertFalse(utils.bool_from_str('junk'))
-
     def test_read_cached_file(self):
         self.mox.StubOutWithMock(os.path, "getmtime")
         os.path.getmtime(mox.IgnoreArg()).AndReturn(1)

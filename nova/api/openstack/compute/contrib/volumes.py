@@ -25,6 +25,7 @@ from nova.api.openstack import xmlutil
 from nova import compute
 from nova import exception
 from nova.openstack.common import log as logging
+from nova.openstack.common import strutils
 from nova.openstack.common import uuidutils
 from nova import utils
 from nova import volume
@@ -620,7 +621,7 @@ class SnapshotController(wsgi.Controller):
             msg = _("Invalid value '%s' for force.") % force
             raise exception.InvalidParameterValue(err=msg)
 
-        if utils.bool_from_str(force):
+        if strutils.bool_from_string(force):
             new_snapshot = self.volume_api.create_snapshot_force(context,
                                         vol,
                                         snapshot.get('display_name'),

@@ -762,3 +762,37 @@ class DisabledFlavorsWithRealDBTest(test.TestCase):
                 self.req, self.disabled_type['flavorid'])['flavor']
 
         self.assertEqual(flavor['name'], self.disabled_type['name'])
+
+
+class ParseIsPublicTest(test.TestCase):
+    def setUp(self):
+        super(ParseIsPublicTest, self).setUp()
+        self.controller = flavors.Controller()
+
+    def assertPublic(self, expected, is_public):
+        self.assertIs(expected, self.controller._parse_is_public(is_public),
+                      '%s did not return %s' % (is_public, expected))
+
+    def test_None(self):
+        self.assertPublic(True, None)
+
+    def test_truthy(self):
+        self.assertPublic(True, True)
+        self.assertPublic(True, 't')
+        self.assertPublic(True, 'true')
+        self.assertPublic(True, 'yes')
+        self.assertPublic(True, '1')
+
+    def test_falsey(self):
+        self.assertPublic(False, False)
+        self.assertPublic(False, 'f')
+        self.assertPublic(False, 'false')
+        self.assertPublic(False, 'no')
+        self.assertPublic(False, '0')
+
+    def test_string_none(self):
+        self.assertPublic(None, 'none')
+
+    def test_other(self):
+        self.assertRaises(
+                webob.exc.HTTPBadRequest, self.assertPublic, None, 'other')

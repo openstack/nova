@@ -45,6 +45,7 @@ from nova.image import glance
 from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
+from nova.openstack.common import strutils
 from nova import utils
 from nova.virt import configdrive
 from nova.virt.disk import api as disk
@@ -998,7 +999,7 @@ def _create_image(context, session, instance, name_label, image_id,
     elif cache_images == 'some':
         sys_meta = utils.metadata_to_dict(instance['system_metadata'])
         try:
-            cache = utils.bool_from_str(sys_meta['image_cache_in_nova'])
+            cache = strutils.bool_from_string(sys_meta['image_cache_in_nova'])
         except KeyError:
             cache = False
     elif cache_images == 'none':
@@ -1091,7 +1092,8 @@ def _image_uses_bittorrent(context, instance):
     elif xenapi_torrent_images == 'some':
         sys_meta = utils.metadata_to_dict(instance['system_metadata'])
         try:
-            bittorrent = utils.bool_from_str(sys_meta['image_bittorrent'])
+            bittorrent = strutils.bool_from_string(
+                sys_meta['image_bittorrent'])
         except KeyError:
             pass
     elif xenapi_torrent_images == 'none':
