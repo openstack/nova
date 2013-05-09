@@ -20,6 +20,7 @@ from oslo.config import cfg
 from nova import exception
 from nova.image import glance
 import nova.openstack.common.log as logging
+from nova.virt.xenapi import agent
 from nova.virt.xenapi import vm_utils
 
 LOG = logging.getLogger(__name__)
@@ -43,6 +44,10 @@ class GlanceStore(object):
             'auto_disk_config': instance['auto_disk_config'],
             'os_type': instance['os_type'] or CONF.default_os_type,
         }
+
+        if agent.USE_AGENT_SM_KEY in instance["system_metadata"]:
+            properties[agent.USE_AGENT_KEY] = \
+                instance["system_metadata"][agent.USE_AGENT_SM_KEY]
 
         for attempt_num in xrange(1, max_attempts + 1):
 

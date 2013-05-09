@@ -24,12 +24,17 @@ import uuid
 from oslo.config import cfg
 
 from nova.api.metadata import password
+from nova.compute import api as compute_api
 from nova import context
 from nova import crypto
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
+from nova.openstack.common import strutils
 from nova import utils
 
+
+USE_AGENT_KEY = "xenapi_use_agent"
+USE_AGENT_SM_KEY = compute_api.SM_IMAGE_PROP_PREFIX + USE_AGENT_KEY
 
 LOG = logging.getLogger(__name__)
 
@@ -54,9 +59,17 @@ xenapi_agent_opts = [
                     ' flat_injected=True'),
     cfg.BoolOpt('xenapi_disable_agent',
                default=False,
-               help='Disable XenAPI agent. Reduces the amount of time '
-                    'it takes nova to detect that a VM has started, when '
-                    'that VM does not have the agent installed'),
+               help='Disables the use of the XenAPI agent in any image '
+                    'regardless of what image properties are present. '),
+    cfg.BoolOpt('xenapi_use_agent_default',
+               default=False,
+               help='Determines if the xenapi agent should be used when '
+                    'the image used does not contain a hint to declare if '
+                    'the agent is present or not. '
+                    'The hint is a glance property "' + USE_AGENT_KEY + '" '
+                    'that has the value "true" or "false". '
+                    'Note that waiting for the agent when it is not present '
+                    'will significantly increase server boot times.'),
 ]
 
 CONF = cfg.CONF
@@ -308,6 +321,21 @@ def find_guest_agent(base_dir):
         LOG.info(_('XenServer tools are not '
                    'installed in this image'))
     return False
+
+
+def should_use_agent(instance):
+    sys_meta = instance["system_metadata"]
+    if USE_AGENT_SM_KEY not in sys_meta:
+        return CONF.xenapi_use_agent_default
+    else:
+        use_agent_raw = sys_meta[USE_AGENT_SM_KEY]
+        try:
+            return strutils.bool_from_string(use_agent_raw, strict=True)
+        except ValueError:
+            LOG.warn(_("Invalid 'agent_present' value. "
+                       "Falling back to the default."),
+                       instance=instance)
+            return CONF.xenapi_use_agent_default
 
 
 class SimpleDH(object):

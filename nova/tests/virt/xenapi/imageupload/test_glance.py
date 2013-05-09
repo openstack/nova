@@ -48,10 +48,12 @@ class TestGlanceStore(test.TestCase):
         properties = {
             'auto_disk_config': True,
             'os_type': 'default',
+            'xenapi_use_agent': 'true',
         }
         image_id = 'fake_image_uuid'
         vdi_uuids = ['fake_vdi_uuid']
-        instance = {'uuid': 'blah'}
+        instance = {'uuid': 'blah',
+                    'system_metadata': {'image_xenapi_use_agent': 'true'}}
         instance.update(properties)
 
         params = {'vdi_uuids': vdi_uuids,

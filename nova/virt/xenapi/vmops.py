@@ -176,12 +176,14 @@ class VMOps(object):
         self.image_upload_handler = importutils.import_object(
                                 CONF.xenapi_image_upload_handler)
 
-    @property
-    def agent_enabled(self):
-        return not CONF.xenapi_disable_agent
+    def agent_enabled(self, instance):
+        if CONF.xenapi_disable_agent:
+            return False
+
+        return xapi_agent.should_use_agent(instance)
 
     def _get_agent(self, instance, vm_ref):
-        if self.agent_enabled:
+        if self.agent_enabled(instance):
             return xapi_agent.XenAPIBasedAgent(self._session, self._virtapi,
                                                instance, vm_ref)
         raise exception.NovaException(_("Error: Agent is disabled"))
@@ -649,7 +651,7 @@ class VMOps(object):
 
             greenthread.sleep(0.5)
 
-        if self.agent_enabled:
+        if self.agent_enabled(instance):
             agent_build = self._virtapi.agent_build_get_by_triple(
                 ctx, 'xen', instance['os_type'], instance['architecture'])
             if agent_build:
@@ -1053,7 +1055,7 @@ class VMOps(object):
 
     def set_admin_password(self, instance, new_pass):
         """Set the root/admin password on the VM instance."""
-        if self.agent_enabled:
+        if self.agent_enabled(instance):
             vm_ref = self._get_vm_opaque_ref(instance)
             agent = self._get_agent(instance, vm_ref)
             agent.set_admin_password(new_pass)
@@ -1062,7 +1064,7 @@ class VMOps(object):
 
     def inject_file(self, instance, path, contents):
         """Write a file to the VM instance."""
-        if self.agent_enabled:
+        if self.agent_enabled(instance):
             vm_ref = self._get_vm_opaque_ref(instance)
             agent = self._get_agent(instance, vm_ref)
             agent.inject_file(path, contents)
@@ -1561,7 +1563,7 @@ class VMOps(object):
 
     def reset_network(self, instance):
         """Calls resetnetwork method in agent."""
-        if self.agent_enabled:
+        if self.agent_enabled(instance):
             vm_ref = self._get_vm_opaque_ref(instance)
             agent = self._get_agent(instance, vm_ref)
             agent.resetnetwork()

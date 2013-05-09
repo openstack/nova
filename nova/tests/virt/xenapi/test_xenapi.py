@@ -972,6 +972,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
     def test_spawn_ssh_key_injection(self):
         # Test spawning with key_data on an instance.  Should use
         # agent file injection.
+        self.flags(xenapi_use_agent_default=True)
         actual_injected_files = []
 
         def fake_inject_file(self, method, args):
@@ -999,6 +1000,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
 
     def test_spawn_injected_files(self):
         # Test spawning with injected_files.
+        self.flags(xenapi_use_agent_default=True)
         actual_injected_files = []
 
         def fake_inject_file(self, method, args):
