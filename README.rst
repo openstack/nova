@@ -24,6 +24,11 @@ available online at:
 
    http://docs.openstack.org
 
+For information about the different compute (hypervisor) drivers
+supported by Nova, read this page on the wiki:
+
+   https://wiki.openstack.org/wiki/HypervisorSupportMatrix
+
 In the unfortunate event that bugs are discovered, they should
 be reported to the appropriate bug tracker. If you obtained
 the software from a 3rd party operating system vendor, it is
