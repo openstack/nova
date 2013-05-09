@@ -19,13 +19,16 @@ import abc
 import contextlib
 import os
 
+from nova import exception
 from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import excutils
+from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt.disk import api as disk
 from nova.virt.libvirt import config
 from nova.virt.libvirt import utils as libvirt_utils
+
 
 __imagebackend_opts = [
     cfg.StrOpt('libvirt_images_type',
@@ -45,6 +48,8 @@ __imagebackend_opts = [
 
 FLAGS = flags.FLAGS
 FLAGS.register_opts(__imagebackend_opts)
+
+LOG = logging.getLogger(__name__)
 
 
 class Image(object):
@@ -170,6 +175,13 @@ class Qcow2(Image):
                         disk.extend(qcow2_base, size)
             libvirt_utils.create_cow_image(qcow2_base, target)
 
+        # NOTE(cfb): Having a flavor that sets the root size to 0 and having
+        #            nova effectively ignore that size and use the size of the
+        #            image is considered a feature at this time, not a bug.
+        if size and size < disk.get_disk_size(base):
+            LOG.error('%s virtual size larger than flavor root disk size %s' %
+                      (base, size))
+            raise exception.ImageTooLarge()
         prepare_template(target=base, *args, **kwargs)
         with utils.remove_path_on_error(self.path):
             copy_qcow2_image(base, self.path, size)

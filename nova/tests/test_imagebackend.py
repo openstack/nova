@@ -17,6 +17,7 @@
 
 import os
 
+from nova import exception
 from nova import flags
 from nova import test
 from nova.tests import fake_libvirt_utils
@@ -190,7 +191,10 @@ class Qcow2TestCase(_ImageTestCase):
         fn = self.prepare_mocks()
         fn(target=self.TEMPLATE_PATH)
         self.mox.StubOutWithMock(os.path, 'exists')
+        self.mox.StubOutWithMock(imagebackend.disk, 'get_disk_size')
         os.path.exists(self.QCOW2_BASE).AndReturn(False)
+        imagebackend.disk.get_disk_size(self.TEMPLATE_PATH
+                                       ).AndReturn(self.SIZE)
         imagebackend.libvirt_utils.copy_image(self.TEMPLATE_PATH,
                                               self.QCOW2_BASE)
         imagebackend.disk.extend(self.QCOW2_BASE, self.SIZE)
@@ -203,11 +207,25 @@ class Qcow2TestCase(_ImageTestCase):
 
         self.mox.VerifyAll()
 
+    def test_create_image_too_small(self):
+        self.mox.StubOutWithMock(imagebackend.disk, 'get_disk_size')
+        imagebackend.disk.get_disk_size(self.TEMPLATE_PATH
+                                       ).AndReturn(self.SIZE)
+        self.mox.ReplayAll()
+
+        image = self.image_class(self.INSTANCE, self.NAME)
+        self.assertRaises(exception.ImageTooLarge, image.create_image, None,
+                          self.TEMPLATE_PATH, 1)
+        self.mox.VerifyAll()
+
     def test_create_image_with_size_template_exists(self):
         fn = self.prepare_mocks()
         fn(target=self.TEMPLATE_PATH)
         self.mox.StubOutWithMock(os.path, 'exists')
+        self.mox.StubOutWithMock(imagebackend.disk, 'get_disk_size')
         os.path.exists(self.QCOW2_BASE).AndReturn(True)
+        imagebackend.disk.get_disk_size(self.TEMPLATE_PATH
+                                       ).AndReturn(self.SIZE)
         imagebackend.libvirt_utils.create_cow_image(self.QCOW2_BASE,
                                                     self.PATH)
         self.mox.ReplayAll()
