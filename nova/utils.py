@@ -1032,6 +1032,13 @@ def dict_to_metadata(metadata):
     return result
 
 
+def instance_sys_meta(instance):
+    if isinstance(instance['system_metadata'], dict):
+        return instance['system_metadata']
+    else:
+        return metadata_to_dict(instance['system_metadata'])
+
+
 def get_wrapped_function(function):
     """Get the method at the bottom of a stack of decorators."""
     if not hasattr(function, 'func_closure') or not function.func_closure:

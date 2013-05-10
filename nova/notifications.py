@@ -288,8 +288,7 @@ def info_from_instance(context, instance_ref, network_info,
     instance_type_name = instance_type.get('name', '')
 
     if system_metadata is None:
-        system_metadata = utils.metadata_to_dict(
-                instance_ref['system_metadata'])
+        system_metadata = utils.instance_sys_meta(instance_ref)
 
     instance_info = dict(
         # Owner properties
