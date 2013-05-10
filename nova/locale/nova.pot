@@ -6,9 +6,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: nova jenkins.nova.propose.translation.update.242\n"
+"Project-Id-Version: nova jenkins.nova.propose.translation.update.243\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2013-05-09 19:38+0000\n"
+"POT-Creation-Date: 2013-05-10 19:38+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -4301,7 +4301,7 @@ msgid "Ignoring volume cleanup failure due to %s"
 msgstr ""
 
 #: nova/compute/manager.py:1474 nova/compute/manager.py:2615
-#: nova/compute/manager.py:4117
+#: nova/compute/manager.py:4124
 #, python-format
 msgid "%s. Setting instance vm_state to ERROR"
 msgstr ""
@@ -4554,181 +4554,181 @@ msgstr ""
 msgid "Host %(host)s not found"
 msgstr ""
 
-#: nova/compute/manager.py:3271
+#: nova/compute/manager.py:3278
 #, python-format
 msgid "Pre live migration failed at  %(dest)s"
 msgstr ""
 
-#: nova/compute/manager.py:3299
+#: nova/compute/manager.py:3306
 msgid "_post_live_migration() is started.."
 msgstr ""
 
-#: nova/compute/manager.py:3354
+#: nova/compute/manager.py:3361
 #, python-format
 msgid "Migrating instance to %(dest)s finished successfully."
 msgstr ""
 
-#: nova/compute/manager.py:3356
+#: nova/compute/manager.py:3363
 msgid ""
 "You may see the error \"libvirt: QEMU error: Domain not found: no domain "
 "with matching name.\" This error can be safely ignored."
 msgstr ""
 
-#: nova/compute/manager.py:3370
+#: nova/compute/manager.py:3377
 msgid "Post operation of migration started"
 msgstr ""
 
-#: nova/compute/manager.py:3399
+#: nova/compute/manager.py:3406
 #, python-format
 msgid "Failed to get compute_info for %s"
 msgstr ""
 
-#: nova/compute/manager.py:3518
+#: nova/compute/manager.py:3525
 msgid "Updated the info_cache for instance"
 msgstr ""
 
-#: nova/compute/manager.py:3563
+#: nova/compute/manager.py:3570
 #, python-format
 msgid ""
 "Found %(migration_count)d unconfirmed migrations older than "
 "%(confirm_window)d seconds"
 msgstr ""
 
-#: nova/compute/manager.py:3569
+#: nova/compute/manager.py:3576
 #, python-format
 msgid "Setting migration %(migration_id)s to error: %(reason)s"
 msgstr ""
 
-#: nova/compute/manager.py:3578
+#: nova/compute/manager.py:3585
 #, python-format
 msgid ""
 "Automatically confirming migration %(migration_id)s for instance "
 "%(instance_uuid)s"
 msgstr ""
 
-#: nova/compute/manager.py:3585
+#: nova/compute/manager.py:3592
 #, python-format
 msgid "Instance %(instance_uuid)s not found"
 msgstr ""
 
-#: nova/compute/manager.py:3589
+#: nova/compute/manager.py:3596
 msgid "In ERROR state"
 msgstr ""
 
-#: nova/compute/manager.py:3596
+#: nova/compute/manager.py:3603
 #, python-format
 msgid "In states %(vm_state)s/%(task_state)s, not RESIZED/None"
 msgstr ""
 
-#: nova/compute/manager.py:3605
+#: nova/compute/manager.py:3612
 #, python-format
 msgid "Error auto-confirming resize: %(e)s. Will retry later."
 msgstr ""
 
-#: nova/compute/manager.py:3622
+#: nova/compute/manager.py:3629
 #, python-format
 msgid ""
 "Running instance usage audit for host %(host)s from %(begin_time)s to "
 "%(end_time)s. %(number_instances)s instances."
 msgstr ""
 
-#: nova/compute/manager.py:3641
+#: nova/compute/manager.py:3648
 #, python-format
 msgid "Failed to generate usage audit for instance on host %s"
 msgstr ""
 
-#: nova/compute/manager.py:3665
+#: nova/compute/manager.py:3672
 msgid "Updating bandwidth usage cache"
 msgstr ""
 
-#: nova/compute/manager.py:3782
+#: nova/compute/manager.py:3789
 msgid "Updating volume usage cache"
 msgstr ""
 
-#: nova/compute/manager.py:3799
+#: nova/compute/manager.py:3806
 msgid "Updating host status"
 msgstr ""
 
-#: nova/compute/manager.py:3826
+#: nova/compute/manager.py:3833
 #, python-format
 msgid ""
 "Found %(num_db_instances)s in the database and %(num_vm_instances)s on "
 "the hypervisor."
 msgstr ""
 
-#: nova/compute/manager.py:3831 nova/compute/manager.py:3881
+#: nova/compute/manager.py:3838 nova/compute/manager.py:3888
 msgid "During sync_power_state the instance has a pending task. Skip."
 msgstr ""
 
-#: nova/compute/manager.py:3868
+#: nova/compute/manager.py:3875
 #, python-format
 msgid ""
 "During the sync_power process the instance has moved from host %(src)s to"
 " host %(dst)s"
 msgstr ""
 
-#: nova/compute/manager.py:3906
+#: nova/compute/manager.py:3913
 msgid "Instance shutdown by itself. Calling the stop API."
 msgstr ""
 
-#: nova/compute/manager.py:3918 nova/compute/manager.py:3927
-#: nova/compute/manager.py:3957
+#: nova/compute/manager.py:3925 nova/compute/manager.py:3934
+#: nova/compute/manager.py:3964
 msgid "error during stop() in sync_power_state."
 msgstr ""
 
-#: nova/compute/manager.py:3922
+#: nova/compute/manager.py:3929
 msgid "Instance is suspended unexpectedly. Calling the stop API."
 msgstr ""
 
-#: nova/compute/manager.py:3938
+#: nova/compute/manager.py:3945
 msgid "Instance is paused unexpectedly. Ignore."
 msgstr ""
 
-#: nova/compute/manager.py:3944
+#: nova/compute/manager.py:3951
 msgid "Instance is unexpectedly not found. Ignore."
 msgstr ""
 
-#: nova/compute/manager.py:3950
+#: nova/compute/manager.py:3957
 msgid "Instance is not stopped. Calling the stop API."
 msgstr ""
 
-#: nova/compute/manager.py:3966
+#: nova/compute/manager.py:3973
 msgid "Instance is not (soft-)deleted."
 msgstr ""
 
-#: nova/compute/manager.py:3974
+#: nova/compute/manager.py:3981
 msgid "CONF.reclaim_instance_interval <= 0, skipping..."
 msgstr ""
 
-#: nova/compute/manager.py:3994
+#: nova/compute/manager.py:4001
 msgid "Reclaiming deleted instance"
 msgstr ""
 
-#: nova/compute/manager.py:4021
+#: nova/compute/manager.py:4028
 #, python-format
 msgid "Deleting orphan compute node %s"
 msgstr ""
 
-#: nova/compute/manager.py:4031 nova/compute/resource_tracker.py:321
+#: nova/compute/manager.py:4038 nova/compute/resource_tracker.py:321
 #, python-format
 msgid "No service record for host %s"
 msgstr ""
 
-#: nova/compute/manager.py:4072
+#: nova/compute/manager.py:4079
 #, python-format
 msgid ""
 "Detected instance with name label '%(name)s' which is marked as DELETED "
 "but still present on host."
 msgstr ""
 
-#: nova/compute/manager.py:4079
+#: nova/compute/manager.py:4086
 #, python-format
 msgid ""
 "Destroying instance with name label '%(name)s' which is marked as DELETED"
 " but still present on host."
 msgstr ""
 
-#: nova/compute/manager.py:4086
+#: nova/compute/manager.py:4093
 #, python-format
 msgid "Unrecognized value '%(action)s' for CONF.running_deleted_instance_action"
 msgstr ""
@@ -4978,7 +4978,7 @@ msgstr ""
 msgid "Change will make usage less than 0 for the following resources: %(unders)s"
 msgstr ""
 
-#: nova/db/sqlalchemy/api.py:4328
+#: nova/db/sqlalchemy/api.py:4341
 #, python-format
 msgid ""
 "Volume(%s) has lower stats then what is in the database. Instance must "
@@ -5158,31 +5158,31 @@ msgstr ""
 msgid "Failed to update usages deallocating floating IP"
 msgstr ""
 
-#: nova/network/floating_ips.py:531
+#: nova/network/floating_ips.py:532
 #, python-format
 msgid "Starting migration network for instance %(instance_uuid)s"
 msgstr ""
 
-#: nova/network/floating_ips.py:538
+#: nova/network/floating_ips.py:539
 #, python-format
 msgid ""
 "Floating ip address |%(address)s| no longer belongs to instance "
 "%(instance_uuid)s. Will notmigrate it "
 msgstr ""
 
-#: nova/network/floating_ips.py:573
+#: nova/network/floating_ips.py:574
 #, python-format
 msgid "Finishing migration network for instance %(instance_uuid)s"
 msgstr ""
 
-#: nova/network/floating_ips.py:581
+#: nova/network/floating_ips.py:582
 #, python-format
 msgid ""
 "Floating ip address |%(address)s| no longer belongs to instance "
 "%(instance_uuid)s. Will notsetup it."
 msgstr ""
 
-#: nova/network/floating_ips.py:629
+#: nova/network/floating_ips.py:630
 #, python-format
 msgid ""
 "Database inconsistency: DNS domain |%s| is registered in the Nova db but "
@@ -5190,12 +5190,12 @@ msgid ""
 "ignored."
 msgstr ""
 
-#: nova/network/floating_ips.py:669
+#: nova/network/floating_ips.py:670
 #, python-format
 msgid "Domain |%(domain)s| already exists, changing zone to |%(av_zone)s|."
 msgstr ""
 
-#: nova/network/floating_ips.py:678
+#: nova/network/floating_ips.py:679
 #, python-format
 msgid "Domain |%(domain)s| already exists, changing project to |%(project)s|."
 msgstr ""
@@ -7716,12 +7716,12 @@ msgstr ""
 msgid "Live migration networks are not configured on this host"
 msgstr ""
 
-#: nova/virt/hyperv/livemigrationutils.py:70 nova/virt/hyperv/vmutils.py:95
+#: nova/virt/hyperv/livemigrationutils.py:70 nova/virt/hyperv/vmutils.py:103
 #, python-format
 msgid "VM not found: %s"
 msgstr ""
 
-#: nova/virt/hyperv/livemigrationutils.py:72 nova/virt/hyperv/vmutils.py:104
+#: nova/virt/hyperv/livemigrationutils.py:72 nova/virt/hyperv/vmutils.py:112
 #, python-format
 msgid "Duplicate VM name found: %s"
 msgstr ""
@@ -7776,62 +7776,69 @@ msgstr ""
 msgid "Cannot cleanup migration files"
 msgstr ""
 
-#: nova/virt/hyperv/migrationops.py:101
+#: nova/virt/hyperv/migrationops.py:103
+#, python-format
+msgid ""
+"Cannot resize the root disk to a smaller size. Current size: "
+"%(curr_root_gb)s GB. Requested size: %(new_root_gb)s GB"
+msgstr ""
+
+#: nova/virt/hyperv/migrationops.py:113
 msgid "migrate_disk_and_power_off called"
 msgstr ""
 
-#: nova/virt/hyperv/migrationops.py:119
+#: nova/virt/hyperv/migrationops.py:133
 msgid "confirm_migration called"
 msgstr ""
 
-#: nova/virt/hyperv/migrationops.py:134
+#: nova/virt/hyperv/migrationops.py:148
 msgid "finish_revert_migration called"
 msgstr ""
 
-#: nova/virt/hyperv/migrationops.py:152
+#: nova/virt/hyperv/migrationops.py:166
 #, python-format
 msgid "Copying base disk %(base_vhd_path)s to %(base_vhd_copy_path)s"
 msgstr ""
 
-#: nova/virt/hyperv/migrationops.py:156
+#: nova/virt/hyperv/migrationops.py:170
 #, python-format
 msgid ""
 "Reconnecting copied base VHD %(base_vhd_copy_path)s and diff VHD "
 "%(diff_vhd_path)s"
 msgstr ""
 
-#: nova/virt/hyperv/migrationops.py:162
+#: nova/virt/hyperv/migrationops.py:176
 #, python-format
 msgid "Merging base disk %(base_vhd_copy_path)s and diff disk %(diff_vhd_path)s"
 msgstr ""
 
-#: nova/virt/hyperv/migrationops.py:174
+#: nova/virt/hyperv/migrationops.py:188
 #, python-format
 msgid "Getting info for disk: %s"
 msgstr ""
 
-#: nova/virt/hyperv/migrationops.py:179
+#: nova/virt/hyperv/migrationops.py:193
 #, python-format
 msgid "Resizing disk \"%(vhd_path)s\" to new max size %(new_size)s"
 msgstr ""
 
-#: nova/virt/hyperv/migrationops.py:190
+#: nova/virt/hyperv/migrationops.py:204
 #, python-format
 msgid ""
 "Reconnecting copied base VHD %(base_vhd_path)s and diff VHD "
 "%(diff_vhd_path)s"
 msgstr ""
 
-#: nova/virt/hyperv/migrationops.py:199
+#: nova/virt/hyperv/migrationops.py:213
 msgid "finish_migration called"
 msgstr ""
 
-#: nova/virt/hyperv/migrationops.py:208
+#: nova/virt/hyperv/migrationops.py:222
 #, python-format
 msgid "Cannot find boot VHD file: %s"
 msgstr ""
 
-#: nova/virt/hyperv/migrationops.py:221 nova/virt/hyperv/vmops.py:136
+#: nova/virt/hyperv/migrationops.py:235 nova/virt/hyperv/vmops.py:136
 msgid "Cannot resize a VHD to a smaller size"
 msgstr ""
 
@@ -8031,58 +8038,58 @@ msgstr ""
 msgid "Failed to change vm state of %(vm_name)s to %(req_state)s"
 msgstr ""
 
-#: nova/virt/hyperv/vmutils.py:75
+#: nova/virt/hyperv/vmutils.py:83
 #, python-format
 msgid "Cannot get VM summary data for: %s"
 msgstr ""
 
-#: nova/virt/hyperv/vmutils.py:152
+#: nova/virt/hyperv/vmutils.py:160
 #, python-format
 msgid "Creating VM %s"
 msgstr ""
 
-#: nova/virt/hyperv/vmutils.py:161
+#: nova/virt/hyperv/vmutils.py:169
 #, python-format
 msgid "Setting memory for vm %s"
 msgstr ""
 
-#: nova/virt/hyperv/vmutils.py:164
+#: nova/virt/hyperv/vmutils.py:172
 #, python-format
 msgid "Set vCPUs for vm %s"
 msgstr ""
 
-#: nova/virt/hyperv/vmutils.py:262
+#: nova/virt/hyperv/vmutils.py:270
 msgid "Controller not found"
 msgstr ""
 
-#: nova/virt/hyperv/vmutils.py:324
+#: nova/virt/hyperv/vmutils.py:332
 #, python-format
 msgid "Successfully changed vm state of %(vm_name)s to %(req_state)s"
 msgstr ""
 
-#: nova/virt/hyperv/vmutils.py:365
+#: nova/virt/hyperv/vmutils.py:373
 #, python-format
 msgid "Operation failed with return value: %s"
 msgstr ""
 
-#: nova/virt/hyperv/vmutils.py:383
+#: nova/virt/hyperv/vmutils.py:391
 #, python-format
 msgid ""
 "WMI job failed with status %(job_state)d. Error details: %(err_sum_desc)s"
 " - %(err_desc)s - Error code: %(err_code)d"
 msgstr ""
 
-#: nova/virt/hyperv/vmutils.py:391
+#: nova/virt/hyperv/vmutils.py:399
 #, python-format
 msgid "WMI job failed with status %(job_state)d. Error details: %(error)s"
 msgstr ""
 
-#: nova/virt/hyperv/vmutils.py:395
+#: nova/virt/hyperv/vmutils.py:403
 #, python-format
 msgid "WMI job failed with status %(job_state)d. No error description available"
 msgstr ""
 
-#: nova/virt/hyperv/vmutils.py:401
+#: nova/virt/hyperv/vmutils.py:409
 #, python-format
 msgid "WMI job succeeded: %(desc)s, Elapsed=%(elap)s"
 msgstr ""
@@ -9789,12 +9796,12 @@ msgstr ""
 msgid "Unable to find iSCSI Target"
 msgstr ""
 
-#: nova/virt/vmwareapi/volumeops.py:156 nova/virt/xenapi/volumeops.py:60
+#: nova/virt/vmwareapi/volumeops.py:156 nova/virt/xenapi/volumeops.py:57
 #, python-format
 msgid "Mountpoint %(mountpoint)s attached to instance %(instance_name)s"
 msgstr ""
 
-#: nova/virt/vmwareapi/volumeops.py:166 nova/virt/xenapi/volumeops.py:104
+#: nova/virt/vmwareapi/volumeops.py:166 nova/virt/xenapi/volumeops.py:128
 #, python-format
 msgid "Detach_volume: %(instance_name)s, %(mountpoint)s"
 msgstr ""
@@ -9803,24 +9810,24 @@ msgstr ""
 msgid "Unable to find volume"
 msgstr ""
 
-#: nova/virt/vmwareapi/volumeops.py:187 nova/virt/xenapi/volumeops.py:124
+#: nova/virt/vmwareapi/volumeops.py:187 nova/virt/xenapi/volumeops.py:147
 #, python-format
 msgid "Mountpoint %(mountpoint)s detached from instance %(instance_name)s"
 msgstr ""
 
-#: nova/virt/xenapi/agent.py:88 nova/virt/xenapi/vmops.py:1567
+#: nova/virt/xenapi/agent.py:88 nova/virt/xenapi/vmops.py:1569
 #, python-format
 msgid "TIMEOUT: The call to %(method)s timed out. args=%(args)r"
 msgstr ""
 
-#: nova/virt/xenapi/agent.py:92 nova/virt/xenapi/vmops.py:1571
+#: nova/virt/xenapi/agent.py:92 nova/virt/xenapi/vmops.py:1573
 #, python-format
 msgid ""
 "NOT IMPLEMENTED: The call to %(method)s is not supported by the agent. "
 "args=%(args)r"
 msgstr ""
 
-#: nova/virt/xenapi/agent.py:97 nova/virt/xenapi/vmops.py:1576
+#: nova/virt/xenapi/agent.py:97 nova/virt/xenapi/vmops.py:1578
 #, python-format
 msgid "The call to %(method)s returned an error: %(e)s. args=%(args)r"
 msgstr ""
@@ -9929,19 +9936,19 @@ msgstr ""
 msgid "Could not determine key: %s"
 msgstr ""
 
-#: nova/virt/xenapi/driver.py:567
+#: nova/virt/xenapi/driver.py:570
 msgid "Host startup on XenServer is not supported."
 msgstr ""
 
-#: nova/virt/xenapi/driver.py:627
+#: nova/virt/xenapi/driver.py:630
 msgid "Unable to log in to XenAPI (is the Dom0 disk full?)"
 msgstr ""
 
-#: nova/virt/xenapi/driver.py:667
+#: nova/virt/xenapi/driver.py:670
 msgid "Host is member of a pool, but DB says otherwise"
 msgstr ""
 
-#: nova/virt/xenapi/driver.py:751 nova/virt/xenapi/driver.py:765
+#: nova/virt/xenapi/driver.py:754 nova/virt/xenapi/driver.py:768
 #, python-format
 msgid "Got exception: %s"
 msgstr ""
@@ -10678,26 +10685,30 @@ msgstr ""
 msgid "Injecting hostname to xenstore"
 msgstr ""
 
-#: nova/virt/xenapi/vmops.py:1626
+#: nova/virt/xenapi/vmops.py:1628
 #, python-format
 msgid ""
 "Destination host:%(hostname)s must be in the same aggregate as the source"
 " server"
 msgstr ""
 
-#: nova/virt/xenapi/vmops.py:1647
+#: nova/virt/xenapi/vmops.py:1649
 msgid "No suitable network for migrate"
 msgstr ""
 
-#: nova/virt/xenapi/vmops.py:1659
+#: nova/virt/xenapi/vmops.py:1661
 msgid "Migrate Receive failed"
 msgstr ""
 
-#: nova/virt/xenapi/vmops.py:1708
+#: nova/virt/xenapi/vmops.py:1735
+msgid "XAPI supporting relax-xsm-sr-check=true requried"
+msgstr ""
+
+#: nova/virt/xenapi/vmops.py:1746
 msgid "VM.assert_can_migrate failed"
 msgstr ""
 
-#: nova/virt/xenapi/vmops.py:1745
+#: nova/virt/xenapi/vmops.py:1799
 msgid "Migrate Send failed"
 msgstr ""
 
@@ -10767,7 +10778,12 @@ msgstr ""
 msgid "Unable to obtain target information %(connection_data)s"
 msgstr ""
 
-#: nova/virt/xenapi/volumeops.py:116
+#: nova/virt/xenapi/volumeops.py:70
+#, python-format
+msgid "Connect_volume: %(connection_info)s"
+msgstr ""
+
+#: nova/virt/xenapi/volumeops.py:139
 #, python-format
 msgid "Skipping detach because VBD for %(instance_name)s was not found"
 msgstr ""
