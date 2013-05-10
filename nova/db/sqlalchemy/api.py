@@ -3014,8 +3014,19 @@ def _block_device_mapping_get_query(context, session=None):
     return model_query(context, models.BlockDeviceMapping, session=session)
 
 
+def _scrub_empty_str_values(dct, keys_to_scrub):
+    """
+    Remove any keys found in sequence keys_to_scrub from the dict
+    if they have the value ''.
+    """
+    for key in keys_to_scrub:
+        if key in dct and dct[key] == '':
+            del dct[key]
+
+
 @require_context
 def block_device_mapping_create(context, values):
+    _scrub_empty_str_values(values, ['volume_size'])
     bdm_ref = models.BlockDeviceMapping()
     bdm_ref.update(values)
     bdm_ref.save()
@@ -3023,6 +3034,7 @@ def block_device_mapping_create(context, values):
 
 @require_context
 def block_device_mapping_update(context, bdm_id, values):
+    _scrub_empty_str_values(values, ['volume_size'])
     _block_device_mapping_get_query(context).\
             filter_by(id=bdm_id).\
             update(values)
@@ -3030,6 +3042,7 @@ def block_device_mapping_update(context, bdm_id, values):
 
 @require_context
 def block_device_mapping_update_or_create(context, values):
+    _scrub_empty_str_values(values, ['volume_size'])
     session = get_session()
     with session.begin():
         result = _block_device_mapping_get_query(context, session=session).\

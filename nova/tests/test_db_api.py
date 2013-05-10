@@ -19,6 +19,7 @@
 
 """Unit tests for the DB API."""
 
+import copy
 import datetime
 import types
 import uuid as stdlib_uuid
@@ -3342,6 +3343,22 @@ class BlockDeviceMappingTestCase(test.TestCase):
         for bdm in bdms:
             if bdm['device_name'] == values['device_name']:
                 return bdm
+
+    def test_scrub_empty_str_values_no_effect(self):
+        values = {'volume_size': 5}
+        expected = copy.copy(values)
+        sqlalchemy_api._scrub_empty_str_values(values, ['volume_size'])
+        self.assertEqual(values, expected)
+
+    def test_scrub_empty_str_values_empty_string(self):
+        values = {'volume_size': ''}
+        sqlalchemy_api._scrub_empty_str_values(values, ['volume_size'])
+        self.assertEqual(values, {})
+
+    def test_scrub_empty_str_values_empty_unicode(self):
+        values = {'volume_size': u''}
+        sqlalchemy_api._scrub_empty_str_values(values, ['volume_size'])
+        self.assertEqual(values, {})
 
     def test_block_device_mapping_create(self):
         bdm = self._create_bdm({})
