@@ -1866,6 +1866,8 @@ class ServersControllerCreateTest(test.TestCase):
         (image_service, image_id) = glance.get_remote_image_service(
                 context, '')
         image_service.update(context, image_uuid, {'status': 'DELETED'})
+        self.addCleanup(image_service.update, context, image_uuid,
+                        {'status': 'active'})
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers')
         req.method = 'POST'
