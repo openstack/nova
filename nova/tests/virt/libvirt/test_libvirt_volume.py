@@ -448,6 +448,39 @@ class LibvirtVolumeTestCase(test.TestCase):
             ('mount', '-t', 'nfs', export_string, export_mnt_base)]
         self.assertEqual(self.executes, expected_commands)
 
+    def test_libvirt_nfs_driver_with_opts(self):
+        mnt_base = '/mnt'
+        self.flags(nfs_mount_point_base=mnt_base)
+
+        libvirt_driver = volume.LibvirtNFSVolumeDriver(self.fake_conn)
+        export_string = '192.168.1.1:/nfs/share1'
+        name = 'volume-00001'
+        options = '-o intr,nfsvers=3'
+        export_mnt_base = os.path.join(mnt_base,
+                libvirt_driver.get_hash_str(export_string))
+        file_path = os.path.join(export_mnt_base, name)
+
+        connection_info = {'data': {'export': export_string,
+                                    'name': name,
+                                    'options': options}}
+        disk_info = {
+            "bus": "virtio",
+            "dev": "vde",
+            "type": "disk",
+        }
+        conf = libvirt_driver.connect_volume(connection_info, disk_info)
+        tree = conf.format_dom()
+        self.assertEqual(tree.get('type'), 'file')
+        self.assertEqual(tree.find('./source').get('file'), file_path)
+        libvirt_driver.disconnect_volume(connection_info, "vde")
+
+        expected_commands = [
+            ('mkdir', '-p', export_mnt_base),
+            ('mount', '-t', 'nfs', '-o', 'intr,nfsvers=3',
+             export_string, export_mnt_base)
+        ]
+        self.assertEqual(self.executes, expected_commands)
+
     def aoe_connection(self, shelf, lun):
         return {
                 'driver_volume_type': 'aoe',
@@ -502,6 +535,40 @@ class LibvirtVolumeTestCase(test.TestCase):
         expected_commands = [
             ('mkdir', '-p', export_mnt_base),
             ('mount', '-t', 'glusterfs', export_string, export_mnt_base)]
+        self.assertEqual(self.executes, expected_commands)
+
+    def test_libvirt_glusterfs_driver_with_opts(self):
+        mnt_base = '/mnt'
+        self.flags(glusterfs_mount_point_base=mnt_base)
+
+        libvirt_driver = volume.LibvirtGlusterfsVolumeDriver(self.fake_conn)
+        export_string = '192.168.1.1:/volume-00001'
+        options = '-o backupvolfile-server=192.168.1.2'
+        name = 'volume-00001'
+        export_mnt_base = os.path.join(mnt_base,
+                libvirt_driver.get_hash_str(export_string))
+        file_path = os.path.join(export_mnt_base, name)
+
+        connection_info = {'data': {'export': export_string,
+                                    'name': name,
+                                    'options': options}}
+        disk_info = {
+            "bus": "virtio",
+            "dev": "vde",
+            "type": "disk",
+        }
+
+        conf = libvirt_driver.connect_volume(connection_info, disk_info)
+        tree = conf.format_dom()
+        self.assertEqual(tree.get('type'), 'file')
+        self.assertEqual(tree.find('./source').get('file'), file_path)
+        libvirt_driver.disconnect_volume(connection_info, "vde")
+
+        expected_commands = [
+            ('mkdir', '-p', export_mnt_base),
+            ('mount', '-t', 'glusterfs',
+             '-o', 'backupvolfile-server=192.168.1.2',
+             export_string, export_mnt_base)]
         self.assertEqual(self.executes, expected_commands)
 
     def fibrechan_connection(self, volume, location, wwn):
