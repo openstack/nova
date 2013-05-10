@@ -1043,11 +1043,14 @@ class HyperVAPITestCase(test.TestCase):
         self.assertEquals(len(self._instance_volume_disks), 1)
 
     def _setup_test_migrate_disk_and_power_off_mocks(self, same_host=False,
-                                                     with_exception=False):
+                                                     copy_exception=False,
+                                                     size_exception=False):
         self._instance_data = self._get_instance_data()
         instance = db.instance_create(self._context, self._instance_data)
         network_info = fake_network.fake_get_instance_nw_info(
             self.stubs, spectacular=True)
+
+        instance['root_gb'] = 10
 
         fake_local_ip = '10.0.0.1'
         if same_host:
@@ -1055,83 +1058,105 @@ class HyperVAPITestCase(test.TestCase):
         else:
             fake_dest_ip = '10.0.0.2'
 
-        fake_root_vhd_path = 'C:\\FakePath\\root.vhd'
-        fake_revert_path = os.path.join(self._test_instance_dir, '_revert')
-
-        func = mox.Func(self._check_instance_name)
-        vmutils.VMUtils.set_vm_state(func, constants.HYPERV_VM_STATE_DISABLED)
-
-        m = vmutils.VMUtils.get_vm_storage_paths(func)
-        m.AndReturn(([fake_root_vhd_path], []))
-
-        m = hostutils.HostUtils.get_local_ips()
-        m.AndReturn([fake_local_ip])
-
-        m = fake.PathUtils.get_instance_dir(mox.IsA(str))
-        m.AndReturn(self._test_instance_dir)
-
-        m = pathutils.PathUtils.get_instance_migr_revert_dir(instance['name'],
-                                                             remove_dir=True)
-        m.AndReturn(fake_revert_path)
-
-        if same_host:
-            fake.PathUtils.makedirs(mox.IsA(str))
-
-        m = fake.PathUtils.copy(fake_root_vhd_path, mox.IsA(str))
-        if with_exception:
-            m.AndRaise(shutil.Error('Simulated copy error'))
-            m = fake.PathUtils.get_instance_dir(mox.IsA(str),
-                                                mox.IsA(str),
-                                                remove_dir=True)
-            m.AndReturn(self._test_instance_dir)
+        if size_exception:
+            flavor = 'm1.tiny'
         else:
-            fake.PathUtils.rename(mox.IsA(str), mox.IsA(str))
-            destroy_disks = True
+            flavor = 'm1.small'
+
+        instance_type = db.instance_type_get_by_name(self._context, flavor)
+
+        if not size_exception:
+            fake_root_vhd_path = 'C:\\FakePath\\root.vhd'
+            fake_revert_path = os.path.join(self._test_instance_dir, '_revert')
+
+            func = mox.Func(self._check_instance_name)
+            vmutils.VMUtils.set_vm_state(func,
+                                         constants.HYPERV_VM_STATE_DISABLED)
+
+            m = vmutils.VMUtils.get_vm_storage_paths(func)
+            m.AndReturn(([fake_root_vhd_path], []))
+
+            m = hostutils.HostUtils.get_local_ips()
+            m.AndReturn([fake_local_ip])
+
+            m = fake.PathUtils.get_instance_dir(mox.IsA(str))
+            m.AndReturn(self._test_instance_dir)
+
+            m = pathutils.PathUtils.get_instance_migr_revert_dir(
+                instance['name'], remove_dir=True)
+            m.AndReturn(fake_revert_path)
+
             if same_host:
-                fake.PathUtils.rename(mox.IsA(str), mox.IsA(str))
-                destroy_disks = False
+                fake.PathUtils.makedirs(mox.IsA(str))
 
-            self._setup_destroy_mocks(False)
-
-            if destroy_disks:
+            m = fake.PathUtils.copy(fake_root_vhd_path, mox.IsA(str))
+            if copy_exception:
+                m.AndRaise(shutil.Error('Simulated copy error'))
                 m = fake.PathUtils.get_instance_dir(mox.IsA(str),
                                                     mox.IsA(str),
                                                     remove_dir=True)
                 m.AndReturn(self._test_instance_dir)
+            else:
+                fake.PathUtils.rename(mox.IsA(str), mox.IsA(str))
+                destroy_disks = True
+                if same_host:
+                    fake.PathUtils.rename(mox.IsA(str), mox.IsA(str))
+                    destroy_disks = False
 
-        return (instance, fake_dest_ip, network_info)
+                self._setup_destroy_mocks(False)
+
+                if destroy_disks:
+                    m = fake.PathUtils.get_instance_dir(mox.IsA(str),
+                                                        mox.IsA(str),
+                                                        remove_dir=True)
+                    m.AndReturn(self._test_instance_dir)
+
+        return (instance, fake_dest_ip, network_info, instance_type)
 
     def test_migrate_disk_and_power_off(self):
         (instance,
          fake_dest_ip,
-         network_info) = self._setup_test_migrate_disk_and_power_off_mocks()
+         network_info,
+         instance_type) = self._setup_test_migrate_disk_and_power_off_mocks()
 
         self._mox.ReplayAll()
         self._conn.migrate_disk_and_power_off(self._context, instance,
-                                              fake_dest_ip, None,
+                                              fake_dest_ip, instance_type,
                                               network_info)
         self._mox.VerifyAll()
 
     def test_migrate_disk_and_power_off_same_host(self):
         args = self._setup_test_migrate_disk_and_power_off_mocks(
             same_host=True)
-        (instance, fake_dest_ip, network_info) = args
+        (instance, fake_dest_ip, network_info, instance_type) = args
 
         self._mox.ReplayAll()
         self._conn.migrate_disk_and_power_off(self._context, instance,
-                                              fake_dest_ip, None,
+                                              fake_dest_ip, instance_type,
                                               network_info)
         self._mox.VerifyAll()
 
-    def test_migrate_disk_and_power_off_exception(self):
+    def test_migrate_disk_and_power_off_copy_exception(self):
         args = self._setup_test_migrate_disk_and_power_off_mocks(
-            with_exception=True)
-        (instance, fake_dest_ip, network_info) = args
+            copy_exception=True)
+        (instance, fake_dest_ip, network_info, instance_type) = args
 
         self._mox.ReplayAll()
         self.assertRaises(shutil.Error, self._conn.migrate_disk_and_power_off,
-                          self._context, instance, fake_dest_ip, None,
-                          network_info)
+                          self._context, instance, fake_dest_ip,
+                          instance_type, network_info)
+        self._mox.VerifyAll()
+
+    def test_migrate_disk_and_power_off_smaller_root_vhd_size_exception(self):
+        args = self._setup_test_migrate_disk_and_power_off_mocks(
+            size_exception=True)
+        (instance, fake_dest_ip, network_info, instance_type) = args
+
+        self._mox.ReplayAll()
+        self.assertRaises(vmutils.VHDResizeException,
+                          self._conn.migrate_disk_and_power_off,
+                          self._context, instance, fake_dest_ip,
+                          instance_type, network_info)
         self._mox.VerifyAll()
 
     def test_finish_migration(self):
