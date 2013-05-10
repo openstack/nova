@@ -241,7 +241,7 @@ class Worker(threading.Thread):
                           {'task_state': baremetal_states.DEPLOYING})
                     deploy(**params)
                 except Exception:
-                    LOG.error(_('deployment to node %s failed') % node_id)
+                    LOG.exception(_('deployment to node %s failed') % node_id)
                     db.bm_node_update(context, node_id,
                           {'task_state': baremetal_states.DEPLOYFAIL})
                 else:
