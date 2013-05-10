@@ -21,6 +21,7 @@ import os
 
 from oslo.config import cfg
 
+from nova import exception
 from nova.openstack.common import excutils
 from nova.openstack.common import fileutils
 from nova.openstack.common import lockutils
@@ -255,6 +256,13 @@ class Qcow2(Image):
 
         if not os.path.exists(base):
             prepare_template(target=base, *args, **kwargs)
+        # NOTE(cfb): Having a flavor that sets the root size to 0 and having
+        #            nova effectively ignore that size and use the size of the
+        #            image is considered a feature at this time, not a bug.
+        if size and size < disk.get_disk_size(base):
+            LOG.error('%s virtual size larger than flavor root disk size %s' %
+                      (base, size))
+            raise exception.ImageTooLarge()
         if not os.path.exists(self.path):
             with utils.remove_path_on_error(self.path):
                 copy_qcow2_image(base, self.path, size)
