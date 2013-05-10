@@ -21,6 +21,7 @@ import testtools
 import webob
 
 from nova.api.openstack.compute.contrib import floating_ips
+from nova.api.openstack import extensions
 from nova import compute
 from nova.compute import utils as compute_utils
 from nova import context
@@ -155,8 +156,10 @@ class FloatingIpTest(test.TestCase):
         self.context = context.get_admin_context()
         self._create_floating_ips()
 
+        self.ext_mgr = extensions.ExtensionManager()
+        self.ext_mgr.extensions = {}
         self.controller = floating_ips.FloatingIPController()
-        self.manager = floating_ips.FloatingIPActionController()
+        self.manager = floating_ips.FloatingIPActionController(self.ext_mgr)
 
     def tearDown(self):
         self._delete_floating_ip()
@@ -350,8 +353,10 @@ class FloatingIpTest(test.TestCase):
         self.controller.delete(req, 1)
 
     def test_floating_ip_associate(self):
+        fixed_address = '192.168.1.100'
+
         def fake_associate_floating_ip(*args, **kwargs):
-            pass
+            self.assertEqual(fixed_address, kwargs['fixed_address'])
 
         self.stubs.Set(network.api.API, "associate_floating_ip",
                        fake_associate_floating_ip)
@@ -361,8 +366,26 @@ class FloatingIpTest(test.TestCase):
         rsp = self.manager._add_floating_ip(req, 'test_inst', body)
         self.assertTrue(rsp.status_int == 202)
 
-    def test_associate_not_allocated_floating_ip_to_instance(self):
+    def test_not_extended_floating_ip_associate_fixed(self):
+        # Check that fixed_address is ignored if os-extended-floating-ips
+        # is not loaded
+        fixed_address_requested = '192.168.1.101'
+        fixed_address_allocated = '192.168.1.100'
 
+        def fake_associate_floating_ip(*args, **kwargs):
+            self.assertEqual(fixed_address_allocated,
+                             kwargs['fixed_address'])
+
+        self.stubs.Set(network.api.API, "associate_floating_ip",
+                       fake_associate_floating_ip)
+        body = dict(addFloatingIp=dict(address=self.floating_ip,
+                                       fixed_address=fixed_address_requested))
+
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
+        rsp = self.manager._add_floating_ip(req, 'test_inst', body)
+        self.assertTrue(rsp.status_int == 202)
+
+    def test_associate_not_allocated_floating_ip_to_instance(self):
         def fake_associate_floating_ip(self, context, instance,
                               floating_address, fixed_address,
                               affect_auto_assigned=False):
@@ -543,6 +566,106 @@ class FloatingIpTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.manager._add_floating_ip, req, 'test_inst',
                           body)
+
+
+class ExtendedFloatingIpTest(test.TestCase):
+    floating_ip = "10.10.10.10"
+    floating_ip_2 = "10.10.10.11"
+
+    def _create_floating_ips(self, floating_ips=None):
+        """Create a floating ip object."""
+        if floating_ips is None:
+            floating_ips = [self.floating_ip]
+        elif not isinstance(floating_ips, (list, tuple)):
+            floating_ips = [floating_ips]
+
+        def make_ip_dict(ip):
+            """Shortcut for creating floating ip dict."""
+            return
+
+        dict_ = {'pool': 'nova', 'host': 'fake_host'}
+        return db.floating_ip_bulk_create(
+            self.context, [dict(address=ip, **dict_) for ip in floating_ips],
+        )
+
+    def _delete_floating_ip(self):
+        db.floating_ip_destroy(self.context, self.floating_ip)
+
+    def setUp(self):
+        super(ExtendedFloatingIpTest, self).setUp()
+        self.stubs.Set(compute.api.API, "get",
+                       compute_api_get)
+        self.stubs.Set(network.api.API, "get_floating_ip",
+                       network_api_get_floating_ip)
+        self.stubs.Set(network.api.API, "get_floating_ip_by_address",
+                       network_api_get_floating_ip_by_address)
+        self.stubs.Set(network.api.API, "get_floating_ips_by_project",
+                       network_api_get_floating_ips_by_project)
+        self.stubs.Set(network.api.API, "release_floating_ip",
+                       network_api_release)
+        self.stubs.Set(network.api.API, "disassociate_floating_ip",
+                       network_api_disassociate)
+        self.stubs.Set(network.api.API, "get_instance_id_by_floating_address",
+                       get_instance_by_floating_ip_addr)
+        self.stubs.Set(compute_utils, "get_nw_info_for_instance",
+                       stub_nw_info(self.stubs))
+        self.flags(
+            osapi_compute_extension=[
+                'nova.api.openstack.compute.contrib.select_extensions'],
+            osapi_compute_ext_list=['Floating_ips', 'Extended_floating_ips'])
+
+        fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs,
+                                                          spectacular=True)
+        self.stubs.Set(db, 'instance_get',
+                       fake_instance_get)
+
+        self.context = context.get_admin_context()
+        self._create_floating_ips()
+
+        self.ext_mgr = extensions.ExtensionManager()
+        self.ext_mgr.extensions = {}
+        self.ext_mgr.extensions['os-floating-ips'] = True
+        self.ext_mgr.extensions['os-extended-floating-ips'] = True
+        self.controller = floating_ips.FloatingIPController()
+        self.manager = floating_ips.FloatingIPActionController(self.ext_mgr)
+
+    def tearDown(self):
+        self._delete_floating_ip()
+        super(ExtendedFloatingIpTest, self).tearDown()
+
+    def test_extended_floating_ip_associate_fixed(self):
+        fixed_address = '192.168.1.101'
+
+        def fake_associate_floating_ip(*args, **kwargs):
+            self.assertEqual(fixed_address, kwargs['fixed_address'])
+
+        self.stubs.Set(network.api.API, "associate_floating_ip",
+                       fake_associate_floating_ip)
+        body = dict(addFloatingIp=dict(address=self.floating_ip,
+                                       fixed_address=fixed_address))
+
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
+        rsp = self.manager._add_floating_ip(req, 'test_inst', body)
+        self.assertTrue(rsp.status_int == 202)
+
+    def test_extended_floating_ip_associate_fixed_not_allocated(self):
+        def fake_associate_floating_ip(*args, **kwargs):
+            pass
+
+        self.stubs.Set(network.api.API, "associate_floating_ip",
+                       fake_associate_floating_ip)
+        body = dict(addFloatingIp=dict(address=self.floating_ip,
+                                       fixed_address='11.11.11.11'))
+
+        req = webob.Request.blank('/v2/fake/servers/test_inst/action')
+        req.method = "POST"
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+        resp = req.get_response(fakes.wsgi_app(init_only=('servers',)))
+        res_dict = jsonutils.loads(resp.body)
+        self.assertEqual(resp.status_int, 400)
+        self.assertEqual(res_dict['badRequest']['message'],
+                       "Specified fixed address not assigned to instance")
 
 
 class FloatingIpSerializerTest(test.TestCase):

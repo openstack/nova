@@ -83,12 +83,15 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
     extension_name = None
 
     def setUp(self):
+        extends = []
         self.flags(use_ipv6=False,
                    osapi_compute_link_prefix=self._get_host(),
                    osapi_glance_link_prefix=self._get_glance_host())
         if not self.all_extensions:
+            if hasattr(self, 'extends_name'):
+                extends = [self.extends_name]
             ext = [self.extension_name] if self.extension_name else []
-            self.flags(osapi_compute_extension=ext)
+            self.flags(osapi_compute_extension=ext + extends)
         super(ApiSampleTestBase, self).setUp()
         fake_network.stub_compute_with_ips(self.stubs)
         self.generate_samples = os.getenv('GENERATE_SAMPLES') is not None
@@ -1351,7 +1354,18 @@ class FloatingIpsJsonTest(ApiSampleTestBase):
         self.assertEqual(response.status, 202)
 
 
+class ExtendedFloatingIpsJsonTest(FloatingIpsJsonTest):
+    extends_name = ("nova.api.openstack.compute.contrib."
+                         "floating_ips.Floating_ips")
+    extension_name = ("nova.api.openstack.compute.contrib."
+                         "extended_floating_ips.Extended_floating_ips")
+
+
 class FloatingIpsXmlTest(FloatingIpsJsonTest):
+    ctype = 'xml'
+
+
+class ExtendedFloatingIpsXmlTest(ExtendedFloatingIpsJsonTest):
     ctype = 'xml'
 
 
