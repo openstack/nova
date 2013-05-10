@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 IBM Corp.
+# Copyright 2013 IBM Corp.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -56,10 +56,38 @@ def ssh_connect(connection):
                     port=connection.port,
                     key_filename=connection.keyfile,
                     timeout=constants.POWERVM_CONNECTION_TIMEOUT)
+
+        LOG.debug("SSH connection with %s established successfully." %
+                  connection.host)
+
+        # send TCP keepalive packets every 20 seconds
+        ssh.get_transport().set_keepalive(20)
+
         return ssh
     except Exception:
         LOG.exception(_('Connection error connecting PowerVM manager'))
         raise exception.PowerVMConnectionFailed()
+
+
+def check_connection(ssh, connection):
+    """
+    Checks the SSH connection to see if the transport is valid.
+    If the connection is dead, a new connection is created and returned.
+
+    :param ssh: an existing paramiko.SSHClient connection.
+    :param connection: a Connection object.
+    :returns: paramiko.SSHClient -- an active ssh connection.
+    :raises: PowerVMConnectionFailed -- if the ssh connection fails.
+    """
+    # if the ssh client is not set or the transport is dead, re-connect
+    if (ssh is None or
+        ssh.get_transport() is None or
+        not ssh.get_transport().is_active()):
+            LOG.debug("Connection to host %s will be established." %
+                      connection.host)
+            ssh = ssh_connect(connection)
+
+    return ssh
 
 
 def ssh_command_as_root(ssh_connection, cmd, check_exit_code=True):
