@@ -372,6 +372,7 @@ class FloatingIP(object):
                 if "Cannot find device" in str(e):
                     LOG.error(_('Interface %(interface)s not found'), locals())
                     raise exception.NoFloatingIpInterface(interface=interface)
+                raise
 
             payload = dict(project_id=context.project_id,
                            instance_id=instance_uuid,
