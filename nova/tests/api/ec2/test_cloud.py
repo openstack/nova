@@ -2108,9 +2108,9 @@ class CloudTestCase(test.TestCase):
                         'rootDeviceType': 'ebs',
                         'blockDeviceMapping': [
                             {'deviceName': '/dev/sdh',
-                             'ebs': {'status': 'in-use',
+                             'ebs': {'status': 'attached',
                                      'deleteOnTermination': True,
-                                     'volumeId': 87654321,
+                                     'volumeId': 'vol-05397fb1',
                                      'attachTime': '13:56:24'}}]}
         expected_bdm['blockDeviceMapping'].sort()
         self.assertEqual(bdm, expected_bdm)
