@@ -80,6 +80,9 @@ get_engine = db_session.get_engine
 get_session = db_session.get_session
 
 
+_SHADOW_TABLE_PREFIX = 'shadow_'
+
+
 def get_backend():
     """The backend is this module itself."""
     return sys.modules[__name__]
@@ -5004,7 +5007,7 @@ def archive_deleted_rows_for_table(context, tablename, max_rows):
     metadata.bind = engine
     table = Table(tablename, metadata, autoload=True)
     default_deleted_value = _get_default_deleted_value(table)
-    shadow_tablename = "shadow_" + tablename
+    shadow_tablename = _SHADOW_TABLE_PREFIX + tablename
     rows_archived = 0
     try:
         shadow_table = Table(shadow_tablename, metadata, autoload=True)
