@@ -3493,6 +3493,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.driver.ensure_filtering_rules_for_instance(
             mox.IsA(instance), nw_info)
 
+        test_notifier.NOTIFICATIONS = []
         # start test
         self.mox.ReplayAll()
         migrate_data = {'is_shared_storage': False}
@@ -3500,6 +3501,13 @@ class ComputeTestCase(BaseTestCase):
                                               block_migration=False,
                                               migrate_data=migrate_data)
         self.assertEqual(ret, None)
+        self.assertEqual(len(test_notifier.NOTIFICATIONS), 2)
+        msg = test_notifier.NOTIFICATIONS[0]
+        self.assertEqual(msg['event_type'],
+                         'compute.instance.live_migration.pre.start')
+        msg = test_notifier.NOTIFICATIONS[1]
+        self.assertEqual(msg['event_type'],
+                         'compute.instance.live_migration.pre.end')
 
         # cleanup
         db.instance_destroy(c, instance['uuid'])
@@ -3719,10 +3727,19 @@ class ComputeTestCase(BaseTestCase):
         self.compute.network_api.setup_networks_on_host(self.admin_ctxt,
                 mox.IgnoreArg(), self.compute.host)
 
+        test_notifier.NOTIFICATIONS = []
         self.mox.ReplayAll()
 
         self.compute.post_live_migration_at_destination(self.admin_ctxt,
                                                         self.instance)
+
+        self.assertEqual(len(test_notifier.NOTIFICATIONS), 2)
+        msg = test_notifier.NOTIFICATIONS[0]
+        self.assertEqual(msg['event_type'],
+                         'compute.instance.live_migration.post.dest.start')
+        msg = test_notifier.NOTIFICATIONS[1]
+        self.assertEqual(msg['event_type'],
+                         'compute.instance.live_migration.post.dest.end')
 
         return self.compute.conductor_api.instance_get_by_uuid(self.admin_ctxt,
                                                         self.instance['uuid'])
@@ -3748,6 +3765,31 @@ class ComputeTestCase(BaseTestCase):
                                                         exception.NotFound())
         updated = self._finish_post_live_migration_at_destination()
         self.assertIsNone(updated['node'])
+
+    def test_rollback_live_migration_at_destination_correctly(self):
+        # creating instance testdata
+        c = context.get_admin_context()
+        instance_ref = self._create_fake_instance({'host': 'dummy'})
+        inst_uuid = instance_ref['uuid']
+        inst_id = instance_ref['id']
+
+        instance = jsonutils.to_primitive(db.instance_get(c, inst_id))
+        test_notifier.NOTIFICATIONS = []
+        # start test
+        self.mox.ReplayAll()
+        ret = self.compute.rollback_live_migration_at_destination(c,
+                                          instance=instance)
+        self.assertEqual(ret, None)
+        self.assertEqual(len(test_notifier.NOTIFICATIONS), 2)
+        msg = test_notifier.NOTIFICATIONS[0]
+        self.assertEqual(msg['event_type'],
+                       'compute.instance.live_migration.rollback.dest.start')
+        msg = test_notifier.NOTIFICATIONS[1]
+        self.assertEqual(msg['event_type'],
+                        'compute.instance.live_migration.rollback.dest.end')
+
+        # cleanup
+        db.instance_destroy(c, inst_uuid)
 
     def test_run_kill_vm(self):
         # Detect when a vm is terminated behind the scenes.

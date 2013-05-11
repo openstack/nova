@@ -3188,6 +3188,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         return self.driver.check_can_live_migrate_source(ctxt, instance,
                                                          dest_check_data)
 
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def pre_live_migration(self, context, instance,
                            block_migration=False, disk=None,
                            migrate_data=None):
@@ -3206,6 +3207,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                             context, instance, bdms=bdms)
 
         network_info = self._get_instance_nw_info(context, instance)
+        self._notify_about_instance_usage(
+                     context, instance, "live_migration.pre.start",
+                     network_info=network_info)
 
         # TODO(tr3buchet): figure out how on the earth this is necessary
         fixed_ips = network_info.fixed_ips()
@@ -3236,8 +3240,13 @@ class ComputeManager(manager.SchedulerDependentManager):
         if block_migration:
             self.driver.pre_block_migration(context, instance, disk)
 
+        self._notify_about_instance_usage(
+                     context, instance, "live_migration.pre.end",
+                     network_info=network_info)
+
         return pre_live_migration_data
 
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def live_migration(self, context, dest, instance,
                        block_migration=False, migrate_data=None):
         """Executing live migration.
@@ -3354,6 +3363,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                    "This error can be safely ignored."),
                  instance=instance_ref)
 
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def post_live_migration_at_destination(self, context, instance,
                                            block_migration=False):
         """Post operations for live migration .
@@ -3379,6 +3389,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                            migration)
 
         network_info = self._get_instance_nw_info(context, instance)
+        self._notify_about_instance_usage(
+                     context, instance, "live_migration.post.dest.start",
+                     network_info=network_info)
         block_device_info = self._get_instance_volume_block_device_info(
                             context, instance)
 
@@ -3402,6 +3415,9 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         # NOTE(vish): this is necessary to update dhcp
         self.network_api.setup_networks_on_host(context, instance, self.host)
+        self._notify_about_instance_usage(
+                     context, instance, "live_migration.post.dest.end",
+                     network_info=network_info)
 
     def _rollback_live_migration(self, context, instance,
                                  dest, block_migration, migrate_data=None):
@@ -3445,6 +3461,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             self.compute_rpcapi.rollback_live_migration_at_destination(context,
                     instance, dest)
 
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def rollback_live_migration_at_destination(self, context, instance):
         """Cleaning up image directory that is created pre_live_migration.
 
@@ -3452,6 +3469,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         :param instance: an Instance dict sent over rpc
         """
         network_info = self._get_instance_nw_info(context, instance)
+        self._notify_about_instance_usage(
+                      context, instance, "live_migration.rollback.dest.start",
+                      network_info=network_info)
 
         # NOTE(tr3buchet): tear down networks on destination host
         self.network_api.setup_networks_on_host(context, instance,
@@ -3463,6 +3483,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                             context, instance)
         self.driver.destroy(instance, self._legacy_nw_info(network_info),
                             block_device_info)
+        self._notify_about_instance_usage(
+                        context, instance, "live_migration.rollback.dest.end",
+                        network_info=network_info)
 
     @periodic_task.periodic_task
     def _heal_instance_info_cache(self, context):
