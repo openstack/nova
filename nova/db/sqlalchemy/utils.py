@@ -16,6 +16,8 @@
 #    under the License.
 
 from migrate.changeset import UniqueConstraint
+from sqlalchemy import Boolean
+from sqlalchemy import CheckConstraint
 from sqlalchemy import Column
 from sqlalchemy.engine import reflection
 from sqlalchemy.exc import OperationalError
@@ -23,10 +25,12 @@ from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy import func
 from sqlalchemy import Index
+from sqlalchemy import Integer
 from sqlalchemy import MetaData
 from sqlalchemy.sql.expression import literal_column
 from sqlalchemy.sql.expression import UpdateBase
 from sqlalchemy.sql import select
+from sqlalchemy import String
 from sqlalchemy import Table
 from sqlalchemy.types import NullType
 
@@ -240,8 +244,7 @@ def create_shadow_table(migrate_engine, table_name=None, table=None,
                             are required only for columns that have unsupported
                             types by sqlite. For example BigInteger.
     """
-    meta = MetaData()
-    meta.bind = migrate_engine
+    meta = MetaData(bind=migrate_engine)
 
     if table_name is None and table is None:
         raise exception.NovaException(_("Specify `table_name` or `table` "
@@ -274,3 +277,208 @@ def create_shadow_table(migrate_engine, table_name=None, table=None,
     except Exception:
         LOG.info(repr(shadow_table))
         LOG.exception(_('Exception while creating table.'))
+
+
+def _get_default_deleted_value(table):
+    if isinstance(table.c.id.type, Integer):
+        return 0
+    if isinstance(table.c.id.type, String):
+        return ""
+    raise exception.NovaException(_("Unsupported id columns type"))
+
+
+def _restore_indexes_on_deleted_columns(migrate_engine, table_name, indexes):
+    table = get_table(migrate_engine, table_name)
+
+    insp = reflection.Inspector.from_engine(migrate_engine)
+    real_indexes = insp.get_indexes(table_name)
+    existing_index_names = dict([(index['name'], index['column_names'])
+                                  for index in real_indexes])
+
+    # NOTE(boris-42): Restore indexes on `deleted` column
+    for index in indexes:
+        if 'deleted' not in index['column_names']:
+            continue
+        name = index['name']
+        if name in existing_index_names:
+            column_names = [table.c[c] for c in existing_index_names[name]]
+            old_index = Index(name, *column_names, unique=index["unique"])
+            old_index.drop(migrate_engine)
+
+        column_names = [table.c[c] for c in index['column_names']]
+        new_index = Index(index["name"], *column_names, unique=index["unique"])
+        new_index.create(migrate_engine)
+
+
+def change_deleted_column_type_to_boolean(migrate_engine, table_name,
+                                          **col_name_col_instance):
+    if migrate_engine.name == "sqlite":
+        return _change_deleted_column_type_to_boolean_sqlite(migrate_engine,
+                                                    table_name,
+                                                    **col_name_col_instance)
+    insp = reflection.Inspector.from_engine(migrate_engine)
+    indexes = insp.get_indexes(table_name)
+
+    table = get_table(migrate_engine, table_name)
+
+    old_deleted = Column('old_deleted', Boolean, default=False)
+    old_deleted.create(table, populate_default=False)
+
+    table.update().\
+            where(table.c.deleted == table.c.id).\
+            values(old_deleted=True).\
+            execute()
+
+    table.c.deleted.drop()
+    table.c.old_deleted.alter(name="deleted")
+
+    _restore_indexes_on_deleted_columns(migrate_engine, table_name, indexes)
+
+
+def _change_deleted_column_type_to_boolean_sqlite(migrate_engine, table_name,
+                                                  **col_name_col_instance):
+    insp = reflection.Inspector.from_engine(migrate_engine)
+    table = get_table(migrate_engine, table_name)
+
+    columns = []
+    for column in table.columns:
+        column_copy = None
+        if column.name != "deleted":
+            if isinstance(column.type, NullType):
+                column_copy = _get_not_supported_column(col_name_col_instance,
+                                                        column.name)
+            else:
+                column_copy = column.copy()
+        else:
+            column_copy = Column('deleted', Boolean, default=0)
+        columns.append(column_copy)
+
+    constraints = [constraint.copy() for constraint in table.constraints]
+
+    meta = MetaData(bind=migrate_engine)
+    new_table = Table(table_name + "__tmp__", meta,
+                      *(columns + constraints))
+    new_table.create()
+
+    indexes = []
+    for index in insp.get_indexes(table_name):
+        column_names = [new_table.c[c] for c in index['column_names']]
+        indexes.append(Index(index["name"], *column_names,
+                             unique=index["unique"]))
+
+    c_select = []
+    for c in table.c:
+        if c.name != "deleted":
+            c_select.append(c)
+        else:
+            c_select.append(table.c.deleted == table.c.id)
+
+    ins = InsertFromSelect(new_table, select(c_select))
+    migrate_engine.execute(ins)
+
+    table.drop()
+    [index.create(migrate_engine) for index in indexes]
+
+    new_table.rename(table_name)
+    new_table.update().\
+        where(new_table.c.deleted == new_table.c.id).\
+        values(deleted=True).\
+        execute()
+
+
+def change_deleted_column_type_to_id_type(migrate_engine, table_name,
+                                          **col_name_col_instance):
+    if migrate_engine.name == "sqlite":
+        return _change_deleted_column_type_to_id_type_sqlite(migrate_engine,
+                                                    table_name,
+                                                    **col_name_col_instance)
+    insp = reflection.Inspector.from_engine(migrate_engine)
+    indexes = insp.get_indexes(table_name)
+
+    table = get_table(migrate_engine, table_name)
+
+    new_deleted = Column('new_deleted', table.c.id.type,
+                         default=_get_default_deleted_value(table))
+    new_deleted.create(table, populate_default=True)
+
+    table.update().\
+            where(table.c.deleted == True).\
+            values(new_deleted=table.c.id).\
+            execute()
+    table.c.deleted.drop()
+    table.c.new_deleted.alter(name="deleted")
+
+    _restore_indexes_on_deleted_columns(migrate_engine, table_name, indexes)
+
+
+def _change_deleted_column_type_to_id_type_sqlite(migrate_engine, table_name,
+                                                  **col_name_col_instance):
+    # NOTE(boris-42): sqlaclhemy-migrate can't drop column with check
+    #                 constraints in sqlite DB and our `deleted` column has
+    #                 2 check constraints. So there is only one way to remove
+    #                 these constraints:
+    #                 1) Create new table with the same columns, constraints
+    #                 and indexes. (except deleted column).
+    #                 2) Copy all data from old to new table.
+    #                 3) Drop old table.
+    #                 4) Rename new table to old table name.
+    insp = reflection.Inspector.from_engine(migrate_engine)
+    meta = MetaData(bind=migrate_engine)
+    table = Table(table_name, meta, autoload=True)
+    default_deleted_value = _get_default_deleted_value(table)
+
+    columns = []
+    for column in table.columns:
+        column_copy = None
+        if column.name != "deleted":
+            if isinstance(column.type, NullType):
+                column_copy = _get_not_supported_column(col_name_col_instance,
+                                                        column.name)
+            else:
+                column_copy = column.copy()
+        else:
+            column_copy = Column('deleted', table.c.id.type,
+                                 default=default_deleted_value)
+        columns.append(column_copy)
+
+    def is_deleted_column_constraint(constraint):
+        # NOTE(boris-42): There is no other way to check is CheckConstraint
+        #                 associated with deleted column.
+        if not isinstance(constraint, CheckConstraint):
+            return False
+        sqltext = str(constraint.sqltext)
+        return (sqltext.endswith("deleted in (0, 1)") or
+                sqltext.endswith("deleted IN (:deleted_1, :deleted_2)"))
+
+    constraints = []
+    for constraint in table.constraints:
+        if not is_deleted_column_constraint(constraint):
+            constraints.append(constraint.copy())
+
+    new_table = Table(table_name + "__tmp__", meta,
+                      *(columns + constraints))
+    new_table.create()
+
+    indexes = []
+    for index in insp.get_indexes(table_name):
+        column_names = [new_table.c[c] for c in index['column_names']]
+        indexes.append(Index(index["name"], *column_names,
+                             unique=index["unique"]))
+
+    ins = InsertFromSelect(new_table, table.select())
+    migrate_engine.execute(ins)
+
+    table.drop()
+    [index.create(migrate_engine) for index in indexes]
+
+    new_table.rename(table_name)
+    new_table.update().\
+        where(new_table.c.deleted == True).\
+        values(deleted=new_table.c.id).\
+        execute()
+
+    # NOTE(boris-42): Fix value of deleted column: False -> "" or 0.
+    new_table.update().\
+        where(new_table.c.deleted == False).\
+        values(deleted=default_deleted_value).\
+        execute()
