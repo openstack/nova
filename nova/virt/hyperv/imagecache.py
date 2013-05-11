@@ -19,15 +19,16 @@ Image caching and management.
 """
 import os
 
+from oslo.config import cfg
+
 from nova.compute import flavors
 from nova.openstack.common import excutils
-from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
+from nova import utils
 from nova.virt.hyperv import pathutils
 from nova.virt.hyperv import vhdutils
 from nova.virt.hyperv import vmutils
 from nova.virt import images
-from oslo.config import cfg
 
 LOG = logging.getLogger(__name__)
 
@@ -76,7 +77,7 @@ class ImageCache(object):
                                             root_vhd_size_gb,
                                             path_parts[1])
 
-            @lockutils.synchronized(resized_vhd_path, 'nova-')
+            @utils.synchronized(resized_vhd_path)
             def copy_and_resize_vhd():
                 if not self._pathutils.exists(resized_vhd_path):
                     try:
@@ -101,7 +102,7 @@ class ImageCache(object):
         base_vhd_dir = self._pathutils.get_base_vhd_dir()
         vhd_path = os.path.join(base_vhd_dir, image_id + ".vhd")
 
-        @lockutils.synchronized(vhd_path, 'nova-')
+        @utils.synchronized(vhd_path)
         def fetch_image_if_not_existing():
             if not self._pathutils.exists(vhd_path):
                 try:

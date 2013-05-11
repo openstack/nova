@@ -24,7 +24,6 @@ from oslo.config import cfg
 from nova import exception
 from nova.openstack.common import excutils
 from nova.openstack.common import fileutils
-from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt.disk import api as disk
@@ -139,8 +138,7 @@ class Image(object):
         :filename: Name of the file in the image directory
         :size: Size of created image in bytes (optional)
         """
-        @lockutils.synchronized(filename, 'nova-', external=True,
-                                lock_path=self.lock_path)
+        @utils.synchronized(filename, external=True, lock_path=self.lock_path)
         def call_if_not_exists(target, *args, **kwargs):
             if not os.path.exists(target):
                 fetch_func(target=target, *args, **kwargs)
@@ -204,8 +202,7 @@ class Raw(Image):
             self.driver_format = data.file_format or 'raw'
 
     def create_image(self, prepare_template, base, size, *args, **kwargs):
-        @lockutils.synchronized(base, 'nova-', external=True,
-                                lock_path=self.lock_path)
+        @utils.synchronized(base, external=True, lock_path=self.lock_path)
         def copy_raw_image(base, target, size):
             libvirt_utils.copy_image(base, target)
             if size:
@@ -244,8 +241,7 @@ class Qcow2(Image):
         self.preallocate = CONF.preallocate_images != 'none'
 
     def create_image(self, prepare_template, base, size, *args, **kwargs):
-        @lockutils.synchronized(base, 'nova-', external=True,
-                                lock_path=self.lock_path)
+        @utils.synchronized(base, external=True, lock_path=self.lock_path)
         def copy_qcow2_image(base, target, size):
             # TODO(pbrady): Consider copying the cow image here
             # with preallocation=metadata set for performance reasons.
@@ -317,8 +313,7 @@ class Lvm(Image):
         return False
 
     def create_image(self, prepare_template, base, size, *args, **kwargs):
-        @lockutils.synchronized(base, 'nova-', external=True,
-                                lock_path=self.lock_path)
+        @utils.synchronized(base, external=True, lock_path=self.lock_path)
         def create_lvm_image(base, size):
             base_size = disk.get_disk_size(base)
             resize = size > base_size

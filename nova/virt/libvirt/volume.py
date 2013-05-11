@@ -27,7 +27,6 @@ import urlparse
 from oslo.config import cfg
 
 from nova import exception
-from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import loopingcall
 from nova.openstack.common import processutils
@@ -192,7 +191,7 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
     def _get_target_portals_from_iscsiadm_output(self, output):
         return [line.split()[0] for line in output.splitlines()]
 
-    @lockutils.synchronized('connect_volume', 'nova-')
+    @utils.synchronized('connect_volume')
     def connect_volume(self, connection_info, disk_info):
         """Attach the volume to instance_name."""
         conf = super(LibvirtISCSIVolumeDriver,
@@ -266,7 +265,7 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
         conf.source_path = host_device
         return conf
 
-    @lockutils.synchronized('connect_volume', 'nova-')
+    @utils.synchronized('connect_volume')
     def disconnect_volume(self, connection_info, disk_dev):
         """Detach the volume from instance_name."""
         super(LibvirtISCSIVolumeDriver,
@@ -654,7 +653,7 @@ class LibvirtFibreChannelVolumeDriver(LibvirtBaseVolumeDriver):
 
         return pci_num
 
-    @lockutils.synchronized('connect_volume', 'nova-')
+    @utils.synchronized('connect_volume')
     def connect_volume(self, connection_info, disk_info):
         """Attach the volume to instance_name."""
         fc_properties = connection_info['data']
@@ -750,7 +749,7 @@ class LibvirtFibreChannelVolumeDriver(LibvirtBaseVolumeDriver):
         conf.source_path = device_path
         return conf
 
-    @lockutils.synchronized('connect_volume', 'nova-')
+    @utils.synchronized('connect_volume')
     def disconnect_volume(self, connection_info, mount_device):
         """Detach the volume from instance_name."""
         super(LibvirtFibreChannelVolumeDriver,

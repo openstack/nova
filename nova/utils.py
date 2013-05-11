@@ -44,6 +44,7 @@ from oslo.config import cfg
 from nova import exception
 from nova.openstack.common import excutils
 from nova.openstack.common import importutils
+from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
 from nova.openstack.common.rpc import common as rpc_common
@@ -96,6 +97,8 @@ BYTE_MULTIPLIERS = {
     'm': 1024 ** 2,
     'k': 1024,
 }
+
+synchronized = lockutils.synchronized_with_prefix('nova-')
 
 
 def vpn_ping(address, port, timeout=0.05, session_id=None):

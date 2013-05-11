@@ -19,13 +19,13 @@ import json
 import os
 import time
 
-from nova.openstack.common import lockutils
+from nova import utils
 
 
 TWENTY_FOUR_HOURS = 3600 * 24
 
 
-@lockutils.synchronized('storage-registry-lock', 'nova-', external=True)
+@utils.synchronized('storage-registry-lock', external=True)
 def register_storage_use(storage_path, hostname):
     """Idenfity the id of this instance storage."""
 
@@ -45,7 +45,7 @@ def register_storage_use(storage_path, hostname):
         f.write(json.dumps(d))
 
 
-@lockutils.synchronized('storage-registry-lock', 'nova-', external=True)
+@utils.synchronized('storage-registry-lock', external=True)
 def get_storage_users(storage_path):
     """Get a list of all the users of this storage path."""
 

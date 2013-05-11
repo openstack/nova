@@ -33,7 +33,6 @@ from nova.openstack.common import excutils
 from nova.openstack.common import fileutils
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
-from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
 from nova.openstack.common import timeutils
@@ -397,7 +396,7 @@ class IptablesManager(object):
 
         self._apply()
 
-    @lockutils.synchronized('iptables', 'nova-', external=True)
+    @utils.synchronized('iptables', external=True)
     def _apply(self):
         """Apply the current in-memory set of iptables rules.
 
@@ -980,7 +979,7 @@ def kill_dhcp(dev):
 # NOTE(ja): Sending a HUP only reloads the hostfile, so any
 #           configuration options (like dchp-range, vlan, ...)
 #           aren't reloaded.
-@lockutils.synchronized('dnsmasq_start', 'nova-')
+@utils.synchronized('dnsmasq_start')
 def restart_dhcp(context, dev, network_ref):
     """(Re)starts a dnsmasq server for a given network.
 
@@ -1068,7 +1067,7 @@ def restart_dhcp(context, dev, network_ref):
     _add_dnsmasq_accept_rules(dev)
 
 
-@lockutils.synchronized('radvd_start', 'nova-')
+@utils.synchronized('radvd_start')
 def update_ra(context, dev, network_ref):
     conffile = _ra_file(dev, 'conf')
     conf_str = """
@@ -1393,7 +1392,7 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
         LinuxBridgeInterfaceDriver.remove_vlan(vlan_num)
 
     @classmethod
-    @lockutils.synchronized('lock_vlan', 'nova-', external=True)
+    @utils.synchronized('lock_vlan', external=True)
     def ensure_vlan(_self, vlan_num, bridge_interface, mac_address=None):
         """Create a vlan unless it already exists."""
         interface = 'vlan%s' % vlan_num
@@ -1418,14 +1417,14 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
         return interface
 
     @classmethod
-    @lockutils.synchronized('lock_vlan', 'nova-', external=True)
+    @utils.synchronized('lock_vlan', external=True)
     def remove_vlan(cls, vlan_num):
         """Delete a vlan."""
         vlan_interface = 'vlan%s' % vlan_num
         delete_net_dev(vlan_interface)
 
     @classmethod
-    @lockutils.synchronized('lock_bridge', 'nova-', external=True)
+    @utils.synchronized('lock_bridge', external=True)
     def ensure_bridge(_self, bridge, interface, net_attrs=None, gateway=True,
                       filtering=True):
         """Create a bridge unless it already exists.
@@ -1510,7 +1509,7 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
                                       % (bridge, CONF.iptables_drop_action)))
 
     @classmethod
-    @lockutils.synchronized('lock_bridge', 'nova-', external=True)
+    @utils.synchronized('lock_bridge', external=True)
     def remove_bridge(cls, bridge, gateway=True, filtering=True):
         """Delete a bridge."""
         if not device_exists(bridge):
@@ -1536,7 +1535,7 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
             delete_net_dev(bridge)
 
 
-@lockutils.synchronized('ebtables', 'nova-', external=True)
+@utils.synchronized('ebtables', external=True)
 def ensure_ebtables_rules(rules, table='filter'):
     for rule in rules:
         cmd = ['ebtables', '-t', table, '-D'] + rule.split()
@@ -1545,7 +1544,7 @@ def ensure_ebtables_rules(rules, table='filter'):
         _execute(*cmd, run_as_root=True)
 
 
-@lockutils.synchronized('ebtables', 'nova-', external=True)
+@utils.synchronized('ebtables', external=True)
 def remove_ebtables_rules(rules, table='filter'):
     for rule in rules:
         cmd = ['ebtables', '-t', table, '-D'] + rule.split()
