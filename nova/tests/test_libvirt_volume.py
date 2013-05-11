@@ -389,6 +389,36 @@ class LibvirtVolumeTestCase(test.TestCase):
         self.assertEqual(tree.find('./source').get('dev'), mpdev_filepath)
         libvirt_driver.disconnect_volume(connection_info, 'vde')
 
+    def test_libvirt_kvm_volume_with_multipath_getmpdev(self):
+        self.flags(libvirt_iscsi_use_multipath=True)
+        self.stubs.Set(os.path, 'exists', lambda x: True)
+        libvirt_driver = volume.LibvirtISCSIVolumeDriver(self.fake_conn)
+        name0 = 'volume-00000000'
+        location0 = '10.0.2.15:3260'
+        iqn0 = 'iqn.2010-10.org.openstack:%s' % name0
+        vol0 = {'id': 0, 'name': name0}
+        dev0 = '/dev/disk/by-path/ip-%s-iscsi-%s-lun-0' % (location0, iqn0)
+        name = 'volume-00000001'
+        location = '10.0.2.15:3260'
+        iqn = 'iqn.2010-10.org.openstack:%s' % name
+        vol = {'id': 1, 'name': name}
+        dev = '/dev/disk/by-path/ip-%s-iscsi-%s-lun-1' % (location, iqn)
+        devs = [dev0, dev]
+        self.stubs.Set(self.fake_conn, 'get_all_block_devices', lambda: devs)
+        connection_info = self.iscsi_connection(vol, location, iqn)
+        mpdev_filepath = '/dev/mapper/foo'
+        disk_info = {
+            "bus": "virtio",
+            "dev": "vde",
+            "type": "disk",
+            }
+        target_portals = ['fake_portal1', 'fake_portal2']
+        libvirt_driver._get_multipath_device_name = lambda x: mpdev_filepath
+        conf = libvirt_driver.connect_volume(connection_info, disk_info)
+        tree = conf.format_dom()
+        self.assertEqual(tree.find('./source').get('dev'), mpdev_filepath)
+        libvirt_driver.disconnect_volume(connection_info, 'vde')
+
     def test_libvirt_nfs_driver(self):
         # NOTE(vish) exists is to make driver assume connecting worked
         mnt_base = '/mnt'
