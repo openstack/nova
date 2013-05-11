@@ -19,6 +19,7 @@ from migrate.changeset import UniqueConstraint
 from sqlalchemy import Integer, DateTime, String
 from sqlalchemy import MetaData, Table, Column
 from sqlalchemy.exc import NoSuchTableError
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.exc import SAWarning
 from sqlalchemy.sql import select
 from sqlalchemy.types import UserDefinedType
@@ -310,5 +311,83 @@ class TestMigrationUtils(test_migrations.BaseMigrationTestCase):
                                  Column('a', Integer),
                                  Column('c', CustomType))
             shadow_table.create()
-
             self.assertTrue(utils.check_shadow_table(engine, table_name))
+
+    def test_create_shadow_table_by_table_instance(self):
+        table_name = 'abc'
+        for key, engine in self.engines.items():
+            meta = MetaData()
+            meta.bind = engine
+            table = Table(table_name, meta,
+                          Column('id', Integer, primary_key=True),
+                          Column('a', Integer),
+                          Column('b', String(256)))
+            table.create()
+            utils.create_shadow_table(engine, table=table)
+            self.assertTrue(utils.check_shadow_table(engine, table_name))
+
+    def test_create_shadow_table_by_name(self):
+        table_name = 'abc'
+        for key, engine in self.engines.items():
+            meta = MetaData()
+            meta.bind = engine
+
+            table = Table(table_name, meta,
+                          Column('id', Integer, primary_key=True),
+                          Column('a', Integer),
+                          Column('b', String(256)))
+            table.create()
+            utils.create_shadow_table(engine, table_name=table_name)
+            self.assertTrue(utils.check_shadow_table(engine, table_name))
+
+    def test_create_shadow_table_not_supported_type(self):
+        table_name = 'abc'
+        for key, engine in self.engines.items():
+            meta = MetaData()
+            meta.bind = engine
+
+            table = Table(table_name, meta,
+                          Column('id', Integer, primary_key=True),
+                          Column('a', CustomType))
+            table.create()
+            self.assertRaises(exception.NovaException,
+                              utils.create_shadow_table,
+                              engine, table_name=table_name)
+
+            utils.create_shadow_table(engine, table_name=table_name,
+                                      a=Column('a', CustomType()))
+            self.assertTrue(utils.check_shadow_table(engine, table_name))
+
+    def test_create_shadow_both_table_and_table_name_are_none(self):
+        for key, engine in self.engines.items():
+            meta = MetaData()
+            meta.bind = engine
+            self.assertRaises(exception.NovaException,
+                              utils.create_shadow_table, engine)
+
+    def test_create_shadow_both_table_and_table_name_are_specified(self):
+        table_name = 'abc'
+        for key, engine in self.engines.items():
+            meta = MetaData()
+            meta.bind = engine
+            table = Table(table_name, meta,
+                          Column('id', Integer, primary_key=True),
+                          Column('a', Integer))
+            table.create()
+            self.assertRaises(exception.NovaException,
+                              utils.create_shadow_table,
+                              engine, table=table, table_name=table_name)
+
+    def test_create_duplicate_shadow_table(self):
+        table_name = 'abc'
+        for key, engine in self.engines.items():
+            meta = MetaData()
+            meta.bind = engine
+            table = Table(table_name, meta,
+                          Column('id', Integer, primary_key=True),
+                          Column('a', Integer))
+            table.create()
+            utils.create_shadow_table(engine, table_name=table_name)
+            self.assertRaises(OperationalError,
+                              utils.create_shadow_table,
+                              engine, table_name=table_name)
