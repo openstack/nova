@@ -58,6 +58,7 @@ import sqlalchemy.exc
 
 from nova.db.sqlalchemy import api as db
 import nova.db.sqlalchemy.migrate_repo
+from nova.db.sqlalchemy import utils as db_utils
 from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
@@ -111,16 +112,6 @@ def _have_postgresql(user, passwd, database):
     if present is None:
         return _is_backend_avail('postgres', user, passwd, database)
     return present.lower() in ('', 'true')
-
-
-def get_table(engine, name):
-    """Returns an sqlalchemy table dynamically from db.
-
-    Needed because the models don't work for us in migrations
-    as models will be far out of sync with the current data."""
-    metadata = sqlalchemy.schema.MetaData()
-    metadata.bind = engine
-    return sqlalchemy.Table(name, metadata, autoload=True)
 
 
 def get_mysql_connection_info(conn_pieces):
@@ -510,12 +501,12 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
             'bw_out': 0,
             }]
 
-        bw_usage_cache = get_table(engine, 'bw_usage_cache')
+        bw_usage_cache = db_utils.get_table(engine, 'bw_usage_cache')
         engine.execute(bw_usage_cache.insert(), data)
         return data
 
     def _check_134(self, engine, data):
-        bw_usage_cache = get_table(engine, 'bw_usage_cache')
+        bw_usage_cache = db_utils.get_table(engine, 'bw_usage_cache')
 
         # Checks if both columns have been successfuly created.
         self.assertIn('last_ctr_in', bw_usage_cache.c)
@@ -539,14 +530,14 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         data = {
             'instance_uuid': str(uuid.uuid4())
             }
-        migrations = get_table(engine, 'migrations')
+        migrations = db_utils.get_table(engine, 'migrations')
         engine.execute(migrations.insert(), data)
         result = migrations.insert().values(data).execute()
         data['id'] = result.inserted_primary_key[0]
         return data
 
     def _check_141(self, engine, data):
-        migrations = get_table(engine, 'migrations')
+        migrations = db_utils.get_table(engine, 'migrations')
         row = migrations.select(
             migrations.c.id == data['id']).execute().first()
         # Check that change to String(36) went alright
@@ -559,7 +550,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
             'name': 'name',
             }
 
-        aggregates = get_table(engine, 'aggregates')
+        aggregates = db_utils.get_table(engine, 'aggregates')
         result = aggregates.insert().values(data).execute()
         # NOTE(sdague) it's important you don't insert keys by value in
         # postgresql, because its autoincrement counter won't get updated
@@ -567,14 +558,14 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         return data
 
     def _check_146(self, engine, data):
-        aggregate_md = get_table(engine, 'aggregate_metadata')
+        aggregate_md = db_utils.get_table(engine, 'aggregate_metadata')
         md = aggregate_md.select(
             aggregate_md.c.aggregate_id == data['id']).execute().first()
         self.assertEqual(data['availability_zone'], md['value'])
 
     def _post_downgrade_146(self, engine):
         # Downgrade should delete availability_zone aggregate_metadata entries
-        aggregate_md = get_table(engine, 'aggregate_metadata')
+        aggregate_md = db_utils.get_table(engine, 'aggregate_metadata')
         num_azs = aggregate_md.count().where(
                 aggregate_md.c.key == 'availability_zone').execute().scalar()
         self.assertEqual(0, num_azs)
@@ -597,29 +588,30 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
              'report_count': 0, 'availability_zone': az},
             ]
 
-        services = get_table(engine, 'services')
+        services = db_utils.get_table(engine, 'services')
         engine.execute(services.insert(), data)
         self._pre_upgrade_147_no_duplicate_aggregate_hosts(engine)
         return data
 
     def _pre_upgrade_147_no_duplicate_aggregate_hosts(self, engine):
-        engine.execute(get_table(engine, 'aggregate_metadata').insert(), [
-            {'aggregate_id': 1,
-             'key': 'availability_zone',
-             'value': 'custom_az'}])
+        engine.execute(
+            db_utils.get_table(engine, 'aggregate_metadata').insert(),
+            [{'aggregate_id': 1,
+              'key': 'availability_zone',
+              'value': 'custom_az'}])
 
-        engine.execute(get_table(engine, 'aggregate_hosts').insert(), [
-            {'aggregate_id': 1,
-             'host': 'compute-host3'}])
+        engine.execute(db_utils.get_table(engine, 'aggregate_hosts').insert(),
+                       [{'aggregate_id': 1,
+                         'host': 'compute-host3'}])
 
-        engine.execute(get_table(engine, 'services').insert(), [
-            {'id': 99, 'host': 'compute-host3',
-             'binary': 'nova-compute', 'topic': 'compute',
-             'report_count': 0, 'availability_zone': 'custom_az'}])
+        engine.execute(db_utils.get_table(engine, 'services').insert(),
+                      [{'id': 99, 'host': 'compute-host3',
+                        'binary': 'nova-compute', 'topic': 'compute',
+                        'report_count': 0, 'availability_zone': 'custom_az'}])
 
     def _check_147(self, engine, data):
-        aggregate_md = get_table(engine, 'aggregate_metadata')
-        aggregate_hosts = get_table(engine, 'aggregate_hosts')
+        aggregate_md = db_utils.get_table(engine, 'aggregate_metadata')
+        aggregate_hosts = db_utils.get_table(engine, 'aggregate_hosts')
         # NOTE(sdague): hard coded to id == 2, because we added to
         # aggregate_metadata previously
         for item in data:
@@ -642,7 +634,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         self._check_147_no_duplicate_aggregate_hosts(engine, data)
 
     def _check_147_no_duplicate_aggregate_hosts(self, engine, data):
-        aggregate_hosts = get_table(engine, 'aggregate_hosts')
+        aggregate_hosts = db_utils.get_table(engine, 'aggregate_hosts')
         agg1_hosts = [h['host'] for h in aggregate_hosts.select(
             aggregate_hosts.c.aggregate_id == 1
             ).execute().fetchall()]
@@ -650,8 +642,8 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
 
     # migration 149, changes IPAddr storage format
     def _pre_upgrade_149(self, engine):
-        provider_fw_rules = get_table(engine, 'provider_fw_rules')
-        console_pools = get_table(engine, 'console_pools')
+        provider_fw_rules = db_utils.get_table(engine, 'provider_fw_rules')
+        console_pools = db_utils.get_table(engine, 'console_pools')
         data = {
             'provider_fw_rules':
                 [
@@ -688,7 +680,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         return data
 
     def _check_149(self, engine, data):
-        provider_fw_rules = get_table(engine, 'provider_fw_rules')
+        provider_fw_rules = db_utils.get_table(engine, 'provider_fw_rules')
         result = provider_fw_rules.select().execute()
 
         iplist = map(lambda x: str(netaddr.IPNetwork(x['cidr'])),
@@ -697,7 +689,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         for row in result:
             self.assertIn(str(netaddr.IPNetwork(row['cidr'])), iplist)
 
-        console_pools = get_table(engine, 'console_pools')
+        console_pools = db_utils.get_table(engine, 'console_pools')
         result = console_pools.select().execute()
 
         iplist = map(lambda x: str(netaddr.IPAddress(x['address'])),
@@ -708,7 +700,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
 
     # migration 151 - changes period_beginning and period_ending to DateTime
     def _pre_upgrade_151(self, engine):
-        task_log = get_table(engine, 'task_log')
+        task_log = db_utils.get_table(engine, 'task_log')
         data = {
             'task_name': 'The name of the task',
             'state': 'The state of the task',
@@ -722,7 +714,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         return data
 
     def _check_151(self, engine, data):
-        task_log = get_table(engine, 'task_log')
+        task_log = db_utils.get_table(engine, 'task_log')
         row = task_log.select(task_log.c.id == data['id']).execute().first()
         self.assertTrue(isinstance(row['period_beginning'],
             datetime.datetime))
@@ -749,21 +741,21 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
             {'id': 'second', 'host': host2, 'deleted': True}
             ]
 
-        services = get_table(engine, 'services')
+        services = db_utils.get_table(engine, 'services')
         engine.execute(services.insert(), services_data)
 
-        volumes = get_table(engine, 'volumes')
+        volumes = db_utils.get_table(engine, 'volumes')
         engine.execute(volumes.insert(), volumes_data)
         return dict(services=services_data, volumes=volumes_data)
 
     def _check_152(self, engine, data):
-        services = get_table(engine, 'services')
+        services = db_utils.get_table(engine, 'services')
         service = services.select(services.c.id == 4).execute().first()
         self.assertEqual(0, service.deleted)
         service = services.select(services.c.id == 5).execute().first()
         self.assertEqual(service.id, service.deleted)
 
-        volumes = get_table(engine, 'volumes')
+        volumes = db_utils.get_table(engine, 'volumes')
         volume = volumes.select(volumes.c.id == "first").execute().first()
         self.assertEqual("", volume.deleted)
         volume = volumes.select(volumes.c.id == "second").execute().first()
@@ -802,8 +794,8 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
             # NOTE(danms): no use of type5
             ]
 
-        instances = get_table(engine, 'instances')
-        instance_types = get_table(engine, 'instance_types')
+        instances = db_utils.get_table(engine, 'instances')
+        instance_types = db_utils.get_table(engine, 'instance_types')
         engine.execute(instance_types.insert(), fake_types)
         engine.execute(instances.insert(), fake_instances)
 
@@ -812,9 +804,9 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     def _check_153(self, engine, data):
         fake_types, fake_instances = data
         # NOTE(danms): Fetch all the tables and data from scratch after change
-        instances = get_table(engine, 'instances')
-        instance_types = get_table(engine, 'instance_types')
-        sys_meta = get_table(engine, 'instance_system_metadata')
+        instances = db_utils.get_table(engine, 'instances')
+        instance_types = db_utils.get_table(engine, 'instance_types')
+        sys_meta = db_utils.get_table(engine, 'instance_system_metadata')
 
         # Collect all system metadata, indexed by instance_uuid
         metadata = collections.defaultdict(dict)
@@ -864,8 +856,8 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
                 base_name = table_name
                 shadow_name = db._SHADOW_TABLE_PREFIX + table_name
                 self.assertIn(shadow_name, table_names)
-            shadow_table = get_table(engine, shadow_name)
-            base_table = get_table(engine, base_name)
+            shadow_table = db_utils.get_table(engine, shadow_name)
+            base_table = db_utils.get_table(engine, base_name)
             base_columns = []
             shadow_columns = []
             for column in base_table.columns:
@@ -923,7 +915,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         self._check_149(engine, data)
 
     def _pre_upgrade_158(self, engine):
-        networks = get_table(engine, 'networks')
+        networks = db_utils.get_table(engine, 'networks')
         data = [
             {'vlan': 1, 'deleted': 0},
             {'vlan': 1, 'deleted': 0},
@@ -935,7 +927,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         return data
 
     def _check_158(self, engine, data):
-        networks = get_table(engine, 'networks')
+        networks = db_utils.get_table(engine, 'networks')
         rows = networks.select().\
                     where(networks.c.deleted != networks.c.id).\
                     execute().\
@@ -978,7 +970,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         # NOTE(maurosr): check if column length is 39 again (it currently makes
         # sense only for mysql)
         if dialect not in [postgresql.dialect, sqlite.dialect]:
-            console_pools = get_table(engine, 'console_pools')
+            console_pools = db_utils.get_table(engine, 'console_pools')
             self.assertEqual(console_pools.columns['address'].type.length, 39)
         # recheck the 149 data
         self._check_149(engine, data)
@@ -988,7 +980,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         # NOTE(maurosr): check if column length is 43 again (it currently makes
         # sense only for mysql)
         if dialect not in [postgresql.dialect, sqlite.dialect]:
-            console_pools = get_table(engine, 'console_pools')
+            console_pools = db_utils.get_table(engine, 'console_pools')
             self.assertEqual(console_pools.columns['address'].type.length, 43)
 
     # migration 160, fix system_metadata NULL deleted entries to be 0
@@ -1003,8 +995,8 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
             dict(instance_uuid='m160-uuid2', key='foo2', value='bar2'),
             dict(instance_uuid='m160-uuid3', key='foo3', value='bar3')]
 
-        instances = get_table(engine, 'instances')
-        sys_meta = get_table(engine, 'instance_system_metadata')
+        instances = db_utils.get_table(engine, 'instances')
+        sys_meta = db_utils.get_table(engine, 'instance_system_metadata')
         engine.execute(instances.insert(), fake_instances)
 
         # Create the metadata entries
@@ -1026,7 +1018,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
 
     def _check_160(self, engine, data):
         our_ids = data.keys()
-        sys_meta = get_table(engine, 'instance_system_metadata')
+        sys_meta = db_utils.get_table(engine, 'instance_system_metadata')
         results = sys_meta.select().where(sys_meta.c.id.in_(our_ids)).\
                                     execute()
         results = list(results)
@@ -1057,8 +1049,8 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
             dict(sm_base, key='instance_type_baz', created_at=now),
             ]
 
-        instances = get_table(engine, 'instances')
-        sys_meta = get_table(engine, 'instance_system_metadata')
+        instances = db_utils.get_table(engine, 'instances')
+        sys_meta = db_utils.get_table(engine, 'instance_system_metadata')
         engine.execute(instances.insert(), fake_instances)
 
         data = {}
@@ -1071,7 +1063,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
 
     def _check_161(self, engine, data):
         our_ids = data.keys()
-        sys_meta = get_table(engine, 'instance_system_metadata')
+        sys_meta = db_utils.get_table(engine, 'instance_system_metadata')
         results = sys_meta.select().where(sys_meta.c.id.in_(our_ids)).\
                                     execute()
         results = list(results)
@@ -1108,7 +1100,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
                 self.assertEqual(result['created_at'], None)
 
     def _pre_upgrade_172(self, engine):
-        instance_types = get_table(engine, 'instance_types')
+        instance_types = db_utils.get_table(engine, 'instance_types')
         data = [
             dict(id=21, name='uc_name0', memory_mb=128, vcpus=1,
                  root_gb=10, ephemeral_gb=0, flavorid="uc_flavor1", swap=0,
@@ -1131,7 +1123,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         return data
 
     def _check_172(self, engine, data):
-        instance_types = get_table(engine, 'instance_types')
+        instance_types = db_utils.get_table(engine, 'instance_types')
 
         not_deleted = instance_types.c.deleted != instance_types.c.id
 
@@ -1165,12 +1157,12 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
                               created_at=created_at[2],
                               deleted=0)
                          ]
-        keypairs = get_table(engine, 'key_pairs')
+        keypairs = db_utils.get_table(engine, 'key_pairs')
         engine.execute(keypairs.insert(), fake_keypairs)
         return fake_keypairs
 
     def _check_173(self, engine, data):
-        keypairs = get_table(engine, 'key_pairs')
+        keypairs = db_utils.get_table(engine, 'key_pairs')
         # Unique constraints are not listed in table.constraints for any db.
         # So, simply add a duplicate keypair to check if unique constraint
         # is applied to the key_pairs table or not.
@@ -1192,8 +1184,9 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         self.assertEqual(len(rows), 2)
 
     def _pre_upgrade_174(self, engine):
-        instance_types = get_table(engine, 'instance_types')
-        instance_type_projects = get_table(engine, 'instance_type_projects')
+        instance_types = db_utils.get_table(engine, 'instance_types')
+        instance_type_projects = db_utils.get_table(engine,
+                                                    'instance_type_projects')
 
         instance_type_data = [
             dict(id=31, name='itp_name0', memory_mb=128, vcpus=1,
@@ -1212,7 +1205,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
                        instance_type_projects_data)
 
     def _check_174(self, engine, data):
-        it_projects = get_table(engine, 'instance_type_projects')
+        it_projects = db_utils.get_table(engine, 'instance_type_projects')
 
         def get_(project_id, it_id, deleted):
             deleted_value = 0 if not deleted else it_projects.c.id
@@ -1233,7 +1226,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     # migration 175, Modify volume_usage-cache, Drop column instance_id, add
     # columns instance_uuid, project_id and user_id
     def _pre_upgrade_175(self, engine):
-        volume_usage_cache = get_table(engine, 'volume_usage_cache')
+        volume_usage_cache = db_utils.get_table(engine, 'volume_usage_cache')
         fake_usage = {'volume_id': 'fake_volume_id',
                       'instance_id': 10,
                       'tot_last_refreshed': datetime.datetime.now(),
@@ -1249,7 +1242,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         volume_usage_cache.insert().execute(fake_usage)
 
     def _check_175(self, engine, data):
-        volume_usage_cache = get_table(engine, 'volume_usage_cache')
+        volume_usage_cache = db_utils.get_table(engine, 'volume_usage_cache')
         # Get the record
         rows = volume_usage_cache.select().execute().fetchall()
         self.assertEqual(len(rows), 1)
@@ -1260,7 +1253,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         self.assertFalse('instance_id' in rows[0])
 
     def _post_downgrade_175(self, engine):
-        volume_usage_cache = get_table(engine, 'volume_usage_cache')
+        volume_usage_cache = db_utils.get_table(engine, 'volume_usage_cache')
         # Get the record
         rows = volume_usage_cache.select().execute().fetchall()
         self.assertEqual(len(rows), 1)
@@ -1271,7 +1264,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         self.assertEqual(rows[0]['instance_id'], None)
 
     def _check_176(self, engine, data):
-        volume_usage_cache = get_table(engine, 'volume_usage_cache')
+        volume_usage_cache = db_utils.get_table(engine, 'volume_usage_cache')
         # Get the record
         rows = volume_usage_cache.select().execute().fetchall()
         self.assertEqual(len(rows), 1)
@@ -1279,7 +1272,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         self.assertEqual(rows[0]['availability_zone'], None)
 
     def _post_downgrade_176(self, engine):
-        volume_usage_cache = get_table(engine, 'volume_usage_cache')
+        volume_usage_cache = db_utils.get_table(engine, 'volume_usage_cache')
         # Get the record
         rows = volume_usage_cache.select().execute().fetchall()
         self.assertEqual(len(rows), 1)
@@ -1287,7 +1280,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         self.assertFalse('availability_zone' in rows[0])
 
     def _pre_upgrade_177(self, engine):
-        floating_ips = get_table(engine, 'floating_ips')
+        floating_ips = db_utils.get_table(engine, 'floating_ips')
         data = [
             {'address': '128.128.128.128', 'deleted': 0},
             {'address': '128.128.128.128', 'deleted': 0},
@@ -1299,7 +1292,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         return data
 
     def _check_177(self, engine, data):
-        floating_ips = get_table(engine, 'floating_ips')
+        floating_ips = db_utils.get_table(engine, 'floating_ips')
 
         def get_(address, deleted):
             deleted_value = 0 if not deleted else floating_ips.c.id
@@ -1323,13 +1316,13 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
             {'id': 5, 'deleted': False},
         ]
 
-        cells = get_table(engine, 'cells')
+        cells = db_utils.get_table(engine, 'cells')
         engine.execute(cells.insert(), cells_data)
 
         return dict(cells=cells_data)
 
     def _check_179(self, engine, data):
-        cells = get_table(engine, 'cells')
+        cells = db_utils.get_table(engine, 'cells')
         cell = cells.select(cells.c.id == 4).execute().first()
         self.assertEqual(4, cell.deleted)
         cell = cells.select(cells.c.id == 5).execute().first()
@@ -1372,27 +1365,27 @@ class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     def _pre_upgrade_002(self, engine):
         data = [{'id': 1, 'key': 'fake-key', 'image_path': '/dev/null',
                  'pxe_config_path': '/dev/null/', 'root_mb': 0, 'swap_mb': 0}]
-        table = get_table(engine, 'bm_deployments')
+        table = db_utils.get_table(engine, 'bm_deployments')
         engine.execute(table.insert(), data)
         return data
 
     def _check_002(self, engine, data):
         self.assertRaises(sqlalchemy.exc.NoSuchTableError,
-                          get_table, engine, 'bm_deployments')
+                          db_utils.get_table, engine, 'bm_deployments')
 
     def _post_downgrade_004(self, engine):
-        bm_nodes = get_table(engine, 'bm_nodes')
+        bm_nodes = db_utils.get_table(engine, 'bm_nodes')
         self.assertNotIn(u'instance_name', [c.name for c in bm_nodes.columns])
 
     def _check_005(self, engine, data):
-        bm_nodes = get_table(engine, 'bm_nodes')
+        bm_nodes = db_utils.get_table(engine, 'bm_nodes')
         columns = [c.name for c in bm_nodes.columns]
         self.assertNotIn(u'prov_vlan_id', columns)
         self.assertNotIn(u'registration_status', columns)
 
     def _pre_upgrade_006(self, engine):
-        nodes = get_table(engine, 'bm_nodes')
-        ifs = get_table(engine, 'bm_interfaces')
+        nodes = db_utils.get_table(engine, 'bm_nodes')
+        ifs = db_utils.get_table(engine, 'bm_interfaces')
         # node 1 has two diffrent addresses in bm_nodes and bm_interfaces
         engine.execute(nodes.insert(),
                        [{'id': 1,
@@ -1411,7 +1404,7 @@ class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
                          'address': 'cc:cc:cc:cc:cc:cc'}])
 
     def _check_006(self, engine, data):
-        ifs = get_table(engine, 'bm_interfaces')
+        ifs = db_utils.get_table(engine, 'bm_interfaces')
         rows = ifs.select().\
                     where(ifs.c.bm_node_id == 1).\
                     execute().\
@@ -1425,7 +1418,7 @@ class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         self.assertEqual(rows[0]['address'], 'cc:cc:cc:cc:cc:cc')
 
     def _post_downgrade_006(self, engine):
-        ifs = get_table(engine, 'bm_interfaces')
+        ifs = db_utils.get_table(engine, 'bm_interfaces')
         rows = ifs.select().where(ifs.c.bm_node_id == 1).execute().fetchall()
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]['address'], 'bb:bb:bb:bb:bb:bb')
