@@ -17,6 +17,6 @@
 # limitations under the License.
 
 # Temporary shim to do a devstack transition
-from nova.cmd import rootwrap
+from nova.openstack.common.rootwrap import cmd
 
-rootwrap.main()
+cmd.main()

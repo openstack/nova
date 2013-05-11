@@ -33,6 +33,8 @@
    they are needed, to avoid allowing more than is necessary.
 """
 
+from __future__ import print_function
+
 import ConfigParser
 import logging
 import os
@@ -55,10 +57,10 @@ def _subprocess_setup():
 
 
 def _exit_error(execname, message, errorcode, log=True):
-    print "%s: %s" % (execname, message)
+    print("%s: %s" % (execname, message))
     if log:
         logging.error(message)
-    return(errorcode)
+    sys.exit(errorcode)
 
 
 def main():
@@ -115,7 +117,7 @@ def main():
                                    preexec_fn=_subprocess_setup,
                                    env=filtermatch.get_environment(userargs))
             obj.wait()
-            return(obj.returncode)
+            sys.exit(obj.returncode)
 
     except wrapper.FilterMatchNotExecutable as exc:
         msg = ("Executable not found: %s (filter match = %s)"
