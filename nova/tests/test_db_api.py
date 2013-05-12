@@ -28,6 +28,7 @@ import mox
 from oslo.config import cfg
 from sqlalchemy.dialects import sqlite
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import MetaData
 from sqlalchemy.sql.expression import select
 
 from nova import context
@@ -4053,6 +4054,16 @@ class ArchiveTestCase(test.TestCase):
                 table = db_utils.get_table(self.engine, name)
                 del_statement = table.delete(table.c.domain.in_(self.uuidstrs))
                 self.conn.execute(del_statement)
+
+    def test_shadow_tables(self):
+        metadata = MetaData(bind=self.engine)
+        metadata.reflect()
+        for table_name in metadata.tables:
+            if table_name.startswith("shadow_"):
+                self.assertIn(table_name[7:], metadata.tables)
+                continue
+            self.assertTrue(db_utils.check_shadow_table(self.engine,
+                                                        table_name))
 
     def test_archive_deleted_rows(self):
         # Add 6 rows to table
