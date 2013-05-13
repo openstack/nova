@@ -1638,7 +1638,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                  task_state=task_states.STOPPING,
                                  terminated_at=timeutils.utcnow(),
                                  progress=0)
-                self.stop_instance(context, instance['uuid'])
+                self.stop_instance(context, instance)
 
             self._notify_about_instance_usage(
                     context, instance, "rebuild.end",
