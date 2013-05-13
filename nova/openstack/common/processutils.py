@@ -34,6 +34,11 @@ from nova.openstack.common import log as logging
 LOG = logging.getLogger(__name__)
 
 
+class InvalidArgumentError(Exception):
+    def __init__(self, message=None):
+        super(InvalidArgumentError, self).__init__(message)
+
+
 class UnknownArgumentError(Exception):
     def __init__(self, message=None):
         super(UnknownArgumentError, self).__init__(message)
@@ -179,3 +184,64 @@ def execute(*cmd, **kwargs):
             #               call clean something up in between calls, without
             #               it two execute calls in a row hangs the second one
             greenthread.sleep(0)
+
+
+def trycmd(*args, **kwargs):
+    """
+    A wrapper around execute() to more easily handle warnings and errors.
+
+    Returns an (out, err) tuple of strings containing the output of
+    the command's stdout and stderr.  If 'err' is not empty then the
+    command can be considered to have failed.
+
+    :discard_warnings   True | False. Defaults to False. If set to True,
+                        then for succeeding commands, stderr is cleared
+
+    """
+    discard_warnings = kwargs.pop('discard_warnings', False)
+
+    try:
+        out, err = execute(*args, **kwargs)
+        failed = False
+    except ProcessExecutionError, exn:
+        out, err = '', str(exn)
+        failed = True
+
+    if not failed and discard_warnings and err:
+        # Handle commands that output to stderr but otherwise succeed
+        err = ''
+
+    return out, err
+
+
+def ssh_execute(ssh, cmd, process_input=None,
+                addl_env=None, check_exit_code=True):
+    LOG.debug(_('Running cmd (SSH): %s'), cmd)
+    if addl_env:
+        raise InvalidArgumentError(_('Environment not supported over SSH'))
+
+    if process_input:
+        # This is (probably) fixable if we need it...
+        raise InvalidArgumentError(_('process_input not supported over SSH'))
+
+    stdin_stream, stdout_stream, stderr_stream = ssh.exec_command(cmd)
+    channel = stdout_stream.channel
+
+    # NOTE(justinsb): This seems suspicious...
+    # ...other SSH clients have buffering issues with this approach
+    stdout = stdout_stream.read()
+    stderr = stderr_stream.read()
+    stdin_stream.close()
+
+    exit_status = channel.recv_exit_status()
+
+    # exit_status == -1 if no exit code was returned
+    if exit_status != -1:
+        LOG.debug(_('Result was %s') % exit_status)
+        if check_exit_code and exit_status != 0:
+            raise ProcessExecutionError(exit_code=exit_status,
+                                        stdout=stdout,
+                                        stderr=stderr,
+                                        cmd=cmd)
+
+    return (stdout, stderr)
