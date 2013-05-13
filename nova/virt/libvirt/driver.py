@@ -3560,6 +3560,19 @@ class LibvirtDriver(driver.ComputeDriver):
         disk_info_text = self.get_instance_disk_info(instance['name'])
         disk_info = jsonutils.loads(disk_info_text)
 
+        # copy disks to destination
+        # rename instance dir to +_resize at first for using
+        # shared storage for instance dir (eg. NFS).
+        inst_base = libvirt_utils.get_instance_path(instance)
+        inst_base_resize = inst_base + "_resize"
+        shared_storage = self._is_storage_shared_with(dest, inst_base)
+
+        # try to create the directory on the remote compute node
+        # if this fails we pass the exception up the stack so we can catch
+        # failures here earlier
+        if not shared_storage:
+            utils.execute('ssh', dest, 'mkdir', '-p', inst_base)
+
         self.power_off(instance)
 
         block_device_mapping = driver.block_device_info_get_mapping(
@@ -3571,20 +3584,14 @@ class LibvirtDriver(driver.ComputeDriver):
                                       connection_info,
                                       disk_dev)
 
-        # copy disks to destination
-        # rename instance dir to +_resize at first for using
-        # shared storage for instance dir (eg. NFS).
-        inst_base = libvirt_utils.get_instance_path(instance)
-        inst_base_resize = inst_base + "_resize"
-
-        shared_storage = self._is_storage_shared_with(dest, inst_base)
         try:
             utils.execute('mv', inst_base, inst_base_resize)
+            # if we are migrating the instance with shared storage then
+            # create the directory.  If it is a remote node the directory
+            # has already been created
             if shared_storage:
                 dest = None
                 utils.execute('mkdir', '-p', inst_base)
-            else:
-                utils.execute('ssh', dest, 'mkdir', '-p', inst_base)
             for info in disk_info:
                 # assume inst_base == dirname(info['path'])
                 img_path = info['path']
