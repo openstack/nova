@@ -88,6 +88,15 @@ def nop_report_driver_status(self):
     pass
 
 
+def get_primitive_instance_by_uuid(context, instance_uuid):
+    """
+    Helper method to get an instance and then convert it to
+    a primitive form using jsonutils.
+    """
+    instance = db.instance_get_by_uuid(context, instance_uuid)
+    return jsonutils.to_primitive(instance)
+
+
 class FakeSchedulerAPI(object):
 
     def run_instance(self, ctxt, request_spec, admin_password,
@@ -2596,11 +2605,23 @@ class ComputeTestCase(BaseTestCase):
         self.compute.terminate_instance(self.context, instance,
                                         bdms=None, reservations=resvs)
 
-    def test_finish_resize(self):
-        # Contrived test to ensure finish_resize doesn't raise anything.
+    def _test_finish_resize(self, power_on):
+        # Contrived test to ensure finish_resize doesn't raise anything and
+        # also tests resize from ACTIVE or STOPPED state which determines
+        # if the resized instance is powered on or not.
+        self.power_on = power_on
+        self.fake_finish_migration_called = False
 
-        def fake(*args, **kwargs):
-            pass
+        def fake_finish_migration(context, migration, instance, disk_info,
+                                  network_info, image_meta, resize_instance,
+                                  block_device_info=None, power_on=True):
+            # nova.conf sets the default flavor to m1.small and the test
+            # sets the default flavor to m1.tiny so they should be different
+            # which makes this a resize
+            self.assertTrue(resize_instance)
+            # ensure the power_on value is what we expect
+            self.assertEqual(self.power_on, power_on)
+            self.fake_finish_migration_called = True
 
         def fake_migration_update(context, id, values):
             # Ensure instance status updates is after the migration finish
@@ -2610,12 +2631,19 @@ class ComputeTestCase(BaseTestCase):
             self.assertFalse(instance['vm_state'] == vm_states.RESIZED)
             self.assertEqual(instance['task_state'], task_states.RESIZE_FINISH)
 
-        self.stubs.Set(self.compute.driver, 'finish_migration', fake)
+        self.stubs.Set(self.compute.driver, 'finish_migration',
+                       fake_finish_migration)
         self.stubs.Set(db, 'migration_update', fake_migration_update)
 
         reservations = self._ensure_quota_reservations_committed()
 
-        instance = jsonutils.to_primitive(self._create_fake_instance())
+        vm_state = None
+        if power_on:
+            vm_state = vm_states.ACTIVE
+        else:
+            vm_state = vm_states.STOPPED
+        params = {'vm_state': vm_state}
+        instance = jsonutils.to_primitive(self._create_fake_instance(params))
         instance_type = flavors.get_default_instance_type()
         db.instance_update(self.context, instance["uuid"],
                           {"task_state": task_states.RESIZE_PREP})
@@ -2626,12 +2654,27 @@ class ComputeTestCase(BaseTestCase):
                 self.context.elevated(), instance['uuid'], 'pre-migrating')
         db.instance_update(self.context, instance["uuid"],
                            {"task_state": task_states.RESIZE_MIGRATED})
-        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
+        # NOTE(mriedem): make sure prep_resize set old_vm_state correctly
+        inst_ref = get_primitive_instance_by_uuid(self.context,
+                                                  instance['uuid'])
+        sys_meta = utils.metadata_to_dict(inst_ref['system_metadata'])
+        self.assertTrue('old_vm_state' in sys_meta)
+        if power_on:
+            self.assertEqual(vm_states.ACTIVE, sys_meta['old_vm_state'])
+        else:
+            self.assertEqual(vm_states.STOPPED, sys_meta['old_vm_state'])
         self.compute.finish_resize(self.context,
                 migration=jsonutils.to_primitive(migration_ref),
-                disk_info={}, image={}, instance=instance,
+                disk_info={}, image={}, instance=inst_ref,
                 reservations=reservations)
-        self.compute.terminate_instance(self.context, instance=instance)
+        self.assertTrue(self.fake_finish_migration_called)
+        self.compute.terminate_instance(self.context, instance=inst_ref)
+
+    def test_finish_resize_from_active(self):
+        self._test_finish_resize(power_on=True)
+
+    def test_finish_resize_from_stopped(self):
+        self._test_finish_resize(power_on=False)
 
     def test_finish_resize_with_volumes(self):
         """Contrived test to ensure finish_resize doesn't raise anything."""
@@ -3104,39 +3147,54 @@ class ComputeTestCase(BaseTestCase):
         new_instance = db.instance_update(self.context, instance['uuid'],
                                       {'host': 'foo'})
         new_instance = jsonutils.to_primitive(new_instance)
+        instance_uuid = new_instance['uuid']
         self.compute.prep_resize(self.context, instance=new_instance,
                 instance_type=instance_type, image={})
         migration_ref = db.migration_get_by_instance_and_status(
-                self.context.elevated(), new_instance['uuid'], 'pre-migrating')
-        db.instance_update(self.context, new_instance['uuid'],
+                self.context.elevated(), instance_uuid, 'pre-migrating')
+
+        # verify 'old_vm_state' was set on system_metadata
+        inst = db.instance_get_by_uuid(self.context, instance_uuid)
+        sys_meta = utils.metadata_to_dict(inst['system_metadata'])
+        self.assertEqual(vm_states.ACTIVE, sys_meta['old_vm_state'])
+
+        db.instance_update(self.context, instance_uuid,
                            {"task_state": task_states.RESIZE_PREP})
         self.compute.resize_instance(self.context, instance=new_instance,
                 migration=migration_ref, image={},
                 instance_type=jsonutils.to_primitive(instance_type))
-        inst = db.instance_get_by_uuid(self.context, new_instance['uuid'])
+        inst = db.instance_get_by_uuid(self.context, instance_uuid)
         self.assertEqual(migration_ref['dest_compute'], inst['host'])
 
         self.compute.terminate_instance(self.context,
             instance=jsonutils.to_primitive(inst))
 
-    def test_finish_revert_resize(self):
-        # Ensure that the flavor is reverted to the original on revert.
+    def _test_confirm_resize(self, power_on):
+        # Common test case method for confirm_resize
         def fake(*args, **kwargs):
             pass
 
-        def fake_finish_revert_migration_driver(*args, **kwargs):
-            # Confirm the instance uses the old type in finish_revert_resize
-            inst = args[0]
+        def fake_confirm_migration_driver(*args, **kwargs):
+            # Confirm the instance uses the new type in finish_resize
+            inst = args[1]
             sys_meta = utils.metadata_to_dict(inst['system_metadata'])
-            self.assertEqual(sys_meta['instance_type_flavorid'], '1')
+            self.assertEqual(sys_meta['instance_type_flavorid'], '3')
 
+        old_vm_state = None
+        if power_on:
+            old_vm_state = vm_states.ACTIVE
+        else:
+            old_vm_state = vm_states.STOPPED
+        params = {'vm_state': old_vm_state}
+        instance = jsonutils.to_primitive(self._create_fake_instance(params))
+
+        self.flags(allow_resize_to_same_host=True)
         self.stubs.Set(self.compute.driver, 'finish_migration', fake)
-        self.stubs.Set(self.compute.driver, 'finish_revert_migration',
-                       fake_finish_revert_migration_driver)
+        self.stubs.Set(self.compute.driver, 'confirm_migration',
+                       fake_confirm_migration_driver)
 
         reservations = self._ensure_quota_reservations_committed()
 
-        instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_uuid = instance['uuid']
 
         self.compute.run_instance(self.context, instance=instance)
@@ -3148,7 +3206,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(instance_type_ref['flavorid'], '1')
 
         new_inst_ref = db.instance_update(self.context, instance_uuid,
-                                          {'host': 'foo'})
+                                          {'vm_state': old_vm_state})
 
         new_instance_type_ref = db.instance_type_get_by_flavor_id(
                 self.context, 3)
@@ -3163,8 +3221,10 @@ class ComputeTestCase(BaseTestCase):
                 inst_ref['uuid'], 'pre-migrating')
 
         # NOTE(danms): make sure to refresh our inst_ref after prep_resize
-        inst_ref = db.instance_get_by_uuid(self.context, instance_uuid)
-        instance = jsonutils.to_primitive(inst_ref)
+        instance = get_primitive_instance_by_uuid(self.context, instance_uuid)
+        # NOTE(mriedem): ensure prep_resize set old_vm_state in system_metadata
+        sys_meta = utils.metadata_to_dict(instance['system_metadata'])
+        self.assertEqual(old_vm_state, sys_meta['old_vm_state'])
         db.instance_update(self.context, instance_uuid,
                            {"task_state": task_states.RESIZE_PREP})
         self.compute.resize_instance(self.context, instance=instance,
@@ -3176,44 +3236,191 @@ class ComputeTestCase(BaseTestCase):
                     disk_info={}, image={}, instance=instance)
 
         # Prove that the instance size is now the new size
+        rpcinst = get_primitive_instance_by_uuid(self.context, instance_uuid)
+        instance_type_ref = db.instance_type_get(self.context,
+                rpcinst['instance_type_id'])
+        self.assertEqual(instance_type_ref['flavorid'], '3')
+
+        # Finally, confirm the resize and verify the new flavor is applied
+        db.instance_update(self.context, instance_uuid,
+                           {"task_state": None})
+
+        def fake_setup_networks_on_host(cls, ctxt, instance, host,
+                                        teardown):
+            self.assertEqual(host, migration_ref['source_compute'])
+            inst = db.instance_get_by_uuid(ctxt, instance['uuid'])
+            self.assertEqual('fake-mini', inst['host'])
+            self.assertTrue(teardown)
+
+        self.stubs.Set(network_api.API, 'setup_networks_on_host',
+                       fake_setup_networks_on_host)
+
+        def fake_get_power_state(context, instance):
+            if power_on:
+                return power_state.RUNNING
+            else:
+                return power_state.SHUTDOWN
+
+        self.stubs.Set(self.compute, '_get_power_state', fake_get_power_state)
+
+        rpcinst = db.instance_get_by_uuid(self.context, rpcinst['uuid'])
+        self.compute.confirm_resize(self.context, rpcinst, reservations,
+                                    migration_ref)
+
+        instance = get_primitive_instance_by_uuid(self.context, instance_uuid)
+        self.assertEqual(instance['task_state'], None)
+
+        instance_type_ref = db.instance_type_get(self.context,
+                instance['instance_type_id'])
+        self.assertEqual(instance_type_ref['flavorid'], '3')
+        self.assertEqual('fake-mini', migration_ref['source_compute'])
+        self.assertEqual(old_vm_state, instance['vm_state'])
+        self.compute.terminate_instance(self.context, instance=instance)
+
+    def test_confirm_resize_from_active(self):
+        self._test_confirm_resize(power_on=True)
+
+    def test_confirm_resize_from_stopped(self):
+        self._test_confirm_resize(power_on=False)
+
+    def _test_finish_revert_resize(self, power_on,
+                                   remove_old_vm_state=False):
+        """
+        Convenience method that does most of the work for the
+        test_finish_revert_resize tests.
+        :param power_on -- True if testing resize from ACTIVE state, False if
+        testing resize from STOPPED state.
+        :param remove_old_vm_state -- True if testing a case where the
+        'old_vm_state' system_metadata is not present when the
+        finish_revert_resize method is called.
+        """
+        def fake(*args, **kwargs):
+            pass
+
+        def fake_finish_revert_migration_driver(*args, **kwargs):
+            # Confirm the instance uses the old type in finish_revert_resize
+            inst = args[0]
+            sys_meta = utils.metadata_to_dict(inst['system_metadata'])
+            self.assertEqual(sys_meta['instance_type_flavorid'], '1')
+
+        old_vm_state = None
+        if power_on:
+            old_vm_state = vm_states.ACTIVE
+        else:
+            old_vm_state = vm_states.STOPPED
+        params = {'vm_state': old_vm_state}
+        instance = jsonutils.to_primitive(self._create_fake_instance(params))
+
+        self.stubs.Set(self.compute.driver, 'finish_migration', fake)
+        self.stubs.Set(self.compute.driver, 'finish_revert_migration',
+                       fake_finish_revert_migration_driver)
+
+        reservations = self._ensure_quota_reservations_committed()
+
+        instance_uuid = instance['uuid']
+
+        self.compute.run_instance(self.context, instance=instance)
+
+        # Confirm the instance size before the resize starts
         inst_ref = db.instance_get_by_uuid(self.context, instance_uuid)
         instance_type_ref = db.instance_type_get(self.context,
                 inst_ref['instance_type_id'])
+        self.assertEqual(instance_type_ref['flavorid'], '1')
+
+        old_vm_state = instance['vm_state']
+        new_inst_ref = db.instance_update(self.context, instance_uuid,
+                                          {'host': 'foo',
+                                           'vm_state': old_vm_state})
+
+        new_instance_type_ref = db.instance_type_get_by_flavor_id(
+                self.context, 3)
+        new_instance_type_p = jsonutils.to_primitive(new_instance_type_ref)
+        self.compute.prep_resize(self.context,
+                instance=jsonutils.to_primitive(new_inst_ref),
+                instance_type=new_instance_type_p,
+                image={}, reservations=reservations)
+
+        migration_ref = db.migration_get_by_instance_and_status(
+                self.context.elevated(),
+                inst_ref['uuid'], 'pre-migrating')
+
+        # NOTE(danms): make sure to refresh our inst_ref after prep_resize
+        instance = get_primitive_instance_by_uuid(self.context, instance_uuid)
+        # NOTE(mriedem): ensure prep_resize set old_vm_state in system_metadata
+        sys_meta = utils.metadata_to_dict(instance['system_metadata'])
+        self.assertEqual(old_vm_state, sys_meta['old_vm_state'])
+        db.instance_update(self.context, instance_uuid,
+                           {"task_state": task_states.RESIZE_PREP})
+        self.compute.resize_instance(self.context, instance=instance,
+                                     migration=migration_ref,
+                                     image={},
+                                     instance_type=new_instance_type_p)
+        self.compute.finish_resize(self.context,
+                    migration=jsonutils.to_primitive(migration_ref),
+                    disk_info={}, image={}, instance=instance)
+
+        # Prove that the instance size is now the new size
+        rpcinst = get_primitive_instance_by_uuid(self.context, instance_uuid)
+        instance_type_ref = db.instance_type_get(self.context,
+                rpcinst['instance_type_id'])
         self.assertEqual(instance_type_ref['flavorid'], '3')
 
         # Finally, revert and confirm the old flavor has been applied
-        rpcinst = jsonutils.to_primitive(inst_ref)
         db.instance_update(self.context, instance_uuid,
                            {"task_state": task_states.RESIZE_REVERTING})
         self.compute.revert_resize(self.context,
                 migration_id=migration_ref['id'], instance=rpcinst,
                 reservations=reservations)
 
-        def fake_setup_networks_on_host(cls, ctxt, instance, host):
+        def fake_setup_networks_on_host(cls, ctxt, instance, host,
+                                        teardown=False):
             self.assertEqual(host, migration_ref['source_compute'])
             inst = db.instance_get_by_uuid(ctxt, instance['uuid'])
             self.assertEqual(host, inst['host'])
+            self.assertFalse(teardown)
 
         self.stubs.Set(network_api.API, 'setup_networks_on_host',
                        fake_setup_networks_on_host)
 
         rpcinst = db.instance_get_by_uuid(self.context, rpcinst['uuid'])
+        if remove_old_vm_state:
+            # need to wipe out the old_vm_state from system_metadata
+            # before calling finish_revert_resize
+            sys_meta = utils.metadata_to_dict(rpcinst['system_metadata'])
+            sys_meta.pop('old_vm_state')
+            rpcinst = db.instance_update(self.context, rpcinst['uuid'],
+                                         {'system_metadata': sys_meta})
+
         self.compute.finish_revert_resize(self.context,
                 migration=jsonutils.to_primitive(migration_ref),
                 instance=rpcinst, reservations=reservations)
 
-        instance = db.instance_get_by_uuid(self.context, instance_uuid)
-        self.assertEqual(instance['vm_state'], vm_states.ACTIVE)
+        instance = get_primitive_instance_by_uuid(self.context, instance_uuid)
         self.assertEqual(instance['task_state'], None)
 
-        inst_ref = db.instance_get_by_uuid(self.context, instance_uuid)
         instance_type_ref = db.instance_type_get(self.context,
-                inst_ref['instance_type_id'])
+                instance['instance_type_id'])
         self.assertEqual(instance_type_ref['flavorid'], '1')
-        self.assertEqual(inst_ref['host'], migration_ref['source_compute'])
+        self.assertEqual(instance['host'], migration_ref['source_compute'])
+        if remove_old_vm_state:
+            self.assertEqual(vm_states.ACTIVE, instance['vm_state'])
+        else:
+            self.assertEqual(old_vm_state, instance['vm_state'])
 
-        self.compute.terminate_instance(self.context,
-            instance=jsonutils.to_primitive(inst_ref))
+        self.compute.terminate_instance(self.context, instance=instance)
+
+    def test_finish_revert_resize_from_active(self):
+        self._test_finish_revert_resize(power_on=True)
+
+    def test_finish_revert_resize_from_stopped(self):
+        self._test_finish_revert_resize(power_on=False)
+
+    def test_finish_revert_resize_from_stopped_remove_old_vm_state(self):
+        # in  this case we resize from STOPPED but end up with ACTIVE
+        # because the old_vm_state value is not present in
+        # finish_revert_resize
+        self._test_finish_revert_resize(power_on=False,
+                                        remove_old_vm_state=True)
 
     def _test_cleanup_stored_instance_types(self, old, new, revert=False):
         migration = dict(old_instance_type_id=old,
@@ -4592,15 +4799,23 @@ class ComputeTestCase(BaseTestCase):
         self.mox.ReplayAll()
         self.compute._init_instance('fake-context', instance)
 
-    def test_init_instance_reverts_crashed_migrations(self):
+    def _test_init_instance_reverts_crashed_migrations(self,
+                                                       old_vm_state=None):
+        power_on = True if (not old_vm_state or
+                            old_vm_state == vm_states.ACTIVE) else False
+        sys_meta = {
+            'old_vm_state': old_vm_state
+            }
         instance = {
             'uuid': 'foo',
             'vm_state': vm_states.ERROR,
             'task_state': task_states.RESIZE_MIGRATING,
             'power_state': power_state.SHUTDOWN,
+            'system_metadata': sys_meta
             }
         fixed = dict(instance, task_state=None)
         self.mox.StubOutWithMock(compute_utils, 'get_nw_info_for_instance')
+        self.mox.StubOutWithMock(utils, 'metadata_to_dict')
         self.mox.StubOutWithMock(self.compute.driver, 'plug_vifs')
         self.mox.StubOutWithMock(self.compute.driver,
                                  'finish_revert_migration')
@@ -4612,9 +4827,10 @@ class ComputeTestCase(BaseTestCase):
         compute_utils.get_nw_info_for_instance(instance).AndReturn(
             network_model.NetworkInfo())
         self.compute.driver.plug_vifs(instance, [])
+        utils.metadata_to_dict(instance['system_metadata']).AndReturn(sys_meta)
         self.compute._get_instance_volume_block_device_info(
             self.context, instance).AndReturn([])
-        self.compute.driver.finish_revert_migration(instance, [], [])
+        self.compute.driver.finish_revert_migration(instance, [], [], power_on)
         self.compute._instance_update(self.context, instance['uuid'],
                                       task_state=None).AndReturn(fixed)
         self.compute.driver.get_info(fixed).AndReturn(
@@ -4623,6 +4839,17 @@ class ComputeTestCase(BaseTestCase):
         self.mox.ReplayAll()
 
         self.compute._init_instance(self.context, instance)
+
+    def test_init_instance_reverts_crashed_migration_from_active(self):
+        self._test_init_instance_reverts_crashed_migrations(
+                                                old_vm_state=vm_states.ACTIVE)
+
+    def test_init_instance_reverts_crashed_migration_from_stopped(self):
+        self._test_init_instance_reverts_crashed_migrations(
+                                                old_vm_state=vm_states.STOPPED)
+
+    def test_init_instance_reverts_crashed_migration_no_old_state(self):
+        self._test_init_instance_reverts_crashed_migrations(old_vm_state=None)
 
     def _test_init_instance_update_nw_info_cache_helper(self, legacy_nwinfo):
         self.compute.driver.legacy_nwinfo = lambda *a, **k: legacy_nwinfo
