@@ -1328,6 +1328,10 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         cell = cells.select(cells.c.id == 5).execute().first()
         self.assertEqual(0, cell.deleted)
 
+    def _check_180(self, engine, data):
+        self.assertTrue(db_utils.check_shadow_table(engine,
+                                                    "volume_usage_cache"))
+
 
 class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""
