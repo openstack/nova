@@ -2,6 +2,7 @@
 
 # Copyright 2011 OpenStack Foundation
 # All Rights Reserved.
+# Copyright 2013 IBM Corp.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -19,6 +20,7 @@ from nova import exception
 from nova.network import model
 from nova import test
 from nova.tests import fake_network_cache_model
+from nova.virt import netutils
 
 
 class RouteTests(test.TestCase):
@@ -347,3 +349,77 @@ class NetworkInfoTests(test.TestCase):
                 [fake_network_cache_model.new_ip({'address': '10.10.0.2'}),
                  fake_network_cache_model.new_ip(
                         {'address': '10.10.0.3'})] * 4)
+
+    def _test_injected_network_template(self, should_inject, use_ipv6=False,
+                                        legacy=False):
+        """Check that netutils properly decides whether to inject based on
+           whether the supplied subnet is static or dynamic.
+        """
+        network = fake_network_cache_model.new_network({'subnets': []})
+        if should_inject:
+            network.add_subnet(fake_network_cache_model.new_subnet())
+            if use_ipv6:
+                gateway_ip = fake_network_cache_model.new_ip(dict(
+                                                        address='1234:567::1'))
+                ip = fake_network_cache_model.new_ip(dict(
+                                                        address='1234:567::2'))
+                subnet_dict = dict(
+                        cidr='1234:567::/48',
+                        gateway=gateway_ip,
+                        ips=[ip])
+                network.add_subnet(fake_network_cache_model.new_subnet(
+                        subnet_dict))
+        else:
+            subnet_dict = dict(dhcp_server='10.10.0.1')
+            network.add_subnet(fake_network_cache_model.new_subnet(
+                    subnet_dict))
+        # Behave as though CONF.flat_injected is True
+        network['meta']['injected'] = True
+        vif = fake_network_cache_model.new_vif({'network': network})
+        ninfo = model.NetworkInfo([vif])
+        if legacy:
+            ninfo = ninfo.legacy()
+
+        template = netutils.get_injected_network_template(ninfo,
+                                                          use_ipv6=use_ipv6)
+
+        # NOTE(bnemec): There is a bug with legacy network info that causes
+        # it to inject regardless of whether the network is static or dynamic.
+        # This can't be fixed without changes that would potentially break
+        # existing code, so until legacy network info goes away this test
+        # will just ignore the improper behavior.
+        if not should_inject and not legacy:
+            self.assertTrue(template is None)
+        else:
+            self.assertTrue('auto eth0' in template)
+            self.assertTrue('iface eth0 inet static' in template)
+            self.assertTrue('address 10.10.0.2' in template)
+            self.assertTrue('netmask 255.255.255.0' in template)
+            self.assertTrue('broadcast 10.10.0.255' in template)
+            self.assertTrue('gateway 10.10.0.1' in template)
+            self.assertTrue('dns-nameservers 1.2.3.4 2.3.4.5' in template)
+            if use_ipv6:
+                self.assertTrue('iface eth0 inet6 static' in template)
+                self.assertTrue('address 1234:567::2' in template)
+                self.assertTrue('netmask 48' in template)
+                self.assertTrue('gateway 1234:567::1' in template)
+
+    def test_injection_static(self):
+        self._test_injected_network_template(should_inject=True)
+
+    def test_injection_static_ipv6(self):
+        self._test_injected_network_template(should_inject=True, use_ipv6=True)
+
+    def test_injection_dynamic(self):
+        self._test_injected_network_template(should_inject=False)
+
+    def test_injection_static_legacy(self):
+        self._test_injected_network_template(should_inject=True, legacy=True)
+
+    def test_injection_static_ipv6_legacy(self):
+        self._test_injected_network_template(should_inject=True,
+                                             use_ipv6=True,
+                                             legacy=True)
+
+    def test_injection_dynamic_legacy(self):
+        self._test_injected_network_template(should_inject=False, legacy=True)
