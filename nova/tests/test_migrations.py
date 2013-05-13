@@ -1404,6 +1404,10 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
                     values({field: data['cidr'] + '/128'}).\
                     execute()
 
+    def _check_183(self, engine, data):
+        table_name = 'security_group_default_rules'
+        self.assertTrue(db_utils.check_shadow_table(engine, table_name))
+
 
 class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""
