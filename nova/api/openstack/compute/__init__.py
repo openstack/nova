@@ -128,3 +128,15 @@ class APIRouter(nova.api.openstack.APIRouter):
                            controller=server_metadata_controller,
                            action='update_all',
                            conditions={"method": ['PUT']})
+
+
+class APIRouterV3(nova.api.openstack.APIRouterV3):
+    """
+    Routes requests on the OpenStack API to the appropriate controller
+    and method.
+    """
+
+    def _register_extensions(self, ext):
+        pass
+        # TODO(cyeoh): bp v3-api-extension-framework - Register extension
+        # information
