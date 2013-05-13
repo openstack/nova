@@ -958,8 +958,8 @@ def load_compute_driver(virtapi, compute_driver=None):
                                               compute_driver,
                                               virtapi)
         return utils.check_isinstance(driver, ComputeDriver)
-    except ImportError as e:
-        LOG.error(_("Unable to load the virtualization driver: %s") % (e))
+    except ImportError:
+        LOG.exception(_("Unable to load the virtualization driver"))
         sys.exit(1)
 
 
