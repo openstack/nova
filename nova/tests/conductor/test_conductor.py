@@ -1166,3 +1166,71 @@ class ConductorPolicyTest(test.TestCase):
 
         for key in keys:
             self.assertTrue(hasattr(instance, key))
+
+
+class _BaseTaskTestCase(object):
+    def setUp(self):
+        super(_BaseTaskTestCase, self).setUp()
+        self.user_id = 'fake'
+        self.project_id = 'fake'
+        self.context = FakeContext(self.user_id, self.project_id)
+
+    def test_migrate_server(self):
+        self.mox.StubOutWithMock(self.conductor_manager.scheduler_rpcapi,
+                                 'live_migration')
+        self.conductor_manager.scheduler_rpcapi.live_migration(self.context,
+            'block_migration', 'disk_over_commit', 'instance', 'destination')
+        self.mox.ReplayAll()
+        self.conductor.migrate_server(self.context, 'instance',
+            {'host': 'destination'}, True, False, None, 'block_migration',
+            'disk_over_commit')
+
+    def test_migrate_server_fails_with_non_live(self):
+        self.assertRaises(NotImplementedError, self.conductor.migrate_server,
+            self.context, None, None, False, False, None, None, None)
+
+    def test_migrate_server_fails_with_rebuild(self):
+        self.assertRaises(NotImplementedError, self.conductor.migrate_server,
+            self.context, None, None, True, True, None, None, None)
+
+    def test_migrate_server_fails_with_flavor(self):
+        self.assertRaises(NotImplementedError, self.conductor.migrate_server,
+            self.context, None, None, True, False, "dummy", None, None)
+
+
+class ConductorTaskTestCase(_BaseTaskTestCase, test.TestCase):
+    """ComputeTaskManager Tests."""
+    def setUp(self):
+        super(ConductorTaskTestCase, self).setUp()
+        self.conductor = conductor_manager.ComputeTaskManager()
+        self.conductor_manager = self.conductor
+
+
+class ConductorTaskRPCAPITestCase(_BaseTaskTestCase, test.TestCase):
+    """Conductor compute_task RPC namespace Tests."""
+    def setUp(self):
+        super(ConductorTaskRPCAPITestCase, self).setUp()
+        self.conductor_service = self.start_service(
+            'conductor', manager='nova.conductor.manager.ConductorManager')
+        self.conductor = conductor_rpcapi.ComputeTaskAPI()
+        service_manager = self.conductor_service.manager
+        self.conductor_manager = service_manager.compute_task_mgr
+
+
+class ConductorTaskAPITestCase(_BaseTaskTestCase, test.TestCase):
+    """Compute task API Tests."""
+    def setUp(self):
+        super(ConductorTaskAPITestCase, self).setUp()
+        self.conductor_service = self.start_service(
+            'conductor', manager='nova.conductor.manager.ConductorManager')
+        self.conductor = conductor_api.ComputeTaskAPI()
+        service_manager = self.conductor_service.manager
+        self.conductor_manager = service_manager.compute_task_mgr
+
+
+class ConductorLocalComputeTaskAPITestCase(ConductorTaskAPITestCase):
+    """Conductor LocalComputeTaskAPI Tests."""
+    def setUp(self):
+        super(ConductorLocalComputeTaskAPITestCase, self).setUp()
+        self.conductor = conductor_api.LocalComputeTaskAPI()
+        self.conductor_manager = self.conductor._manager._target

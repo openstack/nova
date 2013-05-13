@@ -197,9 +197,19 @@ class API(base.Base):
         self.consoleauth_rpcapi = consoleauth_rpcapi.ConsoleAuthAPI()
         self.scheduler_rpcapi = scheduler_rpcapi.SchedulerAPI()
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
+        self._compute_task_api = None
         self.servicegroup_api = servicegroup.API()
 
         super(API, self).__init__(**kwargs)
+
+    @property
+    def compute_task_api(self):
+        if self._compute_task_api is None:
+            # TODO(alaski): Remove calls into here from conductor manager so
+            # that this isn't necessary. #1180540
+            from nova import conductor
+            self._compute_task_api = conductor.ComputeTaskAPI()
+        return self._compute_task_api
 
     def _instance_update(self, context, instance_uuid, **kwargs):
         """Update an instance in the database using kwargs as value."""
@@ -2501,8 +2511,11 @@ class API(base.Base):
                                task_state=task_states.MIGRATING,
                                expected_task_state=None)
 
-        self.scheduler_rpcapi.live_migration(context, block_migration,
-                disk_over_commit, instance, host_name)
+        self.compute_task_api.migrate_server(context, instance,
+                scheduler_hint={'host': host_name},
+                live=True, rebuild=False, flavor=None,
+                block_migration=block_migration,
+                disk_over_commit=disk_over_commit)
 
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED],
                           task_state=[None])
