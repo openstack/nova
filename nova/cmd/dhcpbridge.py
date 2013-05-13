@@ -21,13 +21,10 @@
 Handle lease database updates from DHCP servers.
 """
 
-import gettext
 import os
 import sys
 
 from oslo.config import cfg
-
-gettext.install('nova', unicode=1)
 
 from nova import config
 from nova import context

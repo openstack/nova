@@ -54,13 +54,10 @@
   CLI interface for nova bare-metal management.
 """
 
-import gettext
 import os
 import sys
 
 from oslo.config import cfg
-
-gettext.install('nova', unicode=1)
 
 from nova import config
 from nova.openstack.common import cliutils
