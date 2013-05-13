@@ -255,6 +255,7 @@ policy_data = """
     "compute_extension:volume_attachments:index": "",
     "compute_extension:volume_attachments:show": "",
     "compute_extension:volume_attachments:create": "",
+    "compute_extension:volume_attachments:update": "",
     "compute_extension:volume_attachments:delete": "",
     "compute_extension:volumetypes": "",
     "compute_extension:zones": "",

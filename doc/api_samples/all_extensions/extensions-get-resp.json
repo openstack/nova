@@ -97,20 +97,20 @@
             "updated": "2011-09-14T00:00:00+00:00"
         },
         {
-            "alias": "OS-SRV-USG",
-            "description": "Adds launched_at and terminated_at on Instances.",
-            "links": [],
-            "name": "ServerUsage",
-            "namespace": "http://docs.openstack.org/compute/ext/server_usage/api/v1.1",
-            "updated": "2013-04-29T00:00:00+00:00"
-        },
-        {
             "alias": "OS-SCH-HNT",
             "description": "Pass arbitrary key/value pairs to the scheduler.",
             "links": [],
             "name": "SchedulerHints",
             "namespace": "http://docs.openstack.org/compute/ext/scheduler-hints/api/v2",
             "updated": "2011-07-19T00:00:00+00:00"
+        },
+        {
+            "alias": "OS-SRV-USG",
+            "description": "Adds launched_at and terminated_at on Servers.",
+            "links": [],
+            "name": "ServerUsage",
+            "namespace": "http://docs.openstack.org/compute/ext/server_usage/api/v1.1",
+            "updated": "2013-04-29T00:00:00+00:00"
         },
         {
             "alias": "os-admin-actions",
@@ -161,20 +161,20 @@
             "updated": "2013-01-04T00:00:00+00:00"
         },
         {
-            "alias": "os-cells",
-            "description": "Enables cells-related functionality such as adding neighbor cells,\n    listing neighbor cells, and getting the capabilities of the local cell.\n    ",
-            "links": [],
-            "name": "Cells",
-            "namespace": "http://docs.openstack.org/compute/ext/cells/api/v1.1",
-            "updated": "2011-09-21T00:00:00+00:00"
-        },
-        {
             "alias": "os-cell-capacities",
             "description": "Adding functionality to get cell capacities.",
             "links": [],
             "name": "CellCapacities",
             "namespace": "http://docs.openstack.org/compute/ext/cell_capacities/api/v1.1",
             "updated": "2013-05-27T00:00:00+00:00"
+        },
+        {
+            "alias": "os-cells",
+            "description": "Enables cells-related functionality such as adding neighbor cells,\n    listing neighbor cells, and getting the capabilities of the local cell.\n    ",
+            "links": [],
+            "name": "Cells",
+            "namespace": "http://docs.openstack.org/compute/ext/cells/api/v1.1",
+            "updated": "2013-05-14T00:00:00+00:00"
         },
         {
             "alias": "os-certificates",
@@ -263,6 +263,22 @@
             "name": "ExtendedFloatingIps",
             "namespace": "http://docs.openstack.org/compute/ext/extended_floating_ips/api/v2",
             "updated": "2013-04-19T00:00:00+00:00"
+        },
+        {
+            "alias": "os-extended-quotas",
+            "description": "Adds ability for admins to delete quota\n    and optionally force the update Quota command.\n    ",
+            "links": [],
+            "name": "ExtendedQuotas",
+            "namespace": "http://docs.openstack.org/compute/ext/extended_quotas/api/v1.1",
+            "updated": "2013-06-09T00:00:00+00:00"
+        },
+        {
+            "alias": "os-extended-services",
+            "description": "Extended services support.",
+            "links": [],
+            "name": "ExtendedServices",
+            "namespace": "http://docs.openstack.org/compute/ext/extended_services/api/v2",
+            "updated": "2013-05-17T00:00:00-00:00"
         },
         {
             "alias": "os-fixed-ips",
@@ -433,14 +449,6 @@
             "updated": "2012-03-12T00:00:00+00:00"
         },
         {
-            "alias": "os-extended-quotas",
-            "description": "Adds ability for admins to delete quota and optionally force the update Quota command.",
-            "links": [],
-            "name": "ExtendedQuotas",
-            "namespace": "http://docs.openstack.org/compute/ext/extended_quotas/api/v1.1",
-            "updated": "2013-06-09T00:00:00+00:00"
-        },
-        {
             "alias": "os-quota-sets",
             "description": "Quotas management support.",
             "links": [],
@@ -470,7 +478,7 @@
             "links": [],
             "name": "SecurityGroups",
             "namespace": "http://docs.openstack.org/compute/ext/securitygroups/api/v1.1",
-            "updated": "2011-07-21T00:00:00+00:00"
+            "updated": "2013-05-28T00:00:00+00:00"
         },
         {
             "alias": "os-server-diagnostics",
@@ -503,14 +511,6 @@
             "name": "Services",
             "namespace": "http://docs.openstack.org/compute/ext/services/api/v2",
             "updated": "2012-10-28T00:00:00-00:00"
-        },
-        {
-            "alias": "os-extended-services",
-            "description": "Extended services support.",
-            "links": [],
-            "name": "ExtendedServices",
-            "namespace": "http://docs.openstack.org/compute/ext/extended_services/api/v2",
-            "updated": "2013-05-17T00:00:00-00:00"
         },
         {
             "alias": "os-shelve",
@@ -567,6 +567,14 @@
             "name": "VirtualInterfaces",
             "namespace": "http://docs.openstack.org/compute/ext/virtual_interfaces/api/v1.1",
             "updated": "2011-08-17T00:00:00+00:00"
+        },
+        {
+            "alias": "os-volume-attachment-update",
+            "description": "Support for updating a volume attachment.",
+            "links": [],
+            "name": "VolumeAttachmentUpdate",
+            "namespace": "http://docs.openstack.org/compute/ext/os-volume-attachment-update/api/v2",
+            "updated": "2013-06-20T00:00:00-00:00"
         },
         {
             "alias": "os-volumes",

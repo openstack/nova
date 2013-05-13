@@ -2552,6 +2552,36 @@ class API(base.Base):
         self._detach_volume(context, instance, volume)
 
     @wrap_check_policy
+    @check_instance_lock
+    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.PAUSED,
+                                    vm_states.SUSPENDED, vm_states.STOPPED,
+                                    vm_states.RESIZED, vm_states.SOFT_DELETED],
+                          task_state=None)
+    def swap_volume(self, context, instance, old_volume, new_volume):
+        """Swap volume attached to an instance."""
+        if old_volume['attach_status'] == 'detached':
+            msg = _("Old volume must be attached in order to swap.")
+            raise exception.InvalidVolume(reason=msg)
+        # The caller likely got the instance from volume['instance_uuid']
+        # in the first place, but let's sanity check.
+        if old_volume['instance_uuid'] != instance['uuid']:
+            raise exception.VolumeUnattached(volume_id=volume['id'])
+        if new_volume['attach_status'] == 'attached':
+            msg = _("New volume must be detached in order to swap.")
+            raise exception.InvalidVolume(reason=msg)
+        if int(new_volume['size']) < int(old_volume['size']):
+            msg = _("New volume must be the same size or larger.")
+            raise exception.InvalidVolume(reason=msg)
+        self.volume_api.check_detach(context, old_volume)
+        self.volume_api.begin_detaching(context, old_volume)
+        self.volume_api.check_attach(context, new_volume, instance=instance)
+        self.volume_api.reserve_volume(context, new_volume)
+        self.compute_rpcapi.swap_volume(
+                context, instance=instance,
+                old_volume_id=old_volume['id'],
+                new_volume_id=new_volume['id'])
+
+    @wrap_check_policy
     def attach_interface(self, context, instance, network_id, port_id,
                          requested_ip):
         """Use hotplug to add an network adapter to an instance."""

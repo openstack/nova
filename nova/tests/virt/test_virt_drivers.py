@@ -419,6 +419,17 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
                                       '/dev/sda')
 
     @catch_notimplementederror
+    def test_swap_volume(self):
+        instance_ref, network_info = self._get_running_instance()
+        self.connection.attach_volume({'driver_volume_type': 'fake'},
+                                      instance_ref,
+                                      '/dev/sda')
+        self.connection.swap_volume({'driver_volume_type': 'fake'},
+                                    {'driver_volume_type': 'fake'},
+                                    instance_ref,
+                                    '/dev/sda')
+
+    @catch_notimplementederror
     def test_attach_detach_different_power_states(self):
         instance_ref, network_info = self._get_running_instance()
         self.connection.power_off(instance_ref)

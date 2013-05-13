@@ -3861,7 +3861,33 @@ class SnapshotsSampleXmlTests(SnapshotsSampleJsonTests):
     ctype = "xml"
 
 
-class VolumeAttachmentsSampleJsonTest(ServersSampleBase):
+class VolumeAttachmentsSampleBase(ServersSampleBase):
+    def _stub_compute_api_get_instance_bdms(self, server_id):
+
+        def fake_compute_api_get_instance_bdms(self, context, instance):
+            bdms = [
+                {'volume_id': 'a26887c6-c47b-4654-abb5-dfadf7d3f803',
+                'instance_uuid': server_id,
+                'device_name': '/dev/sdd'},
+                {'volume_id': 'a26887c6-c47b-4654-abb5-dfadf7d3f804',
+                'instance_uuid': server_id,
+                'device_name': '/dev/sdc'}
+            ]
+            return bdms
+
+        self.stubs.Set(compute_api.API, "get_instance_bdms",
+                       fake_compute_api_get_instance_bdms)
+
+    def _stub_compute_api_get(self):
+
+        def fake_compute_api_get(self, context, instance_id,
+                                 want_objects=False):
+            return {'uuid': instance_id}
+
+        self.stubs.Set(compute_api.API, 'get', fake_compute_api_get)
+
+
+class VolumeAttachmentsSampleJsonTest(VolumeAttachmentsSampleBase):
     extension_name = ("nova.api.openstack.compute.contrib.volumes.Volumes")
 
     def test_attach_volume_to_server(self):
@@ -3887,29 +3913,6 @@ class VolumeAttachmentsSampleJsonTest(ServersSampleBase):
         subs.update(self._get_regexes())
         self._verify_response('attach-volume-to-server-resp', subs,
                               response, 200)
-
-    def _stub_compute_api_get_instance_bdms(self, server_id):
-
-        def fake_compute_api_get_instance_bdms(self, context, instance):
-            bdms = [
-                {'volume_id': 'a26887c6-c47b-4654-abb5-dfadf7d3f803',
-                'instance_uuid': server_id,
-                'device_name': '/dev/sdd'},
-                {'volume_id': 'a26887c6-c47b-4654-abb5-dfadf7d3f804',
-                'instance_uuid': server_id,
-                'device_name': '/dev/sdc'}
-            ]
-            return bdms
-
-        self.stubs.Set(compute_api.API, "get_instance_bdms",
-                       fake_compute_api_get_instance_bdms)
-
-    def _stub_compute_api_get(self):
-
-        def fake_compute_api_get(self, context, instance_id):
-            return {'uuid': instance_id}
-
-        self.stubs.Set(compute_api.API, 'get', fake_compute_api_get)
 
     def test_list_volume_attachments(self):
         server_id = self._post_server()
@@ -3947,6 +3950,35 @@ class VolumeAttachmentsSampleJsonTest(ServersSampleBase):
 
 
 class VolumeAttachmentsSampleXmlTest(VolumeAttachmentsSampleJsonTest):
+    ctype = 'xml'
+
+
+class VolumeAttachUpdateSampleJsonTest(VolumeAttachmentsSampleBase):
+    extends_name = ("nova.api.openstack.compute.contrib.volumes.Volumes")
+    extension_name = ("nova.api.openstack.compute.contrib."
+                      "volume_attachment_update.Volume_attachment_update")
+
+    def test_volume_attachment_update(self):
+        self.stubs.Set(cinder.API, 'get', fakes.stub_volume_get)
+        subs = {
+            'volume_id': 'a26887c6-c47b-4654-abb5-dfadf7d3f805',
+            'device': '/dev/sdd'
+        }
+        server_id = self._post_server()
+        attach_id = 'a26887c6-c47b-4654-abb5-dfadf7d3f803'
+        self._stub_compute_api_get_instance_bdms(server_id)
+        self._stub_compute_api_get()
+        self.stubs.Set(cinder.API, 'get', fakes.stub_volume_get)
+        self.stubs.Set(compute_api.API, 'swap_volume', lambda *a, **k: None)
+        response = self._do_put('servers/%s/os-volume_attachments/%s'
+                                % (server_id, attach_id),
+                                'update-volume-req',
+                                subs)
+        self.assertEqual(response.status, 202)
+        self.assertEqual(response.read(), '')
+
+
+class VolumeAttachUpdateSampleXmlTest(VolumeAttachUpdateSampleJsonTest):
     ctype = 'xml'
 
 

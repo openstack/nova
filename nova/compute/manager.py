@@ -364,7 +364,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '2.33'
+    RPC_API_VERSION = '2.34'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -3523,6 +3523,70 @@ class ComputeManager(manager.SchedulerDependentManager):
         info = dict(volume_id=volume_id)
         self._notify_about_instance_usage(
             context, instance, "volume.detach", extra_usage_info=info)
+
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @reverts_task_state
+    @wrap_instance_fault
+    def swap_volume(self, context, old_volume_id, new_volume_id, instance):
+        """Swap volume for an instance."""
+        context = context.elevated()
+        bdm = self._get_instance_volume_bdm(context, instance, old_volume_id)
+        mountpoint = bdm['device_name']
+        connector = self.driver.get_volume_connector(instance)
+        volume = self.volume_api.get(context, new_volume_id)
+        try:
+            new_cinfo = self.volume_api.initialize_connection(context,
+                                                              volume,
+                                                              connector)
+        except Exception:  # pylint: disable=W0702
+            with excutils.save_and_reraise_exception():
+                msg = _("Failed to connect to volume %(volume_id)s "
+                        "with volume at %(mountpoint)s")
+                LOG.exception(msg % {'volume_id': new_volume_id,
+                                     'mountpoint': mountpoint},
+                              context=context,
+                              instance=instance)
+                self.volume_api.unreserve_volume(context, volume)
+
+        old_cinfo = jsonutils.loads(bdm['connection_info'])
+        if old_cinfo and 'serial' not in old_cinfo:
+            old_cinfo['serial'] = old_volume_id
+        new_cinfo['serial'] = old_cinfo['serial']
+
+        try:
+            self.driver.swap_volume(old_cinfo, new_cinfo, instance, mountpoint)
+        except Exception:  # pylint: disable=W0702
+            with excutils.save_and_reraise_exception():
+                msg = _("Failed to swap volume %(old_volume_id)s "
+                        "for %(new_volume_id)s")
+                LOG.exception(msg % {'old_volume_id': old_volume_id,
+                                     'new_volume_id': new_volume_id},
+                              context=context,
+                              instance=instance)
+                self.volume_api.terminate_connection(context,
+                                                     volume,
+                                                     connector)
+        self.volume_api.attach(context,
+                               volume,
+                               instance['uuid'],
+                               mountpoint)
+        # Remove old connection
+        volume = self.volume_api.get(context, old_volume_id)
+        self.volume_api.terminate_connection(context, volume, connector)
+        self.volume_api.detach(context.elevated(), volume)
+        # Update bdm
+        values = {
+            'instance_uuid': instance['uuid'],
+            'connection_info': jsonutils.dumps(new_cinfo),
+            'device_name': mountpoint,
+            'delete_on_termination': False,
+            'virtual_name': None,
+            'snapshot_id': None,
+            'volume_id': new_volume_id,
+            'volume_size': None,
+            'no_device': None}
+        self.conductor_api.block_device_mapping_update_or_create(context,
+                                                                 values)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def remove_volume_connection(self, context, volume_id, instance):

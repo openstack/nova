@@ -36,11 +36,11 @@
   <extension alias="OS-FLV-EXT-DATA" updated="2011-09-14T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/flavor_extra_data/api/v1.1" name="FlavorExtraData">
     <description>Provide additional data for flavors.</description>
   </extension>
-  <extension alias="OS-SRV-USG" updated="2013-04-29T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/server_usage/api/v1.1" name="ServerUsage">
-    <description>Adds launched_at and terminated_at on Servers.</description>
-  </extension>
   <extension alias="OS-SCH-HNT" updated="2011-07-19T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/scheduler-hints/api/v2" name="SchedulerHints">
     <description>Pass arbitrary key/value pairs to the scheduler.</description>
+  </extension>
+  <extension alias="OS-SRV-USG" updated="2013-04-29T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/server_usage/api/v1.1" name="ServerUsage">
+    <description>Adds launched_at and terminated_at on Servers.</description>
   </extension>
   <extension alias="os-admin-actions" updated="2011-09-20T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/admin-actions/api/v1.1" name="AdminActions">
     <description>Enable admin-only server actions
@@ -66,13 +66,13 @@
   <extension alias="os-baremetal-nodes" updated="2013-01-04T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/baremetal_nodes/api/v2" name="BareMetalNodes">
     <description>Admin-only bare-metal node administration.</description>
   </extension>
-  <extension alias="os-cells" updated="2011-09-21T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/cells/api/v1.1" name="Cells">
+  <extension alias="os-cell-capacities" updated="2013-05-27T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/cell_capacities/api/v1.1" name="CellCapacities">
+    <description>Adding functionality to get cell capacities.</description>
+  </extension>
+  <extension alias="os-cells" updated="2013-05-14T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/cells/api/v1.1" name="Cells">
     <description>Enables cells-related functionality such as adding neighbor cells,
     listing neighbor cells, and getting the capabilities of the local cell.
     </description>
-  </extension>
-  <extension alias="os-cell-capacities" updated="2013-05-27T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/cell_capacities/api/v1.1" name="CellCapacities">
-    <description>Adds functionality to get cell capacities.</description>
   </extension>
   <extension alias="os-certificates" updated="2012-01-19T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/certificates/api/v1.1" name="Certificates">
     <description>Certificates support.</description>
@@ -114,6 +114,14 @@
   </extension>
   <extension alias="os-extended-floating-ips" updated="2013-04-19T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/extended_floating_ips/api/v2" name="ExtendedFloatingIps">
     <description>Adds optional fixed_address to the add floating IP command.</description>
+  </extension>
+  <extension alias="os-extended-quotas" updated="2013-06-09T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/extended_quotas/api/v1.1" name="ExtendedQuotas">
+    <description>Adds ability for admins to delete quota
+    and optionally force the update Quota command.
+    </description>
+  </extension>
+  <extension alias="os-extended-services" updated="2013-05-17T00:00:00-00:00" namespace="http://docs.openstack.org/compute/ext/extended_services/api/v2" name="ExtendedServices">
+    <description>Extended services support.</description>
   </extension>
   <extension alias="os-fixed-ips" updated="2012-10-18T13:25:27-06:00" namespace="http://docs.openstack.org/compute/ext/fixed_ips/api/v2" name="FixedIPs">
     <description>Fixed IPs support.</description>
@@ -180,9 +188,6 @@
   <extension alias="os-quota-class-sets" updated="2012-03-12T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/quota-classes-sets/api/v1.1" name="QuotaClasses">
     <description>Quota classes management support.</description>
   </extension>
-  <extension alias="os-extended-quotas" updated="2013-06-09T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/extended_quotas/api/v1.1" name="ExtendedQuotas">
-    <description>Adds ability for admins to delete quota and optionally force the update Quota command.</description>
-  </extension>
   <extension alias="os-quota-sets" updated="2011-08-08T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/quotas-sets/api/v1.1" name="Quotas">
     <description>Quotas management support.</description>
   </extension>
@@ -192,7 +197,7 @@
   <extension alias="os-security-group-default-rules" updated="2013-02-05T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/securitygroupdefaultrules/api/v1.1" name="SecurityGroupDefaultRules">
     <description>Default rules for security group support.</description>
   </extension>
-  <extension alias="os-security-groups" updated="2011-07-21T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/securitygroups/api/v1.1" name="SecurityGroups">
+  <extension alias="os-security-groups" updated="2013-05-28T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/securitygroups/api/v1.1" name="SecurityGroups">
     <description>Security group support.</description>
   </extension>
   <extension alias="os-server-diagnostics" updated="2011-12-21T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/server-diagnostics/api/v1.1" name="ServerDiagnostics">
@@ -206,9 +211,6 @@
   </extension>
   <extension alias="os-services" updated="2012-10-28T00:00:00-00:00" namespace="http://docs.openstack.org/compute/ext/services/api/v2" name="Services">
     <description>Services support.</description>
-  </extension>
-  <extension alias="os-extended-services" updated="2013-05-17T00:00:00-00:00" namespace="http://docs.openstack.org/compute/ext/extended_services/api/v2" name="ExtendedServices">
-    <description>Extended services support.</description>
   </extension>
   <extension alias="os-shelve" updated="2013-04-06T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/shelve/api/v1.1" name="Shelve">
     <description>Instance shelve mode.</description>
@@ -230,6 +232,9 @@
   </extension>
   <extension alias="os-virtual-interfaces" updated="2011-08-17T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/virtual_interfaces/api/v1.1" name="VirtualInterfaces">
     <description>Virtual interface support.</description>
+  </extension>
+  <extension alias="os-volume-attachment-update" updated="2013-06-20T00:00:00-00:00" namespace="http://docs.openstack.org/compute/ext/os-volume-attachment-update/api/v2" name="VolumeAttachmentUpdate">
+    <description>Support for updating a volume attachment.</description>
   </extension>
   <extension alias="os-volumes" updated="2011-03-25T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/volumes/api/v1.1" name="Volumes">
     <description>Volumes support.</description>

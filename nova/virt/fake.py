@@ -234,6 +234,15 @@ class FakeDriver(driver.ComputeDriver):
             pass
         return True
 
+    def swap_volume(self, old_connection_info, new_connection_info,
+                    instance, mountpoint):
+        """Replace the disk attached to the instance."""
+        instance_name = instance['name']
+        if instance_name not in self._mounts:
+            self._mounts[instance_name] = {}
+        self._mounts[instance_name][mountpoint] = new_connection_info
+        return True
+
     def attach_interface(self, instance, image_meta, network_info):
         for (network, mapping) in network_info:
             if mapping['vif_uuid'] in self._interfaces:

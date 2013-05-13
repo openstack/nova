@@ -229,6 +229,12 @@ class ComputeRpcAPITestCase(test.TestCase):
                 reservations=['uuid1', 'uuid2'],
                 version='2.27')
 
+    def test_swap_volume(self):
+        self._test_compute_api('swap_volume', 'cast',
+                instance=self.fake_instance, old_volume_id='oldid',
+                new_volume_id='newid',
+                version='2.34')
+
     def test_restore_instance(self):
         self._test_compute_api('restore_instance', 'cast',
                 instance=self.fake_instance)
