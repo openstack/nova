@@ -1408,6 +1408,13 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         table_name = 'security_group_default_rules'
         self.assertTrue(db_utils.check_shadow_table(engine, table_name))
 
+    def _check_184(self, engine, data):
+        self.assertTrue(db_utils.check_shadow_table(engine, 'instances'))
+        self.assertTrue(db_utils.check_shadow_table(engine, 'networks'))
+        self.assertTrue(db_utils.check_shadow_table(engine, 'fixed_ips'))
+        self.assertTrue(db_utils.check_shadow_table(engine, 'floating_ips'))
+        self.assertTrue(db_utils.check_shadow_table(engine, 'console_pools'))
+
 
 class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""
