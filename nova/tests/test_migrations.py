@@ -1332,6 +1332,9 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         self.assertTrue(db_utils.check_shadow_table(engine,
                                                     "volume_usage_cache"))
 
+    def _check_181(self, engine, data):
+        self.assertTrue(db_utils.check_shadow_table(engine, 'cells'))
+
 
 class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""
