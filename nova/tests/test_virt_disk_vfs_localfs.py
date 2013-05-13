@@ -14,12 +14,16 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo.config import cfg
+
 from nova import exception
+from nova.openstack.common import processutils
 from nova import test
 from nova.tests import utils as tests_utils
-from nova import utils
 
 from nova.virt.disk.vfs import localfs as vfsimpl
+
+CONF = cfg.CONF
 
 dirs = []
 files = {}
@@ -121,13 +125,13 @@ class VirtDiskVFSLocalFSTestPaths(test.TestCase):
     def setUp(self):
         super(VirtDiskVFSLocalFSTestPaths, self).setUp()
 
-        real_execute = utils.execute
+        real_execute = processutils.execute
 
         def nonroot_execute(*cmd_parts, **kwargs):
             kwargs.pop('run_as_root', None)
             return real_execute(*cmd_parts, **kwargs)
 
-        self.stubs.Set(utils, 'execute', nonroot_execute)
+        self.stubs.Set(processutils, 'execute', nonroot_execute)
 
     def test_check_safe_path(self):
         if tests_utils.is_osx():
@@ -152,7 +156,7 @@ class VirtDiskVFSLocalFSTest(test.TestCase):
         global dirs, commands
         dirs = []
         commands = []
-        self.stubs.Set(utils, 'execute', fake_execute)
+        self.stubs.Set(processutils, 'execute', fake_execute)
 
         vfs = vfsimpl.VFSLocalFS(imgfile="/dummy.qcow2", imgfmt="qcow2")
         vfs.imgdir = "/scratch/dir"
@@ -162,25 +166,30 @@ class VirtDiskVFSLocalFSTest(test.TestCase):
         self.assertEqual(dirs,
                          ["/scratch/dir/some/dir", "/scratch/dir/other/dir"]),
 
+        root_helper = 'sudo nova-rootwrap %s' % CONF.rootwrap_config
         self.assertEqual(commands,
                          [{'args': ('readlink', '-nm',
                                     '/scratch/dir/some/dir'),
-                           'kwargs': {'run_as_root': True}},
+                           'kwargs': {'run_as_root': True,
+                                      'root_helper': root_helper}},
                           {'args': ('mkdir', '-p',
                                     '/scratch/dir/some/dir'),
-                           'kwargs': {'run_as_root': True}},
+                           'kwargs': {'run_as_root': True,
+                                      'root_helper': root_helper}},
                           {'args': ('readlink', '-nm',
                                     '/scratch/dir/other/dir'),
-                            'kwargs': {'run_as_root': True}},
+                            'kwargs': {'run_as_root': True,
+                                      'root_helper': root_helper}},
                           {'args': ('mkdir', '-p',
                                     '/scratch/dir/other/dir'),
-                           'kwargs': {'run_as_root': True}}])
+                           'kwargs': {'run_as_root': True,
+                                      'root_helper': root_helper}}])
 
     def test_append_file(self):
         global files, commands
         files = {}
         commands = []
-        self.stubs.Set(utils, 'execute', fake_execute)
+        self.stubs.Set(processutils, 'execute', fake_execute)
 
         vfs = vfsimpl.VFSLocalFS(imgfile="/dummy.qcow2", imgfmt="qcow2")
         vfs.imgdir = "/scratch/dir"
@@ -190,20 +199,23 @@ class VirtDiskVFSLocalFSTest(test.TestCase):
         self.assertEquals(files["/scratch/dir/some/file"]["content"],
                           "Hello World Goodbye")
 
+        root_helper = 'sudo nova-rootwrap %s' % CONF.rootwrap_config
         self.assertEqual(commands,
                          [{'args': ('readlink', '-nm',
                                     '/scratch/dir/some/file'),
-                           'kwargs': {'run_as_root': True}},
+                           'kwargs': {'run_as_root': True,
+                                      'root_helper': root_helper}},
                           {'args': ('tee', '-a',
                                     '/scratch/dir/some/file'),
                            'kwargs': {'process_input': ' Goodbye',
-                                      'run_as_root': True}}])
+                                      'run_as_root': True,
+                                      'root_helper': root_helper}}])
 
     def test_replace_file(self):
         global files, commands
         files = {}
         commands = []
-        self.stubs.Set(utils, 'execute', fake_execute)
+        self.stubs.Set(processutils, 'execute', fake_execute)
 
         vfs = vfsimpl.VFSLocalFS(imgfile="/dummy.qcow2", imgfmt="qcow2")
         vfs.imgdir = "/scratch/dir"
@@ -213,36 +225,42 @@ class VirtDiskVFSLocalFSTest(test.TestCase):
         self.assertEquals(files["/scratch/dir/some/file"]["content"],
                           "Goodbye")
 
+        root_helper = 'sudo nova-rootwrap %s' % CONF.rootwrap_config
         self.assertEqual(commands,
                          [{'args': ('readlink', '-nm',
                                     '/scratch/dir/some/file'),
-                           'kwargs': {'run_as_root': True}},
+                           'kwargs': {'run_as_root': True,
+                                      'root_helper': root_helper}},
                           {'args': ('tee', '/scratch/dir/some/file'),
                            'kwargs': {'process_input': 'Goodbye',
-                                      'run_as_root': True}}])
+                                      'run_as_root': True,
+                                      'root_helper': root_helper}}])
 
     def test_read_file(self):
         global commands, files
         files = {}
         commands = []
-        self.stubs.Set(utils, 'execute', fake_execute)
+        self.stubs.Set(processutils, 'execute', fake_execute)
 
         vfs = vfsimpl.VFSLocalFS(imgfile="/dummy.qcow2", imgfmt="qcow2")
         vfs.imgdir = "/scratch/dir"
         self.assertEqual(vfs.read_file("/some/file"), "Hello World")
 
+        root_helper = 'sudo nova-rootwrap %s' % CONF.rootwrap_config
         self.assertEqual(commands,
                          [{'args': ('readlink', '-nm',
                                     '/scratch/dir/some/file'),
-                           'kwargs': {'run_as_root': True}},
+                           'kwargs': {'run_as_root': True,
+                                      'root_helper': root_helper}},
                           {'args': ('cat', '/scratch/dir/some/file'),
-                           'kwargs': {'run_as_root': True}}])
+                           'kwargs': {'run_as_root': True,
+                                      'root_helper': root_helper}}])
 
     def test_has_file(self):
         global commands, files
         files = {}
         commands = []
-        self.stubs.Set(utils, 'execute', fake_execute)
+        self.stubs.Set(processutils, 'execute', fake_execute)
 
         vfs = vfsimpl.VFSLocalFS(imgfile="/dummy.qcow2", imgfmt="qcow2")
         vfs.imgdir = "/scratch/dir"
@@ -251,31 +269,38 @@ class VirtDiskVFSLocalFSTest(test.TestCase):
         self.assertTrue(vfs.has_file("/some/file"))
         self.assertFalse(vfs.has_file("/other/file"))
 
+        root_helper = 'sudo nova-rootwrap %s' % CONF.rootwrap_config
         self.assertEqual(commands,
                          [{'args': ('readlink', '-nm',
                                     '/scratch/dir/some/file'),
-                           'kwargs': {'run_as_root': True}},
+                           'kwargs': {'run_as_root': True,
+                                      'root_helper': root_helper}},
                           {'args': ('cat', '/scratch/dir/some/file'),
-                           'kwargs': {'run_as_root': True}},
+                           'kwargs': {'run_as_root': True,
+                                      'root_helper': root_helper}},
                           {'args': ('readlink', '-nm',
                                     '/scratch/dir/some/file'),
-                           'kwargs': {'run_as_root': True}},
+                           'kwargs': {'run_as_root': True,
+                                      'root_helper': root_helper}},
                           {'args': ('readlink', '-e',
                                     '/scratch/dir/some/file'),
-                           'kwargs': {'run_as_root': True}},
+                           'kwargs': {'run_as_root': True,
+                                      'root_helper': root_helper}},
                           {'args': ('readlink', '-nm',
                                     '/scratch/dir/other/file'),
-                           'kwargs': {'run_as_root': True}},
+                           'kwargs': {'run_as_root': True,
+                                      'root_helper': root_helper}},
                           {'args': ('readlink', '-e',
                                     '/scratch/dir/other/file'),
-                           'kwargs': {'run_as_root': True}},
+                           'kwargs': {'run_as_root': True,
+                                      'root_helper': root_helper}},
                           ])
 
     def test_set_permissions(self):
         global commands, files
         commands = []
         files = {}
-        self.stubs.Set(utils, 'execute', fake_execute)
+        self.stubs.Set(processutils, 'execute', fake_execute)
 
         vfs = vfsimpl.VFSLocalFS(imgfile="/dummy.qcow2", imgfmt="qcow2")
         vfs.imgdir = "/scratch/dir"
@@ -284,24 +309,29 @@ class VirtDiskVFSLocalFSTest(test.TestCase):
         vfs.set_permissions("/some/file", 0777)
         self.assertEquals(files["/scratch/dir/some/file"]["mode"], 0777)
 
+        root_helper = 'sudo nova-rootwrap %s' % CONF.rootwrap_config
         self.assertEqual(commands,
                          [{'args': ('readlink', '-nm',
                                     '/scratch/dir/some/file'),
-                           'kwargs': {'run_as_root': True}},
+                           'kwargs': {'run_as_root': True,
+                                      'root_helper': root_helper}},
                           {'args': ('cat', '/scratch/dir/some/file'),
-                           'kwargs': {'run_as_root': True}},
+                           'kwargs': {'run_as_root': True,
+                                      'root_helper': root_helper}},
                           {'args': ('readlink', '-nm',
                                     '/scratch/dir/some/file'),
-                           'kwargs': {'run_as_root': True}},
+                           'kwargs': {'run_as_root': True,
+                                      'root_helper': root_helper}},
                           {'args': ('chmod', '777',
                                     '/scratch/dir/some/file'),
-                           'kwargs': {'run_as_root': True}}])
+                           'kwargs': {'run_as_root': True,
+                                      'root_helper': root_helper}}])
 
     def test_set_ownership(self):
         global commands, files
         commands = []
         files = {}
-        self.stubs.Set(utils, 'execute', fake_execute)
+        self.stubs.Set(processutils, 'execute', fake_execute)
 
         vfs = vfsimpl.VFSLocalFS(imgfile="/dummy.qcow2", imgfmt="qcow2")
         vfs.imgdir = "/scratch/dir"
@@ -322,27 +352,36 @@ class VirtDiskVFSLocalFSTest(test.TestCase):
         self.assertEquals(files["/scratch/dir/some/file"]["uid"], 110)
         self.assertEquals(files["/scratch/dir/some/file"]["gid"], 600)
 
+        root_helper = 'sudo nova-rootwrap %s' % CONF.rootwrap_config
         self.assertEqual(commands,
                          [{'args': ('readlink', '-nm',
                                     '/scratch/dir/some/file'),
-                           'kwargs': {'run_as_root': True}},
+                           'kwargs': {'run_as_root': True,
+                                      'root_helper': root_helper}},
                           {'args': ('cat', '/scratch/dir/some/file'),
-                           'kwargs': {'run_as_root': True}},
+                           'kwargs': {'run_as_root': True,
+                                      'root_helper': root_helper}},
                           {'args': ('readlink', '-nm',
                                     '/scratch/dir/some/file'),
-                           'kwargs': {'run_as_root': True}},
+                           'kwargs': {'run_as_root': True,
+                                      'root_helper': root_helper}},
                           {'args': ('chown', 'fred',
                                     '/scratch/dir/some/file'),
-                           'kwargs': {'run_as_root': True}},
+                           'kwargs': {'run_as_root': True,
+                                      'root_helper': root_helper}},
                           {'args': ('readlink', '-nm',
                                     '/scratch/dir/some/file'),
-                           'kwargs': {'run_as_root': True}},
+                           'kwargs': {'run_as_root': True,
+                                      'root_helper': root_helper}},
                           {'args': ('chgrp', 'users',
                                     '/scratch/dir/some/file'),
-                           'kwargs': {'run_as_root': True}},
+                           'kwargs': {'run_as_root': True,
+                                      'root_helper': root_helper}},
                           {'args': ('readlink', '-nm',
                                     '/scratch/dir/some/file'),
-                           'kwargs': {'run_as_root': True}},
+                           'kwargs': {'run_as_root': True,
+                                      'root_helper': root_helper}},
                           {'args': ('chown', 'joe:admins',
                                     '/scratch/dir/some/file'),
-                           'kwargs': {'run_as_root': True}}])
+                           'kwargs': {'run_as_root': True,
+                                      'root_helper': root_helper}}])

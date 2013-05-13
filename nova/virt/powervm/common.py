@@ -23,7 +23,6 @@ import paramiko
 
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
-from nova import utils
 from nova.virt.powervm import constants
 from nova.virt.powervm import exception
 
@@ -113,7 +112,7 @@ def ssh_command_as_root(ssh_connection, cmd, check_exit_code=True):
     stdin.flush()
     exit_status = chan.recv_exit_status()
 
-    # Lets handle the error just like nova.utils.ssh_execute does.
+    # Lets handle the error just like processutils.ssh_execute does.
     if exit_status != -1:
         LOG.debug(_('Result was %s') % exit_status)
         if check_exit_code and exit_status != 0:
@@ -218,7 +217,7 @@ def vios_to_vios_auth(source, dest, conn_info):
     dest_conn_obj = ssh_connect(dest_conn_info)
 
     def run_command(conn_obj, cmd):
-        stdout, stderr = utils.ssh_execute(conn_obj, cmd)
+        stdout, stderr = processutils.ssh_execute(conn_obj, cmd)
         return stdout.strip().splitlines()
 
     def build_keypair_on_source():

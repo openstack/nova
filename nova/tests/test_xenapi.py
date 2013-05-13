@@ -39,7 +39,7 @@ from nova.openstack.common import log as logging
 from nova import test
 from nova.tests.db import fakes as db_fakes
 from nova.tests import fake_network
-from nova.tests import fake_utils
+from nova.tests import fake_processutils
 import nova.tests.image.fake as fake_image
 from nova.tests import matchers
 from nova.tests.xenapi import stubs
@@ -323,7 +323,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         stubs.stubout_get_this_vm_uuid(self.stubs)
         stubs.stubout_is_vdi_pv(self.stubs)
         stubs.stub_out_vm_methods(self.stubs)
-        fake_utils.stub_out_utils_execute(self.stubs)
+        fake_processutils.stub_out_processutils_execute(self.stubs)
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id, self.project_id)
@@ -872,7 +872,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         def _readlink_handler(cmd_parts, **kwargs):
             return os.path.realpath(cmd_parts[2]), ''
 
-        fake_utils.fake_execute_set_repliers([
+        fake_processutils.fake_execute_set_repliers([
             # Capture the tee .../etc/network/interfaces command
             (r'tee.*interfaces', _tee_handler),
             (r'readlink -nm.*', _readlink_handler),
@@ -917,7 +917,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
             self._tee_executed = True
             return '', ''
 
-        fake_utils.fake_execute_set_repliers([
+        fake_processutils.fake_execute_set_repliers([
             (r'mount', _mount_handler),
             (r'umount', _umount_handler),
             (r'tee.*interfaces', _tee_handler)])
@@ -1319,7 +1319,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         self.migration = db.migration_create(
             context.get_admin_context(), migration_values)
 
-        fake_utils.stub_out_utils_execute(self.stubs)
+        fake_processutils.stub_out_processutils_execute(self.stubs)
         stubs.stub_out_migration_methods(self.stubs)
         stubs.stubout_get_this_vm_uuid(self.stubs)
 

@@ -25,7 +25,7 @@ from nova.compute import task_states
 from nova.image import glance
 from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
-from nova import utils
+from nova.openstack.common import processutils
 from nova.virt import images
 from nova.virt.powervm import command
 from nova.virt.powervm import common
@@ -533,8 +533,8 @@ class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
         :param command: String with the command to run.
         """
         self._set_connection()
-        stdout, stderr = utils.ssh_execute(self._connection, cmd,
-                                           check_exit_code=check_exit_code)
+        stdout, stderr = processutils.ssh_execute(
+            self._connection, cmd, check_exit_code=check_exit_code)
 
         error_text = stderr.strip()
         if error_text:
