@@ -24,6 +24,8 @@ import random
 from oslo.config import cfg
 
 from nova.compute import flavors
+from nova.compute import rpcapi as compute_rpcapi
+from nova import db
 from nova import exception
 from nova.openstack.common import log as logging
 from nova.openstack.common.notifier import api as notifier
@@ -54,6 +56,7 @@ class FilterScheduler(driver.Scheduler):
     def __init__(self, *args, **kwargs):
         super(FilterScheduler, self).__init__(*args, **kwargs)
         self.options = scheduler_options.SchedulerOptions()
+        self.compute_rpcapi = compute_rpcapi.ComputeAPI()
 
     def schedule_run_instance(self, context, request_spec,
                               admin_password, injected_files,
@@ -376,6 +379,17 @@ class FilterScheduler(driver.Scheduler):
             if update_group_hosts is True:
                 filter_properties['group_hosts'].append(chosen_host.obj.host)
         return selected_hosts
+
+    def _get_compute_info(self, context, dest):
+        """Get compute node's information
+
+        :param context: security context
+        :param dest: hostname (must be compute node)
+        :return: dict of compute node information
+
+        """
+        service_ref = db.service_get_by_compute_host(context, dest)
+        return service_ref['compute_node'][0]
 
     def _assert_compute_node_has_enough_memory(self, context,
                                               instance_ref, dest):

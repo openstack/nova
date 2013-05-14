@@ -25,15 +25,11 @@ import sys
 
 from oslo.config import cfg
 
-from nova.compute import flavors
-from nova.compute import power_state
-from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova.conductor import api as conductor_api
 from nova import db
 from nova import exception
-from nova.image import glance
 from nova import notifications
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
@@ -122,9 +118,7 @@ class Scheduler(object):
     def __init__(self):
         self.host_manager = importutils.import_object(
                 CONF.scheduler_host_manager)
-        self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.servicegroup_api = servicegroup.API()
-        self.image_service = glance.get_default_image_service()
 
     def update_service_capabilities(self, service_name, host, capabilities):
         """Process a capability update from a service node."""
@@ -168,189 +162,3 @@ class Scheduler(object):
         """Must override select_hosts method for scheduler to work."""
         msg = _("Driver must implement select_hosts")
         raise NotImplementedError(msg)
-
-    def schedule_live_migration(self, context, instance, dest,
-                                block_migration, disk_over_commit):
-        """Live migration scheduling method.
-
-        :param context:
-        :param instance: instance dict
-        :param dest: destination host
-        :param block_migration: if true, block_migration.
-        :param disk_over_commit: if True, consider real(not virtual)
-                                 disk size.
-
-        :return:
-            The host where instance is running currently.
-            Then scheduler send request that host.
-        """
-        # Check we can do live migration
-        self._live_migration_src_check(context, instance)
-
-        if dest is None:
-            # Let scheduler select a dest host, retry next best until success
-            # or no more valid hosts.
-            ignore_hosts = [instance['host']]
-            while dest is None:
-                dest = self._live_migration_dest_check(context, instance, dest,
-                                                       ignore_hosts)
-                try:
-                    self._live_migration_common_check(context, instance, dest)
-                    migrate_data = self.compute_rpcapi.\
-                        check_can_live_migrate_destination(context, instance,
-                                                           dest,
-                                                           block_migration,
-                                                           disk_over_commit)
-                except exception.Invalid:
-                    ignore_hosts.append(dest)
-                    dest = None
-                    continue
-        else:
-            # Test the given dest host
-            self._live_migration_dest_check(context, instance, dest)
-            self._live_migration_common_check(context, instance, dest)
-            migrate_data = self.compute_rpcapi.\
-                check_can_live_migrate_destination(context, instance, dest,
-                                                   block_migration,
-                                                   disk_over_commit)
-
-        # Perform migration
-        src = instance['host']
-        self.compute_rpcapi.live_migration(context, host=src,
-                instance=instance, dest=dest,
-                block_migration=block_migration,
-                migrate_data=migrate_data)
-
-    def _live_migration_src_check(self, context, instance_ref):
-        """Live migration check routine (for src host).
-
-        :param context: security context
-        :param instance_ref: nova.db.sqlalchemy.models.Instance object
-
-        """
-        # TODO(johngar) why is this not in the API layer?
-        # Checking instance is running.
-        if instance_ref['power_state'] != power_state.RUNNING:
-            raise exception.InstanceNotRunning(
-                    instance_id=instance_ref['uuid'])
-
-        # Checking src host exists and compute node
-        src = instance_ref['host']
-        try:
-            service = db.service_get_by_compute_host(context, src)
-        except exception.NotFound:
-            raise exception.ComputeServiceUnavailable(host=src)
-
-        # Checking src host is alive.
-        if not self.servicegroup_api.service_is_up(service):
-            raise exception.ComputeServiceUnavailable(host=src)
-
-    def _live_migration_dest_check(self, context, instance_ref, dest,
-                                   ignore_hosts=None):
-        """Live migration check routine (for destination host).
-
-        :param context: security context
-        :param instance_ref: nova.db.sqlalchemy.models.Instance object
-        :param dest: destination host
-        :param ignore_hosts: hosts that should be avoided as dest host
-        """
-
-        # If dest is not specified, have scheduler pick one.
-        if dest is None:
-            instance_type = flavors.extract_flavor(instance_ref)
-            if not instance_ref['image_ref']:
-                image = None
-            else:
-                image = self.image_service.show(context,
-                                                instance_ref['image_ref'])
-            request_spec = {'instance_properties': instance_ref,
-                            'instance_type': instance_type,
-                            'instance_uuids': [instance_ref['uuid']],
-                            'image': image}
-            filter_properties = {'ignore_hosts': ignore_hosts}
-            return self.select_hosts(context, request_spec,
-                                     filter_properties)[0]
-
-        # Checking whether The host where instance is running
-        # and dest is not same.
-        src = instance_ref['host']
-        if dest == src:
-            raise exception.UnableToMigrateToSelf(
-                    instance_id=instance_ref['uuid'], host=dest)
-
-        # Checking dest exists and compute node.
-        try:
-            dservice_ref = db.service_get_by_compute_host(context, dest)
-        except exception.NotFound:
-            raise exception.ComputeServiceUnavailable(host=dest)
-
-        # Checking dest host is alive.
-        if not self.servicegroup_api.service_is_up(dservice_ref):
-            raise exception.ComputeServiceUnavailable(host=dest)
-
-        # Check memory requirements
-        self._assert_compute_node_has_enough_memory(context,
-                                                   instance_ref, dest)
-
-        return dest
-
-    def _live_migration_common_check(self, context, instance_ref, dest):
-        """Live migration common check routine.
-
-        The following checks are based on
-        http://wiki.libvirt.org/page/TodoPreMigrationChecks
-
-        :param context: security context
-        :param instance_ref: nova.db.sqlalchemy.models.Instance object
-        :param dest: destination host
-        """
-        dservice_ref = self._get_compute_info(context, dest)
-        src = instance_ref['host']
-        oservice_ref = self._get_compute_info(context, src)
-
-        # Checking hypervisor is same.
-        orig_hypervisor = oservice_ref['hypervisor_type']
-        dest_hypervisor = dservice_ref['hypervisor_type']
-        if orig_hypervisor != dest_hypervisor:
-            raise exception.InvalidHypervisorType()
-
-        # Checking hypervisor version.
-        orig_hypervisor = oservice_ref['hypervisor_version']
-        dest_hypervisor = dservice_ref['hypervisor_version']
-        if orig_hypervisor > dest_hypervisor:
-            raise exception.DestinationHypervisorTooOld()
-
-    def _assert_compute_node_has_enough_memory(self, context,
-                                              instance_ref, dest):
-        """Checks if destination host has enough memory for live migration.
-
-
-        :param context: security context
-        :param instance_ref: nova.db.sqlalchemy.models.Instance object
-        :param dest: destination host
-
-        """
-        # Getting total available memory of host
-        avail = self._get_compute_info(context, dest)['free_ram_mb']
-
-        mem_inst = instance_ref['memory_mb']
-        if not mem_inst or avail <= mem_inst:
-            instance_uuid = instance_ref['uuid']
-            reason = _("Unable to migrate %(instance_uuid)s to %(dest)s: "
-                       "Lack of memory(host:%(avail)s <= "
-                       "instance:%(mem_inst)s)")
-            raise exception.MigrationPreCheckError(reason=reason %
-                {'instance_uuid': instance_uuid, 'dest': dest, 'avail': avail,
-                 'mem_inst': mem_inst})
-
-    def _get_compute_info(self, context, host):
-        """get compute node's information specified by key
-
-        :param context: security context
-        :param host: hostname(must be compute node)
-        :param key: column name of compute_nodes
-        :return: value specified by key
-
-        """
-        service_ref = db.service_get_by_compute_host(context, host)
-        return service_ref['compute_node'][0]
