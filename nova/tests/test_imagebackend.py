@@ -161,7 +161,7 @@ class RawTestCase(_ImageTestCase, test.TestCase):
 
     def prepare_mocks(self):
         fn = self.mox.CreateMockAnything()
-        self.mox.StubOutWithMock(imagebackend.lockutils.synchronized,
+        self.mox.StubOutWithMock(imagebackend.utils.synchronized,
                                  '__call__')
         self.mox.StubOutWithMock(imagebackend.libvirt_utils, 'copy_image')
         self.mox.StubOutWithMock(imagebackend.disk, 'extend')
@@ -230,7 +230,7 @@ class Qcow2TestCase(_ImageTestCase, test.TestCase):
 
     def prepare_mocks(self):
         fn = self.mox.CreateMockAnything()
-        self.mox.StubOutWithMock(imagebackend.lockutils.synchronized,
+        self.mox.StubOutWithMock(imagebackend.utils.synchronized,
                                  '__call__')
         self.mox.StubOutWithMock(imagebackend.libvirt_utils,
                                  'create_cow_image')

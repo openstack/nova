@@ -25,7 +25,6 @@ from nova import exception
 from nova.network import rpcapi as network_rpcapi
 from nova.openstack.common import excutils
 from nova.openstack.common import importutils
-from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.notifier import api as notifier
 from nova.openstack.common import processutils
@@ -33,6 +32,7 @@ from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import uuidutils
 from nova import quota
 from nova import servicegroup
+from nova import utils
 
 LOG = logging.getLogger(__name__)
 
@@ -354,7 +354,7 @@ class FloatingIP(object):
         """Performs db and driver calls to associate floating ip & fixed ip."""
         interface = CONF.public_interface or interface
 
-        @lockutils.synchronized(unicode(floating_address), 'nova-')
+        @utils.synchronized(unicode(floating_address))
         def do_associate():
             # associate floating ip
             fixed = self.db.floating_ip_fixed_ip_associate(context,
@@ -443,7 +443,7 @@ class FloatingIP(object):
         """Performs db and driver calls to disassociate floating ip."""
         interface = CONF.public_interface or interface
 
-        @lockutils.synchronized(unicode(address), 'nova-')
+        @utils.synchronized(unicode(address))
         def do_disassociate():
             # NOTE(vish): Note that we are disassociating in the db before we
             #             actually remove the ip address on the host. We are

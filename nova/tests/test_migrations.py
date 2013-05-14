@@ -59,10 +59,10 @@ import sqlalchemy.exc
 from nova.db.sqlalchemy import api as db
 import nova.db.sqlalchemy.migrate_repo
 from nova.db.sqlalchemy import utils as db_utils
-from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import test
+from nova import utils
 import nova.virt.baremetal.db.sqlalchemy.migrate_repo
 
 
@@ -246,7 +246,7 @@ class BaseMigrationTestCase(test.TestCase):
         self.assertEqual(0, status,
                          "Failed to run: %s\n%s" % (cmd, output))
 
-    @lockutils.synchronized('pgadmin', 'nova-', external=True)
+    @utils.synchronized('pgadmin', external=True)
     def _reset_pg(self, conn_pieces):
         (user, password, database, host) = \
             get_pgsql_connection_info(conn_pieces)

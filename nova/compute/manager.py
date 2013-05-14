@@ -62,7 +62,6 @@ from nova.network import model as network_model
 from nova.network.security_group import openstack_driver
 from nova.openstack.common import excutils
 from nova.openstack.common import jsonutils
-from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.notifier import api as notifier
 from nova.openstack.common import periodic_task
@@ -699,7 +698,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         Synchronise the call beacuse we may still be in the middle of
         creating the instance.
         """
-        @lockutils.synchronized(instance['uuid'], 'nova-')
+        @utils.synchronized(instance['uuid'])
         def _sync_refresh():
             return self.driver.refresh_instance_security_rules(instance)
         return _sync_refresh()
@@ -1313,7 +1312,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         if filter_properties is None:
             filter_properties = {}
 
-        @lockutils.synchronized(instance['uuid'], 'nova-')
+        @utils.synchronized(instance['uuid'])
         def do_run_instance():
             self._run_instance(context, request_spec,
                     filter_properties, requested_networks, injected_files,
@@ -1465,7 +1464,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         if not bdms:
             bdms = self._get_instance_volume_bdms(context, instance)
 
-        @lockutils.synchronized(instance['uuid'], 'nova-')
+        @utils.synchronized(instance['uuid'])
         def do_terminate_instance(instance, bdms):
             try:
                 self._delete_instance(context, instance, bdms,
@@ -2928,7 +2927,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     def reserve_block_device_name(self, context, instance, device,
                                   volume_id=None):
 
-        @lockutils.synchronized(instance['uuid'], 'nova-')
+        @utils.synchronized(instance['uuid'])
         def do_reserve():
             bdms = self.conductor_api.block_device_mapping_get_all_by_instance(
                 context, instance)
