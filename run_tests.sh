@@ -141,7 +141,14 @@ function run_tests {
     ${wrapper} python setup.py egg_info
   fi
   echo "Running \`${wrapper} $TESTRTESTS\`"
-  bash -c "${wrapper} $TESTRTESTS | ${wrapper} tools/colorizer.py"
+  if ${wrapper} which subunit-2to1 2>&1 > /dev/null
+  then
+    # subunit-2to1 is present, testr subunit stream should be in version 2
+    # format. Convert to version one before colorizing.
+    bash -c "${wrapper} $TESTRTESTS | ${wrapper} subunit-2to1 | ${wrapper} tools/colorizer.py"
+  else
+    bash -c "${wrapper} $TESTRTESTS | ${wrapper} tools/colorizer.py"
+  fi
   RESULT=$?
   set -e
 
