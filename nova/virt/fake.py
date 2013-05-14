@@ -41,7 +41,7 @@ CONF.import_opt('host', 'nova.netconf')
 LOG = logging.getLogger(__name__)
 
 
-_FAKE_NODES = [CONF.host]
+_FAKE_NODES = None
 
 
 def set_nodes(nodes):
@@ -107,6 +107,8 @@ class FakeDriver(driver.ComputeDriver):
           }
         self._mounts = {}
         self._interfaces = {}
+        if not _FAKE_NODES:
+            set_nodes([CONF.host])
 
     def init_host(self, host):
         return
