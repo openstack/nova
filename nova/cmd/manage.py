@@ -887,8 +887,9 @@ class InstanceTypeCommands(object):
         """Creates instance types / flavors."""
         try:
             flavors.create(name, memory, vcpus, root_gb,
-                                  ephemeral_gb, flavorid, swap, rxtx_factor,
-                                  is_public)
+                           ephemeral_gb=ephemeral_gb, flavorid=flavorid,
+                           swap=swap, rxtx_factor=rxtx_factor,
+                           is_public=is_public)
         except exception.InvalidInput as e:
             print _("Must supply valid parameters to create instance_type")
             print e

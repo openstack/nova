@@ -65,18 +65,11 @@ system_metadata_instance_type_props = {
     }
 
 
-def create(name, memory, vcpus, root_gb, ephemeral_gb=None, flavorid=None,
-           swap=None, rxtx_factor=None, is_public=True):
+def create(name, memory, vcpus, root_gb, ephemeral_gb=0, flavorid=None,
+           swap=0, rxtx_factor=1.0, is_public=True):
     """Creates instance types."""
-
-    if flavorid is None or flavorid == '':
+    if not flavorid:
         flavorid = uuid.uuid4()
-    if swap is None:
-        swap = 0
-    if rxtx_factor is None:
-        rxtx_factor = 1.0
-    if ephemeral_gb is None:
-        ephemeral_gb = 0
 
     kwargs = {
         'memory_mb': memory,
@@ -96,13 +89,23 @@ def create(name, memory, vcpus, root_gb, ephemeral_gb=None, flavorid=None,
         msg = _("names can only contain [a-zA-Z0-9_.- ]")
         raise exception.InvalidInput(reason=msg)
 
-    # ensure some attributes are integers and greater than or equal to 0
-    for option in ['memory_mb', 'vcpus', 'root_gb', 'ephemeral_gb', 'swap']:
+    # Some attributes are positive ( > 0) integers
+    for option in ['memory_mb', 'vcpus']:
+        try:
+            kwargs[option] = int(kwargs[option])
+            assert kwargs[option] > 0
+        except (ValueError, AssertionError):
+            msg = _("'%s' argument must be greater than 0") % option
+            raise exception.InvalidInput(reason=msg)
+
+    # Some attributes are non-negative ( >= 0) integers
+    for option in ['root_gb', 'ephemeral_gb', 'swap']:
         try:
             kwargs[option] = int(kwargs[option])
             assert kwargs[option] >= 0
         except (ValueError, AssertionError):
-            msg = _("'%s' argument must be a positive integer") % option
+            msg = _("'%s' argument must be greater than or equal"
+                    " to 0") % option
             raise exception.InvalidInput(reason=msg)
 
     # rxtx_factor should be a positive float
@@ -112,14 +115,6 @@ def create(name, memory, vcpus, root_gb, ephemeral_gb=None, flavorid=None,
     except (ValueError, AssertionError):
         msg = _("'rxtx_factor' argument must be a positive float")
         raise exception.InvalidInput(reason=msg)
-
-    # some value are required to be nonzero, not just positive
-    for option in ['memory_mb', 'vcpus']:
-        try:
-            assert kwargs[option] > 0
-        except AssertionError:
-            msg = _("'%s' argument must be greater than 0") % option
-            raise exception.InvalidInput(reason=msg)
 
     kwargs['name'] = name
     # NOTE(vish): Internally, flavorid is stored as a string but it comes
