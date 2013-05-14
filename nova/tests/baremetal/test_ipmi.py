@@ -85,13 +85,24 @@ class BareMetalIPMITestCase(test.TestCase):
         self.ipmi._exec_ipmitool('A B C')
         self.mox.VerifyAll()
 
-    def test_is_power(self):
+    def test_is_power_on_ok(self):
         self.mox.StubOutWithMock(self.ipmi, '_exec_ipmitool')
         self.ipmi._exec_ipmitool("power status").AndReturn(
                 ["Chassis Power is on\n"])
         self.mox.ReplayAll()
 
-        self.ipmi._is_power("on")
+        res = self.ipmi.is_power_on()
+        self.assertEqual(res, True)
+        self.mox.VerifyAll()
+
+    def test_is_power_no_answer(self):
+        self.mox.StubOutWithMock(self.ipmi, '_exec_ipmitool')
+        self.ipmi._exec_ipmitool("power status").AndReturn(
+                ["Fake reply\n"])
+        self.mox.ReplayAll()
+
+        res = self.ipmi.is_power_on()
+        self.assertEqual(res, None)
         self.mox.VerifyAll()
 
     def test_power_already_on(self):
