@@ -51,119 +51,6 @@ class InstanceTypeTestCase(test.TestCase):
         """return first instance type name."""
         return flavors.get_all_types().keys()[0]
 
-    def test_instance_type_create(self):
-        # Ensure instance types can be created.
-        name = 'Instance create test'
-        flavor_id = '512'
-
-        original_list = flavors.get_all_types()
-
-        # create new type and make sure values stick
-        inst_type = flavors.create(name, 256, 1, 120,
-                                          flavorid=flavor_id)
-        self.assertEqual(inst_type['flavorid'], flavor_id)
-        self.assertEqual(inst_type['name'], name)
-        self.assertEqual(inst_type['memory_mb'], 256)
-        self.assertEqual(inst_type['vcpus'], 1)
-        self.assertEqual(inst_type['root_gb'], 120)
-        self.assertEqual(inst_type['ephemeral_gb'], 0)
-        self.assertEqual(inst_type['swap'], 0)
-        self.assertEqual(inst_type['rxtx_factor'], 1.0)
-
-        # make sure new type shows up in list
-        new_list = flavors.get_all_types()
-        self.assertNotEqual(len(original_list), len(new_list),
-                            'instance type was not created')
-
-    def test_instance_type_create_then_delete(self):
-        # Ensure instance types can be created.
-        name = 'Small Flavor'
-        flavorid = 'flavor1'
-
-        original_list = flavors.get_all_types()
-
-        # create new type and make sure values stick
-        inst_type = flavors.create(name, 256, 1, 120, 100, flavorid)
-        inst_type_id = inst_type['id']
-        self.assertEqual(inst_type['flavorid'], flavorid)
-        self.assertEqual(inst_type['name'], name)
-        self.assertEqual(inst_type['memory_mb'], 256)
-        self.assertEqual(inst_type['vcpus'], 1)
-        self.assertEqual(inst_type['root_gb'], 120)
-        self.assertEqual(inst_type['ephemeral_gb'], 100)
-        self.assertEqual(inst_type['swap'], 0)
-        self.assertEqual(inst_type['rxtx_factor'], 1.0)
-
-        # make sure new type shows up in list
-        new_list = flavors.get_all_types()
-        self.assertNotEqual(len(original_list), len(new_list),
-                            'instance type was not created')
-
-        flavors.destroy(name)
-        self.assertRaises(exception.InstanceTypeNotFound,
-                          flavors.get_instance_type, inst_type_id)
-
-        # deleted instance should not be in list anymoer
-        new_list = flavors.get_all_types()
-        self.assertEqual(original_list, new_list)
-
-    def test_instance_type_create_without_flavorid(self):
-        name = 'Small Flavor'
-        inst_type = flavors.create(name, 256, 1, 120, 100)
-        self.assertNotEqual(inst_type['flavorid'], None)
-        self.assertEqual(inst_type['name'], name)
-        self.assertEqual(inst_type['memory_mb'], 256)
-        self.assertEqual(inst_type['vcpus'], 1)
-        self.assertEqual(inst_type['root_gb'], 120)
-        self.assertEqual(inst_type['ephemeral_gb'], 100)
-        self.assertEqual(inst_type['swap'], 0)
-        self.assertEqual(inst_type['rxtx_factor'], 1.0)
-
-    def test_instance_type_create_with_empty_flavorid(self):
-        # Ensure that auto-generated uuid is assigned.
-        name = 'Empty String ID Flavor'
-        flavorid = ''
-        inst_type = flavors.create(name, 256, 1, 120, 100, flavorid)
-        self.assertEqual(len(inst_type['flavorid']), 36)
-        self.assertEqual(inst_type['name'], name)
-        self.assertEqual(inst_type['memory_mb'], 256)
-        self.assertEqual(inst_type['vcpus'], 1)
-        self.assertEqual(inst_type['root_gb'], 120)
-        self.assertEqual(inst_type['ephemeral_gb'], 100)
-        self.assertEqual(inst_type['swap'], 0)
-        self.assertEqual(inst_type['rxtx_factor'], 1.0)
-
-    def test_instance_type_create_with_custom_rxtx_factor(self):
-        name = 'Custom RXTX Factor'
-        inst_type = flavors.create(name, 256, 1, 120, 100,
-                                          rxtx_factor=9.9)
-        self.assertNotEqual(inst_type['flavorid'], None)
-        self.assertEqual(inst_type['name'], name)
-        self.assertEqual(inst_type['memory_mb'], 256)
-        self.assertEqual(inst_type['vcpus'], 1)
-        self.assertEqual(inst_type['root_gb'], 120)
-        self.assertEqual(inst_type['ephemeral_gb'], 100)
-        self.assertEqual(inst_type['swap'], 0)
-        self.assertEqual(inst_type['rxtx_factor'], 9.9)
-
-    def test_instance_type_create_with_special_characters(self):
-        # Ensure instance types raises InvalidInput for invalid characters.
-        name = "foo.bar!@#$%^-test_name"
-        flavorid = "flavor1"
-        self.assertRaises(exception.InvalidInput, flavors.create,
-                name, 256, 1, 120, 100, flavorid)
-
-    def test_instance_type_create_with_long_flavor_name(self):
-        # Flavor name with 255 characters or less is valid.
-        name = 'a' * 255
-        inst_type = flavors.create(name, 64, 1, 120, flavorid=11)
-        self.assertEqual(inst_type['name'], name)
-
-        # Flavor name which is more than 255 characters will cause error.
-        name = 'a' * 256
-        self.assertRaises(exception.InvalidInput, flavors.create,
-                          name, 64, 1, 120, flavorid=11)
-
     def test_add_instance_type_access(self):
         user_id = 'fake'
         project_id = 'fake'
@@ -233,54 +120,11 @@ class InstanceTypeTestCase(test.TestCase):
         inst_types = flavors.get_all_types()
         self.assertEqual(total_instance_types, len(inst_types))
 
-    def test_invalid_create_args_should_fail(self):
-        # Ensures that instance type creation fails with invalid args.
-        invalid_sigs = [
-            (('Zero memory', 0, 1, 10, 20, 'flavor1'), {}),
-            (('Negative memory', -256, 1, 10, 20, 'flavor1'), {}),
-            (('Non-integer memory', 'asdf', 1, 10, 20, 'flavor1'), {}),
-
-            (('Zero vcpus', 256, 0, 10, 20, 'flavor1'), {}),
-            (('Negative vcpus', 256, -1, 10, 20, 'flavor1'), {}),
-            (('Non-integer vcpus', 256, 'a', 10, 20, 'flavor1'), {}),
-
-            (('Negative storage', 256, 1, -1, 20, 'flavor1'), {}),
-            (('Non-integer storage', 256, 1, 'a', 20, 'flavor1'), {}),
-
-            (('Negative swap', 256, 1, 10, 20, 'flavor1'), {'swap': -1}),
-            (('Non-integer swap', 256, 1, 10, 20, 'flavor1'), {'swap': -1}),
-
-            (('Negative rxtx_factor', 256, 1, 10, 20, 'f1'),
-                 {'rxtx_factor': -1}),
-            (('Non-integer rxtx_factor', 256, 1, 10, 20, 'f1'),
-                 {'rxtx_factor': "d"}),
-        ]
-
-        for (args, kwargs) in invalid_sigs:
-            self.assertRaises(exception.InvalidInput,
-                              flavors.create, *args, **kwargs)
-
     def test_non_existent_inst_type_shouldnt_delete(self):
         # Ensures that instance type creation fails with invalid args.
         self.assertRaises(exception.InstanceTypeNotFoundByName,
                           flavors.destroy,
                           'unknown_flavor')
-
-    def test_duplicate_names_fail(self):
-        # Ensures that name duplicates raise InstanceTypeCreateFailed.
-        name = 'some_name'
-        flavors.create(name, 256, 1, 120, 200, 'flavor1')
-        self.assertRaises(exception.InstanceTypeExists,
-                          flavors.create,
-                          name, 256, 1, 120, 200, 'flavor2')
-
-    def test_duplicate_flavorids_fail(self):
-        # Ensures that flavorid duplicates raise InstanceTypeCreateFailed.
-        flavorid = 'flavor1'
-        flavors.create('name one', 256, 1, 120, 200, flavorid)
-        self.assertRaises(exception.InstanceTypeIdExists,
-                          flavors.create,
-                          'name two', 256, 1, 120, 200, flavorid)
 
     def test_will_not_destroy_with_no_name(self):
         # Ensure destroy said path of no name raises error.
@@ -452,3 +296,143 @@ class InstanceTypeFilteringTest(test.TestCase):
         filters = dict(min_memory_mb=16384, min_root_gb=80)
         expected = ['m1.xlarge']
         self.assertFilterResults(filters, expected)
+
+
+class CreateInstanceTypeTest(test.TestCase):
+
+    def assertInvalidInput(self, *create_args, **create_kwargs):
+        self.assertRaises(exception.InvalidInput, flavors.create,
+                          *create_args, **create_kwargs)
+
+    def test_name_with_special_characters(self):
+        # Names can contain [a-zA-Z0-9_.- ]
+        flavors.create('_foo.bar-123', 64, 1, 120)
+
+        # Ensure instance types raises InvalidInput for invalid characters.
+        self.assertInvalidInput('foobar#', 64, 1, 120)
+
+    def test_name_length_checks(self):
+        MAX_LEN = 255
+
+        # Flavor name with 255 characters or less is valid.
+        flavors.create('a' * MAX_LEN, 64, 1, 120)
+
+        # Flavor name which is more than 255 characters will cause error.
+        self.assertInvalidInput('a' * (MAX_LEN + 1), 64, 1, 120)
+
+        # Flavor name which is empty should cause an error
+        self.assertInvalidInput('', 64, 1, 120)
+
+    def test_memory_must_be_positive_integer(self):
+        self.assertInvalidInput('flavor1', 'foo', 1, 120)
+        self.assertInvalidInput('flavor1', -1, 1, 120)
+        self.assertInvalidInput('flavor1', 0, 1, 120)
+        flavors.create('flavor1', 1, 1, 120)
+
+    def test_vcpus_must_be_positive_integer(self):
+        self.assertInvalidInput('flavor`', 64, 'foo', 120)
+        self.assertInvalidInput('flavor1', 64, -1, 120)
+        self.assertInvalidInput('flavor1', 64, 0, 120)
+        flavors.create('flavor1', 64, 1, 120)
+
+    def test_root_gb_must_be_nonnegative_integer(self):
+        self.assertInvalidInput('flavor1', 64, 1, 'foo')
+        self.assertInvalidInput('flavor1', 64, 1, -1)
+        flavors.create('flavor1', 64, 1, 0)
+        flavors.create('flavor2', 64, 1, 120)
+
+    def test_swap_must_be_nonnegative_integer(self):
+        self.assertInvalidInput('flavor1', 64, 1, 120, swap='foo')
+        self.assertInvalidInput('flavor1', 64, 1, 120, swap=-1)
+        flavors.create('flavor1', 64, 1, 120, swap=0)
+        flavors.create('flavor2', 64, 1, 120, swap=1)
+
+    def test_rxtx_factor_must_be_positive_float(self):
+        self.assertInvalidInput('flavor1', 64, 1, 120, rxtx_factor='foo')
+        self.assertInvalidInput('flavor1', 64, 1, 120, rxtx_factor=-1.0)
+        self.assertInvalidInput('flavor1', 64, 1, 120, rxtx_factor=0.0)
+
+        flavor = flavors.create('flavor1', 64, 1, 120, rxtx_factor=1.0)
+        self.assertEqual(1.0, flavor['rxtx_factor'])
+
+        flavor = flavors.create('flavor2', 64, 1, 120, rxtx_factor=1.1)
+        self.assertEqual(1.1, flavor['rxtx_factor'])
+
+    def test_is_public_must_be_valid_bool_string(self):
+        self.assertInvalidInput('flavor1', 64, 1, 120, is_public='foo')
+
+        flavors.create('flavor1', 64, 1, 120, is_public='TRUE')
+        flavors.create('flavor2', 64, 1, 120, is_public='False')
+        flavors.create('flavor3', 64, 1, 120, is_public='Yes')
+        flavors.create('flavor4', 64, 1, 120, is_public='No')
+        flavors.create('flavor5', 64, 1, 120, is_public='Y')
+        flavors.create('flavor6', 64, 1, 120, is_public='N')
+        flavors.create('flavor7', 64, 1, 120, is_public='1')
+        flavors.create('flavor8', 64, 1, 120, is_public='0')
+        flavors.create('flavor9', 64, 1, 120, is_public='true')
+
+    def test_flavorid_populated(self):
+        flavor1 = flavors.create('flavor1', 64, 1, 120)
+        self.assertIsNot(None, flavor1['flavorid'])
+
+        flavor2 = flavors.create('flavor2', 64, 1, 120, flavorid='')
+        self.assertIsNot(None, flavor2['flavorid'])
+
+        flavor3 = flavors.create('flavor3', 64, 1, 120, flavorid='foo')
+        self.assertEqual('foo', flavor3['flavorid'])
+
+    def test_default_values(self):
+        flavor1 = flavors.create('flavor1', 64, 1, 120)
+
+        self.assertIsNot(None, flavor1['flavorid'])
+        self.assertEqual(flavor1['ephemeral_gb'], 0)
+        self.assertEqual(flavor1['swap'], 0)
+        self.assertEqual(flavor1['rxtx_factor'], 1.0)
+
+    def test_basic_create(self):
+        # Ensure instance types can be created.
+        original_list = flavors.get_all_types()
+
+        # Create new type and make sure values stick
+        flavor = flavors.create('flavor', 64, 1, 120)
+        self.assertEqual(flavor['name'], 'flavor')
+        self.assertEqual(flavor['memory_mb'], 64)
+        self.assertEqual(flavor['vcpus'], 1)
+        self.assertEqual(flavor['root_gb'], 120)
+
+        # Ensure new type shows up in list
+        new_list = flavors.get_all_types()
+        self.assertNotEqual(len(original_list), len(new_list),
+                            'flavor was not created')
+
+    def test_create_then_delete(self):
+        original_list = flavors.get_all_types()
+
+        flavor = flavors.create('flavor', 64, 1, 120)
+
+        # Ensure new type shows up in list
+        new_list = flavors.get_all_types()
+        self.assertNotEqual(len(original_list), len(new_list),
+                            'instance type was not created')
+
+        flavors.destroy('flavor')
+        self.assertRaises(exception.InstanceTypeNotFound,
+                          flavors.get_instance_type, flavor['id'])
+
+        # Deleted instance should not be in list anymore
+        new_list = flavors.get_all_types()
+        self.assertEqual(original_list, new_list)
+
+    def test_duplicate_names_fail(self):
+        # Ensures that name duplicates raise InstanceTypeCreateFailed.
+        flavors.create('flavor', 256, 1, 120, 200, 'flavor1')
+        self.assertRaises(exception.InstanceTypeExists,
+                          flavors.create,
+                          'flavor', 64, 1, 120)
+
+    def test_duplicate_flavorids_fail(self):
+        # Ensures that flavorid duplicates raise InstanceTypeCreateFailed.
+        flavors.create('flavor1', 64, 1, 120, flavorid='flavorid')
+        self.assertRaises(exception.InstanceTypeIdExists,
+                          flavors.create,
+                          'flavor2', 64, 1, 120, flavorid='flavorid')
