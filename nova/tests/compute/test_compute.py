@@ -6050,11 +6050,8 @@ class ComputeAPITestCase(BaseTestCase):
 
         name = 'test_resize_new_flavor'
         flavorid = 11
-        memory_mb = 128
-        root_gb = 0
-        vcpus = 1
-        flavors.create(name, memory_mb, vcpus, root_gb, 0,
-                              flavorid, 0, 1.0, True)
+        flavors.create(name, 128, 1, 0, ephemeral_gb=0, flavorid=flavorid,
+                       swap=0, rxtx_factor=1.0, is_public=True)
         flavors.destroy(name)
         self.assertRaises(exception.FlavorNotFound, self.compute_api.resize,
                 self.context, instance, flavorid)
@@ -6082,11 +6079,8 @@ class ComputeAPITestCase(BaseTestCase):
 
         name = 'test_resize_with_big_mem'
         flavorid = 11
-        memory_mb = 102400
-        root_gb = 0
-        vcpus = 1
-        flavors.create(name, memory_mb, vcpus, root_gb, 0,
-                              flavorid, 0, 1.0, True)
+        flavors.create(name, 102400, 1, 0, ephemeral_gb=0, flavorid=flavorid,
+                       swap=0, rxtx_factor=1.0, is_public=True)
         self.assertRaises(exception.TooManyInstances, self.compute_api.resize,
                 self.context, instance, flavorid)
 
@@ -6096,11 +6090,9 @@ class ComputeAPITestCase(BaseTestCase):
     def test_resize_revert_deleted_flavor_fails(self):
         orig_name = 'test_resize_revert_orig_flavor'
         orig_flavorid = 11
-        memory_mb = 128
-        root_gb = 0
-        vcpus = 1
-        flavors.create(orig_name, memory_mb, vcpus, root_gb, 0,
-                              orig_flavorid, 0, 1.0, True)
+        flavors.create(orig_name, 128, 1, 0, ephemeral_gb=0,
+                       flavorid=orig_flavorid, swap=0, rxtx_factor=1.0,
+                       is_public=True)
 
         instance = self._create_fake_instance(type_name=orig_name)
         instance = db.instance_get_by_uuid(self.context, instance['uuid'])
