@@ -605,12 +605,6 @@ def is_int_like(val):
         return False
 
 
-def is_valid_boolstr(val):
-    """Check if the provided string is a valid bool string or not."""
-    boolstrs = ('true', 'false', 'yes', 'no', 'y', 'n', '1', '0')
-    return str(val).lower() in boolstrs
-
-
 def is_valid_ipv4(address):
     """Verify that address represents a valid IPv4 address."""
     try:

@@ -360,19 +360,6 @@ class GenericUtilsTestCase(test.TestCase):
         h2 = hashlib.sha1(data).hexdigest()
         self.assertEquals(h1, h2)
 
-    def test_is_valid_boolstr(self):
-        self.assertTrue(utils.is_valid_boolstr('true'))
-        self.assertTrue(utils.is_valid_boolstr('false'))
-        self.assertTrue(utils.is_valid_boolstr('yes'))
-        self.assertTrue(utils.is_valid_boolstr('no'))
-        self.assertTrue(utils.is_valid_boolstr('y'))
-        self.assertTrue(utils.is_valid_boolstr('n'))
-        self.assertTrue(utils.is_valid_boolstr('1'))
-        self.assertTrue(utils.is_valid_boolstr('0'))
-
-        self.assertFalse(utils.is_valid_boolstr('maybe'))
-        self.assertFalse(utils.is_valid_boolstr('only on tuesdays'))
-
     def test_is_valid_ipv4(self):
         self.assertTrue(utils.is_valid_ipv4('127.0.0.1'))
         self.assertFalse(utils.is_valid_ipv4('::1'))

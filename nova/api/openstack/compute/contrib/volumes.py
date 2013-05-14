@@ -27,7 +27,6 @@ from nova import exception
 from nova.openstack.common import log as logging
 from nova.openstack.common import strutils
 from nova.openstack.common import uuidutils
-from nova import utils
 from nova import volume
 
 LOG = logging.getLogger(__name__)
@@ -617,27 +616,26 @@ class SnapshotController(wsgi.Controller):
         snapshot = body['snapshot']
         volume_id = snapshot['volume_id']
 
-        force = snapshot.get('force', False)
         LOG.audit(_("Create snapshot from volume %s"), volume_id,
-                context=context)
+                  context=context)
 
-        if not utils.is_valid_boolstr(force):
+        force = snapshot.get('force', False)
+        try:
+            force = strutils.bool_from_string(force, strict=True)
+        except ValueError:
             msg = _("Invalid value '%s' for force.") % force
             raise exception.InvalidParameterValue(err=msg)
 
-        if strutils.bool_from_string(force):
-            new_snapshot = self.volume_api.create_snapshot_force(context,
-                                        volume_id,
-                                        snapshot.get('display_name'),
-                                        snapshot.get('display_description'))
+        if force:
+            create_func = self.volume_api.create_snapshot_force
         else:
-            new_snapshot = self.volume_api.create_snapshot(context,
-                                        volume_id,
-                                        snapshot.get('display_name'),
-                                        snapshot.get('display_description'))
+            create_func = self.volume_api.create_snapshot
+
+        new_snapshot = create_func(context, volume_id,
+                                   snapshot.get('display_name'),
+                                   snapshot.get('display_description'))
 
         retval = _translate_snapshot_detail_view(context, new_snapshot)
-
         return {'snapshot': retval}
 
 

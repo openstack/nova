@@ -81,6 +81,16 @@ def fake_detach_volume(self, context, instance, volume):
     return()
 
 
+def fake_create_snapshot(self, context, volume, name, description):
+    return({'id': 123,
+            'volume_id': 'fakeVolId',
+            'status': 'available',
+            'volume_size': 123,
+            'created_at': '2013-01-01 00:00:01',
+            'display_name': 'myVolumeName',
+            'display_description': 'myVolumeDescription'})
+
+
 def fake_get_instance_bdms(self, context, instance):
     return([{'id': 1,
              'instance_uuid': instance['uuid'],
@@ -668,3 +678,29 @@ class UnprocessableSnapshotTestCase(CommonUnprocessableEntityTestCase,
     resource = 'os-snapshots'
     entity_name = 'snapshot'
     controller_cls = volumes.SnapshotController
+
+
+class CreateSnapshotTestCase(test.TestCase):
+    def setUp(self):
+        super(CreateSnapshotTestCase, self).setUp()
+        self.controller = volumes.SnapshotController()
+        self.stubs.Set(cinder.API, 'get', fake_get_volume)
+        self.stubs.Set(cinder.API, 'create_snapshot_force',
+                       fake_create_snapshot)
+        self.stubs.Set(cinder.API, 'create_snapshot', fake_create_snapshot)
+        self.req = fakes.HTTPRequest.blank('/v2/fake/os-snapshots')
+        self.req.method = 'POST'
+        self.body = {'snapshot': {'volume_id': 1}}
+
+    def test_force_true(self):
+        self.body['snapshot']['force'] = 'True'
+        self.controller.create(self.req, body=self.body)
+
+    def test_force_false(self):
+        self.body['snapshot']['force'] = 'f'
+        self.controller.create(self.req, body=self.body)
+
+    def test_force_invalid(self):
+        self.body['snapshot']['force'] = 'foo'
+        self.assertRaises(exception.InvalidParameterValue,
+                          self.controller.create, self.req, body=self.body)

@@ -476,6 +476,26 @@ class API(base.Base):
                 instance['uuid'], updates)
         return instance
 
+    def _check_config_drive(self, context, config_drive):
+        bool_like = True
+        try:
+            strutils.bool_from_string(config_drive, strict=True)
+        except ValueError:
+            bool_like = False
+
+        if config_drive is None:
+            return None, None
+        elif bool_like and config_drive not in (0, 1, '0', '1'):
+            # NOTE(sirp): '0' and '1' could be a bool value or an ID.  Since
+            # there are many other ways to specify bools (e.g. 't', 'f'), it's
+            # better to treat as an ID.
+            return None, config_drive
+        else:
+            cd_image_service, config_drive_id = \
+                glance.get_remote_image_service(context, config_drive)
+            cd_image_service.show(context, config_drive_id)
+            return config_drive_id, None
+
     def _validate_and_provision_instance(self, context, instance_type,
                                          image_href, kernel_id, ramdisk_id,
                                          min_count, max_count,
@@ -557,17 +577,8 @@ class API(base.Base):
             kernel_id, ramdisk_id = self._handle_kernel_and_ramdisk(
                     context, kernel_id, ramdisk_id, image)
 
-            # Handle config_drive
-            config_drive_id = None
-            if config_drive and not utils.is_valid_boolstr(config_drive):
-                # config_drive is volume id
-                config_drive_id = config_drive
-                config_drive = None
-
-                # Ensure config_drive image exists
-                cd_image_service, config_drive_id = \
-                    glance.get_remote_image_service(context, config_drive_id)
-                cd_image_service.show(context, config_drive_id)
+            config_drive_id, config_drive = self._check_config_drive(
+                context, config_drive)
 
             if key_data is None and key_name:
                 key_pair = self.db.key_pair_get(context, context.user_id,

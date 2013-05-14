@@ -123,10 +123,11 @@ def create(name, memory, vcpus, root_gb, ephemeral_gb=0, flavorid=None,
     kwargs['flavorid'] = unicode(flavorid)
 
     # ensure is_public attribute is boolean
-    if not utils.is_valid_boolstr(is_public):
-        msg = _("is_public must be a boolean")
-        raise exception.InvalidInput(reason=msg)
-    kwargs['is_public'] = strutils.bool_from_string(is_public)
+    try:
+        kwargs['is_public'] = strutils.bool_from_string(
+            is_public, strict=True)
+    except ValueError:
+        raise exception.InvalidInput(reason=_("is_public must be a boolean"))
 
     try:
         return db.instance_type_create(context.get_admin_context(), kwargs)

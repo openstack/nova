@@ -8851,3 +8851,56 @@ class GetAndCheckImageMetadataTest(test.TestCase):
         self.assertRaises(exception.ImageTooLarge,
                 self.compute._get_and_check_image_metadata,
                 self.context, instance)
+
+
+class CheckConfigDriveTestCase(test.TestCase):
+    # NOTE(sirp): `TestCase` is far too heavyweight for this test, this should
+    # probably derive from a `test.FastTestCase` that omits DB and env
+    # handling
+    def setUp(self):
+        super(CheckConfigDriveTestCase, self).setUp()
+        self.compute_api = compute.API()
+        self.context = context.RequestContext(
+                'fake_user_id', 'fake_project_id')
+
+        self.called = called = {'show': False}
+
+        def fake_get_remote_image_service(context, image_id):
+            class FakeGlance(object):
+                def show(self, context, image_id):
+                    called['show'] = True
+
+            return FakeGlance(), image_id
+
+        self.stubs.Set(glance, 'get_remote_image_service',
+                       fake_get_remote_image_service)
+
+    def tearDown(self):
+        self.stubs.UnsetAll()
+        super(CheckConfigDriveTestCase, self).tearDown()
+
+    def assertCheck(self, expected, config_drive):
+        self.assertEqual(expected,
+                         self.compute_api._check_config_drive(
+                             self.context, config_drive))
+
+    def test_value_is_none(self):
+        self.assertFalse(self.called['show'])
+        self.assertCheck((None, None), None)
+        self.assertFalse(self.called['show'])
+
+    def test_value_is_bool_like_string(self):
+        self.assertCheck((None, 'True'), 'True')
+        self.assertCheck((None, 'yes'), 'yes')
+
+    def test_bool_string_or_id(self):
+        # NOTE(sirp): '0' and '1' could be a bool value or an ID.  Since there
+        # are many other ways to specify bools (e.g. 't', 'f'), it's better to
+        # treat as an ID.
+        self.assertCheck((0, None), 0)
+        self.assertCheck((1, None), 1)
+        self.assertCheck(('0', None), '0')
+        self.assertCheck(('1', None), '1')
+
+    def test_value_is_image_id(self):
+        self.assertCheck((2, None), 2)
