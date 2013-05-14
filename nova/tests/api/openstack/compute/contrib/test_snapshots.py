@@ -67,6 +67,8 @@ class SnapshotApiTest(test.TestCase):
                         snapshot['display_name'])
         self.assertEqual(resp_dict['snapshot']['displayDescription'],
                         snapshot['display_description'])
+        self.assertEqual(resp_dict['snapshot']['volumeId'],
+                         snapshot['volume_id'])
 
     def test_snapshot_create_force(self):
         snapshot = {"volume_id": 12,
@@ -88,6 +90,8 @@ class SnapshotApiTest(test.TestCase):
                         snapshot['display_name'])
         self.assertEqual(resp_dict['snapshot']['displayDescription'],
                         snapshot['display_description'])
+        self.assertEqual(resp_dict['snapshot']['volumeId'],
+                         snapshot['volume_id'])
 
         # Test invalid force paramter
         snapshot = {"volume_id": 12,

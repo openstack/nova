@@ -611,8 +611,8 @@ def stub_snapshot(id, **kwargs):
     return snapshot
 
 
-def stub_snapshot_create(self, context, volume_id, name, description):
-    return stub_snapshot(100, volume_id=volume_id, display_name=name,
+def stub_snapshot_create(self, context, volume, name, description):
+    return stub_snapshot(100, volume_id=volume['id'], display_name=name,
                          display_description=description)
 
 
