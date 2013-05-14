@@ -552,6 +552,7 @@ class ProviderFirewallRule(BASE, NovaBase):
 class KeyPair(BASE, NovaBase):
     """Represents a public key pair for ssh."""
     __tablename__ = 'key_pairs'
+    __table_args__ = (schema.UniqueConstraint("name", "user_id"), )
     id = Column(Integer, primary_key=True)
 
     name = Column(String(255))
