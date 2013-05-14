@@ -50,6 +50,7 @@ from nova import test
 from nova.tests.api.openstack.compute.contrib import (
     test_quantum_security_groups as test_quantum)
 from nova.tests import fake_network
+from nova.tests import fake_utils
 from nova.tests.image import fake
 from nova.tests import matchers
 from nova import utils
@@ -112,6 +113,7 @@ class CloudTestCase(test.TestCase):
         self.flags(compute_driver='nova.virt.fake.FakeDriver',
                    volume_api_class='nova.tests.fake_volume.API')
         self.useFixture(fixtures.FakeLogger('boto'))
+        fake_utils.stub_out_utils_spawn_n(self.stubs)
 
         def fake_show(meh, context, id):
             return {'id': id,

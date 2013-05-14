@@ -64,7 +64,7 @@ class CellsManager(manager.Manager):
 
     Scheduling requests get passed to the scheduler class.
     """
-    RPC_API_VERSION = '1.7'
+    RPC_API_VERSION = '1.8'
 
     def __init__(self, *args, **kwargs):
         # Mostly for tests.
@@ -185,6 +185,14 @@ class CellsManager(manager.Manager):
         our_cell = self.state_manager.get_my_state()
         self.msg_runner.schedule_run_instance(ctxt, our_cell,
                                               host_sched_kwargs)
+
+    def build_instances(self, ctxt, build_inst_kwargs):
+        """Pick a cell (possibly ourselves) to build new instance(s) and
+        forward the request accordingly.
+        """
+        # Target is ourselves first.
+        our_cell = self.state_manager.get_my_state()
+        self.msg_runner.build_instances(ctxt, our_cell, build_inst_kwargs)
 
     def get_cell_info_for_neighbors(self, _ctxt):
         """Return cell information for our neighbor cells."""

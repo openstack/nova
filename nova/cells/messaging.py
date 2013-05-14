@@ -651,6 +651,10 @@ class _TargetedMessageMethods(_BaseMessageMethods):
         """Parent cell told us to schedule new instance creation."""
         self.msg_runner.scheduler.run_instance(message, host_sched_kwargs)
 
+    def build_instances(self, message, build_inst_kwargs):
+        """Parent cell told us to schedule new instance creation."""
+        self.msg_runner.scheduler.build_instances(message, build_inst_kwargs)
+
     def run_compute_api_method(self, message, method_info):
         """Run a method in the compute api class."""
         method = method_info['method']
@@ -1129,6 +1133,15 @@ class MessageRunner(object):
         """
         method_kwargs = dict(host_sched_kwargs=host_sched_kwargs)
         message = _TargetedMessage(self, ctxt, 'schedule_run_instance',
+                                   method_kwargs, 'down', target_cell)
+        message.process()
+
+    def build_instances(self, ctxt, target_cell, build_inst_kwargs):
+        """Called by the cell scheduler to tell a child cell to build
+        instance(s).
+        """
+        method_kwargs = dict(build_inst_kwargs=build_inst_kwargs)
+        message = _TargetedMessage(self, ctxt, 'build_instances',
                                    method_kwargs, 'down', target_cell)
         message.process()
 

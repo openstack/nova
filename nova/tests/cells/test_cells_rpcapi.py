@@ -114,6 +114,21 @@ class CellsAPITestCase(test.TestCase):
         self._check_result(call_info, 'schedule_run_instance',
                 expected_args)
 
+    def test_build_instances(self):
+        call_info = self._stub_rpc_method('cast', None)
+
+        self.cells_rpcapi.build_instances(
+                self.fake_context, instances=['1', '2'],
+                image={'fake': 'image'}, arg1=1, arg2=2, arg3=3)
+
+        expected_args = {'build_inst_kwargs': {'instances': ['1', '2'],
+                                               'image': {'fake': 'image'},
+                                               'arg1': 1,
+                                               'arg2': 2,
+                                               'arg3': 3}}
+        self._check_result(call_info, 'build_instances',
+                expected_args, version=1.8)
+
     def test_instance_update_at_top(self):
         fake_info_cache = {'id': 1,
                            'instance': 'fake_instance',
