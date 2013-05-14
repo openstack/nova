@@ -20,6 +20,7 @@ import os
 import fixtures
 from oslo.config import cfg
 
+from nova import exception
 from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests import fake_libvirt_utils
@@ -253,9 +254,12 @@ class Qcow2TestCase(_ImageTestCase, test.TestCase):
         fn = self.prepare_mocks()
         fn(target=self.TEMPLATE_PATH)
         self.mox.StubOutWithMock(os.path, 'exists')
+        self.mox.StubOutWithMock(imagebackend.disk, 'get_disk_size')
         if self.OLD_STYLE_INSTANCE_PATH:
             os.path.exists(self.OLD_STYLE_INSTANCE_PATH).AndReturn(False)
         os.path.exists(self.TEMPLATE_PATH).AndReturn(False)
+        imagebackend.disk.get_disk_size(self.TEMPLATE_PATH
+                                       ).AndReturn(self.SIZE)
         os.path.exists(self.PATH).AndReturn(False)
         imagebackend.libvirt_utils.create_cow_image(self.TEMPLATE_PATH,
                                                     self.PATH)
@@ -265,6 +269,23 @@ class Qcow2TestCase(_ImageTestCase, test.TestCase):
         image = self.image_class(self.INSTANCE, self.NAME)
         image.create_image(fn, self.TEMPLATE_PATH, self.SIZE)
 
+        self.mox.VerifyAll()
+
+    def test_create_image_too_small(self):
+        fn = self.prepare_mocks()
+        fn(target=self.TEMPLATE_PATH)
+        self.mox.StubOutWithMock(os.path, 'exists')
+        self.mox.StubOutWithMock(imagebackend.disk, 'get_disk_size')
+        if self.OLD_STYLE_INSTANCE_PATH:
+            os.path.exists(self.OLD_STYLE_INSTANCE_PATH).AndReturn(False)
+        os.path.exists(self.TEMPLATE_PATH).AndReturn(False)
+        imagebackend.disk.get_disk_size(self.TEMPLATE_PATH
+                                       ).AndReturn(self.SIZE)
+        self.mox.ReplayAll()
+
+        image = self.image_class(self.INSTANCE, self.NAME)
+        self.assertRaises(exception.ImageTooLarge, image.create_image, fn,
+                          self.TEMPLATE_PATH, 1)
         self.mox.VerifyAll()
 
 
