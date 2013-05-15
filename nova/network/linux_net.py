@@ -764,6 +764,9 @@ def floating_forward_rules(floating_ip, fixed_ip, device):
             ('PREROUTING', '-d %s -j DNAT --to %s' % (floating_ip, fixed_ip)))
     rules.append(
             ('OUTPUT', '-d %s -j DNAT --to %s' % (floating_ip, fixed_ip)))
+    rules.append(('POSTROUTING', '-s %s -m conntrack --ctstate DNAT -j SNAT '
+                  '--to-source %s' %
+                  (fixed_ip, floating_ip)))
     return rules
 
 
