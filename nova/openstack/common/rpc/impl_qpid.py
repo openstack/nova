@@ -375,7 +375,7 @@ class Connection(object):
             try:
                 return method(*args, **kwargs)
             except (qpid_exceptions.Empty,
-                    qpid_exceptions.ConnectionError), e:
+                    qpid_exceptions.ConnectionError) as e:
                 if error_callback:
                     error_callback(e)
                 self.reconnect()
