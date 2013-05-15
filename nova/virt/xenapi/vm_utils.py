@@ -286,7 +286,7 @@ def destroy_vm(session, instance, vm_ref):
 
 
 def clean_shutdown_vm(session, instance, vm_ref):
-    if _is_vm_shutdown(session, vm_ref):
+    if is_vm_shutdown(session, vm_ref):
         LOG.warn(_("VM already halted, skipping shutdown..."),
                  instance=instance)
         return False
@@ -301,7 +301,7 @@ def clean_shutdown_vm(session, instance, vm_ref):
 
 
 def hard_shutdown_vm(session, instance, vm_ref):
-    if _is_vm_shutdown(session, vm_ref):
+    if is_vm_shutdown(session, vm_ref):
         LOG.warn(_("VM already halted, skipping shutdown..."),
                  instance=instance)
         return False
@@ -315,7 +315,7 @@ def hard_shutdown_vm(session, instance, vm_ref):
     return True
 
 
-def _is_vm_shutdown(session, vm_ref):
+def is_vm_shutdown(session, vm_ref):
     vm_rec = session.call_xenapi("VM.get_record", vm_ref)
     state = compile_info(vm_rec)['state']
     if state == power_state.SHUTDOWN:
@@ -2078,6 +2078,21 @@ def _write_partition(virtual_size, dev):
     LOG.debug(_('Writing partition table %s done.'), dev_path)
 
 
+def _get_min_sectors(partition_path, block_size=4096):
+    stdout, _err = utils.execute('resize2fs', '-P', partition_path,
+        run_as_root=True)
+    min_size_blocks = long(re.sub('[^0-9]', '', stdout))
+    min_size_bytes = min_size_blocks * block_size
+    return min_size_bytes / SECTOR_SIZE
+
+
+def _repair_filesystem(partition_path):
+    # Exit Code 1 = File system errors corrected
+    #           2 = File system errors corrected, system needs a reboot
+    utils.execute('e2fsck', '-f', '-y', partition_path, run_as_root=True,
+        check_exit_code=[0, 1, 2])
+
+
 def _resize_part_and_fs(dev, start, old_sectors, new_sectors):
     """Resize partition and fileystem.
 
@@ -2091,10 +2106,7 @@ def _resize_part_and_fs(dev, start, old_sectors, new_sectors):
     partition_path = utils.make_dev_path(dev, partition=1)
 
     # Replay journal if FS wasn't cleanly unmounted
-    # Exit Code 1 = File system errors corrected
-    #           2 = File system errors corrected, system needs a reboot
-    utils.execute('e2fsck', '-f', '-y', partition_path, run_as_root=True,
-                  check_exit_code=[0, 1, 2])
+    _repair_filesystem(partition_path)
 
     # Remove ext3 journal (making it ext2)
     utils.execute('tune2fs', '-O ^has_journal', partition_path,
@@ -2102,6 +2114,12 @@ def _resize_part_and_fs(dev, start, old_sectors, new_sectors):
 
     if new_sectors < old_sectors:
         # Resizing down, resize filesystem before partition resize
+        min_sectors = _get_min_sectors(partition_path)
+        if min_sectors >= new_sectors:
+            reason = _('Resize down not allowed because minimum '
+                       'filesystem sectors %(min_sectors)d is too big '
+                       'for target sectors %(new_sectors)d')
+            raise exception.ResizeError(reason=(reason % locals()))
         utils.execute('resize2fs', partition_path, '%ds' % size,
                       run_as_root=True)
 

@@ -141,7 +141,7 @@ class VolumeOps(object):
             return
 
         # Unplug VBD if we're NOT shutdown
-        unplug = not vm_utils._is_vm_shutdown(self._session, vm_ref)
+        unplug = not vm_utils.is_vm_shutdown(self._session, vm_ref)
         self._detach_vbd(vbd_ref, unplug=unplug)
 
         LOG.info(_('Mountpoint %(mountpoint)s detached from instance'
@@ -171,7 +171,7 @@ class VolumeOps(object):
         # Generally speaking, detach_all will be called with VM already
         # shutdown; however if it's still running, we can still perform the
         # operation by unplugging the VBD first.
-        unplug = not vm_utils._is_vm_shutdown(self._session, vm_ref)
+        unplug = not vm_utils.is_vm_shutdown(self._session, vm_ref)
 
         vbd_refs = self._get_all_volume_vbd_refs(vm_ref)
         for vbd_ref in vbd_refs:

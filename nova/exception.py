@@ -1196,3 +1196,10 @@ class BuildAbortException(NovaException):
 class RescheduledException(NovaException):
     message = _("Build of instance %(instance_uuid)s was re-scheduled: "
                 "%(reason)s")
+
+
+class InstanceFaultRollback(NovaException):
+    def __init__(self, inner_exception=None):
+        message = _("Instance rollback performed due to: %s")
+        self.inner_exception = inner_exception
+        super(InstanceFaultRollback, self).__init__(message % inner_exception)

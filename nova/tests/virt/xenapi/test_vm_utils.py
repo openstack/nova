@@ -278,3 +278,89 @@ class FetchVhdImageTestCase(test.TestCase):
             self.context, self.session, self.instance, self.image_id)
 
         self.mox.VerifyAll()
+
+
+class ResizeHelpersTestCase(test.TestCase):
+    def test_get_min_sectors(self):
+        self.mox.StubOutWithMock(utils, 'execute')
+
+        utils.execute('resize2fs', '-P', "fakepath",
+            run_as_root=True).AndReturn(("size is: 42", ""))
+
+        self.mox.ReplayAll()
+
+        result = vm_utils._get_min_sectors("fakepath")
+        self.assertEquals(42 * 4096 / 512, result)
+
+    def test_repair_filesystem(self):
+        self.mox.StubOutWithMock(utils, 'execute')
+
+        utils.execute('e2fsck', '-f', "-y", "fakepath",
+            run_as_root=True, check_exit_code=[0, 1, 2]).AndReturn(
+                ("size is: 42", ""))
+
+        self.mox.ReplayAll()
+
+        vm_utils._repair_filesystem("fakepath")
+
+    def _call_tune2fs_remove_journal(self, path):
+        utils.execute("tune2fs", "-O ^has_journal", path, run_as_root=True)
+
+    def _call_tune2fs_add_journal(self, path):
+        utils.execute("tune2fs", "-j", path, run_as_root=True)
+
+    def _call_parted(self, path, start, end):
+        utils.execute('parted', '--script', path, 'rm', '1',
+            run_as_root=True)
+        utils.execute('parted', '--script', path, 'mkpart',
+            'primary', '%ds' % start, '%ds' % end, run_as_root=True)
+
+    def test_resize_part_and_fs_down_succeeds(self):
+        self.mox.StubOutWithMock(vm_utils, "_repair_filesystem")
+        self.mox.StubOutWithMock(utils, 'execute')
+        self.mox.StubOutWithMock(vm_utils, "_get_min_sectors")
+
+        dev_path = "/dev/fake"
+        partition_path = "%s1" % dev_path
+        vm_utils._repair_filesystem(partition_path)
+        self._call_tune2fs_remove_journal(partition_path)
+        vm_utils._get_min_sectors(partition_path).AndReturn(9)
+        utils.execute("resize2fs", partition_path, "10s", run_as_root=True)
+        self._call_parted(dev_path, 0, 9)
+        self._call_tune2fs_add_journal(partition_path)
+
+        self.mox.ReplayAll()
+
+        vm_utils._resize_part_and_fs("fake", 0, 20, 10)
+
+    def test_resize_part_and_fs_down_fails_disk_too_big(self):
+        self.mox.StubOutWithMock(vm_utils, "_repair_filesystem")
+        self.mox.StubOutWithMock(utils, 'execute')
+        self.mox.StubOutWithMock(vm_utils, "_get_min_sectors")
+
+        dev_path = "/dev/fake"
+        partition_path = "%s1" % dev_path
+        vm_utils._repair_filesystem(partition_path)
+        self._call_tune2fs_remove_journal(partition_path)
+        vm_utils._get_min_sectors(partition_path).AndReturn(10)
+
+        self.mox.ReplayAll()
+
+        self.assertRaises(exception.ResizeError,
+            vm_utils._resize_part_and_fs, "fake", 0, 20, 10)
+
+    def test_resize_part_and_fs_up_succeeds(self):
+        self.mox.StubOutWithMock(vm_utils, "_repair_filesystem")
+        self.mox.StubOutWithMock(utils, 'execute')
+
+        dev_path = "/dev/fake"
+        partition_path = "%s1" % dev_path
+        vm_utils._repair_filesystem(partition_path)
+        self._call_tune2fs_remove_journal(partition_path)
+        self._call_parted(dev_path, 0, 29)
+        utils.execute("resize2fs", partition_path, run_as_root=True)
+        self._call_tune2fs_add_journal(partition_path)
+
+        self.mox.ReplayAll()
+
+        vm_utils._resize_part_and_fs("fake", 0, 20, 30)
