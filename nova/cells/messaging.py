@@ -31,6 +31,7 @@ from nova.cells import state as cells_state
 from nova.cells import utils as cells_utils
 from nova import compute
 from nova.compute import rpcapi as compute_rpcapi
+from nova.compute import vm_states
 from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import context
 from nova.db import base
@@ -809,6 +810,21 @@ class _BroadcastMessageMethods(_BaseMessageMethods):
 
         LOG.debug(_("Got update for instance %(instance_uuid)s: "
                 "%(instance)s") % locals())
+
+        # To attempt to address out-of-order messages, do some sanity
+        # checking on the VM state.
+        expected_vm_state_map = {
+                # For updates containing 'vm_state' of 'building',
+                # only allow them to occur if the DB already says
+                # 'building' or if the vm_state is None.  None
+                # really shouldn't be possible as instances always
+                # start out in 'building' anyway.. but just in case.
+                vm_states.BUILDING: [vm_states.BUILDING, None]}
+
+        expected_vm_states = expected_vm_state_map.get(
+                instance.get('vm_state'))
+        if expected_vm_states:
+                instance['expected_vm_state'] = expected_vm_states
 
         # It's possible due to some weird condition that the instance
         # was already set as deleted... so we'll attempt to update

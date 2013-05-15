@@ -1153,6 +1153,11 @@ class InstanceActionEventNotFound(NovaException):
     message = _("Event %(event)s not found for action id %(action_id)s")
 
 
+class UnexpectedVMStateError(NovaException):
+    message = _("unexpected VM state: expecting %(expected)s but "
+                "the actual state is %(actual)s")
+
+
 class CryptoCAFileNotFound(FileNotFound):
     message = _("The CA file for %(project)s could not be found")
 
