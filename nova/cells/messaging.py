@@ -1104,8 +1104,7 @@ class MessageRunner(object):
         """
         method_kwargs = dict(host_sched_kwargs=host_sched_kwargs)
         message = _TargetedMessage(self, ctxt, 'schedule_run_instance',
-                                    method_kwargs, 'down',
-                                    target_cell)
+                                   method_kwargs, 'down', target_cell)
         message.process()
 
     def run_compute_api_method(self, ctxt, cell_name, method_info, call):
