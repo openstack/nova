@@ -8752,3 +8752,102 @@ class ComputeInjectedFilesTestCase(BaseTestCase):
 
         self.compute.run_instance(self.context, self.instance,
                                   injected_files=expected)
+
+
+class GetAndCheckImageMetadataTest(test.TestCase):
+    NOT_PRESENT = object()
+
+    def setUp(self):
+        super(GetAndCheckImageMetadataTest, self).setUp()
+        self.context = context.RequestContext('fakeuser', 'fakeproject')
+        self.compute = importutils.import_object(CONF.compute_manager)
+
+    def assertCheckSucceedsWithWonkySize(self, size):
+        instance = {'uuid': 'fakeuuid', 'image_ref': 'fakeimage'}
+        image_meta = {'id': 'imageid'}
+        if size is not self.NOT_PRESENT:
+            image_meta['size'] = size
+
+        self.mox.StubOutWithMock(compute_manager, '_get_image_meta')
+        compute_manager._get_image_meta(self.context,
+                instance['image_ref']).AndReturn(image_meta)
+
+        self.mox.ReplayAll()
+
+        image_meta2 = self.compute._get_and_check_image_metadata(
+                self.context, instance)
+
+        self.assertEqual(image_meta, image_meta2)
+
+    def test_size_not_present_on_image(self):
+        self.assertCheckSucceedsWithWonkySize(self.NOT_PRESENT)
+
+    def test_invalid_image_size(self):
+        self.assertCheckSucceedsWithWonkySize('invalid')
+
+    def test_image_size_present_but_empty(self):
+        self.assertCheckSucceedsWithWonkySize('')
+
+    def test_image_size_is_none(self):
+        self.assertCheckSucceedsWithWonkySize(None)
+
+    def test_root_gb_zero(self):
+        instance = {'uuid': 'fakeuuid', 'image_ref': 'fakeimage'}
+        self.mox.StubOutWithMock(flavors, 'extract_instance_type')
+        flavors.extract_instance_type(instance).AndReturn({'root_gb': 0})
+
+        self.mox.StubOutWithMock(compute_manager, '_get_image_meta')
+
+        image_meta = {'id': 'imageid', 'size': '123'}
+        compute_manager._get_image_meta(self.context,
+                instance['image_ref']).AndReturn(image_meta)
+
+        self.mox.ReplayAll()
+
+        image_meta2 = self.compute._get_and_check_image_metadata(
+                self.context, instance)
+
+        self.assertEqual(image_meta, image_meta2)
+
+    def test_image_ref_is_none(self):
+        # Instance was started from volume - so no image ref
+        instance = {'uuid': 'fakeuuid', 'image_ref': None}
+        image_meta2 = self.compute._get_and_check_image_metadata(
+                self.context, instance)
+
+        self.assertEqual({}, image_meta2)
+
+    def test_image_not_too_large(self):
+        instance = {'uuid': 'fakeuuid', 'image_ref': 'fakeimage'}
+
+        self.mox.StubOutWithMock(flavors, 'extract_instance_type')
+        flavors.extract_instance_type(instance).AndReturn({'root_gb': 1})
+
+        image_meta = {'id': 'imageid', 'size': '1073741824'}
+        self.mox.StubOutWithMock(compute_manager, '_get_image_meta')
+        compute_manager._get_image_meta(self.context,
+                instance['image_ref']).AndReturn(image_meta)
+
+        self.mox.ReplayAll()
+
+        image_meta2 = self.compute._get_and_check_image_metadata(
+                self.context, instance)
+
+        self.assertEqual(image_meta, image_meta2)
+
+    def test_image_too_large(self):
+        instance = {'uuid': 'fakeuuid', 'image_ref': 'fakeimage'}
+
+        self.mox.StubOutWithMock(flavors, 'extract_instance_type')
+        flavors.extract_instance_type(instance).AndReturn({'root_gb': 1})
+
+        image_meta = {'id': 'imageid', 'size': '1073741825'}
+        self.mox.StubOutWithMock(compute_manager, '_get_image_meta')
+        compute_manager._get_image_meta(self.context,
+                instance['image_ref']).AndReturn(image_meta)
+
+        self.mox.ReplayAll()
+
+        self.assertRaises(exception.ImageTooLarge,
+                self.compute._get_and_check_image_metadata,
+                self.context, instance)

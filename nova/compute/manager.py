@@ -1104,13 +1104,10 @@ class ComputeManager(manager.SchedulerDependentManager):
             return {}
 
         try:
-            size_bytes = image_meta['size']
-        except KeyError:
-            # Size is not a required field in the image service (yet), so
-            # we are unable to rely on it being there even though it's in
-            # glance.
-
-            # TODO(jk0): Should size be required in the image service?
+            size_bytes = int(image_meta['size'])
+        except (KeyError, TypeError, ValueError):
+            # Disregard missing field or bad data rather than put the instance
+            # into an ERROR state that can't be communicated back to the user
             return image_meta
 
         instance_type = flavors.extract_instance_type(instance)
