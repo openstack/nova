@@ -995,8 +995,7 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
                                          expected_instance,
                                          update_cells=False)
         self.tgt_db_inst.instance_info_cache_update(self.ctxt, 'fake_uuid',
-                                                    expected_info_cache,
-                                                    update_cells=False)
+                                                    expected_info_cache)
         self.mox.ReplayAll()
 
         self.src_msg_runner.instance_update_at_top(self.ctxt, fake_instance)

@@ -808,8 +808,8 @@ class _BroadcastMessageMethods(_BaseMessageMethods):
                 self.db.instance_create(message.ctxt, instance)
         if info_cache:
             try:
-                self.db.instance_info_cache_update(message.ctxt,
-                        instance_uuid, info_cache, update_cells=False)
+                self.db.instance_info_cache_update(
+                        message.ctxt, instance_uuid, info_cache)
             except exception.InstanceInfoCacheNotFound:
                 # Can happen if we try to update a deleted instance's
                 # network information.

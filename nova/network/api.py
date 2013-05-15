@@ -20,6 +20,7 @@
 import functools
 import inspect
 
+from nova.cells import rpcapi as cells_rpcapi
 from nova.compute import instance_types
 from nova.db import base
 from nova import exception
@@ -63,7 +64,8 @@ def refresh_cache(f):
 
 
 def update_instance_cache_with_nw_info(api, context, instance,
-                                       nw_info=None, conductor_api=None):
+                                       nw_info=None, conductor_api=None,
+                                       update_cells=True):
     try:
         if not isinstance(nw_info, network_model.NetworkInfo):
             nw_info = None
@@ -72,9 +74,20 @@ def update_instance_cache_with_nw_info(api, context, instance,
         # update cache
         cache = {'network_info': nw_info.json()}
         if conductor_api:
-            conductor_api.instance_info_cache_update(context, instance, cache)
+            rv = conductor_api.instance_info_cache_update(context,
+                                                          instance,
+                                                          cache)
         else:
-            api.db.instance_info_cache_update(context, instance['uuid'], cache)
+            rv = api.db.instance_info_cache_update(context,
+                                                   instance['uuid'],
+                                                   cache)
+        if update_cells:
+            cells_api = cells_rpcapi.CellsAPI()
+            try:
+                cells_api.instance_info_cache_update_at_top(context, rv)
+            except Exception:
+                LOG.exception(_("Failed to notify cells of instance info "
+                                "cache update"))
     except Exception:
         LOG.exception(_('Failed storing info cache'), instance=instance)
 
@@ -360,8 +373,13 @@ class API(base.Base):
     def get_instance_nw_info(self, context, instance, conductor_api=None):
         """Returns all network info related to an instance."""
         result = self._get_instance_nw_info(context, instance)
+        # NOTE(comstud): Don't update API cell with new info_cache every
+        # time we pull network info for an instance.  The periodic healing
+        # of info_cache causes too many cells messages.  Healing the API
+        # will happen separately.
         update_instance_cache_with_nw_info(self, context, instance,
-                                           result, conductor_api)
+                                           result, conductor_api,
+                                           update_cells=False)
         return result
 
     def _get_instance_nw_info(self, context, instance):
