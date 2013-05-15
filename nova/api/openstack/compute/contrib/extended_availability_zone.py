@@ -21,34 +21,16 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import availability_zones
-from nova.openstack.common import memorycache
 
-# NOTE(vish): azs don't change that often, so cache them for an hour to
-#             avoid hitting the db multiple times on every request.
-AZ_CACHE_SECONDS = 60 * 60
 authorize = extensions.soft_extension_authorizer('compute',
                                                  'extended_availability_zone')
 
 
 class ExtendedAZController(wsgi.Controller):
-    def __init__(self):
-        self.mc = memorycache.get_client()
-
-    def _get_host_az(self, context, instance):
-        host = str(instance.get('host'))
-        if not host:
-            return None
-        cache_key = "azcache-%s" % host
-        az = self.mc.get(cache_key)
-        if not az:
-            elevated = context.elevated()
-            az = availability_zones.get_host_availability_zone(elevated, host)
-            self.mc.set(cache_key, az, AZ_CACHE_SECONDS)
-        return az
-
     def _extend_server(self, context, server, instance):
         key = "%s:availability_zone" % Extended_availability_zone.alias
-        server[key] = self._get_host_az(context, instance)
+        server[key] = availability_zones.get_instance_availability_zone(
+                                                            context, instance)
 
     @wsgi.extends
     def show(self, req, resp_obj, id):
