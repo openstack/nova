@@ -597,19 +597,6 @@ def parse_server_string(server_str):
         return ('', '')
 
 
-def bool_from_str(val):
-    """Convert a string representation of a bool into a bool value."""
-
-    if not val:
-        return False
-    try:
-        return True if int(val) else False
-    except ValueError:
-        return val.lower() == 'true' or \
-               val.lower() == 'yes' or \
-               val.lower() == 'y'
-
-
 def is_int_like(val):
     """Check if a value looks like an int."""
     try:

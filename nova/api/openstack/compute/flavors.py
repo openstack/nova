@@ -23,6 +23,7 @@ from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova.compute import flavors
 from nova import exception
+from nova.openstack.common import strutils
 
 
 def make_flavor(elem, detailed=False):
@@ -91,25 +92,20 @@ class Controller(wsgi.Controller):
 
         return self._view_builder.show(req, flavor)
 
-    def _get_is_public(self, req):
+    def _parse_is_public(self, is_public):
         """Parse is_public into something usable."""
-        is_public = req.params.get('is_public', None)
 
         if is_public is None:
             # preserve default value of showing only public flavors
             return True
-        elif is_public is True or \
-            is_public.lower() in ['t', 'true', 'yes', '1']:
-            return True
-        elif is_public is False or \
-            is_public.lower() in ['f', 'false', 'no', '0']:
-            return False
-        elif is_public.lower() == 'none':
-            # value to match all flavors, ignore is_public
+        elif is_public == 'none':
             return None
         else:
-            msg = _('Invalid is_public filter [%s]') % req.params['is_public']
-            raise webob.exc.HTTPBadRequest(explanation=msg)
+            try:
+                return strutils.bool_from_string(is_public, strict=True)
+            except ValueError:
+                msg = _('Invalid is_public filter [%s]') % is_public
+                raise webob.exc.HTTPBadRequest(explanation=msg)
 
     def _get_flavors(self, req):
         """Helper function that returns a list of flavor dicts."""
@@ -118,7 +114,8 @@ class Controller(wsgi.Controller):
         context = req.environ['nova.context']
         if context.is_admin:
             # Only admin has query access to all flavor types
-            filters['is_public'] = self._get_is_public(req)
+            filters['is_public'] = self._parse_is_public(
+                    req.params.get('is_public', None))
         else:
             filters['is_public'] = True
             filters['disabled'] = False

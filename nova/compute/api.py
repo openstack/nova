@@ -53,6 +53,7 @@ from nova import notifications
 from nova.openstack.common import excutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
+from nova.openstack.common import strutils
 from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
 import nova.policy
@@ -439,7 +440,7 @@ class API(base.Base):
 
             if value is not None:
                 if prop_type == 'bool':
-                    value = utils.bool_from_str(value)
+                    value = strutils.bool_from_string(value)
 
             return value
 
