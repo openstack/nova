@@ -354,15 +354,21 @@ class BareMetalDriver(driver.ComputeDriver):
                                                 instance_name, mountpoint)
 
     def get_info(self, instance):
-        # NOTE(deva): compute/manager.py expects to get NotFound exception
-        #             so we convert from InstanceNotFound
         inst_uuid = instance.get('uuid')
         node = _get_baremetal_node_by_instance_uuid(inst_uuid)
         pm = get_power_manager(node=node, instance=instance)
-        ps = power_state.SHUTDOWN
-        if pm.is_power_on():
-            ps = power_state.RUNNING
-        return {'state': ps,
+
+        # NOTE(deva): Power manager may not be able to determine power state
+        #             in which case it may return "None" here.
+        ps = pm.is_power_on()
+        if ps:
+            pstate = power_state.RUNNING
+        elif ps is False:
+            pstate = power_state.SHUTDOWN
+        else:
+            pstate = power_state.NOSTATE
+
+        return {'state': pstate,
                 'max_mem': node['memory_mb'],
                 'mem': node['memory_mb'],
                 'num_cpu': node['cpus'],

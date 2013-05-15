@@ -138,17 +138,13 @@ class IPMI(base.PowerManager):
         finally:
             bm_utils.unlink_without_raise(pwfile)
 
-    def _is_power(self, state):
-        out_err = self._exec_ipmitool("power status")
-        return out_err[0] == ("Chassis Power is %s\n" % state)
-
     def _power_on(self):
         """Turn the power to this node ON."""
 
         def _wait_for_power_on():
             """Called at an interval until the node's power is on."""
 
-            if self._is_power("on"):
+            if self.is_power_on():
                 self.state = baremetal_states.ACTIVE
                 raise loopingcall.LoopingCallDone()
             if self.retries > CONF.baremetal.ipmi_power_retry:
@@ -170,7 +166,7 @@ class IPMI(base.PowerManager):
         def _wait_for_power_off():
             """Called at an interval until the node's power is off."""
 
-            if self._is_power("off"):
+            if self.is_power_on() is False:
                 self.state = baremetal_states.DELETED
                 raise loopingcall.LoopingCallDone()
             if self.retries > CONF.baremetal.ipmi_power_retry:
@@ -193,8 +189,15 @@ class IPMI(base.PowerManager):
             LOG.exception(_("IPMI set next bootdev failed"))
 
     def activate_node(self):
-        """Turns the power to node ON."""
-        if self._is_power("on") and self.state == baremetal_states.ACTIVE:
+        """Turns the power to node ON.
+
+        Sets node next-boot to PXE and turns the power on,
+        waiting up to ipmi_power_retry/2 seconds for confirmation
+        that the power is on.
+
+        :returns: One of baremetal_states.py, representing the new state.
+        """
+        if self.is_power_on() and self.state == baremetal_states.ACTIVE:
             LOG.warning(_("Activate node called, but node %s "
                           "is already active") % self.address)
         self._set_pxe_for_next_boot()
@@ -202,19 +205,44 @@ class IPMI(base.PowerManager):
         return self.state
 
     def reboot_node(self):
-        """Cycles the power to a node."""
+        """Cycles the power to a node.
+
+        Turns the power off, sets next-boot to PXE, and turns the power on.
+        Each action waits up to ipmi_power_retry/2 seconds for confirmation
+        that the power state has changed.
+
+        :returns: One of baremetal_states.py, representing the new state.
+        """
         self._power_off()
         self._set_pxe_for_next_boot()
         self._power_on()
         return self.state
 
     def deactivate_node(self):
-        """Turns the power to node OFF, regardless of current state."""
+        """Turns the power to node OFF.
+
+        Turns the power off, and waits up to ipmi_power_retry/2 seconds
+        for confirmation that the power is off.
+
+        :returns: One of baremetal_states.py, representing the new state.
+        """
         self._power_off()
         return self.state
 
     def is_power_on(self):
-        return self._is_power("on")
+        """Check if the power is currently on.
+
+        :returns: True if on; False if off; None if unable to determine.
+        """
+        # NOTE(deva): string matching based on
+        #             http://ipmitool.cvs.sourceforge.net/
+        #               viewvc/ipmitool/ipmitool/lib/ipmi_chassis.c
+        res = self._exec_ipmitool("power status")[0]
+        if res == ("Chassis Power is on\n"):
+            return True
+        elif res == ("Chassis Power is off\n"):
+            return False
+        return None
 
     def start_console(self):
         if not self.port:
