@@ -2513,6 +2513,10 @@
 # region name of this node (string value)
 #os_region_name=<None>
 
+# Allow for a ca certificates file to be specified for cinder
+# client requests (string value)
+#cinder_ca_certificates_file=<None>
+
 # Number of cinderclient retries on failed http calls (integer
 # value)
 #cinder_http_retries=3
