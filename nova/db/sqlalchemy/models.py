@@ -444,7 +444,16 @@ class BlockDeviceMapping(BASE, NovaBase):
                                               'Instance.uuid,'
                                               'BlockDeviceMapping.deleted=='
                                               '0)')
-    device_name = Column(String(255), nullable=False)
+
+    source_type = Column(String(255))
+    destination_type = Column(String(255))
+    guest_format = Column(String(255))
+    device_type = Column(String(255))
+    disk_bus = Column(String(255))
+
+    boot_index = Column(Integer)
+
+    device_name = Column(String(255))
 
     # default=False for compatibility of the existing code.
     # With EC2 API,
@@ -452,13 +461,12 @@ class BlockDeviceMapping(BASE, NovaBase):
     # default False for created with other timing.
     delete_on_termination = Column(Boolean, default=False)
 
-    # for ephemeral device
-    virtual_name = Column(String(255), nullable=True)
-
     snapshot_id = Column(String(36))
 
     volume_id = Column(String(36), nullable=True)
     volume_size = Column(Integer, nullable=True)
+
+    image_id = Column('image_id', String(36))
 
     # for no device to suppress devices.
     no_device = Column(Boolean, nullable=True)

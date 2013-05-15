@@ -1464,6 +1464,124 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     def _post_downgrade_185(self, engine):
         self._unique_constraint_check_migrate_185(engine)
 
+    def _pre_upgrade_186(self, engine):
+        fake_instances = [
+            dict(uuid='mig186_uuid-1', image_ref='fake_image_1',
+                 root_device_name='/dev/vda'),
+            dict(uuid='mig186_uuid-2', image_ref='',
+                 root_device_name='vda'),
+            dict(uuid='mig186_uuid-3', image_ref='fake_image_2',
+                 root_device_name='/dev/vda'),
+        ]
+
+        fake_bdms = [
+            # Instance 1 - image, volume and swap
+            dict(instance_uuid='mig186_uuid-1', device_name='/dev/vdc',
+                 volume_id='fake_volume_1'),
+            dict(instance_uuid='mig186_uuid-1', device_name='/dev/vdb',
+                 virtual_name='swap'),
+            # Instance 2 - no image. snapshot and volume
+            dict(instance_uuid='mig186_uuid-2', device_name='/dev/vda',
+                 snapshot_id='fake_snap_1', volume_id='fake_volume_2'),
+            dict(instance_uuid='mig186_uuid-2', device_name='/dev/vdc',
+                 volume_id='fake_volume_3'),
+            # Instance 3 - ephemerals and swap
+            dict(instance_uuid='mig186_uuid-3', device_name='/dev/vdc',
+                 virtual_name='ephemeral0'),
+            dict(instance_uuid='mig186_uuid-3', device_name='/dev/vdd',
+                 virtual_name='ephemeral1'),
+            dict(instance_uuid='mig186_uuid-3', device_name='/dev/vdb',
+                 virtual_name='swap'),
+        ]
+
+        instances = db_utils.get_table(engine, 'instances')
+        block_device = db_utils.get_table(engine, 'block_device_mapping')
+        engine.execute(instances.insert(), fake_instances)
+        for fake_bdm in fake_bdms:
+            engine.execute(block_device.insert(), fake_bdm)
+
+        return fake_instances, fake_bdms
+
+    def _check_186(self, engine, data):
+        block_device = db_utils.get_table(engine, 'block_device_mapping')
+
+        instance_qs = []
+
+        for instance in ('mig186_uuid-1', 'mig186_uuid-2', 'mig186_uuid-3'):
+            q = block_device.select().where(
+                block_device.c.instance_uuid == instance).order_by(
+                block_device.c.id.asc()
+            )
+            instance_qs.append(q)
+
+        bdm_1s, bdm_2s, bdm_3s = (
+            [bdm for bdm in q.execute()]
+            for q in instance_qs
+        )
+
+        # Instance 1
+        self.assertEqual(bdm_1s[0].source_type, 'volume')
+        self.assertEqual(bdm_1s[0].destination_type, 'volume')
+        self.assertEqual(bdm_1s[0].volume_id, 'fake_volume_1')
+        self.assertEqual(bdm_1s[0].device_type, 'disk')
+        self.assertEqual(bdm_1s[0].boot_index, -1)
+        self.assertEqual(bdm_1s[0].device_name, '/dev/vdc')
+
+        self.assertEqual(bdm_1s[1].source_type, 'blank')
+        self.assertEqual(bdm_1s[1].guest_format, 'swap')
+        self.assertEqual(bdm_1s[1].destination_type, 'local')
+        self.assertEqual(bdm_1s[1].device_type, 'disk')
+        self.assertEqual(bdm_1s[1].boot_index, -1)
+        self.assertEqual(bdm_1s[1].device_name, '/dev/vdb')
+
+        self.assertEqual(bdm_1s[2].source_type, 'image')
+        self.assertEqual(bdm_1s[2].destination_type, 'local')
+        self.assertEqual(bdm_1s[2].device_type, 'disk')
+        self.assertEqual(bdm_1s[2].image_id, 'fake_image_1')
+        self.assertEqual(bdm_1s[2].boot_index, 0)
+
+        # Instance 2
+        self.assertEqual(bdm_2s[0].source_type, 'snapshot')
+        self.assertEqual(bdm_2s[0].destination_type, 'volume')
+        self.assertEqual(bdm_2s[0].snapshot_id, 'fake_snap_1')
+        self.assertEqual(bdm_2s[0].volume_id, 'fake_volume_2')
+        self.assertEqual(bdm_2s[0].device_type, 'disk')
+        self.assertEqual(bdm_2s[0].boot_index, 0)
+        self.assertEqual(bdm_2s[0].device_name, '/dev/vda')
+
+        self.assertEqual(bdm_2s[1].source_type, 'volume')
+        self.assertEqual(bdm_2s[1].destination_type, 'volume')
+        self.assertEqual(bdm_2s[1].volume_id, 'fake_volume_3')
+        self.assertEqual(bdm_2s[1].device_type, 'disk')
+        self.assertEqual(bdm_2s[1].boot_index, -1)
+        self.assertEqual(bdm_2s[1].device_name, '/dev/vdc')
+
+        # Instance 3
+        self.assertEqual(bdm_3s[0].source_type, 'blank')
+        self.assertEqual(bdm_3s[0].destination_type, 'local')
+        self.assertEqual(bdm_3s[0].device_type, 'disk')
+        self.assertEqual(bdm_3s[0].boot_index, -1)
+        self.assertEqual(bdm_3s[0].device_name, '/dev/vdc')
+
+        self.assertEqual(bdm_3s[1].source_type, 'blank')
+        self.assertEqual(bdm_3s[1].destination_type, 'local')
+        self.assertEqual(bdm_3s[1].device_type, 'disk')
+        self.assertEqual(bdm_3s[1].boot_index, -1)
+        self.assertEqual(bdm_3s[1].device_name, '/dev/vdd')
+
+        self.assertEqual(bdm_3s[2].source_type, 'blank')
+        self.assertEqual(bdm_3s[2].guest_format, 'swap')
+        self.assertEqual(bdm_3s[2].destination_type, 'local')
+        self.assertEqual(bdm_3s[2].device_type, 'disk')
+        self.assertEqual(bdm_3s[2].boot_index, -1)
+        self.assertEqual(bdm_3s[2].device_name, '/dev/vdb')
+
+        self.assertEqual(bdm_3s[3].source_type, 'image')
+        self.assertEqual(bdm_3s[3].destination_type, 'local')
+        self.assertEqual(bdm_3s[3].device_type, 'disk')
+        self.assertEqual(bdm_3s[3].image_id, 'fake_image_2')
+        self.assertEqual(bdm_3s[3].boot_index, 0)
+
 
 class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""

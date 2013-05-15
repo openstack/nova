@@ -17,6 +17,7 @@
 import copy
 
 from nova.api.ec2 import ec2utils
+from nova import block_device
 from nova.compute import api as compute_api
 from nova.compute import utils as compute_utils
 from nova import exception
@@ -66,7 +67,7 @@ class ConductorManager(manager.Manager):
     namespace.  See the ComputeTaskManager class for details.
     """
 
-    RPC_API_VERSION = '1.50'
+    RPC_API_VERSION = '1.51'
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(service_name='conductor',
@@ -264,9 +265,12 @@ class ConductorManager(manager.Manager):
         else:
             self.db.block_device_mapping_update(context, values['id'], values)
 
-    def block_device_mapping_get_all_by_instance(self, context, instance):
+    def block_device_mapping_get_all_by_instance(self, context, instance,
+                                                 legacy=True):
         bdms = self.db.block_device_mapping_get_all_by_instance(
             context, instance['uuid'])
+        if legacy:
+            bdms = block_device.legacy_mapping(bdms)
         return jsonutils.to_primitive(bdms)
 
     def block_device_mapping_destroy(self, context, bdms=None,

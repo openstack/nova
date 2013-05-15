@@ -90,6 +90,8 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.48 - Added compute_unrescue
     1.49 - Added columns_to_join to instance_get_by_uuid
     1.50 - Added object_action() and object_class_action()
+    1.51 - Added the 'legacy' argument to
+           block_device_mapping_get_all_by_instance
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -230,11 +232,12 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                             values=values, create=create)
         return self.call(context, msg, version='1.12')
 
-    def block_device_mapping_get_all_by_instance(self, context, instance):
+    def block_device_mapping_get_all_by_instance(self, context, instance,
+                                                 legacy=True):
         instance_p = jsonutils.to_primitive(instance)
         msg = self.make_msg('block_device_mapping_get_all_by_instance',
-                            instance=instance_p)
-        return self.call(context, msg, version='1.13')
+                            instance=instance_p, legacy=legacy)
+        return self.call(context, msg, version='1.51')
 
     def block_device_mapping_destroy(self, context, bdms=None,
                                      instance=None, volume_id=None,
