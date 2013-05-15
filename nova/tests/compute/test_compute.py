@@ -7263,6 +7263,56 @@ class ComputeAPITestCase(BaseTestCase):
         instance = db.instance_get_by_uuid(self.context, instance['uuid'])
         self.compute.terminate_instance(self.context, instance)
 
+    def test_populate_instance_for_bdm(self):
+        # Test that the image bdm is created
+        instance_type = {'swap': 1}
+        instance = self._create_fake_instance(
+            {'root_device_name': 'vda'}
+        )
+        image = {'uuid': FAKE_IMAGE_REF}
+        fake_bdms = [{'device_name': '/dev/vda',
+                      'snapshot_id': '33333333-aaaa-bbbb-cccc-333333333333',
+                      'delete_on_termination': False}]
+
+        # Has an image but no bdms
+        self.compute_api._populate_instance_for_bdm(self.context,
+                                                    instance,
+                                                    instance_type,
+                                                    image, [])
+        bdms = db.block_device_mapping_get_all_by_instance(
+            self.context, instance['uuid'])
+        self.assertEqual(len(bdms), 1)
+        self.assertEqual(bdms[0]['image_id'], FAKE_IMAGE_REF)
+        for bdm in bdms:
+            db.block_device_mapping_destroy(self.context, bdm['id'])
+
+        # Has an image and is volume backed - legacy style
+        self.compute_api._populate_instance_for_bdm(self.context,
+                                                    instance,
+                                                    instance_type,
+                                                    image, fake_bdms)
+        bdms = db.block_device_mapping_get_all_by_instance(
+            self.context, instance['uuid'])
+        self.assertEqual(len(bdms), 1)
+        self.assertEqual(bdms[0]['snapshot_id'],
+                         '33333333-aaaa-bbbb-cccc-333333333333')
+        for bdm in bdms:
+            db.block_device_mapping_destroy(self.context, bdm['id'])
+
+        # Is volume backed and has no image
+        instance['image_ref'] = ''
+        self.compute_api._populate_instance_for_bdm(self.context,
+                                                    instance,
+                                                    instance_type,
+                                                    image, fake_bdms)
+        bdms = db.block_device_mapping_get_all_by_instance(
+            self.context, instance['uuid'])
+        self.assertEqual(len(bdms), 1)
+        self.assertEqual(bdms[0]['snapshot_id'],
+                         '33333333-aaaa-bbbb-cccc-333333333333')
+        for bdm in bdms:
+            db.block_device_mapping_destroy(self.context, bdm['id'])
+
     def test_volume_size(self):
         ephemeral_size = 2
         swap_size = 3

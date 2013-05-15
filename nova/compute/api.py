@@ -898,6 +898,16 @@ class API(base.Base):
                 continue
             self._update_block_device_mapping(context,
                     instance_type, instance_uuid, mapping)
+        # NOTE(ndipanov): Create an image bdm - at the moment
+        #                 this is not used but is done for easier transition
+        #                 in the future.
+        if (instance['image_ref'] and not
+                self.is_volume_backed_instance(context, instance, None)):
+            image_bdm = block_device.create_image_bdm(instance['image_ref'])
+            image_bdm['instance_uuid'] = instance_uuid
+            self.db.block_device_mapping_update_or_create(context,
+                                                          image_bdm,
+                                                          legacy=False)
 
     def _populate_instance_shutdown_terminate(self, instance, image,
                                               block_device_mapping):
