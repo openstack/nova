@@ -14,14 +14,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.openstack.common import version as common_version
+import pbr.version
 
 NOVA_VENDOR = "OpenStack Foundation"
 NOVA_PRODUCT = "OpenStack Nova"
 NOVA_PACKAGE = None  # OS distro package version suffix
 
 loaded = False
-version_info = common_version.VersionInfo('nova')
+version_info = pbr.version.VersionInfo('nova')
 version_string = version_info.version_string
 
 
