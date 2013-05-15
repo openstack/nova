@@ -644,7 +644,11 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     def handle_events(self, event):
         if isinstance(event, virtevent.LifecycleEvent):
-            self.handle_lifecycle_event(event)
+            try:
+                self.handle_lifecycle_event(event)
+            except exception.InstanceNotFound:
+                LOG.debug(_("Event %s arrived for non-existent instance. The "
+                            "instance was probably deleted.") % event)
         else:
             LOG.debug(_("Ignoring event %s") % event)
 

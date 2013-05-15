@@ -73,6 +73,11 @@ from nova.tests import fake_network_cache_model
 from nova.tests.image import fake as fake_image
 from nova.tests import matchers
 from nova import utils
+from nova.virt.event import EVENT_LIFECYCLE_PAUSED
+from nova.virt.event import EVENT_LIFECYCLE_RESUMED
+from nova.virt.event import EVENT_LIFECYCLE_STARTED
+from nova.virt.event import EVENT_LIFECYCLE_STOPPED
+from nova.virt.event import LifecycleEvent
 from nova.virt import fake
 from nova.volume import cinder
 
@@ -5314,6 +5319,38 @@ class ComputeTestCase(BaseTestCase):
             for ps in (power_state.NOSTATE, power_state.SHUTDOWN):
                 self._test_sync_to_stop(power_state.RUNNING, vs, ps,
                                         stop=False)
+
+    def _test_lifecycle_event(self, lifecycle_event, power_state):
+        instance = self._create_fake_instance()
+        uuid = instance['uuid']
+
+        self.mox.StubOutWithMock(self.compute, '_sync_instance_power_state')
+        if power_state != None:
+            self.compute._sync_instance_power_state(
+                mox.IgnoreArg(),
+                mox.ContainsKeyValue('uuid', uuid),
+                power_state)
+        self.mox.ReplayAll()
+        self.compute.handle_events(LifecycleEvent(uuid, lifecycle_event))
+        self.mox.VerifyAll()
+        self.mox.UnsetStubs()
+
+    def test_lifecycle_events(self):
+        self._test_lifecycle_event(EVENT_LIFECYCLE_STOPPED,
+                                   power_state.SHUTDOWN)
+        self._test_lifecycle_event(EVENT_LIFECYCLE_STARTED,
+                                   power_state.RUNNING)
+        self._test_lifecycle_event(EVENT_LIFECYCLE_PAUSED,
+                                   power_state.PAUSED)
+        self._test_lifecycle_event(EVENT_LIFECYCLE_RESUMED,
+                                   power_state.RUNNING)
+        self._test_lifecycle_event(-1, None)
+
+    def test_lifecycle_event_non_existent_instance(self):
+        # No error raised for non-existent instance because of inherent race
+        # between database updates and hypervisor events. See bug #1180501.
+        event = LifecycleEvent('does-not-exist', EVENT_LIFECYCLE_STOPPED)
+        self.compute.handle_events(event)
 
 
 class ComputeAPITestCase(BaseTestCase):
