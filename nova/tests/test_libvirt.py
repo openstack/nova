@@ -1072,6 +1072,10 @@ class LibvirtConnTestCase(test.TestCase):
         libvirt_driver.LibvirtDriver._conn.listDomainsID = lambda: [0, 1]
         libvirt_driver.LibvirtDriver._conn.listDefinedDomains = lambda: []
 
+        self.mox.StubOutWithMock(libvirt.libvirtError, "get_error_code")
+        libvirt.libvirtError.get_error_code().AndReturn(
+            libvirt.VIR_ERR_NO_DOMAIN)
+
         self.mox.ReplayAll()
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instances = conn.list_instances()
