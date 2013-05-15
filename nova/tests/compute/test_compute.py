@@ -8001,6 +8001,18 @@ class ComputeAPITestCase(BaseTestCase):
                 admin_password=None)
             db.instance_destroy(self.context, instance['uuid'])
 
+    def test_get_migrations(self):
+        migration = {uuid: "1234"}
+        filters = {'host': 'host1'}
+        self.mox.StubOutWithMock(db, "migration_get_all_by_filters")
+        db.migration_get_all_by_filters(self.context,
+                                        filters).AndReturn([migration])
+        self.mox.ReplayAll()
+
+        migrations = self.compute_api.get_migrations(self.context,
+                                                             filters)
+        self.assertEqual(migrations, [migration])
+
 
 def fake_rpc_method(context, topic, msg, do_cast=True):
     pass

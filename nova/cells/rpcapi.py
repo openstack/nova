@@ -66,6 +66,7 @@ class CellsAPI(rpc_proxy.RpcProxy):
         1.8 - Adds build_instances(), deprecates schedule_run_instance()
         1.9 - Adds get_capacities()
         1.10 - Adds bdm_update_or_create_at_top(), and bdm_destroy_at_top()
+        1.11 - Adds get_migrations()
     '''
     BASE_RPC_API_VERSION = '1.0'
 
@@ -351,3 +352,8 @@ class CellsAPI(rpc_proxy.RpcProxy):
                       version='1.10')
         except Exception:
             LOG.exception(_("Failed to notify cells of BDM destroy."))
+
+    def get_migrations(self, ctxt, filters):
+        """Get all migrations applying the filters."""
+        return self.call(ctxt, self.make_msg('get_migrations',
+                                             filters=filters), version='1.11')

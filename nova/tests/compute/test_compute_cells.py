@@ -214,6 +214,19 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
         self.mox.ReplayAll()
         self.compute_api.soft_delete(self.context, inst)
 
+    def test_get_migrations(self):
+        filters = {'cell_name': 'ChildCell', 'status': 'confirmed'}
+        migrations = {'migrations': [{'id': 1234}]}
+        cells_rpcapi = self.compute_api.cells_rpcapi
+        self.mox.StubOutWithMock(cells_rpcapi, 'get_migrations')
+        cells_rpcapi.get_migrations(self.context,
+                                        filters).AndReturn(migrations)
+        self.mox.ReplayAll()
+
+        response = self.compute_api.get_migrations(self.context, filters)
+
+        self.assertEqual(migrations, response)
+
 
 class CellsComputePolicyTestCase(test_compute.ComputePolicyTestCase):
     def setUp(self):

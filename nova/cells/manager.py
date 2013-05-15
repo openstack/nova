@@ -46,6 +46,7 @@ cell_manager_opts = [
 
 
 CONF = cfg.CONF
+CONF.import_opt('name', 'nova.cells.opts', group='cells')
 CONF.register_opts(cell_manager_opts, group='cells')
 
 
@@ -401,3 +402,18 @@ class CellsManager(manager.Manager):
         self.msg_runner.bdm_destroy_at_top(ctxt, instance_uuid,
                                            device_name=device_name,
                                            volume_id=volume_id)
+
+    def get_migrations(self, ctxt, filters):
+        """Fetch migrations applying the filters."""
+        target_cell = None
+        if "cell_name" in filters:
+            _path_cell_sep = cells_utils._PATH_CELL_SEP
+            target_cell = '%s%s%s' % (CONF.cells.name, _path_cell_sep,
+                                      filters['cell_name'])
+
+        responses = self.msg_runner.get_migrations(ctxt, target_cell,
+                                                       False, filters)
+        migrations = []
+        for response in responses:
+            migrations += response.value_or_raise()
+        return migrations

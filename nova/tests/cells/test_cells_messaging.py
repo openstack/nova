@@ -1044,6 +1044,31 @@ class CellsTargetedMethodsTestCase(test.TestCase):
         result = response.value_or_raise()
         self.assertEqual('fake_result', result)
 
+    def test_get_migrations_for_a_given_cell(self):
+        filters = {'cell_name': 'child-cell2', 'status': 'confirmed'}
+        migrations_in_progress = [{'id': 123}]
+        self.mox.StubOutWithMock(self.tgt_compute_api,
+                                 'get_migrations')
+
+        self.tgt_compute_api.get_migrations(self.ctxt, filters).\
+            AndReturn(migrations_in_progress)
+        self.mox.ReplayAll()
+
+        responses = self.src_msg_runner.get_migrations(
+                self.ctxt,
+                self.tgt_cell_name, False, filters)
+        result = responses[0].value_or_raise()
+        self.assertEqual(migrations_in_progress, result)
+
+    def test_get_migrations_for_an_invalid_cell(self):
+        filters = {'cell_name': 'invalid_Cell', 'status': 'confirmed'}
+
+        responses = self.src_msg_runner.get_migrations(
+                self.ctxt,
+                'api_cell!invalid_cell', False, filters)
+
+        self.assertEqual(0, len(responses))
+
 
 class CellsBroadcastMethodsTestCase(test.TestCase):
     """Test case for _BroadcastMessageMethods class.  Most of these
@@ -1696,3 +1721,30 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
 
         self.src_msg_runner.bdm_destroy_at_top(self.ctxt, fake_instance_uuid,
                                                device_name=fake_device_name)
+
+    def test_get_migrations(self):
+        self._setup_attrs(up=False)
+        filters = {'status': 'confirmed'}
+        migrations_from_cell1 = [{'id': 123}]
+        migrations_from_cell2 = [{'id': 456}]
+        self.mox.StubOutWithMock(self.mid_compute_api,
+                                 'get_migrations')
+
+        self.mid_compute_api.get_migrations(self.ctxt, filters).\
+            AndReturn(migrations_from_cell1)
+
+        self.mox.StubOutWithMock(self.tgt_compute_api,
+                                 'get_migrations')
+
+        self.tgt_compute_api.get_migrations(self.ctxt, filters).\
+            AndReturn(migrations_from_cell2)
+
+        self.mox.ReplayAll()
+
+        responses = self.src_msg_runner.get_migrations(
+                self.ctxt,
+                None, False, filters)
+        self.assertEquals(2, len(responses))
+        for response in responses:
+            self.assertIn(response.value_or_raise(), [migrations_from_cell1,
+                                                      migrations_from_cell2])

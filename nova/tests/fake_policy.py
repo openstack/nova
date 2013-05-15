@@ -205,6 +205,8 @@ policy_data = """
     "compute_extension:availability_zone:list": "",
     "compute_extension:availability_zone:detail": "is_admin:True",
     "compute_extension:used_limits_for_admin": "is_admin:True",
+    "compute_extension:migrations:index": "is_admin:True",
+
 
     "volume:create": "",
     "volume:get": "",

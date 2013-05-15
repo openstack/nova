@@ -228,4 +228,8 @@
   <extension alias="os-volumes" updated="2011-03-25T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/volumes/api/v1.1" name="Volumes">
     <description>Volumes support.</description>
   </extension>
+  <extension alias="os-migrations" updated="2013-05-30T00:00:00+00:00"
+             namespace="http://docs.openstack.org/compute/ext/migrations/api/v2.0" name="Migrations">
+    <description>Provide data on migrations.</description>
+  </extension>
 </extensions>

@@ -796,6 +796,10 @@ class _TargetedMessageMethods(_BaseMessageMethods):
         return self.compute_rpcapi.validate_console_port(message.ctxt,
                 instance, console_port, console_type)
 
+    def get_migrations(self, message, filters):
+        context = message.ctxt
+        return self.compute_api.get_migrations(context, filters)
+
 
 class _BroadcastMessageMethods(_BaseMessageMethods):
     """These are the methods that can be called as a part of a broadcast
@@ -1027,6 +1031,10 @@ class _BroadcastMessageMethods(_BaseMessageMethods):
             self.db.block_device_mapping_destroy_by_instance_and_volume(
                     message.ctxt, instance_uuid, volume_id)
 
+    def get_migrations(self, message, filters):
+        context = message.ctxt
+        return self.compute_api.get_migrations(context, filters)
+
 
 _CELL_MESSAGE_TYPE_TO_MESSAGE_CLS = {'targeted': _TargetedMessage,
                                      'broadcast': _BroadcastMessage,
@@ -1125,6 +1133,19 @@ class MessageRunner(object):
         return _ResponseMessage(self, ctxt, 'parse_responses',
                                 response_kwargs, direction, target_cell,
                                 response_uuid, **kwargs)
+
+    def _get_migrations_for_cell(self, ctxt, cell_name, filters):
+        method_kwargs = dict(filters=filters)
+        message = _TargetedMessage(self, ctxt, 'get_migrations',
+                                   method_kwargs, 'down', cell_name,
+                                   need_response=True)
+
+        response = message.process()
+        if response.failure and isinstance(response.value[1],
+                                           exception.CellRoutingInconsistency):
+            return []
+
+        return [response]
 
     def message_from_json(self, json_message):
         """Turns a message in JSON format into an appropriate Message
@@ -1437,6 +1458,20 @@ class MessageRunner(object):
                                     method_kwargs,
                                     'up', run_locally=False)
         message.process()
+
+    def get_migrations(self, ctxt, cell_name, run_locally, filters):
+        """Fetch all migrations applying the filters for a given cell or all
+        cells.
+        """
+        method_kwargs = dict(filters=filters)
+        if cell_name:
+            return self._get_migrations_for_cell(ctxt, cell_name, filters)
+
+        message = _BroadcastMessage(self, ctxt, 'get_migrations',
+                                    method_kwargs, 'down',
+                                    run_locally=run_locally,
+                                    need_response=True)
+        return message.process()
 
     @staticmethod
     def get_message_types():
