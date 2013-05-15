@@ -399,11 +399,11 @@ class DbApiTestCase(DbTestCase):
         network = db.network_create_safe(ctxt, values)
         db_network = db.network_get(ctxt, network['id'])
         values = {'network_id': network['id'], 'address': 'fake1'}
-        address1 = db.fixed_ip_create(ctxt, values)
+        address1 = db.fixed_ip_create(ctxt, values)['address']
         values = {'network_id': network['id'],
                   'address': 'fake2',
                   'allocated': True}
-        address2 = db.fixed_ip_create(ctxt, values)
+        address2 = db.fixed_ip_create(ctxt, values)['address']
         self.assertRaises(exception.NetworkInUse,
                           db.network_delete_safe, ctxt, network['id'])
         db.fixed_ip_update(ctxt, address2, {'allocated': False})
@@ -1013,7 +1013,7 @@ class DbApiTestCase(DbTestCase):
                   'allocated': True,
                   'instance_uuid': instance['uuid'],
                   'virtual_interface_id': vif['id']}
-        fixed_address = db.fixed_ip_create(ctxt, values)
+        fixed_address = db.fixed_ip_create(ctxt, values)['address']
         data = db.network_get_associated_fixed_ips(ctxt, 1)
         self.assertEqual(len(data), 1)
         record = data[0]
@@ -1041,7 +1041,7 @@ class DbApiTestCase(DbTestCase):
         # network with fixed ip with host set
         net = db.network_create_safe(ctxt, {})
         values = {'host': 'foo', 'network_id': net['id']}
-        fixed_address = db.fixed_ip_create(ctxt, values)
+        db.fixed_ip_create(ctxt, values)
         data = db.network_get_all_by_host(ctxt, 'foo')
         self.assertEqual(len(data), 2)
         # network with instance with host set
@@ -1051,7 +1051,7 @@ class DbApiTestCase(DbTestCase):
         vif = db.virtual_interface_create(ctxt, values)
         values = {'network_id': net['id'],
                   'virtual_interface_id': vif['id']}
-        fixed_address = db.fixed_ip_create(ctxt, values)
+        db.fixed_ip_create(ctxt, values)
         data = db.network_get_all_by_host(ctxt, 'foo')
         self.assertEqual(len(data), 3)
 
@@ -2383,13 +2383,12 @@ class FixedIPTestCase(BaseInstanceTypeTestCase):
         self.assertEqual(result, 0)
 
     def test_fixed_ip_get_by_floating_address(self):
-        fixed = db.fixed_ip_create(self.ctxt, {'address': 'fixed'})
-        fixed_ip_ref = db.fixed_ip_get_by_address(self.ctxt, fixed)
+        fixed_ip = db.fixed_ip_create(self.ctxt, {'address': 'fixed'})
         values = {'address': 'floating',
-                  'fixed_ip_id': fixed_ip_ref['id']}
+                  'fixed_ip_id': fixed_ip['id']}
         floating = db.floating_ip_create(self.ctxt, values)['address']
         fixed_ip_ref = db.fixed_ip_get_by_floating_address(self.ctxt, floating)
-        self.assertEqual(fixed, fixed_ip_ref['address'])
+        self._assertEqualObjects(fixed_ip, fixed_ip_ref)
 
     def test_fixed_ip_get_by_host(self):
         host_ips = {
@@ -2572,7 +2571,7 @@ class FixedIPTestCase(BaseInstanceTypeTestCase):
     def create_fixed_ip(self, **params):
         default_params = {'address': '192.168.0.1'}
         default_params.update(params)
-        return db.fixed_ip_create(self.ctxt, default_params)
+        return db.fixed_ip_create(self.ctxt, default_params)['address']
 
     def test_fixed_ip_associate_fails_if_ip_not_in_network(self):
         instance_uuid = self._create_instance()
@@ -2608,6 +2607,210 @@ class FixedIPTestCase(BaseInstanceTypeTestCase):
         fixed_ip = db.fixed_ip_get_by_address(self.ctxt, address)
         self.assertEqual(fixed_ip['instance_uuid'], instance_uuid)
         self.assertEqual(fixed_ip['network_id'], network['id'])
+
+    def test_fixed_ip_associate_pool_invalid_uuid(self):
+        instance_uuid = '123'
+        self.assertRaises(exception.InvalidUUID, db.fixed_ip_associate_pool,
+                          self.ctxt, None, instance_uuid)
+
+    def test_fixed_ip_associate_pool_no_more_fixed_ips(self):
+        instance_uuid = self._create_instance()
+        self.assertRaises(exception.NoMoreFixedIps, db.fixed_ip_associate_pool,
+                          self.ctxt, None, instance_uuid)
+
+    def test_fixed_ip_associate_pool_succeeds(self):
+        instance_uuid = self._create_instance()
+        network = db.network_create_safe(self.ctxt, {})
+
+        address = self.create_fixed_ip(network_id=network['id'])
+        db.fixed_ip_associate_pool(self.ctxt, network['id'], instance_uuid)
+        fixed_ip = db.fixed_ip_get_by_address(self.ctxt, address)
+        self.assertEqual(fixed_ip['instance_uuid'], instance_uuid)
+
+    def test_fixed_ip_create(self):
+        instance_uuid = self._create_instance()
+        network_id = db.network_create_safe(self.ctxt, {})['id']
+        param = {
+            'reserved': False,
+            'deleted': 0,
+            'leased': False,
+            'host': '127.0.0.1',
+            'address': 'localhost',
+            'allocated': False,
+            'instance_uuid': instance_uuid,
+            'network_id': network_id,
+            'virtual_interface_id': None
+        }
+
+        ignored_keys = ['created_at', 'id', 'deleted_at', 'updated_at']
+        fixed_ip_data = db.fixed_ip_create(self.ctxt, param)
+        self._assertEqualObjects(param, fixed_ip_data, ignored_keys)
+
+    def test_fixed_ip_bulk_create(self):
+        adress = 'fixed_ip_adress'
+        instance_uuid = self._create_instance()
+        network_id_1 = db.network_create_safe(self.ctxt, {})['id']
+        network_id_2 = db.network_create_safe(self.ctxt, {})['id']
+        params = [
+            {'reserved': False, 'deleted': 0, 'leased': False,
+             'host': '127.0.0.1', 'address': adress, 'allocated': False,
+             'instance_uuid': instance_uuid, 'network_id': network_id_1,
+             'virtual_interface_id': None},
+            {'reserved': False, 'deleted': 0, 'leased': False,
+             'host': 'localhost', 'address': adress, 'allocated': True,
+             'instance_uuid': instance_uuid, 'network_id': network_id_2,
+             'virtual_interface_id': None}
+        ]
+
+        db.fixed_ip_bulk_create(self.ctxt, params)
+        ignored_keys = ['created_at', 'id', 'deleted_at', 'updated_at']
+        fixed_ip_data = db.fixed_ip_get_by_instance(self.ctxt, instance_uuid)
+
+        # we have no `id` in incoming data so we can not use
+        # _assertEqualListsOfObjects to compare incoming data and received
+        # objects
+        fixed_ip_data = sorted(fixed_ip_data, key=lambda i: i['network_id'])
+        params = sorted(params, key=lambda i: i['network_id'])
+        for param, ip in zip(params, fixed_ip_data):
+            self._assertEqualObjects(param, ip, ignored_keys)
+
+    def test_fixed_ip_disassociate(self):
+        adress = 'fixed_ip_adress'
+        instance_uuid = self._create_instance()
+        network_id = db.network_create_safe(self.ctxt, {})['id']
+        param = {
+            'reserved': False,
+            'deleted': 0,
+            'leased': False,
+            'host': '127.0.0.1',
+            'address': adress,
+            'allocated': False,
+            'instance_uuid': instance_uuid,
+            'network_id': network_id,
+            'virtual_interface_id': None
+        }
+        db.fixed_ip_create(self.ctxt, param)
+
+        db.fixed_ip_disassociate(self.ctxt, adress)
+        fixed_ip_data = db.fixed_ip_get_by_address(self.ctxt, adress)
+        ignored_keys = ['created_at', 'id', 'deleted_at',
+                        'updated_at', 'instance_uuid']
+        self._assertEqualObjects(param, fixed_ip_data, ignored_keys)
+        self.assertIsNone(fixed_ip_data['instance_uuid'])
+
+    def test_fixed_ip_get_not_found_exception(self):
+        self.assertRaises(exception.FixedIpNotFound,
+                          db.fixed_ip_get, self.ctxt, 0)
+
+    def test_fixed_ip_get_sucsess2(self):
+        adress = 'fixed_ip_adress'
+        instance_uuid = self._create_instance()
+        network_id = db.network_create_safe(self.ctxt, {})['id']
+        param = {
+            'reserved': False,
+            'deleted': 0,
+            'leased': False,
+            'host': '127.0.0.1',
+            'address': adress,
+            'allocated': False,
+            'instance_uuid': instance_uuid,
+            'network_id': network_id,
+            'virtual_interface_id': None
+        }
+        fixed_ip_id = db.fixed_ip_create(self.ctxt, param)
+
+        self.ctxt.is_admin = False
+        self.assertRaises(exception.NotAuthorized, db.fixed_ip_get,
+                          self.ctxt, fixed_ip_id)
+
+    def test_fixed_ip_get_sucsess(self):
+        adress = 'fixed_ip_adress'
+        instance_uuid = self._create_instance()
+        network_id = db.network_create_safe(self.ctxt, {})['id']
+        param = {
+            'reserved': False,
+            'deleted': 0,
+            'leased': False,
+            'host': '127.0.0.1',
+            'address': adress,
+            'allocated': False,
+            'instance_uuid': instance_uuid,
+            'network_id': network_id,
+            'virtual_interface_id': None
+        }
+        db.fixed_ip_create(self.ctxt, param)
+
+        fixed_ip_id = db.fixed_ip_get_by_address(self.ctxt, adress)['id']
+        fixed_ip_data = db.fixed_ip_get(self.ctxt, fixed_ip_id)
+        ignored_keys = ['created_at', 'id', 'deleted_at', 'updated_at']
+        self._assertEqualObjects(param, fixed_ip_data, ignored_keys)
+
+    def test_fixed_ip_get_by_address_detailed_not_found_exception(self):
+        self.assertRaises(exception.FixedIpNotFoundForAddress,
+                          db.fixed_ip_get_by_address_detailed, self.ctxt, 'x')
+
+    def test_fixed_ip_get_by_address_detailed_sucsess(self):
+        adress = 'fixed_ip_adress_123'
+        instance_uuid = self._create_instance()
+        network_id = db.network_create_safe(self.ctxt, {})['id']
+        param = {
+            'reserved': False,
+            'deleted': 0,
+            'leased': False,
+            'host': '127.0.0.1',
+            'address': adress,
+            'allocated': False,
+            'instance_uuid': instance_uuid,
+            'network_id': network_id,
+            'virtual_interface_id': None
+        }
+        db.fixed_ip_create(self.ctxt, param)
+
+        fixed_ip_data = db.fixed_ip_get_by_address_detailed(self.ctxt,
+                                                               adress)
+        # fixed ip check here
+        ignored_keys = ['created_at', 'id', 'deleted_at', 'updated_at']
+        self._assertEqualObjects(param, fixed_ip_data[0], ignored_keys)
+
+        # network model check here
+        network_data = db.network_get(self.ctxt, network_id)
+        self._assertEqualObjects(network_data, fixed_ip_data[1])
+
+        # Instance check here
+        instance_data = db.instance_get_by_uuid(self.ctxt, instance_uuid)
+        ignored_keys = ['info_cache', 'system_metadata',
+                        'security_groups', 'metadata']  # HOW ????
+        self._assertEqualObjects(instance_data, fixed_ip_data[2], ignored_keys)
+
+    def test_fixed_ip_update_not_found_for_adress(self):
+        self.assertRaises(exception.FixedIpNotFoundForAddress,
+                          db.fixed_ip_update, self.ctxt, 'fixed_ip_adress', {})
+
+    def test_fixed_ip_update(self):
+        instance_uuid_1 = self._create_instance()
+        instance_uuid_2 = self._create_instance()
+        network_id_1 = db.network_create_safe(self.ctxt, {})['id']
+        network_id_2 = db.network_create_safe(self.ctxt, {})['id']
+        param_1 = {
+            'reserved': True, 'deleted': 0, 'leased': True,
+            'host': '192.168.133.1', 'address': 'localhost',
+            'allocated': True, 'instance_uuid': instance_uuid_1,
+            'network_id': network_id_1, 'virtual_interface_id': '123',
+        }
+
+        param_2 = {
+            'reserved': False, 'deleted': 0, 'leased': False,
+            'host': '127.0.0.1', 'address': 'localhost', 'allocated': False,
+            'instance_uuid': instance_uuid_2, 'network_id': network_id_2,
+            'virtual_interface_id': None
+        }
+
+        ignored_keys = ['created_at', 'id', 'deleted_at', 'updated_at']
+        fixed_ip_addr = db.fixed_ip_create(self.ctxt, param_1)['address']
+        db.fixed_ip_update(self.ctxt, fixed_ip_addr, param_2)
+        fixed_ip_after_update = db.fixed_ip_get_by_address(self.ctxt,
+                                                           param_2['address'])
+        self._assertEqualObjects(param_2, fixed_ip_after_update, ignored_keys)
 
 
 class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
@@ -2773,7 +2976,7 @@ class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def _create_fixed_ip(self, params):
         default_params = {'address': '192.168.0.1'}
         default_params.update(params)
-        return db.fixed_ip_create(self.ctxt, default_params)
+        return db.fixed_ip_create(self.ctxt, default_params)['address']
 
     def test_floating_ip_fixed_ip_associate(self):
         float_addresses = ['1.1.1.1', '1.1.1.2', '1.1.1.3']

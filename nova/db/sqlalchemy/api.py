@@ -1050,7 +1050,7 @@ def fixed_ip_create(context, values):
     fixed_ip_ref = models.FixedIp()
     fixed_ip_ref.update(values)
     fixed_ip_ref.save()
-    return fixed_ip_ref['address']
+    return fixed_ip_ref
 
 
 @require_context

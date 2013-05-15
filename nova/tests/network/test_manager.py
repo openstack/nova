@@ -2146,11 +2146,9 @@ class FloatingIPTestCase(test.TestCase):
                 'project_id': self.project_id, 'deleted': True})
         network = db.api.network_create_safe(self.context.elevated(), {
                 'project_id': self.project_id})
-        addr = db.fixed_ip_create(self.context, {'allocated': True,
+        fixed = db.fixed_ip_create(self.context, {'allocated': True,
                 'instance_uuid': instance['uuid'], 'address': '10.1.1.1',
                 'network_id': network['id']})
-        fixed = db.fixed_ip_get_by_address(
-                self.context.elevated(read_deleted='yes'), addr)
         db.api.floating_ip_create(self.context, {
                 'address': '10.10.10.10', 'instance_uuid': instance['uuid'],
                 'fixed_ip_id': fixed['id'],
@@ -2165,11 +2163,9 @@ class FloatingIPTestCase(test.TestCase):
                 'project_id': self.project_id})
         network = db.api.network_create_safe(self.context.elevated(), {
                 'project_id': self.project_id})
-        addr = db.fixed_ip_create(self.context, {'allocated': True,
+        fixed = db.fixed_ip_create(self.context, {'allocated': True,
                 'instance_uuid': instance['uuid'], 'address': '10.1.1.1',
                 'network_id': network['id']})
-        fixed = db.fixed_ip_get_by_address(
-                self.context.elevated(read_deleted='yes'), addr)
         db.api.floating_ip_create(self.context, {
                 'address': '10.10.10.10',
                 'deleted': True})

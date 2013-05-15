@@ -187,7 +187,7 @@ def stub_out_db_network_api(stubs):
         ip['id'] = max([i['id'] for i in fixed_ips] or [-1]) + 1
         for key in values:
             ip[key] = values[key]
-        return ip['address']
+        return ip
 
     def fake_fixed_ip_disassociate(context, address):
         ips = filter(lambda i: i['address'] == address,
