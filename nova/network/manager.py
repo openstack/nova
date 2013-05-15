@@ -1868,7 +1868,7 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
                     self.db.fixed_ip_update(context, network['dhcp_server'],
                                             values)
             else:
-                self.driver.update_dhcp(context, dev, network)
+                self.driver.update_dhcp(elevated, dev, network)
 
     def _get_network_dict(self, network):
         """Returns the dict representing necessary and meta network fields."""
