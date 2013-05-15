@@ -753,6 +753,7 @@ class LibvirtFibreChannelVolumeDriver(LibvirtBaseVolumeDriver):
                       % {'device': mdev_info['device']})
             device_path = mdev_info['device']
             connection_info['data']['devices'] = mdev_info['devices']
+            connection_info['data']['multipath_id'] = mdev_info['id']
         else:
             # we didn't find a multipath device.
             # so we assume the kernel only sees 1 device
@@ -773,6 +774,15 @@ class LibvirtFibreChannelVolumeDriver(LibvirtBaseVolumeDriver):
         super(LibvirtFibreChannelVolumeDriver,
               self).disconnect_volume(connection_info, mount_device)
         devices = connection_info['data']['devices']
+
+        # If this is a multipath device, we need to search again
+        # and make sure we remove all the devices. Some of them
+        # might not have shown up at attach time.
+        if 'multipath_id' in connection_info['data']:
+            multipath_id = connection_info['data']['multipath_id']
+            mdev_info = linuxscsi.find_multipath_device(multipath_id)
+            devices = mdev_info['devices']
+            LOG.debug("devices to remove = %s" % devices)
 
         # There may have been more than 1 device mounted
         # by the kernel for this volume.  We have to remove
