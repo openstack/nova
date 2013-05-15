@@ -50,49 +50,49 @@ def fake_compute_api_create(cls, context, instance_type, image_href, **kwargs):
     inst_type = flavors.get_instance_type_by_flavor_id(2)
     resv_id = None
     return ([{'id': 1,
-             'display_name': 'test_server',
-             'uuid': FAKE_UUID,
-             'instance_type': dict(inst_type),
-             'access_ip_v4': '1.2.3.4',
-             'access_ip_v6': 'fead::1234',
-             'image_ref': IMAGE_UUID,
-             'user_id': 'fake',
-             'project_id': 'fake',
-             'created_at': datetime.datetime(2010, 10, 10, 12, 0, 0),
-             'updated_at': datetime.datetime(2010, 11, 11, 11, 0, 0),
-             'progress': 0,
-             'fixed_ips': []
-             }], resv_id)
+              'display_name': 'test_server',
+              'uuid': FAKE_UUID,
+              'instance_type': dict(inst_type),
+              'access_ip_v4': '1.2.3.4',
+              'access_ip_v6': 'fead::1234',
+              'image_ref': IMAGE_UUID,
+              'user_id': 'fake',
+              'project_id': 'fake',
+              'created_at': datetime.datetime(2010, 10, 10, 12, 0, 0),
+              'updated_at': datetime.datetime(2010, 11, 11, 11, 0, 0),
+              'progress': 0,
+              'fixed_ips': []
+              }], resv_id)
 
 
 def fake_get_instance(self, context, instance_id):
-    return({'uuid': instance_id})
+    return {'uuid': instance_id}
 
 
 def fake_get_volume(self, context, id):
-    return({'id': 'woot'})
+    return {'id': 'woot'}
 
 
 def fake_attach_volume(self, context, instance, volume_id, device):
-    return()
+    pass
 
 
 def fake_detach_volume(self, context, instance, volume):
-    return()
+    pass
 
 
 def fake_create_snapshot(self, context, volume, name, description):
-    return({'id': 123,
+    return {'id': 123,
             'volume_id': 'fakeVolId',
             'status': 'available',
             'volume_size': 123,
             'created_at': '2013-01-01 00:00:01',
             'display_name': 'myVolumeName',
-            'display_description': 'myVolumeDescription'})
+            'display_description': 'myVolumeDescription'}
 
 
 def fake_get_instance_bdms(self, context, instance):
-    return([{'id': 1,
+    return [{'id': 1,
              'instance_uuid': instance['uuid'],
              'device_name': '/dev/fake0',
              'delete_on_termination': 'False',
@@ -107,7 +107,7 @@ def fake_get_instance_bdms(self, context, instance):
              'virtual_name': 'MyNamesVirtual',
              'snapshot_id': None,
              'volume_id': FAKE_UUID_B,
-             'volume_size': 1}])
+             'volume_size': 1}]
 
 
 class BootFromVolumeTest(test.TestCase):
