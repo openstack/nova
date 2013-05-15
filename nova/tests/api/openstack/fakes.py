@@ -581,7 +581,7 @@ def stub_volume_get(self, context, volume_id):
     return stub_volume(volume_id)
 
 
-def stub_volume_get_notfound(self, context, volume_id):
+def stub_volume_notfound(self, context, volume_id):
     raise exc.VolumeNotFound(volume_id=volume_id)
 
 
@@ -611,13 +611,13 @@ def stub_snapshot(id, **kwargs):
     return snapshot
 
 
-def stub_snapshot_create(self, context, volume, name, description):
-    return stub_snapshot(100, volume_id=volume['id'], display_name=name,
+def stub_snapshot_create(self, context, volume_id, name, description):
+    return stub_snapshot(100, volume_id=volume_id, display_name=name,
                          display_description=description)
 
 
-def stub_snapshot_delete(self, context, snapshot):
-    if snapshot['id'] == '-1':
+def stub_snapshot_delete(self, context, snapshot_id):
+    if snapshot_id == '-1':
         raise exc.NotFound
 
 

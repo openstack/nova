@@ -838,7 +838,7 @@ class ServerActionsControllerTest(test.TestCase):
         self.mox.StubOutWithMock(self.controller.compute_api, 'volume_api')
         volume_api = self.controller.compute_api.volume_api
         volume_api.get(mox.IgnoreArg(), volume['id']).AndReturn(volume)
-        volume_api.create_snapshot_force(mox.IgnoreArg(), volume,
+        volume_api.create_snapshot_force(mox.IgnoreArg(), volume['id'],
                 mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(snapshot)
 
         self.mox.ReplayAll()

@@ -217,7 +217,7 @@ class VolumeApiTest(test.TestCase):
         self.assertEqual(resp.status_int, 200)
 
     def test_volume_show_no_volume(self):
-        self.stubs.Set(cinder.API, "get", fakes.stub_volume_get_notfound)
+        self.stubs.Set(cinder.API, "get", fakes.stub_volume_notfound)
 
         req = webob.Request.blank('/v2/fake/os-volumes/456')
         resp = req.get_response(self.app)
@@ -230,7 +230,7 @@ class VolumeApiTest(test.TestCase):
         self.assertEqual(resp.status_int, 202)
 
     def test_volume_delete_no_volume(self):
-        self.stubs.Set(cinder.API, "get", fakes.stub_volume_get_notfound)
+        self.stubs.Set(cinder.API, "delete", fakes.stub_volume_notfound)
 
         req = webob.Request.blank('/v2/fake/os-volumes/456')
         req.method = 'DELETE'

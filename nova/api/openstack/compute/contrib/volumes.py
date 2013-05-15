@@ -188,8 +188,7 @@ class VolumeController(wsgi.Controller):
         LOG.audit(_("Delete volume with id: %s"), id, context=context)
 
         try:
-            vol = self.volume_api.get(context, id)
-            self.volume_api.delete(context, vol)
+            self.volume_api.delete(context, id)
         except exception.NotFound:
             raise exc.HTTPNotFound()
         return webob.Response(status_int=202)
@@ -578,8 +577,7 @@ class SnapshotController(wsgi.Controller):
         LOG.audit(_("Delete snapshot with id: %s"), id, context=context)
 
         try:
-            snapshot = self.volume_api.get_snapshot(context, id)
-            self.volume_api.delete_snapshot(context, snapshot)
+            self.volume_api.delete_snapshot(context, id)
         except exception.NotFound:
             return exc.HTTPNotFound()
         return webob.Response(status_int=202)
@@ -615,7 +613,6 @@ class SnapshotController(wsgi.Controller):
 
         snapshot = body['snapshot']
         volume_id = snapshot['volume_id']
-        vol = self.volume_api.get(context, volume_id)
 
         force = snapshot.get('force', False)
         LOG.audit(_("Create snapshot from volume %s"), volume_id,
@@ -627,12 +624,12 @@ class SnapshotController(wsgi.Controller):
 
         if strutils.bool_from_string(force):
             new_snapshot = self.volume_api.create_snapshot_force(context,
-                                        vol,
+                                        volume_id,
                                         snapshot.get('display_name'),
                                         snapshot.get('display_description'))
         else:
             new_snapshot = self.volume_api.create_snapshot(context,
-                                        vol,
+                                        volume_id,
                                         snapshot.get('display_name'),
                                         snapshot.get('display_description'))
 

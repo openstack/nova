@@ -168,41 +168,46 @@ def _untranslate_snapshot_summary_view(context, snapshot):
     return d
 
 
+def translate_volume_exception(method):
+    """Transforms the exception for the volume but keeps its traceback intact.
+    """
+    def wrapper(self, ctx, volume_id, *args, **kwargs):
+        try:
+            res = method(self, ctx, volume_id, *args, **kwargs)
+        except cinder_exception.ClientException:
+            exc_type, exc_value, exc_trace = sys.exc_info()
+            if isinstance(exc_value, cinder_exception.NotFound):
+                exc_value = exception.VolumeNotFound(volume_id=volume_id)
+            elif isinstance(exc_value, cinder_exception.BadRequest):
+                exc_value = exception.InvalidInput(reason=exc_value.message)
+            raise exc_value, None, exc_trace
+        return res
+    return wrapper
+
+
+def translate_snapshot_exception(method):
+    """Transforms the exception for the snapshot but keeps its traceback
+       intact.
+    """
+    def wrapper(self, ctx, snapshot_id, *args, **kwargs):
+        try:
+            res = method(self, ctx, snapshot_id, *args, **kwargs)
+        except cinder_exception.ClientException:
+            exc_type, exc_value, exc_trace = sys.exc_info()
+            if isinstance(exc_value, cinder_exception.NotFound):
+                exc_value = exception.SnapshotNotFound(snapshot_id=snapshot_id)
+            raise exc_value, None, exc_trace
+        return res
+    return wrapper
+
+
 class API(base.Base):
     """API for interacting with the volume manager."""
 
-    def _reraise_translated_volume_exception(self, volume_id=None):
-        """Transform the exception for the volume but keep its traceback
-        intact."""
-        exc_type, exc_value, exc_trace = sys.exc_info()
-        new_exc = self._translate_volume_exception(volume_id, exc_value)
-        raise new_exc, None, exc_trace
-
-    def _translate_volume_exception(self, volume_id, exc_value):
-        if isinstance(exc_value, cinder_exception.NotFound):
-            return exception.VolumeNotFound(volume_id=volume_id)
-        elif isinstance(exc_value, cinder_exception.BadRequest):
-            return exception.InvalidInput(reason=exc_value.message)
-        return exc_value
-
-    def _reraise_translated_snapshot_exception(self, snapshot_id=None):
-        """Transform the exception for the snapshot but keep its traceback
-        intact."""
-        exc_type, exc_value, exc_trace = sys.exc_info()
-        new_exc = self._translate_snapshot_exception(snapshot_id, exc_value)
-        raise new_exc, None, exc_trace
-
-    def _translate_snapshot_exception(self, snapshot_id, exc_value):
-        if isinstance(exc_value, cinder_exception.NotFound):
-            return exception.SnapshotNotFound(snapshot_id=snapshot_id)
-        return exc_value
-
+    @translate_volume_exception
     def get(self, context, volume_id):
-        try:
-            item = cinderclient(context).volumes.get(volume_id)
-            return _untranslate_volume_summary_view(context, item)
-        except Exception:
-            self._reraise_translated_volume_exception(volume_id)
+        item = cinderclient(context).volumes.get(volume_id)
+        return _untranslate_volume_summary_view(context, item)
 
     def get_all(self, context, search_opts={}):
         items = cinderclient(context).volumes.list(detailed=True)
@@ -238,33 +243,40 @@ class API(base.Base):
             msg = _("already detached")
             raise exception.InvalidVolume(reason=msg)
 
-    def reserve_volume(self, context, volume):
-        cinderclient(context).volumes.reserve(volume['id'])
+    @translate_volume_exception
+    def reserve_volume(self, context, volume_id):
+        cinderclient(context).volumes.reserve(volume_id)
 
-    def unreserve_volume(self, context, volume):
-        cinderclient(context).volumes.unreserve(volume['id'])
+    @translate_volume_exception
+    def unreserve_volume(self, context, volume_id):
+        cinderclient(context).volumes.unreserve(volume_id)
 
-    def begin_detaching(self, context, volume):
-        cinderclient(context).volumes.begin_detaching(volume['id'])
+    @translate_volume_exception
+    def begin_detaching(self, context, volume_id):
+        cinderclient(context).volumes.begin_detaching(volume_id)
 
-    def roll_detaching(self, context, volume):
-        cinderclient(context).volumes.roll_detaching(volume['id'])
+    @translate_volume_exception
+    def roll_detaching(self, context, volume_id):
+        cinderclient(context).volumes.roll_detaching(volume_id)
 
-    def attach(self, context, volume, instance_uuid, mountpoint):
-        cinderclient(context).volumes.attach(volume['id'],
-                                             instance_uuid,
+    @translate_volume_exception
+    def attach(self, context, volume_id, instance_uuid, mountpoint):
+        cinderclient(context).volumes.attach(volume_id, instance_uuid,
                                              mountpoint)
 
-    def detach(self, context, volume):
-        cinderclient(context).volumes.detach(volume['id'])
+    @translate_volume_exception
+    def detach(self, context, volume_id):
+        cinderclient(context).volumes.detach(volume_id)
 
-    def initialize_connection(self, context, volume, connector):
-        return cinderclient(context).\
-                 volumes.initialize_connection(volume['id'], connector)
+    @translate_volume_exception
+    def initialize_connection(self, context, volume_id, connector):
+        return cinderclient(context).volumes.initialize_connection(volume_id,
+                                                                   connector)
 
-    def terminate_connection(self, context, volume, connector):
-        return cinderclient(context).\
-                 volumes.terminate_connection(volume['id'], connector)
+    @translate_volume_exception
+    def terminate_connection(self, context, volume_id, connector):
+        return cinderclient(context).volumes.terminate_connection(volume_id,
+                                                                  connector)
 
     def create(self, context, size, name, description, snapshot=None,
                image_id=None, volume_type=None, metadata=None,
@@ -288,20 +300,20 @@ class API(base.Base):
         try:
             item = cinderclient(context).volumes.create(size, **kwargs)
             return _untranslate_volume_summary_view(context, item)
-        except Exception:
-            self._reraise_translated_volume_exception()
+        except cinder_exception.BadRequest as e:
+            raise exception.InvalidInput(reason=e.message)
 
-    def delete(self, context, volume):
-        cinderclient(context).volumes.delete(volume['id'])
+    @translate_volume_exception
+    def delete(self, context, volume_id):
+        cinderclient(context).volumes.delete(volume_id)
 
-    def update(self, context, volume, fields):
+    @translate_volume_exception
+    def update(self, context, volume_id, fields):
         raise NotImplementedError()
 
+    @translate_snapshot_exception
     def get_snapshot(self, context, snapshot_id):
-        try:
-            item = cinderclient(context).volume_snapshots.get(snapshot_id)
-        except Exception:
-            self._reraise_translated_snapshot_exception(snapshot_id)
+        item = cinderclient(context).volume_snapshots.get(snapshot_id)
         return _untranslate_snapshot_summary_view(context, item)
 
     def get_all_snapshots(self, context):
@@ -313,32 +325,40 @@ class API(base.Base):
 
         return rvals
 
-    def create_snapshot(self, context, volume, name, description):
-        item = cinderclient(context).volume_snapshots.create(volume['id'],
+    @translate_volume_exception
+    def create_snapshot(self, context, volume_id, name, description):
+        item = cinderclient(context).volume_snapshots.create(volume_id,
                                                              False,
                                                              name,
                                                              description)
         return _untranslate_snapshot_summary_view(context, item)
 
-    def create_snapshot_force(self, context, volume, name, description):
-        item = cinderclient(context).volume_snapshots.create(volume['id'],
+    @translate_volume_exception
+    def create_snapshot_force(self, context, volume_id, name, description):
+        item = cinderclient(context).volume_snapshots.create(volume_id,
                                                              True,
                                                              name,
                                                              description)
 
         return _untranslate_snapshot_summary_view(context, item)
 
-    def delete_snapshot(self, context, snapshot):
-        cinderclient(context).volume_snapshots.delete(snapshot['id'])
+    @translate_snapshot_exception
+    def delete_snapshot(self, context, snapshot_id):
+        cinderclient(context).volume_snapshots.delete(snapshot_id)
 
-    def get_volume_metadata(self, context, volume):
+    @translate_volume_exception
+    def get_volume_metadata(self, context, volume_id):
         raise NotImplementedError()
 
-    def delete_volume_metadata(self, context, volume, key):
+    @translate_volume_exception
+    def delete_volume_metadata(self, context, volume_id, key):
         raise NotImplementedError()
 
-    def update_volume_metadata(self, context, volume, metadata, delete=False):
+    @translate_volume_exception
+    def update_volume_metadata(self, context, volume_id,
+                               metadata, delete=False):
         raise NotImplementedError()
 
-    def get_volume_metadata_value(self, volume, key):
+    @translate_volume_exception
+    def get_volume_metadata_value(self, volume_id, key):
         raise NotImplementedError()

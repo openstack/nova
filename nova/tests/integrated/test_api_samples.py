@@ -3654,7 +3654,6 @@ class SnapshotsSampleJsonTests(ApiSampleTestBase):
     def _create_snapshot(self):
         self.stubs.Set(cinder.API, "create_snapshot",
                        fakes.stub_snapshot_create)
-        self.stubs.Set(cinder.API, "get", fakes.stub_volume_get)
 
         response = self._do_post("os-snapshots",
                                  "snapshot-create-req",

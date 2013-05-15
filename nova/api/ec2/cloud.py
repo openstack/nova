@@ -391,8 +391,8 @@ class CloudController(object):
         LOG.audit(_("Create snapshot of volume %s"), volume_id,
                   context=context)
         volume_id = ec2utils.ec2_vol_id_to_uuid(volume_id)
-        volume = self.volume_api.get(context, volume_id)
-        args = (context, volume, kwargs.get('name'), kwargs.get('description'))
+        args = (context, volume_id, kwargs.get('name'),
+                kwargs.get('description'))
         if kwargs.get('force', False):
             snapshot = self.volume_api.create_snapshot_force(*args)
         else:
@@ -403,8 +403,7 @@ class CloudController(object):
 
     def delete_snapshot(self, context, snapshot_id, **kwargs):
         snapshot_id = ec2utils.ec2_snap_id_to_uuid(snapshot_id)
-        snapshot = self.volume_api.get_snapshot(context, snapshot_id)
-        self.volume_api.delete_snapshot(context, snapshot)
+        self.volume_api.delete_snapshot(context, snapshot_id)
         return True
 
     def describe_key_pairs(self, context, key_name=None, **kwargs):
@@ -860,8 +859,7 @@ class CloudController(object):
         validate_ec2_id(volume_id)
         volume_id = ec2utils.ec2_vol_id_to_uuid(volume_id)
         try:
-            volume = self.volume_api.get(context, volume_id)
-            self.volume_api.delete(context, volume)
+            self.volume_api.delete(context, volume_id)
         except exception.InvalidVolume:
             raise exception.EC2APIError(_('Delete Failed'))
 

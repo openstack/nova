@@ -401,12 +401,12 @@ class CinderCloudTestCase(test.TestCase):
                                                         **kwargs)
                 if 'snapshot_id' in values:
                     self.volume_api.create_snapshot(self.context,
-                                                    vol,
+                                                    vol['id'],
                                                     'snapshot-bdm',
                                                     'fake snap for bdm tests',
                                                     values['snapshot_id'])
 
-                self.volume_api.attach(self.context, vol,
+                self.volume_api.attach(self.context, vol['id'],
                                        instance_uuid, bdm['device_name'])
                 volumes.append(vol)
         return volumes
@@ -471,7 +471,7 @@ class CinderCloudTestCase(test.TestCase):
 
     def _tearDownBlockDeviceMapping(self, inst1, inst2, volumes):
         for vol in volumes:
-            self.volume_api.delete(self.context, vol)
+            self.volume_api.delete(self.context, vol['id'])
         for uuid in (inst1['uuid'], inst2['uuid']):
             for bdm in db.block_device_mapping_get_all_by_instance(
                 self.context, uuid):
@@ -776,10 +776,10 @@ class CinderCloudTestCase(test.TestCase):
             self.assertTrue(str(vol['id']) == str(vol1_uuid) or
                 str(vol['id']) == str(vol2_uuid))
             if str(vol['id']) == str(vol1_uuid):
-                self.volume_api.attach(self.context, vol,
+                self.volume_api.attach(self.context, vol['id'],
                                        instance_uuid, '/dev/sdb')
             elif str(vol['id']) == str(vol2_uuid):
-                self.volume_api.attach(self.context, vol,
+                self.volume_api.attach(self.context, vol['id'],
                                        instance_uuid, '/dev/sdc')
 
         vol = self.volume_api.get(self.context, vol1_uuid)
