@@ -24,6 +24,7 @@ import datetime
 import types
 import uuid as stdlib_uuid
 
+import mox
 from oslo.config import cfg
 from sqlalchemy.dialects import sqlite
 from sqlalchemy import MetaData
@@ -36,6 +37,7 @@ from nova.db.sqlalchemy import api as sqlalchemy_api
 from nova import exception
 from nova.openstack.common.db.sqlalchemy import session as db_session
 from nova.openstack.common import timeutils
+from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests import matchers
 from nova import utils
@@ -335,6 +337,52 @@ class DbApiTestCase(DbTestCase):
         results = db.instance_get_all_hung_in_rebooting(ctxt, 10)
         self.assertEqual(0, len(results))
         db.instance_update(ctxt, instance['uuid'], {"task_state": None})
+
+    def test_instance_update_with_expected_vm_state(self):
+        ctxt = context.get_admin_context()
+        uuid = uuidutils.generate_uuid()
+        updates = {'expected_vm_state': 'meow',
+                   'moo': 'cow'}
+
+        class FakeInstance(dict):
+            def save(self, session=None):
+                pass
+
+        fake_instance_values = {'vm_state': 'meow',
+                                'hostname': '',
+                                'metadata': None,
+                                'system_metadata': None}
+        fake_instance = FakeInstance(fake_instance_values)
+
+        self.mox.StubOutWithMock(sqlalchemy_api, '_instance_get_by_uuid')
+        self.mox.StubOutWithMock(fake_instance, 'save')
+
+        sqlalchemy_api._instance_get_by_uuid(ctxt, uuid,
+                session=mox.IgnoreArg()).AndReturn(fake_instance)
+        fake_instance.save(session=mox.IgnoreArg())
+
+        self.mox.ReplayAll()
+
+        result = db.instance_update(ctxt, uuid, updates)
+        expected_instance = dict(fake_instance_values)
+        expected_instance['moo'] = 'cow'
+        self.assertEqual(expected_instance, result)
+
+    def test_instance_update_with_unexpected_vm_state(self):
+        ctxt = context.get_admin_context()
+        uuid = uuidutils.generate_uuid()
+        updates = {'expected_vm_state': 'meow'}
+        fake_instance = {'vm_state': 'nomatch'}
+
+        self.mox.StubOutWithMock(sqlalchemy_api, '_instance_get_by_uuid')
+
+        sqlalchemy_api._instance_get_by_uuid(ctxt, uuid,
+                session=mox.IgnoreArg()).AndReturn(fake_instance)
+
+        self.mox.ReplayAll()
+
+        self.assertRaises(exception.UnexpectedVMStateError,
+                          db.instance_update, ctxt, uuid, updates)
 
     def test_network_create_safe(self):
         ctxt = context.get_admin_context()
