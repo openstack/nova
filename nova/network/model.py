@@ -15,6 +15,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import functools
+
+import eventlet
 import netaddr
 
 from nova import exception
@@ -434,3 +437,75 @@ class NetworkInfo(list):
 
             network_info.append((network_dict, info_dict))
         return network_info
+
+
+class NetworkInfoAsyncWrapper(NetworkInfo):
+    """Wrapper around NetworkInfo that allows retrieving NetworkInfo
+    in an async manner.
+
+    This allows one to start querying for network information before
+    you know you will need it.  If you have a long-running
+    operation, this allows the network model retrieval to occur in the
+    background.  When you need the data, it will ensure the async
+    operation has completed.
+
+    As an example:
+
+    def allocate_net_info(arg1, arg2)
+        return call_quantum_to_allocate(arg1, arg2)
+
+    network_info = NetworkInfoAsyncWrapper(allocate_net_info, arg1, arg2)
+    [do a long running operation -- real network_info will be retrieved
+    in the background]
+    [do something with network_info]
+    """
+
+    def __init__(self, async_method, *args, **kwargs):
+        self._gt = eventlet.spawn(async_method, *args, **kwargs)
+        methods = ['json', 'legacy', 'fixed_ips', 'floating_ips']
+        for method in methods:
+            fn = getattr(self, method)
+            wrapper = functools.partial(self._sync_wrapper, fn)
+            functools.update_wrapper(wrapper, fn)
+            setattr(self, method, wrapper)
+
+    def _sync_wrapper(self, wrapped, *args, **kwargs):
+        """Synchronize the model before running a method."""
+        self.wait()
+        return wrapped(*args, **kwargs)
+
+    def __getitem__(self, *args, **kwargs):
+        fn = super(NetworkInfoAsyncWrapper, self).__getitem__
+        return self._sync_wrapper(fn, *args, **kwargs)
+
+    def __iter__(self, *args, **kwargs):
+        fn = super(NetworkInfoAsyncWrapper, self).__iter__
+        return self._sync_wrapper(fn, *args, **kwargs)
+
+    def __len__(self, *args, **kwargs):
+        fn = super(NetworkInfoAsyncWrapper, self).__len__
+        return self._sync_wrapper(fn, *args, **kwargs)
+
+    def __str__(self, *args, **kwargs):
+        fn = super(NetworkInfoAsyncWrapper, self).__str__
+        return self._sync_wrapper(fn, *args, **kwargs)
+
+    def __repr__(self, *args, **kwargs):
+        fn = super(NetworkInfoAsyncWrapper, self).__repr__
+        return self._sync_wrapper(fn, *args, **kwargs)
+
+    def wait(self, do_raise=True):
+        """Wait for async call to finish."""
+        if self._gt is not None:
+            try:
+                # NOTE(comstud): This looks funky, but this object is
+                # subclassed from list.  In other words, 'self' is really
+                # just a list with a bunch of extra methods.  So this
+                # line just replaces the current list (which should be
+                # empty) with the result.
+                self[:] = self._gt.wait()
+            except Exception:
+                if do_raise:
+                    raise
+            finally:
+                self._gt = None

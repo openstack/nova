@@ -332,6 +332,34 @@ class NetworkInfoTests(test.TestCase):
                  fake_network_cache_model.new_ip(
                     {'address': '10.10.0.3'})] * 4)
 
+    def test_create_async_model(self):
+        def async_wrapper():
+            return model.NetworkInfo(
+                    [fake_network_cache_model.new_vif(),
+                     fake_network_cache_model.new_vif(
+                            {'address': 'bb:bb:bb:bb:bb:bb'})])
+
+        ninfo = model.NetworkInfoAsyncWrapper(async_wrapper)
+        self.assertEqual(ninfo.fixed_ips(),
+                [fake_network_cache_model.new_ip({'address': '10.10.0.2'}),
+                 fake_network_cache_model.new_ip(
+                    {'address': '10.10.0.3'})] * 4)
+
+    def test_create_async_model_exceptions(self):
+        def async_wrapper():
+            raise test.TestingException()
+
+        ninfo = model.NetworkInfoAsyncWrapper(async_wrapper)
+        self.assertRaises(test.TestingException, ninfo.wait)
+        # 2nd one doesn't raise
+        self.assertEqual(None, ninfo.wait())
+        # Test that do_raise=False works on .wait()
+        ninfo = model.NetworkInfoAsyncWrapper(async_wrapper)
+        self.assertEqual(None, ninfo.wait(do_raise=False))
+        # Test we also raise calling a method
+        ninfo = model.NetworkInfoAsyncWrapper(async_wrapper)
+        self.assertRaises(test.TestingException, ninfo.fixed_ips)
+
     def test_get_floating_ips(self):
         vif = fake_network_cache_model.new_vif()
         vif['network']['subnets'][0]['ips'][0].add_floating_ip('192.168.1.1')

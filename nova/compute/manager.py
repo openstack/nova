@@ -959,6 +959,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         except exception.InstanceNotFound:
             # the instance got deleted during the spawn
             with excutils.save_and_reraise_exception():
+                # Make sure the async call finishes
+                if network_info is not None:
+                    network_info.wait(do_raise=False)
                 try:
                     self._deallocate_network(context, instance)
                 except Exception:
@@ -966,6 +969,10 @@ class ComputeManager(manager.SchedulerDependentManager):
                             'for deleted instance')
                     LOG.exception(msg, instance=instance)
         except exception.UnexpectedTaskStateError as e:
+            exc_info = sys.exc_info()
+            # Make sure the async call finishes
+            if network_info is not None:
+                network_info.wait(do_raise=False)
             actual_task_state = e.kwargs.get('actual', None)
             if actual_task_state == 'deleting':
                 msg = _('Instance was deleted during spawn.')
@@ -973,10 +980,13 @@ class ComputeManager(manager.SchedulerDependentManager):
                 raise exception.BuildAbortException(
                         instance_uuid=instance['uuid'], reason=msg)
             else:
-                raise
+                raise exc_info[0], exc_info[1], exc_info[2]
         except Exception:
             exc_info = sys.exc_info()
             # try to re-schedule instance:
+            # Make sure the async call finishes
+            if network_info is not None:
+                network_info.wait(do_raise=False)
             rescheduled = self._reschedule_or_error(context, instance,
                     exc_info, requested_networks, admin_password,
                     injected_files_orig, is_first_time, request_spec,
@@ -1111,29 +1121,37 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     def _allocate_network(self, context, instance, requested_networks, macs,
                           security_groups):
-        """Allocate networks for an instance and return the network info."""
+        """Start network allocation asynchronously.  Return an instance
+        of NetworkInfoAsyncWrapper that can be used to retrieve the
+        allocated networks when the operation has finished.
+        """
+        # NOTE(comstud): Since we're allocating networks asynchronously,
+        # this task state has little meaning, as we won't be in this
+        # state for very long.
         instance = self._instance_update(context, instance['uuid'],
                                          vm_state=vm_states.BUILDING,
                                          task_state=task_states.NETWORKING,
                                          expected_task_state=None)
         is_vpn = pipelib.is_vpn_image(instance['image_ref'])
-        try:
-            # allocate and get network info
-            network_info = self.network_api.allocate_for_instance(
-                                context, instance, vpn=is_vpn,
-                                requested_networks=requested_networks,
-                                macs=macs,
-                                conductor_api=self.conductor_api,
-                                security_groups=security_groups)
-        except Exception:
-            with excutils.save_and_reraise_exception():
-                LOG.exception(_('Instance failed network setup'),
-                              instance=instance)
 
-        LOG.debug(_('Instance network_info: |%s|'), network_info,
-                  instance=instance)
-
-        return network_info
+        def async_alloc():
+            LOG.debug(_("Allocating IP information in the background."),
+                      instance=instance)
+            try:
+                nwinfo = self.network_api.allocate_for_instance(
+                        context, instance, vpn=is_vpn,
+                        requested_networks=requested_networks,
+                        macs=macs,
+                        conductor_api=self.conductor_api,
+                        security_groups=security_groups)
+            except Exception:
+                with excutils.save_and_reraise_exception():
+                    LOG.exception(_('Instance failed network setup'),
+                                  instance=instance)
+            LOG.debug(_('Instance network_info: |%s|'), nwinfo,
+                      instance=instance)
+            return nwinfo
+        return network_model.NetworkInfoAsyncWrapper(async_alloc)
 
     def _prep_block_device(self, context, instance, bdms):
         """Set up the block device for an instance with error logging."""

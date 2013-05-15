@@ -406,8 +406,11 @@ def set_stub_network_methods(stubs):
     def fake_networkinfo(*args, **kwargs):
         return network_model.NetworkInfo()
 
+    def fake_async_networkinfo(*args, **kwargs):
+        return network_model.NetworkInfoAsyncWrapper(fake_networkinfo)
+
     stubs.Set(cm, '_get_instance_nw_info', fake_networkinfo)
-    stubs.Set(cm, '_allocate_network', fake_networkinfo)
+    stubs.Set(cm, '_allocate_network', fake_async_networkinfo)
     stubs.Set(cm, '_deallocate_network', lambda *args, **kwargs: None)
 
 
