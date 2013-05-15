@@ -48,6 +48,7 @@
         "status": "%(status)s",
         "tenant_id": "openstack",
         "updated": "%(timestamp)s",
-        "user_id": "fake"
+        "user_id": "fake",
+        "volumes_attached": []
     }
 }

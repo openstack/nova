@@ -52,6 +52,7 @@
         "status": "ACTIVE",
         "tenant_id": "openstack",
         "updated": "2012-11-15T19:27:04Z",
-        "user_id": "fake"
+        "user_id": "fake",
+        "volumes_attached": []
     }
 }

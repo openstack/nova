@@ -459,6 +459,8 @@ class ServersSampleJsonTest(ServersSampleBase):
 
     def test_servers_get(self):
         uuid = self.test_servers_post()
+        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
+                       fakes.stub_bdm_get_all_by_instance)
         response = self._do_get('servers/%s' % uuid)
         subs = self._get_regexes()
         subs['hostid'] = '[a-f0-9]+'
@@ -476,6 +478,8 @@ class ServersSampleJsonTest(ServersSampleBase):
 
     def test_servers_details(self):
         uuid = self._post_server()
+        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
+                       fakes.stub_bdm_get_all_by_instance)
         response = self._do_get('servers/detail')
         subs = self._get_regexes()
         subs['hostid'] = '[a-f0-9]+'
