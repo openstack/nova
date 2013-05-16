@@ -161,6 +161,11 @@ class EC2APIError(NovaException):
         super(EC2APIError, self).__init__(outstr)
 
 
+#TODO(bcwaldon): EOL this exception!
+class Duplicate(NovaException):
+    pass
+
+
 class EncryptionFailure(NovaException):
     message = _("Failed to encrypt text: %(reason)s")
 
@@ -564,6 +569,10 @@ class PortNotFree(NovaException):
     message = _("No free port available for instance %(instance)s.")
 
 
+class FixedIpExists(Duplicate):
+    message = _("Fixed ip %(address)s already exists.")
+
+
 class FixedIpNotFound(NotFound):
     message = _("No fixed IP associated with id %(id)s.")
 
@@ -610,11 +619,6 @@ class NoMoreFixedIps(NovaException):
 
 class NoFixedIpsDefined(NotFound):
     message = _("Zero fixed ips could be found.")
-
-
-#TODO(bcwaldon): EOL this exception!
-class Duplicate(NovaException):
-    pass
 
 
 class FloatingIpExists(Duplicate):
