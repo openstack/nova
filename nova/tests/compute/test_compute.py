@@ -5519,6 +5519,87 @@ class ComputeAPITestCase(BaseTestCase):
             self.compute_api.rebuild(self.context, instance,
                                      self.fake_image['id'], 'new_password')
 
+    def test_rebuild_with_too_little_ram(self):
+        instance = jsonutils.to_primitive(
+            self._create_fake_instance(params={'image_ref': '1'}))
+
+        def fake_extract_instance_type(_inst):
+            return dict(memory_mb=64, root_gb=1)
+
+        self.stubs.Set(flavors, 'extract_instance_type',
+                       fake_extract_instance_type)
+
+        self.fake_image['min_ram'] = 128
+        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
+
+        self.assertRaises(exception.InstanceTypeMemoryTooSmall,
+            self.compute_api.rebuild, self.context,
+            instance, self.fake_image['id'], 'new_password')
+
+        # Reduce image memory requirements and make sure it works
+        self.fake_image['min_ram'] = 64
+
+        self.compute_api.rebuild(self.context,
+                instance, self.fake_image['id'], 'new_password')
+        db.instance_destroy(self.context, instance['uuid'])
+
+    def test_rebuild_with_too_little_disk(self):
+        instance = jsonutils.to_primitive(
+            self._create_fake_instance(params={'image_ref': '1'}))
+
+        def fake_extract_instance_type(_inst):
+            return dict(memory_mb=64, root_gb=1)
+
+        self.stubs.Set(flavors, 'extract_instance_type',
+                       fake_extract_instance_type)
+
+        self.fake_image['min_disk'] = 2
+        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
+
+        self.assertRaises(exception.InstanceTypeDiskTooSmall,
+            self.compute_api.rebuild, self.context,
+            instance, self.fake_image['id'], 'new_password')
+
+        # Reduce image disk requirements and make sure it works
+        self.fake_image['min_disk'] = 1
+
+        self.compute_api.rebuild(self.context,
+                instance, self.fake_image['id'], 'new_password')
+        db.instance_destroy(self.context, instance['uuid'])
+
+    def test_rebuild_with_just_enough_ram_and_disk(self):
+        instance = jsonutils.to_primitive(
+            self._create_fake_instance(params={'image_ref': '1'}))
+
+        def fake_extract_instance_type(_inst):
+            return dict(memory_mb=64, root_gb=1)
+
+        self.stubs.Set(flavors, 'extract_instance_type',
+                       fake_extract_instance_type)
+
+        self.fake_image['min_ram'] = 64
+        self.fake_image['min_disk'] = 1
+        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
+
+        self.compute_api.rebuild(self.context,
+                instance, self.fake_image['id'], 'new_password')
+        db.instance_destroy(self.context, instance['uuid'])
+
+    def test_rebuild_with_no_ram_and_disk_reqs(self):
+        instance = jsonutils.to_primitive(
+            self._create_fake_instance(params={'image_ref': '1'}))
+
+        def fake_extract_instance_type(_inst):
+            return dict(memory_mb=64, root_gb=1)
+
+        self.stubs.Set(flavors, 'extract_instance_type',
+                       fake_extract_instance_type)
+        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
+
+        self.compute_api.rebuild(self.context,
+                instance, self.fake_image['id'], 'new_password')
+        db.instance_destroy(self.context, instance['uuid'])
+
     def _stub_out_reboot(self, device_name):
         def fake_reboot_instance(rpcapi, context, instance,
                                  block_device_info,
