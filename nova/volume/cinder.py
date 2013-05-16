@@ -45,6 +45,10 @@ cinder_opts = [
     cfg.StrOpt('os_region_name',
                 default=None,
                 help='region name of this node'),
+    cfg.StrOpt('cinder_ca_certificates_file',
+                default=None,
+                help='Location of ca certicates file to use for cinder client '
+                     'requests.'),
     cfg.IntOpt('cinder_http_retries',
                default=3,
                help='Number of cinderclient retries on failed http calls'),
@@ -52,9 +56,9 @@ cinder_opts = [
                default=False,
                help='Allow to perform insecure SSL requests to cinder'),
     cfg.BoolOpt('cinder_cross_az_attach',
-               default=True,
-               help='Allow attach between instance and volume in different '
-                    'availability zones.'),
+                default=True,
+                help='Allow attach between instance and volume in different '
+                     'availability zones.'),
 ]
 
 CONF = cfg.CONF
@@ -98,7 +102,8 @@ def cinderclient(context):
                              project_id=context.project_id,
                              auth_url=url,
                              insecure=CONF.cinder_api_insecure,
-                             retries=CONF.cinder_http_retries)
+                             retries=CONF.cinder_http_retries,
+                             cacert=CONF.cinder_ca_certificates_file)
     # noauth extracts user_id:project_id from auth_token
     c.client.auth_token = context.auth_token or '%s:%s' % (context.user_id,
                                                            context.project_id)

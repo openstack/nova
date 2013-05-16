@@ -98,14 +98,16 @@ class FakeHTTPClient(cinder.cinder_client.client.HTTPClient):
 class FakeCinderClient(cinder.cinder_client.Client):
 
     def __init__(self, username, password, project_id=None, auth_url=None,
-                 insecure=False, retries=None):
+                 insecure=False, retries=None, cacert=None):
         super(FakeCinderClient, self).__init__(username, password,
                                                project_id=project_id,
                                                auth_url=auth_url,
                                                insecure=insecure,
-                                               retries=retries)
+                                               retries=retries,
+                                               cacert=cacert)
         self.client = FakeHTTPClient(username, password, project_id, auth_url,
-                                     insecure=insecure, retries=retries)
+                                     insecure=insecure, retries=retries,
+                                     cacert=cacert)
         # keep a ref to the clients callstack for factory's assert_called
         self.callstack = self.client.callstack = []
 
@@ -186,6 +188,14 @@ class CinderTestCase(test.TestCase):
         self.assert_called('GET', '/volumes/1234')
         self.assertEquals(
             self.fake_client_factory.client.client.verify_cert, False)
+
+    def test_cinder_api_cacert_file(self):
+        cacert = "/etc/ssl/certs/ca-certificates.crt"
+        self.flags(cinder_ca_certificates_file=cacert)
+        volume = self.api.get(self.context, '1234')
+        self.assert_called('GET', '/volumes/1234')
+        self.assertEquals(
+            self.fake_client_factory.client.client.verify_cert, cacert)
 
     def test_cinder_http_retries(self):
         retries = 42
