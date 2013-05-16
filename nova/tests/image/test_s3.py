@@ -198,12 +198,8 @@ class TestS3ImageService(test.TestCase):
              'no_device': True}]
         self.assertEqual(block_device_mapping, expected_bdm)
 
-    def test_s3_create_is_public(self):
-        metadata = {'properties': {
-                    'image_location': 'mybucket/my.img.manifest.xml'},
-                    'name': 'mybucket/my.img'}
+    def _initialize_mocks(self):
         handle, tempf = tempfile.mkstemp(dir='/tmp')
-
         ignore = mox.IgnoreArg()
         mockobj = self.mox.CreateMockAnything()
         self.stubs.Set(self.image_service, '_conn', mockobj)
@@ -225,6 +221,33 @@ class TestS3ImageService(test.TestCase):
         mockobj(ignore, ignore).AndReturn(tempf)
         self.mox.ReplayAll()
 
+    def test_s3_create_image_locations(self):
+        image_location_1 = 'testbucket_1/test.img.manifest.xml'
+        # Use another location that starts with a '/'
+        image_location_2 = '/testbucket_2/test.img.manifest.xml'
+
+        metadata = [{'properties': {'image_location': image_location_1}},
+                    {'properties': {'image_location': image_location_2}}]
+
+        for mdata in metadata:
+            self._initialize_mocks()
+            image = self.image_service._s3_create(self.context, mdata)
+            eventlet.sleep()
+            translated = self.image_service._translate_id_to_uuid(self.context,
+                                                              image)
+            uuid = translated['id']
+            image_service = fake.FakeImageService()
+            updated_image = image_service.update(self.context, uuid,
+                            {'properties': {'image_state': 'available'}},
+                            purge_props=False)
+            self.assertEqual(updated_image['properties']['image_state'],
+                             'available')
+
+    def test_s3_create_is_public(self):
+        self._initialize_mocks()
+        metadata = {'properties': {
+                    'image_location': 'mybucket/my.img.manifest.xml'},
+                    'name': 'mybucket/my.img'}
         img = self.image_service._s3_create(self.context, metadata)
         eventlet.sleep()
         translated = self.image_service._translate_id_to_uuid(self.context,
