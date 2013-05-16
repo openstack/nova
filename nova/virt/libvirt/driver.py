@@ -673,9 +673,10 @@ class LibvirtDriver(driver.ComputeDriver):
                 if domain_id != 0:
                     domain = self._conn.lookupByID(domain_id)
                     names.append(domain.name())
-            except libvirt.libvirtError:
-                # Instance was deleted while listing... ignore it
-                pass
+            except libvirt.libvirtError as e:
+                if e.get_error_code() != libvirt.VIR_ERR_NO_DOMAIN:
+                    # Ignore deleted instance while listing
+                    raise
 
         # extend instance list to contain also defined domains
         names.extend([vm for vm in self._conn.listDefinedDomains()
