@@ -86,14 +86,18 @@ class Manager(base.Base, periodic_task.PeriodicTasks):
         pluginmgr = pluginmanager.PluginManager('nova', self.__class__)
         pluginmgr.load_plugins()
 
-    def create_rpc_dispatcher(self, backdoor_port=None):
+    def create_rpc_dispatcher(self, backdoor_port=None, additional_apis=None):
         '''Get the rpc dispatcher for this manager.
 
         If a manager would like to set an rpc API version, or support more than
         one class as the target of rpc messages, override this method.
         '''
+        apis = []
+        if additional_apis:
+            apis.extend(additional_apis)
         base_rpc = baserpc.BaseRPCAPI(self.service_name, backdoor_port)
-        return rpc_dispatcher.RpcDispatcher([self, base_rpc])
+        apis.extend([self, base_rpc])
+        return rpc_dispatcher.RpcDispatcher(apis)
 
     def periodic_tasks(self, context, raise_on_error=False):
         """Tasks to be run at a periodic interval."""
