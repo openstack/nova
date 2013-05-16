@@ -49,7 +49,7 @@ class FiltersTestCase(test.TestCase):
 
         result = base_filter.filter_all(filter_obj_list, filter_properties)
         self.assertTrue(inspect.isgenerator(result))
-        self.assertEqual(list(result), ['obj1', 'obj3'])
+        self.assertEqual(['obj1', 'obj3'], list(result))
 
     def test_filter_all_recursive_yields(self):
         # Test filter_all() allows generators from previous filter_all()s.
@@ -84,7 +84,7 @@ class FiltersTestCase(test.TestCase):
             # Pass in generators returned from previous calls.
             objs = base_filter.filter_all(objs, filter_properties)
         self.assertTrue(inspect.isgenerator(objs))
-        self.assertEqual(list(objs), ['obj1', 'obj3'])
+        self.assertEqual(['obj1', 'obj3'], list(objs))
 
     def test_get_filtered_objects(self):
         filter_objs_initial = ['initial', 'filter1', 'objects1']
@@ -122,4 +122,4 @@ class FiltersTestCase(test.TestCase):
         result = filter_handler.get_filtered_objects(filter_classes,
                                                      filter_objs_initial,
                                                      filter_properties)
-        self.assertEqual(result, filter_objs_last)
+        self.assertEqual(filter_objs_last, result)
