@@ -67,7 +67,7 @@ class ConductorManager(manager.Manager):
     namespace.  See the ComputeTaskManager class for details.
     """
 
-    RPC_API_VERSION = '1.52'
+    RPC_API_VERSION = '1.53'
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(service_name='conductor',
@@ -540,6 +540,9 @@ class ConductorManager(manager.Manager):
         # method anyway
         updates['obj_what_changed'] = objinst.obj_what_changed()
         return updates, result
+
+    def compute_reboot(self, context, instance, reboot_type):
+        self.compute_api.reboot(context, instance, reboot_type)
 
 
 class ComputeTaskManager(object):

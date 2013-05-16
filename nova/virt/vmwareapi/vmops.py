@@ -31,9 +31,9 @@ import uuid
 from oslo.config import cfg
 
 from nova import block_device
-from nova.compute import api as compute
 from nova.compute import power_state
 from nova.compute import task_states
+from nova import conductor
 from nova import context as nova_context
 from nova import exception
 from nova.openstack.common import excutils
@@ -77,7 +77,7 @@ class VMwareVMOps(object):
 
     def __init__(self, session, virtapi, volumeops, cluster=None):
         """Initializer."""
-        self.compute_api = compute.API()
+        self.conductor_api = conductor.API()
         self._session = session
         self._virtapi = virtapi
         self._volumeops = volumeops
@@ -1024,8 +1024,8 @@ class VMwareVMOps(object):
                     "older than %(timeout)d seconds") % instances_info)
 
         for instance in instances:
-            LOG.info(_("Automatically hard rebooting %d") % instance['uuid'])
-            self.compute_api.reboot(ctxt, instance, "HARD")
+            LOG.info(_("Automatically hard rebooting"), instance=instance)
+            self.conductor_api.compute_reboot(ctxt, instance, "HARD")
 
     def get_info(self, instance):
         """Return data about the VM instance."""

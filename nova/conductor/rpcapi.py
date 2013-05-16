@@ -103,6 +103,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.51 - Added the 'legacy' argument to
            block_device_mapping_get_all_by_instance
     1.52 - Pass instance objects for compute_confirm_resize
+    1.53 - Added compute_reboot
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -481,6 +482,12 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         msg = self.make_msg('object_action', objinst=objinst,
                             objmethod=objmethod, args=args, kwargs=kwargs)
         return self.call(context, msg, version='1.50')
+
+    def compute_reboot(self, context, instance, reboot_type):
+        instance_p = jsonutils.to_primitive(instance)
+        msg = self.make_msg('compute_reboot', instance=instance_p,
+                            reboot_type=reboot_type)
+        return self.call(context, msg, version='1.53')
 
 
 class ComputeTaskAPI(nova.openstack.common.rpc.proxy.RpcProxy):

@@ -338,6 +338,9 @@ class LocalAPI(object):
     def compute_unrescue(self, context, instance):
         return self._manager.compute_unrescue(context, instance)
 
+    def compute_reboot(self, context, instance, reboot_type):
+        return self._manager.compute_reboot(context, instance, reboot_type)
+
 
 class LocalComputeTaskAPI(object):
     def __init__(self):
