@@ -30,7 +30,7 @@ from nova.virt.vmwareapi import error_util
 
 _CLASSES = ['Datacenter', 'Datastore', 'ResourcePool', 'VirtualMachine',
             'Network', 'HostSystem', 'HostNetworkSystem', 'Task', 'session',
-            'files']
+            'files', 'ClusterComputeResource']
 
 _FAKE_FILE_SIZE = 1024
 
@@ -61,6 +61,7 @@ def reset():
     create_datacenter()
     create_datastore()
     create_res_pool()
+    create_cluster()
 
 
 def cleanup():
@@ -90,14 +91,20 @@ class Prop(object):
         self.val = None
 
 
+class Obj(object):
+    def __init__(self, name, value):
+        self.value = value
+        self._type = name
+
+
 class ManagedObject(object):
     """Managed Data Object base class."""
 
-    def __init__(self, name="ManagedObject", obj_ref=None):
+    def __init__(self, name="ManagedObject", obj_ref=None, value=None):
         """Sets the obj property which acts as a reference to the object."""
         super(ManagedObject, self).__setattr__('objName', name)
         if obj_ref is None:
-            obj_ref = str(uuid.uuid4())
+            obj_ref = Obj(name, value)
         object.__setattr__(self, 'obj', obj_ref)
         object.__setattr__(self, 'propSet', [])
 
@@ -139,6 +146,10 @@ class DataObject(object):
     """Data object base class."""
     def __init__(self, obj_name=None):
         self.obj_name = obj_name
+
+
+class HostInternetScsiHba():
+    pass
 
 
 class VirtualDisk(DataObject):
@@ -186,7 +197,7 @@ class VirtualMachine(ManagedObject):
     """Virtual Machine class."""
 
     def __init__(self, **kwargs):
-        super(VirtualMachine, self).__init__("VirtualMachine")
+        super(VirtualMachine, self).__init__("VirtualMachine", value='vm-10')
         self.set("name", kwargs.get("name"))
         self.set("runtime.connectionState",
                  kwargs.get("conn_state", "connected"))
@@ -248,6 +259,25 @@ class ResourcePool(ManagedObject):
     def __init__(self):
         super(ResourcePool, self).__init__("ResourcePool")
         self.set("name", "ResPool")
+
+
+class ClusterComputeResource(ManagedObject):
+    """Cluster class."""
+    def __init__(self, **kwargs):
+        super(ClusterComputeResource, self).__init__("ClusterComputeResource",
+                                                     value="domain-test")
+        r_pool = DataObject()
+        r_pool.ManagedObjectReference = [_get_objects("ResourcePool")[0].obj]
+        self.set("resourcePool", r_pool)
+
+        host_sys = DataObject()
+        host_sys.ManagedObjectReference = [_get_objects("HostSystem")[0].obj]
+        self.set("host", host_sys)
+        self.set("name", "test_cluster")
+
+        datastore = DataObject()
+        datastore.ManagedObjectReference = [_get_objects("Datastore")[0].obj]
+        self.set("datastore", datastore)
 
 
 class Datastore(ManagedObject):
@@ -347,6 +377,17 @@ class HostSystem(ManagedObject):
         host_pg.HostPortGroup = [host_pg_do]
         self.set("config.network.portgroup", host_pg)
 
+        config = DataObject()
+        storageDevice = DataObject()
+
+        hostBusAdapter = HostInternetScsiHba()
+        hostBusAdapter.HostHostBusAdapter = [hostBusAdapter]
+        hostBusAdapter.iScsiName = "iscsi-name"
+        storageDevice.hostBusAdapter = hostBusAdapter
+        config.storageDevice = storageDevice
+        self.set("config.storageDevice.hostBusAdapter",
+                 config.storageDevice.hostBusAdapter)
+
     def _add_port_group(self, spec):
         """Adds a port group to the host system object in the db."""
         pg_name = spec.name
@@ -427,6 +468,11 @@ def create_res_pool():
 def create_network():
     network = Network()
     _create_object('Network', network)
+
+
+def create_cluster():
+    cluster = ClusterComputeResource()
+    _create_object('ClusterComputeResource', cluster)
 
 
 def create_task(task_name, state="running"):
@@ -682,6 +728,8 @@ class FakeVim(object):
         spec_set = kwargs.get("specSet")[0]
         type = spec_set.propSet[0].type
         properties = spec_set.propSet[0].pathSet
+        if not isinstance(properties, list):
+            properties = properties.split()
         objs = spec_set.objectSet
         lst_ret_objs = []
         for obj in objs:
