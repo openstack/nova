@@ -51,7 +51,6 @@
             "hostId": "%(hostid)s",
             "metadata": {
                 "My Server Name": "Apache1"
-            },
-            "volumes_attached": []
+            }
     }]
 }

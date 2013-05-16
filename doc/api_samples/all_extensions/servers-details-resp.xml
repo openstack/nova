@@ -15,8 +15,6 @@
         <ip OS-EXT-IPS:type="fixed" version="4" addr="192.168.0.3" OS-EXT-IPS-MAC:mac_addr="00:0c:29:e1:42:90"/>
       </network>
     </addresses>
-    <volume_attached id="volume_id1"/>
-    <volume_attached id="volume_id2"/>
     <atom:link href="http://openstack.example.com/v2/openstack/servers/b45edf9d-30f6-41e8-a00b-ef8962376586" rel="self"/>
     <atom:link href="http://openstack.example.com/openstack/servers/b45edf9d-30f6-41e8-a00b-ef8962376586" rel="bookmark"/>
     <security_groups>

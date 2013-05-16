@@ -15,8 +15,6 @@
           OS-EXT-IPS-MAC:mac_addr="00:0c:29:e1:42:90"/>
     </network>
   </addresses>
-  <volume_attached id="volume_id1"/>
-  <volume_attached id="volume_id2"/>
   <atom:link href="http://openstack.example.com/v2/openstack/servers/6be39927-53b2-4aee-8593-1c72b3673168" rel="self"/>
   <atom:link href="http://openstack.example.com/openstack/servers/6be39927-53b2-4aee-8593-1c72b3673168" rel="bookmark"/>
   <security_groups>

@@ -314,7 +314,6 @@ class ServersControllerTest(test.TestCase):
                         "href": "http://localhost/fake/servers/%s" % uuid,
                     },
                 ],
-                "volumes_attached": [],
             }
         }
 
@@ -381,7 +380,6 @@ class ServersControllerTest(test.TestCase):
                         "href": "http://localhost/fake/servers/%s" % uuid,
                     },
                 ],
-                "volumes_attached": [],
             }
         }
 
@@ -451,75 +449,7 @@ class ServersControllerTest(test.TestCase):
                         "href": "http://localhost/fake/servers/%s" % uuid,
                     },
                 ],
-                "volumes_attached": [],
             }
-        }
-
-        self.assertThat(res_dict, matchers.DictMatches(expected_server))
-
-    def test_get_server_with_volumes_attached(self):
-        image_bookmark = "http://localhost/fake/images/10"
-        flavor_bookmark = "http://localhost/fake/flavors/1"
-
-        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
-                       fakes.stub_bdm_get_all_by_instance)
-
-        uuid = FAKE_UUID
-        req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % uuid)
-        res_dict = self.controller.show(req, uuid)
-        expected_server = {
-            "server": {
-                "id": uuid,
-                "user_id": "fake_user",
-                "tenant_id": "fake_project",
-                "updated": "2010-11-11T11:00:00Z",
-                "created": "2010-10-10T12:00:00Z",
-                "progress": 0,
-                "name": "server1",
-                "status": "BUILD",
-                "accessIPv4": "",
-                "accessIPv6": "",
-                "hostId": '',
-                "image": {
-                    "id": "10",
-                    "links": [
-                        {
-                            "rel": "bookmark",
-                            "href": image_bookmark,
-                            },
-                        ],
-                    },
-                "flavor": {
-                    "id": "1",
-                    "links": [
-                        {
-                            "rel": "bookmark",
-                            "href": flavor_bookmark,
-                            },
-                        ],
-                    },
-                "addresses": {
-                    'test1': [
-                        {'version': 4, 'addr': '192.168.1.100'},
-                        {'version': 6, 'addr': '2001:db8:0:1::1'}
-                    ]
-                },
-                "metadata": {
-                    "seq": "1",
-                    },
-                "links": [
-                    {
-                        "rel": "self",
-                        "href": "http://localhost/v2/fake/servers/%s" % uuid,
-                        },
-                    {
-                        "rel": "bookmark",
-                        "href": "http://localhost/fake/servers/%s" % uuid,
-                        },
-                    ],
-                "volumes_attached": [{'id': 'volume_id1'},
-                                     {'id': 'volume_id2'}],
-                }
         }
 
         self.assertThat(res_dict, matchers.DictMatches(expected_server))
@@ -4272,7 +4202,6 @@ class ServersViewBuilderTest(test.TestCase):
                         "href": bookmark_link,
                     },
                 ],
-                "volumes_attached": [],
             }
         }
 
@@ -4351,7 +4280,6 @@ class ServersViewBuilderTest(test.TestCase):
                     "message": "HTTPNotFound",
                     "details": "Stock details for test",
                 },
-                "volumes_attached": [],
             }
         }
 
@@ -4492,7 +4420,6 @@ class ServersViewBuilderTest(test.TestCase):
                         "href": bookmark_link,
                     },
                 ],
-                "volumes_attached": [],
             }
         }
 
@@ -4555,7 +4482,6 @@ class ServersViewBuilderTest(test.TestCase):
                         "href": bookmark_link,
                     },
                 ],
-                "volumes_attached": [],
             }
         }
 
@@ -4618,7 +4544,6 @@ class ServersViewBuilderTest(test.TestCase):
                         "href": bookmark_link,
                     },
                 ],
-                "volumes_attached": [],
             }
         }
 
@@ -4683,73 +4608,7 @@ class ServersViewBuilderTest(test.TestCase):
                         "href": bookmark_link,
                     },
                 ],
-                "volumes_attached": [],
             }
-        }
-
-        output = self.view_builder.show(self.request, self.instance)
-        self.assertThat(output, matchers.DictMatches(expected_server))
-
-    def test_build_server_detail_with_volumes_attached(self):
-
-        volumes_attached = ['volume_id1', 'volume_id2']
-        self.instance['volumes_attached'] = volumes_attached
-
-        image_bookmark = "http://localhost/fake/images/5"
-        flavor_bookmark = "http://localhost/fake/flavors/1"
-        self_link = "http://localhost/v2/fake/servers/%s" % self.uuid
-        bookmark_link = "http://localhost/fake/servers/%s" % self.uuid
-        expected_server = {
-            "server": {
-                "id": self.uuid,
-                "user_id": "fake_user",
-                "tenant_id": "fake_project",
-                "updated": "2010-11-11T11:00:00Z",
-                "created": "2010-10-10T12:00:00Z",
-                "progress": 0,
-                "name": "test_server",
-                "status": "BUILD",
-                "accessIPv4": "",
-                "accessIPv6": "",
-                "hostId": '',
-                "image": {
-                    "id": "5",
-                    "links": [
-                        {
-                            "rel": "bookmark",
-                            "href": image_bookmark,
-                            },
-                        ],
-                    },
-                "flavor": {
-                    "id": "1",
-                    "links": [
-                        {
-                            "rel": "bookmark",
-                            "href": flavor_bookmark,
-                            },
-                        ],
-                    },
-                "addresses": {
-                    'test1': [
-                        {'version': 4, 'addr': '192.168.1.100'},
-                        {'version': 6, 'addr': '2001:db8:0:1::1'}
-                    ]
-                },
-                "metadata": {},
-                "links": [
-                    {
-                        "rel": "self",
-                        "href": self_link,
-                        },
-                    {
-                        "rel": "bookmark",
-                        "href": bookmark_link,
-                        },
-                    ],
-                "volumes_attached": [{'id': vol_id} for vol_id in
-                                     volumes_attached],
-                }
         }
 
         output = self.view_builder.show(self.request, self.instance)

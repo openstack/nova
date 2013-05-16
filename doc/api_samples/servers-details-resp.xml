@@ -15,8 +15,6 @@
         <ip version="4" addr="192.168.0.3"/>
       </network>
     </addresses>
-    <volume_attached id="volume_id1"/>
-    <volume_attached id="volume_id2"/>
     <atom:link href="http://openstack.example.com/v2/openstack/servers/7c3c0f79-343e-4b99-93bc-2ade47641e64" rel="self"/>
     <atom:link href="http://openstack.example.com/openstack/servers/7c3c0f79-343e-4b99-93bc-2ade47641e64" rel="bookmark"/>
   </server>

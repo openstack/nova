@@ -98,11 +98,6 @@ def make_server(elem, detailed=False):
         # Attach addresses node
         elem.append(ips.AddressesTemplate())
 
-        # Attach volumes_attached node
-        volumes = xmlutil.SubTemplateElement(elem, 'volume_attached',
-                                             selector='volumes_attached')
-        volumes.set('id')
-
     xmlutil.make_links(elem, 'links')
 
 
@@ -500,13 +495,6 @@ class Controller(wsgi.Controller):
 
         return instances
 
-    def _add_instance_volumes(self, context, instances):
-        for instance in instances:
-            bdms = self.compute_api.get_instance_bdms(context, instance)
-            volumes = [bdm['volume_id'] for bdm in bdms if bdm['volume_id']]
-            if volumes:
-                instance['volumes_attached'] = volumes
-
     def _get_servers(self, req, is_detail):
         """Returns a list of servers, based on any search options specified."""
 
@@ -574,7 +562,6 @@ class Controller(wsgi.Controller):
 
         if is_detail:
             self._add_instance_faults(context, instance_list)
-            self._add_instance_volumes(context, instance_list)
             response = self._view_builder.detail(req, instance_list)
         else:
             response = self._view_builder.index(req, instance_list)
@@ -751,7 +738,6 @@ class Controller(wsgi.Controller):
             instance = self.compute_api.get(context, id)
             req.cache_db_instance(instance)
             self._add_instance_faults(context, [instance])
-            self._add_instance_volumes(context, [instance])
             return self._view_builder.show(req, instance)
         except exception.NotFound:
             msg = _("Instance could not be found")
