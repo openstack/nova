@@ -267,32 +267,20 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
     @lockutils.synchronized('connect_volume', 'nova-')
     def disconnect_volume(self, connection_info, disk_dev):
         """Detach the volume from instance_name."""
+        iscsi_properties = connection_info['data']
+        multipath_device = None
+        if CONF.libvirt_iscsi_use_multipath:
+            host_device = ("/dev/disk/by-path/ip-%s-iscsi-%s-lun-%s" %
+                           (iscsi_properties['target_portal'],
+                            iscsi_properties['target_iqn'],
+                            iscsi_properties.get('target_lun', 0)))
+            multipath_device = self._get_multipath_device_name(host_device)
+
         super(LibvirtISCSIVolumeDriver,
               self).disconnect_volume(connection_info, disk_dev)
-        iscsi_properties = connection_info['data']
 
-        if CONF.libvirt_iscsi_use_multipath and \
-           "mapper" in connection_info['data']['device_path']:
-            self._rescan_iscsi()
-            self._rescan_multipath()
-            devices = [dev for dev in self.connection.get_all_block_devices()
-                       if "/mapper/" in dev]
-            if not devices:
-                #disconnect if no other multipath devices
-                self._disconnect_mpath(iscsi_properties)
-                return
-
-            other_iqns = [self._get_multipath_iqn(device)
-                          for device in devices]
-
-            if iscsi_properties['target_iqn'] not in other_iqns:
-                #disconnect if no other multipath devices with same iqn
-                self._disconnect_mpath(iscsi_properties)
-                return
-
-            #else do not disconnect iscsi portals,
-            #as they are used for other luns
-            return
+        if CONF.libvirt_iscsi_use_multipath and multipath_device:
+            return self._disconnect_volume_multipath_iscsi(iscsi_properties)
 
         # NOTE(vish): Only disconnect from the target if no luns from the
         #             target are in use.
@@ -303,6 +291,36 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
         devices = [dev for dev in devices if dev.startswith(device_prefix)]
         if not devices:
             self._disconnect_from_iscsi_portal(iscsi_properties)
+
+    def _disconnect_volume_multipath_iscsi(self, iscsi_properties):
+        self._rescan_iscsi()
+        self._rescan_multipath()
+        block_devices = self.connection.get_all_block_devices()
+        devices = []
+        for dev in block_devices:
+            if "/mapper/" in dev:
+                devices.append(dev)
+            else:
+                mpdev = self._get_multipath_device_name(dev)
+                if mpdev:
+                    devices.append(mpdev)
+
+        if not devices:
+            # disconnect if no other multipath devices
+            self._disconnect_mpath(iscsi_properties)
+            return
+
+        other_iqns = [self._get_multipath_iqn(device)
+                      for device in devices]
+
+        if iscsi_properties['target_iqn'] not in other_iqns:
+            # disconnect if no other multipath devices with same iqn
+            self._disconnect_mpath(iscsi_properties)
+            return
+
+        # else do not disconnect iscsi portals,
+        # as they are used for other luns
+        return
 
     def _connect_to_iscsi_portal(self, iscsi_properties):
         # NOTE(vish): If we are on the same host as nova volume, the
