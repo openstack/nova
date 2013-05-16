@@ -1123,9 +1123,6 @@ class LibvirtDriver(driver.ComputeDriver):
                                    'ramdisk_id': instance['ramdisk_id'],
                                    }
                     }
-        if 'architecture' in base.get('properties', {}):
-            arch = base['properties']['architecture']
-            metadata['properties']['architecture'] = arch
 
         disk_path = libvirt_utils.find_disk(virt_dom)
         source_format = libvirt_utils.get_disk_type(disk_path)
