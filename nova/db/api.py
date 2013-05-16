@@ -933,11 +933,6 @@ def network_get_by_cidr(context, cidr):
     return IMPL.network_get_by_cidr(context, cidr)
 
 
-def network_get_all_by_instance(context, instance_id):
-    """Get all networks by instance id or raise if none exist."""
-    return IMPL.network_get_all_by_instance(context, instance_id)
-
-
 def network_get_all_by_host(context, host):
     """All networks for which the given host is the network host."""
     return IMPL.network_get_all_by_host(context, host)

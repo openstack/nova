@@ -459,54 +459,6 @@ class DbApiTestCase(DbTestCase):
         self.assertRaises(exception.UnexpectedVMStateError,
                           db.instance_update, ctxt, uuid, updates)
 
-    def test_network_create_safe(self):
-        ctxt = context.get_admin_context()
-        values = {'host': 'localhost', 'project_id': 'project1'}
-        network = db.network_create_safe(ctxt, values)
-        self.assertNotEqual(None, network['uuid'])
-        self.assertEqual(36, len(network['uuid']))
-        db_network = db.network_get(ctxt, network['id'])
-        self.assertEqual(network['uuid'], db_network['uuid'])
-
-    def test_network_delete_safe(self):
-        ctxt = context.get_admin_context()
-        values = {'host': 'localhost', 'project_id': 'project1'}
-        network = db.network_create_safe(ctxt, values)
-        db_network = db.network_get(ctxt, network['id'])
-        values = {'network_id': network['id'], 'address': 'fake1'}
-        address1 = db.fixed_ip_create(ctxt, values)['address']
-        values = {'network_id': network['id'],
-                  'address': 'fake2',
-                  'allocated': True}
-        address2 = db.fixed_ip_create(ctxt, values)['address']
-        self.assertRaises(exception.NetworkInUse,
-                          db.network_delete_safe, ctxt, network['id'])
-        db.fixed_ip_update(ctxt, address2, {'allocated': False})
-        network = db.network_delete_safe(ctxt, network['id'])
-        self.assertRaises(exception.FixedIpNotFoundForAddress,
-                          db.fixed_ip_get_by_address, ctxt, address1)
-        ctxt = ctxt.elevated(read_deleted='yes')
-        fixed_ip = db.fixed_ip_get_by_address(ctxt, address1)
-        self.assertTrue(fixed_ip['deleted'])
-
-    def test_network_create_with_duplicate_vlan(self):
-        ctxt = context.get_admin_context()
-        values1 = {'host': 'localhost', 'project_id': 'project1', 'vlan': 1}
-        values2 = {'host': 'something', 'project_id': 'project1', 'vlan': 1}
-        db.network_create_safe(ctxt, values1)
-        self.assertRaises(exception.DuplicateVlan,
-                          db.network_create_safe, ctxt, values2)
-
-    def test_network_update_with_duplicate_vlan(self):
-        ctxt = context.get_admin_context()
-        values1 = {'host': 'localhost', 'project_id': 'project1', 'vlan': 1}
-        values2 = {'host': 'something', 'project_id': 'project1', 'vlan': 2}
-        network_ref = db.network_create_safe(ctxt, values1)
-        db.network_create_safe(ctxt, values2)
-        self.assertRaises(exception.DuplicateVlan,
-                          db.network_update,
-                          ctxt, network_ref["id"], values2)
-
     def test_instance_update_with_instance_uuid(self):
         # test instance_update() works when an instance UUID is passed.
         ctxt = context.get_admin_context()
@@ -1073,76 +1025,6 @@ class DbApiTestCase(DbTestCase):
 
         db.dnsdomain_unregister(ctxt, domain1)
         db.dnsdomain_unregister(ctxt, domain2)
-
-    def test_network_get_associated_fixed_ips(self):
-        ctxt = context.get_admin_context()
-        values = {'host': 'foo', 'hostname': 'myname'}
-        instance = db.instance_create(ctxt, values)
-        values = {'address': 'bar', 'instance_uuid': instance['uuid']}
-        vif = db.virtual_interface_create(ctxt, values)
-        values = {'address': 'baz',
-                  'network_id': 1,
-                  'allocated': True,
-                  'instance_uuid': instance['uuid'],
-                  'virtual_interface_id': vif['id']}
-        fixed_address = db.fixed_ip_create(ctxt, values)['address']
-        data = db.network_get_associated_fixed_ips(ctxt, 1)
-        self.assertEqual(len(data), 1)
-        record = data[0]
-        self.assertEqual(record['address'], fixed_address)
-        self.assertEqual(record['instance_uuid'], instance['uuid'])
-        self.assertEqual(record['network_id'], 1)
-        self.assertEqual(record['instance_created'], instance['created_at'])
-        self.assertEqual(record['instance_updated'], instance['updated_at'])
-        self.assertEqual(record['instance_hostname'], instance['hostname'])
-        self.assertEqual(record['vif_id'], vif['id'])
-        self.assertEqual(record['vif_address'], vif['address'])
-        data = db.network_get_associated_fixed_ips(ctxt, 1, 'nothing')
-        self.assertEqual(len(data), 0)
-
-    def test_network_get_all_by_host(self):
-        ctxt = context.get_admin_context()
-        data = db.network_get_all_by_host(ctxt, 'foo')
-        self.assertEqual(len(data), 0)
-        # dummy network
-        net = db.network_create_safe(ctxt, {})
-        # network with host set
-        net = db.network_create_safe(ctxt, {'host': 'foo'})
-        data = db.network_get_all_by_host(ctxt, 'foo')
-        self.assertEqual(len(data), 1)
-        # network with fixed ip with host set
-        net = db.network_create_safe(ctxt, {})
-        values = {'host': 'foo', 'network_id': net['id']}
-        db.fixed_ip_create(ctxt, values)
-        data = db.network_get_all_by_host(ctxt, 'foo')
-        self.assertEqual(len(data), 2)
-        # network with instance with host set
-        net = db.network_create_safe(ctxt, {})
-        instance = db.instance_create(ctxt, {'host': 'foo'})
-        values = {'instance_uuid': instance['uuid']}
-        vif = db.virtual_interface_create(ctxt, values)
-        values = {'network_id': net['id'],
-                  'virtual_interface_id': vif['id']}
-        db.fixed_ip_create(ctxt, values)
-        data = db.network_get_all_by_host(ctxt, 'foo')
-        self.assertEqual(len(data), 3)
-
-    def test_network_in_use_on_host(self):
-        ctxt = context.get_admin_context()
-
-        values = {'host': 'foo', 'hostname': 'myname'}
-        instance = db.instance_create(ctxt, values)
-        values = {'address': 'bar', 'instance_uuid': instance['uuid']}
-        vif = db.virtual_interface_create(ctxt, values)
-        values = {'address': 'baz',
-                  'network_id': 1,
-                  'allocated': True,
-                  'instance_uuid': instance['uuid'],
-                  'virtual_interface_id': vif['id']}
-        db.fixed_ip_create(ctxt, values)
-
-        self.assertEqual(db.network_in_use_on_host(ctxt, 1, 'foo'), True)
-        self.assertEqual(db.network_in_use_on_host(ctxt, 1, 'bar'), False)
 
     def test_instance_floating_address_get_all(self):
         ctxt = context.get_admin_context()
@@ -4348,6 +4230,240 @@ class VirtualInterfaceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         vifs = [self._create_virt_interface(val) for val in values]
         real_vifs = db.virtual_interface_get_all(self.ctxt)
         self._assertEqualListsOfObjects(vifs, real_vifs)
+
+
+class NetworkTestCase(test.TestCase, ModelsObjectComparatorMixin):
+
+    """Tests for db/api/network_* methods."""
+
+    def setUp(self):
+        super(NetworkTestCase, self).setUp()
+        self.ctxt = context.get_admin_context()
+
+    def _get_associated_fixed_ip(self, host, cidr, ip):
+        network = db.network_create_safe(self.ctxt,
+            {'project_id': 'project1', 'cidr': cidr})
+        self.assertFalse(db.network_in_use_on_host(self.ctxt, network.id,
+            host))
+        instance = db.instance_create(self.ctxt,
+            {'project_id': 'project1', 'host': host})
+        virtual_interface = db.virtual_interface_create(self.ctxt,
+            {'instance_uuid': instance.uuid, 'network_id': network.id,
+            'address': ip})
+        db.fixed_ip_create(self.ctxt, {'address': ip,
+            'network_id': network.id, 'allocated': True,
+            'virtual_interface_id': virtual_interface.id})
+        db.fixed_ip_associate(self.ctxt, ip, instance.uuid,
+            network.id)
+        return network, instance
+
+    def test_network_in_use_on_host(self):
+        network, _ = self._get_associated_fixed_ip('host.net', '192.0.2.0/30',
+            '192.0.2.1')
+        self.assertTrue(db.network_in_use_on_host(self.ctxt, network.id,
+            'host.net'))
+
+    def test_network_get_associated_fixed_ips(self):
+        network, instance = self._get_associated_fixed_ip('host.net',
+            '192.0.2.0/30', '192.0.2.1')
+        data = db.network_get_associated_fixed_ips(self.ctxt, network.id)
+        self.assertEqual(1, len(data))
+        self.assertEqual('192.0.2.1', data[0]['address'])
+        self.assertEqual('192.0.2.1', data[0]['vif_address'])
+        self.assertEqual(instance.uuid, data[0]['instance_uuid'])
+        self.assertTrue(data[0]['allocated'])
+
+    def test_network_create_safe(self):
+        values = {'host': 'localhost', 'project_id': 'project1'}
+        network = db.network_create_safe(self.ctxt, values)
+        self.assertEqual(36, len(network['uuid']))
+        db_network = db.network_get(self.ctxt, network['id'])
+        self._assertEqualObjects(network, db_network)
+
+    def test_network_create_with_duplicate_vlan(self):
+        values1 = {'host': 'localhost', 'project_id': 'project1', 'vlan': 1}
+        values2 = {'host': 'something', 'project_id': 'project1', 'vlan': 1}
+        db.network_create_safe(self.ctxt, values1)
+        self.assertRaises(exception.DuplicateVlan,
+                          db.network_create_safe, self.ctxt, values2)
+
+    def test_network_delete_safe(self):
+        values = {'host': 'localhost', 'project_id': 'project1'}
+        network = db.network_create_safe(self.ctxt, values)
+        db_network = db.network_get(self.ctxt, network['id'])
+        values = {'network_id': network['id'], 'address': 'fake1'}
+        address1 = db.fixed_ip_create(self.ctxt, values)['address']
+        values = {'network_id': network['id'],
+                  'address': 'fake2',
+                  'allocated': True}
+        address2 = db.fixed_ip_create(self.ctxt, values)['address']
+        self.assertRaises(exception.NetworkInUse,
+                          db.network_delete_safe, self.ctxt, network['id'])
+        db.fixed_ip_update(self.ctxt, address2, {'allocated': False})
+        network = db.network_delete_safe(self.ctxt, network['id'])
+        self.assertRaises(exception.FixedIpNotFoundForAddress,
+                          db.fixed_ip_get_by_address, self.ctxt, address1)
+        ctxt = self.ctxt.elevated(read_deleted='yes')
+        fixed_ip = db.fixed_ip_get_by_address(ctxt, address1)
+        self.assertTrue(fixed_ip['deleted'])
+
+    def test_network_in_use_on_host(self):
+        values = {'host': 'foo', 'hostname': 'myname'}
+        instance = db.instance_create(self.ctxt, values)
+        values = {'address': 'bar', 'instance_uuid': instance['uuid']}
+        vif = db.virtual_interface_create(self.ctxt, values)
+        values = {'address': 'baz',
+                  'network_id': 1,
+                  'allocated': True,
+                  'instance_uuid': instance['uuid'],
+                  'virtual_interface_id': vif['id']}
+        db.fixed_ip_create(self.ctxt, values)
+        self.assertEqual(db.network_in_use_on_host(self.ctxt, 1, 'foo'), True)
+        self.assertEqual(db.network_in_use_on_host(self.ctxt, 1, 'bar'), False)
+
+    def test_network_update_nonexistent(self):
+        self.assertRaises(exception.NetworkNotFound,
+            db.network_update, self.ctxt, 'nonexistent', {})
+
+    def test_network_update_with_duplicate_vlan(self):
+        values1 = {'host': 'localhost', 'project_id': 'project1', 'vlan': 1}
+        values2 = {'host': 'something', 'project_id': 'project1', 'vlan': 2}
+        network_ref = db.network_create_safe(self.ctxt, values1)
+        db.network_create_safe(self.ctxt, values2)
+        self.assertRaises(exception.DuplicateVlan,
+                          db.network_update, self.ctxt,
+                          network_ref["id"], values2)
+
+    def test_network_update(self):
+        network = db.network_create_safe(self.ctxt, {'project_id': 'project1',
+            'vlan': 1, 'host': 'test.com'})
+        db.network_update(self.ctxt, network.id, {'vlan': 2})
+        network_new = db.network_get(self.ctxt, network.id)
+        self.assertEqual(2, network_new.vlan)
+
+    def test_network_set_host_nonexistent_network(self):
+        self.assertRaises(exception.NetworkNotFound,
+            db.network_set_host, self.ctxt, 'nonexistent', 'nonexistent')
+
+    def test_network_set_host_with_initially_no_host(self):
+        values = {'host': 'example.com', 'project_id': 'project1'}
+        network = db.network_create_safe(self.ctxt, values)
+        self.assertEqual(
+            db.network_set_host(self.ctxt, network.id, 'new.example.com'),
+            'example.com')
+
+    def test_network_set_host(self):
+        values = {'project_id': 'project1'}
+        network = db.network_create_safe(self.ctxt, values)
+        self.assertEqual(
+            db.network_set_host(self.ctxt, network.id, 'example.com'),
+            'example.com')
+        self.assertEqual('example.com',
+            db.network_get(self.ctxt, network.id).host)
+
+    def test_network_get_all_by_host(self):
+        self.assertEqual([],
+            db.network_get_all_by_host(self.ctxt, 'example.com'))
+        host = 'h1.example.com'
+        # network with host set
+        net1 = db.network_create_safe(self.ctxt, {'host': host})
+        self._assertEqualListsOfObjects([net1],
+            db.network_get_all_by_host(self.ctxt, host))
+        # network with fixed ip with host set
+        net2 = db.network_create_safe(self.ctxt, {})
+        db.fixed_ip_create(self.ctxt, {'host': host, 'network_id': net2.id})
+        data = db.network_get_all_by_host(self.ctxt, host)
+        self._assertEqualListsOfObjects([net1, net2],
+            db.network_get_all_by_host(self.ctxt, host))
+        # network with instance with host set
+        net3 = db.network_create_safe(self.ctxt, {})
+        instance = db.instance_create(self.ctxt, {'host': host})
+        vif = db.virtual_interface_create(self.ctxt,
+            {'instance_uuid': instance.uuid})
+        db.fixed_ip_create(self.ctxt, {'network_id': net3.id,
+            'virtual_interface_id': vif.id})
+        self._assertEqualListsOfObjects([net1, net2, net3],
+            db.network_get_all_by_host(self.ctxt, host))
+
+    def test_network_get_by_cidr_nonexistent(self):
+        self.assertRaises(exception.NetworkNotFoundForCidr,
+            db.network_get_by_cidr(self.ctxt, '192.0.2.0/29'))
+
+    def test_network_get_by_cidr(self):
+        cidr = '192.0.2.0/30'
+        cidr_v6 = '2001:db8:1::/64'
+        network = db.network_create_safe(self.ctxt,
+            {'project_id': 'project1', 'cidr': cidr, 'cidr_v6': cidr_v6})
+        self._assertEqualObjects(network,
+            db.network_get_by_cidr(self.ctxt, cidr))
+        self._assertEqualObjects(network,
+            db.network_get_by_cidr(self.ctxt, cidr_v6))
+
+    def test_network_get_by_cidr_nonexistent(self):
+        self.assertRaises(exception.NetworkNotFoundForCidr,
+            db.network_get_by_cidr, self.ctxt, '192.0.2.0/30')
+
+    def test_network_get_by_uuid(self):
+        network = db.network_create_safe(self.ctxt,
+            {'project_id': 'project_1'})
+        self._assertEqualObjects(network,
+            db.network_get_by_uuid(self.ctxt, network.uuid))
+
+    def test_network_get_by_uuid_nonexistent(self):
+        self.assertRaises(exception.NetworkNotFoundForUUID,
+            db.network_get_by_uuid, self.ctxt, 'non-existent-uuid')
+
+    def test_network_get_all_by_uuids_no_networks(self):
+        self.assertRaises(exception.NoNetworksFound,
+            db.network_get_all_by_uuids, self.ctxt, ['non-existent-uuid'])
+
+    def test_network_get_all_by_uuids(self):
+        net1 = db.network_create_safe(self.ctxt, {})
+        net2 = db.network_create_safe(self.ctxt, {})
+        self._assertEqualListsOfObjects([net1, net2],
+            db.network_get_all_by_uuids(self.ctxt, [net1.uuid, net2.uuid]))
+
+    def test_network_get_all_no_networks(self):
+        self.assertRaises(exception.NoNetworksFound,
+            db.network_get_all, self.ctxt)
+
+    def test_network_get_all(self):
+        network = db.network_create_safe(self.ctxt, {})
+        network_db = db.network_get_all(self.ctxt)
+        self.assertEqual(1, len(network_db))
+        self._assertEqualObjects(network, network_db[0])
+
+    def test_network_get(self):
+        network = db.network_create_safe(self.ctxt, {})
+        self._assertEqualObjects(db.network_get(self.ctxt, network.id),
+            network)
+        db.network_delete_safe(self.ctxt, network.id)
+        self.assertRaises(exception.NetworkNotFound,
+            db.network_get, self.ctxt, network.id)
+
+    def test_network_associate(self):
+        network = db.network_create_safe(self.ctxt, {})
+        self.assertIsNone(network.project_id)
+        db.network_associate(self.ctxt, "project1", network.id)
+        self.assertEqual("project1", db.network_get(self.ctxt,
+            network.id).project_id)
+
+    def test_network_diassociate(self):
+        network = db.network_create_safe(self.ctxt,
+            {'project_id': 'project1', 'host': 'test.net'})
+        # disassociate project
+        db.network_disassociate(self.ctxt, network.id, False, True)
+        self.assertIsNone(db.network_get(self.ctxt, network.id).project_id)
+        # disassociate host
+        db.network_disassociate(self.ctxt, network.id, True, False)
+        self.assertIsNone(db.network_get(self.ctxt, network.id).host)
+
+    def test_network_count_reserved_ips(self):
+        net = db.network_create_safe(self.ctxt, {})
+        self.assertEqual(0, db.network_count_reserved_ips(self.ctxt, net.id))
+        db.fixed_ip_create(self.ctxt, {'network_id': net.id,
+            'reserved': True})
+        self.assertEqual(1, db.network_count_reserved_ips(self.ctxt, net.id))
 
 
 class KeyPairTestCase(test.TestCase, ModelsObjectComparatorMixin):
