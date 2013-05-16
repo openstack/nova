@@ -1282,18 +1282,16 @@ class Controller(wsgi.Controller):
         except exception.InstanceNotFound:
             msg = _("Instance could not be found")
             raise exc.HTTPNotFound(explanation=msg)
-        except exception.InvalidMetadata as error:
-            raise exc.HTTPBadRequest(
-                explanation=error.format_message())
         except exception.InvalidMetadataSize as error:
             raise exc.HTTPRequestEntityTooLarge(
                 explanation=error.format_message())
         except exception.ImageNotFound:
             msg = _("Cannot find image for rebuild")
             raise exc.HTTPBadRequest(explanation=msg)
-        except exception.InstanceTypeMemoryTooSmall as error:
-            raise exc.HTTPBadRequest(explanation=error.format_message())
-        except exception.InstanceTypeDiskTooSmall as error:
+        except (exception.InvalidMetadata,
+                exception.InstanceTypeMemoryTooSmall,
+                exception.InstanceTypeDiskTooSmall,
+                exception.ImageNotActive) as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
 
         instance = self._get_server(context, req, id)

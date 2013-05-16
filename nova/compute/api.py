@@ -1757,25 +1757,13 @@ class API(base.Base):
                                             block_device_info=block_info,
                                             reboot_type=reboot_type)
 
-    def _get_image(self, context, image_href):
-        """Throws an ImageNotFound exception if image_href does not exist."""
-        (image_service, image_id) = glance.get_remote_image_service(context,
-                                                                 image_href)
-        return image_service.show(context, image_id)
-
     @wrap_check_policy
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED],
                           task_state=[None])
     def rebuild(self, context, instance, image_href, admin_password, **kwargs):
         """Rebuild the given instance with the provided attributes."""
-
-        if instance['image_ref']:
-            orig_image_ref = instance['image_ref']
-            image = self._get_image(context, image_href)
-        else:
-            orig_image_ref = ''
-            image = {}
+        orig_image_ref = instance['image_ref'] or ''
 
         files_to_inject = kwargs.pop('files_to_inject', [])
         self._check_injected_file_quota(context, files_to_inject)
@@ -1783,18 +1771,21 @@ class API(base.Base):
         metadata = kwargs.get('metadata', {})
         self._check_metadata_properties_quota(context, metadata)
 
+        if image_href:
+            (image_service, image_id) = glance.get_remote_image_service(
+                    context, image_href)
+            image = image_service.show(context, image_id)
+            if image['status'] != 'active':
+                raise exception.ImageNotActive(image_id=image_id)
+        else:
+            image = {}
+
         instance_type = flavors.extract_instance_type(instance)
         if instance_type['memory_mb'] < int(image.get('min_ram') or 0):
             raise exception.InstanceTypeMemoryTooSmall()
         if instance_type['root_gb'] < int(image.get('min_disk') or 0):
             raise exception.InstanceTypeDiskTooSmall()
 
-        if image_href:
-            (image_service, image_id) = glance.get_remote_image_service(
-                context, image_href)
-            image = image_service.show(context, image_id)
-        else:
-            image = {}
         kernel_id, ramdisk_id = self._handle_kernel_and_ramdisk(
                 context, None, None, image)
 
