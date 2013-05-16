@@ -173,9 +173,9 @@ class MoxStubout(fixtures.Fixture):
         # because it screws with our generators
         self.mox = mox.Mox()
         self.stubs = stubout.StubOutForTesting()
-        self.addCleanup(self.mox.UnsetStubs)
         self.addCleanup(self.stubs.UnsetAll)
         self.addCleanup(self.stubs.SmartUnsetAll)
+        self.addCleanup(self.mox.UnsetStubs)
         self.addCleanup(self.mox.VerifyAll)
 
 
