@@ -1750,6 +1750,38 @@ class CapacityTestCase(test.TestCase):
                 item['id'], {})
         self.assertNotEqual(item['updated_at'], item_updated['updated_at'])
 
+    def test_compute_node_stat_unchanged(self):
+        # don't update unchanged stat values:
+        item = self._create_helper('host1')
+
+        compute_node_id = item['id']
+        stats = self._stats_as_dict(item['stats'])
+        self.assertEqual(4, len(stats.keys()))
+
+        orig_update_stats = sqlalchemy_api._update_stats
+
+        def update(context, new_stats, compute_id, session, prune_stats=False):
+            # wrap the session object to see which stats get updated
+            orig_add = session.add
+            added = []
+
+            def add(instance):
+                added.append(instance)
+                orig_add(instance)
+
+            self.stubs.Set(session, 'add', add)
+            orig_update_stats(context, new_stats, compute_id, session,
+                              prune_stats=False)
+
+            # no stats should have been added to the session:
+            self.assertEqual(0, len(added))
+
+        self.stubs.Set(sqlalchemy_api, '_update_stats', update)
+
+        # save with same (unchanged) stats again:
+        values = {'stats': stats}
+        db.compute_node_update(self.ctxt, compute_node_id, values)
+
     def test_compute_node_stat_prune(self):
         item = self._create_helper('host1')
         for stat in item['stats']:
