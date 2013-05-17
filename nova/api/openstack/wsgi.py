@@ -917,7 +917,8 @@ class Resource(wsgi.Application):
 
         if body:
             msg = _("Action: '%(action)s', body: "
-                    "%(body)s") % {'action': action, 'body': body}
+                    "%(body)s") % {'action': action,
+                                   'body': unicode(body, 'utf-8')}
             LOG.debug(msg)
         LOG.debug(_("Calling method %s") % meth)
 
