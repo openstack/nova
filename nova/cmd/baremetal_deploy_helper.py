@@ -201,7 +201,7 @@ def deploy(address, port, iqn, lun, image_path, pxe_config_path,
     login_iscsi(address, port, iqn)
     try:
         root_uuid = work_on_disk(dev, root_mb, swap_mb, image_path)
-    except processutils.ProcessExecutionError, err:
+    except processutils.ProcessExecutionError as err:
         # Log output if there was a error
         LOG.error("Cmd     : %s" % err.cmd)
         LOG.error("StdOut  : %s" % err.stdout)

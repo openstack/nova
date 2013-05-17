@@ -2153,7 +2153,7 @@ class LibvirtConnTestCase(test.TestCase):
             conn.ensure_filtering_rules_for_instance(instance_ref,
                                                      network_info,
                                                      time_module=fake_timer)
-        except exception.NovaException, e:
+        except exception.NovaException as e:
             msg = ('The firewall filter for %s does not exist' %
                    instance_ref['name'])
             c1 = (0 <= str(e).find(msg))

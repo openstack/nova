@@ -3739,7 +3739,7 @@ def instance_type_create(context, values):
         if 'flavorid' in e.columns:
             raise exception.InstanceTypeIdExists(flavor_id=values['flavorid'])
         raise exception.InstanceTypeExists(name=values['name'])
-    except Exception, e:
+    except Exception as e:
         raise db_exc.DBError(e)
 
     return _dict_with_extra_specs(instance_type_ref)
@@ -4505,7 +4505,7 @@ def s3_image_create(context, image_uuid):
         s3_image_ref = models.S3Image()
         s3_image_ref.update({'uuid': image_uuid})
         s3_image_ref.save()
-    except Exception, e:
+    except Exception as e:
         raise db_exc.DBError(e)
 
     return s3_image_ref

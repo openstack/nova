@@ -877,7 +877,7 @@ class VMOps(object):
             new_vdi_ref, new_vdi_uuid = create_copy_vdi_and_resize(
                 undo_mgr, old_vdi_ref)
             transfer_vhd_to_dest(new_vdi_ref, new_vdi_uuid)
-        except Exception, error:
+        except Exception as error:
             msg = _("_migrate_disk_resizing_down failed. "
                     "Restoring orig vm due_to: %{exception}.")
             LOG.exception(msg, instance=instance)

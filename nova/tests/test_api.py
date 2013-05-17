@@ -309,7 +309,7 @@ class ApiEc2TestCase(test.TestCase):
 
         try:
             self.ec2.create_key_pair('test')
-        except boto_exc.EC2ResponseError, e:
+        except boto_exc.EC2ResponseError as e:
             if e.code == 'InvalidKeyPair.Duplicate':
                 pass
             else:

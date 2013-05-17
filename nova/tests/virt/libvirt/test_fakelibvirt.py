@@ -136,7 +136,7 @@ class FakeLibvirtTests(test.TestCase):
         conn = self.get_openAuth_curry_func()('qemu:///system')
         try:
             getattr(conn, xmlfunc_name)("this is not valid </xml>", *args)
-        except libvirt.libvirtError, e:
+        except libvirt.libvirtError as e:
             self.assertEqual(e.get_error_code(), libvirt.VIR_ERR_XML_DETAIL)
             self.assertEqual(e.get_error_domain(), libvirt.VIR_FROM_DOMAIN)
             return
@@ -242,7 +242,7 @@ class FakeLibvirtTests(test.TestCase):
         dom_id = conn.listDomainsID()[0]
         try:
             conn.lookupByID(dom_id + 1)
-        except libvirt.libvirtError, e:
+        except libvirt.libvirtError as e:
             self.assertEqual(e.get_error_code(), libvirt.VIR_ERR_NO_DOMAIN)
             self.assertEqual(e.get_error_domain(), libvirt.VIR_FROM_QEMU)
             return
@@ -315,7 +315,7 @@ class FakeLibvirtTests(test.TestCase):
         nwfilter.undefine()
         try:
             conn.nwfilterLookupByName('nova-instance-instance-789320334')
-        except libvirt.libvirtError, e:
+        except libvirt.libvirtError as e:
             self.assertEqual(e.get_error_code(), libvirt.VIR_ERR_NO_NWFILTER)
             self.assertEqual(e.get_error_domain(), libvirt.VIR_FROM_NWFILTER)
             return

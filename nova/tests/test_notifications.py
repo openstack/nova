@@ -99,7 +99,7 @@ class NotificationsTestCase(test.TestCase):
         try:
             # Get a real exception with a call stack.
             raise test.TestingException("junk")
-        except test.TestingException, e:
+        except test.TestingException as e:
             exception = e
 
         notifications.send_api_fault("http://example.com/foo", 500, exception)

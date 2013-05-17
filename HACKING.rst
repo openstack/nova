@@ -211,6 +211,25 @@ Example::
     LOG.error(msg % {"s_id": "1234", "m_key": "imageId"})
 
 
+Python 3.x compatibility
+------------------------
+Nova code should stay Python 3.x compatible. That means all Python 2.x-only
+constructs should be avoided. An example is
+
+    except x,y:
+
+Use
+
+    except x as y:
+
+instead. Other Python 3.x compatility issues, like e.g. print operator
+can be avoided in new code by using
+
+    from __future__ import print_function
+
+at the top of your module.
+
+
 Creating Unit Tests
 -------------------
 For every new feature, unit tests should be created that both test and

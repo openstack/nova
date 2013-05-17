@@ -251,7 +251,7 @@ class EC2KeystoneAuth(wsgi.Middleware):
             project_name = result['access']['token']['tenant'].get('name')
             roles = [role['name'] for role
                      in result['access']['user']['roles']]
-        except (AttributeError, KeyError), e:
+        except (AttributeError, KeyError) as e:
             LOG.exception(_("Keystone failure: %s") % e)
             msg = _("Failure communicating with keystone")
             return ec2_error(req, request_id, "Unauthorized", msg)

@@ -102,13 +102,13 @@ class InterfaceAttachmentController(object):
             LOG.audit(_("Attach interface"), instance=instance)
             network_info = self.compute_api.attach_interface(context,
                 instance, network_id, port_id, req_ip)
-        except exception.NotFound, e:
+        except exception.NotFound as e:
             LOG.exception(e)
             raise exc.HTTPNotFound()
         except NotImplementedError:
             msg = _("Network driver does not support this function.")
             raise webob.exc.HTTPNotImplemented(explanation=msg)
-        except exception.InterfaceAttachFailed, e:
+        except exception.InterfaceAttachFailed as e:
             LOG.exception(e)
             msg = _("Failed to attach interface")
             raise webob.exc.HTTPInternalServerError(explanation=msg)

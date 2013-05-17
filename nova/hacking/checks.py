@@ -27,5 +27,29 @@ def import_no_db_in_virt(logical_line, filename):
             yield (0, "N307: nova.db import not allowed in nova/virt/*")
 
 
+def except_python3x_compatible(logical_line, filename):
+    """Check for except statements to be Python 3.x compatible
+
+    As of Python 3.x, the construct "except x,y:" has been removed.
+
+    N308
+    """
+
+    def is_old_style_except(logical_line):
+        # Should match:
+        #     except ProcessExecutionError, exn:
+        # Should not match:
+        #     except UncodeError:
+        #     except (x,y):
+        return (',' in logical_line
+                and ')' not in logical_line.rpartition(',')[2])
+
+    if ("except " in logical_line
+            and logical_line.endswith(':')
+            and is_old_style_except(logical_line)):
+        yield(0, "N308: Python 3.x incompatible 'except x,y:' construct")
+
+
 def factory(register):
     register(import_no_db_in_virt)
+    register(except_python3x_compatible)

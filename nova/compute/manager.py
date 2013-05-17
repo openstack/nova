@@ -1774,7 +1774,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                reboot_type,
                                block_device_info=block_device_info,
                                bad_volumes_callback=bad_volumes_callback)
-        except Exception, exc:
+        except Exception as exc:
             LOG.error(_('Cannot reboot instance: %(exc)s'), locals(),
                       context=context, instance=instance)
             compute_utils.add_instance_fault_from_exc(context,
@@ -4114,7 +4114,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                         reservations=None):
         try:
             yield
-        except exception.InstanceFaultRollback, error:
+        except exception.InstanceFaultRollback as error:
             self._quota_rollback(context, reservations)
             msg = _("Setting instance back to ACTIVE after: %s")
             LOG.info(msg % error, instance_uuid=instance_uuid)
@@ -4122,7 +4122,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                   vm_state=vm_states.ACTIVE,
                                   task_state=None)
             raise error.inner_exception
-        except Exception, error:
+        except Exception as error:
             with excutils.save_and_reraise_exception():
                 self._quota_rollback(context, reservations)
                 msg = _('%s. Setting instance vm_state to ERROR')
