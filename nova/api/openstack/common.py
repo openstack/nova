@@ -113,7 +113,8 @@ def status_from_state(vm_state, task_state='default'):
     if status == "UNKNOWN":
         LOG.error(_("status is UNKNOWN from vm_state=%(vm_state)s "
                     "task_state=%(task_state)s. Bad upgrade or db "
-                    "corrupted?") % locals())
+                    "corrupted?"),
+                  {'vm_state': vm_state, 'task_state': task_state})
     return status
 
 
@@ -358,11 +359,12 @@ def raise_http_conflict_for_instance_invalid_state(exc, action):
     attr = exc.kwargs.get('attr')
     state = exc.kwargs.get('state')
     if attr and state:
-        msg = _("Cannot '%(action)s' while instance is in %(attr)s %(state)s")
+        msg = _("Cannot '%(action)s' while instance is in %(attr)s "
+                "%(state)s") % {'action': action, 'attr': attr, 'state': state}
     else:
         # At least give some meaningful message
-        msg = _("Instance is in an invalid state for '%(action)s'")
-    raise webob.exc.HTTPConflict(explanation=msg % locals())
+        msg = _("Instance is in an invalid state for '%s'") % action
+    raise webob.exc.HTTPConflict(explanation=msg)
 
 
 class MetadataDeserializer(wsgi.MetadataXMLDeserializer):

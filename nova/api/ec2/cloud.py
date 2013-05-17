@@ -620,8 +620,7 @@ class CloudController(object):
         validprotocols = ['tcp', 'udp', 'icmp', '6', '17', '1']
         if 'ip_protocol' in values and \
             values['ip_protocol'] not in validprotocols:
-            protocol = values['ip_protocol']
-            err = _("Invalid IP protocol %(protocol)s.") % locals()
+            err = _('Invalid IP protocol %s.') % values['ip_protocol']
             raise exception.EC2APIError(message=err, code="400")
 
     def revoke_security_group_ingress(self, context, group_name=None,
@@ -874,9 +873,12 @@ class CloudController(object):
         volume_id = ec2utils.ec2_vol_id_to_uuid(volume_id)
         instance_uuid = ec2utils.ec2_inst_id_to_uuid(context, instance_id)
         instance = self.compute_api.get(context, instance_uuid)
-        msg = _("Attach volume %(volume_id)s to instance %(instance_id)s"
-                " at %(device)s") % locals()
-        LOG.audit(msg, context=context)
+        LOG.audit(_('Attach volume %(volume_id)s to instance %(instance_id)s '
+                    'at %(device)s'),
+                  {'volume_id': volume_id,
+                   'instance_id': instance_id,
+                   'device': device},
+                  context=context)
 
         try:
             self.compute_api.attach_volume(context, instance,
@@ -1236,7 +1238,7 @@ class CloudController(object):
         return {'publicIp': public_ip}
 
     def release_address(self, context, public_ip, **kwargs):
-        LOG.audit(_("Release address %s"), public_ip, context=context)
+        LOG.audit(_('Release address %s'), public_ip, context=context)
         try:
             self.network_api.release_floating_ip(context, address=public_ip)
             return {'return': "true"}
@@ -1244,8 +1246,10 @@ class CloudController(object):
             raise exception.EC2APIError(_('Unable to release IP Address.'))
 
     def associate_address(self, context, instance_id, public_ip, **kwargs):
-        LOG.audit(_("Associate address %(public_ip)s to"
-                " instance %(instance_id)s") % locals(), context=context)
+        LOG.audit(_("Associate address %(public_ip)s to instance "
+                    "%(instance_id)s"),
+                  {'public_ip': public_ip, 'instance_id': instance_id},
+                  context=context)
         instance_uuid = ec2utils.ec2_inst_id_to_uuid(context, instance_id)
         instance = self.compute_api.get(context, instance_uuid)
 
@@ -1504,9 +1508,10 @@ class CloudController(object):
             metadata['properties']['block_device_mapping'] = mappings
 
         image_id = self._register_image(context, metadata)
-        msg = _("Registered image %(image_location)s with"
-                " id %(image_id)s") % locals()
-        LOG.audit(msg, context=context)
+        LOG.audit(_('Registered image %(image_location)s with id '
+                    '%(image_id)s'),
+                  {'image_location': image_location, 'image_id': image_id},
+                  context=context)
         return {'imageId': image_id}
 
     def describe_image_attribute(self, context, image_id, attribute, **kwargs):
@@ -1613,10 +1618,10 @@ class CloudController(object):
         # CreateImage only supported for the analogue of EBS-backed instances
         if not self.compute_api.is_volume_backed_instance(context, instance,
                                                           bdms):
-            root = instance['root_device_name']
             msg = _("Invalid value '%(ec2_instance_id)s' for instanceId. "
                     "Instance does not have a volume attached at root "
-                    "(%(root)s)") % locals()
+                    "(%(root)s)") % {'root': instance['root_device_name'],
+                                     'ec2_instance_id': ec2_instance_id}
             raise exception.InvalidParameterValue(err=msg)
 
         # stop the instance if necessary

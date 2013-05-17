@@ -397,9 +397,12 @@ class VolumeAttachmentController(wsgi.Controller):
 
         self._validate_volume_id(volume_id)
 
-        msg = _("Attach volume %(volume_id)s to instance %(server_id)s"
-                " at %(device)s") % locals()
-        LOG.audit(msg, context=context)
+        LOG.audit(_("Attach volume %(volume_id)s to instance %(server_id)s "
+                    "at %(device)s"),
+                  {'volume_id': volume_id,
+                   'device': device,
+                   'server_id': server_id},
+                  context=context)
 
         try:
             instance = self.compute_api.get(context, server_id)

@@ -289,11 +289,11 @@ class AdminActionsController(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=ex.format_message())
         except Exception:
             if host is None:
-                msg = _("Live migration of instance %(id)s to another host"
-                        " failed") % locals()
+                msg = _("Live migration of instance %s to another host "
+                        "failed") % id
             else:
-                msg = _("Live migration of instance %(id)s to host %(host)s"
-                        " failed") % locals()
+                msg = _("Live migration of instance %(id)s to host %(host)s "
+                        "failed") % {'id': id, 'host': host}
             LOG.exception(msg)
             # Return messages from scheduler
             raise exc.HTTPBadRequest(explanation=msg)

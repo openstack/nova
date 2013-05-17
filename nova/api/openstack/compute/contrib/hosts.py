@@ -202,8 +202,9 @@ class HostController(object):
     def _set_host_maintenance(self, context, host_name, mode=True):
         """Start/Stop host maintenance window. On start, it triggers
         guest VMs evacuation."""
-        LOG.audit(_("Putting host %(host_name)s in maintenance "
-                    "mode %(mode)s.") % locals())
+        LOG.audit(_("Putting host %(host_name)s in maintenance mode "
+                    "%(mode)s."),
+                  {'host_name': host_name, 'mode': mode})
         try:
             result = self.api.set_host_maintenance(context, host_name, mode)
         except NotImplementedError:

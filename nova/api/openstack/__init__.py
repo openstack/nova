@@ -174,18 +174,20 @@ class APIRouter(base_wsgi.Router):
 
     def _setup_extensions(self, ext_mgr):
         for extension in ext_mgr.get_controller_extensions():
-            ext_name = extension.extension.name
             collection = extension.collection
             controller = extension.controller
 
+            msg_format_dict = {'collection': collection,
+                               'ext_name': extension.extension.name}
             if collection not in self.resources:
                 LOG.warning(_('Extension %(ext_name)s: Cannot extend '
-                              'resource %(collection)s: No such resource') %
-                            locals())
+                              'resource %(collection)s: No such resource'),
+                            msg_format_dict)
                 continue
 
             LOG.debug(_('Extension %(ext_name)s extending resource: '
-                        '%(collection)s') % locals())
+                        '%(collection)s'),
+                      msg_format_dict)
 
             resource = self.resources[collection]
             resource.register_actions(controller)

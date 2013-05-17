@@ -916,7 +916,9 @@ class Resource(wsgi.Application):
             return Fault(webob.exc.HTTPBadRequest(explanation=msg))
 
         if body:
-            LOG.debug(_("Action: '%(action)s', body: %(body)s") % locals())
+            msg = _("Action: '%(action)s', body: "
+                    "%(body)s") % {'action': action, 'body': body}
+            LOG.debug(msg)
         LOG.debug(_("Calling method %s") % meth)
 
         # Now, deserialize the request body...
