@@ -295,6 +295,30 @@ class SecurityGroupController(SecurityGroupControllerBase):
         return {'security_group': self._format_security_group(context,
                                                               group_ref)}
 
+    @wsgi.serializers(xml=SecurityGroupTemplate)
+    def update(self, req, id, body):
+        """Update a security group."""
+        context = _authorize_context(req)
+
+        id = self.security_group_api.validate_id(id)
+
+        security_group = self.security_group_api.get(context, None, id,
+                                                     map_exception=True)
+        security_group_data = self._from_body(body, 'security_group')
+
+        group_name = security_group_data.get('name', None)
+        group_description = security_group_data.get('description', None)
+
+        self.security_group_api.validate_property(group_name, 'name', None)
+        self.security_group_api.validate_property(group_description,
+                                                  'description', None)
+
+        group_ref = self.security_group_api.update_security_group(
+            context, security_group, group_name, group_description)
+
+        return {'security_group': self._format_security_group(context,
+                                                              group_ref)}
+
 
 class SecurityGroupRulesController(SecurityGroupControllerBase):
 
@@ -568,7 +592,7 @@ class Security_groups(extensions.ExtensionDescriptor):
     name = "SecurityGroups"
     alias = "os-security-groups"
     namespace = "http://docs.openstack.org/compute/ext/securitygroups/api/v1.1"
-    updated = "2011-07-21T00:00:00+00:00"
+    updated = "2013-05-28T00:00:00+00:00"
 
     def get_controller_extensions(self):
         controller = SecurityGroupActionController()

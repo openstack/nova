@@ -60,6 +60,24 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
             raise e
         return self._convert_to_nova_security_group_format(security_group)
 
+    def update_security_group(self, context, security_group,
+                              name, description):
+        quantum = quantumv2.get_client(context)
+        body = self._make_quantum_security_group_dict(name, description)
+        try:
+            security_group = quantum.update_security_group(
+                security_group['id'], body).get('security_group')
+        except q_exc.QuantumClientException as e:
+            LOG.exception(_("Quantum Error updating security group %s"),
+                          name)
+            if e.status_code == 401:
+                # TODO(arosen) Cannot raise generic response from quantum here
+                # as this error code could be related to bad input or over
+                # quota
+                raise exc.HTTPBadRequest()
+            raise e
+        return self._convert_to_nova_security_group_format(security_group)
+
     def _convert_to_nova_security_group_format(self, security_group):
         nova_group = {}
         nova_group['id'] = security_group['id']

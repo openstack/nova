@@ -3258,6 +3258,18 @@ def security_group_create(context, values, session=None):
     return security_group_ref
 
 
+@require_context
+def security_group_update(context, security_group_id, values, session=None):
+    security_group_ref = model_query(context, models.SecurityGroup,
+            session=session).filter_by(id=security_group_id).first()
+
+    if not security_group_ref:
+        raise exception.SecurityGroupNotFound(
+                security_group_id=security_group_id)
+    security_group_ref.update(values)
+    return security_group_ref
+
+
 def security_group_ensure_default(context, session=None):
     """Ensure default security group exists for a project_id."""
     try:

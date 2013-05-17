@@ -185,6 +185,10 @@ class SecurityGroupBase(object):
     def create_security_group(self, context, name, description):
         raise NotImplementedError()
 
+    def update_security_group(self, context, security_group,
+                              name, description):
+        raise NotImplementedError()
+
     def get(self, context, name=None, id=None, map_exception=False):
         raise NotImplementedError()
 
