@@ -166,10 +166,14 @@ class MetadataRequestHandler(wsgi.Application):
 
         if expected_signature != signature:
             if instance_id:
-                w = _('X-Instance-ID-Signature: %(signature)s does not match '
-                      'the expected value: %(expected_signature)s for id: '
-                      '%(instance_id)s.  Request From: %(remote_address)s')
-                LOG.warn(w % locals())
+                LOG.warn(_('X-Instance-ID-Signature: %(signature)s does not '
+                           'match the expected value: %(expected_signature)s '
+                           'for id: %(instance_id)s.  Request From: '
+                            '%(remote_address)s'),
+                         {'signature': signature,
+                          'expected_signature': expected_signature,
+                          'instance_id': instance_id,
+                          'remote_address': remote_address})
 
             msg = _('Invalid proxy request signature.')
             raise webob.exc.HTTPForbidden(explanation=msg)

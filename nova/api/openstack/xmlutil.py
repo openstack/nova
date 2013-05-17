@@ -739,10 +739,9 @@ class MasterTemplate(Template):
 
             # Make sure we have a tree match
             if slave.root.tag != self.root.tag:
-                slavetag = slave.root.tag
-                mastertag = self.root.tag
-                msg = _("Template tree mismatch; adding slave %(slavetag)s "
-                        "to master %(mastertag)s") % locals()
+                msg = _("Template tree mismatch; adding slave %(slavetag)s to "
+                        "master %(mastertag)s") % {'slavetag': slave.root.tag,
+                                                   'mastertag': self.root.tag}
                 raise ValueError(msg)
 
             # Make sure slave applies to this template

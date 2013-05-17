@@ -9,14 +9,11 @@ in a ``_()`` function call. For example::
 
     LOG.debug(_("block_device_mapping %s"), block_device_mapping)
 
-If you have multiple arguments, the convention is to use named parameters.
-It's common to use the ``locals()`` dict (which contains the names and values
-of the local variables in the current scope) to do the string interpolation.
-For example::
-
-    label = ...
-    sr_ref = ...
-    LOG.debug(_('Introduced %(label)s as %(sr_ref)s.') % locals())
+Do not use ``locals()`` for formatting messages because:
+1. It is not as clear as using explicit dicts.
+2. It could produce hidden errors during refactoring.
+3. Changing the name of a variable causes a change in the message.
+4. It creates a lot of otherwise unused variables.
 
 If you do not follow the project conventions, your code may cause the
 LocalizationTestCase.test_multiple_positional_format_placeholders test to fail

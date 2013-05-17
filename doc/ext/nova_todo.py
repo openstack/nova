@@ -37,13 +37,13 @@ def process_todo_nodes(app, doctree, fromdocname):
 
         for todo_info in env.todo_all_todos:
             para = nodes.paragraph()
-            filename = env.doc2path(todo_info['docname'], base=None)
-
             # Create a reference
             newnode = nodes.reference('', '')
 
-            line_info = todo_info['lineno']
-            link = _('%(filename)s, line %(line_info)d') % locals()
+            filename = env.doc2path(todo_info['docname'], base=None)
+            link = (_('%(filename)s, line %(line_info)d') %
+                     {'filename': filename, 'line_info': todo_info['lineno']})
+
             innernode = nodes.emphasis(link, link)
             newnode['refdocname'] = todo_info['docname']
 

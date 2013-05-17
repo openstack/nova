@@ -1404,9 +1404,8 @@ def remove_invalid_options(context, search_options, allowed_search_options):
         return
     # Otherwise, strip out all unknown options
     unknown_options = [opt for opt in search_options
-            if opt not in allowed_search_options]
-    unk_opt_str = ", ".join(unknown_options)
-    log_msg = _("Removing options '%(unk_opt_str)s' from query") % locals()
-    LOG.debug(log_msg)
+                        if opt not in allowed_search_options]
+    LOG.debug(_("Removing options '%s' from query"),
+              ", ".join(unknown_options))
     for opt in unknown_options:
         search_options.pop(opt, None)
