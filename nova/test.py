@@ -227,7 +227,7 @@ class TestCase(testtools.TestCase):
         self.useFixture(fixtures.EnvironmentVariable('http_proxy'))
         self.policy = self.useFixture(policy_fixture.PolicyFixture())
         CONF.set_override('fatal_exception_format_errors', True)
-        CONF.set_override('osapi_v3_enabled', True)
+        CONF.set_override('enabled', True, 'osapi_v3')
 
     def _clear_attrs(self):
         # Delete attributes that don't start with _ so they don't pin

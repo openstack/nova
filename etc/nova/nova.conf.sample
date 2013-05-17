@@ -413,14 +413,6 @@
 
 
 #
-# Options defined in nova.api.openstack
-#
-
-# Whether the V3 API is enabled or not
-#osapi_v3_enabled=False
-
-
-#
 # Options defined in nova.api.openstack.common
 #
 
@@ -2878,6 +2870,27 @@
 
 # keymap for spice (string value)
 #keymap=en-us
+
+
+[osapi_v3]
+
+#
+# Options defined in nova.api.openstack
+#
+
+# Whether the V3 API is enabled or not
+#enabled=False
+
+# If the list is not empty then a v3 API extension
+# will only be loaded if it exists in this list.
+# Specify the extension aliases here
+#extensions_whitelist=
+
+# A list of v3 API extensions to never load.
+# Specify the extension aliases here.
+# Note that if an extension is in both the blacklist and
+# and whitelist then it will not be loaded
+#extensions_blacklist=
 
 
 # Total option count: 584
