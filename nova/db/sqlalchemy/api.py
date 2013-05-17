@@ -80,6 +80,9 @@ get_engine = db_session.get_engine
 get_session = db_session.get_session
 
 
+_SHADOW_TABLE_PREFIX = 'shadow_'
+
+
 def get_backend():
     """The backend is this module itself."""
     return sys.modules[__name__]
@@ -685,21 +688,18 @@ def floating_ip_allocate_address(context, project_id, pool):
 
 @require_context
 def floating_ip_bulk_create(context, ips):
-    existing_ips = {}
-    for floating in _floating_ip_get_all(context).all():
-        existing_ips[floating['address']] = floating
-
     session = get_session()
     with session.begin():
         for ip in ips:
-            addr = ip['address']
-            if (addr in existing_ips and
-                ip.get('id') != existing_ips[addr]['id']):
-                raise exception.FloatingIpExists(**dict(existing_ips[addr]))
-
             model = models.FloatingIp()
             model.update(ip)
-            session.add(model)
+            try:
+                # NOTE(boris-42): To get existing address we have to do each
+                #                  time session.flush()..
+                session.add(model)
+                session.flush()
+            except db_exc.DBDuplicateEntry:
+                raise exception.FloatingIpExists(address=ip['address'])
 
 
 def _ip_range_splitter(ips, block_size=256):
@@ -730,27 +730,14 @@ def floating_ip_bulk_destroy(context, ips):
 
 
 @require_context
-def floating_ip_create(context, values, session=None):
-    if not session:
-        session = get_session()
-
+def floating_ip_create(context, values):
     floating_ip_ref = models.FloatingIp()
     floating_ip_ref.update(values)
-
-    # check uniqueness for not deleted addresses
-    if not floating_ip_ref.deleted:
-        try:
-            floating_ip = _floating_ip_get_by_address(context,
-                                                      floating_ip_ref.address,
-                                                      session)
-        except exception.FloatingIpNotFoundForAddress:
-            pass
-        else:
-            if floating_ip.id != floating_ip_ref.id:
-                raise exception.FloatingIpExists(**dict(floating_ip_ref))
-
-    floating_ip_ref.save(session=session)
-    return floating_ip_ref['address']
+    try:
+        floating_ip_ref.save()
+    except db_exc.DBDuplicateEntry:
+        raise exception.FloatingIpExists(address=values['address'])
+    return floating_ip_ref
 
 
 @require_context
@@ -903,25 +890,22 @@ def floating_ip_get_by_fixed_address(context, fixed_address):
 
 
 @require_context
-def floating_ip_get_by_fixed_ip_id(context, fixed_ip_id, session=None):
-    if not session:
-        session = get_session()
-
-    return model_query(context, models.FloatingIp, session=session).\
-                   filter_by(fixed_ip_id=fixed_ip_id).\
-                   all()
+def floating_ip_get_by_fixed_ip_id(context, fixed_ip_id):
+    return model_query(context, models.FloatingIp).\
+                filter_by(fixed_ip_id=fixed_ip_id).\
+                all()
 
 
 @require_context
 def floating_ip_update(context, address, values):
     session = get_session()
     with session.begin():
-        floating_ip_ref = _floating_ip_get_by_address(context,
-                                                      address,
-                                                      session)
-        for (key, value) in values.iteritems():
-            floating_ip_ref[key] = value
-        floating_ip_ref.save(session=session)
+        float_ip_ref = _floating_ip_get_by_address(context, address, session)
+        float_ip_ref.update(values)
+        try:
+            float_ip_ref.save(session=session)
+        except db_exc.DBDuplicateEntry:
+            raise exception.FloatingIpExists(address=values['address'])
 
 
 @require_context
@@ -1066,7 +1050,7 @@ def fixed_ip_create(context, values):
     fixed_ip_ref = models.FixedIp()
     fixed_ip_ref.update(values)
     fixed_ip_ref.save()
-    return fixed_ip_ref['address']
+    return fixed_ip_ref
 
 
 @require_context
@@ -1457,7 +1441,7 @@ def instance_create(context, values):
 
     def _get_sec_group_models(session, security_groups):
         models = []
-        _existed, default_group = security_group_ensure_default(context,
+        default_group = security_group_ensure_default(context,
             session=session)
         if 'default' in security_groups:
             models.append(default_group)
@@ -1520,6 +1504,9 @@ def instance_destroy(context, instance_uuid, constraint=None):
                  filter_by(instance_uuid=instance_uuid).\
                  soft_delete()
         session.query(models.InstanceMetadata).\
+                 filter_by(instance_uuid=instance_uuid).\
+                 soft_delete()
+        session.query(models.InstanceSystemMetadata).\
                  filter_by(instance_uuid=instance_uuid).\
                  soft_delete()
     return instance_ref
@@ -1927,15 +1914,23 @@ def instance_get_floating_address(context, instance_id):
 
 @require_context
 def instance_floating_address_get_all(context, instance_uuid):
-    fixed_ips = fixed_ip_get_by_instance(context, instance_uuid)
+    if not uuidutils.is_uuid_like(instance_uuid):
+        raise exception.InvalidUUID(uuid=instance_uuid)
 
-    floating_ips = []
-    for fixed_ip in fixed_ips:
-        _floating_ips = floating_ip_get_by_fixed_ip_id(context,
-                                                    fixed_ip['id'])
-        floating_ips += _floating_ips
+    fixed_ip_ids = model_query(context, models.FixedIp.id,
+                               base_model=models.FixedIp).\
+                        filter_by(instance_uuid=instance_uuid).\
+                        all()
+    if not fixed_ip_ids:
+        raise exception.FixedIpNotFoundForInstance(instance_uuid=instance_uuid)
 
-    return floating_ips
+    fixed_ip_ids = [fixed_ip_id.id for fixed_ip_id in fixed_ip_ids]
+
+    floating_ips = model_query(context, models.FloatingIp.address,
+                               base_model=models.FloatingIp).\
+                    filter(models.FloatingIp.fixed_ip_id.in_(fixed_ip_ids)).\
+                    all()
+    return [floating_ip.address for floating_ip in floating_ips]
 
 
 @require_admin_context
@@ -2023,6 +2018,14 @@ def _instance_update(context, instance_uuid, values, copy_old_instance=False):
             if actual_state not in expected:
                 raise exception.UnexpectedTaskStateError(actual=actual_state,
                                                          expected=expected)
+        if "expected_vm_state" in values:
+            expected = values.pop("expected_vm_state")
+            if not isinstance(expected, (tuple, list, set)):
+                expected = (expected,)
+            actual_state = instance_ref["vm_state"]
+            if actual_state not in expected:
+                raise exception.UnexpectedVMStateError(actual=actual_state,
+                                                       expected=expected)
 
         instance_hostname = instance_ref['hostname'] or ''
         if ("hostname" in values and
@@ -3031,8 +3034,19 @@ def _block_device_mapping_get_query(context, session=None):
     return model_query(context, models.BlockDeviceMapping, session=session)
 
 
+def _scrub_empty_str_values(dct, keys_to_scrub):
+    """
+    Remove any keys found in sequence keys_to_scrub from the dict
+    if they have the value ''.
+    """
+    for key in keys_to_scrub:
+        if key in dct and dct[key] == '':
+            del dct[key]
+
+
 @require_context
 def block_device_mapping_create(context, values):
+    _scrub_empty_str_values(values, ['volume_size'])
     bdm_ref = models.BlockDeviceMapping()
     bdm_ref.update(values)
     bdm_ref.save()
@@ -3040,6 +3054,7 @@ def block_device_mapping_create(context, values):
 
 @require_context
 def block_device_mapping_update(context, bdm_id, values):
+    _scrub_empty_str_values(values, ['volume_size'])
     _block_device_mapping_get_query(context).\
             filter_by(id=bdm_id).\
             update(values)
@@ -3047,6 +3062,7 @@ def block_device_mapping_update(context, bdm_id, values):
 
 @require_context
 def block_device_mapping_update_or_create(context, values):
+    _scrub_empty_str_values(values, ['volume_size'])
     session = get_session()
     with session.begin():
         result = _block_device_mapping_get_query(context, session=session).\
@@ -3243,17 +3259,11 @@ def security_group_create(context, values, session=None):
 
 
 def security_group_ensure_default(context, session=None):
-    """Ensure default security group exists for a project_id.
-
-    Returns a tuple with the first element being a bool indicating
-    if the default security group previously existed. Second
-    element is the dict used to create the default security group.
-    """
+    """Ensure default security group exists for a project_id."""
     try:
         default_group = security_group_get_by_name(context,
                 context.project_id, 'default',
                 columns_to_join=[], session=session)
-        return (True, default_group)
     except exception.NotFound:
         values = {'name': 'default',
                   'description': 'default',
@@ -3271,7 +3281,7 @@ def security_group_ensure_default(context, session=None):
                            'parent_group_id': default_group.id,
             }
             security_group_rule_create(context, rule_values)
-        return (False, default_group)
+    return default_group
 
 
 @require_context
@@ -4300,8 +4310,8 @@ def vol_get_usage_by_time(context, begin):
 
 @require_context
 def vol_usage_update(context, id, rd_req, rd_bytes, wr_req, wr_bytes,
-                     instance_id, project_id, user_id, last_refreshed=None,
-                     update_totals=False, session=None):
+                     instance_id, project_id, user_id, availability_zone,
+                     last_refreshed=None, update_totals=False, session=None):
     if not session:
         session = get_session()
 
@@ -4320,7 +4330,8 @@ def vol_usage_update(context, id, rd_req, rd_bytes, wr_req, wr_bytes,
                       'curr_write_bytes': wr_bytes,
                       'instance_uuid': instance_id,
                       'project_id': project_id,
-                      'user_id': user_id}
+                      'user_id': user_id,
+                      'availability_zone': availability_zone}
         else:
             values = {'tot_last_refreshed': last_refreshed,
                       'tot_reads': models.VolumeUsage.tot_reads + rd_req,
@@ -4335,14 +4346,48 @@ def vol_usage_update(context, id, rd_req, rd_bytes, wr_req, wr_bytes,
                       'curr_write_bytes': 0,
                       'instance_uuid': instance_id,
                       'project_id': project_id,
-                      'user_id': user_id}
+                      'user_id': user_id,
+                      'availability_zone': availability_zone}
 
-        rows = model_query(context, models.VolumeUsage,
-                           session=session, read_deleted="yes").\
-                           filter_by(volume_id=id).\
-                           update(values, synchronize_session=False)
+        current_usage = model_query(context, models.VolumeUsage,
+                            session=session, read_deleted="yes").\
+                            filter_by(volume_id=id).\
+                            first()
+        if current_usage:
+            if (rd_req < current_usage['curr_reads'] or
+                rd_bytes < current_usage['curr_read_bytes'] or
+                wr_req < current_usage['curr_writes'] or
+                wr_bytes < current_usage['curr_write_bytes']):
+                LOG.info(_("Volume(%s) has lower stats then what is in "
+                           "the database. Instance must have been rebooted "
+                           "or crashed. Updating totals.") % id)
+                if not update_totals:
+                    values['tot_last_refreshed'] = last_refreshed
+                    values['tot_reads'] = (models.VolumeUsage.tot_reads +
+                                           current_usage['curr_reads'])
+                    values['tot_read_bytes'] = (
+                        models.VolumeUsage.tot_read_bytes +
+                        current_usage['curr_read_bytes'])
+                    values['tot_writes'] = (models.VolumeUsage.tot_writes +
+                                            current_usage['curr_writes'])
+                    values['tot_write_bytes'] = (
+                        models.VolumeUsage.tot_write_bytes +
+                        current_usage['curr_write_bytes'])
+                else:
+                    values['tot_reads'] = (models.VolumeUsage.tot_reads +
+                                           current_usage['curr_reads'] +
+                                           rd_req)
+                    values['tot_read_bytes'] = (
+                        models.VolumeUsage.tot_read_bytes +
+                        current_usage['curr_read_bytes'] + rd_bytes)
+                    values['tot_writes'] = (models.VolumeUsage.tot_writes +
+                                            current_usage['curr_writes'] +
+                                            wr_req)
+                    values['tot_write_bytes'] = (
+                        models.VolumeUsage.tot_write_bytes +
+                        current_usage['curr_write_bytes'] + wr_bytes)
 
-        if rows:
+            current_usage.update(values)
             return
 
         vol_usage = models.VolumeUsage()
@@ -4352,6 +4397,7 @@ def vol_usage_update(context, id, rd_req, rd_bytes, wr_req, wr_bytes,
         vol_usage.instance_uuid = instance_id
         vol_usage.project_id = project_id
         vol_usage.user_id = user_id
+        vol_usage.availability_zone = availability_zone
 
         if not update_totals:
             vol_usage.curr_reads = rd_req
@@ -4365,8 +4411,6 @@ def vol_usage_update(context, id, rd_req, rd_bytes, wr_req, wr_bytes,
             vol_usage.tot_write_bytes = wr_bytes
 
         vol_usage.save(session=session)
-
-    return
 
 
 ####################
@@ -4980,7 +5024,7 @@ def archive_deleted_rows_for_table(context, tablename, max_rows):
     metadata.bind = engine
     table = Table(tablename, metadata, autoload=True)
     default_deleted_value = _get_default_deleted_value(table)
-    shadow_tablename = "shadow_" + tablename
+    shadow_tablename = _SHADOW_TABLE_PREFIX + tablename
     rows_archived = 0
     try:
         shadow_table = Table(shadow_tablename, metadata, autoload=True)

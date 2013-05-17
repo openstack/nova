@@ -84,7 +84,7 @@ class FixedIntervalLoopingCall(LoopingCallBase):
                         LOG.warn(_('task run outlasted interval by %s sec') %
                                  -delay)
                     greenthread.sleep(delay if delay > 0 else 0)
-            except LoopingCallDone, e:
+            except LoopingCallDone as e:
                 self.stop()
                 done.send(e.retvalue)
             except Exception:
@@ -131,7 +131,7 @@ class DynamicLoopingCall(LoopingCallBase):
                     LOG.debug(_('Dynamic looping call sleeping for %.02f '
                                 'seconds'), idle)
                     greenthread.sleep(idle)
-            except LoopingCallDone, e:
+            except LoopingCallDone as e:
                 self.stop()
                 done.send(e.retvalue)
             except Exception:

@@ -25,9 +25,9 @@ from oslo.config import cfg
 from nova.cells import rpc_driver
 from nova import context
 from nova.db import base
-from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
+from nova import utils
 
 cell_state_manager_opts = [
         cfg.IntOpt('db_check_interval',
@@ -258,7 +258,7 @@ class CellStateManager(base.Base):
                                     'units_by_mb': disk_mb_free_units}}
         self.my_cell_state.update_capacities(capacities)
 
-    @lockutils.synchronized('cell-db-sync', 'nova-')
+    @utils.synchronized('cell-db-sync')
     def _cell_db_sync(self):
         """Update status for all cells if it's time.  Most calls to
         this are from the check_for_update() decorator that checks

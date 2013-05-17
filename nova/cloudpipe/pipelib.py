@@ -29,7 +29,7 @@ import zipfile
 from oslo.config import cfg
 
 from nova import compute
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova import crypto
 from nova import db
 from nova import exception
@@ -126,7 +126,7 @@ class CloudPipe(object):
         LOG.debug(_("Launching VPN for %s") % (context.project_id))
         key_name = self.setup_key_pair(context)
         group_name = self.setup_security_group(context)
-        instance_type = instance_types.get_instance_type_by_name(
+        instance_type = flavors.get_instance_type_by_name(
                 CONF.vpn_instance_type)
         instance_name = '%s%s' % (context.project_id, CONF.vpn_key_suffix)
         user_data = self.get_encoded_zip(context.project_id)

@@ -233,6 +233,14 @@
             "updated": "2013-01-06T00:00:00+00:00"
         },
         {
+            "alias": "os-extended-floating-ips",
+            "description": "Adds optional fixed_address to the add floating IP command.",
+            "links": [],
+            "name": "ExtendedFloatingIps",
+            "namespace": "http://docs.openstack.org/compute/ext/extended_floating_ips/api/v2",
+            "updated": "2013-04-19T00:00:00+00:00"
+        },
+        {
             "alias": "os-fixed-ips",
             "description": "Fixed IPs support.",
             "links": [],

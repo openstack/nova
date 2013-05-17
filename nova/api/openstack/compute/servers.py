@@ -28,11 +28,12 @@ from nova.api.openstack.compute.views import servers as views_servers
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import compute
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova import exception
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.rpc import common as rpc_common
+from nova.openstack.common import strutils
 from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
 from nova import utils
@@ -185,7 +186,8 @@ class CommonDeserializer(wsgi.MetadataXMLDeserializer):
 
         res_id = server_node.getAttribute('return_reservation_id')
         if res_id:
-            server['return_reservation_id'] = utils.bool_from_str(res_id)
+            server['return_reservation_id'] = \
+                    strutils.bool_from_string(res_id)
 
         scheduler_hints = self._extract_scheduler_hints(server_node)
         if scheduler_hints:
@@ -253,7 +255,7 @@ class CommonDeserializer(wsgi.MetadataXMLDeserializer):
                 for attr in attributes:
                     value = child.getAttribute(attr)
                     if value:
-                        mapping[attr] = utils.bool_from_str(value)
+                        mapping[attr] = strutils.bool_from_string(value)
                 block_device_mapping.append(mapping)
             return block_device_mapping
         else:
@@ -826,7 +828,7 @@ class Controller(wsgi.Controller):
             for bdm in block_device_mapping:
                 self._validate_device_name(bdm["device_name"])
                 if 'delete_on_termination' in bdm:
-                    bdm['delete_on_termination'] = utils.bool_from_str(
+                    bdm['delete_on_termination'] = strutils.bool_from_string(
                         bdm['delete_on_termination'])
 
         ret_resv_id = False
@@ -872,7 +874,7 @@ class Controller(wsgi.Controller):
             scheduler_hints = server_dict.get('scheduler_hints', {})
 
         try:
-            _get_inst_type = instance_types.get_instance_type_by_flavor_id
+            _get_inst_type = flavors.get_instance_type_by_flavor_id
             inst_type = _get_inst_type(flavor_id, read_deleted="no")
 
             (instances, resv_id) = self.compute_api.create(context,
@@ -903,7 +905,7 @@ class Controller(wsgi.Controller):
         except exception.InstanceTypeMemoryTooSmall as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
         except exception.InstanceTypeNotFound as error:
-            raise exc.HTTPBadRequest(explanation=error)
+            raise exc.HTTPBadRequest(explanation=error.format_message())
         except exception.InstanceTypeDiskTooSmall as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
         except exception.InvalidMetadata as error:
@@ -991,7 +993,7 @@ class Controller(wsgi.Controller):
             update_dict['access_ip_v6'] = access_ipv6.strip()
 
         if 'auto_disk_config' in body['server']:
-            auto_disk_config = utils.bool_from_str(
+            auto_disk_config = strutils.bool_from_string(
                     body['server']['auto_disk_config'])
             update_dict['auto_disk_config'] = auto_disk_config
 
@@ -1357,6 +1359,8 @@ class Controller(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                         'createImage')
+        except exception.Invalid as err:
+            raise exc.HTTPBadRequest(explanation=str(err))
 
         # build location of newly-created image entity
         image_id = str(image['id'])

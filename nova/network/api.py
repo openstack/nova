@@ -21,7 +21,7 @@
 import functools
 import inspect
 
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova.db import base
 from nova import exception
 from nova.network import floating_ips
@@ -266,7 +266,7 @@ class API(base.Base):
         #             this is called from compute.manager which shouldn't
         #             have db access so we do it on the other side of the
         #             rpc.
-        instance_type = instance_types.extract_instance_type(instance)
+        instance_type = flavors.extract_instance_type(instance)
         args = {}
         args['vpn'] = vpn
         args['requested_networks'] = requested_networks
@@ -316,7 +316,7 @@ class API(base.Base):
     def add_fixed_ip_to_instance(self, context, instance, network_id,
                                  conductor_api=None):
         """Adds a fixed ip to instance from specified network."""
-        instance_type = instance_types.extract_instance_type(instance)
+        instance_type = flavors.extract_instance_type(instance)
         args = {'instance_id': instance['uuid'],
                 'rxtx_factor': instance_type['rxtx_factor'],
                 'host': instance['host'],
@@ -329,7 +329,7 @@ class API(base.Base):
                                       conductor_api=None):
         """Removes a fixed ip from instance from specified network."""
 
-        instance_type = instance_types.extract_instance_type(instance)
+        instance_type = flavors.extract_instance_type(instance)
         args = {'instance_id': instance['uuid'],
                 'rxtx_factor': instance_type['rxtx_factor'],
                 'host': instance['host'],
@@ -346,7 +346,6 @@ class API(base.Base):
     def associate(self, context, network_uuid, host=_sentinel,
                   project=_sentinel):
         """Associate or disassociate host or project to network."""
-        associations = {}
         network_id = self.get(context, network_uuid)['id']
         if host is not API._sentinel:
             if host is None:
@@ -356,7 +355,6 @@ class API(base.Base):
             else:
                 self.db.network_set_host(context, network_id, host)
         if project is not API._sentinel:
-            project = associations['project']
             if project is None:
                 self.db.network_disassociate(context, network_id,
                                              disassociate_host=False,
@@ -374,7 +372,7 @@ class API(base.Base):
 
     def _get_instance_nw_info(self, context, instance):
         """Returns all network info related to an instance."""
-        instance_type = instance_types.extract_instance_type(instance)
+        instance_type = flavors.extract_instance_type(instance)
         args = {'instance_id': instance['uuid'],
                 'rxtx_factor': instance_type['rxtx_factor'],
                 'host': instance['host'],
@@ -486,12 +484,12 @@ class API(base.Base):
     def _get_floating_ip_addresses(self, context, instance):
         floating_ips = self.db.instance_floating_address_get_all(context,
                                                             instance['uuid'])
-        return [floating_ip['address'] for floating_ip in floating_ips]
+        return floating_ips
 
     @wrap_check_policy
     def migrate_instance_start(self, context, instance, migration):
         """Start to migrate the network of an instance."""
-        instance_type = instance_types.extract_instance_type(instance)
+        instance_type = flavors.extract_instance_type(instance)
         args = dict(
             instance_uuid=instance['uuid'],
             rxtx_factor=instance_type['rxtx_factor'],
@@ -511,7 +509,7 @@ class API(base.Base):
     @wrap_check_policy
     def migrate_instance_finish(self, context, instance, migration):
         """Finish migrating the network of an instance."""
-        instance_type = instance_types.extract_instance_type(instance)
+        instance_type = flavors.extract_instance_type(instance)
         args = dict(
             instance_uuid=instance['uuid'],
             rxtx_factor=instance_type['rxtx_factor'],

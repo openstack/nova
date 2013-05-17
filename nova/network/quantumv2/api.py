@@ -20,7 +20,7 @@ import time
 
 from oslo.config import cfg
 
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova import conductor
 from nova import context
 from nova.db import base
@@ -280,9 +280,6 @@ class API(base.Base):
                             LOG.debug(msg, {'portid': port_id,
                                             'exception': ex})
 
-        self.trigger_security_group_members_refresh(context, instance)
-        self.trigger_instance_add_security_group_refresh(context, instance)
-
         nw_info = self._get_instance_nw_info(context, instance, networks=nets)
         # NOTE(danms): Only return info about ports we created in this run.
         # In the initial allocation case, this will be everything we created,
@@ -312,7 +309,7 @@ class API(base.Base):
         """
         self._refresh_quantum_extensions_cache()
         if 'nvp-qos' in self.extensions:
-            instance_type = instance_types.extract_instance_type(instance)
+            instance_type = flavors.extract_instance_type(instance)
             rxtx_factor = instance_type.get('rxtx_factor')
             port_req_body['port']['rxtx_factor'] = rxtx_factor
 
@@ -329,8 +326,6 @@ class API(base.Base):
             except Exception as ex:
                 LOG.exception(_("Failed to delete quantum port %(portid)s ")
                               % {'portid': port['id']})
-        self.trigger_security_group_members_refresh(context, instance)
-        self.trigger_instance_remove_security_group_refresh(context, instance)
 
     @refresh_cache
     def allocate_port_for_instance(self, context, instance, port_id,
@@ -353,9 +348,6 @@ class API(base.Base):
         except Exception as ex:
             LOG.exception(_("Failed to delete quantum port %(port_id)s ") %
                           locals())
-
-        self.trigger_security_group_members_refresh(context, instance)
-        self.trigger_instance_remove_security_group_refresh(context, instance)
 
         return self._get_instance_nw_info(context, instance)
 
@@ -506,32 +498,6 @@ class API(base.Base):
             ip = ip[:-1]
         ip = ip.replace('\\.', '.')
         return self._get_instance_uuids_by_ip(context, ip)
-
-    def trigger_instance_add_security_group_refresh(self, context,
-                                                    instance_ref):
-        """Refresh and add security groups given an instance reference."""
-        admin_context = context.elevated()
-        for group in instance_ref['security_groups']:
-            self.conductor_api.security_groups_trigger_handler(context,
-                'instance_add_security_group', instance_ref, group['name'])
-
-    def trigger_instance_remove_security_group_refresh(self, context,
-                                                       instance_ref):
-        """Refresh and remove security groups given an instance reference."""
-        admin_context = context.elevated()
-        for group in instance_ref['security_groups']:
-            self.conductor_api.security_groups_trigger_handler(context,
-                'instance_remove_security_group', instance_ref, group['name'])
-
-    def trigger_security_group_members_refresh(self, context, instance_ref):
-        """Refresh security group members."""
-        admin_context = context.elevated()
-        group_ids = [group['id'] for group in instance_ref['security_groups']]
-
-        self.conductor_api.security_groups_trigger_members_refresh(
-            admin_context, group_ids)
-        self.conductor_api.security_groups_trigger_handler(admin_context,
-            'security_group_members', group_ids)
 
     def _get_port_id_by_fixed_address(self, client,
                                       instance, address):
@@ -807,6 +773,63 @@ class API(base.Base):
         """Force add a network to the project."""
         raise NotImplementedError()
 
+    def _nw_info_get_ips(self, client, port):
+        network_IPs = []
+        for fixed_ip in port['fixed_ips']:
+            fixed = network_model.FixedIP(address=fixed_ip['ip_address'])
+            floats = self._get_floating_ips_by_fixed_and_port(
+                client, fixed_ip['ip_address'], port['id'])
+            for ip in floats:
+                fip = network_model.IP(address=ip['floating_ip_address'],
+                                       type='floating')
+                fixed.add_floating_ip(fip)
+            network_IPs.append(fixed)
+        return network_IPs
+
+    def _nw_info_get_subnets(self, context, port, network_IPs):
+        subnets = self._get_subnets_from_port(context, port)
+        for subnet in subnets:
+            subnet['ips'] = [fixed_ip for fixed_ip in network_IPs
+                             if fixed_ip.is_in_subnet(subnet)]
+        return subnets
+
+    def _nw_info_build_network(self, port, networks, subnets):
+        # NOTE(danms): This loop can't fail to find a network since we
+        # filtered ports to only the ones matching networks in our parent
+        for net in networks:
+            if port['network_id'] == net['id']:
+                network_name = net['name']
+                break
+
+        bridge = None
+        ovs_interfaceid = None
+        # Network model metadata
+        should_create_bridge = None
+        vif_type = port.get('binding:vif_type')
+        # TODO(berrange) Quantum should pass the bridge name
+        # in another binding metadata field
+        if vif_type == network_model.VIF_TYPE_OVS:
+            bridge = CONF.quantum_ovs_bridge
+            ovs_interfaceid = port['id']
+        elif vif_type == network_model.VIF_TYPE_BRIDGE:
+            bridge = "brq" + port['network_id']
+            should_create_bridge = True
+
+        if bridge is not None:
+            bridge = bridge[:network_model.NIC_NAME_LEN]
+
+        network = network_model.Network(
+            id=port['network_id'],
+            bridge=bridge,
+            injected=CONF.flat_injected,
+            label=network_name,
+            tenant_id=net['tenant_id']
+            )
+        network['subnets'] = subnets
+        if should_create_bridge is not None:
+            network['should_create_bridge'] = should_create_bridge
+        return network, ovs_interfaceid
+
     def _build_network_info_model(self, context, instance, networks=None):
         search_opts = {'tenant_id': instance['project_id'],
                        'device_id': instance['uuid'], }
@@ -816,73 +839,26 @@ class API(base.Base):
         if networks is None:
             networks = self._get_available_networks(context,
                                                     instance['project_id'])
-        else:
-            # ensure ports are in preferred network order
-            _ensure_requested_network_ordering(
-                lambda x: x['network_id'],
-                ports,
-                [n['id'] for n in networks])
+
+        # ensure ports are in preferred network order, and filter out
+        # those not attached to one of the provided list of networks
+        net_ids = [n['id'] for n in networks]
+        ports = [port for port in ports if port['network_id'] in net_ids]
+        _ensure_requested_network_ordering(lambda x: x['network_id'],
+                                           ports, net_ids)
 
         nw_info = network_model.NetworkInfo()
         for port in ports:
-            network_name = None
-            for net in networks:
-                if port['network_id'] == net['id']:
-                    network_name = net['name']
-                    break
-
-            if network_name is None:
-                raise exception.NotFound(_('Network %(net)s for '
-                                           'port %(port_id)s not found!') %
-                                         {'net': port['network_id'],
-                                          'port': port['id']})
-
-            network_IPs = []
-            for fixed_ip in port['fixed_ips']:
-                fixed = network_model.FixedIP(address=fixed_ip['ip_address'])
-                floats = self._get_floating_ips_by_fixed_and_port(
-                        client, fixed_ip['ip_address'], port['id'])
-                for ip in floats:
-                    fip = network_model.IP(address=ip['floating_ip_address'],
-                                           type='floating')
-                    fixed.add_floating_ip(fip)
-                network_IPs.append(fixed)
-
-            subnets = self._get_subnets_from_port(context, port)
-            for subnet in subnets:
-                subnet['ips'] = [fixed_ip for fixed_ip in network_IPs
-                                 if fixed_ip.is_in_subnet(subnet)]
-
-            bridge = None
-            ovs_interfaceid = None
-            # Network model metadata
-            should_create_bridge = None
-            vif_type = port.get('binding:vif_type')
-            # TODO(berrange) Quantum should pass the bridge name
-            # in another binding metadata field
-            if vif_type == network_model.VIF_TYPE_OVS:
-                bridge = CONF.quantum_ovs_bridge
-                ovs_interfaceid = port['id']
-            elif vif_type == network_model.VIF_TYPE_BRIDGE:
-                bridge = "brq" + port['network_id']
-                should_create_bridge = True
-
-            if bridge is not None:
-                bridge = bridge[:network_model.NIC_NAME_LEN]
+            network_IPs = self._nw_info_get_ips(client, port)
+            subnets = self._nw_info_get_subnets(context, port, network_IPs)
 
             devname = "tap" + port['id']
             devname = devname[:network_model.NIC_NAME_LEN]
 
-            network = network_model.Network(
-                id=port['network_id'],
-                bridge=bridge,
-                injected=CONF.flat_injected,
-                label=network_name,
-                tenant_id=net['tenant_id']
-            )
-            network['subnets'] = subnets
-            if should_create_bridge is not None:
-                network['should_create_bridge'] = should_create_bridge
+            network, ovs_interfaceid = self._nw_info_build_network(port,
+                                                                   networks,
+                                                                   subnets)
+
             nw_info.append(network_model.VIF(
                 id=port['id'],
                 address=port['mac_address'],

@@ -31,7 +31,7 @@ from oslo.config import cfg
 from xml.dom import minidom
 
 from nova.api.ec2 import cloud
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import vm_mode
@@ -320,7 +320,7 @@ class LibvirtConnTestCase(test.TestCase):
                        lambda *a, **k: self.conn)
 
         instance_type = db.instance_type_get(self.context, 5)
-        sys_meta = instance_types.save_instance_type_info({}, instance_type)
+        sys_meta = flavors.save_instance_type_info({}, instance_type)
 
         nova.tests.image.fake.stub_out_image_service(self.stubs)
         self.test_instance = {
@@ -1072,6 +1072,10 @@ class LibvirtConnTestCase(test.TestCase):
         libvirt_driver.LibvirtDriver._conn.listDomainsID = lambda: [0, 1]
         libvirt_driver.LibvirtDriver._conn.listDefinedDomains = lambda: []
 
+        self.mox.StubOutWithMock(libvirt.libvirtError, "get_error_code")
+        libvirt.libvirtError.get_error_code().AndReturn(
+            libvirt.VIR_ERR_NO_DOMAIN)
+
         self.mox.ReplayAll()
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instances = conn.list_instances()
@@ -1237,7 +1241,6 @@ class LibvirtConnTestCase(test.TestCase):
 
         snapshot = image_service.show(context, recv_meta['id'])
         self.assertIsNone(func_call_matcher.match())
-        self.assertEquals(snapshot['properties']['image_state'], 'available')
         self.assertEquals(snapshot['properties']['image_state'], 'available')
         self.assertEquals(snapshot['status'], 'active')
         self.assertEquals(snapshot['disk_format'], 'ami')
@@ -1679,6 +1682,56 @@ class LibvirtConnTestCase(test.TestCase):
         snapshot = image_service.show(context, recv_meta['id'])
         self.assertIsNone(func_call_matcher.match())
         self.assertEquals(snapshot['properties']['image_state'], 'available')
+        self.assertEquals(snapshot['status'], 'active')
+        self.assertEquals(snapshot['name'], snapshot_name)
+
+    def test_snapshot_metadata_image(self):
+        expected_calls = [
+            {'args': (),
+             'kwargs':
+                 {'task_state': task_states.IMAGE_PENDING_UPLOAD}},
+            {'args': (),
+             'kwargs':
+                 {'task_state': task_states.IMAGE_UPLOADING,
+                  'expected_state': task_states.IMAGE_PENDING_UPLOAD}}]
+        func_call_matcher = matchers.FunctionCallMatcher(expected_calls)
+
+        self.flags(libvirt_snapshots_directory='./')
+
+        image_service = nova.tests.image.fake.FakeImageService()
+
+        # Assign an image with an architecture defined (x86_64)
+        test_instance = copy.deepcopy(self.test_instance)
+        test_instance["image_ref"] = 'a440c04b-79fa-479c-bed1-0b816eaec379'
+
+        instance_ref = db.instance_create(self.context, test_instance)
+        properties = {'instance_id': instance_ref['id'],
+                      'user_id': str(self.context.user_id),
+                      'architecture': 'fake_arch',
+                      'key_a': 'value_a',
+                      'key_b': 'value_b'}
+        snapshot_name = 'test-snap'
+        sent_meta = {'name': snapshot_name, 'is_public': False,
+                     'status': 'creating', 'properties': properties}
+        recv_meta = image_service.create(context, sent_meta)
+
+        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
+        libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
+        self.mox.StubOutWithMock(libvirt_driver.utils, 'execute')
+        libvirt_driver.utils.execute = self.fake_execute
+
+        self.mox.ReplayAll()
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        conn.snapshot(self.context, instance_ref, recv_meta['id'],
+                      func_call_matcher.call)
+
+        snapshot = image_service.show(context, recv_meta['id'])
+        self.assertIsNone(func_call_matcher.match())
+        self.assertEquals(snapshot['properties']['image_state'], 'available')
+        self.assertEquals(snapshot['properties']['architecture'], 'fake_arch')
+        self.assertEquals(snapshot['properties']['key_a'], 'value_a')
+        self.assertEquals(snapshot['properties']['key_b'], 'value_b')
         self.assertEquals(snapshot['status'], 'active')
         self.assertEquals(snapshot['name'], snapshot_name)
 
@@ -2557,7 +2610,7 @@ class LibvirtConnTestCase(test.TestCase):
         instance_ref['image_ref'] = 123456  # we send an int to test sha1 call
         instance_type = db.instance_type_get(self.context,
                                              instance_ref['instance_type_id'])
-        sys_meta = instance_types.save_instance_type_info({}, instance_type)
+        sys_meta = flavors.save_instance_type_info({}, instance_type)
         instance_ref['system_metadata'] = sys_meta
         instance = db.instance_create(self.context, instance_ref)
 
@@ -3735,6 +3788,38 @@ class LibvirtConnTestCase(test.TestCase):
         conn.set_cache_mode(fake_conf)
         self.assertEqual(fake_conf.driver_cache, 'fake')
 
+    def _test_shared_storage_detection(self, is_same):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        self.mox.StubOutWithMock(conn, 'get_host_ip_addr')
+        self.mox.StubOutWithMock(utils, 'execute')
+        self.mox.StubOutWithMock(os.path, 'exists')
+        self.mox.StubOutWithMock(os, 'unlink')
+        conn.get_host_ip_addr().AndReturn('bar')
+        utils.execute('ssh', 'foo', 'touch', mox.IgnoreArg())
+        os.path.exists(mox.IgnoreArg()).AndReturn(is_same)
+        if is_same:
+            os.unlink(mox.IgnoreArg())
+        else:
+            utils.execute('ssh', 'foo', 'rm', mox.IgnoreArg())
+        self.mox.ReplayAll()
+        return conn._is_storage_shared_with('foo', '/path')
+
+    def test_shared_storage_detection_same_host(self):
+        self.assertTrue(self._test_shared_storage_detection(True))
+
+    def test_shared_storage_detection_different_host(self):
+        self.assertFalse(self._test_shared_storage_detection(False))
+
+    def test_shared_storage_detection_easy(self):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        self.mox.StubOutWithMock(conn, 'get_host_ip_addr')
+        self.mox.StubOutWithMock(utils, 'execute')
+        self.mox.StubOutWithMock(os.path, 'exists')
+        self.mox.StubOutWithMock(os, 'unlink')
+        conn.get_host_ip_addr().AndReturn('foo')
+        self.mox.ReplayAll()
+        self.assertTrue(conn._is_storage_shared_with('foo', '/path'))
+
 
 class HostStateTestCase(test.TestCase):
 
@@ -4724,8 +4809,8 @@ class LibvirtDriverTestCase(test.TestCase):
         if not params:
             params = {}
 
-        sys_meta = instance_types.save_instance_type_info(
-            {}, instance_types.get_instance_type_by_name('m1.tiny'))
+        sys_meta = flavors.save_instance_type_info(
+            {}, flavors.get_instance_type_by_name('m1.tiny'))
 
         inst = {}
         inst['image_ref'] = '1'
@@ -4733,7 +4818,7 @@ class LibvirtDriverTestCase(test.TestCase):
         inst['launch_time'] = '10'
         inst['user_id'] = 'fake'
         inst['project_id'] = 'fake'
-        type_id = instance_types.get_instance_type_by_name('m1.tiny')['id']
+        type_id = flavors.get_instance_type_by_name('m1.tiny')['id']
         inst['instance_type_id'] = type_id
         inst['ami_launch_index'] = 0
         inst['host'] = 'host1'
@@ -4754,6 +4839,7 @@ class LibvirtDriverTestCase(test.TestCase):
         .migrate_disk_and_power_off. """
 
         self.counter = 0
+        self.checked_shared_storage = False
 
         def fake_get_instance_disk_info(instance, xml=None):
             return '[]'
@@ -4772,11 +4858,17 @@ class LibvirtDriverTestCase(test.TestCase):
         def fake_os_path_exists(path):
             return True
 
+        def fake_is_storage_shared(dest, inst_base):
+            self.checked_shared_storage = True
+            return False
+
         self.stubs.Set(self.libvirtconnection, 'get_instance_disk_info',
                        fake_get_instance_disk_info)
         self.stubs.Set(self.libvirtconnection, '_destroy', fake_destroy)
         self.stubs.Set(self.libvirtconnection, 'get_host_ip_addr',
                        fake_get_host_ip_addr)
+        self.stubs.Set(self.libvirtconnection, '_is_storage_shared_with',
+                       fake_is_storage_shared)
         self.stubs.Set(utils, 'execute', fake_execute)
         self.stubs.Set(os.path, 'exists', fake_os_path_exists)
 
@@ -5096,6 +5188,105 @@ class LibvirtDriverTestCase(test.TestCase):
         self.assertRaises(exception.InstanceNotFound,
             self.libvirtconnection.get_instance_disk_info,
             instance_name)
+
+    def test_get_cpuset_ids(self):
+        # correct syntax
+        self.flags(vcpu_pin_set="1")
+        cpuset_ids = self.libvirtconnection._get_cpuset_ids()
+        self.assertEqual([1], cpuset_ids)
+
+        self.flags(vcpu_pin_set="1,2")
+        cpuset_ids = self.libvirtconnection._get_cpuset_ids()
+        self.assertEqual([1, 2], cpuset_ids)
+
+        self.flags(vcpu_pin_set=", ,   1 ,  ,,  2,    ,")
+        cpuset_ids = self.libvirtconnection._get_cpuset_ids()
+        self.assertEqual([1, 2], cpuset_ids)
+
+        self.flags(vcpu_pin_set="1-1")
+        cpuset_ids = self.libvirtconnection._get_cpuset_ids()
+        self.assertEqual([1], cpuset_ids)
+
+        self.flags(vcpu_pin_set=" 1 - 1, 1 - 2 , 1 -3")
+        cpuset_ids = self.libvirtconnection._get_cpuset_ids()
+        self.assertEqual([1, 2, 3], cpuset_ids)
+
+        self.flags(vcpu_pin_set="1,^2")
+        cpuset_ids = self.libvirtconnection._get_cpuset_ids()
+        self.assertEqual([1], cpuset_ids)
+
+        self.flags(vcpu_pin_set="1-2, ^1")
+        cpuset_ids = self.libvirtconnection._get_cpuset_ids()
+        self.assertEqual([2], cpuset_ids)
+
+        self.flags(vcpu_pin_set="1-3,5,^2")
+        cpuset_ids = self.libvirtconnection._get_cpuset_ids()
+        self.assertEqual([1, 3, 5], cpuset_ids)
+
+        self.flags(vcpu_pin_set=" 1 -    3        ,   ^2,        5")
+        cpuset_ids = self.libvirtconnection._get_cpuset_ids()
+        self.assertEqual([1, 3, 5], cpuset_ids)
+
+        # invalid syntax
+        self.flags(vcpu_pin_set=" -1-3,5,^2")
+        self.assertRaises(exception.Invalid,
+                          self.libvirtconnection._get_cpuset_ids)
+
+        self.flags(vcpu_pin_set="1-3-,5,^2")
+        self.assertRaises(exception.Invalid,
+                          self.libvirtconnection._get_cpuset_ids)
+
+        self.flags(vcpu_pin_set="-3,5,^2")
+        self.assertRaises(exception.Invalid,
+                          self.libvirtconnection._get_cpuset_ids)
+
+        self.flags(vcpu_pin_set="1-,5,^2")
+        self.assertRaises(exception.Invalid,
+                          self.libvirtconnection._get_cpuset_ids)
+
+        self.flags(vcpu_pin_set="1-3,5,^2^")
+        self.assertRaises(exception.Invalid,
+                          self.libvirtconnection._get_cpuset_ids)
+
+        self.flags(vcpu_pin_set="1-3,5,^2-")
+        self.assertRaises(exception.Invalid,
+                          self.libvirtconnection._get_cpuset_ids)
+
+        self.flags(vcpu_pin_set="--13,^^5,^2")
+        self.assertRaises(exception.Invalid,
+                          self.libvirtconnection._get_cpuset_ids)
+
+        self.flags(vcpu_pin_set="a-3,5,^2")
+        self.assertRaises(exception.Invalid,
+                          self.libvirtconnection._get_cpuset_ids)
+
+        self.flags(vcpu_pin_set="1-a,5,^2")
+        self.assertRaises(exception.Invalid,
+                          self.libvirtconnection._get_cpuset_ids)
+
+        self.flags(vcpu_pin_set="1-3,b,^2")
+        self.assertRaises(exception.Invalid,
+                          self.libvirtconnection._get_cpuset_ids)
+
+        self.flags(vcpu_pin_set="1-3,5,^c")
+        self.assertRaises(exception.Invalid,
+                          self.libvirtconnection._get_cpuset_ids)
+
+        self.flags(vcpu_pin_set="3 - 1, 5 , ^ 2 ")
+        self.assertRaises(exception.Invalid,
+                          self.libvirtconnection._get_cpuset_ids)
+
+        self.flags(vcpu_pin_set=" 1,1, ^1")
+        self.assertRaises(exception.Invalid,
+                          self.libvirtconnection._get_cpuset_ids)
+
+        self.flags(vcpu_pin_set=" 1,^1,^1,2, ^2")
+        self.assertRaises(exception.Invalid,
+                          self.libvirtconnection._get_cpuset_ids)
+
+        self.flags(vcpu_pin_set="^2")
+        self.assertRaises(exception.Invalid,
+                          self.libvirtconnection._get_cpuset_ids)
 
 
 class LibvirtVolumeUsageTestCase(test.TestCase):

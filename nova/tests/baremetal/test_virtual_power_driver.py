@@ -22,11 +22,11 @@ import mox
 from oslo.config import cfg
 
 from nova import exception
+from nova.openstack.common import processutils
 from nova.tests.baremetal.db import base as bm_db_base
 from nova.tests.baremetal.db import utils as bm_db_utils
 from nova.tests.image import fake as fake_image
 from nova.tests import utils
-from nova import utils as nutils
 from nova.virt.baremetal import db
 from nova.virt.baremetal import virtual_power_driver
 import nova.virt.powervm.common as connection
@@ -351,9 +351,9 @@ class VPDClassMethodsTestCase(BareMetalVPDTestCase):
         self._create_pm()
 
         self.mox.StubOutWithMock(self.pm, '_set_connection')
-        self.mox.StubOutWithMock(nutils, 'ssh_execute')
+        self.mox.StubOutWithMock(processutils, 'ssh_execute')
         self.pm._set_connection().AndReturn(True)
-        nutils.ssh_execute(None, '/usr/bin/VBoxManage test return',
+        processutils.ssh_execute(None, '/usr/bin/VBoxManage test return',
                 check_exit_code=True).AndReturn(("test\nreturn", ""))
         self.pm._matched_name = 'testNode'
         self.mox.ReplayAll()
@@ -366,12 +366,12 @@ class VPDClassMethodsTestCase(BareMetalVPDTestCase):
         self._create_pm()
 
         self.mox.StubOutWithMock(self.pm, '_set_connection')
-        self.mox.StubOutWithMock(nutils, 'ssh_execute')
+        self.mox.StubOutWithMock(processutils, 'ssh_execute')
 
         self.pm._set_connection().AndReturn(True)
-        nutils.ssh_execute(None, '/usr/bin/VBoxManage test return',
+        processutils.ssh_execute(None, '/usr/bin/VBoxManage test return',
                 check_exit_code=True).\
-                AndRaise(exception.ProcessExecutionError)
+                AndRaise(processutils.ProcessExecutionError)
         self.mox.ReplayAll()
 
         result = self.pm._run_command("test return")
@@ -383,16 +383,16 @@ class VPDClassMethodsTestCase(BareMetalVPDTestCase):
         self._create_pm()
 
         self.mox.StubOutWithMock(self.pm, '_check_for_node')
-        self.mox.StubOutWithMock(nutils, 'ssh_execute')
+        self.mox.StubOutWithMock(processutils, 'ssh_execute')
 
         self.pm._check_for_node().AndReturn(['"testNode"'])
         self.pm._check_for_node().AndReturn(['"testNode"'])
-        nutils.ssh_execute('test', '/usr/bin/VBoxManage startvm ',
+        processutils.ssh_execute('test', '/usr/bin/VBoxManage startvm ',
                 check_exit_code=True).\
-                AndRaise(exception.ProcessExecutionError)
-        nutils.ssh_execute('test', '/usr/bin/VBoxManage list runningvms',
+                AndRaise(processutils.ProcessExecutionError)
+        processutils.ssh_execute('test', '/usr/bin/VBoxManage list runningvms',
                 check_exit_code=True).\
-                AndRaise(exception.ProcessExecutionError)
+                AndRaise(processutils.ProcessExecutionError)
 
         self.mox.ReplayAll()
         self.pm._connection = 'test'

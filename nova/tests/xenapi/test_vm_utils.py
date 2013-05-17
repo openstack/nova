@@ -14,6 +14,18 @@ XENSM_TYPE = 'xensm'
 ISCSI_TYPE = 'iscsi'
 
 
+class FakeSession():
+    def call_xenapi(self, operation, *args, **kwargs):
+        # VDI.add_to_other_config -> VDI_add_to_other_config
+        method = getattr(self, operation.replace('.', '_'), None)
+        if method:
+            return method(*args, **kwargs)
+
+        self.operation = operation
+        self.args = args
+        self.kwargs = kwargs
+
+
 def get_fake_connection_data(sr_type):
     fakes = {XENSM_TYPE: {'sr_uuid': 'falseSR',
                           'name_label': 'fake_storage',
@@ -209,11 +221,6 @@ class BittorrentTestCase(stubs.XenAPITestBase):
 class CreateVBDTestCase(test.TestCase):
     def setUp(self):
         super(CreateVBDTestCase, self).setUp()
-
-        class FakeSession():
-            def call_xenapi(*args):
-                pass
-
         self.session = FakeSession()
         self.mock = mox.Mox()
         self.mock.StubOutWithMock(self.session, 'call_xenapi')
@@ -284,3 +291,87 @@ class CreateVBDTestCase(test.TestCase):
         result = vm_utils.attach_cd(self.session, "vm_ref", "vdi_ref", 1)
         self.assertEquals(result, "vbd_ref")
         self.mock.VerifyAll()
+
+
+class VDIOtherConfigTestCase(stubs.XenAPITestBase):
+    """Tests to ensure that the code is populating VDI's `other_config`
+    attribute with the correct metadta.
+    """
+
+    def setUp(self):
+        super(VDIOtherConfigTestCase, self).setUp()
+        self.session = FakeSession()
+        self.context = context.get_admin_context()
+        self.fake_instance = {'uuid': 'aaaa-bbbb-cccc-dddd',
+                              'name': 'myinstance'}
+
+    def test_create_vdi(self):
+        # Some images are registered with XenServer explicitly by calling
+        # `create_vdi`
+        vm_utils.create_vdi(self.session, 'sr_ref', self.fake_instance,
+                            'myvdi', 'root', 1024, read_only=True)
+
+        expected = {'nova_disk_type': 'root',
+                    'nova_instance_uuid': 'aaaa-bbbb-cccc-dddd'}
+
+        self.assertEqual(expected, self.session.args[0]['other_config'])
+
+    def test_create_image(self):
+        # Other images are registered implicitly when they are dropped into
+        # the SR by a dom0 plugin or some other process
+        self.flags(cache_images='none')
+
+        def fake_fetch_image(*args):
+            return {'root': {'uuid': 'fake-uuid'}}
+
+        self.stubs.Set(vm_utils, '_fetch_image', fake_fetch_image)
+
+        other_config = {}
+
+        def VDI_add_to_other_config(ref, key, value):
+            other_config[key] = value
+
+        def VDI_get_record(ref):
+            return {'other_config': {}}
+
+        # Stubbing on the session object and not class so we don't pollute
+        # other tests
+        self.session.VDI_add_to_other_config = VDI_add_to_other_config
+        self.session.VDI_get_record = VDI_get_record
+
+        vm_utils._create_image(self.context, self.session, self.fake_instance,
+                'myvdi', 'image1', vm_utils.ImageType.DISK_VHD)
+
+        expected = {'nova_disk_type': 'root',
+                    'nova_instance_uuid': 'aaaa-bbbb-cccc-dddd'}
+
+        self.assertEqual(expected, other_config)
+
+    def test_move_disks(self):
+        # Migrated images should preserve the `other_config`
+        other_config = {}
+
+        def VDI_add_to_other_config(ref, key, value):
+            other_config[key] = value
+
+        def VDI_get_record(ref):
+            return {'other_config': {}}
+
+        def call_plugin_serialized(*args, **kwargs):
+            return {'root': {'uuid': 'aaaa-bbbb-cccc-dddd'}}
+
+        # Stubbing on the session object and not class so we don't pollute
+        # other tests
+        self.session.VDI_add_to_other_config = VDI_add_to_other_config
+        self.session.VDI_get_record = VDI_get_record
+        self.session.call_plugin_serialized = call_plugin_serialized
+
+        self.stubs.Set(vm_utils, 'get_sr_path', lambda *a, **k: None)
+        self.stubs.Set(vm_utils, 'scan_default_sr', lambda *a, **k: None)
+
+        vm_utils.move_disks(self.session, self.fake_instance, {})
+
+        expected = {'nova_disk_type': 'root',
+                    'nova_instance_uuid': 'aaaa-bbbb-cccc-dddd'}
+
+        self.assertEqual(expected, other_config)

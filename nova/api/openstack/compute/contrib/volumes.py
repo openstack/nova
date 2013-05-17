@@ -25,6 +25,7 @@ from nova.api.openstack import xmlutil
 from nova import compute
 from nova import exception
 from nova.openstack.common import log as logging
+from nova.openstack.common import strutils
 from nova.openstack.common import uuidutils
 from nova import utils
 from nova import volume
@@ -187,8 +188,7 @@ class VolumeController(wsgi.Controller):
         LOG.audit(_("Delete volume with id: %s"), id, context=context)
 
         try:
-            vol = self.volume_api.get(context, id)
-            self.volume_api.delete(context, vol)
+            self.volume_api.delete(context, id)
         except exception.NotFound:
             raise exc.HTTPNotFound()
         return webob.Response(status_int=202)
@@ -244,15 +244,19 @@ class VolumeController(wsgi.Controller):
 
         availability_zone = vol.get('availability_zone', None)
 
-        new_volume = self.volume_api.create(context,
-                                            size,
-                                            vol.get('display_name'),
-                                            vol.get('display_description'),
-                                            snapshot=snapshot,
-                                            volume_type=vol_type,
-                                            metadata=metadata,
-                                            availability_zone=availability_zone
-                                           )
+        try:
+            new_volume = self.volume_api.create(
+                context,
+                size,
+                vol.get('display_name'),
+                vol.get('display_description'),
+                snapshot=snapshot,
+                volume_type=vol_type,
+                metadata=metadata,
+                availability_zone=availability_zone
+                )
+        except exception.InvalidInput as err:
+            raise exc.HTTPBadRequest(explanation=str(err))
 
         # TODO(vish): Instance should be None at db layer instead of
         #             trying to lazy load, but for now we turn it into
@@ -573,8 +577,7 @@ class SnapshotController(wsgi.Controller):
         LOG.audit(_("Delete snapshot with id: %s"), id, context=context)
 
         try:
-            snapshot = self.volume_api.get_snapshot(context, id)
-            self.volume_api.delete_snapshot(context, snapshot)
+            self.volume_api.delete_snapshot(context, id)
         except exception.NotFound:
             return exc.HTTPNotFound()
         return webob.Response(status_int=202)
@@ -610,7 +613,6 @@ class SnapshotController(wsgi.Controller):
 
         snapshot = body['snapshot']
         volume_id = snapshot['volume_id']
-        vol = self.volume_api.get(context, volume_id)
 
         force = snapshot.get('force', False)
         LOG.audit(_("Create snapshot from volume %s"), volume_id,
@@ -620,14 +622,14 @@ class SnapshotController(wsgi.Controller):
             msg = _("Invalid value '%s' for force.") % force
             raise exception.InvalidParameterValue(err=msg)
 
-        if utils.bool_from_str(force):
+        if strutils.bool_from_string(force):
             new_snapshot = self.volume_api.create_snapshot_force(context,
-                                        vol,
+                                        volume_id,
                                         snapshot.get('display_name'),
                                         snapshot.get('display_description'))
         else:
             new_snapshot = self.volume_api.create_snapshot(context,
-                                        vol,
+                                        volume_id,
                                         snapshot.get('display_name'),
                                         snapshot.get('display_description'))
 

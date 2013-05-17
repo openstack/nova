@@ -21,9 +21,9 @@ import os
 
 from oslo.config import cfg
 
+from nova import exception
 from nova.openstack.common import excutils
 from nova.openstack.common import fileutils
-from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt.disk import api as disk
@@ -138,8 +138,7 @@ class Image(object):
         :filename: Name of the file in the image directory
         :size: Size of created image in bytes (optional)
         """
-        @lockutils.synchronized(filename, 'nova-', external=True,
-                                lock_path=self.lock_path)
+        @utils.synchronized(filename, external=True, lock_path=self.lock_path)
         def call_if_not_exists(target, *args, **kwargs):
             if not os.path.exists(target):
                 fetch_func(target=target, *args, **kwargs)
@@ -203,8 +202,7 @@ class Raw(Image):
             self.driver_format = data.file_format or 'raw'
 
     def create_image(self, prepare_template, base, size, *args, **kwargs):
-        @lockutils.synchronized(base, 'nova-', external=True,
-                                lock_path=self.lock_path)
+        @utils.synchronized(base, external=True, lock_path=self.lock_path)
         def copy_raw_image(base, target, size):
             libvirt_utils.copy_image(base, target)
             if size:
@@ -243,8 +241,7 @@ class Qcow2(Image):
         self.preallocate = CONF.preallocate_images != 'none'
 
     def create_image(self, prepare_template, base, size, *args, **kwargs):
-        @lockutils.synchronized(base, 'nova-', external=True,
-                                lock_path=self.lock_path)
+        @utils.synchronized(base, external=True, lock_path=self.lock_path)
         def copy_qcow2_image(base, target, size):
             # TODO(pbrady): Consider copying the cow image here
             # with preallocation=metadata set for performance reasons.
@@ -255,6 +252,13 @@ class Qcow2(Image):
 
         if not os.path.exists(base):
             prepare_template(target=base, *args, **kwargs)
+        # NOTE(cfb): Having a flavor that sets the root size to 0 and having
+        #            nova effectively ignore that size and use the size of the
+        #            image is considered a feature at this time, not a bug.
+        if size and size < disk.get_disk_size(base):
+            LOG.error('%s virtual size larger than flavor root disk size %s' %
+                      (base, size))
+            raise exception.ImageTooLarge()
         if not os.path.exists(self.path):
             with utils.remove_path_on_error(self.path):
                 copy_qcow2_image(base, self.path, size)
@@ -309,8 +313,7 @@ class Lvm(Image):
         return False
 
     def create_image(self, prepare_template, base, size, *args, **kwargs):
-        @lockutils.synchronized(base, 'nova-', external=True,
-                                lock_path=self.lock_path)
+        @utils.synchronized(base, external=True, lock_path=self.lock_path)
         def create_lvm_image(base, size):
             base_size = disk.get_disk_size(base)
             resize = size > base_size

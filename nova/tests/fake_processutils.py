@@ -14,15 +14,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""This modules stubs out functions in nova.utils."""
+"""This modules stubs out functions in openstack.common.processutils."""
 
 import re
 
 from eventlet import greenthread
 
-from nova import exception
 from nova.openstack.common import log as logging
-from nova import utils
+from nova.openstack.common import processutils
 
 LOG = logging.getLogger(__name__)
 
@@ -92,7 +91,7 @@ def fake_execute(*cmd_parts, **kwargs):
                                   attempts=attempts,
                                   run_as_root=run_as_root,
                                   check_exit_code=check_exit_code)
-        except exception.ProcessExecutionError as e:
+        except processutils.ProcessExecutionError as e:
             LOG.debug(_('Faked command raised an exception %s'), e)
             raise
 
@@ -106,7 +105,7 @@ def fake_execute(*cmd_parts, **kwargs):
     return reply
 
 
-def stub_out_utils_execute(stubs):
+def stub_out_processutils_execute(stubs):
     fake_execute_set_repliers([])
     fake_execute_clear_log()
-    stubs.Set(utils, 'execute', fake_execute)
+    stubs.Set(processutils, 'execute', fake_execute)

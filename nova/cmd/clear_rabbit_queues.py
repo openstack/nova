@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright (c) 2011 OpenStack Foundation
@@ -23,13 +22,9 @@
 
 """
 
-import gettext
 import sys
 
 from oslo.config import cfg
-
-gettext.install('nova', unicode=1)
-
 
 from nova import config
 from nova.openstack.common import log as logging

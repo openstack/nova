@@ -21,8 +21,9 @@ from nova.api.openstack import common
 from nova.api.openstack.compute.views import flavors as flavors_view
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova import exception
+from nova.openstack.common import strutils
 
 
 def make_flavor(elem, detailed=False):
@@ -70,46 +71,41 @@ class Controller(wsgi.Controller):
     @wsgi.serializers(xml=MinimalFlavorsTemplate)
     def index(self, req):
         """Return all flavors in brief."""
-        flavors = self._get_flavors(req)
-        return self._view_builder.index(req, flavors)
+        limited_flavors = self._get_flavors(req)
+        return self._view_builder.index(req, limited_flavors)
 
     @wsgi.serializers(xml=FlavorsTemplate)
     def detail(self, req):
         """Return all flavors in detail."""
-        flavors = self._get_flavors(req)
-        req.cache_db_flavors(flavors)
-        return self._view_builder.detail(req, flavors)
+        limited_flavors = self._get_flavors(req)
+        req.cache_db_flavors(limited_flavors)
+        return self._view_builder.detail(req, limited_flavors)
 
     @wsgi.serializers(xml=FlavorTemplate)
     def show(self, req, id):
         """Return data about the given flavor id."""
         try:
-            flavor = instance_types.get_instance_type_by_flavor_id(id)
+            flavor = flavors.get_instance_type_by_flavor_id(id)
             req.cache_db_flavor(flavor)
         except exception.NotFound:
             raise webob.exc.HTTPNotFound()
 
         return self._view_builder.show(req, flavor)
 
-    def _get_is_public(self, req):
+    def _parse_is_public(self, is_public):
         """Parse is_public into something usable."""
-        is_public = req.params.get('is_public', None)
 
         if is_public is None:
             # preserve default value of showing only public flavors
             return True
-        elif is_public is True or \
-            is_public.lower() in ['t', 'true', 'yes', '1']:
-            return True
-        elif is_public is False or \
-            is_public.lower() in ['f', 'false', 'no', '0']:
-            return False
-        elif is_public.lower() == 'none':
-            # value to match all flavors, ignore is_public
+        elif is_public == 'none':
             return None
         else:
-            msg = _('Invalid is_public filter [%s]') % req.params['is_public']
-            raise webob.exc.HTTPBadRequest(explanation=msg)
+            try:
+                return strutils.bool_from_string(is_public, strict=True)
+            except ValueError:
+                msg = _('Invalid is_public filter [%s]') % is_public
+                raise webob.exc.HTTPBadRequest(explanation=msg)
 
     def _get_flavors(self, req):
         """Helper function that returns a list of flavor dicts."""
@@ -118,7 +114,8 @@ class Controller(wsgi.Controller):
         context = req.environ['nova.context']
         if context.is_admin:
             # Only admin has query access to all flavor types
-            filters['is_public'] = self._get_is_public(req)
+            filters['is_public'] = self._parse_is_public(
+                    req.params.get('is_public', None))
         else:
             filters['is_public'] = True
             filters['disabled'] = False
@@ -137,8 +134,8 @@ class Controller(wsgi.Controller):
                 msg = _('Invalid minDisk filter [%s]') % req.params['minDisk']
                 raise webob.exc.HTTPBadRequest(explanation=msg)
 
-        flavors = instance_types.get_all_types(context, filters=filters)
-        flavors_list = flavors.values()
+        limited_flavors = flavors.get_all_types(context, filters=filters)
+        flavors_list = limited_flavors.values()
         sorted_flavors = sorted(flavors_list,
                                 key=lambda item: item['flavorid'])
         limited_flavors = common.limited_by_marker(sorted_flavors, req)

@@ -789,6 +789,7 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         self.name = None
         self.memory = 1024 * 1024 * 500
         self.vcpus = 1
+        self.cpuset = None
         self.cpu = None
         self.cpu_shares = None
         self.cpu_quota = None
@@ -812,7 +813,12 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         root.append(self._text_node("uuid", self.uuid))
         root.append(self._text_node("name", self.name))
         root.append(self._text_node("memory", self.memory))
-        root.append(self._text_node("vcpu", self.vcpus))
+        if self.cpuset is not None:
+            vcpu = self._text_node("vcpu", self.vcpus)
+            vcpu.set("cpuset", self.cpuset)
+            root.append(vcpu)
+        else:
+            root.append(self._text_node("vcpu", self.vcpus))
 
     def _format_os(self, root):
         os = etree.Element("os")

@@ -239,17 +239,8 @@ class XenAPIDriver(driver.ComputeDriver):
         """Transfers the VHD of a running instance to another host, then shuts
         off the instance copies over the COW disk"""
         # NOTE(vish): Xen currently does not use network info.
-        rv = self._vmops.migrate_disk_and_power_off(context, instance,
-                                                    dest, instance_type)
-        block_device_mapping = driver.block_device_info_get_mapping(
-                block_device_info)
-        name_label = self._vmops._get_orig_vm_name_label(instance)
-        for vol in block_device_mapping:
-            connection_info = vol['connection_info']
-            mount_device = vol['mount_device'].rpartition("/")[2]
-            self._volumeops.detach_volume(connection_info,
-                    name_label, mount_device)
-        return rv
+        return self._vmops.migrate_disk_and_power_off(context, instance,
+                    dest, instance_type, block_device_info)
 
     def suspend(self, instance):
         """suspend the specified instance."""
@@ -372,7 +363,7 @@ class XenAPIDriver(driver.ComputeDriver):
                                              mountpoint)
 
     def detach_volume(self, connection_info, instance, mountpoint):
-        """Detach volume storage to VM instance."""
+        """Detach volume storage from VM instance."""
         return self._volumeops.detach_volume(connection_info,
                                              instance['name'],
                                              mountpoint)
@@ -504,7 +495,10 @@ class XenAPIDriver(driver.ComputeDriver):
             at compute manager.
         """
         # TODO(JohnGarbutt) look again when boot-from-volume hits trunk
-        pass
+        pre_live_migration_result = {}
+        pre_live_migration_result['sr_uuid_map'] = \
+                 self._vmops.attach_block_device_volumes(block_device_info)
+        return pre_live_migration_result
 
     def post_live_migration_at_destination(self, ctxt, instance_ref,
                                            network_info, block_migration,

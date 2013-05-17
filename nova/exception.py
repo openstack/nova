@@ -53,25 +53,6 @@ class ConvertedException(webob.exc.WSGIHTTPException):
         super(ConvertedException, self).__init__()
 
 
-class ProcessExecutionError(IOError):
-    def __init__(self, stdout=None, stderr=None, exit_code=None, cmd=None,
-                 description=None):
-        self.exit_code = exit_code
-        self.stderr = stderr
-        self.stdout = stdout
-        self.cmd = cmd
-        self.description = description
-
-        if description is None:
-            description = _('Unexpected error while running command.')
-        if exit_code is None:
-            exit_code = '-'
-        message = _('%(description)s\nCommand: %(cmd)s\n'
-                    'Exit code: %(exit_code)s\nStdout: %(stdout)r\n'
-                    'Stderr: %(stderr)r') % locals()
-        IOError.__init__(self, message)
-
-
 def _cleanse_dict(original):
     """Strip all admin_password, new_pass, rescue_pass keys from a dict."""
     return dict((k, v) for k, v in original.iteritems() if not "_pass" in k)
@@ -450,10 +431,6 @@ class InvalidUUID(Invalid):
 
 class InvalidID(Invalid):
     message = _("Invalid ID received %(id)s.")
-
-
-class InvalidPeriodicTaskArg(Invalid):
-    message = _("Unexpected argument for periodic task creation: %(arg)s.")
 
 
 class ConstraintNotMet(NovaException):
@@ -950,6 +927,10 @@ class MigrationError(NovaException):
     message = _("Migration error") + ": %(reason)s"
 
 
+class MigrationPreCheckError(MigrationError):
+    message = _("Migration pre-check error") + ": %(reason)s"
+
+
 class MalformedRequestBody(NovaException):
     message = _("Malformed message body: %(reason)s")
 
@@ -1172,6 +1153,11 @@ class InstanceActionEventNotFound(NovaException):
     message = _("Event %(event)s not found for action id %(action_id)s")
 
 
+class UnexpectedVMStateError(NovaException):
+    message = _("unexpected VM state: expecting %(expected)s but "
+                "the actual state is %(actual)s")
+
+
 class CryptoCAFileNotFound(FileNotFound):
     message = _("The CA file for %(project)s could not be found")
 
@@ -1215,3 +1201,10 @@ class BuildAbortException(NovaException):
 class RescheduledException(NovaException):
     message = _("Build of instance %(instance_uuid)s was re-scheduled: "
                 "%(reason)s")
+
+
+class InstanceFaultRollback(NovaException):
+    def __init__(self, inner_exception=None):
+        message = _("Instance rollback performed due to: %s")
+        self.inner_exception = inner_exception
+        super(InstanceFaultRollback, self).__init__(message % inner_exception)

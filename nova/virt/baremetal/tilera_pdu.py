@@ -26,6 +26,7 @@ from oslo.config import cfg
 
 from nova import exception
 from nova.openstack.common import log as logging
+from nova.openstack.common import processutils
 from nova import utils
 from nova.virt.baremetal import baremetal_states
 from nova.virt.baremetal import base
@@ -104,7 +105,7 @@ class Pdu(base.PowerManager):
                 utils.execute('ping', '-c1', self.address,
                        check_exit_code=True)
                 return CONF.baremetal.tile_pdu_on
-            except exception.ProcessExecutionError:
+            except processutils.ProcessExecutionError:
                 return CONF.baremetal.tile_pdu_off
         else:
             try:
@@ -112,7 +113,7 @@ class Pdu(base.PowerManager):
                           CONF.baremetal.tile_pdu_ip, mode)
                 time.sleep(CONF.baremetal.tile_power_wait)
                 return mode
-            except exception.ProcessExecutionError:
+            except processutils.ProcessExecutionError:
                 LOG.exception(_("PDU failed"))
 
     def _is_power(self, state):

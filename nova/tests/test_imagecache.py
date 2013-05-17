@@ -349,7 +349,7 @@ class ImageCacheManagerTestCase(test.TestCase):
             mylog = logging.getLogger('nova')
             stream = cStringIO.StringIO()
             handler = logging.logging.StreamHandler(stream)
-            handler.setFormatter(logging.LegacyFormatter())
+            handler.setFormatter(logging.ContextFormatter())
             mylog.logger.addHandler(handler)
             yield stream
         finally:

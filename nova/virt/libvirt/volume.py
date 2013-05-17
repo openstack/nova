@@ -27,9 +27,9 @@ import urlparse
 from oslo.config import cfg
 
 from nova import exception
-from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import loopingcall
+from nova.openstack.common import processutils
 from nova import paths
 from nova.storage import linuxscsi
 from nova import utils
@@ -191,7 +191,7 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
     def _get_target_portals_from_iscsiadm_output(self, output):
         return [line.split()[0] for line in output.splitlines()]
 
-    @lockutils.synchronized('connect_volume', 'nova-')
+    @utils.synchronized('connect_volume')
     def connect_volume(self, connection_info, disk_info):
         """Attach the volume to instance_name."""
         conf = super(LibvirtISCSIVolumeDriver,
@@ -265,35 +265,23 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
         conf.source_path = host_device
         return conf
 
-    @lockutils.synchronized('connect_volume', 'nova-')
+    @utils.synchronized('connect_volume')
     def disconnect_volume(self, connection_info, disk_dev):
         """Detach the volume from instance_name."""
+        iscsi_properties = connection_info['data']
+        multipath_device = None
+        if CONF.libvirt_iscsi_use_multipath:
+            host_device = ("/dev/disk/by-path/ip-%s-iscsi-%s-lun-%s" %
+                           (iscsi_properties['target_portal'],
+                            iscsi_properties['target_iqn'],
+                            iscsi_properties.get('target_lun', 0)))
+            multipath_device = self._get_multipath_device_name(host_device)
+
         super(LibvirtISCSIVolumeDriver,
               self).disconnect_volume(connection_info, disk_dev)
-        iscsi_properties = connection_info['data']
 
-        if CONF.libvirt_iscsi_use_multipath and \
-           "mapper" in connection_info['data']['device_path']:
-            self._rescan_iscsi()
-            self._rescan_multipath()
-            devices = [dev for dev in self.connection.get_all_block_devices()
-                       if "/mapper/" in dev]
-            if not devices:
-                #disconnect if no other multipath devices
-                self._disconnect_mpath(iscsi_properties)
-                return
-
-            other_iqns = [self._get_multipath_iqn(device)
-                          for device in devices]
-
-            if iscsi_properties['target_iqn'] not in other_iqns:
-                #disconnect if no other multipath devices with same iqn
-                self._disconnect_mpath(iscsi_properties)
-                return
-
-            #else do not disconnect iscsi portals,
-            #as they are used for other luns
-            return
+        if CONF.libvirt_iscsi_use_multipath and multipath_device:
+            return self._disconnect_volume_multipath_iscsi(iscsi_properties)
 
         # NOTE(vish): Only disconnect from the target if no luns from the
         #             target are in use.
@@ -305,6 +293,36 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
         if not devices:
             self._disconnect_from_iscsi_portal(iscsi_properties)
 
+    def _disconnect_volume_multipath_iscsi(self, iscsi_properties):
+        self._rescan_iscsi()
+        self._rescan_multipath()
+        block_devices = self.connection.get_all_block_devices()
+        devices = []
+        for dev in block_devices:
+            if "/mapper/" in dev:
+                devices.append(dev)
+            else:
+                mpdev = self._get_multipath_device_name(dev)
+                if mpdev:
+                    devices.append(mpdev)
+
+        if not devices:
+            # disconnect if no other multipath devices
+            self._disconnect_mpath(iscsi_properties)
+            return
+
+        other_iqns = [self._get_multipath_iqn(device)
+                      for device in devices]
+
+        if iscsi_properties['target_iqn'] not in other_iqns:
+            # disconnect if no other multipath devices with same iqn
+            self._disconnect_mpath(iscsi_properties)
+            return
+
+        # else do not disconnect iscsi portals,
+        # as they are used for other luns
+        return
+
     def _connect_to_iscsi_portal(self, iscsi_properties):
         # NOTE(vish): If we are on the same host as nova volume, the
         #             discovery makes the target so we don't need to
@@ -314,7 +332,7 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
         #             volume is using the same target.
         try:
             self._run_iscsiadm(iscsi_properties, ())
-        except exception.ProcessExecutionError as exc:
+        except processutils.ProcessExecutionError as exc:
             # iscsiadm returns 21 for "No records found" after version 2.0-871
             if exc.exit_code in [21, 255]:
                 self._run_iscsiadm(iscsi_properties, ('--op', 'new'))
@@ -353,7 +371,7 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
                 self._run_iscsiadm(iscsi_properties,
                                    ("--login",),
                                    check_exit_code=[0, 255])
-            except exception.ProcessExecutionError as err:
+            except processutils.ProcessExecutionError as err:
                 #as this might be one of many paths,
                 #only set successfull logins to startup automatically
                 if err.exit_code in [15]:
@@ -484,7 +502,7 @@ class LibvirtNFSVolumeDriver(LibvirtBaseVolumeDriver):
 
         try:
             utils.execute(*nfs_cmd, run_as_root=True)
-        except exception.ProcessExecutionError as exc:
+        except processutils.ProcessExecutionError as exc:
             if ensure and 'already mounted' in exc.message:
                 LOG.warn(_("%s is already mounted"), nfs_share)
             else:
@@ -500,7 +518,7 @@ class LibvirtNFSVolumeDriver(LibvirtBaseVolumeDriver):
         """Check path."""
         try:
             return utils.execute('stat', path, run_as_root=True)
-        except exception.ProcessExecutionError:
+        except processutils.ProcessExecutionError:
             return False
 
 
@@ -605,7 +623,7 @@ class LibvirtGlusterfsVolumeDriver(LibvirtBaseVolumeDriver):
             utils.execute('mount', '-t', 'glusterfs', glusterfs_share,
                           mount_path,
                           run_as_root=True)
-        except exception.ProcessExecutionError as exc:
+        except processutils.ProcessExecutionError as exc:
             if ensure and 'already mounted' in exc.message:
                 LOG.warn(_("%s is already mounted"), glusterfs_share)
             else:
@@ -621,7 +639,7 @@ class LibvirtGlusterfsVolumeDriver(LibvirtBaseVolumeDriver):
         """Check path."""
         try:
             return utils.execute('stat', path, run_as_root=True)
-        except exception.ProcessExecutionError:
+        except processutils.ProcessExecutionError:
             return False
 
 
@@ -653,7 +671,7 @@ class LibvirtFibreChannelVolumeDriver(LibvirtBaseVolumeDriver):
 
         return pci_num
 
-    @lockutils.synchronized('connect_volume', 'nova-')
+    @utils.synchronized('connect_volume')
     def connect_volume(self, connection_info, disk_info):
         """Attach the volume to instance_name."""
         fc_properties = connection_info['data']
@@ -749,7 +767,7 @@ class LibvirtFibreChannelVolumeDriver(LibvirtBaseVolumeDriver):
         conf.source_path = device_path
         return conf
 
-    @lockutils.synchronized('connect_volume', 'nova-')
+    @utils.synchronized('connect_volume')
     def disconnect_volume(self, connection_info, mount_device):
         """Detach the volume from instance_name."""
         super(LibvirtFibreChannelVolumeDriver,

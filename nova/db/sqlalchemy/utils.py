@@ -24,13 +24,23 @@ from sqlalchemy.sql.expression import UpdateBase, literal_column
 from sqlalchemy.sql import select
 from sqlalchemy.types import NullType
 
-
+from nova.db.sqlalchemy import api as db
 from nova import exception
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 
 
 LOG = logging.getLogger(__name__)
+
+
+def get_table(engine, name):
+    """Returns an sqlalchemy table dynamically from db.
+
+    Needed because the models don't work for us in migrations
+    as models will be far out of sync with the current data."""
+    metadata = MetaData()
+    metadata.bind = engine
+    return Table(name, metadata, autoload=True)
 
 
 class InsertFromSelect(UpdateBase):
@@ -46,6 +56,23 @@ def visit_insert_from_select(element, compiler, **kw):
         compiler.process(element.select))
 
 
+def _get_not_supported_column(col_name_col_instance, column_name):
+    try:
+        column = col_name_col_instance[column_name]
+    except Exception as e:
+        msg = _("Please specify column %s in col_name_col_instance "
+                "param. It is required because column has unsupported "
+                "type by sqlite).")
+        raise exception.NovaException(msg % column_name)
+
+    if not isinstance(column, Column):
+        msg = _("col_name_col_instance param has wrong type of "
+                "column instance for column %s It should be instance "
+                "of sqlalchemy.Column.")
+        raise exception.NovaException(msg % column_name)
+    return column
+
+
 def _drop_unique_constraint_in_sqlite(migrate_engine, table_name, uc_name,
                                       **col_name_col_instance):
     insp = reflection.Inspector.from_engine(migrate_engine)
@@ -55,19 +82,8 @@ def _drop_unique_constraint_in_sqlite(migrate_engine, table_name, uc_name,
     columns = []
     for column in table.columns:
         if isinstance(column.type, NullType):
-            try:
-                new_column = col_name_col_instance.get(column.name)
-            except Exception as e:
-                msg = _("Please specify column %s in col_name_col_instance "
-                        "param. It is required because column has unsupported "
-                        "type by sqlite).")
-                raise exception.NovaException(msg % column.name)
-
-            if not isinstance(new_column, Column):
-                msg = _("col_name_col_instance param has wrong type of "
-                        "column instance for column %s It should be instance "
-                        "of sqlalchemy.Column.")
-                raise exception.NovaException(msg % column.name)
+            new_column = _get_not_supported_column(col_name_col_instance,
+                                                   column.name)
             columns.append(new_column)
         else:
             columns.append(column.copy())
@@ -166,3 +182,85 @@ def drop_old_duplicate_entries_from_table(migrate_engine, table_name,
         else:
             delete_statement = table.delete().where(delete_condition)
         migrate_engine.execute(delete_statement)
+
+
+def check_shadow_table(migrate_engine, table_name):
+    """
+    This method checks that table with ``table_name`` and corresponding shadow
+    table have same columns.
+    """
+    meta = MetaData()
+    meta.bind = migrate_engine
+
+    table = Table(table_name, meta, autoload=True)
+    shadow_table = Table(db._SHADOW_TABLE_PREFIX + table_name, meta,
+                         autoload=True)
+
+    columns = dict([(c.name, c) for c in table.columns])
+    shadow_columns = dict([(c.name, c) for c in shadow_table.columns])
+
+    for name, column in columns.iteritems():
+        if name not in shadow_columns:
+            raise exception.NovaException(
+                _("Missing column %(table)s.%(column)s in shadow table")
+                        % {'column': name, 'table': shadow_table.name})
+        shadow_column = shadow_columns[name]
+
+        if not isinstance(shadow_column.type, type(column.type)):
+            raise exception.NovaException(
+                _("Different types in %(table)s.%(column)s and shadow table: "
+                  "%(c_type)s %(shadow_c_type)s")
+                        % {'column': name, 'table': table.name,
+                           'c_type': column.type,
+                           'shadow_c_type': shadow_column.type})
+
+    for name, column in shadow_columns.iteritems():
+        if name not in columns:
+            raise exception.NovaException(
+                _("Extra column %(table)%.%(column)s in shadow table")
+                        % {'column': name, 'table': shadow_table.name})
+    return True
+
+
+def create_shadow_table(migrate_engine, table_name=None, table=None,
+                        **col_name_col_instance):
+    """
+    This method create shadow table for table with name ``table_name`` or table
+    instance ``table``.
+    :param table_name: Autoload table with this name and create shadow table
+    :param table: Autoloaded table, so just create corresponding shadow table.
+    :param col_name_col_instance:   contains pair column_name=column_instance.
+                            column_instance is instance of Column. These params
+                            are required only for columns that have unsupported
+                            types by sqlite. For example BigInteger.
+    """
+    meta = MetaData()
+    meta.bind = migrate_engine
+
+    if table_name is None and table is None:
+        raise exception.NovaException(_("Specify `table_name` or `table` "
+                                        "param"))
+    if not (table_name is None or table is None):
+        raise exception.NovaException(_("Specify only one param `table_name` "
+                                        "`table`"))
+
+    if table is None:
+        table = Table(table_name, meta, autoload=True)
+
+    columns = []
+    for column in table.columns:
+        if isinstance(column.type, NullType):
+            new_column = _get_not_supported_column(col_name_col_instance,
+                                                   column.name)
+            columns.append(new_column)
+        else:
+            columns.append(column.copy())
+
+    shadow_table = Table(db._SHADOW_TABLE_PREFIX + table.name, meta, *columns,
+                         mysql_engine='InnoDB')
+    try:
+        shadow_table.create()
+    except Exception:
+        LOG.info(repr(shadow_table))
+        LOG.exception(_('Exception while creating table.'))
+        raise

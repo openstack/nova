@@ -25,6 +25,7 @@ from nova import availability_zones as az
 from nova import context
 from nova import db
 from nova import test
+from nova.tests.api.openstack import fakes
 
 CONF = cfg.CONF
 CONF.import_opt('internal_service_availability_zone',
@@ -155,3 +156,23 @@ class AvailabilityZoneTestCases(test.TestCase):
 
         self.assertEquals(zones, ['nova-test', 'nova-test2'])
         self.assertEquals(not_zones, ['nova-test3', 'nova'])
+
+    def test_get_instance_availability_zone_default_value(self):
+        """Test get right availability zone by given an instance."""
+        fake_inst_id = 162
+        fake_inst = fakes.stub_instance(fake_inst_id, host=self.host)
+
+        self.assertEqual(self.default_az,
+                az.get_instance_availability_zone(self.context, fake_inst))
+
+    def test_get_instance_availability_zone_from_aggregate(self):
+        """Test get availability zone from aggregate by given an instance."""
+        host = 'host170'
+        service = self._create_service_with_topic('compute', host)
+        self._add_to_aggregate(service, self.agg)
+
+        fake_inst_id = 174
+        fake_inst = fakes.stub_instance(fake_inst_id, host=host)
+
+        self.assertEqual(self.availability_zone,
+                az.get_instance_availability_zone(self.context, fake_inst))

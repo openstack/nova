@@ -22,6 +22,7 @@
 
 from oslo.config import cfg
 
+from nova.compute import power_state
 from nova import exception
 from nova import test
 from nova.tests.baremetal.db import base as bm_db_base
@@ -283,38 +284,10 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
         node1 = self._create_node()
         self.assertEqual(1, len(self.driver.get_available_nodes()))
 
-        node_info = bm_db_utils.new_bm_node(
-                        id=456,
-                        service_host='test_host',
-                        cpus=2,
-                        memory_mb=2048,
-                    )
-        nic_info = [
-                {'address': 'cc:cc:cc', 'datapath_id': '0x1',
-                    'port_no': 1},
-                {'address': 'dd:dd:dd', 'datapath_id': '0x2',
-                    'port_no': 2},
-            ]
-        node2 = self._create_node(node_info=node_info, nic_info=nic_info)
-        self.assertEqual(2, len(self.driver.get_available_nodes()))
-        self.assertEqual([node1['node']['uuid'], node2['node']['uuid']],
-                         self.driver.get_available_nodes())
-
         node1['instance']['hostname'] = 'test-host-1'
-        node2['instance']['hostname'] = 'test-host-2'
-
         self.driver.spawn(**node1['spawn_params'])
         self.assertEqual(1, len(self.driver.get_available_nodes()))
-
-        self.driver.spawn(**node2['spawn_params'])
-        self.assertEqual(0, len(self.driver.get_available_nodes()))
-
-        self.driver.destroy(**node1['destroy_params'])
-        self.assertEqual(1, len(self.driver.get_available_nodes()))
-
-        self.driver.destroy(**node2['destroy_params'])
-        self.assertEqual(2, len(self.driver.get_available_nodes()))
-        self.assertEqual([node1['node']['uuid'], node2['node']['uuid']],
+        self.assertEqual([node1['node']['uuid']],
                          self.driver.get_available_nodes())
 
     def test_list_instances(self):
@@ -355,3 +328,36 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
 
         self.driver.destroy(**node2['destroy_params'])
         self.assertEqual([], self.driver.list_instances())
+
+    def test_get_info_no_such_node(self):
+        node = self._create_node()
+        self.assertRaises(exception.InstanceNotFound,
+                self.driver.get_info,
+                node['instance'])
+
+    def test_get_info_ok(self):
+        node = self._create_node()
+        db.bm_node_associate_and_update(self.context, node['node']['uuid'],
+                {'instance_uuid': node['instance']['uuid'],
+                 'instance_name': node['instance']['hostname'],
+                 'task_state': baremetal_states.ACTIVE})
+        res = self.driver.get_info(node['instance'])
+        self.assertEqual(res['state'], power_state.RUNNING)
+
+    def test_get_info_with_defunct_pm(self):
+        # test fix for bug 1178378
+        node = self._create_node()
+        db.bm_node_associate_and_update(self.context, node['node']['uuid'],
+                {'instance_uuid': node['instance']['uuid'],
+                 'instance_name': node['instance']['hostname'],
+                 'task_state': baremetal_states.ACTIVE})
+
+        # fake the power manager and don't get a power state
+        self.mox.StubOutWithMock(fake.FakePowerManager, 'is_power_on')
+        fake.FakePowerManager.is_power_on().AndReturn(None)
+        self.mox.ReplayAll()
+
+        res = self.driver.get_info(node['instance'])
+        # prior to the fix, returned power_state was SHUTDOWN
+        self.assertEqual(res['state'], power_state.NOSTATE)
+        self.mox.VerifyAll()

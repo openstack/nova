@@ -26,7 +26,7 @@ from oslo.config import cfg
 from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils
 from nova.compute import api as compute_api
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova.compute import utils as compute_utils
 from nova import context
 from nova import db
@@ -40,7 +40,7 @@ from nova import volume
 
 CONF = cfg.CONF
 CONF.import_opt('compute_driver', 'nova.virt.driver')
-CONF.import_opt('default_instance_type', 'nova.compute.instance_types')
+CONF.import_opt('default_instance_type', 'nova.compute.flavors')
 CONF.import_opt('use_ipv6', 'nova.netconf')
 
 
@@ -401,20 +401,20 @@ class CinderCloudTestCase(test.TestCase):
                                                         **kwargs)
                 if 'snapshot_id' in values:
                     self.volume_api.create_snapshot(self.context,
-                                                    vol,
+                                                    vol['id'],
                                                     'snapshot-bdm',
                                                     'fake snap for bdm tests',
                                                     values['snapshot_id'])
 
-                self.volume_api.attach(self.context, vol,
+                self.volume_api.attach(self.context, vol['id'],
                                        instance_uuid, bdm['device_name'])
                 volumes.append(vol)
         return volumes
 
     def _setUpBlockDeviceMapping(self):
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
-        sys_meta = instance_types.save_instance_type_info(
-            {}, instance_types.get_instance_type(1))
+        sys_meta = flavors.save_instance_type_info(
+            {}, flavors.get_instance_type(1))
         inst1 = db.instance_create(self.context,
                                   {'image_ref': image_uuid,
                                    'instance_type_id': 1,
@@ -471,7 +471,7 @@ class CinderCloudTestCase(test.TestCase):
 
     def _tearDownBlockDeviceMapping(self, inst1, inst2, volumes):
         for vol in volumes:
-            self.volume_api.delete(self.context, vol)
+            self.volume_api.delete(self.context, vol['id'])
         for uuid in (inst1['uuid'], inst2['uuid']):
             for bdm in db.block_device_mapping_get_all_by_instance(
                 self.context, uuid):
@@ -486,34 +486,34 @@ class CinderCloudTestCase(test.TestCase):
 
     _expected_block_device_mapping0 = [
         {'deviceName': '/dev/sdb1',
-         'ebs': {'status': 'in-use',
+         'ebs': {'status': 'attached',
                  'deleteOnTermination': False,
-                 'volumeId': '2',
+                 'volumeId': 'vol-00000002',
                  }},
         {'deviceName': '/dev/sdb2',
-         'ebs': {'status': 'in-use',
+         'ebs': {'status': 'attached',
                  'deleteOnTermination': False,
-                 'volumeId': '3',
+                 'volumeId': 'vol-00000003',
                  }},
         {'deviceName': '/dev/sdb3',
-         'ebs': {'status': 'in-use',
+         'ebs': {'status': 'attached',
                  'deleteOnTermination': True,
-                 'volumeId': '5',
+                 'volumeId': 'vol-00000005',
                  }},
         {'deviceName': '/dev/sdb4',
-         'ebs': {'status': 'in-use',
+         'ebs': {'status': 'attached',
                  'deleteOnTermination': False,
-                 'volumeId': '7',
+                 'volumeId': 'vol-00000007',
                  }},
         {'deviceName': '/dev/sdb5',
-         'ebs': {'status': 'in-use',
+         'ebs': {'status': 'attached',
                  'deleteOnTermination': False,
-                 'volumeId': '9',
+                 'volumeId': 'vol-00000009',
                  }},
         {'deviceName': '/dev/sdb6',
-         'ebs': {'status': 'in-use',
+         'ebs': {'status': 'attached',
                  'deleteOnTermination': False,
-                 'volumeId': '11', }}]
+                 'volumeId': 'vol-0000000b', }}]
         # NOTE(yamahata): swap/ephemeral device case isn't supported yet.
 
     _expected_instance_bdm2 = {
@@ -776,10 +776,10 @@ class CinderCloudTestCase(test.TestCase):
             self.assertTrue(str(vol['id']) == str(vol1_uuid) or
                 str(vol['id']) == str(vol2_uuid))
             if str(vol['id']) == str(vol1_uuid):
-                self.volume_api.attach(self.context, vol,
+                self.volume_api.attach(self.context, vol['id'],
                                        instance_uuid, '/dev/sdb')
             elif str(vol['id']) == str(vol2_uuid):
-                self.volume_api.attach(self.context, vol,
+                self.volume_api.attach(self.context, vol['id'],
                                        instance_uuid, '/dev/sdc')
 
         vol = self.volume_api.get(self.context, vol1_uuid)

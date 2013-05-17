@@ -17,7 +17,7 @@
 import mox
 
 from nova.api.ec2 import ec2utils
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova import conductor
@@ -73,7 +73,7 @@ class _BaseTestCase(object):
         inst['user_id'] = self.user_id
         inst['project_id'] = self.project_id
         inst['host'] = 'fake_host'
-        type_id = instance_types.get_instance_type_by_name(type_name)['id']
+        type_id = flavors.get_instance_type_by_name(type_name)['id']
         inst['instance_type_id'] = type_id
         inst['ami_launch_index'] = 0
         inst['memory_mb'] = 0
@@ -82,6 +82,7 @@ class _BaseTestCase(object):
         inst['ephemeral_gb'] = 0
         inst['architecture'] = 'x86_64'
         inst['os_type'] = 'Linux'
+        inst['availability_zone'] = 'fake-az'
         inst.update(params)
         return db.instance_create(self.context, inst)
 
@@ -374,17 +375,18 @@ class _BaseTestCase(object):
 
     def test_vol_usage_update(self):
         self.mox.StubOutWithMock(db, 'vol_usage_update')
+        inst = self._create_fake_instance({
+                'project_id': 'fake-project_id',
+                'user_id': 'fake-user_id',
+                })
         db.vol_usage_update(self.context, 'fake-vol', 'rd-req', 'rd-bytes',
-                            'wr-req', 'wr-bytes', 'fake-id',
-                            'fake-project_id', 'fake-user_id', 'fake-refr',
-                            'fake-bool')
+                            'wr-req', 'wr-bytes', inst['uuid'],
+                            'fake-project_id', 'fake-user_id', 'fake-az',
+                            'fake-refr', 'fake-bool')
         self.mox.ReplayAll()
         self.conductor.vol_usage_update(self.context, 'fake-vol', 'rd-req',
                                         'rd-bytes', 'wr-req', 'wr-bytes',
-                                        {'uuid': 'fake-id',
-                                         'project_id': 'fake-project_id',
-                                         'user_id': 'fake-user_id'},
-                                        'fake-refr', 'fake-bool')
+                                        inst, 'fake-refr', 'fake-bool')
 
     def test_compute_node_create(self):
         self.mox.StubOutWithMock(db, 'compute_node_create')

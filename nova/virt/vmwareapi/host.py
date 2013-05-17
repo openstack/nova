@@ -202,6 +202,8 @@ class VCState(object):
         data["hypervisor_type"] = summary.config.product.name
         data["hypervisor_version"] = summary.config.product.version
         data["hypervisor_hostname"] = self._host_name
+        data["supported_instances"] = [('i686', 'vmware', 'hvm'),
+                                       ('x86_64', 'vmware', 'hvm')]
 
         self._stats = data
         return data

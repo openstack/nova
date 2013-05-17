@@ -19,8 +19,8 @@ from lxml import etree
 from webob import exc
 
 from nova.api.openstack.compute.contrib import flavor_access
-from nova.api.openstack.compute import flavors
-from nova.compute import instance_types
+from nova.api.openstack.compute import flavors as flavors_api
+from nova.compute import flavors
 from nova import context
 from nova import exception
 from nova import test
@@ -116,15 +116,15 @@ class FakeResponse(object):
 class FlavorAccessTest(test.TestCase):
     def setUp(self):
         super(FlavorAccessTest, self).setUp()
-        self.flavor_controller = flavors.Controller()
+        self.flavor_controller = flavors_api.Controller()
         self.flavor_access_controller = flavor_access.FlavorAccessController()
         self.flavor_action_controller = flavor_access.FlavorActionController()
         self.req = FakeRequest()
         self.context = self.req.environ['nova.context']
-        self.stubs.Set(instance_types, 'get_instance_type_by_flavor_id',
+        self.stubs.Set(flavors, 'get_instance_type_by_flavor_id',
                        fake_get_instance_type_by_flavor_id)
-        self.stubs.Set(instance_types, 'get_all_types', fake_get_all_types)
-        self.stubs.Set(instance_types, 'get_instance_type_access_by_flavor_id',
+        self.stubs.Set(flavors, 'get_all_types', fake_get_all_types)
+        self.stubs.Set(flavors, 'get_instance_type_access_by_flavor_id',
                        fake_get_instance_type_access_by_flavor_id)
 
     def _verify_flavor_list(self, result, expected):
@@ -249,7 +249,7 @@ class FlavorAccessTest(test.TestCase):
         def stub_add_instance_type_access(flavorid, projectid, ctxt=None):
             self.assertEqual('3', flavorid, "flavorid")
             self.assertEqual("proj2", projectid, "projectid")
-        self.stubs.Set(instance_types, 'add_instance_type_access',
+        self.stubs.Set(flavors, 'add_instance_type_access',
                        stub_add_instance_type_access)
         expected = {'flavor_access':
             [{'flavor_id': '3', 'tenant_id': 'proj3'}]}
@@ -264,7 +264,7 @@ class FlavorAccessTest(test.TestCase):
         def stub_add_instance_type_access(flavorid, projectid, ctxt=None):
             raise exception.FlavorAccessExists(flavor_id=flavorid,
                                                project_id=projectid)
-        self.stubs.Set(instance_types, 'add_instance_type_access',
+        self.stubs.Set(flavors, 'add_instance_type_access',
                        stub_add_instance_type_access)
         body = {'addTenantAccess': {'tenant': 'proj2'}}
         req = fakes.HTTPRequest.blank('/v2/fake/flavors/2/action',
@@ -277,7 +277,7 @@ class FlavorAccessTest(test.TestCase):
         def stub_remove_instance_type_access(flavorid, projectid, ctxt=None):
             raise exception.FlavorAccessNotFound(flavor_id=flavorid,
                                                  project_id=projectid)
-        self.stubs.Set(instance_types, 'remove_instance_type_access',
+        self.stubs.Set(flavors, 'remove_instance_type_access',
                        stub_remove_instance_type_access)
         body = {'removeTenantAccess': {'tenant': 'proj2'}}
         req = fakes.HTTPRequest.blank('/v2/fake/flavors/2/action',

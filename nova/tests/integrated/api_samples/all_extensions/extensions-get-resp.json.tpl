@@ -233,6 +233,14 @@
             "updated": "%(timestamp)s"
         },
         {
+            "alias": "os-extended-floating-ips",
+            "description": "%(text)s",
+            "links": [],
+            "name": "ExtendedFloatingIps",
+            "namespace": "http://docs.openstack.org/compute/ext/extended_floating_ips/api/v2",
+            "updated": "%(timestamp)s"
+        },
+        {
             "alias": "os-fixed-ips",
             "description": "Fixed IPs support.",
             "links": [],

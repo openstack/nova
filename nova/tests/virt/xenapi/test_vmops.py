@@ -151,3 +151,18 @@ class VMOpsTestCase(test.TestCase):
             self._vmops._determine_vm_mode(fake_instance, fake_vdis,
                                      fake_disk_type))
         self.mox.VerifyAll()
+
+    def test_xsm_sr_check_relaxed_cached(self):
+        self.make_plugin_call_count = 0
+
+        def fake_make_plugin_call(plugin, method, **args):
+            self.make_plugin_call_count = self.make_plugin_call_count + 1
+            return "true"
+
+        self.stubs.Set(self._vmops, "_make_plugin_call",
+                       fake_make_plugin_call)
+
+        self.assertTrue(self._vmops._is_xsm_sr_check_relaxed())
+        self.assertTrue(self._vmops._is_xsm_sr_check_relaxed())
+
+        self.assertEqual(self.make_plugin_call_count, 1)

@@ -166,6 +166,7 @@ class API(object):
         if volume_id == 87654321:
             return {'id': volume_id,
                     'attach_time': '13:56:24',
+                    'attach_status': 'attached',
                     'status': 'in-use'}
 
         for v in self.volume_list:
@@ -177,9 +178,10 @@ class API(object):
     def get_all(self, context):
         return self.volume_list
 
-    def delete(self, context, volume):
-        LOG.info('deleting volume %s', volume['id'])
-        self.volume_list = [v for v in self.volume_list if v != volume]
+    def delete(self, context, volume_id):
+        LOG.info('deleting volume %s', volume_id)
+        self.volume_list = [v for v in self.volume_list
+                            if v['id'] != volume_id]
 
     def check_attach(self, context, volume, instance=None):
         if volume['status'] != 'available':
@@ -199,9 +201,9 @@ class API(object):
             msg = _("already detached")
             raise exception.InvalidVolume(reason=msg)
 
-    def attach(self, context, volume, instance_uuid, mountpoint):
-        LOG.info('attaching volume %s', volume['id'])
-        volume = self.get(context, volume['id'])
+    def attach(self, context, volume_id, instance_uuid, mountpoint):
+        LOG.info('attaching volume %s', volume_id)
+        volume = self.get(context, volume_id)
         volume['status'] = 'in-use'
         volume['mountpoint'] = mountpoint
         volume['attach_status'] = 'attached'
@@ -215,9 +217,9 @@ class API(object):
         del self.volume_list[:]
         del self.snapshot_list[:]
 
-    def detach(self, context, volume):
-        LOG.info('detaching volume %s', volume['id'])
-        volume = self.get(context, volume['id'])
+    def detach(self, context, volume_id):
+        LOG.info('detaching volume %s', volume_id)
+        volume = self.get(context, volume_id)
         volume['status'] = 'available'
         volume['mountpoint'] = None
         volume['attach_status'] = 'detached'
@@ -237,7 +239,8 @@ class API(object):
     def get_all_snapshots(self, context):
         return self.snapshot_list
 
-    def create_snapshot(self, context, volume, name, description, id=None):
+    def create_snapshot(self, context, volume_id, name, description, id=None):
+        volume = self.get(context, volume_id)
         snapshot = fake_snapshot(volume['id'], volume['size'],
                                  name, description, id)
         self.snapshot_list.append(snapshot.snap)
@@ -255,32 +258,34 @@ class API(object):
         self.snapshot_list.append(snapshot.snap)
         return snapshot.snap
 
-    def create_snapshot_force(self, context, volume,
+    def create_snapshot_force(self, context, volume_id,
                               name, description, id=None):
+        volume = self.get(context, volume_id)
         snapshot = fake_snapshot(volume['id'], volume['size'],
                                  name, description, id)
         self.snapshot_list.append(snapshot.snap)
         return snapshot.snap
 
-    def delete_snapshot(self, context, snapshot):
-        self.snapshot_list = [s for s in self.snapshot_list if s != snapshot]
+    def delete_snapshot(self, context, snapshot_id):
+        self.snapshot_list = [s for s in self.snapshot_list
+                              if s['id'] != snapshot_id]
 
-    def reserve_volume(self, context, volume):
-        LOG.info('reserving volume %s', volume['id'])
-        volume = self.get(context, volume['id'])
+    def reserve_volume(self, context, volume_id):
+        LOG.info('reserving volume %s', volume_id)
+        volume = self.get(context, volume_id)
         volume['status'] = 'attaching'
 
-    def unreserve_volume(self, context, volume):
-        LOG.info('unreserving volume %s', volume['id'])
-        volume = self.get(context, volume['id'])
+    def unreserve_volume(self, context, volume_id):
+        LOG.info('unreserving volume %s', volume_id)
+        volume = self.get(context, volume_id)
         volume['status'] = 'available'
 
-    def begin_detaching(self, context, volume):
-        LOG.info('beging detaching volume %s', volume['id'])
-        volume = self.get(context, volume['id'])
+    def begin_detaching(self, context, volume_id):
+        LOG.info('beging detaching volume %s', volume_id)
+        volume = self.get(context, volume_id)
         volume['status'] = 'detaching'
 
-    def roll_detaching(self, context, volume):
-        LOG.info('roll detaching volume %s', volume['id'])
-        volume = self.get(context, volume['id'])
+    def roll_detaching(self, context, volume_id):
+        LOG.info('roll detaching volume %s', volume_id)
+        volume = self.get(context, volume_id)
         volume['status'] = 'in-use'

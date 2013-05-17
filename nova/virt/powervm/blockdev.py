@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 IBM Corp.
+# Copyright 2013 IBM Corp.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -20,12 +20,12 @@ import re
 
 from oslo.config import cfg
 
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova.compute import task_states
 from nova.image import glance
 from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
-from nova import utils
+from nova.openstack.common import processutils
 from nova.virt import images
 from nova.virt.powervm import command
 from nova.virt.powervm import common
@@ -125,8 +125,10 @@ class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
         self.connection_data = connection
 
     def _set_connection(self):
-        if self._connection is None:
-            self._connection = common.ssh_connect(self.connection_data)
+        # create a new connection or verify an existing connection
+        # and re-establish if the existing connection is dead
+        self._connection = common.check_connection(self._connection,
+                                                   self.connection_data)
 
     def create_volume(self, size):
         """Creates a logical volume with a minimum size
@@ -175,7 +177,7 @@ class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
 
         # calculate root device size in bytes
         # we respect the minimum root device size in constants
-        instance_type = instance_types.extract_instance_type(instance)
+        instance_type = flavors.extract_instance_type(instance)
         size_gb = max(instance_type['root_gb'], constants.POWERVM_MIN_ROOT_GB)
         size = size_gb * 1024 * 1024 * 1024
 
@@ -531,8 +533,8 @@ class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
         :param command: String with the command to run.
         """
         self._set_connection()
-        stdout, stderr = utils.ssh_execute(self._connection, cmd,
-                                           check_exit_code=check_exit_code)
+        stdout, stderr = processutils.ssh_execute(
+            self._connection, cmd, check_exit_code=check_exit_code)
 
         error_text = stderr.strip()
         if error_text:

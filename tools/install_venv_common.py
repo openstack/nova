@@ -18,10 +18,15 @@
 """Provides methods needed by installation script for OpenStack development
 virtual environments.
 
+Since this script is used to bootstrap a virtualenv from the system's Python
+environment, it should be kept strictly compatible with Python 2.6.
+
 Synced in from openstack-common
 """
 
-import argparse
+from __future__ import print_function
+
+import optparse
 import os
 import subprocess
 import sys
@@ -39,7 +44,7 @@ class InstallVenv(object):
         self.project = project
 
     def die(self, message, *args):
-        print >> sys.stderr, message % args
+        print(message % args, file=sys.stderr)
         sys.exit(1)
 
     def check_python_version(self):
@@ -86,20 +91,20 @@ class InstallVenv(object):
         virtual environment.
         """
         if not os.path.isdir(self.venv):
-            print 'Creating venv...',
+            print('Creating venv...', end=' ')
             if no_site_packages:
                 self.run_command(['virtualenv', '-q', '--no-site-packages',
                                  self.venv])
             else:
                 self.run_command(['virtualenv', '-q', self.venv])
-            print 'done.'
-            print 'Installing pip in venv...',
+            print('done.')
+            print('Installing pip in venv...', end=' ')
             if not self.run_command(['tools/with_venv.sh', 'easy_install',
                                     'pip>1.0']).strip():
                 self.die("Failed to install pip.")
-            print 'done.'
+            print('done.')
         else:
-            print "venv already exists..."
+            print("venv already exists...")
             pass
 
     def pip_install(self, *args):
@@ -108,7 +113,7 @@ class InstallVenv(object):
                          redirect_output=False)
 
     def install_dependencies(self):
-        print 'Installing dependencies with pip (this can take a while)...'
+        print('Installing dependencies with pip (this can take a while)...')
 
         # First things first, make sure our venv has the latest pip and
         # distribute.
@@ -131,12 +136,12 @@ class InstallVenv(object):
 
     def parse_args(self, argv):
         """Parses command-line arguments."""
-        parser = argparse.ArgumentParser()
-        parser.add_argument('-n', '--no-site-packages',
-                            action='store_true',
-                            help="Do not inherit packages from global Python "
-                                 "install")
-        return parser.parse_args(argv[1:])
+        parser = optparse.OptionParser()
+        parser.add_option('-n', '--no-site-packages',
+                          action='store_true',
+                          help="Do not inherit packages from global Python "
+                               "install")
+        return parser.parse_args(argv[1:])[0]
 
 
 class Distro(InstallVenv):
@@ -150,12 +155,12 @@ class Distro(InstallVenv):
             return
 
         if self.check_cmd('easy_install'):
-            print 'Installing virtualenv via easy_install...',
+            print('Installing virtualenv via easy_install...', end=' ')
             if self.run_command(['easy_install', 'virtualenv']):
-                print 'Succeeded'
+                print('Succeeded')
                 return
             else:
-                print 'Failed'
+                print('Failed')
 
         self.die('ERROR: virtualenv not found.\n\n%s development'
                  ' requires virtualenv, please install it using your'
@@ -180,10 +185,6 @@ class Fedora(Distro):
         return self.run_command_with_code(['rpm', '-q', pkg],
                                           check_exit_code=False)[1] == 0
 
-    def yum_install(self, pkg, **kwargs):
-        print "Attempting to install '%s' via yum" % pkg
-        self.run_command(['sudo', 'yum', 'install', '-y', pkg], **kwargs)
-
     def apply_patch(self, originalfile, patchfile):
         self.run_command(['patch', '-N', originalfile, patchfile],
                          check_exit_code=False)
@@ -193,7 +194,7 @@ class Fedora(Distro):
             return
 
         if not self.check_pkg('python-virtualenv'):
-            self.yum_install('python-virtualenv', check_exit_code=False)
+            self.die("Please install 'python-virtualenv'.")
 
         super(Fedora, self).install_virtualenv()
 
@@ -211,7 +212,7 @@ class Fedora(Distro):
 
         # Install "patch" program if it's not there
         if not self.check_pkg('patch'):
-            self.yum_install('patch')
+            self.die("Please install 'patch'.")
 
         # Apply the eventlet patch
         self.apply_patch(os.path.join(self.venv, 'lib', self.py_version,

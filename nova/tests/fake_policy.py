@@ -119,7 +119,7 @@ policy_data = """
     "compute_extension:createserverext": "",
     "compute_extension:deferred_delete": "",
     "compute_extension:disk_config": "",
-    "compute_extension:evacuate": "",
+    "compute_extension:evacuate": "is_admin:True",
     "compute_extension:extended_server_attributes": "",
     "compute_extension:extended_status": "",
     "compute_extension:extended_availability_zone": "",

@@ -76,3 +76,20 @@ Example::
 
     obj = cls()
     self.assertRaises(test.TestingException, obj.outer_method)
+
+
+Stubbing and Mocking
+--------------------
+
+Whenever possible, tests SHOULD NOT stub and mock out the same function.
+
+If it's unavoidable, tests SHOULD define stubs before mocks since the
+`TestCase` cleanup routine will un-mock before un-stubbing. Doing otherwise
+results in a test that leaks stubbed functions, causing hard-to-debug
+interference between tests [1]_.
+
+If a mock must take place before a stub, any stubs after the mock call MUST be
+manually unset using `self.cleanUp` calls within the test.
+
+
+.. [1] https://bugs.launchpad.net/nova/+bug/1180671

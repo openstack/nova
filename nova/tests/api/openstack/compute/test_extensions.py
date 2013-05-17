@@ -167,6 +167,7 @@ class ExtensionControllerTest(ExtensionTestCase):
             "DeferredDelete",
             "DiskConfig",
             "ExtendedAvailabilityZone",
+            "ExtendedFloatingIps",
             "ExtendedIps",
             "ExtendedIpsMac",
             "ExtendedVIFNet",

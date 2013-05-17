@@ -22,7 +22,7 @@ import random
 
 import mox
 
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova import context
 from nova import exception
 from nova import network
@@ -81,9 +81,9 @@ class ApiTestCase(test.TestCase):
         self.network_api.network_rpcapi.allocate_for_instance(
             mox.IgnoreArg(), **kwargs).AndReturn([])
         self.mox.ReplayAll()
-        inst_type = instance_types.get_default_instance_type()
+        inst_type = flavors.get_default_instance_type()
         inst_type['rxtx_factor'] = 0
-        sys_meta = instance_types.save_instance_type_info({}, inst_type)
+        sys_meta = flavors.save_instance_type_info({}, inst_type)
         instance = dict(id='id', uuid='uuid', project_id='project_id',
             host='host', system_metadata=utils.dict_to_metadata(sys_meta))
         self.network_api.allocate_for_instance(
@@ -140,10 +140,10 @@ class ApiTestCase(test.TestCase):
         self._do_test_associate_floating_ip(None)
 
     def _stub_migrate_instance_calls(self, method, multi_host, info):
-        fake_instance_type = instance_types.get_default_instance_type()
+        fake_instance_type = flavors.get_default_instance_type()
         fake_instance_type['rxtx_factor'] = 1.21
         sys_meta = utils.dict_to_metadata(
-            instance_types.save_instance_type_info({}, fake_instance_type))
+            flavors.save_instance_type_info({}, fake_instance_type))
         fake_instance = {'uuid': 'fake_uuid',
                          'instance_type_id': fake_instance_type['id'],
                          'project_id': 'fake_project_id',
@@ -255,3 +255,19 @@ class ApiTestCase(test.TestCase):
         instance = {'uuid': FAKE_UUID}
         result = self.network_api._is_multi_host(self.context, instance)
         self.assertEqual(is_multi_host, result)
+
+    def test_network_disassociate_project(self):
+        def fake_network_disassociate(ctx, network_id, disassociate_host,
+                                      disassociate_project):
+            self.assertEqual(network_id, 1)
+            self.assertEqual(disassociate_host, False)
+            self.assertEqual(disassociate_project, True)
+
+        def fake_get(context, network_uuid):
+            return {'id': 1}
+
+        self.stubs.Set(self.network_api.db, 'network_disassociate',
+                       fake_network_disassociate)
+        self.stubs.Set(self.network_api, 'get', fake_get)
+
+        self.network_api.associate(self.context, FAKE_UUID, project=None)

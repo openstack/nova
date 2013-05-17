@@ -16,6 +16,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import abc
 import os
 
 import webob.dec
@@ -396,3 +397,52 @@ def soft_extension_authorizer(api_name, extension_name):
         except exception.NotAuthorized:
             return False
     return authorize
+
+
+class V3APIExtensionBase(object):
+    """Abstract base class for all V3 API extensions.
+
+    All V3 API extensions must derive from this class and implement
+    the abstract methods get_resources and get_controller_extensions
+    even if they just return an empty list. The extensions must also
+    define the abstract properties.
+    """
+    __metaclass__ = abc.ABCMeta
+
+    @abc.abstractmethod
+    def get_resources(self):
+        """Return a list of resources extensions.
+
+        The extensions should return a list of ResourceExtension
+        objects. This list may be empty.
+        """
+        pass
+
+    @abc.abstractmethod
+    def get_controller_extensions(self):
+        """Return a list of controller extensions.
+
+        The extensions should return a list of ControllerExtension
+        objects. This list may be empty.
+        """
+        pass
+
+    @abc.abstractproperty
+    def name(self):
+        """Name of the extension."""
+        pass
+
+    @abc.abstractproperty
+    def alias(self):
+        """Alias for the extension."""
+        pass
+
+    @abc.abstractproperty
+    def namespace(self):
+        """Namespace for the extension."""
+        pass
+
+    @abc.abstractproperty
+    def version(self):
+        """Version of the extension."""
+        pass

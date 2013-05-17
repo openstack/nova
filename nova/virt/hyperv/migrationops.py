@@ -95,10 +95,24 @@ class MigrationOps(object):
             LOG.exception(ex)
             LOG.error(_("Cannot cleanup migration files"))
 
+    def _check_target_instance_type(self, instance, instance_type):
+        new_root_gb = instance_type['root_gb']
+        curr_root_gb = instance['root_gb']
+
+        if new_root_gb < curr_root_gb:
+            raise vmutils.VHDResizeException(_("Cannot resize the root disk "
+                                               "to a smaller size. Current "
+                                               "size: %(curr_root_gb)s GB. "
+                                               "Requested size: "
+                                               "%(new_root_gb)s GB") %
+                                             locals())
+
     def migrate_disk_and_power_off(self, context, instance, dest,
                                    instance_type, network_info,
                                    block_device_info=None):
         LOG.debug(_("migrate_disk_and_power_off called"), instance=instance)
+
+        self._check_target_instance_type(instance, instance_type)
 
         self._vmops.power_off(instance)
 
@@ -218,8 +232,8 @@ class MigrationOps(object):
                 curr_size = vhd_info['MaxInternalSize']
                 new_size = instance['root_gb'] * 1024 ** 3
                 if new_size < curr_size:
-                    raise vmutils.HyperVException(_("Cannot resize a VHD to a "
-                                                    "smaller size"))
+                    raise vmutils.VHDResizeException(_("Cannot resize a VHD "
+                                                       "to a smaller size"))
                 elif new_size > curr_size:
                     self._resize_vhd(root_vhd_path, new_size)
 

@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 IBM Corp.
+# Copyright 2013 IBM Corp.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -19,15 +19,17 @@ Test suite for PowerVMDriver.
 """
 
 import contextlib
+import paramiko
 
 from nova import context
 from nova import db
 from nova import test
 
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.network import model as network_model
+from nova.openstack.common import processutils
 from nova.tests import fake_network_cache_model
 from nova.tests.image import fake
 from nova.virt import images
@@ -44,6 +46,16 @@ def fake_lpar(instance_name):
                      lpar_id=1, desired_mem=1024,
                      max_mem=2048, max_procs=2,
                      uptime=939395, state='Running')
+
+
+def fake_ssh_connect(connection):
+    """Returns a new paramiko.SSHClient object."""
+    return paramiko.SSHClient()
+
+
+def raise_(ex):
+    """Raises the given Exception."""
+    raise ex
 
 
 class FakePowerVMOperator(powervm_operator.PowerVMOperator):
@@ -179,7 +191,7 @@ class PowerVMDriverTestCase(test.TestCase):
         fake.stub_out_image_service(self.stubs)
         ctxt = context.get_admin_context()
         instance_type = db.instance_type_get(ctxt, 1)
-        sys_meta = instance_types.save_instance_type_info({}, instance_type)
+        sys_meta = flavors.save_instance_type_info({}, instance_type)
         return db.instance_create(ctxt,
                         {'user_id': 'fake',
                         'project_id': 'fake',
@@ -214,12 +226,23 @@ class PowerVMDriverTestCase(test.TestCase):
         state = self.powervm_connection.get_info(self.instance)['state']
         self.assertEqual(state, power_state.RUNNING)
 
-    def test_spawn_cleanup_on_fail(self):
-        # Verify on a failed spawn, we get the original exception raised.
-        # helper function
-        def raise_(ex):
-            raise ex
+    def test_spawn_create_lpar_fail(self):
+        self.flags(powervm_img_local_path='/images/')
+        self.stubs.Set(images, 'fetch', lambda *x, **y: None)
+        self.stubs.Set(
+            self.powervm_connection._powervm,
+            'get_host_stats',
+            lambda *x, **y: raise_(
+                (processutils.ProcessExecutionError('instance_name'))))
+        fake_net_info = network_model.NetworkInfo([
+                                     fake_network_cache_model.new_vif()])
+        self.assertRaises(exception.PowerVMLPARCreationFailed,
+                          self.powervm_connection.spawn,
+                          context.get_admin_context(),
+                          self.instance,
+                          {'id': 'ANY_ID'}, [], 's3cr3t', fake_net_info)
 
+    def test_spawn_cleanup_on_fail(self):
         self.flags(powervm_img_local_path='/images/')
         self.stubs.Set(images, 'fetch', lambda *x, **y: None)
         self.stubs.Set(
@@ -595,3 +618,50 @@ class PowerVMDriverLparTestCase(test.TestCase):
         self.mox.ReplayAll()
 
         fake_op._operator.set_lpar_mac_base_value(inst_name, mac)
+
+
+class PowerVMDriverCommonTestCase(test.TestCase):
+    """Unit tests for the nova.virt.powervm.common module."""
+
+    def setUp(self):
+        super(PowerVMDriverCommonTestCase, self).setUp()
+        # our fake connection information never changes since we can't
+        # actually connect to anything for these tests
+        self.connection = common.Connection('fake_host', 'user', 'password')
+
+    def test_check_connection_ssh_is_none(self):
+        """
+        Passes a null ssh object to the check_connection method.
+        The method should create a new ssh connection using the
+        Connection object and return it.
+        """
+        self.stubs.Set(common, 'ssh_connect', fake_ssh_connect)
+        ssh = common.check_connection(None, self.connection)
+        self.assertIsNotNone(ssh)
+
+    def test_check_connection_transport_is_dead(self):
+        """
+        Passes an ssh object to the check_connection method which
+        does not have a transport set.
+        The method should create a new ssh connection using the
+        Connection object and return it.
+        """
+        self.stubs.Set(common, 'ssh_connect', fake_ssh_connect)
+        ssh1 = fake_ssh_connect(self.connection)
+        ssh2 = common.check_connection(ssh1, self.connection)
+        self.assertIsNotNone(ssh2)
+        self.assertNotEqual(ssh1, ssh2)
+
+    def test_check_connection_raise_ssh_exception(self):
+        """
+        Passes an ssh object to the check_connection method which
+        does not have a transport set.
+        The method should raise an SSHException.
+        """
+        self.stubs.Set(common, 'ssh_connect',
+            lambda *x, **y: raise_(paramiko.SSHException(
+                                        'Error connecting to host.')))
+        ssh = fake_ssh_connect(self.connection)
+        self.assertRaises(paramiko.SSHException,
+                          common.check_connection,
+                          ssh, self.connection)

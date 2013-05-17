@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright (c) 2011 X.commerce, a business unit of eBay Inc.
@@ -54,18 +53,15 @@
   CLI interface for nova management.
 """
 
-import gettext
 import netaddr
 import os
 import sys
 
 from oslo.config import cfg
 
-gettext.install('nova', unicode=1)
-
 from nova.api.ec2 import ec2utils
 from nova import availability_zones
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova import config
 from nova import context
 from nova import db
@@ -78,7 +74,6 @@ from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
 from nova.openstack.common import timeutils
 from nova import quota
-from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import servicegroup
 from nova import version
 
@@ -622,7 +617,7 @@ class VmCommands(object):
                            context.get_admin_context(), host)
 
         for instance in instances:
-            instance_type = instance_types.extract_instance_type(instance)
+            instance_type = flavors.extract_instance_type(instance)
             print ("%-10s %-15s %-10s %-10s %-26s %-9s %-9s %-9s"
                    " %-10s %-10s %-10s %-5d" % (instance['display_name'],
                                                 instance['host'],
@@ -700,6 +695,60 @@ class ServiceCommands(object):
             return(2)
         print _("Service %(service)s on host %(host)s disabled.") % locals()
 
+    def _show_host_resources(self, context, host):
+        """Shows the physical/usage resource given by hosts.
+
+        :param context: security context
+        :param host: hostname
+        :returns:
+            example format is below::
+
+                {'resource':D, 'usage':{proj_id1:D, proj_id2:D}}
+                D: {'vcpus': 3, 'memory_mb': 2048, 'local_gb': 2048,
+                    'vcpus_used': 12, 'memory_mb_used': 10240,
+                    'local_gb_used': 64}
+
+        """
+        # Getting compute node info and related instances info
+        service_ref = db.service_get_by_compute_host(context, host)
+        instance_refs = db.instance_get_all_by_host(context,
+                                                    service_ref['host'])
+
+        # Getting total available/used resource
+        compute_ref = service_ref['compute_node'][0]
+        resource = {'vcpus': compute_ref['vcpus'],
+                    'memory_mb': compute_ref['memory_mb'],
+                    'local_gb': compute_ref['local_gb'],
+                    'vcpus_used': compute_ref['vcpus_used'],
+                    'memory_mb_used': compute_ref['memory_mb_used'],
+                    'local_gb_used': compute_ref['local_gb_used']}
+        usage = dict()
+        if not instance_refs:
+            return {'resource': resource, 'usage': usage}
+
+        # Getting usage resource per project
+        project_ids = [i['project_id'] for i in instance_refs]
+        project_ids = list(set(project_ids))
+        for project_id in project_ids:
+            vcpus = [i['vcpus'] for i in instance_refs
+                     if i['project_id'] == project_id]
+
+            mem = [i['memory_mb'] for i in instance_refs
+                   if i['project_id'] == project_id]
+
+            root = [i['root_gb'] for i in instance_refs
+                    if i['project_id'] == project_id]
+
+            ephemeral = [i['ephemeral_gb'] for i in instance_refs
+                         if i['project_id'] == project_id]
+
+            usage[project_id] = {'vcpus': sum(vcpus),
+                                 'memory_mb': sum(mem),
+                                 'root_gb': sum(root),
+                                 'ephemeral_gb': sum(ephemeral)}
+
+        return {'resource': resource, 'usage': usage}
+
     @args('--host', metavar='<host>', help='Host')
     def describe_resource(self, host):
         """Describes cpu/memory/hdd info for host.
@@ -707,9 +756,8 @@ class ServiceCommands(object):
         :param host: hostname.
 
         """
-        rpcapi = scheduler_rpcapi.SchedulerAPI()
-        result = rpcapi.show_host_resources(context.get_admin_context(),
-                                            host=host)
+        result = self._show_host_resources(context.get_admin_context(),
+                                           host=host)
 
         if not isinstance(result, dict):
             print _('An unexpected error has occurred.')
@@ -837,9 +885,10 @@ class InstanceTypeCommands(object):
                flavorid=None, swap=0, rxtx_factor=1.0, is_public=True):
         """Creates instance types / flavors."""
         try:
-            instance_types.create(name, memory, vcpus, root_gb,
-                                  ephemeral_gb, flavorid, swap, rxtx_factor,
-                                  is_public)
+            flavors.create(name, memory, vcpus, root_gb,
+                           ephemeral_gb=ephemeral_gb, flavorid=flavorid,
+                           swap=swap, rxtx_factor=rxtx_factor,
+                           is_public=is_public)
         except exception.InvalidInput as e:
             print _("Must supply valid parameters to create instance_type")
             print e
@@ -862,7 +911,7 @@ class InstanceTypeCommands(object):
     def delete(self, name):
         """Marks instance types / flavors as deleted."""
         try:
-            instance_types.destroy(name)
+            flavors.destroy(name)
         except exception.InstanceTypeNotFound:
             print _("Valid instance type name is required")
             return(1)
@@ -879,9 +928,9 @@ class InstanceTypeCommands(object):
         """Lists all active or specific instance types / flavors."""
         try:
             if name is None:
-                inst_types = instance_types.get_all_types()
+                inst_types = flavors.get_all_types()
             else:
-                inst_types = instance_types.get_instance_type_by_name(name)
+                inst_types = flavors.get_instance_type_by_name(name)
         except db_exc.DBError as e:
             _db_error(e)
         if isinstance(inst_types.values()[0], dict):
@@ -897,7 +946,7 @@ class InstanceTypeCommands(object):
         """Add key/value pair to specified instance type's extra_specs."""
         try:
             try:
-                inst_type = instance_types.get_instance_type_by_name(name)
+                inst_type = flavors.get_instance_type_by_name(name)
             except exception.InstanceTypeNotFoundByName as e:
                 print e
                 return(2)
@@ -919,7 +968,7 @@ class InstanceTypeCommands(object):
         """Delete the specified extra spec for instance type."""
         try:
             try:
-                inst_type = instance_types.get_instance_type_by_name(name)
+                inst_type = flavors.get_instance_type_by_name(name)
             except exception.InstanceTypeNotFoundByName as e:
                 print e
                 return(2)

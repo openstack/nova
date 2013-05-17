@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 IBM Corp.
+# Copyright 2013 IBM Corp.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -22,10 +22,9 @@ import time
 from oslo.config import cfg
 
 from nova.compute import power_state
-from nova import exception as nova_exception
 from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
-from nova import utils
+from nova.openstack.common import processutils
 from nova.virt.powervm import blockdev
 from nova.virt.powervm import command
 from nova.virt.powervm import common
@@ -199,10 +198,11 @@ class PowerVMOperator(object):
                 #             system (1 in 2^28)
                 self._operator.create_lpar(lpar_inst)
                 LOG.debug(_("Creating LPAR instance '%s'") % instance['name'])
-            except nova_exception.ProcessExecutionError:
+            except processutils.ProcessExecutionError:
                 LOG.exception(_("LPAR instance '%s' creation failed") %
                         instance['name'])
-                raise exception.PowerVMLPARCreationFailed()
+                raise exception.PowerVMLPARCreationFailed(
+                    instance_name=instance['name'])
 
             _create_image(context, instance, image_id)
             LOG.debug(_("Activating the LPAR instance '%s'")
@@ -464,8 +464,10 @@ class BaseOperator(object):
         self.connection_data = connection
 
     def _set_connection(self):
-        if self._connection is None:
-            self._connection = common.ssh_connect(self.connection_data)
+        # create a new connection or verify an existing connection
+        # and re-establish if the existing connection is dead
+        self._connection = common.check_connection(self._connection,
+                                                   self.connection_data)
 
     def get_lpar(self, instance_name, resource_type='lpar'):
         """Return a LPAR object by its instance name.
@@ -663,8 +665,8 @@ class BaseOperator(object):
         :param command: String with the command to run.
         """
         self._set_connection()
-        stdout, stderr = utils.ssh_execute(self._connection, cmd,
-                                           check_exit_code=check_exit_code)
+        stdout, stderr = processutils.ssh_execute(
+            self._connection, cmd, check_exit_code=check_exit_code)
 
         error_text = stderr.strip()
         if error_text:

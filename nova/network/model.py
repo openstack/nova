@@ -293,6 +293,13 @@ class VIF(Model):
         return vif
 
 
+def get_netmask(ip, subnet):
+    """Returns the netmask appropriate for injection into a guest."""
+    if ip['version'] == 4:
+        return str(subnet.as_netaddr().netmask)
+    return subnet.as_netaddr()._prefixlen
+
+
 class NetworkInfo(list):
     """Stores and manipulates network information for a Nova instance."""
 
@@ -325,10 +332,7 @@ class NetworkInfo(list):
             return ip['address']
 
         def fixed_ip_dict(ip, subnet):
-            if ip['version'] == 4:
-                netmask = str(subnet.as_netaddr().netmask)
-            else:
-                netmask = subnet.as_netaddr()._prefixlen
+            netmask = get_netmask(ip, subnet)
 
             return {'ip': ip['address'],
                     'enabled': '1',

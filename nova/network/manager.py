@@ -66,9 +66,10 @@ from nova.network.security_group import openstack_driver
 from nova.openstack.common import excutils
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
-from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
+from nova.openstack.common import periodic_task
 from nova.openstack.common.rpc import common as rpc_common
+from nova.openstack.common import strutils
 from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
 from nova import quota
@@ -312,7 +313,7 @@ class NetworkManager(manager.Manager):
     def _import_ipam_lib(self, ipam_lib):
         self.ipam = importutils.import_module(ipam_lib).get_ipam_lib(self)
 
-    @lockutils.synchronized('get_dhcp', 'nova-')
+    @utils.synchronized('get_dhcp')
     def _get_dhcp_ip(self, context, network_ref, host=None):
         """Get the proper dhcp address to listen on."""
         # NOTE(vish): this is for compatibility
@@ -350,7 +351,7 @@ class NetworkManager(manager.Manager):
                 dev = self.driver.get_dev(network)
                 self.driver.update_dns(ctxt, dev, network)
 
-    @manager.periodic_task
+    @periodic_task.periodic_task
     def _disassociate_stale_fixed_ips(self, context):
         if self.timeout_fixed_ips:
             now = timeutils.utcnow()
@@ -386,21 +387,6 @@ class NetworkManager(manager.Manager):
 
         self.security_group_api.trigger_members_refresh(admin_context,
                                                         group_ids)
-        self.security_group_api.trigger_handler('security_group_members',
-                                                admin_context, group_ids)
-
-    def _do_trigger_security_group_handler(self, handler, instance_id):
-        admin_context = context.get_admin_context(read_deleted="yes")
-        if uuidutils.is_uuid_like(instance_id):
-            instance_ref = self.db.instance_get_by_uuid(admin_context,
-                                                        instance_id)
-        else:
-            instance_ref = self.db.instance_get(admin_context,
-                                                instance_id)
-        for group_name in [group['name'] for group
-                in instance_ref['security_groups']]:
-            self.security_group_api.trigger_handler(handler, admin_context,
-                    instance_ref, group_name)
 
     def get_floating_ips_by_fixed_address(self, context, fixed_address):
         # NOTE(jkoelker) This is just a stub function. Managers supporting
@@ -855,8 +841,6 @@ class NetworkManager(manager.Manager):
                         context.elevated(), network['id'], instance_id)
                 self._do_trigger_security_group_members_refresh_for_instance(
                     instance_id)
-                self._do_trigger_security_group_handler(
-                    'instance_add_security_group', instance_id)
                 get_vif = self.db.virtual_interface_get_by_instance_and_network
                 vif = get_vif(context, instance_id, network['id'])
                 values = {'allocated': True,
@@ -897,8 +881,6 @@ class NetworkManager(manager.Manager):
 
         self._do_trigger_security_group_members_refresh_for_instance(
             instance_uuid)
-        self._do_trigger_security_group_handler(
-            'instance_remove_security_group', instance_uuid)
 
         # NOTE(vish) This db query could be removed if we pass az and name
         #            (or the whole instance object).
@@ -1048,10 +1030,11 @@ class NetworkManager(manager.Manager):
             else:
                 kwargs["network_size"] = CONF.network_size
 
-        kwargs["multi_host"] = (CONF.multi_host
-                                if kwargs["multi_host"] is None
-                                else
-                                utils.bool_from_str(kwargs["multi_host"]))
+        kwargs["multi_host"] = (
+            CONF.multi_host
+            if kwargs["multi_host"] is None
+            else strutils.bool_from_string(kwargs["multi_host"]))
+
         kwargs["vlan_start"] = kwargs.get("vlan_start") or CONF.vlan_start
         kwargs["vpn_start"] = kwargs.get("vpn_start") or CONF.vpn_start
         kwargs["dns1"] = kwargs["dns1"] or CONF.flat_network_dns
@@ -1337,8 +1320,10 @@ class NetworkManager(manager.Manager):
                                    project_only="allow_none")
 
     def _get_networks_by_uuids(self, context, network_uuids):
-        return self.db.network_get_all_by_uuids(context, network_uuids,
-                                                project_only="allow_none")
+        networks = self.db.network_get_all_by_uuids(context, network_uuids,
+                                                    project_only="allow_none")
+        networks.sort(key=lambda x: network_uuids.index(x['uuid']))
+        return networks
 
     def get_vifs_by_instance(self, context, instance_id):
         """Returns the vifs associated with an instance."""
@@ -1408,7 +1393,7 @@ class NetworkManager(manager.Manager):
             vif['net_uuid'] = network['uuid']
         return vif
 
-    @manager.periodic_task(
+    @periodic_task.periodic_task(
         spacing=CONF.dns_update_periodic_interval)
     def _periodic_update_dns(self, context):
         """Update local DNS entries of all networks on this host."""
@@ -1780,8 +1765,10 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
         # NOTE(vish): Don't allow access to networks with project_id=None as
         #             these are networks that haven't been allocated to a
         #             project yet.
-        return self.db.network_get_all_by_uuids(context, network_uuids,
-                                                project_only=True)
+        networks = self.db.network_get_all_by_uuids(context, network_uuids,
+                                                    project_only=True)
+        networks.sort(key=lambda x: network_uuids.index(x['uuid']))
+        return networks
 
     def _get_networks_for_instance(self, context, instance_id, project_id,
                                    requested_networks=None):
@@ -1821,7 +1808,7 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
         return NetworkManager.create_networks(
             self, context, vpn=True, **kwargs)
 
-    @lockutils.synchronized('setup_network', 'nova-', external=True)
+    @utils.synchronized('setup_network', external=True)
     def _setup_network_on_host(self, context, network):
         """Sets up network on this host."""
         if not network['vpn_public_address']:
@@ -1855,7 +1842,7 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
                 self.db.network_update(context, network['id'],
                                        {'gateway_v6': gateway})
 
-    @lockutils.synchronized('setup_network', 'nova-', external=True)
+    @utils.synchronized('setup_network', external=True)
     def _teardown_network_on_host(self, context, network):
         if not CONF.fake_network:
             network['dhcp_server'] = self._get_dhcp_ip(context, network)
@@ -1881,7 +1868,7 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
                     self.db.fixed_ip_update(context, network['dhcp_server'],
                                             values)
             else:
-                self.driver.update_dhcp(context, dev, network)
+                self.driver.update_dhcp(elevated, dev, network)
 
     def _get_network_dict(self, network):
         """Returns the dict representing necessary and meta network fields."""

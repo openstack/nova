@@ -57,7 +57,6 @@ as it allows particular rules to be explicitly disabled.
 """
 
 import abc
-import logging
 import re
 import urllib
 
@@ -65,6 +64,7 @@ import urllib2
 
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
+from nova.openstack.common import log as logging
 
 
 LOG = logging.getLogger(__name__)

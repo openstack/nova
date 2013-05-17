@@ -22,8 +22,9 @@ from webob import exc
 
 from nova.api.openstack.compute.contrib import volumes
 from nova.compute import api as compute_api
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova import context
+from nova import exception
 from nova.openstack.common import jsonutils
 from nova.openstack.common import timeutils
 from nova import test
@@ -46,7 +47,7 @@ def fake_compute_api_create(cls, context, instance_type, image_href, **kwargs):
     global _block_device_mapping_seen
     _block_device_mapping_seen = kwargs.get('block_device_mapping')
 
-    inst_type = instance_types.get_instance_type_by_flavor_id(2)
+    inst_type = flavors.get_instance_type_by_flavor_id(2)
     resv_id = None
     return ([{'id': 1,
              'display_name': 'test_server',
@@ -183,6 +184,23 @@ class VolumeApiTest(test.TestCase):
         self.assertEqual(resp_dict['volume']['availabilityZone'],
                          vol['availability_zone'])
 
+    def test_volume_create_bad(self):
+        def fake_volume_create(self, context, size, name, description,
+                               snapshot, **param):
+            raise exception.InvalidInput(reason="bad request data")
+
+        self.stubs.Set(cinder.API, "create", fake_volume_create)
+
+        vol = {"size": '#$?',
+               "display_name": "Volume Test Name",
+               "display_description": "Volume Test Desc",
+               "availability_zone": "zone1:host1"}
+        body = {"volume": vol}
+
+        req = fakes.HTTPRequest.blank('/v2/fake/os-volumes')
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          volumes.VolumeController().create, req, body)
+
     def test_volume_index(self):
         req = webob.Request.blank('/v2/fake/os-volumes')
         resp = req.get_response(self.app)
@@ -199,7 +217,7 @@ class VolumeApiTest(test.TestCase):
         self.assertEqual(resp.status_int, 200)
 
     def test_volume_show_no_volume(self):
-        self.stubs.Set(cinder.API, "get", fakes.stub_volume_get_notfound)
+        self.stubs.Set(cinder.API, "get", fakes.stub_volume_notfound)
 
         req = webob.Request.blank('/v2/fake/os-volumes/456')
         resp = req.get_response(self.app)
@@ -212,7 +230,7 @@ class VolumeApiTest(test.TestCase):
         self.assertEqual(resp.status_int, 202)
 
     def test_volume_delete_no_volume(self):
-        self.stubs.Set(cinder.API, "get", fakes.stub_volume_get_notfound)
+        self.stubs.Set(cinder.API, "delete", fakes.stub_volume_notfound)
 
         req = webob.Request.blank('/v2/fake/os-volumes/456')
         req.method = 'DELETE'

@@ -30,7 +30,6 @@ import pyclbr
 import random
 import re
 import shutil
-import signal
 import socket
 import struct
 import sys
@@ -38,8 +37,6 @@ import tempfile
 import time
 from xml.sax import saxutils
 
-from eventlet.green import subprocess
-from eventlet import greenthread
 import netaddr
 
 from oslo.config import cfg
@@ -47,7 +44,9 @@ from oslo.config import cfg
 from nova import exception
 from nova.openstack.common import excutils
 from nova.openstack.common import importutils
+from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
+from nova.openstack.common import processutils
 from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import timeutils
 
@@ -99,6 +98,8 @@ BYTE_MULTIPLIERS = {
     'k': 1024,
 }
 
+synchronized = lockutils.synchronized_with_prefix('nova-')
+
 
 def vpn_ping(address, port, timeout=0.05, session_id=None):
     """Sends a vpn negotiation packet and returns the server session.
@@ -149,172 +150,18 @@ def vpn_ping(address, port, timeout=0.05, session_id=None):
         return server_sess
 
 
-def _subprocess_setup():
-    # Python installs a SIGPIPE handler by default. This is usually not what
-    # non-Python subprocesses expect.
-    signal.signal(signal.SIGPIPE, signal.SIG_DFL)
-
-
 def execute(*cmd, **kwargs):
-    """Helper method to execute command with optional retry.
-
-    If you add a run_as_root=True command, don't forget to add the
-    corresponding filter to etc/nova/rootwrap.d !
-
-    :param cmd:                Passed to subprocess.Popen.
-    :param process_input:      Send to opened process.
-    :param check_exit_code:    Single bool, int, or list of allowed exit
-                               codes.  Defaults to [0].  Raise
-                               exception.ProcessExecutionError unless
-                               program exits with one of these code.
-    :param delay_on_retry:     True | False. Defaults to True. If set to
-                               True, wait a short amount of time
-                               before retrying.
-    :param attempts:           How many times to retry cmd.
-    :param run_as_root:        True | False. Defaults to False. If set to True,
-                               the command is run with rootwrap.
-
-    :raises exception.NovaException: on receiving unknown arguments
-    :raises exception.ProcessExecutionError:
-
-    :returns: a tuple, (stdout, stderr) from the spawned process, or None if
-             the command fails.
-    """
-    process_input = kwargs.pop('process_input', None)
-    check_exit_code = kwargs.pop('check_exit_code', [0])
-    ignore_exit_code = False
-    if isinstance(check_exit_code, bool):
-        ignore_exit_code = not check_exit_code
-        check_exit_code = [0]
-    elif isinstance(check_exit_code, int):
-        check_exit_code = [check_exit_code]
-    delay_on_retry = kwargs.pop('delay_on_retry', True)
-    attempts = kwargs.pop('attempts', 1)
-    run_as_root = kwargs.pop('run_as_root', False)
-    shell = kwargs.pop('shell', False)
-
-    if len(kwargs):
-        raise exception.NovaException(_('Got unknown keyword args '
-                                        'to utils.execute: %r') % kwargs)
-
-    if run_as_root and os.geteuid() != 0:
-        cmd = ['sudo', 'nova-rootwrap', CONF.rootwrap_config] + list(cmd)
-
-    cmd = map(str, cmd)
-
-    while attempts > 0:
-        attempts -= 1
-        try:
-            LOG.debug(_('Running cmd (subprocess): %s'), ' '.join(cmd))
-            _PIPE = subprocess.PIPE  # pylint: disable=E1101
-
-            if os.name == 'nt':
-                preexec_fn = None
-                close_fds = False
-            else:
-                preexec_fn = _subprocess_setup
-                close_fds = True
-
-            obj = subprocess.Popen(cmd,
-                                   stdin=_PIPE,
-                                   stdout=_PIPE,
-                                   stderr=_PIPE,
-                                   close_fds=close_fds,
-                                   preexec_fn=preexec_fn,
-                                   shell=shell)
-            result = None
-            if process_input is not None:
-                result = obj.communicate(process_input)
-            else:
-                result = obj.communicate()
-            obj.stdin.close()  # pylint: disable=E1101
-            _returncode = obj.returncode  # pylint: disable=E1101
-            LOG.debug(_('Result was %s') % _returncode)
-            if not ignore_exit_code and _returncode not in check_exit_code:
-                (stdout, stderr) = result
-                raise exception.ProcessExecutionError(
-                        exit_code=_returncode,
-                        stdout=stdout,
-                        stderr=stderr,
-                        cmd=' '.join(cmd))
-            return result
-        except exception.ProcessExecutionError:
-            if not attempts:
-                raise
-            else:
-                LOG.debug(_('%r failed. Retrying.'), cmd)
-                if delay_on_retry:
-                    greenthread.sleep(random.randint(20, 200) / 100.0)
-        finally:
-            # NOTE(termie): this appears to be necessary to let the subprocess
-            #               call clean something up in between calls, without
-            #               it two execute calls in a row hangs the second one
-            greenthread.sleep(0)
+    """Convenience wrapper around oslo's execute() method."""
+    if 'run_as_root' in kwargs and not 'root_helper' in kwargs:
+        kwargs['root_helper'] = 'sudo nova-rootwrap %s' % CONF.rootwrap_config
+    return processutils.execute(*cmd, **kwargs)
 
 
 def trycmd(*args, **kwargs):
-    """
-    A wrapper around execute() to more easily handle warnings and errors.
-
-    Returns an (out, err) tuple of strings containing the output of
-    the command's stdout and stderr.  If 'err' is not empty then the
-    command can be considered to have failed.
-
-    :discard_warnings   True | False. Defaults to False. If set to True,
-                        then for succeeding commands, stderr is cleared
-
-    """
-    discard_warnings = kwargs.pop('discard_warnings', False)
-
-    try:
-        out, err = execute(*args, **kwargs)
-        failed = False
-    except exception.ProcessExecutionError, exn:
-        out, err = '', str(exn)
-        failed = True
-
-    if not failed and discard_warnings and err:
-        # Handle commands that output to stderr but otherwise succeed
-        err = ''
-
-    return out, err
-
-
-def ssh_execute(ssh, cmd, process_input=None,
-                addl_env=None, check_exit_code=True):
-    LOG.debug(_('Running cmd (SSH): %s'), cmd)
-    if addl_env:
-        raise exception.NovaException(_('Environment not supported over SSH'))
-
-    if process_input:
-        # This is (probably) fixable if we need it...
-        msg = _('process_input not supported over SSH')
-        raise exception.NovaException(msg)
-
-    stdin_stream, stdout_stream, stderr_stream = ssh.exec_command(cmd)
-    channel = stdout_stream.channel
-
-    #stdin.write('process_input would go here')
-    #stdin.flush()
-
-    # NOTE(justinsb): This seems suspicious...
-    # ...other SSH clients have buffering issues with this approach
-    stdout = stdout_stream.read()
-    stderr = stderr_stream.read()
-    stdin_stream.close()
-
-    exit_status = channel.recv_exit_status()
-
-    # exit_status == -1 if no exit code was returned
-    if exit_status != -1:
-        LOG.debug(_('Result was %s') % exit_status)
-        if check_exit_code and exit_status != 0:
-            raise exception.ProcessExecutionError(exit_code=exit_status,
-                                                  stdout=stdout,
-                                                  stderr=stderr,
-                                                  cmd=cmd)
-
-    return (stdout, stderr)
+    """Convenience wrapper around oslo's trycmd() method."""
+    if 'run_as_root' in kwargs and not 'root_helper' in kwargs:
+        kwargs['root_helper'] = 'sudo nova-rootwrap %s' % CONF.rootwrap_config
+    return processutils.trycmd(*args, **kwargs)
 
 
 def novadir():
@@ -750,19 +597,6 @@ def parse_server_string(server_str):
         return ('', '')
 
 
-def bool_from_str(val):
-    """Convert a string representation of a bool into a bool value."""
-
-    if not val:
-        return False
-    try:
-        return True if int(val) else False
-    except ValueError:
-        return val.lower() == 'true' or \
-               val.lower() == 'yes' or \
-               val.lower() == 'y'
-
-
 def is_int_like(val):
     """Check if a value looks like an int."""
     try:
@@ -1066,7 +900,7 @@ def read_file_as_root(file_path):
     try:
         out, _err = execute('cat', file_path, run_as_root=True)
         return out
-    except exception.ProcessExecutionError:
+    except processutils.ProcessExecutionError:
         raise exception.FileNotFound(file_path=file_path)
 
 

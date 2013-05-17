@@ -25,9 +25,6 @@ security_group_opts = [
     cfg.StrOpt('security_group_api',
                default='nova',
                help='The full class name of the security API class'),
-    cfg.StrOpt('security_group_handler',
-               default='nova.network.sg.NullSecurityGroupHandler',
-               help='The full class name of the security group handler class'),
 ]
 
 CONF = cfg.CONF
@@ -46,10 +43,6 @@ def get_openstack_security_group_driver():
         return importutils.import_object(QUANTUM_DRIVER)
     else:
         return importutils.import_object(CONF.security_group_api)
-
-
-def get_security_group_handler():
-    return importutils.import_object(CONF.security_group_handler)
 
 
 def is_quantum_security_groups():

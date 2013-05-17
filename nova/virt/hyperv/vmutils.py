@@ -37,7 +37,15 @@ CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
+# TODO(alexpilotti): Move the exceptions to a separate module
+# TODO(alexpilotti): Add more domain exceptions
 class HyperVException(exception.NovaException):
+    def __init__(self, message=None):
+        super(HyperVException, self).__init__(message)
+
+
+# TODO(alexpilotti): Add a storage exception base class
+class VHDResizeException(HyperVException):
     def __init__(self, message=None):
         super(HyperVException, self).__init__(message)
 

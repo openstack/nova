@@ -37,13 +37,15 @@ from oslo.config import cfg
 
 from nova.api.metadata import base as instance_metadata
 from nova import block_device
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova.compute import power_state
 from nova.compute import task_states
 from nova import exception
 from nova.image import glance
 from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
+from nova.openstack.common import processutils
+from nova.openstack.common import strutils
 from nova import utils
 from nova.virt import configdrive
 from nova.virt.disk import api as disk
@@ -209,7 +211,7 @@ def create_vm(session, instance, name_label, kernel, ramdisk,
 
         3. Using hardware virtualization
     """
-    instance_type = instance_types.extract_instance_type(instance)
+    instance_type = flavors.extract_instance_type(instance)
     mem = str(long(instance_type['memory_mb']) * 1024 * 1024)
     vcpus = str(instance_type['vcpus'])
 
@@ -284,7 +286,7 @@ def destroy_vm(session, instance, vm_ref):
 
 
 def clean_shutdown_vm(session, instance, vm_ref):
-    if _is_vm_shutdown(session, vm_ref):
+    if is_vm_shutdown(session, vm_ref):
         LOG.warn(_("VM already halted, skipping shutdown..."),
                  instance=instance)
         return False
@@ -299,7 +301,7 @@ def clean_shutdown_vm(session, instance, vm_ref):
 
 
 def hard_shutdown_vm(session, instance, vm_ref):
-    if _is_vm_shutdown(session, vm_ref):
+    if is_vm_shutdown(session, vm_ref):
         LOG.warn(_("VM already halted, skipping shutdown..."),
                  instance=instance)
         return False
@@ -313,7 +315,7 @@ def hard_shutdown_vm(session, instance, vm_ref):
     return True
 
 
-def _is_vm_shutdown(session, vm_ref):
+def is_vm_shutdown(session, vm_ref):
     vm_rec = session.call_xenapi("VM.get_record", vm_ref)
     state = compile_info(vm_rec)['state']
     if state == power_state.SHUTDOWN:
@@ -322,7 +324,7 @@ def _is_vm_shutdown(session, vm_ref):
 
 
 def ensure_free_mem(session, instance):
-    instance_type = instance_types.extract_instance_type(instance)
+    instance_type = flavors.extract_instance_type(instance)
     mem = long(instance_type['memory_mb']) * 1024 * 1024
     host = session.get_xenapi_host()
     host_free_mem = long(session.call_xenapi("host.compute_free_memory",
@@ -449,11 +451,6 @@ def safe_destroy_vdis(session, vdi_refs):
 def create_vdi(session, sr_ref, instance, name_label, disk_type, virtual_size,
                read_only=False):
     """Create a VDI record and returns its reference."""
-    # create_vdi may be called simply while creating a volume
-    # hence information about instance may or may not be present
-    otherconf = {'nova_disk_type': disk_type}
-    if instance:
-        otherconf['nova_instance_uuid'] = instance['uuid']
     vdi_ref = session.call_xenapi("VDI.create",
          {'name_label': name_label,
           'name_description': disk_type,
@@ -463,7 +460,7 @@ def create_vdi(session, sr_ref, instance, name_label, disk_type, virtual_size,
           'sharable': False,
           'read_only': read_only,
           'xenstore_data': {},
-          'other_config': otherconf,
+          'other_config': _get_vdi_other_config(disk_type, instance=instance),
           'sm_config': {},
           'tags': []})
     LOG.debug(_('Created VDI %(vdi_ref)s (%(name_label)s,'
@@ -596,10 +593,35 @@ def _clone_vdi(session, vdi_to_clone_ref):
     return vdi_ref
 
 
-def set_vdi_name(session, vdi_uuid, label, description, vdi_ref=None):
-    vdi_ref = vdi_ref or session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
-    session.call_xenapi('VDI.set_name_label', vdi_ref, label)
+def _get_vdi_other_config(disk_type, instance=None):
+    """Return metadata to store in VDI's other_config attribute.
+
+    `nova_instance_uuid` is used to associate a VDI with a particular instance
+    so that, if it becomes orphaned from an unclean shutdown of a
+    compute-worker, we can safely detach it.
+    """
+    other_config = {'nova_disk_type': disk_type}
+
+    # create_vdi may be called simply while creating a volume
+    # hence information about instance may or may not be present
+    if instance:
+        other_config['nova_instance_uuid'] = instance['uuid']
+
+    return other_config
+
+
+def _set_vdi_info(session, vdi_ref, vdi_type, name_label, description,
+                  instance):
+    vdi_rec = session.call_xenapi('VDI.get_record', vdi_ref)
+
+    session.call_xenapi('VDI.set_name_label', vdi_ref, name_label)
     session.call_xenapi('VDI.set_name_description', vdi_ref, description)
+
+    other_config = _get_vdi_other_config(vdi_type, instance=instance)
+    for key, value in other_config.iteritems():
+        if key not in vdi_rec['other_config']:
+            session.call_xenapi(
+                    "VDI.add_to_other_config", vdi_ref, key, value)
 
 
 def get_vdi_for_vm_safely(session, vm_ref):
@@ -756,7 +778,7 @@ def resize_disk(session, instance, vdi_ref, instance_type):
 
 def auto_configure_disk(session, vdi_ref, new_gb):
     """Partition and resize FS to match the size specified by
-    instance_types.root_gb.
+    flavors.root_gb.
 
     This is a fail-safe to prevent accidentally destroying data on a disk
     erroneously marked as auto_disk_config=True.
@@ -932,25 +954,25 @@ def _create_cached_image(context, session, instance, name_label,
                       "type %(sr_type)s. Ignoring the cow flag.")
                       % locals())
 
-    root_vdi_ref = _find_cached_image(session, image_id, sr_ref)
-    if root_vdi_ref is None:
+    cache_vdi_ref = _find_cached_image(session, image_id, sr_ref)
+    if cache_vdi_ref is None:
         vdis = _fetch_image(context, session, instance, name_label,
                             image_id, image_type)
-        root_vdi = vdis['root']
-        root_vdi_ref = session.call_xenapi('VDI.get_by_uuid',
-                                           root_vdi['uuid'])
-        set_vdi_name(session, root_vdi['uuid'], 'Glance Image %s' % image_id,
-                     'root', vdi_ref=root_vdi_ref)
+
+        cache_vdi_ref = session.call_xenapi(
+                'VDI.get_by_uuid', vdis['root']['uuid'])
+
+        session.call_xenapi('VDI.set_name_label', cache_vdi_ref,
+                            'Glance Image %s' % image_id)
+        session.call_xenapi('VDI.set_name_description', cache_vdi_ref, 'root')
         session.call_xenapi('VDI.add_to_other_config',
-                            root_vdi_ref, 'image-id', str(image_id))
+                            cache_vdi_ref, 'image-id', str(image_id))
 
     if CONF.use_cow_images and sr_type == 'ext':
-        new_vdi_ref = _clone_vdi(session, root_vdi_ref)
+        new_vdi_ref = _clone_vdi(session, cache_vdi_ref)
     else:
-        new_vdi_ref = _safe_copy_vdi(session, sr_ref, instance, root_vdi_ref)
+        new_vdi_ref = _safe_copy_vdi(session, sr_ref, instance, cache_vdi_ref)
 
-    # Set the name label for the image we just created and remove image id
-    # field from other-config.
     session.call_xenapi('VDI.remove_from_other_config',
                         new_vdi_ref, 'image-id')
 
@@ -977,7 +999,7 @@ def _create_image(context, session, instance, name_label, image_id,
     elif cache_images == 'some':
         sys_meta = utils.metadata_to_dict(instance['system_metadata'])
         try:
-            cache = utils.bool_from_str(sys_meta['image_cache_in_nova'])
+            cache = strutils.bool_from_string(sys_meta['image_cache_in_nova'])
         except KeyError:
             cache = False
     elif cache_images == 'none':
@@ -995,10 +1017,10 @@ def _create_image(context, session, instance, name_label, image_id,
         vdis = _fetch_image(context, session, instance, name_label,
                             image_id, image_type)
 
-    # Set the name label and description to easily identify what
-    # instance and disk it's for
     for vdi_type, vdi in vdis.iteritems():
-        set_vdi_name(session, vdi['uuid'], name_label, vdi_type)
+        vdi_ref = session.call_xenapi('VDI.get_by_uuid', vdi['uuid'])
+        _set_vdi_info(session, vdi_ref, vdi_type, name_label, vdi_type,
+                      instance)
 
     return vdis
 
@@ -1070,7 +1092,8 @@ def _image_uses_bittorrent(context, instance):
     elif xenapi_torrent_images == 'some':
         sys_meta = utils.metadata_to_dict(instance['system_metadata'])
         try:
-            bittorrent = utils.bool_from_str(sys_meta['image_bittorrent'])
+            bittorrent = strutils.bool_from_string(
+                sys_meta['image_bittorrent'])
         except KeyError:
             pass
     elif xenapi_torrent_images == 'none':
@@ -1097,6 +1120,45 @@ def _fetch_vhd_image(context, session, instance, image_id):
     if _image_uses_bittorrent(context, instance):
         plugin_name = 'bittorrent'
         callback = None
+        _add_bittorrent_params(params)
+    else:
+        plugin_name = 'glance'
+        callback = _generate_glance_callback(context)
+
+    vdis = _fetch_using_dom0_plugin_with_retry(
+            context, session, image_id, plugin_name, params,
+            callback=callback)
+
+    sr_ref = safe_find_sr(session)
+    _scan_sr(session, sr_ref)
+
+    try:
+        _check_vdi_size(context, session, instance, vdis['root']['uuid'])
+    except Exception:
+        with excutils.save_and_reraise_exception():
+            for key in vdis:
+                vdi = vdis[key]
+                vdi_uuid = vdi['uuid']
+                vdi_ref = session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
+                destroy_vdi(session, vdi_ref)
+
+    return vdis
+
+
+def _generate_glance_callback(context):
+    glance_api_servers = glance.get_api_servers()
+
+    def pick_glance(params):
+        g_host, g_port, g_use_ssl = glance_api_servers.next()
+        params['glance_host'] = g_host
+        params['glance_port'] = g_port
+        params['glance_use_ssl'] = g_use_ssl
+        params['auth_token'] = getattr(context, 'auth_token', None)
+
+    return pick_glance
+
+
+def _add_bittorrent_params(params):
         params['torrent_base_url'] = CONF.xenapi_torrent_base_url
         params['torrent_seed_duration'] = CONF.xenapi_torrent_seed_duration
         params['torrent_seed_chance'] = CONF.xenapi_torrent_seed_chance
@@ -1110,34 +1172,6 @@ def _fetch_vhd_image(context, session, instance, image_id):
                 CONF.xenapi_torrent_download_stall_cutoff
         params['torrent_max_seeder_processes_per_host'] =\
                 CONF.xenapi_torrent_max_seeder_processes_per_host
-    else:
-        plugin_name = 'glance'
-        glance_api_servers = glance.get_api_servers()
-
-        def pick_glance(params):
-            g_host, g_port, g_use_ssl = glance_api_servers.next()
-            params['glance_host'] = g_host
-            params['glance_port'] = g_port
-            params['glance_use_ssl'] = g_use_ssl
-            params['auth_token'] = getattr(context, 'auth_token', None)
-
-        callback = pick_glance
-
-    vdis = _fetch_using_dom0_plugin_with_retry(
-            context, session, image_id, plugin_name, params,
-            callback=callback)
-
-    sr_ref = safe_find_sr(session)
-    _scan_sr(session, sr_ref)
-
-    # Pull out the UUID of the root VDI
-    root_vdi_uuid = vdis['root']['uuid']
-
-    # Set the name-label to ease debugging
-    set_vdi_name(session, root_vdi_uuid, instance['name'], 'root')
-
-    _check_vdi_size(context, session, instance, root_vdi_uuid)
-    return vdis
 
 
 def _get_vdi_chain_size(session, vdi_uuid):
@@ -1162,7 +1196,7 @@ def _check_vdi_size(context, session, instance, vdi_uuid):
 
     # FIXME(jk0): this was copied directly from compute.manager.py, let's
     # refactor this to a common area
-    instance_type = instance_types.extract_instance_type(instance)
+    instance_type = flavors.extract_instance_type(instance)
     allowed_size_gb = instance_type['root_gb']
     allowed_size_bytes = allowed_size_gb * 1024 * 1024 * 1024
 
@@ -1979,7 +2013,7 @@ def _is_vdi_pv(dev):
                 LOG.debug(_("Found Xen kernel %s") % m.group(0))
                 return True
         LOG.debug(_("No Xen kernel found.  Booting HVM."))
-    except exception.ProcessExecutionError:
+    except processutils.ProcessExecutionError:
         LOG.exception(_("Error while executing pygrub! Please, ensure the "
                         "binary is installed correctly, and available in your "
                         "PATH; on some Linux distros, pygrub may be installed "
@@ -2044,6 +2078,21 @@ def _write_partition(virtual_size, dev):
     LOG.debug(_('Writing partition table %s done.'), dev_path)
 
 
+def _get_min_sectors(partition_path, block_size=4096):
+    stdout, _err = utils.execute('resize2fs', '-P', partition_path,
+        run_as_root=True)
+    min_size_blocks = long(re.sub('[^0-9]', '', stdout))
+    min_size_bytes = min_size_blocks * block_size
+    return min_size_bytes / SECTOR_SIZE
+
+
+def _repair_filesystem(partition_path):
+    # Exit Code 1 = File system errors corrected
+    #           2 = File system errors corrected, system needs a reboot
+    utils.execute('e2fsck', '-f', '-y', partition_path, run_as_root=True,
+        check_exit_code=[0, 1, 2])
+
+
 def _resize_part_and_fs(dev, start, old_sectors, new_sectors):
     """Resize partition and fileystem.
 
@@ -2057,10 +2106,7 @@ def _resize_part_and_fs(dev, start, old_sectors, new_sectors):
     partition_path = utils.make_dev_path(dev, partition=1)
 
     # Replay journal if FS wasn't cleanly unmounted
-    # Exit Code 1 = File system errors corrected
-    #           2 = File system errors corrected, system needs a reboot
-    utils.execute('e2fsck', '-f', '-y', partition_path, run_as_root=True,
-                  check_exit_code=[0, 1, 2])
+    _repair_filesystem(partition_path)
 
     # Remove ext3 journal (making it ext2)
     utils.execute('tune2fs', '-O ^has_journal', partition_path,
@@ -2068,6 +2114,12 @@ def _resize_part_and_fs(dev, start, old_sectors, new_sectors):
 
     if new_sectors < old_sectors:
         # Resizing down, resize filesystem before partition resize
+        min_sectors = _get_min_sectors(partition_path)
+        if min_sectors >= new_sectors:
+            reason = _('Resize down not allowed because minimum '
+                       'filesystem sectors %(min_sectors)d is too big '
+                       'for target sectors %(new_sectors)d')
+            raise exception.ResizeError(reason=(reason % locals()))
         utils.execute('resize2fs', partition_path, '%ds' % size,
                       run_as_root=True)
 
@@ -2161,7 +2213,7 @@ def _mount_filesystem(dev_path, dir):
         _out, err = utils.execute('mount',
                                  '-t', 'ext2,ext3,ext4,reiserfs',
                                  dev_path, dir, run_as_root=True)
-    except exception.ProcessExecutionError as e:
+    except processutils.ProcessExecutionError as e:
         err = str(e)
     return err
 
@@ -2314,12 +2366,12 @@ def move_disks(session, instance, disk_info):
     # Now we rescan the SR so we find the VHDs
     scan_default_sr(session)
 
-    # Set name-label so we can find if we need to clean up a failed
-    # migration
     root_uuid = imported_vhds['root']['uuid']
-    set_vdi_name(session, root_uuid, instance['name'], 'root')
-
     root_vdi_ref = session.call_xenapi('VDI.get_by_uuid', root_uuid)
+
+    # Set name-label so we can find if we need to clean up a failed migration
+    _set_vdi_info(session, root_vdi_ref, 'root', instance['name'], 'root',
+                  instance)
 
     return {'uuid': root_uuid, 'ref': root_vdi_ref}
 

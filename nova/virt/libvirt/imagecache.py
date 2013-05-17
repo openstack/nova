@@ -34,7 +34,6 @@ from nova.compute import task_states
 from nova.compute import vm_states
 from nova.openstack.common import fileutils
 from nova.openstack.common import jsonutils
-from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt.libvirt import utils as virtutils
@@ -174,8 +173,7 @@ def read_stored_info(target, field=None, timestamped=False):
         lock_name = 'info-%s' % os.path.split(target)[-1]
         lock_path = os.path.join(CONF.instances_path, 'locks')
 
-        @lockutils.synchronized(lock_name, 'nova-', external=True,
-                                lock_path=lock_path)
+        @utils.synchronized(lock_name, external=True, lock_path=lock_path)
         def read_file(info_file):
             LOG.debug(_('Reading image info file: %s'), info_file)
             with open(info_file, 'r') as f:
@@ -205,8 +203,7 @@ def write_stored_info(target, field=None, value=None):
     lock_name = 'info-%s' % os.path.split(target)[-1]
     lock_path = os.path.join(CONF.instances_path, 'locks')
 
-    @lockutils.synchronized(lock_name, 'nova-', external=True,
-                            lock_path=lock_path)
+    @utils.synchronized(lock_name, external=True, lock_path=lock_path)
     def write_file(info_file, field, value):
         d = {}
 
@@ -399,8 +396,7 @@ class ImageCacheManager(object):
 
         # Protect against other nova-computes performing checksums at the same
         # time if we are using shared storage
-        @lockutils.synchronized(lock_name, 'nova-', external=True,
-                                lock_path=self.lock_path)
+        @utils.synchronized(lock_name, external=True, lock_path=self.lock_path)
         def inner_verify_checksum():
             (stored_checksum, stored_timestamp) = read_stored_checksum(
                 base_file, timestamped=True)

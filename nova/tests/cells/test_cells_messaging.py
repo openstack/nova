@@ -19,6 +19,7 @@ from oslo.config import cfg
 
 from nova.cells import messaging
 from nova.cells import utils as cells_utils
+from nova.compute import vm_states
 from nova import context
 from nova import db
 from nova import exception
@@ -1015,6 +1016,59 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
         expected_instance = {'system_metadata': expected_sys_metadata,
                              'cell_name': expected_cell_name,
                              'other': 'meow',
+                             'uuid': 'fake_uuid'}
+
+        # To show these should not be called in src/mid-level cell
+        self.mox.StubOutWithMock(self.src_db_inst, 'instance_update')
+        self.mox.StubOutWithMock(self.src_db_inst,
+                                 'instance_info_cache_update')
+        self.mox.StubOutWithMock(self.mid_db_inst, 'instance_update')
+        self.mox.StubOutWithMock(self.mid_db_inst,
+                                 'instance_info_cache_update')
+
+        self.mox.StubOutWithMock(self.tgt_db_inst, 'instance_update')
+        self.mox.StubOutWithMock(self.tgt_db_inst,
+                                 'instance_info_cache_update')
+        self.tgt_db_inst.instance_update(self.ctxt, 'fake_uuid',
+                                         expected_instance,
+                                         update_cells=False)
+        self.tgt_db_inst.instance_info_cache_update(self.ctxt, 'fake_uuid',
+                                                    expected_info_cache,
+                                                    update_cells=False)
+        self.mox.ReplayAll()
+
+        self.src_msg_runner.instance_update_at_top(self.ctxt, fake_instance)
+
+    def test_instance_update_at_top_with_building_state(self):
+        fake_info_cache = {'id': 1,
+                           'instance': 'fake_instance',
+                           'other': 'moo'}
+        fake_sys_metadata = [{'id': 1,
+                              'key': 'key1',
+                              'value': 'value1'},
+                             {'id': 2,
+                              'key': 'key2',
+                              'value': 'value2'}]
+        fake_instance = {'id': 2,
+                         'uuid': 'fake_uuid',
+                         'security_groups': 'fake',
+                         'volumes': 'fake',
+                         'cell_name': 'fake',
+                         'name': 'fake',
+                         'metadata': 'fake',
+                         'info_cache': fake_info_cache,
+                         'system_metadata': fake_sys_metadata,
+                         'vm_state': vm_states.BUILDING,
+                         'other': 'meow'}
+        expected_sys_metadata = {'key1': 'value1',
+                                 'key2': 'value2'}
+        expected_info_cache = {'other': 'moo'}
+        expected_cell_name = 'api-cell!child-cell2!grandchild-cell1'
+        expected_instance = {'system_metadata': expected_sys_metadata,
+                             'cell_name': expected_cell_name,
+                             'other': 'meow',
+                             'vm_state': vm_states.BUILDING,
+                             'expected_vm_state': [vm_states.BUILDING, None],
                              'uuid': 'fake_uuid'}
 
         # To show these should not be called in src/mid-level cell

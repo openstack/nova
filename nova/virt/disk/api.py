@@ -37,6 +37,7 @@ from oslo.config import cfg
 from nova import exception
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
+from nova.openstack.common import processutils
 from nova import paths
 from nova import utils
 from nova.virt.disk.mount import api as mount
@@ -155,7 +156,7 @@ def can_resize_fs(image, size, use_cow=False):
         # For raw, we can directly inspect the file system
         try:
             utils.execute('e2label', image)
-        except exception.ProcessExecutionError as e:
+        except processutils.ProcessExecutionError as e:
             LOG.debug(_('Unable to determine label for image %(image)s with '
                         'error %(errror)s. Cannot resize.'),
                       {'image': image,

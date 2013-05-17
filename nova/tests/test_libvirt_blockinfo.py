@@ -16,7 +16,7 @@
 #    under the License.
 
 from nova import block_device
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova import context
 from nova import db
 from nova import exception
@@ -34,7 +34,7 @@ class LibvirtBlockInfoTest(test.TestCase):
         self.project_id = 'fake'
         self.context = context.get_admin_context()
         instance_type = db.instance_type_get(self.context, 2)
-        sys_meta = instance_types.save_instance_type_info({}, instance_type)
+        sys_meta = flavors.save_instance_type_info({}, instance_type)
         nova.tests.image.fake.stub_out_image_service(self.stubs)
         self.test_instance = {
                 'uuid': '32dfcb37-5af1-552b-357c-be8c3aa38310',

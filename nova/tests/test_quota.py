@@ -21,7 +21,7 @@ import datetime
 from oslo.config import cfg
 
 from nova import compute
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova import context
 from nova import db
 from nova.db.sqlalchemy import api as sqa_api
@@ -95,7 +95,7 @@ class QuotaIntegrationTestCase(test.TestCase):
         for i in range(CONF.quota_instances):
             instance = self._create_instance()
             instance_uuids.append(instance['uuid'])
-        inst_type = instance_types.get_instance_type_by_name('m1.small')
+        inst_type = flavors.get_instance_type_by_name('m1.small')
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
         self.assertRaises(exception.QuotaError, compute.API().create,
                                             self.context,
@@ -108,7 +108,7 @@ class QuotaIntegrationTestCase(test.TestCase):
 
     def test_too_many_cores(self):
         instance = self._create_instance(cores=4)
-        inst_type = instance_types.get_instance_type_by_name('m1.small')
+        inst_type = flavors.get_instance_type_by_name('m1.small')
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
         self.assertRaises(exception.QuotaError, compute.API().create,
                                             self.context,
@@ -146,7 +146,7 @@ class QuotaIntegrationTestCase(test.TestCase):
         metadata = {}
         for i in range(CONF.quota_metadata_items + 1):
             metadata['key%s' % i] = 'value%s' % i
-        inst_type = instance_types.get_instance_type_by_name('m1.small')
+        inst_type = flavors.get_instance_type_by_name('m1.small')
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
         self.assertRaises(exception.QuotaError, compute.API().create,
                                             self.context,
@@ -158,7 +158,7 @@ class QuotaIntegrationTestCase(test.TestCase):
 
     def _create_with_injected_files(self, files):
         api = compute.API()
-        inst_type = instance_types.get_instance_type_by_name('m1.small')
+        inst_type = flavors.get_instance_type_by_name('m1.small')
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
         api.create(self.context, min_count=1, max_count=1,
                 instance_type=inst_type, image_href=image_uuid,
@@ -166,7 +166,7 @@ class QuotaIntegrationTestCase(test.TestCase):
 
     def test_no_injected_files(self):
         api = compute.API()
-        inst_type = instance_types.get_instance_type_by_name('m1.small')
+        inst_type = flavors.get_instance_type_by_name('m1.small')
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
         api.create(self.context,
                    instance_type=inst_type,

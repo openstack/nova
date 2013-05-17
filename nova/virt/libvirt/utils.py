@@ -20,13 +20,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import errno
 import os
 
 from lxml import etree
 from oslo.config import cfg
 
-from nova import exception
 from nova.openstack.common import log as logging
+from nova.openstack.common import processutils
 from nova import utils
 from nova.virt import images
 
@@ -59,11 +60,21 @@ def get_iscsi_initiator():
 
 def get_fc_hbas():
     """Get the Fibre Channel HBA information."""
+    out = None
     try:
         out, err = execute('systool', '-c', 'fc_host', '-v',
                            run_as_root=True)
-    except exception.ProcessExecutionError as exc:
+    except processutils.ProcessExecutionError as exc:
+        # This handles the case where rootwrap is used
+        # and systool is not installed
+        # 96 = nova.cmd.rootwrap.RC_NOEXECFOUND:
         if exc.exit_code == 96:
+            LOG.warn(_("systool is not installed"))
+        return []
+    except OSError as exc:
+        # This handles the case where rootwrap is NOT used
+        # and systool is not installed
+        if exc.errno == errno.ENOENT:
             LOG.warn(_("systool is not installed"))
         return []
 
@@ -416,7 +427,7 @@ def copy_image(src, dest, host=None):
             # can fall back to scp, without having run out of space
             # on the destination for example.
             execute('rsync', '--sparse', '--compress', '--dry-run', src, dest)
-        except exception.ProcessExecutionError:
+        except processutils.ProcessExecutionError:
             execute('scp', src, dest)
         else:
             execute('rsync', '--sparse', '--compress', src, dest)

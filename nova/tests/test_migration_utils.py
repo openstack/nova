@@ -18,14 +18,23 @@
 from migrate.changeset import UniqueConstraint
 from sqlalchemy import Integer, DateTime, String
 from sqlalchemy import MetaData, Table, Column
+from sqlalchemy.exc import NoSuchTableError
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.exc import SAWarning
 from sqlalchemy.sql import select
 from sqlalchemy.types import UserDefinedType
 
+from nova.db.sqlalchemy import api as db
 from nova.db.sqlalchemy import utils
 from nova import exception
 from nova.tests import test_migrations
 import warnings
+
+
+class CustomType(UserDefinedType):
+    """Dummy column type for testing unsupported types."""
+    def get_col_spec(self):
+        return "CustomType"
 
 
 class TestMigrationUtils(test_migrations.BaseMigrationTestCase):
@@ -74,11 +83,6 @@ class TestMigrationUtils(test_migrations.BaseMigrationTestCase):
             test_table.drop()
 
     def test_util_drop_unique_constraint_with_not_supported_sqlite_type(self):
-
-        class CustomType(UserDefinedType):
-            """Dummy column type for testing unsupported types."""
-            def get_col_spec(self):
-                return "CustomType"
 
         table_name = "__test_tmp_table__"
         uc_name = 'uniq_foo'
@@ -235,3 +239,155 @@ class TestMigrationUtils(test_migrations.BaseMigrationTestCase):
                              len(values) - len(row_ids))
             for value in soft_deleted_values:
                 self.assertTrue(value['id'] in deleted_rows_ids)
+
+    def test_check_shadow_table(self):
+        table_name = 'abc'
+        for key, engine in self.engines.items():
+            meta = MetaData()
+            meta.bind = engine
+
+            table = Table(table_name, meta,
+                          Column('id', Integer, primary_key=True),
+                          Column('a', Integer),
+                          Column('c', String(256)))
+            table.create()
+
+            #check missing shadow table
+            self.assertRaises(NoSuchTableError,
+                              utils.check_shadow_table, engine, table_name)
+
+            shadow_table = Table(db._SHADOW_TABLE_PREFIX + table_name, meta,
+                                 Column('id', Integer),
+                                 Column('a', Integer))
+            shadow_table.create()
+
+            # check missing column
+            self.assertRaises(exception.NovaException,
+                              utils.check_shadow_table, engine, table_name)
+
+            # check when all is ok
+            c = Column('c', String(256))
+            shadow_table.create_column(c)
+            self.assertTrue(utils.check_shadow_table(engine, table_name))
+
+            # check extra column
+            d = Column('d', Integer)
+            shadow_table.create_column(d)
+            self.assertRaises(exception.NovaException,
+                              utils.check_shadow_table, engine, table_name)
+
+    def test_check_shadow_table_different_types(self):
+        table_name = 'abc'
+        for key, engine in self.engines.items():
+            meta = MetaData()
+            meta.bind = engine
+
+            table = Table(table_name, meta,
+                          Column('id', Integer, primary_key=True),
+                          Column('a', Integer))
+            table.create()
+
+            shadow_table = Table(db._SHADOW_TABLE_PREFIX + table_name, meta,
+                                 Column('id', Integer, primary_key=True),
+                                 Column('a', String(256)))
+            shadow_table.create()
+            self.assertRaises(exception.NovaException,
+                              utils.check_shadow_table, engine, table_name)
+
+    def test_check_shadow_table_with_unsupported_type(self):
+        table_name = 'abc'
+        for key, engine in self.engines.items():
+            meta = MetaData()
+            meta.bind = engine
+
+            table = Table(table_name, meta,
+                          Column('id', Integer, primary_key=True),
+                          Column('a', Integer),
+                          Column('c', CustomType))
+            table.create()
+
+            shadow_table = Table(db._SHADOW_TABLE_PREFIX + table_name, meta,
+                                 Column('id', Integer, primary_key=True),
+                                 Column('a', Integer),
+                                 Column('c', CustomType))
+            shadow_table.create()
+            self.assertTrue(utils.check_shadow_table(engine, table_name))
+
+    def test_create_shadow_table_by_table_instance(self):
+        table_name = 'abc'
+        for key, engine in self.engines.items():
+            meta = MetaData()
+            meta.bind = engine
+            table = Table(table_name, meta,
+                          Column('id', Integer, primary_key=True),
+                          Column('a', Integer),
+                          Column('b', String(256)))
+            table.create()
+            utils.create_shadow_table(engine, table=table)
+            self.assertTrue(utils.check_shadow_table(engine, table_name))
+
+    def test_create_shadow_table_by_name(self):
+        table_name = 'abc'
+        for key, engine in self.engines.items():
+            meta = MetaData()
+            meta.bind = engine
+
+            table = Table(table_name, meta,
+                          Column('id', Integer, primary_key=True),
+                          Column('a', Integer),
+                          Column('b', String(256)))
+            table.create()
+            utils.create_shadow_table(engine, table_name=table_name)
+            self.assertTrue(utils.check_shadow_table(engine, table_name))
+
+    def test_create_shadow_table_not_supported_type(self):
+        table_name = 'abc'
+        for key, engine in self.engines.items():
+            meta = MetaData()
+            meta.bind = engine
+
+            table = Table(table_name, meta,
+                          Column('id', Integer, primary_key=True),
+                          Column('a', CustomType))
+            table.create()
+            self.assertRaises(exception.NovaException,
+                              utils.create_shadow_table,
+                              engine, table_name=table_name)
+
+            utils.create_shadow_table(engine, table_name=table_name,
+                                      a=Column('a', CustomType()))
+            self.assertTrue(utils.check_shadow_table(engine, table_name))
+
+    def test_create_shadow_both_table_and_table_name_are_none(self):
+        for key, engine in self.engines.items():
+            meta = MetaData()
+            meta.bind = engine
+            self.assertRaises(exception.NovaException,
+                              utils.create_shadow_table, engine)
+
+    def test_create_shadow_both_table_and_table_name_are_specified(self):
+        table_name = 'abc'
+        for key, engine in self.engines.items():
+            meta = MetaData()
+            meta.bind = engine
+            table = Table(table_name, meta,
+                          Column('id', Integer, primary_key=True),
+                          Column('a', Integer))
+            table.create()
+            self.assertRaises(exception.NovaException,
+                              utils.create_shadow_table,
+                              engine, table=table, table_name=table_name)
+
+    def test_create_duplicate_shadow_table(self):
+        table_name = 'abc'
+        for key, engine in self.engines.items():
+            meta = MetaData()
+            meta.bind = engine
+            table = Table(table_name, meta,
+                          Column('id', Integer, primary_key=True),
+                          Column('a', Integer))
+            table.create()
+            utils.create_shadow_table(engine, table_name=table_name)
+            self.assertRaises(OperationalError,
+                              utils.create_shadow_table,
+                              engine, table_name=table_name)

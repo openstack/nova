@@ -195,6 +195,34 @@ class ServerActionsControllerTest(test.TestCase):
                           self.controller._action_reboot,
                           req, FAKE_UUID, body)
 
+    def test_reboot_soft_with_soft_in_progress_raises_conflict(self):
+        body = dict(reboot=dict(type="SOFT"))
+        req = fakes.HTTPRequest.blank(self.url)
+        self.stubs.Set(db, 'instance_get_by_uuid',
+                       fakes.fake_instance_get(vm_state=vm_states.ACTIVE,
+                                            task_state=task_states.REBOOTING))
+        self.assertRaises(webob.exc.HTTPConflict,
+                          self.controller._action_reboot,
+                          req, FAKE_UUID, body)
+
+    def test_reboot_hard_with_soft_in_progress_does_not_raise(self):
+        body = dict(reboot=dict(type="HARD"))
+        req = fakes.HTTPRequest.blank(self.url)
+        self.stubs.Set(db, 'instance_get_by_uuid',
+                       fakes.fake_instance_get(vm_state=vm_states.ACTIVE,
+                                        task_state=task_states.REBOOTING))
+        self.controller._action_reboot(req, FAKE_UUID, body)
+
+    def test_reboot_hard_with_hard_in_progress_raises_conflict(self):
+        body = dict(reboot=dict(type="HARD"))
+        req = fakes.HTTPRequest.blank(self.url)
+        self.stubs.Set(db, 'instance_get_by_uuid',
+                       fakes.fake_instance_get(vm_state=vm_states.ACTIVE,
+                                        task_state=task_states.REBOOTING_HARD))
+        self.assertRaises(webob.exc.HTTPConflict,
+                          self.controller._action_reboot,
+                          req, FAKE_UUID, body)
+
     def test_rebuild_accepted_minimum(self):
         return_server = fakes.fake_instance_get(image_ref='2',
                 vm_state=vm_states.ACTIVE, host='fake_host')
@@ -745,6 +773,19 @@ class ServerActionsControllerTest(test.TestCase):
         location = response.headers['Location']
         self.assertEqual('http://localhost/v2/fake/images/123', location)
 
+    def test_create_image_name_too_long(self):
+        long_name = 'a' * 260
+        body = {
+            'createImage': {
+                'name': long_name,
+            },
+        }
+
+        req = fakes.HTTPRequest.blank(self.url)
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller._action_create_image, req,
+                          FAKE_UUID, body)
+
     def _do_test_create_volume_backed_image(self, extra_properties):
 
         def _fake_id(x):
@@ -797,7 +838,7 @@ class ServerActionsControllerTest(test.TestCase):
         self.mox.StubOutWithMock(self.controller.compute_api, 'volume_api')
         volume_api = self.controller.compute_api.volume_api
         volume_api.get(mox.IgnoreArg(), volume['id']).AndReturn(volume)
-        volume_api.create_snapshot_force(mox.IgnoreArg(), volume,
+        volume_api.create_snapshot_force(mox.IgnoreArg(), volume['id'],
                 mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(snapshot)
 
         self.mox.ReplayAll()

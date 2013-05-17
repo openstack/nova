@@ -27,6 +27,7 @@ from nova import exception
 from nova.network import linux_net
 from nova.network import model as network_model
 from nova.openstack.common import log as logging
+from nova.openstack.common import processutils
 from nova import utils
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import designer
@@ -417,7 +418,7 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
             network, mapping = vif
             linux_net.delete_ovs_vif_port(self.get_bridge_name(network),
                                           self.get_vif_devname(mapping))
-        except exception.ProcessExecutionError:
+        except processutils.ProcessExecutionError:
             LOG.exception(_("Failed while unplugging vif"), instance=instance)
 
     def unplug_ovs_bridge(self, instance, vif):
@@ -446,7 +447,7 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
 
             linux_net.delete_ovs_vif_port(self.get_bridge_name(network),
                                           v2_name)
-        except exception.ProcessExecutionError:
+        except processutils.ProcessExecutionError:
             LOG.exception(_("Failed while unplugging vif"), instance=instance)
 
     def unplug_ovs(self, instance, vif):

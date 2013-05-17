@@ -34,7 +34,7 @@ from nova.api.openstack.compute import views
 from nova.api.openstack import extensions
 from nova.api.openstack import xmlutil
 from nova.compute import api as compute_api
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context
@@ -1728,7 +1728,7 @@ class ServersControllerCreateTest(test.TestCase):
         self.controller = servers.Controller(self.ext_mgr)
 
         def instance_create(context, inst):
-            inst_type = instance_types.get_instance_type_by_flavor_id(3)
+            inst_type = flavors.get_instance_type_by_flavor_id(3)
             image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
             def_image_ref = 'http://localhost/images/%s' % image_uuid
             self.instance_cache_num += 1
@@ -1866,6 +1866,8 @@ class ServersControllerCreateTest(test.TestCase):
         (image_service, image_id) = glance.get_remote_image_service(
                 context, '')
         image_service.update(context, image_uuid, {'status': 'DELETED'})
+        self.addCleanup(image_service.update, context, image_uuid,
+                        {'status': 'active'})
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers')
         req.method = 'POST'
@@ -2434,7 +2436,7 @@ class ServersControllerCreateTest(test.TestCase):
                {'device_name': 'foo3', 'delete_on_termination': 'invalid'},
                {'device_name': 'foo4', 'delete_on_termination': 0},
                {'device_name': 'foo5', 'delete_on_termination': False}]
-        expected_dbm = [
+        expected_bdm = [
             {'device_name': 'foo1', 'delete_on_termination': True},
             {'device_name': 'foo2', 'delete_on_termination': True},
             {'device_name': 'foo3', 'delete_on_termination': False},
@@ -2444,7 +2446,7 @@ class ServersControllerCreateTest(test.TestCase):
         old_create = compute_api.API.create
 
         def create(*args, **kwargs):
-            self.assertEqual(kwargs['block_device_mapping'], expected_dbm)
+            self.assertEqual(expected_bdm, kwargs['block_device_mapping'])
             return old_create(*args, **kwargs)
 
         self.stubs.Set(compute_api.API, 'create', create)

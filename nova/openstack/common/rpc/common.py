@@ -22,6 +22,7 @@ import sys
 import traceback
 
 from oslo.config import cfg
+import six
 
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
@@ -276,7 +277,7 @@ def _safe_log(log_func, msg, msg_data):
                 for elem in arg[:-1]:
                     d = d[elem]
                 d[arg[-1]] = '<SANITIZED>'
-            except KeyError, e:
+            except KeyError as e:
                 LOG.info(_('Failed to sanitize %(item)s. Key error %(err)s'),
                          {'item': arg,
                           'err': e})
@@ -299,7 +300,8 @@ def serialize_remote_exception(failure_info, log_failure=True):
     tb = traceback.format_exception(*failure_info)
     failure = failure_info[1]
     if log_failure:
-        LOG.error(_("Returning exception %s to caller"), unicode(failure))
+        LOG.error(_("Returning exception %s to caller"),
+                  six.text_type(failure))
         LOG.error(tb)
 
     kwargs = {}
@@ -309,7 +311,7 @@ def serialize_remote_exception(failure_info, log_failure=True):
     data = {
         'class': str(failure.__class__.__name__),
         'module': str(failure.__class__.__module__),
-        'message': unicode(failure),
+        'message': six.text_type(failure),
         'tb': tb,
         'args': failure.args,
         'kwargs': kwargs
@@ -419,7 +421,7 @@ class ClientException(Exception):
 def catch_client_exception(exceptions, func, *args, **kwargs):
     try:
         return func(*args, **kwargs)
-    except Exception, e:
+    except Exception as e:
         if type(e) in exceptions:
             raise ClientException()
         else:

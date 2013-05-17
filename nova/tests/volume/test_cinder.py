@@ -80,10 +80,10 @@ class CinderApiTestCase(test.TestCase):
         self.api.create(self.ctx, 1, '', '')
 
     def test_create_failed(self):
-        cinder.cinderclient(self.ctx).AndRaise(cinder_exception.NotFound(''))
+        cinder.cinderclient(self.ctx).AndRaise(cinder_exception.BadRequest(''))
         self.mox.ReplayAll()
 
-        self.assertRaises(exception.VolumeNotFound,
+        self.assertRaises(exception.InvalidInput,
                           self.api.create, self.ctx, 1, '', '')
 
     def test_get_all(self):
@@ -142,7 +142,7 @@ class CinderApiTestCase(test.TestCase):
         self.cinderclient.volumes.reserve('id1')
         self.mox.ReplayAll()
 
-        self.api.reserve_volume(self.ctx, {'id': 'id1'})
+        self.api.reserve_volume(self.ctx, 'id1')
 
     def test_unreserve_volume(self):
         cinder.cinderclient(self.ctx).AndReturn(self.cinderclient)
@@ -151,7 +151,7 @@ class CinderApiTestCase(test.TestCase):
         self.cinderclient.volumes.unreserve('id1')
         self.mox.ReplayAll()
 
-        self.api.unreserve_volume(self.ctx, {'id': 'id1'})
+        self.api.unreserve_volume(self.ctx, 'id1')
 
     def test_begin_detaching(self):
         cinder.cinderclient(self.ctx).AndReturn(self.cinderclient)
@@ -160,7 +160,7 @@ class CinderApiTestCase(test.TestCase):
         self.cinderclient.volumes.begin_detaching('id1')
         self.mox.ReplayAll()
 
-        self.api.begin_detaching(self.ctx, {'id': 'id1'})
+        self.api.begin_detaching(self.ctx, 'id1')
 
     def test_roll_detaching(self):
         cinder.cinderclient(self.ctx).AndReturn(self.cinderclient)
@@ -169,7 +169,7 @@ class CinderApiTestCase(test.TestCase):
         self.cinderclient.volumes.roll_detaching('id1')
         self.mox.ReplayAll()
 
-        self.api.roll_detaching(self.ctx, {'id': 'id1'})
+        self.api.roll_detaching(self.ctx, 'id1')
 
     def test_attach(self):
         cinder.cinderclient(self.ctx).AndReturn(self.cinderclient)
@@ -178,7 +178,7 @@ class CinderApiTestCase(test.TestCase):
         self.cinderclient.volumes.attach('id1', 'uuid', 'point')
         self.mox.ReplayAll()
 
-        self.api.attach(self.ctx, {'id': 'id1'}, 'uuid', 'point')
+        self.api.attach(self.ctx, 'id1', 'uuid', 'point')
 
     def test_detach(self):
         cinder.cinderclient(self.ctx).AndReturn(self.cinderclient)
@@ -187,7 +187,7 @@ class CinderApiTestCase(test.TestCase):
         self.cinderclient.volumes.detach('id1')
         self.mox.ReplayAll()
 
-        self.api.detach(self.ctx, {'id': 'id1'})
+        self.api.detach(self.ctx, 'id1')
 
     def test_initialize_connection(self):
         cinder.cinderclient(self.ctx).AndReturn(self.cinderclient)
@@ -196,7 +196,7 @@ class CinderApiTestCase(test.TestCase):
         self.cinderclient.volumes.initialize_connection('id1', 'connector')
         self.mox.ReplayAll()
 
-        self.api.initialize_connection(self.ctx, {'id': 'id1'}, 'connector')
+        self.api.initialize_connection(self.ctx, 'id1', 'connector')
 
     def test_terminate_connection(self):
         cinder.cinderclient(self.ctx).AndReturn(self.cinderclient)
@@ -205,7 +205,7 @@ class CinderApiTestCase(test.TestCase):
         self.cinderclient.volumes.terminate_connection('id1', 'connector')
         self.mox.ReplayAll()
 
-        self.api.terminate_connection(self.ctx, {'id': 'id1'}, 'connector')
+        self.api.terminate_connection(self.ctx, 'id1', 'connector')
 
     def test_delete(self):
         cinder.cinderclient(self.ctx).AndReturn(self.cinderclient)
@@ -214,7 +214,7 @@ class CinderApiTestCase(test.TestCase):
         self.cinderclient.volumes.delete('id1')
         self.mox.ReplayAll()
 
-        self.api.delete(self.ctx, {'id': 'id1'})
+        self.api.delete(self.ctx, 'id1')
 
     def test_update(self):
         self.assertRaises(NotImplementedError,
@@ -270,7 +270,7 @@ class CinderApiTestCase(test.TestCase):
         self.cinderclient.volume_snapshots.delete('id1')
         self.mox.ReplayAll()
 
-        self.api.delete_snapshot(self.ctx, {'id': 'id1'})
+        self.api.delete_snapshot(self.ctx, 'id1')
 
     def test_get_volume_metadata(self):
         self.assertRaises(NotImplementedError,

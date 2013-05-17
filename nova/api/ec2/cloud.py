@@ -36,7 +36,7 @@ from nova import block_device
 from nova.cloudpipe import pipelib
 from nova import compute
 from nova.compute import api as compute_api
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova.compute import vm_states
 from nova import db
 from nova import exception
@@ -391,8 +391,8 @@ class CloudController(object):
         LOG.audit(_("Create snapshot of volume %s"), volume_id,
                   context=context)
         volume_id = ec2utils.ec2_vol_id_to_uuid(volume_id)
-        volume = self.volume_api.get(context, volume_id)
-        args = (context, volume, kwargs.get('name'), kwargs.get('description'))
+        args = (context, volume_id, kwargs.get('name'),
+                kwargs.get('description'))
         if kwargs.get('force', False):
             snapshot = self.volume_api.create_snapshot_force(*args)
         else:
@@ -403,8 +403,7 @@ class CloudController(object):
 
     def delete_snapshot(self, context, snapshot_id, **kwargs):
         snapshot_id = ec2utils.ec2_snap_id_to_uuid(snapshot_id)
-        snapshot = self.volume_api.get_snapshot(context, snapshot_id)
-        self.volume_api.delete_snapshot(context, snapshot)
+        self.volume_api.delete_snapshot(context, snapshot_id)
         return True
 
     def describe_key_pairs(self, context, key_name=None, **kwargs):
@@ -860,8 +859,7 @@ class CloudController(object):
         validate_ec2_id(volume_id)
         volume_id = ec2utils.ec2_vol_id_to_uuid(volume_id)
         try:
-            volume = self.volume_api.get(context, volume_id)
-            self.volume_api.delete(context, volume)
+            self.volume_api.delete(context, volume_id)
         except exception.InvalidVolume:
             raise exception.EC2APIError(_('Delete Failed'))
 
@@ -1072,10 +1070,10 @@ class CloudController(object):
             vol = self.volume_api.get(context, volume_id)
             LOG.debug(_("vol = %s\n"), vol)
             # TODO(yamahata): volume attach time
-            ebs = {'volumeId': volume_id,
+            ebs = {'volumeId': ec2utils.id_to_ec2_vol_id(volume_id),
                    'deleteOnTermination': bdm['delete_on_termination'],
                    'attachTime': vol['attach_time'] or '',
-                   'status': vol['status'], }
+                   'status': vol['attach_status'], }
             res = {'deviceName': bdm['device_name'],
                    'ebs': ebs, }
             mapping.append(res)
@@ -1091,7 +1089,7 @@ class CloudController(object):
 
     @staticmethod
     def _format_instance_type(instance, result):
-        instance_type = instance_types.extract_instance_type(instance)
+        instance_type = flavors.extract_instance_type(instance)
         result['instanceType'] = instance_type['name']
 
     @staticmethod
@@ -1323,7 +1321,7 @@ class CloudController(object):
             raise exception.EC2APIError(_('Image must be available'))
 
         (instances, resv_id) = self.compute_api.create(context,
-            instance_type=instance_types.get_instance_type_by_name(
+            instance_type=flavors.get_instance_type_by_name(
                 kwargs.get('instance_type', None)),
             image_href=image_uuid,
             max_count=int(kwargs.get('max_count', min_count)),

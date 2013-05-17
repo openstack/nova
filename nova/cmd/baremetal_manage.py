@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright (c) 2011 X.commerce, a business unit of eBay Inc.
@@ -54,13 +53,10 @@
   CLI interface for nova bare-metal management.
 """
 
-import gettext
 import os
 import sys
 
 from oslo.config import cfg
-
-gettext.install('nova', unicode=1)
 
 from nova import config
 from nova.openstack.common import cliutils

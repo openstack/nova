@@ -33,7 +33,7 @@ from nova.api.openstack.compute import versions
 from nova.api.openstack import urlmap
 from nova.api.openstack import wsgi as os_wsgi
 from nova.compute import api as compute_api
-from nova.compute import instance_types
+from nova.compute import flavors
 from nova.compute import vm_states
 from nova import context
 from nova.db.sqlalchemy import models
@@ -158,6 +158,9 @@ def stub_out_networking(stubs):
 def stub_out_compute_api_snapshot(stubs):
 
     def snapshot(self, context, instance, name, extra_properties=None):
+        # emulate glance rejecting image names which are too long
+        if len(name) > 256:
+            raise exc.Invalid
         return dict(id='123', status='ACTIVE', name=name,
                     properties=extra_properties)
 
@@ -434,8 +437,8 @@ def stub_instance(id, user_id=None, project_id=None, host=None,
     else:
         metadata = []
 
-    inst_type = instance_types.get_instance_type_by_flavor_id(int(flavor_id))
-    sys_meta = instance_types.save_instance_type_info({}, inst_type)
+    inst_type = flavors.get_instance_type_by_flavor_id(int(flavor_id))
+    sys_meta = flavors.save_instance_type_info({}, inst_type)
 
     if host is not None:
         host = str(host)
@@ -501,7 +504,14 @@ def stub_instance(id, user_id=None, project_id=None, host=None,
         "disable_terminate": False,
         "security_groups": security_groups,
         "root_device_name": root_device_name,
-        "system_metadata": utils.dict_to_metadata(sys_meta)}
+        "system_metadata": utils.dict_to_metadata(sys_meta),
+        "vm_mode": "",
+        "default_swap_device": "",
+        "default_ephemeral_device": "",
+        "launched_on": "",
+        "cell_name": "",
+        "architecture": "",
+        "os_type": ""}
 
     instance.update(info_cache)
 
@@ -571,7 +581,7 @@ def stub_volume_get(self, context, volume_id):
     return stub_volume(volume_id)
 
 
-def stub_volume_get_notfound(self, context, volume_id):
+def stub_volume_notfound(self, context, volume_id):
     raise exc.VolumeNotFound(volume_id=volume_id)
 
 
@@ -606,8 +616,8 @@ def stub_snapshot_create(self, context, volume_id, name, description):
                          display_description=description)
 
 
-def stub_snapshot_delete(self, context, snapshot):
-    if snapshot['id'] == '-1':
+def stub_snapshot_delete(self, context, snapshot_id):
+    if snapshot_id == '-1':
         raise exc.NotFound
 
 

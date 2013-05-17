@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 IBM Corp.
+# Copyright 2013 IBM Corp.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -21,9 +21,8 @@ import uuid
 
 import paramiko
 
-from nova import exception as nova_exception
 from nova.openstack.common import log as logging
-from nova import utils
+from nova.openstack.common import processutils
 from nova.virt.powervm import constants
 from nova.virt.powervm import exception
 
@@ -56,10 +55,38 @@ def ssh_connect(connection):
                     port=connection.port,
                     key_filename=connection.keyfile,
                     timeout=constants.POWERVM_CONNECTION_TIMEOUT)
+
+        LOG.debug("SSH connection with %s established successfully." %
+                  connection.host)
+
+        # send TCP keepalive packets every 20 seconds
+        ssh.get_transport().set_keepalive(20)
+
         return ssh
     except Exception:
         LOG.exception(_('Connection error connecting PowerVM manager'))
         raise exception.PowerVMConnectionFailed()
+
+
+def check_connection(ssh, connection):
+    """
+    Checks the SSH connection to see if the transport is valid.
+    If the connection is dead, a new connection is created and returned.
+
+    :param ssh: an existing paramiko.SSHClient connection.
+    :param connection: a Connection object.
+    :returns: paramiko.SSHClient -- an active ssh connection.
+    :raises: PowerVMConnectionFailed -- if the ssh connection fails.
+    """
+    # if the ssh client is not set or the transport is dead, re-connect
+    if (ssh is None or
+        ssh.get_transport() is None or
+        not ssh.get_transport().is_active()):
+            LOG.debug("Connection to host %s will be established." %
+                      connection.host)
+            ssh = ssh_connect(connection)
+
+    return ssh
 
 
 def ssh_command_as_root(ssh_connection, cmd, check_exit_code=True):
@@ -68,7 +95,7 @@ def ssh_command_as_root(ssh_connection, cmd, check_exit_code=True):
     :param connection: an active paramiko.SSHClient connection.
     :param command: string containing the command to run.
     :returns: Tuple -- a tuple of (stdout, stderr)
-    :raises: nova.exception.ProcessExecutionError
+    :raises: processutils.ProcessExecutionError
     """
     LOG.debug(_('Running cmd (SSH-as-root): %s') % cmd)
     chan = ssh_connection._transport.open_session()
@@ -85,14 +112,17 @@ def ssh_command_as_root(ssh_connection, cmd, check_exit_code=True):
     stdin.flush()
     exit_status = chan.recv_exit_status()
 
-    # Lets handle the error just like nova.utils.ssh_execute does.
+    # Lets handle the error just like processutils.ssh_execute does.
     if exit_status != -1:
         LOG.debug(_('Result was %s') % exit_status)
         if check_exit_code and exit_status != 0:
-            raise nova_exception.ProcessExecutionError(exit_code=exit_status,
-                                                       stdout=stdout,
-                                                       stderr=stderr,
-                                                       cmd=''.join(cmd))
+            # TODO(mikal): I know this is weird, but it needs to be consistent
+            # with processutils.execute. I will move this method to oslo in
+            # a later commit.
+            raise processutils.ProcessExecutionError(exit_code=exit_status,
+                                                     stdout=stdout,
+                                                     stderr=stderr,
+                                                     cmd=''.join(cmd))
 
     return (stdout, stderr)
 
@@ -187,7 +217,7 @@ def vios_to_vios_auth(source, dest, conn_info):
     dest_conn_obj = ssh_connect(dest_conn_info)
 
     def run_command(conn_obj, cmd):
-        stdout, stderr = utils.ssh_execute(conn_obj, cmd)
+        stdout, stderr = processutils.ssh_execute(conn_obj, cmd)
         return stdout.strip().splitlines()
 
     def build_keypair_on_source():

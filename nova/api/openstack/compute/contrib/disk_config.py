@@ -21,7 +21,7 @@ from webob import exc
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
-from nova import utils
+from nova.openstack.common import strutils
 
 ALIAS = 'OS-DCF'
 XMLNS_DCF = "http://docs.openstack.org/compute/ext/disk_config/api/v1.1"
@@ -65,7 +65,7 @@ class ImageDiskConfigController(wsgi.Controller):
             metadata = image['metadata']
             if INTERNAL_DISK_CONFIG in metadata:
                 raw_value = metadata[INTERNAL_DISK_CONFIG]
-                value = utils.bool_from_str(raw_value)
+                value = strutils.bool_from_string(raw_value)
                 image[API_DISK_CONFIG] = disk_config_to_api(value)
 
     @wsgi.extends

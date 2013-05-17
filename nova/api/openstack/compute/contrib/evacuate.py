@@ -21,6 +21,7 @@ from nova.api.openstack import wsgi
 from nova import compute
 from nova import exception
 from nova.openstack.common import log as logging
+from nova.openstack.common import strutils
 from nova import utils
 
 LOG = logging.getLogger(__name__)
@@ -39,9 +40,6 @@ class Controller(wsgi.Controller):
         to a new one.
         """
         context = req.environ["nova.context"]
-        if not context.is_admin:
-            msg = _("Instance evacuate is admin only functionality")
-            raise exc.HTTPForbidden(explanation=msg)
         authorize(context)
 
         try:
@@ -50,7 +48,7 @@ class Controller(wsgi.Controller):
 
             evacuate_body = body["evacuate"]
             host = evacuate_body["host"]
-            on_shared_storage = utils.bool_from_str(
+            on_shared_storage = strutils.bool_from_string(
                                             evacuate_body["onSharedStorage"])
 
             password = None

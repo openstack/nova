@@ -49,6 +49,10 @@ CONF = cfg.CONF
 CONF.register_opts(util_opts)
 
 
+def set_defaults(lock_path):
+    cfg.set_defaults(util_opts, lock_path=lock_path)
+
+
 class _InterProcessLock(object):
     """Lock implementation which allows multiple locks, working around
     issues like bugs.debian.org/cgi-bin/bugreport.cgi?bug=632857 and does
@@ -82,7 +86,7 @@ class _InterProcessLock(object):
                 # to have a laughable 10 attempts "blocking" mechanism.
                 self.trylock()
                 return self
-            except IOError, e:
+            except IOError as e:
                 if e.errno in (errno.EACCES, errno.EAGAIN):
                     # external locks synchronise things like iptables
                     # updates - give it some time to prevent busy spinning
@@ -247,3 +251,28 @@ def synchronized(name, lock_file_prefix, external=False, lock_path=None):
             return retval
         return inner
     return wrap
+
+
+def synchronized_with_prefix(lock_file_prefix):
+    """Partial object generator for the synchronization decorator.
+
+    Redefine @synchronized in each project like so::
+
+        (in nova/utils.py)
+        from nova.openstack.common import lockutils
+
+        synchronized = lockutils.synchronized_with_prefix('nova-')
+
+
+        (in nova/foo.py)
+        from nova import utils
+
+        @utils.synchronized('mylock')
+        def bar(self, *args):
+           ...
+
+    The lock_file_prefix argument is used to provide lock files on disk with a
+    meaningful prefix. The prefix should end with a hyphen ('-') if specified.
+    """
+
+    return functools.partial(synchronized, lock_file_prefix=lock_file_prefix)

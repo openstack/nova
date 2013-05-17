@@ -143,7 +143,6 @@ class BareMetalNodeController(wsgi.Controller):
             node['interfaces'] = [_interface_dict(if_ref)]
         else:
             node['interfaces'] = []
-        print node
         return {'node': node}
 
     def delete(self, req, id):

@@ -245,7 +245,7 @@ class HeartbeatMatchMakerBase(MatchMakerBase):
         yielding for CONF.matchmaker_heartbeat_freq seconds
         between iterations.
         """
-        if len(self.hosts) == 0:
+        if not self.hosts:
             raise MatchMakerException(
                 _("Register before starting heartbeat."))
 

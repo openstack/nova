@@ -39,29 +39,49 @@ class VolumeOps(object):
 
     def attach_volume(self, connection_info, instance_name, mountpoint,
                       hotplug=True):
-        """Attach volume storage to VM instance."""
-
-        vm_ref = vm_utils.vm_ref_or_raise(self._session, instance_name)
+        """
+        Attach volume storage to VM instance.
+        """
 
         # NOTE: No Resource Pool concept so far
         LOG.debug(_("Attach_volume: %(connection_info)s, %(instance_name)s,"
                 " %(mountpoint)s") % locals())
 
+        dev_number = volume_utils.get_device_number(mountpoint)
+        vm_ref = vm_utils.vm_ref_or_raise(self._session, instance_name)
+
+        sr_uuid, vdi_uuid = self._connect_volume(connection_info, dev_number,
+                                                 instance_name, vm_ref,
+                                                 hotplug=hotplug)
+
+        LOG.info(_('Mountpoint %(mountpoint)s attached to'
+                ' instance %(instance_name)s') % locals())
+
+        return (sr_uuid, vdi_uuid)
+
+    def connect_volume(self, connection_info):
+        """
+        Attach volume storage to the hypervisor without attaching to a VM
+
+        Used to attach the just the SR - e.g. for during live migration
+        """
+
+        # NOTE: No Resource Pool concept so far
+        LOG.debug(_("Connect_volume: %(connection_info)s") % locals())
+
+        sr_uuid, vdi_uuid = self._connect_volume(connection_info,
+                                                 None, None, None, False)
+
+        return (sr_uuid, vdi_uuid)
+
+    def _connect_volume(self, connection_info, dev_number=None,
+                        instance_name=None, vm_ref=None, hotplug=True):
         driver_type = connection_info['driver_volume_type']
         if driver_type not in ['iscsi', 'xensm']:
             raise exception.VolumeDriverNotFound(driver_type=driver_type)
 
         connection_data = connection_info['data']
-        dev_number = volume_utils.get_device_number(mountpoint)
 
-        self._connect_volume(connection_data, dev_number, instance_name,
-                            vm_ref, hotplug=hotplug)
-
-        LOG.info(_('Mountpoint %(mountpoint)s attached to'
-                ' instance %(instance_name)s') % locals())
-
-    def _connect_volume(self, connection_data, dev_number, instance_name,
-                        vm_ref, hotplug=True):
         sr_uuid, sr_label, sr_params = volume_utils.parse_sr_info(
                 connection_data, 'Disk-for:%s' % instance_name)
 
@@ -86,12 +106,16 @@ class VolumeOps(object):
                 vdi_ref = volume_utils.introduce_vdi(self._session, sr_ref)
 
             # Attach
-            vbd_ref = vm_utils.create_vbd(self._session, vm_ref, vdi_ref,
-                                          dev_number, bootable=False,
-                                          osvol=True)
+            if vm_ref:
+                vbd_ref = vm_utils.create_vbd(self._session, vm_ref, vdi_ref,
+                                              dev_number, bootable=False,
+                                              osvol=True)
 
-            if hotplug:
-                self._session.call_xenapi("VBD.plug", vbd_ref)
+                if hotplug:
+                    self._session.call_xenapi("VBD.plug", vbd_ref)
+
+            vdi_uuid = self._session.call_xenapi("VDI.get_uuid", vdi_ref)
+            return (sr_uuid, vdi_uuid)
         except Exception:
             with excutils.save_and_reraise_exception():
                 # NOTE(sirp): Forgetting the SR will have the effect of
@@ -106,7 +130,6 @@ class VolumeOps(object):
 
         device_number = volume_utils.get_device_number(mountpoint)
         vm_ref = vm_utils.vm_ref_or_raise(self._session, instance_name)
-
         try:
             vbd_ref = vm_utils.find_vbd_by_number(
                     self._session, vm_ref, device_number)
@@ -118,7 +141,7 @@ class VolumeOps(object):
             return
 
         # Unplug VBD if we're NOT shutdown
-        unplug = not vm_utils._is_vm_shutdown(self._session, vm_ref)
+        unplug = not vm_utils.is_vm_shutdown(self._session, vm_ref)
         self._detach_vbd(vbd_ref, unplug=unplug)
 
         LOG.info(_('Mountpoint %(mountpoint)s detached from instance'
@@ -148,7 +171,7 @@ class VolumeOps(object):
         # Generally speaking, detach_all will be called with VM already
         # shutdown; however if it's still running, we can still perform the
         # operation by unplugging the VBD first.
-        unplug = not vm_utils._is_vm_shutdown(self._session, vm_ref)
+        unplug = not vm_utils.is_vm_shutdown(self._session, vm_ref)
 
         vbd_refs = self._get_all_volume_vbd_refs(vm_ref)
         for vbd_ref in vbd_refs:
