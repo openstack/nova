@@ -3930,6 +3930,28 @@ class KeyPairTestCase(test.TestCase, ModelsObjectComparatorMixin):
                           param['user_id'], param['name'])
 
 
+class QuotaClassTestCase(test.TestCase, ModelsObjectComparatorMixin):
+
+    def setUp(self):
+        super(QuotaClassTestCase, self).setUp()
+        self.ctxt = context.get_admin_context()
+
+    def test_quota_class_get_default(self):
+        params = {
+            'test_resource1': '10',
+            'test_resource2': '20',
+            'test_resource3': '30',
+        }
+        for res, limit in params.items():
+            db.quota_class_create(self.ctxt, 'default', res, limit)
+
+        defaults = db.quota_class_get_default(self.ctxt)
+        self.assertEqual(defaults, dict(class_name='default',
+                                        test_resource1=10,
+                                        test_resource2=20,
+                                        test_resource3=30))
+
+
 class ArchiveTestCase(test.TestCase):
 
     def setUp(self):

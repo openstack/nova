@@ -911,6 +911,11 @@ def quota_class_get(context, class_name, resource):
     return IMPL.quota_class_get(context, class_name, resource)
 
 
+def quota_class_get_default(context):
+    """Retrieve all default quotas."""
+    return IMPL.quota_class_get_default(context)
+
+
 def quota_class_get_all_by_name(context, class_name):
     """Retrieve all quotas associated with a given quota class."""
     return IMPL.quota_class_get_all_by_name(context, class_name)
