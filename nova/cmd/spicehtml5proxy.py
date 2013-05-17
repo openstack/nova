@@ -59,13 +59,13 @@ opts = [
                help='Port on which to listen for incoming requests'),
     ]
 
-CONF = cfg.CONF
-CONF.register_cli_opts(opts)
-CONF.import_opt('debug', 'nova.openstack.common.log')
-
 
 def main():
     # Setup flags
+
+    CONF = cfg.CONF
+    CONF.register_cli_opts(opts)
+    CONF.import_opt('debug', 'nova.openstack.common.log')
     config.parse_args(sys.argv)
 
     if CONF.ssl_only and not os.path.exists(CONF.cert):

@@ -97,7 +97,7 @@ class MultiNodeComputeTestCase(BaseTestCase):
                                    'memory_mb': 131072,
                                    'current_workload': 0,
                                    'vcpus': 16,
-                                   'cpu_info':'ppc64,powervm,3940',
+                                   'cpu_info': 'ppc64,powervm,3940',
                                    'running_vms': 0,
                                    'free_disk_gb': 259,
                                    'service_id': 7,

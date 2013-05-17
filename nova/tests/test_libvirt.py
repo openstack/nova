@@ -3175,13 +3175,13 @@ class LibvirtConnTestCase(test.TestCase):
         fake_disks = {'fake1': [{'type': 'qcow2', 'path': '/somepath/disk1',
                                  'virt_disk_size': '10737418240',
                                  'backing_file': '/somepath/disk1',
-                                 'disk_size':'83886080',
-                                 'over_committed_disk_size':'10653532160'}],
+                                 'disk_size': '83886080',
+                                 'over_committed_disk_size': '10653532160'}],
                       'fake2': [{'type': 'raw', 'path': '/somepath/disk2',
                                  'virt_disk_size': '0',
                                  'backing_file': '/somepath/disk2',
-                                 'disk_size':'10737418240',
-                                 'over_committed_disk_size':'0'}]}
+                                 'disk_size': '10737418240',
+                                 'over_committed_disk_size': '0'}]}
 
         def get_info(instance_name):
             return jsonutils.dumps(fake_disks.get(instance_name))

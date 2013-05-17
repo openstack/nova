@@ -135,7 +135,7 @@ class BaseTestCase(test.TestCase):
                                    'memory_mb': 131072,
                                    'current_workload': 0,
                                    'vcpus': 16,
-                                   'cpu_info':'ppc64,powervm,3940',
+                                   'cpu_info': 'ppc64,powervm,3940',
                                    'running_vms': 0,
                                    'free_disk_gb': 259,
                                    'service_id': 7,
@@ -5706,7 +5706,7 @@ class ComputeAPITestCase(BaseTestCase):
 
         def fake_get_instance_bdms(*args, **kwargs):
             return [{'device_name': '/dev/vda',
-                     'volume_id':'bf0b6b00-a20c-11e2-9e96-0800200c9a66'}]
+                     'volume_id': 'bf0b6b00-a20c-11e2-9e96-0800200c9a66'}]
 
         self.stubs.Set(self.compute_api, 'get_instance_bdms',
                        fake_get_instance_bdms)
@@ -6964,7 +6964,7 @@ class ComputeAPITestCase(BaseTestCase):
 
         def fake_get_instance_bdms(*args, **kwargs):
             return [{'device_name': '/dev/vda',
-                     'volume_id':'bf0b6b00-a20c-11e2-9e96-0800200c9a66'}]
+                     'volume_id': 'bf0b6b00-a20c-11e2-9e96-0800200c9a66'}]
 
         self.stubs.Set(self.compute_api, 'get_instance_bdms',
                        fake_get_instance_bdms)

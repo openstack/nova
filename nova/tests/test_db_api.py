@@ -3744,8 +3744,8 @@ class VirtualInterfaceTestCase(test.TestCase, ModelsObjectComparatorMixin):
                           self._create_virt_interface, {"uuid": vif['uuid']})
 
     def test_virtual_interface_get(self):
-        vifs = [self._create_virt_interface({'address':'a'}),
-                self._create_virt_interface({'address':'b'})]
+        vifs = [self._create_virt_interface({'address': 'a'}),
+                self._create_virt_interface({'address': 'b'})]
 
         for vif in vifs:
             real_vif = db.virtual_interface_get(self.ctxt, vif['id'])
