@@ -1110,8 +1110,8 @@ class SecurityGroupsSampleJsonTest(ServersSampleBase):
         subs = {
                 'group_name': 'test'
         }
-        return  self._do_post('servers/%s/action' % uuid,
-                              'security-group-add-post-req', subs)
+        return self._do_post('servers/%s/action' % uuid,
+                             'security-group-add-post-req', subs)
 
     def test_security_group_create(self):
         response = self._create_security_group()

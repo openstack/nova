@@ -244,7 +244,7 @@ class FloatingIPActionController(wsgi.Controller):
 
         if not fixed_address:
             fixed_address = fixed_ips[0]['address']
-            if  len(fixed_ips) > 1:
+            if len(fixed_ips) > 1:
                 msg = _('multiple fixed_ips exist, using the first: %s')
                 LOG.warning(msg, fixed_address)
 
