@@ -1067,11 +1067,8 @@ def fixed_ip_bulk_create(context, ips):
 def fixed_ip_disassociate(context, address):
     session = get_session()
     with session.begin():
-        fixed_ip_ref = fixed_ip_get_by_address(context,
-                                               address,
-                                               session=session)
-        fixed_ip_ref['instance_uuid'] = None
-        fixed_ip_ref.save(session=session)
+        _fixed_ip_get_by_address(context, address, session=session).\
+                                 update({'instance_uuid': None})
 
 
 @require_admin_context
@@ -1129,10 +1126,8 @@ def fixed_ip_get(context, id, get_network=False):
 
 
 @require_admin_context
-def fixed_ip_get_all(context, session=None):
-    result = model_query(context, models.FixedIp, session=session,
-                         read_deleted="yes").\
-                     all()
+def fixed_ip_get_all(context):
+    result = model_query(context, models.FixedIp, read_deleted="yes").all()
     if not result:
         raise exception.NoFixedIpsDefined()
 
@@ -1140,35 +1135,44 @@ def fixed_ip_get_all(context, session=None):
 
 
 @require_context
-def fixed_ip_get_by_address(context, address, session=None):
-    result = model_query(context, models.FixedIp, session=session).\
-                     filter_by(address=address).\
-                     first()
-    if not result:
-        raise exception.FixedIpNotFoundForAddress(address=address)
+def fixed_ip_get_by_address(context, address):
+    return _fixed_ip_get_by_address(context, address)
 
-    # NOTE(sirp): shouldn't we just use project_only here to restrict the
-    # results?
-    if (nova.context.is_user_context(context) and
-            result['instance_uuid'] is not None):
-        instance = _instance_get_by_uuid(context.elevated(read_deleted='yes'),
-                                         result['instance_uuid'],
-                                         session)
-        nova.context.authorize_project_context(context, instance.project_id)
+
+@require_context
+def _fixed_ip_get_by_address(context, address, session=None):
+    if session is None:
+        session = get_session()
+
+    with session.begin(subtransactions=True):
+        result = model_query(context, models.FixedIp, session=session).\
+                         filter_by(address=address).\
+                         first()
+        if not result:
+            raise exception.FixedIpNotFoundForAddress(address=address)
+
+        # NOTE(sirp): shouldn't we just use project_only here to restrict the
+        # results?
+        if (nova.context.is_user_context(context) and
+                result['instance_uuid'] is not None):
+            instance = _instance_get_by_uuid(
+                context.elevated(read_deleted='yes'),
+                result['instance_uuid'],
+                session
+            )
+            nova.context.authorize_project_context(context,
+                                                   instance.project_id)
 
     return result
 
 
 @require_admin_context
-def fixed_ip_get_by_address_detailed(context, address, session=None):
+def fixed_ip_get_by_address_detailed(context, address):
     """
     :returns: a tuple of (models.FixedIp, models.Network, models.Instance)
     """
-    if not session:
-        session = get_session()
-
-    result = model_query(context, models.FixedIp, models.Network,
-                         models.Instance, session=session).\
+    result = model_query(context, models.FixedIp,
+                         models.Network, models.Instance).\
                          filter_by(address=address).\
                          outerjoin((models.Network,
                                     models.Network.id ==
@@ -1250,11 +1254,8 @@ def fixed_ips_by_virtual_interface(context, vif_id):
 def fixed_ip_update(context, address, values):
     session = get_session()
     with session.begin():
-        fixed_ip_ref = fixed_ip_get_by_address(context,
-                                               address,
-                                               session=session)
-        fixed_ip_ref.update(values)
-        fixed_ip_ref.save(session=session)
+        _fixed_ip_get_by_address(context, address, session=session).\
+                                 update(values)
 
 
 @require_context
