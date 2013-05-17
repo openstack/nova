@@ -1,5 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-#
+
+# Copyright (c) 2013 Hewlett-Packard Development Company, L.P.
 # Copyright 2013 Canonical Corp.
 # All Rights Reserved.
 #
@@ -41,8 +42,8 @@ class VMwareVMUtilTestCase(test.TestCase):
             fake_session([fake.Datastore()]))
 
         self.assertEquals(result[1], "fake-ds")
-        self.assertEquals(result[2], 1024 * 1024 * 1024)
-        self.assertEquals(result[3], 1024 * 1024 * 500)
+        self.assertEquals(result[2], 1024 * 1024 * 1024 * 1024)
+        self.assertEquals(result[3], 1024 * 1024 * 500 * 1024)
 
     def test_get_datastore_ref_and_name_without_datastore(self):
 
