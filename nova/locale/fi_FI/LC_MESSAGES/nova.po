@@ -1,18 +1,18 @@
-# Ukrainian translation for nova
-# Copyright (c) 2011 Rosetta Contributors and Canonical Ltd 2011
-# This file is distributed under the same license as the nova package.
-# FIRST AUTHOR <EMAIL@ADDRESS>, 2011.
+# English (United States) translations for nova.
+# Copyright (C) 2012 ORGANIZATION
+# This file is distributed under the same license as the nova project.
 #
+# Translators:
 msgid ""
 msgstr ""
-"Project-Id-Version:  nova\n"
-"Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
+"Project-Id-Version:  Nova\n"
+"Report-Msgid-Bugs-To: https://bugs.launchpad.net/nova\n"
 "POT-Creation-Date: 2013-05-18 19:37+0000\n"
-"PO-Revision-Date: 2011-08-23 11:21+0000\n"
-"Last-Translator: Thierry Carrez <thierry.carrez+lp@gmail.com>\n"
-"Language-Team: Ukrainian <uk@li.org>\n"
-"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
-"n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2)\n"
+"PO-Revision-Date: 2013-05-18 19:07+0000\n"
+"Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
+"Language-Team: Finnish (Finland) "
+"(http://www.transifex.com/projects/p/openstack/language/fi_FI/)\n"
+"Plural-Forms: nplurals=2; plural=(n != 1)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -39,7 +39,7 @@ msgstr ""
 
 #: nova/crypto.py:58
 msgid "Filename of private key"
-msgstr "Ім'я файлу секретного ключа"
+msgstr ""
 
 #: nova/crypto.py:61
 msgid "Filename of root Certificate Revocation List"
@@ -47,7 +47,7 @@ msgstr ""
 
 #: nova/crypto.py:64
 msgid "Where we keep our keys"
-msgstr "Шлях до збережених ключів"
+msgstr ""
 
 #: nova/crypto.py:67
 msgid "Where we keep our root CA"
@@ -134,9 +134,9 @@ msgid "Image %(image_id)s is not active."
 msgstr ""
 
 #: nova/exception.py:202
-#, fuzzy, python-format
+#, python-format
 msgid "Not authorized for image %(image_id)s."
-msgstr "без порядку для повідомлень: %s"
+msgstr ""
 
 #: nova/exception.py:206
 msgid "Unacceptable parameters."
@@ -1159,14 +1159,14 @@ msgid "Invalid id: %(val)s (expecting \"i-...\")."
 msgstr ""
 
 #: nova/exception.py:1095
-#, fuzzy, python-format
+#, python-format
 msgid "Could not fetch image %(image_id)s"
-msgstr "без порядку для повідомлень: %s"
+msgstr ""
 
 #: nova/exception.py:1099
-#, fuzzy, python-format
+#, python-format
 msgid "Could not upload image %(image_id)s"
-msgstr "без порядку для повідомлень: %s"
+msgstr ""
 
 #: nova/exception.py:1103
 #, python-format
@@ -1588,7 +1588,7 @@ msgstr ""
 
 #: nova/api/ec2/__init__.py:174
 msgid "Too many failed authentications."
-msgstr "Занадто багато невдалих аутентифікацій."
+msgstr ""
 
 #: nova/api/ec2/__init__.py:183
 #, python-format
@@ -1615,9 +1615,8 @@ msgid "Keystone failure: %s"
 msgstr ""
 
 #: nova/api/ec2/__init__.py:315
-#, fuzzy
 msgid "Timestamp failed validation."
-msgstr "Занадто багато невдалих аутентифікацій."
+msgstr ""
 
 #: nova/api/ec2/__init__.py:335
 #, python-format
@@ -1763,9 +1762,9 @@ msgid "No rule for the specified parameters."
 msgstr ""
 
 #: nova/api/ec2/cloud.py:676
-#, fuzzy, python-format
+#, python-format
 msgid "%s - This rule already exists in group"
-msgstr "Це правило вже існує в групі %s"
+msgstr ""
 
 #: nova/api/ec2/cloud.py:759
 #, python-format
@@ -1780,7 +1779,7 @@ msgstr ""
 #: nova/api/ec2/cloud.py:836 nova/api/openstack/compute/contrib/volumes.py:242
 #, python-format
 msgid "Create volume of %s GB"
-msgstr "Створити розділ на %s ГБ"
+msgstr ""
 
 #: nova/api/ec2/cloud.py:863
 msgid "Delete Failed"
@@ -1798,12 +1797,11 @@ msgstr ""
 #: nova/api/ec2/cloud.py:909 nova/api/openstack/compute/contrib/volumes.py:445
 #, python-format
 msgid "Detach volume %s"
-msgstr "Від'єднати том %s"
+msgstr ""
 
 #: nova/api/ec2/cloud.py:916
-#, fuzzy
 msgid "Detach Volume Failed."
-msgstr "Від'єднати том %s"
+msgstr ""
 
 #: nova/api/ec2/cloud.py:942 nova/api/ec2/cloud.py:999
 #: nova/api/ec2/cloud.py:1556 nova/api/ec2/cloud.py:1571
@@ -1915,7 +1913,7 @@ msgstr ""
 
 #: nova/api/ec2/cloud.py:1576
 msgid "only group \"all\" is supported"
-msgstr "лише група \"всі\" підтримується"
+msgstr ""
 
 #: nova/api/ec2/cloud.py:1578
 msgid "operation_type must be add or remove"
@@ -2231,9 +2229,9 @@ msgid "Action: '%(action)s', body: %(body)s"
 msgstr ""
 
 #: nova/api/openstack/wsgi.py:922
-#, fuzzy, python-format
+#, python-format
 msgid "Calling method %s"
-msgstr "Оголошення черги %s"
+msgstr ""
 
 #: nova/api/openstack/wsgi.py:931
 msgid "Unsupported Content-Type"
@@ -2980,14 +2978,14 @@ msgid "Virt driver does not implement host maintenance mode."
 msgstr ""
 
 #: nova/api/openstack/compute/contrib/hosts.py:224
-#, fuzzy, python-format
+#, python-format
 msgid "Enabling host %s."
-msgstr "Оголошення черги %s"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/hosts.py:226
-#, fuzzy, python-format
+#, python-format
 msgid "Disabling host %s."
-msgstr "Оголошення черги %s"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/hosts.py:231
 msgid "Virt driver does not implement host disabled status."
@@ -3161,9 +3159,8 @@ msgid "Not enough parameters to build a valid rule."
 msgstr ""
 
 #: nova/api/openstack/compute/contrib/security_group_default_rules.py:133
-#, fuzzy
 msgid "This default rule already exists."
-msgstr "Це правило вже існує в групі %s"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/security_group_default_rules.py:154
 #, python-format
@@ -3278,9 +3275,9 @@ msgid "Unknown %(cell_type)s when routing to %(target_cell)s"
 msgstr ""
 
 #: nova/cells/messaging.py:398
-#, fuzzy, python-format
+#, python-format
 msgid "Error locating next hop for message: %(exc)s"
-msgstr "без порядку для повідомлень: %s"
+msgstr ""
 
 #: nova/cells/messaging.py:425
 #, python-format
@@ -3288,9 +3285,9 @@ msgid "Failed to send message to cell: %(next_hop)s: %(exc)s"
 msgstr ""
 
 #: nova/cells/messaging.py:504
-#, fuzzy, python-format
+#, python-format
 msgid "Error locating next hops for message: %(exc)s"
-msgstr "без порядку для повідомлень: %s"
+msgstr ""
 
 #: nova/cells/messaging.py:524
 #, python-format
@@ -3485,9 +3482,8 @@ msgid "In Use"
 msgstr ""
 
 #: nova/cmd/manage.py:246
-#, fuzzy
 msgid "Reserved"
-msgstr "отримано %s"
+msgstr ""
 
 #: nova/cmd/manage.py:286 nova/cmd/manage.py:357 nova/cmd/manage.py:681
 #: nova/cmd/manage.py:694
@@ -3980,7 +3976,7 @@ msgstr ""
 #: nova/compute/api.py:2983
 #, python-format
 msgid "Delete security group %s"
-msgstr "Вилучити групу безпеки %s"
+msgstr ""
 
 #: nova/compute/api.py:3060 nova/compute/api.py:3134
 #, python-format
@@ -4343,9 +4339,9 @@ msgid "bringing vm to original state: '%s'"
 msgstr ""
 
 #: nova/compute/manager.py:1756
-#, fuzzy, python-format
+#, python-format
 msgid "Detaching from volume api: %s"
-msgstr "Від'єднати том %s"
+msgstr ""
 
 #: nova/compute/manager.py:1774
 msgid "Rebooting instance"
@@ -4656,9 +4652,8 @@ msgid "Updating bandwidth usage cache"
 msgstr ""
 
 #: nova/compute/manager.py:3776
-#, fuzzy
 msgid "Updating volume usage cache"
-msgstr "Від'єднати том %s"
+msgstr ""
 
 #: nova/compute/manager.py:3793
 msgid "Updating host status"
@@ -4720,9 +4715,9 @@ msgid "Reclaiming deleted instance"
 msgstr ""
 
 #: nova/compute/manager.py:4015
-#, fuzzy, python-format
+#, python-format
 msgid "Deleting orphan compute node %s"
-msgstr "Від'єднати том %s"
+msgstr ""
 
 #: nova/compute/manager.py:4025 nova/compute/resource_tracker.py:321
 #, python-format
@@ -5514,9 +5509,9 @@ msgid "Cannot delete entry |%s|"
 msgstr ""
 
 #: nova/network/minidns.py:201
-#, fuzzy, python-format
+#, python-format
 msgid "deleted %s"
-msgstr "отримано %s"
+msgstr ""
 
 #: nova/network/minidns.py:207
 #, python-format
@@ -5601,14 +5596,14 @@ msgid "Multiple floating IP pools matches found for name '%s'"
 msgstr ""
 
 #: nova/network/security_group/quantum_driver.py:53
-#, fuzzy, python-format
+#, python-format
 msgid "Quantum Error creating security group %s"
-msgstr "Вилучити групу безпеки %s"
+msgstr ""
 
 #: nova/network/security_group/quantum_driver.py:106
-#, fuzzy, python-format
+#, python-format
 msgid "Quantum security group %s not found"
-msgstr "Вилучити групу безпеки %s"
+msgstr ""
 
 #: nova/network/security_group/quantum_driver.py:109
 #: nova/network/security_group/quantum_driver.py:155
@@ -5618,18 +5613,17 @@ msgid "Quantum Error: %s"
 msgstr ""
 
 #: nova/network/security_group/quantum_driver.py:129
-#, fuzzy
 msgid "Quantum Error getting security groups"
-msgstr "Вилучити групу безпеки %s"
+msgstr ""
 
 #: nova/network/security_group/quantum_driver.py:139
 msgid "Security group id should be uuid"
 msgstr ""
 
 #: nova/network/security_group/quantum_driver.py:173
-#, fuzzy, python-format
+#, python-format
 msgid "Quantum Error getting security group %s"
-msgstr "Вилучити групу безпеки %s"
+msgstr ""
 
 #: nova/network/security_group/quantum_driver.py:177
 #: nova/network/security_group/quantum_driver.py:342
@@ -5674,7 +5668,7 @@ msgstr ""
 #: nova/network/security_group/security_group_base.py:137
 #, python-format
 msgid "This rule already exists in group %s"
-msgstr "Це правило вже існує в групі %s"
+msgstr ""
 
 #: nova/openstack/common/excutils.py:48
 #, python-format
@@ -5707,9 +5701,9 @@ msgid "Released file lock \"%(lock)s\" at %(path)s for method \"%(method)s\"..."
 msgstr ""
 
 #: nova/openstack/common/log.py:244
-#, fuzzy, python-format
+#, python-format
 msgid "Deprecated: %s"
-msgstr "отримано %s"
+msgstr ""
 
 #: nova/openstack/common/log.py:347
 #, python-format
@@ -5914,17 +5908,17 @@ msgstr ""
 #: nova/openstack/common/rpc/amqp.py:406
 #, python-format
 msgid "received %s"
-msgstr "отримано %s"
+msgstr ""
 
 #: nova/openstack/common/rpc/amqp.py:414
 #, python-format
 msgid "no method for message: %s"
-msgstr "без порядку для повідомлень: %s"
+msgstr ""
 
 #: nova/openstack/common/rpc/amqp.py:415
 #, python-format
 msgid "No method for message: %s"
-msgstr "Без порядку для повідомлень: %s"
+msgstr ""
 
 #: nova/openstack/common/rpc/amqp.py:443
 #: nova/openstack/common/rpc/impl_zmq.py:286
@@ -5945,7 +5939,7 @@ msgstr ""
 #: nova/openstack/common/rpc/amqp.py:589
 #, python-format
 msgid "MSG_ID is %s"
-msgstr "MSG_ID %s"
+msgstr ""
 
 #: nova/openstack/common/rpc/amqp.py:623
 #, python-format
@@ -6239,9 +6233,9 @@ msgid "Cast sent; Waiting reply"
 msgstr ""
 
 #: nova/openstack/common/rpc/impl_zmq.py:719
-#, fuzzy, python-format
+#, python-format
 msgid "Received message: %s"
-msgstr "отримано %s"
+msgstr ""
 
 #: nova/openstack/common/rpc/impl_zmq.py:720
 msgid "Unpacking response"
@@ -7940,14 +7934,14 @@ msgid "The file copy from %(src)s to %(dest)s failed"
 msgstr ""
 
 #: nova/virt/hyperv/pathutils.py:92
-#, fuzzy, python-format
+#, python-format
 msgid "Creating directory: %s"
-msgstr "Від'єднати том %s"
+msgstr ""
 
 #: nova/virt/hyperv/pathutils.py:97 nova/virt/hyperv/snapshotops.py:116
-#, fuzzy, python-format
+#, python-format
 msgid "Removing directory: %s"
-msgstr "Від'єднати том %s"
+msgstr ""
 
 #: nova/virt/hyperv/snapshotops.py:56
 #, python-format
@@ -8126,9 +8120,9 @@ msgid "Cannot get VM summary data for: %s"
 msgstr ""
 
 #: nova/virt/hyperv/vmutils.py:160
-#, fuzzy, python-format
+#, python-format
 msgid "Creating VM %s"
-msgstr "Від'єднати том %s"
+msgstr ""
 
 #: nova/virt/hyperv/vmutils.py:169
 #, python-format
@@ -8196,9 +8190,9 @@ msgid "Attach_volume: %(connection_info)s to %(instance_name)s"
 msgstr ""
 
 #: nova/virt/hyperv/volumeops.py:145
-#, fuzzy, python-format
+#, python-format
 msgid "Attach volume failed: %s"
-msgstr "Від'єднати том %s"
+msgstr ""
 
 #: nova/virt/hyperv/volumeops.py:147
 #, python-format
@@ -9717,9 +9711,9 @@ msgid "Updating instance '%(instance_uuid)s' progress to %(progress)d"
 msgstr ""
 
 #: nova/virt/vmwareapi/vmops.py:924
-#, fuzzy, python-format
+#, python-format
 msgid "Renaming the VM to %s"
-msgstr "Від'єднати том %s"
+msgstr ""
 
 #: nova/virt/vmwareapi/vmops.py:930
 #, python-format
@@ -9744,9 +9738,9 @@ msgid ""
 msgstr ""
 
 #: nova/virt/vmwareapi/vmops.py:990
-#, fuzzy, python-format
+#, python-format
 msgid "Renaming the VM from %s"
-msgstr "Від'єднати том %s"
+msgstr ""
 
 #: nova/virt/vmwareapi/vmops.py:996
 #, python-format
@@ -10080,9 +10074,9 @@ msgid "Calling getter %s"
 msgstr ""
 
 #: nova/virt/xenapi/fake.py:731
-#, fuzzy, python-format
+#, python-format
 msgid "Calling setter %s"
-msgstr "Оголошення черги %s"
+msgstr ""
 
 #: nova/virt/xenapi/fake.py:793
 #, python-format
@@ -10353,9 +10347,9 @@ msgid "Fetching image %(image_id)s, type %(image_type_str)s"
 msgstr ""
 
 #: nova/virt/xenapi/vm_utils.py:1242
-#, fuzzy, python-format
+#, python-format
 msgid "Size for image %(image_id)s: %(virtual_size)d"
-msgstr "без порядку для повідомлень: %s"
+msgstr ""
 
 #: nova/virt/xenapi/vm_utils.py:1251
 #, python-format
@@ -10835,9 +10829,9 @@ msgid "Migrate Send failed"
 msgstr ""
 
 #: nova/virt/xenapi/volume_utils.py:51
-#, fuzzy, python-format
+#, python-format
 msgid "Creating SR %(label)s"
-msgstr "Від'єднати том %s"
+msgstr ""
 
 #: nova/virt/xenapi/volume_utils.py:61
 #, python-format
@@ -10845,9 +10839,8 @@ msgid "Introducing SR %(label)s"
 msgstr ""
 
 #: nova/virt/xenapi/volume_utils.py:68
-#, fuzzy
 msgid "Creating PBD for SR"
-msgstr "Від'єднати том %s"
+msgstr ""
 
 #: nova/virt/xenapi/volume_utils.py:71
 msgid "Plugging SR"
@@ -10971,68 +10964,4 @@ msgstr ""
 #: nova/volume/cinder.py:235
 msgid "status must be 'available'"
 msgstr ""
-
-#~ msgid "EC2APIError raised: %s"
-#~ msgstr ""
-
-#~ msgid "Instance is in an invalid state for '%(action)s'"
-#~ msgstr ""
-
-#~ msgid "Failed to load extension %(ext_name)s: %(exc)s"
-#~ msgstr ""
-
-#~ msgid "Removing options '%(unk_opt_str)s' from query"
-#~ msgstr ""
-
-#~ msgid "Live migration of instance %(id)s to another host failed"
-#~ msgstr ""
-
-#~ msgid "Cannot show aggregate: %(id)s"
-#~ msgstr ""
-
-#~ msgid "Cannot update aggregate: %(id)s"
-#~ msgstr ""
-
-#~ msgid "Cannot delete aggregate: %(id)s"
-#~ msgstr ""
-
-#~ msgid "Total %(type_)s: %(total)d %(unit)s, used: %(used)d %(unit)s"
-#~ msgstr ""
-
-#~ msgid "%(type_)s limit not specified, defaulting to unlimited"
-#~ msgstr ""
-
-#~ msgid "%(type_)s limit: %(limit)d %(unit)s, free: %(free)d %(unit)s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Unable to claim resources.  Free "
-#~ "%(type_)s %(free)d %(unit)s < requested "
-#~ "%(requested)d %(unit)s"
-#~ msgstr ""
-
-#~ msgid "'%s' argument must be a positive integer"
-#~ msgstr ""
-
-#~ msgid "Attempting to build %(num_instances)d instance(s)"
-#~ msgstr ""
-
-#~ msgid "Choosing host %(chosen_host)s"
-#~ msgstr ""
-
-#~ msgid "Unable to load the virtualization driver: %s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Inject data image=%(image)s key=%(key)s "
-#~ "net=%(net)s metadata=%(metadata)s admin_password=ha-"
-#~ "ha-not-telling-you files=%(files)s "
-#~ "partition=%(partition)s use_cow=%(use_cow)s"
-#~ msgstr ""
-
-#~ msgid "Inject admin password fs=%(fs)s admin_passwd=ha-ha-not-telling-you"
-#~ msgstr ""
-
-#~ msgid "Resizing down VDI %(vdi_uuid)s from %(old_gb)dGB to %(new_gb)dGB"
-#~ msgstr ""
 
