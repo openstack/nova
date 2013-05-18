@@ -1785,7 +1785,7 @@ class ServersControllerCreateTest(test.TestCase):
         self.volume_id = 'fake'
 
         def instance_create(context, inst):
-            inst_type = flavors.get_instance_type_by_flavor_id(3)
+            inst_type = flavors.get_flavor_by_flavor_id(3)
             image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
             def_image_ref = 'http://localhost/images/%s' % image_uuid
             self.instance_cache_num += 1
@@ -4244,7 +4244,7 @@ class ServersViewBuilderTest(test.TestCase):
         self.view_builder = views.servers.ViewBuilder()
         self.request = fakes.HTTPRequest.blank("/v2")
 
-    def test_get_flavor_valid_instance_type(self):
+    def test_get_flavor_valid_flavor(self):
         flavor_bookmark = "http://localhost/fake/flavors/1"
         expected = {"id": "1",
                     "links": [{"rel": "bookmark",

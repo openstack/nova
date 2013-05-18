@@ -213,7 +213,7 @@ def create_vm(session, instance, name_label, kernel, ramdisk,
 
         3. Using hardware virtualization
     """
-    instance_type = flavors.extract_instance_type(instance)
+    instance_type = flavors.extract_flavor(instance)
     mem = str(long(instance_type['memory_mb']) * 1024 * 1024)
     vcpus = str(instance_type['vcpus'])
 
@@ -326,7 +326,7 @@ def is_vm_shutdown(session, vm_ref):
 
 
 def ensure_free_mem(session, instance):
-    instance_type = flavors.extract_instance_type(instance)
+    instance_type = flavors.extract_flavor(instance)
     mem = long(instance_type['memory_mb']) * 1024 * 1024
     host = session.get_xenapi_host()
     host_free_mem = long(session.call_xenapi("host.compute_free_memory",
@@ -1194,7 +1194,7 @@ def _get_vdi_chain_size(session, vdi_uuid):
 
 
 def _check_vdi_size(context, session, instance, vdi_uuid):
-    instance_type = flavors.extract_instance_type(instance)
+    instance_type = flavors.extract_flavor(instance)
     allowed_size = instance_type['root_gb'] * (1024 ** 3)
 
     if not allowed_size:

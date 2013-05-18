@@ -350,12 +350,12 @@ class ComputeCellsAPI(compute_api.API):
         # specified flavor_id is valid and exists. We'll need to load
         # it again, but that should be safe.
 
-        old_instance_type = flavors.extract_instance_type(instance)
+        old_instance_type = flavors.extract_flavor(instance)
 
         if not flavor_id:
             new_instance_type = old_instance_type
         else:
-            new_instance_type = flavors.get_instance_type_by_flavor_id(
+            new_instance_type = flavors.get_flavor_by_flavor_id(
                     flavor_id, read_deleted="no")
 
         # NOTE(johannes): Later, when the resize is confirmed or reverted,

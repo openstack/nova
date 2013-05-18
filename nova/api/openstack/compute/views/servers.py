@@ -181,7 +181,7 @@ class ViewBuilder(common.ViewBuilder):
             return ""
 
     def _get_flavor(self, request, instance):
-        instance_type = flavors.extract_instance_type(instance)
+        instance_type = flavors.extract_flavor(instance)
         if not instance_type:
             LOG.warn(_("Instance has had its instance_type removed "
                     "from the DB"), instance=instance)

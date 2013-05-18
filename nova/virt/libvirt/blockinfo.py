@@ -300,7 +300,7 @@ def get_disk_mapping(virt_type, instance,
 
        Returns the guest disk mapping for the devices."""
 
-    inst_type = flavors.extract_instance_type(instance)
+    inst_type = flavors.extract_flavor(instance)
 
     mapping = {}
 

@@ -47,7 +47,7 @@ def fake_compute_api_create(cls, context, instance_type, image_href, **kwargs):
     global _block_device_mapping_seen
     _block_device_mapping_seen = kwargs.get('block_device_mapping')
 
-    inst_type = flavors.get_instance_type_by_flavor_id(2)
+    inst_type = flavors.get_flavor_by_flavor_id(2)
     resv_id = None
     return ([{'id': 1,
               'display_name': 'test_server',

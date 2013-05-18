@@ -160,7 +160,7 @@ class ResourceTracker(object):
         be done while the COMPUTE_RESOURCES_SEMAPHORE is held so the resource
         claim will not be lost if the audit process starts.
         """
-        old_instance_type = flavors.extract_instance_type(instance)
+        old_instance_type = flavors.extract_flavor(instance)
 
         return self.conductor_api.migration_create(context, instance,
                 {'dest_compute': self.host,
@@ -580,7 +580,7 @@ class ResourceTracker(object):
             instance_type_id = instance['instance_type_id']
 
         try:
-            return flavors.extract_instance_type(instance, prefix)
+            return flavors.extract_flavor(instance, prefix)
         except KeyError:
             return self.conductor_api.instance_type_get(context,
                     instance_type_id)

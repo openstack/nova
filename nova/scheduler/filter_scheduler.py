@@ -392,7 +392,7 @@ class FilterScheduler(driver.Scheduler):
         host_state = self.host_manager.host_state_cls(dest, node)
         host_state.update_from_compute_node(compute)
 
-        instance_type = flavors.extract_instance_type(instance_ref)
+        instance_type = flavors.extract_flavor(instance_ref)
         filter_properties = {'instance_type': instance_type}
 
         hosts = self.host_manager.get_filtered_hosts([host_state],

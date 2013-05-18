@@ -59,7 +59,7 @@ from nova import volume
 
 CONF = cfg.CONF
 CONF.import_opt('compute_driver', 'nova.virt.driver')
-CONF.import_opt('default_instance_type', 'nova.compute.flavors')
+CONF.import_opt('default_flavor', 'nova.compute.flavors')
 CONF.import_opt('use_ipv6', 'nova.netconf')
 LOG = logging.getLogger(__name__)
 
@@ -765,8 +765,8 @@ class CloudTestCase(test.TestCase):
         self._stub_instance_get_with_fixed_ips('get')
 
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
-        sys_meta = flavors.save_instance_type_info(
-            {}, flavors.get_instance_type(1))
+        sys_meta = flavors.save_flavor_info(
+            {}, flavors.get_flavor(1))
         inst1 = db.instance_create(self.context, {'reservation_id': 'a',
                                                   'image_ref': image_uuid,
                                                   'instance_type_id': 1,
@@ -871,8 +871,8 @@ class CloudTestCase(test.TestCase):
                        fake_change_instance_metadata)
 
         # Create some test images
-        sys_meta = flavors.save_instance_type_info(
-            {}, flavors.get_instance_type(1))
+        sys_meta = flavors.save_flavor_info(
+            {}, flavors.get_flavor(1))
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
         inst1_kwargs = {
                 'reservation_id': 'a',
@@ -1043,8 +1043,8 @@ class CloudTestCase(test.TestCase):
         self._stub_instance_get_with_fixed_ips('get')
 
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
-        sys_meta = flavors.save_instance_type_info(
-            {}, flavors.get_instance_type(1))
+        sys_meta = flavors.save_flavor_info(
+            {}, flavors.get_flavor(1))
         inst_base = {
                 'reservation_id': 'a',
                 'image_ref': image_uuid,
@@ -1098,8 +1098,8 @@ class CloudTestCase(test.TestCase):
         def test_instance_state(expected_code, expected_name,
                                 power_state_, vm_state_, values=None):
             image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
-            sys_meta = flavors.save_instance_type_info(
-                {}, flavors.get_instance_type(1))
+            sys_meta = flavors.save_flavor_info(
+                {}, flavors.get_flavor(1))
             values = values or {}
             values.update({'image_ref': image_uuid, 'instance_type_id': 1,
                            'power_state': power_state_, 'vm_state': vm_state_,
@@ -1133,8 +1133,8 @@ class CloudTestCase(test.TestCase):
         self._stub_instance_get_with_fixed_ips('get')
 
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
-        sys_meta = flavors.save_instance_type_info(
-            {}, flavors.get_instance_type(1))
+        sys_meta = flavors.save_flavor_info(
+            {}, flavors.get_flavor(1))
         inst1 = db.instance_create(self.context, {'reservation_id': 'a',
                                                   'image_ref': image_uuid,
                                                   'instance_type_id': 1,
@@ -1160,8 +1160,8 @@ class CloudTestCase(test.TestCase):
 
     def test_describe_instances_deleted(self):
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
-        sys_meta = flavors.save_instance_type_info(
-            {}, flavors.get_instance_type(1))
+        sys_meta = flavors.save_flavor_info(
+            {}, flavors.get_flavor(1))
         args1 = {'reservation_id': 'a',
                  'image_ref': image_uuid,
                  'instance_type_id': 1,
@@ -1185,8 +1185,8 @@ class CloudTestCase(test.TestCase):
 
     def test_describe_instances_with_image_deleted(self):
         image_uuid = 'aebef54a-ed67-4d10-912f-14455edce176'
-        sys_meta = flavors.save_instance_type_info(
-            {}, flavors.get_instance_type(1))
+        sys_meta = flavors.save_flavor_info(
+            {}, flavors.get_flavor(1))
         args1 = {'reservation_id': 'a',
                  'image_ref': image_uuid,
                  'instance_type_id': 1,
@@ -1619,7 +1619,7 @@ class CloudTestCase(test.TestCase):
     def test_get_password_data(self):
         instance_id = self._run_instance(
             image_id='ami-1',
-            instance_type=CONF.default_instance_type,
+            instance_type=CONF.default_flavor,
             max_count=1)
         self.stubs.Set(password, 'extract_password', lambda i: 'fakepass')
         output = self.cloud.get_password_data(context=self.context,
@@ -1630,7 +1630,7 @@ class CloudTestCase(test.TestCase):
     def test_console_output(self):
         instance_id = self._run_instance(
             image_id='ami-1',
-            instance_type=CONF.default_instance_type,
+            instance_type=CONF.default_flavor,
             max_count=1)
         output = self.cloud.get_console_output(context=self.context,
                                                instance_id=[instance_id])
@@ -1743,7 +1743,7 @@ class CloudTestCase(test.TestCase):
 
     def test_run_instances(self):
         kwargs = {'image_id': 'ami-00000001',
-                  'instance_type': CONF.default_instance_type,
+                  'instance_type': CONF.default_flavor,
                   'max_count': 1}
         run_instances = self.cloud.run_instances
 
@@ -1775,7 +1775,7 @@ class CloudTestCase(test.TestCase):
 
     def test_run_instances_availability_zone(self):
         kwargs = {'image_id': 'ami-00000001',
-                  'instance_type': CONF.default_instance_type,
+                  'instance_type': CONF.default_flavor,
                   'max_count': 1,
                   'placement': {'availability_zone': 'fake'},
                  }
@@ -1811,7 +1811,7 @@ class CloudTestCase(test.TestCase):
 
     def test_run_instances_image_state_none(self):
         kwargs = {'image_id': 'ami-00000001',
-                  'instance_type': CONF.default_instance_type,
+                  'instance_type': CONF.default_flavor,
                   'max_count': 1}
         run_instances = self.cloud.run_instances
 
@@ -1830,7 +1830,7 @@ class CloudTestCase(test.TestCase):
 
     def test_run_instances_image_state_invalid(self):
         kwargs = {'image_id': 'ami-00000001',
-                  'instance_type': CONF.default_instance_type,
+                  'instance_type': CONF.default_flavor,
                   'max_count': 1}
         run_instances = self.cloud.run_instances
 
@@ -1851,7 +1851,7 @@ class CloudTestCase(test.TestCase):
 
     def test_run_instances_image_status_active(self):
         kwargs = {'image_id': 'ami-00000001',
-                  'instance_type': CONF.default_instance_type,
+                  'instance_type': CONF.default_flavor,
                   'max_count': 1}
         run_instances = self.cloud.run_instances
 
@@ -1890,7 +1890,7 @@ class CloudTestCase(test.TestCase):
         self._restart_compute_service(periodic_interval_max=0.3)
 
         kwargs = {'image_id': 'ami-1',
-                  'instance_type': CONF.default_instance_type,
+                  'instance_type': CONF.default_flavor,
                   'max_count': 1, }
         instance_id = self._run_instance(**kwargs)
 
@@ -1919,7 +1919,7 @@ class CloudTestCase(test.TestCase):
 
     def test_start_instances(self):
         kwargs = {'image_id': 'ami-1',
-                  'instance_type': CONF.default_instance_type,
+                  'instance_type': CONF.default_flavor,
                   'max_count': 1, }
         instance_id = self._run_instance(**kwargs)
 
@@ -1941,7 +1941,7 @@ class CloudTestCase(test.TestCase):
 
     def test_stop_instances(self):
         kwargs = {'image_id': 'ami-1',
-                  'instance_type': CONF.default_instance_type,
+                  'instance_type': CONF.default_flavor,
                   'max_count': 1, }
         instance_id = self._run_instance(**kwargs)
 
@@ -1960,7 +1960,7 @@ class CloudTestCase(test.TestCase):
 
     def test_terminate_instances(self):
         kwargs = {'image_id': 'ami-1',
-                  'instance_type': CONF.default_instance_type,
+                  'instance_type': CONF.default_flavor,
                   'max_count': 1, }
         instance_id = self._run_instance(**kwargs)
 
@@ -1981,7 +1981,7 @@ class CloudTestCase(test.TestCase):
 
     def test_terminate_instances_invalid_instance_id(self):
         kwargs = {'image_id': 'ami-1',
-                  'instance_type': CONF.default_instance_type,
+                  'instance_type': CONF.default_flavor,
                   'max_count': 1, }
         instance_id = self._run_instance(**kwargs)
 
@@ -1992,7 +1992,7 @@ class CloudTestCase(test.TestCase):
 
     def test_terminate_instances_disable_terminate(self):
         kwargs = {'image_id': 'ami-1',
-                  'instance_type': CONF.default_instance_type,
+                  'instance_type': CONF.default_flavor,
                   'max_count': 1, }
         instance_id = self._run_instance(**kwargs)
 
@@ -2025,7 +2025,7 @@ class CloudTestCase(test.TestCase):
 
     def test_terminate_instances_two_instances(self):
         kwargs = {'image_id': 'ami-1',
-                  'instance_type': CONF.default_instance_type,
+                  'instance_type': CONF.default_flavor,
                   'max_count': 1, }
         inst1 = self._run_instance(**kwargs)
         inst2 = self._run_instance(**kwargs)
@@ -2050,7 +2050,7 @@ class CloudTestCase(test.TestCase):
 
     def test_reboot_instances(self):
         kwargs = {'image_id': 'ami-1',
-                  'instance_type': CONF.default_instance_type,
+                  'instance_type': CONF.default_flavor,
                   'max_count': 1, }
         instance_id = self._run_instance(**kwargs)
 
@@ -2096,7 +2096,7 @@ class CloudTestCase(test.TestCase):
             create_volumes_and_snapshots=True)
 
         kwargs = {'image_id': 'ami-1',
-                  'instance_type': CONF.default_instance_type,
+                  'instance_type': CONF.default_flavor,
                   'max_count': 1}
         ec2_instance_id = self._run_instance(**kwargs)
 
@@ -2186,7 +2186,7 @@ class CloudTestCase(test.TestCase):
             create_volumes_and_snapshots=True)
 
         kwargs = {'image_id': 'ami-1',
-                  'instance_type': CONF.default_instance_type,
+                  'instance_type': CONF.default_flavor,
                   'max_count': 1}
         ec2_instance_id = self._run_instance(**kwargs)
 
@@ -2269,9 +2269,9 @@ class CloudTestCase(test.TestCase):
                        self._fake_bdm_get)
 
         def fake_get(ctxt, instance_id):
-            inst_type = flavors.get_default_instance_type()
+            inst_type = flavors.get_default_flavor()
             inst_type['name'] = 'fake_type'
-            sys_meta = flavors.save_instance_type_info({}, inst_type)
+            sys_meta = flavors.save_flavor_info({}, inst_type)
             sys_meta = utils.dict_to_metadata(sys_meta)
             return {
                 'id': 0,
@@ -2347,7 +2347,7 @@ class CloudTestCase(test.TestCase):
         def test_dia_iisb(expected_result, **kwargs):
             """test describe_instance_attribute
             attribute instance_initiated_shutdown_behavior"""
-            kwargs.update({'instance_type': CONF.default_instance_type,
+            kwargs.update({'instance_type': CONF.default_flavor,
                            'max_count': 1})
             instance_id = self._run_instance(**kwargs)
 

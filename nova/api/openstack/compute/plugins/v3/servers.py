@@ -955,8 +955,8 @@ class ServersController(wsgi.Controller):
         #    scheduler_hints = server_dict.get('scheduler_hints', {})
 
         try:
-            _get_inst_type = flavors.get_instance_type_by_flavor_id
-            inst_type = _get_inst_type(flavor_id, read_deleted="no")
+            inst_type = flavors.get_flavor_by_flavor_id(
+                    flavor_id, read_deleted="no")
 
             (instances, resv_id) = self.compute_api.create(context,
                             inst_type,

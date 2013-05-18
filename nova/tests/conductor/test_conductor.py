@@ -79,7 +79,7 @@ class _BaseTestCase(object):
         inst['user_id'] = self.user_id
         inst['project_id'] = self.project_id
         inst['host'] = 'fake_host'
-        type_id = flavors.get_instance_type_by_name(type_name)['id']
+        type_id = flavors.get_flavor_by_name(type_name)['id']
         inst['instance_type_id'] = type_id
         inst['ami_launch_index'] = 0
         inst['memory_mb'] = 0
@@ -357,7 +357,7 @@ class _BaseTestCase(object):
                                                   fake_instance,
                                                   fake_values)
 
-    def test_instance_type_get(self):
+    def test_flavor_get(self):
         self.mox.StubOutWithMock(db, 'instance_type_get')
         db.instance_type_get(self.context, 'fake-id').AndReturn('fake-type')
         self.mox.ReplayAll()
@@ -1197,11 +1197,11 @@ class _BaseTaskTestCase(object):
             self.context, None, None, True, False, "dummy", None, None)
 
     def test_build_instances(self):
-        instance_type = flavors.get_default_instance_type()
-        system_metadata = flavors.save_instance_type_info({}, instance_type)
+        instance_type = flavors.get_default_flavor()
+        system_metadata = flavors.save_flavor_info({}, instance_type)
         # NOTE(alaski): instance_type -> system_metadata -> instance_type loses
         # some data (extra_specs) so we need both for testing.
-        instance_type_extract = flavors.extract_instance_type(
+        instance_type_extract = flavors.extract_flavor(
                 {'system_metadata': system_metadata})
         self.mox.StubOutWithMock(self.conductor_manager.scheduler_rpcapi,
                                  'run_instance')

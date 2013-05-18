@@ -23,7 +23,7 @@ from nova import test
 from nova.tests.api.openstack import fakes
 
 
-def fake_get_instance_type_by_flavor_id(flavorid):
+def fake_get_flavor_by_flavor_id(flavorid):
     return {
         'id': flavorid,
         'flavorid': str(flavorid),
@@ -41,10 +41,10 @@ def fake_get_instance_type_by_flavor_id(flavorid):
     }
 
 
-def fake_get_all_types(inactive=0, filters=None):
+def fake_get_all_flavors(inactive=0, filters=None):
     return {
-        'fake1': fake_get_instance_type_by_flavor_id(1),
-        'fake2': fake_get_instance_type_by_flavor_id(2)
+        'fake1': fake_get_flavor_by_flavor_id(1),
+        'fake2': fake_get_flavor_by_flavor_id(2)
     }
 
 
@@ -54,9 +54,9 @@ class FlavorextradataTest(test.TestCase):
         ext = ('nova.api.openstack.compute.contrib'
               '.flavorextradata.Flavorextradata')
         self.flags(osapi_compute_extension=[ext])
-        self.stubs.Set(flavors, 'get_instance_type_by_flavor_id',
-                                        fake_get_instance_type_by_flavor_id)
-        self.stubs.Set(flavors, 'get_all_types', fake_get_all_types)
+        self.stubs.Set(flavors, 'get_flavor_by_flavor_id',
+                                        fake_get_flavor_by_flavor_id)
+        self.stubs.Set(flavors, 'get_all_flavors', fake_get_all_flavors)
 
     def _verify_flavor_response(self, flavor, expected):
         for key in expected:

@@ -50,11 +50,11 @@ FAKE_FLAVORS = {
 }
 
 
-def fake_instance_type_get_by_flavor_id(flavorid):
+def fake_flavor_get_by_flavor_id(flavorid):
     return FAKE_FLAVORS['flavor %s' % flavorid]
 
 
-def fake_instance_type_get_all(inactive=False, filters=None):
+def fake_flavor_get_all(inactive=False, filters=None):
     def reject_min(db_attr, filter_attr):
         return (filter_attr in filters and
                 int(flavor[db_attr]) < int(filters[filter_attr]))
@@ -72,11 +72,11 @@ def fake_instance_type_get_all(inactive=False, filters=None):
     return output
 
 
-def empty_instance_type_get_all(inactive=False, filters=None):
+def empty_flavor_get_all(inactive=False, filters=None):
     return {}
 
 
-def return_instance_type_not_found(flavor_id):
+def return_flavor_not_found(flavor_id):
     raise exception.InstanceTypeNotFound(instance_type_id=flavor_id)
 
 
@@ -86,18 +86,18 @@ class FlavorsTest(test.TestCase):
         self.flags(osapi_compute_extension=[])
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
-        self.stubs.Set(nova.compute.flavors, "get_all_types",
-                       fake_instance_type_get_all)
+        self.stubs.Set(nova.compute.flavors, "get_all_flavors",
+                       fake_flavor_get_all)
         self.stubs.Set(nova.compute.flavors,
-                       "get_instance_type_by_flavor_id",
-                       fake_instance_type_get_by_flavor_id)
+                       "get_flavor_by_flavor_id",
+                       fake_flavor_get_by_flavor_id)
 
         self.controller = flavors.Controller()
 
     def test_get_flavor_by_invalid_id(self):
         self.stubs.Set(nova.compute.flavors,
-                       "get_instance_type_by_flavor_id",
-                       return_instance_type_not_found)
+                       "get_flavor_by_flavor_id",
+                       return_flavor_not_found)
         req = fakes.HTTPRequest.blank('/v2/fake/flavors/asdf')
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller.show, req, 'asdf')
@@ -341,8 +341,8 @@ class FlavorsTest(test.TestCase):
         self.assertEqual(flavor, expected)
 
     def test_get_empty_flavor_list(self):
-        self.stubs.Set(nova.compute.flavors, "get_all_types",
-                       empty_instance_type_get_all)
+        self.stubs.Set(nova.compute.flavors, "get_all_flavors",
+                       empty_flavor_get_all)
 
         req = fakes.HTTPRequest.blank('/v2/fake/flavors')
         flavors = self.controller.index(req)

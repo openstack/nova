@@ -2130,15 +2130,15 @@ class ComputeManager(manager.SchedulerDependentManager):
         """
         sys_meta = utils.metadata_to_dict(instance['system_metadata'])
         if restore_old:
-            instance_type = flavors.extract_instance_type(instance,
+            instance_type = flavors.extract_flavor(instance,
                                                                  'old_')
-            sys_meta = flavors.save_instance_type_info(sys_meta,
+            sys_meta = flavors.save_flavor_info(sys_meta,
                                                               instance_type)
         else:
-            instance_type = flavors.extract_instance_type(instance)
+            instance_type = flavors.extract_flavor(instance)
 
-        flavors.delete_instance_type_info(sys_meta, 'old_')
-        flavors.delete_instance_type_info(sys_meta, 'new_')
+        flavors.delete_flavor_info(sys_meta, 'old_')
+        flavors.delete_flavor_info(sys_meta, 'new_')
 
         return sys_meta, instance_type
 
@@ -2384,7 +2384,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         # NOTE(danms): Stash the new instance_type to avoid having to
         # look it up in the database later
         sys_meta = utils.metadata_to_dict(instance['system_metadata'])
-        flavors.save_instance_type_info(sys_meta, instance_type,
+        flavors.save_flavor_info(sys_meta, instance_type,
                                                 prefix='new_')
         # NOTE(mriedem): Stash the old vm_state so we can set the
         # resized/reverted instance back to the same state later.
@@ -2555,19 +2555,19 @@ class ComputeManager(manager.SchedulerDependentManager):
         resize_instance = False
         old_instance_type_id = migration['old_instance_type_id']
         new_instance_type_id = migration['new_instance_type_id']
-        old_instance_type = flavors.extract_instance_type(instance)
+        old_instance_type = flavors.extract_flavor(instance)
         sys_meta = utils.metadata_to_dict(instance['system_metadata'])
         # NOTE(mriedem): Get the old_vm_state so we know if we should
         # power on the instance. If old_vm_sate is not set we need to default
         # to ACTIVE for backwards compatibility
         old_vm_state = sys_meta.get('old_vm_state', vm_states.ACTIVE)
-        flavors.save_instance_type_info(sys_meta,
-                                               old_instance_type,
-                                               prefix='old_')
+        flavors.save_flavor_info(sys_meta,
+                                 old_instance_type,
+                                 prefix='old_')
         if old_instance_type_id != new_instance_type_id:
-            instance_type = flavors.extract_instance_type(instance,
+            instance_type = flavors.extract_flavor(instance,
                                                                  prefix='new_')
-            flavors.save_instance_type_info(sys_meta, instance_type)
+            flavors.save_flavor_info(sys_meta, instance_type)
 
             instance = self._instance_update(
                     context,

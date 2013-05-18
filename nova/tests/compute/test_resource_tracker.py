@@ -112,7 +112,7 @@ class BaseTestCase(test.TestCase):
                        'instance_update_and_get_original',
                        self._fake_instance_update_and_get_original)
         self.stubs.Set(self.conductor.db,
-                       'instance_type_get', self._fake_instance_type_get)
+                       'instance_type_get', self._fake_flavor_get)
 
         self.host = 'fakehost'
 
@@ -153,7 +153,7 @@ class BaseTestCase(test.TestCase):
 
     def _fake_instance_system_metadata(self, instance_type, prefix=''):
         sys_meta = []
-        for key in flavors.system_metadata_instance_type_props.keys():
+        for key in flavors.system_metadata_flavor_props.keys():
             sys_meta.append({'key': '%sinstance_type_%s' % (prefix, key),
                              'value': instance_type[key]})
         return sys_meta
@@ -162,7 +162,7 @@ class BaseTestCase(test.TestCase):
 
         # Default to an instance ready to resize to or from the same
         # instance_type
-        itype = self._fake_instance_type_create()
+        itype = self._fake_flavor_create()
         sys_meta = self._fake_instance_system_metadata(itype)
 
         if stash:
@@ -193,7 +193,7 @@ class BaseTestCase(test.TestCase):
         self._instances[instance_uuid] = instance
         return instance
 
-    def _fake_instance_type_create(self, **kwargs):
+    def _fake_flavor_create(self, **kwargs):
         instance_type = {
             'id': 1,
             'name': 'fakeitype',
@@ -215,7 +215,7 @@ class BaseTestCase(test.TestCase):
     def _fake_instance_get_all_by_host_and_node(self, context, host, nodename):
         return [i for i in self._instances.values() if i['host'] == host]
 
-    def _fake_instance_type_get(self, ctxt, id_):
+    def _fake_flavor_get(self, ctxt, id_):
         return self._instance_types[id_]
 
     def _fake_instance_update_and_get_original(self, context, instance_uuid,
@@ -286,7 +286,7 @@ class UnsupportedDriverTestCase(BaseTestCase):
 
     def test_disabled_resize_claim(self):
         instance = self._fake_instance()
-        instance_type = self._fake_instance_type_create()
+        instance_type = self._fake_flavor_create()
         claim = self.tracker.resize_claim(self.context, instance,
                 instance_type)
         self.assertEqual(0, claim.memory_mb)
@@ -296,7 +296,7 @@ class UnsupportedDriverTestCase(BaseTestCase):
 
     def test_disabled_resize_context_claim(self):
         instance = self._fake_instance()
-        instance_type = self._fake_instance_type_create()
+        instance_type = self._fake_flavor_create()
         with self.tracker.resize_claim(self.context, instance, instance_type) \
                                        as claim:
             self.assertEqual(0, claim.memory_mb)
@@ -666,7 +666,7 @@ class ResizeClaimTestCase(BaseTrackerTestCase):
                        'migration_create', self._fake_migration_create)
 
         self.instance = self._fake_instance()
-        self.instance_type = self._fake_instance_type_create()
+        self.instance_type = self._fake_flavor_create()
 
     def _fake_migration_create(self, context, values=None):
         instance_uuid = str(uuid.uuid1())
@@ -737,9 +737,9 @@ class ResizeClaimTestCase(BaseTrackerTestCase):
     def test_same_host(self):
         self.limits['vcpu'] = 3
 
-        src_type = self._fake_instance_type_create(id=2, memory_mb=1,
+        src_type = self._fake_flavor_create(id=2, memory_mb=1,
                 root_gb=1, ephemeral_gb=0, vcpus=1)
-        dest_type = self._fake_instance_type_create(id=2, memory_mb=2,
+        dest_type = self._fake_flavor_create(id=2, memory_mb=2,
                 root_gb=2, ephemeral_gb=1, vcpus=2)
 
         # make an instance of src_type:
@@ -848,7 +848,7 @@ class ResizeClaimTestCase(BaseTrackerTestCase):
         self.assertTrue(self.tracker._instance_in_resize_state(instance))
 
     def test_dupe_filter(self):
-        self._fake_instance_type_create(id=2, memory_mb=1, root_gb=1,
+        self._fake_flavor_create(id=2, memory_mb=1, root_gb=1,
                 ephemeral_gb=1, vcpus=1)
 
         instance = self._fake_instance(host=self.host)

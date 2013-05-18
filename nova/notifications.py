@@ -284,7 +284,7 @@ def info_from_instance(context, instance_ref, network_info,
 
     image_ref_url = glance.generate_image_url(instance_ref['image_ref'])
 
-    instance_type = flavors.extract_instance_type(instance_ref)
+    instance_type = flavors.extract_flavor(instance_ref)
     instance_type_name = instance_type.get('name', '')
 
     if system_metadata is None:

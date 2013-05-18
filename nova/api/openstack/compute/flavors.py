@@ -85,7 +85,7 @@ class Controller(wsgi.Controller):
     def show(self, req, id):
         """Return data about the given flavor id."""
         try:
-            flavor = flavors.get_instance_type_by_flavor_id(id)
+            flavor = flavors.get_flavor_by_flavor_id(id)
             req.cache_db_flavor(flavor)
         except exception.NotFound:
             raise webob.exc.HTTPNotFound()
@@ -134,7 +134,7 @@ class Controller(wsgi.Controller):
                 msg = _('Invalid minDisk filter [%s]') % req.params['minDisk']
                 raise webob.exc.HTTPBadRequest(explanation=msg)
 
-        limited_flavors = flavors.get_all_types(context, filters=filters)
+        limited_flavors = flavors.get_all_flavors(context, filters=filters)
         flavors_list = limited_flavors.values()
         sorted_flavors = sorted(flavors_list,
                                 key=lambda item: item['flavorid'])

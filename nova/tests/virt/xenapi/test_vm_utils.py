@@ -427,8 +427,8 @@ class CheckVDISizeTestCase(test.TestCase):
         self.vdi_uuid = 'fakeuuid'
 
     def test_not_too_large(self):
-        self.mox.StubOutWithMock(flavors, 'extract_instance_type')
-        flavors.extract_instance_type(self.instance).AndReturn(
+        self.mox.StubOutWithMock(flavors, 'extract_flavor')
+        flavors.extract_flavor(self.instance).AndReturn(
                 dict(root_gb=1))
 
         self.mox.StubOutWithMock(vm_utils, '_get_vdi_chain_size')
@@ -441,8 +441,8 @@ class CheckVDISizeTestCase(test.TestCase):
                 self.vdi_uuid)
 
     def test_too_large(self):
-        self.mox.StubOutWithMock(flavors, 'extract_instance_type')
-        flavors.extract_instance_type(self.instance).AndReturn(
+        self.mox.StubOutWithMock(flavors, 'extract_flavor')
+        flavors.extract_flavor(self.instance).AndReturn(
                 dict(root_gb=1))
 
         self.mox.StubOutWithMock(vm_utils, '_get_vdi_chain_size')
@@ -456,8 +456,8 @@ class CheckVDISizeTestCase(test.TestCase):
                 self.instance, self.vdi_uuid)
 
     def test_zero_root_gb_disables_check(self):
-        self.mox.StubOutWithMock(flavors, 'extract_instance_type')
-        flavors.extract_instance_type(self.instance).AndReturn(
+        self.mox.StubOutWithMock(flavors, 'extract_flavor')
+        flavors.extract_flavor(self.instance).AndReturn(
                 dict(root_gb=0))
 
         self.mox.ReplayAll()

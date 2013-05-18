@@ -41,7 +41,7 @@ from nova import volume
 
 CONF = cfg.CONF
 CONF.import_opt('compute_driver', 'nova.virt.driver')
-CONF.import_opt('default_instance_type', 'nova.compute.flavors')
+CONF.import_opt('default_flavor', 'nova.compute.flavors')
 CONF.import_opt('use_ipv6', 'nova.netconf')
 
 
@@ -415,8 +415,8 @@ class CinderCloudTestCase(test.TestCase):
 
     def _setUpBlockDeviceMapping(self):
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
-        sys_meta = flavors.save_instance_type_info(
-            {}, flavors.get_instance_type(1))
+        sys_meta = flavors.save_flavor_info(
+            {}, flavors.get_flavor(1))
         inst1 = db.instance_create(self.context,
                                   {'image_ref': image_uuid,
                                    'instance_type_id': 1,
@@ -758,7 +758,7 @@ class CinderCloudTestCase(test.TestCase):
         self._restart_compute_service(periodic_interval_max=0.3)
 
         kwargs = {'image_id': 'ami-1',
-                  'instance_type': CONF.default_instance_type,
+                  'instance_type': CONF.default_flavor,
                   'max_count': 1,
                   'block_device_mapping': [{'device_name': '/dev/sdb',
                                             'volume_id': vol1_uuid,
@@ -840,7 +840,7 @@ class CinderCloudTestCase(test.TestCase):
         # enforce periodic tasks run in short time to avoid wait for 60s.
         self._restart_compute_service(periodic_interval_max=0.3)
         kwargs = {'image_id': 'ami-1',
-                  'instance_type': CONF.default_instance_type,
+                  'instance_type': CONF.default_flavor,
                   'max_count': 1,
                   'block_device_mapping': [{'device_name': '/dev/sdb',
                                             'volume_id': vol1_uuid,
@@ -921,7 +921,7 @@ class CinderCloudTestCase(test.TestCase):
         snap2_uuid = ec2utils.ec2_snap_id_to_uuid(snap2['snapshotId'])
 
         kwargs = {'image_id': 'ami-1',
-                  'instance_type': CONF.default_instance_type,
+                  'instance_type': CONF.default_flavor,
                   'max_count': 1,
                   'block_device_mapping': [{'device_name': '/dev/vdb',
                                             'snapshot_id': snap1_uuid,
@@ -981,7 +981,7 @@ class CinderCloudTestCase(test.TestCase):
             create_volumes_and_snapshots=True)
 
         kwargs = {'image_id': 'ami-1',
-                  'instance_type': CONF.default_instance_type,
+                  'instance_type': CONF.default_flavor,
                   'max_count': 1}
         ec2_instance_id = self._run_instance(**kwargs)
 
