@@ -28,6 +28,7 @@ import webob.exc
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova import exception
 from nova import notifications
 from nova.openstack.common import log as logging
 from nova import utils
@@ -54,6 +55,11 @@ LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
 CONF.register_group(api_opts_group)
 CONF.register_opts(api_opts, api_opts_group)
+
+# List of v3 API extensions which are considered to form
+# the core API and so must be present
+# TODO(cyeoh): Expand this list as the core APIs are ported to V3
+API_V3_CORE_EXTENSIONS = set(['servers'])
 
 
 class FaultWrapper(base_wsgi.Middleware):
@@ -306,7 +312,21 @@ class APIRouterV3(base_wsgi.Router):
                                            mapper=mapper)
             self.api_extension_manager.map(self._register_controllers)
 
+        missing_core_extensions = self.get_missing_core_extensions(
+            self.loaded_extension_info.get_extensions().keys())
+        if missing_core_extensions:
+            LOG.critical(_("Missing core API extensions: %s"),
+                         missing_core_extensions)
+            raise exception.CoreAPIMissing(
+                missing_apis=missing_core_extensions)
+
         super(APIRouterV3, self).__init__(mapper)
+
+    @staticmethod
+    def get_missing_core_extensions(extensions_loaded):
+        extensions_loaded = set(extensions_loaded)
+        missing_extensions = API_V3_CORE_EXTENSIONS - extensions_loaded
+        return missing_extensions
 
     @property
     def loaded_extension_info(self):
