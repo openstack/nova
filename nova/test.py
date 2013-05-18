@@ -87,7 +87,6 @@ class Database(fixtures.Fixture):
             if os.path.exists(testdb):
                 return
         db_migrate.db_sync()
-        self.post_migrations()
         if sql_connection == "sqlite://":
             conn = self.engine.connect()
             self._DB = "".join(line for line in conn.connection.iterdump())
@@ -107,8 +106,13 @@ class Database(fixtures.Fixture):
             shutil.copyfile(paths.state_path_rel(self.sqlite_clean_db),
                             paths.state_path_rel(self.sqlite_db))
 
-    def post_migrations(self):
-        """Any addition steps that are needed outside of the migrations."""
+
+class SampleNetworks(fixtures.Fixture):
+
+    """Create sample networks in the database."""
+
+    def setUp(self):
+        super(SampleNetworks, self).setUp()
         ctxt = context.get_admin_context()
         network = network_manager.VlanManager()
         bridge_interface = CONF.flat_interface or CONF.vlan_interface

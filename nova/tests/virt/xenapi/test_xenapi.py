@@ -308,6 +308,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
     """Unit tests for VM operations."""
     def setUp(self):
         super(XenAPIVMTestCase, self).setUp()
+        self.useFixture(test.SampleNetworks())
         self.network = importutils.import_object(CONF.network_manager)
         self.flags(disable_process_locking=True,
                    instance_name_template='%d',

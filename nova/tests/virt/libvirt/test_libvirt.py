@@ -281,6 +281,7 @@ class LibvirtConnTestCase(test.TestCase):
 
     def setUp(self):
         super(LibvirtConnTestCase, self).setUp()
+        self.useFixture(test.SampleNetworks())
         self.flags(fake_call=True)
         self.user_id = 'fake'
         self.project_id = 'fake'
