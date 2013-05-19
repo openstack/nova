@@ -3,7 +3,7 @@
 
 [Filters]
 # nova/virt/baremetal/ipmi.py: 'ipmitool', ..
-ipmitool: CommandFilter, /usr/bin/ipmitool, root
+ipmitool: CommandFilter, ipmitool, root
 
 # nova/virt/baremetal/ipmi.py: 'kill', '-TERM', str(console_pid)
 kill_shellinaboxd: KillFilter, root, /usr/local/bin/shellinaboxd, -15, -TERM
