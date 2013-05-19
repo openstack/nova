@@ -30,6 +30,7 @@ from sqlalchemy.dialects import sqlite
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.sql.expression import select
 
+from nova.compute import vm_states
 from nova import context
 from nova import db
 from nova.db.sqlalchemy import api as sqlalchemy_api
@@ -59,7 +60,7 @@ class DbTestCase(test.TestCase):
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id, self.project_id)
 
-    def create_instances_with_args(self, **kwargs):
+    def create_instance_with_args(self, **kwargs):
         args = {'reservation_id': 'a', 'image_ref': 1, 'host': 'host1',
                 'node': 'node1', 'project_id': self.project_id,
                 'vm_state': 'fake'}
@@ -91,36 +92,36 @@ class DbApiTestCase(DbTestCase):
         otherprojectcontext = context.RequestContext(self.user_id,
                                           "%s2" % self.project_id)
 
-        self.create_instances_with_args(hostname='fake_name')
+        self.create_instance_with_args(hostname='fake_name')
 
         # With scope 'global' any duplicate should fail, be it this project:
         self.flags(osapi_compute_unique_server_name_scope='global')
         self.assertRaises(exception.InstanceExists,
-                          self.create_instances_with_args,
+                          self.create_instance_with_args,
                           hostname='fake_name')
 
         # or another:
         self.assertRaises(exception.InstanceExists,
-                          self.create_instances_with_args,
+                          self.create_instance_with_args,
                           context=otherprojectcontext,
                           hostname='fake_name')
 
         # With scope 'project' a duplicate in the project should fail:
         self.flags(osapi_compute_unique_server_name_scope='project')
         self.assertRaises(exception.InstanceExists,
-                          self.create_instances_with_args,
+                          self.create_instance_with_args,
                           hostname='fake_name')
 
         # With scope 'project' a duplicate in a different project should work:
         self.flags(osapi_compute_unique_server_name_scope='project')
-        self.create_instances_with_args(context=otherprojectcontext,
-                                        hostname='fake_name')
+        self.create_instance_with_args(context=otherprojectcontext,
+                                       hostname='fake_name')
 
         self.flags(osapi_compute_unique_server_name_scope=None)
 
     def test_instance_metadata_get_all_query(self):
-        self.create_instances_with_args(metadata={'foo': 'bar'})
-        self.create_instances_with_args(metadata={'baz': 'quux'})
+        self.create_instance_with_args(metadata={'foo': 'bar'})
+        self.create_instance_with_args(metadata={'baz': 'quux'})
 
         result = db.instance_metadata_get_all(self.context, [])
         self.assertEqual(2, len(result))
@@ -153,7 +154,7 @@ class DbApiTestCase(DbTestCase):
         check_exc_format(db.get_instance_uuid_by_ec2_id)
 
     def test_instance_get_all_with_meta(self):
-        inst = self.create_instances_with_args()
+        inst = self.create_instance_with_args()
         fake_meta, fake_sys = self.create_metadata_for_instance(inst['uuid'])
         result = db.instance_get_all(self.context)
         for inst in result:
@@ -163,7 +164,7 @@ class DbApiTestCase(DbTestCase):
             self.assertEqual(sys_meta, fake_sys)
 
     def test_instance_get_all_by_filters_with_meta(self):
-        inst = self.create_instances_with_args()
+        inst = self.create_instance_with_args()
         fake_meta, fake_sys = self.create_metadata_for_instance(inst['uuid'])
         result = db.instance_get_all_by_filters(self.context, {})
         for inst in result:
@@ -173,7 +174,7 @@ class DbApiTestCase(DbTestCase):
             self.assertEqual(sys_meta, fake_sys)
 
     def test_instance_get_all_by_filters_without_meta(self):
-        inst = self.create_instances_with_args()
+        inst = self.create_instance_with_args()
         fake_meta, fake_sys = self.create_metadata_for_instance(inst['uuid'])
         result = db.instance_get_all_by_filters(self.context, {},
                                                 columns_to_join=[])
@@ -184,34 +185,41 @@ class DbApiTestCase(DbTestCase):
             self.assertEqual(sys_meta, {})
 
     def test_instance_get_all_by_filters(self):
-        self.create_instances_with_args()
-        self.create_instances_with_args()
+        self.create_instance_with_args()
+        self.create_instance_with_args()
         result = db.instance_get_all_by_filters(self.context, {})
         self.assertEqual(2, len(result))
 
     def test_instance_get_all_by_filters_regex(self):
-        self.create_instances_with_args(display_name='test1')
-        self.create_instances_with_args(display_name='teeeest2')
-        self.create_instances_with_args(display_name='diff')
+        self.create_instance_with_args(display_name='test1')
+        self.create_instance_with_args(display_name='teeeest2')
+        self.create_instance_with_args(display_name='diff')
         result = db.instance_get_all_by_filters(self.context,
                                                 {'display_name': 't.*st.'})
         self.assertEqual(2, len(result))
 
+    def test_instance_get_all_by_filters_exact_match(self):
+        self.create_instance_with_args(host='host1')
+        self.create_instance_with_args(host='host12')
+        result = db.instance_get_all_by_filters(self.context,
+                                                {'host': 'host1'})
+        self.assertEqual(1, len(result))
+
     def test_instance_get_all_by_filters_metadata(self):
-        self.create_instances_with_args(metadata={'foo': 'bar'})
-        self.create_instances_with_args()
+        self.create_instance_with_args(metadata={'foo': 'bar'})
+        self.create_instance_with_args()
         result = db.instance_get_all_by_filters(self.context,
                                                 {'metadata': {'foo': 'bar'}})
         self.assertEqual(1, len(result))
 
     def test_instance_get_all_by_filters_unicode_value(self):
-        self.create_instances_with_args(display_name=u'test♥')
+        self.create_instance_with_args(display_name=u'test♥')
         result = db.instance_get_all_by_filters(self.context,
                                                 {'display_name': u'test'})
         self.assertEqual(1, len(result))
 
     def test_instance_get_by_uuid(self):
-        inst = self.create_instances_with_args()
+        inst = self.create_instance_with_args()
         fake_meta, fake_sys = self.create_metadata_for_instance(inst['uuid'])
         result = db.instance_get_by_uuid(self.context, inst['uuid'])
         meta = utils.metadata_to_dict(result['metadata'])
@@ -220,7 +228,7 @@ class DbApiTestCase(DbTestCase):
         self.assertEqual(sys_meta, fake_sys)
 
     def test_instance_get_by_uuid_join_empty(self):
-        inst = self.create_instances_with_args()
+        inst = self.create_instance_with_args()
         fake_meta, fake_sys = self.create_metadata_for_instance(inst['uuid'])
         result = db.instance_get_by_uuid(self.context, inst['uuid'],
                 columns_to_join=[])
@@ -230,7 +238,7 @@ class DbApiTestCase(DbTestCase):
         self.assertEqual(sys_meta, {})
 
     def test_instance_get_by_uuid_join_meta(self):
-        inst = self.create_instances_with_args()
+        inst = self.create_instance_with_args()
         fake_meta, fake_sys = self.create_metadata_for_instance(inst['uuid'])
         result = db.instance_get_by_uuid(self.context, inst['uuid'],
                 columns_to_join=['metadata'])
@@ -240,7 +248,7 @@ class DbApiTestCase(DbTestCase):
         self.assertEqual(sys_meta, {})
 
     def test_instance_get_by_uuid_join_sys_meta(self):
-        inst = self.create_instances_with_args()
+        inst = self.create_instance_with_args()
         fake_meta, fake_sys = self.create_metadata_for_instance(inst['uuid'])
         result = db.instance_get_by_uuid(self.context, inst['uuid'],
                 columns_to_join=['system_metadata'])
@@ -250,8 +258,8 @@ class DbApiTestCase(DbTestCase):
         self.assertEqual(sys_meta, fake_sys)
 
     def test_instance_get_all_by_filters_deleted(self):
-        inst1 = self.create_instances_with_args()
-        inst2 = self.create_instances_with_args(reservation_id='b')
+        inst1 = self.create_instance_with_args()
+        inst2 = self.create_instance_with_args(reservation_id='b')
         db.instance_destroy(self.context, inst1['uuid'])
         result = db.instance_get_all_by_filters(self.context, {})
         self.assertEqual(2, len(result))
@@ -262,10 +270,44 @@ class DbApiTestCase(DbTestCase):
         else:
             self.assertTrue(result[1]['deleted'])
 
+    def test_instance_get_all_by_filters_deleted_and_soft_deleted(self):
+        inst1 = self.create_instance_with_args()
+        inst2 = self.create_instance_with_args(vm_state=vm_states.SOFT_DELETED)
+        inst3 = self.create_instance_with_args()
+        db.instance_destroy(self.context, inst1['uuid'])
+        result = db.instance_get_all_by_filters(self.context,
+                                                {'deleted': True})
+        self.assertEqual(2, len(result))
+        self.assertIn(inst1['id'], [result[0]['id'], result[1]['id']])
+        self.assertIn(inst2['id'], [result[0]['id'], result[1]['id']])
+
+    def test_instance_get_all_by_filters_deleted_no_soft_deleted(self):
+        inst1 = self.create_instance_with_args()
+        inst2 = self.create_instance_with_args(vm_state=vm_states.SOFT_DELETED)
+        inst3 = self.create_instance_with_args()
+        db.instance_destroy(self.context, inst1['uuid'])
+        result = db.instance_get_all_by_filters(self.context,
+                                                {'deleted': True,
+                                                 'soft_deleted': False})
+        self.assertEqual(1, len(result))
+        self.assertEqual(inst1['id'], result[0]['id'])
+
+    def test_instance_get_all_by_filters_alive_and_soft_deleted(self):
+        inst1 = self.create_instance_with_args()
+        inst2 = self.create_instance_with_args(vm_state=vm_states.SOFT_DELETED)
+        inst3 = self.create_instance_with_args()
+        db.instance_destroy(self.context, inst1['uuid'])
+        result = db.instance_get_all_by_filters(self.context,
+                                                {'deleted': False,
+                                                 'soft_deleted': True})
+        self.assertEqual(2, len(result))
+        self.assertIn(inst2['id'], [result[0]['id'], result[1]['id']])
+        self.assertIn(inst3['id'], [result[0]['id'], result[1]['id']])
+
     def test_instance_get_all_by_host_and_node_no_join(self):
         # Test that system metadata is not joined.
         sys_meta = {'foo': 'bar'}
-        expected = self.create_instances_with_args(system_metadata=sys_meta)
+        expected = self.create_instance_with_args(system_metadata=sys_meta)
 
         elevated = self.context.elevated()
         instances = db.instance_get_all_by_host_and_node(elevated, 'host1',
@@ -480,12 +522,12 @@ class DbApiTestCase(DbTestCase):
         otherprojectcontext = context.RequestContext(self.user_id,
                                           "%s2" % self.project_id)
 
-        inst = self.create_instances_with_args(hostname='fake_name')
+        inst = self.create_instance_with_args(hostname='fake_name')
         uuid1p1 = inst['uuid']
-        inst = self.create_instances_with_args(hostname='fake_name2')
+        inst = self.create_instance_with_args(hostname='fake_name2')
         uuid2p1 = inst['uuid']
 
-        inst = self.create_instances_with_args(context=otherprojectcontext,
+        inst = self.create_instance_with_args(context=otherprojectcontext,
                                                hostname='fake_name3')
         uuid1p2 = inst['uuid']
 
@@ -1216,9 +1258,9 @@ class NotDbApiTestCase(DbTestCase):
 
     def test_instance_get_all_by_filters_regex_unsupported_db(self):
         # Ensure that the 'LIKE' operator is used for unsupported dbs.
-        self.create_instances_with_args(display_name='test1')
-        self.create_instances_with_args(display_name='test.*')
-        self.create_instances_with_args(display_name='diff')
+        self.create_instance_with_args(display_name='test1')
+        self.create_instance_with_args(display_name='test.*')
+        self.create_instance_with_args(display_name='diff')
         result = db.instance_get_all_by_filters(self.context,
                                                 {'display_name': 'test.*'})
         self.assertEqual(1, len(result))
@@ -1227,9 +1269,9 @@ class NotDbApiTestCase(DbTestCase):
         self.assertEqual(2, len(result))
 
     def test_instance_get_all_by_filters_paginate(self):
-        test1 = self.create_instances_with_args(display_name='test1')
-        test2 = self.create_instances_with_args(display_name='test2')
-        test3 = self.create_instances_with_args(display_name='test3')
+        test1 = self.create_instance_with_args(display_name='test1')
+        test2 = self.create_instance_with_args(display_name='test2')
+        test3 = self.create_instance_with_args(display_name='test3')
 
         result = db.instance_get_all_by_filters(self.context,
                                                 {'display_name': '%test%'},
@@ -1590,17 +1632,17 @@ class SqlAlchemyDbApiTestCase(DbTestCase):
     def test_instance_get_all_by_host(self):
         ctxt = context.get_admin_context()
 
-        self.create_instances_with_args()
-        self.create_instances_with_args()
-        self.create_instances_with_args(host='host2')
+        self.create_instance_with_args()
+        self.create_instance_with_args()
+        self.create_instance_with_args(host='host2')
         result = sqlalchemy_api._instance_get_all_uuids_by_host(ctxt, 'host1')
         self.assertEqual(2, len(result))
 
     def test_instance_get_all_uuids_by_host(self):
         ctxt = context.get_admin_context()
-        self.create_instances_with_args()
-        self.create_instances_with_args()
-        self.create_instances_with_args(host='host2')
+        self.create_instance_with_args()
+        self.create_instance_with_args()
+        self.create_instance_with_args(host='host2')
         result = sqlalchemy_api._instance_get_all_uuids_by_host(ctxt, 'host1')
         self.assertEqual(2, len(result))
         self.assertEqual(types.UnicodeType, type(result[0]))
