@@ -72,9 +72,6 @@ class LocalAPI(object):
     def instance_destroy(self, context, instance):
         return self._manager.instance_destroy(context, instance)
 
-    def instance_get_all(self, context):
-        return self._manager.instance_get_all(context)
-
     def instance_get_all_by_host(self, context, host, columns_to_join=None):
         return self._manager.instance_get_all_by_host(
             context, host, columns_to_join=columns_to_join)
@@ -91,10 +88,6 @@ class LocalAPI(object):
                                                          sort_key,
                                                          sort_dir,
                                                          columns_to_join)
-
-    def instance_get_all_hung_in_rebooting(self, context, timeout):
-        return self._manager.instance_get_all_hung_in_rebooting(context,
-                                                                timeout)
 
     def instance_get_active_by_window_joined(self, context, begin, end=None,
                                              project_id=None, host=None):
@@ -398,9 +391,6 @@ class API(object):
                                                           instance_uuid,
                                                           columns_to_join)
 
-    def instance_get_all(self, context):
-        return self.conductor_rpcapi.instance_get_all(context)
-
     def instance_get_all_by_host(self, context, host, columns_to_join=None):
         return self.conductor_rpcapi.instance_get_all_by_host(
             context, host, columns_to_join=columns_to_join)
@@ -415,10 +405,6 @@ class API(object):
                                     columns_to_join=None):
         return self.conductor_rpcapi.instance_get_all_by_filters(
             context, filters, sort_key, sort_dir, columns_to_join)
-
-    def instance_get_all_hung_in_rebooting(self, context, timeout):
-        return self.conductor_rpcapi.instance_get_all_hung_in_rebooting(
-            context, timeout)
 
     def instance_get_active_by_window_joined(self, context, begin, end=None,
                                              project_id=None, host=None):

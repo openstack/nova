@@ -3888,13 +3888,15 @@ class ComputeTestCase(BaseTestCase):
         deleted_at = (timeutils.utcnow() -
                       datetime.timedelta(hours=1, minutes=5))
         instance = self._create_fake_instance({"deleted_at": deleted_at,
-                                          "deleted": True})
+                                               "deleted": True})
 
         self.compute.host = instance['host']
 
         self.mox.StubOutWithMock(self.compute, '_get_instances_on_driver')
-        self.compute._get_instances_on_driver(admin_context).AndReturn(
-                [instance])
+        self.compute._get_instances_on_driver(
+            admin_context, {'deleted': True,
+                            'soft_deleted': False,
+                            'host': self.compute.host}).AndReturn([instance])
         self.flags(running_deleted_instance_timeout=3600,
                    running_deleted_instance_action='reap')
 
@@ -3922,13 +3924,11 @@ class ComputeTestCase(BaseTestCase):
         instance1['deleted'] = True
         instance1['deleted_at'] = "sometimeago"
 
-        instance2 = {}
-        instance2['deleted'] = False
-        instance2['deleted_at'] = None
-
         self.mox.StubOutWithMock(self.compute, '_get_instances_on_driver')
-        self.compute._get_instances_on_driver(admin_context).AndReturn(
-                [instance1, instance2])
+        self.compute._get_instances_on_driver(
+            admin_context, {'deleted': True,
+                            'soft_deleted': False,
+                            'host': self.compute.host}).AndReturn([instance1])
 
         self.mox.StubOutWithMock(timeutils, 'is_older_than')
         timeutils.is_older_than('sometimeago',
@@ -4046,25 +4046,23 @@ class ComputeTestCase(BaseTestCase):
 
         instances = [{'uuid': 'fake_uuid1', 'vm_state': vm_states.RESCUED,
                       'launched_at': timed_out_time},
-                     {'uuid': 'fake_uuid2', 'vm_state': vm_states.ACTIVE,
+                     {'uuid': 'fake_uuid2', 'vm_state': vm_states.RESCUED,
                       'launched_at': timed_out_time},
-                     {'uuid': 'fake_uuid3', 'vm_state': vm_states.ACTIVE,
-                      'launched_at': not_timed_out_time},
-                     {'uuid': 'fake_uuid4', 'vm_state': vm_states.RESCUED,
-                      'launched_at': timed_out_time},
-                     {'uuid': 'fake_uuid5', 'vm_state': vm_states.RESCUED,
+                     {'uuid': 'fake_uuid3', 'vm_state': vm_states.RESCUED,
                       'launched_at': not_timed_out_time}]
-        unrescued_instances = {'fake_uuid1': False, 'fake_uuid4': False}
+        unrescued_instances = {'fake_uuid1': False, 'fake_uuid2': False}
 
-        def fake_instance_get_all_by_host(context, host, columns_to_join):
+        def fake_instance_get_all_by_filters(context, filters,
+                                             columns_to_join):
             self.assertEqual(columns_to_join, [])
             return instances
 
         def fake_unrescue(context, instance):
             unrescued_instances[instance['uuid']] = True
 
-        self.stubs.Set(self.compute.conductor_api, 'instance_get_all_by_host',
-                       fake_instance_get_all_by_host)
+        self.stubs.Set(self.compute.conductor_api,
+                       'instance_get_all_by_filters',
+                       fake_instance_get_all_by_filters)
         self.stubs.Set(self.compute.conductor_api, 'compute_unrescue',
                        fake_unrescue)
 
@@ -4315,8 +4313,8 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute, '_legacy_nw_info')
         self.mox.StubOutWithMock(self.compute.driver, 'destroy')
 
-        self.compute._get_instances_on_driver(fake_context).AndReturn(
-                instances)
+        self.compute._get_instances_on_driver(
+                fake_context, {'deleted': False}).AndReturn(instances)
         self.compute._get_instance_nw_info(fake_context,
                                            evacuated_instance).AndReturn(
                                                    'fake_network_info')
@@ -4368,8 +4366,8 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute, '_legacy_nw_info')
         self.mox.StubOutWithMock(self.compute.driver, 'destroy')
 
-        self.compute._get_instances_on_driver(fake_context).AndReturn(
-                instances)
+        self.compute._get_instances_on_driver(
+                fake_context, {'deleted': False}).AndReturn(instances)
         self.compute._get_instance_nw_info(fake_context,
                                            evacuated_instance).AndReturn(
                                                    'fake_network_info')
@@ -4426,8 +4424,8 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute, '_legacy_nw_info')
         self.mox.StubOutWithMock(self.compute.driver, 'destroy')
 
-        self.compute._get_instances_on_driver(fake_context).AndReturn(
-                instances)
+        self.compute._get_instances_on_driver(
+                fake_context, {'deleted': False}).AndReturn(instances)
         self.compute._get_instance_nw_info(fake_context,
                                            evacuated_instance).AndReturn(
                                                    'fake_network_info')
@@ -4533,8 +4531,8 @@ class ComputeTestCase(BaseTestCase):
         self.compute.init_virt_events()
 
         # simulate failed instance
-        self.compute._get_instances_on_driver(fake_context).AndReturn([
-            deleted_instance])
+        self.compute._get_instances_on_driver(
+            fake_context, {'deleted': False}).AndReturn([deleted_instance])
         self.compute._get_instance_nw_info(fake_context, deleted_instance
             ).AndRaise(exception.InstanceNotFound(
                 instance_id=deleted_instance['uuid']))
@@ -4693,6 +4691,7 @@ class ComputeTestCase(BaseTestCase):
         # Test getting instances when driver doesn't support
         # 'list_instance_uuids'
         self.compute.host = 'host'
+        filters = {'host': self.compute.host}
         fake_context = context.get_admin_context()
 
         all_instances = []
@@ -4708,19 +4707,19 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute.driver,
                 'list_instances')
         self.mox.StubOutWithMock(self.compute.conductor_api,
-                'instance_get_all_by_host')
+                'instance_get_all_by_filters')
 
         self.compute.driver.list_instance_uuids().AndRaise(
                 NotImplementedError())
         self.compute.driver.list_instances().AndReturn(
                 [inst['name'] for inst in driver_instances])
-        self.compute.conductor_api.instance_get_all_by_host(
-                fake_context, self.compute.host,
+        self.compute.conductor_api.instance_get_all_by_filters(
+                fake_context, filters,
                 columns_to_join=[]).AndReturn(all_instances)
 
         self.mox.ReplayAll()
 
-        result = self.compute._get_instances_on_driver(fake_context)
+        result = self.compute._get_instances_on_driver(fake_context, filters)
         self.assertEqual(driver_instances, result)
 
     def test_instance_usage_audit(self):

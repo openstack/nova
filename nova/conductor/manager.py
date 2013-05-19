@@ -111,6 +111,7 @@ class ConductorManager(manager.Manager):
             self.db.instance_get_by_uuid(context, instance_uuid,
                 columns_to_join))
 
+    # NOTE(hanlind): This method can be removed in v2.0 of the RPC API.
     def instance_get_all(self, context):
         return jsonutils.to_primitive(self.db.instance_get_all(context))
 
@@ -269,6 +270,7 @@ class ConductorManager(manager.Manager):
             columns_to_join=columns_to_join)
         return jsonutils.to_primitive(result)
 
+    # NOTE(hanlind): This method can be removed in v2.0 of the RPC API.
     def instance_get_all_hung_in_rebooting(self, context, timeout):
         result = self.db.instance_get_all_hung_in_rebooting(context, timeout)
         return jsonutils.to_primitive(result)

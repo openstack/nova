@@ -1635,7 +1635,37 @@ def instance_get_all_by_filters(context, filters, sort_key, sort_dir,
                                 session=None):
     """Return instances that match all filters.  Deleted instances
     will be returned by default, unless there's a filter that says
-    otherwise"""
+    otherwise.
+
+    Depending on the name of a filter, matching for that filter is
+    performed using either exact matching or as regular expression
+    matching. Exact matching is applied for the following filters:
+
+        ['project_id', 'user_id', 'image_ref',
+         'vm_state', 'instance_type_id', 'uuid',
+         'metadata', 'host']
+
+
+    A third type of filter (also using exact matching), filters
+    based on instance metadata tags when supplied under a special
+    key named 'filter'.
+
+        filters = {
+            'filter': [
+                {'name': 'tag-key', 'value': '<metakey>'},
+                {'name': 'tag-value', 'value': '<metaval>'},
+                {'name': 'tag:<metakey>', 'value': '<metaval>'}
+            ]
+        }
+
+    Special keys are used to tweek the query further:
+
+        'changes-since' - only return instances updated after
+        'deleted' - only return (or exclude) deleted instances
+        'soft-deleted' - modify behavior of 'deleted' to either
+                         include or exclude instances whose
+                         vm_state is SOFT_DELETED.
+    """
 
     sort_fn = {'desc': desc, 'asc': asc}
 
@@ -1668,12 +1698,21 @@ def instance_get_all_by_filters(context, filters, sort_key, sort_dir,
         # Instances can be soft or hard deleted and the query needs to
         # include or exclude both
         if filters.pop('deleted'):
-            deleted = or_(models.Instance.deleted == models.Instance.id,
-                          models.Instance.vm_state == vm_states.SOFT_DELETED)
-            query_prefix = query_prefix.filter(deleted)
+            if filters.pop('soft_deleted', False):
+                query_prefix = query_prefix.\
+                    filter(models.Instance.deleted == models.Instance.id)
+            else:
+                deleted = or_(
+                    models.Instance.deleted == models.Instance.id,
+                    models.Instance.vm_state == vm_states.SOFT_DELETED
+                    )
+                query_prefix = query_prefix.\
+                    filter(deleted)
         else:
             query_prefix = query_prefix.\
-                    filter_by(deleted=0).\
+                    filter_by(deleted=0)
+            if not filters.pop('soft_deleted', False):
+                query_prefix = query_prefix.\
                     filter(models.Instance.vm_state != vm_states.SOFT_DELETED)
 
     if not context.is_admin:
@@ -1687,7 +1726,7 @@ def instance_get_all_by_filters(context, filters, sort_key, sort_dir,
     # For other filters that don't match this, we will do regexp matching
     exact_match_filter_names = ['project_id', 'user_id', 'image_ref',
                                 'vm_state', 'instance_type_id', 'uuid',
-                                'metadata']
+                                'metadata', 'host']
 
     # Filter the query
     query_prefix = exact_filter(query_prefix, models.Instance,
@@ -1933,6 +1972,7 @@ def instance_floating_address_get_all(context, instance_uuid):
     return [floating_ip.address for floating_ip in floating_ips]
 
 
+# NOTE(hanlind): This method can be removed as conductor RPC API moves to v2.0.
 @require_admin_context
 def instance_get_all_hung_in_rebooting(context, reboot_window):
     reboot_window = (timeutils.utcnow() -
