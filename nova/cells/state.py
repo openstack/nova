@@ -313,7 +313,8 @@ class CellStateManager(base.Base):
             cell = self.parent_cells.get(cell_name)
         if not cell:
             LOG.error(_("Unknown cell '%(cell_name)s' when trying to "
-                        "update capabilities"), locals())
+                        "update capabilities"),
+                      {'cell_name': cell_name})
             return
         # Make sure capabilities are sets.
         for capab_name, values in capabilities.items():
@@ -328,7 +329,8 @@ class CellStateManager(base.Base):
             cell = self.parent_cells.get(cell_name)
         if not cell:
             LOG.error(_("Unknown cell '%(cell_name)s' when trying to "
-                        "update capacities"), locals())
+                        "update capacities"),
+                      {'cell_name': cell_name})
             return
         cell.update_capacities(capacities)
 

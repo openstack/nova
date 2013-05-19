@@ -104,7 +104,7 @@ class CellsScheduler(base.Base):
         target_cell = cells[0]
 
         LOG.debug(_("Scheduling with routing_path=%(routing_path)s"),
-                locals())
+                  {'routing_path': message.routing_path})
 
         if target_cell.is_me:
             # Need to create instance DB entries as the host scheduler
@@ -130,14 +130,15 @@ class CellsScheduler(base.Base):
                         raise
                     sleep_time = max(1, CONF.cells.scheduler_retry_delay)
                     LOG.info(_("No cells available when scheduling.  Will "
-                            "retry in %(sleep_time)s second(s)"), locals())
+                               "retry in %(sleep_time)s second(s)"),
+                             {'sleep_time': sleep_time})
                     time.sleep(sleep_time)
                     continue
         except Exception:
             request_spec = host_sched_kwargs['request_spec']
             instance_uuids = request_spec['instance_uuids']
             LOG.exception(_("Error scheduling instances %(instance_uuids)s"),
-                    locals())
+                          {'instance_uuids': instance_uuids})
             ctxt = message.ctxt
             for instance_uuid in instance_uuids:
                 self.msg_runner.instance_update_at_top(ctxt,
