@@ -1743,7 +1743,7 @@ class API(base.Base):
                 method='reboot')
         state = {'SOFT': task_states.REBOOTING,
                  'HARD': task_states.REBOOTING_HARD}[reboot_type]
-        instance = self.update(context, instance, vm_state=vm_states.ACTIVE,
+        instance = self.update(context, instance,
                                task_state=state,
                                expected_task_state=[None,
                                                     task_states.REBOOTING])
@@ -2112,7 +2112,6 @@ class API(base.Base):
         """Pause the given instance."""
         self.update(context,
                     instance,
-                    vm_state=vm_states.ACTIVE,
                     task_state=task_states.PAUSING,
                     expected_task_state=None)
 
@@ -2127,7 +2126,6 @@ class API(base.Base):
         """Unpause the given instance."""
         self.update(context,
                     instance,
-                    vm_state=vm_states.PAUSED,
                     task_state=task_states.UNPAUSING,
                     expected_task_state=None)
 
@@ -2147,7 +2145,6 @@ class API(base.Base):
         """Suspend the given instance."""
         self.update(context,
                     instance,
-                    vm_state=vm_states.ACTIVE,
                     task_state=task_states.SUSPENDING,
                     expected_task_state=None)
 
@@ -2162,7 +2159,6 @@ class API(base.Base):
         """Resume the given instance."""
         self.update(context,
                     instance,
-                    vm_state=vm_states.SUSPENDED,
                     task_state=task_states.RESUMING,
                     expected_task_state=None)
 
@@ -2191,7 +2187,6 @@ class API(base.Base):
 
         self.update(context,
                     instance,
-                    vm_state=vm_states.ACTIVE,
                     task_state=task_states.RESCUING,
                     expected_task_state=None)
 
@@ -2207,7 +2202,6 @@ class API(base.Base):
         """Unrescue the given instance."""
         self.update(context,
                     instance,
-                    vm_state=vm_states.RESCUED,
                     task_state=task_states.UNRESCUING,
                     expected_task_state=None)
 
