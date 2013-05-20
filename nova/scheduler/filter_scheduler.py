@@ -69,7 +69,7 @@ class FilterScheduler(driver.Scheduler):
         notifier.notify(context, notifier.publisher_id("scheduler"),
                         'scheduler.run_instance.start', notifier.INFO, payload)
 
-        instance_uuids = request_spec.pop('instance_uuids')
+        instance_uuids = request_spec.get('instance_uuids')
         LOG.info(_("Attempting to build %(num_instances)d instance(s) "
                     "uuids: %(instance_uuids)s"),
                   {'num_instances': len(instance_uuids),
@@ -78,6 +78,11 @@ class FilterScheduler(driver.Scheduler):
 
         weighed_hosts = self._schedule(context, request_spec,
                                        filter_properties, instance_uuids)
+
+        # NOTE: Pop instance_uuids as individual creates do not need the
+        # set of uuids. Do not pop before here as the upper exception
+        # handler fo NoValidHost needs the uuid to set error state
+        instance_uuids = request_spec.pop('instance_uuids')
 
         # NOTE(comstud): Make sure we do not pass this through.  It
         # contains an instance of RpcContext that cannot be serialized.
