@@ -29,6 +29,7 @@ from nova import exception
 from nova.network import api as network_api
 from nova.network import model as network_model
 from nova.network import quantumv2
+from nova.network.quantumv2 import constants
 from nova.network.security_group import openstack_driver
 from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
@@ -76,8 +77,6 @@ CONF.register_opts(quantum_opts)
 CONF.import_opt('default_floating_pool', 'nova.network.floating_ips')
 CONF.import_opt('flat_injected', 'nova.network.manager')
 LOG = logging.getLogger(__name__)
-
-NET_EXTERNAL = 'router:external'
 
 refresh_cache = network_api.refresh_cache
 update_instance_info_cache = network_api.update_instance_cache_with_nw_info
@@ -237,8 +236,14 @@ class API(base.Base):
                                       'device_owner': zone}}
             try:
                 port = ports.get(network_id)
+                self._populate_quantum_extension_values(instance,
+                                                        port_req_body)
+                # Requires admin creds to set port bindings
+                port_client = (quantum if not
+                               self._has_port_binding_extension() else
+                               quantumv2.get_client(context, admin=True))
                 if port:
-                    quantum.update_port(port['id'], port_req_body)
+                    port_client.update_port(port['id'], port_req_body)
                     touched_port_ids.append(port['id'])
                 else:
                     fixed_ip = fixed_ips.get(network_id)
@@ -257,28 +262,31 @@ class API(base.Base):
                                 instance=instance['display_name'])
                         mac_address = available_macs.pop()
                         port_req_body['port']['mac_address'] = mac_address
-
-                    self._populate_quantum_extension_values(instance,
-                                                            port_req_body)
                     created_port_ids.append(
-                        quantum.create_port(port_req_body)['port']['id'])
+                        port_client.create_port(port_req_body)['port']['id'])
             except Exception:
                 with excutils.save_and_reraise_exception():
                     for port_id in touched_port_ids:
-                        port_in_server = quantum.show_port(port_id).get('port')
-                        if not port_in_server:
-                            raise Exception(_('Port not found'))
-                        port_req_body = {'port': {'device_id': None}}
-                        quantum.update_port(port_id, port_req_body)
+                        try:
+                            port_req_body = {'port': {'device_id': None}}
+                            # Requires admin creds to set port bindings
+                            if self._has_port_binding_extension():
+                                port_req_body['port']['binding:host_id'] = None
+                                port_client = quantumv2.get_client(
+                                    context, admin=True)
+                            else:
+                                port_client = quantum
+                            port_client.update_port(port_id, port_req_body)
+                        except Exception:
+                            msg = _("Failed to update port %s")
+                            LOG.exception(msg, port_id)
 
                     for port_id in created_port_ids:
                         try:
                             quantum.delete_port(port_id)
-                        except Exception as ex:
-                            msg = _("Fail to delete port %(portid)s with"
-                                    " failure: %(exception)s")
-                            LOG.debug(msg, {'portid': port_id,
-                                            'exception': ex})
+                        except Exception:
+                            msg = _("Failed to delete port %s")
+                            LOG.exception(msg, port_id)
 
         self.trigger_security_group_members_refresh(context, instance)
         self.trigger_instance_add_security_group_refresh(context, instance)
@@ -304,12 +312,19 @@ class API(base.Base):
             self.extensions = dict((ext['name'], ext)
                                    for ext in extensions_list)
 
+    def _has_port_binding_extension(self, refresh_cache=False):
+        if refresh_cache:
+            self._refresh_quantum_extensions_cache()
+        return constants.PORTBINDING_EXT in self.extensions
+
     def _populate_quantum_extension_values(self, instance, port_req_body):
         self._refresh_quantum_extensions_cache()
         if 'nvp-qos' in self.extensions:
             instance_type = instance_types.extract_instance_type(instance)
             rxtx_factor = instance_type.get('rxtx_factor')
             port_req_body['port']['rxtx_factor'] = rxtx_factor
+        if self._has_port_binding_extension():
+            port_req_body['port']['binding:host_id'] = instance.get('host')
 
     def deallocate_for_instance(self, context, instance, **kwargs):
         """Deallocate all network resources related to the instance."""
@@ -321,8 +336,8 @@ class API(base.Base):
         for port in ports:
             try:
                 quantumv2.get_client(context).delete_port(port['id'])
-            except Exception as ex:
-                LOG.exception(_("Failed to delete quantum port %(portid)s ")
+            except Exception:
+                LOG.exception(_("Failed to delete quantum port %(portid)s")
                               % {'portid': port['id']})
         self.trigger_security_group_members_refresh(context, instance)
         self.trigger_instance_remove_security_group_refresh(context, instance)
@@ -613,7 +628,7 @@ class API(base.Base):
         return self._format_floating_ip_model(fip, pool_dict, port_dict)
 
     def _get_floating_ip_pools(self, client, project_id=None):
-        search_opts = {NET_EXTERNAL: True}
+        search_opts = {constants.NET_EXTERNAL: True}
         if project_id:
             search_opts.update({'tenant_id': project_id})
         data = client.list_networks(**search_opts)
@@ -679,7 +694,7 @@ class API(base.Base):
         raise NotImplementedError()
 
     def _get_floating_ip_pool_id_by_name_or_id(self, client, name_or_id):
-        search_opts = {NET_EXTERNAL: True, 'fields': 'id'}
+        search_opts = {constants.NET_EXTERNAL: True, 'fields': 'id'}
         if uuidutils.is_uuid_like(name_or_id):
             search_opts.update({'id': name_or_id})
         else:
@@ -772,9 +787,21 @@ class API(base.Base):
 
     def migrate_instance_finish(self, context, instance, migration):
         """Finish migrating the network of an instance."""
-        # NOTE(wenjianhn): just pass to make migrate instance doesn't
-        # raise for now.
-        pass
+        if not self._has_port_binding_extension(refresh_cache=True):
+            return
+        quantum = quantumv2.get_client(context, admin=True)
+        search_opts = {'device_id': instance['uuid'],
+                       'tenant_id': instance['project_id']}
+        data = quantum.list_ports(**search_opts)
+        ports = data['ports']
+        for p in ports:
+            port_req_body = {'port': {'binding:host_id': instance.get('host')}}
+            try:
+                quantum.update_port(p['id'], port_req_body)
+            except Exception as ex:
+                with excutils.save_and_reraise_exception():
+                    msg = _("Unable to update host of port %s")
+                    LOG.exception(msg, p['id'])
 
     def add_network_to_project(self, context, project_id, network_uuid=None):
         """Force add a network to the project."""
