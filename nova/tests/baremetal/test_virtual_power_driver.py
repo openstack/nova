@@ -71,7 +71,6 @@ class BareMetalVPDTestCase(bm_db_base.BMDBTestCase):
                 service_host='test_host',
                 cpus=2,
                 memory_mb=2048,
-                prov_mac_address='aa:bb:cc:dd:ee:ff',
             )
         self.nic_info = [
                 {'address': '11:11:11:11:11:11', 'datapath_id': '0x1',
@@ -200,9 +199,7 @@ class VPDClassMethodsTestCase(BareMetalVPDTestCase):
 
         self.mox.StubOutWithMock(self.pm, '_run_command')
         cmd = self.pm._vp_cmd.get_node_macs.replace('{_NodeName_}', 'testNode')
-        # aa:bb:cc:dd:ee:ff is prov_mac_adress. Check it is not used to
-        # find the node.
-        self.pm._run_command(cmd).AndReturn(["aabbccddeeff", "ffeeddccbbaa"])
+        self.pm._run_command(cmd).AndReturn(["ffeeddccbbaa"])
 
         self.mox.ReplayAll()
         name = self.pm._check_for_node()
