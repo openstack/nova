@@ -47,7 +47,17 @@ datetime_fields = ['launched_at', 'terminated_at', 'updated_at']
 
 
 class ConductorManager(manager.Manager):
-    """Mission: TBD."""
+    """Mission: Conduct things.
+
+    The methods in the base API for nova-conductor are various proxy operations
+    performed on behalf of the nova-compute service running on compute nodes.
+    Compute nodes are not allowed to directly access the database, so this set
+    of methods allows them to get specific work done without locally accessing
+    the database.
+
+    The nova-conductor service also exposes an API in the 'compute_task'
+    namespace.  See the ComputeTaskManager class for details.
+    """
 
     RPC_API_VERSION = '1.49'
 
@@ -58,7 +68,13 @@ class ConductorManager(manager.Manager):
             openstack_driver.get_openstack_security_group_driver())
         self._network_api = None
         self._compute_api = None
+        self.compute_task_mgr = ComputeTaskManager()
         self.quotas = quota.QUOTAS
+
+    def create_rpc_dispatcher(self, *args, **kwargs):
+        kwargs['additional_apis'] = [self.compute_task_mgr]
+        return super(ConductorManager, self).create_rpc_dispatcher(*args,
+                **kwargs)
 
     @property
     def network_api(self):
@@ -442,3 +458,19 @@ class ConductorManager(manager.Manager):
 
     def compute_unrescue(self, context, instance):
         self.compute_api.unrescue(context, instance)
+
+
+class ComputeTaskManager(object):
+    """Namespace for compute methods.
+
+    This class presents an rpc API for nova-conductor under the 'compute_task'
+    namespace.  The methods here are compute operations that are invoked
+    by the API service.  These methods see the operation to completion, which
+    may involve coordinating activities on multiple compute nodes.
+    """
+
+    RPC_API_NAMESPACE = 'compute_task'
+    RPC_API_VERSION = '1.0'
+
+    def __init__(self):
+        pass

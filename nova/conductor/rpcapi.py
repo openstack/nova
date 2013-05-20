@@ -440,3 +440,20 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         instance_p = jsonutils.to_primitive(instance)
         msg = self.make_msg('compute_unrescue', instance=instance_p)
         return self.call(context, msg, version='1.48')
+
+
+class ComputeTaskAPI(nova.openstack.common.rpc.proxy.RpcProxy):
+    """Client side of the conductor 'compute' namespaced RPC API
+
+    API version history:
+
+    1.0 - Initial version (empty).
+    """
+
+    BASE_RPC_API_VERSION = '1.0'
+    RPC_API_NAMESPACE = 'compute_task'
+
+    def __init__(self):
+        super(ComputeTaskAPI, self).__init__(
+                topic=CONF.conductor.topic,
+                default_version=self.BASE_RPC_API_VERSION)
