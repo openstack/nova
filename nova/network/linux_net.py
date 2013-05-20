@@ -624,11 +624,12 @@ def metadata_accept():
 
 def add_snat_rule(ip_range):
     if CONF.routing_source_ip:
-        rule = '-s %s -j SNAT --to-source %s' % (ip_range,
-                                                 CONF.routing_source_ip)
-        if CONF.public_interface:
-            rule += ' -o %s' % CONF.public_interface
-        iptables_manager.ipv4['nat'].add_rule('snat', rule)
+        for dest_range in CONF.force_snat_range or ['0.0.0.0/0']:
+            rule = ('-s %s -d %s -j SNAT --to-source %s'
+                    % (ip_range, dest_range, CONF.routing_source_ip))
+            if CONF.public_interface:
+                rule += ' -o %s' % CONF.public_interface
+            iptables_manager.ipv4['nat'].add_rule('snat', rule)
         iptables_manager.apply()
 
 

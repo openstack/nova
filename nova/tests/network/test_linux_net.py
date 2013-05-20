@@ -242,6 +242,28 @@ class LinuxNetworkTestCase(test.TestCase):
         self.stubs.Set(db, 'instance_get', get_instance)
         self.stubs.Set(db, 'network_get_associated_fixed_ips', get_associated)
 
+    def _test_add_snat_rule(self, expected):
+        def verify_add_rule(chain, rule):
+            self.assertEqual(chain, 'snat')
+            self.assertEqual(rule, expected)
+
+        self.stubs.Set(linux_net.iptables_manager.ipv4['nat'],
+                       'add_rule', verify_add_rule)
+        linux_net.add_snat_rule('10.0.0.0/24')
+
+    def test_add_snat_rule(self):
+        self.flags(routing_source_ip='10.10.10.1')
+        expected = ('-s 10.0.0.0/24 -d 0.0.0.0/0 '
+                    '-j SNAT --to-source 10.10.10.1 -o eth0')
+        self._test_add_snat_rule(expected)
+
+    def test_add_snat_rule_snat_range(self):
+        self.flags(routing_source_ip='10.10.10.1',
+                   force_snat_range=['10.10.10.0/24'])
+        expected = ('-s 10.0.0.0/24 -d 10.10.10.0/24 '
+                    '-j SNAT --to-source 10.10.10.1 -o eth0')
+        self._test_add_snat_rule(expected)
+
     def test_update_dhcp_for_nw00(self):
         self.flags(use_single_default_gateway=True)
 
