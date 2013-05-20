@@ -1177,6 +1177,22 @@ class DbApiTestCase(DbTestCase):
         _compare(bw_usages[2], expected_bw_usages[2])
         timeutils.clear_time_override()
 
+    def _test_decorator_wraps_helper(self, decorator):
+        def test_func():
+            """Test docstring."""
+
+        decorated_func = decorator(test_func)
+
+        self.assertEquals(test_func.func_name, decorated_func.func_name)
+        self.assertEquals(test_func.__doc__, decorated_func.__doc__)
+        self.assertEquals(test_func.__module__, decorated_func.__module__)
+
+    def test_require_context_decorator_wraps_functions_properly(self):
+        self._test_decorator_wraps_helper(sqlalchemy_api.require_context)
+
+    def test_require_admin_context_decorator_wraps_functions_properly(self):
+        self._test_decorator_wraps_helper(sqlalchemy_api.require_admin_context)
+
 
 def _get_fake_aggr_values():
     return {'name': 'fake_aggregate'}
