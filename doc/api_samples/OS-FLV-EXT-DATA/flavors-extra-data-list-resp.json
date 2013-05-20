@@ -2,7 +2,7 @@
     "flavors": [
         {
             "OS-FLV-EXT-DATA:ephemeral": 0,
-            "disk": 0,
+            "disk": 1,
             "id": "1",
             "links": [
                 {

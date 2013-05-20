@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<flavor xmlns:atom="http://www.w3.org/2005/Atom" xmlns="http://docs.openstack.org/compute/api/v1.1" disk="0" vcpus="1" ram="512" name="m1.tiny" id="1" swap="">
+<flavor xmlns:atom="http://www.w3.org/2005/Atom" xmlns="http://docs.openstack.org/compute/api/v1.1" disk="1" vcpus="1" ram="512" name="m1.tiny" id="1" swap="">
   <atom:link href="http://openstack.example.com/v2/openstack/flavors/1" rel="self"/>
   <atom:link href="http://openstack.example.com/openstack/flavors/1" rel="bookmark"/>
 </flavor>
