@@ -253,7 +253,7 @@ class FetchVhdImageTestCase(test.TestCase):
 
         self.mox.VerifyAll()
 
-    def test_fetch_vhd_image_cleans_up_vid_on_fail(self):
+    def test_fetch_vhd_image_cleans_up_vdi_on_fail(self):
         self._apply_stubouts()
         self._common_params_setup(True)
         self.mox.StubOutWithMock(self.session, 'call_xenapi')
@@ -267,15 +267,16 @@ class FetchVhdImageTestCase(test.TestCase):
         vm_utils.safe_find_sr(self.session).AndReturn("sr")
         vm_utils._scan_sr(self.session, "sr")
         vm_utils._check_vdi_size(self.context, self.session, self.instance,
-                                 "vdi").AndRaise(exception.ImageTooLarge)
+                "vdi").AndRaise(exception.InstanceTypeDiskTooSmall)
 
         self.session.call_xenapi("VDI.get_by_uuid", "vdi").AndReturn("ref")
         vm_utils.destroy_vdi(self.session, "ref")
 
         self.mox.ReplayAll()
 
-        self.assertRaises(exception.ImageTooLarge, vm_utils._fetch_vhd_image,
-            self.context, self.session, self.instance, self.image_id)
+        self.assertRaises(exception.InstanceTypeDiskTooSmall,
+                vm_utils._fetch_vhd_image, self.context, self.session,
+                self.instance, self.image_id)
 
         self.mox.VerifyAll()
 

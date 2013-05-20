@@ -4898,7 +4898,7 @@ class ComputeAPITestCase(BaseTestCase):
 
         self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
 
-        self.assertRaises(exception.ImageTooLarge,
+        self.assertRaises(exception.InstanceTypeDiskTooSmall,
             self.compute_api.create, self.context,
             inst_type, self.fake_image['id'])
 
@@ -5675,7 +5675,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.fake_image['size'] = '1073741825'
         self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
 
-        self.assertRaises(exception.ImageTooLarge,
+        self.assertRaises(exception.InstanceTypeDiskTooSmall,
             self.compute_api.rebuild, self.context,
             instance, self.fake_image['id'], 'new_password')
 
@@ -9057,7 +9057,7 @@ class CheckRequestedImageTestCase(test.TestCase):
     def test_image_too_large(self):
         image = dict(id='123', status='active', size='1073741825')
 
-        self.assertRaises(exception.ImageTooLarge,
+        self.assertRaises(exception.InstanceTypeDiskTooSmall,
                 self.compute_api._check_requested_image, self.context,
                 image['id'], image, self.instance_type)
 

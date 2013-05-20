@@ -258,7 +258,7 @@ class Qcow2(Image):
         if size and size < disk.get_disk_size(base):
             LOG.error('%s virtual size larger than flavor root disk size %s' %
                       (base, size))
-            raise exception.ImageTooLarge()
+            raise exception.InstanceTypeDiskTooSmall()
         if not os.path.exists(self.path):
             with utils.remove_path_on_error(self.path):
                 copy_qcow2_image(base, self.path, size)

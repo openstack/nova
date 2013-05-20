@@ -1963,7 +1963,7 @@ class ServersControllerCreateTest(test.TestCase):
         req.headers["content-type"] = "application/json"
         with testtools.ExpectedException(
             webob.exc.HTTPBadRequest,
-            'Image is larger than instance type allows'):
+            "Instance type's disk is too small for requested image."):
                 self.controller.create(req, body)
 
     def test_create_instance_invalid_negative_min(self):

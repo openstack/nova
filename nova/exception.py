@@ -953,10 +953,6 @@ class ResizeError(NovaException):
     message = _("Resize error: %(reason)s")
 
 
-class ImageTooLarge(NovaException):
-    message = _("Image is larger than instance type allows")
-
-
 class InstanceTypeMemoryTooSmall(NovaException):
     message = _("Instance type's memory is too small for requested image.")
 
