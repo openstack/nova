@@ -123,7 +123,7 @@ def execute(*cmd, **kwargs):
     elif isinstance(check_exit_code, int):
         check_exit_code = [check_exit_code]
 
-    if len(kwargs):
+    if kwargs:
         raise UnknownArgumentError(_('Got unknown keyword args '
                                      'to utils.execute: %r') % kwargs)
 
