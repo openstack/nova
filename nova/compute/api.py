@@ -496,6 +496,32 @@ class API(base.Base):
             cd_image_service.show(context, config_drive_id)
             return config_drive_id, None
 
+    def _check_requested_image(self, context, image_id, image, instance_type):
+        if not image:
+            # Image checks don't apply when building from volume
+            return
+        if image['status'] != 'active':
+            raise exception.ImageNotActive(image_id=image_id)
+        if instance_type['memory_mb'] < int(image.get('min_ram') or 0):
+            raise exception.InstanceTypeMemoryTooSmall()
+        if instance_type['root_gb'] < int(image.get('min_disk') or 0):
+            raise exception.InstanceTypeDiskTooSmall()
+
+    def _get_image(self, context, image_href):
+        if not image_href:
+            return None, {}
+
+        (image_service, image_id) = glance.get_remote_image_service(
+                context, image_href)
+        image = image_service.show(context, image_id)
+        return image_id, image
+
+    def _checks_for_create_and_rebuild(self, context, image_id, image,
+                                       instance_type, metadata,
+                                       files_to_inject):
+        self._check_injected_file_quota(context, files_to_inject)
+        self._check_requested_image(context, image_id, image, instance_type)
+
     def _validate_and_provision_instance(self, context, instance_type,
                                          image_href, kernel_id, ramdisk_id,
                                          min_count, max_count,
@@ -555,24 +581,20 @@ class API(base.Base):
             instances = []
             instance_uuids = []
 
+            # FIXME(sirp): this check should go in
+            # `_checks_for_create_and_rebuild`, however Tempest has a bug in
+            # its quota checking test where its submitting a bad image ID. So
+            # if `_get_image` is called first, we get a `ImageNotFound`
+            # exception instead of a OverlimitException.
             self._check_metadata_properties_quota(context, metadata)
-            self._check_injected_file_quota(context, injected_files)
+
+            image_id, image = self._get_image(context, image_href)
+
+            self._checks_for_create_and_rebuild(context, image_id, image,
+                    instance_type, metadata, injected_files)
+
             self._check_requested_secgroups(context, security_groups)
             self._check_requested_networks(context, requested_networks)
-
-            if image_href:
-                (image_service, image_id) = glance.get_remote_image_service(
-                        context, image_href)
-                image = image_service.show(context, image_id)
-                if image['status'] != 'active':
-                    raise exception.ImageNotActive(image_id=image_id)
-            else:
-                image = {}
-
-            if instance_type['memory_mb'] < int(image.get('min_ram') or 0):
-                raise exception.InstanceTypeMemoryTooSmall()
-            if instance_type['root_gb'] < int(image.get('min_disk') or 0):
-                raise exception.InstanceTypeDiskTooSmall()
 
             kernel_id, ramdisk_id = self._handle_kernel_and_ramdisk(
                     context, kernel_id, ramdisk_id, image)
@@ -1764,27 +1786,16 @@ class API(base.Base):
     def rebuild(self, context, instance, image_href, admin_password, **kwargs):
         """Rebuild the given instance with the provided attributes."""
         orig_image_ref = instance['image_ref'] or ''
-
         files_to_inject = kwargs.pop('files_to_inject', [])
-        self._check_injected_file_quota(context, files_to_inject)
-
         metadata = kwargs.get('metadata', {})
+        instance_type = flavors.extract_instance_type(instance)
+
         self._check_metadata_properties_quota(context, metadata)
 
-        if image_href:
-            (image_service, image_id) = glance.get_remote_image_service(
-                    context, image_href)
-            image = image_service.show(context, image_id)
-            if image['status'] != 'active':
-                raise exception.ImageNotActive(image_id=image_id)
-        else:
-            image = {}
+        image_id, image = self._get_image(context, image_href)
 
-        instance_type = flavors.extract_instance_type(instance)
-        if instance_type['memory_mb'] < int(image.get('min_ram') or 0):
-            raise exception.InstanceTypeMemoryTooSmall()
-        if instance_type['root_gb'] < int(image.get('min_disk') or 0):
-            raise exception.InstanceTypeDiskTooSmall()
+        self._checks_for_create_and_rebuild(context, image_id, image,
+                instance_type, metadata, files_to_inject)
 
         kernel_id, ramdisk_id = self._handle_kernel_and_ramdisk(
                 context, None, None, image)
