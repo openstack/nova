@@ -1378,19 +1378,22 @@ class LibvirtDriver(driver.ComputeDriver):
             state = LIBVIRT_POWER_STATE[state]
             new_domid = dom.ID()
 
-            if state in [power_state.SHUTDOWN,
-                         power_state.CRASHED]:
-                LOG.info(_("Instance shutdown successfully."),
-                         instance=instance)
-                self._create_domain(domain=dom)
-                timer = loopingcall.FixedIntervalLoopingCall(
-                    self._wait_for_running, instance)
-                timer.start(interval=0.5).wait()
-                return True
-            elif old_domid != new_domid:
-                LOG.info(_("Instance may have been rebooted during soft "
-                           "reboot, so return now."), instance=instance)
-                return True
+            # NOTE(ivoks): By checking domain IDs, we make sure we are
+            #              not recreating domain that's already running.
+            if old_domid != new_domid:
+                if state in [power_state.SHUTDOWN,
+                             power_state.CRASHED]:
+                    LOG.info(_("Instance shutdown successfully."),
+                             instance=instance)
+                    self._create_domain(domain=dom)
+                    timer = loopingcall.FixedIntervalLoopingCall(
+                        self._wait_for_running, instance)
+                    timer.start(interval=0.5).wait()
+                    return True
+                else:
+                    LOG.info(_("Instance may have been rebooted during soft "
+                               "reboot, so return now."), instance=instance)
+                    return True
             greenthread.sleep(1)
         return False
 
