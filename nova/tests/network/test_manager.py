@@ -1710,7 +1710,8 @@ class CommonNetworkTestCase(test.TestCase):
                                        table_name='nat')
 
         # The expected rules that should be configured based on the fixed_range
-        expected_lines = ['[0:0] -A %s-snat -s %s -j SNAT --to-source %s -o %s'
+        expected_lines = ['[0:0] -A %s-snat -s %s -d 0.0.0.0/0 '
+                          '-j SNAT --to-source %s -o %s'
                           % (binary_name, CONF.fixed_range,
                                           CONF.routing_source_ip,
                                           CONF.public_interface),
@@ -1758,7 +1759,8 @@ class CommonNetworkTestCase(test.TestCase):
                                        table_name='nat')
 
         # The expected rules that should be configured based on the fixed_range
-        expected_lines = ['[0:0] -A %s-snat -s %s -j SNAT --to-source %s -o %s'
+        expected_lines = ['[0:0] -A %s-snat -s %s -d 0.0.0.0/0 '
+                          '-j SNAT --to-source %s -o %s'
                           % (binary_name, networks[0]['cidr'],
                                           CONF.routing_source_ip,
                                           CONF.public_interface),
@@ -1772,7 +1774,8 @@ class CommonNetworkTestCase(test.TestCase):
                           '--ctstate DNAT -j ACCEPT' % (binary_name,
                                                         networks[0]['cidr'],
                                                         networks[0]['cidr']),
-                          '[0:0] -A %s-snat -s %s -j SNAT --to-source %s -o %s'
+                          '[0:0] -A %s-snat -s %s -d 0.0.0.0/0 '
+                          '-j SNAT --to-source %s -o %s'
                           % (binary_name, networks[1]['cidr'],
                                           CONF.routing_source_ip,
                                           CONF.public_interface),
@@ -1826,10 +1829,11 @@ class CommonNetworkTestCase(test.TestCase):
                                        table_name='nat')
 
         # Add the new expected rules to the old ones
-        expected_lines += ['[0:0] -A %s-snat -s %s -j SNAT --to-source %s -o '
-                           '%s' % (binary_name, new_network['cidr'],
-                                                CONF.routing_source_ip,
-                                                CONF.public_interface),
+        expected_lines += ['[0:0] -A %s-snat -s %s -d 0.0.0.0/0 '
+                           '-j SNAT --to-source %s -o %s'
+                           % (binary_name, new_network['cidr'],
+                                           CONF.routing_source_ip,
+                                           CONF.public_interface),
                            '[0:0] -A %s-POSTROUTING -s %s -d %s/32 -j ACCEPT'
                            % (binary_name, new_network['cidr'],
                                            CONF.metadata_host),
