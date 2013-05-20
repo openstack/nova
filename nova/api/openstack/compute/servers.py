@@ -902,32 +902,18 @@ class Controller(wsgi.Controller):
             raise exc.HTTPRequestEntityTooLarge(
                 explanation=error.format_message(),
                 headers={'Retry-After': 0})
-        except exception.InstanceTypeMemoryTooSmall as error:
-            raise exc.HTTPBadRequest(explanation=error.format_message())
-        except exception.InstanceTypeNotFound as error:
-            raise exc.HTTPBadRequest(explanation=error.format_message())
-        except exception.InstanceTypeDiskTooSmall as error:
-            raise exc.HTTPBadRequest(explanation=error.format_message())
-        except exception.InvalidMetadata as error:
-            raise exc.HTTPBadRequest(explanation=error.format_message())
         except exception.InvalidMetadataSize as error:
             raise exc.HTTPRequestEntityTooLarge(
                 explanation=error.format_message())
-        except exception.InvalidRequest as error:
-            raise exc.HTTPBadRequest(explanation=error.format_message())
         except exception.ImageNotFound as error:
             msg = _("Can not find requested image")
             raise exc.HTTPBadRequest(explanation=msg)
-        except exception.ImageNotActive as error:
-            raise exc.HTTPBadRequest(explanation=error.format_message())
         except exception.FlavorNotFound as error:
             msg = _("Invalid flavorRef provided.")
             raise exc.HTTPBadRequest(explanation=msg)
         except exception.KeypairNotFound as error:
             msg = _("Invalid key_name provided.")
             raise exc.HTTPBadRequest(explanation=msg)
-        except exception.SecurityGroupNotFound as error:
-            raise exc.HTTPBadRequest(explanation=error.format_message())
         except rpc_common.RemoteError as err:
             msg = "%(err_type)s: %(err_msg)s" % {'err_type': err.exc_type,
                                                  'err_msg': err.value}
@@ -935,7 +921,15 @@ class Controller(wsgi.Controller):
         except UnicodeDecodeError as error:
             msg = "UnicodeError: %s" % unicode(error)
             raise exc.HTTPBadRequest(explanation=msg)
-        # Let the caller deal with unhandled exceptions.
+        except (exception.ImageNotActive,
+                exception.ImageTooLarge,
+                exception.InstanceTypeDiskTooSmall,
+                exception.InstanceTypeMemoryTooSmall,
+                exception.InstanceTypeNotFound,
+                exception.InvalidMetadata,
+                exception.InvalidRequest,
+                exception.SecurityGroupNotFound) as error:
+            raise exc.HTTPBadRequest(explanation=error.format_message())
 
         # If the caller wanted a reservation_id, return it
         if ret_resv_id:
@@ -1288,10 +1282,11 @@ class Controller(wsgi.Controller):
         except exception.ImageNotFound:
             msg = _("Cannot find image for rebuild")
             raise exc.HTTPBadRequest(explanation=msg)
-        except (exception.InvalidMetadata,
-                exception.InstanceTypeMemoryTooSmall,
+        except (exception.ImageNotActive,
+                exception.ImageTooLarge,
                 exception.InstanceTypeDiskTooSmall,
-                exception.ImageNotActive) as error:
+                exception.InstanceTypeMemoryTooSmall,
+                exception.InvalidMetadata) as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
 
         instance = self._get_server(context, req, id)

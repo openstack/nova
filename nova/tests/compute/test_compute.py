@@ -4888,6 +4888,26 @@ class ComputeAPITestCase(BaseTestCase):
                 inst_type, self.fake_image['id'])
         db.instance_destroy(self.context, refs[0]['uuid'])
 
+    def test_create_with_too_large_image(self):
+        # Test an instance type with too little disk space.
+
+        inst_type = flavors.get_default_instance_type()
+        inst_type['root_gb'] = 1
+
+        self.fake_image['size'] = '1073741825'
+
+        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
+
+        self.assertRaises(exception.ImageTooLarge,
+            self.compute_api.create, self.context,
+            inst_type, self.fake_image['id'])
+
+        # Reduce image to 1 GB limit and ensure it works
+        self.fake_image['size'] = '1073741824'
+        (refs, resv_id) = self.compute_api.create(self.context,
+                inst_type, self.fake_image['id'])
+        db.instance_destroy(self.context, refs[0]['uuid'])
+
     def test_create_just_enough_ram_and_disk(self):
         # Test an instance type with just enough ram and disk space.
 
@@ -5638,6 +5658,29 @@ class ComputeAPITestCase(BaseTestCase):
                        fake_extract_instance_type)
         self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
 
+        self.compute_api.rebuild(self.context,
+                instance, self.fake_image['id'], 'new_password')
+        db.instance_destroy(self.context, instance['uuid'])
+
+    def test_rebuild_with_too_large_image(self):
+        instance = jsonutils.to_primitive(
+            self._create_fake_instance(params={'image_ref': '1'}))
+
+        def fake_extract_instance_type(_inst):
+            return dict(memory_mb=64, root_gb=1)
+
+        self.stubs.Set(flavors, 'extract_instance_type',
+                       fake_extract_instance_type)
+
+        self.fake_image['size'] = '1073741825'
+        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
+
+        self.assertRaises(exception.ImageTooLarge,
+            self.compute_api.rebuild, self.context,
+            instance, self.fake_image['id'], 'new_password')
+
+        # Reduce image to 1 GB limit and ensure it works
+        self.fake_image['size'] = '1073741824'
         self.compute_api.rebuild(self.context,
                 instance, self.fake_image['id'], 'new_password')
         db.instance_destroy(self.context, instance['uuid'])
@@ -8910,105 +8953,6 @@ class ComputeInjectedFilesTestCase(BaseTestCase):
                                   injected_files=expected)
 
 
-class GetAndCheckImageMetadataTest(test.TestCase):
-    NOT_PRESENT = object()
-
-    def setUp(self):
-        super(GetAndCheckImageMetadataTest, self).setUp()
-        self.context = context.RequestContext('fakeuser', 'fakeproject')
-        self.compute = importutils.import_object(CONF.compute_manager)
-
-    def assertCheckSucceedsWithWonkySize(self, size):
-        instance = {'uuid': 'fakeuuid', 'image_ref': 'fakeimage'}
-        image_meta = {'id': 'imageid'}
-        if size is not self.NOT_PRESENT:
-            image_meta['size'] = size
-
-        self.mox.StubOutWithMock(compute_manager, '_get_image_meta')
-        compute_manager._get_image_meta(self.context,
-                instance['image_ref']).AndReturn(image_meta)
-
-        self.mox.ReplayAll()
-
-        image_meta2 = self.compute._get_and_check_image_metadata(
-                self.context, instance)
-
-        self.assertEqual(image_meta, image_meta2)
-
-    def test_size_not_present_on_image(self):
-        self.assertCheckSucceedsWithWonkySize(self.NOT_PRESENT)
-
-    def test_invalid_image_size(self):
-        self.assertCheckSucceedsWithWonkySize('invalid')
-
-    def test_image_size_present_but_empty(self):
-        self.assertCheckSucceedsWithWonkySize('')
-
-    def test_image_size_is_none(self):
-        self.assertCheckSucceedsWithWonkySize(None)
-
-    def test_root_gb_zero(self):
-        instance = {'uuid': 'fakeuuid', 'image_ref': 'fakeimage'}
-        self.mox.StubOutWithMock(flavors, 'extract_instance_type')
-        flavors.extract_instance_type(instance).AndReturn({'root_gb': 0})
-
-        self.mox.StubOutWithMock(compute_manager, '_get_image_meta')
-
-        image_meta = {'id': 'imageid', 'size': '123'}
-        compute_manager._get_image_meta(self.context,
-                instance['image_ref']).AndReturn(image_meta)
-
-        self.mox.ReplayAll()
-
-        image_meta2 = self.compute._get_and_check_image_metadata(
-                self.context, instance)
-
-        self.assertEqual(image_meta, image_meta2)
-
-    def test_image_ref_is_none(self):
-        # Instance was started from volume - so no image ref
-        instance = {'uuid': 'fakeuuid', 'image_ref': None}
-        image_meta2 = self.compute._get_and_check_image_metadata(
-                self.context, instance)
-
-        self.assertEqual({}, image_meta2)
-
-    def test_image_not_too_large(self):
-        instance = {'uuid': 'fakeuuid', 'image_ref': 'fakeimage'}
-
-        self.mox.StubOutWithMock(flavors, 'extract_instance_type')
-        flavors.extract_instance_type(instance).AndReturn({'root_gb': 1})
-
-        image_meta = {'id': 'imageid', 'size': '1073741824'}
-        self.mox.StubOutWithMock(compute_manager, '_get_image_meta')
-        compute_manager._get_image_meta(self.context,
-                instance['image_ref']).AndReturn(image_meta)
-
-        self.mox.ReplayAll()
-
-        image_meta2 = self.compute._get_and_check_image_metadata(
-                self.context, instance)
-
-        self.assertEqual(image_meta, image_meta2)
-
-    def test_image_too_large(self):
-        instance = {'uuid': 'fakeuuid', 'image_ref': 'fakeimage'}
-
-        self.mox.StubOutWithMock(flavors, 'extract_instance_type')
-        flavors.extract_instance_type(instance).AndReturn({'root_gb': 1})
-
-        image_meta = {'id': 'imageid', 'size': '1073741825'}
-        self.mox.StubOutWithMock(compute_manager, '_get_image_meta')
-        compute_manager._get_image_meta(self.context,
-                instance['image_ref']).AndReturn(image_meta)
-
-        self.mox.ReplayAll()
-
-        self.assertRaises(exception.ImageTooLarge,
-                self.compute._get_and_check_image_metadata,
-                self.context, instance)
-
-
 class CheckConfigDriveTestCase(test.TestCase):
     # NOTE(sirp): `TestCase` is far too heavyweight for this test, this should
     # probably derive from a `test.FastTestCase` that omits DB and env
@@ -9060,3 +9004,77 @@ class CheckConfigDriveTestCase(test.TestCase):
 
     def test_value_is_image_id(self):
         self.assertCheck((2, None), 2)
+
+
+class CheckRequestedImageTestCase(test.TestCase):
+    def setUp(self):
+        super(CheckRequestedImageTestCase, self).setUp()
+        self.compute_api = compute.API()
+        self.context = context.RequestContext(
+                'fake_user_id', 'fake_project_id')
+
+        self.instance_type = flavors.get_default_instance_type()
+        self.instance_type['memory_mb'] = 64
+        self.instance_type['root_gb'] = 1
+
+    def test_no_image_specified(self):
+        self.compute_api._check_requested_image(self.context, None, {},
+                self.instance_type)
+
+    def test_image_status_must_be_active(self):
+        image = dict(id='123', status='foo')
+
+        self.assertRaises(exception.ImageNotActive,
+                self.compute_api._check_requested_image, self.context,
+                image['id'], image, self.instance_type)
+
+        image['status'] = 'active'
+        self.compute_api._check_requested_image(self.context, image['id'],
+                image, self.instance_type)
+
+    def test_image_min_ram_check(self):
+        image = dict(id='123', status='active', min_ram='65')
+
+        self.assertRaises(exception.InstanceTypeMemoryTooSmall,
+                self.compute_api._check_requested_image, self.context,
+                image['id'], image, self.instance_type)
+
+        image['min_ram'] = '64'
+        self.compute_api._check_requested_image(self.context, image['id'],
+                image, self.instance_type)
+
+    def test_image_min_disk_check(self):
+        image = dict(id='123', status='active', min_disk='2')
+
+        self.assertRaises(exception.InstanceTypeDiskTooSmall,
+                self.compute_api._check_requested_image, self.context,
+                image['id'], image, self.instance_type)
+
+        image['min_disk'] = '1'
+        self.compute_api._check_requested_image(self.context, image['id'],
+                image, self.instance_type)
+
+    def test_image_too_large(self):
+        image = dict(id='123', status='active', size='1073741825')
+
+        self.assertRaises(exception.ImageTooLarge,
+                self.compute_api._check_requested_image, self.context,
+                image['id'], image, self.instance_type)
+
+        image['size'] = '1073741824'
+        self.compute_api._check_requested_image(self.context, image['id'],
+                image, self.instance_type)
+
+    def test_root_gb_zero_disables_size_check(self):
+        self.instance_type['root_gb'] = 0
+        image = dict(id='123', status='active', size='1073741825')
+
+        self.compute_api._check_requested_image(self.context, image['id'],
+                image, self.instance_type)
+
+    def test_root_gb_zero_disables_min_disk(self):
+        self.instance_type['root_gb'] = 0
+        image = dict(id='123', status='active', min_disk='2')
+
+        self.compute_api._check_requested_image(self.context, image['id'],
+                image, self.instance_type)

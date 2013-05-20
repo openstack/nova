@@ -500,12 +500,23 @@ class API(base.Base):
         if not image:
             # Image checks don't apply when building from volume
             return
+
         if image['status'] != 'active':
             raise exception.ImageNotActive(image_id=image_id)
+
         if instance_type['memory_mb'] < int(image.get('min_ram') or 0):
             raise exception.InstanceTypeMemoryTooSmall()
-        if instance_type['root_gb'] < int(image.get('min_disk') or 0):
-            raise exception.InstanceTypeDiskTooSmall()
+
+        # NOTE(johannes): root_gb is allowed to be 0 for legacy reasons
+        # since libvirt interpreted the value differently than other
+        # drivers. A value of 0 means don't check size.
+        root_gb = instance_type['root_gb']
+        if root_gb:
+            if int(image.get('size') or 0) > root_gb * (1024 ** 3):
+                raise exception.ImageTooLarge()
+
+            if int(image.get('min_disk') or 0) > root_gb:
+                    raise exception.InstanceTypeDiskTooSmall()
 
     def _get_image(self, context, image_href):
         if not image_href:
