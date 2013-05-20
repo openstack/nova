@@ -4264,28 +4264,19 @@ def agent_build_get_all(context, hypervisor=None):
 
 @require_admin_context
 def agent_build_destroy(context, agent_build_id):
-    session = get_session()
-    with session.begin():
-        count = model_query(context, models.AgentBuild,
-                    session=session, read_deleted="yes").\
-                filter_by(id=agent_build_id).\
-                soft_delete()
-        if count == 0:
-            raise exception.AgentBuildNotFound(id=agent_build_id)
+    rows_affected = model_query(context, models.AgentBuild).filter_by(
+                                        id=agent_build_id).soft_delete()
+    if rows_affected == 0:
+        raise exception.AgentBuildNotFound(id=agent_build_id)
 
 
 @require_admin_context
 def agent_build_update(context, agent_build_id, values):
-    session = get_session()
-    with session.begin():
-        agent_build_ref = model_query(context, models.AgentBuild,
-                                      session=session, read_deleted="yes").\
+    rows_affected = model_query(context, models.AgentBuild).\
                    filter_by(id=agent_build_id).\
-                   first()
-        if not agent_build_ref:
-            raise exception.AgentBuildNotFound(id=agent_build_id)
-        agent_build_ref.update(values)
-        agent_build_ref.save(session=session)
+                   update(values)
+    if rows_affected == 0:
+        raise exception.AgentBuildNotFound(id=agent_build_id)
 
 
 ####################
