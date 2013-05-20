@@ -477,19 +477,15 @@ class API(base.Base):
         return instance
 
     def _check_config_drive(self, context, config_drive):
-        bool_like = True
         try:
-            strutils.bool_from_string(config_drive, strict=True)
+            bool_like = strutils.bool_from_string(config_drive, strict=True)
         except ValueError:
             bool_like = False
 
         if config_drive is None:
             return None, None
-        elif bool_like and config_drive not in (0, 1, '0', '1'):
-            # NOTE(sirp): '0' and '1' could be a bool value or an ID.  Since
-            # there are many other ways to specify bools (e.g. 't', 'f'), it's
-            # better to treat as an ID.
-            return None, config_drive
+        elif bool_like:
+            return None, bool_like
         else:
             cd_image_service, config_drive_id = \
                 glance.get_remote_image_service(context, config_drive)
