@@ -3724,19 +3724,6 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                 usage['instance'],
                                                 last_refreshed=refreshed)
 
-    def _send_volume_usage_notifications(self, context, start_time):
-        """Queries vol usage cache table and sends a vol usage notification."""
-        # We might have had a quick attach/detach that we missed in
-        # the last run of get_all_volume_usage and this one
-        # but detach stats will be recorded in db and returned from
-        # vol_get_usage_by_time
-        vol_usages = self.conductor_api.vol_get_usage_by_time(context,
-                                                              start_time)
-        for vol_usage in vol_usages:
-            notifier.notify(context, 'volume.%s' % self.host, 'volume.usage',
-                            notifier.INFO,
-                            compute_utils.usage_volume_info(vol_usage))
-
     @periodic_task.periodic_task
     def _poll_volume_usage(self, context, start_time=None):
         if CONF.volume_usage_poll_interval == 0:
@@ -3764,8 +3751,6 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         refreshed = timeutils.utcnow()
         self._update_volume_usage_cache(context, vol_usages, refreshed)
-
-        self._send_volume_usage_notifications(context, start_time)
 
     @periodic_task.periodic_task
     def _report_driver_status(self, context):

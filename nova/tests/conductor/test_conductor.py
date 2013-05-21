@@ -30,6 +30,8 @@ from nova.db.sqlalchemy import models
 from nova import exception as exc
 from nova import notifications
 from nova.openstack.common import jsonutils
+from nova.openstack.common.notifier import api as notifier_api
+from nova.openstack.common.notifier import test_notifier
 from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import timeutils
 from nova import quota
@@ -54,6 +56,11 @@ class _BaseTestCase(object):
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = FakeContext(self.user_id, self.project_id)
+
+        notifier_api._reset_drivers()
+        self.addCleanup(notifier_api._reset_drivers)
+        self.flags(notification_driver=[test_notifier.__name__])
+        test_notifier.NOTIFICATIONS = []
 
     def stub_out_client_exceptions(self):
         def passthru(exceptions, func, *args, **kwargs):
@@ -368,19 +375,49 @@ class _BaseTestCase(object):
         self.assertEqual(result, 'fake-usage')
 
     def test_vol_usage_update(self):
+        # the vol_usage_update method sends the volume usage notifications
+        # as well as updating the database
         self.mox.StubOutWithMock(db, 'vol_usage_update')
         inst = self._create_fake_instance({
                 'project_id': 'fake-project_id',
                 'user_id': 'fake-user_id',
                 })
+        fake_usage = {'tot_last_refreshed': 20,
+                      'curr_last_refreshed': 10,
+                      'volume_id': 'fake-vol',
+                      'instance_uuid': inst['uuid'],
+                      'project_id': 'fake-project_id',
+                      'user_id': 'fake-user_id',
+                      'availability_zone': 'fake-az',
+                      'tot_reads': 11,
+                      'curr_reads': 22,
+                      'tot_read_bytes': 33,
+                      'curr_read_bytes': 44,
+                      'tot_writes': 55,
+                      'curr_writes': 66,
+                      'tot_write_bytes': 77,
+                      'curr_write_bytes': 88}
         db.vol_usage_update(self.context, 'fake-vol', 'rd-req', 'rd-bytes',
                             'wr-req', 'wr-bytes', inst['uuid'],
                             'fake-project_id', 'fake-user_id', 'fake-az',
-                            'fake-refr', 'fake-bool')
+                            'fake-refr', 'fake-bool', mox.IgnoreArg()).\
+                            AndReturn(fake_usage)
         self.mox.ReplayAll()
         self.conductor.vol_usage_update(self.context, 'fake-vol', 'rd-req',
                                         'rd-bytes', 'wr-req', 'wr-bytes',
                                         inst, 'fake-refr', 'fake-bool')
+
+        self.assertEquals(len(test_notifier.NOTIFICATIONS), 1)
+        msg = test_notifier.NOTIFICATIONS[0]
+        payload = msg['payload']
+        self.assertEquals(payload['instance_id'], inst['uuid'])
+        self.assertEquals(payload['user_id'], 'fake-user_id')
+        self.assertEquals(payload['tenant_id'], 'fake-project_id')
+        self.assertEquals(payload['reads'], 33)
+        self.assertEquals(payload['read_bytes'], 77)
+        self.assertEquals(payload['writes'], 121)
+        self.assertEquals(payload['write_bytes'], 165)
+        self.assertEquals(payload['availability_zone'], 'fake-az')
 
     def test_compute_node_create(self):
         self.mox.StubOutWithMock(db, 'compute_node_create')

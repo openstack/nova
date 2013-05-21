@@ -4456,7 +4456,7 @@ def vol_usage_update(context, id, rd_req, rd_bytes, wr_req, wr_bytes,
                         current_usage['curr_write_bytes'] + wr_bytes)
 
             current_usage.update(values)
-            return
+            return current_usage
 
         vol_usage = models.VolumeUsage()
         vol_usage.tot_last_refreshed = timeutils.utcnow()
@@ -4479,6 +4479,8 @@ def vol_usage_update(context, id, rd_req, rd_bytes, wr_req, wr_bytes,
             vol_usage.tot_write_bytes = wr_bytes
 
         vol_usage.save(session=session)
+
+        return vol_usage
 
 
 ####################
