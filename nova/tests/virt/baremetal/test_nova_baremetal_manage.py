@@ -17,7 +17,7 @@
 #    under the License.
 
 from nova.cmd import baremetal_manage as bm_man
-from nova.tests.baremetal.db import base as bm_db_base
+from nova.tests.virt.baremetal.db import base as bm_db_base
 
 
 class BareMetalDbCommandsTestCase(bm_db_base.BMDBTestCase):

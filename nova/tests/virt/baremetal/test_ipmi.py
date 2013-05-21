@@ -26,7 +26,7 @@ import tempfile
 from oslo.config import cfg
 
 from nova import test
-from nova.tests.baremetal.db import utils as bm_db_utils
+from nova.tests.virt.baremetal.db import utils as bm_db_utils
 from nova import utils
 from nova.virt.baremetal import baremetal_states
 from nova.virt.baremetal import ipmi

@@ -19,8 +19,8 @@ Bare-metal DB testcase for BareMetalPxeIp
 
 from nova import exception
 from nova.openstack.common.db import exception as db_exc
-from nova.tests.baremetal.db import base
-from nova.tests.baremetal.db import utils
+from nova.tests.virt.baremetal.db import base
+from nova.tests.virt.baremetal.db import utils
 from nova.virt.baremetal import db
 
 

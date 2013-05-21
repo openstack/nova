@@ -52,12 +52,12 @@ from nova.tests.api.openstack.compute.contrib import test_fping
 from nova.tests.api.openstack.compute.contrib import test_networks
 from nova.tests.api.openstack.compute.contrib import test_services
 from nova.tests.api.openstack import fakes
-from nova.tests.baremetal.db import base as bm_db_base
 from nova.tests import fake_instance_actions
 from nova.tests import fake_network
 from nova.tests.image import fake
 from nova.tests.integrated import integrated_helpers
 from nova.tests import utils as test_utils
+from nova.tests.virt.baremetal.db import base as bm_db_base
 from nova import utils
 from nova.volume import cinder
 
