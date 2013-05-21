@@ -123,10 +123,13 @@ class SchedulerManager(manager.Manager):
                                  expected_task_state=task_states.MIGRATING,),
                                               context, ex, request_spec)
         except Exception as ex:
+            request_spec = {'instance_properties': {
+                'uuid': instance['uuid'], },
+            }
             with excutils.save_and_reraise_exception():
                 self._set_vm_state_and_notify('live_migration',
                                              {'vm_state': vm_states.ERROR},
-                                             context, ex, {})
+                                             context, ex, request_spec)
 
     def run_instance(self, context, request_spec, admin_password,
             injected_files, requested_networks, is_first_time,
