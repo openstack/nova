@@ -158,6 +158,10 @@ class UnsupportedRpcEnvelopeVersion(RPCException):
                 "not supported by this endpoint.")
 
 
+class RpcVersionCapError(RPCException):
+    message = _("Specified RPC version cap, %(version_cap)s, is too low")
+
+
 class Connection(object):
     """A connection, returned by rpc.create_connection().
 
