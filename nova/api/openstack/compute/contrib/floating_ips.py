@@ -93,9 +93,6 @@ def disassociate_floating_ip(self, context, instance, address):
         self.network_api.disassociate_floating_ip(context, instance, address)
     except exception.NotAuthorized:
         raise webob.exc.HTTPForbidden()
-    except exception.FloatingIpNotAssociated:
-        msg = _('Floating ip is not associated')
-        raise webob.exc.HTTPBadRequest(explanation=msg)
     except exception.CannotDisassociateAutoAssignedFloatingIP:
         msg = _('Cannot disassociate auto assigned floating ip')
         raise webob.exc.HTTPForbidden(explanation=msg)
@@ -186,7 +183,10 @@ class FloatingIPController(object):
 
         # disassociate if associated
         if floating_ip.get('fixed_ip_id'):
-            disassociate_floating_ip(self, context, instance, address)
+            try:
+                disassociate_floating_ip(self, context, instance, address)
+            except exception.FloatingIpNotAssociated:
+                LOG.info(_("Floating ip %s has been disassociated") % address)
 
         # release ip from project
         self.network_api.release_floating_ip(context, address)
@@ -291,7 +291,11 @@ class FloatingIPActionController(wsgi.Controller):
             (uuidutils.is_uuid_like(id) and
              [instance['uuid'] == id] or
              [instance['id'] == id])[0]):
-            disassociate_floating_ip(self, context, instance, address)
+            try:
+                disassociate_floating_ip(self, context, instance, address)
+            except exception.FloatingIpNotAssociated:
+                msg = _('Floating ip is not associated')
+                raise webob.exc.HTTPBadRequest(explanation=msg)
             return webob.Response(status_int=202)
         else:
             msg = _("Floating ip %(address)s is not associated with instance "
