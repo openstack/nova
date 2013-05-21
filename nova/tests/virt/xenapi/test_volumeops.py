@@ -17,7 +17,7 @@
 import collections
 
 from nova import test
-from nova.tests.xenapi import stubs
+from nova.tests.virt.xenapi import stubs
 from nova.virt.xenapi import volumeops
 
 
