@@ -23,7 +23,7 @@ from oslo.config import cfg
 from nova import exception
 from nova.storage import linuxscsi
 from nova import test
-from nova.tests import fake_libvirt_utils
+from nova.tests.virt.libvirt import fake_libvirt_utils
 from nova import utils
 from nova.virt import fake
 from nova.virt.libvirt import utils as libvirt_utils

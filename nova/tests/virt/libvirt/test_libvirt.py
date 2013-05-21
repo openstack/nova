@@ -45,10 +45,10 @@ from nova.openstack.common import jsonutils
 from nova.openstack.common import loopingcall
 from nova.openstack.common import uuidutils
 from nova import test
-from nova.tests import fake_libvirt_utils
 from nova.tests import fake_network
 import nova.tests.image.fake
 from nova.tests import matchers
+from nova.tests.virt.libvirt import fake_libvirt_utils
 from nova import utils
 from nova import version
 from nova.virt.disk import api as disk
@@ -68,7 +68,7 @@ from nova.virt import netutils
 try:
     import libvirt
 except ImportError:
-    import nova.tests.fakelibvirt as libvirt
+    import nova.tests.virt.libvirt.fakelibvirt as libvirt
 libvirt_driver.libvirt = libvirt
 
 
@@ -351,7 +351,8 @@ class LibvirtConnTestCase(test.TestCase):
                 return FakeVirtDomain()
 
         # Creating mocks
-        volume_driver = 'iscsi=nova.tests.test_libvirt.FakeVolumeDriver'
+        volume_driver = ('iscsi=nova.tests.virt.libvirt.test_libvirt'
+                         '.FakeVolumeDriver')
         self.flags(libvirt_volume_drivers=[volume_driver])
         fake = FakeLibvirtDriver()
         # Customizing above fake if necessary
