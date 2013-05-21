@@ -33,8 +33,8 @@ from nova import test
 import nova.tests.image.fake
 from nova.tests import matchers
 from nova.tests import utils
-from nova.tests.vmwareapi import db_fakes
-from nova.tests.vmwareapi import stubs
+from nova.tests.virt.vmwareapi import db_fakes
+from nova.tests.virt.vmwareapi import stubs
 from nova.virt.vmwareapi import driver
 from nova.virt.vmwareapi import fake as vmwareapi_fake
 from nova.virt.vmwareapi import vim
