@@ -4679,6 +4679,16 @@ class ComputeAPITestCase(BaseTestCase):
 
         db.instance_destroy(self.context, instance['uuid'])
 
+    def test_stop_a_stopped_inst(self):
+        instance = jsonutils.to_primitive(self._create_fake_instance(
+                                          {'vm_state': vm_states.STOPPED}))
+
+        self.assertRaises(exception.InstanceInvalidState,
+                          self.compute_api.stop,
+                          self.context, instance)
+
+        db.instance_destroy(self.context, instance['uuid'])
+
     def test_stop_no_host(self):
         instance = self._create_fake_instance(params={'host': ''})
 
