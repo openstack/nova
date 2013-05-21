@@ -1402,8 +1402,9 @@ class ServersControllerTest(test.TestCase):
                 name='public image', is_public=True,
                 status='active', properties={'key1': 'value1'},
                 min_ram="4096", min_disk="10")
-        self.stubs.Set(compute_api.API, '_get_image',
-                fake_get_image)
+
+        self.stubs.Set(fake._FakeImageService, 'show', fake_get_image)
+
         self.stubs.Set(db, 'instance_get_by_uuid',
                 fakes.fake_instance_get(vm_state=vm_states.ACTIVE))
         image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
@@ -1429,8 +1430,35 @@ class ServersControllerTest(test.TestCase):
                 name='public image', is_public=True,
                 status='active', properties={'key1': 'value1'},
                 min_ram="128", min_disk="100000")
-        self.stubs.Set(compute_api.API, '_get_image',
-                fake_get_image)
+
+        self.stubs.Set(fake._FakeImageService, 'show', fake_get_image)
+
+        self.stubs.Set(db, 'instance_get_by_uuid',
+                fakes.fake_instance_get(vm_state=vm_states.ACTIVE))
+        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        image_href = 'http://localhost/v2/fake/images/%s' % image_uuid
+        body = {
+            'rebuild': {
+                'name': 'new_name',
+                'imageRef': image_href,
+            },
+        }
+
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/a/action')
+        req.method = 'POST'
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+        self.assertRaises(webob.exc.HTTPBadRequest,
+            self.controller._action_rebuild, req, FAKE_UUID, body)
+
+    def test_rebuild_instance_with_deleted_image(self):
+        def fake_get_image(self, context, image_href):
+            return dict(id='76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
+                        name='public image', is_public=True,
+                        status='DELETED')
+
+        self.stubs.Set(fake._FakeImageService, 'show', fake_get_image)
+
         self.stubs.Set(db, 'instance_get_by_uuid',
                 fakes.fake_instance_get(vm_state=vm_states.ACTIVE))
         image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'

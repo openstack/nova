@@ -5543,6 +5543,24 @@ class ComputeAPITestCase(BaseTestCase):
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
         self.assertEqual(instance['task_state'], task_states.REBUILDING)
 
+    def test_rebuild_with_deleted_image(self):
+        # If we're given a deleted image by glance, we should not be able to
+        # rebuild from it
+        instance = jsonutils.to_primitive(
+            self._create_fake_instance(params={'image_ref': '1'}))
+
+        self.fake_image['name'] = 'fake_name'
+        self.fake_image['status'] = 'DELETED'
+        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
+
+        expected_message = (
+            exception.ImageNotActive.message % {'image_id':
+            self.fake_image['id']})
+        with testtools.ExpectedException(exception.ImageNotActive,
+                                         expected_message):
+            self.compute_api.rebuild(self.context, instance,
+                                     self.fake_image['id'], 'new_password')
+
     def _stub_out_reboot(self, device_name):
         def fake_reboot_instance(rpcapi, context, instance,
                                  block_device_info,
