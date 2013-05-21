@@ -201,7 +201,6 @@ class TestLauncher(test.TestCase):
         self.service = service.WSGIService("test_service")
 
     def test_launch_app(self):
-        launcher = service.Launcher()
-        launcher.launch_server(self.service)
+        service.serve(self.service)
         self.assertNotEquals(0, self.service.port)
-        launcher.stop()
+        service._launcher.stop()
