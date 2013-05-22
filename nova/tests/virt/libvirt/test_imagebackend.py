@@ -23,8 +23,8 @@ from oslo.config import cfg
 from nova import exception
 from nova.openstack.common import uuidutils
 from nova import test
-from nova.tests import fake_libvirt_utils
 from nova.tests import fake_processutils
+from nova.tests.virt.libvirt import fake_libvirt_utils
 from nova.virt.libvirt import imagebackend
 
 CONF = cfg.CONF

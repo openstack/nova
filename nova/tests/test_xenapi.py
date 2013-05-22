@@ -2117,8 +2117,9 @@ class XenAPIBWCountersTestCase(stubs.XenAPITestBase):
 
 
 # TODO(salvatore-orlando): this class and
-# nova.tests.test_libvirt.IPTablesFirewallDriverTestCase share a lot of code.
-# Consider abstracting common code in a base class for firewall driver testing.
+# nova.tests.virt.test_libvirt.IPTablesFirewallDriverTestCase share a lot of
+# code.  Consider abstracting common code in a base class for firewall driver
+# testing.
 class XenAPIDom0IptablesFirewallTestCase(stubs.XenAPITestBase):
 
     _in_rules = [

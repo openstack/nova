@@ -25,9 +25,9 @@ from nova import exception
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova import test
-from nova.tests import fake_libvirt_utils
 from nova.tests.image import fake as fake_image
 from nova.tests import utils as test_utils
+from nova.tests.virt.libvirt import fake_libvirt_utils
 from nova.virt import event as virtevent
 from nova.virt import fake
 
@@ -67,9 +67,9 @@ class _FakeDriverBackendTestCase(object):
         else:
             self.saved_libvirt = None
 
-        import nova.tests.fake_imagebackend as fake_imagebackend
-        import nova.tests.fake_libvirt_utils as fake_libvirt_utils
-        import nova.tests.fakelibvirt as fakelibvirt
+        import nova.tests.virt.libvirt.fake_imagebackend as fake_imagebackend
+        import nova.tests.virt.libvirt.fake_libvirt_utils as fake_libvirt_utils
+        import nova.tests.virt.libvirt.fakelibvirt as fakelibvirt
 
         sys.modules['libvirt'] = fakelibvirt
         import nova.virt.libvirt.driver

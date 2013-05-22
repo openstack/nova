@@ -20,7 +20,7 @@ from oslo.config import cfg
 from nova import exception
 from nova.network import model as network_model
 from nova import test
-from nova.tests import fakelibvirt
+from nova.tests.virt.libvirt import fakelibvirt
 from nova import utils
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import vif
