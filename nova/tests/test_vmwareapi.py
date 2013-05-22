@@ -71,7 +71,7 @@ class VMwareAPIVMTestCase(test.TestCase):
         vmwareapi_fake.reset()
         db_fakes.stub_out_db_instance_api(self.stubs)
         stubs.set_stubs(self.stubs)
-        self.conn = driver.VMwareESXDriver(None, False)
+        self.conn = driver.VMwareVCDriver(None, False)
         # NOTE(vish): none of the network plugging code is actually
         #             being tested
         self.network_info = utils.get_test_network_info(legacy_model=False)
@@ -379,14 +379,10 @@ class VMwareAPIVMTestCase(test.TestCase):
                           self.instance)
 
     def test_get_vnc_console(self):
-        vm_ref = fake_vm_ref()
         self._create_instance_in_the_db()
         self._create_vm()
-        self.mox.StubOutWithMock(self.conn._vmops, '_get_vnc_port')
-        self.conn._vmops._get_vnc_port(mox.IgnoreArg()).AndReturn(5910)
-        self.mox.ReplayAll()
         vnc_dict = self.conn.get_vnc_console(self.instance)
-        self.assertEquals(vnc_dict['host'], "test_url")
+        self.assertEquals(vnc_dict['host'], "ha-host")
         self.assertEquals(vnc_dict['port'], 5910)
 
     def test_host_ip_addr(self):

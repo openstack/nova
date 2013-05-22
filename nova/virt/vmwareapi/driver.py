@@ -126,6 +126,12 @@ class Failure(Exception):
 class VMwareESXDriver(driver.ComputeDriver):
     """The ESX host connection object."""
 
+    # VMwareAPI has both ESXi and vCenter API sets.
+    # The ESXi API are a proper sub-set of the vCenter API.
+    # That is to say, nearly all valid ESXi calls are
+    # valid vCenter calls. There are some small edge-case
+    # exceptions regarding VNC, CIM, User management & SSO.
+
     def __init__(self, virtapi, read_only=False, scheme="https"):
         super(VMwareESXDriver, self).__init__(virtapi)
 
@@ -335,6 +341,14 @@ class VMwareESXDriver(driver.ComputeDriver):
 class VMwareVCDriver(VMwareESXDriver):
     """The ESX host connection object."""
 
+    # The vCenter driver includes several additional VMware vSphere
+    # capabilities that include API that act on hosts or groups of
+    # hosts in clusters or non-cluster logical-groupings.
+    #
+    # vCenter is not a hypervisor itself, it works with multiple
+    # hypervisor host machines and their guests. This fact can
+    # subtly alter how vSphere and OpenStack interoperate.
+
     def __init__(self, virtapi, read_only=False, scheme="https"):
         super(VMwareVCDriver, self).__init__(virtapi)
         if not self._cluster_name:
@@ -390,6 +404,14 @@ class VMwareVCDriver(VMwareESXDriver):
         self._vmops.live_migration(context, instance_ref, dest,
                                    post_method, recover_method,
                                    block_migration)
+
+    def get_vnc_console(self, instance):
+        """Return link to instance's VNC console using vCenter logic."""
+        # In this situation, ESXi and vCenter require different
+        # API logic to create a valid VNC console connection object.
+        # In specific, vCenter does not actually run the VNC service
+        # itself. You must talk to the VNC host underneath vCenter.
+        return self._vmops.get_vnc_console_vcenter(instance)
 
 
 class VMwareAPISession(object):
