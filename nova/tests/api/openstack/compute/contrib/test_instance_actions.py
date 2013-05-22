@@ -178,6 +178,14 @@ class InstanceActionsTest(test.TestCase):
         self.assertRaises(exc.HTTPNotFound, self.controller.show, req,
                           FAKE_UUID, FAKE_REQUEST_ID)
 
+    def test_instance_not_found(self):
+        def fake_get(self, context, instance_uuid):
+            raise exception.InstanceNotFound(instance_id=instance_uuid)
+        self.stubs.Set(compute_api.API, 'get', fake_get)
+        req = fakes.HTTPRequest.blank('/v2/123/servers/12/os-instance-actions')
+        self.assertRaises(exc.HTTPNotFound, self.controller.index, req,
+                          FAKE_UUID)
+
 
 class InstanceActionsSerializerTest(test.TestCase):
     def setUp(self):
