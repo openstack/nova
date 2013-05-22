@@ -18,8 +18,8 @@ Bare-Metal DB testcase for BareMetalNode
 """
 
 from nova import exception
-from nova.tests.baremetal.db import base
-from nova.tests.baremetal.db import utils
+from nova.tests.virt.baremetal.db import base
+from nova.tests.virt.baremetal.db import utils
 from nova.virt.baremetal import db
 
 

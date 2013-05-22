@@ -25,10 +25,10 @@ from oslo.config import cfg
 from nova.compute import power_state
 from nova import exception
 from nova import test
-from nova.tests.baremetal.db import base as bm_db_base
-from nova.tests.baremetal.db import utils as bm_db_utils
 from nova.tests.image import fake as fake_image
 from nova.tests import utils
+from nova.tests.virt.baremetal.db import base as bm_db_base
+from nova.tests.virt.baremetal.db import utils as bm_db_utils
 from nova.virt.baremetal import baremetal_states
 from nova.virt.baremetal import db
 from nova.virt.baremetal import driver as bm_driver

@@ -1339,7 +1339,7 @@ class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         super(TestBaremetalMigrations, self).__init__(*args, **kwargs)
 
         self.DEFAULT_CONFIG_FILE = os.path.join(os.path.dirname(__file__),
-                                       'test_baremetal_migrations.conf')
+                'virt/baremetal/test_baremetal_migrations.conf')
         # Test machines can set the NOVA_TEST_MIGRATIONS_CONF variable
         # to override the location of the config file for migration testing
         self.CONFIG_FILE_PATH = os.environ.get(
