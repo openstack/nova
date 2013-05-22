@@ -55,6 +55,7 @@ class KeypairController(object):
         self.api = compute_api.KeypairAPI()
 
     @wsgi.serializers(xml=KeypairTemplate)
+    @extensions.expected_errors((400, 409, 413))
     def create(self, req, body):
         """
         Create or import keypair.
@@ -100,6 +101,7 @@ class KeypairController(object):
         except exception.KeyPairExists as exc:
             raise webob.exc.HTTPConflict(explanation=exc.format_message())
 
+    @extensions.expected_errors(404)
     def delete(self, req, id):
         """
         Delete a keypair with a given name
@@ -113,6 +115,7 @@ class KeypairController(object):
         return webob.Response(status_int=202)
 
     @wsgi.serializers(xml=KeypairTemplate)
+    @extensions.expected_errors(404)
     def show(self, req, id):
         """Return data for the given key name."""
         context = req.environ['nova.context']

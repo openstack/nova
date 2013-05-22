@@ -16,10 +16,12 @@
 
 from oslo.config import cfg
 import stevedore
+import webob.exc
 
 from nova.api import openstack
 from nova.api.openstack import compute
 from nova.api.openstack.compute import plugins
+from nova.api.openstack import extensions
 from nova import exception
 from nova import test
 
@@ -139,3 +141,38 @@ class ExtensionLoadingTestCase(test.TestCase):
         self.stubs.Set(plugins, 'LoadedExtensionInfo',
                        fake_loaded_extension_info)
         self.assertRaises(exception.CoreAPIMissing, compute.APIRouterV3)
+
+    def test_extensions_expected_error(self):
+        @extensions.expected_errors(404)
+        def fake_func():
+            raise webob.exc.HTTPNotFound()
+
+        self.assertRaises(webob.exc.HTTPNotFound, fake_func)
+
+    def test_extensions_expected_error_from_list(self):
+        @extensions.expected_errors((404, 403))
+        def fake_func():
+            raise webob.exc.HTTPNotFound()
+
+        self.assertRaises(webob.exc.HTTPNotFound, fake_func)
+
+    def test_extensions_unexpected_error(self):
+        @extensions.expected_errors(404)
+        def fake_func():
+            raise webob.exc.HTTPConflict()
+
+        self.assertRaises(webob.exc.HTTPInternalServerError, fake_func)
+
+    def test_extensions_unexpected_error_from_list(self):
+        @extensions.expected_errors((404, 413))
+        def fake_func():
+            raise webob.exc.HTTPConflict()
+
+        self.assertRaises(webob.exc.HTTPInternalServerError, fake_func)
+
+    def test_extensions_unexpected_policy_not_authorized_error(self):
+        @extensions.expected_errors(404)
+        def fake_func():
+            raise exception.PolicyNotAuthorized(action="foo")
+
+        self.assertRaises(exception.PolicyNotAuthorized, fake_func)
