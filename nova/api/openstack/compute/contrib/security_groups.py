@@ -466,6 +466,8 @@ class SecurityGroupsOutputController(wsgi.Controller):
     def _extend_servers(self, req, servers):
         # TODO(arosen) this function should be refactored to reduce duplicate
         # code and use get_instance_security_groups instead of get_db_instance.
+        if not len(servers):
+            return
         key = "security_groups"
         context = _authorize_context(req)
         if not openstack_driver.is_quantum_security_groups():
@@ -480,13 +482,20 @@ class SecurityGroupsOutputController(wsgi.Controller):
             # quantum security groups the requested security groups for the
             # instance are not in the db and have not been sent to quantum yet.
             if req.method != 'POST':
-                sg_instance_bindings = (
-                    self.security_group_api
-                    .get_instances_security_groups_bindings(context))
-                for server in servers:
-                    groups = sg_instance_bindings.get(server['id'])
-                    if groups:
-                        server[key] = groups
+                if len(servers) == 1:
+                    group = (self.security_group_api
+                             .get_instance_security_groups(context,
+                                                           servers[0]['id']))
+                    if group:
+                        servers[0][key] = group
+                else:
+                    sg_instance_bindings = (
+                        self.security_group_api
+                        .get_instances_security_groups_bindings(context))
+                    for server in servers:
+                        groups = sg_instance_bindings.get(server['id'])
+                        if groups:
+                            server[key] = groups
             # In this section of code len(servers) == 1 as you can only POST
             # one server in an API request.
             else:

@@ -426,6 +426,13 @@ class TestQuantumSecurityGroupsOutputTest(TestQuantumSecurityGroupsTestCase):
         self.assertEquals(group.get('name'), 'default')
 
     def test_show(self):
+        def fake_get_instance_security_groups(inst, context, id):
+            return [{'name': 'fake-2-0'}, {'name': 'fake-2-1'}]
+
+        self.stubs.Set(quantum_driver.SecurityGroupAPI,
+                       'get_instance_security_groups',
+                       fake_get_instance_security_groups)
+
         url = '/v2/fake/servers'
         image_uuid = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
@@ -440,6 +447,16 @@ class TestQuantumSecurityGroupsOutputTest(TestQuantumSecurityGroupsTestCase):
         res = self._make_request(url, {'server': server})
         self.assertEqual(res.status_int, 202)
         server = self._get_server(res.body)
+        for i, group in enumerate(self._get_groups(server)):
+            name = 'fake-2-%s' % i
+            self.assertEqual(group.get('name'), name)
+
+        # Test that show (GET) returns the same information as create (POST)
+        url = '/v2/fake/servers/' + test_security_groups.UUID3
+        res = self._make_request(url)
+        self.assertEqual(res.status_int, 200)
+        server = self._get_server(res.body)
+
         for i, group in enumerate(self._get_groups(server)):
             name = 'fake-2-%s' % i
             self.assertEqual(group.get('name'), name)
