@@ -313,73 +313,78 @@ class S3ImageService(object):
                 self.service.update(context, image_uuid, metadata, image_data,
                                     purge_props=False)
 
-            _update_image_state(context, image_uuid, 'downloading')
-
             try:
-                parts = []
-                elements = manifest.find('image').getiterator('filename')
-                for fn_element in elements:
-                    part = self._download_file(bucket,
-                                               fn_element.text,
-                                               image_path)
-                    parts.append(part)
+                _update_image_state(context, image_uuid, 'downloading')
 
-                # NOTE(vish): this may be suboptimal, should we use cat?
-                enc_filename = os.path.join(image_path, 'image.encrypted')
-                with open(enc_filename, 'w') as combined:
-                    for filename in parts:
-                        with open(filename) as part:
-                            shutil.copyfileobj(part, combined)
+                try:
+                    parts = []
+                    elements = manifest.find('image').getiterator('filename')
+                    for fn_element in elements:
+                        part = self._download_file(bucket,
+                                                   fn_element.text,
+                                                   image_path)
+                        parts.append(part)
 
-            except Exception:
-                LOG.exception(_("Failed to download %(image_location)s "
-                                "to %(image_path)s"), log_vars)
-                _update_image_state(context, image_uuid, 'failed_download')
+                    # NOTE(vish): this may be suboptimal, should we use cat?
+                    enc_filename = os.path.join(image_path, 'image.encrypted')
+                    with open(enc_filename, 'w') as combined:
+                        for filename in parts:
+                            with open(filename) as part:
+                                shutil.copyfileobj(part, combined)
+
+                except Exception:
+                    LOG.exception(_("Failed to download %(image_location)s "
+                                    "to %(image_path)s"), log_vars)
+                    _update_image_state(context, image_uuid, 'failed_download')
+                    return
+
+                _update_image_state(context, image_uuid, 'decrypting')
+
+                try:
+                    hex_key = manifest.find('image/ec2_encrypted_key').text
+                    encrypted_key = binascii.a2b_hex(hex_key)
+                    hex_iv = manifest.find('image/ec2_encrypted_iv').text
+                    encrypted_iv = binascii.a2b_hex(hex_iv)
+
+                    dec_filename = os.path.join(image_path, 'image.tar.gz')
+                    self._decrypt_image(context, enc_filename, encrypted_key,
+                                        encrypted_iv, dec_filename)
+                except Exception:
+                    LOG.exception(_("Failed to decrypt %(image_location)s "
+                                    "to %(image_path)s"), log_vars)
+                    _update_image_state(context, image_uuid, 'failed_decrypt')
+                    return
+
+                _update_image_state(context, image_uuid, 'untarring')
+
+                try:
+                    unz_filename = self._untarzip_image(image_path,
+                                                        dec_filename)
+                except Exception:
+                    LOG.exception(_("Failed to untar %(image_location)s "
+                                    "to %(image_path)s"), log_vars)
+                    _update_image_state(context, image_uuid, 'failed_untar')
+                    return
+
+                _update_image_state(context, image_uuid, 'uploading')
+                try:
+                    with open(unz_filename) as image_file:
+                        _update_image_data(context, image_uuid, image_file)
+                except Exception:
+                    LOG.exception(_("Failed to upload %(image_location)s "
+                                    "to %(image_path)s"), log_vars)
+                    _update_image_state(context, image_uuid, 'failed_upload')
+                    return
+
+                metadata = {'status': 'active',
+                            'properties': {'image_state': 'available'}}
+                self.service.update(context, image_uuid, metadata,
+                        purge_props=False)
+
+                shutil.rmtree(image_path)
+            except exception.ImageNotFound:
+                LOG.info(_("Image %s was deleted underneath us"), image_uuid)
                 return
-
-            _update_image_state(context, image_uuid, 'decrypting')
-
-            try:
-                hex_key = manifest.find('image/ec2_encrypted_key').text
-                encrypted_key = binascii.a2b_hex(hex_key)
-                hex_iv = manifest.find('image/ec2_encrypted_iv').text
-                encrypted_iv = binascii.a2b_hex(hex_iv)
-
-                dec_filename = os.path.join(image_path, 'image.tar.gz')
-                self._decrypt_image(context, enc_filename, encrypted_key,
-                                    encrypted_iv, dec_filename)
-            except Exception:
-                LOG.exception(_("Failed to decrypt %(image_location)s "
-                                "to %(image_path)s"), log_vars)
-                _update_image_state(context, image_uuid, 'failed_decrypt')
-                return
-
-            _update_image_state(context, image_uuid, 'untarring')
-
-            try:
-                unz_filename = self._untarzip_image(image_path, dec_filename)
-            except Exception:
-                LOG.exception(_("Failed to untar %(image_location)s "
-                                "to %(image_path)s"), log_vars)
-                _update_image_state(context, image_uuid, 'failed_untar')
-                return
-
-            _update_image_state(context, image_uuid, 'uploading')
-            try:
-                with open(unz_filename) as image_file:
-                    _update_image_data(context, image_uuid, image_file)
-            except Exception:
-                LOG.exception(_("Failed to upload %(image_location)s "
-                                "to %(image_path)s"), log_vars)
-                _update_image_state(context, image_uuid, 'failed_upload')
-                return
-
-            metadata = {'status': 'active',
-                        'properties': {'image_state': 'available'}}
-            self.service.update(context, image_uuid, metadata,
-                    purge_props=False)
-
-            shutil.rmtree(image_path)
 
         eventlet.spawn_n(delayed_create)
 
