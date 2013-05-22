@@ -2708,6 +2708,7 @@ class LibvirtConnTestCase(test.TestCase):
         instance_ref = self.test_instance
         instance_ref['image_ref'] = ''
         instance_ref['root_device_name'] = '/dev/vda'
+        instance_ref['uuid'] = uuidutils.generate_uuid()
         instance = db.instance_create(self.context, instance_ref)
 
         conn.spawn(self.context, instance, None, [], None,
@@ -2719,6 +2720,7 @@ class LibvirtConnTestCase(test.TestCase):
         instance_ref = self.test_instance
         instance_ref['image_ref'] = 'my_fake_image'
         instance_ref['root_device_name'] = '/dev/vda'
+        instance_ref['uuid'] = uuidutils.generate_uuid()
         instance = db.instance_create(self.context, instance_ref)
 
         conn.spawn(self.context, instance, None, [], None,
@@ -2728,6 +2730,7 @@ class LibvirtConnTestCase(test.TestCase):
 
         # Booted from an image
         instance_ref['image_ref'] = 'my_fake_image'
+        instance_ref['uuid'] = uuidutils.generate_uuid()
         instance = db.instance_create(self.context, instance_ref)
         conn.spawn(self.context, instance, None, [], None)
         self.assertTrue(self.cache_called_for_disk)
