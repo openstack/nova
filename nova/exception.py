@@ -1203,6 +1203,10 @@ class RescheduledException(NovaException):
                 "%(reason)s")
 
 
+class ShadowTableExists(NovaException):
+    message = _("Shadow table with name %(name)s already exists.")
+
+
 class InstanceFaultRollback(NovaException):
     def __init__(self, inner_exception=None):
         message = _("Instance rollback performed due to: %s")

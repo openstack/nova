@@ -16,12 +16,18 @@
 #    under the License.
 
 from migrate.changeset import UniqueConstraint
+from sqlalchemy import Column
 from sqlalchemy.engine import reflection
+from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy import func
-from sqlalchemy import MetaData, Table, Column, Index
-from sqlalchemy.sql.expression import UpdateBase, literal_column
+from sqlalchemy import Index
+from sqlalchemy import MetaData
+from sqlalchemy.sql.expression import literal_column
+from sqlalchemy.sql.expression import UpdateBase
 from sqlalchemy.sql import select
+from sqlalchemy import Table
 from sqlalchemy.types import NullType
 
 from nova.db.sqlalchemy import api as db
@@ -256,11 +262,15 @@ def create_shadow_table(migrate_engine, table_name=None, table=None,
         else:
             columns.append(column.copy())
 
-    shadow_table = Table(db._SHADOW_TABLE_PREFIX + table.name, meta, *columns,
+    shadow_table_name = db._SHADOW_TABLE_PREFIX + table.name
+    shadow_table = Table(shadow_table_name, meta, *columns,
                          mysql_engine='InnoDB')
     try:
         shadow_table.create()
+    except (OperationalError, ProgrammingError):
+        LOG.info(repr(shadow_table))
+        LOG.exception(_('Exception while creating table.'))
+        raise exception.ShadowTableExists(name=shadow_table_name)
     except Exception:
         LOG.info(repr(shadow_table))
         LOG.exception(_('Exception while creating table.'))
-        raise
