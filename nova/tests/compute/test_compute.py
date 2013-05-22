@@ -6296,6 +6296,22 @@ class ComputeAPITestCase(BaseTestCase):
                           self.context, instance)
         self.compute.terminate_instance(self.context, instance=instance)
 
+    def test_resize_no_image(self):
+        def _fake_prep_resize(_context, **args):
+            image = args['image']
+            self.assertEqual(image, {})
+
+        instance = self._create_fake_instance(params={'image_ref': ''})
+        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
+        instance = jsonutils.to_primitive(instance)
+        self.compute.run_instance(self.context, instance=instance)
+
+        self.stubs.Set(self.compute_api.scheduler_rpcapi,
+                       'prep_resize', _fake_prep_resize)
+
+        self.compute_api.resize(self.context, instance, None)
+        self.compute.terminate_instance(self.context, instance=instance)
+
     def test_migrate(self):
         instance = self._create_fake_instance()
         instance = db.instance_get_by_uuid(self.context, instance['uuid'])

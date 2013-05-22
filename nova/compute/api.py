@@ -2011,7 +2011,11 @@ class API(base.Base):
             raise exception.FlavorNotFound(flavor_id=flavor_id)
 
         # NOTE(markwash): look up the image early to avoid auth problems later
-        image = self.image_service.show(context, instance['image_ref'])
+        image_ref = instance.get('image_ref')
+        if image_ref:
+            image = self.image_service.show(context, image_ref)
+        else:
+            image = {}
 
         if same_instance_type and flavor_id:
             raise exception.CannotResizeToSameFlavor()
