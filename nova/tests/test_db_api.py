@@ -3968,6 +3968,41 @@ class QuotaClassTestCase(test.TestCase, ModelsObjectComparatorMixin):
                                         test_resource2=20,
                                         test_resource3=30))
 
+    def test_quota_class_create(self):
+        qc = db.quota_class_create(self.ctxt, 'class name', 'resource', 42)
+        self.assertEqual(qc.class_name, 'class name')
+        self.assertEqual(qc.resource, 'resource')
+        self.assertEqual(qc.hard_limit, 42)
+
+    def test_quota_class_get(self):
+        qc = db.quota_class_create(self.ctxt, 'class name', 'resource', 42)
+        qc_db = db.quota_class_get(self.ctxt, 'class name', 'resource')
+        self._assertEqualObjects(qc, qc_db)
+
+    def test_quota_class_get_nonexistent(self):
+        self.assertRaises(exception.QuotaClassNotFound, db.quota_class_get,
+                                self.ctxt, 'nonexistent', 'resource')
+
+    def test_quota_class_get_all_by_name(self):
+        for i in xrange(3):
+            for j in xrange(3):
+                db.quota_class_create(self.ctxt, 'class%d' % i,
+                                                'resource%d' % j, j)
+        for i in xrange(3):
+            classes = db.quota_class_get_all_by_name(self.ctxt, 'class%d' % i)
+            self.assertEqual(classes, {'class_name': 'class%d' % i,
+                            'resource0': 0, 'resource1': 1, 'resource2': 2})
+
+    def test_quota_class_update(self):
+        qc = db.quota_class_create(self.ctxt, 'class name', 'resource', 42)
+        db.quota_class_update(self.ctxt, 'class name', 'resource', 43)
+        self.assertEqual(db.quota_class_get(self.ctxt, 'class name',
+                                    'resource').hard_limit, 43)
+
+    def test_quota_class_update_nonexistent(self):
+        self.assertRaises(exception.QuotaClassNotFound, db.quota_class_update,
+                                self.ctxt, 'class name', 'resource', 42)
+
 
 class ArchiveTestCase(test.TestCase):
 
