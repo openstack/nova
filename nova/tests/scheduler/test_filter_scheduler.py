@@ -279,18 +279,27 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.assertEqual(2, num_attempts)
 
     def test_retry_exceeded_max_attempts(self):
-        # Test for necessary explosion when max retries is exceeded.
+        # Test for necessary explosion when max retries is exceeded and that
+        # the information needed in request_spec is still present for error
+        # handling
         self.flags(scheduler_max_attempts=2)
         sched = fakes.FakeFilterScheduler()
 
         instance_properties = {'project_id': '12345', 'os_type': 'Linux'}
-        request_spec = dict(instance_properties=instance_properties)
+        instance_uuids = ['fake-id']
+        request_spec = dict(instance_properties=instance_properties,
+                            instance_uuids=instance_uuids)
 
         retry = dict(num_attempts=2)
         filter_properties = dict(retry=retry)
 
-        self.assertRaises(exception.NoValidHost, sched._schedule, self.context,
-                request_spec, filter_properties=filter_properties)
+        self.assertRaises(exception.NoValidHost, sched.schedule_run_instance,
+                          self.context, request_spec, admin_password=None,
+                          injected_files=None, requested_networks=None,
+                          is_first_time=False,
+                          filter_properties=filter_properties)
+        uuids = request_spec.get('instance_uuids')
+        self.assertEqual(uuids, instance_uuids)
 
     def test_add_retry_host(self):
         retry = dict(num_attempts=1, hosts=[])
