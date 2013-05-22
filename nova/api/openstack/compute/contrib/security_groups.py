@@ -289,8 +289,12 @@ class SecurityGroupController(SecurityGroupControllerBase):
         self.security_group_api.validate_property(group_description,
                                                   'description', None)
 
-        group_ref = self.security_group_api.create_security_group(
-            context, group_name, group_description)
+        try:
+            group_ref = self.security_group_api.create_security_group(
+                context, group_name, group_description)
+        except exception.SecurityGroupLimitExceeded as err:
+            raise exc.HTTPRequestEntityTooLarge(
+                explanation=err.format_message())
 
         return {'security_group': self._format_security_group(context,
                                                               group_ref)}
@@ -356,9 +360,13 @@ class SecurityGroupRulesController(SecurityGroupControllerBase):
                 msg = _("Bad prefix for network in cidr %s") % new_rule['cidr']
                 raise exc.HTTPBadRequest(explanation=msg)
 
-        security_group_rule = (
-            self.security_group_api.create_security_group_rule(
-                context, security_group, new_rule))
+        try:
+            security_group_rule = (
+                self.security_group_api.create_security_group_rule(
+                    context, security_group, new_rule))
+        except exception.SecurityGroupLimitExceeded as err:
+            raise exc.HTTPRequestEntityTooLarge(
+                explanation=err.format_message())
 
         return {"security_group_rule": self._format_security_group_rule(
                                                         context,
