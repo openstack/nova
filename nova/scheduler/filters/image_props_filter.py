@@ -47,7 +47,7 @@ class ImagePropertiesFilter(filters.BaseHostFilter):
         if not supp_instances:
             LOG.debug(_("Instance contains properties %(image_props)s, "
                         "but no corresponding capabilities are advertised "
-                        "by the compute node"), locals())
+                        "by the compute node"), {'image_props': image_props})
             return False
 
         def _compare_props(props, other_props):
@@ -60,12 +60,16 @@ class ImagePropertiesFilter(filters.BaseHostFilter):
             if _compare_props(checked_img_props, supp_inst):
                 LOG.debug(_("Instance properties %(image_props)s "
                             "are satisfied by compute host capabilities "
-                            "%(capabilities)s"), locals())
+                            "%(capabilities)s"),
+                            {'image_props': image_props,
+                             'capabilities': capabilities})
                 return True
 
         LOG.debug(_("Instance contains properties %(image_props)s "
                     "that are not provided by the compute node "
-                    "capabilities %(capabilities)s"), locals())
+                    "capabilities %(capabilities)s"),
+                  {'image_props': image_props,
+                   'capabilities': capabilities})
         return False
 
     def host_passes(self, host_state, filter_properties):
@@ -80,6 +84,6 @@ class ImagePropertiesFilter(filters.BaseHostFilter):
 
         if not self._instance_supported(capabilities, image_props):
             LOG.debug(_("%(host_state)s does not support requested "
-                        "instance_properties"), locals())
+                        "instance_properties"), {'host_state': host_state})
             return False
         return True

@@ -40,5 +40,7 @@ class IoOpsFilter(filters.BaseHostFilter):
         passes = num_io_ops < max_io_ops
         if not passes:
             LOG.debug(_("%(host_state)s fails I/O ops check: Max IOs per host "
-                        "is set to %(max_io_ops)s"), locals())
+                        "is set to %(max_io_ops)s"),
+                        {'host_state': host_state,
+                         'max_io_ops': max_io_ops})
         return passes

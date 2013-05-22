@@ -38,10 +38,10 @@ class ComputeFilter(filters.BaseHostFilter):
         alive = self.servicegroup_api.service_is_up(service)
         if not alive or service['disabled']:
             LOG.debug(_("%(host_state)s is disabled or has not been "
-                    "heard from in a while"), locals())
+                    "heard from in a while"), {'host_state': host_state})
             return False
         if not capabilities.get("enabled", True):
             LOG.debug(_("%(host_state)s is disabled via capabilities"),
-                    locals())
+                    {'host_state': host_state})
             return False
         return True

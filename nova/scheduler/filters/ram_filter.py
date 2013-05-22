@@ -45,7 +45,9 @@ class RamFilter(filters.BaseHostFilter):
         if not usable_ram >= requested_ram:
             LOG.debug(_("%(host_state)s does not have %(requested_ram)s MB "
                     "usable ram, it only has %(usable_ram)s MB usable ram."),
-                    locals())
+                    {'host_state': host_state,
+                     'requested_ram': requested_ram,
+                     'usable_ram': usable_ram})
             return False
 
         # save oversubscription limit for compute node to test against:
