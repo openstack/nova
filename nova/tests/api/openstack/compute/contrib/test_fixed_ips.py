@@ -132,6 +132,11 @@ class FixedIpTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.show, req,
                           '10.0.0.1')
 
+    def test_fixed_ips_get_invalid_ip_address(self):
+        req = fakes.HTTPRequest.blank('/v2/fake/os-fixed-ips/inv.ali.d.ip')
+        self.assertRaises(webob.exc.HTTPNotFound, self.controller.show, req,
+                          'inv.ali.d.ip')
+
     def test_fixed_ips_get_deleted_ip_fail(self):
         req = fakes.HTTPRequest.blank('/v2/fake/os-fixed-ips/10.0.0.2')
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.show, req,
@@ -153,6 +158,13 @@ class FixedIpTest(test.TestCase):
             '/v2/fake/os-fixed-ips/10.0.0.1/action')
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.action, req,
                           '10.0.0.1', body)
+
+    def test_fixed_ip_reserve_invalid_ip_address(self):
+        body = {'reserve': None}
+        req = fakes.HTTPRequest.blank(
+            '/v2/fake/os-fixed-ips/inv.ali.d.ip/action')
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          self.controller.action, req, 'inv.ali.d.ip', body)
 
     def test_fixed_ip_reserve_deleted_ip(self):
         body = {'reserve': None}
@@ -177,6 +189,13 @@ class FixedIpTest(test.TestCase):
             '/v2/fake/os-fixed-ips/10.0.0.1/action')
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.action, req,
                           '10.0.0.1', body)
+
+    def test_fixed_ip_unreserve_invalid_ip_address(self):
+        body = {'unreserve': None}
+        req = fakes.HTTPRequest.blank(
+            '/v2/fake/os-fixed-ips/inv.ali.d.ip/action')
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          self.controller.action, req, 'inv.ali.d.ip', body)
 
     def test_fixed_ip_unreserve_deleted_ip(self):
         body = {'unreserve': None}
