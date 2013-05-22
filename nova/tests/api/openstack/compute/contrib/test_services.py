@@ -21,6 +21,7 @@ from nova import context
 from nova import db
 from nova import exception
 from nova.openstack.common import timeutils
+from nova.servicegroup.drivers import db as db_driver
 from nova import test
 from nova.tests.api.openstack import fakes
 
@@ -202,3 +203,13 @@ class ServicesTest(test.TestCase):
         res_dict = self.controller.update(req, "disable", body)
 
         self.assertEqual(res_dict['service']['status'], 'disabled')
+
+    # This test is just to verify that the servicegroup API gets used when
+    # calling this API.
+    def test_services_with_exception(self):
+        def dummy_is_up(self, dummy):
+            raise KeyError()
+
+        self.stubs.Set(db_driver.DbDriver, 'is_up', dummy_is_up)
+        req = FakeRequestWithHostService()
+        self.assertRaises(KeyError, self.controller.index, req)

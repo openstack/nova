@@ -22,8 +22,7 @@ from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import compute
 from nova import exception
-from nova.openstack.common import timeutils
-from nova import utils
+from nova import servicegroup
 
 authorize = extensions.extension_authorizer('compute', 'services')
 CONF = cfg.CONF
@@ -71,6 +70,7 @@ class ServiceController(object):
 
     def __init__(self):
         self.host_api = compute.HostAPI()
+        self.servicegroup_api = servicegroup.API()
 
     @wsgi.serializers(xml=ServicesIndexTemplate)
     def index(self, req):
@@ -79,7 +79,6 @@ class ServiceController(object):
         """
         context = req.environ['nova.context']
         authorize(context)
-        now = timeutils.utcnow()
         services = self.host_api.service_get_all(
             context, set_zones=True)
 
@@ -96,8 +95,7 @@ class ServiceController(object):
 
         svcs = []
         for svc in services:
-            delta = now - (svc['updated_at'] or svc['created_at'])
-            alive = abs(utils.total_seconds(delta)) <= CONF.service_down_time
+            alive = self.servicegroup_api.service_is_up(svc)
             art = (alive and "up") or "down"
             active = 'enabled'
             if svc['disabled']:
