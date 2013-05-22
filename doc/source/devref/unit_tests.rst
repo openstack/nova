@@ -100,7 +100,7 @@ If you wish to recreate the virtualenv, call ``run_tests.sh`` with the flag::
     -f, --force
 
 Recreating the virtualenv is useful if the package dependencies have changed
-since the virtualenv was last created. If the ``tools/pip-requires`` or
+since the virtualenv was last created. If the ``requirements.txt`` or
 ``tools/install_venv.py`` files have changed, it's a good idea to recreate the
 virtualenv.
 
