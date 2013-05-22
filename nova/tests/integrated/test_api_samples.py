@@ -2554,6 +2554,17 @@ class OsNetworksJsonTests(ApiSampleTestBase):
         self.assertEqual(response.status, 202)
 
 
+class OsNetworksXmlTests(OsNetworksJsonTests):
+    ctype = 'xml'
+
+    def test_delete_network(self):
+        response = self._do_post('os-tenant-networks', "networks-post-req", {})
+        net = etree.fromstring(response.read())
+        network_id = net.find('id').text
+        response = self._do_delete('os-tenant-networks/%s' % network_id)
+        self.assertEqual(response.status, 202)
+
+
 class NetworksJsonTests(ApiSampleTestBase):
     extension_name = ("nova.api.openstack.compute.contrib"
                       ".os_networks.Os_networks")
