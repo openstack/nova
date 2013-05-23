@@ -41,14 +41,9 @@ from nova.openstack.common import uuidutils
 from nova import utils
 
 
-server_opts = [
-    cfg.BoolOpt('enable_instance_password',
-                default=True,
-                help='Allows use of instance password during '
-                     'server creation'),
-]
 CONF = cfg.CONF
-CONF.register_opts(server_opts)
+CONF.import_opt('enable_instance_password',
+                'nova.api.openstack.compute.servers')
 CONF.import_opt('network_api_class', 'nova.network')
 CONF.import_opt('reclaim_instance_interval', 'nova.compute.manager')
 

@@ -19,10 +19,12 @@
 
 FILES=$(find nova -type f -name "*.py" ! -path "nova/tests/*" -exec \
     grep -l "Opt(" {} \; | sort -u)
-BINS=$(echo bin/nova-*)
+BINS=$(echo bin/nova-* | grep -v nova-rootwrap)
+
+export EVENTLET_NO_GREENDNS=yes
 
 PYTHONPATH=./:${PYTHONPATH} \
-    python $(dirname "$0")/extract_opts.py ${FILES} ${BINS} > \
+    python $(dirname "$0")/../../nova/openstack/common/config/generator.py ${FILES} ${BINS} > \
     etc/nova/nova.conf.sample
 
 # Remove compiled files created by imp.import_source()

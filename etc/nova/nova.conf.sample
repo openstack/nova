@@ -52,15 +52,6 @@
 
 
 #
-# Options defined in nova.manager
-#
-
-# Some periodic tasks can be run in a separate process. Should
-# we run them here? (boolean value)
-#run_external_periodic_tasks=true
-
-
-#
 # Options defined in nova.netconf
 #
 
@@ -82,6 +73,13 @@
 #
 
 # If set, send compute.instance.update notifications on
+# instance state changes.  Valid values are None for no
+# notifications, "vm_state" for notifications on VM state
+# changes, or "vm_and_task_state" for notifications on VM and
+# task state changes. (string value)
+#notify_on_state_change=<None>
+
+# If set, send compute.instance.update notifications on
 # instance state changes.  Valid values are False for no
 # notifications, True for notifications on any instance
 # changes. (boolean value)
@@ -90,13 +88,6 @@
 # If set, send api.fault notifications on caught exceptions in
 # the API service. (boolean value)
 #notify_api_faults=false
-
-# If set, send compute.instance.update notifications on
-# instance state changes.  Valid values are None for no
-# notifications, "vm_state" for notifications on VM state
-# changes, or "vm_and_task_state" for notifications on VM and
-# task state changes. (string value)
-#notify_on_state_change=<None>
 
 
 #
@@ -142,6 +133,10 @@
 
 # number of floating ips allowed per project (integer value)
 #quota_floating_ips=10
+
+# number of fixed ips allowed per project (this should be at
+# least the number of instances allowed) (integer value)
+#quota_fixed_ips=-1
 
 # number of metadata items allowed per instance (integer
 # value)
@@ -275,9 +270,6 @@
 
 # Length of generated instance admin passwords (integer value)
 #password_length=12
-
-# Whether to disable inter-process locks (boolean value)
-#disable_process_locking=false
 
 # time period to generate instance usages for.  Time period
 # must be hour, day, month or year (string value)
@@ -541,19 +533,73 @@
 
 
 #
-# Options defined in nova.common.memorycache
+# Options defined in nova.cmd.clear_rabbit_queues
 #
 
-# Memcached servers or None for in process cache. (list value)
-#memcached_servers=<None>
+# Queues to delete (multi valued)
+#queues=
+
+# delete nova exchange too. (boolean value)
+#delete_exchange=false
+
+
+#
+# Options defined in nova.cmd.novnc
+#
+
+# Record sessions to FILE.[session_number] (boolean value)
+#record=false
+
+# Become a daemon (background process) (boolean value)
+#daemon=false
+
+# Disallow non-encrypted connections (boolean value)
+#ssl_only=false
+
+# Source is ipv6 (boolean value)
+#source_is_ipv6=false
+
+# SSL certificate file (string value)
+#cert=self.pem
+
+# SSL key file (if separate from cert) (string value)
+#key=<None>
+
+# Run webserver on same port. Serve files from DIR. (string
+# value)
+#web=/usr/share/spice-html5
+
+
+#
+# Options defined in nova.cmd.novncproxy
+#
+
+# Host on which to listen for incoming requests (string value)
+#novncproxy_host=0.0.0.0
+
+# Port on which to listen for incoming requests (integer
+# value)
+#novncproxy_port=6080
+
+
+#
+# Options defined in nova.cmd.spicehtml5proxy
+#
+
+# Host on which to listen for incoming requests (string value)
+#spicehtml5proxy_host=0.0.0.0
+
+# Port on which to listen for incoming requests (integer
+# value)
+#spicehtml5proxy_port=6082
 
 
 #
 # Options defined in nova.compute
 #
 
-# The full class name of the compute API class to use (string
-# value)
+# The full class name of the compute API class to use
+# (deprecated) (string value)
 #compute_api_class=nova.compute.api.API
 
 
@@ -564,6 +610,10 @@
 # Allow destination machine to match source for resize. Useful
 # when testing in single-host environments. (boolean value)
 #allow_resize_to_same_host=false
+
+# Allow migrate machine to the same host. Useful when testing
+# in single-host environments. (boolean value)
+#allow_migrate_to_same_host=false
 
 # availability zone to use when user doesn't specify one
 # (string value)
@@ -588,7 +638,7 @@
 
 
 #
-# Options defined in nova.compute.instance_types
+# Options defined in nova.compute.flavors
 #
 
 # default instance type to use, testing only (string value)
@@ -629,6 +679,10 @@
 
 # interval to pull bandwidth usage info (integer value)
 #bandwidth_poll_interval=600
+
+# interval to sync power states between the database and the
+# hypervisor (integer value)
+#sync_power_state_interval=600
 
 # Number of seconds between instance info_cache self healing
 # updates (integer value)
@@ -1046,6 +1100,10 @@
 # be on the bottom. (string value)
 #iptables_bottom_regex=
 
+# The table that iptables to jump to when a packet is to be
+# dropped. (string value)
+#iptables_drop_action=DROP
+
 
 #
 # Options defined in nova.network.manager
@@ -1083,7 +1141,9 @@
 # Number of addresses in each private subnet (integer value)
 #network_size=256
 
-# Fixed IP address block (string value)
+# DEPRECATED - Fixed IP address block.If set to an empty
+# string, the subnet range(s) will be automatically determined
+# and configured. (string value)
 #fixed_range=10.0.0.0/8
 
 # Fixed IPv6 address block (string value)
@@ -1210,50 +1270,6 @@
 # The full class name of the security API class (string value)
 #security_group_api=nova
 
-#
-# Options defined in bin.nova-clear-rabbit-queues
-#
-
-# Queues to delete (multi valued)
-#queues=
-
-# delete nova exchange too. (boolean value)
-#delete_exchange=false
-
-
-#
-# Options defined in bin.nova-novncproxy
-#
-
-# Record sessions to FILE.[session_number] (boolean value)
-#record=false
-
-# Become a daemon (background process) (boolean value)
-#daemon=false
-
-# Disallow non-encrypted connections (boolean value)
-#ssl_only=false
-
-# Source is ipv6 (boolean value)
-#source_is_ipv6=false
-
-# SSL certificate file (string value)
-#cert=self.pem
-
-# SSL key file (if separate from cert) (string value)
-#key=<None>
-
-# Run webserver on same port. Serve files from DIR. (string
-# value)
-#web=/usr/share/novnc
-
-# Host on which to listen for incoming requests (string value)
-#novncproxy_host=0.0.0.0
-
-# Port on which to listen for incoming requests (integer
-# value)
-#novncproxy_port=6080
-
 
 #
 # Options defined in nova.objectstore.s3server
@@ -1287,7 +1303,7 @@
 
 # The SQLAlchemy connection string used to connect to the
 # database (string value)
-#sql_connection=sqlite:////nova/openstack/common/db/$sqlite_db
+#sql_connection=sqlite:////common/db/$sqlite_db
 
 # the filename to use with sqlite (string value)
 #sqlite_db=nova.sqlite
@@ -1363,13 +1379,9 @@
 # Log output to standard error (boolean value)
 #use_stderr=true
 
-# Default file mode used when creating log files (string
-# value)
-#logfile_mode=0644
-
 # format string to use for log messages with context (string
 # value)
-#logging_context_format_string=%(asctime)s.%(msecs)03d %(levelname)s %(name)s [%(request_id)s %(user)s %(tenant)s] %(instance)s%(message)s
+#logging_context_format_string=%(asctime)s.%(msecs)03d %(process)d %(levelname)s %(name)s [%(request_id)s %(user)s %(tenant)s] %(instance)s%(message)s
 
 # format string to use for log messages without context
 # (string value)
@@ -1408,20 +1420,22 @@
 #log_config=<None>
 
 # A logging.Formatter log message format string which may use
-# any of the available logging.LogRecord attributes. Default:
-# %(default)s (string value)
-#log_format=%(asctime)s %(levelname)8s [%(name)s] %(message)s
+# any of the available logging.LogRecord attributes. This
+# option is deprecated.  Please use
+# logging_context_format_string and
+# logging_default_format_string instead. (string value)
+#log_format=<None>
 
 # Format string for %%(asctime)s in log records. Default:
 # %(default)s (string value)
 #log_date_format=%Y-%m-%d %H:%M:%S
 
-# (Optional) Name of log file to output to. If not set,
-# logging will go to stdout. (string value)
+# (Optional) Name of log file to output to. If no default is
+# set, logging will go to stdout. (string value)
 #log_file=<None>
 
-# (Optional) The directory to keep log files in (will be
-# prepended to --log-file) (string value)
+# (Optional) The base directory used for relative --log-file
+# paths (string value)
 #log_dir=<None>
 
 # Use syslog for logging. (boolean value)
@@ -1429,6 +1443,14 @@
 
 # syslog facility to receive log lines (string value)
 #syslog_log_facility=LOG_USER
+
+
+#
+# Options defined in nova.openstack.common.memorycache
+#
+
+# Memcached servers or None for in process cache. (list value)
+#memcached_servers=<None>
 
 
 #
@@ -1454,6 +1476,15 @@
 
 # AMQP topic used for openstack notifications (list value)
 #notification_topics=notifications
+
+
+#
+# Options defined in nova.openstack.common.periodic_task
+#
+
+# Some periodic tasks can be run in a separate process. Should
+# we run them here? (boolean value)
+#run_external_periodic_tasks=true
 
 
 #
@@ -1569,7 +1600,7 @@
 # Qpid broker hostname (string value)
 #qpid_hostname=localhost
 
-# Qpid broker port (string value)
+# Qpid broker port (integer value)
 #qpid_port=5672
 
 # Qpid HA cluster host:port pairs (list value)
@@ -1624,7 +1655,7 @@
 # Name of this node. Must be a valid hostname, FQDN, or IP
 # address. Must match "host" option, if running Nova. (string
 # value)
-#rpc_zmq_host=sorcha
+#rpc_zmq_host=nova
 
 
 #
@@ -1633,6 +1664,12 @@
 
 # Matchmaker ring file (JSON) (string value)
 #matchmaker_ringfile=/etc/nova/matchmaker_ring.json
+
+# Heartbeat frequency (integer value)
+#matchmaker_heartbeat_freq=300
+
+# Heartbeat time-to-live. (integer value)
+#matchmaker_heartbeat_ttl=600
 
 
 #
@@ -1743,17 +1780,6 @@
 
 
 #
-# Options defined in nova.scheduler.multi
-#
-
-# Driver to use for scheduling compute calls (string value)
-#compute_scheduler_driver=nova.scheduler.filter_scheduler.FilterScheduler
-
-# Default driver to use for scheduling calls (string value)
-#default_scheduler_driver=nova.scheduler.chance.ChanceScheduler
-
-
-#
 # Options defined in nova.scheduler.rpcapi
 #
 
@@ -1768,24 +1794,6 @@
 # Absolute path to scheduler configuration JSON file. (string
 # value)
 #scheduler_json_config_location=
-
-
-#
-# Options defined in nova.scheduler.weights.least_cost
-#
-
-# Which cost functions the LeastCostScheduler should use (list
-# value)
-#least_cost_functions=<None>
-
-# How much weight to give the noop cost function (floating
-# point value)
-#noop_cost_fn_weight=1.0
-
-# How much weight to give the fill-first cost function. A
-# negative value will reverse behavior: e.g. spread-first
-# (floating point value)
-#compute_fill_first_cost_fn_weight=<None>
 
 
 #
@@ -1856,7 +1864,8 @@
 # Driver to use for controlling virtualization. Options
 # include: libvirt.LibvirtDriver, xenapi.XenAPIDriver,
 # fake.FakeDriver, baremetal.BareMetalDriver,
-# vmwareapi.VMWareESXDriver (string value)
+# vmwareapi.VMwareESXDriver, vmwareapi.VMwareVCDriver (string
+# value)
 #compute_driver=<None>
 
 # The default format an ephemeral_volume will be formatted
@@ -1883,52 +1892,6 @@
 # Whether to allow network traffic from same network (boolean
 # value)
 #allow_same_net_traffic=true
-
-
-#
-# Options defined in nova.virt.hyperv.vif
-#
-
-# External virtual switch Name, if not provided, the first
-# external virtual switch is used (string value)
-#vswitch_name=<None>
-
-
-#
-# Options defined in nova.virt.hyperv.vmops
-#
-
-# Required for live migration among hosts with different CPU
-# features (boolean value)
-#limit_cpu_features=false
-
-# Sets the admin password in the config drive image (boolean
-# value)
-#config_drive_inject_password=false
-
-# qemu-img is used to convert between different image types
-# (string value)
-#qemu_img_cmd=qemu-img.exe
-
-# Attaches the Config Drive image as a cdrom drive instead of
-# a disk drive (boolean value)
-#config_drive_cdrom=false
-
-
-#
-# Options defined in nova.virt.hyperv.volumeops
-#
-
-# The number of times we retry on attaching volume  (integer
-# value)
-#hyperv_attaching_volume_retry_count=10
-
-# The seconds to wait between an volume attachment attempt
-# (integer value)
-#hyperv_wait_between_attach_retry=5
-
-# Force volumeutils v1 (boolean value)
-#force_volumeutils_v1=false
 
 
 #
@@ -2039,6 +2002,10 @@
 # Specific cachemodes to use for different disk types e.g:
 # ["file=directsync","block=none"] (list value)
 #disk_cachemodes=
+
+# Which pcpus can be used by vcpus of instance e.g:
+# "4-12,^8,15" (string value)
+#vcpu_pin_set=<None>
 
 
 #
@@ -2252,7 +2219,8 @@
 #
 
 # Optional VIM Service WSDL Location e.g
-# http://<server>/vimService.wsdl
+# http://<server>/vimService.wsdl. Optional over-ride to
+# default location for bug work-arounds (string value)
 #vmwareapi_wsdl_loc=<None>
 
 
@@ -2278,10 +2246,17 @@
 # (string value)
 #xenapi_agent_path=usr/sbin/xe-update-networking
 
-# Disable XenAPI agent. Reduces the amount of time it takes
-# nova to detect that a VM has started, when that VM does not
-# have the agent installed (boolean value)
+# Disables the use of the XenAPI agent in any image regardless
+# of what image properties are present.  (boolean value)
 #xenapi_disable_agent=false
+
+# Determines if the xenapi agent should be used when the image
+# used does not contain a hint to declare if the agent is
+# present or not. The hint is a glance property
+# "xenapi_use_agent" that has the value "true" or "false".
+# Note that waiting for the agent when it is not present will
+# significantly increase server boot times. (boolean value)
+#xenapi_use_agent_default=false
 
 
 #
@@ -2513,8 +2488,8 @@
 # region name of this node (string value)
 #os_region_name=<None>
 
-# Allow for a ca certificates file to be specified for cinder
-# client requests (string value)
+# Location of ca certicates file to use for cinder client
+# requests. (string value)
 #cinder_ca_certificates_file=<None>
 
 # Number of cinderclient retries on failed http calls (integer
@@ -2530,7 +2505,7 @@
 #cinder_cross_az_attach=true
 
 
-[HYPERV]
+[hyperv]
 
 #
 # Options defined in nova.virt.hyperv.pathutils
@@ -2542,6 +2517,71 @@
 # share will be used, looking for the same "instances_path"
 # used locally (string value)
 #instances_path_share=
+
+
+#
+# Options defined in nova.virt.hyperv.vif
+#
+
+# External virtual switch Name, if not provided, the first
+# external virtual switch is used (string value)
+#vswitch_name=<None>
+
+
+#
+# Options defined in nova.virt.hyperv.vmops
+#
+
+# Required for live migration among hosts with different CPU
+# features (boolean value)
+#limit_cpu_features=false
+
+# Sets the admin password in the config drive image (boolean
+# value)
+#config_drive_inject_password=false
+
+# qemu-img is used to convert between different image types
+# (string value)
+#qemu_img_cmd=qemu-img.exe
+
+# Attaches the Config Drive image as a cdrom drive instead of
+# a disk drive (boolean value)
+#config_drive_cdrom=false
+
+
+#
+# Options defined in nova.virt.hyperv.volumeops
+#
+
+# The number of times to retry to attach a volume (integer
+# value)
+#volume_attach_retry_count=10
+
+# Interval between volume attachment attempts, in seconds
+# (integer value)
+#volume_attach_retry_interval=5
+
+# Force volumeutils v1 (boolean value)
+#force_volumeutils_v1=false
+
+
+[osapi_v3]
+
+#
+# Options defined in nova.api.openstack
+#
+
+# Whether the V3 API is enabled or not (boolean value)
+#enabled=false
+
+# A list of v3 API extensions to never load. Specify the
+# extension aliases here. (list value)
+#extensions_blacklist=
+
+# If the list is not empty then a v3 API extension will only
+# be loaded if it exists in this list. Specify the extension
+# aliases here. (list value)
+#extensions_whitelist=
 
 
 [conductor]
@@ -2613,6 +2653,13 @@
 # value)
 #call_timeout=60
 
+# Percentage of cell capacity to hold in reserve. Affects both
+# memory and disk utilization (floating point value)
+#reserve_percent=10.0
+
+# Type of cell: api or compute (string value)
+#cell_type=<None>
+
 
 #
 # Options defined in nova.cells.rpc_driver
@@ -2627,6 +2674,16 @@
 #
 # Options defined in nova.cells.scheduler
 #
+
+# Filter classes the cells scheduler should use.  An entry of
+# "nova.cells.filters.all_filters"maps to all cells filters
+# included with nova. (list value)
+#scheduler_filter_classes=nova.cells.filters.all_filters
+
+# Weigher classes the cells scheduler should use.  An entry of
+# "nova.cells.weights.all_weighers"maps to all cell weighers
+# included with nova. (list value)
+#scheduler_weight_classes=nova.cells.weights.all_weighers
 
 # How many retries when no cells are available. (integer
 # value)
@@ -2644,6 +2701,33 @@
 # Seconds between getting fresh cell info from db. (integer
 # value)
 #db_check_interval=60
+
+
+#
+# Options defined in nova.cells.weights.mute_child
+#
+
+# Multiplier used to weigh mute children.  (The value should
+# be negative.) (floating point value)
+#mute_weight_multiplier=-10.0
+
+# Weight value assigned to mute children.  (The value should
+# be positive.) (floating point value)
+#mute_weight_value=1000.0
+
+# Number of seconds after which a lack of capability and
+# capacity updates signals the child cell is to be treated as
+# a mute. (integer value)
+#mute_child_interval=300
+
+
+#
+# Options defined in nova.cells.weights.ram_by_instance_type
+#
+
+# Multiplier used for weighing ram.  Negative numbers mean to
+# stack vs spread. (floating point value)
+#ram_weight_multiplier=10.0
 
 
 [zookeeper]
@@ -2767,21 +2851,51 @@
 
 
 #
+# Options defined in nova.virt.baremetal.tilera_pdu
+#
+
+# ip address of tilera pdu (string value)
+#tile_pdu_ip=10.0.100.1
+
+# management script for tilera pdu (string value)
+#tile_pdu_mgr=/tftpboot/pdu_mgr
+
+# power status of tilera PDU is OFF (integer value)
+#tile_pdu_off=2
+
+# power status of tilera PDU is ON (integer value)
+#tile_pdu_on=1
+
+# power status of tilera PDU (integer value)
+#tile_pdu_status=9
+
+# wait time in seconds until check the result after tilera
+# power operations (integer value)
+#tile_power_wait=9
+
+
+#
 # Options defined in nova.virt.baremetal.virtual_power_driver
 #
 
 # ip or name to virtual power host (string value)
 #virtual_power_ssh_host=
 
+# Port to use for ssh to virtual power host (integer value)
+#virtual_power_ssh_port=22
+
 # base command to use for virtual power(vbox,virsh) (string
 # value)
-#virtual_power_type=vbox
+#virtual_power_type=virsh
 
 # user to execute virtual power commands as (string value)
 #virtual_power_host_user=
 
 # password for virtual power host_user (string value)
 #virtual_power_host_pass=
+
+# ssh key for virtual power host_user (string value)
+#virtual_power_host_key=<None>
 
 
 #
@@ -2806,6 +2920,22 @@
 
 # AMQP topic(s) used for openstack notifications (list value)
 #topics=notifications
+
+
+[matchmaker_redis]
+
+#
+# Options defined in nova.openstack.common.rpc.matchmaker_redis
+#
+
+# Host to locate redis (string value)
+#host=127.0.0.1
+
+# Use this port to connect to redis host. (integer value)
+#port=6379
+
+# Password for Redis server. (optional) (string value)
+#password=<None>
 
 
 [trusted_computing]
@@ -2872,25 +3002,4 @@
 #keymap=en-us
 
 
-[osapi_v3]
-
-#
-# Options defined in nova.api.openstack
-#
-
-# Whether the V3 API is enabled or not
-#enabled=False
-
-# If the list is not empty then a v3 API extension
-# will only be loaded if it exists in this list.
-# Specify the extension aliases here
-#extensions_whitelist=
-
-# A list of v3 API extensions to never load.
-# Specify the extension aliases here.
-# Note that if an extension is in both the blacklist and
-# and whitelist then it will not be loaded
-#extensions_blacklist=
-
-
-# Total option count: 584
+# Total option count: 609

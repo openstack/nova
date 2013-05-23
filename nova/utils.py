@@ -68,9 +68,6 @@ utils_opts = [
     cfg.IntOpt('password_length',
                default=12,
                help='Length of generated instance admin passwords'),
-    cfg.BoolOpt('disable_process_locking',
-                default=False,
-                help='Whether to disable inter-process locks'),
     cfg.StrOpt('instance_usage_audit_period',
                default='month',
                help='time period to generate instance usages for.  '
