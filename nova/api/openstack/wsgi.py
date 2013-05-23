@@ -940,7 +940,11 @@ class Resource(wsgi.Application):
         project_id = action_args.pop("project_id", None)
         context = request.environ.get('nova.context')
         if (context and project_id and (project_id != context.project_id)):
-            msg = _("Malformed request url")
+            msg = _("Malformed request URL: URL's project_id '%(project_id)s'"
+                    " doesn't match Context's project_id"
+                    " '%(context_project_id)s'") % \
+                    {'project_id': project_id,
+                     'context_project_id': context.project_id}
             return Fault(webob.exc.HTTPBadRequest(explanation=msg))
 
         # Run pre-processing extensions
