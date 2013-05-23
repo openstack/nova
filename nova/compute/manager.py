@@ -889,7 +889,13 @@ class ComputeManager(manager.SchedulerDependentManager):
             raise exception.BuildAbortException(instance_uuid=instance['uuid'],
                     reason=msg)
 
-        return self._get_and_check_image_metadata(context, instance)
+        if instance['image_ref']:
+            image_meta = _get_image_meta(context, instance['image_ref'])
+        else:
+            # Instance was started from volume - so no image ref
+            image_meta = {}
+
+        return image_meta
 
     def _build_instance(self, context, request_spec, filter_properties,
             requested_networks, injected_files, admin_password, is_first_time,
@@ -1083,60 +1089,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         """Ensure an instance with the same name is not already present."""
         if self.driver.instance_exists(instance['name']):
             raise exception.InstanceExists(name=instance['name'])
-
-    def _get_and_check_image_metadata(self, context, instance):
-        """Get the image metadata and do basic sanity checks on said image
-        like ensuring the image is smaller than the maximum size allowed by
-        the instance_type.
-
-        The image stored in Glance is potentially compressed, so we use two
-        checks to ensure that the size isn't exceeded:
-
-            1) This one - checks compressed size, this a quick check to
-               eliminate any images which are obviously too large
-
-            2) Check uncompressed size in nova.virt.xenapi.vm_utils. This
-               is a slower check since it requires uncompressing the entire
-               image, but is accurate because it reflects the image's
-               actual size.
-        """
-        if instance['image_ref']:
-            image_meta = _get_image_meta(context, instance['image_ref'])
-        else:  # Instance was started from volume - so no image ref
-            return {}
-
-        try:
-            size_bytes = int(image_meta['size'])
-        except (KeyError, TypeError, ValueError):
-            # Disregard missing field or bad data rather than put the instance
-            # into an ERROR state that can't be communicated back to the user
-            return image_meta
-
-        instance_type = flavors.extract_instance_type(instance)
-        allowed_size_gb = instance_type['root_gb']
-
-        # NOTE(johannes): root_gb is allowed to be 0 for legacy reasons
-        # since libvirt interpreted the value differently than other
-        # drivers. A value of 0 means don't check size.
-        if not allowed_size_gb:
-            return image_meta
-
-        allowed_size_bytes = allowed_size_gb * 1024 * 1024 * 1024
-
-        image_id = image_meta['id']
-        LOG.debug(_("image_id=%(image_id)s, image_size_bytes="
-                    "%(size_bytes)d, allowed_size_bytes="
-                    "%(allowed_size_bytes)d") % locals(),
-                  instance=instance)
-
-        if size_bytes > allowed_size_bytes:
-            LOG.info(_("Image '%(image_id)s' size %(size_bytes)d exceeded"
-                       " instance_type allowed size "
-                       "%(allowed_size_bytes)d")
-                       % locals(), instance=instance)
-            raise exception.ImageTooLarge()
-
-        return image_meta
 
     def _start_building(self, context, instance):
         """Save the host and launched_on fields and log appropriately."""

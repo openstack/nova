@@ -1451,6 +1451,35 @@ class ServersControllerTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest,
             self.controller._action_rebuild, req, FAKE_UUID, body)
 
+    def test_rebuild_instance_image_too_large(self):
+        # make image size larger than our instance disk size
+        size = str(1000 * (1024 ** 3))
+
+        def fake_get_image(self, context, image_href):
+            return dict(id='76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
+                        name='public image', is_public=True,
+                        status='active', size=size)
+
+        self.stubs.Set(fake._FakeImageService, 'show', fake_get_image)
+
+        self.stubs.Set(db, 'instance_get_by_uuid',
+                fakes.fake_instance_get(vm_state=vm_states.ACTIVE))
+        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        image_href = 'http://localhost/v2/fake/images/%s' % image_uuid
+        body = {
+            'rebuild': {
+                'name': 'new_name',
+                'imageRef': image_href,
+            },
+        }
+
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/a/action')
+        req.method = 'POST'
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+        self.assertRaises(webob.exc.HTTPBadRequest,
+            self.controller._action_rebuild, req, FAKE_UUID, body)
+
     def test_rebuild_instance_with_deleted_image(self):
         def fake_get_image(self, context, image_href):
             return dict(id='76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
@@ -1927,6 +1956,35 @@ class ServersControllerCreateTest(test.TestCase):
         with testtools.ExpectedException(
             webob.exc.HTTPBadRequest,
             'Image 76fa36fc-c930-4bf3-8c8a-ea2a2420deb6 is not active.'):
+                self.controller.create(req, body)
+
+    def test_create_server_image_too_large(self):
+        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+
+        # Get the fake image service so we can set the status to deleted
+        (image_service, image_id) = glance.get_remote_image_service(
+                context, image_uuid)
+
+        image = image_service.show(context, image_id)
+
+        orig_size = image['size']
+        new_size = str(1000 * (1024 ** 3))
+        image_service.update(context, image_uuid, {'size': new_size})
+
+        self.addCleanup(image_service.update, context, image_uuid,
+                        {'size': orig_size})
+
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
+        req.method = 'POST'
+        body = dict(server=dict(name='server_test',
+                                imageRef=image_uuid,
+                                flavorRef=2))
+        req.body = jsonutils.dumps(body)
+
+        req.headers["content-type"] = "application/json"
+        with testtools.ExpectedException(
+            webob.exc.HTTPBadRequest,
+            'Image is larger than instance type allows'):
                 self.controller.create(req, body)
 
     def test_create_instance_invalid_negative_min(self):
