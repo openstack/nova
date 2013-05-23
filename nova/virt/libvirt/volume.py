@@ -239,8 +239,9 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
                                               % (host_device))
 
             LOG.warn(_("ISCSI volume not yet found at: %(disk_dev)s. "
-                       "Will rescan & retry.  Try number: %(tries)s") %
-                     locals())
+                       "Will rescan & retry.  Try number: %(tries)s"),
+                     {'disk_dev': disk_dev,
+                      'tries': tries})
 
             # The rescan isn't documented as being necessary(?), but it helps
             self._run_iscsiadm(iscsi_properties, ("--rescan",))
@@ -251,8 +252,9 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
 
         if tries != 0:
             LOG.debug(_("Found iSCSI node %(disk_dev)s "
-                        "(after %(tries)s rescans)") %
-                      locals())
+                        "(after %(tries)s rescans)"),
+                      {'disk_dev': disk_dev,
+                       'tries': tries})
 
         if libvirt_iscsi_use_multipath:
             #we use the multipath device instead of the single path device
@@ -563,8 +565,9 @@ class LibvirtAOEVolumeDriver(LibvirtBaseVolumeDriver):
                 raise exception.NovaException(_("AoE device not found at %s") %
                                                 (aoedevpath))
             LOG.warn(_("AoE volume not yet found at: %(aoedevpath)s. "
-                       "Try number: %(tries)s") %
-                     locals())
+                       "Try number: %(tries)s"),
+                     {'aoedevpath': aoedevpath,
+                      'tries': tries})
 
             self._aoe_discover()
             self.tries = self.tries + 1
@@ -577,8 +580,9 @@ class LibvirtAOEVolumeDriver(LibvirtBaseVolumeDriver):
         tries = self.tries
         if tries != 0:
             LOG.debug(_("Found AoE device %(aoedevpath)s "
-                        "(after %(tries)s rediscover)") %
-                      locals())
+                        "(after %(tries)s rediscover)"),
+                      {'aoedevpath': aoedevpath,
+                       'tries': tries})
 
         conf = super(LibvirtAOEVolumeDriver,
                      self).connect_volume(connection_info, mount_device)
@@ -713,8 +717,8 @@ class LibvirtFibreChannelVolumeDriver(LibvirtBaseVolumeDriver):
         def _wait_for_device_discovery(host_devices, mount_device):
             tries = self.tries
             for device in host_devices:
-                LOG.debug(_("Looking for Fibre Channel dev %(device)s")
-                          % locals())
+                LOG.debug(_("Looking for Fibre Channel dev %(device)s"),
+                          {'device': device})
                 if os.path.exists(device):
                     self.host_device = device
                     # get the /dev/sdX device.  This is used
@@ -727,8 +731,9 @@ class LibvirtFibreChannelVolumeDriver(LibvirtBaseVolumeDriver):
                 raise exception.NovaException(msg)
 
             LOG.warn(_("Fibre volume not yet found at: %(mount_device)s. "
-                       "Will rescan & retry.  Try number: %(tries)s") %
-                     locals())
+                       "Will rescan & retry.  Try number: %(tries)s"),
+                     {'mount_device': mount_device,
+                      'tries': tries})
 
             linuxscsi.rescan_hosts(hbas)
             self.tries = self.tries + 1
@@ -743,7 +748,9 @@ class LibvirtFibreChannelVolumeDriver(LibvirtBaseVolumeDriver):
         tries = self.tries
         if self.host_device is not None and self.device_name is not None:
             LOG.debug(_("Found Fibre Channel volume %(mount_device)s "
-                        "(after %(tries)s rescans)") % locals())
+                        "(after %(tries)s rescans)"),
+                      {'mount_device': mount_device,
+                       'tries': tries})
 
         # see if the new drive is part of a multipath
         # device.  If so, we'll use the multipath device.
