@@ -513,7 +513,7 @@ class API(base.Base):
         root_gb = instance_type['root_gb']
         if root_gb:
             if int(image.get('size') or 0) > root_gb * (1024 ** 3):
-                raise exception.ImageTooLarge()
+                raise exception.InstanceTypeDiskTooSmall()
 
             if int(image.get('min_disk') or 0) > root_gb:
                     raise exception.InstanceTypeDiskTooSmall()

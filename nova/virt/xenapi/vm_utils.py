@@ -1207,7 +1207,7 @@ def _check_vdi_size(context, session, instance, vdi_uuid):
         LOG.info(_("Image size %(size_bytes)d exceeded instance_type "
                    "allowed size %(allowed_size_bytes)d"),
                  locals(), instance=instance)
-        raise exception.ImageTooLarge()
+        raise exception.InstanceTypeDiskTooSmall()
 
 
 def _fetch_disk_image(context, session, instance, name_label, image_id,

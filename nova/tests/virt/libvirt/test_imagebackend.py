@@ -284,8 +284,8 @@ class Qcow2TestCase(_ImageTestCase, test.TestCase):
         self.mox.ReplayAll()
 
         image = self.image_class(self.INSTANCE, self.NAME)
-        self.assertRaises(exception.ImageTooLarge, image.create_image, fn,
-                          self.TEMPLATE_PATH, 1)
+        self.assertRaises(exception.InstanceTypeDiskTooSmall,
+                          image.create_image, fn, self.TEMPLATE_PATH, 1)
         self.mox.VerifyAll()
 
 

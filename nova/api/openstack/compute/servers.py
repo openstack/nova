@@ -925,7 +925,6 @@ class Controller(wsgi.Controller):
             msg = "UnicodeError: %s" % unicode(error)
             raise exc.HTTPBadRequest(explanation=msg)
         except (exception.ImageNotActive,
-                exception.ImageTooLarge,
                 exception.InstanceTypeDiskTooSmall,
                 exception.InstanceTypeMemoryTooSmall,
                 exception.InstanceTypeNotFound,
@@ -1286,7 +1285,6 @@ class Controller(wsgi.Controller):
             msg = _("Cannot find image for rebuild")
             raise exc.HTTPBadRequest(explanation=msg)
         except (exception.ImageNotActive,
-                exception.ImageTooLarge,
                 exception.InstanceTypeDiskTooSmall,
                 exception.InstanceTypeMemoryTooSmall,
                 exception.InvalidMetadata) as error:
