@@ -1981,6 +1981,36 @@ class ComputeTestCase(BaseTestCase):
                 instance=jsonutils.to_primitive(instance),
                 bdms={})
 
+    def test_delete_instance_keeps_net_on_power_off_fail(self):
+        self.mox.StubOutWithMock(self.compute.driver, 'destroy')
+        self.mox.StubOutWithMock(self.compute, '_deallocate_network')
+        exp = exception.InstancePowerOffFailure(reason='')
+        self.compute.driver.destroy(mox.IgnoreArg(), mox.IgnoreArg(),
+                                    mox.IgnoreArg()).AndRaise(exp)
+        # mox will detect if _deallocate_network gets called unexpectedly
+        self.mox.ReplayAll()
+        instance = self._create_fake_instance()
+        self.assertRaises(exception.InstancePowerOffFailure,
+                          self.compute._delete_instance,
+                          self.context,
+                          instance=jsonutils.to_primitive(instance),
+                          bdms={})
+
+    def test_delete_instance_loses_net_on_other_fail(self):
+        self.mox.StubOutWithMock(self.compute.driver, 'destroy')
+        self.mox.StubOutWithMock(self.compute, '_deallocate_network')
+        exp = test.TestingException()
+        self.compute.driver.destroy(mox.IgnoreArg(), mox.IgnoreArg(),
+                                    mox.IgnoreArg()).AndRaise(exp)
+        self.compute._deallocate_network(mox.IgnoreArg(), mox.IgnoreArg())
+        self.mox.ReplayAll()
+        instance = self._create_fake_instance()
+        self.assertRaises(test.TestingException,
+                          self.compute._delete_instance,
+                          self.context,
+                          instance=jsonutils.to_primitive(instance),
+                          bdms={})
+
     def test_delete_instance_deletes_console_auth_tokens(self):
         instance = self._create_fake_instance()
         self.flags(vnc_enabled=True)
