@@ -181,6 +181,7 @@ class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
         size_gb = max(instance_type['root_gb'], constants.POWERVM_MIN_ROOT_GB)
         size = size_gb * 1024 * 1024 * 1024
 
+        disk_name = None
         try:
             LOG.debug(_("Creating logical volume of size %s bytes") % size)
             disk_name = self._create_logical_volume(size)
@@ -192,12 +193,13 @@ class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
                         "Will attempt cleanup."))
             # attempt cleanup of logical volume before re-raising exception
             with excutils.save_and_reraise_exception():
-                try:
-                    self.delete_volume(disk_name)
-                except Exception:
-                    msg = _('Error while attempting cleanup of failed '
-                            'deploy to logical volume.')
-                    LOG.exception(msg)
+                if disk_name is not None:
+                    try:
+                        self.delete_volume(disk_name)
+                    except Exception:
+                        msg = _('Error while attempting cleanup of failed '
+                                'deploy to logical volume.')
+                        LOG.exception(msg)
 
         return {'device_name': disk_name}
 

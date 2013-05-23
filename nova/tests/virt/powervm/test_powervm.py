@@ -175,6 +175,21 @@ def fake_get_powervm_operator():
     return FakeIVMOperator(None)
 
 
+def create_instance(testcase):
+    fake.stub_out_image_service(testcase.stubs)
+    ctxt = context.get_admin_context()
+    instance_type = db.instance_type_get(ctxt, 1)
+    sys_meta = flavors.save_instance_type_info({}, instance_type)
+    return db.instance_create(ctxt,
+                    {'user_id': 'fake',
+                     'project_id': 'fake',
+                     'instance_type_id': 1,
+                     'memory_mb': 1024,
+                     'vcpus': 2,
+                     'image_ref': '155d900f-4e14-4e4c-a73d-069cbf4541e6',
+                     'system_metadata': sys_meta})
+
+
 class PowerVMDriverTestCase(test.TestCase):
     """Unit tests for PowerVM connection calls."""
 
@@ -185,21 +200,7 @@ class PowerVMDriverTestCase(test.TestCase):
         self.stubs.Set(powervm_operator, 'get_powervm_disk_adapter',
                        lambda: FakeBlockAdapter())
         self.powervm_connection = powervm_driver.PowerVMDriver(None)
-        self.instance = self._create_instance()
-
-    def _create_instance(self):
-        fake.stub_out_image_service(self.stubs)
-        ctxt = context.get_admin_context()
-        instance_type = db.instance_type_get(ctxt, 1)
-        sys_meta = flavors.save_instance_type_info({}, instance_type)
-        return db.instance_create(ctxt,
-                        {'user_id': 'fake',
-                        'project_id': 'fake',
-                        'instance_type_id': 1,
-                        'memory_mb': 1024,
-                        'vcpus': 2,
-                        'image_ref': '155d900f-4e14-4e4c-a73d-069cbf4541e6',
-                        'system_metadata': sys_meta})
+        self.instance = create_instance(self)
 
     def test_list_instances(self):
         instances = self.powervm_connection.list_instances()
@@ -665,3 +666,81 @@ class PowerVMDriverCommonTestCase(test.TestCase):
         self.assertRaises(paramiko.SSHException,
                           common.check_connection,
                           ssh, self.connection)
+
+
+def fake_copy_image_file(source_path, remote_path):
+    return '/tmp/fake_file', 1
+
+
+class PowerVMLocalVolumeAdapterTestCase(test.TestCase):
+    """
+    Unit tests for nova.virt.powervm.blockdev.PowerVMLocalVolumeAdapter.
+    """
+
+    def setUp(self):
+        super(PowerVMLocalVolumeAdapterTestCase, self).setUp()
+        self.context = context.get_admin_context()
+        self.connection = common.Connection(host='fake_compute_1',
+                                            username='fake_user',
+                                            password='fake_pass')
+        self.powervm_adapter = powervm_blockdev.PowerVMLocalVolumeAdapter(
+                                                            self.connection)
+        self.instance = create_instance(self)
+        self.image_id = self.instance['image_ref']
+
+    def test_create_volume_from_image_fails_no_disk_name(self):
+        """
+        Tests that delete_volume is not called after create_logical_volume
+        fails.
+        """
+
+        def fake_create_logical_volume(size):
+            raise exception.PowerVMNoSpaceLeftOnVolumeGroup()
+
+        def fake_delete_volume(volume_info):
+            self.fail("Should not be called to do cleanup.")
+
+        self.stubs.Set(self.powervm_adapter, '_copy_image_file',
+                       fake_copy_image_file)
+        self.stubs.Set(self.powervm_adapter, '_create_logical_volume',
+                       fake_create_logical_volume)
+        self.stubs.Set(self.powervm_adapter, 'delete_volume',
+                       fake_delete_volume)
+
+        self.assertRaises(exception.PowerVMNoSpaceLeftOnVolumeGroup,
+                          self.powervm_adapter.create_volume_from_image,
+                          self.context, self.instance, self.image_id)
+
+    def test_create_volume_from_image_fails_with_disk_name(self):
+        """
+        Tests that delete_volume is called to cleanup the volume after
+        create_logical_volume was successful but copy_file_to_device fails.
+        """
+
+        disk_name = 'lvm_disk_name'
+
+        def fake_create_logical_volume(size):
+            return disk_name
+
+        def fake_copy_file_to_device(source_path, device):
+            raise exception.PowerVMConnectionFailed()
+
+        self.delete_volume_called = False
+
+        def fake_delete_volume(volume_info):
+            self.assertEquals(disk_name, volume_info)
+            self.delete_volume_called = True
+
+        self.stubs.Set(self.powervm_adapter, '_copy_image_file',
+                       fake_copy_image_file)
+        self.stubs.Set(self.powervm_adapter, '_create_logical_volume',
+                       fake_create_logical_volume)
+        self.stubs.Set(self.powervm_adapter, '_copy_file_to_device',
+                       fake_copy_file_to_device)
+        self.stubs.Set(self.powervm_adapter, 'delete_volume',
+                       fake_delete_volume)
+
+        self.assertRaises(exception.PowerVMConnectionFailed,
+                          self.powervm_adapter.create_volume_from_image,
+                          self.context, self.instance, self.image_id)
+        self.assertTrue(self.delete_volume_called)
