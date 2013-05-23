@@ -791,6 +791,9 @@ class Controller(wsgi.Controller):
             requested_networks = server_dict.get('networks')
 
         if requested_networks is not None:
+            if not isinstance(requested_networks, list):
+                expl = _('Bad networks format')
+                raise exc.HTTPBadRequest(explanation=expl)
             requested_networks = self._get_requested_networks(
                 requested_networks)
 

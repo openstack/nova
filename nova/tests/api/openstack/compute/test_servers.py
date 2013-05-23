@@ -1885,6 +1885,27 @@ class ServersControllerCreateTest(test.TestCase):
                           req,
                           body)
 
+    def test_create_server_with_invalid_networks_parameter(self):
+        self.ext_mgr.extensions = {'os-networks': 'fake'}
+        image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        flavor_ref = 'http://localhost/123/flavors/3'
+        body = {
+            'server': {
+            'name': 'server_test',
+            'imageRef': image_href,
+            'flavorRef': flavor_ref,
+            'networks': {'uuid': '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'},
+            }
+        }
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
+        req.method = 'POST'
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.create,
+                          req,
+                          body)
+
     def test_create_server_with_deleted_image(self):
         image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
         # Get the fake image service so we can set the status to deleted
