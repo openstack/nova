@@ -42,7 +42,7 @@ from nova.tests import fake_network
 from nova.tests import fake_processutils
 import nova.tests.image.fake as fake_image
 from nova.tests import matchers
-from nova.tests.xenapi import stubs
+from nova.tests.virt.xenapi import stubs
 from nova.virt import fake
 from nova.virt.xenapi import agent
 from nova.virt.xenapi import driver as xenapi_conn
@@ -396,7 +396,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
     def test_get_diagnostics(self):
         def fake_get_rrd(host, vm_uuid):
             path = os.path.dirname(os.path.realpath(__file__))
-            with open(os.path.join(path, 'xenapi/vm_rrd.xml')) as f:
+            with open(os.path.join(path, 'vm_rrd.xml')) as f:
                 return re.sub(r'\s', '', f.read())
         self.stubs.Set(vm_utils, '_get_rrd', fake_get_rrd)
 
