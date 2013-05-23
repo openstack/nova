@@ -238,7 +238,7 @@ def extract_instance_type(instance, prefix=''):
     information."""
 
     instance_type = {}
-    sys_meta = utils.metadata_to_dict(instance['system_metadata'])
+    sys_meta = utils.instance_sys_meta(instance)
     for key, type_fn in system_metadata_instance_type_props.items():
         type_key = '%sinstance_type_%s' % (prefix, key)
         instance_type[key] = type_fn(sys_meta[type_key])
