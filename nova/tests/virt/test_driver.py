@@ -39,8 +39,8 @@ class ToDriverRegistryTestCase(test.TestCase):
     def test_driver_dict_from_config(self):
         drvs = driver.driver_dict_from_config(
             [
-                'key1=nova.tests.test_driver.FakeDriver',
-                'key2=nova.tests.test_driver.FakeDriver2',
+                'key1=nova.tests.virt.test_driver.FakeDriver',
+                'key2=nova.tests.virt.test_driver.FakeDriver2',
             ], 'arg1', 'arg2', param1='value1', param2='value2'
         )
 
