@@ -21,8 +21,10 @@ Client side of the compute RPC API.
 from oslo.config import cfg
 
 from nova import exception
+from nova.objects import base as objects_base
 from nova.openstack.common import jsonutils
 from nova.openstack.common import rpc
+import nova.openstack.common.rpc
 import nova.openstack.common.rpc.proxy
 
 rpcapi_opts = [
@@ -166,6 +168,8 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         2.27 - Adds 'reservations' to terminate_instance() and
                soft_delete_instance()
         2.28 - Adds check_instance_shared_storage()
+        2.29 - Made start_instance() and stop_instance() take new-world
+               instance objects
     '''
 
     #
@@ -181,7 +185,8 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     def __init__(self):
         super(ComputeAPI, self).__init__(
                 topic=CONF.compute_topic,
-                default_version=self.BASE_RPC_API_VERSION)
+                default_version=self.BASE_RPC_API_VERSION,
+                serializer=objects_base.NovaObjectSerializer())
 
     def add_aggregate_host(self, ctxt, aggregate, host_param, host,
                            slave_info=None):
@@ -581,17 +586,17 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 topic=_compute_topic(self.topic, ctxt, None, instance))
 
     def start_instance(self, ctxt, instance):
-        instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('start_instance',
-                instance=instance_p),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+                instance=instance),
+                topic=_compute_topic(self.topic, ctxt, None, instance),
+                version='2.29')
 
     def stop_instance(self, ctxt, instance, cast=True):
         rpc_method = self.cast if cast else self.call
-        instance_p = jsonutils.to_primitive(instance)
         return rpc_method(ctxt, self.make_msg('stop_instance',
-                instance=instance_p),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+                instance=instance),
+                topic=_compute_topic(self.topic, ctxt, None, instance),
+                version='2.29')
 
     def suspend_instance(self, ctxt, instance):
         instance_p = jsonutils.to_primitive(instance)

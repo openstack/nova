@@ -60,6 +60,7 @@ from nova import manager
 from nova import network
 from nova.network import model as network_model
 from nova.network.security_group import openstack_driver
+from nova.objects import instance as instance_obj
 from nova.openstack.common import excutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
@@ -266,6 +267,27 @@ def wrap_instance_event(function):
     return decorated_function
 
 
+# TODO(danms): Remove me after havana
+def object_compat(function):
+    """Wraps a method that expects a new-world instance
+
+    This provides compatibility for callers passing old-style dict
+    instances.
+    """
+
+    @functools.wraps(function)
+    def decorated_function(self, context, **kwargs):
+        metas = ['metadata', 'system_metadata']
+        instance = kwargs['instance']
+        if isinstance(instance, dict):
+            kwargs['instance'] = instance_obj.Instance._from_db_object(
+                instance_obj.Instance(), instance, expected_attrs=metas)
+            kwargs['instance']._context = context
+        return function(self, context, **kwargs)
+
+    return decorated_function
+
+
 def _get_image_meta(context, image_ref):
     image_service, image_id = glance.get_remote_image_service(context,
                                                               image_ref)
@@ -328,7 +350,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '2.28'
+    RPC_API_VERSION = '2.29'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1457,6 +1479,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     # NOTE(johannes): This is probably better named power_off_instance
     # so it matches the driver method, but because of other issues, we
     # can't use that name in grizzly.
+    @object_compat
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
     @wrap_instance_event
@@ -1466,17 +1489,17 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._notify_about_instance_usage(context, instance, "power_off.start")
         self.driver.power_off(instance)
         current_power_state = self._get_power_state(context, instance)
-        instance = self._instance_update(context, instance['uuid'],
-                power_state=current_power_state,
-                vm_state=vm_states.STOPPED,
-                expected_task_state=(task_states.POWERING_OFF,
-                                     task_states.STOPPING),
-                task_state=None)
+        instance.power_state = current_power_state
+        instance.vm_state = vm_states.STOPPED
+        instance.task_state = None
+        instance.save(expected_task_state=(task_states.POWERING_OFF,
+                                           task_states.STOPPING))
         self._notify_about_instance_usage(context, instance, "power_off.end")
 
     # NOTE(johannes): This is probably better named power_on_instance
     # so it matches the driver method, but because of other issues, we
     # can't use that name in grizzly.
+    @object_compat
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
     @wrap_instance_event
@@ -1486,12 +1509,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._notify_about_instance_usage(context, instance, "power_on.start")
         self.driver.power_on(instance)
         current_power_state = self._get_power_state(context, instance)
-        instance = self._instance_update(context, instance['uuid'],
-                power_state=current_power_state,
-                vm_state=vm_states.ACTIVE,
-                task_state=None,
-                expected_task_state=(task_states.POWERING_ON,
-                                     task_states.STARTING))
+        instance.power_state = current_power_state
+        instance.vm_state = vm_states.ACTIVE
+        instance.task_state = None
+        instance.save(expected_task_state=(task_states.POWERING_ON,
+                                           task_states.STARTING))
         self._notify_about_instance_usage(context, instance, "power_on.end")
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
@@ -1709,7 +1731,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                  task_state=task_states.STOPPING,
                                  terminated_at=timeutils.utcnow(),
                                  progress=0)
-                self.stop_instance(context, instance)
+                self.stop_instance(context, instance=instance)
 
             self._notify_about_instance_usage(
                     context, instance, "rebuild.end",
@@ -2320,7 +2342,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 instance = self._instance_update(
                         context, instance['uuid'],
                         task_state=task_states.STOPPING)
-                self.stop_instance(context, instance)
+                self.stop_instance(context, instance=instance)
 
             self._notify_about_instance_usage(
                     context, instance, "resize.revert.end")
