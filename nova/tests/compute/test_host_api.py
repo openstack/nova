@@ -252,7 +252,8 @@ class ComputeHostAPITestCase(test.TestCase):
 
 class ComputeHostAPICellsTestCase(ComputeHostAPITestCase):
     def setUp(self):
-        self.flags(compute_api_class='nova.compute.cells_api.ComputeCellsAPI')
+        self.flags(enable=True, group='cells')
+        self.flags(cell_type='api', group='cells')
         super(ComputeHostAPICellsTestCase, self).setUp()
 
     def _mock_rpc_call(self, expected_message, result=None):

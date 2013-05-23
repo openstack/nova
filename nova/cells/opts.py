@@ -43,6 +43,9 @@ cells_opts = [
                 default=10.0,
                 help='Percentage of cell capacity to hold in reserve. '
                      'Affects both memory and disk utilization'),
+    cfg.StrOpt('cell_type',
+                default=None,
+                help='Type of cell: api or compute'),
 ]
 
 cfg.CONF.register_opts(cells_opts, group='cells')

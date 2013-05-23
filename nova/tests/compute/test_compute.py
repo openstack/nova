@@ -9276,3 +9276,27 @@ class CheckRequestedImageTestCase(test.TestCase):
 
         self.compute_api._check_requested_image(self.context, image['id'],
                 image, self.instance_type)
+
+
+class ComputeAPIClassNameTestCase(test.TestCase):
+    def setUp(self):
+        super(ComputeAPIClassNameTestCase, self).setUp()
+
+    def test_default_compute_api_class_name(self):
+        result = compute.get_compute_api_class_name()
+        self.assertEqual('nova.compute.api.API', result)
+
+    def test_cell_compute_api_class_name(self):
+        self.flags(enable=True, group='cells')
+        self.flags(cell_type='api', group='cells')
+        result = compute.get_compute_api_class_name()
+        self.assertEqual('nova.compute.cells_api.ComputeCellsAPI', result)
+        self.flags(cell_type='compute', group='cells')
+        result = compute.get_compute_api_class_name()
+        self.assertEqual('nova.compute.api.API', result)
+
+    def test_illegal_cell_compute_api_class_name(self):
+        self.flags(enable=True, group='cells')
+        self.flags(cell_type='fake_cell_type', group='cells')
+        self.assertRaises(exception.InvalidInput,
+                          compute.get_compute_api_class_name)
