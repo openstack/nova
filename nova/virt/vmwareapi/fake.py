@@ -63,7 +63,8 @@ def reset():
     create_datacenter()
     create_datastore()
     create_res_pool()
-    create_cluster()
+    create_cluster('test_cluster')
+    create_cluster('test_cluster2')
 
 
 def cleanup():
@@ -350,9 +351,50 @@ class Network(ManagedObject):
 class ResourcePool(ManagedObject):
     """Resource Pool class."""
 
-    def __init__(self, name="test-rpool"):
+    def __init__(self, name="test-rpool", value="resgroup-test"):
         super(ResourcePool, self).__init__("rp")
         self.set("name", name)
+        self.set("name", "test_ResPool")
+        summary = DataObject()
+        runtime = DataObject()
+        config = DataObject()
+        memory = DataObject()
+        cpu = DataObject()
+
+        memoryAllocation = DataObject()
+        cpuAllocation = DataObject()
+
+        memory.maxUsage = 1000 * 1024 * 1024
+        memory.overallUsage = 500 * 1024 * 1024
+        cpu.maxUsage = 10000
+        cpu.overallUsage = 1000
+        runtime.cpu = cpu
+        runtime.memory = memory
+        summary.runtime = runtime
+        cpuAllocation.limit = 10000
+        memoryAllocation.limit = 1024
+        memoryAllocation.reservation = 1024
+        config.memoryAllocation = memoryAllocation
+        config.cpuAllocation = cpuAllocation
+        self.set("summary", summary)
+        self.set("config", config)
+        parent = ManagedObjectReference(value=value,
+                                        name=name)
+        owner = ManagedObjectReference(value=value,
+                                       name=name)
+        self.set("parent", parent)
+        self.set("owner", owner)
+
+
+class DatastoreHostMount(DataObject):
+    def __init__(self, value='host-100'):
+        super(DatastoreHostMount, self).__init__()
+        host_ref = (_db_content["HostSystem"]
+                    [_db_content["HostSystem"].keys()[0]].obj)
+        host_system = DataObject()
+        host_system.ManagedObjectReference = [host_ref]
+        host_system.value = value
+        self.key = host_system
 
 
 class ClusterComputeResource(ManagedObject):
@@ -373,6 +415,7 @@ class ClusterComputeResource(ManagedObject):
         summary.totalMemory = 0
         summary.effectiveMemory = 0
         self.set("summary", summary)
+        self.set("summary.effectiveCpu", 10000)
 
     def _add_resource_pool(self, r_pool):
         if r_pool:
@@ -477,6 +520,7 @@ class HostSystem(ManagedObject):
         hardware.numCpuThreads = 16
         hardware.vendor = "Intel"
         hardware.cpuModel = "Intel(R) Xeon(R)"
+        hardware.uuid = "host-uuid"
         hardware.memorySize = 1024 * 1024 * 1024
         summary.hardware = hardware
 
@@ -497,7 +541,9 @@ class HostSystem(ManagedObject):
         net_info_pnic.PhysicalNic = [pnic_do]
 
         self.set("summary", summary)
-        self.set("summary.hardware", hardware)
+        self.set("capability.maxHostSupportedVcpus", 600)
+        self.set("summary.runtime.inMaintenanceMode", False)
+        self.set("runtime.connectionState", "connected")
         self.set("config.network.pnic", net_info_pnic)
         self.set("connected", connected)
 
@@ -623,10 +669,11 @@ def create_network():
     _create_object('Network', network)
 
 
-def create_cluster():
-    cluster = ClusterComputeResource()
+def create_cluster(name):
+    cluster = ClusterComputeResource(name=name)
     cluster._add_host(_get_object_refs("HostSystem")[0])
     cluster._add_datastore(_get_object_refs("Datastore")[0])
+    cluster._add_resource_pool(_get_object_refs("ResourcePool")[0])
     _create_object('ClusterComputeResource', cluster)
 
 

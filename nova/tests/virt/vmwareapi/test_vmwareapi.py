@@ -121,7 +121,7 @@ class VMwareAPIVMTestCase(test.TestCase):
         vmwareapi_fake.reset()
         db_fakes.stub_out_db_instance_api(self.stubs)
         stubs.set_stubs(self.stubs)
-        self.conn = driver.VMwareVCDriver(fake.FakeVirtAPI)
+        self.conn = driver.VMwareESXDriver(fake.FakeVirtAPI)
         # NOTE(vish): none of the network plugging code is actually
         #             being tested
         self.network_info = utils.get_test_network_info()
@@ -138,7 +138,9 @@ class VMwareAPIVMTestCase(test.TestCase):
         vmwareapi_fake.cleanup()
         nova.tests.image.fake.FakeImageService_reset()
 
-    def _create_instance_in_the_db(self):
+    def _create_instance_in_the_db(self, node=None):
+        if not node:
+            node = self.node_name
         values = {'name': '1',
                   'id': 1,
                   'uuid': "fake-uuid",
@@ -149,27 +151,29 @@ class VMwareAPIVMTestCase(test.TestCase):
                   'ramdisk_id': "1",
                   'mac_address': "de:ad:be:ef:be:ef",
                   'instance_type': 'm1.large',
-                  'node': self.node_name,
+                  'node': node,
                   }
         self.instance = db.instance_create(None, values)
 
-    def _create_vm(self):
+    def _create_vm(self, node=None, num_instances=1):
         """Create and spawn the VM."""
-        self._create_instance_in_the_db()
+        if not node:
+            node = self.node_name
+        self._create_instance_in_the_db(node=node)
         self.type_data = db.flavor_get_by_name(None, 'm1.large')
         self.conn.spawn(self.context, self.instance, self.image,
                         injected_files=[], admin_password=None,
                         network_info=self.network_info,
                         block_device_info=None)
-        self._check_vm_record()
+        self._check_vm_record(num_instances=num_instances)
 
-    def _check_vm_record(self):
+    def _check_vm_record(self, num_instances=1):
         """
         Check if the spawned VM's properties correspond to the instance in
         the db.
         """
         instances = self.conn.list_instances()
-        self.assertEquals(len(instances), 1)
+        self.assertEquals(len(instances), num_instances)
 
         # Get Nova record for VM
         vm_info = self.conn.get_info({'uuid': 'fake-uuid',
@@ -473,9 +477,7 @@ class VMwareAPIVMTestCase(test.TestCase):
 
     def _test_finish_migration(self, power_on):
         """
-        Tests the finish_migration method on vmops via the
-        VMwareVCDriver. Results are checked against whether or not
-        the underlying instance should have been powered on.
+        Tests the finish_migration method on vmops
         """
 
         self.power_on_called = False
@@ -504,22 +506,21 @@ class VMwareAPIVMTestCase(test.TestCase):
                                    disk_info=None,
                                    network_info=None,
                                    block_device_info=None,
+                                   resize_instance=False,
                                    image_meta=None,
                                    power_on=power_on)
-        # verify the results
-        self.assertEquals(power_on, self.power_on_called)
 
     def test_finish_migration_power_on(self):
-        self._test_finish_migration(power_on=True)
+        self.assertRaises(NotImplementedError,
+                          self._test_finish_migration, power_on=True)
 
     def test_finish_migration_power_off(self):
-        self._test_finish_migration(power_on=False)
+        self.assertRaises(NotImplementedError,
+                          self._test_finish_migration, power_on=False)
 
     def _test_finish_revert_migration(self, power_on):
         """
-        Tests the finish_revert_migration method on vmops via the
-        VMwareVCDriver. Results are checked against whether or not
-        the underlying instance should have been powered on.
+        Tests the finish_revert_migration method on vmops
         """
 
         # setup the test instance in the database
@@ -564,14 +565,14 @@ class VMwareAPIVMTestCase(test.TestCase):
         self.conn.finish_revert_migration(instance=self.instance,
                                           network_info=None,
                                           power_on=power_on)
-        # verify the results
-        self.assertEquals(power_on, self.power_on_called)
 
     def test_finish_revert_migration_power_on(self):
-        self._test_finish_revert_migration(power_on=True)
+        self.assertRaises(NotImplementedError,
+                          self._test_finish_migration, power_on=True)
 
     def test_finish_revert_migration_power_off(self):
-        self._test_finish_revert_migration(power_on=False)
+        self.assertRaises(NotImplementedError,
+                          self._test_finish_migration, power_on=False)
 
     def test_diagnostics_non_existent_vm(self):
         self._create_instance_in_the_db()
@@ -596,7 +597,7 @@ class VMwareAPIVMTestCase(test.TestCase):
         fake_vm = vmwareapi_fake._get_objects("VirtualMachine").objects[0]
         fake_vm_id = int(fake_vm.obj.value.replace('vm-', ''))
         vnc_dict = self.conn.get_vnc_console(self.instance)
-        self.assertEquals(vnc_dict['host'], "ha-host")
+        self.assertEquals(vnc_dict['host'], 'test_url')
         self.assertEquals(vnc_dict['port'], cfg.CONF.vmware.vnc_port +
                           fake_vm_id % cfg.CONF.vmware.vnc_port_total)
 
@@ -804,10 +805,18 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
 
     def setUp(self):
         super(VMwareAPIVCDriverTestCase, self).setUp()
-        self.flags(cluster_name='test_cluster',
+        cluster_name = 'test_cluster'
+        cluster_name2 = 'test_cluster2'
+        self.flags(cluster_name=[cluster_name, cluster_name2],
                    task_poll_interval=10, datastore_regex='.*', group='vmware')
         self.flags(vnc_enabled=False)
         self.conn = driver.VMwareVCDriver(None, False)
+        node = self.conn._resources.keys()[0]
+        self.node_name = '%s(%s)' % (node,
+                                     self.conn._resources[node]['name'])
+        node = self.conn._resources.keys()[1]
+        self.node_name2 = '%s(%s)' % (node,
+                                      self.conn._resources[node]['name'])
 
     def tearDown(self):
         super(VMwareAPIVCDriverTestCase, self).tearDown()
@@ -822,13 +831,51 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
         self.assertEquals(stats['memory_mb_used'], 1024 - 524)
         self.assertEquals(stats['hypervisor_type'], 'VMware ESXi')
         self.assertEquals(stats['hypervisor_version'], '5.0.0')
-        self.assertEquals(stats['hypervisor_hostname'], 'test_url')
+        self.assertEquals(stats['hypervisor_hostname'], self.node_name)
         self.assertEquals(stats['supported_instances'],
                 '[["i686", "vmware", "hvm"], ["x86_64", "vmware", "hvm"]]')
 
     def test_invalid_datastore_regex(self):
         # Tests if we raise an exception for Invalid Regular Expression in
         # vmware_datastore_regex
-        self.flags(cluster_name='test_cluster', datastore_regex='fake-ds(01',
+        self.flags(cluster_name=['test_cluster'], datastore_regex='fake-ds(01',
                    group='vmware')
         self.assertRaises(exception.InvalidInput, driver.VMwareVCDriver, None)
+
+    def test_get_available_nodes(self):
+        nodelist = self.conn.get_available_nodes()
+        self.assertEquals(nodelist, [self.node_name, self.node_name2])
+
+    def test_spawn_multiple_node(self):
+        self._create_vm(node=self.node_name, num_instances=1)
+        info = self.conn.get_info({'uuid': 'fake-uuid'})
+        self._check_vm_info(info, power_state.RUNNING)
+        self._create_vm(node=self.node_name2, num_instances=2)
+        info = self.conn.get_info({'uuid': 'fake-uuid'})
+        self._check_vm_info(info, power_state.RUNNING)
+
+    def test_finish_migration_power_on(self):
+        self._test_finish_migration(power_on=True)
+        self.assertEquals(True, self.power_on_called)
+
+    def test_finish_migration_power_off(self):
+        self._test_finish_migration(power_on=False)
+        self.assertEquals(False, self.power_on_called)
+
+    def test_finish_revert_migration_power_on(self):
+        self._test_finish_revert_migration(power_on=True)
+        self.assertEquals(True, self.power_on_called)
+
+    def test_finish_revert_migration_power_off(self):
+        self._test_finish_revert_migration(power_on=False)
+        self.assertEquals(False, self.power_on_called)
+
+    def test_get_vnc_console(self):
+        self._create_instance_in_the_db()
+        self._create_vm()
+        fake_vm = vmwareapi_fake._get_objects("VirtualMachine").objects[0]
+        fake_vm_id = int(fake_vm.obj.value.replace('vm-', ''))
+        vnc_dict = self.conn.get_vnc_console(self.instance)
+        self.assertEquals(vnc_dict['host'], "ha-host")
+        self.assertEquals(vnc_dict['port'], cfg.CONF.vmware.vnc_port +
+                          fake_vm_id % cfg.CONF.vmware.vnc_port_total)
