@@ -47,13 +47,13 @@ class AggregateInstanceExtraSpecsFilter(filters.BaseHostFilter):
             aggregate_vals = metadata.get(key, None)
             if not aggregate_vals:
                 LOG.debug(_("%(host_state)s fails instance_type extra_specs "
-                    "requirements"), locals())
+                    "requirements"), {'host_state': host_state})
                 return False
             for aggregate_val in aggregate_vals:
                 if extra_specs_ops.match(aggregate_val, req):
                     break
             else:
                 LOG.debug(_("%(host_state)s fails instance_type extra_specs "
-                    "requirements"), locals())
+                    "requirements"), {'host_state': host_state})
                 return False
         return True

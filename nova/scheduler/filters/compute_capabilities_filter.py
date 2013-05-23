@@ -55,6 +55,6 @@ class ComputeCapabilitiesFilter(filters.BaseHostFilter):
         if not self._satisfies_extra_specs(host_state.capabilities,
                 instance_type):
             LOG.debug(_("%(host_state)s fails instance_type extra_specs "
-                    "requirements"), locals())
+                    "requirements"), {'host_state': host_state})
             return False
         return True

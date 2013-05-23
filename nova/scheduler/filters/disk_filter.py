@@ -46,7 +46,9 @@ class DiskFilter(filters.BaseHostFilter):
         if not usable_disk_mb >= requested_disk:
             LOG.debug(_("%(host_state)s does not have %(requested_disk)s MB "
                     "usable disk, it only has %(usable_disk_mb)s MB usable "
-                    "disk."), locals())
+                    "disk."), {'host_state': host_state,
+                               'requested_disk': requested_disk,
+                               'usable_disk_mb': usable_disk_mb})
             return False
 
         disk_gb_limit = disk_mb_limit / 1024
