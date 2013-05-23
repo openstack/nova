@@ -1192,21 +1192,20 @@ def _get_vdi_chain_size(session, vdi_uuid):
 
 
 def _check_vdi_size(context, session, instance, vdi_uuid):
-    size_bytes = _get_vdi_chain_size(session, vdi_uuid)
-
-    # FIXME(jk0): this was copied directly from compute.manager.py, let's
-    # refactor this to a common area
     instance_type = flavors.extract_instance_type(instance)
-    allowed_size_gb = instance_type['root_gb']
-    allowed_size_bytes = allowed_size_gb * 1024 * 1024 * 1024
+    allowed_size = instance_type['root_gb'] * (1024 ** 3)
 
-    LOG.debug(_("image_size_bytes=%(size_bytes)d, allowed_size_bytes="
-                "%(allowed_size_bytes)d"), locals(), instance=instance)
+    if not allowed_size:
+        # root_gb=0 indicates that we're disabling size checks
+        return
 
-    if size_bytes > allowed_size_bytes:
-        LOG.info(_("Image size %(size_bytes)d exceeded instance_type "
-                   "allowed size %(allowed_size_bytes)d"),
-                 locals(), instance=instance)
+    size = _get_vdi_chain_size(session, vdi_uuid)
+    if size > allowed_size:
+        LOG.error(_("Image size %(size)d exceeded instance_type "
+                    "allowed size %(allowed_size)d"),
+                  {'size': size, 'allowed_size': allowed_size},
+                  instance=instance)
+
         raise exception.InstanceTypeDiskTooSmall()
 
 

@@ -20,6 +20,7 @@ import contextlib
 import fixtures
 import mox
 
+from nova.compute import flavors
 from nova import exception
 from nova import test
 from nova import utils
@@ -365,3 +366,51 @@ class ResizeHelpersTestCase(test.TestCase):
         self.mox.ReplayAll()
 
         vm_utils._resize_part_and_fs("fake", 0, 20, 30)
+
+
+class CheckVDISizeTestCase(test.TestCase):
+    def setUp(self):
+        super(CheckVDISizeTestCase, self).setUp()
+        self.context = 'fakecontext'
+        self.session = 'fakesession'
+        self.instance = dict(uuid='fakeinstance')
+        self.vdi_uuid = 'fakeuuid'
+
+    def test_not_too_large(self):
+        self.mox.StubOutWithMock(flavors, 'extract_instance_type')
+        flavors.extract_instance_type(self.instance).AndReturn(
+                dict(root_gb=1))
+
+        self.mox.StubOutWithMock(vm_utils, '_get_vdi_chain_size')
+        vm_utils._get_vdi_chain_size(self.session,
+                self.vdi_uuid).AndReturn(1073741824)
+
+        self.mox.ReplayAll()
+
+        vm_utils._check_vdi_size(self.context, self.session, self.instance,
+                self.vdi_uuid)
+
+    def test_too_large(self):
+        self.mox.StubOutWithMock(flavors, 'extract_instance_type')
+        flavors.extract_instance_type(self.instance).AndReturn(
+                dict(root_gb=1))
+
+        self.mox.StubOutWithMock(vm_utils, '_get_vdi_chain_size')
+        vm_utils._get_vdi_chain_size(self.session,
+                self.vdi_uuid).AndReturn(1073741825)
+
+        self.mox.ReplayAll()
+
+        self.assertRaises(exception.InstanceTypeDiskTooSmall,
+                vm_utils._check_vdi_size, self.context, self.session,
+                self.instance, self.vdi_uuid)
+
+    def test_zero_root_gb_disables_check(self):
+        self.mox.StubOutWithMock(flavors, 'extract_instance_type')
+        flavors.extract_instance_type(self.instance).AndReturn(
+                dict(root_gb=0))
+
+        self.mox.ReplayAll()
+
+        vm_utils._check_vdi_size(self.context, self.session, self.instance,
+                self.vdi_uuid)
