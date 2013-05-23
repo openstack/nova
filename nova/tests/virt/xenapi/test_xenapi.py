@@ -1121,6 +1121,17 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
 
         conn.reboot(self.context, instance, None, "SOFT")
 
+    def test_get_console_output_succeeds(self):
+
+        def fake_get_console_output(instance):
+            self.assertEqual("instance", instance)
+            return "console_log"
+        self.stubs.Set(self.conn._vmops, 'get_console_output',
+                       fake_get_console_output)
+
+        self.assertEqual(self.conn.get_console_output("instance"),
+                         "console_log")
+
     def _test_maintenance_mode(self, find_host, find_aggregate):
         real_call_xenapi = self.conn._session.call_xenapi
         instance = self._create_instance(spawn=True)

@@ -50,10 +50,12 @@
 A fake XenAPI SDK.
 """
 
+import base64
 import pickle
 import random
 import uuid
 from xml.sax import saxutils
+import zlib
 
 import pprint
 
@@ -607,6 +609,12 @@ class SessionBase(object):
 
     def _plugin_xenhost_host_uptime(self, method, args):
         return jsonutils.dumps({"uptime": "fake uptime"})
+
+    def _plugin_console_get_console_log(self, method, args):
+        dom_id = args["dom_id"]
+        if dom_id == 0:
+            raise Failure('Guest does not have a console')
+        return base64.b64encode(zlib.compress("dom_id: %s" % dom_id))
 
     def host_call_plugin(self, _1, _2, plugin, method, args):
         func = getattr(self, '_plugin_%s_%s' % (plugin, method), None)

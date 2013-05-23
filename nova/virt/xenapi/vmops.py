@@ -19,9 +19,11 @@
 Management class for VM-related functions (spawn, reboot, etc).
 """
 
+import base64
 import functools
 import itertools
 import time
+import zlib
 
 from eventlet import greenthread
 import netaddr
@@ -1421,9 +1423,18 @@ class VMOps(object):
         return bw
 
     def get_console_output(self, instance):
-        """Return snapshot of console."""
-        # TODO(armando-migliaccio): implement this to fix pylint!
-        return 'FAKE CONSOLE OUTPUT of instance'
+        """Return last few lines of instance console."""
+        dom_id = self._get_dom_id(instance, check_rescue=True)
+
+        try:
+            raw_console_data = self._session.call_plugin('console',
+                    'get_console_log', {'dom_id': dom_id})
+        except self._session.XenAPI.Failure as exc:
+            LOG.exception(exc)
+            msg = _("Guest does not have a console available")
+            raise exception.NovaException(msg)
+
+        return zlib.decompress(base64.b64decode(raw_console_data))
 
     def get_vnc_console(self, instance):
         """Return connection info for a vnc console."""
@@ -1607,9 +1618,7 @@ class VMOps(object):
         """
         args = {}
         if instance or vm_ref:
-            vm_ref = vm_ref or self._get_vm_opaque_ref(instance)
-            vm_rec = self._session.call_xenapi("VM.get_record", vm_ref)
-            args['dom_id'] = vm_rec['domid']
+            args['dom_id'] = self._get_dom_id(instance, vm_ref)
         args.update(addl_args)
         try:
             return self._session.call_plugin(plugin, method, args)
@@ -1629,6 +1638,11 @@ class VMOps(object):
                             'args=%(args)r'), locals(), instance=instance)
                 return {'returncode': 'error', 'message': err_msg}
             return None
+
+    def _get_dom_id(self, instance=None, vm_ref=None, check_rescue=False):
+        vm_ref = vm_ref or self._get_vm_opaque_ref(instance, check_rescue)
+        vm_rec = self._session.call_xenapi("VM.get_record", vm_ref)
+        return vm_rec['domid']
 
     def _add_to_param_xenstore(self, vm_ref, key, val):
         """
