@@ -211,10 +211,12 @@ class Qcow2TestCase(_ImageTestCase):
         self.mox.StubOutWithMock(imagebackend.disk, 'get_disk_size')
         imagebackend.disk.get_disk_size(self.TEMPLATE_PATH
                                        ).AndReturn(self.SIZE)
+        fn = self.mox.CreateMockAnything()
+        fn(target=self.TEMPLATE_PATH)
         self.mox.ReplayAll()
 
         image = self.image_class(self.INSTANCE, self.NAME)
-        self.assertRaises(exception.ImageTooLarge, image.create_image, None,
+        self.assertRaises(exception.ImageTooLarge, image.create_image, fn,
                           self.TEMPLATE_PATH, 1)
         self.mox.VerifyAll()
 

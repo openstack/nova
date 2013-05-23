@@ -175,6 +175,7 @@ class Qcow2(Image):
                         disk.extend(qcow2_base, size)
             libvirt_utils.create_cow_image(qcow2_base, target)
 
+        prepare_template(target=base, *args, **kwargs)
         # NOTE(cfb): Having a flavor that sets the root size to 0 and having
         #            nova effectively ignore that size and use the size of the
         #            image is considered a feature at this time, not a bug.
@@ -182,7 +183,6 @@ class Qcow2(Image):
             LOG.error('%s virtual size larger than flavor root disk size %s' %
                       (base, size))
             raise exception.ImageTooLarge()
-        prepare_template(target=base, *args, **kwargs)
         with utils.remove_path_on_error(self.path):
             copy_qcow2_image(base, self.path, size)
 
