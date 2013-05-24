@@ -14,6 +14,7 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+import warnings
 
 from migrate.changeset import UniqueConstraint
 from sqlalchemy.dialects import mysql
@@ -28,8 +29,7 @@ from sqlalchemy.types import UserDefinedType, NullType
 from nova.db.sqlalchemy import api as db
 from nova.db.sqlalchemy import utils
 from nova import exception
-from nova.tests import test_migrations
-import warnings
+from nova.tests.db import test_migrations
 
 
 class CustomType(UserDefinedType):
