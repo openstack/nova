@@ -36,10 +36,10 @@ from nova import db
 from nova.image import glance
 from nova import test
 from nova.tests import fake_network
-from nova.tests.hyperv import db_fakes
-from nova.tests.hyperv import fake
 from nova.tests.image import fake as fake_image
 from nova.tests import matchers
+from nova.tests.virt.hyperv import db_fakes
+from nova.tests.virt.hyperv import fake
 from nova import utils
 from nova.virt import configdrive
 from nova.virt import driver
