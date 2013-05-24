@@ -19,7 +19,6 @@ from migrate.changeset import UniqueConstraint
 from sqlalchemy import Integer, DateTime, String
 from sqlalchemy import MetaData, Table, Column
 from sqlalchemy.exc import NoSuchTableError
-from sqlalchemy.exc import OperationalError
 from sqlalchemy.exc import SAWarning
 from sqlalchemy.sql import select
 from sqlalchemy.types import UserDefinedType
@@ -92,54 +91,51 @@ class TestMigrationUtils(test_migrations.BaseMigrationTestCase):
             {'id': 3, 'a': 1, 'foo': 30}
         ]
 
-        for key, engine in self.engines.items():
-            meta = MetaData()
-            meta.bind = engine
-            test_table = Table(table_name, meta,
-                               Column('id', Integer, primary_key=True,
-                                      nullable=False),
-                               Column('a', Integer),
-                               Column('foo', CustomType, default=0),
-                               UniqueConstraint('a', name='uniq_a'),
-                               UniqueConstraint('foo', name=uc_name))
-            test_table.create()
+        engine = self.engines['sqlite']
+        meta = MetaData(bind=engine)
 
-            engine.execute(test_table.insert(), values)
-            if key == "sqlite":
-                warnings.simplefilter("ignore", SAWarning)
-                # NOTE(boris-42): Missing info about column `foo` that has
-                #                 unsupported type CustomType.
-                self.assertRaises(exception.NovaException,
-                                  utils.drop_unique_constraint,
-                                  engine, table_name, uc_name, 'foo')
+        test_table = Table(table_name, meta,
+                            Column('id', Integer, primary_key=True,
+                                  nullable=False),
+                           Column('a', Integer),
+                           Column('foo', CustomType, default=0),
+                           UniqueConstraint('a', name='uniq_a'),
+                           UniqueConstraint('foo', name=uc_name))
+        test_table.create()
 
-                # NOTE(boris-42): Wrong type of foo instance. it should be
-                #                 instance of sqlalchemy.Column.
-                self.assertRaises(exception.NovaException,
-                                  utils.drop_unique_constraint,
-                                  engine, table_name, uc_name, 'foo',
-                                  foo=Integer())
+        engine.execute(test_table.insert(), values)
+        warnings.simplefilter("ignore", SAWarning)
+        # NOTE(boris-42): Missing info about column `foo` that has
+        #                 unsupported type CustomType.
+        self.assertRaises(exception.NovaException,
+                          utils.drop_unique_constraint,
+                          engine, table_name, uc_name, 'foo')
 
-            foo = Column('foo', CustomType, default=0)
-            utils.drop_unique_constraint(engine, table_name, uc_name, 'foo',
-                                         foo=foo)
+        # NOTE(boris-42): Wrong type of foo instance. it should be
+        #                 instance of sqlalchemy.Column.
+        self.assertRaises(exception.NovaException,
+                          utils.drop_unique_constraint,
+                          engine, table_name, uc_name, 'foo', foo=Integer())
 
-            s = test_table.select().order_by(test_table.c.id)
-            rows = engine.execute(s).fetchall()
+        foo = Column('foo', CustomType, default=0)
+        utils.drop_unique_constraint(engine, table_name, uc_name, 'foo',
+                                     foo=foo)
 
-            for i in xrange(0, len(values)):
-                v = values[i]
-                self.assertEqual((v['id'], v['a'], v['foo']), rows[i])
+        s = test_table.select().order_by(test_table.c.id)
+        rows = engine.execute(s).fetchall()
 
-            # NOTE(boris-42): Update data about Table from DB.
-            meta = MetaData()
-            meta.bind = engine
-            test_table = Table(table_name, meta, autoload=True)
-            constraints = filter(lambda c: c.name == uc_name,
-                                 test_table.constraints)
-            self.assertEqual(len(constraints), 0)
-            self.assertEqual(len(test_table.constraints), 1)
-            test_table.drop()
+        for i in xrange(0, len(values)):
+            v = values[i]
+            self.assertEqual((v['id'], v['a'], v['foo']), rows[i])
+
+        # NOTE(boris-42): Update data about Table from DB.
+        meta = MetaData(bind=engine)
+        test_table = Table(table_name, meta, autoload=True)
+        constraints = filter(lambda c: c.name == uc_name,
+                             test_table.constraints)
+        self.assertEqual(len(constraints), 0)
+        self.assertEqual(len(test_table.constraints), 1)
+        test_table.drop()
 
     def _populate_db_for_drop_duplicate_entries(self, engine, meta,
                                                 table_name):
@@ -160,7 +156,7 @@ class TestMigrationUtils(test_migrations.BaseMigrationTestCase):
                                   nullable=False),
                            Column('a', Integer),
                            Column('b', Integer),
-                           Column('c', String),
+                           Column('c', String(255)),
                            Column('deleted', Integer, default=0),
                            Column('deleted_at', DateTime),
                            Column('updated_at', DateTime))
@@ -296,22 +292,21 @@ class TestMigrationUtils(test_migrations.BaseMigrationTestCase):
 
     def test_check_shadow_table_with_unsupported_type(self):
         table_name = 'abc'
-        for key, engine in self.engines.items():
-            meta = MetaData()
-            meta.bind = engine
+        engine = self.engines['sqlite']
+        meta = MetaData(bind=engine)
 
-            table = Table(table_name, meta,
-                          Column('id', Integer, primary_key=True),
-                          Column('a', Integer),
-                          Column('c', CustomType))
-            table.create()
+        table = Table(table_name, meta,
+                      Column('id', Integer, primary_key=True),
+                      Column('a', Integer),
+                      Column('c', CustomType))
+        table.create()
 
-            shadow_table = Table(db._SHADOW_TABLE_PREFIX + table_name, meta,
-                                 Column('id', Integer, primary_key=True),
-                                 Column('a', Integer),
-                                 Column('c', CustomType))
-            shadow_table.create()
-            self.assertTrue(utils.check_shadow_table(engine, table_name))
+        shadow_table = Table(db._SHADOW_TABLE_PREFIX + table_name, meta,
+                             Column('id', Integer, primary_key=True),
+                             Column('a', Integer),
+                             Column('c', CustomType))
+        shadow_table.create()
+        self.assertTrue(utils.check_shadow_table(engine, table_name))
 
     def test_create_shadow_table_by_table_instance(self):
         table_name = 'abc'
@@ -342,21 +337,20 @@ class TestMigrationUtils(test_migrations.BaseMigrationTestCase):
 
     def test_create_shadow_table_not_supported_type(self):
         table_name = 'abc'
-        for key, engine in self.engines.items():
-            meta = MetaData()
-            meta.bind = engine
+        engine = self.engines['sqlite']
+        meta = MetaData()
+        meta.bind = engine
+        table = Table(table_name, meta,
+                      Column('id', Integer, primary_key=True),
+                      Column('a', CustomType))
+        table.create()
+        self.assertRaises(exception.NovaException,
+                          utils.create_shadow_table,
+                          engine, table_name=table_name)
 
-            table = Table(table_name, meta,
-                          Column('id', Integer, primary_key=True),
-                          Column('a', CustomType))
-            table.create()
-            self.assertRaises(exception.NovaException,
-                              utils.create_shadow_table,
-                              engine, table_name=table_name)
-
-            utils.create_shadow_table(engine, table_name=table_name,
-                                      a=Column('a', CustomType()))
-            self.assertTrue(utils.check_shadow_table(engine, table_name))
+        utils.create_shadow_table(engine, table_name=table_name,
+                                  a=Column('a', CustomType()))
+        self.assertTrue(utils.check_shadow_table(engine, table_name))
 
     def test_create_shadow_both_table_and_table_name_are_none(self):
         for key, engine in self.engines.items():
@@ -388,6 +382,6 @@ class TestMigrationUtils(test_migrations.BaseMigrationTestCase):
                           Column('a', Integer))
             table.create()
             utils.create_shadow_table(engine, table_name=table_name)
-            self.assertRaises(OperationalError,
+            self.assertRaises(exception.ShadowTableExists,
                               utils.create_shadow_table,
                               engine, table_name=table_name)
