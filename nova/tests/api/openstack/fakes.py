@@ -699,3 +699,8 @@ def stub_snapshot_get_all(self, context):
 def stub_bdm_get_all_by_instance(context, instance_uuid):
     return [{'source_type': 'volume', 'volume_id': 'volume_id1'},
             {'source_type': 'volume', 'volume_id': 'volume_id2'}]
+
+
+def fake_get_available_languages(domain):
+    existing_translations = ['en_GB', 'en_AU', 'de', 'zh_CN', 'en_US']
+    return existing_translations

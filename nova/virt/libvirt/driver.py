@@ -583,7 +583,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 self._wrapped_conn = wrapped_conn
 
             try:
-                LOG.debug(_("Registering for lifecycle events %s") % self)
+                LOG.debug(_("Registering for lifecycle events %s") %
+                          str(self))
                 wrapped_conn.domainEventRegisterAny(
                     None,
                     libvirt.VIR_DOMAIN_EVENT_ID_LIFECYCLE,
@@ -595,8 +596,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
             if self.has_min_version(MIN_LIBVIRT_CLOSE_CALLBACK_VERSION):
                 try:
-                    LOG.debug(_("Registering for connection events: %s")
-                                % self)
+                    LOG.debug(_("Registering for connection events: %s") %
+                              str(self))
                     wrapped_conn.registerCloseCallback(
                         self._close_callback, None)
                 except libvirt.libvirtError:

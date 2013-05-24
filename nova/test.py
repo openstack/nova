@@ -27,6 +27,7 @@ import eventlet
 eventlet.monkey_patch(os=False)
 
 import copy
+import gettext
 import os
 import shutil
 import sys
@@ -191,6 +192,17 @@ class MoxStubout(fixtures.Fixture):
         self.addCleanup(self.mox.VerifyAll)
 
 
+class TranslationFixture(fixtures.Fixture):
+    """Use gettext NullTranslation objects in tests."""
+
+    def setUp(self):
+        super(TranslationFixture, self).setUp()
+        nulltrans = gettext.NullTranslations()
+        gettext_fixture = fixtures.MonkeyPatch('gettext.translation',
+                                               lambda *x, **y: nulltrans)
+        self.gettext_patcher = self.useFixture(gettext_fixture)
+
+
 class TestingException(Exception):
     pass
 
@@ -216,6 +228,7 @@ class TestCase(testtools.TestCase):
             self.useFixture(fixtures.Timeout(test_timeout, gentle=True))
         self.useFixture(fixtures.NestedTempfile())
         self.useFixture(fixtures.TempHomeDir())
+        self.useFixture(TranslationFixture())
 
         if (os.environ.get('OS_STDOUT_CAPTURE') == 'True' or
                 os.environ.get('OS_STDOUT_CAPTURE') == '1'):

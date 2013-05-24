@@ -43,6 +43,7 @@ from oslo.config import cfg
 
 from nova import exception
 from nova.openstack.common import excutils
+from nova.openstack.common import gettextutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import lockutils
@@ -476,6 +477,8 @@ def utf8(value):
     """
     if isinstance(value, unicode):
         return value.encode('utf-8')
+    elif isinstance(value, gettextutils.Message):
+        return unicode(value).encode('utf-8')
     assert isinstance(value, str)
     return value
 

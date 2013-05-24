@@ -911,7 +911,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             info = extra_usage_info.copy()
             if not msg:
                 msg = ""
-            info['message'] = msg
+            info['message'] = unicode(msg)
             self._notify_about_instance_usage(context, instance, type_,
                     extra_usage_info=info, **kwargs)
 

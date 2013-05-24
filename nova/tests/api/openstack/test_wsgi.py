@@ -5,6 +5,7 @@ import webob
 
 from nova.api.openstack import wsgi
 from nova import exception
+from nova.openstack.common import gettextutils
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests import utils
@@ -96,6 +97,53 @@ class RequestTest(test.TestCase):
                 {'uuid0': instances[0],
                  'uuid1': instances[1],
                  'uuid2': instances[2]})
+
+    def test_from_request(self):
+        self.stubs.Set(gettextutils, 'get_available_languages',
+                       fakes.fake_get_available_languages)
+
+        request = wsgi.Request.blank('/')
+        accepted = 'bogus;q=1.1, en-gb;q=0.7,en-us,en;q=.5,*;q=.7'
+        request.headers = {'Accept-Language': accepted}
+        self.assertEqual(request.best_match_language(), 'en_US')
+
+    def test_asterisk(self):
+        # asterisk should match first available if there
+        # are not any other available matches
+        self.stubs.Set(gettextutils, 'get_available_languages',
+                       fakes.fake_get_available_languages)
+
+        request = wsgi.Request.blank('/')
+        accepted = '*,es;q=.5'
+        request.headers = {'Accept-Language': accepted}
+        self.assertEqual(request.best_match_language(), 'en_GB')
+
+    def test_prefix(self):
+        self.stubs.Set(gettextutils, 'get_available_languages',
+                       fakes.fake_get_available_languages)
+
+        request = wsgi.Request.blank('/')
+        accepted = 'zh'
+        request.headers = {'Accept-Language': accepted}
+        self.assertEqual(request.best_match_language(), 'zh_CN')
+
+    def test_secondary(self):
+        self.stubs.Set(gettextutils, 'get_available_languages',
+                       fakes.fake_get_available_languages)
+
+        request = wsgi.Request.blank('/')
+        accepted = 'nn,en-gb;q=.5'
+        request.headers = {'Accept-Language': accepted}
+        self.assertEqual(request.best_match_language(), 'en_GB')
+
+    def test_none_found(self):
+        self.stubs.Set(gettextutils, 'get_available_languages',
+                       fakes.fake_get_available_languages)
+
+        request = wsgi.Request.blank('/')
+        accepted = 'nb-no'
+        request.headers = {'Accept-Language': accepted}
+        self.assertEqual(request.best_match_language(), 'en_US')
 
 
 class ActionDispatcherTest(test.TestCase):
