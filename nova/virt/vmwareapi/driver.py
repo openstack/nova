@@ -330,16 +330,6 @@ class VMwareESXDriver(driver.ComputeDriver):
         """Unplug VIFs from networks."""
         self._vmops.unplug_vifs(instance, network_info)
 
-    def list_interfaces(self, instance_name):
-        """
-        Return the IDs of all the virtual network interfaces attached to the
-        specified instance, as a list.  These IDs are opaque to the caller
-        (they are only useful for giving back to this layer as a parameter to
-        interface_stats).  These IDs only need to be unique for a given
-        instance.
-        """
-        return self._vmops.list_interfaces(instance_name)
-
 
 class VMwareVCDriver(VMwareESXDriver):
     """The ESX host connection object."""

@@ -159,10 +159,13 @@ class VMwareVMOps(object):
                                                 "lsiLogic")
             disk_type = image_properties.get("vmware_disktype",
                                              "preallocated")
-            return vmdk_file_size_in_kb, os_type, adapter_type, disk_type
+            # Get the network card type from the image properties.
+            vif_model = image_properties.get("hw_vif_model", "VirtualE1000")
+            return (vmdk_file_size_in_kb, os_type, adapter_type, disk_type,
+                vif_model)
 
         (vmdk_file_size_in_kb, os_type, adapter_type,
-         disk_type) = _get_image_properties()
+            disk_type, vif_model) = _get_image_properties()
 
         vm_folder_ref = self._get_vmfolder_ref()
         res_pool_ref = self._get_res_pool_ref()
@@ -192,6 +195,7 @@ class VMwareVMOps(object):
                                   'mac_address': mac_address,
                                   'network_ref': network_ref,
                                   'iface_id': vif.get_meta('iface_id'),
+                                  'vif_model': vif_model,
                                  })
             return vif_infos
 
@@ -1329,28 +1333,3 @@ class VMwareVMOps(object):
     def unplug_vifs(self, instance, network_info):
         """Unplug VIFs from networks."""
         pass
-
-    def list_interfaces(self, instance_name):
-        """
-        Return the IDs of all the virtual network interfaces attached to the
-        specified instance, as a list.  These IDs are opaque to the caller
-        (they are only useful for giving back to this layer as a parameter to
-        interface_stats).  These IDs only need to be unique for a given
-        instance.
-        """
-        vm_ref = vm_util.get_vm_ref_from_name(self._session, instance_name)
-        if vm_ref is None:
-            raise exception.InstanceNotFound(instance_id=instance_name)
-
-        interfaces = []
-        # Get the virtual network interfaces attached to the VM
-        hardware_devices = self._session._call_method(vim_util,
-                    "get_dynamic_property", vm_ref,
-                    "VirtualMachine", "config.hardware.device")
-
-        for device in hardware_devices:
-            if device.__class__.__name__ in ["VirtualE1000", "VirtualE1000e",
-                "VirtualPCNet32", "VirtualVmxnet"]:
-                interfaces.append(device.key)
-
-        return interfaces
