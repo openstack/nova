@@ -374,7 +374,7 @@ def inject_data_into_fs(fs, key, net, metadata, admin_password, files,
                 if inject in mandatory:
                     raise
                 LOG.warn(_('Ignoring error injecting %(inject)s into image '
-                           '(%(e)s)'), {'e': e})
+                           '(%(e)s)'), {'e': e, 'inject': inject})
                 status = False
     return status
 
