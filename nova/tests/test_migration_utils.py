@@ -16,12 +16,14 @@
 #    under the License.
 
 from migrate.changeset import UniqueConstraint
-from sqlalchemy import Integer, DateTime, String
+from sqlalchemy.dialects import mysql
+from sqlalchemy import Boolean, Index, Integer, DateTime, String
 from sqlalchemy import MetaData, Table, Column
+from sqlalchemy.engine import reflection
 from sqlalchemy.exc import NoSuchTableError
 from sqlalchemy.exc import SAWarning
 from sqlalchemy.sql import select
-from sqlalchemy.types import UserDefinedType
+from sqlalchemy.types import UserDefinedType, NullType
 
 from nova.db.sqlalchemy import api as db
 from nova.db.sqlalchemy import utils
@@ -385,3 +387,130 @@ class TestMigrationUtils(test_migrations.BaseMigrationTestCase):
             self.assertRaises(exception.ShadowTableExists,
                               utils.create_shadow_table,
                               engine, table_name=table_name)
+
+    def test_change_deleted_column_type_doesnt_drop_index(self):
+        table_name = 'abc'
+        for key, engine in self.engines.items():
+            meta = MetaData(bind=engine)
+
+            indexes = {
+                'idx_a_deleted': ['a', 'deleted'],
+                'idx_b_deleted': ['b', 'deleted'],
+                'idx_a': ['a']
+            }
+
+            index_instances = [Index(name, *columns)
+                                    for name, columns in indexes.iteritems()]
+
+            table = Table(table_name, meta,
+                          Column('id', Integer, primary_key=True),
+                          Column('a', String(255)),
+                          Column('b', String(255)),
+                          Column('deleted', Boolean),
+                          *index_instances)
+            table.create()
+            utils.change_deleted_column_type_to_id_type(engine, table_name)
+            utils.change_deleted_column_type_to_boolean(engine, table_name)
+
+            insp = reflection.Inspector.from_engine(engine)
+            real_indexes = insp.get_indexes(table_name)
+            self.assertEqual(len(real_indexes), 3)
+            for index in real_indexes:
+                name = index['name']
+                self.assertIn(name, indexes)
+                self.assertEqual(set(index['column_names']),
+                                 set(indexes[name]))
+
+    def test_change_deleted_column_type_to_id_type_integer(self):
+        table_name = 'abc'
+        for key, engine in self.engines.items():
+            meta = MetaData()
+            meta.bind = engine
+            table = Table(table_name, meta,
+                          Column('id', Integer, primary_key=True),
+                          Column('deleted', Boolean))
+            table.create()
+            utils.change_deleted_column_type_to_id_type(engine, table_name)
+
+            table = utils.get_table(engine, table_name)
+            self.assertTrue(isinstance(table.c.deleted.type, Integer))
+
+    def test_change_deleted_column_type_to_id_type_string(self):
+        table_name = 'abc'
+        for key, engine in self.engines.items():
+            meta = MetaData()
+            meta.bind = engine
+            table = Table(table_name, meta,
+                          Column('id', String(255), primary_key=True),
+                          Column('deleted', Boolean))
+            table.create()
+            utils.change_deleted_column_type_to_id_type(engine, table_name)
+
+            table = utils.get_table(engine, table_name)
+            self.assertTrue(isinstance(table.c.deleted.type, String))
+
+    def test_change_deleted_column_type_to_id_type_custom(self):
+        table_name = 'abc'
+        engine = self.engines['sqlite']
+        meta = MetaData()
+        meta.bind = engine
+        table = Table(table_name, meta,
+                      Column('id', Integer, primary_key=True),
+                      Column('foo', CustomType),
+                      Column('deleted', Boolean))
+        table.create()
+
+        self.assertRaises(exception.NovaException,
+                          utils.change_deleted_column_type_to_id_type,
+                          engine, table_name)
+
+        fooColumn = Column('foo', CustomType())
+        utils.change_deleted_column_type_to_id_type(engine, table_name,
+                                                    foo=fooColumn)
+
+        table = utils.get_table(engine, table_name)
+        # NOTE(boris-42): There is no way to check has foo type CustomType.
+        #                 but sqlalchemy will set it to NullType.
+        self.assertTrue(isinstance(table.c.foo.type, NullType))
+        self.assertTrue(isinstance(table.c.deleted.type, Integer))
+
+    def test_change_deleted_column_type_to_boolean(self):
+        table_name = 'abc'
+        for key, engine in self.engines.items():
+            meta = MetaData()
+            meta.bind = engine
+            table = Table(table_name, meta,
+                          Column('id', Integer, primary_key=True),
+                          Column('deleted', Integer))
+            table.create()
+
+            utils.change_deleted_column_type_to_boolean(engine, table_name)
+
+            table = utils.get_table(engine, table_name)
+            expected_type = Boolean if key != "mysql" else mysql.TINYINT
+            self.assertTrue(isinstance(table.c.deleted.type, expected_type))
+
+    def test_change_deleted_column_type_to_boolean_type_custom(self):
+        table_name = 'abc'
+        engine = self.engines['sqlite']
+        meta = MetaData()
+        meta.bind = engine
+        table = Table(table_name, meta,
+                      Column('id', Integer, primary_key=True),
+                      Column('foo', CustomType),
+                      Column('deleted', Integer))
+        table.create()
+
+        self.assertRaises(exception.NovaException,
+                          utils.change_deleted_column_type_to_boolean,
+                          engine, table_name)
+
+        fooColumn = Column('foo', CustomType())
+        utils.change_deleted_column_type_to_boolean(engine, table_name,
+                                                    foo=fooColumn)
+
+        table = utils.get_table(engine, table_name)
+        # NOTE(boris-42): There is no way to check has foo type CustomType.
+        #                 but sqlalchemy will set it to NullType.
+        self.assertTrue(isinstance(table.c.foo.type, NullType))
+        self.assertTrue(isinstance(table.c.deleted.type, Boolean))
