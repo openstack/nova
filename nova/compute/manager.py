@@ -4081,7 +4081,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             msg = _("Setting instance back to ACTIVE after: %s")
             LOG.info(msg % error, instance_uuid=instance_uuid)
             self._instance_update(context, instance_uuid,
-                                  vm_state=vm_states.ACTIVE)
+                                  vm_state=vm_states.ACTIVE,
+                                  task_state=None)
             raise error.inner_exception
         except Exception, error:
             with excutils.save_and_reraise_exception():
