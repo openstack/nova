@@ -136,7 +136,8 @@ class ManagedObject(object):
 
 class DataObject(object):
     """Data object base class."""
-    pass
+    def __init__(self, obj_name=None):
+        self.obj_name = obj_name
 
 
 class VirtualDisk(DataObject):
@@ -202,6 +203,7 @@ class VirtualMachine(ManagedObject):
         self.set("summary.config.memorySizeMB", kwargs.get("mem", 1))
         self.set("config.hardware.device", kwargs.get("virtual_device", None))
         self.set("config.extraConfig", kwargs.get("extra_config", None))
+        self.device = kwargs.get("virtual_device")
 
     def reconfig(self, factory, val):
         """
@@ -224,9 +226,8 @@ class VirtualMachine(ManagedObject):
             controller = VirtualLsiLogicController()
             controller.key = controller_key
 
-            nic = VirtualPCNet32()
-
-            self.set("config.hardware.device", [disk, controller, nic])
+            self.set("config.hardware.device", [disk, controller,
+                                                  self.device[0]])
         except AttributeError:
             # Case of Reconfig of VM to set extra params
             self.set("config.extraConfig", val.extraConfig)
@@ -501,7 +502,7 @@ class FakeFactory(object):
 
     def create(self, obj_name):
         """Creates a namespace object."""
-        return DataObject()
+        return DataObject(obj_name)
 
 
 class FakeVim(object):
@@ -584,7 +585,8 @@ class FakeVim(object):
                   "vmPathName": config_spec.files.vmPathName,
                   "numCpu": config_spec.numCPUs,
                   "mem": config_spec.memoryMB,
-                  "extra_config": config_spec.extraConfig}
+                  "extra_config": config_spec.extraConfig,
+                  "virtual_device": config_spec.deviceChange}
         virtual_machine = VirtualMachine(**vm_dict)
         _create_object("VirtualMachine", virtual_machine)
         task_mdo = create_task(method, "success")

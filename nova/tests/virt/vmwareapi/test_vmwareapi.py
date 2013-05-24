@@ -179,6 +179,9 @@ class VMwareAPIVMTestCase(test.TestCase):
         self.assertEquals(vm.get("summary.config.memorySizeMB"),
                           self.type_data['memory_mb'])
 
+        self.assertEqual(
+            vm.get("config.hardware.device")[2].device.obj_name,
+            "ns0:VirtualE1000")
         # Check that the VM is running according to Nova
         self.assertEquals(vm_info['state'], power_state.RUNNING)
 
