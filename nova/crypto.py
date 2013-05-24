@@ -230,10 +230,10 @@ def convert_from_sshrsa_to_pkcs8(pubkey):
     #              +- INTEGER 65537
 
     # Build the sequence for the bit string
-    n_val = eval(
-        '0x' + ''.join(['%02X' % struct.unpack('B', x)[0] for x in parts[2]]))
-    e_val = eval(
-        '0x' + ''.join(['%02X' % struct.unpack('B', x)[0] for x in parts[1]]))
+    n_val = int(
+        ''.join(['%02X' % struct.unpack('B', x)[0] for x in parts[2]]), 16)
+    e_val = int(
+        ''.join(['%02X' % struct.unpack('B', x)[0] for x in parts[1]]), 16)
     pkinfo = _to_sequence(univ.Integer(n_val), univ.Integer(e_val))
 
     # Convert the sequence into a bit string
