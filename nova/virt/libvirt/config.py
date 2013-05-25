@@ -460,7 +460,9 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
         self.driver_cache = None
         self.source_path = None
         self.source_protocol = None
-        self.source_host = None
+        self.source_name = None
+        self.source_hosts = []
+        self.source_ports = []
         self.target_dev = None
         self.target_path = None
         self.target_bus = None
@@ -499,8 +501,16 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
         elif self.source_type == "mount":
             dev.append(etree.Element("source", dir=self.source_path))
         elif self.source_type == "network":
-            dev.append(etree.Element("source", protocol=self.source_protocol,
-                                      name=self.source_host))
+            source = etree.Element("source", protocol=self.source_protocol)
+            if self.source_name is not None:
+                source.set('name', self.source_name)
+            hosts_info = zip(self.source_hosts, self.source_ports)
+            for name, port in hosts_info:
+                host = etree.Element('host', name=name)
+                if port is not None:
+                    host.set('port', port)
+                source.append(host)
+            dev.append(source)
 
         if self.auth_secret_type is not None:
             auth = etree.Element("auth")

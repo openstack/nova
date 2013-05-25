@@ -434,7 +434,7 @@ class LibvirtConfigGuestDiskTest(LibvirtConfigBaseTest):
         obj = config.LibvirtConfigGuestDisk()
         obj.source_type = "network"
         obj.source_protocol = "iscsi"
-        obj.source_host = "foo.bar.com"
+        obj.source_name = "foo.bar.com"
         obj.driver_name = "qemu"
         obj.driver_format = "qcow2"
         obj.target_dev = "/dev/hda"
@@ -448,11 +448,56 @@ class LibvirtConfigGuestDiskTest(LibvirtConfigBaseTest):
               <target bus="ide" dev="/dev/hda"/>
             </disk>""")
 
+    def test_config_network_no_name(self):
+        obj = config.LibvirtConfigGuestDisk()
+        obj.source_type = 'network'
+        obj.source_protocol = 'nbd'
+        obj.source_hosts = ['foo.bar.com']
+        obj.source_ports = [None]
+        obj.driver_name = 'qemu'
+        obj.driver_format = 'raw'
+        obj.target_dev = '/dev/vda'
+        obj.target_bus = 'virtio'
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <disk type="network" device="disk">
+              <driver name="qemu" type="raw"/>
+              <source protocol="nbd">
+                <host name="foo.bar.com"/>
+              </source>
+              <target bus="virtio" dev="/dev/vda"/>
+            </disk>""")
+
+    def test_config_network_multihost(self):
+        obj = config.LibvirtConfigGuestDisk()
+        obj.source_type = 'network'
+        obj.source_protocol = 'rbd'
+        obj.source_name = 'pool/image'
+        obj.source_hosts = ['foo.bar.com', '::1', '1.2.3.4']
+        obj.source_ports = [None, '123', '456']
+        obj.driver_name = 'qemu'
+        obj.driver_format = 'raw'
+        obj.target_dev = '/dev/vda'
+        obj.target_bus = 'virtio'
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <disk type="network" device="disk">
+              <driver name="qemu" type="raw"/>
+              <source name="pool/image" protocol="rbd">
+                <host name="foo.bar.com"/>
+                <host name="::1" port="123"/>
+                <host name="1.2.3.4" port="456"/>
+              </source>
+              <target bus="virtio" dev="/dev/vda"/>
+            </disk>""")
+
     def test_config_network_auth(self):
         obj = config.LibvirtConfigGuestDisk()
         obj.source_type = "network"
         obj.source_protocol = "rbd"
-        obj.source_host = "pool/image"
+        obj.source_name = "pool/image"
         obj.driver_name = "qemu"
         obj.driver_format = "raw"
         obj.target_dev = "/dev/vda"
