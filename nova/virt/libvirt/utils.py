@@ -224,7 +224,11 @@ def create_lvm_image(vg, lv, size, sparse=False):
             raise RuntimeError(_('Insufficient Space on Volume Group %(vg)s.'
                                  ' Only %(free_space)db available,'
                                  ' but %(size)db required'
-                                 ' by volume %(lv)s.') % locals())
+                                 ' by volume %(lv)s.') %
+                               {'vg': vg,
+                                'free_space': free_space,
+                                'size': size,
+                                'lv': lv})
 
     if sparse:
         preallocated_space = 64 * 1024 * 1024
@@ -234,7 +238,11 @@ def create_lvm_image(vg, lv, size, sparse=False):
                           ' to hold sparse volume %(lv)s.'
                           ' Virtual volume size is %(size)db,'
                           ' but free space on volume group is'
-                          ' only %(free_space)db.') % locals())
+                          ' only %(free_space)db.'),
+                        {'vg': vg,
+                         'free_space': free_space,
+                         'size': size,
+                         'lv': lv})
 
         cmd = ('lvcreate', '-L', '%db' % preallocated_space,
                 '--virtualsize', '%db' % size, '-n', lv, vg)
