@@ -185,6 +185,17 @@ class VMwareAPIVMTestCase(test.TestCase):
         # Check that the VM is running according to vSphere API.
         self.assertEquals(vm.get("runtime.powerState"), 'poweredOn')
 
+        found_vm_uuid = False
+        found_iface_id = False
+        for c in vm.get("config.extraConfig"):
+            if (c.key == "nvp.vm-uuid" and c.value == self.instance['uuid']):
+                found_vm_uuid = True
+            if (c.key == "nvp.iface-id.0" and c.value == "vif-xxx-yyy-zzz"):
+                found_iface_id = True
+
+        self.assertTrue(found_vm_uuid)
+        self.assertTrue(found_iface_id)
+
     def _check_vm_info(self, info, pwr_state=power_state.RUNNING):
         """
         Check if the get_info returned values correspond to the instance
