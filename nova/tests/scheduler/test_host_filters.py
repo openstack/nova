@@ -44,7 +44,7 @@ class TestBogusFilter(object):
     pass
 
 
-class ExtraSpecsOpsTestCase(test.TestCase):
+class ExtraSpecsOpsTestCase(test.NoDBTestCase):
     def _do_extra_specs_ops_test(self, value, req, matches):
         assertion = self.assertTrue if matches else self.assertFalse
         assertion(extra_specs_ops.match(value, req))
@@ -230,8 +230,11 @@ class ExtraSpecsOpsTestCase(test.TestCase):
             matches=False)
 
 
-class HostFiltersTestCase(test.TestCase):
+class HostFiltersTestCase(test.NoDBTestCase):
     """Test case for host filters."""
+    # FIXME(sirp): These tests still require DB access until we can separate
+    # the testing of the DB API code from the host-filter code.
+    USES_DB = True
 
     def fake_oat_request(self, *args, **kwargs):
         """Stubs out the response from OAT service."""

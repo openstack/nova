@@ -18,7 +18,6 @@ Fakes For Scheduler tests.
 
 import mox
 
-from nova.compute import flavors
 from nova.compute import vm_states
 from nova import db
 from nova.scheduler import filter_scheduler
@@ -107,14 +106,14 @@ class FakeHostState(host_manager.HostState):
 
 
 class FakeInstance(object):
-    def __init__(self, context=None, params=None, type_name='m1.tiny'):
+    def __init__(self, context=None, params=None):
         """Create a test instance. Returns uuid."""
         self.context = context
 
-        i = self._create_fake_instance(params, type_name=type_name)
+        i = self._create_fake_instance(params=params)
         self.uuid = i['uuid']
 
-    def _create_fake_instance(self, params=None, type_name='m1.tiny'):
+    def _create_fake_instance(self, params=None):
         """Create a test instance."""
         if not params:
             params = {}
@@ -125,8 +124,7 @@ class FakeInstance(object):
         inst['reservation_id'] = 'r-fakeres'
         inst['user_id'] = 'fake'
         inst['project_id'] = 'fake'
-        type_id = flavors.get_instance_type_by_name(type_name)['id']
-        inst['instance_type_id'] = type_id
+        inst['instance_type_id'] = 2
         inst['ami_launch_index'] = 0
         inst.update(params)
         return db.instance_create(self.context, inst)

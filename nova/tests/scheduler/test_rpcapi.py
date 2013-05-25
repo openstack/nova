@@ -28,7 +28,7 @@ from nova import test
 CONF = cfg.CONF
 
 
-class SchedulerRpcAPITestCase(test.TestCase):
+class SchedulerRpcAPITestCase(test.NoDBTestCase):
     def _test_scheduler_api(self, method, rpc_method, **kwargs):
         ctxt = context.RequestContext('fake_user', 'fake_project')
         rpcapi = scheduler_rpcapi.SchedulerAPI()

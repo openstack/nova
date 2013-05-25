@@ -50,7 +50,7 @@ class FakeSchedulerOptions(scheduler_options.SchedulerOptions):
         return self._time_now
 
 
-class SchedulerOptionsTestCase(test.TestCase):
+class SchedulerOptionsTestCase(test.NoDBTestCase):
     def test_get_configuration_first_time_no_flag(self):
         last_checked = None
         now = datetime.datetime(2012, 1, 1, 1, 1, 1)
