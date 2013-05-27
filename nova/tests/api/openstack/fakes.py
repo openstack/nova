@@ -311,8 +311,9 @@ class HTTPRequest(os_wsgi.Request):
 
 
 class TestRouter(wsgi.Router):
-    def __init__(self, controller):
-        mapper = routes.Mapper()
+    def __init__(self, controller, mapper=None):
+        if not mapper:
+            mapper = routes.Mapper()
         mapper.resource("test", "tests",
                         controller=os_wsgi.Resource(controller))
         super(TestRouter, self).__init__(mapper)

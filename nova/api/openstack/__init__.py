@@ -117,6 +117,18 @@ class ProjectMapper(APIMapper):
                                      **kwargs)
 
 
+class PlainMapper(APIMapper):
+    def resource(self, member_name, collection_name, **kwargs):
+        if 'parent_resource' in kwargs:
+            parent_resource = kwargs['parent_resource']
+            p_collection = parent_resource['collection_name']
+            p_member = parent_resource['member_name']
+            kwargs['path_prefix'] = '%s/:%s_id' % (p_collection, p_member)
+        routes.Mapper.resource(self, member_name,
+                                     collection_name,
+                                     **kwargs)
+
+
 class APIRouter(base_wsgi.Router):
     """
     Routes requests on the OpenStack API to the appropriate controller
@@ -222,7 +234,7 @@ class APIRouterV3(base_wsgi.Router):
             check_func=_check_load_extension,
             invoke_on_load=True)
 
-        mapper = ProjectMapper()
+        mapper = PlainMapper()
         self.resources = {}
 
         # NOTE(cyeoh) Core API support is rewritten as extensions
