@@ -19,7 +19,6 @@
 
 """Generic Node base class for all workers that run on hosts."""
 
-import inspect
 import os
 import random
 import sys
@@ -238,7 +237,7 @@ class Service(service.Service):
         if not host:
             host = CONF.host
         if not binary:
-            binary = os.path.basename(inspect.stack()[-1][1])
+            binary = os.path.basename(sys.argv[0])
         if not topic:
             topic = binary.rpartition('nova-')[2]
         if not manager:
