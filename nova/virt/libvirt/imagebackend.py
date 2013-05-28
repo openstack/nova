@@ -175,13 +175,13 @@ class Image(object):
         return can_fallocate
 
     def snapshot_create(self):
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def snapshot_extract(self, target, out_format):
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def snapshot_delete(self):
-        raise NotImplementedError
+        raise NotImplementedError()
 
 
 class Raw(Image):

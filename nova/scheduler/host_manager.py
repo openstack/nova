@@ -66,19 +66,19 @@ class ReadOnlyDict(UserDict.IterableUserDict):
         self.update(source)
 
     def __setitem__(self, key, item):
-        raise TypeError
+        raise TypeError()
 
     def __delitem__(self, key):
-        raise TypeError
+        raise TypeError()
 
     def clear(self):
-        raise TypeError
+        raise TypeError()
 
     def pop(self, key, *args):
-        raise TypeError
+        raise TypeError()
 
     def popitem(self):
-        raise TypeError
+        raise TypeError()
 
     def update(self, source=None):
         if source is None:
@@ -88,7 +88,7 @@ class ReadOnlyDict(UserDict.IterableUserDict):
         elif isinstance(source, type({})):
             self.data = source
         else:
-            raise TypeError
+            raise TypeError()
 
 
 class HostState(object):

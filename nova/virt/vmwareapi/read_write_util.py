@@ -97,15 +97,15 @@ class VMwareHTTPFile(object):
 
     def write(self, data):
         """Write data to the file."""
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def read(self, chunk_size):
         """Read a chunk of data."""
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def get_size(self):
         """Get size of the file to be read."""
-        raise NotImplementedError
+        raise NotImplementedError()
 
 
 class VMwareHTTPWriteFile(VMwareHTTPFile):
