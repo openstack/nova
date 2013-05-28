@@ -49,6 +49,7 @@
     "compute_extension:extended_ips_mac": "",
     "compute_extension:extended_vif_net": "",
     "compute_extension:fixed_ips": "rule:admin_api",
+    "compute_extension:v3:os-fixed-ips": "rule:admin_api",
     "compute_extension:flavor_access": "",
     "compute_extension:flavor_disabled": "",
     "compute_extension:flavor_rxtx": "",

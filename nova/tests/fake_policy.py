@@ -127,6 +127,7 @@ policy_data = """
     "compute_extension:extended_ips_mac": "",
     "compute_extension:extended_vif_net": "",
     "compute_extension:fixed_ips": "",
+    "compute_extension:v3:os-fixed-ips": "",
     "compute_extension:flavor_access": "",
     "compute_extension:flavor_disabled": "",
     "compute_extension:flavor_rxtx": "",
