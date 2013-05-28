@@ -76,6 +76,8 @@ class FlavorManageController(wsgi.Controller):
         except (exception.InstanceTypeExists,
                 exception.InstanceTypeIdExists) as err:
             raise webob.exc.HTTPConflict(explanation=err.format_message())
+        except exception.InvalidInput as exc:
+            raise webob.exc.HTTPBadRequest(explanation=exc.format_message())
 
         return self._view_builder.show(req, flavor)
 

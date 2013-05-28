@@ -218,3 +218,18 @@ class FlavorManageTest(test.TestCase):
         req.body = jsonutils.dumps(expected)
         res = req.get_response(self.app)
         self.assertEqual(res.status_int, 409)
+
+    def test_invalid_memory_mb(self):
+        """Check negative and decimal number can't be accepted."""
+
+        self.stubs.UnsetAll()
+        self.assertRaises(exception.InvalidInput, flavors.create, "abc",
+                          -512, 2, 1, 1, 1234, 512, 1, True)
+        self.assertRaises(exception.InvalidInput, flavors.create, "abcd",
+                          512.2, 2, 1, 1, 1234, 512, 1, True)
+        self.assertRaises(exception.InvalidInput, flavors.create, "abcde",
+                          None, 2, 1, 1, 1234, 512, 1, True)
+        self.assertRaises(exception.InvalidInput, flavors.create, "abcdef",
+                          512, 2, None, 1, 1234, 512, 1, True)
+        self.assertRaises(exception.InvalidInput, flavors.create, "abcdef",
+                          "test_memory_mb", 2, None, 1, 1234, 512, 1, True)

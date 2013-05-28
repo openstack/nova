@@ -95,20 +95,20 @@ def create(name, memory, vcpus, root_gb, ephemeral_gb=0, flavorid=None,
     # Some attributes are positive ( > 0) integers
     for option in ['memory_mb', 'vcpus']:
         try:
+            assert int(str(kwargs[option])) > 0
             kwargs[option] = int(kwargs[option])
-            assert kwargs[option] > 0
-        except (ValueError, AssertionError):
-            msg = _("'%s' argument must be greater than 0") % option
+        except (ValueError, AssertionError, TypeError):
+            msg = _("'%s' argument must be a positive integer") % option
             raise exception.InvalidInput(reason=msg)
 
     # Some attributes are non-negative ( >= 0) integers
     for option in ['root_gb', 'ephemeral_gb', 'swap']:
         try:
+            assert int(str(kwargs[option])) >= 0
             kwargs[option] = int(kwargs[option])
-            assert kwargs[option] >= 0
-        except (ValueError, AssertionError):
-            msg = _("'%s' argument must be greater than or equal"
-                    " to 0") % option
+        except (ValueError, AssertionError, TypeError):
+            msg = _("'%s' argument must be an integer greater than or"
+                    " equal to 0") % option
             raise exception.InvalidInput(reason=msg)
 
     # rxtx_factor should be a positive float
