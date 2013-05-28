@@ -19,7 +19,10 @@ from lxml import etree
 import webob
 
 from nova.api.openstack.compute.contrib import quotas
+from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova import context as context_maker
+from nova import quota
 from nova import test
 from nova.tests.api.openstack import fakes
 
@@ -37,7 +40,8 @@ class QuotaSetsTest(test.TestCase):
 
     def setUp(self):
         super(QuotaSetsTest, self).setUp()
-        self.controller = quotas.QuotaSetsController()
+        self.ext_mgr = self.mox.CreateMock(extensions.ExtensionManager)
+        self.controller = quotas.QuotaSetsController(self.ext_mgr)
 
     def test_format_quota_set(self):
         raw_quota_set = {
@@ -200,6 +204,33 @@ class QuotaSetsTest(test.TestCase):
                                       use_admin_context=True)
         res_dict = self.controller.update(req, 'update_me', body)
         self.assertEqual(res_dict, expected_resp)
+
+    def test_delete_quotas_when_extension_not_loaded(self):
+        self.ext_mgr.is_loaded('os-extended-quotas').AndReturn(False)
+        self.mox.ReplayAll()
+        req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/1234')
+        self.assertRaises(webob.exc.HTTPNotFound, self.controller.delete,
+                          req, 1234)
+
+    def test_quotas_delete_as_unauthorized_user(self):
+        self.ext_mgr.is_loaded('os-extended-quotas').AndReturn(True)
+        self.mox.ReplayAll()
+        req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/1234')
+        self.assertRaises(webob.exc.HTTPForbidden, self.controller.delete,
+                          req, 1234)
+
+    def test_quotas_delete_as_admin(self):
+        context = context_maker.get_admin_context()
+        self.req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/1234')
+        self.req.environ['nova.context'] = context
+        self.ext_mgr.is_loaded('os-extended-quotas').AndReturn(True)
+        self.mox.StubOutWithMock(quota.QUOTAS,
+                                 "destroy_all_by_project")
+        quota.QUOTAS.destroy_all_by_project(context, 1234)
+        self.mox.ReplayAll()
+        res = self.controller.delete(self.req, 1234)
+        self.mox.VerifyAll()
+        self.assertEqual(res.status_int, 202)
 
 
 class QuotaXMLSerializerTest(test.TestCase):

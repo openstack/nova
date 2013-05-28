@@ -2277,6 +2277,22 @@ class QuotasSampleXmlTests(QuotasSampleJsonTests):
     ctype = "xml"
 
 
+class ExtendedQuotasSampleJsonTests(ApiSampleTestBase):
+    extends_name = "nova.api.openstack.compute.contrib.quotas.Quotas"
+    extension_name = ("nova.api.openstack.compute.contrib"
+                      ".extended_quotas.Extended_quotas")
+
+    def test_delete_quotas(self):
+        # Get api sample to delete quota.
+        response = self._do_delete('os-quota-sets/fake_tenant')
+        self.assertEqual(response.status, 202)
+        self.assertEqual(response.read(), '')
+
+
+class ExtendedQuotasSampleXmlTests(ExtendedQuotasSampleJsonTests):
+    ctype = "xml"
+
+
 class ExtendedIpsSampleJsonTests(ServersSampleBase):
     extension_name = ("nova.api.openstack.compute.contrib"
                       ".extended_ips.Extended_ips")

@@ -417,6 +417,14 @@
             "updated": "%(timestamp)s"
         },
         {
+            "alias": "os-extended-quotas",
+            "description": "%(text)s",
+            "links": [],
+            "name": "ExtendedQuotas",
+            "namespace": "http://docs.openstack.org/compute/ext/quota-delete/api/v1.1",
+            "updated": "%(timestamp)s"
+        },
+        {
             "alias": "os-quota-sets",
             "description": "%(text)s",
             "links": [],

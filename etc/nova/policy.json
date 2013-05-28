@@ -80,6 +80,7 @@
     "compute_extension:networks_associate": "rule:admin_api",
     "compute_extension:quotas:show": "",
     "compute_extension:quotas:update": "rule:admin_api",
+    "compute_extension:quotas:delete": "rule:admin_api",
     "compute_extension:quota_classes": "",
     "compute_extension:rescue": "",
     "compute_extension:security_group_default_rules": "rule:admin_api",
