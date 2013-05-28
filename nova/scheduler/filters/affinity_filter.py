@@ -87,7 +87,7 @@ class SimpleCIDRAffinityFilter(AffinityFilter):
 
 class GroupAntiAffinityFilter(AffinityFilter):
     """Schedule the instance on a different host from a set of group
-    instances.
+    hosts.
     """
 
     def host_passes(self, host_state, filter_properties):
