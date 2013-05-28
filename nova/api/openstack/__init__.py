@@ -270,7 +270,7 @@ class APIRouterV3(base_wsgi.Router):
         """
 
         handler = ext.obj
-        LOG.debug("Running _register_resources on %s", ext.obj)
+        LOG.debug(_("Running _register_resources on %s"), ext.obj)
 
         for resource in handler.get_resources():
             LOG.debug(_('Extended resource: %s'), resource.collection)
@@ -312,7 +312,7 @@ class APIRouterV3(base_wsgi.Router):
         """
 
         handler = ext.obj
-        LOG.debug("Running _register_controllers on %s", ext.obj)
+        LOG.debug(_("Running _register_controllers on %s"), ext.obj)
 
         for extension in handler.get_controller_extensions():
             ext_name = extension.extension.name
