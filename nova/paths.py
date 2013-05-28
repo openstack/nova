@@ -18,6 +18,7 @@
 #    under the License.
 
 import os
+import sys
 
 from oslo.config import cfg
 
@@ -27,7 +28,7 @@ path_opts = [
                                                     '../')),
                help='Directory where the nova python module is installed'),
     cfg.StrOpt('bindir',
-               default='$pybasedir/bin',
+               default=os.path.join(sys.prefix, 'local', 'bin'),
                help='Directory where nova binaries are installed'),
     cfg.StrOpt('state_path',
                default='$pybasedir',
