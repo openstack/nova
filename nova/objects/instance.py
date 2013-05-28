@@ -239,3 +239,57 @@ class Instance(base.NovaObject):
                                               uuid=self.uuid,
                                               expected_attrs=extra)
         self[attrname] = instance[attrname]
+
+
+def _make_instance_list(context, inst_list, db_inst_list, expected_attrs):
+    inst_list.objects = []
+    for db_inst in db_inst_list:
+        inst_obj = Instance._from_db_object(Instance(), db_inst,
+                                            expected_attrs=expected_attrs)
+        inst_obj._context = context
+        inst_list.objects.append(inst_obj)
+    inst_list.obj_reset_changes()
+    return inst_list
+
+
+class InstanceList(base.ObjectListBase, base.NovaObject):
+    @base.remotable_classmethod
+    def get_by_filters(cls, context, filters,
+                       sort_key=None, sort_dir=None, limit=None, marker=None,
+                       expected_attrs=None):
+        db_inst_list = db.instance_get_all_by_filters(
+            context, filters, sort_key, sort_dir, limit, marker,
+            columns_to_join=expected_attrs)
+
+        return _make_instance_list(context, cls(), db_inst_list,
+                                   expected_attrs)
+
+    @base.remotable_classmethod
+    def get_by_host(cls, context, host, expected_attrs=None):
+        db_inst_list = db.instance_get_all_by_host(
+            context, host, columns_to_join=expected_attrs)
+        return _make_instance_list(context, cls(), db_inst_list,
+                                   expected_attrs)
+
+    @base.remotable_classmethod
+    def get_by_host_and_node(cls, context, host, node, expected_attrs=None):
+        db_inst_list = db.instance_get_all_by_host_and_node(
+            context, host, node)
+        return _make_instance_list(context, cls(), db_inst_list,
+                                   expected_attrs)
+
+    @base.remotable_classmethod
+    def get_by_host_and_not_type(cls, context, host, type_id=None,
+                                 expected_attrs=None):
+        db_inst_list = db.instance_get_all_by_host_and_not_type(
+            context, host, type_id=type_id)
+        return _make_instance_list(context, cls(), db_inst_list,
+                                   expected_attrs)
+
+    @base.remotable_classmethod
+    def get_hung_in_rebooting(cls, context, reboot_window,
+                              expected_attrs=None):
+        db_inst_list = db.instance_get_all_hung_in_rebooting(context,
+                                                             reboot_window)
+        return _make_instance_list(context, cls(), db_inst_list,
+                                   expected_attrs)
