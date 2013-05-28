@@ -920,8 +920,10 @@ def temporary_chown(path, owner_uid=None):
 
 @contextlib.contextmanager
 def tempdir(**kwargs):
-    tempfile.tempdir = CONF.tempdir
-    tmpdir = tempfile.mkdtemp(**kwargs)
+    argdict = kwargs.copy()
+    if 'dir' not in argdict:
+        argdict['dir'] = CONF.tempdir
+    tmpdir = tempfile.mkdtemp(**argdict)
     try:
         yield tmpdir
     finally:
