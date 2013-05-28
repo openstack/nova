@@ -2654,6 +2654,10 @@
 # full class name for the Manager for conductor (string value)
 #manager=nova.conductor.manager.ConductorManager
 
+# Number of workers for OpenStack Conductor service (integer
+# value)
+#workers=<None>
+
 
 [database]
 
