@@ -19,6 +19,8 @@ policy_data = """
 {
     "admin_api": "role:admin",
 
+    "cells_scheduler_filter:TargetCellFilter": "is_admin:True",
+
     "context_is_admin": "role:admin or role:administrator",
     "compute:create": "",
     "compute:create:attach_network": "",

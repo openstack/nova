@@ -123,3 +123,36 @@ class FiltersTestCase(test.TestCase):
                                                      filter_objs_initial,
                                                      filter_properties)
         self.assertEqual(filter_objs_last, result)
+
+    def test_get_filtered_objects_none_response(self):
+        filter_objs_initial = ['initial', 'filter1', 'objects1']
+        filter_properties = 'fake_filter_properties'
+
+        def _fake_base_loader_init(*args, **kwargs):
+            pass
+
+        self.stubs.Set(loadables.BaseLoader, '__init__',
+                       _fake_base_loader_init)
+
+        filt1_mock = self.mox.CreateMock(Filter1)
+        filt2_mock = self.mox.CreateMock(Filter2)
+
+        self.mox.StubOutWithMock(sys.modules[__name__], 'Filter1',
+                                 use_mock_anything=True)
+        self.mox.StubOutWithMock(filt1_mock, 'filter_all')
+        # Shouldn't be called.
+        self.mox.StubOutWithMock(sys.modules[__name__], 'Filter2',
+                                 use_mock_anything=True)
+        self.mox.StubOutWithMock(filt2_mock, 'filter_all')
+
+        Filter1().AndReturn(filt1_mock)
+        filt1_mock.filter_all(filter_objs_initial,
+                              filter_properties).AndReturn(None)
+        self.mox.ReplayAll()
+
+        filter_handler = filters.BaseFilterHandler(filters.BaseFilter)
+        filter_classes = [Filter1, Filter2]
+        result = filter_handler.get_filtered_objects(filter_classes,
+                                                     filter_objs_initial,
+                                                     filter_properties)
+        self.assertEqual(None, result)
