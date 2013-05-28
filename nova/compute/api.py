@@ -108,6 +108,8 @@ MAX_USERDATA_SIZE = 65535
 QUOTAS = quota.QUOTAS
 RO_SECURITY_GROUPS = ['default']
 
+SM_IMAGE_PROP_PREFIX = "image_"
+
 
 def check_instance_state(vm_state=None, task_state=(None,)):
     """Decorator to check VM and/or task state before entry to API functions.
@@ -928,9 +930,10 @@ class API(base.Base):
         # Store image properties so we can use them later
         # (for notifications, etc).  Only store what we can.
         instance.setdefault('system_metadata', {})
+        prefix_format = SM_IMAGE_PROP_PREFIX + '%s'
         for key, value in image_properties.iteritems():
             new_value = str(value)[:255]
-            instance['system_metadata']['image_%s' % key] = new_value
+            instance['system_metadata'][prefix_format % key] = new_value
 
         # Keep a record of the original base image that this
         # image's instance is derived from:
@@ -1626,11 +1629,10 @@ class API(base.Base):
         properties.update(extra_properties or {})
 
         # Now inherit image properties from the base image
-        prefix = 'image_'
         for key, value in system_meta.items():
             # Trim off the image_ prefix
-            if key.startswith(prefix):
-                key = key[len(prefix):]
+            if key.startswith(SM_IMAGE_PROP_PREFIX):
+                key = key[len(SM_IMAGE_PROP_PREFIX):]
 
             # Skip properties that are non-inheritable
             if key in CONF.non_inheritable_image_properties:
@@ -1829,12 +1831,12 @@ class API(base.Base):
             orig_sys_metadata = dict(sys_metadata)
             # Remove the old keys
             for key in sys_metadata.keys():
-                if key.startswith('image_'):
+                if key.startswith(SM_IMAGE_PROP_PREFIX):
                     del sys_metadata[key]
             # Add the new ones
             for key, value in image.get('properties', {}).iteritems():
                 new_value = str(value)[:255]
-                sys_metadata['image_%s' % key] = new_value
+                sys_metadata[(SM_IMAGE_PROP_PREFIX + '%s') % key] = new_value
             self.db.instance_system_metadata_update(context,
                     instance['uuid'], sys_metadata, True)
             return orig_sys_metadata
