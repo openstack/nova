@@ -31,8 +31,8 @@ class InstanceTypeTestCase(test.TestCase):
     def _generate_name(self):
         """return a name not in the DB."""
         nonexistent_flavor = str(int(time.time()))
-        flavors = flavors.get_all_types()
-        while nonexistent_flavor in flavors:
+        all_flavors = flavors.get_all_types()
+        while nonexistent_flavor in all_flavors:
             nonexistent_flavor += "z"
         else:
             return nonexistent_flavor
