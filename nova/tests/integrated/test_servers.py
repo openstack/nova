@@ -126,7 +126,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
 
         # It should also be in the all-servers list
         servers = self.api.get_servers()
-        server_ids = [server['id'] for server in servers]
+        server_ids = [s['id'] for s in servers]
         self.assertTrue(created_server_id in server_ids)
 
         found_server = self._wait_for_state_change(found_server, 'BUILD')

@@ -2854,18 +2854,18 @@ def quota_reserve(context, resources, quotas, deltas, expire,
                     #            a best-effort mechanism.
 
         # Check for deltas that would go negative
-        unders = [resource for resource, delta in deltas.items()
+        unders = [res for res, delta in deltas.items()
                   if delta < 0 and
-                  delta + usages[resource].in_use < 0]
+                  delta + usages[res].in_use < 0]
 
         # Now, let's check the quotas
         # NOTE(Vek): We're only concerned about positive increments.
         #            If a project has gone over quota, we want them to
         #            be able to reduce their usage without any
         #            problems.
-        overs = [resource for resource, delta in deltas.items()
-                 if quotas[resource] >= 0 and delta >= 0 and
-                 quotas[resource] < delta + usages[resource].total]
+        overs = [res for res, delta in deltas.items()
+                 if quotas[res] >= 0 and delta >= 0 and
+                 quotas[res] < delta + usages[res].total]
 
         # NOTE(Vek): The quota check needs to be in the transaction,
         #            but the transaction doesn't fail just because
@@ -2877,12 +2877,12 @@ def quota_reserve(context, resources, quotas, deltas, expire,
         # Create the reservations
         if not overs:
             reservations = []
-            for resource, delta in deltas.items():
+            for res, delta in deltas.items():
                 reservation = reservation_create(elevated,
                                                  str(uuid.uuid4()),
-                                                 usages[resource],
+                                                 usages[res],
                                                  project_id,
-                                                 resource, delta, expire,
+                                                 res, delta, expire,
                                                  session=session)
                 reservations.append(reservation.uuid)
 
@@ -2899,7 +2899,7 @@ def quota_reserve(context, resources, quotas, deltas, expire,
                 #            To prevent this, we only update the
                 #            reserved value if the delta is positive.
                 if delta > 0:
-                    usages[resource].reserved += delta
+                    usages[res].reserved += delta
 
         # Apply updates to the usages table
         for usage_ref in usages.values():
