@@ -71,6 +71,7 @@ class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         2.8 - Deprecate prep_resize() -- JUST KIDDING.  It is still used
               by the compute manager for retries.
         2.9 - Added the leagacy_bdm_in_spec parameter to run_instances
+        2.10 - Deprecated live_migration() call, moved to conductor
     '''
 
     #
@@ -121,16 +122,6 @@ class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 image=image_p, request_spec=request_spec,
                 filter_properties=filter_properties,
                 reservations=reservations_p))
-
-    def live_migration(self, ctxt, block_migration, disk_over_commit,
-            instance, dest):
-        # NOTE(comstud): Call vs cast so we can get exceptions back, otherwise
-        # this call in the scheduler driver doesn't return anything.
-        instance_p = jsonutils.to_primitive(instance)
-        return self.call(ctxt, self.make_msg('live_migration',
-                block_migration=block_migration,
-                disk_over_commit=disk_over_commit, instance=instance_p,
-                dest=dest))
 
     def update_service_capabilities(self, ctxt, service_name, host,
             capabilities):

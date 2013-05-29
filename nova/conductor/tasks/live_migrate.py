@@ -22,28 +22,34 @@ from nova import exception
 from nova.image import glance
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
+from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import servicegroup
 
 LOG = logging.getLogger(__name__)
 
+migrate_opt = cfg.IntOpt('migrate_max_retries',
+        default=-1,
+        help='Number of times to retry live-migration before failing. '
+             'If == -1, try until out of hosts. '
+             'If == 0, only try once, no retries.')
+
 CONF = cfg.CONF
-CONF.import_opt('scheduler_max_attempts', 'nova.scheduler.driver')
+CONF.register_opt(migrate_opt)
 
 
 class LiveMigrationTask(object):
     def __init__(self, context, instance, destination,
-                 block_migration, disk_over_commit,
-                 select_hosts_callback):
+                 block_migration, disk_over_commit):
         self.context = context
         self.instance = instance
         self.destination = destination
         self.block_migration = block_migration
         self.disk_over_commit = disk_over_commit
-        self.select_hosts_callback = select_hosts_callback
         self.source = instance['host']
         self.migrate_data = None
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.servicegroup_api = servicegroup.API()
+        self.scheduler_rpcapi = scheduler_rpcapi.SchedulerAPI()
         self.image_service = glance.get_default_image_service()
 
     def execute(self):
@@ -66,6 +72,10 @@ class LiveMigrationTask(object):
 
     def rollback(self):
         #TODO(johngarbutt) need to implement the clean up operation
+        # but this will make sense only once we pull in the compute
+        # calls, since this class currently makes no state changes,
+        # except to call the compute method, that has no matching
+        # rollback call right now.
         raise NotImplementedError()
 
     def _check_instance_is_running(self):
@@ -133,7 +143,7 @@ class LiveMigrationTask(object):
 
     def _find_destination(self):
         #TODO(johngarbutt) this retry loop should be shared
-        ignore_hosts = [self.source]
+        attempted_hosts = [self.source]
         image = None
         if self.instance['image_ref']:
             image = self.image_service.show(self.context,
@@ -142,36 +152,49 @@ class LiveMigrationTask(object):
 
         host = None
         while host is None:
-            self._check_not_over_max_attempts(ignore_hosts)
+            self._check_not_over_max_retries(attempted_hosts)
 
             host = self._get_candidate_destination(image,
-                    instance_type, ignore_hosts)
+                    instance_type, attempted_hosts)
             try:
                 self._check_compatible_with_source_hypervisor(host)
                 self._call_livem_checks_on_host(host)
             except exception.Invalid as e:
                 LOG.debug(_("Skipping host: %(host)s because: %(e)s") %
                     {"host": host, "e": e})
-                ignore_hosts.append(host)
+                attempted_hosts.append(host)
                 host = None
         return host
 
-    def _get_candidate_destination(self, image, instance_type, ignore_hosts):
+    def _get_candidate_destination(self, image, instance_type,
+                                   attempted_hosts):
         request_spec = {'instance_properties': self.instance,
                         'instance_type': instance_type,
                         'instance_uuids': [self.instance['uuid']]}
         if image:
             request_spec['image'] = image
-        filter_properties = {'ignore_hosts': ignore_hosts}
-        #TODO(johngarbutt) this should be an rpc call to scheduler
-        return self.select_hosts_callback(self.context, request_spec,
-                                          filter_properties)[0]
+        filter_properties = {'ignore_hosts': attempted_hosts}
+        return self.scheduler_rpcapi.select_hosts(self.context,
+                        request_spec, filter_properties)[0]
 
-    def _check_not_over_max_attempts(self, ignore_hosts):
-        attempts = len(ignore_hosts)
-        if attempts > CONF.scheduler_max_attempts:
-            msg = (_('Exceeded max scheduling attempts %(max_attempts)d for '
+    def _check_not_over_max_retries(self, attempted_hosts):
+        if CONF.migrate_max_retries == -1:
+            return
+
+        retries = len(attempted_hosts) - 1
+        if retries > CONF.migrate_max_retries:
+            msg = (_('Exceeded max scheduling retries %(max_retries)d for '
                      'instance %(instance_uuid)s during live migration')
-                   % {'max_attempts': attempts,
+                   % {'max_retries': retries,
                       'instance_uuid': self.instance['uuid']})
             raise exception.NoValidHost(reason=msg)
+
+
+def execute(context, instance, destination,
+            block_migration, disk_over_commit):
+    task = LiveMigrationTask(context, instance,
+                             destination,
+                             block_migration,
+                             disk_over_commit)
+    #TODO(johngarbutt) create a superclass that contains a safe_execute call
+    return task.execute()

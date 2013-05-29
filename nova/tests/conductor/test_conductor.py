@@ -25,6 +25,7 @@ from nova import conductor
 from nova.conductor import api as conductor_api
 from nova.conductor import manager as conductor_manager
 from nova.conductor import rpcapi as conductor_rpcapi
+from nova.conductor.tasks import live_migrate
 from nova import context
 from nova import db
 from nova.db.sqlalchemy import models
@@ -1219,12 +1220,18 @@ class _BaseTaskTestCase(object):
         self.context = FakeContext(self.user_id, self.project_id)
         fake_instance_actions.stub_out_action_events(self.stubs)
 
+    def stub_out_client_exceptions(self):
+        def passthru(exceptions, func, *args, **kwargs):
+            return func(*args, **kwargs)
+
+        self.stubs.Set(rpc_common, 'catch_client_exception', passthru)
+
     def test_live_migrate(self):
-        self.mox.StubOutWithMock(self.conductor_manager.scheduler_rpcapi,
-                                 'live_migration')
-        self.conductor_manager.scheduler_rpcapi.live_migration(self.context,
-            'block_migration', 'disk_over_commit', 'instance', 'destination')
+        self.mox.StubOutWithMock(live_migrate, 'execute')
+        live_migrate.execute(self.context, 'instance', 'destination',
+                'block_migration', 'disk_over_commit')
         self.mox.ReplayAll()
+
         self.conductor.migrate_server(self.context, 'instance',
             {'host': 'destination'}, True, False, None,
              'block_migration', 'disk_over_commit')
@@ -1266,6 +1273,64 @@ class _BaseTaskTestCase(object):
         self.conductor.migrate_server(
             self.context, inst, scheduler_hint,
             False, False, 'flavor', None, None, [])
+
+    def test_migrate_server_fails_with_rebuild(self):
+        self.assertRaises(NotImplementedError, self.conductor.migrate_server,
+            self.context, None, None, True, True, None, None, None)
+
+    def _build_request_spec(self, instance):
+        return {
+            'instance_properties': {
+                'uuid': instance['uuid'], },
+        }
+
+    def test_migrate_server_deals_with_expected_exceptions(self):
+        instance = {"uuid": "uuid",
+                    "vm_state": vm_states.ACTIVE}
+        self.mox.StubOutWithMock(live_migrate, 'execute')
+        self.mox.StubOutWithMock(scheduler_utils,
+                'set_vm_state_and_notify')
+
+        ex = exc.DestinationHypervisorTooOld()
+        live_migrate.execute(self.context, instance, 'destination',
+                'block_migration', 'disk_over_commit').AndRaise(ex)
+
+        scheduler_utils.set_vm_state_and_notify(self.context,
+                'compute_task', 'migrate_server',
+                {'vm_state': vm_states.ACTIVE,
+                 'task_state': None,
+                 'expected_task_state': task_states.MIGRATING},
+                ex, self._build_request_spec(instance),
+                self.conductor_manager.db)
+        self.mox.ReplayAll()
+
+        self.stub_out_client_exceptions()
+        self.assertRaises(exc.DestinationHypervisorTooOld,
+            self.conductor.migrate_server, self.context, instance,
+            {'host': 'destination'}, True, False, None, 'block_migration',
+            'disk_over_commit')
+
+    def test_migrate_server_deals_with_unexpected_exceptions(self):
+        instance = {"uuid": "uuid"}
+        self.mox.StubOutWithMock(live_migrate, 'execute')
+        self.mox.StubOutWithMock(scheduler_utils,
+                'set_vm_state_and_notify')
+
+        ex = IOError()
+        live_migrate.execute(self.context, instance, 'destination',
+                'block_migration', 'disk_over_commit').AndRaise(ex)
+        scheduler_utils.set_vm_state_and_notify(self.context,
+                'compute_task', 'migrate_server',
+                {'vm_state': vm_states.ERROR},
+                ex, self._build_request_spec(instance),
+                self.conductor_manager.db)
+        self.mox.ReplayAll()
+
+        self.stub_out_client_exceptions()
+        self.assertRaises(IOError,
+            self.conductor.migrate_server, self.context, instance,
+            {'host': 'destination'}, True, False, None, 'block_migration',
+            'disk_over_commit')
 
     def test_build_instances(self):
         instance_type = flavors.get_default_flavor()

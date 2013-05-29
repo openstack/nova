@@ -132,8 +132,7 @@ class SchedulerManager(manager.Manager):
     def _schedule_live_migration(self, context, instance, dest,
             block_migration, disk_over_commit):
         task = live_migrate.LiveMigrationTask(context, instance,
-                    dest, block_migration, disk_over_commit,
-                    self.driver.select_hosts)
+                    dest, block_migration, disk_over_commit)
         return task.execute()
 
     def run_instance(self, context, request_spec, admin_password,

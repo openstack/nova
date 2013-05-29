@@ -38,6 +38,7 @@ from nova.cloudpipe import pipelib
 from nova.compute import api as compute_api
 from nova.compute import cells_api as cells_api
 from nova.compute import manager as compute_manager
+from nova.conductor import manager as conductor_manager
 from nova import context
 from nova import db
 from nova.db.sqlalchemy import models
@@ -48,7 +49,6 @@ from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 import nova.quota
-from nova.scheduler import manager as scheduler_manager
 from nova.servicegroup import api as service_group_api
 from nova import test
 from nova.tests.api.openstack.compute.contrib import test_coverage_ext
@@ -1971,13 +1971,15 @@ class AdminActionsSamplesJsonTest(ServersSampleBase):
 
     def test_post_live_migrate_server(self):
         # Get api samples to server live migrate request.
-        def fake_live_migration(self, context, instance, dest,
-                                block_migration, disk_over_commit):
-            return
+        def fake_live_migrate(_self, context, instance, scheduler_hint,
+                              block_migration, disk_over_commit):
+            self.assertEqual(self.uuid, instance["uuid"])
+            host = scheduler_hint["host"]
+            self.assertEqual(self.compute.host, host)
 
-        self.stubs.Set(scheduler_manager.SchedulerManager,
-                       'live_migration',
-                       fake_live_migration)
+        self.stubs.Set(conductor_manager.ComputeTaskManager,
+                       '_live_migrate',
+                       fake_live_migrate)
 
         def fake_get_compute(context, host):
             service = dict(host=host,

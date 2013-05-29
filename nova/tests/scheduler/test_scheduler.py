@@ -271,7 +271,7 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
         instance = {'host': 'h'}
         self.mox.StubOutClassWithMocks(live_migrate, "LiveMigrationTask")
         task = live_migrate.LiveMigrationTask(self.context, instance,
-                    "dest", "bm", "doc", self.manager.driver.select_hosts)
+                    "dest", "bm", "doc")
         task.execute()
 
         self.mox.ReplayAll()
