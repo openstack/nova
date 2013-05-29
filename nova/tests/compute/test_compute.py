@@ -6513,6 +6513,40 @@ class ComputeAPITestCase(BaseTestCase):
         flavors.destroy(name)
         self.compute.terminate_instance(self.context, instance=instance)
 
+    def test_resize_by_admin_for_tenant_with_sufficient_quota(self):
+        user_project_id = 'user'
+        instance = self._create_fake_instance({'project_id': user_project_id})
+        self.context.is_admin = True
+        db.quota_create(self.context, self.context.project_id, 'ram', 0)
+        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
+        instance = jsonutils.to_primitive(instance)
+        self.compute.run_instance(self.context, instance=instance)
+        name = 'test_resize_with_big_mem'
+        flavor_id = 11
+        flavors.create(name, 1024, 1, 0, ephemeral_gb=0, flavorid=flavor_id,
+                       swap=0, rxtx_factor=1.0, is_public=True)
+        deltas = {'ram': 512}
+        reservations = ['reservation_id']
+
+        self.mox.StubOutWithMock(self.compute_api, '_reserve_quota_delta')
+
+        self.compute_api._reserve_quota_delta(self.context,
+                                              deltas,
+                                              project_id=user_project_id). \
+            AndReturn(reservations)
+
+        CONF.cells.enable = True
+        self.mox.StubOutWithMock(nova.quota.QUOTAS, 'commit')
+        nova.quota.QUOTAS.commit(self.context, reservations,
+                                 project_id=user_project_id)
+        self.mox.ReplayAll()
+
+        self.compute_api.resize(self.context, instance, flavor_id)
+
+        flavors.destroy(name)
+        db.quota_destroy_all_by_project(self.context, self.context.project_id)
+        self.compute.terminate_instance(self.context, instance=instance)
+
     def test_resize_revert_deleted_flavor_fails(self):
         orig_name = 'test_resize_revert_orig_flavor'
         orig_flavorid = 11

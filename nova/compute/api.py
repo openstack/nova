@@ -1989,8 +1989,10 @@ class API(base.Base):
                                        old_instance_type, 1, -1)
 
     @staticmethod
-    def _reserve_quota_delta(context, deltas):
-        return QUOTAS.reserve(context, **deltas) if deltas else None
+    def _reserve_quota_delta(context, deltas, project_id=None):
+        if not deltas:
+            return
+        return QUOTAS.reserve(context, project_id=project_id, **deltas)
 
     @wrap_check_policy
     @check_instance_lock
@@ -2046,7 +2048,9 @@ class API(base.Base):
         deltas = self._upsize_quota_delta(context, new_instance_type,
                                           current_instance_type)
         try:
-            reservations = self._reserve_quota_delta(context, deltas)
+            reservations = self._reserve_quota_delta(context, deltas,
+                                                     project_id=instance[
+                                                         'project_id'])
         except exception.OverQuota as exc:
             quotas = exc.kwargs['quotas']
             usages = exc.kwargs['usages']
@@ -2092,7 +2096,8 @@ class API(base.Base):
         # With cells, the best we can do right now is commit the reservations
         # immediately...
         if CONF.cells.enable and reservations:
-            QUOTAS.commit(context, reservations)
+            QUOTAS.commit(context, reservations,
+                          project_id=instance['project_id'])
             reservations = []
 
         args = {
