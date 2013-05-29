@@ -4828,6 +4828,108 @@ class ProviderFwRuleTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertEqual([], db.provider_fw_rule_get_all(self.ctxt))
 
 
+class CellTestCase(test.TestCase, ModelsObjectComparatorMixin):
+
+    _ignored_keys = ['id', 'deleted', 'deleted_at', 'created_at', 'updated_at']
+
+    def setUp(self):
+        super(CellTestCase, self).setUp()
+        self.ctxt = context.get_admin_context()
+
+    def _get_cell_base_values(self):
+        return {
+            'name': 'myname',
+            'api_url': 'apiurl',
+            'username': 'user',
+            'password': 'passwd',
+            'weight_offset': 0.5,
+            'weight_scale': 1.5,
+            'is_parent': True,
+            'rpc_host': 'rpchost',
+            'rpc_port': 9999,
+            'rpc_virtual_host': 'virthost'
+        }
+
+    def _cell_value_modify(self, value, step):
+        if isinstance(value, str):
+            return value + str(step)
+        elif isinstance(value, float):
+            return value + step + 0.6
+        elif isinstance(value, bool):
+            return bool(step % 2)
+        elif isinstance(value, int):
+            return value + step
+
+    def _create_cells(self):
+        test_values = []
+        for x in xrange(1, 4):
+            modified_val = dict([(k, self._cell_value_modify(v, x))
+                        for k, v in self._get_cell_base_values().iteritems()])
+            db.cell_create(self.ctxt, modified_val)
+            test_values.append(modified_val)
+        return test_values
+
+    def test_cell_create(self):
+        cell = db.cell_create(self.ctxt, self._get_cell_base_values())
+        self.assertFalse(cell['id'] is None)
+        self._assertEqualObjects(cell, self._get_cell_base_values(),
+                                 ignored_keys=self._ignored_keys)
+
+    def test_cell_update(self):
+        db.cell_create(self.ctxt, self._get_cell_base_values())
+        new_values = {
+            'api_url': 'apiurl1',
+            'username': 'user1',
+            'password': 'passwd1',
+            'weight_offset': 0.6,
+            'weight_scale': 1.6,
+            'is_parent': False,
+            'rpc_host': 'rpchost1',
+            'rpc_port': 10000,
+            'rpc_virtual_host': 'virthost1'
+        }
+        test_cellname = self._get_cell_base_values()['name']
+        db.cell_update(self.ctxt, test_cellname, new_values)
+        updated_cell = db.cell_get(self.ctxt, test_cellname)
+        self._assertEqualObjects(updated_cell, new_values,
+                                 ignored_keys=self._ignored_keys + ['name'])
+
+    def test_cell_delete(self):
+        new_cells = self._create_cells()
+        for cell in new_cells:
+            test_cellname = cell['name']
+            db.cell_delete(self.ctxt, test_cellname)
+            self.assertRaises(exception.CellNotFound, db.cell_get, self.ctxt,
+                              test_cellname)
+
+    def test_cell_get(self):
+        new_cells = self._create_cells()
+        for cell in new_cells:
+            cell_get = db.cell_get(self.ctxt, cell['name'])
+            self._assertEqualObjects(cell_get, cell,
+                                     ignored_keys=self._ignored_keys)
+
+    def test_cell_get_all(self):
+        new_cells = self._create_cells()
+        cells = db.cell_get_all(self.ctxt)
+        self.assertEqual(len(new_cells), len(cells))
+        cells_byname = dict([(newcell['name'],
+                              newcell) for newcell in new_cells])
+        for cell in cells:
+            self._assertEqualObjects(cell, cells_byname[cell['name']],
+                                     self._ignored_keys)
+
+    def test_cell_get_not_found(self):
+        self._create_cells()
+        self.assertRaises(exception.CellNotFound, db.cell_get, self.ctxt,
+                          'cellnotinbase')
+
+    def test_cell_update_not_found(self):
+        self._create_cells()
+        self.assertRaises(exception.CellNotFound, db.cell_update, self.ctxt,
+                          'cellnotinbase', self._get_cell_base_values())
+
+
 class ArchiveTestCase(test.TestCase):
 
     def setUp(self):

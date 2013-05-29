@@ -4062,7 +4062,7 @@ def cell_update(context, cell_name, values):
     session = get_session()
     with session.begin():
         cell = _cell_get_by_name_query(context, cell_name, session=session)
-        if not cell:
+        if cell.count() == 0:
             raise exception.CellNotFound(cell_name=cell_name)
         cell.update(values)
     return cell
