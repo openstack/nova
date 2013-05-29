@@ -932,7 +932,7 @@ class API(base.Base):
         instance.setdefault('system_metadata', {})
         prefix_format = SM_IMAGE_PROP_PREFIX + '%s'
         for key, value in image_properties.iteritems():
-            new_value = str(value)[:255]
+            new_value = unicode(value)[:255]
             instance['system_metadata'][prefix_format % key] = new_value
 
         # Keep a record of the original base image that this
@@ -1835,7 +1835,7 @@ class API(base.Base):
                     del sys_metadata[key]
             # Add the new ones
             for key, value in image.get('properties', {}).iteritems():
-                new_value = str(value)[:255]
+                new_value = unicode(value)[:255]
                 sys_metadata[(SM_IMAGE_PROP_PREFIX + '%s') % key] = new_value
             self.db.instance_system_metadata_update(context,
                     instance['uuid'], sys_metadata, True)
