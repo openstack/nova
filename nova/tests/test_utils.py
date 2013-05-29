@@ -325,7 +325,7 @@ class GenericUtilsTestCase(test.TestCase):
     def test_read_file_as_root(self):
         def fake_execute(*args, **kwargs):
             if args[1] == 'bad':
-                raise processutils.ProcessExecutionError
+                raise processutils.ProcessExecutionError()
             return 'fakecontents', None
 
         self.stubs.Set(utils, 'execute', fake_execute)

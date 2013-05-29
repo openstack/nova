@@ -7462,7 +7462,7 @@ class ComputeAPITestCase(BaseTestCase):
 
         def fake_libvirt_driver_detach_volume_fails(*args, **kwargs):
             called['fake_libvirt_driver_detach_volume_fails'] = True
-            raise AttributeError
+            raise AttributeError()
 
         def fake_roll_detaching(*args, **kwargs):
             called['fake_roll_detaching'] = True

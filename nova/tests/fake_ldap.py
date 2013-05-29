@@ -217,19 +217,19 @@ class FakeLDAP(object):
     def simple_bind_s(self, dn, password):
         """This method is ignored, but provided for compatibility."""
         if server_fail:
-            raise SERVER_DOWN
+            raise SERVER_DOWN()
         pass
 
     def unbind_s(self):
         """This method is ignored, but provided for compatibility."""
         if server_fail:
-            raise SERVER_DOWN
+            raise SERVER_DOWN()
         pass
 
     def add_s(self, dn, attr):
         """Add an object with the specified attributes at dn."""
         if server_fail:
-            raise SERVER_DOWN
+            raise SERVER_DOWN()
 
         key = "%s%s" % (self.__prefix, dn)
         value_dict = dict([(k, _to_json(v)) for k, v in attr])
@@ -238,7 +238,7 @@ class FakeLDAP(object):
     def delete_s(self, dn):
         """Remove the ldap object at specified dn."""
         if server_fail:
-            raise SERVER_DOWN
+            raise SERVER_DOWN()
 
         Store.instance().delete("%s%s" % (self.__prefix, dn))
 
@@ -252,7 +252,7 @@ class FakeLDAP(object):
 
         """
         if server_fail:
-            raise SERVER_DOWN
+            raise SERVER_DOWN()
 
         store = Store.instance()
         key = "%s%s" % (self.__prefix, dn)
@@ -292,7 +292,7 @@ class FakeLDAP(object):
 
         """
         if server_fail:
-            raise SERVER_DOWN
+            raise SERVER_DOWN()
 
         if scope != SCOPE_BASE and scope != SCOPE_SUBTREE:
             raise NotImplementedError(str(scope))
