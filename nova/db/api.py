@@ -1097,6 +1097,11 @@ def security_group_create(context, values):
     return IMPL.security_group_create(context, values)
 
 
+def security_group_update(context, security_group_id, values):
+    """Update a security group."""
+    return IMPL.security_group_update(context, security_group_id, values)
+
+
 def security_group_ensure_default(context):
     """Ensure default security group exists for a project_id.
 

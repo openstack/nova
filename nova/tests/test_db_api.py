@@ -1112,6 +1112,19 @@ class DbApiTestCase(DbTestCase):
         ec2_id = db.get_ec2_snapshot_id_by_uuid(self.context, 'fake-uuid')
         self.assertEqual(ref['id'], ec2_id)
 
+    def test_security_group_update(self):
+        ctxt = context.get_admin_context()
+        values = {'security_group': {'tenant_id': '123',
+                  'name': 'test', 'description': 'test-description'}}
+        sg = db.security_group_create(ctxt, values)
+
+        values['security_group']['name'] = 'test_name'
+        values['security_group']['description'] = 'test_desc'
+        sg = db.security_group_update(ctxt, sg['id'], values)
+        self.assertNotEqual(None, sg)
+        self.assertEqual(sg['security_group']['name'], 'test_name')
+        self.assertEqual(sg['security_group']['description'], 'test_desc')
+
     def test_bw_usage_calls(self):
         ctxt = context.get_admin_context()
         now = timeutils.utcnow()

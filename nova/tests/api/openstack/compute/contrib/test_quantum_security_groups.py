@@ -116,6 +116,10 @@ class TestQuantumSecurityGroups(
         # Enforced by Quantum server.
         pass
 
+    def test_update_security_group(self):
+        # Enforced by Quantum server.
+        pass
+
     def test_get_security_group_list(self):
         self._create_sg_template().get('security_group')
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')

@@ -2929,6 +2929,21 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
 
         return group_ref
 
+    def update_security_group(self, context, security_group,
+                                name, description):
+        if security_group['name'] in RO_SECURITY_GROUPS:
+            msg = (_("Unable to update system group '%s'") %
+                    security_group['name'])
+            self.raise_invalid_group(msg)
+
+        group = {'name': name,
+                 'description': description}
+
+        group_ref = self.db.security_group_update(context,
+                                                  security_group['id'],
+                                                  group)
+        return group_ref
+
     def get(self, context, name=None, id=None, map_exception=False):
         self.ensure_default(context)
         try:
