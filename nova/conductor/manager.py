@@ -22,8 +22,10 @@ from nova import manager
 from nova import network
 from nova.network.security_group import openstack_driver
 from nova import notifications
+from nova.openstack.common.db.sqlalchemy import session as db_session
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
+from nova.openstack.common.notifier import api as notifier
 from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import timeutils
 from nova import quota
@@ -322,6 +324,7 @@ class ConductorManager(manager.Manager):
         result = self.db.instance_fault_create(context, values)
         return jsonutils.to_primitive(result)
 
+    # NOTE(kerrin): This method can be removed in v2.0 of the RPC API.
     def vol_get_usage_by_time(self, context, start_time):
         result = self.db.vol_get_usage_by_time(context, start_time)
         return jsonutils.to_primitive(result)
@@ -329,11 +332,23 @@ class ConductorManager(manager.Manager):
     def vol_usage_update(self, context, vol_id, rd_req, rd_bytes, wr_req,
                          wr_bytes, instance, last_refreshed=None,
                          update_totals=False):
-        self.db.vol_usage_update(context, vol_id, rd_req, rd_bytes, wr_req,
-                                 wr_bytes, instance['uuid'],
-                                 instance['project_id'], instance['user_id'],
-                                 instance['availability_zone'],
-                                 last_refreshed, update_totals)
+        # The session object is needed here, as the vol_usage object returned
+        # needs to bound to it in order to refresh its data
+        session = db_session.get_session()
+        vol_usage = self.db.vol_usage_update(context, vol_id,
+                                             rd_req, rd_bytes,
+                                             wr_req, wr_bytes,
+                                             instance['uuid'],
+                                             instance['project_id'],
+                                             instance['user_id'],
+                                             instance['availability_zone'],
+                                             last_refreshed, update_totals,
+                                             session)
+
+        # We have just updated the database, so send the notification now
+        notifier.notify(context, 'conductor.%s' % self.host, 'volume.usage',
+                        notifier.INFO,
+                        compute_utils.usage_volume_info(vol_usage))
 
     @rpc_common.client_exceptions(exception.ComputeHostNotFound,
                                   exception.HostBinaryNotFound)

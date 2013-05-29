@@ -386,8 +386,6 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute, '_get_host_volume_bdms')
         self.mox.StubOutWithMock(utils, 'last_completed_audit_period')
         self.mox.StubOutWithMock(self.compute.driver, 'get_all_volume_usage')
-        self.mox.StubOutWithMock(self.compute,
-                                 '_send_volume_usage_notifications')
         self.mox.StubOutWithMock(time, 'time')
         # Following methods will be called.
         utils.last_completed_audit_period().AndReturn((0, 0))
@@ -405,8 +403,6 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute, '_get_host_volume_bdms')
         self.mox.StubOutWithMock(utils, 'last_completed_audit_period')
         self.mox.StubOutWithMock(self.compute.driver, 'get_all_volume_usage')
-        self.mox.StubOutWithMock(self.compute,
-                                 '_send_volume_usage_notifications')
         # Following methods are called.
         utils.last_completed_audit_period().AndReturn((0, 0))
         self.compute._get_host_volume_bdms(ctxt, 'MockHost').AndReturn([])
@@ -425,8 +421,6 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute, '_get_host_volume_bdms')
         self.mox.StubOutWithMock(timeutils, 'utcnow')
         self.mox.StubOutWithMock(self.compute, '_update_volume_usage_cache')
-        self.mox.StubOutWithMock(self.compute,
-                                 '_send_volume_usage_notifications')
         self.stubs.Set(self.compute.driver, 'get_all_volume_usage',
                        lambda x, y: [3, 4])
         # All the mocks are called
@@ -434,7 +428,6 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.compute._get_host_volume_bdms(ctxt, 'MockHost').AndReturn([1, 2])
         timeutils.utcnow().AndReturn(5)
         self.compute._update_volume_usage_cache(ctxt, [3, 4], 5)
-        self.compute._send_volume_usage_notifications(ctxt, 20)
         self.mox.ReplayAll()
         CONF.volume_usage_poll_interval = 10
         self.compute._last_vol_usage_poll = 0
@@ -443,48 +436,6 @@ class ComputeVolumeTestCase(BaseTestCase):
                         "_last_vol_usage_poll was not properly updated <%s>" %
                         self.compute._last_vol_usage_poll)
         self.mox.UnsetStubs()
-
-    def test_send_volume_usage_notifications(self):
-        ctxt = 'MockContext'
-        test_notifier.NOTIFICATIONS = []
-        self.compute.host = 'MockHost'
-        fake_usage = {'tot_last_refreshed': 20,
-                      'curr_last_refreshed': 10,
-                      'volume_id': 'fake_volume_id',
-                      'instance_uuid': 'fake_instance_uuid',
-                      'project_id': 'fake_project_id',
-                      'user_id': 'fake_user_id',
-                      'availability_zone': 'fake-az',
-                      'tot_reads': 11,
-                      'curr_reads': 22,
-                      'tot_read_bytes': 33,
-                      'curr_read_bytes': 44,
-                      'tot_writes': 55,
-                      'curr_writes': 66,
-                      'tot_write_bytes': 77,
-                      'curr_write_bytes': 88}
-
-        self.stubs.Set(self.compute.conductor_api,
-                       'vol_get_usage_by_time',
-                       lambda x, y:
-                       [db.sqlalchemy.models.VolumeUsage(**fake_usage)])
-        self.stubs.Set(self.compute.conductor_api,
-                       'instance_get_all_by_filters',
-                       lambda x, y: [{'project_id': 'fake_project_id',
-                                      'user_id': 'fake_user_id'}])
-
-        self.compute._send_volume_usage_notifications(ctxt, 20)
-        self.assertEquals(len(test_notifier.NOTIFICATIONS), 1)
-        msg = test_notifier.NOTIFICATIONS[0]
-        payload = msg['payload']
-        self.assertEquals(payload['instance_id'], 'fake_instance_uuid')
-        self.assertEquals(payload['user_id'], 'fake_user_id')
-        self.assertEquals(payload['tenant_id'], 'fake_project_id')
-        self.assertEquals(payload['reads'], 33)
-        self.assertEquals(payload['read_bytes'], 77)
-        self.assertEquals(payload['writes'], 121)
-        self.assertEquals(payload['write_bytes'], 165)
-        self.assertEquals(payload['availability_zone'], 'fake-az')
 
     def test_detach_volume_usage(self):
         # Test that detach volume update the volume usage cache table correctly
@@ -526,7 +477,25 @@ class ComputeVolumeTestCase(BaseTestCase):
         # total fields in the volume usage cache.
         CONF.volume_usage_poll_interval = 10
         self.compute._poll_volume_usage(self.context)
+        # Check that a volume.usage notification was sent
+        self.assertEqual(1, len(test_notifier.NOTIFICATIONS))
+        msg = test_notifier.NOTIFICATIONS[0]
+
         self.compute.detach_volume(self.context, 1, instance)
+
+        # Check that a volume.usage notification was sent
+        self.assertEquals(2, len(test_notifier.NOTIFICATIONS))
+        msg = test_notifier.NOTIFICATIONS[1]
+        self.assertEquals('volume.usage', msg['event_type'])
+        payload = msg['payload']
+        self.assertEquals(instance['uuid'], payload['instance_id'])
+        self.assertEquals('fake', payload['user_id'])
+        self.assertEquals('fake', payload['tenant_id'])
+        self.assertEquals(1, payload['reads'])
+        self.assertEquals(30, payload['read_bytes'])
+        self.assertEquals(1, payload['writes'])
+        self.assertEquals(20, payload['write_bytes'])
+        self.assertEquals(None, payload['availability_zone'])
 
         # Check the database for the
         volume_usages = db.vol_get_usage_by_time(self.context, 0)
