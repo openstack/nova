@@ -232,6 +232,8 @@ class NovaTestResult(testtools.TestResult):
         self._addResult(test, 'OK', 'green', '.', True)
 
     def addFailure(self, test, err):
+        if test.id() == 'process-returncode':
+            return
         super(NovaTestResult, self).addFailure(test, err)
         self._addResult(test, 'FAIL', 'red', 'F', False)
 
