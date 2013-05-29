@@ -476,22 +476,24 @@ class LibvirtNFSVolumeDriver(LibvirtBaseVolumeDriver):
         conf = super(LibvirtNFSVolumeDriver,
                      self).connect_volume(connection_info,
                                           disk_info)
-        path = self._ensure_mounted(connection_info['data']['export'])
+        options = connection_info['data'].get('options')
+        path = self._ensure_mounted(connection_info['data']['export'], options)
         path = os.path.join(path, connection_info['data']['name'])
         conf.source_type = 'file'
         conf.source_path = path
         return conf
 
-    def _ensure_mounted(self, nfs_export):
+    def _ensure_mounted(self, nfs_export, options=None):
         """
         @type nfs_export: string
+        @type options: string
         """
         mount_path = os.path.join(CONF.nfs_mount_point_base,
                                   self.get_hash_str(nfs_export))
-        self._mount_nfs(mount_path, nfs_export, ensure=True)
+        self._mount_nfs(mount_path, nfs_export, options, ensure=True)
         return mount_path
 
-    def _mount_nfs(self, mount_path, nfs_share, ensure=False):
+    def _mount_nfs(self, mount_path, nfs_share, options=None, ensure=False):
         """Mount nfs export to mount path."""
         utils.execute('mkdir', '-p', mount_path)
 
@@ -499,6 +501,8 @@ class LibvirtNFSVolumeDriver(LibvirtBaseVolumeDriver):
         nfs_cmd = ['mount', '-t', 'nfs']
         if CONF.nfs_mount_options is not None:
             nfs_cmd.extend(['-o', CONF.nfs_mount_options])
+        if options is not None:
+            nfs_cmd.extend(options.split(' '))
         nfs_cmd.extend([nfs_share, mount_path])
 
         try:
@@ -594,29 +598,36 @@ class LibvirtGlusterfsVolumeDriver(LibvirtBaseVolumeDriver):
         """Connect the volume. Returns xml for libvirt."""
         conf = super(LibvirtGlusterfsVolumeDriver,
                      self).connect_volume(connection_info, mount_device)
-        path = self._ensure_mounted(connection_info['data']['export'])
+        options = connection_info['data'].get('options')
+        path = self._ensure_mounted(connection_info['data']['export'], options)
         path = os.path.join(path, connection_info['data']['name'])
         conf.source_type = 'file'
         conf.source_path = path
         return conf
 
-    def _ensure_mounted(self, glusterfs_export):
+    def _ensure_mounted(self, glusterfs_export, options=None):
         """
         @type glusterfs_export: string
+        @type options: string
         """
         mount_path = os.path.join(CONF.glusterfs_mount_point_base,
                                   self.get_hash_str(glusterfs_export))
-        self._mount_glusterfs(mount_path, glusterfs_export, ensure=True)
+        self._mount_glusterfs(mount_path, glusterfs_export,
+                              options, ensure=True)
         return mount_path
 
-    def _mount_glusterfs(self, mount_path, glusterfs_share, ensure=False):
+    def _mount_glusterfs(self, mount_path, glusterfs_share,
+                         options=None, ensure=False):
         """Mount glusterfs export to mount path."""
         utils.execute('mkdir', '-p', mount_path)
 
+        gluster_cmd = ['mount', '-t', 'glusterfs']
+        if options is not None:
+            gluster_cmd.extend(options.split(' '))
+        gluster_cmd.extend([glusterfs_share, mount_path])
+
         try:
-            utils.execute('mount', '-t', 'glusterfs', glusterfs_share,
-                          mount_path,
-                          run_as_root=True)
+            utils.execute(*gluster_cmd, run_as_root=True)
         except processutils.ProcessExecutionError as exc:
             if ensure and 'already mounted' in exc.message:
                 LOG.warn(_("%s is already mounted"), glusterfs_share)
