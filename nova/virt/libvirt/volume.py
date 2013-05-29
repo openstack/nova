@@ -493,8 +493,7 @@ class LibvirtNFSVolumeDriver(LibvirtBaseVolumeDriver):
 
     def _mount_nfs(self, mount_path, nfs_share, ensure=False):
         """Mount nfs export to mount path."""
-        if not self._path_exists(mount_path):
-            utils.execute('mkdir', '-p', mount_path)
+        utils.execute('mkdir', '-p', mount_path)
 
         # Construct the NFS mount command.
         nfs_cmd = ['mount', '-t', 'nfs']
@@ -514,14 +513,6 @@ class LibvirtNFSVolumeDriver(LibvirtBaseVolumeDriver):
     def get_hash_str(base_str):
         """returns string that represents hash of base_str (in hex format)."""
         return hashlib.md5(base_str).hexdigest()
-
-    @staticmethod
-    def _path_exists(path):
-        """Check path."""
-        try:
-            return utils.execute('stat', path, run_as_root=True)
-        except processutils.ProcessExecutionError:
-            return False
 
 
 class LibvirtAOEVolumeDriver(LibvirtBaseVolumeDriver):
@@ -620,8 +611,7 @@ class LibvirtGlusterfsVolumeDriver(LibvirtBaseVolumeDriver):
 
     def _mount_glusterfs(self, mount_path, glusterfs_share, ensure=False):
         """Mount glusterfs export to mount path."""
-        if not self._path_exists(mount_path):
-            utils.execute('mkdir', '-p', mount_path)
+        utils.execute('mkdir', '-p', mount_path)
 
         try:
             utils.execute('mount', '-t', 'glusterfs', glusterfs_share,
@@ -637,14 +627,6 @@ class LibvirtGlusterfsVolumeDriver(LibvirtBaseVolumeDriver):
     def get_hash_str(base_str):
         """returns string that represents hash of base_str (in hex format)."""
         return hashlib.md5(base_str).hexdigest()
-
-    @staticmethod
-    def _path_exists(path):
-        """Check path."""
-        try:
-            return utils.execute('stat', path, run_as_root=True)
-        except processutils.ProcessExecutionError:
-            return False
 
 
 class LibvirtFibreChannelVolumeDriver(LibvirtBaseVolumeDriver):

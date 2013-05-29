@@ -444,7 +444,7 @@ class LibvirtVolumeTestCase(test.TestCase):
         libvirt_driver.disconnect_volume(connection_info, "vde")
 
         expected_commands = [
-            ('stat', export_mnt_base),
+            ('mkdir', '-p', export_mnt_base),
             ('mount', '-t', 'nfs', export_string, export_mnt_base)]
         self.assertEqual(self.executes, expected_commands)
 
@@ -500,7 +500,7 @@ class LibvirtVolumeTestCase(test.TestCase):
         libvirt_driver.disconnect_volume(connection_info, "vde")
 
         expected_commands = [
-            ('stat', export_mnt_base),
+            ('mkdir', '-p', export_mnt_base),
             ('mount', '-t', 'glusterfs', export_string, export_mnt_base)]
         self.assertEqual(self.executes, expected_commands)
 
