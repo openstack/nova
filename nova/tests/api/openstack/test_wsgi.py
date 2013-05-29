@@ -171,6 +171,35 @@ class JSONDeserializerTest(test.TestCase):
         deserializer = wsgi.JSONDeserializer()
         self.assertEqual(deserializer.deserialize(data), as_dict)
 
+    def test_json_valid_utf8(self):
+        data = """{"server": {"min_count": 1, "flavorRef": "1",
+                "name": "\xe6\xa6\x82\xe5\xbf\xb5",
+                "imageRef": "10bab10c-1304-47d",
+                "max_count": 1}} """
+        as_dict = {
+            'body': {
+                u'server': {
+                            u'min_count': 1, u'flavorRef': u'1',
+                            u'name': u'\u6982\u5ff5',
+                            u'imageRef': u'10bab10c-1304-47d',
+                            u'max_count': 1
+                           }
+                    }
+            }
+        deserializer = wsgi.JSONDeserializer()
+        self.assertEqual(deserializer.deserialize(data), as_dict)
+
+    def test_json_invalid_utf8(self):
+        """ Send invalid utf-8 to JSONDeserializer"""
+        data = """{"server": {"min_count": 1, "flavorRef": "1",
+                "name": "\xf0\x28\x8c\x28",
+                "imageRef": "10bab10c-1304-47d",
+                "max_count": 1}} """
+
+        deserializer = wsgi.JSONDeserializer()
+        self.assertRaises(exception.MalformedRequestBody,
+                          deserializer.deserialize, data)
+
 
 class XMLDeserializerTest(test.TestCase):
     def test_xml(self):
@@ -201,6 +230,19 @@ class XMLDeserializerTest(test.TestCase):
         as_dict = {"body": {"a": {}}}
         deserializer = wsgi.XMLDeserializer()
         self.assertEqual(deserializer.deserialize(xml), as_dict)
+
+    def test_xml_valid_utf8(self):
+        xml = """ <a><name>\xe6\xa6\x82\xe5\xbf\xb5</name></a> """
+        deserializer = wsgi.XMLDeserializer()
+        as_dict = {'body': {u'a': {u'name': u'\u6982\u5ff5'}}}
+        self.assertEqual(deserializer.deserialize(xml), as_dict)
+
+    def test_xml_invalid_utf8(self):
+        """ Send invalid utf-8 to XMLDeserializer"""
+        xml = """ <a><name>\xf0\x28\x8c\x28</name></a> """
+        deserializer = wsgi.XMLDeserializer()
+        self.assertRaises(exception.MalformedRequestBody,
+                         deserializer.deserialize, xml)
 
 
 class ResourceTest(test.TestCase):
@@ -779,6 +821,33 @@ class ResourceTest(test.TestCase):
             self.fail("Should have raised a Fault (HTTP 400)")
         except wsgi.Fault as fault:
             self.assertEqual(400, fault.status_int)
+
+    def test_resource_valid_utf8_body(self):
+        class Controller(object):
+            def index(self, req, body):
+                return body
+
+        req = webob.Request.blank('/tests')
+        body = """ {"name": "\xe6\xa6\x82\xe5\xbf\xb5" } """
+        expected_body = '{"name": "\\u6982\\u5ff5"}'
+        req.body = body
+        req.headers['Content-Type'] = 'application/json'
+        app = fakes.TestRouter(Controller())
+        response = req.get_response(app)
+        self.assertEqual(response.body, expected_body)
+        self.assertEqual(response.status_int, 200)
+
+    def test_resource_invalid_utf8(self):
+        class Controller(object):
+            def index(self, req, body):
+                return body
+
+        req = webob.Request.blank('/tests')
+        body = """ {"name": "\xf0\x28\x8c\x28" } """
+        req.body = body
+        req.headers['Content-Type'] = 'application/json'
+        app = fakes.TestRouter(Controller())
+        self.assertRaises(UnicodeDecodeError, req.get_response, app)
 
 
 class ResponseObjectTest(test.TestCase):
