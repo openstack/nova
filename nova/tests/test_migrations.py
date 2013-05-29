@@ -1335,6 +1335,75 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     def _check_181(self, engine, data):
         self.assertTrue(db_utils.check_shadow_table(engine, 'cells'))
 
+    def _pre_upgrade_182(self, engine):
+        CIDR = '6666:1020:1000:2013:1000:6535:abcd:abcd'
+
+        security_group_rules = \
+                    db_utils.get_table(engine, 'shadow_security_group_rules')
+        values = {
+            'id': 182,
+            'protocol': 'tcp',
+            'from_port': 6666,
+            'to_port': 9999,
+            'cidr': CIDR,
+            'deleted': 0
+        }
+        security_group_rules.insert().values(values).execute()
+
+        networks = db_utils.get_table(engine, 'shadow_networks')
+        values = {
+            'id': 182,
+            'vlan': 100500,
+            'cidr': CIDR,
+            'cidr_v6': CIDR,
+            'deleted': 0
+        }
+        networks.insert().values(values).execute()
+
+        provider_fw_rules = db_utils.get_table(engine,
+                                               'shadow_provider_fw_rules')
+        values = {
+            'id': 182,
+            'protocol': 'tcp',
+            'from_port': 6666,
+            'to_port': 9999,
+            'cidr': CIDR,
+            'deleted': 0
+        }
+        provider_fw_rules.insert().values(values).execute()
+        return {'cidr': CIDR}
+
+    def _check_182(self, engine, data):
+        self.assertTrue(db_utils.check_shadow_table(engine,
+                                                    'security_group_rules'))
+        self.assertTrue(db_utils.check_shadow_table(engine,
+                                                    'provider_fw_rules'))
+        self.assertTrue(db_utils.check_shadow_table(engine, 'networks'))
+
+        table_fields = {
+            'shadow_security_group_rules': ['cidr'],
+            'shadow_networks': ['cidr', 'cidr_v6'],
+            'shadow_provider_fw_rules': ['cidr']
+        }
+
+        for table_name, fields in table_fields.iteritems():
+            table = db_utils.get_table(engine, table_name)
+            rows = table.\
+                        select().\
+                        where(table.c.id == 182).\
+                        execute().\
+                        fetchall()
+            self.assertEqual(len(rows), 1)
+            for field in fields:
+                self.assertEqual(rows[0][field], data['cidr'])
+
+            for field in fields:
+                # we should be able to store mask in cidr fields also
+                table.\
+                    update().\
+                    values({field: data['cidr'] + '/128'}).\
+                    execute()
+
 
 class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""
