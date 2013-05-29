@@ -297,7 +297,7 @@ class ResourceExtension(object):
 
     def __init__(self, collection, controller=None, parent=None,
                  collection_actions=None, member_actions=None,
-                 custom_routes_fn=None, inherits=None):
+                 custom_routes_fn=None, inherits=None, member_name=None):
         if not collection_actions:
             collection_actions = {}
         if not member_actions:
@@ -309,6 +309,7 @@ class ResourceExtension(object):
         self.member_actions = member_actions
         self.custom_routes_fn = custom_routes_fn
         self.inherits = inherits
+        self.member_name = member_name
 
 
 def load_standard_extensions(ext_mgr, logger, path, package, ext_list=None):
@@ -409,6 +410,9 @@ class V3APIExtensionBase(object):
     define the abstract properties.
     """
     __metaclass__ = abc.ABCMeta
+
+    def __init__(self, extension_info):
+        self.extension_info = extension_info
 
     @abc.abstractmethod
     def get_resources(self):

@@ -100,6 +100,30 @@ def wsgi_app(inner_app_v2=None, fake_auth_context=None,
     return mapper
 
 
+def wsgi_app_v3(inner_app_v3=None, fake_auth_context=None,
+        use_no_auth=False, ext_mgr=None, init_only=None):
+    if not inner_app_v3:
+        inner_app_v3 = compute.APIRouterV3(init_only)
+
+    if use_no_auth:
+        api_v3 = openstack_api.FaultWrapper(auth.NoAuthMiddleware(
+              limits.RateLimitingMiddleware(inner_app_v3)))
+    else:
+        if fake_auth_context is not None:
+            ctxt = fake_auth_context
+        else:
+            ctxt = context.RequestContext('fake', 'fake', auth_token=True)
+        api_v3 = openstack_api.FaultWrapper(api_auth.InjectContext(ctxt,
+              limits.RateLimitingMiddleware(inner_app_v3)))
+
+    mapper = urlmap.URLMap()
+    mapper['/v3'] = api_v3
+    # TODO(cyeoh): bp nova-api-core-as-extensions
+    # Still need to implement versions for v3 API
+    #    mapper['/'] = openstack_api.FaultWrapper(versions.Versions())
+    return mapper
+
+
 def stub_out_key_pair_funcs(stubs, have_key_pair=True):
     def key_pair(context, user_id):
         return [dict(name='key', public_key='public_key')]

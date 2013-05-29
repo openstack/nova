@@ -30,6 +30,7 @@ from nova.api.openstack.compute import image_metadata
 from nova.api.openstack.compute import images
 from nova.api.openstack.compute import ips
 from nova.api.openstack.compute import limits
+from nova.api.openstack.compute import plugins
 from nova.api.openstack.compute import server_metadata
 from nova.api.openstack.compute import servers
 from nova.api.openstack.compute import versions
@@ -135,8 +136,13 @@ class APIRouterV3(nova.api.openstack.APIRouterV3):
     Routes requests on the OpenStack API to the appropriate controller
     and method.
     """
+    def __init__(self, init_only=None):
+        self._loaded_extension_info = plugins.LoadedExtensionInfo()
+        super(APIRouterV3, self).__init__(init_only)
 
-    def _register_extensions(self, ext):
-        pass
-        # TODO(cyeoh): bp v3-api-extension-framework - Register extension
-        # information
+    def _register_extension(self, ext):
+        return self.loaded_extension_info.register_extension(ext.obj)
+
+    @property
+    def loaded_extension_info(self):
+        return self._loaded_extension_info
