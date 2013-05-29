@@ -17,6 +17,7 @@
 #    under the License.
 
 import collections
+import re
 
 from nova import exception
 from nova import test
@@ -48,6 +49,46 @@ class VMwareVMUtilTestCase(test.TestCase):
         self.assertEquals(result[1], "fake-ds")
         self.assertEquals(result[2], 1024 * 1024 * 1024 * 1024)
         self.assertEquals(result[3], 1024 * 1024 * 500 * 1024)
+
+    def test_get_datastore_ref_and_name_with_regex(self):
+        # Test with a regex that matches with a datastore
+        datastore_valid_regex = re.compile("^openstack.*\d$")
+        fake_objects = [fake.Datastore("openstack-ds0"),
+                        fake.Datastore("fake-ds0"),
+                        fake.Datastore("fake-ds1")]
+        result = vm_util.get_datastore_ref_and_name(
+            fake_session(fake_objects), None, None, datastore_valid_regex)
+        self.assertEquals("openstack-ds0", result[1])
+
+    def test_get_datastore_ref_and_name_with_list(self):
+        # Test with a regex containing whitelist of datastores
+        datastore_valid_regex = re.compile("(openstack-ds0|openstack-ds2)")
+        fake_objects = [fake.Datastore("openstack-ds0"),
+                        fake.Datastore("fake-ds0"),
+                        fake.Datastore("fake-ds1")]
+        result = vm_util.get_datastore_ref_and_name(
+            fake_session(fake_objects), None, None, datastore_valid_regex)
+        self.assertNotEquals("openstack-ds1", result[1])
+
+    def test_get_datastore_ref_and_name_with_regex_error(self):
+        # Test with a regex that has no match
+        # Checks if code raises DatastoreNotFound with a specific message
+        datastore_invalid_regex = re.compile("unknown-ds")
+        exp_message = (_("Datastore regex %s did not match any datastores")
+                       % datastore_invalid_regex.pattern)
+        fake_objects = [fake.Datastore("fake-ds0"),
+                        fake.Datastore("fake-ds1")]
+        # assertRaisesRegExp would have been a good choice instead of
+        # try/catch block, but it's available only from Py 2.7.
+        try:
+            vm_util.get_datastore_ref_and_name(
+                fake_session(fake_objects), None, None,
+                datastore_invalid_regex)
+        except exception.DatastoreNotFound as e:
+            self.assertEquals(exp_message, e.args[0])
+        else:
+            self.fail("DatastoreNotFound Exception was not raised with "
+                      "message: %s" % exp_message)
 
     def test_get_datastore_ref_and_name_without_datastore(self):
 

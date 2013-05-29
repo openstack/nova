@@ -310,10 +310,10 @@ class ResourcePool(ManagedObject):
 class Datastore(ManagedObject):
     """Datastore class."""
 
-    def __init__(self):
+    def __init__(self, name="fake-ds"):
         super(Datastore, self).__init__("Datastore")
         self.set("summary.type", "VMFS")
-        self.set("summary.name", "fake-ds")
+        self.set("summary.name", name)
         self.set("summary.capacity", 1024 * 1024 * 1024 * 1024)
         self.set("summary.freeSpace", 500 * 1024 * 1024 * 1024)
 
