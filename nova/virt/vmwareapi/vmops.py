@@ -76,13 +76,15 @@ RESIZE_TOTAL_STEPS = 4
 class VMwareVMOps(object):
     """Management class for VM-related tasks."""
 
-    def __init__(self, session, virtapi, volumeops, cluster=None):
+    def __init__(self, session, virtapi, volumeops, cluster=None,
+                 datastore_regex=None):
         """Initializer."""
         self.conductor_api = conductor.API()
         self._session = session
         self._virtapi = virtapi
         self._volumeops = volumeops
         self._cluster = cluster
+        self._datastore_regex = datastore_regex
         self._instance_path_base = VMWARE_PREFIX + CONF.base_dir_name
         self._default_root_device = 'vda'
         self._rescue_suffix = '-rescue'
@@ -144,7 +146,8 @@ class VMwareVMOps(object):
 
         client_factory = self._session._get_vim().client.factory
         service_content = self._session._get_vim().get_service_content()
-        ds = vm_util.get_datastore_ref_and_name(self._session, self._cluster)
+        ds = vm_util.get_datastore_ref_and_name(self._session, self._cluster,
+                 datastore_regex=self._datastore_regex)
         data_store_ref = ds[0]
         data_store_name = ds[1]
 

@@ -22,6 +22,7 @@ The VMware API VM utility module to build SOAP object specs.
 import copy
 
 from nova import exception
+from nova.openstack.common.gettextutils import _
 from nova.virt.vmwareapi import vim_util
 
 
@@ -706,7 +707,7 @@ def get_host_ref(session, cluster=None):
     return host_mor
 
 
-def _get_datastore_ref_and_name(data_stores):
+def _get_datastore_ref_and_name(data_stores, datastore_regex=None):
     for elem in data_stores.objects:
         ds_name = None
         ds_type = None
@@ -723,10 +724,12 @@ def _get_datastore_ref_and_name(data_stores):
                 ds_free = prop.val
         # Local storage identifier
         if ds_type == "VMFS" or ds_type == "NFS":
-            return elem.obj, ds_name, ds_cap, ds_free
+            if not datastore_regex or datastore_regex.match(ds_name):
+                return elem.obj, ds_name, ds_cap, ds_free
 
 
-def get_datastore_ref_and_name(session, cluster=None, host=None):
+def get_datastore_ref_and_name(session, cluster=None, host=None,
+                               datastore_regex=None):
     """Get the datastore list and choose the first local storage."""
     if cluster is None and host is None:
         data_stores = session._call_method(vim_util, "get_objects",
@@ -755,7 +758,7 @@ def get_datastore_ref_and_name(session, cluster=None, host=None):
 
     while data_stores:
         token = _get_token(data_stores)
-        results = _get_datastore_ref_and_name(data_stores)
+        results = _get_datastore_ref_and_name(data_stores, datastore_regex)
         if results:
             if token:
                 session._call_method(vim_util,
@@ -767,5 +770,10 @@ def get_datastore_ref_and_name(session, cluster=None, host=None):
                                                "continue_to_get_objects",
                                                token)
         else:
-            raise exception.DatastoreNotFound()
+            if datastore_regex:
+                raise exception.DatastoreNotFound(
+                _("Datastore regex %s did not match any datastores")
+                % datastore_regex.pattern)
+            else:
+                raise exception.DatastoreNotFound()
     raise exception.DatastoreNotFound()

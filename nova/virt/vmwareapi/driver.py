@@ -38,6 +38,7 @@ A connection to the VMware ESX platform.
 :use_linked_clone:          Whether to use linked clone (default: True)
 """
 
+import re
 import time
 
 from eventlet import event
@@ -88,6 +89,11 @@ vmwareapi_opts = [
                deprecated_name='vmwareapi_cluster_name',
                deprecated_group='DEFAULT',
                help='Name of a VMware Cluster ComputeResource. '
+                    'Used only if compute_driver is '
+                    'vmwareapi.VMwareVCDriver.'),
+    cfg.StrOpt('datastore_regex',
+               default=None,
+               help='Regex to match the name of a datastore. '
                     'Used only if compute_driver is '
                     'vmwareapi.VMwareVCDriver.'),
     cfg.FloatOpt('task_poll_interval',
@@ -406,10 +412,19 @@ class VMwareVCDriver(VMwareESXDriver):
             if self._cluster is None:
                 raise exception.NotFound(_("VMware Cluster %s is not found")
                                            % self._cluster_name)
+        self._datastore_regex = None
+        if CONF.vmware.datastore_regex:
+            try:
+                self._datastore_regex = re.compile(CONF.vmware.datastore_regex)
+            except re.error:
+                raise exception.InvalidInput(reason=
+                _("Invalid Regular Expression %s")
+                % CONF.vmware.datastore_regex)
         self._volumeops = volumeops.VMwareVolumeOps(self._session,
                                                     self._cluster)
         self._vmops = vmops.VMwareVMOps(self._session, self.virtapi,
-                                        self._volumeops, self._cluster)
+                                        self._volumeops, self._cluster,
+                                        self._datastore_regex)
         self._vc_state = None
 
     @property

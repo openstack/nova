@@ -645,7 +645,7 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
     def setUp(self):
         super(VMwareAPIVCDriverTestCase, self).setUp()
         self.flags(cluster_name='test_cluster',
-                   task_poll_interval=10, group='vmware')
+                   task_poll_interval=10, datastore_regex='.*', group='vmware')
         self.flags(vnc_enabled=False)
         self.conn = driver.VMwareVCDriver(None, False)
 
@@ -663,3 +663,10 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
         self.assertEquals(stats['hypervisor_type'], 'VMware ESXi')
         self.assertEquals(stats['hypervisor_version'], '5.0.0')
         self.assertEquals(stats['hypervisor_hostname'], 'test_url')
+
+    def test_invalid_datastore_regex(self):
+        # Tests if we raise an exception for Invalid Regular Expression in
+        # vmware_datastore_regex
+        self.flags(cluster_name='test_cluster', datastore_regex='fake-ds(01',
+                   group='vmware')
+        self.assertRaises(exception.InvalidInput, driver.VMwareVCDriver, None)
