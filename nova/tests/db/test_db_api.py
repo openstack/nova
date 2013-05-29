@@ -5186,6 +5186,94 @@ class CellTestCase(test.TestCase, ModelsObjectComparatorMixin):
                           self.ctxt, self._get_cell_base_values())
 
 
+class ConsolePoolTestCase(test.TestCase, ModelsObjectComparatorMixin):
+    def setUp(self):
+        super(ConsolePoolTestCase, self).setUp()
+
+        self.ctxt = context.get_admin_context()
+        self.test_console_pool_1 = {
+            'address': 'adress_1',
+            'username': 'user_1',
+            'password': 'secret_123',
+            'console_type': 'type_1',
+            'public_hostname': 'public_hostname_123',
+            'host': 'localhost',
+            'compute_host': '127.0.0.1',
+        }
+        self.test_console_pool_2 = {
+            'address': 'adress_2',
+            'username': 'user_2',
+            'password': 'secret_1234',
+            'console_type': 'type_2',
+            'public_hostname': 'public_hostname_1234',
+            'host': '127.0.0.1',
+            'compute_host': 'localhost',
+        }
+
+    def test_console_pool_create(self):
+        console_pool = db.console_pool_create(
+            self.ctxt, self.test_console_pool_1)
+        self.assertTrue(console_pool.get('id') is not None)
+        ignored_keys = ['deleted', 'created_at', 'updated_at',
+                        'deleted_at', 'id']
+        self._assertEqualObjects(
+            console_pool, self.test_console_pool_1, ignored_keys)
+
+    @test.testtools.skip("bug 1185450")
+    def test_console_pool_create_duplicate(self):
+        db.console_pool_create(self.ctxt, self.test_console_pool_1)
+        self.assertRaises(exception.ConsolePoolExists, db.console_pool_create,
+                          self.ctxt, self.test_console_pool_1)
+
+    def test_console_pool_get_by_host_type(self):
+        params = [
+            self.test_console_pool_1,
+            self.test_console_pool_2,
+        ]
+
+        for p in params:
+            db.console_pool_create(self.ctxt, p)
+
+        ignored_keys = ['deleted', 'created_at', 'updated_at',
+                        'deleted_at', 'id', 'consoles']
+
+        cp = self.test_console_pool_1
+        db_cp = db.console_pool_get_by_host_type(
+            self.ctxt, cp['compute_host'], cp['host'], cp['console_type']
+        )
+        self._assertEqualObjects(cp, db_cp, ignored_keys)
+
+    def test_console_pool_get_by_host_type_no_resuls(self):
+        self.assertRaises(
+            exception.ConsolePoolNotFoundForHostType,
+            db.console_pool_get_by_host_type, self.ctxt, 'compute_host',
+            'host', 'console_type')
+
+    def test_console_pool_get_all_by_host_type(self):
+        params = [
+            self.test_console_pool_1,
+            self.test_console_pool_1,
+            self.test_console_pool_2,
+        ]
+        for p in params:
+            db.console_pool_create(self.ctxt, p)
+        ignored_keys = ['deleted', 'created_at', 'updated_at',
+                        'deleted_at', 'id', 'consoles']
+
+        cp = self.test_console_pool_1
+        db_cp = db.console_pool_get_all_by_host_type(
+            self.ctxt, cp['host'], cp['console_type'])
+
+        self.assertEqual(len(db_cp), 2)
+        self._assertEqualObjects(cp, db_cp[0], ignored_keys)
+        self._assertEqualObjects(cp, db_cp[1], ignored_keys)
+
+    def test_console_pool_get_all_by_host_type_no_results(self):
+        res = db.console_pool_get_all_by_host_type(
+            self.ctxt, 'cp_host', 'cp_console_type')
+        self.assertEqual([], res)
+
+
 class ArchiveTestCase(test.TestCase):
 
     def setUp(self):
