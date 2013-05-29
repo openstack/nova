@@ -289,6 +289,11 @@ MIN_LIBVIRT_LIVESNAPSHOT_VERSION = (1, 0, 0)
 MIN_QEMU_LIVESNAPSHOT_VERSION = (1, 3, 0)
 
 
+def libvirt_error_handler(ctxt, err):
+    # Just ignore instead of default outputting to stderr.
+    pass
+
+
 class LibvirtDriver(driver.ComputeDriver):
 
     capabilities = {
@@ -543,6 +548,7 @@ class LibvirtDriver(driver.ComputeDriver):
         dispatch_thread = eventlet.spawn(self._dispatch_thread)
 
     def init_host(self, host):
+        libvirt.registerErrorHandler(libvirt_error_handler, None)
         libvirt.virEventRegisterDefaultImpl()
 
         if not self.has_min_version(MIN_LIBVIRT_VERSION):
