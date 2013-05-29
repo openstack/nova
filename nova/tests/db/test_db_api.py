@@ -4828,6 +4828,49 @@ class ProviderFwRuleTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertEqual([], db.provider_fw_rule_get_all(self.ctxt))
 
 
+class CertificateTestCase(test.TestCase, ModelsObjectComparatorMixin):
+
+    def setUp(self):
+        super(CertificateTestCase, self).setUp()
+        self.ctxt = context.get_admin_context()
+        self.created = self._certificates_create()
+
+    def _get_certs_values(self):
+        base_values = {
+            'user_id': 'user',
+            'project_id': 'project',
+            'file_name': 'filename'
+        }
+        return [dict((k, v + str(x)) for k, v in base_values.iteritems())
+                      for x in xrange(1, 4)]
+
+    def _certificates_create(self):
+        return [db.certificate_create(self.ctxt, cert)
+                                      for cert in self._get_certs_values()]
+
+    def test_certificate_create(self):
+        ignored_keys = ['id', 'deleted', 'deleted_at', 'created_at',
+                        'updated_at']
+        for i, cert in enumerate(self._get_certs_values()):
+            self._assertEqualObjects(self.created[i], cert,
+                                     ignored_keys=ignored_keys)
+
+    def test_certificate_get_all_by_project(self):
+        cert = db.certificate_get_all_by_project(self.ctxt,
+                                                 self.created[1].project_id)
+        self._assertEqualObjects(self.created[1], cert[0])
+
+    def test_certificate_get_all_by_user(self):
+        cert = db.certificate_get_all_by_user(self.ctxt,
+                                              self.created[1].user_id)
+        self._assertEqualObjects(self.created[1], cert[0])
+
+    def test_certificate_get_all_by_user_and_project(self):
+        cert = db.certificate_get_all_by_user_and_project(self.ctxt,
+                           self.created[1].user_id, self.created[1].project_id)
+        self._assertEqualObjects(self.created[1], cert[0])
+
+
 class CellTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     _ignored_keys = ['id', 'deleted', 'deleted_at', 'created_at', 'updated_at']
