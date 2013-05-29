@@ -18,8 +18,11 @@ Unit Tests for testing the cells weight algorithms.
 Cells with higher weights should be given priority for new builds.
 """
 
+import datetime
+
 from nova.cells import state
 from nova.cells import weights
+from nova.openstack.common import timeutils
 from nova import test
 
 
@@ -163,3 +166,52 @@ class WeightOffsetWeigherTestClass(_WeigherTestClass):
         expected_cells = [cells[2], cells[3], cells[0], cells[1]]
         resulting_cells = [weighed_cell.obj for weighed_cell in weighed_cells]
         self.assertEqual(expected_cells, resulting_cells)
+
+
+class MuteWeigherTestClass(_WeigherTestClass):
+    weigher_cls_name = 'nova.cells.weights.mute_child.MuteChildWeigher'
+
+    def setUp(self):
+        super(MuteWeigherTestClass, self).setUp()
+        self.flags(mute_weight_multiplier=-10.0, mute_child_interval=100,
+                   mute_weight_value=1000.0, group='cells')
+
+        self.now = timeutils.utcnow()
+        timeutils.set_time_override(self.now)
+
+        self.cells = _get_fake_cells()
+        for cell in self.cells:
+            cell.last_seen = self.now
+
+    def tearDown(self):
+        super(MuteWeigherTestClass, self).tearDown()
+        timeutils.clear_time_override()
+
+    def test_non_mute(self):
+        weight_properties = {}
+        weighed_cells = self._get_weighed_cells(self.cells, weight_properties)
+        self.assertEqual(len(weighed_cells), 4)
+
+        for weighed_cell in weighed_cells:
+            self.assertEqual(0, weighed_cell.weight)
+
+    def test_mutes(self):
+        # make 2 of them mute:
+        self.cells[0].last_seen = (self.cells[0].last_seen -
+                                   datetime.timedelta(seconds=200))
+        self.cells[1].last_seen = (self.cells[1].last_seen -
+                                   datetime.timedelta(seconds=200))
+
+        weight_properties = {}
+        weighed_cells = self._get_weighed_cells(self.cells, weight_properties)
+        self.assertEqual(len(weighed_cells), 4)
+
+        for i in range(2):
+            weighed_cell = weighed_cells.pop(0)
+            self.assertEqual(0, weighed_cell.weight)
+            self.assertIn(weighed_cell.obj.name, ['cell3', 'cell4'])
+
+        for i in range(2):
+            weighed_cell = weighed_cells.pop(0)
+            self.assertEqual(1000 * -10.0, weighed_cell.weight)
+            self.assertIn(weighed_cell.obj.name, ['cell1', 'cell2'])
