@@ -4083,14 +4083,12 @@ class AgentBuildTestCase(test.TestCase, ModelsObjectComparatorMixin):
         db.agent_build_update(self.ctxt, agent_build.id, {'os': 'ReactOS'})
         self.assertEqual('ReactOS', db.agent_build_get_all(self.ctxt)[0].os)
 
-    @test.testtools.skip("bug 1181967")
     def test_agent_build_destroy_destroyed(self):
         agent_build = db.agent_build_create(self.ctxt, {})
         db.agent_build_destroy(self.ctxt, agent_build.id)
         self.assertRaises(exception.AgentBuildNotFound,
             db.agent_build_destroy, self.ctxt, agent_build.id)
 
-    @test.testtools.skip("bug 1181967")
     def test_agent_build_update_destroyed(self):
         agent_build = db.agent_build_create(self.ctxt, {'os': 'HaikuOS'})
         db.agent_build_destroy(self.ctxt, agent_build.id)
