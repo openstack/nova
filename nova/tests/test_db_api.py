@@ -1958,6 +1958,180 @@ class ReservationTestCase(test.TestCase, ModelsObjectComparatorMixin):
                                             self.ctxt, 'project1'))
 
 
+class SecurityGroupTestCase(test.TestCase, ModelsObjectComparatorMixin):
+    def setUp(self):
+        super(SecurityGroupTestCase, self).setUp()
+        self.ctxt = context.get_admin_context()
+
+    def _get_base_values(self):
+        return {
+            'name': 'fake_sec_group',
+            'description': 'fake_sec_group_descr',
+            'user_id': 'fake',
+            'project_id': 'fake',
+            'instances': []
+            }
+
+    def _create_security_group(self, values):
+        v = self._get_base_values()
+        v.update(values)
+        return db.security_group_create(self.ctxt, v)
+
+    def test_security_group_create(self):
+        security_group = self._create_security_group({})
+        self.assertFalse(security_group['id'] is None)
+        for key, value in self._get_base_values().iteritems():
+            self.assertEqual(value, security_group[key])
+
+    def test_security_group_destroy(self):
+        security_group1 = self._create_security_group({})
+        security_group2 = \
+            self._create_security_group({'name': 'fake_sec_group2'})
+
+        db.security_group_destroy(self.ctxt, security_group1['id'])
+        self.assertRaises(exception.SecurityGroupNotFound,
+                          db.security_group_get,
+                          self.ctxt, security_group1['id'])
+        self._assertEqualObjects(db.security_group_get(self.ctxt,
+                                                       security_group2['id']),
+                                 security_group2)
+
+    def test_security_group_get(self):
+        security_group1 = self._create_security_group({})
+        security_group2 = self._create_security_group(
+                {'name': 'fake_sec_group2'})
+        real_security_group = db.security_group_get(self.ctxt,
+                                              security_group1['id'])
+        self._assertEqualObjects(security_group1,
+                                 real_security_group)
+
+    def test_security_group_get_not_found_exception(self):
+        self.assertRaises(exception.SecurityGroupNotFound,
+                          db.security_group_get, self.ctxt, 100500)
+
+    def test_security_group_get_by_name(self):
+        security_group1 = self._create_security_group({'name': 'fake1'})
+        security_group2 = self._create_security_group({'name': 'fake2'})
+
+        real_security_group1 = db.security_group_get_by_name(
+                                self.ctxt,
+                                security_group1['project_id'],
+                                security_group1['name'])
+        real_security_group2 = db.security_group_get_by_name(
+                                self.ctxt,
+                                security_group2['project_id'],
+                                security_group2['name'])
+        self._assertEqualObjects(security_group1, real_security_group1)
+        self._assertEqualObjects(security_group2, real_security_group2)
+
+    def test_security_group_get_by_project(self):
+        security_group1 = self._create_security_group(
+                {'name': 'fake1', 'project_id': 'fake_proj1'})
+        security_group2 = self._create_security_group(
+                {'name': 'fake2', 'project_id': 'fake_proj2'})
+
+        real1 = db.security_group_get_by_project(
+                               self.ctxt,
+                               security_group1['project_id'])
+        real2 = db.security_group_get_by_project(
+                               self.ctxt,
+                               security_group2['project_id'])
+
+        expected1, expected2 = [security_group1], [security_group2]
+        self._assertEqualListsOfObjects(expected1, real1,
+                                        ignored_keys=['instances'])
+        self._assertEqualListsOfObjects(expected2, real2,
+                                        ignored_keys=['instances'])
+
+    def test_security_group_get_by_instance(self):
+        instance = db.instance_create(self.ctxt, dict(host='foo'))
+        values = [
+            {'name': 'fake1', 'instances': [instance]},
+            {'name': 'fake2', 'instances': [instance]},
+            {'name': 'fake3', 'instances': []},
+        ]
+        security_groups = [self._create_security_group(vals)
+                           for vals in values]
+
+        real = db.security_group_get_by_instance(self.ctxt,
+                                                 instance['id'])
+        expected = security_groups[:2]
+        self._assertEqualListsOfObjects(expected, real,
+                                        ignored_keys=['instances'])
+
+    def test_security_group_get_all(self):
+        values = [
+            {'name': 'fake1', 'project_id': 'fake_proj1'},
+            {'name': 'fake2', 'project_id': 'fake_proj2'},
+        ]
+        security_groups = [self._create_security_group(vals)
+                           for vals in values]
+
+        real = db.security_group_get_all(self.ctxt)
+
+        self._assertEqualListsOfObjects(security_groups, real,
+                                        ignored_keys=['instances'])
+
+    def test_security_group_exists(self):
+        security_group = self._create_security_group(
+                {'name': 'fake1', 'project_id': 'fake_proj1'})
+
+        real = (db.security_group_exists(self.ctxt,
+                                         security_group['project_id'],
+                                         security_group['name']),
+                db.security_group_exists(self.ctxt,
+                                         security_group['project_id'],
+                                         'fake_sec_group'))
+
+        self.assertEqual((True, False), real)
+
+    def test_security_group_count_by_project(self):
+        values = [
+            {'name': 'fake1', 'project_id': 'fake_proj1'},
+            {'name': 'fake2', 'project_id': 'fake_proj1'},
+            {'name': 'fake3', 'project_id': 'fake_proj2'},
+        ]
+        security_groups = [self._create_security_group(vals)
+                           for vals in values]
+
+        real = []
+        for project in ('fake_proj1', 'fake_proj2'):
+            real.append(db.security_group_count_by_project(self.ctxt, project))
+        expected = [2, 1]
+
+        self.assertEquals(expected, real)
+
+    def test_security_group_in_use(self):
+        instance = db.instance_create(self.ctxt, dict(host='foo'))
+        values = [
+            {'instances': [instance]},
+            {'instances': []},
+        ]
+
+        security_groups = [self._create_security_group(vals)
+                           for vals in values]
+
+        real = []
+        for security_group in security_groups:
+            in_use = db.security_group_in_use(self.ctxt,
+                                              security_group['id'])
+            real.append(in_use)
+        expected = [True, False]
+
+        self.assertEquals(expected, real)
+
+    def test_security_group_ensure_default(self):
+        self.assertFalse(db.security_group_exists(self.ctxt,
+                                                  self.ctxt.project_id,
+                                                  'default'))
+
+        default_group = db.security_group_ensure_default(self.ctxt)
+
+        self.assertTrue(db.security_group_exists(self.ctxt,
+                                                 self.ctxt.project_id,
+                                                 'default'))
+
+
 class ServiceTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def setUp(self):
         super(ServiceTestCase, self).setUp()
