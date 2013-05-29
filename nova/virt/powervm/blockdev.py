@@ -380,6 +380,22 @@ class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
         output = self.run_vios_command_as_root(cmd)
         return output[0]
 
+    def _checksum_local_file(self, source_path):
+        """Calculate local file checksum.
+
+        :param source_path: source file path
+        :returns: string -- the md5sum of local file
+        """
+        with open(source_path, 'r') as img_file:
+            hasher = hashlib.md5()
+            block_size = 0x10000
+            buf = img_file.read(block_size)
+            while len(buf) > 0:
+                hasher.update(buf)
+                buf = img_file.read(block_size)
+            source_cksum = hasher.hexdigest()
+        return source_cksum
+
     def _copy_image_file(self, source_path, remote_path, decompress=False):
         """Copy file to VIOS, decompress it, and return its new size and name.
 
@@ -389,14 +405,7 @@ class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
                            if False (default), just copies the file
         """
         # Calculate source image checksum
-        hasher = hashlib.md5()
-        block_size = 0x10000
-        img_file = file(source_path, 'r')
-        buf = img_file.read(block_size)
-        while len(buf) > 0:
-            hasher.update(buf)
-            buf = img_file.read(block_size)
-        source_cksum = hasher.hexdigest()
+        source_cksum = self._checksum_local_file(source_path)
 
         comp_path = os.path.join(remote_path, os.path.basename(source_path))
         if comp_path.endswith(".gz"):
@@ -422,10 +431,18 @@ class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
             output = self._md5sum_remote_file(final_path)
             if not output:
                 LOG.error(_("Unable to get checksum"))
-                raise exception.PowerVMFileTransferFailed()
+                # Cleanup inconsistent remote file
+                cmd = "/usr/bin/rm -f %s" % final_path
+                self.run_vios_command_as_root(cmd)
+
+                raise exception.PowerVMFileTransferFailed(file_path=final_path)
             if source_cksum != output.split(' ')[0]:
                 LOG.error(_("Image checksums do not match"))
-                raise exception.PowerVMFileTransferFailed()
+                # Cleanup inconsistent remote file
+                cmd = "/usr/bin/rm -f %s" % final_path
+                self.run_vios_command_as_root(cmd)
+
+                raise exception.PowerVMFileTransferFailed(file_path=final_path)
 
             if decompress:
                 # Unzip the image
@@ -505,19 +522,13 @@ class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
                                local_file_path)
 
         # Calculate copied image checksum
-        with open(local_file_path, 'r') as image_file:
-            hasher = hashlib.md5()
-            block_size = 0x10000
-            buf = image_file.read(block_size)
-            while len(buf) > 0:
-                hasher.update(buf)
-                buf = image_file.read(block_size)
-            dest_chksum = hasher.hexdigest()
+        dest_chksum = self._checksum_local_file(local_file_path)
 
         # do comparison
         if source_chksum and dest_chksum != source_chksum:
             LOG.error(_("Image checksums do not match"))
-            raise exception.PowerVMFileTransferFailed()
+            raise exception.PowerVMFileTransferFailed(
+                                      file_path=local_file_path)
 
         # Cleanup transferred remote file
         cmd = "/usr/bin/rm -f %s" % copy_from_path
