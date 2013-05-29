@@ -55,6 +55,9 @@ class CellsAPITestCase(test.TestCase):
         self.assertEqual(self.fake_context, call_info['context'])
         self.assertEqual(self.fake_topic, call_info['topic'])
         self.assertEqual(method, call_info['msg']['method'])
+        msg_version = call_info['msg']['version']
+        self.assertTrue(isinstance(msg_version, basestring),
+                        "Message version %s is not a string" % msg_version)
         self.assertEqual(version, call_info['msg']['version'])
         self.assertEqual(args, call_info['msg']['args'])
 
@@ -127,7 +130,7 @@ class CellsAPITestCase(test.TestCase):
                                                'arg2': 2,
                                                'arg3': 3}}
         self._check_result(call_info, 'build_instances',
-                expected_args, version=1.8)
+                expected_args, version='1.8')
 
     def test_get_capacities(self):
         capacity_info = {"capacity": "info"}
