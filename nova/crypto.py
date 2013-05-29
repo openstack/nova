@@ -324,7 +324,7 @@ def generate_x509_cert(user_id, project_id, bits=1024):
 
     with utils.tempdir() as tmpdir:
         keyfile = os.path.abspath(os.path.join(tmpdir, 'temp.key'))
-        csrfile = os.path.join(tmpdir, 'temp.csr')
+        csrfile = os.path.abspath(os.path.join(tmpdir, 'temp.csr'))
         utils.execute('openssl', 'genrsa', '-out', keyfile, str(bits))
         utils.execute('openssl', 'req', '-new', '-key', keyfile, '-out',
                       csrfile, '-batch', '-subj', subject)
