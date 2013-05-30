@@ -45,12 +45,6 @@ class VirtAPIBaseTest(test.TestCase, test.APICoverage):
         self.assertExpected('instance_update', 'fake-uuid',
                             dict(host='foohost'))
 
-    def test_instance_get_by_uuid(self):
-        self.assertExpected('instance_get_by_uuid', 'fake-uuid')
-
-    def test_instance_get_all_by_host(self):
-        self.assertExpected('instance_get_all_by_host', 'fake-host')
-
     def test_aggregate_get_by_host(self):
         self.assertExpected('aggregate_get_by_host', 'fake-host', key=None)
 
