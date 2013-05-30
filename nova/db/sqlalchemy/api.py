@@ -2747,6 +2747,13 @@ def reservation_get(context, uuid):
 
 @require_admin_context
 def reservation_create(context, uuid, usage, project_id, resource, delta,
+                       expire):
+    return _reservation_create(context, uuid, usage, project_id,
+                               resource, delta, expire)
+
+
+@require_admin_context
+def _reservation_create(context, uuid, usage, project_id, resource, delta,
                        expire, session=None):
     reservation_ref = models.Reservation()
     reservation_ref.uuid = uuid
@@ -2875,7 +2882,7 @@ def quota_reserve(context, resources, quotas, deltas, expire,
         if not overs:
             reservations = []
             for res, delta in deltas.items():
-                reservation = reservation_create(elevated,
+                reservation = _reservation_create(elevated,
                                                  str(uuid.uuid4()),
                                                  usages[res],
                                                  project_id,
