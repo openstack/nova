@@ -1700,16 +1700,16 @@ def instance_get_all_by_filters(context, filters, sort_key, sort_dir,
         # Instances can be soft or hard deleted and the query needs to
         # include or exclude both
         if filters.pop('deleted'):
-            if filters.pop('soft_deleted', False):
-                query_prefix = query_prefix.\
-                    filter(models.Instance.deleted == models.Instance.id)
-            else:
+            if filters.pop('soft_deleted', True):
                 deleted = or_(
                     models.Instance.deleted == models.Instance.id,
                     models.Instance.vm_state == vm_states.SOFT_DELETED
                     )
                 query_prefix = query_prefix.\
                     filter(deleted)
+            else:
+                query_prefix = query_prefix.\
+                    filter(models.Instance.deleted == models.Instance.id)
         else:
             query_prefix = query_prefix.\
                     filter_by(deleted=0)
