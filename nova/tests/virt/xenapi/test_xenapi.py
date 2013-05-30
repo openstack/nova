@@ -38,6 +38,7 @@ from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova import test
 from nova.tests.db import fakes as db_fakes
+from nova.tests import fake_instance
 from nova.tests import fake_network
 from nova.tests import fake_processutils
 import nova.tests.image.fake as fake_image
@@ -1172,6 +1173,19 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
     def test_maintenance_mode_no_aggregate(self):
         self.assertRaises(exception.NotFound,
                           self._test_maintenance_mode, True, False)
+
+    def test_uuid_find(self):
+        self.mox.StubOutWithMock(db, 'instance_get_all_by_host')
+        fake_inst = fake_instance.fake_db_instance(id=123)
+        fake_inst2 = fake_instance.fake_db_instance(id=456)
+        db.instance_get_all_by_host(self.context, fake_inst['host'],
+                                    columns_to_join=None
+                                    ).AndReturn([fake_inst, fake_inst2])
+        self.mox.ReplayAll()
+        expected_name = CONF.instance_name_template % fake_inst['id']
+        inst_uuid = host._uuid_find(self.context, fake_inst['host'],
+                                    expected_name)
+        self.assertEqual(inst_uuid, fake_inst['uuid'])
 
     def test_session_virtapi(self):
         was = {'called': False}
