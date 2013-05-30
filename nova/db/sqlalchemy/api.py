@@ -519,9 +519,10 @@ def _update_stats(context, new_stats, compute_id, session, prune_stats=False):
     for k, v in new_stats.iteritems():
         old_stat = statmap.pop(k, None)
         if old_stat:
-            # update existing value:
-            old_stat.update({'value': v})
-            stats.append(old_stat)
+            if old_stat['value'] != unicode(v):
+                # update existing value:
+                old_stat.update({'value': v})
+                stats.append(old_stat)
         else:
             # add new stat:
             stat = models.ComputeNodeStat()
