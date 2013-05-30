@@ -257,7 +257,7 @@ class APIRouterV3(base_wsgi.Router):
 
     @property
     def loaded_extension_info(self):
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def _register_extension(self, ext):
         raise NotImplementedError()

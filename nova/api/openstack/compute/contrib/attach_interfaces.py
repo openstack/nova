@@ -137,7 +137,7 @@ class InterfaceAttachmentController(object):
             self.compute_api.detach_interface(context,
                 instance, port_id=port_id)
         except exception.PortNotFound:
-            raise exc.HTTPNotFound
+            raise exc.HTTPNotFound()
         except NotImplementedError:
             msg = _("Network driver does not support this function.")
             raise webob.exc.HTTPNotImplemented(explanation=msg)
