@@ -35,10 +35,12 @@ from nova.tests import matchers
 from nova.tests import utils
 from nova.tests.virt.vmwareapi import db_fakes
 from nova.tests.virt.vmwareapi import stubs
+from nova.virt import fake
 from nova.virt.vmwareapi import driver
 from nova.virt.vmwareapi import fake as vmwareapi_fake
 from nova.virt.vmwareapi import vim
 from nova.virt.vmwareapi import vm_util
+from nova.virt.vmwareapi import vmops
 
 
 class fake_vm_ref(object):
@@ -113,7 +115,7 @@ class VMwareAPIVMTestCase(test.TestCase):
         vmwareapi_fake.reset()
         db_fakes.stub_out_db_instance_api(self.stubs)
         stubs.set_stubs(self.stubs)
-        self.conn = driver.VMwareESXDriver(None, False)
+        self.conn = driver.VMwareVCDriver(fake.FakeVirtAPI)
         # NOTE(vish): none of the network plugging code is actually
         #             being tested
         self.network_info = utils.get_test_network_info(legacy_model=False)
@@ -380,6 +382,102 @@ class VMwareAPIVMTestCase(test.TestCase):
 
         self.mox.ReplayAll()
         self.conn.get_console_output(self.instance)
+
+    def _test_finish_migration(self, power_on):
+        """
+        Tests the finish_migration method on vmops via the
+        VMwareVCDriver. Results are checked against whether or not
+        the underlying instance should have been powered on.
+        """
+
+        self.power_on_called = False
+
+        def fake_power_on(instance):
+            self.assertEquals(self.instance, instance)
+            self.power_on_called = True
+
+        def fake_vmops_update_instance_progress(context, instance, step,
+                                                total_steps):
+            self.assertEquals(self.context, context)
+            self.assertEquals(self.instance, instance)
+            self.assertEquals(4, step)
+            self.assertEqual(vmops.RESIZE_TOTAL_STEPS, total_steps)
+
+        self.stubs.Set(self.conn._vmops, "power_on", fake_power_on)
+        self.stubs.Set(self.conn._vmops, "_update_instance_progress",
+                       fake_vmops_update_instance_progress)
+
+        # setup the test instance in the database
+        self._create_vm()
+        # perform the migration on our stubbed methods
+        self.conn.finish_migration(context=self.context,
+                                   migration=None,
+                                   instance=self.instance,
+                                   disk_info=None,
+                                   network_info=None,
+                                   image_meta=None,
+                                   power_on=power_on)
+        # verify the results
+        self.assertEquals(power_on, self.power_on_called)
+
+    def test_finish_migration_power_on(self):
+        self._test_finish_migration(power_on=True)
+
+    def test_finish_migration_power_off(self):
+        self._test_finish_migration(power_on=False)
+
+    def _test_finish_revert_migration(self, power_on):
+        """
+        Tests the finish_revert_migration method on vmops via the
+        VMwareVCDriver. Results are checked against whether or not
+        the underlying instance should have been powered on.
+        """
+
+        # setup the test instance in the database
+        self._create_vm()
+
+        self.power_on_called = False
+        self.vm_name = str(self.instance['name']) + '-orig'
+
+        def fake_power_on(instance):
+            self.assertEquals(self.instance, instance)
+            self.power_on_called = True
+
+        def fake_get_orig_vm_name_label(instance):
+            self.assertEquals(self.instance, instance)
+            return self.vm_name
+
+        def fake_get_vm_ref_from_name(session, vm_name):
+            self.assertEquals(self.vm_name, vm_name)
+            return vmwareapi_fake._get_objects("VirtualMachine")[0]
+
+        def fake_call_method(*args, **kwargs):
+            pass
+
+        def fake_wait_for_task(*args, **kwargs):
+            pass
+
+        self.stubs.Set(self.conn._vmops, "power_on", fake_power_on)
+        self.stubs.Set(self.conn._vmops, "_get_orig_vm_name_label",
+                       fake_get_orig_vm_name_label)
+        self.stubs.Set(vm_util, "get_vm_ref_from_name",
+                       fake_get_vm_ref_from_name)
+        self.stubs.Set(self.conn._session, "_call_method", fake_call_method)
+        self.stubs.Set(self.conn._session, "_wait_for_task",
+                       fake_wait_for_task)
+
+        # perform the revert on our stubbed methods
+        self.conn.finish_revert_migration(instance=self.instance,
+                                          network_info=None,
+                                          power_on=power_on)
+        # verify the results
+        self.assertEquals(power_on, self.power_on_called)
+
+    def test_finish_revert_migration_power_on(self):
+        self._test_finish_revert_migration(power_on=True)
+
+    def test_finish_revert_migration_power_off(self):
+        self._test_finish_revert_migration(power_on=False)
 
 
 class VMwareAPIHostTestCase(test.TestCase):

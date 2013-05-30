@@ -144,7 +144,7 @@ class MigrationOps(object):
         self._pathutils.rename(revert_path, instance_path)
 
     def finish_revert_migration(self, instance, network_info,
-                                block_device_info=None):
+                                block_device_info=None, power_on=True):
         LOG.debug(_("finish_revert_migration called"), instance=instance)
 
         instance_name = instance['name']
@@ -157,7 +157,8 @@ class MigrationOps(object):
         self._vmops.create_instance(instance, network_info, block_device_info,
                                     root_vhd_path)
 
-        self._vmops.power_on(instance)
+        if power_on:
+            self._vmops.power_on(instance)
 
     def _merge_base_vhd(self, diff_vhd_path, base_vhd_path):
         base_vhd_copy_path = os.path.join(os.path.dirname(diff_vhd_path),
@@ -209,7 +210,7 @@ class MigrationOps(object):
 
     def finish_migration(self, context, migration, instance, disk_info,
                          network_info, image_meta, resize_instance=False,
-                         block_device_info=None):
+                         block_device_info=None, power_on=True):
         LOG.debug(_("finish_migration called"), instance=instance)
 
         instance_name = instance['name']
@@ -239,4 +240,5 @@ class MigrationOps(object):
 
         self._vmops.create_instance(instance, network_info, block_device_info,
                                     root_vhd_path)
-        self._vmops.power_on(instance)
+        if power_on:
+            self._vmops.power_on(instance)

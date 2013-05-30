@@ -1069,7 +1069,8 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
             def __init__(self):
                 self.finish_revert_migration_called = False
 
-            def finish_revert_migration(self, instance, block_info):
+            def finish_revert_migration(self, instance, block_info,
+                                        power_on):
                 self.finish_revert_migration_called = True
 
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
@@ -1391,7 +1392,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
                           self.context, instance,
                           '127.0.0.1', instance_type, None)
 
-    def test_revert_migrate(self):
+    def _test_revert_migrate(self, power_on):
         instance = create_instance_with_system_metadata(self.context,
                                                         self.instance_values)
         self.called = False
@@ -1426,14 +1427,21 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         cow_uuid = xenapi_fake.get_record('VDI', cow)['uuid']
         conn.finish_migration(self.context, self.migration, instance,
                               dict(base_copy=base_uuid, cow=cow_uuid),
-                              network_info, image_meta, resize_instance=True)
+                              network_info, image_meta, resize_instance=True,
+                              block_device_info=None, power_on=power_on)
         self.assertEqual(self.called, True)
-        self.assertEqual(self.fake_vm_start_called, True)
+        self.assertEqual(self.fake_vm_start_called, power_on)
 
         conn.finish_revert_migration(instance, network_info)
         self.assertEqual(self.fake_finish_revert_migration_called, True)
 
-    def test_finish_migrate(self):
+    def test_revert_migrate_power_on(self):
+        self._test_revert_migrate(True)
+
+    def test_revert_migrate_power_off(self):
+        self._test_revert_migrate(False)
+
+    def _test_finish_migrate(self, power_on):
         instance = create_instance_with_system_metadata(self.context,
                                                         self.instance_values)
         self.called = False
@@ -1458,9 +1466,16 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         image_meta = {'id': instance['image_ref'], 'disk_format': 'vhd'}
         conn.finish_migration(self.context, self.migration, instance,
                               dict(base_copy='hurr', cow='durr'),
-                              network_info, image_meta, resize_instance=True)
+                              network_info, image_meta, resize_instance=True,
+                              block_device_info=None, power_on=power_on)
         self.assertEqual(self.called, True)
-        self.assertEqual(self.fake_vm_start_called, True)
+        self.assertEqual(self.fake_vm_start_called, power_on)
+
+    def test_finish_migrate_power_on(self):
+        self._test_finish_migrate(True)
+
+    def test_finish_migrate_power_off(self):
+        self._test_finish_migrate(False)
 
     def test_finish_migrate_no_local_storage(self):
         tiny_type = flavors.get_instance_type_by_name('m1.tiny')

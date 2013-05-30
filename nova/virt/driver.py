@@ -343,14 +343,23 @@ class ComputeDriver(object):
 
     def finish_migration(self, context, migration, instance, disk_info,
                          network_info, image_meta, resize_instance,
-                         block_device_info=None):
-        """Completes a resize, turning on the migrated instance
+                         block_device_info=None, power_on=True):
+        """Completes a resize.
 
+        :param context: the context for the migration/resize
+        :param migration: the migrate/resize information
+        :param instance: the instance being migrated/resized
+        :param disk_info: the newly transferred disk information
         :param network_info:
            :py:meth:`~nova.network.manager.NetworkManager.get_instance_nw_info`
         :param image_meta: image object returned by nova.image.glance that
                            defines the image from which this instance
                            was created
+        :param resize_instance: True if the instance is being resized,
+                                False otherwise
+        :param block_device_info: instance volume block device info
+        :param power_on: True if the instance should be powered on, False
+                         otherwise
         """
         raise NotImplementedError()
 
@@ -360,8 +369,17 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def finish_revert_migration(self, instance, network_info,
-                                block_device_info=None):
-        """Finish reverting a resize, powering back on the instance."""
+                                block_device_info=None, power_on=True):
+        """
+        Finish reverting a resize.
+
+        :param instance: the instance being migrated/resized
+        :param network_info:
+           :py:meth:`~nova.network.manager.NetworkManager.get_instance_nw_info`
+        :param block_device_info: instance volume block device info
+        :param power_on: True if the instance should be powered on, False
+                         otherwise
+        """
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 

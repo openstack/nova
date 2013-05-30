@@ -279,7 +279,7 @@ class PowerVMDriver(driver.ComputeDriver):
 
     def finish_migration(self, context, migration, instance, disk_info,
                          network_info, image_meta, resize_instance,
-                         block_device_info=None):
+                         block_device_info=None, power_on=True):
         """Completes a resize, turning on the migrated instance
 
         :param network_info:
@@ -297,7 +297,8 @@ class PowerVMDriver(driver.ComputeDriver):
             disk_size = max(int(new_lv_size), int(old_lv_size))
             disk_size_bytes = disk_size * 1024 * 1024 * 1024
             self._powervm.deploy_from_migrated_file(
-                    lpar_obj, disk_info['root_disk_file'], disk_size_bytes)
+                    lpar_obj, disk_info['root_disk_file'], disk_size_bytes,
+                    power_on)
         else:
             # this shouldn't get hit unless someone forgot to handle
             # a certain migration type
@@ -312,8 +313,8 @@ class PowerVMDriver(driver.ComputeDriver):
         self._powervm.destroy(new_name)
 
     def finish_revert_migration(self, instance, network_info,
-                                block_device_info=None):
-        """Finish reverting a resize, powering back on the instance."""
+                                block_device_info=None, power_on=True):
+        """Finish reverting a resize."""
 
         new_name = self._get_resize_name(instance['name'])
 
@@ -332,4 +333,6 @@ class PowerVMDriver(driver.ComputeDriver):
                 self._powervm.destroy(instance['name'])
             # undo instance rename and start
             self._powervm._operator.rename_lpar(new_name, instance['name'])
-        self._powervm.power_on(instance['name'])
+
+        if power_on:
+            self._powervm.power_on(instance['name'])
