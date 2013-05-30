@@ -16,6 +16,7 @@
 
 from oslo.config import cfg
 
+from nova.objects import base as objects_base
 from nova.openstack.common import jsonutils
 import nova.openstack.common.rpc.proxy
 
@@ -88,6 +89,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                  instance_get_all_by_filters
     1.48 - Added compute_unrescue
     1.49 - Added columns_to_join to instance_get_by_uuid
+    1.50 - Added object_action() and object_class_action()
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -95,7 +97,8 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     def __init__(self):
         super(ConductorAPI, self).__init__(
             topic=CONF.conductor.topic,
-            default_version=self.BASE_RPC_API_VERSION)
+            default_version=self.BASE_RPC_API_VERSION,
+            serializer=objects_base.NovaObjectSerializer())
 
     def instance_update(self, context, instance_uuid, updates,
                         service=None):
@@ -440,6 +443,16 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         instance_p = jsonutils.to_primitive(instance)
         msg = self.make_msg('compute_unrescue', instance=instance_p)
         return self.call(context, msg, version='1.48')
+
+    def object_class_action(self, context, objname, objmethod, objver, kwargs):
+        msg = self.make_msg('object_class_action', objname=objname,
+                            objmethod=objmethod, objver=objver, **kwargs)
+        return self.call(context, msg, version='1.50')
+
+    def object_action(self, context, objinst, objmethod, kwargs):
+        msg = self.make_msg('object_action', objinst=objinst,
+                            objmethod=objmethod, **kwargs)
+        return self.call(context, msg, version='1.50')
 
 
 class ComputeTaskAPI(nova.openstack.common.rpc.proxy.RpcProxy):

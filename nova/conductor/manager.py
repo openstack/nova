@@ -14,6 +14,8 @@
 
 """Handles database requests from other nova services."""
 
+import copy
+
 from nova.api.ec2 import ec2utils
 from nova.compute import api as compute_api
 from nova.compute import utils as compute_utils
@@ -22,6 +24,7 @@ from nova import manager
 from nova import network
 from nova.network.security_group import openstack_driver
 from nova import notifications
+from nova.objects import base as nova_object
 from nova.openstack.common.db.sqlalchemy import session as db_session
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
@@ -61,7 +64,7 @@ class ConductorManager(manager.Manager):
     namespace.  See the ComputeTaskManager class for details.
     """
 
-    RPC_API_VERSION = '1.49'
+    RPC_API_VERSION = '1.50'
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(service_name='conductor',
@@ -473,6 +476,31 @@ class ConductorManager(manager.Manager):
 
     def compute_unrescue(self, context, instance):
         self.compute_api.unrescue(context, instance)
+
+    def object_class_action(self, context, objname, objmethod,
+                            objver, **kwargs):
+        """Perform a classmethod action on an object."""
+        objclass = nova_object.NovaObject.obj_class_from_name(objname,
+                                                              objver)
+        return getattr(objclass, objmethod)(context, **kwargs)
+
+    def object_action(self, context, objinst, objmethod, **kwargs):
+        """Perform an action on an object."""
+        oldobj = copy.copy(objinst)
+        result = getattr(objinst, objmethod)(context, **kwargs)
+        updates = dict()
+        # NOTE(danms): Diff the object with the one passed to us and
+        # generate a list of changes to forward back
+        for field in objinst.fields:
+            if not hasattr(objinst, nova_object.get_attrname(field)):
+                # Avoid demand-loading anything
+                continue
+            if oldobj[field] != objinst[field]:
+                updates[field] = objinst._attr_to_primitive(field)
+        # This is safe since a field named this would conflict with the
+        # method anyway
+        updates['obj_what_changed'] = objinst.obj_what_changed()
+        return updates, result
 
 
 class ComputeTaskManager(object):

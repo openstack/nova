@@ -1208,3 +1208,15 @@ class InstanceFaultRollback(NovaException):
         message = _("Instance rollback performed due to: %s")
         self.inner_exception = inner_exception
         super(InstanceFaultRollback, self).__init__(message % inner_exception)
+
+
+class UnsupportedObjectError(NovaException):
+    message = _('Unsupported object type %(objtype)s')
+
+
+class OrphanedObjectError(NovaException):
+    message = _('Cannot call %(method)s on orphaned %(objtype)s object')
+
+
+class IncompatibleObjectVersion(NovaException):
+    message = _('Version %(objver)s of %(objname)s is not supported')

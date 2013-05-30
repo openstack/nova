@@ -57,6 +57,7 @@ from oslo.config import cfg
 
 from nova import baserpc
 from nova.db import base
+from nova.objects import base as objects_base
 from nova.openstack.common import log as logging
 from nova.openstack.common import periodic_task
 from nova.openstack.common.plugin import pluginmanager
@@ -97,7 +98,8 @@ class Manager(base.Base, periodic_task.PeriodicTasks):
             apis.extend(additional_apis)
         base_rpc = baserpc.BaseRPCAPI(self.service_name, backdoor_port)
         apis.extend([self, base_rpc])
-        return rpc_dispatcher.RpcDispatcher(apis)
+        serializer = objects_base.NovaObjectSerializer()
+        return rpc_dispatcher.RpcDispatcher(apis, serializer)
 
     def periodic_tasks(self, context, raise_on_error=False):
         """Tasks to be run at a periodic interval."""
