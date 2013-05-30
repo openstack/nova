@@ -72,7 +72,7 @@ class Host(object):
                                     ' ping migration to a new host')
                             LOG.info(msg % locals())
                             continue
-                    instance = self._virtapi.instance_get_by_uuid(ctxt, uuid)
+                    instance = instance_obj.Instance.get_by_uuid(ctxt, uuid)
                     vm_counter = vm_counter + 1
 
                     aggregate = self._virtapi.aggregate_get_by_host(
@@ -84,27 +84,24 @@ class Host(object):
 
                     dest = _host_find(ctxt, self._session, aggregate[0],
                                       host_ref)
-                    self._virtapi.instance_update(
-                        ctxt, instance['uuid'],
-                        {'host': dest,
-                         'task_state': task_states.MIGRATING})
+                    instance.host = dest
+                    instance.task_state = task_states.MIGRATING
+                    instance.save()
 
                     self._session.call_xenapi('VM.pool_migrate',
                                               vm_ref, host_ref, {})
                     migrations_counter = migrations_counter + 1
 
-                    self._virtapi.instance_update(
-                        ctxt, instance['uuid'],
-                        {'vm_state': vm_states.ACTIVE})
+                    instance.vm_state = vm_states.ACTIVE
+                    instance.save()
 
                     break
                 except self._session.XenAPI.Failure:
                     LOG.exception(_('Unable to migrate VM %(vm_ref)s'
                                     'from %(host)s') % locals())
-                    self._virtapi.instance_update(
-                        ctxt, instance['uuid'],
-                        {'host': host,
-                         'vm_state': vm_states.ACTIVE})
+                    instance.host = host
+                    instance.vm_state = vm_states.ACTIVE
+                    instance.save()
 
         if vm_counter == migrations_counter:
             return 'on_maintenance'
