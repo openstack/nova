@@ -4603,6 +4603,41 @@ class QuotaClassTestCase(test.TestCase, ModelsObjectComparatorMixin):
                                 self.ctxt, 'class name', 'resource', 42)
 
 
+class S3ImageTestCase(test.TestCase):
+
+    def setUp(self):
+        super(S3ImageTestCase, self).setUp()
+        self.ctxt = context.get_admin_context()
+        self.values = [uuidutils.generate_uuid() for i in xrange(3)]
+        self.images = [db.s3_image_create(self.ctxt, uuid)
+                                          for uuid in self.values]
+
+    def test_s3_image_create(self):
+        for ref in self.images:
+            self.assertTrue(uuidutils.is_uuid_like(ref.uuid))
+        self.assertEqual(sorted(self.values),
+                         sorted([ref.uuid for ref in self.images]))
+
+    def test_s3_image_get_by_uuid(self):
+        for uuid in self.values:
+            ref = db.s3_image_get_by_uuid(self.ctxt, uuid)
+            self.assertTrue(uuidutils.is_uuid_like(ref.uuid))
+            self.assertEqual(uuid, ref.uuid)
+
+    def test_s3_image_get(self):
+        self.assertEqual(sorted(self.values),
+                         sorted([db.s3_image_get(self.ctxt, ref.id).uuid
+                         for ref in self.images]))
+
+    def test_s3_image_get_not_found(self):
+        self.assertRaises(exception.ImageNotFound, db.s3_image_get, self.ctxt,
+                          100500)
+
+    def test_s3_image_get_by_uuid_not_found(self):
+        self.assertRaises(exception.ImageNotFound, db.s3_image_get_by_uuid,
+                          self.ctxt, uuidutils.generate_uuid())
+
+
 class ArchiveTestCase(test.TestCase):
 
     def setUp(self):
