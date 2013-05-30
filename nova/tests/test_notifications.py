@@ -82,6 +82,7 @@ class NotificationsTestCase(test.TestCase):
         inst['access_ip_v6'] = 'feed:5eed'
         inst['display_name'] = 'test_instance'
         inst['hostname'] = 'test_instance_hostname'
+        inst['node'] = 'test_instance_node'
         inst['system_metadata'] = sys_meta
         if params:
             inst.update(params)
@@ -211,6 +212,7 @@ class NotificationsTestCase(test.TestCase):
         access_ip_v6 = self.instance["access_ip_v6"]
         display_name = self.instance["display_name"]
         hostname = self.instance["hostname"]
+        node = self.instance["node"]
 
         self.assertEquals(vm_states.BUILDING, payload["old_state"])
         self.assertEquals(vm_states.ACTIVE, payload["state"])
@@ -220,6 +222,7 @@ class NotificationsTestCase(test.TestCase):
         self.assertEquals(payload["access_ip_v6"], access_ip_v6)
         self.assertEquals(payload["display_name"], display_name)
         self.assertEquals(payload["hostname"], hostname)
+        self.assertEquals(payload["node"], node)
 
     def test_task_update_with_states(self):
         self.flags(notify_on_state_change="vm_and_task_state")

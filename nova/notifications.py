@@ -318,6 +318,7 @@ def info_from_instance(context, instance_ref, network_info,
 
         # Location properties
         host=instance_ref['host'],
+        node=instance_ref['node'],
         availability_zone=instance_ref['availability_zone'],
 
         # Date properties
