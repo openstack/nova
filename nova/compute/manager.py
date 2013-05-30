@@ -620,7 +620,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                   {'state': event.get_transition(),
                    'uuid': event.get_instance_uuid()})
         context = nova.context.get_admin_context()
-        instance = self.conductor_api.instance_get_by_uuid(
+        instance = instance_obj.Instance.get_by_uuid(
             context, event.get_instance_uuid())
         vm_power_state = None
         if event.get_transition() == virtevent.EVENT_LIFECYCLE_STOPPED:
@@ -3910,8 +3910,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         loop, one database record at a time, checking if the hypervisor has the
         same power state as is in the database.
         """
-        db_instances = self.conductor_api.instance_get_all_by_host(
-            context, self.host, columns_to_join=[])
+        db_instances = instance_obj.InstanceList.get_by_host(context,
+                                                             self.host)
 
         num_vm_instances = self.driver.get_num_instances()
         num_db_instances = len(db_instances)
@@ -3948,13 +3948,11 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         # We re-query the DB to get the latest instance info to minimize
         # (not eliminate) race condition.
-        u = self.conductor_api.instance_get_by_uuid(context,
-                                                    db_instance['uuid'],
-                                                    columns_to_join=[])
-        db_power_state = u["power_state"]
-        vm_state = u['vm_state']
+        db_instance.refresh()
+        db_power_state = db_instance.power_state
+        vm_state = db_instance.vm_state
 
-        if self.host != u['host']:
+        if self.host != db_instance.host:
             # on the sending end of nova-compute _sync_power_state
             # may have yielded to the greenthread performing a live
             # migration; this in turn has changed the resident-host
@@ -3966,10 +3964,10 @@ class ComputeManager(manager.SchedulerDependentManager):
                        "instance has moved from "
                        "host %(src)s to host %(dst)s") %
                        {'src': self.host,
-                        'dst': u['host']},
+                        'dst': db_instance.host},
                      instance=db_instance)
             return
-        elif u['task_state'] is not None:
+        elif db_instance.task_state is not None:
             # on the receiving end of nova-compute, it could happen
             # that the DB instance already report the new resident
             # but the actual VM has not showed up on the hypervisor
@@ -3981,9 +3979,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         if vm_power_state != db_power_state:
             # power_state is always updated from hypervisor to db
-            self._instance_update(context,
-                                  db_instance['uuid'],
-                                  power_state=vm_power_state)
+            db_instance.power_state = vm_power_state
+            db_instance.save()
             db_power_state = vm_power_state
 
         # Note(maoy): Now resolve the discrepancy between vm_state and

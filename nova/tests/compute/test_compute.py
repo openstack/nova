@@ -5158,6 +5158,82 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute._reclaim_queued_deletes(ctxt)
 
+    def test_sync_power_states(self):
+        ctxt = self.context.elevated()
+        self._create_fake_instance({'host': self.compute.host})
+        self._create_fake_instance({'host': self.compute.host})
+        self.mox.StubOutWithMock(self.compute.driver, 'get_info')
+        self.mox.StubOutWithMock(self.compute, '_sync_instance_power_state')
+        self.compute.driver.get_info(mox.IgnoreArg()).AndReturn(
+            {'state': power_state.RUNNING})
+        self.compute._sync_instance_power_state(ctxt, mox.IgnoreArg(),
+                                                power_state.RUNNING)
+        self.compute.driver.get_info(mox.IgnoreArg()).AndReturn(
+            {'state': power_state.SHUTDOWN})
+        self.compute._sync_instance_power_state(ctxt, mox.IgnoreArg(),
+                                                power_state.SHUTDOWN)
+        self.mox.ReplayAll()
+        self.compute._sync_power_states(ctxt)
+
+    def _get_sync_instance(self, power_state, vm_state, task_state=None):
+        instance = instance_obj.Instance()
+        instance.uuid = 'fake-uuid'
+        instance.power_state = power_state
+        instance.vm_state = vm_state
+        instance.host = self.compute.host
+        instance.task_state = task_state
+        self.mox.StubOutWithMock(instance, 'refresh')
+        self.mox.StubOutWithMock(instance, 'save')
+        return instance
+
+    def test_sync_instance_power_state_match(self):
+        instance = self._get_sync_instance(power_state.RUNNING,
+                                           vm_states.ACTIVE)
+        instance.refresh()
+        self.mox.ReplayAll()
+        self.compute._sync_instance_power_state(self.context, instance,
+                                                power_state.RUNNING)
+
+    def test_sync_instance_power_state_running_stopped(self):
+        instance = self._get_sync_instance(power_state.RUNNING,
+                                           vm_states.ACTIVE)
+        instance.refresh()
+        instance.save()
+        self.mox.ReplayAll()
+        self.compute._sync_instance_power_state(self.context, instance,
+                                                power_state.SHUTDOWN)
+        self.assertEqual(instance.power_state, power_state.SHUTDOWN)
+
+    def _test_sync_to_stop(self, power_state, vm_state, driver_power_state,
+                           stop=True):
+        instance = self._get_sync_instance(power_state, vm_state)
+        instance.refresh()
+        instance.save()
+        self.mox.StubOutWithMock(self.compute.conductor_api, 'compute_stop')
+        if stop:
+            self.compute.conductor_api.compute_stop(self.context, instance)
+        self.mox.ReplayAll()
+        self.compute._sync_instance_power_state(self.context, instance,
+                                                driver_power_state)
+        self.mox.VerifyAll()
+        self.mox.UnsetStubs()
+
+    def test_sync_instance_power_state_to_stop(self):
+        for ps in (power_state.SHUTDOWN, power_state.CRASHED,
+                   power_state.SUSPENDED):
+            self._test_sync_to_stop(power_state.RUNNING, vm_states.ACTIVE, ps)
+        self._test_sync_to_stop(power_state.SHUTDOWN, vm_states.STOPPED,
+                                power_state.RUNNING)
+
+    def test_sync_instance_power_state_to_no_stop(self):
+        for ps in (power_state.PAUSED, power_state.NOSTATE):
+            self._test_sync_to_stop(power_state.RUNNING, vm_states.ACTIVE, ps,
+                                    stop=False)
+        for vs in (vm_states.SOFT_DELETED, vm_states.DELETED):
+            for ps in (power_state.NOSTATE, power_state.SHUTDOWN):
+                self._test_sync_to_stop(power_state.RUNNING, vs, ps,
+                                        stop=False)
+
 
 class ComputeAPITestCase(BaseTestCase):
 
