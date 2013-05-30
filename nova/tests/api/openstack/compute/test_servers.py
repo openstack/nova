@@ -2667,8 +2667,10 @@ class ServersControllerCreateTest(test.TestCase):
         self.ext_mgr.extensions = {'os-volumes': 'fake',
                                    'os-block-device-mapping-v2-boot': 'fake'}
         bdm_v2 = [{'source_type': 'volume',
+                   'device_name': 'fake_dev',
                    'uuid': 'fake_vol'}]
         bdm_v2_expected = [{'source_type': 'volume',
+                            'device_name': 'fake_dev',
                             'volume_id': 'fake_vol'}]
         params = {'block_device_mapping_v2': bdm_v2}
         old_create = compute_api.API.create
@@ -2749,6 +2751,42 @@ class ServersControllerCreateTest(test.TestCase):
                    'uuid': 'fake_vol'}]
         params = {'block_device_mapping': bdm,
                   'block_device_mapping_v2': bdm_v2}
+
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self._test_create_extra, params)
+
+    def test_create_instance_bdm_v2_missing_device_name(self):
+        self.ext_mgr.extensions = {'os-volumes': 'fake',
+                                   'os-block-device-mapping-v2-boot': 'fake'}
+        bdm_v2 = [{'source_type': 'volume',
+                   'uuid': 'fake_vol'}]
+        params = {'block_device_mapping_v2': bdm_v2}
+
+        def _validate(*args, **kwargs):
+            pass
+
+        def _validate_bdm(*args, **kwargs):
+            pass
+
+        self.stubs.Set(block_device.BlockDeviceDict,
+                      '_validate', _validate)
+        self.stubs.Set(compute_api.API, '_validate_bdm',
+                       _validate_bdm)
+
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self._test_create_extra, params)
+
+    def test_create_instance_bdm_v2_validation_error(self):
+        self.ext_mgr.extensions = {'os-volumes': 'fake',
+                                   'os-block-device-mapping-v2-boot': 'fake'}
+        bdm_v2 = [{'device_name': 'bogus device'}]
+        params = {'block_device_mapping_v2': bdm_v2}
+
+        def _validate(*args, **kwargs):
+            raise exception.InvalidBDMFormat()
+
+        self.stubs.Set(block_device.BlockDeviceDict,
+                      '_validate', _validate)
 
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self._test_create_extra, params)

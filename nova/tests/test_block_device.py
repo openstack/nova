@@ -225,10 +225,15 @@ class TestBlockDeviceDict(test.TestCase):
         ]
 
     def test_init(self):
+        def fake_validate(obj, dct):
+            pass
+
         self.stubs.Set(block_device.BlockDeviceDict, '_fields',
                        set(['field1', 'field2']))
         self.stubs.Set(block_device.BlockDeviceDict, '_db_only_fields',
                        set(['db_field1', 'db_field2']))
+        self.stubs.Set(block_device.BlockDeviceDict, '_validate',
+                       fake_validate)
 
         # Make sure db fields are not picked up if they are not
         # in the original dict
@@ -256,12 +261,53 @@ class TestBlockDeviceDict(test.TestCase):
         self.assertFalse('db_field1' in dev_dict)
         self.assertFalse('db_field2'in dev_dict)
 
-        # Assert basic validation works
-        # NOTE (ndipanov):  Move to separate test once we have
-        #                   more complex validations in place
+    def test_validate(self):
         self.assertRaises(exception.InvalidBDMFormat,
                           block_device.BlockDeviceDict,
-                          {'field1': 'foo', 'bogus_field': 'lame_val'})
+                          {'bogus_field': 'lame_val'})
+
+        lame_bdm = dict(self.new_mapping[2])
+        del lame_bdm['source_type']
+        self.assertRaises(exception.InvalidBDMFormat,
+                          block_device.BlockDeviceDict,
+                          lame_bdm)
+
+        lame_bdm['no_device'] = True
+        block_device.BlockDeviceDict(lame_bdm)
+
+        lame_dev_bdm = dict(self.new_mapping[2])
+        lame_dev_bdm['device_name'] = "not a valid name"
+        self.assertRaises(exception.InvalidBDMFormat,
+                          block_device.BlockDeviceDict,
+                          lame_dev_bdm)
+
+        lame_dev_bdm['device_name'] = ""
+        self.assertRaises(exception.InvalidBDMFormat,
+                          block_device.BlockDeviceDict,
+                          lame_dev_bdm)
+
+        cool_volume_size_bdm = dict(self.new_mapping[2])
+        cool_volume_size_bdm['volume_size'] = '42'
+        cool_volume_size_bdm = block_device.BlockDeviceDict(
+            cool_volume_size_bdm)
+        self.assertEquals(cool_volume_size_bdm['volume_size'], 42)
+
+        lame_volume_size_bdm = dict(self.new_mapping[2])
+        lame_volume_size_bdm['volume_size'] = 'some_non_int_string'
+        self.assertRaises(exception.InvalidBDMFormat,
+                          block_device.BlockDeviceDict,
+                          lame_volume_size_bdm)
+
+        truthy_bdm = dict(self.new_mapping[2])
+        truthy_bdm['delete_on_termination'] = '1'
+        truthy_bdm = block_device.BlockDeviceDict(truthy_bdm)
+        self.assertEquals(truthy_bdm['delete_on_termination'], True)
+
+        verbose_bdm = dict(self.new_mapping[2])
+        verbose_bdm['boot_index'] = 'first'
+        self.assertRaises(exception.InvalidBDMFormat,
+                          block_device.BlockDeviceDict,
+                          verbose_bdm)
 
     def test_from_legacy(self):
         for legacy, new in zip(self.legacy_mapping, self.new_mapping):
