@@ -8989,21 +8989,13 @@ class CheckConfigDriveTestCase(test.TestCase):
         self.assertCheck((None, None), None)
         self.assertFalse(self.called['show'])
 
-    def test_value_is_bool_like_string(self):
-        self.assertCheck((None, 'True'), 'True')
-        self.assertCheck((None, 'yes'), 'yes')
-
     def test_bool_string_or_id(self):
-        # NOTE(sirp): '0' and '1' could be a bool value or an ID.  Since there
-        # are many other ways to specify bools (e.g. 't', 'f'), it's better to
-        # treat as an ID.
-        self.assertCheck((0, None), 0)
-        self.assertCheck((1, None), 1)
-        self.assertCheck(('0', None), '0')
-        self.assertCheck(('1', None), '1')
+        self.assertCheck((None, True), "true")
+        self.assertCheck((None, True), 1)
+        self.assertCheck((None, True), 't')
 
     def test_value_is_image_id(self):
-        self.assertCheck((2, None), 2)
+        self.assertCheck(("fake-uuid", None), "fake-uuid")
 
 
 class CheckRequestedImageTestCase(test.TestCase):
