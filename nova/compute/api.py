@@ -538,6 +538,7 @@ class API(base.Base):
     def _checks_for_create_and_rebuild(self, context, image_id, image,
                                        instance_type, metadata,
                                        files_to_inject):
+        self._check_metadata_properties_quota(context, metadata)
         self._check_injected_file_quota(context, files_to_inject)
         self._check_requested_image(context, image_id, image, instance_type)
 
@@ -599,13 +600,6 @@ class API(base.Base):
         try:
             instances = []
             instance_uuids = []
-
-            # FIXME(sirp): this check should go in
-            # `_checks_for_create_and_rebuild`, however Tempest has a bug in
-            # its quota checking test where its submitting a bad image ID. So
-            # if `_get_image` is called first, we get a `ImageNotFound`
-            # exception instead of a OverlimitException.
-            self._check_metadata_properties_quota(context, metadata)
 
             image_id, image = self._get_image(context, image_href)
 
@@ -1808,8 +1802,6 @@ class API(base.Base):
         files_to_inject = kwargs.pop('files_to_inject', [])
         metadata = kwargs.get('metadata', {})
         instance_type = flavors.extract_instance_type(instance)
-
-        self._check_metadata_properties_quota(context, metadata)
 
         image_id, image = self._get_image(context, image_href)
 
