@@ -34,7 +34,9 @@ ignore_messages = ["An attribute affected in nova.tests"]
 # Note(maoy): we ignore all errors in openstack.common because it should be
 # checked elsewhere. We also ignore nova.tests for now due to high false
 # positive rate.
-ignore_modules = ["nova/openstack/common/", "nova/tests/"]
+# Note(danms): we ignore all errors in nova.objects because the false
+# positive rate should be very high.
+ignore_modules = ["nova/openstack/common/", "nova/tests/", "nova/objects/"]
 
 KNOWN_PYLINT_EXCEPTIONS_FILE = "tools/pylint_exceptions"
 
