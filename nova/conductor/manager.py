@@ -32,6 +32,7 @@ from nova.openstack.common.notifier import api as notifier
 from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import timeutils
 from nova import quota
+from nova.scheduler import rpcapi as scheduler_rpcapi
 
 LOG = logging.getLogger(__name__)
 
@@ -513,7 +514,24 @@ class ComputeTaskManager(object):
     """
 
     RPC_API_NAMESPACE = 'compute_task'
-    RPC_API_VERSION = '1.0'
+    RPC_API_VERSION = '1.1'
 
     def __init__(self):
-        pass
+        self.scheduler_rpcapi = scheduler_rpcapi.SchedulerAPI()
+
+    @rpc_common.client_exceptions(exception.NoValidHost,
+                                  exception.ComputeServiceUnavailable,
+                                  exception.InvalidHypervisorType,
+                                  exception.UnableToMigrateToSelf,
+                                  exception.DestinationHypervisorTooOld,
+                                  exception.InvalidLocalStorage,
+                                  exception.InvalidSharedStorage,
+                                  exception.MigrationPreCheckError)
+    def migrate_server(self, context, instance, scheduler_hint, live, rebuild,
+                  flavor, block_migration, disk_over_commit):
+        if not live or rebuild or (flavor != None):
+            raise NotImplementedError()
+
+        destination = scheduler_hint.get("host")
+        self.scheduler_rpcapi.live_migration(context, block_migration,
+                disk_over_commit, instance, destination)

@@ -22,10 +22,10 @@ from nova.api.openstack import compute
 from nova.api.openstack.compute.contrib import admin_actions
 from nova.compute import api as compute_api
 from nova.compute import vm_states
+from nova.conductor import api as conductor_api
 from nova import context
 from nova import exception
 from nova.openstack.common import jsonutils
-from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import test
 from nova.tests.api.openstack import fakes
 
@@ -140,16 +140,15 @@ class AdminActionsTest(test.TestCase):
                         task_state, expected_task_state):
             return None
 
-        def fake_scheduler_api_live_migration(self, context, dest,
-                                        block_migration=False,
-                                        disk_over_commit=False, instance=None,
-                                        instance_id=None, topic=None):
+        def fake_migrate_server(self, context, instance,
+                scheduler_hint, live, rebuild, flavor,
+                block_migration, disk_over_commit):
             return None
 
         self.stubs.Set(compute_api.API, 'update', fake_update)
-        self.stubs.Set(scheduler_rpcapi.SchedulerAPI,
-                       'live_migration',
-                       fake_scheduler_api_live_migration)
+        self.stubs.Set(conductor_api.ComputeTaskAPI,
+                       'migrate_server',
+                       fake_migrate_server)
 
         res = req.get_response(app)
         self.assertEqual(res.status_int, 202)
@@ -194,16 +193,15 @@ class AdminActionsTest(test.TestCase):
                         task_state, expected_task_state):
             return None
 
-        def fake_scheduler_api_live_migration(context, dest,
-                                        block_migration=False,
-                                        disk_over_commit=False, instance=None,
-                                        instance_id=None, topic=None):
+        def fake_migrate_server(self, context, instance,
+                scheduler_hint, live, rebuild, flavor,
+                block_migration, disk_over_commit):
             raise exception.ComputeServiceUnavailable(host='host')
 
         self.stubs.Set(compute_api.API, 'update', fake_update)
-        self.stubs.Set(scheduler_rpcapi.SchedulerAPI,
-                       'live_migration',
-                       fake_scheduler_api_live_migration)
+        self.stubs.Set(conductor_api.ComputeTaskAPI,
+                       'migrate_server',
+                       fake_migrate_server)
 
         res = req.get_response(app)
         self.assertEqual(res.status_int, 400)
@@ -232,16 +230,15 @@ class AdminActionsTest(test.TestCase):
                         task_state, expected_task_state):
             return None
 
-        def fake_scheduler_api_live_migration(context, dest,
-                                        block_migration=False,
-                                        disk_over_commit=False, instance=None,
-                                        instance_id=None, topic=None):
+        def fake_migrate_server(self, context, instance,
+                scheduler_hint, live, rebuild, flavor,
+                block_migration, disk_over_commit):
             raise exception.InvalidHypervisorType()
 
         self.stubs.Set(compute_api.API, 'update', fake_update)
-        self.stubs.Set(scheduler_rpcapi.SchedulerAPI,
-                       'live_migration',
-                       fake_scheduler_api_live_migration)
+        self.stubs.Set(conductor_api.ComputeTaskAPI,
+                       'migrate_server',
+                       fake_migrate_server)
 
         res = req.get_response(app)
         self.assertEqual(res.status_int, 400)
@@ -270,16 +267,15 @@ class AdminActionsTest(test.TestCase):
                         task_state, expected_task_state):
             return None
 
-        def fake_scheduler_api_live_migration(context, dest,
-                                        block_migration=False,
-                                        disk_over_commit=False, instance=None,
-                                        instance_id=None, topic=None):
+        def fake_migrate_server(self, context, instance,
+                scheduler_hint, live, rebuild, flavor,
+                block_migration, disk_over_commit):
             raise exception.UnableToMigrateToSelf(self.UUID, host='host')
 
         self.stubs.Set(compute_api.API, 'update', fake_update)
-        self.stubs.Set(scheduler_rpcapi.SchedulerAPI,
-                       'live_migration',
-                       fake_scheduler_api_live_migration)
+        self.stubs.Set(conductor_api.ComputeTaskAPI,
+                       'migrate_server',
+                       fake_migrate_server)
 
         res = req.get_response(app)
         self.assertEqual(res.status_int, 400)
@@ -308,16 +304,15 @@ class AdminActionsTest(test.TestCase):
                         task_state, expected_task_state):
             return None
 
-        def fake_scheduler_api_live_migration(context, dest,
-                                        block_migration=False,
-                                        disk_over_commit=False, instance=None,
-                                        instance_id=None, topic=None):
+        def fake_migrate_server(self, context, instance,
+                scheduler_hint, live, rebuild, flavor,
+                block_migration, disk_over_commit):
             raise exception.DestinationHypervisorTooOld()
 
         self.stubs.Set(compute_api.API, 'update', fake_update)
-        self.stubs.Set(scheduler_rpcapi.SchedulerAPI,
-                       'live_migration',
-                       fake_scheduler_api_live_migration)
+        self.stubs.Set(conductor_api.ComputeTaskAPI,
+                       'migrate_server',
+                       fake_migrate_server)
 
         res = req.get_response(app)
         self.assertEqual(res.status_int, 400)

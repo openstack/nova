@@ -344,6 +344,11 @@ class LocalComputeTaskAPI(object):
         self._manager = utils.ExceptionHelper(
                 manager.ComputeTaskManager())
 
+    def migrate_server(self, context, instance, scheduler_hint, live, rebuild,
+                  flavor, block_migration, disk_over_commit):
+        return self._manager.migrate_server(context, instance, scheduler_hint,
+            live, rebuild, flavor, block_migration, disk_over_commit)
+
 
 class API(object):
     """Conductor API that does updates via RPC to the ConductorManager."""
@@ -681,3 +686,9 @@ class ComputeTaskAPI(object):
 
     def __init__(self):
         self.conductor_compute_rpcapi = rpcapi.ComputeTaskAPI()
+
+    def migrate_server(self, context, instance, scheduler_hint, live, rebuild,
+                  flavor, block_migration, disk_over_commit):
+        return self.conductor_compute_rpcapi.migrate_server(context, instance,
+            scheduler_hint, live, rebuild, flavor, block_migration,
+            disk_over_commit)

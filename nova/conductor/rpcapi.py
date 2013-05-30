@@ -461,6 +461,7 @@ class ComputeTaskAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     API version history:
 
     1.0 - Initial version (empty).
+    1.1 - Added unified migrate_server call.
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -470,3 +471,13 @@ class ComputeTaskAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         super(ComputeTaskAPI, self).__init__(
                 topic=CONF.conductor.topic,
                 default_version=self.BASE_RPC_API_VERSION)
+
+    def migrate_server(self, context, instance, scheduler_hint, live, rebuild,
+                  flavor, block_migration, disk_over_commit):
+        instance_p = jsonutils.to_primitive(instance)
+        flavor_p = jsonutils.to_primitive(flavor)
+        msg = self.make_msg('migrate_server', instance=instance_p,
+            scheduler_hint=scheduler_hint, live=live, rebuild=rebuild,
+            flavor=flavor_p, block_migration=block_migration,
+            disk_over_commit=disk_over_commit)
+        return self.call(context, msg, version='1.1')
