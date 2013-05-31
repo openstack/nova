@@ -630,6 +630,34 @@ class ServerActionsControllerTest(test.TestCase):
                           self.controller._action_resize,
                           req, FAKE_UUID, body)
 
+    def test_resize_with_image_exceptions(self):
+        body = dict(resize=dict(flavorRef="http://localhost/3"))
+        self.resize_called = 0
+        image_id = 'fake_image_id'
+
+        exceptions = [
+            (exception.ImageNotAuthorized(image_id=image_id),
+             webob.exc.HTTPUnauthorized),
+            (exception.ImageNotFound(image_id=image_id),
+             webob.exc.HTTPBadRequest),
+            (exception.Invalid, webob.exc.HTTPBadRequest),
+        ]
+
+        raised, expected = map(iter, zip(*exceptions))
+
+        def _fake_resize(obj, context, instance, flavor_id):
+            self.resize_called += 1
+            raise raised.next()
+
+        self.stubs.Set(compute_api.API, 'resize', _fake_resize)
+
+        for call_no in range(len(exceptions)):
+            req = fakes.HTTPRequest.blank(self.url)
+            self.assertRaises(expected.next(),
+                              self.controller._action_resize,
+                              req, FAKE_UUID, body)
+            self.assertEqual(self.resize_called, call_no + 1)
+
     def test_resize_with_too_many_instances(self):
         body = dict(resize=dict(flavorRef="http://localhost/3"))
 
