@@ -1159,7 +1159,7 @@ class HyperVAPITestCase(test.TestCase):
                           instance_type, network_info)
         self._mox.VerifyAll()
 
-    def test_finish_migration(self):
+    def _test_finish_migration(self, power_on):
         self._instance_data = self._get_instance_data()
         instance = db.instance_create(self._context, self._instance_data)
         instance['system_metadata'] = {}
@@ -1198,13 +1198,20 @@ class HyperVAPITestCase(test.TestCase):
         self._set_vm_name(instance['name'])
         self._setup_create_instance_mocks(None, False)
 
-        vmutils.VMUtils.set_vm_state(mox.Func(self._check_instance_name),
-                                     constants.HYPERV_VM_STATE_ENABLED)
+        if power_on:
+            vmutils.VMUtils.set_vm_state(mox.Func(self._check_instance_name),
+                                         constants.HYPERV_VM_STATE_ENABLED)
 
         self._mox.ReplayAll()
         self._conn.finish_migration(self._context, None, instance, "",
-                                    network_info, None, False, None)
+                                    network_info, None, False, None, power_on)
         self._mox.VerifyAll()
+
+    def test_finish_migration_power_on(self):
+        self._test_finish_migration(True)
+
+    def test_finish_migration_power_off(self):
+        self._test_finish_migration(False)
 
     def test_confirm_migration(self):
         self._instance_data = self._get_instance_data()
@@ -1218,7 +1225,7 @@ class HyperVAPITestCase(test.TestCase):
         self._conn.confirm_migration(None, instance, network_info)
         self._mox.VerifyAll()
 
-    def test_finish_revert_migration(self):
+    def _test_finish_revert_migration(self, power_on):
         self._instance_data = self._get_instance_data()
         instance = db.instance_create(self._context, self._instance_data)
         network_info = fake_network.fake_get_instance_nw_info(
@@ -1246,9 +1253,17 @@ class HyperVAPITestCase(test.TestCase):
         self._set_vm_name(instance['name'])
         self._setup_create_instance_mocks(None, False)
 
-        vmutils.VMUtils.set_vm_state(mox.Func(self._check_instance_name),
-                                     constants.HYPERV_VM_STATE_ENABLED)
+        if power_on:
+            vmutils.VMUtils.set_vm_state(mox.Func(self._check_instance_name),
+                                         constants.HYPERV_VM_STATE_ENABLED)
 
         self._mox.ReplayAll()
-        self._conn.finish_revert_migration(instance, network_info, None)
+        self._conn.finish_revert_migration(instance, network_info, None,
+                                           power_on)
         self._mox.VerifyAll()
+
+    def test_finish_revert_migration_power_on(self):
+        self._test_finish_revert_migration(True)
+
+    def test_finish_revert_migration_power_off(self):
+        self._test_finish_revert_migration(False)

@@ -182,18 +182,19 @@ class XenAPIDriver(driver.ComputeDriver):
         self._vmops.confirm_migration(migration, instance, network_info)
 
     def finish_revert_migration(self, instance, network_info,
-                                block_device_info=None):
-        """Finish reverting a resize, powering back on the instance."""
+                                block_device_info=None, power_on=True):
+        """Finish reverting a resize."""
         # NOTE(vish): Xen currently does not use network info.
-        self._vmops.finish_revert_migration(instance, block_device_info)
+        self._vmops.finish_revert_migration(instance, block_device_info,
+                                            power_on)
 
     def finish_migration(self, context, migration, instance, disk_info,
                          network_info, image_meta, resize_instance=False,
-                         block_device_info=None):
+                         block_device_info=None, power_on=True):
         """Completes a resize, turning on the migrated instance."""
         self._vmops.finish_migration(context, migration, instance, disk_info,
                                      network_info, image_meta, resize_instance,
-                                     block_device_info)
+                                     block_device_info, power_on)
 
     def snapshot(self, context, instance, image_id, update_task_state):
         """Create snapshot from a running VM instance."""

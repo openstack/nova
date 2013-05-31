@@ -380,7 +380,9 @@ class PowerVMDriverTestCase(test.TestCase):
         expected_path = '/some/file/path/filename'
         self.assertEqual(joined_path, expected_path)
 
-    def _test_finish_revert_migration_after_crash(self, backup_made, new_made):
+    def _test_finish_revert_migration_after_crash(self, backup_made,
+                                                  new_made,
+                                                  power_on):
         inst = {'name': 'foo'}
         network_info = []
         network_info.append({'address': 'fa:89:f0:8b:9b:39'})
@@ -404,21 +406,24 @@ class PowerVMDriverTestCase(test.TestCase):
                                                                    'foo')
         self.powervm_connection._powervm._operator.set_lpar_mac_base_value(
                 'foo', 'fa:89:f0:8b:9b:39')
-        self.powervm_connection._powervm.power_on('foo')
+        if power_on:
+            self.powervm_connection._powervm.power_on('foo')
 
         self.mox.ReplayAll()
 
         self.powervm_connection.finish_revert_migration(inst, network_info,
-                                                    block_device_info=None)
+                                                    block_device_info=None,
+                                                    power_on=power_on)
 
     def test_finish_revert_migration_after_crash(self):
-        self._test_finish_revert_migration_after_crash(True, True)
+        self._test_finish_revert_migration_after_crash(True, True, True)
 
     def test_finish_revert_migration_after_crash_before_new(self):
-        self._test_finish_revert_migration_after_crash(True, False)
+        self._test_finish_revert_migration_after_crash(True, False, True)
 
     def test_finish_revert_migration_after_crash_before_backup(self):
-        self._test_finish_revert_migration_after_crash(False, False)
+        # NOTE(mriedem): tests the power_on=False case also
+        self._test_finish_revert_migration_after_crash(False, False, False)
 
     def test_migrate_volume_use_instance_name(self):
         inst_name = 'instance-00000000'
@@ -457,7 +462,7 @@ class PowerVMDriverTestCase(test.TestCase):
         expected_path = 'some/image/path/logical-vol-name_rsz.gz'
         self.assertEqual(file_path, expected_path)
 
-    def test_deploy_from_migrated_file(self):
+    def _test_deploy_from_migrated_file(self, power_on):
         instance = self.instance
         context = 'fake_context'
         network_info = []
@@ -469,9 +474,10 @@ class PowerVMDriverTestCase(test.TestCase):
         self.flags(powervm_mgr=dest)
         fake_op = self.powervm_connection._powervm
         self.deploy_from_vios_file_called = False
+        self.power_on = power_on
 
         def fake_deploy_from_vios_file(lpar, file_path, size,
-                                       decompress):
+                                       decompress, power_on):
             exp_file_path = 'some/file/path.gz'
             exp_size = 40 * 1024 ** 3
             exp_decompress = True
@@ -479,14 +485,22 @@ class PowerVMDriverTestCase(test.TestCase):
             self.assertEqual(exp_file_path, file_path)
             self.assertEqual(exp_size, size)
             self.assertEqual(exp_decompress, decompress)
+            self.assertEqual(self.power_on, power_on)
 
         self.stubs.Set(fake_op, '_deploy_from_vios_file',
                        fake_deploy_from_vios_file)
         self.powervm_connection.finish_migration(context, None,
                          instance, disk_info, network_info,
                          None, resize_instance=True,
-                         block_device_info=None)
+                         block_device_info=None,
+                         power_on=power_on)
         self.assertEqual(self.deploy_from_vios_file_called, True)
+
+    def test_deploy_from_migrated_file_power_on(self):
+        self._test_deploy_from_migrated_file(True)
+
+    def test_deploy_from_migrated_file_power_off(self):
+        self._test_deploy_from_migrated_file(False)
 
     def test_set_lpar_mac_base_value(self):
         instance = self.instance

@@ -4951,7 +4951,7 @@ class LibvirtDriverTestCase(test.TestCase):
         self.libvirtconnection._wait_for_running({'name': 'else',
                                                   'uuid': 'other_uuid'})
 
-    def test_finish_migration(self):
+    def _test_finish_migration(self, power_on):
         """Test for nova.virt.libvirt.libvirt_driver.LivirtConnection
         .finish_migration. """
 
@@ -4960,6 +4960,8 @@ class LibvirtDriverTestCase(test.TestCase):
                      {'type': 'raw', 'path': '/test/disk.local',
                       'local_gb': 10, 'backing_file': '/base/disk.local'}]
         disk_info_text = jsonutils.dumps(disk_info)
+        powered_on = power_on
+        self.fake_create_domain_called = False
 
         def fake_can_resize_fs(path, size, use_cow=False):
             return False
@@ -4981,7 +4983,9 @@ class LibvirtDriverTestCase(test.TestCase):
                               block_device_info=None):
             pass
 
-        def fake_create_domain(xml, instance=None):
+        def fake_create_domain(xml, instance=None, power_on=True):
+            self.fake_create_domain_called = True
+            self.assertEqual(powered_on, power_on)
             return None
 
         def fake_enable_hairpin(instance):
@@ -4991,7 +4995,10 @@ class LibvirtDriverTestCase(test.TestCase):
             pass
 
         def fake_get_info(instance):
-            return {'state': power_state.RUNNING}
+            if powered_on:
+                return {'state': power_state.RUNNING}
+            else:
+                return {'state': power_state.SHUTDOWN}
 
         self.flags(use_cow_images=True)
         self.stubs.Set(libvirt_driver.disk, 'extend', fake_extend)
@@ -5015,11 +5022,20 @@ class LibvirtDriverTestCase(test.TestCase):
 
         self.libvirtconnection.finish_migration(
                       context.get_admin_context(), None, ins_ref,
-                      disk_info_text, None, None, None)
+                      disk_info_text, None, None, None, None, power_on)
+        self.assertTrue(self.fake_create_domain_called)
 
-    def test_finish_revert_migration(self):
+    def test_finish_migration_power_on(self):
+        self._test_finish_migration(True)
+
+    def test_finish_migration_power_off(self):
+        self._test_finish_migration(False)
+
+    def _test_finish_revert_migration(self, power_on):
         """Test for nova.virt.libvirt.libvirt_driver.LivirtConnection
         .finish_revert_migration. """
+        powered_on = power_on
+        self.fake_create_domain_called = False
 
         def fake_execute(*args, **kwargs):
             pass
@@ -5027,14 +5043,19 @@ class LibvirtDriverTestCase(test.TestCase):
         def fake_plug_vifs(instance, network_info):
             pass
 
-        def fake_create_domain(xml, instance=None):
+        def fake_create_domain(xml, instance=None, power_on=True):
+            self.fake_create_domain_called = True
+            self.assertEqual(powered_on, power_on)
             return None
 
         def fake_enable_hairpin(instance):
             pass
 
         def fake_get_info(instance):
-            return {'state': power_state.RUNNING}
+            if powered_on:
+                return {'state': power_state.RUNNING}
+            else:
+                return {'state': power_state.SHUTDOWN}
 
         def fake_to_xml(instance, network_info, disk_info,
                         image_meta=None, rescue=None,
@@ -5063,7 +5084,15 @@ class LibvirtDriverTestCase(test.TestCase):
             f = open(libvirt_xml_path, 'w')
             f.close()
 
-            self.libvirtconnection.finish_revert_migration(ins_ref, None)
+            self.libvirtconnection.finish_revert_migration(ins_ref, None,
+                                                           None, power_on)
+            self.assertTrue(self.fake_create_domain_called)
+
+    def test_finish_revert_migration_power_on(self):
+        self._test_finish_revert_migration(True)
+
+    def test_finish_revert_migration_power_off(self):
+        self._test_finish_revert_migration(False)
 
     def _test_finish_revert_migration_after_crash(self, backup_made, new_made):
         class FakeLoopingCall:

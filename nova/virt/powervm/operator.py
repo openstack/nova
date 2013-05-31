@@ -414,7 +414,8 @@ class PowerVMOperator(object):
         disk_info['root_disk_file'] = dest_file_path
         return disk_info
 
-    def deploy_from_migrated_file(self, lpar, file_path, size):
+    def deploy_from_migrated_file(self, lpar, file_path, size,
+                                  power_on=True):
         """Deploy the logical volume and attach to new lpar.
 
         :param lpar: lar instance
@@ -426,13 +427,14 @@ class PowerVMOperator(object):
         try:
             # deploy lpar from file
             self._deploy_from_vios_file(lpar, file_path, size,
-                                        decompress=need_decompress)
+                                        decompress=need_decompress,
+                                        power_on=power_on)
         finally:
             # cleanup migrated file
             self._operator._remove_file(file_path)
 
     def _deploy_from_vios_file(self, lpar, file_path, size,
-                               decompress=True):
+                               decompress=True, power_on=True):
         self._operator.create_lpar(lpar)
         lpar = self._operator.get_lpar(lpar['name'])
         instance_id = lpar['lpar_id']
@@ -447,7 +449,8 @@ class PowerVMOperator(object):
         self._disk_adapter._copy_file_to_device(file_path, diskName,
                                                 decompress)
 
-        self._operator.start_lpar(lpar['name'])
+        if power_on:
+            self._operator.start_lpar(lpar['name'])
 
 
 class BaseOperator(object):

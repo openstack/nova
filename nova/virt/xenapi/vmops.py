@@ -231,10 +231,13 @@ class VMOps(object):
                                           mount_device,
                                           hotplug=False)
 
-    def finish_revert_migration(self, instance, block_device_info=None):
-        self._restore_orig_vm_and_cleanup_orphan(instance, block_device_info)
+    def finish_revert_migration(self, instance, block_device_info=None,
+                                power_on=True):
+        self._restore_orig_vm_and_cleanup_orphan(instance, block_device_info,
+                                                 power_on)
 
-    def _restore_orig_vm_and_cleanup_orphan(self, instance, block_device_info):
+    def _restore_orig_vm_and_cleanup_orphan(self, instance,
+                                            block_device_info, power_on=True):
         # NOTE(sirp): the original vm was suffixed with '-orig'; find it using
         # the old suffix, remove the suffix, then power it back on.
         name_label = self._get_orig_vm_name_label(instance)
@@ -257,11 +260,12 @@ class VMOps(object):
             # We crashed before the -orig backup was made
             vm_ref = new_ref
 
-        self._start(instance, vm_ref)
+        if power_on:
+            self._start(instance, vm_ref)
 
     def finish_migration(self, context, migration, instance, disk_info,
                          network_info, image_meta, resize_instance,
-                         block_device_info=None):
+                         block_device_info=None, power_on=True):
         root_vdi = vm_utils.move_disks(self._session, instance, disk_info)
 
         if resize_instance:
@@ -292,7 +296,8 @@ class VMOps(object):
         self._attach_mapped_block_devices(instance, block_device_info)
 
         # 5. Start VM
-        self._start(instance, vm_ref=vm_ref)
+        if power_on:
+            self._start(instance, vm_ref=vm_ref)
         self._update_instance_progress(context, instance,
                                        step=5,
                                        total_steps=RESIZE_TOTAL_STEPS)

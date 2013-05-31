@@ -978,8 +978,8 @@ class VMwareVMOps(object):
         if network_info:
             self.unplug_vifs(instance, network_info)
 
-    def finish_revert_migration(self, instance):
-        """Finish reverting a resize, powering back on the instance."""
+    def finish_revert_migration(self, instance, power_on=True):
+        """Finish reverting a resize."""
         # The original vm was suffixed with '-orig'; find it using
         # the old suffix, remove the suffix, then power it back on.
         name_label = self._get_orig_vm_name_label(instance)
@@ -995,13 +995,16 @@ class VMwareVMOps(object):
         self._session._wait_for_task(instance['uuid'], rename_task)
         LOG.debug(_("Renamed the VM from %s") % name_label,
                   instance=instance)
-        self.power_on(instance)
+        if power_on:
+            self.power_on(instance)
 
     def finish_migration(self, context, migration, instance, disk_info,
-                         network_info, image_meta, resize_instance=False):
+                         network_info, image_meta, resize_instance=False,
+                         power_on=True):
         """Completes a resize, turning on the migrated instance."""
         # 4. Start VM
-        self.power_on(instance)
+        if power_on:
+            self.power_on(instance)
         self._update_instance_progress(context, instance,
                                        step=4,
                                        total_steps=RESIZE_TOTAL_STEPS)

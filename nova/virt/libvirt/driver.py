@@ -2386,7 +2386,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 'id': virt_dom.ID()}
 
     def _create_domain(self, xml=None, domain=None,
-                       instance=None, launch_flags=0):
+                       instance=None, launch_flags=0, power_on=True):
         """Create a domain.
 
         Either domain or xml must be passed in. If both are passed, then
@@ -2409,7 +2409,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
         if xml:
             domain = self._conn.defineXML(xml)
-        domain.createWithFlags(launch_flags)
+        if power_on:
+            domain.createWithFlags(launch_flags)
         self._enable_hairpin(domain.XMLDesc(0))
 
         # NOTE(uni): Now the container is running with its own private mount
@@ -2426,7 +2427,7 @@ class LibvirtDriver(driver.ComputeDriver):
         return domain
 
     def _create_domain_and_network(self, xml, instance, network_info,
-                                   block_device_info=None):
+                                   block_device_info=None, power_on=True):
 
         """Do required network setup and create domain."""
         block_device_mapping = driver.block_device_info_get_mapping(
@@ -2448,7 +2449,7 @@ class LibvirtDriver(driver.ComputeDriver):
         self.plug_vifs(instance, network_info)
         self.firewall_driver.setup_basic_filtering(instance, network_info)
         self.firewall_driver.prepare_instance_filter(instance, network_info)
-        domain = self._create_domain(xml, instance=instance)
+        domain = self._create_domain(xml, instance=instance, power_on=power_on)
 
         self.firewall_driver.apply_instance_filter(instance, network_info)
         return domain
@@ -3626,7 +3627,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def finish_migration(self, context, migration, instance, disk_info,
                          network_info, image_meta, resize_instance,
-                         block_device_info=None):
+                         block_device_info=None, power_on=True):
         LOG.debug(_("Starting finish_migration"), instance=instance)
 
         # resize disks. only "disk" and "disk.local" are necessary.
@@ -3677,10 +3678,12 @@ class LibvirtDriver(driver.ComputeDriver):
                           block_device_info=block_device_info,
                           write_to_disk=True)
         self._create_domain_and_network(xml, instance, network_info,
-                                        block_device_info)
-        timer = loopingcall.FixedIntervalLoopingCall(self._wait_for_running,
-                                                     instance)
-        timer.start(interval=0.5).wait()
+                                        block_device_info, power_on)
+        if power_on:
+            timer = loopingcall.FixedIntervalLoopingCall(
+                                                    self._wait_for_running,
+                                                    instance)
+            timer.start(interval=0.5).wait()
 
     def _cleanup_failed_migration(self, inst_base):
         """Make sure that a failed migrate doesn't prevent us from rolling
@@ -3688,7 +3691,7 @@ class LibvirtDriver(driver.ComputeDriver):
         shutil.rmtree(inst_base)
 
     def finish_revert_migration(self, instance, network_info,
-                                block_device_info=None):
+                                block_device_info=None, power_on=True):
         LOG.debug(_("Starting finish_revert_migration"),
                    instance=instance)
 
@@ -3710,11 +3713,13 @@ class LibvirtDriver(driver.ComputeDriver):
         xml = self.to_xml(instance, network_info, disk_info,
                           block_device_info=block_device_info)
         self._create_domain_and_network(xml, instance, network_info,
-                                        block_device_info)
+                                        block_device_info, power_on)
 
-        timer = loopingcall.FixedIntervalLoopingCall(self._wait_for_running,
-                                                     instance)
-        timer.start(interval=0.5).wait()
+        if power_on:
+            timer = loopingcall.FixedIntervalLoopingCall(
+                                                    self._wait_for_running,
+                                                    instance)
+            timer.start(interval=0.5).wait()
 
     def confirm_migration(self, migration, instance, network_info):
         """Confirms a resize, destroying the source VM."""
