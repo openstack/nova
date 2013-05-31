@@ -1792,6 +1792,73 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         check = tables & dropped_tables
         self.assertEqual(check, dropped_tables)
 
+    def _check_194(self, engine, data):
+        if engine.name == 'sqlite':
+            return
+
+        test_data = {
+            # table_name: ((index_name_1, (*columns)), ...)
+            "certificates": (
+                ("certificates_project_id_deleted_idx",
+                    ["project_id", "deleted"]),
+                ("certificates_user_id_deleted_idx", ["user_id", "deleted"]),
+            ),
+            "instances": (
+                ("instances_host_deleted_idx", ["host", "deleted"]),
+                ("instances_uuid_deleted_idx", ["uuid", "deleted"]),
+                ("instances_host_node_deleted_idx",
+                    ["host", "node", "deleted"]),
+            ),
+            "iscsi_targets": (
+                ("iscsi_targets_host_volume_id_deleted_idx",
+                    ["host", "volume_id", "deleted"]),
+            ),
+            "networks": (
+                ("networks_bridge_deleted_idx", ["bridge", "deleted"]),
+                ("networks_project_id_deleted_idx", ["project_id", "deleted"]),
+                ("networks_uuid_project_id_deleted_idx",
+                    ["uuid", "project_id", "deleted"]),
+                ("networks_vlan_deleted_idx", ["vlan", "deleted"]),
+            ),
+            "fixed_ips": (
+                ("fixed_ips_network_id_host_deleted_idx",
+                    ["network_id", "host", "deleted"]),
+                ("fixed_ips_address_reserved_network_id_deleted_idx",
+                    ["address", "reserved", "network_id", "deleted"]),
+                ("fixed_ips_deleted_allocated_idx",
+                    ["address", "deleted", "allocated"]),
+            ),
+            "floating_ips": (
+                ("floating_ips_pool_deleted_fixed_ip_id_project_id_idx",
+                    ["pool", "deleted", "fixed_ip_id", "project_id"]),
+            ),
+            "instance_faults": (
+                ("instance_faults_instance_uuid_deleted_created_at_idx",
+                 ["instance_uuid", "deleted", "created_at"]),
+            ),
+        }
+
+        for table_name, indexes in test_data.iteritems():
+            meta = sqlalchemy.MetaData()
+            meta.bind = engine
+            table = sqlalchemy.Table(table_name, meta, autoload=True)
+
+            index_data = [(idx.name, idx.columns.keys())
+                          for idx in table.indexes]
+
+            for name, columns in indexes:
+                if engine.name == "postgresql":
+                    # we can not get correct order of columns in index
+                    # definition to postgresql using sqlalchemy. So we sortind
+                    # columns list before compare
+                    # bug http://www.sqlalchemy.org/trac/ticket/2767
+                    self.assertIn(
+                        (name, sorted(columns)),
+                        ([(idx[0], sorted(idx[1])) for idx in index_data])
+                    )
+                else:
+                    self.assertIn((name, columns), index_data)
+
 
 class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""
