@@ -334,6 +334,18 @@ class HTTPRequest(os_wsgi.Request):
         return out
 
 
+class HTTPRequestV3(os_wsgi.Request):
+
+    @classmethod
+    def blank(cls, *args, **kwargs):
+        kwargs['base_url'] = 'http://localhost/v3'
+        use_admin_context = kwargs.pop('use_admin_context', False)
+        out = os_wsgi.Request.blank(*args, **kwargs)
+        out.environ['nova.context'] = FakeRequestContext('fake_user', 'fake',
+                is_admin=use_admin_context)
+        return out
+
+
 class TestRouter(wsgi.Router):
     def __init__(self, controller, mapper=None):
         if not mapper:
