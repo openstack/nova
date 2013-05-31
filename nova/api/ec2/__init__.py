@@ -501,8 +501,6 @@ class Executor(wsgi.Application):
             LOG.info(_('NotFound raised: %s'), unicode(ex), context=context)
             return ec2_error(req, request_id, type(ex).__name__, unicode(ex))
         except exception.EC2APIError as ex:
-            LOG.exception(_('EC2APIError raised: %s'), unicode(ex),
-                          context=context)
             if ex.code:
                 return ec2_error(req, request_id, ex.code, unicode(ex))
             else:
