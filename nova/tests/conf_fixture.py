@@ -26,6 +26,7 @@ from nova.tests import utils
 
 CONF = cfg.CONF
 CONF.import_opt('use_ipv6', 'nova.netconf')
+CONF.import_opt('host', 'nova.netconf')
 CONF.import_opt('scheduler_driver', 'nova.scheduler.manager')
 CONF.import_opt('fake_network', 'nova.network.manager')
 CONF.import_opt('network_size', 'nova.network.manager')
@@ -48,6 +49,7 @@ class ConfFixture(fixtures.Fixture):
 
         self.conf.set_default('api_paste_config',
                               paths.state_path_def('etc/nova/api-paste.ini'))
+        self.conf.set_default('host', 'fake-mini')
         self.conf.set_default('compute_driver', 'nova.virt.fake.FakeDriver')
         self.conf.set_default('fake_network', True)
         self.conf.set_default('fake_rabbit', True)
