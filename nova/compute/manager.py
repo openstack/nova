@@ -483,7 +483,23 @@ class ComputeManager(manager.SchedulerDependentManager):
                 legacy_net_info[0][1].get('vif_type') is None):
             # Call to network API to get instance info, this will
             # force an update to the instance's info_cache
-            net_info = self._get_instance_nw_info(context, instance)
+            retry_time = 0
+            # Continue retrying until _get_instance_nw_info() succeeds.
+            while True:
+                try:
+                    net_info = self._get_instance_nw_info(context, instance)
+                    break
+                except Exception:
+                    # Retry in an exponential backoff fashion
+                    # capped at 60 seconds.
+                    if retry_time < 60:
+                        retry_time += 6
+                    LOG.exception(_("Error raised getting network info for "
+                                    "instance %(instance_uuid)s. Retrying "
+                                    "in %(retry_time)s seconds."),
+                                    {'instance_uuid': instance['uuid'],
+                                     'retry_time': retry_time})
+                    time.sleep(retry_time)
             legacy_net_info = self._legacy_nw_info(net_info)
         self.driver.plug_vifs(instance, legacy_net_info)
 
