@@ -53,11 +53,6 @@ API Extensions
 
 Go to http://api.openstack.org for information about Compute API extensions.
 
-Outstanding Documentation Tasks
-===============================
-
-.. todolist::
-
 Indices and tables
 ==================
 
