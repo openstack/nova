@@ -244,15 +244,19 @@ class VolumeController(wsgi.Controller):
 
         availability_zone = vol.get('availability_zone', None)
 
-        new_volume = self.volume_api.create(context,
-                                            size,
-                                            vol.get('display_name'),
-                                            vol.get('display_description'),
-                                            snapshot=snapshot,
-                                            volume_type=vol_type,
-                                            metadata=metadata,
-                                            availability_zone=availability_zone
-                                           )
+        try:
+            new_volume = self.volume_api.create(
+                context,
+                size,
+                vol.get('display_name'),
+                vol.get('display_description'),
+                snapshot=snapshot,
+                volume_type=vol_type,
+                metadata=metadata,
+                availability_zone=availability_zone
+                )
+        except exception.InvalidInput as err:
+            raise exc.HTTPBadRequest(explanation=str(err))
 
         # TODO(vish): Instance should be None at db layer instead of
         #             trying to lazy load, but for now we turn it into

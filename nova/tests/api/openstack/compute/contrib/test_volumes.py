@@ -24,6 +24,7 @@ from nova.api.openstack.compute.contrib import volumes
 from nova.compute import api as compute_api
 from nova.compute import instance_types
 from nova import context
+from nova import exception
 from nova.openstack.common import jsonutils
 from nova.openstack.common import timeutils
 from nova import test
@@ -178,6 +179,23 @@ class VolumeApiTest(test.TestCase):
                          vol['display_description'])
         self.assertEqual(resp_dict['volume']['availabilityZone'],
                          vol['availability_zone'])
+
+    def test_volume_create_bad(self):
+        def fake_volume_create(self, context, size, name, description,
+                               snapshot, **param):
+            raise exception.InvalidInput(reason="bad request data")
+
+        self.stubs.Set(cinder.API, "create", fake_volume_create)
+
+        vol = {"size": '#$?',
+               "display_name": "Volume Test Name",
+               "display_description": "Volume Test Desc",
+               "availability_zone": "zone1:host1"}
+        body = {"volume": vol}
+
+        req = fakes.HTTPRequest.blank('/v2/fake/os-volumes')
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          volumes.VolumeController().create, req, body)
 
     def test_volume_index(self):
         req = webob.Request.blank('/v2/fake/os-volumes')
