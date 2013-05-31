@@ -24,7 +24,7 @@ from oslo.config import cfg
 
 from nova.cells import rpcapi as cells_rpcapi
 from nova.compute import rpcapi as compute_rpcapi
-from nova.conductor import api as conductor_api
+from nova import conductor
 from nova import manager
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
@@ -56,7 +56,7 @@ class ConsoleAuthManager(manager.Manager):
         super(ConsoleAuthManager, self).__init__(service_name='consoleauth',
                                                  *args, **kwargs)
         self.mc = memorycache.get_client()
-        self.conductor_api = conductor_api.API()
+        self.conductor_api = conductor.API()
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.cells_rpcapi = cells_rpcapi.CellsAPI()
 
