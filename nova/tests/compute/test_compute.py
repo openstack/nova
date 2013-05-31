@@ -238,7 +238,6 @@ class BaseTestCase(test.TestCase):
         inst['vm_state'] = vm_states.ACTIVE
         inst['image_ref'] = FAKE_IMAGE_REF
         inst['reservation_id'] = 'r-fakeres'
-        inst['launch_time'] = '10'
         inst['user_id'] = self.user_id
         inst['project_id'] = self.project_id
         inst['host'] = 'fake_host'
@@ -1437,7 +1436,7 @@ class ComputeTestCase(BaseTestCase):
                                       orig_sys_metadata=sys_metadata)
         self.compute.terminate_instance(self.context, instance=instance)
 
-    def test_rebuild_launch_time(self):
+    def test_rebuild_launched_at_time(self):
         # Ensure instance can be rebuilt.
         old_time = datetime.datetime(2012, 4, 1)
         cur_time = datetime.datetime(2012, 12, 21, 12, 21)
@@ -7960,7 +7959,6 @@ class ComputeAPITestCase(BaseTestCase):
         inst['vm_state'] = vm_states.ACTIVE
         inst['image_ref'] = FAKE_IMAGE_REF
         inst['reservation_id'] = 'r-fakeres'
-        inst['launch_time'] = '10'
         inst['user_id'] = self.user_id
         inst['project_id'] = self.project_id
         inst['host'] = 'fake_host'

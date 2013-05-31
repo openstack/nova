@@ -53,7 +53,6 @@ class ConsoleTestCase(test.TestCase):
         #inst['name'] = 'instance-1234'
         inst['image_id'] = 1
         inst['reservation_id'] = 'r-fakeres'
-        inst['launch_time'] = '10'
         inst['user_id'] = self.user_id
         inst['project_id'] = self.project_id
         inst['instance_type_id'] = 1

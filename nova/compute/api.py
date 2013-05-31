@@ -25,7 +25,6 @@ import base64
 import functools
 import re
 import string
-import time
 import uuid
 
 from oslo.config import cfg
@@ -640,8 +639,6 @@ class API(base.Base):
                 'config_drive': config_drive or '',
                 'user_id': context.user_id,
                 'project_id': context.project_id,
-                'launch_time': time.strftime('%Y-%m-%dT%H:%M:%SZ',
-                    time.gmtime()),
                 'instance_type_id': instance_type['id'],
                 'memory_mb': instance_type['memory_mb'],
                 'vcpus': instance_type['vcpus'],

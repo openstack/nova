@@ -18,7 +18,6 @@
 Stubouts, mocks and fixtures for the test suite
 """
 
-import time
 import uuid
 
 from nova.compute import task_states
@@ -145,7 +144,6 @@ def stub_out_db_instance_api(stubs):
             'task_state': task_states.SCHEDULING,
             'user_id': values['user_id'],
             'project_id': values['project_id'],
-            'launch_time': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
             'instance_type': instance_type,
             'memory_mb': instance_type['memory_mb'],
             'vcpus': instance_type['vcpus'],

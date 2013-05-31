@@ -4816,7 +4816,6 @@ class LibvirtDriverTestCase(test.TestCase):
         inst = {}
         inst['image_ref'] = '1'
         inst['reservation_id'] = 'r-fakeres'
-        inst['launch_time'] = '10'
         inst['user_id'] = 'fake'
         inst['project_id'] = 'fake'
         type_id = flavors.get_instance_type_by_name('m1.tiny')['id']
