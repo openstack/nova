@@ -3253,7 +3253,8 @@ class ServersControllerCreateTest(test.TestCase):
         server = res['server']
         self.assertEqual(FAKE_UUID, server['id'])
 
-    def test_create_instance_with_config_drive_as_id(self):
+    def test_create_instance_with_bad_config_drive(self):
+        # Test with an image href as config drive value.
         self.ext_mgr.extensions = {'os-config-drive': 'fake'}
         image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
         flavor_ref = 'http://localhost/v2/fake/flavors/3'
@@ -3275,34 +3276,6 @@ class ServersControllerCreateTest(test.TestCase):
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
-        res = self.controller.create(req, body).obj
-
-        server = res['server']
-        self.assertEqual(FAKE_UUID, server['id'])
-
-    def test_create_instance_with_bad_config_drive(self):
-        self.ext_mgr.extensions = {'os-config-drive': 'fake'}
-        image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        flavor_ref = 'http://localhost/v2/fake/flavors/3'
-        body = {
-            'server': {
-                'name': 'config_drive_test',
-                'imageRef': image_href,
-                'flavorRef': flavor_ref,
-                'metadata': {
-                    'hello': 'world',
-                    'open': 'stack',
-                },
-                'personality': {},
-                'config_drive': 'asdf',
-            },
-        }
-
-        req = fakes.HTTPRequest.blank('/fake/servers')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create, req, body)
 

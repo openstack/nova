@@ -411,7 +411,7 @@ def get_disk_mapping(virt_type, instance,
                                         'dev': disk_dev,
                                         'type': 'disk'}
 
-    if configdrive.enabled_for(instance):
+    if configdrive.required_by(instance):
         config_info = get_next_disk_info(mapping,
                                          disk_bus,
                                          last_device=True)

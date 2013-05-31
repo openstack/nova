@@ -919,6 +919,9 @@ class Controller(wsgi.Controller):
         except exception.KeypairNotFound as error:
             msg = _("Invalid key_name provided.")
             raise exc.HTTPBadRequest(explanation=msg)
+        except exception.ConfigDriveInvalidValue:
+            msg = _("Invalid config_drive provided.")
+            raise exc.HTTPBadRequest(explanation=msg)
         except rpc_common.RemoteError as err:
             msg = "%(err_type)s: %(err_msg)s" % {'err_type': err.exc_type,
                                                  'err_msg': err.value}

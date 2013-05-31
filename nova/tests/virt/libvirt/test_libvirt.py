@@ -589,8 +589,8 @@ class LibvirtConnTestCase(test.TestCase):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_ref = db.instance_create(self.context, self.test_instance)
 
-        # make configdrive.enabled_for() return True
-        instance_ref['config_drive'] = 'ANY_ID'
+        # make configdrive.required_by() return True
+        instance_ref['config_drive'] = True
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
                                             instance_ref)
@@ -4945,10 +4945,9 @@ class LibvirtDriverTestCase(test.TestCase):
         inst['host'] = 'host1'
         inst['root_gb'] = 10
         inst['ephemeral_gb'] = 20
-        inst['config_drive'] = 1
+        inst['config_drive'] = True
         inst['kernel_id'] = 2
         inst['ramdisk_id'] = 3
-        inst['config_drive_id'] = 1
         inst['key_data'] = 'ABCDEFG'
         inst['system_metadata'] = sys_meta
 
