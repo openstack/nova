@@ -133,8 +133,6 @@ class TestQuantumSecurityGroups(
             device_id=test_security_groups.FAKE_UUID1)
         expected = [{'rules': [], 'tenant_id': 'fake_tenant', 'id': sg['id'],
                     'name': 'test', 'description': 'test-description'}]
-        self.stubs.Set(nova.db, 'instance_get',
-                       test_security_groups.return_server)
         self.stubs.Set(nova.db, 'instance_get_by_uuid',
                        test_security_groups.return_server_by_uuid)
         req = fakes.HTTPRequest.blank('/v2/fake/servers/%s/os-security-groups'
@@ -196,8 +194,6 @@ class TestQuantumSecurityGroups(
 
         self.stubs.Set(nova.db, 'instance_get',
                        test_security_groups.return_server)
-        self.stubs.Set(nova.db, 'instance_get_by_uuid',
-                       test_security_groups.return_server_by_uuid)
         body = dict(addSecurityGroup=dict(name="test"))
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers/1/action')
@@ -233,8 +229,6 @@ class TestQuantumSecurityGroups(
 
         self.stubs.Set(nova.db, 'instance_get',
                        test_security_groups.return_server)
-        self.stubs.Set(nova.db, 'instance_get_by_uuid',
-                       test_security_groups.return_server_by_uuid)
         body = dict(removeSecurityGroup=dict(name="test"))
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers/1/action')
@@ -258,15 +252,30 @@ class TestQuantumSecurityGroups(
                                                       {'name': sg2['name']}],
                     test_security_groups.FAKE_UUID2: [{'name': sg2['name']},
                                                       {'name': sg3['id']}]}
-        self.stubs.Set(nova.db, 'instance_get',
-                       test_security_groups.return_server)
-        self.stubs.Set(nova.db, 'instance_get_by_uuid',
-                       test_security_groups.return_server_by_uuid)
         security_group_api = self.controller.security_group_api
         bindings = (
             security_group_api.get_instances_security_groups_bindings(
                 context.get_admin_context()))
         self.assertEquals(bindings, expected)
+
+    def test_get_instance_security_groups(self):
+        sg1 = self._create_sg_template(name='test1').get('security_group')
+        sg2 = self._create_sg_template(name='test2').get('security_group')
+        # test name='' is replaced with id
+        sg3 = self._create_sg_template(name='').get('security_group')
+        net = self._create_network()
+        self._create_port(
+            network_id=net['network']['id'], security_groups=[sg1['id'],
+                                                              sg2['id'],
+                                                              sg3['id']],
+            device_id=test_security_groups.FAKE_UUID1)
+
+        expected = [{'name': sg1['name']}, {'name': sg2['name']},
+                    {'name': sg3['id']}]
+        security_group_api = self.controller.security_group_api
+        sgs = security_group_api.get_instance_security_groups(
+            context.get_admin_context(), test_security_groups.FAKE_UUID1)
+        self.assertEquals(sgs, expected)
 
 
 class TestQuantumSecurityGroupRulesTestCase(TestQuantumSecurityGroupsTestCase):

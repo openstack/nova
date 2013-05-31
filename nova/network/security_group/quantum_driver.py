@@ -306,7 +306,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                         # Since the name is optional for
                         # quantum security groups
                         if not name:
-                            name = security_group['id']
+                            name = security_group
                         ret.append({'name': name})
                 except KeyError:
                     # This should only happen due to a race condition
