@@ -523,10 +523,19 @@ class ComputeManager(manager.SchedulerDependentManager):
         if instance['task_state'] == task_states.RESIZE_MIGRATING:
             # We crashed during resize/migration, so roll back for safety
             try:
+                # NOTE(mriedem): check old_vm_state for STOPPED here, if it's
+                # not in system_metadata we default to True for backwards
+                # compatibility
+                sys_meta = utils.metadata_to_dict(instance['system_metadata'])
+                power_on = sys_meta.get('old_vm_state') != vm_states.STOPPED
+
+                block_dev_info = self._get_instance_volume_block_device_info(
+                            context, instance)
+
                 self.driver.finish_revert_migration(
                     instance, self._legacy_nw_info(net_info),
-                    self._get_instance_volume_block_device_info(context,
-                                                                instance))
+                    block_dev_info, power_on)
+
             except Exception as e:
                 LOG.exception(_('Failed to revert crashed migration'),
                               instance=instance)
@@ -2102,9 +2111,10 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         with self._error_out_instance_on_exception(context, instance['uuid'],
                                                    reservations):
-            # NOTE(danms): delete stashed old/new instance_type information
+            # NOTE(danms): delete stashed migration information
             sys_meta, instance_type = self._cleanup_stored_instance_types(
                 migration, instance)
+            sys_meta.pop('old_vm_state', None)
             self._instance_update(context, instance['uuid'],
                                   system_metadata=sys_meta)
 
@@ -2122,8 +2132,24 @@ class ComputeManager(manager.SchedulerDependentManager):
             rt = self._get_resource_tracker(migration['source_node'])
             rt.drop_resize_claim(instance, prefix='old_')
 
+            # NOTE(mriedem): The old_vm_state could be STOPPED but the user
+            # might have manually powered up the instance to confirm the
+            # resize/migrate, so we need to check the current power state
+            # on the instance and set the vm_state appropriately. We default
+            # to ACTIVE because if the power state is not SHUTDOWN, we
+            # assume _sync_instance_power_state will clean it up.
+            p_state = self._get_power_state(context, instance)
+            vm_state = None
+            if p_state == power_state.SHUTDOWN:
+                vm_state = vm_states.STOPPED
+                LOG.debug("Resized/migrated instance is powered off. "
+                          "Setting vm_state to '%s'." % vm_state,
+                          instance=instance)
+            else:
+                vm_state = vm_states.ACTIVE
+
             instance = self._instance_update(context, instance['uuid'],
-                                             vm_state=vm_states.ACTIVE,
+                                             vm_state=vm_state,
                                              task_state=None,
                                              expected_task_state=None)
 
@@ -2210,8 +2236,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                              migration=None, migration_id=None):
         """Finishes the second half of reverting a resize.
 
-        Power back on the source instance and revert the resized attributes
-        in the database.
+        Bring the original source instance state back (active/shutoff) and
+        revert the resized attributes in the database.
 
         """
         if not migration:
@@ -2226,6 +2252,11 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             sys_meta, instance_type = self._cleanup_stored_instance_types(
                 migration, instance, True)
+
+            # NOTE(mriedem): delete stashed old_vm_state information; we
+            # default to ACTIVE for backwards compability if old_vm_state is
+            # not set
+            old_vm_state = sys_meta.pop('old_vm_state', vm_states.ACTIVE)
 
             instance = self._instance_update(context,
                                   instance['uuid'],
@@ -2246,9 +2277,10 @@ class ComputeManager(manager.SchedulerDependentManager):
             block_device_info = self._get_instance_volume_block_device_info(
                     context, instance, bdms=bdms)
 
+            power_on = old_vm_state != vm_states.STOPPED
             self.driver.finish_revert_migration(instance,
                                        self._legacy_nw_info(network_info),
-                                       block_device_info)
+                                       block_device_info, power_on)
 
             # Just roll back the record. There's no need to resize down since
             # the 'old' VM already has the preferred attributes
@@ -2260,8 +2292,17 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                                instance,
                                                                migration)
 
-            instance = self._instance_update(context, instance['uuid'],
-                    vm_state=vm_states.ACTIVE, task_state=None)
+            # if the original vm state was STOPPED, set it back to STOPPED
+            LOG.info(_("Updating instance to original state: '%s'") %
+                     old_vm_state)
+            if power_on:
+                instance = self._instance_update(context, instance['uuid'],
+                        vm_state=vm_states.ACTIVE, task_state=None)
+            else:
+                instance = self._instance_update(
+                        context, instance['uuid'],
+                        task_state=task_states.STOPPING)
+                self.stop_instance(context, instance)
 
             self._notify_about_instance_usage(
                     context, instance, "resize.revert.end")
@@ -2300,6 +2341,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         sys_meta = utils.metadata_to_dict(instance['system_metadata'])
         flavors.save_instance_type_info(sys_meta, instance_type,
                                                 prefix='new_')
+        # NOTE(mriedem): Stash the old vm_state so we can set the
+        # resized/reverted instance back to the same state later.
+        vm_state = instance['vm_state']
+        LOG.debug('Stashing vm_state: %s' % vm_state, instance=instance)
+        sys_meta['old_vm_state'] = vm_state
         instance = self._instance_update(context, instance['uuid'],
                                          system_metadata=sys_meta)
 
@@ -2466,6 +2512,10 @@ class ComputeManager(manager.SchedulerDependentManager):
         new_instance_type_id = migration['new_instance_type_id']
         old_instance_type = flavors.extract_instance_type(instance)
         sys_meta = utils.metadata_to_dict(instance['system_metadata'])
+        # NOTE(mriedem): Get the old_vm_state so we know if we should
+        # power on the instance. If old_vm_sate is not set we need to default
+        # to ACTIVE for backwards compatibility
+        old_vm_state = sys_meta.get('old_vm_state', vm_states.ACTIVE)
         flavors.save_instance_type_info(sys_meta,
                                                old_instance_type,
                                                prefix='old_')
@@ -2510,11 +2560,14 @@ class ComputeManager(manager.SchedulerDependentManager):
         block_device_info = self._get_instance_volume_block_device_info(
                             context, instance, bdms=bdms)
 
+        # NOTE(mriedem): If the original vm_state was STOPPED, we don't
+        # automatically power on the instance after it's migrated
+        power_on = old_vm_state != vm_states.STOPPED
         self.driver.finish_migration(context, migration, instance,
                                      disk_info,
                                      self._legacy_nw_info(network_info),
                                      image, resize_instance,
-                                     block_device_info)
+                                     block_device_info, power_on)
 
         migration = self.conductor_api.migration_update(context,
                 migration, 'finished')
