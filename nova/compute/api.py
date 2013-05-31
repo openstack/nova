@@ -1861,10 +1861,6 @@ class API(base.Base):
         deltas = self._downsize_quota_delta(context, instance)
         reservations = self._reserve_quota_delta(context, deltas)
 
-        instance = self.update(context, instance, vm_state=vm_states.ACTIVE,
-                               task_state=None,
-                               expected_task_state=None)
-
         self.db.migration_update(elevated, migration_ref['id'],
                 {'status': 'confirming'})
         # With cells, the best we can do right now is commit the reservations
