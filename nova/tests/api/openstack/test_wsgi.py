@@ -449,6 +449,49 @@ class ResourceTest(test.TestCase):
         self.assertEqual(content_type, 'application/json')
         self.assertEqual(body, 'foo')
 
+    def test_get_request_id_with_dict_response_body(self):
+        class Controller(wsgi.Controller):
+            def index(self, req):
+                return {'foo': 'bar'}
+
+        req = fakes.HTTPRequest.blank('/tests')
+        context = req.environ['nova.context']
+        app = fakes.TestRouter(Controller())
+        response = req.get_response(app)
+        self.assertEqual(response.headers['x-compute-request-id'],
+                context.request_id)
+        self.assertEqual(response.body, '{"foo": "bar"}')
+        self.assertEqual(response.status_int, 200)
+
+    def test_no_request_id_with_str_response_body(self):
+        class Controller(wsgi.Controller):
+            def index(self, req):
+                return 'foo'
+
+        req = fakes.HTTPRequest.blank('/tests')
+        app = fakes.TestRouter(Controller())
+        response = req.get_response(app)
+        # NOTE(alaski): This test is really to ensure that a str response
+        # doesn't error.  Not having a request_id header is a side effect of
+        # our wsgi setup, ideally it would be there.
+        self.assertFalse(hasattr(response.headers, 'x-compute-request-id'))
+        self.assertEqual(response.body, 'foo')
+        self.assertEqual(response.status_int, 200)
+
+    def test_get_request_id_no_response_body(self):
+        class Controller(object):
+            def index(self, req):
+                pass
+
+        req = fakes.HTTPRequest.blank('/tests')
+        context = req.environ['nova.context']
+        app = fakes.TestRouter(Controller())
+        response = req.get_response(app)
+        self.assertEqual(response.headers['x-compute-request-id'],
+                context.request_id)
+        self.assertEqual(response.body, '')
+        self.assertEqual(response.status_int, 200)
+
     def test_deserialize_badtype(self):
         class Controller(object):
             def index(self, req, pants=None):
