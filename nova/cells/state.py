@@ -127,7 +127,7 @@ class CellStateManager(base.Base):
             else:
                 values = set([value])
             my_cell_capabs[name] = values
-            self.my_cell_state.update_capabilities(my_cell_capabs)
+        self.my_cell_state.update_capabilities(my_cell_capabs)
 
     def _refresh_cells_from_db(self, ctxt):
         """Make our cell info map match the db."""
