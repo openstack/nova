@@ -1728,7 +1728,7 @@ def instance_get_all_by_filters(context, filters, sort_key, sort_dir,
     # For other filters that don't match this, we will do regexp matching
     exact_match_filter_names = ['project_id', 'user_id', 'image_ref',
                                 'vm_state', 'instance_type_id', 'uuid',
-                                'metadata', 'host']
+                                'metadata', 'host', 'task_state']
 
     # Filter the query
     query_prefix = exact_filter(query_prefix, models.Instance,
