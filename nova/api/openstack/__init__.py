@@ -20,6 +20,7 @@
 WSGI middleware for OpenStack API controllers.
 """
 
+from oslo.config import cfg
 import routes
 import stevedore
 import webob.dec
@@ -33,7 +34,15 @@ from nova import utils
 from nova import wsgi as base_wsgi
 
 
+api_opts = [
+        cfg.BoolOpt('osapi_v3_enabled',
+                    default=False,
+                    help='Whether the V3 API is enabled or not')
+]
+
 LOG = logging.getLogger(__name__)
+CONF = cfg.CONF
+CONF.register_opts(api_opts)
 
 
 class FaultWrapper(base_wsgi.Middleware):
@@ -233,6 +242,10 @@ class APIRouterV3(base_wsgi.Router):
                 return self._register_extension(ext)
             else:
                 return False
+
+        if not CONF.osapi_v3_enabled:
+            LOG.warning("V3 API has been disabled by configuration")
+            return
 
         self.init_only = init_only
         self.api_extension_manager = stevedore.enabled.EnabledExtensionManager(

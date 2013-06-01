@@ -413,6 +413,14 @@
 
 
 #
+# Options defined in nova.api.openstack
+#
+
+# Whether the V3 API is enabled or not
+#osapi_v3_enabled=False
+
+
+#
 # Options defined in nova.api.openstack.common
 #
 
