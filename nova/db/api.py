@@ -112,9 +112,9 @@ def not_equal(*values):
 ###################
 
 
-def service_destroy(context, instance_id):
+def service_destroy(context, service_id):
     """Destroy the service or raise if it does not exist."""
-    return IMPL.service_destroy(context, instance_id)
+    return IMPL.service_destroy(context, service_id)
 
 
 def service_get(context, service_id):
