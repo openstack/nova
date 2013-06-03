@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  Nova\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/nova\n"
-"POT-Creation-Date: 2013-06-02 19:37+0000\n"
+"POT-Creation-Date: 2013-06-03 19:38+0000\n"
 "PO-Revision-Date: 2013-05-28 17:08+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: Portuguese "
@@ -1448,22 +1448,22 @@ msgstr ""
 msgid "Reloading cached file %s"
 msgstr ""
 
-#: nova/utils.py:931 nova/virt/configdrive.py:177
+#: nova/utils.py:933 nova/virt/configdrive.py:177
 #, python-format
 msgid "Could not remove tmpdir: %s"
 msgstr ""
 
-#: nova/utils.py:1090
+#: nova/utils.py:1092
 #, python-format
 msgid "%s is not a string or unicode"
 msgstr ""
 
-#: nova/utils.py:1094
+#: nova/utils.py:1096
 #, python-format
 msgid "%(name)s has less than %(min_length)s characters."
 msgstr ""
 
-#: nova/utils.py:1099
+#: nova/utils.py:1101
 #, python-format
 msgid "%(name)s has more than %(max_length)s characters."
 msgstr ""
@@ -6957,12 +6957,12 @@ msgstr ""
 msgid "spawn error"
 msgstr ""
 
-#: nova/tests/integrated/test_api_samples.py:177
+#: nova/tests/integrated/test_api_samples.py:178
 #, python-format
 msgid "%(result_str)s: %(result)s is not a dict."
 msgstr ""
 
-#: nova/tests/integrated/test_api_samples.py:191
+#: nova/tests/integrated/test_api_samples.py:192
 #, python-format
 msgid ""
 "Dictionary key mismatch:\n"
@@ -6972,22 +6972,22 @@ msgid ""
 "%(res_delta)s\n"
 msgstr ""
 
-#: nova/tests/integrated/test_api_samples.py:202
+#: nova/tests/integrated/test_api_samples.py:203
 #, python-format
 msgid "%(result_str)s: %(result)s is not a list."
 msgstr ""
 
-#: nova/tests/integrated/test_api_samples.py:221
+#: nova/tests/integrated/test_api_samples.py:222
 msgid "Extra list items in template:"
 msgstr ""
 
-#: nova/tests/integrated/test_api_samples.py:225
+#: nova/tests/integrated/test_api_samples.py:226
 #, python-format
 msgid "Extra list items in %(result_str)s:"
 msgstr ""
 
-#: nova/tests/integrated/test_api_samples.py:246
-#: nova/tests/integrated/test_api_samples.py:261
+#: nova/tests/integrated/test_api_samples.py:247
+#: nova/tests/integrated/test_api_samples.py:262
 #, python-format
 msgid ""
 "Values do not match:\n"
@@ -7069,12 +7069,12 @@ msgstr ""
 msgid "Expected a function in 'auth[1]' parameter"
 msgstr ""
 
-#: nova/tests/virt/xenapi/test_xenapi.py:897
+#: nova/tests/virt/xenapi/test_xenapi.py:898
 #, python-format
 msgid "Creating files in %s to simulate guest agent"
 msgstr ""
 
-#: nova/tests/virt/xenapi/test_xenapi.py:908
+#: nova/tests/virt/xenapi/test_xenapi.py:909
 #, python-format
 msgid "Removing simulated guest agent files in %s"
 msgstr ""
@@ -11158,7 +11158,4 @@ msgstr ""
 #: nova/volume/cinder.py:235
 msgid "status must be 'available'"
 msgstr ""
-
-#~ msgid "Quantum client authentication failed: %s"
-#~ msgstr ""
 

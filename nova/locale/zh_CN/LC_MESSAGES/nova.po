@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  nova\n"
 "Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
-"POT-Creation-Date: 2013-06-02 19:37+0000\n"
+"POT-Creation-Date: 2013-06-03 19:38+0000\n"
 "PO-Revision-Date: 2012-05-07 06:51+0000\n"
 "Last-Translator: Edward <Unknown>\n"
 "Language-Team: Chinese (Simplified) <zh_CN@li.org>\n"
@@ -1466,22 +1466,22 @@ msgstr "timefunc：'%(name)s' 用了%(total_time).2f 秒"
 msgid "Reloading cached file %s"
 msgstr "正在删除基文件：%s"
 
-#: nova/utils.py:931 nova/virt/configdrive.py:177
+#: nova/utils.py:933 nova/virt/configdrive.py:177
 #, fuzzy, python-format
 msgid "Could not remove tmpdir: %s"
 msgstr "移除容器失败：%s"
 
-#: nova/utils.py:1090
+#: nova/utils.py:1092
 #, fuzzy, python-format
 msgid "%s is not a string or unicode"
 msgstr "服务器名称不是字符串或者unicode"
 
-#: nova/utils.py:1094
+#: nova/utils.py:1096
 #, fuzzy, python-format
 msgid "%(name)s has less than %(min_length)s characters."
 msgstr "密钥对名称长度必须在1到255个字符之间"
 
-#: nova/utils.py:1099
+#: nova/utils.py:1101
 #, python-format
 msgid "%(name)s has more than %(max_length)s characters."
 msgstr ""
@@ -5959,7 +5959,7 @@ msgid "Error setting %(attr)s"
 msgstr "设置管理员密码出错"
 
 #: nova/objects/base.py:136
-#, fuzzy, python-format
+#, fuzzy
 msgid "Invalid version string"
 msgstr "不正确的server_string：%s"
 
@@ -7148,12 +7148,12 @@ msgstr ""
 msgid "spawn error"
 msgstr "未知的guestmount错误"
 
-#: nova/tests/integrated/test_api_samples.py:177
+#: nova/tests/integrated/test_api_samples.py:178
 #, fuzzy, python-format
 msgid "%(result_str)s: %(result)s is not a dict."
 msgstr "地址 |%(address)s| 没有分配"
 
-#: nova/tests/integrated/test_api_samples.py:191
+#: nova/tests/integrated/test_api_samples.py:192
 #, python-format
 msgid ""
 "Dictionary key mismatch:\n"
@@ -7163,22 +7163,22 @@ msgid ""
 "%(res_delta)s\n"
 msgstr ""
 
-#: nova/tests/integrated/test_api_samples.py:202
+#: nova/tests/integrated/test_api_samples.py:203
 #, fuzzy, python-format
 msgid "%(result_str)s: %(result)s is not a list."
 msgstr "地址 |%(address)s| 没有分配"
 
-#: nova/tests/integrated/test_api_samples.py:221
+#: nova/tests/integrated/test_api_samples.py:222
 msgid "Extra list items in template:"
 msgstr ""
 
-#: nova/tests/integrated/test_api_samples.py:225
+#: nova/tests/integrated/test_api_samples.py:226
 #, python-format
 msgid "Extra list items in %(result_str)s:"
 msgstr ""
 
-#: nova/tests/integrated/test_api_samples.py:246
-#: nova/tests/integrated/test_api_samples.py:261
+#: nova/tests/integrated/test_api_samples.py:247
+#: nova/tests/integrated/test_api_samples.py:262
 #, python-format
 msgid ""
 "Values do not match:\n"
@@ -7264,12 +7264,12 @@ msgstr ""
 msgid "Expected a function in 'auth[1]' parameter"
 msgstr ""
 
-#: nova/tests/virt/xenapi/test_xenapi.py:897
+#: nova/tests/virt/xenapi/test_xenapi.py:898
 #, python-format
 msgid "Creating files in %s to simulate guest agent"
 msgstr "在%s 创建文件模拟客户代理"
 
-#: nova/tests/virt/xenapi/test_xenapi.py:908
+#: nova/tests/virt/xenapi/test_xenapi.py:909
 #, python-format
 msgid "Removing simulated guest agent files in %s"
 msgstr "移除在 %s 的模拟的客户代理文件"
@@ -11508,7 +11508,4 @@ msgstr "状态必须可用"
 #, fuzzy
 msgid "status must be 'available'"
 msgstr "状态必须可用"
-
-#~ msgid "Quantum client authentication failed: %s"
-#~ msgstr ""
 
