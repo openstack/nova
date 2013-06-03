@@ -27,6 +27,14 @@ def datetime_or_none(dt):
     raise ValueError('A datetime.datetime is required here')
 
 
+# NOTE(danms): Being tolerant of isotime strings here will help us
+# during our objects transition
+def datetime_or_str_or_none(val):
+    if isinstance(val, basestring):
+        return timeutils.parse_isotime(val)
+    return datetime_or_none(val)
+
+
 def int_or_none(val):
     """Attempt to parse an integer value, or None."""
     if val is None:

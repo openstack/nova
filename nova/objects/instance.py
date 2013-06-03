@@ -58,9 +58,9 @@ class Instance(base.NovaObject):
 
         'reservation_id': obj_utils.str_or_none,
 
-        'scheduled_at': obj_utils.datetime_or_none,
-        'launched_at': obj_utils.datetime_or_none,
-        'terminated_at': obj_utils.datetime_or_none,
+        'scheduled_at': obj_utils.datetime_or_str_or_none,
+        'launched_at': obj_utils.datetime_or_str_or_none,
+        'terminated_at': obj_utils.datetime_or_str_or_none,
 
         'availability_zone': obj_utils.str_or_none,
 
