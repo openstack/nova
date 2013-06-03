@@ -26,9 +26,11 @@ from oslo.config import cfg
 
 from nova import exception
 from nova.openstack.common import jsonutils
+from nova.openstack.common import log as logging
 from nova.openstack.common.rpc import proxy as rpc_proxy
 
 
+LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
 CONF.import_opt('enable', 'nova.cells.opts', group='cells')
 CONF.import_opt('topic', 'nova.cells.opts', group='cells')
@@ -52,6 +54,7 @@ class CellsAPI(rpc_proxy.RpcProxy):
         1.7 - Adds service_update()
         1.8 - Adds build_instances(), deprecates schedule_run_instance()
         1.9 - Adds get_capacities()
+        1.10 - Adds bdm_update_or_create_at_top(), and bdm_destroy_at_top()
     '''
     BASE_RPC_API_VERSION = '1.0'
 
@@ -298,3 +301,34 @@ class CellsAPI(rpc_proxy.RpcProxy):
         return self.call(ctxt,
                          self.make_msg('get_capacities', cell_name=cell_name),
                          version='1.9')
+
+    def bdm_update_or_create_at_top(self, ctxt, bdm, create=None):
+        """Create or update a block device mapping in API cells.  If
+        create is True, only try to create.  If create is None, try to
+        update but fall back to create.  If create is False, only attempt
+        to update.  This maps to nova-conductor's behavior.
+        """
+        if not CONF.cells.enable:
+            return
+        try:
+            self.cast(ctxt, self.make_msg('bdm_update_or_create_at_top',
+                                          bdm=bdm, create=create),
+                      version='1.10')
+        except Exception:
+            LOG.exception(_("Failed to notify cells of BDM update/create."))
+
+    def bdm_destroy_at_top(self, ctxt, instance_uuid, device_name=None,
+                           volume_id=None):
+        """Broadcast upwards that a block device mapping was destroyed.
+        One of device_name or volume_id should be specified.
+        """
+        if not CONF.cells.enable:
+            return
+        try:
+            self.cast(ctxt, self.make_msg('bdm_destroy_at_top',
+                                          instance_uuid=instance_uuid,
+                                          device_name=device_name,
+                                          volume_id=volume_id),
+                      version='1.10')
+        except Exception:
+            LOG.exception(_("Failed to notify cells of BDM destroy."))

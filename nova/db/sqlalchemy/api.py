@@ -3139,15 +3139,16 @@ def block_device_mapping_create(context, values, legacy=True):
     bdm_ref = models.BlockDeviceMapping()
     bdm_ref.update(values)
     bdm_ref.save()
+    return bdm_ref
 
 
 @require_context
 def block_device_mapping_update(context, bdm_id, values, legacy=True):
     _scrub_empty_str_values(values, ['volume_size'])
     values = _from_legacy_values(values, legacy, allow_updates=True)
-    _block_device_mapping_get_query(context).\
-            filter_by(id=bdm_id).\
-            update(values)
+    query = _block_device_mapping_get_query(context).filter_by(id=bdm_id)
+    query.update(values)
+    return query.first()
 
 
 def block_device_mapping_update_or_create(context, values, legacy=True):
@@ -3163,6 +3164,7 @@ def block_device_mapping_update_or_create(context, values, legacy=True):
             bdm_ref = models.BlockDeviceMapping()
             bdm_ref.update(values)
             bdm_ref.save(session=session)
+            result = bdm_ref
         else:
             values = _from_legacy_values(values, legacy, allow_updates=True)
             result.update(values)
@@ -3185,6 +3187,7 @@ def block_device_mapping_update_or_create(context, values, legacy=True):
                     models.BlockDeviceMapping.guest_format == None,
                     models.BlockDeviceMapping.guest_format != 'swap')).
                  soft_delete())
+        return result
 
 
 @require_context

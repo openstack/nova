@@ -18,6 +18,7 @@ import copy
 
 from nova.api.ec2 import ec2utils
 from nova import block_device
+from nova.cells import rpcapi as cells_rpcapi
 from nova.compute import api as compute_api
 from nova.compute import utils as compute_utils
 from nova import exception
@@ -78,6 +79,7 @@ class ConductorManager(manager.Manager):
         self._compute_api = None
         self.compute_task_mgr = ComputeTaskManager()
         self.quotas = quota.QUOTAS
+        self.cells_rpcapi = cells_rpcapi.CellsAPI()
 
     def create_rpc_dispatcher(self, *args, **kwargs):
         kwargs['additional_apis'] = [self.compute_task_mgr]
@@ -259,11 +261,18 @@ class ConductorManager(manager.Manager):
     def block_device_mapping_update_or_create(self, context, values,
                                               create=None):
         if create is None:
-            self.db.block_device_mapping_update_or_create(context, values)
+            bdm = self.db.block_device_mapping_update_or_create(context,
+                                                                values)
         elif create is True:
-            self.db.block_device_mapping_create(context, values)
+            bdm = self.db.block_device_mapping_create(context, values)
         else:
-            self.db.block_device_mapping_update(context, values['id'], values)
+            bdm = self.db.block_device_mapping_update(context,
+                                                      values['id'],
+                                                      values)
+        # NOTE:comstud): 'bdm' is always in the new format, so we
+        # account for this in cells/messaging.py
+        self.cells_rpcapi.bdm_update_or_create_at_top(context, bdm,
+                                                      create=create)
 
     def block_device_mapping_get_all_by_instance(self, context, instance,
                                                  legacy=True):
@@ -279,12 +288,36 @@ class ConductorManager(manager.Manager):
         if bdms is not None:
             for bdm in bdms:
                 self.db.block_device_mapping_destroy(context, bdm['id'])
+                # NOTE(comstud): bdm['id'] will be different in API cell,
+                # so we must try to destroy by device_name or volume_id.
+                # We need an instance_uuid in order to do this properly,
+                # too.
+                # I hope to clean a lot of this up in the object
+                # implementation.
+                instance_uuid = (bdm['instance_uuid'] or
+                                    (instance and instance['uuid']))
+                if not instance_uuid:
+                    continue
+                # Better to be safe than sorry.  device_name is not
+                # NULLable, however it could be an empty string.
+                if bdm['device_name']:
+                    self.cells_rpcapi.bdm_destroy_at_top(
+                            context, instance_uuid,
+                            device_name=bdm['device_name'])
+                elif bdm['volume_id']:
+                    self.cells_rpcapi.bdm_destroy_at_top(
+                            context, instance_uuid,
+                            volume_id=bdm['volume_id'])
         elif instance is not None and volume_id is not None:
             self.db.block_device_mapping_destroy_by_instance_and_volume(
                 context, instance['uuid'], volume_id)
+            self.cells_rpcapi.bdm_destroy_at_top(
+                context, instance['uuid'], volume_id=volume_id)
         elif instance is not None and device_name is not None:
             self.db.block_device_mapping_destroy_by_instance_and_device(
                 context, instance['uuid'], device_name)
+            self.cells_rpcapi.bdm_destroy_at_top(
+                context, instance['uuid'], device_name=device_name)
         else:
             # NOTE(danms): This shouldn't happen
             raise exception.Invalid(_("Invalid block_device_mapping_destroy"

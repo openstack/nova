@@ -520,8 +520,6 @@ class ComputeCellsAPI(compute_api.API):
         """Attach an existing volume to an existing instance."""
         if device and not block_device.match_device(device):
             raise exception.InvalidDevicePath(path=device)
-        device = self.compute_rpcapi.reserve_block_device_name(
-            context, device=device, instance=instance, volume_id=volume_id)
         try:
             volume = self.volume_api.get(context, volume_id)
             self.volume_api.check_attach(context, volume, instance=instance)
@@ -529,7 +527,7 @@ class ComputeCellsAPI(compute_api.API):
             with excutils.save_and_reraise_exception():
                 self.db.block_device_mapping_destroy_by_instance_and_device(
                         context, instance['uuid'], device)
-        self._cast_to_cells(context, instance, 'attach_volume',
+        return self._call_to_cells(context, instance, 'attach_volume',
                 volume_id, device)
 
     @validate_cell

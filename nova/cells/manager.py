@@ -64,7 +64,7 @@ class CellsManager(manager.Manager):
 
     Scheduling requests get passed to the scheduler class.
     """
-    RPC_API_VERSION = '1.9'
+    RPC_API_VERSION = '1.10'
 
     def __init__(self, *args, **kwargs):
         # Mostly for tests.
@@ -390,3 +390,14 @@ class CellsManager(manager.Manager):
 
     def get_capacities(self, ctxt, cell_name):
         return self.state_manager.get_capacities(cell_name)
+
+    def bdm_update_or_create_at_top(self, ctxt, bdm, create=None):
+        """BDM was created/updated in this cell.  Tell the API cells."""
+        self.msg_runner.bdm_update_or_create_at_top(ctxt, bdm, create=create)
+
+    def bdm_destroy_at_top(self, ctxt, instance_uuid, device_name=None,
+                           volume_id=None):
+        """BDM was destroyed for instance in this cell.  Tell the API cells."""
+        self.msg_runner.bdm_destroy_at_top(ctxt, instance_uuid,
+                                           device_name=device_name,
+                                           volume_id=volume_id)

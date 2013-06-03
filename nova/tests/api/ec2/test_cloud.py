@@ -2121,6 +2121,7 @@ class CloudTestCase(test.TestCase):
             return [dict(id=1,
                          source_type='snapshot',
                          destination_type='volume',
+                         instance_uuid=inst_id,
                          snapshot_id=snapshots[0],
                          volume_id=volumes[0],
                          volume_size=1,

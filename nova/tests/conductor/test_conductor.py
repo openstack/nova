@@ -632,13 +632,28 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
         self.conductor_manager = self.conductor
 
     def test_block_device_mapping_update_or_create(self):
-        fake_bdm = {'id': 'fake-id'}
+        fake_bdm = {'id': 'fake-id', 'device_name': 'foo'}
+        fake_bdm2 = {'id': 'fake-id', 'device_name': 'foo2'}
+        cells_rpcapi = self.conductor.cells_rpcapi
         self.mox.StubOutWithMock(db, 'block_device_mapping_create')
         self.mox.StubOutWithMock(db, 'block_device_mapping_update')
         self.mox.StubOutWithMock(db, 'block_device_mapping_update_or_create')
-        db.block_device_mapping_create(self.context, fake_bdm)
-        db.block_device_mapping_update(self.context, fake_bdm['id'], fake_bdm)
-        db.block_device_mapping_update_or_create(self.context, fake_bdm)
+        self.mox.StubOutWithMock(cells_rpcapi,
+                                 'bdm_update_or_create_at_top')
+        db.block_device_mapping_create(self.context,
+                                       fake_bdm).AndReturn(fake_bdm2)
+        cells_rpcapi.bdm_update_or_create_at_top(self.context, fake_bdm2,
+                                                 create=True)
+        db.block_device_mapping_update(self.context, fake_bdm['id'],
+                                       fake_bdm).AndReturn(fake_bdm2)
+        cells_rpcapi.bdm_update_or_create_at_top(self.context,
+                                                 fake_bdm2,
+                                                 create=False)
+        db.block_device_mapping_update_or_create(
+                self.context, fake_bdm).AndReturn(fake_bdm2)
+        cells_rpcapi.bdm_update_or_create_at_top(self.context,
+                                                 fake_bdm2,
+                                                 create=None)
         self.mox.ReplayAll()
         self.conductor.block_device_mapping_update_or_create(self.context,
                                                              fake_bdm,
@@ -650,22 +665,44 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
                                                              fake_bdm)
 
     def test_block_device_mapping_destroy(self):
-        fake_bdm = {'id': 'fake-bdm'}
-        fake_bdm2 = {'id': 'fake-bdm-2'}
+        fake_bdm = {'id': 'fake-bdm',
+                    'instance_uuid': 'fake-uuid',
+                    'device_name': 'fake-device1',
+                    'volume_id': 'fake-vol-id1'}
+        fake_bdm2 = {'id': 'fake-bdm-2',
+                     'instance_uuid': 'fake-uuid2',
+                     'device_name': '',
+                     'volume_id': 'fake-vol-id2'}
         fake_inst = {'uuid': 'fake-uuid'}
+
+        cells_rpcapi = self.conductor.cells_rpcapi
+
         self.mox.StubOutWithMock(db, 'block_device_mapping_destroy')
         self.mox.StubOutWithMock(
             db, 'block_device_mapping_destroy_by_instance_and_device')
         self.mox.StubOutWithMock(
             db, 'block_device_mapping_destroy_by_instance_and_volume')
+        self.mox.StubOutWithMock(cells_rpcapi, 'bdm_destroy_at_top')
+
         db.block_device_mapping_destroy(self.context, 'fake-bdm')
+        cells_rpcapi.bdm_destroy_at_top(self.context,
+                                        fake_bdm['instance_uuid'],
+                                        device_name=fake_bdm['device_name'])
         db.block_device_mapping_destroy(self.context, 'fake-bdm-2')
+        cells_rpcapi.bdm_destroy_at_top(self.context,
+                                        fake_bdm2['instance_uuid'],
+                                        volume_id=fake_bdm2['volume_id'])
         db.block_device_mapping_destroy_by_instance_and_device(self.context,
                                                                'fake-uuid',
                                                                'fake-device')
+        cells_rpcapi.bdm_destroy_at_top(self.context, fake_inst['uuid'],
+                                        device_name='fake-device')
         db.block_device_mapping_destroy_by_instance_and_volume(self.context,
                                                                'fake-uuid',
                                                                'fake-volume')
+        cells_rpcapi.bdm_destroy_at_top(self.context, fake_inst['uuid'],
+                                        volume_id='fake-volume')
+
         self.mox.ReplayAll()
         self.conductor.block_device_mapping_destroy(self.context,
                                                     [fake_bdm,
@@ -810,8 +847,12 @@ class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
                                                              fake_bdm)
 
     def test_block_device_mapping_destroy(self):
-        fake_bdm = {'id': 'fake-bdm'}
+        fake_bdm = {'id': 'fake-bdm',
+                    'instance_uuid': 'fake-uuid',
+                    'device_name': 'fake-device1',
+                    'volume_id': 'fake-vol-id1'}
         fake_inst = {'uuid': 'fake-uuid'}
+
         self.mox.StubOutWithMock(db, 'block_device_mapping_destroy')
         self.mox.StubOutWithMock(
             db, 'block_device_mapping_destroy_by_instance_and_device')
@@ -961,8 +1002,12 @@ class ConductorAPITestCase(_BaseTestCase, test.TestCase):
                                                              'fake-bdm')
 
     def test_block_device_mapping_destroy(self):
-        fake_bdm = {'id': 'fake-bdm'}
+        fake_bdm = {'id': 'fake-bdm',
+                    'instance_uuid': 'fake-uuid',
+                    'device_name': 'fake-device1',
+                    'volume_id': 'fake-vol-id1'}
         fake_inst = {'uuid': 'fake-uuid'}
+
         self.mox.StubOutWithMock(db, 'block_device_mapping_destroy')
         self.mox.StubOutWithMock(
             db, 'block_device_mapping_destroy_by_instance_and_device')
