@@ -384,7 +384,13 @@ class Connection(object):
         """Close/release this connection"""
         self.cancel_consumer_thread()
         self.wait_on_proxy_callbacks()
-        self.connection.close()
+        try:
+            self.connection.close()
+        except Exception:
+            # NOTE(dripton) Logging exceptions that happen during cleanup just
+            # causes confusion; there's really nothing useful we can do with
+            # them.
+            pass
         self.connection = None
 
     def reset(self):
