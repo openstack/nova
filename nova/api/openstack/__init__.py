@@ -35,14 +35,25 @@ from nova import wsgi as base_wsgi
 
 
 api_opts = [
-        cfg.BoolOpt('osapi_v3_enabled',
+        cfg.BoolOpt('enabled',
                     default=False,
-                    help='Whether the V3 API is enabled or not')
+                    help='Whether the V3 API is enabled or not'),
+        cfg.ListOpt('extensions_blacklist',
+                    default=[],
+                    help='A list of v3 API extensions to never load. '
+                    'Specify the extension aliases here.'),
+        cfg.ListOpt('extensions_whitelist',
+                    default=[],
+                    help='If the list is not empty then a v3 API extension '
+                    'will only be loaded if it exists in this list. Specify '
+                    'the extension aliases here.')
 ]
+api_opts_group = cfg.OptGroup(name='osapi_v3', title='API v3 Options')
 
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
-CONF.register_opts(api_opts)
+CONF.register_group(api_opts_group)
+CONF.register_opts(api_opts, api_opts_group)
 
 
 class FaultWrapper(base_wsgi.Middleware):
@@ -239,15 +250,44 @@ class APIRouterV3(base_wsgi.Router):
             if (self.init_only is None or ext.obj.alias in
                 self.init_only) and isinstance(ext.obj,
                                                extensions.V3APIExtensionBase):
-                return self._register_extension(ext)
+
+                # Check whitelist is either empty or if not then the extension
+                # is in the whitelist
+                if (not CONF.osapi_v3.extensions_whitelist or
+                    ext.obj.alias in CONF.osapi_v3.extensions_whitelist):
+
+                    # Check the extension is not in the blacklist
+                    if ext.obj.alias not in CONF.osapi_v3.extensions_blacklist:
+                        return self._register_extension(ext)
+                    else:
+                        LOG.warning(_("Not loading %s because it is "
+                                      "in the blacklist"), ext.obj.alias)
+                        return False
+                else:
+                    LOG.warning(
+                        _("Not loading %s because it is not in the whitelist"),
+                        ext.obj.alias)
+                    return False
             else:
                 return False
 
-        if not CONF.osapi_v3_enabled:
+        if not CONF.osapi_v3.enabled:
             LOG.warning("V3 API has been disabled by configuration")
             return
 
         self.init_only = init_only
+        LOG.debug(_("v3 API Extension Blacklist: %s"),
+                  CONF.osapi_v3.extensions_blacklist)
+        LOG.debug(_("v3 API Extension Whitelist: %s"),
+                  CONF.osapi_v3.extensions_whitelist)
+
+        in_blacklist_and_whitelist = set(
+            CONF.osapi_v3.extensions_whitelist).intersection(
+                CONF.osapi_v3.extensions_blacklist)
+        if len(in_blacklist_and_whitelist) != 0:
+            LOG.warning(_("Extensions in both blacklist and whitelist: %s"),
+                        list(in_blacklist_and_whitelist))
+
         self.api_extension_manager = stevedore.enabled.EnabledExtensionManager(
             namespace=self.API_EXTENSION_NAMESPACE,
             check_func=_check_load_extension,
