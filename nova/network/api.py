@@ -131,8 +131,14 @@ class API(base.Base):
 
     @wrap_check_policy
     def get_all(self, context):
+        """Get all the networks.
+
+        If it is an admin user, api will return all the networks,
+        if it is a normal user, api will only return the networks which
+        belong to the user's project.
+        """
         try:
-            return self.db.network_get_all(context)
+            return self.db.network_get_all(context, project_only=True)
         except exception.NoNetworksFound:
             return []
 

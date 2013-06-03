@@ -817,9 +817,9 @@ def network_get(context, network_id, project_only="allow_none"):
     return IMPL.network_get(context, network_id, project_only=project_only)
 
 
-def network_get_all(context):
+def network_get_all(context, project_only="allow_none"):
     """Return all defined networks."""
-    return IMPL.network_get_all(context)
+    return IMPL.network_get_all(context, project_only)
 
 
 def network_get_all_by_uuids(context, network_uuids,
