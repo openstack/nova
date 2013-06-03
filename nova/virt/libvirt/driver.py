@@ -671,12 +671,11 @@ class LibvirtDriver(driver.ComputeDriver):
             try:
                 # We skip domains with ID 0 (hypervisors).
                 if domain_id != 0:
-                    domain = self._conn.lookupByID(domain_id)
+                    domain = self._lookup_by_id(domain_id)
                     names.append(domain.name())
-            except libvirt.libvirtError as e:
-                if e.get_error_code() != libvirt.VIR_ERR_NO_DOMAIN:
-                    # Ignore deleted instance while listing
-                    raise
+            except exception.InstanceNotFound:
+                # Ignore deleted instance while listing
+                continue
 
         # extend instance list to contain also defined domains
         names.extend([vm for vm in self._conn.listDefinedDomains()
@@ -2350,6 +2349,27 @@ class LibvirtDriver(driver.ComputeDriver):
         LOG.debug(_('End to_xml instance=%(instance)s xml=%(xml)s') % locals())
         return xml
 
+    def _lookup_by_id(self, instance_id):
+        """Retrieve libvirt domain object given an instance id.
+
+        All libvirt error handling should be handled in this method and
+        relevant nova exceptions should be raised in response.
+
+        """
+        try:
+            return self._conn.lookupByID(instance_id)
+        except libvirt.libvirtError as ex:
+            error_code = ex.get_error_code()
+            if error_code == libvirt.VIR_ERR_NO_DOMAIN:
+                raise exception.InstanceNotFound(instance_id=instance_id)
+
+            msg = (_("Error from libvirt while looking up %(instance_id)s: "
+                     "[Error Code %(error_code)s] %(ex)s")
+                   % {'instance_id': instance_id,
+                      'error_code': error_code,
+                      'ex': ex})
+            raise exception.NovaException(msg)
+
     def _lookup_by_name(self, instance_name):
         """Retrieve libvirt domain object given an instance name.
 
@@ -2461,8 +2481,11 @@ class LibvirtDriver(driver.ComputeDriver):
         devices = []
         for dom_id in self.list_instance_ids():
             try:
-                domain = self._conn.lookupByID(dom_id)
+                domain = self._lookup_by_id(dom_id)
                 doc = etree.fromstring(domain.XMLDesc(0))
+            except exception.InstanceNotFound:
+                LOG.info(_("libvirt can't find a domain with id: %s") % dom_id)
+                continue
             except Exception:
                 continue
             ret = doc.findall('./devices/disk')
@@ -2644,21 +2667,16 @@ class LibvirtDriver(driver.ComputeDriver):
         dom_ids = self.list_instance_ids()
         for dom_id in dom_ids:
             try:
-                dom = self._conn.lookupByID(dom_id)
+                dom = self._lookup_by_id(dom_id)
                 vcpus = dom.vcpus()
                 if vcpus is None:
                     LOG.debug(_("couldn't obtain the vpu count from domain id:"
                                 " %s") % dom_id)
                 else:
                     total += len(vcpus[1])
-            except libvirt.libvirtError as err:
-                if err.get_error_code() == libvirt.VIR_ERR_NO_DOMAIN:
-                    LOG.debug(_("List of domains returned by libVirt: %s")
-                              % dom_ids)
-                    LOG.warn(_("libVirt can't find a domain with id: %s")
-                             % dom_id)
-                    continue
-                raise
+            except exception.InstanceNotFound:
+                LOG.info(_("libvirt can't find a domain with id: %s") % dom_id)
+                continue
             # NOTE(gtt116): give change to do other task.
             greenthread.sleep(0)
         return total
