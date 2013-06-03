@@ -519,6 +519,7 @@ class FlatNetworkTestCase(test.TestCase):
 class VlanNetworkTestCase(test.TestCase):
     def setUp(self):
         super(VlanNetworkTestCase, self).setUp()
+        self.useFixture(test.SampleNetworks())
         self.network = network_manager.VlanManager(host=HOST)
         self.network.db = db
         self.context = context.RequestContext('testuser', 'testproject',
@@ -1929,6 +1930,7 @@ class TestFloatingIPManager(floating_ips.FloatingIP,
 class AllocateTestCase(test.TestCase):
     def setUp(self):
         super(AllocateTestCase, self).setUp()
+        self.useFixture(test.SampleNetworks())
         self.conductor = self.start_service(
             'conductor', manager=CONF.conductor.manager)
         self.compute = self.start_service('compute')
