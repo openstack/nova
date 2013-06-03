@@ -4556,6 +4556,24 @@ class NetworkTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertEqual(1, len(network_db))
         self._assertEqualObjects(network, network_db[0])
 
+    def test_network_get_all_admin_user(self):
+        network1 = db.network_create_safe(self.ctxt, {})
+        network2 = db.network_create_safe(self.ctxt,
+                                          {'project_id': 'project1'})
+        self._assertEqualListsOfObjects([network1, network2],
+                                        db.network_get_all(self.ctxt,
+                                                           project_only=True))
+
+    def test_network_get_all_normal_user(self):
+        normal_ctxt = context.RequestContext('fake', 'fake')
+        db.network_create_safe(self.ctxt, {})
+        db.network_create_safe(self.ctxt, {'project_id': 'project1'})
+        network1 = db.network_create_safe(self.ctxt,
+                                          {'project_id': 'fake'})
+        network_db = db.network_get_all(normal_ctxt, project_only=True)
+        self.assertEqual(1, len(network_db))
+        self._assertEqualObjects(network1, network_db[0])
+
     def test_network_get(self):
         network = db.network_create_safe(self.ctxt, {})
         self._assertEqualObjects(db.network_get(self.ctxt, network.id),
