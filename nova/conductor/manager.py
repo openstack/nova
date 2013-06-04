@@ -479,16 +479,16 @@ class ConductorManager(manager.Manager):
         self.compute_api.unrescue(context, instance)
 
     def object_class_action(self, context, objname, objmethod,
-                            objver, **kwargs):
+                            objver, args, kwargs):
         """Perform a classmethod action on an object."""
         objclass = nova_object.NovaObject.obj_class_from_name(objname,
                                                               objver)
-        return getattr(objclass, objmethod)(context, **kwargs)
+        return getattr(objclass, objmethod)(context, *args, **kwargs)
 
-    def object_action(self, context, objinst, objmethod, **kwargs):
+    def object_action(self, context, objinst, objmethod, args, kwargs):
         """Perform an action on an object."""
         oldobj = copy.copy(objinst)
-        result = getattr(objinst, objmethod)(context, **kwargs)
+        result = getattr(objinst, objmethod)(context, *args, **kwargs)
         updates = dict()
         # NOTE(danms): Diff the object with the one passed to us and
         # generate a list of changes to forward back

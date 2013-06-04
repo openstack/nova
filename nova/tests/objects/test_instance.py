@@ -101,7 +101,7 @@ class _TestInstanceObject(object):
             ['metadata', 'system_metadata']).AndReturn(self.fake_instance)
         self.mox.ReplayAll()
         inst = instance.Instance.get_by_uuid(
-            ctxt, uuid='uuid', expected_attrs=['metadata', 'system_metadata'])
+            ctxt, 'uuid', expected_attrs=['metadata', 'system_metadata'])
         self.assertTrue(hasattr(inst, '_metadata'))
         self.assertTrue(hasattr(inst, '_system_metadata'))
         self.assertRemotes()
@@ -117,7 +117,7 @@ class _TestInstanceObject(object):
         db.instance_get_by_uuid(ctxt, fake_uuid, ['system_metadata']
                                 ).AndReturn(fake_inst2)
         self.mox.ReplayAll()
-        inst = instance.Instance.get_by_uuid(ctxt, uuid=fake_uuid)
+        inst = instance.Instance.get_by_uuid(ctxt, fake_uuid)
         self.assertFalse(hasattr(inst, '_system_metadata'))
         sys_meta = inst.system_metadata
         self.assertEqual(sys_meta, {'foo': 'bar'})
@@ -135,7 +135,7 @@ class _TestInstanceObject(object):
         db.instance_get_by_uuid(ctxt, 'fake-uuid', []).AndReturn(
             fake_instance)
         self.mox.ReplayAll()
-        inst = instance.Instance.get_by_uuid(ctxt, uuid='fake-uuid')
+        inst = instance.Instance.get_by_uuid(ctxt, 'fake-uuid')
         self.assertEqual(inst.id, fake_instance['id'])
         self.assertEqual(inst.launched_at, fake_instance['launched_at'])
         self.assertEqual(str(inst.access_ip_v4),
@@ -153,7 +153,7 @@ class _TestInstanceObject(object):
         db.instance_get_by_uuid(ctxt, fake_uuid, []).AndReturn(
             dict(self.fake_instance, host='new-host'))
         self.mox.ReplayAll()
-        inst = instance.Instance.get_by_uuid(ctxt, uuid=fake_uuid)
+        inst = instance.Instance.get_by_uuid(ctxt, fake_uuid)
         self.assertEqual(inst.host, 'orig-host')
         inst.refresh()
         self.assertEqual(inst.host, 'new-host')
@@ -170,7 +170,7 @@ class _TestInstanceObject(object):
             ctxt, fake_uuid, {'user_data': 'foo'}).AndReturn(
                 (fake_inst, dict(fake_inst, host='newhost')))
         self.mox.ReplayAll()
-        inst = instance.Instance.get_by_uuid(ctxt, uuid=fake_uuid)
+        inst = instance.Instance.get_by_uuid(ctxt, fake_uuid)
         inst.user_data = 'foo'
         inst.save()
         self.assertEqual(inst.host, 'newhost')
