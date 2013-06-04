@@ -896,6 +896,8 @@ def _remove_dnsmasq_accept_rules(dev):
     iptables_manager.apply()
 
 
+# NOTE(russellb) Curious why this is needed?  Check out this explanation from
+# markmc: https://bugzilla.redhat.com/show_bug.cgi?id=910619#c6
 def _add_dhcp_mangle_rule(dev):
     if not os.path.exists('/dev/vhost-net'):
         return
