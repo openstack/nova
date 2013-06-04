@@ -454,6 +454,16 @@ def check_snapshots_enabled(f):
 class ViewBuilder(object):
     """Model API responses as dictionaries."""
 
+    def _get_project_id(self, request):
+        """
+        Get project id from request url if present or empty string
+        otherwise
+        """
+        project_id = request.environ["nova.context"].project_id
+        if project_id in request.url:
+            return project_id
+        return ''
+
     def _get_links(self, request, identifier, collection_name):
         return [{
             "rel": "self",
@@ -472,7 +482,7 @@ class ViewBuilder(object):
         params["marker"] = identifier
         prefix = self._update_compute_link_prefix(request.application_url)
         url = os.path.join(prefix,
-                           request.environ["nova.context"].project_id,
+                           self._get_project_id(request),
                            collection_name)
         return "%s?%s" % (url, dict_to_query_str(params))
 
@@ -480,7 +490,7 @@ class ViewBuilder(object):
         """Return an href string pointing to this object."""
         prefix = self._update_compute_link_prefix(request.application_url)
         return os.path.join(prefix,
-                            request.environ["nova.context"].project_id,
+                            self._get_project_id(request),
                             collection_name,
                             str(identifier))
 
@@ -489,7 +499,7 @@ class ViewBuilder(object):
         base_url = remove_version_from_href(request.application_url)
         base_url = self._update_compute_link_prefix(base_url)
         return os.path.join(base_url,
-                            request.environ["nova.context"].project_id,
+                            self._get_project_id(request),
                             collection_name,
                             str(identifier))
 
