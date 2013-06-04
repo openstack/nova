@@ -15,6 +15,7 @@
 """Utility methods for objects"""
 
 import datetime
+import iso8601
 import netaddr
 
 from nova.openstack.common import timeutils
@@ -22,8 +23,16 @@ from nova.openstack.common import timeutils
 
 def datetime_or_none(dt):
     """Validate a datetime or None value."""
-    if dt is None or isinstance(dt, datetime.datetime):
-        return dt
+    if dt is None:
+        return None
+    elif isinstance(dt, datetime.datetime):
+        if dt.utcoffset() is None:
+            # NOTE(danms): Legacy objects from sqlalchemy are stored in UTC,
+            # but are returned without a timezone attached.
+            # As a transitional aid, assume a tz-naive object is in UTC.
+            return dt.replace(tzinfo=iso8601.iso8601.Utc())
+        else:
+            return dt
     raise ValueError('A datetime.datetime is required here')
 
 
