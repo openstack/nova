@@ -123,7 +123,6 @@ class FakeInstance(object):
         inst['vm_state'] = vm_states.ACTIVE
         inst['image_ref'] = 1
         inst['reservation_id'] = 'r-fakeres'
-        inst['launch_time'] = '10'
         inst['user_id'] = 'fake'
         inst['project_id'] = 'fake'
         type_id = flavors.get_instance_type_by_name(type_name)['id']

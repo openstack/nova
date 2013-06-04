@@ -76,7 +76,6 @@ class _BaseTestCase(object):
         inst['vm_state'] = vm_states.ACTIVE
         inst['image_ref'] = FAKE_IMAGE_REF
         inst['reservation_id'] = 'r-fakeres'
-        inst['launch_time'] = '10'
         inst['user_id'] = self.user_id
         inst['project_id'] = self.project_id
         inst['host'] = 'fake_host'
