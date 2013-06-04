@@ -64,4 +64,6 @@ class BaseFilterHandler(loadables.BaseLoader):
             list_objs = list(objs)
             LOG.debug("Filter %(cls_name)s returned %(obj_len)d host(s)",
                       {'cls_name': cls_name, 'obj_len': len(list_objs)})
+            if len(list_objs) == 0:
+                break
         return list_objs
