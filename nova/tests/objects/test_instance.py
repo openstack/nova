@@ -18,6 +18,7 @@ import netaddr
 
 from nova import context
 from nova import db
+from nova.objects import base
 from nova.objects import instance
 from nova.openstack.common import timeutils
 from nova.tests.api.openstack import fakes
@@ -39,6 +40,7 @@ class _TestInstanceObject(object):
             fake_instance['launched_at'].replace(
                 tzinfo=iso8601.iso8601.Utc(), microsecond=0))
         fake_instance['deleted'] = False
+        fake_instance['info_cache']['instance_uuid'] = fake_instance['uuid']
         return fake_instance
 
     def test_datetime_deserialization(self):
@@ -90,8 +92,9 @@ class _TestInstanceObject(object):
         self.mox.ReplayAll()
         inst = instance.Instance.get_by_uuid(ctxt, uuid='uuid')
         # Make sure these weren't loaded
-        self.assertFalse(hasattr(inst, '_metadata'))
-        self.assertFalse(hasattr(inst, '_system_metadata'))
+        for attr in instance.INSTANCE_OPTIONAL_FIELDS:
+            attrname = base.get_attrname(attr)
+            self.assertFalse(hasattr(inst, attrname))
         self.assertRemotes()
 
     def test_get_with_expected(self):
@@ -99,12 +102,13 @@ class _TestInstanceObject(object):
         self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
         db.instance_get_by_uuid(
             ctxt, 'uuid',
-            ['metadata', 'system_metadata']).AndReturn(self.fake_instance)
+            instance.INSTANCE_OPTIONAL_FIELDS).AndReturn(self.fake_instance)
         self.mox.ReplayAll()
         inst = instance.Instance.get_by_uuid(
-            ctxt, 'uuid', expected_attrs=['metadata', 'system_metadata'])
-        self.assertTrue(hasattr(inst, '_metadata'))
-        self.assertTrue(hasattr(inst, '_system_metadata'))
+            ctxt, 'uuid', expected_attrs=instance.INSTANCE_OPTIONAL_FIELDS)
+        for attr in instance.INSTANCE_OPTIONAL_FIELDS:
+            attrname = base.get_attrname(attr)
+            self.assertTrue(hasattr(inst, attrname))
         self.assertRemotes()
 
     def test_load(self):
@@ -166,6 +170,7 @@ class _TestInstanceObject(object):
         fake_uuid = fake_inst['uuid']
         self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
         self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
+        self.mox.StubOutWithMock(db, 'instance_info_cache_update')
         db.instance_get_by_uuid(ctxt, fake_uuid, []).AndReturn(fake_inst)
         db.instance_update_and_get_original(
             ctxt, fake_uuid, {'user_data': 'foo'}).AndReturn(
@@ -186,6 +191,26 @@ class _TestInstanceObject(object):
         inst = instance.Instance.get_by_uuid(ctxt, fake_uuid)
         # NOTE(danms): Make sure it's actually a bool
         self.assertEqual(inst.deleted, True)
+
+    def test_with_info_cache(self):
+        ctxt = context.get_admin_context()
+        fake_inst = dict(self.fake_instance)
+        fake_uuid = fake_inst['uuid']
+        fake_inst['info_cache'] = {'network_info': 'foo',
+                                   'instance_uuid': fake_uuid}
+        self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
+        self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
+        self.mox.StubOutWithMock(db, 'instance_info_cache_update')
+        db.instance_get_by_uuid(ctxt, fake_uuid, []).AndReturn(fake_inst)
+        db.instance_info_cache_update(ctxt, fake_uuid,
+                                      {'network_info': 'bar'})
+        self.mox.ReplayAll()
+        inst = instance.Instance.get_by_uuid(ctxt, fake_uuid)
+        self.assertEqual(inst.info_cache.network_info,
+                         fake_inst['info_cache']['network_info'])
+        self.assertEqual(inst.info_cache.instance_uuid, fake_uuid)
+        inst.info_cache.network_info = 'bar'
+        inst.save()
 
 
 class TestInstanceObject(test_objects._LocalTest,

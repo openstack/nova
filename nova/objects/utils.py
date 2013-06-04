@@ -70,6 +70,14 @@ def ip_or_none(version):
     return validator
 
 
+def nested_object_or_none(objclass):
+    def validator(val, objclass=objclass):
+        if val is None or isinstance(val, objclass):
+            return val
+        raise ValueError('An object of class %s is required here' % objclass)
+    return validator
+
+
 def dt_serializer(name):
     """Return a datetime serializer for a named attribute."""
     def serializer(self, name=name):
@@ -86,3 +94,12 @@ def dt_deserializer(instance, val):
         return None
     else:
         return timeutils.parse_isotime(val)
+
+
+def obj_serializer(name):
+    def serializer(self, name=name):
+        if getattr(self, name) is not None:
+            return getattr(self, name).obj_to_primitive()
+        else:
+            return None
+    return serializer

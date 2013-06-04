@@ -29,6 +29,8 @@ def fake_instance_get(self, context, instance_id):
     result['deleted_at'] = None
     result['updated_at'] = None
     result['deleted'] = 0
+    result['info_cache'] = {'network_info': 'foo',
+                            'instance_uuid': result['uuid']}
     return result
 
 
