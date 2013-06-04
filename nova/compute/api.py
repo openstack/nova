@@ -541,34 +541,20 @@ class API(base.Base):
         self._check_injected_file_quota(context, files_to_inject)
         self._check_requested_image(context, image_id, image, instance_type)
 
-    def _validate_and_provision_instance(self, context, instance_type,
-                                         image_href, kernel_id, ramdisk_id,
-                                         min_count, max_count,
-                                         display_name, display_description,
-                                         key_name, key_data, security_groups,
+    def _validate_and_build_base_options(self, context, instance_type,
+                                         image, image_href, image_id,
+                                         kernel_id, ramdisk_id, min_count,
+                                         max_count, display_name,
+                                         display_description, key_name,
+                                         key_data, security_groups,
                                          availability_zone, user_data,
                                          metadata, injected_files,
                                          access_ip_v4, access_ip_v6,
                                          requested_networks, config_drive,
                                          block_device_mapping,
-                                         auto_disk_config, reservation_id,
-                                         scheduler_hints):
+                                         auto_disk_config, reservation_id):
         """Verify all the input parameters regardless of the provisioning
         strategy being performed."""
-
-        if not metadata:
-            metadata = {}
-        if not security_groups:
-            security_groups = ['default']
-
-        if not instance_type:
-            instance_type = flavors.get_default_instance_type()
-        if not min_count:
-            min_count = 1
-        if not max_count:
-            max_count = min_count
-
-        block_device_mapping = block_device_mapping or []
         if min_count > 1 or max_count > 1:
             if any(map(lambda bdm: 'volume_id' in bdm, block_device_mapping)):
                 msg = _('Cannot attach one or more volumes to multiple'
@@ -591,88 +577,87 @@ class API(base.Base):
             except base64.binascii.Error:
                 raise exception.InstanceUserDataMalformed()
 
+        self._checks_for_create_and_rebuild(context, image_id, image,
+                instance_type, metadata, injected_files)
+
+        self._check_requested_secgroups(context, security_groups)
+        self._check_requested_networks(context, requested_networks)
+
+        kernel_id, ramdisk_id = self._handle_kernel_and_ramdisk(
+                context, kernel_id, ramdisk_id, image)
+
+        config_drive_id, config_drive = self._check_config_drive(
+            context, config_drive)
+
+        if key_data is None and key_name:
+            key_pair = self.db.key_pair_get(context, context.user_id,
+                    key_name)
+            key_data = key_pair['public_key']
+
+        root_device_name = block_device.properties_root_device_name(
+            image.get('properties', {}))
+
+        system_metadata = flavors.save_instance_type_info(
+            dict(), instance_type)
+
+        base_options = {
+            'reservation_id': reservation_id,
+            'image_ref': image_href,
+            'kernel_id': kernel_id or '',
+            'ramdisk_id': ramdisk_id or '',
+            'power_state': power_state.NOSTATE,
+            'vm_state': vm_states.BUILDING,
+            'config_drive_id': config_drive_id or '',
+            'config_drive': config_drive or '',
+            'user_id': context.user_id,
+            'project_id': context.project_id,
+            'instance_type_id': instance_type['id'],
+            'memory_mb': instance_type['memory_mb'],
+            'vcpus': instance_type['vcpus'],
+            'root_gb': instance_type['root_gb'],
+            'ephemeral_gb': instance_type['ephemeral_gb'],
+            'display_name': display_name,
+            'display_description': display_description or '',
+            'user_data': user_data,
+            'key_name': key_name,
+            'key_data': key_data,
+            'locked': False,
+            'metadata': metadata,
+            'access_ip_v4': access_ip_v4,
+            'access_ip_v6': access_ip_v6,
+            'availability_zone': availability_zone,
+            'root_device_name': root_device_name,
+            'progress': 0,
+            'system_metadata': system_metadata}
+
+        options_from_image = self._inherit_properties_from_image(
+                image, auto_disk_config)
+
+        base_options.update(options_from_image)
+
+        return base_options
+
+    def _build_filter_properties(self, context, scheduler_hints, forced_host,
+            forced_node, instance_type):
+        filter_properties = dict(scheduler_hints=scheduler_hints)
+        filter_properties['instance_type'] = instance_type
+        if forced_host:
+            check_policy(context, 'create:forced_host', {})
+            filter_properties['force_hosts'] = [forced_host]
+        if forced_node:
+            check_policy(context, 'create:forced_host', {})
+            filter_properties['force_nodes'] = [forced_node]
+        return filter_properties
+
+    def _provision_instances(self, context, instance_type, min_count,
+            max_count, base_options, image, security_groups,
+            block_device_mapping):
         # Reserve quotas
         num_instances, quota_reservations = self._check_num_instances_quota(
                 context, instance_type, min_count, max_count)
-
-        # Try to create the instance
+        LOG.debug(_("Going to run %s instances...") % num_instances)
+        instances = []
         try:
-            instances = []
-            instance_uuids = []
-
-            image_id, image = self._get_image(context, image_href)
-
-            self._checks_for_create_and_rebuild(context, image_id, image,
-                    instance_type, metadata, injected_files)
-
-            self._check_requested_secgroups(context, security_groups)
-            self._check_requested_networks(context, requested_networks)
-
-            kernel_id, ramdisk_id = self._handle_kernel_and_ramdisk(
-                    context, kernel_id, ramdisk_id, image)
-
-            config_drive_id, config_drive = self._check_config_drive(
-                context, config_drive)
-
-            if key_data is None and key_name:
-                key_pair = self.db.key_pair_get(context, context.user_id,
-                        key_name)
-                key_data = key_pair['public_key']
-
-            root_device_name = block_device.properties_root_device_name(
-                image.get('properties', {}))
-
-            availability_zone, forced_host, forced_node = \
-                    self._handle_availability_zone(availability_zone)
-
-            system_metadata = flavors.save_instance_type_info(
-                dict(), instance_type)
-
-            base_options = {
-                'reservation_id': reservation_id,
-                'image_ref': image_href,
-                'kernel_id': kernel_id or '',
-                'ramdisk_id': ramdisk_id or '',
-                'power_state': power_state.NOSTATE,
-                'vm_state': vm_states.BUILDING,
-                'config_drive_id': config_drive_id or '',
-                'config_drive': config_drive or '',
-                'user_id': context.user_id,
-                'project_id': context.project_id,
-                'instance_type_id': instance_type['id'],
-                'memory_mb': instance_type['memory_mb'],
-                'vcpus': instance_type['vcpus'],
-                'root_gb': instance_type['root_gb'],
-                'ephemeral_gb': instance_type['ephemeral_gb'],
-                'display_name': display_name,
-                'display_description': display_description or '',
-                'user_data': user_data,
-                'key_name': key_name,
-                'key_data': key_data,
-                'locked': False,
-                'metadata': metadata,
-                'access_ip_v4': access_ip_v4,
-                'access_ip_v6': access_ip_v6,
-                'availability_zone': availability_zone,
-                'root_device_name': root_device_name,
-                'progress': 0,
-                'system_metadata': system_metadata}
-
-            options_from_image = self._inherit_properties_from_image(
-                    image, auto_disk_config)
-
-            base_options.update(options_from_image)
-
-            LOG.debug(_("Going to run %s instances...") % num_instances)
-
-            filter_properties = dict(scheduler_hints=scheduler_hints)
-            if forced_host:
-                check_policy(context, 'create:forced_host', {})
-                filter_properties['force_hosts'] = [forced_host]
-            if forced_node:
-                check_policy(context, 'create:forced_host', {})
-                filter_properties['force_nodes'] = [forced_node]
-
             for i in xrange(num_instances):
                 options = base_options.copy()
                 instance = self.create_db_entry_for_new_instance(
@@ -681,7 +666,6 @@ class API(base.Base):
                         num_instances, i)
 
                 instances.append(instance)
-                instance_uuids.append(instance['uuid'])
                 self._validate_bdm(context, instance)
                 # send a state update notification for the initial create to
                 # show it going from non-existent to BUILDING
@@ -693,30 +677,20 @@ class API(base.Base):
         except Exception:
             with excutils.save_and_reraise_exception():
                 try:
-                    for instance_uuid in instance_uuids:
-                        self.db.instance_destroy(context, instance_uuid)
+                    for instance in instances:
+                        self.db.instance_destroy(context, instance['uuid'])
                 finally:
                     QUOTAS.rollback(context, quota_reservations)
 
         # Commit the reservations
         QUOTAS.commit(context, quota_reservations)
-
-        request_spec = {
-            'image': jsonutils.to_primitive(image),
-            'instance_properties': base_options,
-            'instance_type': instance_type,
-            'instance_uuids': instance_uuids,
-            'block_device_mapping': block_device_mapping,
-            'security_group': security_groups,
-        }
-
-        return (instances, request_spec, filter_properties)
+        return instances
 
     def _create_instance(self, context, instance_type,
                image_href, kernel_id, ramdisk_id,
                min_count, max_count,
                display_name, display_description,
-               key_name, key_data, security_group,
+               key_name, key_data, security_groups,
                availability_zone, user_data, metadata,
                injected_files, admin_password,
                access_ip_v4, access_ip_v6,
@@ -727,28 +701,48 @@ class API(base.Base):
         strategy being performed and schedule the instance(s) for
         creation."""
 
+        # Normalize and setup some parameters
         if reservation_id is None:
             reservation_id = utils.generate_uid('r')
+        security_groups = security_groups or ['default']
+        min_count = min_count or 1
+        max_count = max_count or min_count
+        block_device_mapping = block_device_mapping or []
+        if not instance_type:
+            instance_type = flavors.get_default_instance_type()
+        image_id, image = self._get_image(context, image_href)
 
-        (instances, request_spec, filter_properties) = \
-                self._validate_and_provision_instance(context, instance_type,
-                        image_href, kernel_id, ramdisk_id, min_count,
-                        max_count, display_name, display_description,
-                        key_name, key_data, security_group, availability_zone,
-                        user_data, metadata, injected_files, access_ip_v4,
-                        access_ip_v6, requested_networks, config_drive,
-                        block_device_mapping, auto_disk_config,
-                        reservation_id, scheduler_hints)
+        handle_az = self._handle_availability_zone
+        availability_zone, forced_host, forced_node = handle_az(
+                                                            availability_zone)
+
+        base_options = self._validate_and_build_base_options(context,
+                instance_type, image, image_href, image_id, kernel_id,
+                ramdisk_id, min_count, max_count, display_name,
+                display_description, key_name, key_data, security_groups,
+                availability_zone, user_data, metadata, injected_files,
+                access_ip_v4, access_ip_v6, requested_networks, config_drive,
+                block_device_mapping, auto_disk_config, reservation_id)
+
+        instances = self._provision_instances(context, instance_type,
+                min_count, max_count, base_options, image, security_groups,
+                block_device_mapping)
+
+        filter_properties = self._build_filter_properties(context,
+                scheduler_hints, forced_host, forced_node, instance_type)
 
         for instance in instances:
             self._record_action_start(context, instance,
                                       instance_actions.CREATE)
 
-        self.scheduler_rpcapi.run_instance(context,
-                request_spec=request_spec,
-                admin_password=admin_password, injected_files=injected_files,
-                requested_networks=requested_networks, is_first_time=True,
-                filter_properties=filter_properties)
+        self.compute_task_api.build_instances(context,
+                instances=instances, image=image,
+                filter_properties=filter_properties,
+                admin_password=admin_password,
+                injected_files=injected_files,
+                requested_networks=requested_networks,
+                security_groups=security_groups,
+                block_device_mapping=block_device_mapping)
 
         return (instances, reservation_id)
 

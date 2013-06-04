@@ -57,8 +57,18 @@ class SchedulerRPCAPIRedirect(object):
             return None
         return _noop_rpc_wrapper
 
-    def run_instance(self, context, **kwargs):
-        self.cells_rpcapi.schedule_run_instance(context, **kwargs)
+
+class ConductorTaskRPCAPIRedirect(object):
+    def __init__(self, cells_rpcapi_obj):
+        self.cells_rpcapi = cells_rpcapi_obj
+
+    def __getattr__(self, key):
+        def _noop_rpc_wrapper(*args, **kwargs):
+            return None
+        return _noop_rpc_wrapper
+
+    def build_instances(self, context, **kwargs):
+        self.cells_rpcapi.build_instances(context, **kwargs)
 
 
 class ComputeRPCProxyAPI(compute_rpcapi.ComputeAPI):
@@ -90,6 +100,8 @@ class ComputeCellsAPI(compute_api.API):
         self.compute_rpcapi = ComputeRPCAPINoOp()
         # Redirect scheduler run_instance to cells.
         self.scheduler_rpcapi = SchedulerRPCAPIRedirect(self.cells_rpcapi)
+        # Redirect conductor build_instances to cells
+        self._compute_task_api = ConductorTaskRPCAPIRedirect(self.cells_rpcapi)
 
     def _cell_read_only(self, cell_name):
         """Is the target cell in a read-only mode?"""

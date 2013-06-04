@@ -349,6 +349,17 @@ class LocalComputeTaskAPI(object):
         return self._manager.migrate_server(context, instance, scheduler_hint,
             live, rebuild, flavor, block_migration, disk_over_commit)
 
+    def build_instances(self, context, instances, image,
+            filter_properties, admin_password, injected_files,
+            requested_networks, security_groups, block_device_mapping):
+        utils.spawn_n(self._manager.build_instances, context,
+                instances=instances, image=image,
+                filter_properties=filter_properties,
+                admin_password=admin_password, injected_files=injected_files,
+                requested_networks=requested_networks,
+                security_groups=security_groups,
+                block_device_mapping=block_device_mapping)
+
 
 class API(object):
     """Conductor API that does updates via RPC to the ConductorManager."""
@@ -692,3 +703,14 @@ class ComputeTaskAPI(object):
         return self.conductor_compute_rpcapi.migrate_server(context, instance,
             scheduler_hint, live, rebuild, flavor, block_migration,
             disk_over_commit)
+
+    def build_instances(self, context, instances, image, filter_properties,
+            admin_password, injected_files, requested_networks,
+            security_groups, block_device_mapping):
+        self.conductor_compute_rpcapi.build_instances(context,
+                instances=instances, image=image,
+                filter_properties=filter_properties,
+                admin_password=admin_password, injected_files=injected_files,
+                requested_networks=requested_networks,
+                security_groups=security_groups,
+                block_device_mapping=block_device_mapping)

@@ -122,6 +122,15 @@ class CellsManagerClassTestCase(test.TestCase):
         self.cells_manager.schedule_run_instance(self.ctxt,
                 host_sched_kwargs=host_sched_kwargs)
 
+    def test_build_instances(self):
+        build_inst_kwargs = {'instances': [1, 2]}
+        self.mox.StubOutWithMock(self.msg_runner, 'build_instances')
+        our_cell = self.msg_runner.state_manager.get_my_state()
+        self.msg_runner.build_instances(self.ctxt, our_cell, build_inst_kwargs)
+        self.mox.ReplayAll()
+        self.cells_manager.build_instances(self.ctxt,
+                build_inst_kwargs=build_inst_kwargs)
+
     def test_run_compute_api_method(self):
         # Args should just be silently passed through
         cell_name = 'fake-cell-name'

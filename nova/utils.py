@@ -37,6 +37,7 @@ import tempfile
 import time
 from xml.sax import saxutils
 
+import eventlet
 import netaddr
 
 from oslo.config import cfg
@@ -1101,3 +1102,12 @@ def check_string_length(value, name, min_length=0, max_length=None):
         msg = _("%(name)s has more than %(max_length)s "
                     "characters.") % locals()
         raise exception.InvalidInput(message=msg)
+
+
+def spawn_n(func, *args, **kwargs):
+    """Passthrough method for eventlet.spawn_n.
+
+    This utility exists so that it can be stubbed for testing without
+    interfering with the service spawns.
+    """
+    eventlet.spawn_n(func, *args, **kwargs)

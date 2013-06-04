@@ -608,6 +608,16 @@ class CellsTargetedMethodsTestCase(test.TestCase):
                                                   self.tgt_cell_name,
                                                   host_sched_kwargs)
 
+    def test_build_instances(self):
+        build_inst_kwargs = {'filter_properties': {},
+                             'key1': 'value1',
+                             'key2': 'value2'}
+        self.mox.StubOutWithMock(self.tgt_scheduler, 'build_instances')
+        self.tgt_scheduler.build_instances(self.ctxt, build_inst_kwargs)
+        self.mox.ReplayAll()
+        self.src_msg_runner.build_instances(self.ctxt, self.tgt_cell_name,
+                build_inst_kwargs)
+
     def test_run_compute_api_method(self):
 
         instance_uuid = 'fake_instance_uuid'

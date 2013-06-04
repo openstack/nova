@@ -1196,6 +1196,41 @@ class _BaseTaskTestCase(object):
         self.assertRaises(NotImplementedError, self.conductor.migrate_server,
             self.context, None, None, True, False, "dummy", None, None)
 
+    def test_build_instances(self):
+        instance_type = flavors.get_default_instance_type()
+        system_metadata = flavors.save_instance_type_info({}, instance_type)
+        # NOTE(alaski): instance_type -> system_metadata -> instance_type loses
+        # some data (extra_specs) so we need both for testing.
+        instance_type_extract = flavors.extract_instance_type(
+                {'system_metadata': system_metadata})
+        self.mox.StubOutWithMock(self.conductor_manager.scheduler_rpcapi,
+                                 'run_instance')
+        self.conductor_manager.scheduler_rpcapi.run_instance(self.context,
+                request_spec={
+                    'image': {'fake_data': 'should_pass_silently'},
+                    'instance_properties': {'system_metadata': system_metadata,
+                                            'uuid': 'fakeuuid'},
+                    'instance_type': instance_type_extract,
+                    'instance_uuids': ['fakeuuid', 'fakeuuid2'],
+                    'block_device_mapping': 'block_device_mapping',
+                    'security_group': 'security_groups'},
+                admin_password='admin_password',
+                injected_files='injected_files',
+                requested_networks='requested_networks', is_first_time=True,
+                filter_properties={})
+        self.mox.ReplayAll()
+        self.conductor.build_instances(self.context,
+                instances=[{'uuid': 'fakeuuid',
+                            'system_metadata': system_metadata},
+                           {'uuid': 'fakeuuid2'}],
+                image={'fake_data': 'should_pass_silently'},
+                filter_properties={},
+                admin_password='admin_password',
+                injected_files='injected_files',
+                requested_networks='requested_networks',
+                security_groups='security_groups',
+                block_device_mapping='block_device_mapping')
+
 
 class ConductorTaskTestCase(_BaseTaskTestCase, test.TestCase):
     """ComputeTaskManager Tests."""

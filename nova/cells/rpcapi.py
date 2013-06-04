@@ -50,6 +50,7 @@ class CellsAPI(rpc_proxy.RpcProxy):
               action_events_get()
         1.6 - Adds consoleauth_delete_tokens() and validate_console_port()
         1.7 - Adds service_update()
+        1.8 - Adds build_instances(), deprecates schedule_run_instance()
     '''
     BASE_RPC_API_VERSION = '1.0'
 
@@ -79,10 +80,23 @@ class CellsAPI(rpc_proxy.RpcProxy):
                                              method_info=method_info,
                                              call=True))
 
+    # NOTE(alaski): Deprecated and should be removed later.
     def schedule_run_instance(self, ctxt, **kwargs):
         """Schedule a new instance for creation."""
         self.cast(ctxt, self.make_msg('schedule_run_instance',
                                       host_sched_kwargs=kwargs))
+
+    def build_instances(self, ctxt, **kwargs):
+        """Build instances."""
+        build_inst_kwargs = kwargs
+        instances = build_inst_kwargs['instances']
+        instances_p = [jsonutils.to_primitive(inst) for inst in instances]
+        build_inst_kwargs['instances'] = instances_p
+        build_inst_kwargs['image'] = jsonutils.to_primitive(
+                build_inst_kwargs['image'])
+        self.cast(ctxt, self.make_msg('build_instances',
+            build_inst_kwargs=build_inst_kwargs),
+                version=1.8)
 
     def instance_update_at_top(self, ctxt, instance):
         """Update instance at API level."""

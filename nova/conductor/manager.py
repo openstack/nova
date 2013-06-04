@@ -33,6 +33,7 @@ from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import timeutils
 from nova import quota
 from nova.scheduler import rpcapi as scheduler_rpcapi
+from nova.scheduler import utils as scheduler_utils
 
 LOG = logging.getLogger(__name__)
 
@@ -514,7 +515,7 @@ class ComputeTaskManager(object):
     """
 
     RPC_API_NAMESPACE = 'compute_task'
-    RPC_API_VERSION = '1.1'
+    RPC_API_VERSION = '1.2'
 
     def __init__(self):
         self.scheduler_rpcapi = scheduler_rpcapi.SchedulerAPI()
@@ -535,3 +536,15 @@ class ComputeTaskManager(object):
         destination = scheduler_hint.get("host")
         self.scheduler_rpcapi.live_migration(context, block_migration,
                 disk_over_commit, instance, destination)
+
+    def build_instances(self, context, instances, image, filter_properties,
+            admin_password, injected_files, requested_networks,
+            security_groups, block_device_mapping):
+        request_spec = scheduler_utils.build_request_spec(image, instances)
+        # NOTE(alaski): For compatibility until a new scheduler method is used.
+        request_spec.update({'block_device_mapping': block_device_mapping,
+                             'security_group': security_groups})
+        self.scheduler_rpcapi.run_instance(context, request_spec=request_spec,
+                admin_password=admin_password, injected_files=injected_files,
+                requested_networks=requested_networks, is_first_time=True,
+                filter_properties=filter_properties)

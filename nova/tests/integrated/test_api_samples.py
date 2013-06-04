@@ -54,6 +54,7 @@ from nova.tests.api.openstack.compute.contrib import test_services
 from nova.tests.api.openstack import fakes
 from nova.tests import fake_instance_actions
 from nova.tests import fake_network
+from nova.tests import fake_utils
 from nova.tests.image import fake
 from nova.tests.integrated import integrated_helpers
 from nova.tests import utils as test_utils
@@ -95,6 +96,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
         super(ApiSampleTestBase, self).setUp()
         self.useFixture(test.SampleNetworks())
         fake_network.stub_compute_with_ips(self.stubs)
+        fake_utils.stub_out_utils_spawn_n(self.stubs)
         self.generate_samples = os.getenv('GENERATE_SAMPLES') is not None
 
     def _pretty_data(self, data):
