@@ -914,6 +914,10 @@ def virEventRegisterDefaultImpl():
     pass
 
 
+def registerErrorHandler(handler, ctxt):
+    pass
+
+
 virDomain = Domain
 
 
