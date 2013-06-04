@@ -649,14 +649,18 @@ def certificate_get_all_by_user_and_project(context, user_id, project_id):
 
 @require_context
 def floating_ip_get(context, id):
-    result = model_query(context, models.FloatingIp, project_only=True).\
-                 filter_by(id=id).\
-                 options(joinedload_all('fixed_ip.instance')).\
-                 first()
+    try:
+        result = model_query(context, models.FloatingIp, project_only=True).\
+                     filter_by(id=id).\
+                     options(joinedload_all('fixed_ip.instance')).\
+                     first()
 
-    if not result:
-        raise exception.FloatingIpNotFound(id=id)
-
+        if not result:
+            raise exception.FloatingIpNotFound(id=id)
+    except DataError:
+        msg = _("Invalid floating ip id %s in request") % id
+        LOG.warn(msg)
+        raise exception.InvalidID(id=id)
     return result
 
 
@@ -866,14 +870,18 @@ def _floating_ip_get_by_address(context, address, session=None):
     # if address string is empty explicitly set it to None
     if not address:
         address = None
+    try:
+        result = model_query(context, models.FloatingIp, session=session).\
+                    filter_by(address=address).\
+                    options(joinedload_all('fixed_ip.instance')).\
+                    first()
 
-    result = model_query(context, models.FloatingIp, session=session).\
-                filter_by(address=address).\
-                options(joinedload_all('fixed_ip.instance')).\
-                first()
-
-    if not result:
-        raise exception.FloatingIpNotFoundForAddress(address=address)
+        if not result:
+            raise exception.FloatingIpNotFoundForAddress(address=address)
+    except DataError:
+        msg = _("Invalid floating IP %s in request") % address
+        LOG.warn(msg)
+        raise exception.InvalidIpAddressError(msg)
 
     # If the floating IP has a project ID set, check to make sure
     # the non-admin user has access.
@@ -1149,11 +1157,16 @@ def _fixed_ip_get_by_address(context, address, session=None):
         session = get_session()
 
     with session.begin(subtransactions=True):
-        result = model_query(context, models.FixedIp, session=session).\
-                         filter_by(address=address).\
-                         first()
-        if not result:
-            raise exception.FixedIpNotFoundForAddress(address=address)
+        try:
+            result = model_query(context, models.FixedIp, session=session).\
+                                 filter_by(address=address).\
+                                 first()
+            if not result:
+                raise exception.FixedIpNotFoundForAddress(address=address)
+        except DataError:
+            msg = _("Invalid fixed IP Address %s in request") % address
+            LOG.warn(msg)
+            raise exception.FixedIpInvalid(msg)
 
         # NOTE(sirp): shouldn't we just use project_only here to restrict the
         # results?
@@ -1175,19 +1188,25 @@ def fixed_ip_get_by_address_detailed(context, address):
     """
     :returns: a tuple of (models.FixedIp, models.Network, models.Instance)
     """
-    result = model_query(context, models.FixedIp,
-                         models.Network, models.Instance).\
-                         filter_by(address=address).\
-                         outerjoin((models.Network,
-                                    models.Network.id ==
-                                    models.FixedIp.network_id)).\
-                         outerjoin((models.Instance,
-                                    models.Instance.uuid ==
-                                    models.FixedIp.instance_uuid)).\
-        first()
+    try:
+        result = model_query(context, models.FixedIp,
+                             models.Network, models.Instance).\
+                             filter_by(address=address).\
+                             outerjoin((models.Network,
+                                        models.Network.id ==
+                                        models.FixedIp.network_id)).\
+                             outerjoin((models.Instance,
+                                        models.Instance.uuid ==
+                                        models.FixedIp.instance_uuid)).\
+            first()
 
-    if not result:
-        raise exception.FixedIpNotFoundForAddress(address=address)
+        if not result:
+            raise exception.FixedIpNotFoundForAddress(address=address)
+
+    except DataError:
+        msg = _("Invalid fixed IP Address %s in request") % address
+        LOG.warn(msg)
+        raise exception.FixedIpInvalid(msg)
 
     return result
 
@@ -1317,9 +1336,14 @@ def virtual_interface_get_by_address(context, address):
 
     :param address: = the address of the interface you're looking to get
     """
-    vif_ref = _virtual_interface_query(context).\
-                      filter_by(address=address).\
-                      first()
+    try:
+        vif_ref = _virtual_interface_query(context).\
+                          filter_by(address=address).\
+                          first()
+    except DataError:
+        msg = _("Invalid virtual interface address %s in request") % address
+        LOG.warn(msg)
+        raise exception.InvalidIpAddressError(msg)
     return vif_ref
 
 

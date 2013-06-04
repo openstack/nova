@@ -27,8 +27,10 @@ import uuid as stdlib_uuid
 import mox
 from oslo.config import cfg
 from sqlalchemy.dialects import sqlite
+from sqlalchemy import exc
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import MetaData
+from sqlalchemy.orm import query
 from sqlalchemy.sql.expression import select
 
 from nova.compute import vm_states
@@ -2782,6 +2784,13 @@ class FixedIPTestCase(BaseInstanceTypeTestCase):
                                       network_id=None,
                                       updated_at=new))
 
+    def mock_db_query_first_to_raise_data_error_exception(self):
+        self.mox.StubOutWithMock(query.Query, 'first')
+        query.Query.first().AndRaise(exc.DataError(mox.IgnoreArg(),
+                                                   mox.IgnoreArg(),
+                                                   mox.IgnoreArg()))
+        self.mox.ReplayAll()
+
     def test_fixed_ip_disassociate_all_by_timeout_single_host(self):
         now = timeutils.utcnow()
         self._timeout_test(self.ctxt, now, False)
@@ -3118,7 +3127,7 @@ class FixedIPTestCase(BaseInstanceTypeTestCase):
         self.assertRaises(exception.FixedIpNotFound,
                           db.fixed_ip_get, self.ctxt, 0)
 
-    def test_fixed_ip_get_sucsess2(self):
+    def test_fixed_ip_get_success2(self):
         adress = 'fixed_ip_adress'
         instance_uuid = self._create_instance()
         network_id = db.network_create_safe(self.ctxt, {})['id']
@@ -3139,7 +3148,7 @@ class FixedIPTestCase(BaseInstanceTypeTestCase):
         self.assertRaises(exception.NotAuthorized, db.fixed_ip_get,
                           self.ctxt, fixed_ip_id)
 
-    def test_fixed_ip_get_sucsess(self):
+    def test_fixed_ip_get_success(self):
         adress = 'fixed_ip_adress'
         instance_uuid = self._create_instance()
         network_id = db.network_create_safe(self.ctxt, {})['id']
@@ -3163,6 +3172,11 @@ class FixedIPTestCase(BaseInstanceTypeTestCase):
 
     def test_fixed_ip_get_by_address_detailed_not_found_exception(self):
         self.assertRaises(exception.FixedIpNotFoundForAddress,
+                          db.fixed_ip_get_by_address_detailed, self.ctxt, 'x')
+
+    def test_fixed_ip_get_by_address_with_data_error_exception(self):
+        self.mock_db_query_first_to_raise_data_error_exception()
+        self.assertRaises(exception.FixedIpInvalid,
                           db.fixed_ip_get_by_address_detailed, self.ctxt, 'x')
 
     def test_fixed_ip_get_by_address_detailed_sucsess(self):
@@ -3246,6 +3260,13 @@ class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
             'interface': 'fake_interface',
         }
 
+    def mock_db_query_first_to_raise_data_error_exception(self):
+        self.mox.StubOutWithMock(query.Query, 'first')
+        query.Query.first().AndRaise(exc.DataError(mox.IgnoreArg(),
+                                                   mox.IgnoreArg(),
+                                                   mox.IgnoreArg()))
+        self.mox.ReplayAll()
+
     def _create_floating_ip(self, values):
         if not values:
             values = {}
@@ -3265,6 +3286,11 @@ class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def test_floating_ip_get_not_found(self):
         self.assertRaises(exception.FloatingIpNotFound,
                           db.floating_ip_get, self.ctxt, 100500)
+
+    def test_floating_ip_get_with_long_id_not_found(self):
+        self.mock_db_query_first_to_raise_data_error_exception()
+        self.assertRaises(exception.InvalidID,
+                          db.floating_ip_get, self.ctxt, 123456789101112)
 
     def test_floating_ip_get_pools(self):
         values = [
@@ -3568,6 +3594,12 @@ class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_floating_ip_get_by_address_not_found(self):
         self.assertRaises(exception.FloatingIpNotFoundForAddress,
+                          db.floating_ip_get_by_address,
+                          self.ctxt, 'non_exists_host')
+
+    def test_floating_ip_get_by_invalid_address(self):
+        self.mock_db_query_first_to_raise_data_error_exception()
+        self.assertRaises(exception.InvalidIpAddressError,
                           db.floating_ip_get_by_address,
                           self.ctxt, 'non_exists_host')
 
@@ -4186,6 +4218,13 @@ class VirtualInterfaceTestCase(test.TestCase, ModelsObjectComparatorMixin):
             'uuid': str(stdlib_uuid.uuid4())
         }
 
+    def mock_db_query_first_to_raise_data_error_exception(self):
+        self.mox.StubOutWithMock(query.Query, 'first')
+        query.Query.first().AndRaise(exc.DataError(mox.IgnoreArg(),
+                                                   mox.IgnoreArg(),
+                                                   mox.IgnoreArg()))
+        self.mox.ReplayAll()
+
     def _create_virt_interface(self, values):
         v = self._get_base_values()
         v.update(values)
@@ -4221,6 +4260,17 @@ class VirtualInterfaceTestCase(test.TestCase, ModelsObjectComparatorMixin):
             real_vif = db.virtual_interface_get_by_address(self.ctxt,
                                                            vif['address'])
             self._assertEqualObjects(vif, real_vif)
+
+    def test_virtual_interface_get_by_address_not_found(self):
+        self.assertIsNone(db.virtual_interface_get_by_address(self.ctxt,
+                          "i.nv.ali.ip"))
+
+    def test_virtual_interface_get_by_address_data_error_exception(self):
+        self.mock_db_query_first_to_raise_data_error_exception()
+        self.assertRaises(exception.InvalidIpAddressError,
+                          db.virtual_interface_get_by_address,
+                          self.ctxt,
+                          "i.nv.ali.ip")
 
     def test_virtual_interface_get_by_uuid(self):
         vifs = [self._create_virt_interface({}),
