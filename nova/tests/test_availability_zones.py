@@ -59,6 +59,10 @@ class AvailabilityZoneTestCases(test.TestCase):
 
         return agg
 
+    def _update_az(self, aggregate, az_name):
+        metadata = {'availability_zone': az_name}
+        db.aggregate_update(self.context, aggregate['id'], metadata)
+
     def _create_service_with_topic(self, topic, host, disabled=False):
         values = {
             'binary': 'bin',
@@ -77,7 +81,7 @@ class AvailabilityZoneTestCases(test.TestCase):
 
     def _delete_from_aggregate(self, service, aggregate):
         return db.aggregate_host_delete(self.context,
-                                        self.aggregate['id'], service['host'])
+                                        aggregate['id'], service['host'])
 
     def test_set_availability_zone_compute_service(self):
         """Test for compute service get right availability zone."""
@@ -118,6 +122,37 @@ class AvailabilityZoneTestCases(test.TestCase):
 
         self.assertEquals(self.availability_zone,
                         az.get_host_availability_zone(self.context, self.host))
+
+    def test_update_host_availability_zone(self):
+        """Test availability zone could be update by given host."""
+        service = self._create_service_with_topic('compute', self.host)
+
+        # Create a new aggregate with an AZ and add the host to the AZ
+        az_name = 'az1'
+        agg_az1 = self._create_az('agg-az1', az_name)
+        self._add_to_aggregate(service, agg_az1)
+        self.assertEquals(az_name,
+                    az.get_host_availability_zone(self.context, self.host))
+        # Update AZ
+        new_az_name = 'az2'
+        self._update_az(agg_az1, new_az_name)
+        self.assertEquals(new_az_name,
+                    az.get_host_availability_zone(self.context, self.host))
+
+    def test_delete_host_availability_zone(self):
+        """Test availability zone could be deleted successfully."""
+        service = self._create_service_with_topic('compute', self.host)
+
+        # Create a new aggregate with an AZ and add the host to the AZ
+        az_name = 'az1'
+        agg_az1 = self._create_az('agg-az1', az_name)
+        self._add_to_aggregate(service, agg_az1)
+        self.assertEquals(az_name,
+                    az.get_host_availability_zone(self.context, self.host))
+        # Delete the AZ via deleting the aggregate
+        self._delete_from_aggregate(service, agg_az1)
+        self.assertEquals(self.default_az,
+                    az.get_host_availability_zone(self.context, self.host))
 
     def test_get_availability_zones(self):
         """Test get_availability_zones."""
