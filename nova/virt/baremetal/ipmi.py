@@ -184,7 +184,7 @@ class IPMI(base.PowerManager):
 
     def _set_pxe_for_next_boot(self):
         try:
-            self._exec_ipmitool("chassis bootdev pxe")
+            self._exec_ipmitool("chassis bootdev pxe options=persistent")
         except Exception:
             LOG.exception(_("IPMI set next bootdev failed"))
 
