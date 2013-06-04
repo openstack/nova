@@ -19,15 +19,16 @@ import webob
 from webob import exc
 
 from nova.api.openstack import common
-from nova.api.openstack import extensions as exts
+from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
 from nova import exception
 from nova import utils
 
 
+ALIAS = "os-rescue"
 CONF = cfg.CONF
-authorize = exts.extension_authorizer('compute', 'rescue')
+authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
 
 
 class RescueController(wsgi.Controller):
@@ -82,15 +83,18 @@ class RescueController(wsgi.Controller):
         return webob.Response(status_int=202)
 
 
-class Rescue(exts.ExtensionDescriptor):
+class Rescue(extensions.V3APIExtensionBase):
     """Instance rescue mode."""
 
     name = "Rescue"
-    alias = "os-rescue"
-    namespace = "http://docs.openstack.org/compute/ext/rescue/api/v1.1"
-    updated = "2011-08-18T00:00:00+00:00"
+    alias = ALIAS
+    namespace = "http://docs.openstack.org/compute/ext/rescue/api/v3"
+    version = 1
+
+    def get_resources(self):
+        return []
 
     def get_controller_extensions(self):
         controller = RescueController()
-        extension = exts.ControllerExtension(self, 'servers', controller)
+        extension = extensions.ControllerExtension(self, 'servers', controller)
         return [extension]

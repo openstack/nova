@@ -44,15 +44,11 @@ class RescueTest(test.TestCase):
         self.stubs.Set(compute.api.API, "get", fake_compute_get)
         self.stubs.Set(compute.api.API, "rescue", rescue)
         self.stubs.Set(compute.api.API, "unrescue", unrescue)
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Rescue'])
-        self.app = fakes.wsgi_app(init_only=('servers',))
+        self.app = fakes.wsgi_app_v3(init_only=('servers', 'os-rescue'))
 
     def test_rescue_with_preset_password(self):
         body = {"rescue": {"adminPass": "AABBCC112233"}}
-        req = webob.Request.blank('/v2/fake/servers/test_inst/action')
+        req = webob.Request.blank('/v3/servers/test_inst/action')
         req.method = "POST"
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -64,7 +60,7 @@ class RescueTest(test.TestCase):
 
     def test_rescue_generates_password(self):
         body = dict(rescue=None)
-        req = webob.Request.blank('/v2/fake/servers/test_inst/action')
+        req = webob.Request.blank('/v3/servers/test_inst/action')
         req.method = "POST"
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -81,7 +77,7 @@ class RescueTest(test.TestCase):
             raise exception.InstanceInvalidState('fake message')
 
         self.stubs.Set(compute.api.API, "rescue", fake_rescue)
-        req = webob.Request.blank('/v2/fake/servers/test_inst/action')
+        req = webob.Request.blank('/v3/servers/test_inst/action')
         req.method = "POST"
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -91,7 +87,7 @@ class RescueTest(test.TestCase):
 
     def test_unrescue(self):
         body = dict(unrescue=None)
-        req = webob.Request.blank('/v2/fake/servers/test_inst/action')
+        req = webob.Request.blank('/v3/servers/test_inst/action')
         req.method = "POST"
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -106,7 +102,7 @@ class RescueTest(test.TestCase):
             raise exception.InstanceInvalidState('fake message')
 
         self.stubs.Set(compute.api.API, "unrescue", fake_unrescue)
-        req = webob.Request.blank('/v2/fake/servers/test_inst/action')
+        req = webob.Request.blank('/v3/servers/test_inst/action')
         req.method = "POST"
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -121,7 +117,7 @@ class RescueTest(test.TestCase):
             raise exception.InstanceNotRescuable('fake message')
 
         self.stubs.Set(compute.api.API, "rescue", fake_rescue)
-        req = webob.Request.blank('/v2/fake/servers/test_inst/action')
+        req = webob.Request.blank('/v3/servers/test_inst/action')
         req.method = "POST"
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
