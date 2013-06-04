@@ -30,7 +30,7 @@ class NodeDriver(object):
     def destroy_images(self, context, node, instance):
         raise NotImplementedError()
 
-    def activate_bootloader(self, context, node, instance):
+    def activate_bootloader(self, context, node, instance, **kwargs):
         raise NotImplementedError()
 
     def deactivate_bootloader(self, context, node, instance):

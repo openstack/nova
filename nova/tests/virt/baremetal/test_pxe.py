@@ -116,6 +116,7 @@ class PXEClassMethodsTestCase(BareMetalPXETestCase):
                 'deployment_ari_path': 'eee',
                 'aki_path': 'fff',
                 'ari_path': 'ggg',
+                'network_info': self.test_network_info,
             }
         config = pxe.build_pxe_config(**args)
         self.assertThat(config, matchers.StartsWith('default deploy'))
@@ -139,6 +140,21 @@ class PXEClassMethodsTestCase(BareMetalPXETestCase):
             matchers.Contains('initrd=ggg'),
             matchers.Not(matchers.Contains('kernel ddd')),
             ))
+
+    def test_build_pxe_network_config(self):
+        self.flags(
+                pxe_network_config=True,
+                group='baremetal',
+            )
+        net = utils.get_test_network_info(1)
+        config = pxe.build_pxe_network_config(net)
+        self.assertIn('eth0:off', config)
+        self.assertNotIn('eth1', config)
+
+        net = utils.get_test_network_info(2)
+        config = pxe.build_pxe_network_config(net)
+        self.assertIn('eth0:off', config)
+        self.assertIn('eth1:off', config)
 
     def test_build_network_config(self):
         net = utils.get_test_network_info(1)
@@ -458,7 +474,8 @@ class PXEPublicMethodsTestCase(BareMetalPXETestCase):
         bm_utils.random_alnum(32).AndReturn('alnum')
         pxe.build_pxe_config(
                 self.node['id'], 'alnum', iqn,
-                'aaaa', 'bbbb', 'cccc', 'dddd').AndReturn(pxe_config)
+                'aaaa', 'bbbb', 'cccc', 'dddd',
+                self.test_network_info).AndReturn(pxe_config)
         bm_utils.write_to_file(pxe_path, pxe_config)
         for mac in macs:
             bm_utils.create_link_without_raise(
@@ -466,7 +483,8 @@ class PXEPublicMethodsTestCase(BareMetalPXETestCase):
 
         self.mox.ReplayAll()
 
-        self.driver.activate_bootloader(self.context, self.node, self.instance)
+        self.driver.activate_bootloader(self.context, self.node, self.instance,
+                                        network_info=self.test_network_info)
 
         self.mox.VerifyAll()
 
@@ -515,8 +533,8 @@ class PXEPublicMethodsTestCase(BareMetalPXETestCase):
         row = db.bm_node_get(self.context, 1)
         self.assertTrue(row['deploy_key'] is None)
 
-        self.driver.activate_bootloader(self.context, self.node,
-                                            self.instance)
+        self.driver.activate_bootloader(self.context, self.node, self.instance,
+                                        network_info=self.test_network_info)
         row = db.bm_node_get(self.context, 1)
         self.assertTrue(row['deploy_key'] is not None)
 

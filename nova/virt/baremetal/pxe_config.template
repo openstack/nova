@@ -8,4 +8,4 @@ ipappend 3
 
 label boot
 kernel ${pxe_options.aki_path}
-append initrd=${pxe_options.ari_path} root=${ROOT} ro ${pxe_options.pxe_append_params}
+append initrd=${pxe_options.ari_path} root=${ROOT} ro ${pxe_options.pxe_append_params} ${pxe_options.pxe_network_config}

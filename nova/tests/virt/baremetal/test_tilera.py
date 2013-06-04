@@ -317,7 +317,8 @@ class TileraPublicMethodsTestCase(BareMetalTileraTestCase):
 
         self.mox.ReplayAll()
 
-        self.driver.activate_bootloader(self.context, self.node, self.instance)
+        self.driver.activate_bootloader(self.context, self.node, self.instance,
+                                        network_info=self.test_network_info)
 
         self.mox.VerifyAll()
 
@@ -334,8 +335,8 @@ class TileraPublicMethodsTestCase(BareMetalTileraTestCase):
         row = db.bm_node_get(self.context, 1)
         self.assertTrue(row['deploy_key'] is None)
 
-        self.driver.activate_bootloader(self.context, self.node,
-                                            self.instance)
+        self.driver.activate_bootloader(self.context, self.node, self.instance,
+                                        network_info=self.test_network_info)
         row = db.bm_node_get(self.context, 1)
         self.assertTrue(row['deploy_key'] is not None)
 

@@ -81,3 +81,32 @@ def random_alnum(count):
     import string
     chars = string.ascii_uppercase + string.digits
     return "".join(random.choice(chars) for _ in range(count))
+
+
+def map_network_interfaces(network_info, use_ipv6=False):
+    # TODO(deva): fix assumption that device names begin with "eth"
+    #             and fix assumption about ordering
+    if not isinstance(network_info, list):
+        network_info = [network_info]
+
+    interfaces = []
+    for id, (network, mapping) in enumerate(network_info):
+        address_v6 = None
+        gateway_v6 = None
+        netmask_v6 = None
+        if use_ipv6:
+            address_v6 = mapping['ip6s'][0]['ip']
+            netmask_v6 = mapping['ip6s'][0]['netmask']
+            gateway_v6 = mapping['gateway_v6']
+        interface = {
+                'name': 'eth%d' % id,
+                'address': mapping['ips'][0]['ip'],
+                'gateway': mapping['gateway'],
+                'netmask': mapping['ips'][0]['netmask'],
+                'dns': ' '.join(mapping['dns']),
+                'address_v6': address_v6,
+                'gateway_v6': gateway_v6,
+                'netmask_v6': netmask_v6,
+            }
+        interfaces.append(interface)
+    return interfaces

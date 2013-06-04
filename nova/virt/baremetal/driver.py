@@ -248,7 +248,8 @@ class BareMetalDriver(driver.ComputeDriver):
                             injected_files=injected_files,
                             network_info=network_info,
                         )
-            self.driver.activate_bootloader(context, node, instance)
+            self.driver.activate_bootloader(context, node, instance,
+                                            network_info=network_info)
             self.power_on(instance, node)
             self.driver.activate_node(context, node, instance)
             _update_state(context, node, instance, baremetal_states.ACTIVE)

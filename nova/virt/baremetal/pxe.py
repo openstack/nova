@@ -54,6 +54,10 @@ pxe_opts = [
     cfg.IntOpt('pxe_deploy_timeout',
                 help='Timeout for PXE deployments. Default: 0 (unlimited)',
                 default=0),
+    cfg.BoolOpt('pxe_network_config',
+                help='If set, pass the network configuration details to the '
+                'initramfs via cmdline.',
+                default=False),
     ]
 
 LOG = logging.getLogger(__name__)
@@ -77,9 +81,22 @@ def _get_cheetah():
     return CHEETAH
 
 
+def build_pxe_network_config(network_info):
+    interfaces = bm_utils.map_network_interfaces(network_info, CONF.use_ipv6)
+    template = None
+    if not CONF.use_ipv6:
+        template = "ip=%(address)s::%(gateway)s:%(netmask)s::%(name)s:off"
+    else:
+        template = ("ip=[%(address_v6)s]::[%(gateway_v6)s]:"
+                    "[%(netmask_v6)s]::%(name)s:off")
+
+    net_config = [template % iface for iface in interfaces]
+    return ' '.join(net_config)
+
+
 def build_pxe_config(deployment_id, deployment_key, deployment_iscsi_iqn,
                       deployment_aki_path, deployment_ari_path,
-                      aki_path, ari_path):
+                      aki_path, ari_path, network_info):
     """Build the PXE config file for a node
 
     This method builds the PXE boot configuration file for a node,
@@ -90,6 +107,11 @@ def build_pxe_config(deployment_id, deployment_key, deployment_iscsi_iqn,
 
     """
     LOG.debug(_("Building PXE config for deployment %s.") % deployment_id)
+
+    network_config = None
+    if network_info and CONF.baremetal.pxe_network_config:
+        network_config = build_pxe_network_config(network_info)
+
     pxe_options = {
             'deployment_id': deployment_id,
             'deployment_key': deployment_key,
@@ -99,6 +121,7 @@ def build_pxe_config(deployment_id, deployment_key, deployment_iscsi_iqn,
             'aki_path': aki_path,
             'ari_path': ari_path,
             'pxe_append_params': CONF.baremetal.pxe_append_params,
+            'pxe_network_config': network_config,
             }
     cheetah = _get_cheetah()
     pxe_config = str(cheetah(
@@ -110,33 +133,7 @@ def build_pxe_config(deployment_id, deployment_key, deployment_iscsi_iqn,
 
 
 def build_network_config(network_info):
-    # TODO(deva): fix assumption that device names begin with "eth"
-    #             and fix assumption about ordering
-    try:
-        assert isinstance(network_info, list)
-    except AssertionError:
-        network_info = [network_info]
-    interfaces = []
-    for id, (network, mapping) in enumerate(network_info):
-        address_v6 = None
-        gateway_v6 = None
-        netmask_v6 = None
-        if CONF.use_ipv6:
-            address_v6 = mapping['ip6s'][0]['ip']
-            netmask_v6 = mapping['ip6s'][0]['netmask']
-            gateway_v6 = mapping['gateway_v6']
-        interface = {
-                'name': 'eth%d' % id,
-                'address': mapping['ips'][0]['ip'],
-                'gateway': mapping['gateway'],
-                'netmask': mapping['ips'][0]['netmask'],
-                'dns': ' '.join(mapping['dns']),
-                'address_v6': address_v6,
-                'gateway_v6': gateway_v6,
-                'netmask_v6': netmask_v6,
-            }
-        interfaces.append(interface)
-
+    interfaces = bm_utils.map_network_interfaces(network_info, CONF.use_ipv6)
     cheetah = _get_cheetah()
     network_config = str(cheetah(
             open(CONF.baremetal.net_config_template).read(),
@@ -354,7 +351,7 @@ class PXE(base.NodeDriver):
         bm_utils.unlink_without_raise(get_image_file_path(instance))
         bm_utils.rmtree_without_raise(get_image_dir_path(instance))
 
-    def activate_bootloader(self, context, node, instance):
+    def activate_bootloader(self, context, node, instance, network_info):
         """Configure PXE boot loader for an instance
 
         Kernel and ramdisk images are downloaded by cache_tftp_images,
@@ -398,6 +395,7 @@ class PXE(base.NodeDriver):
                     image_info['deploy_ramdisk'][1],
                     image_info['kernel'][1],
                     image_info['ramdisk'][1],
+                    network_info,
                 )
         bm_utils.write_to_file(pxe_config_file_path, pxe_config)
 
