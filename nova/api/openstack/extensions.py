@@ -392,9 +392,9 @@ def extension_authorizer(api_name, extension_name):
 def soft_extension_authorizer(api_name, extension_name):
     hard_authorize = extension_authorizer(api_name, extension_name)
 
-    def authorize(context):
+    def authorize(context, action=None):
         try:
-            hard_authorize(context)
+            hard_authorize(context, action=action)
             return True
         except exception.NotAuthorized:
             return False
