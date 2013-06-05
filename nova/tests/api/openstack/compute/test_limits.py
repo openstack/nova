@@ -462,7 +462,7 @@ class ParseLimitsTest(BaseLimitTestSuite):
                                             '(PUT, /foo*, /foo.*, 10, hour);'
                                             '(POST, /bar*, /bar.*, 5, second);'
                                             '(Say, /derp*, /derp.*, 1, day)')
-        except ValueError, e:
+        except ValueError as e:
             assert False, str(e)
 
         # Make sure the number of returned limits are correct

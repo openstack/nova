@@ -143,7 +143,7 @@ class XVPConsoleProxy(object):
                           '-p', CONF.console_xvp_pid,
                           '-c', CONF.console_xvp_conf,
                           '-l', CONF.console_xvp_log)
-        except processutils.ProcessExecutionError, err:
+        except processutils.ProcessExecutionError as err:
             LOG.error(_('Error starting xvp: %s') % err)
 
     def _xvp_restart(self):

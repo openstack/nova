@@ -191,7 +191,7 @@ class FlavorActionController(wsgi.Controller):
 
         try:
             flavors.remove_instance_type_access(id, tenant, context)
-        except exception.FlavorAccessNotFound, e:
+        except exception.FlavorAccessNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
         return _marshall_flavor_access(id)

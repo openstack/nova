@@ -104,12 +104,12 @@ def _import_module(mod_str):
             return sys.modules[mod_str[4:]]
         else:
             return importutils.import_module(mod_str)
-    except (ValueError, AttributeError), err:
+    except (ValueError, AttributeError) as err:
         return None
-    except ImportError, ie:
+    except ImportError as ie:
         sys.stderr.write("%s\n" % str(ie))
         return None
-    except Exception, e:
+    except Exception as e:
         return None
 
 

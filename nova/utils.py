@@ -930,7 +930,7 @@ def tempdir(**kwargs):
     finally:
         try:
             shutil.rmtree(tmpdir)
-        except OSError, e:
+        except OSError as e:
             LOG.error(_('Could not remove tmpdir: %s'), str(e))
 
 
@@ -1010,7 +1010,7 @@ def last_bytes(file_like_object, num):
 
     try:
         file_like_object.seek(-num, os.SEEK_END)
-    except IOError, e:
+    except IOError as e:
         if e.errno == 22:
             file_like_object.seek(0, os.SEEK_SET)
         else:
@@ -1077,7 +1077,7 @@ class ExceptionHelper(object):
         def wrapper(*args, **kwargs):
             try:
                 return func(*args, **kwargs)
-            except rpc_common.ClientException, e:
+            except rpc_common.ClientException as e:
                 raise (e._exc_info[1], None, e._exc_info[2])
         return wrapper
 

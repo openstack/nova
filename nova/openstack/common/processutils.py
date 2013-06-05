@@ -203,7 +203,7 @@ def trycmd(*args, **kwargs):
     try:
         out, err = execute(*args, **kwargs)
         failed = False
-    except ProcessExecutionError, exn:
+    except ProcessExecutionError as exn:
         out, err = '', str(exn)
         failed = True
 

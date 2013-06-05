@@ -123,7 +123,7 @@ class AdminActionsController(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'migrate')
-        except Exception, e:
+        except Exception as e:
             LOG.exception(_("Error in migrate %s"), e)
             raise exc.HTTPBadRequest()
         return webob.Response(status_int=202)

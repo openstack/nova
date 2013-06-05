@@ -397,14 +397,14 @@ class S3ImageService(object):
             key = self.cert_rpcapi.decrypt_text(elevated,
                     project_id=context.project_id,
                     text=base64.b64encode(encrypted_key))
-        except Exception, exc:
+        except Exception as exc:
             msg = _('Failed to decrypt private key: %s') % exc
             raise exception.NovaException(msg)
         try:
             iv = self.cert_rpcapi.decrypt_text(elevated,
                     project_id=context.project_id,
                     text=base64.b64encode(encrypted_iv))
-        except Exception, exc:
+        except Exception as exc:
             raise exception.NovaException(_('Failed to decrypt initialization '
                                     'vector: %s') % exc)
 
@@ -415,7 +415,7 @@ class S3ImageService(object):
                           '-K', '%s' % (key,),
                           '-iv', '%s' % (iv,),
                           '-out', '%s' % (decrypted_filename,))
-        except processutils.ProcessExecutionError, exc:
+        except processutils.ProcessExecutionError as exc:
             raise exception.NovaException(_('Failed to decrypt image file '
                                     '%(image_file)s: %(err)s') %
                                     {'image_file': encrypted_filename,

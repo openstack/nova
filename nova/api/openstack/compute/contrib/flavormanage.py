@@ -42,7 +42,7 @@ class FlavorManageController(wsgi.Controller):
         try:
             flavor = flavors.get_instance_type_by_flavor_id(
                     id, read_deleted="no")
-        except exception.NotFound, e:
+        except exception.NotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
         flavors.destroy(flavor['name'])

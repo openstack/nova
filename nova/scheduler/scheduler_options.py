@@ -66,7 +66,7 @@ class SchedulerOptions(object):
         """Get the last modified datetime. Broken out for testing."""
         try:
             return os.path.getmtime(filename)
-        except os.error, e:
+        except os.error as e:
             with excutils.save_and_reraise_exception():
                 LOG.exception(_("Could not stat scheduler options file "
                                 "%(filename)s: '%(e)s'"), locals())
@@ -75,7 +75,7 @@ class SchedulerOptions(object):
         """Decode the JSON file. Broken out for testing."""
         try:
             return json.load(handle)
-        except ValueError, e:
+        except ValueError as e:
             LOG.exception(_("Could not decode scheduler options: "
                             "'%(e)s'") % locals())
             return {}

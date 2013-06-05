@@ -73,7 +73,7 @@ def wrap_exception(notifier=None, publisher_id=None, event_type=None,
             # contain confidential information.
             try:
                 return f(self, context, *args, **kw)
-            except Exception, e:
+            except Exception as e:
                 with excutils.save_and_reraise_exception():
                     if notifier:
                         payload = dict(exception=e)
