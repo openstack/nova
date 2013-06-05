@@ -1259,6 +1259,18 @@ def delete_ovs_vif_port(bridge, dev):
     delete_net_dev(dev)
 
 
+def create_ivs_vif_port(dev, iface_id, mac, instance_id):
+    utils.execute('ivs-ctl', 'add-port',
+                   dev, run_as_root=True)
+
+
+def delete_ivs_vif_port(dev):
+    utils.execute('ivs-ctl', 'del-port', dev,
+                  run_as_root=True)
+    utils.execute('ip', 'link', 'delete', dev,
+                  run_as_root=True)
+
+
 def create_tap_dev(dev, mac_address=None):
     if not device_exists(dev):
         try:

@@ -103,6 +103,17 @@ class LibvirtVifTestCase(test.TestCase):
         'ovs_interfaceid': 'aaa-bbb-ccc',
     }
 
+    mapping_ivs = {
+        'mac': 'ca:fe:de:ad:be:ef',
+        'gateway_v6': net_ovs['gateway_v6'],
+        'ips': [{'ip': '101.168.1.9'}],
+        'dhcp_server': '191.168.1.1',
+        'vif_uuid': 'vif-xxx-yyy-zzz',
+        'vif_devname': 'tap-xxx-yyy-zzz',
+        'vif_type': network_model.VIF_TYPE_IVS,
+        'ivs_interfaceid': 'aaa-bbb-ccc',
+    }
+
     mapping_ovs_legacy = {
         'mac': 'ca:fe:de:ad:be:ef',
         'gateway_v6': net_ovs['gateway_v6'],
@@ -411,6 +422,24 @@ class LibvirtVifTestCase(test.TestCase):
                                   self.mapping_bridge_quantum,
                                   br_want)
 
+    def _check_ivs_ethernet_driver(self, d, net, mapping, dev_prefix):
+        self.flags(firewall_driver="nova.virt.firewall.NoopFirewallDriver")
+        xml = self._get_instance_xml(d, net, mapping)
+
+        doc = etree.fromstring(xml)
+        ret = doc.findall('./devices/interface')
+        self.assertEqual(len(ret), 1)
+        node = ret[0]
+        ret = node.findall("filterref")
+        self.assertEqual(len(ret), 0)
+        self.assertEqual(node.get("type"), "ethernet")
+        dev_name = node.find("target").get("dev")
+        self.assertTrue(dev_name.startswith(dev_prefix))
+        mac = node.find("mac").get("address")
+        self.assertEqual(mac, self.mapping_ivs['mac'])
+        script = node.find("script").get("path")
+        self.assertEquals(script, "")
+
     def _check_ovs_ethernet_driver(self, d, net, mapping, dev_prefix):
         self.flags(firewall_driver="nova.virt.firewall.NoopFirewallDriver")
         xml = self._get_instance_xml(d, net, mapping)
@@ -450,6 +479,33 @@ class LibvirtVifTestCase(test.TestCase):
                                         self.net_ovs,
                                         self.mapping_ovs,
                                         "tap")
+
+    def test_ivs_ethernet_driver(self):
+        def get_connection():
+            return fakelibvirt.Connection("qemu:///session",
+                                          False,
+                                          9010)
+        d = vif.LibvirtGenericVIFDriver(get_connection)
+        self._check_ivs_ethernet_driver(d,
+                                        self.net_ovs,
+                                        self.mapping_ivs,
+                                        "tap")
+
+    def _check_ivs_virtualport_driver(self, d, net, mapping, want_iface_id):
+        self.flags(firewall_driver="nova.virt.firewall.NoopFirewallDriver")
+        xml = self._get_instance_xml(d, net, mapping)
+        doc = etree.fromstring(xml)
+        ret = doc.findall('./devices/interface')
+        self.assertEqual(len(ret), 1)
+        node = ret[0]
+        ret = node.findall("filterref")
+        self.assertEqual(len(ret), 0)
+        self.assertEqual(node.get("type"), "ethernet")
+
+        tap_name = node.find("target").get("dev")
+        self.assertEqual(tap_name, mapping['vif_devname'])
+        mac = node.find("mac").get("address")
+        self.assertEqual(mac, mapping['mac'])
 
     def _check_ovs_virtualport_driver(self, d, net, mapping, want_iface_id):
         self.flags(firewall_driver="nova.virt.firewall.NoopFirewallDriver")
@@ -502,6 +558,18 @@ class LibvirtVifTestCase(test.TestCase):
                                            self.mapping_ovs,
                                            want_iface_id)
 
+    def test_generic_ivs_virtualport_driver(self):
+        def get_connection():
+            return fakelibvirt.Connection("qemu:///session",
+                                          False,
+                                          9011)
+        d = vif.LibvirtGenericVIFDriver(get_connection)
+        want_iface_id = self.mapping_ivs['ivs_interfaceid']
+        self._check_ivs_virtualport_driver(d,
+                                           self.net_ovs,
+                                           self.mapping_ivs,
+                                           want_iface_id)
+
     def _check_quantum_hybrid_driver(self, d, net, mapping, br_want):
         self.flags(firewall_driver="nova.virt.firewall.IptablesFirewallDriver")
         xml = self._get_instance_xml(d, net, mapping)
@@ -540,6 +608,18 @@ class LibvirtVifTestCase(test.TestCase):
         self._check_quantum_hybrid_driver(d,
                                           self.net_ovs,
                                           self.mapping_ovs,
+                                          br_want)
+
+    def test_ivs_hybrid_driver(self):
+        def get_connection():
+            return fakelibvirt.Connection("qemu:///session",
+                                          False)
+        d = vif.LibvirtGenericVIFDriver(get_connection)
+        br_want = "qbr" + self.mapping_ivs['vif_uuid']
+        br_want = br_want[:network_model.NIC_NAME_LEN]
+        self._check_quantum_hybrid_driver(d,
+                                          self.net_ovs,
+                                          self.mapping_ivs,
                                           br_want)
 
     def test_generic_8021qbh_driver(self):
