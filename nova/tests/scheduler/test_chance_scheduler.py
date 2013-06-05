@@ -194,3 +194,12 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.mox.ReplayAll()
         hosts = self.driver.select_hosts(ctxt, request_spec, {})
         self.assertEquals(['host3', 'host1'], hosts)
+
+    def test_select_hosts_no_valid_host(self):
+
+        def _return_no_host(*args, **kwargs):
+            return []
+
+        self.stubs.Set(self.driver, '_schedule', _return_no_host)
+        self.assertRaises(exception.NoValidHost,
+                          self.driver.select_hosts, self.context, {}, {})

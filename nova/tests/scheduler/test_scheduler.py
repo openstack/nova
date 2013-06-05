@@ -951,6 +951,10 @@ class SchedulerDriverBaseTestCase(SchedulerTestCase):
                          self.context, {},
                          fake_request_spec, {}, {}, {}, None)
 
+    def test_unimplemented_select_hosts(self):
+        self.assertRaises(NotImplementedError,
+                          self.driver.select_hosts, self.context, {}, {})
+
 
 class SchedulerDriverModuleTestCase(test.TestCase):
     """Test case for scheduler driver module methods."""
