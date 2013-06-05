@@ -38,6 +38,7 @@ class _TestInstanceObject(object):
         fake_instance['launched_at'] = (
             fake_instance['launched_at'].replace(
                 tzinfo=iso8601.iso8601.Utc(), microsecond=0))
+        fake_instance['deleted'] = False
         return fake_instance
 
     def test_datetime_deserialization(self):
@@ -174,6 +175,17 @@ class _TestInstanceObject(object):
         inst.user_data = 'foo'
         inst.save()
         self.assertEqual(inst.host, 'newhost')
+
+    def test_get_deleted(self):
+        ctxt = context.get_admin_context()
+        fake_inst = dict(self.fake_instance, id=123, deleted=123)
+        fake_uuid = fake_inst['uuid']
+        self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
+        db.instance_get_by_uuid(ctxt, fake_uuid, []).AndReturn(fake_inst)
+        self.mox.ReplayAll()
+        inst = instance.Instance.get_by_uuid(ctxt, fake_uuid)
+        # NOTE(danms): Make sure it's actually a bool
+        self.assertEqual(inst.deleted, True)
 
 
 class TestInstanceObject(test_objects._LocalTest,

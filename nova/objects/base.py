@@ -180,6 +180,7 @@ class NovaObject(object):
         'created_at': obj_utils.datetime_or_str_or_none,
         'updated_at': obj_utils.datetime_or_str_or_none,
         'deleted_at': obj_utils.datetime_or_str_or_none,
+        'deleted': bool,
         }
 
     def __init__(self):

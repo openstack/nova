@@ -413,15 +413,18 @@ class _TestObject(object):
         obj.created_at = dt
         obj.updated_at = dt
         obj.deleted_at = None
+        obj.deleted = False
         expected = {'nova_object.name': 'MyObj',
                     'nova_object.namespace': 'nova',
                     'nova_object.version': '1.5',
                     'nova_object.changes':
-                        ['created_at', 'deleted_at', 'updated_at'],
+                        ['deleted', 'created_at', 'deleted_at', 'updated_at'],
                     'nova_object.data':
                         {'created_at': timeutils.isotime(dt),
                          'updated_at': timeutils.isotime(dt),
-                         'deleted_at': None}
+                         'deleted_at': None,
+                         'deleted': False,
+                         }
                     }
         self.assertEqual(obj.obj_to_primitive(), expected)
 
