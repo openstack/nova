@@ -13,7 +13,7 @@
 #    under the License.
 
 
-from nova.api.openstack.compute.contrib import agents
+from nova.api.openstack.compute.plugins.v3 import agents
 from nova import context
 from nova import db
 from nova.db.sqlalchemy import models

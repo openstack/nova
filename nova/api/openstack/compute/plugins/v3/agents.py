@@ -24,7 +24,8 @@ from nova import db
 from nova import exception
 
 
-authorize = extensions.extension_authorizer('compute', 'agents')
+ALIAS = "os-agents"
+authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
 
 
 class AgentsIndexTemplate(xmlutil.TemplateBuilder):
@@ -152,17 +153,20 @@ class AgentController(object):
         return {'agent': agent}
 
 
-class Agents(extensions.ExtensionDescriptor):
+class Agents(extensions.V3APIExtensionBase):
     """Agents support."""
 
     name = "Agents"
-    alias = "os-agents"
-    namespace = "http://docs.openstack.org/compute/ext/agents/api/v2"
-    updated = "2012-10-28T00:00:00-00:00"
+    alias = ALIAS
+    namespace = "http://docs.openstack.org/compute/ext/agents/api/v3"
+    version = 1
 
     def get_resources(self):
-        resources = []
-        resource = extensions.ResourceExtension('os-agents',
-                                                AgentController())
-        resources.append(resource)
-        return resources
+        resource = [extensions.ResourceExtension(ALIAS,
+                                                AgentController())]
+        return resource
+
+    def get_controller_extensions(self):
+        """It's an abstract function V3APIExtensionBase and the extension
+        will not be loaded without it."""
+        return []
