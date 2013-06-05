@@ -91,6 +91,7 @@ class VMwareAPIVMTestCase(test.TestCase):
     def _create_instance_in_the_db(self):
         values = {'name': 1,
                   'id': 1,
+                  'uuid': "fake-uuid",
                   'project_id': self.project_id,
                   'user_id': self.user_id,
                   'image_ref': "1",
@@ -120,7 +121,8 @@ class VMwareAPIVMTestCase(test.TestCase):
         self.assertEquals(len(instances), 1)
 
         # Get Nova record for VM
-        vm_info = self.conn.get_info({'name': 1})
+        vm_info = self.conn.get_info({'uuid': 'fake-uuid',
+                                      'name': 1})
 
         # Get record for VM
         vms = vmwareapi_fake._get_objects("VirtualMachine")
@@ -177,7 +179,7 @@ class VMwareAPIVMTestCase(test.TestCase):
 
     def test_spawn(self):
         self._create_vm()
-        info = self.conn.get_info({'name': 1})
+        info = self.conn.get_info({'uuid': 'fake-uuid'})
         self._check_vm_info(info, power_state.RUNNING)
 
     def test_snapshot(self):
@@ -191,11 +193,11 @@ class VMwareAPIVMTestCase(test.TestCase):
                   'expected_state': task_states.IMAGE_PENDING_UPLOAD}}]
         func_call_matcher = matchers.FunctionCallMatcher(expected_calls)
         self._create_vm()
-        info = self.conn.get_info({'name': 1})
+        info = self.conn.get_info({'uuid': 'fake-uuid'})
         self._check_vm_info(info, power_state.RUNNING)
         self.conn.snapshot(self.context, self.instance, "Test-Snapshot",
                            func_call_matcher.call)
-        info = self.conn.get_info({'name': 1})
+        info = self.conn.get_info({'uuid': 'fake-uuid'})
         self._check_vm_info(info, power_state.RUNNING)
         self.assertIsNone(func_call_matcher.match())
 
@@ -207,12 +209,23 @@ class VMwareAPIVMTestCase(test.TestCase):
 
     def test_reboot(self):
         self._create_vm()
-        info = self.conn.get_info({'name': 1})
+        info = self.conn.get_info({'name': 1, 'uuid': 'fake-uuid'})
         self._check_vm_info(info, power_state.RUNNING)
         reboot_type = "SOFT"
         self.conn.reboot(self.context, self.instance, self.network_info,
                          reboot_type)
-        info = self.conn.get_info({'name': 1})
+        info = self.conn.get_info({'name': 1, 'uuid': 'fake-uuid'})
+        self._check_vm_info(info, power_state.RUNNING)
+
+    def test_reboot_with_uuid(self):
+        """Test fall back to use name when can't find by uuid."""
+        self._create_vm()
+        info = self.conn.get_info({'name': 'fake-uuid', 'uuid': 'wrong-uuid'})
+        self._check_vm_info(info, power_state.RUNNING)
+        reboot_type = "SOFT"
+        self.conn.reboot(self.context, self.instance, self.network_info,
+                         reboot_type)
+        info = self.conn.get_info({'name': 'fake-uuid', 'uuid': 'wrong-uuid'})
         self._check_vm_info(info, power_state.RUNNING)
 
     def test_reboot_non_existent(self):
@@ -223,10 +236,10 @@ class VMwareAPIVMTestCase(test.TestCase):
 
     def test_reboot_not_poweredon(self):
         self._create_vm()
-        info = self.conn.get_info({'name': 1})
+        info = self.conn.get_info({'uuid': 'fake-uuid'})
         self._check_vm_info(info, power_state.RUNNING)
         self.conn.suspend(self.instance)
-        info = self.conn.get_info({'name': 1})
+        info = self.conn.get_info({'uuid': 'fake-uuid'})
         self._check_vm_info(info, power_state.SUSPENDED)
         self.assertRaises(exception.InstanceRebootFailure, self.conn.reboot,
                           self.context, self.instance, self.network_info,
@@ -234,10 +247,10 @@ class VMwareAPIVMTestCase(test.TestCase):
 
     def test_suspend(self):
         self._create_vm()
-        info = self.conn.get_info({'name': 1})
+        info = self.conn.get_info({'uuid': "fake-uuid"})
         self._check_vm_info(info, power_state.RUNNING)
         self.conn.suspend(self.instance)
-        info = self.conn.get_info({'name': 1})
+        info = self.conn.get_info({'uuid': 'fake-uuid'})
         self._check_vm_info(info, power_state.SUSPENDED)
 
     def test_suspend_non_existent(self):
@@ -247,13 +260,13 @@ class VMwareAPIVMTestCase(test.TestCase):
 
     def test_resume(self):
         self._create_vm()
-        info = self.conn.get_info({'name': 1})
+        info = self.conn.get_info({'uuid': 'fake-uuid'})
         self._check_vm_info(info, power_state.RUNNING)
         self.conn.suspend(self.instance)
-        info = self.conn.get_info({'name': 1})
+        info = self.conn.get_info({'uuid': 'fake-uuid'})
         self._check_vm_info(info, power_state.SUSPENDED)
         self.conn.resume(self.instance, self.network_info)
-        info = self.conn.get_info({'name': 1})
+        info = self.conn.get_info({'uuid': 'fake-uuid'})
         self._check_vm_info(info, power_state.RUNNING)
 
     def test_resume_non_existent(self):
@@ -263,20 +276,20 @@ class VMwareAPIVMTestCase(test.TestCase):
 
     def test_resume_not_suspended(self):
         self._create_vm()
-        info = self.conn.get_info({'name': 1})
+        info = self.conn.get_info({'uuid': 'fake-uuid'})
         self._check_vm_info(info, power_state.RUNNING)
         self.assertRaises(exception.InstanceResumeFailure, self.conn.resume,
                           self.instance, self.network_info)
 
     def test_power_on(self):
         self._create_vm()
-        info = self.conn.get_info({'name': 1})
+        info = self.conn.get_info({'uuid': 'fake-uuid'})
         self._check_vm_info(info, power_state.RUNNING)
         self.conn.power_off(self.instance)
-        info = self.conn.get_info({'name': 1})
+        info = self.conn.get_info({'uuid': 'fake-uuid'})
         self._check_vm_info(info, power_state.SHUTDOWN)
         self.conn.power_on(self.context, self.instance, self.network_info)
-        info = self.conn.get_info({'name': 1})
+        info = self.conn.get_info({'uuid': 'fake-uuid'})
         self._check_vm_info(info, power_state.RUNNING)
 
     def test_power_on_non_existent(self):
@@ -286,10 +299,10 @@ class VMwareAPIVMTestCase(test.TestCase):
 
     def test_power_off(self):
         self._create_vm()
-        info = self.conn.get_info({'name': 1})
+        info = self.conn.get_info({'uuid': 'fake-uuid'})
         self._check_vm_info(info, power_state.RUNNING)
         self.conn.power_off(self.instance)
-        info = self.conn.get_info({'name': 1})
+        info = self.conn.get_info({'uuid': 'fake-uuid'})
         self._check_vm_info(info, power_state.SHUTDOWN)
 
     def test_power_off_non_existent(self):
@@ -300,19 +313,19 @@ class VMwareAPIVMTestCase(test.TestCase):
     def test_power_off_suspended(self):
         self._create_vm()
         self.conn.suspend(self.instance)
-        info = self.conn.get_info({'name': 1})
+        info = self.conn.get_info({'uuid': 'fake-uuid'})
         self._check_vm_info(info, power_state.SUSPENDED)
         self.assertRaises(exception.InstancePowerOffFailure,
                           self.conn.power_off, self.instance)
 
     def test_get_info(self):
         self._create_vm()
-        info = self.conn.get_info({'name': 1})
+        info = self.conn.get_info({'uuid': 'fake-uuid'})
         self._check_vm_info(info, power_state.RUNNING)
 
     def test_destroy(self):
         self._create_vm()
-        info = self.conn.get_info({'name': 1})
+        info = self.conn.get_info({'uuid': 'fake-uuid'})
         self._check_vm_info(info, power_state.RUNNING)
         instances = self.conn.list_instances()
         self.assertEquals(len(instances), 1)

@@ -20,7 +20,6 @@ Stubouts, mocks and fixtures for the test suite
 """
 
 import time
-import uuid
 
 from nova.compute import task_states
 from nova.compute import vm_states
@@ -63,7 +62,7 @@ def stub_out_db_instance_api(stubs):
         base_options = {
             'name': values['name'],
             'id': values['id'],
-            'uuid': uuid.uuid4(),
+            'uuid': values['uuid'],
             'reservation_id': utils.generate_uid('r'),
             'image_ref': values['image_ref'],
             'kernel_id': values['kernel_id'],
