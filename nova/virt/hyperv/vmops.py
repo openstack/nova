@@ -157,7 +157,7 @@ class VMOps(object):
                 self._pathutils.copyfile(base_vhd_path, root_vhd_path)
 
                 base_vhd_info = self._vhdutils.get_vhd_info(base_vhd_path)
-                base_vhd_size = base_vhd_info['MaxInternalSize']
+                base_vhd_size = base_vhd_info['FileSize']
                 root_vhd_size = instance['root_gb'] * 1024 ** 3
 
                 if root_vhd_size < base_vhd_size:

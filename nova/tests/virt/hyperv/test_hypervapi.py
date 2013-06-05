@@ -1000,7 +1000,8 @@ class HyperVAPITestCase(test.TestCase):
             else:
                 fake.PathUtils.copyfile(mox.IsA(str), mox.IsA(str))
                 m = vhdutils.VHDUtils.get_vhd_info(mox.IsA(str))
-                m.AndReturn({'MaxInternalSize': 1024})
+                m.AndReturn({'MaxInternalSize': 1024, 'FileSize': 1024,
+                             'Type': 2})
                 vhdutils.VHDUtils.resize_vhd(mox.IsA(str), mox.IsA(object))
 
         self._setup_check_admin_permissions_mocks(
