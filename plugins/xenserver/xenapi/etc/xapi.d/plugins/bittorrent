@@ -49,12 +49,11 @@ def _make_torrent_cache():
     return torrent_cache_path
 
 
-def _fetch_torrent_file(torrent_cache_path, image_id, torrent_base_url):
+def _fetch_torrent_file(torrent_cache_path, image_id, torrent_url):
     torrent_path = os.path.join(
             torrent_cache_path, image_id + '.torrent')
 
     if not os.path.exists(torrent_path):
-        torrent_url = torrent_base_url + "/%s.torrent" % image_id
         logging.info("Downloading %s" % torrent_url)
 
         # Write contents to temporary path to ensure we don't have partially
@@ -250,7 +249,7 @@ def _make_seed_cache():
     return seed_cache_path
 
 
-def download_vhd(session, image_id, torrent_base_url, torrent_seed_duration,
+def download_vhd(session, image_id, torrent_url, torrent_seed_duration,
                  torrent_seed_chance, torrent_max_last_accessed,
                  torrent_listen_port_start, torrent_listen_port_end,
                  torrent_download_stall_cutoff, uuid_stack, sr_path,
@@ -266,7 +265,7 @@ def download_vhd(session, image_id, torrent_base_url, torrent_seed_duration,
     _reap_old_torrent_files(torrent_cache_path, torrent_max_last_accessed)
 
     torrent_path = _fetch_torrent_file(
-            torrent_cache_path, image_id, torrent_base_url)
+            torrent_cache_path, image_id, torrent_url)
 
     staging_path = utils.make_staging_area(sr_path)
     try:
