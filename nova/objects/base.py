@@ -168,9 +168,9 @@ class NovaObject(object):
     # by subclasses, but that is a special case. Objects inheriting from
     # other objects will not receive this merging of fields contents.
     fields = {
-        'created_at': obj_utils.datetime_or_none,
-        'updated_at': obj_utils.datetime_or_none,
-        'deleted_at': obj_utils.datetime_or_none,
+        'created_at': obj_utils.datetime_or_str_or_none,
+        'updated_at': obj_utils.datetime_or_str_or_none,
+        'deleted_at': obj_utils.datetime_or_str_or_none,
         }
 
     def __init__(self):

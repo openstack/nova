@@ -123,6 +123,14 @@ class TestUtils(test.TestCase):
         self.assertEqual(utils.datetime_or_none(None), None)
         self.assertRaises(ValueError, utils.datetime_or_none, 'foo')
 
+    def test_datetime_or_str_or_none(self):
+        dts = timeutils.isotime()
+        dt = timeutils.parse_isotime(dts)
+        self.assertEqual(utils.datetime_or_str_or_none(dt), dt)
+        self.assertEqual(utils.datetime_or_str_or_none(None), None)
+        self.assertEqual(utils.datetime_or_str_or_none(dts), dt)
+        self.assertRaises(ValueError, utils.datetime_or_str_or_none, 'foo')
+
     def test_int_or_none(self):
         self.assertEqual(utils.int_or_none(1), 1)
         self.assertEqual(utils.int_or_none('1'), 1)
