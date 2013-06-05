@@ -16,9 +16,11 @@
 #    under the License.
 
 import contextlib
+import urlparse
 
 import fixtures
 import mox
+from oslo.config import cfg
 
 from nova.compute import flavors
 from nova import context
@@ -33,7 +35,7 @@ from nova.virt.xenapi import fake
 from nova.virt.xenapi import vm_utils
 from nova.virt.xenapi import volume_utils
 
-
+CONF = cfg.CONF
 XENSM_TYPE = 'xensm'
 ISCSI_TYPE = 'iscsi'
 
@@ -233,6 +235,8 @@ class FetchVhdImageTestCase(test.TestCase):
         self.sr_path = "sr_path"
         self.params = {'image_id': self.image_id,
             'uuid_stack': self.uuid_stack, 'sr_path': self.sr_path}
+        if uses_bittorrent:
+            self.params['torrent_url'] = "%s.torrent" % self.image_id
         self.vdis = {'root': {'uuid': 'vdi'}}
 
         vm_utils._make_uuid_stack().AndReturn(self.uuid_stack)
@@ -808,3 +812,33 @@ class VDIOtherConfigTestCase(stubs.XenAPITestBase):
                     'nova_instance_uuid': 'aaaa-bbbb-cccc-dddd'}
 
         self.assertEqual(expected, other_config)
+
+
+def bad_fetcher(instance, image_id):
+    raise test.TestingException("just plain bad.")
+
+
+class BitTorrentMiscTestCase(test.TestCase):
+
+    def tearDown(self):
+        vm_utils._TORRENT_URL_FN = None
+        super(BitTorrentMiscTestCase, self).tearDown()
+
+    def test_default_fetch_url(self):
+        image_id = "1-2-3-4-5"
+        params = {}
+        self.assertTrue(vm_utils._add_torrent_url({}, image_id, params))
+        expected = urlparse.urljoin(CONF.xenapi_torrent_base_url,
+                                    "%s.torrent" % image_id)
+        self.assertEqual(expected, params['torrent_url'])
+        self.assertEqual(vm_utils.get_torrent_url,
+                         vm_utils._TORRENT_URL_FN)
+
+        # call it again now that the fetcher fn is cached:
+        params = {}
+        self.assertTrue(vm_utils._add_torrent_url({}, image_id, params))
+
+    def test_fetch_url_failure(self):
+        # fetcher function fails:
+        vm_utils._TORRENT_URL_FN = bad_fetcher
+        self.assertFalse(vm_utils._add_torrent_url({}, '1-2-3-4-5', {}))
