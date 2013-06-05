@@ -444,14 +444,16 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         msg = self.make_msg('compute_unrescue', instance=instance_p)
         return self.call(context, msg, version='1.48')
 
-    def object_class_action(self, context, objname, objmethod, objver, kwargs):
+    def object_class_action(self, context, objname, objmethod, objver,
+                            args, kwargs):
         msg = self.make_msg('object_class_action', objname=objname,
-                            objmethod=objmethod, objver=objver, **kwargs)
+                            objmethod=objmethod, objver=objver,
+                            args=args, kwargs=kwargs)
         return self.call(context, msg, version='1.50')
 
-    def object_action(self, context, objinst, objmethod, kwargs):
+    def object_action(self, context, objinst, objmethod, args, kwargs):
         msg = self.make_msg('object_action', objinst=objinst,
-                            objmethod=objmethod, **kwargs)
+                            objmethod=objmethod, args=args, kwargs=kwargs)
         return self.call(context, msg, version='1.50')
 
 
