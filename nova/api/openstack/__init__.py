@@ -272,7 +272,7 @@ class APIRouterV3(base_wsgi.Router):
                 return False
 
         if not CONF.osapi_v3.enabled:
-            LOG.warning("V3 API has been disabled by configuration")
+            LOG.info("V3 API has been disabled by configuration")
             return
 
         self.init_only = init_only
