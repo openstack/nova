@@ -203,8 +203,7 @@ def notify_usage_exists(context, instance_ref, current_period=False,
             ignore_missing_network_data)
 
     if system_metadata is None:
-        system_metadata = utils.metadata_to_dict(
-                instance_ref['system_metadata'])
+        system_metadata = utils.instance_sys_meta(instance_ref)
 
     # add image metadata to the notification:
     image_meta = notifications.image_meta(system_metadata)

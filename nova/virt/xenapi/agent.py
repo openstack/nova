@@ -197,7 +197,7 @@ class XenAPIBasedAgent(object):
         if sshkey:
             ctxt = context.get_admin_context()
             enc = crypto.ssh_encrypt_text(sshkey, new_pass)
-            sys_meta = utils.metadata_to_dict(self.instance['system_metadata'])
+            sys_meta = utils.instance_sys_meta(self.instance)
             sys_meta.update(password.convert_password(ctxt,
                                                       base64.b64encode(enc)))
             self.virtapi.instance_update(ctxt, self.instance['uuid'],

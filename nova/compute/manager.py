@@ -1447,7 +1447,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                              vm_state=vm_states.DELETED,
                                              task_state=None,
                                              terminated_at=timeutils.utcnow())
-            system_meta = utils.metadata_to_dict(instance['system_metadata'])
+            system_meta = utils.instance_sys_meta(instance)
             self.conductor_api.instance_destroy(context, instance)
         except Exception:
             with excutils.save_and_reraise_exception():
@@ -2072,7 +2072,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     def _get_rescue_image_ref(self, context, instance):
         """Determine what image should be used to boot the rescue VM."""
-        system_meta = utils.metadata_to_dict(instance['system_metadata'])
+        system_meta = utils.instance_sys_meta(instance)
 
         rescue_image_ref = system_meta.get('image_base_image_ref')
 
@@ -2174,7 +2174,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         Returns the updated system_metadata as a dict, as well as the
         post-cleanup current instance type.
         """
-        sys_meta = utils.metadata_to_dict(instance['system_metadata'])
+        sys_meta = utils.instance_sys_meta(instance)
         if restore_old:
             instance_type = flavors.extract_flavor(instance, 'old_')
             sys_meta = flavors.save_flavor_info(sys_meta, instance_type)
@@ -2428,9 +2428,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         # NOTE(danms): Stash the new instance_type to avoid having to
         # look it up in the database later
-        sys_meta = utils.metadata_to_dict(instance['system_metadata'])
-        flavors.save_flavor_info(sys_meta, instance_type,
-                                                prefix='new_')
+        sys_meta = utils.instance_sys_meta(instance)
+        flavors.save_flavor_info(sys_meta, instance_type, prefix='new_')
         # NOTE(mriedem): Stash the old vm_state so we can set the
         # resized/reverted instance back to the same state later.
         vm_state = instance['vm_state']
@@ -2600,7 +2599,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         old_instance_type_id = migration['old_instance_type_id']
         new_instance_type_id = migration['new_instance_type_id']
         old_instance_type = flavors.extract_flavor(instance)
-        sys_meta = utils.metadata_to_dict(instance['system_metadata'])
+        sys_meta = utils.instance_sys_meta(instance)
         # NOTE(mriedem): Get the old_vm_state so we know if we should
         # power on the instance. If old_vm_sate is not set we need to default
         # to ACTIVE for backwards compatibility
