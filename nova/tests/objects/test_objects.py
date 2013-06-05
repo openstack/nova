@@ -15,6 +15,7 @@
 import contextlib
 import datetime
 import gettext
+import iso8601
 import netaddr
 
 gettext.install('nova')
@@ -118,8 +119,12 @@ class TestMetaclass(test.TestCase):
 
 class TestUtils(test.TestCase):
     def test_datetime_or_none(self):
-        dt = datetime.datetime.now()
+        naive_dt = datetime.datetime.now()
+        dt = timeutils.parse_isotime(timeutils.isotime(naive_dt))
         self.assertEqual(utils.datetime_or_none(dt), dt)
+        self.assertEqual(utils.datetime_or_none(dt),
+                         naive_dt.replace(tzinfo=iso8601.iso8601.Utc(),
+                                          microsecond=0))
         self.assertEqual(utils.datetime_or_none(None), None)
         self.assertRaises(ValueError, utils.datetime_or_none, 'foo')
 
