@@ -355,16 +355,20 @@ def prepare_staging_area(sr_path, staging_path, vdi_uuids, seq_num=0):
         seq_num += 1
 
 
-def create_tarball(fileobj, path, callback=None):
+def create_tarball(fileobj, path, callback=None, compression_level=None):
     """Create a tarball from a given path.
 
     :param fileobj: a file-like object holding the tarball byte-stream.
                     If None, then only the callback will be used.
     :param path: path to create tarball from
     :param callback: optional callback to call on each chunk written
+    :param compression_level: compression level, e.g., 9 for gzip -9.
     """
     tar_cmd = ["tar", "-zc", "--directory=%s" % path, "."]
-    tar_proc = make_subprocess(tar_cmd, stdout=True, stderr=True)
+    env = os.environ.copy()
+    if compression_level and 1 <= compression_level <= 9:
+        env["GZIP"] = "-%d" % compression_level
+    tar_proc = make_subprocess(tar_cmd, stdout=True, stderr=True, env=env)
 
     while True:
         chunk = tar_proc.stdout.read(CHUNK_SIZE)

@@ -2309,6 +2309,11 @@
 # (string value)
 #cache_images=all
 
+# Compression level for images, e.g., 9 for gzip -9. Range is
+# 1-9, 9 being most compressed but most CPU intensive on dom0.
+# (integer value)
+#xenapi_image_compression_level=<None>
+
 # Default OS type (string value)
 #default_os_type=linux
 

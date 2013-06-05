@@ -65,6 +65,10 @@ xenapi_vm_utils_opts = [
                      ' images, `some` will only cache images that have the'
                      ' image_property `cache_in_nova=True`, and `none` turns'
                      ' off caching entirely'),
+    cfg.IntOpt('xenapi_image_compression_level',
+               help='Compression level for images, e.g., 9 for gzip -9.'
+                    ' Range is 1-9, 9 being most compressed but most CPU'
+                    ' intensive on dom0.'),
     cfg.StrOpt('default_os_type',
                default='linux',
                help='Default OS type'),
@@ -1120,6 +1124,15 @@ def _choose_download_handler(context, instance):
                 'nova.virt.xenapi.image.bittorrent.BittorrentStore')
     else:
         return _default_download_handler()
+
+
+def get_compression_level():
+    level = CONF.xenapi_image_compression_level
+    if level is not None and (level < 1 or level > 9):
+        LOG.warn(_("Invalid value '%d' for xenapi_image_compression_level"),
+                 level)
+        return None
+    return level
 
 
 def _fetch_vhd_image(context, session, instance, image_id):
