@@ -53,6 +53,7 @@ class CellsManagerClassTestCase(test.TestCase):
         self.our_cell = 'grandchild-cell1'
         self.cells_manager = fakes.get_cells_manager(self.our_cell)
         self.msg_runner = self.cells_manager.msg_runner
+        self.state_manager = fakes.get_state_manager(self.our_cell)
         self.driver = self.cells_manager.driver
         self.ctxt = 'fake_context'
 
@@ -512,6 +513,17 @@ class CellsManagerClassTestCase(test.TestCase):
         self.mox.ReplayAll()
         self.cells_manager.consoleauth_delete_tokens(self.ctxt,
                 instance_uuid=instance_uuid)
+
+    def test_get_capacities(self):
+        cell_name = 'cell_name'
+        response = {"ram_free":
+                   {"units_by_mb": {"64": 20, "128": 10}, "total_mb": 1491}}
+        self.mox.StubOutWithMock(self.state_manager,
+                                 'get_capacities')
+        self.state_manager.get_capacities(cell_name).AndReturn(response)
+        self.mox.ReplayAll()
+        self.assertEqual(response,
+                self.cells_manager.get_capacities(self.ctxt, cell_name))
 
     def test_validate_console_port(self):
         instance_uuid = 'fake-instance-uuid'

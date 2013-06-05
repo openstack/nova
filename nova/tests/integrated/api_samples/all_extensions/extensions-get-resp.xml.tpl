@@ -60,6 +60,9 @@
   <extension alias="os-cells" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/cells/api/v1.1" name="Cells">
     <description>%(text)s</description>
   </extension>
+  <extension alias="os-cell-capacities" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/cell_capacities/api/v1.1" name="CellCapacities">
+    <description>%(text)s</description>
+  </extension>
   <extension alias="os-certificates" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/certificates/api/v1.1" name="Certificates">
     <description>%(text)s</description>
   </extension>

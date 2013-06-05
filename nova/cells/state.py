@@ -25,6 +25,7 @@ from oslo.config import cfg
 from nova.cells import rpc_driver
 from nova import context
 from nova.db import base
+from nova import exception
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import utils
@@ -361,3 +362,11 @@ class CellStateManager(base.Base):
             for cell in self.child_cells.values():
                 self._add_to_dict(capacities, cell.capacities)
         return capacities
+
+    @sync_from_db
+    def get_capacities(self, cell_name=None):
+        if not cell_name or cell_name == self.my_cell_state.name:
+            return self.get_our_capacities()
+        if cell_name in self.child_cells:
+            return self.child_cells[cell_name].capacities
+        raise exception.CellNotFound(cell_name=cell_name)

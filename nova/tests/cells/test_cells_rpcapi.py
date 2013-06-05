@@ -129,6 +129,16 @@ class CellsAPITestCase(test.TestCase):
         self._check_result(call_info, 'build_instances',
                 expected_args, version=1.8)
 
+    def test_get_capacities(self):
+        capacity_info = {"capacity": "info"}
+        call_info = self._stub_rpc_method('call',
+                                          result=capacity_info)
+        result = self.cells_rpcapi.get_capacities(self.fake_context,
+                                                  cell_name="name")
+        self._check_result(call_info, 'get_capacities',
+                           {'cell_name': 'name'}, version='1.9')
+        self.assertEqual(capacity_info, result)
+
     def test_instance_update_at_top(self):
         fake_info_cache = {'id': 1,
                            'instance': 'fake_instance',

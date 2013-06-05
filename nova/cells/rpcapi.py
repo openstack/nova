@@ -51,6 +51,7 @@ class CellsAPI(rpc_proxy.RpcProxy):
         1.6 - Adds consoleauth_delete_tokens() and validate_console_port()
         1.7 - Adds service_update()
         1.8 - Adds build_instances(), deprecates schedule_run_instance()
+        1.9 - Adds get_capacities()
     '''
     BASE_RPC_API_VERSION = '1.0'
 
@@ -292,3 +293,8 @@ class CellsAPI(rpc_proxy.RpcProxy):
                               console_port=console_port,
                               console_type=console_type),
                 version='1.6')
+
+    def get_capacities(self, ctxt, cell_name=None):
+        return self.call(ctxt,
+                         self.make_msg('get_capacities', cell_name=cell_name),
+                         version='1.9')

@@ -31,6 +31,7 @@ from nova.api.metadata import password
 from nova.api.openstack.compute.contrib import coverage_ext
 from nova.api.openstack.compute.contrib import fping
 # Import extensions to pull in osapi_compute_extension CONF option used below.
+from nova.cells import state
 from nova.cloudpipe import pipelib
 from nova.compute import api as compute_api
 from nova.compute import manager as compute_manager
@@ -2805,6 +2806,54 @@ class CellsSampleJsonTest(ApiSampleTestBase):
 
 
 class CellsSampleXmlTest(CellsSampleJsonTest):
+    ctype = 'xml'
+
+
+class CellsCapacitySampleJsonTest(ApiSampleTestBase):
+    extends_name = ("nova.api.openstack.compute.contrib.cells.Cells")
+    extension_name = ("nova.api.openstack.compute.contrib."
+                         "cell_capacities.Cell_capacities")
+
+    def setUp(self):
+        self.flags(enable=True, db_check_interval=-1, group='cells')
+        super(CellsCapacitySampleJsonTest, self).setUp()
+        # (navneetk/kaushikc) : Mock cell capacity to avoid the capacity
+        # being calculated from the compute nodes in the environment
+        self._mock_cell_capacity()
+
+    def test_get_cell_capacity(self):
+        state_manager = state.CellStateManager()
+        my_state = state_manager.get_my_state()
+        response = self._do_get('os-cells/%s/capacities' %
+                my_state.name)
+        subs = self._get_regexes()
+        return self._verify_response('cells-capacities-resp',
+                                        subs, response, 200)
+
+    def test_get_all_cells_capacity(self):
+        response = self._do_get('os-cells/capacities')
+        subs = self._get_regexes()
+        return self._verify_response('cells-capacities-resp',
+                                        subs, response, 200)
+
+    def _mock_cell_capacity(self):
+        self.mox.StubOutWithMock(self.cells.manager.state_manager,
+                                 'get_our_capacities')
+        response = {"ram_free":
+                        {"units_by_mb": {"8192": 0, "512": 13,
+                                         "4096": 1, "2048": 3, "16384": 0},
+                         "total_mb": 7680},
+                    "disk_free":
+                        {"units_by_mb": {"81920": 11, "20480": 46,
+                                         "40960": 23, "163840": 5, "0": 0},
+                         "total_mb": 1052672}
+        }
+        self.cells.manager.state_manager.get_our_capacities(). \
+            AndReturn(response)
+        self.mox.ReplayAll()
+
+
+class CellsCapacitySampleXmlTest(CellsCapacitySampleJsonTest):
     ctype = 'xml'
 
 

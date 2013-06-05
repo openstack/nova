@@ -161,6 +161,14 @@
             "updated": "%(timestamp)s"
         },
         {
+            "alias": "os-cell-capacities",
+            "description": "%(text)s",
+            "links": [],
+            "name": "CellCapacities",
+            "namespace": "http://docs.openstack.org/compute/ext/cell_capacities/api/v1.1",
+            "updated": "%(timestamp)s"
+        },
+        {
             "alias": "os-certificates",
             "description": "%(text)s",
             "links": [],
