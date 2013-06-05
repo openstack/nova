@@ -51,11 +51,8 @@ def get_network_with_the_name(session, network_name="vmnet0", cluster=None):
     if not vm_networks_ret:
         return None
     vm_networks = vm_networks_ret.ManagedObjectReference
-    networks = session._call_method(vim_util,
-                       "get_properties_for_a_collection_of_objects",
-                       "Network", vm_networks, ["summary.name"])
     network_obj = {}
-    LOG.warn(vm_networks)
+    LOG.debug(vm_networks)
     for network in vm_networks:
         # Get network properties
         if network._type == 'DistributedVirtualPortgroup':
