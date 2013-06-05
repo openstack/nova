@@ -347,6 +347,7 @@ def create_tarball(fileobj, path, callback=None):
     :param path: path to create tarball from
     :param callback: optional callback to call on each chunk written
     """
+    os.putenv("GZIP", "-1")
     tar_cmd = "tar -zc --directory=%(path)s ." % locals()
     tar_proc = make_subprocess(tar_cmd, stdout=True, stderr=True)
 
@@ -371,7 +372,6 @@ def extract_tarball(fileobj, path, callback=None):
     :param path: path to extract tarball into
     :param callback: optional callback to call on each chunk read
     """
-    os.putenv("GZIP", "-1")
     tar_cmd = "tar -zx --directory=%(path)s" % locals()
     tar_proc = make_subprocess(tar_cmd, stderr=True, stdin=True)
 
