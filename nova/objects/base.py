@@ -357,6 +357,58 @@ class NovaObject(object):
         return self[key]
 
 
+class ObjectListBase(object):
+    """Mixin class for lists of objects.
+
+    This mixin class can be added as a base class for an object that
+    is implementing a list of objects. It adds a single field of 'objects',
+    which is the list store, and behaves like a list itself. It supports
+    serialization of the list of objects automatically.
+    """
+    fields = {
+        'objects': list,
+        }
+
+    def __iter__(self):
+        """List iterator interface."""
+        return iter(self.objects)
+
+    def __len__(self):
+        """List length."""
+        return len(self.objects)
+
+    def __getitem__(self, index):
+        """List index access."""
+        if isinstance(index, slice):
+            new_obj = self.__class__()
+            new_obj.objects = self.objects[index]
+            # NOTE(danms): We must be mixed in with a NovaObject!
+            new_obj.obj_reset_changes()
+            new_obj._context = self._context
+            return new_obj
+        return self.objects[index]
+
+    def __contains__(self, value):
+        """List membership test."""
+        return value in self.objects
+
+    def count(self, value):
+        """List count of value occurrences."""
+        return self.objects.count(value)
+
+    def index(self, value):
+        """List index of value."""
+        return self.objects.index(value)
+
+    def _attr_objects_to_primitive(self):
+        """Serialization of object list."""
+        return [x.obj_to_primitive() for x in self.objects]
+
+    def _attr_objects_from_primitive(self, value):
+        """Deserialization of object list."""
+        return [NovaObject.obj_from_primitive(x) for x in value]
+
+
 class NovaObjectSerializer(nova.openstack.common.rpc.serializer.Serializer):
     """A NovaObject-aware Serializer.
 
