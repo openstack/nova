@@ -24,6 +24,7 @@ from nova.compute import flavors
 from nova import context
 from nova import db
 from nova import exception
+from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.virt.xenapi import stubs
 from nova import utils
@@ -363,6 +364,26 @@ class ResizeHelpersTestCase(test.TestCase):
         self.mox.ReplayAll()
 
         vm_utils._resize_part_and_fs("fake", 0, 20, 10)
+
+    def test_log_progress_if_required(self):
+        self.mox.StubOutWithMock(vm_utils.LOG, "debug")
+        vm_utils.LOG.debug(_("Sparse copy in progress, "
+                             "%(complete_pct).2f%% complete. "
+                             "%(left) bytes left to copy"),
+                           {"complete_pct": 50.0, "left": 1})
+        current = timeutils.utcnow()
+        timeutils.set_time_override(current)
+        timeutils.advance_time_seconds(vm_utils.PROGRESS_INTERVAL_SECONDS + 1)
+        self.mox.ReplayAll()
+        vm_utils._log_progress_if_required(1, current, 2)
+
+    def test_log_progress_if_not_required(self):
+        self.mox.StubOutWithMock(vm_utils.LOG, "debug")
+        current = timeutils.utcnow()
+        timeutils.set_time_override(current)
+        timeutils.advance_time_seconds(vm_utils.PROGRESS_INTERVAL_SECONDS - 1)
+        self.mox.ReplayAll()
+        vm_utils._log_progress_if_required(1, current, 2)
 
     def test_resize_part_and_fs_down_fails_disk_too_big(self):
         self.mox.StubOutWithMock(vm_utils, "_repair_filesystem")

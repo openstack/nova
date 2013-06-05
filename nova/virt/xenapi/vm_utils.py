@@ -46,6 +46,7 @@ from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
 from nova.openstack.common import strutils
+from nova.openstack.common import timeutils
 from nova import utils
 from nova.virt import configdrive
 from nova.virt.disk import api as disk
@@ -145,6 +146,7 @@ MBR_SIZE_SECTORS = 63
 MBR_SIZE_BYTES = MBR_SIZE_SECTORS * SECTOR_SIZE
 KERNEL_DIR = '/boot/guest'
 MAX_VDI_CHAIN_SIZE = 16
+PROGRESS_INTERVAL_SECONDS = 300
 
 
 class ImageType(object):
@@ -2138,9 +2140,20 @@ def _resize_part_and_fs(dev, start, old_sectors, new_sectors):
     utils.execute('tune2fs', '-j', partition_path, run_as_root=True)
 
 
+def _log_progress_if_required(left, last_log_time, virtual_size):
+    if timeutils.is_older_than(last_log_time, PROGRESS_INTERVAL_SECONDS):
+        last_log_time = timeutils.utcnow()
+        complete_pct = float(virtual_size - left) / virtual_size * 100
+        LOG.debug(_("Sparse copy in progress, "
+                    "%(complete_pct).2f%% complete. "
+                    "%(left) bytes left to copy"),
+            {"complete_pct": complete_pct, "left": left})
+    return last_log_time
+
+
 def _sparse_copy(src_path, dst_path, virtual_size, block_size=4096):
     """Copy data, skipping long runs of zeros to create a sparse file."""
-    start_time = time.time()
+    start_time = last_log_time = timeutils.utcnow()
     EMPTY_BLOCK = '\0' * block_size
     bytes_read = 0
     skipped_bytes = 0
@@ -2175,8 +2188,10 @@ def _sparse_copy(src_path, dst_path, virtual_size, block_size=4096):
 
                         data = src.read(min(block_size, left))
                         greenthread.sleep(0)
+                        last_log_time = _log_progress_if_required(
+                            left, last_log_time, virtual_size)
 
-    duration = time.time() - start_time
+    duration = timeutils.delta_seconds(start_time, timeutils.utcnow())
     compression_pct = float(skipped_bytes) / bytes_read * 100
 
     LOG.debug(_("Finished sparse_copy in %(duration).2f secs, "
