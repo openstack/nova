@@ -2376,6 +2376,30 @@ class ExtendedStatusSampleXmlTests(ExtendedStatusSampleJsonTests):
         ctype = 'xml'
 
 
+class ServerUsageSampleJsonTests(ServersSampleBase):
+    extension_name = ("nova.api.openstack.compute.contrib"
+                      ".server_usage.Server_usage")
+
+    def test_show(self):
+        uuid = self._post_server()
+        response = self._do_get('servers/%s' % uuid)
+        subs = self._get_regexes()
+        subs['hostid'] = '[a-f0-9]+'
+        return self._verify_response('server-get-resp', subs, response, 200)
+
+    def test_detail(self):
+        self._post_server()
+        response = self._do_get('servers/detail')
+        subs = self._get_regexes()
+        subs['hostid'] = '[a-f0-9]+'
+        return self._verify_response('servers-detail-resp', subs,
+                                     response, 200)
+
+
+class ServerUsageSampleXmlTests(ServerUsageSampleJsonTests):
+        ctype = 'xml'
+
+
 class ExtendedVIFNetSampleJsonTests(ServersSampleBase):
     extension_name = ("nova.api.openstack.compute.contrib"
           ".extended_virtual_interfaces_net.Extended_virtual_interfaces_net")

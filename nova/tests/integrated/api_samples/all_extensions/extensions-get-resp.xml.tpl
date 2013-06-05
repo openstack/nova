@@ -33,6 +33,9 @@
   <extension alias="OS-FLV-EXT-DATA" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/flavor_extra_data/api/v1.1" name="FlavorExtraData">
     <description>%(text)s</description>
   </extension>
+  <extension alias="OS-SRV-USG" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/server_usage/api/v1.1" name="ServerUsage">
+    <description>%(text)s</description>
+  </extension>
   <extension alias="OS-SCH-HNT" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/scheduler-hints/api/v2" name="SchedulerHints">
     <description>%(text)s</description>
   </extension>

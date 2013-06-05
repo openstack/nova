@@ -89,6 +89,14 @@
             "updated": "%(timestamp)s"
         },
         {
+            "alias": "OS-SRV-USG",
+            "description": "%(text)s",
+            "links": [],
+            "name": "ServerUsage",
+            "namespace": "http://docs.openstack.org/compute/ext/server_usage/api/v1.1",
+            "updated": "%(timestamp)s"
+        },
+        {
             "alias": "OS-SCH-HNT",
             "description": "%(text)s",
             "links": [],
