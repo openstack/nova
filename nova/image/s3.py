@@ -283,10 +283,9 @@ class S3ImageService(object):
 
     def _s3_create(self, context, metadata):
         """Gets a manifest from s3 and makes an image."""
-
         image_path = tempfile.mkdtemp(dir=CONF.image_decryption_dir)
 
-        image_location = metadata['properties']['image_location']
+        image_location = metadata['properties']['image_location'].lstrip('/')
         bucket_name = image_location.split('/')[0]
         manifest_path = image_location[len(bucket_name) + 1:]
         bucket = self._conn(context).get_bucket(bucket_name)
