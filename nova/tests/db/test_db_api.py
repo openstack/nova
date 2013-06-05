@@ -1435,17 +1435,22 @@ class AggregateDBApiTestCase(test.TestCase):
     def test_aggregate_get_by_host(self):
         ctxt = context.get_admin_context()
         values = {'name': 'fake_aggregate2'}
+        values2 = {'name': 'fake_aggregate4'}
         a1 = _create_aggregate_with_hosts(context=ctxt)
         a2 = _create_aggregate_with_hosts(context=ctxt, values=values)
+        # a3 has no hosts and should not be in the results.
+        a3 = _create_aggregate(context=ctxt, values=values2)
         r1 = db.aggregate_get_by_host(ctxt, 'foo.openstack.org')
         self.assertEqual([a1['id'], a2['id']], [x['id'] for x in r1])
 
     def test_aggregate_get_by_host_with_key(self):
         ctxt = context.get_admin_context()
         values = {'name': 'fake_aggregate2'}
+        values2 = {'name': 'fake_aggregate4'}
         a1 = _create_aggregate_with_hosts(context=ctxt,
                                           metadata={'goodkey': 'good'})
         a2 = _create_aggregate_with_hosts(context=ctxt, values=values)
+        a3 = _create_aggregate(context=ctxt, values=values2)
         # filter result by key
         r1 = db.aggregate_get_by_host(ctxt, 'foo.openstack.org', key='goodkey')
         self.assertEqual([a1['id']], [x['id'] for x in r1])
