@@ -592,9 +592,9 @@ class VMOps(object):
             if instance['auto_disk_config']:
                 LOG.debug(_("Auto configuring disk, attempting to "
                             "resize partition..."), instance=instance)
-                vm_utils.auto_configure_disk(self._session,
-                                             root_vdi['ref'],
-                                             instance_type['root_gb'])
+                vm_utils.try_auto_configure_disk(self._session,
+                                                 root_vdi['ref'],
+                                                 instance_type['root_gb'])
 
             vm_utils.create_vbd(self._session, vm_ref, root_vdi['ref'],
                                 DEVICE_ROOT, bootable=True,
@@ -820,10 +820,6 @@ class VMOps(object):
 
     def _migrate_disk_resizing_down(self, context, instance, dest,
                                     instance_type, vm_ref, sr_path):
-        if not instance['auto_disk_config']:
-            reason = _('Resize down not allowed without auto_disk_config')
-            raise exception.ResizeError(reason=reason)
-
         step = make_step_decorator(context, instance,
                                    self._virtapi.instance_update)
 

@@ -964,6 +964,10 @@ class ResizeError(NovaException):
     message = _("Resize error: %(reason)s")
 
 
+class CannotResizeDisk(NovaException):
+    message = _("Server disk was unable to be resized because: %(reason)s")
+
+
 class InstanceTypeMemoryTooSmall(NovaException):
     message = _("Instance type's memory is too small for requested image.")
 
