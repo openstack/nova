@@ -807,7 +807,7 @@ class VMwareVMOps(object):
         instance['name'] = instance['name'] + self._rescue_suffix
         self.destroy(instance, None)
         instance['name'] = instance_orig_name
-        self.power_on(instance)
+        self._power_on(instance)
 
     def power_off(self, instance):
         """Power off the specified instance."""
@@ -832,7 +832,7 @@ class VMwareVMOps(object):
             LOG.debug(_("VM was already in powered off state. So returning "
                         "without doing anything"), instance=instance)
 
-    def power_on(self, instance):
+    def _power_on(self, instance):
         """Power on the specified instance."""
         vm_ref = vm_util.get_vm_ref(self._session, instance)
 
@@ -850,6 +850,9 @@ class VMwareVMOps(object):
                                         "PowerOnVM_Task", vm_ref)
             self._session._wait_for_task(instance['uuid'], poweron_task)
             LOG.debug(_("Powered on the VM"), instance=instance)
+
+    def power_on(self, context, instance, network_info, block_device_info):
+        self._power_on(instance)
 
     def _get_orig_vm_name_label(self, instance):
         return instance['name'] + '-orig'
@@ -954,7 +957,8 @@ class VMwareVMOps(object):
         if network_info:
             self.unplug_vifs(instance, network_info)
 
-    def finish_revert_migration(self, instance, power_on=True):
+    def finish_revert_migration(self, instance, network_info,
+                                block_device_info, power_on=True):
         """Finish reverting a resize."""
         # The original vm was suffixed with '-orig'; find it using
         # the old suffix, remove the suffix, then power it back on.
@@ -972,15 +976,15 @@ class VMwareVMOps(object):
         LOG.debug(_("Renamed the VM from %s") % name_label,
                   instance=instance)
         if power_on:
-            self.power_on(instance)
+            self._power_on(instance)
 
     def finish_migration(self, context, migration, instance, disk_info,
                          network_info, image_meta, resize_instance=False,
-                         power_on=True):
+                         block_device_info=None, power_on=True):
         """Completes a resize, turning on the migrated instance."""
         # 4. Start VM
         if power_on:
-            self.power_on(instance)
+            self._power_on(instance)
         self._update_instance_progress(context, instance,
                                        step=4,
                                        total_steps=RESIZE_TOTAL_STEPS)

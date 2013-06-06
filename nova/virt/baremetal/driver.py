@@ -250,7 +250,8 @@ class BareMetalDriver(driver.ComputeDriver):
                         )
             self.driver.activate_bootloader(context, node, instance,
                                             network_info=network_info)
-            self.power_on(instance, node)
+            self.power_on(context, instance, network_info, block_device_info,
+                          node)
             self.driver.activate_node(context, node, instance)
             _update_state(context, node, instance, baremetal_states.ACTIVE)
         except Exception:
@@ -331,7 +332,8 @@ class BareMetalDriver(driver.ComputeDriver):
                 "for instance %r") % instance['uuid'])
         pm.stop_console()
 
-    def power_on(self, instance, node=None):
+    def power_on(self, context, instance, network_info, block_device_info=None,
+                 node=None):
         """Power on the specified instance."""
         if not node:
             node = _get_baremetal_node_by_instance_uuid(instance['uuid'])
