@@ -1311,6 +1311,16 @@ class CloudController(object):
 
     def run_instances(self, context, **kwargs):
         min_count = int(kwargs.get('min_count', 1))
+
+        client_token = kwargs.get('client_token')
+        if client_token:
+            resv_id = self._resv_id_from_token(context, client_token)
+            if resv_id:
+                # since this client_token already corresponds to a reservation
+                # id, this returns a proper response without creating a new
+                # instance
+                return self._format_run_instances(context, resv_id)
+
         if kwargs.get('kernel_id'):
             kernel = self._get_image(context, kwargs['kernel_id'])
             kwargs['kernel_id'] = ec2utils.id_to_glance_id(context,
@@ -1347,7 +1357,36 @@ class CloudController(object):
             availability_zone=kwargs.get('placement', {}).get(
                                   'availability_zone'),
             block_device_mapping=kwargs.get('block_device_mapping', {}))
-        return self._format_run_instances(context, resv_id)
+
+        instances = self._format_run_instances(context, resv_id)
+        if instances:
+            instance_ids = [i['instanceId'] for i in instances['instancesSet']]
+            self._add_client_token(context, client_token, instance_ids)
+        return instances
+
+    def _add_client_token(self, context, client_token, instance_ids):
+        """Add client token to reservation ID mapping."""
+        if client_token:
+            self.create_tags(context, resource_id=instance_ids,
+                             tag=[{'key': 'EC2_client_token',
+                                   'value': client_token}])
+
+    def _resv_id_from_token(self, context, client_token):
+        """Get reservation ID from db."""
+        resv_id = None
+        tags = self.describe_tags(context, filter=[
+                {'name': 'key', 'value': 'EC2_client_token'},
+                ])
+
+        tagSet = tags.get('tagSet')
+
+        # work around bug #1190845
+        for tags in tagSet:
+            if tags.get('value') == client_token:
+                instances = self._ec2_ids_to_instances(
+                    context, [tags['resource_id']])
+                resv_id = instances[0]['reservation_id']
+        return resv_id
 
     def _ec2_ids_to_instances(self, context, instance_id, objects=False):
         """Get all instances first, to prevent partial executions."""
@@ -1709,6 +1748,7 @@ class CloudController(object):
         """
         resources = kwargs.get('resource_id', None)
         tags = kwargs.get('tag', None)
+
         if resources is None or tags is None:
             raise exception.EC2APIError(_('resource_id and tag are required'))
 
@@ -1792,7 +1832,6 @@ class CloudController(object):
         :param context: context under which the method is called
         """
         filters = kwargs.get('filter', None)
-
         search_filts = []
         if filters:
             for filter_block in filters:
