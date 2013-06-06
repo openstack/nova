@@ -305,13 +305,14 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
     @catch_notimplementederror
     def test_power_on_running(self):
         instance_ref, network_info = self._get_running_instance()
-        self.connection.power_on(instance_ref)
+        self.connection.power_on(self.ctxt, instance_ref,
+                                 network_info, None)
 
     @catch_notimplementederror
     def test_power_on_powered_off(self):
         instance_ref, network_info = self._get_running_instance()
         self.connection.power_off(instance_ref)
-        self.connection.power_on(instance_ref)
+        self.connection.power_on(self.ctxt, instance_ref, network_info, None)
 
     @catch_notimplementederror
     def test_soft_delete(self):
@@ -401,7 +402,24 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         self.connection.attach_volume({'driver_volume_type': 'fake'},
                                       instance_ref,
                                       '/dev/sda')
-        self.connection.power_on(instance_ref)
+
+        bdm = {
+            'root_device_name': None,
+            'swap': None,
+            'ephemerals': [],
+            'block_device_mapping': [{
+            'instance_uuid': instance_ref['uuid'],
+            'connection_info': {'driver_volume_type': 'fake'},
+            'mount_device': '/dev/sda',
+            'delete_on_termination': False,
+            'virtual_name': None,
+            'snapshot_id': None,
+            'volume_id': 'abcdedf',
+            'volume_size': None,
+            'no_device': None
+            }]
+        }
+        self.connection.power_on(self.ctxt, instance_ref, network_info, bdm)
         self.connection.detach_volume({'driver_volume_type': 'fake'},
                                       instance_ref,
                                       '/dev/sda')

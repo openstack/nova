@@ -19,6 +19,9 @@
 """
 Test suite for VMwareAPI.
 """
+import urllib2
+
+import mox
 
 from nova.compute import power_state
 from nova.compute import task_states
@@ -33,6 +36,22 @@ from nova.tests.vmwareapi import db_fakes
 from nova.tests.vmwareapi import stubs
 from nova.virt.vmwareapi import driver
 from nova.virt.vmwareapi import fake as vmwareapi_fake
+from nova.virt.vmwareapi import vm_util
+from nova.virt.vmwareapi import volume_util
+
+
+class fake_vm_ref(object):
+    def __init__(self):
+        self.value = 4
+        self._type = 'VirtualMachine'
+
+
+class fake_http_resp(object):
+    def __init__(self):
+        self.code = 200
+
+    def read(self):
+        return "console log"
 
 
 class VMwareAPIVMTestCase(test.TestCase):
@@ -256,14 +275,14 @@ class VMwareAPIVMTestCase(test.TestCase):
         self.conn.power_off(self.instance)
         info = self.conn.get_info({'name': 1})
         self._check_vm_info(info, power_state.SHUTDOWN)
-        self.conn.power_on(self.instance)
+        self.conn.power_on(self.context, self.instance, self.network_info)
         info = self.conn.get_info({'name': 1})
         self._check_vm_info(info, power_state.RUNNING)
 
     def test_power_on_non_existent(self):
         self._create_instance_in_the_db()
         self.assertRaises(exception.InstanceNotFound, self.conn.power_on,
-                          self.instance)
+                          self.context, self.instance, self.network_info)
 
     def test_power_off(self):
         self._create_vm()
@@ -316,7 +335,61 @@ class VMwareAPIVMTestCase(test.TestCase):
         pass
 
     def test_get_console_output(self):
-        pass
+        vm_ref = fake_vm_ref()
+        result = fake_http_resp()
+        self._create_instance_in_the_db()
+        self.mox.StubOutWithMock(vm_util, 'get_vm_ref_from_name')
+        self.mox.StubOutWithMock(urllib2, 'urlopen')
+        vm_util.get_vm_ref_from_name(mox.IgnoreArg(), self.instance['name']).\
+        AndReturn(vm_ref)
+        urllib2.urlopen(mox.IgnoreArg()).AndReturn(result)
+
+        self.mox.ReplayAll()
+        self.conn.get_console_output(self.instance)
+
+    def test_diagnostics_non_existent_vm(self):
+        self._create_instance_in_the_db()
+        self.assertRaises(exception.InstanceNotFound,
+                          self.conn.get_diagnostics,
+                          self.instance)
+
+    def test_get_console_pool_info(self):
+        info = self.conn.get_console_pool_info("console_type")
+        self.assertEquals(info['address'], 'test_url')
+        self.assertEquals(info['username'], 'test_username')
+        self.assertEquals(info['password'], 'test_pass')
+
+    def test_get_vnc_console_non_existent(self):
+        self._create_instance_in_the_db()
+        self.assertRaises(exception.InstanceNotFound,
+                          self.conn.get_vnc_console,
+                          self.instance)
+
+    def test_get_vnc_console(self):
+        vm_ref = fake_vm_ref()
+        self._create_instance_in_the_db()
+        self._create_vm()
+        self.mox.StubOutWithMock(self.conn._vmops, '_get_vnc_port')
+        self.conn._vmops._get_vnc_port(mox.IgnoreArg()).AndReturn(5910)
+        self.mox.ReplayAll()
+        vnc_dict = self.conn.get_vnc_console(self.instance)
+        self.assertEquals(vnc_dict['host'], "test_url")
+        self.assertEquals(vnc_dict['port'], 5910)
+
+    def test_host_ip_addr(self):
+        self.assertEquals(self.conn.get_host_ip_addr(), "test_url")
+
+    def test_get_volume_connector(self):
+
+        def fake_iqn(session, instance):
+            return "iscsi-name"
+
+        self._create_instance_in_the_db()
+        self.stubs.Set(volume_util, "get_host_iqn", fake_iqn)
+        connector_dict = self.conn.get_volume_connector(self.instance)
+        self.assertEquals(connector_dict['ip'], "test_url")
+        self.assertEquals(connector_dict['initiator'], "iscsi-name")
+        self.assertEquals(connector_dict['host'], "test_url")
 
 
 class VMwareAPIHostTestCase(test.TestCase):

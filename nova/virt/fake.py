@@ -182,7 +182,7 @@ class FakeDriver(driver.ComputeDriver):
     def power_off(self, instance):
         pass
 
-    def power_on(self, instance):
+    def power_on(self, context, instance, network_info, block_device_info):
         pass
 
     def soft_delete(self, instance):

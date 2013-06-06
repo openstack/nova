@@ -1945,7 +1945,8 @@ class CloudTestCase(test.TestCase):
 
         virt_driver = {}
 
-        def fake_power_on(self, instance):
+        def fake_power_on(self, context, instance, network_info,
+                          block_device_info):
             virt_driver['powered_on'] = True
 
         self.stubs.Set(fake_virt.FakeDriver, 'power_on', fake_power_on)

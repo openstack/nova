@@ -103,7 +103,8 @@ class HyperVDriver(driver.ComputeDriver):
     def power_off(self, instance):
         self._vmops.power_off(instance)
 
-    def power_on(self, instance):
+    def power_on(self, context, instance, network_info,
+                 block_device_info=None):
         self._vmops.power_on(instance)
 
     def live_migration(self, context, instance_ref, dest, post_method,

@@ -219,9 +219,10 @@ class VMwareESXDriver(driver.ComputeDriver):
         """Power off the specified instance."""
         self._vmops.power_off(instance)
 
-    def power_on(self, instance):
+    def power_on(self, context, instance, network_info,
+                 block_device_info=None):
         """Power on the specified instance."""
-        self._vmops.power_on(instance)
+        self._vmops._power_on(instance)
 
     def poll_rebooting_instances(self, timeout, instances):
         """Poll for rebooting instances."""
@@ -371,14 +372,16 @@ class VMwareVCDriver(VMwareESXDriver):
     def finish_revert_migration(self, instance, network_info,
                                 block_device_info=None):
         """Finish reverting a resize, powering back on the instance."""
-        self._vmops.finish_revert_migration(instance)
+        self._vmops.finish_revert_migration(instance, network_info,
+                                            block_device_info)
 
     def finish_migration(self, context, migration, instance, disk_info,
                          network_info, image_meta, resize_instance=False,
                          block_device_info=None):
         """Completes a resize, turning on the migrated instance."""
         self._vmops.finish_migration(context, migration, instance, disk_info,
-                                     network_info, image_meta, resize_instance)
+                                     network_info, image_meta, resize_instance,
+                                     block_device_info)
 
     def live_migration(self, context, instance_ref, dest,
                        post_method, recover_method, block_migration=False,

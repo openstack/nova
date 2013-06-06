@@ -404,7 +404,8 @@ class ComputeDriver(object):
         """Power off the specified instance."""
         raise NotImplementedError()
 
-    def power_on(self, instance):
+    def power_on(self, context, instance, network_info,
+                 block_device_info=None):
         """Power on the specified instance."""
         raise NotImplementedError()
 
