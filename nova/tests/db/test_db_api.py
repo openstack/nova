@@ -636,83 +636,6 @@ class DbApiTestCase(DbTestCase):
         # Ensure that metadata is updated during instance_update
         self._test_instance_update_updates_metadata('metadata')
 
-    def test_instance_fault_create(self):
-        # Ensure we can create an instance fault.
-        ctxt = context.get_admin_context()
-        uuid = str(stdlib_uuid.uuid4())
-
-        # Create a fault
-        fault_values = {
-            'message': 'message',
-            'details': 'detail',
-            'instance_uuid': uuid,
-            'code': 404,
-        }
-        db.instance_fault_create(ctxt, fault_values)
-
-        # Retrieve the fault to ensure it was successfully added
-        faults = db.instance_fault_get_by_instance_uuids(ctxt, [uuid])
-        self.assertEqual(404, faults[uuid][0]['code'])
-
-    def test_instance_fault_get_by_instance(self):
-        # ensure we can retrieve an instance fault by  instance UUID.
-        ctxt = context.get_admin_context()
-        instance1 = db.instance_create(ctxt, {})
-        instance2 = db.instance_create(ctxt, {})
-        uuids = [instance1['uuid'], instance2['uuid']]
-
-        # Create faults
-        fault_values = {
-            'message': 'message',
-            'details': 'detail',
-            'instance_uuid': uuids[0],
-            'code': 404,
-        }
-        fault1 = db.instance_fault_create(ctxt, fault_values)
-
-        fault_values = {
-            'message': 'message',
-            'details': 'detail',
-            'instance_uuid': uuids[0],
-            'code': 500,
-        }
-        fault2 = db.instance_fault_create(ctxt, fault_values)
-
-        fault_values = {
-            'message': 'message',
-            'details': 'detail',
-            'instance_uuid': uuids[1],
-            'code': 404,
-        }
-        fault3 = db.instance_fault_create(ctxt, fault_values)
-
-        fault_values = {
-            'message': 'message',
-            'details': 'detail',
-            'instance_uuid': uuids[1],
-            'code': 500,
-        }
-        fault4 = db.instance_fault_create(ctxt, fault_values)
-
-        instance_faults = db.instance_fault_get_by_instance_uuids(ctxt, uuids)
-
-        expected = {
-                uuids[0]: [fault2, fault1],
-                uuids[1]: [fault4, fault3],
-        }
-
-        self.assertEqual(instance_faults, expected)
-
-    def test_instance_faults_get_by_instance_uuids_no_faults(self):
-        # None should be returned when no faults exist.
-        ctxt = context.get_admin_context()
-        instance1 = db.instance_create(ctxt, {})
-        instance2 = db.instance_create(ctxt, {})
-        uuids = [instance1['uuid'], instance2['uuid']]
-        instance_faults = db.instance_fault_get_by_instance_uuids(ctxt, uuids)
-        expected = {uuids[0]: [], uuids[1]: []}
-        self.assertEqual(expected, instance_faults)
-
     def test_instance_action_start(self):
         """Create an instance action."""
         ctxt = context.get_admin_context()
@@ -2430,6 +2353,69 @@ class BaseInstanceTypeTestCase(test.TestCase, ModelsObjectComparatorMixin):
         v = self._get_base_values()
         v.update(values)
         return db.instance_type_create(self.ctxt, v)
+
+
+class InstanceFaultTestCase(test.TestCase, ModelsObjectComparatorMixin):
+    def setUp(self):
+        super(InstanceFaultTestCase, self).setUp()
+        self.ctxt = context.get_admin_context()
+
+    def _create_fault_values(self, uuid, code=404):
+        return {
+            'message': 'message',
+            'details': 'detail',
+            'instance_uuid': uuid,
+            'code': code,
+            'host': 'localhost'
+        }
+
+    def test_instance_fault_create(self):
+        """Ensure we can create an instance fault."""
+        uuid = str(stdlib_uuid.uuid4())
+
+        # Ensure no faults registered for this instance
+        faults = db.instance_fault_get_by_instance_uuids(self.ctxt, [uuid])
+        self.assertEqual(0, len(faults[uuid]))
+
+        # Create a fault
+        fault_values = self._create_fault_values(uuid)
+        fault = db.instance_fault_create(self.ctxt, fault_values)
+
+        ignored_keys = ['deleted', 'created_at', 'updated_at',
+                        'deleted_at', 'id']
+        self._assertEqualObjects(fault_values, fault, ignored_keys)
+
+        # Retrieve the fault to ensure it was successfully added
+        faults = db.instance_fault_get_by_instance_uuids(self.ctxt, [uuid])
+        self.assertEqual(1, len(faults[uuid]))
+        self._assertEqualObjects(fault, faults[uuid][0])
+
+    def test_instance_fault_get_by_instance(self):
+        """Ensure we can retrieve faults for instance."""
+        uuids = [str(stdlib_uuid.uuid4()), str(stdlib_uuid.uuid4())]
+        fault_codes = [404, 500]
+        expected = {}
+
+        # Create faults
+        for uuid in uuids:
+            expected[uuid] = []
+            for code in fault_codes:
+                fault_values = self._create_fault_values(uuid, code)
+                fault = db.instance_fault_create(self.ctxt, fault_values)
+                expected[uuid].append(fault)
+
+        # Ensure faults are saved
+        faults = db.instance_fault_get_by_instance_uuids(self.ctxt, uuids)
+        self.assertEqual(len(expected), len(faults))
+        for uuid in uuids:
+            self._assertEqualListsOfObjects(expected[uuid], faults[uuid])
+
+    def test_instance_faults_get_by_instance_uuids_no_faults(self):
+        uuid = str(stdlib_uuid.uuid4())
+        # None should be returned when no faults exist.
+        faults = db.instance_fault_get_by_instance_uuids(self.ctxt, [uuid])
+        expected = {uuid: []}
+        self.assertEqual(expected, faults)
 
 
 class InstanceTypeTestCase(BaseInstanceTypeTestCase):
