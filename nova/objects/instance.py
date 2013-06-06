@@ -257,7 +257,7 @@ class Instance(base.NovaObject):
                 self[field] != current[field]):
                 self[field] = current[field]
 
-    def obj_load(self, attrname):
+    def obj_load_attr(self, attrname):
         extra = []
         if attrname == 'system_metadata':
             extra.append('system_metadata')

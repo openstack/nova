@@ -36,7 +36,7 @@ class MyObj(base.NovaObject):
               'missing': str,
               }
 
-    def obj_load(self, attrname):
+    def obj_load_attr(self, attrname):
         setattr(self, attrname, 'loaded!')
 
     @base.remotable_classmethod
@@ -304,6 +304,19 @@ class _TestObject(object):
     def test_load(self):
         obj = MyObj()
         self.assertEqual(obj.bar, 'loaded!')
+
+    def test_load_in_base(self):
+        class Foo(base.NovaObject):
+            fields = {'foobar': int}
+        obj = Foo()
+        # NOTE(danms): Can't use assertRaisesRegexp() because of py26
+        raised = False
+        try:
+            obj.foobar
+        except NotImplementedError as ex:
+            raised = True
+        self.assertTrue(raised)
+        self.assertTrue('foobar' in str(ex))
 
     def test_loaded_in_primitive(self):
         obj = MyObj()
