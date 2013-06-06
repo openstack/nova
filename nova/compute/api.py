@@ -2172,13 +2172,6 @@ class API(base.Base):
         if not same_instance_type and new_instance_type['disabled']:
             raise exception.FlavorNotFound(flavor_id=flavor_id)
 
-        # NOTE(markwash): look up the image early to avoid auth problems later
-        image_ref = instance.get('image_ref')
-        if image_ref:
-            image = self.image_service.show(context, image_ref)
-        else:
-            image = {}
-
         if same_instance_type and flavor_id:
             raise exception.CannotResizeToSameFlavor()
 
@@ -2215,12 +2208,6 @@ class API(base.Base):
                 expected_task_state=None,
                 progress=0, **kwargs)
 
-        request_spec = {
-                'instance_type': new_instance_type,
-                'instance_uuids': [instance['uuid']],
-                'instance_properties': instance,
-                'image': image}
-
         filter_properties = {'ignore_hosts': []}
 
         if not CONF.allow_resize_to_same_host:
@@ -2237,18 +2224,14 @@ class API(base.Base):
                           project_id=instance['project_id'])
             reservations = []
 
-        args = {
-            "instance": instance,
-            "instance_type": new_instance_type,
-            "image": image,
-            "request_spec": jsonutils.to_primitive(request_spec),
-            "filter_properties": filter_properties,
-            "reservations": reservations,
-        }
-
         self._record_action_start(context, instance, instance_actions.RESIZE)
 
-        self.scheduler_rpcapi.prep_resize(context, **args)
+        scheduler_hint = {'filter_properties': filter_properties}
+        self.compute_task_api.migrate_server(context, instance,
+                scheduler_hint=scheduler_hint,
+                live=False, rebuild=False, flavor=new_instance_type,
+                block_migration=None, disk_over_commit=None,
+                reservations=reservations)
 
     @wrap_check_policy
     @check_instance_lock

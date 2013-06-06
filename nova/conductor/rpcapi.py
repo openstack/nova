@@ -534,6 +534,7 @@ class ComputeTaskAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.1 - Added unified migrate_server call.
     1.2 - Added build_instances
     1.3 - Added unshelve_instance
+    1.4 - Added reservations to migrate_server.
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -546,14 +547,15 @@ class ComputeTaskAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 serializer=objects_base.NovaObjectSerializer())
 
     def migrate_server(self, context, instance, scheduler_hint, live, rebuild,
-                  flavor, block_migration, disk_over_commit):
+                  flavor, block_migration, disk_over_commit,
+                  reservations=None):
         instance_p = jsonutils.to_primitive(instance)
         flavor_p = jsonutils.to_primitive(flavor)
         msg = self.make_msg('migrate_server', instance=instance_p,
             scheduler_hint=scheduler_hint, live=live, rebuild=rebuild,
             flavor=flavor_p, block_migration=block_migration,
-            disk_over_commit=disk_over_commit)
-        return self.call(context, msg, version='1.1')
+            disk_over_commit=disk_over_commit, reservations=reservations)
+        return self.call(context, msg, version='1.4')
 
     def build_instances(self, context, instances, image, filter_properties,
             admin_password, injected_files, requested_networks,
