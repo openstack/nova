@@ -47,13 +47,17 @@ class AggregateInstanceExtraSpecsFilter(filters.BaseHostFilter):
             aggregate_vals = metadata.get(key, None)
             if not aggregate_vals:
                 LOG.debug(_("%(host_state)s fails instance_type extra_specs "
-                    "requirements"), {'host_state': host_state})
+                    "requirements. Extra_spec %(key)s is not in aggregate."),
+                    {'host_state': host_state, 'key': key})
                 return False
             for aggregate_val in aggregate_vals:
                 if extra_specs_ops.match(aggregate_val, req):
                     break
             else:
                 LOG.debug(_("%(host_state)s fails instance_type extra_specs "
-                    "requirements"), {'host_state': host_state})
+                            "requirements. '%(aggregate_vals)s' do not "
+                            "match '%(req)s'"),
+                          {'host_state': host_state, 'req': req,
+                           'aggregate_vals': aggregate_vals})
                 return False
         return True
