@@ -25,7 +25,7 @@ project = 'nova'
 
 setuptools.setup(
       name=project,
-      version=common_setup.get_version(project, '2013.1.2'),
+      version=common_setup.get_version(project, '2013.1.3'),
       description='cloud computing fabric controller',
       author='OpenStack',
       author_email='nova@lists.launchpad.net',
