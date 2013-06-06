@@ -45,6 +45,7 @@ import collections
 import commands
 import ConfigParser
 import datetime
+import glob
 import os
 import urlparse
 import uuid
@@ -1517,3 +1518,30 @@ class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         bm_nodes = db_utils.get_table(engine, 'bm_nodes')
         columns = [c.name for c in bm_nodes.columns]
         self.assertNotIn(u'prov_mac_address', columns)
+
+
+class ProjectTestCase(test.TestCase):
+
+    def test_all_migrations_have_downgrade(self):
+        topdir = os.path.normpath(os.path.dirname(__file__) + '/../../../')
+        py_glob = os.path.join(topdir, "nova", "db", "sqlalchemy",
+                               "migrate_repo", "versions", "*.py")
+
+        missing_downgrade = []
+        for path in glob.iglob(py_glob):
+            has_upgrade = False
+            has_downgrade = False
+            with open(path, "r") as f:
+                for line in f:
+                    if 'def upgrade(' in line:
+                        has_upgrade = True
+                    if 'def downgrade(' in line:
+                        has_downgrade = True
+
+                if has_upgrade and not has_downgrade:
+                    fname = os.path.basename(path)
+                    missing_downgrade.append(fname)
+
+        helpful_msg = (_("The following migrations are missing a downgrade:"
+                         "\n\t%s") % '\n\t'.join(sorted(missing_downgrade)))
+        self.assert_(not missing_downgrade, helpful_msg)
