@@ -972,7 +972,6 @@ class Resource(wsgi.Application):
 
             # Run post-processing extensions
             if resp_obj:
-                _set_request_id_header(request, resp_obj)
                 # Do a preserialize to set up the response object
                 serializers = getattr(meth, 'wsgi_serializers', {})
                 resp_obj._bind_method_serializers(serializers)
@@ -987,6 +986,9 @@ class Resource(wsgi.Application):
             if resp_obj and not response:
                 response = resp_obj.serialize(request, accept,
                                               self.default_serializers)
+
+        if context and hasattr(response, 'headers'):
+            response.headers.add('x-compute-request-id', context.request_id)
 
         return response
 
