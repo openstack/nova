@@ -3719,7 +3719,12 @@ class VolumeUsageDBApiTestCase(test.TestCase):
         ctxt = context.get_admin_context()
         now = timeutils.utcnow()
         start_time = now - datetime.timedelta(seconds=10)
-        refreshed_time = now - datetime.timedelta(seconds=5)
+
+        self.mox.StubOutWithMock(timeutils, 'utcnow')
+        timeutils.utcnow().AndReturn(now)
+        timeutils.utcnow().AndReturn(now)
+        timeutils.utcnow().AndReturn(now)
+        self.mox.ReplayAll()
 
         expected_vol_usages = [{'volume_id': u'1',
                                 'instance_uuid': 'fake-instance-uuid1',
@@ -3729,10 +3734,12 @@ class VolumeUsageDBApiTestCase(test.TestCase):
                                 'curr_read_bytes': 2000,
                                 'curr_writes': 3000,
                                 'curr_write_bytes': 4000,
+                                'curr_last_refreshed': now,
                                 'tot_reads': 0,
                                 'tot_read_bytes': 0,
                                 'tot_writes': 0,
-                                'tot_write_bytes': 0},
+                                'tot_write_bytes': 0,
+                                'tot_last_refreshed': None},
                                {'volume_id': u'2',
                                 'instance_uuid': 'fake-instance-uuid2',
                                 'project_id': 'fake-project-uuid2',
@@ -3744,7 +3751,8 @@ class VolumeUsageDBApiTestCase(test.TestCase):
                                 'tot_reads': 0,
                                 'tot_read_bytes': 0,
                                 'tot_writes': 0,
-                                'tot_write_bytes': 0}]
+                                'tot_write_bytes': 0,
+                                'tot_last_refreshed': None}]
 
         def _compare(vol_usage, expected):
             for key, value in expected.items():
@@ -3770,8 +3778,7 @@ class VolumeUsageDBApiTestCase(test.TestCase):
                                         instance_id='fake-instance-uuid1',
                                         project_id='fake-project-uuid1',
                                         user_id='fake-user-uuid1',
-                                        availability_zone='fake-az',
-                                        last_refreshed=refreshed_time)
+                                        availability_zone='fake-az')
 
         vol_usages = db.vol_get_usage_by_time(ctxt, start_time)
         self.assertEqual(len(vol_usages), 2)
@@ -3780,8 +3787,18 @@ class VolumeUsageDBApiTestCase(test.TestCase):
 
     def test_vol_usage_update_totals_update(self):
         ctxt = context.get_admin_context()
-        now = timeutils.utcnow()
+        now = datetime.datetime(1, 1, 1, 1, 0, 0)
         start_time = now - datetime.timedelta(seconds=10)
+
+        self.mox.StubOutWithMock(timeutils, 'utcnow')
+        timeutils.utcnow().AndReturn(now)
+        now1 = now + datetime.timedelta(minutes=1)
+        timeutils.utcnow().AndReturn(now1)
+        now2 = now + datetime.timedelta(minutes=2)
+        timeutils.utcnow().AndReturn(now2)
+        now3 = now + datetime.timedelta(minutes=3)
+        timeutils.utcnow().AndReturn(now3)
+        self.mox.ReplayAll()
 
         vol_usage = db.vol_usage_update(ctxt, 1, rd_req=100, rd_bytes=200,
                                         wr_req=300, wr_bytes=400,
@@ -3833,14 +3850,16 @@ class VolumeUsageDBApiTestCase(test.TestCase):
                                'tot_read_bytes': 800,
                                'tot_writes': 1000,
                                'tot_write_bytes': 1200,
+                               'tot_last_refreshed': now3,
                                'curr_reads': 0,
                                'curr_read_bytes': 0,
                                'curr_writes': 0,
-                               'curr_write_bytes': 0}
+                               'curr_write_bytes': 0,
+                               'curr_last_refreshed': now2}
 
         self.assertEquals(1, len(vol_usages))
         for key, value in expected_vol_usages.items():
-            self.assertEqual(vol_usages[0][key], value)
+            self.assertEqual(vol_usages[0][key], value, key)
 
     def test_vol_usage_update_when_blockdevicestats_reset(self):
         ctxt = context.get_admin_context()

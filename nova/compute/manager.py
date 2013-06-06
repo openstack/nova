@@ -3782,7 +3782,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         return compute_host_bdms
 
-    def _update_volume_usage_cache(self, context, vol_usages, refreshed):
+    def _update_volume_usage_cache(self, context, vol_usages):
         """Updates the volume usage cache table with a list of stats."""
         for usage in vol_usages:
             # Allow switching of greenthreads between queries.
@@ -3792,8 +3792,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                 usage['rd_bytes'],
                                                 usage['wr_req'],
                                                 usage['wr_bytes'],
-                                                usage['instance'],
-                                                last_refreshed=refreshed)
+                                                usage['instance'])
 
     @periodic_task.periodic_task
     def _poll_volume_usage(self, context, start_time=None):
@@ -3820,8 +3819,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         except NotImplementedError:
             return
 
-        refreshed = timeutils.utcnow()
-        self._update_volume_usage_cache(context, vol_usages, refreshed)
+        self._update_volume_usage_cache(context, vol_usages)
 
     @periodic_task.periodic_task
     def _report_driver_status(self, context):

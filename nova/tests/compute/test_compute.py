@@ -427,15 +427,13 @@ class ComputeVolumeTestCase(BaseTestCase):
         curr_time = time.time()
         self.mox.StubOutWithMock(utils, 'last_completed_audit_period')
         self.mox.StubOutWithMock(self.compute, '_get_host_volume_bdms')
-        self.mox.StubOutWithMock(timeutils, 'utcnow')
         self.mox.StubOutWithMock(self.compute, '_update_volume_usage_cache')
         self.stubs.Set(self.compute.driver, 'get_all_volume_usage',
                        lambda x, y: [3, 4])
         # All the mocks are called
         utils.last_completed_audit_period().AndReturn((10, 20))
         self.compute._get_host_volume_bdms(ctxt, 'MockHost').AndReturn([1, 2])
-        timeutils.utcnow().AndReturn(5)
-        self.compute._update_volume_usage_cache(ctxt, [3, 4], 5)
+        self.compute._update_volume_usage_cache(ctxt, [3, 4])
         self.mox.ReplayAll()
         CONF.volume_usage_poll_interval = 10
         self.compute._last_vol_usage_poll = 0
