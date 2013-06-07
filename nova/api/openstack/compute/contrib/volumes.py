@@ -255,7 +255,7 @@ class VolumeController(wsgi.Controller):
                 availability_zone=availability_zone
                 )
         except exception.InvalidInput as err:
-            raise exc.HTTPBadRequest(explanation=str(err))
+            raise exc.HTTPBadRequest(explanation=err.format_message())
 
         # TODO(vish): Instance should be None at db layer instead of
         #             trying to lazy load, but for now we turn it into

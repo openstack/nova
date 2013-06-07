@@ -518,7 +518,7 @@ class ServersController(wsgi.Controller):
         try:
             servers = self._get_servers(req, is_detail=False)
         except exception.Invalid as err:
-            raise exc.HTTPBadRequest(explanation=str(err))
+            raise exc.HTTPBadRequest(explanation=err.format_message())
         return servers
 
     @wsgi.serializers(xml=ServersTemplate)
@@ -527,7 +527,7 @@ class ServersController(wsgi.Controller):
         try:
             servers = self._get_servers(req, is_detail=True)
         except exception.Invalid as err:
-            raise exc.HTTPBadRequest(explanation=str(err))
+            raise exc.HTTPBadRequest(explanation=err.format_message())
         return servers
 
     def _add_instance_faults(self, ctxt, instances):
@@ -630,7 +630,7 @@ class ServersController(wsgi.Controller):
             utils.check_string_length(value, name, min_length=1,
                                       max_length=max_length)
         except exception.InvalidInput as e:
-            raise exc.HTTPBadRequest(explanation=str(e))
+            raise exc.HTTPBadRequest(explanation=e.format_message())
 
     def _validate_server_name(self, value):
         self._check_string_length(value, 'Server name', max_length=255)
@@ -1460,7 +1460,7 @@ class ServersController(wsgi.Controller):
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                         'createImage')
         except exception.Invalid as err:
-            raise exc.HTTPBadRequest(explanation=str(err))
+            raise exc.HTTPBadRequest(explanation=err.format_message())
 
         # build location of newly-created image entity
         image_id = str(image['id'])
