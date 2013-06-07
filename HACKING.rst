@@ -262,18 +262,18 @@ uses.) More information about testr can be found at:
 http://wiki.openstack.org/testr
 
 
-openstack-common
+oslo-incubator
 ----------------
 
-A number of modules from openstack-common are imported into the project.
+A number of modules from oslo-incubator are imported into the project.
 
-These modules are "incubating" in openstack-common and are kept in sync
-with the help of openstack-common's update.py script. See:
+These modules are "incubating" in oslo-incubator and are kept in sync
+with the help of oslo's update.py script. See:
 
-  http://wiki.openstack.org/CommonLibrary#Incubation
+  https://wiki.openstack.org/wiki/Oslo#Incubation
 
 The copy of the code should never be directly modified here. Please
-always update openstack-common first and then run the script to copy
+always update oslo-incubator first and then run the script to copy
 the changes across.
 
 OpenStack Trademark
