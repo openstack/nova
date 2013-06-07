@@ -279,6 +279,34 @@ def convert_datetimes(values, *datetime_keys):
             values[key] = timeutils.parse_strtime(values[key])
     return values
 
+
+def _sync_instances(context, project_id, session):
+    return dict(zip(('instances', 'cores', 'ram'),
+                    _instance_data_get_for_project(
+                context, project_id, session)))
+
+
+def _sync_floating_ips(context, project_id, session):
+    return dict(floating_ips=_floating_ip_count_by_project(
+                context, project_id, session))
+
+
+def _sync_fixed_ips(context, project_id, session):
+    return dict(fixed_ips=_fixed_ip_count_by_project(
+                context, project_id, session))
+
+
+def _sync_security_groups(context, project_id, session):
+    return dict(security_groups=_security_group_count_by_project(
+                context, project_id, session))
+
+QUOTA_SYNC_FUNCTIONS = {
+    '_sync_instances': _sync_instances,
+    '_sync_floating_ips': _sync_floating_ips,
+    '_sync_fixed_ips': _sync_fixed_ips,
+    '_sync_security_groups': _sync_security_groups,
+}
+
 ###################
 
 
@@ -743,8 +771,7 @@ def floating_ip_create(context, values):
     return floating_ip_ref
 
 
-@require_context
-def floating_ip_count_by_project(context, project_id, session=None):
+def _floating_ip_count_by_project(context, project_id, session=None):
     nova.context.authorize_project_context(context, project_id)
     # TODO(tr3buchet): why leave auto_assigned floating IPs out?
     return model_query(context, models.FloatingIp, read_deleted="no",
@@ -1286,8 +1313,7 @@ def fixed_ip_update(context, address, values):
                                  update(values)
 
 
-@require_context
-def fixed_ip_count_by_project(context, project_id, session=None):
+def _fixed_ip_count_by_project(context, project_id, session=None):
     nova.context.authorize_project_context(context, project_id)
     return model_query(context, models.FixedIp.id,
                        base_model=models.FixedIp, read_deleted="no",
@@ -1499,8 +1525,7 @@ def instance_create(context, values):
     return instance_ref
 
 
-@require_admin_context
-def instance_data_get_for_project(context, project_id, session=None):
+def _instance_data_get_for_project(context, project_id, session=None):
     result = model_query(context,
                          func.count(models.Instance.id),
                          func.sum(models.Instance.vcpus),
@@ -2870,7 +2895,7 @@ def quota_reserve(context, resources, quotas, deltas, expire,
             # OK, refresh the usage
             if refresh:
                 # Grab the sync routine
-                sync = resources[resource].sync
+                sync = QUOTA_SYNC_FUNCTIONS[resources[resource].sync]
 
                 updates = sync(elevated, project_id, session)
                 for res, in_use in updates.items():
@@ -3459,13 +3484,13 @@ def security_group_destroy(context, security_group_id):
                 soft_delete()
 
 
-@require_context
-def security_group_count_by_project(context, project_id, session=None):
+def _security_group_count_by_project(context, project_id, session=None):
     nova.context.authorize_project_context(context, project_id)
     return model_query(context, models.SecurityGroup, read_deleted="no",
                        session=session).\
                    filter_by(project_id=project_id).\
                    count()
+
 
 ###################
 

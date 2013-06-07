@@ -47,6 +47,7 @@ from nova.openstack.common.db.sqlalchemy import session as db_session
 from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
 from nova.quota import ReservableResource
+from nova.quota import resources
 from nova import test
 from nova.tests import matchers
 from nova import utils
@@ -77,11 +78,15 @@ def _quota_reserve(context, project_id):
     resources = {}
     deltas = {}
     for i in range(3):
-        resource = 'res%d' % i
+        resource = 'resource%d' % i
+        sync_name = '_sync_%s' % resource
         quotas[resource] = db.quota_create(context, project_id, resource, i)
-        resources[resource] = ReservableResource(resource,
-                            get_sync(resource, i), 'quota_res_%d' % i)
+        resources[resource] = ReservableResource(
+            resource, sync_name, 'quota_res_%d' % i)
         deltas[resource] = i
+        setattr(sqlalchemy_api, sync_name, get_sync(resource, i))
+        sqlalchemy_api.QUOTA_SYNC_FUNCTIONS[sync_name] = getattr(
+            sqlalchemy_api, sync_name)
     return db.quota_reserve(context, resources, quotas, deltas,
                     datetime.datetime.utcnow(), datetime.datetime.utcnow(),
                     datetime.timedelta(days=1), project_id)
@@ -806,33 +811,6 @@ class ReservationTestCase(test.TestCase, ModelsObjectComparatorMixin):
                                         datetime.timedelta(days=1),
                 'usage': {'id': 1}}
 
-    def _quota_reserve(self):
-        """Create sample Quota, QuotaUsage and Reservation objects.
-
-        There is no method db.quota_usage_create(), so we have to use
-        db.quota_reserve() for creating QuotaUsage objects.
-
-        Returns reservations uuids.
-
-        """
-        def get_sync(resource, usage):
-            def sync(elevated, project_id, session):
-                return {resource: usage}
-            return sync
-        quotas = {}
-        resources = {}
-        deltas = {}
-        for i in range(3):
-            resource = 'resource%d' % i
-            quotas[resource] = db.quota_create(self.ctxt, 'project1',
-                                                            resource, i)
-            resources[resource] = ReservableResource(resource,
-                                get_sync(resource, i), 'quota_res_%d' % i)
-            deltas[resource] = i
-        return db.quota_reserve(self.ctxt, resources, quotas, deltas,
-                        datetime.datetime.utcnow(), datetime.datetime.utcnow(),
-                        datetime.timedelta(days=1), self.values['project_id'])
-
     def test_reservation_create(self):
         reservation = db.reservation_create(self.ctxt, **self.values)
         self._assertEqualObjects(self.values, reservation, ignored_keys=(
@@ -852,7 +830,7 @@ class ReservationTestCase(test.TestCase, ModelsObjectComparatorMixin):
                                     self.ctxt, 'non-exitent-resevation-uuid')
 
     def test_reservation_commit(self):
-        reservations = self._quota_reserve()
+        reservations = _quota_reserve(self.ctxt, 'project1')
         expected = {'project_id': 'project1',
                 'resource0': {'reserved': 0, 'in_use': 0},
                 'resource1': {'reserved': 1, 'in_use': 1},
@@ -871,7 +849,7 @@ class ReservationTestCase(test.TestCase, ModelsObjectComparatorMixin):
                                             self.ctxt, 'project1'))
 
     def test_reservation_rollback(self):
-        reservations = self._quota_reserve()
+        reservations = _quota_reserve(self.ctxt, 'project1')
         expected = {'project_id': 'project1',
                 'resource0': {'reserved': 0, 'in_use': 0},
                 'resource1': {'reserved': 1, 'in_use': 1},
@@ -892,7 +870,7 @@ class ReservationTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def test_reservation_expire(self):
         self.values['expire'] = datetime.datetime.utcnow() + datetime.\
                         timedelta(days=1)
-        self._quota_reserve()
+        _quota_reserve(self.ctxt, 'project1')
         db.reservation_expire(self.ctxt)
 
         expected = {'project_id': 'project1',
@@ -1149,22 +1127,6 @@ class SecurityGroupTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
         self._assertEqualListsOfObjects(security_groups, real,
                                         ignored_keys=['instances'])
-
-    def test_security_group_count_by_project(self):
-        values = [
-            {'name': 'fake1', 'project_id': 'fake_proj1'},
-            {'name': 'fake2', 'project_id': 'fake_proj1'},
-            {'name': 'fake3', 'project_id': 'fake_proj2'},
-        ]
-        for vals in values:
-            self._create_security_group(vals)
-
-        real = []
-        for project in ('fake_proj1', 'fake_proj2'):
-            real.append(db.security_group_count_by_project(self.ctxt, project))
-        expected = [2, 1]
-
-        self.assertEquals(expected, real)
 
     def test_security_group_in_use(self):
         instance = db.instance_create(self.ctxt, dict(host='foo'))
@@ -1627,6 +1589,13 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         set_and_check(meta)
         del meta['gigawatts']
         set_and_check(meta)
+
+    def test_security_group_in_use(self):
+        instance = db.instance_create(self.ctxt, dict(host='foo'))
+        values = [
+            {'instances': [instance]},
+            {'instances': []},
+        ]
 
     def test_instance_update_updates_system_metadata(self):
         # Ensure that system_metadata is updated during instance_update
@@ -2877,32 +2846,6 @@ class FixedIPTestCase(BaseInstanceTypeTestCase):
         ips_list = db.fixed_ips_by_virtual_interface(self.ctxt, vif.id)
         self.assertEquals(0, len(ips_list))
 
-    def test_fixed_ip_count_by_project_one_ip(self):
-        PROJECT_ID = "project_id"
-        instance_uuid = self._create_instance(project_id=PROJECT_ID)
-        db.fixed_ip_create(self.ctxt, dict(
-            instance_uuid=instance_uuid, address='address'))
-
-        ips_count = db.fixed_ip_count_by_project(self.ctxt, PROJECT_ID)
-        self.assertEquals(1, ips_count)
-
-    def test_fixed_ip_count_by_project_two_ips_for_different_instances(self):
-        PROJECT_ID = "project_id"
-        instance_uuid = self._create_instance(project_id=PROJECT_ID)
-
-        db.fixed_ip_create(self.ctxt, dict(
-            instance_uuid=instance_uuid, address='address_1'))
-
-        another_instance_for_this_project =\
-            db.instance_create(self.ctxt, dict(project_id=PROJECT_ID))
-
-        db.fixed_ip_create(self.ctxt, dict(
-            instance_uuid=another_instance_for_this_project['uuid'],
-            address='address_2'))
-
-        ips_count = db.fixed_ip_count_by_project(self.ctxt, PROJECT_ID)
-        self.assertEquals(2, ips_count)
-
     def create_fixed_ip(self, **params):
         default_params = {'address': '192.168.0.1'}
         default_params.update(params)
@@ -3342,26 +3285,6 @@ class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self._create_floating_ip({})
         self.assertRaises(exception.FloatingIpExists,
                           self._create_floating_ip, {})
-
-    def test_floating_ip_count_by_project(self):
-        projects = {
-            'project1': ['1.1.1.1', '2.2.2.2', '3.3.3.3'],
-            'project2': ['4.4.4.4', '5.5.5.5'],
-            'project3': ['6.6.6.6']
-        }
-        for project_id, addresses in projects.iteritems():
-            for address in addresses:
-                self._create_floating_ip({'project_id': project_id,
-                                          'address': address})
-        for project_id, addresses in projects.iteritems():
-            real_count = db.floating_ip_count_by_project(self.ctxt, project_id)
-            self.assertEqual(len(addresses), real_count)
-
-    def test_floating_ip_count_by_project_not_authorized(self):
-        ctxt = context.RequestContext(user_id='a', project_id='abc',
-                                      is_admin=False)
-        self.assertRaises(exception.NotAuthorized,
-                          db.floating_ip_count_by_project, ctxt, 'def')
 
     def _create_fixed_ip(self, params):
         default_params = {'address': '192.168.0.1'}
@@ -4708,14 +4631,56 @@ class QuotaTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertRaises(exception.ProjectQuotaNotFound,
             db.quota_get, self.ctxt, 'project1', 'resource1')
 
-    def test_quota_reserve(self):
-        reservations = _quota_reserve(self.ctxt, 'project1')
-        self.assertEqual(len(reservations), 3)
-        res_names = ['res0', 'res1', 'res2']
-        for uuid in reservations:
-            reservation = db.reservation_get(self.ctxt, uuid)
-            self.assertTrue(reservation.resource in res_names)
-            res_names.remove(reservation.resource)
+    def test_quota_reserve_all_resources(self):
+        quotas = {}
+        deltas = {}
+        reservable_resources = {}
+        for i, resource in enumerate(resources):
+            if isinstance(resource, ReservableResource):
+                quotas[resource.name] = db.quota_create(self.ctxt, 'project1',
+                                                        resource.name, 100)
+                deltas[resource.name] = i
+                reservable_resources[resource.name] = resource
+
+        usages = {'instances': 3, 'cores': 6, 'ram': 9}
+        instances = []
+        for i in range(3):
+            instances.append(db.instance_create(self.ctxt,
+                             {'vcpus': 2, 'memory_mb': 3,
+                             'project_id': 'project1'}))
+
+        usages['fixed_ips'] = 2
+        network = db.network_create_safe(self.ctxt, {})
+        for i in range(2):
+            address = '192.168.0.%d' % i
+            ip = db.fixed_ip_create(self.ctxt, {'project_id': 'project1',
+                                                'address': address,
+                                                'network_id': network['id']})
+            db.fixed_ip_associate(self.ctxt, address,
+                                  instances[0].uuid, network['id'])
+
+        usages['floating_ips'] = 5
+        for i in range(5):
+            db.floating_ip_create(self.ctxt, {'project_id': 'project1'})
+
+        usages['security_groups'] = 3
+        for i in range(3):
+            db.security_group_create(self.ctxt, {'project_id': 'project1'})
+
+        reservations_uuids = db.quota_reserve(self.ctxt, reservable_resources,
+                                              quotas, deltas, None,
+                                              None, None, 'project1')
+        resources_names = reservable_resources.keys()
+        for reservation_uuid in reservations_uuids:
+            reservation = db.reservation_get(self.ctxt, reservation_uuid)
+            usage = db.quota_usage_get(self.ctxt, 'project1',
+                                       reservation.resource)
+            self.assertEqual(usage.in_use, usages[reservation.resource],
+                             'Resource: %s' % reservation.resource)
+            self.assertEqual(usage.reserved, deltas[reservation.resource])
+            self.assertIn(reservation.resource, resources_names)
+            resources_names.remove(reservation.resource)
+        self.assertEqual(len(resources_names), 0)
 
     def test_quota_destroy_all_by_project(self):
         reservations = _quota_reserve(self.ctxt, 'project1')
@@ -4735,8 +4700,8 @@ class QuotaTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_quota_usage_get(self):
         _quota_reserve(self.ctxt, 'p1')
-        quota_usage = db.quota_usage_get(self.ctxt, 'p1', 'res0')
-        expected = {'resource': 'res0', 'project_id': 'p1',
+        quota_usage = db.quota_usage_get(self.ctxt, 'p1', 'resource0')
+        expected = {'resource': 'resource0', 'project_id': 'p1',
                     'in_use': 0, 'reserved': 0, 'total': 0}
         for key, value in expected.iteritems():
             self.assertEqual(value, quota_usage[key])
@@ -4744,9 +4709,9 @@ class QuotaTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def test_quota_usage_get_all_by_project(self):
         _quota_reserve(self.ctxt, 'p1')
         expected = {'project_id': 'p1',
-                    'res0': {'in_use': 0, 'reserved': 0},
-                    'res1': {'in_use': 1, 'reserved': 1},
-                    'res2': {'in_use': 2, 'reserved': 2}}
+                    'resource0': {'in_use': 0, 'reserved': 0},
+                    'resource1': {'in_use': 1, 'reserved': 1},
+                    'resource2': {'in_use': 2, 'reserved': 2}}
         self.assertEqual(expected, db.quota_usage_get_all_by_project(
                          self.ctxt, 'p1'))
 
@@ -4756,9 +4721,10 @@ class QuotaTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_quota_usage_update(self):
         _quota_reserve(self.ctxt, 'p1')
-        db.quota_usage_update(self.ctxt, 'p1', 'res0', in_use=42, reserved=43)
-        quota_usage = db.quota_usage_get(self.ctxt, 'p1', 'res0')
-        expected = {'resource': 'res0', 'project_id': 'p1',
+        db.quota_usage_update(self.ctxt, 'p1', 'resource0', in_use=42,
+                              reserved=43)
+        quota_usage = db.quota_usage_get(self.ctxt, 'p1', 'resource0')
+        expected = {'resource': 'resource0', 'project_id': 'p1',
                     'in_use': 42, 'reserved': 43, 'total': 85}
         for key, value in expected.iteritems():
             self.assertEqual(value, quota_usage[key])

@@ -447,36 +447,6 @@ class QuotaEngineTestCase(test.TestCase):
                 test_resource3=resources[2],
                 ))
 
-    def test_sync_predeclared(self):
-        quota_obj = quota.QuotaEngine()
-
-        def spam(*args, **kwargs):
-            pass
-
-        resource = quota.ReservableResource('test_resource', spam)
-        quota_obj.register_resource(resource)
-
-        self.assertEqual(resource.sync, spam)
-
-    def test_sync_multi(self):
-        quota_obj = quota.QuotaEngine()
-
-        def spam(*args, **kwargs):
-            pass
-
-        resources = [
-            quota.ReservableResource('test_resource1', spam),
-            quota.ReservableResource('test_resource2', spam),
-            quota.ReservableResource('test_resource3', spam),
-            quota.ReservableResource('test_resource4', spam),
-            ]
-        quota_obj.register_resources(resources[:2])
-
-        self.assertEqual(resources[0].sync, spam)
-        self.assertEqual(resources[1].sync, spam)
-        self.assertEqual(resources[2].sync, spam)
-        self.assertEqual(resources[3].sync, spam)
-
     def test_get_by_project(self):
         context = FakeContext('test_project', 'test_class')
         driver = FakeDriver(by_project=dict(
@@ -1433,10 +1403,12 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
                         return {res_name: self.usages[res_name].in_use - 1}
                 return {res_name: 0}
             return sync
-
         self.resources = {}
+
         for res_name in ('instances', 'cores', 'ram'):
-            res = quota.ReservableResource(res_name, make_sync(res_name))
+            method_name = '_sync_%s' % res_name
+            sqa_api.QUOTA_SYNC_FUNCTIONS[method_name] = make_sync(res_name)
+            res = quota.ReservableResource(res_name, '_sync_%s' % res_name)
             self.resources[res_name] = res
 
         self.expire = timeutils.utcnow() + datetime.timedelta(seconds=3600)

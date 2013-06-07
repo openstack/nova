@@ -218,9 +218,9 @@ class DbQuotaDriver(object):
         :param resources: A dictionary of the registered resources.
         :param keys: A list of the desired quotas to retrieve.
         :param has_sync: If True, indicates that the resource must
-                         have a sync attribute; if False, indicates
+                         have a sync function; if False, indicates
                          that the resource must NOT have a sync
-                         attribute.
+                         function.
         :param project_id: Specify the project_id if current context
                            is admin and admin wants to impact on
                            common user's tenant.
@@ -716,14 +716,16 @@ class ReservableResource(BaseResource):
     """Describe a reservable resource."""
 
     def __init__(self, name, sync, flag=None):
-        """
-        Initializes a ReservableResource.
+        """Initializes a ReservableResource.
 
         Reservable resources are those resources which directly
-        correspond to objects in the database, i.e., instances, cores,
-        etc.  A ReservableResource must be constructed with a usage
-        synchronization function, which will be called to determine the
-        current counts of one or more resources.
+        correspond to objects in the database, i.e., instances,
+        cores, etc.
+
+        Usage synchronization function must be associated with each
+        object. This function will be called to determine the current
+        counts of one or more resources. This association is done in
+        database backend.
 
         The usage synchronization function will be passed three
         arguments: an admin context, the project ID, and an opaque
@@ -735,15 +737,14 @@ class ReservableResource(BaseResource):
         synchronization functions may be associated with more than one
         ReservableResource.
 
-        :param name: The name of the resource, i.e., "instances".
-        :param sync: A callable which returns a dictionary to
-                     resynchronize the in_use count for one or more
+        :param name: The name of the resource, i.e., "volumes".
+        :param sync: A dbapi methods name which returns a dictionary
+                     to resynchronize the in_use count for one or more
                      resources, as described above.
         :param flag: The name of the flag or configuration option
                      which specifies the default value of the quota
                      for this resource.
         """
-
         super(ReservableResource, self).__init__(name, flag=flag)
         self.sync = sync
 
@@ -1063,45 +1064,24 @@ class QuotaEngine(object):
         return sorted(self._resources.keys())
 
 
-def _sync_instances(context, project_id, session):
-    return dict(zip(('instances', 'cores', 'ram'),
-                    db.instance_data_get_for_project(
-                context, project_id, session=session)))
-
-
-def _sync_floating_ips(context, project_id, session):
-    return dict(floating_ips=db.floating_ip_count_by_project(
-            context, project_id, session=session))
-
-
-def _sync_fixed_ips(context, project_id, session):
-    return dict(fixed_ips=db.fixed_ip_count_by_project(
-            context, project_id, session=session))
-
-
-def _sync_security_groups(context, project_id, session):
-    return dict(security_groups=db.security_group_count_by_project(
-            context, project_id, session=session))
-
-
 QUOTAS = QuotaEngine()
 
 
 resources = [
-    ReservableResource('instances', _sync_instances, 'quota_instances'),
-    ReservableResource('cores', _sync_instances, 'quota_cores'),
-    ReservableResource('ram', _sync_instances, 'quota_ram'),
-    ReservableResource('floating_ips', _sync_floating_ips,
+    ReservableResource('instances', '_sync_instances', 'quota_instances'),
+    ReservableResource('cores', '_sync_instances', 'quota_cores'),
+    ReservableResource('ram', '_sync_instances', 'quota_ram'),
+    ReservableResource('security_groups', '_sync_security_groups',
+                       'quota_security_groups'),
+    ReservableResource('floating_ips', '_sync_floating_ips',
                        'quota_floating_ips'),
-    ReservableResource('fixed_ips', _sync_fixed_ips, 'quota_fixed_ips'),
+    ReservableResource('fixed_ips', '_sync_fixed_ips', 'quota_fixed_ips'),
     AbsoluteResource('metadata_items', 'quota_metadata_items'),
     AbsoluteResource('injected_files', 'quota_injected_files'),
     AbsoluteResource('injected_file_content_bytes',
                      'quota_injected_file_content_bytes'),
     AbsoluteResource('injected_file_path_bytes',
                      'quota_injected_file_path_bytes'),
-    ReservableResource('security_groups', _sync_security_groups,
-                       'quota_security_groups'),
     CountableResource('security_group_rules',
                       db.security_group_rule_count_by_group,
                       'quota_security_group_rules'),
