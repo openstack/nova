@@ -49,6 +49,7 @@ import shutil
 import socket
 import sys
 import tempfile
+import threading
 import time
 import uuid
 
@@ -283,6 +284,7 @@ MIN_LIBVIRT_VERSION = (0, 9, 6)
 # When the above version matches/exceeds this version
 # delete it & corresponding code using it
 MIN_LIBVIRT_HOST_CPU_VERSION = (0, 9, 10)
+MIN_LIBVIRT_CLOSE_CALLBACK_VERSION = (1, 0, 1)
 # Live snapshot requirements
 REQ_HYPERVISOR_LIVESNAPSHOT = "QEMU"
 MIN_LIBVIRT_LIVESNAPSHOT_VERSION = (1, 0, 0)
@@ -313,6 +315,7 @@ class LibvirtDriver(driver.ComputeDriver):
         self._fc_wwnns = None
         self._fc_wwpns = None
         self._wrapped_conn = None
+        self._wrapped_conn_lock = threading.Lock()
         self._caps = None
         self._vcpu_total = 0
         self.read_only = read_only
@@ -562,19 +565,23 @@ class LibvirtDriver(driver.ComputeDriver):
         self._init_events()
 
     def _get_connection(self):
-        if not self._wrapped_conn or not self._test_connection():
+        with self._wrapped_conn_lock:
+            wrapped_conn = self._wrapped_conn
+
+        if not wrapped_conn or not self._test_connection(wrapped_conn):
             LOG.debug(_('Connecting to libvirt: %s'), self.uri())
             if not CONF.libvirt_nonblocking:
-                self._wrapped_conn = self._connect(self.uri(),
-                                               self.read_only)
+                wrapped_conn = self._connect(self.uri(), self.read_only)
             else:
-                self._wrapped_conn = tpool.proxy_call(
+                wrapped_conn = tpool.proxy_call(
                     (libvirt.virDomain, libvirt.virConnect),
                     self._connect, self.uri(), self.read_only)
+            with self._wrapped_conn_lock:
+                self._wrapped_conn = wrapped_conn
 
             try:
                 LOG.debug("Registering for lifecycle events %s" % str(self))
-                self._wrapped_conn.domainEventRegisterAny(
+                wrapped_conn.domainEventRegisterAny(
                     None,
                     libvirt.VIR_DOMAIN_EVENT_ID_LIFECYCLE,
                     self._event_lifecycle_callback,
@@ -583,13 +590,30 @@ class LibvirtDriver(driver.ComputeDriver):
                 LOG.warn(_("URI %s does not support events"),
                          self.uri())
 
-        return self._wrapped_conn
+            if self.has_min_version(MIN_LIBVIRT_CLOSE_CALLBACK_VERSION):
+                try:
+                    LOG.debug("Registering for connection events: %s" %
+                              str(self))
+                    wrapped_conn.registerCloseCallback(
+                        self._close_callback, None)
+                except libvirt.libvirtError:
+                    LOG.debug(_("URI %s does not support connection events"),
+                             self.uri())
+
+        return wrapped_conn
 
     _conn = property(_get_connection)
 
-    def _test_connection(self):
+    def _close_callback(self, conn, reason, opaque):
+        with self._wrapped_conn_lock:
+            if conn == self._wrapped_conn:
+                LOG.info(_("Connection to libvirt lost: %s") % reason)
+                self._wrapped_conn = None
+
+    @staticmethod
+    def _test_connection(conn):
         try:
-            self._wrapped_conn.getLibVersion()
+            conn.getLibVersion()
             return True
         except libvirt.libvirtError as e:
             if (e.get_error_code() in (libvirt.VIR_ERR_SYSTEM_ERROR,

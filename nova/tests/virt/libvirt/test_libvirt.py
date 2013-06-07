@@ -316,6 +316,9 @@ class LibvirtConnTestCase(test.TestCase):
             def getLibVersion(self):
                 return (0 * 1000 * 1000) + (9 * 1000) + 11
 
+            def registerCloseCallback(self, cb, opaque):
+                pass
+
         self.conn = FakeConn()
         self.stubs.Set(libvirt_driver.LibvirtDriver, '_connect',
                        lambda *a, **k: self.conn)
@@ -401,6 +404,37 @@ class LibvirtConnTestCase(test.TestCase):
         }
         result = conn.get_volume_connector(volume)
         self.assertThat(expected, matchers.DictMatches(result))
+
+    def test_close_callback(self):
+        def get_lib_version_stub():
+            return (1 * 1000 * 1000) + (0 * 1000) + 1
+
+        self.close_callback = None
+
+        def set_close_callback(cb, opaque):
+            self.close_callback = cb
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        self.stubs.Set(self.conn, "getLibVersion", get_lib_version_stub)
+        self.mox.StubOutWithMock(conn, '_connect')
+        self.mox.StubOutWithMock(self.conn, 'registerCloseCallback')
+
+        conn._connect(mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(self.conn)
+        self.conn.registerCloseCallback(
+            mox.IgnoreArg(), mox.IgnoreArg()).WithSideEffects(
+                set_close_callback)
+        conn._connect(mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(self.conn)
+        self.conn.registerCloseCallback(mox.IgnoreArg(), mox.IgnoreArg())
+        self.mox.ReplayAll()
+
+        # verify that the driver registers for the close callback
+        # and re-connects after receiving the callback
+        conn._get_connection()
+
+        self.assertTrue(self.close_callback)
+        self.close_callback(self.conn, 1, None)
+
+        conn._get_connection()
 
     def test_get_guest_config(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -2975,7 +3009,7 @@ class LibvirtConnTestCase(test.TestCase):
 
             self.mox.ReplayAll()
 
-            self.assertFalse(conn._test_connection())
+            self.assertFalse(conn._test_connection(conn._wrapped_conn))
 
             self.mox.UnsetStubs()
 
