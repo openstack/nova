@@ -46,6 +46,7 @@ from nova.network import api as network_api
 from nova.network import quantumv2
 from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
+from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.api.openstack.compute.contrib import (
     test_quantum_security_groups as test_quantum)
@@ -880,6 +881,7 @@ class CloudTestCase(test.TestCase):
                 'instance_type_id': 1,
                 'host': 'host1',
                 'vm_state': 'active',
+                'launched_at': timeutils.utcnow(),
                 'hostname': 'server-1111',
                 'created_at': datetime.datetime(2012, 5, 1, 1, 1, 1),
                 'system_metadata': sys_meta
@@ -891,6 +893,7 @@ class CloudTestCase(test.TestCase):
                 'instance_type_id': 1,
                 'host': 'host2',
                 'vm_state': 'active',
+                'launched_at': timeutils.utcnow(),
                 'hostname': 'server-1112',
                 'created_at': datetime.datetime(2012, 5, 1, 1, 1, 2),
                 'system_metadata': sys_meta
@@ -2442,6 +2445,7 @@ class CloudTestCase(test.TestCase):
                 'image_ref': image_uuid,
                 'instance_type_id': 1,
                 'vm_state': 'active',
+                'launched_at': timeutils.utcnow(),
                 'hostname': 'server-1111',
                 'created_at': datetime.datetime(2012, 5, 1, 1, 1, 1)
         }
@@ -2492,6 +2496,7 @@ class CloudTestCase(test.TestCase):
                 'image_ref': image_uuid,
                 'instance_type_id': 1,
                 'vm_state': 'active',
+                'launched_at': timeutils.utcnow(),
                 'hostname': 'server-1111',
                 'created_at': datetime.datetime(2012, 5, 1, 1, 1, 1)
         }
@@ -2501,6 +2506,7 @@ class CloudTestCase(test.TestCase):
                 'image_ref': image_uuid,
                 'instance_type_id': 1,
                 'vm_state': 'active',
+                'launched_at': timeutils.utcnow(),
                 'hostname': 'server-1112',
                 'created_at': datetime.datetime(2012, 5, 1, 1, 1, 2)
         }

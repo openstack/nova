@@ -110,10 +110,12 @@ RO_SECURITY_GROUPS = ['default']
 SM_IMAGE_PROP_PREFIX = "image_"
 
 
-def check_instance_state(vm_state=None, task_state=(None,)):
+def check_instance_state(vm_state=None, task_state=(None,),
+                         must_have_launched=True):
     """Decorator to check VM and/or task state before entry to API functions.
 
-    If the instance is in the wrong state, the wrapper will raise an exception.
+    If the instance is in the wrong state, or has not been sucessfully started
+    at least once the wrapper will raise an exception.
     """
 
     if vm_state is not None and not isinstance(vm_state, set):
@@ -136,6 +138,13 @@ def check_instance_state(vm_state=None, task_state=(None,)):
                     attr='task_state',
                     instance_uuid=instance['uuid'],
                     state=instance['task_state'],
+                    method=f.__name__)
+            if must_have_launched and not instance['launched_at']:
+                raise exception.InstanceInvalidState(
+                    attr=None,
+                    not_launched=True,
+                    instance_uuid=instance['uuid'],
+                    state=instance['vm_state'],
                     method=f.__name__)
 
             return f(self, context, instance, *args, **kw)
@@ -1305,7 +1314,8 @@ class API(base.Base):
     # NOTE(maoy): we allow delete to be called no matter what vm_state says.
     @wrap_check_policy
     @check_instance_lock
-    @check_instance_state(vm_state=None, task_state=None)
+    @check_instance_state(vm_state=None, task_state=None,
+                          must_have_launched=True)
     def soft_delete(self, context, instance):
         """Terminate an instance."""
         LOG.debug(_('Going to try to soft delete instance'),
@@ -1329,7 +1339,8 @@ class API(base.Base):
 
     @wrap_check_policy
     @check_instance_lock
-    @check_instance_state(vm_state=None, task_state=None)
+    @check_instance_state(vm_state=None, task_state=None,
+                          must_have_launched=False)
     def delete(self, context, instance):
         """Terminate an instance."""
         LOG.debug(_("Going to try to terminate instance"), instance=instance)
@@ -1369,7 +1380,8 @@ class API(base.Base):
 
     @wrap_check_policy
     @check_instance_lock
-    @check_instance_state(vm_state=[vm_states.SOFT_DELETED])
+    @check_instance_state(vm_state=[vm_states.SOFT_DELETED],
+                          must_have_launched=False)
     def force_delete(self, context, instance):
         """Force delete a previously deleted (but not reclaimed) instance."""
         self._delete_instance(context, instance)
@@ -1790,7 +1802,8 @@ class API(base.Base):
     @wrap_check_policy
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
-                                    vm_states.PAUSED, vm_states.SUSPENDED],
+                                    vm_states.PAUSED, vm_states.SUSPENDED,
+                                    vm_states.ERROR],
                           task_state=[None, task_states.REBOOTING,
                                       task_states.REBOOTING_HARD,
                                       task_states.RESUMING,
@@ -1826,7 +1839,8 @@ class API(base.Base):
 
     @wrap_check_policy
     @check_instance_lock
-    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED],
+    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
+                                    vm_states.ERROR],
                           task_state=[None])
     def rebuild(self, context, instance, image_href, admin_password, **kwargs):
         """Rebuild the given instance with the provided attributes."""
@@ -2224,7 +2238,8 @@ class API(base.Base):
 
     @wrap_check_policy
     @check_instance_lock
-    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED])
+    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
+                                    vm_states.ERROR])
     def rescue(self, context, instance, rescue_password=None):
         """Rescue the given instance."""
 

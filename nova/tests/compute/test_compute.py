@@ -259,6 +259,9 @@ class BaseTestCase(test.TestCase):
         inst['os_type'] = 'Linux'
         inst['system_metadata'] = make_fake_sys_meta()
         inst['locked'] = False
+        inst['created_at'] = timeutils.utcnow()
+        inst['updated_at'] = timeutils.utcnow()
+        inst['launched_at'] = timeutils.utcnow()
         inst.update(params)
         _create_service_entries(self.context.elevated(),
                 {'fake_zone': [inst['host']]})
@@ -1248,6 +1251,7 @@ class ComputeTestCase(BaseTestCase):
     def test_run_terminate_timestamps(self):
         # Make sure timestamps are set for launched and destroyed.
         instance = jsonutils.to_primitive(self._create_fake_instance())
+        instance['launched_at'] = None
         self.assertEqual(instance['launched_at'], None)
         self.assertEqual(instance['deleted_at'], None)
         launch = timeutils.utcnow()
@@ -5710,6 +5714,21 @@ class ComputeAPITestCase(BaseTestCase):
 
         db.instance_destroy(self.context, instance['uuid'])
 
+    def test_delete_if_not_launched(self):
+        instance, instance_uuid = self._run_instance(params={
+                'host': CONF.host})
+
+        db.instance_update(self.context, instance['uuid'],
+                           {"vm_state": vm_states.ERROR,
+                            "launched_at": None})
+
+        self.compute_api.delete(self.context, instance)
+
+        instance = db.instance_get_by_uuid(self.context, instance_uuid)
+        self.assertEqual(instance['task_state'], task_states.DELETING)
+
+        db.instance_destroy(self.context, instance['uuid'])
+
     def test_delete_in_resizing(self):
         def fake_quotas_reserve(context, expire=None, project_id=None,
                                                              **deltas):
@@ -5984,7 +6003,7 @@ class ComputeAPITestCase(BaseTestCase):
 
         db.instance_destroy(self.context, instance['uuid'])
 
-    def test_rebuild(self):
+    def _test_rebuild(self, vm_state):
         instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_uuid = instance['uuid']
         self.compute.run_instance(self.context, instance=instance)
@@ -6015,6 +6034,10 @@ class ComputeAPITestCase(BaseTestCase):
 
         image_ref = instance["image_ref"] + '-new_image_ref'
         password = "new_password"
+
+        db.instance_update(self.context, instance['uuid'],
+                           {"vm_state": vm_state})
+
         self.compute_api.rebuild(self.context, instance, image_ref, password)
         self.assertEqual(info['image_ref'], image_ref)
 
@@ -6028,6 +6051,34 @@ class ComputeAPITestCase(BaseTestCase):
                 'image_something_else': 'meow',
                 'preserved': 'preserve this!'})
         db.instance_destroy(self.context, instance['uuid'])
+
+    def test_rebuild(self):
+        # Test we can rebuild an instance in the Error State
+        self._test_rebuild(vm_state=vm_states.ACTIVE)
+
+    def test_rebuild_in_error_state(self):
+        # Test we can rebuild an instance in the Error State
+        self._test_rebuild(vm_state=vm_states.ERROR)
+
+    def test_rebuild_in_error_not_launched(self):
+        instance = jsonutils.to_primitive(
+            self._create_fake_instance(params={'image_ref': ''}))
+        instance_uuid = instance['uuid']
+        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
+        self.compute.run_instance(self.context, instance=instance)
+
+        db.instance_update(self.context, instance['uuid'],
+                           {"vm_state": vm_states.ERROR,
+                            "launched_at": None})
+
+        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
+
+        self.assertRaises(exception.InstanceInvalidState,
+                          self.compute_api.rebuild,
+                          self.context,
+                          instance,
+                          instance['image_ref'],
+                          "new password")
 
     def test_rebuild_no_image(self):
         instance = jsonutils.to_primitive(
@@ -6175,7 +6226,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.stubs.Set(nova.virt.fake.FakeDriver, 'legacy_nwinfo',
                        lambda x: False)
 
-    def test_reboot_soft(self):
+    def _test_reboot_soft(self, vm_state):
         # Ensure instance can be soft rebooted.
         instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, instance=instance)
@@ -6192,6 +6243,9 @@ class ComputeAPITestCase(BaseTestCase):
         inst_ref = db.instance_get_by_uuid(self.context, instance['uuid'])
         self.assertEqual(inst_ref['task_state'], None)
 
+        db.instance_update(self.context, instance['uuid'],
+                           {"vm_state": vm_state})
+
         reboot_type = "SOFT"
         self._stub_out_reboot(device_name)
         self.compute_api.reboot(self.context, inst_ref, reboot_type)
@@ -6201,7 +6255,15 @@ class ComputeAPITestCase(BaseTestCase):
 
         db.instance_destroy(self.context, inst_ref['uuid'])
 
-    def test_reboot_hard(self):
+    def test_soft_reboot(self):
+        # Ensure instance can be rebooted while in error state.
+        self._test_reboot_soft(vm_state=vm_states.ACTIVE)
+
+    def test_soft_reboot_of_instance_in_error(self):
+        # Ensure instance can be rebooted while in error state.
+        self._test_reboot_soft(vm_state=vm_states.ERROR)
+
+    def test_reboot_hard(self, vm_state=vm_states.ACTIVE):
         # Ensure instance can be hard rebooted.
         instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, instance=instance)
@@ -6218,6 +6280,9 @@ class ComputeAPITestCase(BaseTestCase):
         inst_ref = db.instance_get_by_uuid(self.context, instance['uuid'])
         self.assertEqual(inst_ref['task_state'], None)
 
+        db.instance_update(self.context, instance['uuid'],
+                           {"vm_state": vm_state})
+
         reboot_type = "HARD"
         self._stub_out_reboot(device_name)
         self.compute_api.reboot(self.context, inst_ref, reboot_type)
@@ -6226,6 +6291,10 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual(inst_ref['task_state'], task_states.REBOOTING_HARD)
 
         db.instance_destroy(self.context, inst_ref['uuid'])
+
+    def test_hard_reboot_of_instance_in_error(self):
+        # Ensure instance can be rebooted while in error state.
+        self.test_reboot_hard(vm_state=vm_states.ERROR)
 
     def test_hard_reboot_of_soft_rebooting_instance(self):
         # Ensure instance can be hard rebooted while soft rebooting.
@@ -6263,7 +6332,7 @@ class ComputeAPITestCase(BaseTestCase):
                           inst_ref,
                           reboot_type)
 
-    def test_soft_reboot_of_rescued_instance(self):
+    def test_reboot_of_rescued_instance(self):
         # Ensure instance can't be rebooted while in rescued state.
         instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, instance=instance)
@@ -6272,6 +6341,33 @@ class ComputeAPITestCase(BaseTestCase):
 
         db.instance_update(self.context, instance['uuid'],
                            {"vm_state": vm_states.RESCUED})
+
+        inst_ref = db.instance_get_by_uuid(self.context, inst_ref['uuid'])
+
+        self.assertRaises(exception.InstanceInvalidState,
+                          self.compute_api.reboot,
+                          self.context,
+                          inst_ref,
+                          'SOFT')
+
+        self.assertRaises(exception.InstanceInvalidState,
+                          self.compute_api.reboot,
+                          self.context,
+                          inst_ref,
+                          'HARD')
+
+    def test_reboot_of_instance_in_error_not_launched(self):
+        # Ensure instance can be not rebooted while in error states
+        # if they have never been booted at least once.
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+        self.compute.run_instance(self.context, instance=instance)
+
+        inst_ref = db.instance_get_by_uuid(self.context, instance['uuid'])
+        self.assertEqual(inst_ref['task_state'], None)
+
+        db.instance_update(self.context, instance['uuid'],
+                           {"vm_state": vm_states.ERROR,
+                            "launched_at": None})
 
         inst_ref = db.instance_get_by_uuid(self.context, inst_ref['uuid'])
 
@@ -7689,7 +7785,8 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertRaises(exception.InvalidDevicePath,
                 self.compute_api.attach_volume,
                 self.context,
-                {'locked': False, 'vm_state': vm_states.ACTIVE},
+                {'locked': False, 'vm_state': vm_states.ACTIVE,
+                 'launched_at': timeutils.utcnow()},
                 None,
                 '/invalid')
 
@@ -7996,6 +8093,7 @@ class ComputeAPITestCase(BaseTestCase):
         # Ensure exception is raised while detaching an un-attached volume
         instance = {'uuid': 'uuid1',
                     'locked': False,
+                    'launched_at': timeutils.utcnow(),
                     'vm_state': vm_states.ACTIVE}
         volume = {'id': 1, 'attach_status': 'detached'}
 
@@ -8008,6 +8106,7 @@ class ComputeAPITestCase(BaseTestCase):
         # instance doesn't match.
         instance = {'uuid': 'uuid1',
                     'locked': False,
+                    'launched_at': timeutils.utcnow(),
                     'vm_state': vm_states.ACTIVE}
         volume = {'id': 1, 'attach_status': 'in-use',
                   'instance_uuid': 'uuid2'}
@@ -8322,6 +8421,7 @@ class ComputeAPITestCase(BaseTestCase):
     def test_fail_evacuate_from_non_existing_host(self):
         inst = {}
         inst['vm_state'] = vm_states.ACTIVE
+        inst['launched_at'] = timeutils.utcnow()
         inst['image_ref'] = FAKE_IMAGE_REF
         inst['reservation_id'] = 'r-fakeres'
         inst['user_id'] = self.user_id
