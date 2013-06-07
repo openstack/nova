@@ -246,6 +246,10 @@ class InstanceInfoCache(BASE, NovaBase):
     Represents a cache of information about an instance
     """
     __tablename__ = 'instance_info_caches'
+    __table_args__ = (
+        schema.UniqueConstraint(
+            "instance_uuid",
+            name="uniq_instance_info_caches0instance_uuid"),)
     id = Column(Integer, primary_key=True, autoincrement=True)
 
     # text column used for storing a json object of network data for api
@@ -262,6 +266,14 @@ class InstanceInfoCache(BASE, NovaBase):
 class InstanceTypes(BASE, NovaBase):
     """Represent possible instance_types or flavor of VM offered."""
     __tablename__ = "instance_types"
+
+    __table_args__ = (
+        schema.UniqueConstraint("flavorid", "deleted",
+                                name="uniq_instance_types0flavorid0deleted"),
+        schema.UniqueConstraint("name", "deleted",
+                                name="uniq_instance_types0name0deleted")
+    )
+
     id = Column(Integer, primary_key=True)
     name = Column(String(255))
     memory_mb = Column(Integer)
@@ -552,7 +564,10 @@ class ProviderFirewallRule(BASE, NovaBase):
 class KeyPair(BASE, NovaBase):
     """Represents a public key pair for ssh."""
     __tablename__ = 'key_pairs'
-    __table_args__ = (schema.UniqueConstraint("name", "user_id"), )
+    __table_args__ = (
+        schema.UniqueConstraint("name", "user_id", "deleted",
+                                name="uniq_key_pairs0user_id0name0deleted"),
+    )
     id = Column(Integer, primary_key=True)
 
     name = Column(String(255))
@@ -591,8 +606,11 @@ class Migration(BASE, NovaBase):
 class Network(BASE, NovaBase):
     """Represents a network."""
     __tablename__ = 'networks'
-    __table_args__ = (schema.UniqueConstraint("vpn_public_address",
-                                              "vpn_public_port"), )
+    __table_args__ = (
+        schema.UniqueConstraint("vlan", "deleted",
+                                name="uniq_networks0vlan0deleted"),
+    )
+
     id = Column(Integer, primary_key=True)
     label = Column(String(255))
 
@@ -628,6 +646,10 @@ class Network(BASE, NovaBase):
 class VirtualInterface(BASE, NovaBase):
     """Represents a virtual interface on an instance."""
     __tablename__ = 'virtual_interfaces'
+    __table_args__ = (
+        schema.UniqueConstraint("address",
+                                name="unique_virtual_interfaces0address"),
+    )
     id = Column(Integer, primary_key=True)
     address = Column(String(255), unique=True)
     network_id = Column(Integer, nullable=False)
@@ -669,6 +691,10 @@ class FixedIp(BASE, NovaBase):
 class FloatingIp(BASE, NovaBase):
     """Represents a floating ip that dynamically forwards to a fixed ip."""
     __tablename__ = 'floating_ips'
+    __table_args__ = (
+        schema.UniqueConstraint("address", "deleted",
+                                name="uniq_floating_ips0address0deleted"),
+    )
     id = Column(Integer, primary_key=True)
     address = Column(types.IPAddress())
     fixed_ip_id = Column(Integer, nullable=True)
@@ -757,6 +783,11 @@ class InstanceSystemMetadata(BASE, NovaBase):
 class InstanceTypeProjects(BASE, NovaBase):
     """Represent projects associated instance_types."""
     __tablename__ = "instance_type_projects"
+    __table_args__ = (schema.UniqueConstraint(
+        "instance_type_id", "project_id", "deleted",
+        name="uniq_instance_type_projects0instance_type_id0project_id0deleted"
+        ),
+    )
     id = Column(Integer, primary_key=True)
     instance_type_id = Column(Integer, ForeignKey('instance_types.id'),
                               nullable=False)
@@ -983,6 +1014,12 @@ class InstanceIdMapping(BASE, NovaBase):
 class TaskLog(BASE, NovaBase):
     """Audit log for background periodic tasks."""
     __tablename__ = 'task_log'
+    __table_args__ = (
+        schema.UniqueConstraint(
+            'task_name', 'host', 'period_beginning', 'period_ending',
+            name="uniq_task_log0task_name0host0period_beginning0period_ending"
+        ),
+    )
     id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
     task_name = Column(String(255), nullable=False)
     state = Column(String(255), nullable=False)

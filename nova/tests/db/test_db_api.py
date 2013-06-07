@@ -4273,8 +4273,8 @@ class VirtualInterfaceTestCase(test.TestCase, ModelsObjectComparatorMixin):
                           "i.nv.ali.ip")
 
     def test_virtual_interface_get_by_uuid(self):
-        vifs = [self._create_virt_interface({}),
-                self._create_virt_interface({})]
+        vifs = [self._create_virt_interface({"address": "address_1"}),
+                self._create_virt_interface({"address": "address_2"})]
         for vif in vifs:
             real_vif = db.virtual_interface_get_by_uuid(self.ctxt, vif['uuid'])
             self._assertEqualObjects(vif, real_vif)

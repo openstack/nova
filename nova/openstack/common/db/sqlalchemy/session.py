@@ -386,14 +386,15 @@ def _raise_if_duplicate_entry_error(integrity_error, engine_name):
     """
 
     def get_columns_from_uniq_cons_or_name(columns):
-        # note(boris-42): UniqueConstraint name convention: "uniq_c1_x_c2_x_c3"
-        # means that columns c1, c2, c3 are in UniqueConstraint.
+        # note(vsergeyev): UniqueConstraint name convention: "uniq_t0c10c2"
+        #                  where `t` it is table name, `0` it is delimiter and
+        #                  columns `c1`, `c2` are in UniqueConstraint.
         uniqbase = "uniq_"
         if not columns.startswith(uniqbase):
             if engine_name == "postgresql":
                 return [columns[columns.index("_") + 1:columns.rindex("_")]]
             return [columns]
-        return columns[len(uniqbase):].split("_x_")
+        return columns[len(uniqbase):].split("0")[1:]
 
     if engine_name not in ["mysql", "sqlite", "postgresql"]:
         return

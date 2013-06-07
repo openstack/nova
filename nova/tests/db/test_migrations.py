@@ -1416,6 +1416,54 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         self.assertTrue(db_utils.check_shadow_table(engine, 'floating_ips'))
         self.assertTrue(db_utils.check_shadow_table(engine, 'console_pools'))
 
+    def _unique_constraint_check_migrate_185(self, engine, check=True):
+        """Test check unique constraint behavior. It should be the same before
+        and after migration because we changed their names only."""
+
+        data_list = [
+            ("floating_ips", {'address': '10.12.14.16', 'deleted': 0}),
+            ("instance_info_caches", {'instance_uuid': 'm161-uuid1'}),
+            ('instance_type_projects', {'instance_type_id': 1,
+                                        'project_id': '116', 'deleted': 0}),
+            ('instance_types', {'flavorid': "flavorid_12", 'deleted': 0,
+                                'memory_mb': 64, 'vcpus': 10, 'swap': 100}),
+            ('instance_types', {'name': "name_123", 'deleted': 0,
+                                'memory_mb': 128, 'vcpus': 11, 'swap': 300}),
+            ('key_pairs', {'user_id': 1, 'name': "name_qwer", 'deleted': 0}),
+            ('networks', {'vlan': '123', 'deleted': 0}),
+            ('task_log', {'task_name': 'task_123', 'host': 'localhost',
+                          'period_beginning': datetime.datetime(2013, 02, 11),
+                          'period_ending': datetime.datetime(2015, 01, 01),
+                          'state': 'state_1', 'message': 'msg_1'}),
+            ('virtual_interfaces', {'address': '192.168.0.0'})
+        ]
+
+        for table_name, data in data_list:
+            table = db_utils.get_table(engine, table_name)
+            if not check:
+                table.insert().values(data).execute()
+            else:
+                # we replace values for some columns because they don't
+                # belong to unique constraint
+                if table_name == "instance_types":
+                    for key in ("memory_mb", "vcpus", "swap"):
+                        data[key] = data[key] * 2
+                if table_name == "task_log":
+                    data["message"] = 'msg_2'
+                    data["state"] = 'state_2'
+
+                self.assertRaises(sqlalchemy.exc.IntegrityError,
+                                  table.insert().execute, data)
+
+    def _pre_upgrade_185(self, engine):
+        self._unique_constraint_check_migrate_185(engine, False)
+
+    def check_185(self, engine):
+        self._unique_constraint_check_migrate_185(engine)
+
+    def _post_downgrade_185(self, engine):
+        self._unique_constraint_check_migrate_185(engine)
+
 
 class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""

@@ -58,7 +58,7 @@ def get_test_instance_type(context=None):
     try:
         instance_type_ref = nova.db.instance_type_create(context,
                                                          test_instance_type)
-    except exception.InstanceTypeExists:
+    except (exception.InstanceTypeExists, exception.InstanceTypeIdExists):
         instance_type_ref = nova.db.instance_type_get_by_name(context,
                                                               'kinda.big')
     return instance_type_ref
