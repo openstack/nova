@@ -295,13 +295,17 @@ class NotificationsTestCase(test.TestCase):
         self.assertEquals(payload["access_ip_v6"], access_ip_v6)
 
     def test_send_name_update(self):
-        notifications.send_update(self.context, self.instance, self.instance)
+        param = {"display_name": "new_display_name"}
+        new_name_inst = self._wrapped_create(params=param)
+        notifications.send_update(self.context, self.instance, new_name_inst)
         self.assertEquals(1, len(test_notifier.NOTIFICATIONS))
         notif = test_notifier.NOTIFICATIONS[0]
         payload = notif["payload"]
-        display_name = self.instance["display_name"]
+        old_display_name = self.instance["display_name"]
+        new_display_name = new_name_inst["display_name"]
 
-        self.assertEquals(payload["display_name"], display_name)
+        self.assertEquals(payload["old_display_name"], old_display_name)
+        self.assertEquals(payload["display_name"], new_display_name)
 
     def test_send_no_state_change(self):
         called = [False]

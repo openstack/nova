@@ -106,8 +106,12 @@ def send_update(context, old_instance, new_instance, service=None, host=None):
 
     else:
         try:
+            old_display_name = None
+            if new_instance["display_name"] != old_instance["display_name"]:
+                old_display_name = old_instance["display_name"]
             _send_instance_update_notification(context, new_instance,
-                    service=service, host=host)
+                    service=service, host=host,
+                    old_display_name=old_display_name)
         except Exception:
             LOG.exception(_("Failed to send state update notification"),
                     instance=new_instance)
@@ -155,7 +159,7 @@ def send_update_with_states(context, instance, old_vm_state, new_vm_state,
 
 def _send_instance_update_notification(context, instance, old_vm_state=None,
             old_task_state=None, new_vm_state=None, new_task_state=None,
-            service="compute", host=None):
+            service="compute", host=None, old_display_name=None):
     """Send 'compute.instance.update' notification to inform observers
     about instance state changes.
     """
@@ -184,6 +188,10 @@ def _send_instance_update_notification(context, instance, old_vm_state=None,
     # add bw usage info:
     bw = bandwidth_usage(instance, audit_start)
     payload["bandwidth"] = bw
+
+    # add old display name if it is changed
+    if old_display_name:
+        payload["old_display_name"] = old_display_name
 
     publisher_id = notifier_api.publisher_id(service, host)
 
