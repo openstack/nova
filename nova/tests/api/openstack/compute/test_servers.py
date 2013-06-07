@@ -24,6 +24,7 @@ import uuid
 
 import iso8601
 from lxml import etree
+import mox
 from oslo.config import cfg
 import webob
 
@@ -1781,6 +1782,8 @@ class ServersControllerCreateTest(test.TestCase):
         self.ext_mgr.extensions = {}
         self.controller = servers.Controller(self.ext_mgr)
 
+        self.volume_id = 'fake'
+
         def instance_create(context, inst):
             inst_type = flavors.get_instance_type_by_flavor_id(3)
             image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
@@ -2441,7 +2444,25 @@ class ServersControllerCreateTest(test.TestCase):
         os-volumes extension is enabled and bdms are supplied
         """
         self.ext_mgr.extensions = {'os-volumes': 'fake'}
-        bdm = [{'device_name': 'foo'}]
+        self.mox.StubOutWithMock(compute_api.API, '_validate_bdm')
+        self.mox.StubOutWithMock(compute_api.API, '_get_volume')
+        bdm = [{
+            'id': 1,
+            'no_device': None,
+            'virtual_name': None,
+            'snapshot_id': None,
+            'volume_id': self.volume_id,
+            'status': 'active',
+            'device_name': 'vda',
+            'delete_on_termination': False,
+            'volume_image_metadata':
+                {'test_key': 'test_value'}
+        }]
+        volume = bdm[0]
+        compute_api.API._validate_bdm(mox.IgnoreArg(),
+                mox.IgnoreArg()).AndReturn(True)
+        compute_api.API._get_volume(mox.IgnoreArg(),
+                bdm).AndReturn(volume)
         params = {'block_device_mapping': bdm}
         old_create = compute_api.API.create
 
@@ -2451,6 +2472,7 @@ class ServersControllerCreateTest(test.TestCase):
             return old_create(*args, **kwargs)
 
         self.stubs.Set(compute_api.API, 'create', create)
+        self.mox.ReplayAll()
         self._test_create_extra(params, no_image=True)
 
     def test_create_instance_with_volumes_disabled(self):

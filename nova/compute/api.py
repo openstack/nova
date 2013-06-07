@@ -539,7 +539,9 @@ class API(base.Base):
                                        files_to_inject):
         self._check_metadata_properties_quota(context, metadata)
         self._check_injected_file_quota(context, files_to_inject)
-        self._check_requested_image(context, image_id, image, instance_type)
+        if image_id is not None:
+            self._check_requested_image(context, image_id,
+                    image, instance_type)
 
     def _validate_and_build_base_options(self, context, instance_type,
                                          image, image_href, image_id,
@@ -686,6 +688,26 @@ class API(base.Base):
         QUOTAS.commit(context, quota_reservations)
         return instances
 
+    def _get_volume(self, context, block_device_mapping):
+        """If we are booting from a volume, we need to get the
+        volume details from Cinder and make sure we pass the
+        metadata back accordingly.
+        """
+        if not block_device_mapping:
+            return {}
+
+        for bdm in block_device_mapping:
+            if bdm.get('device_name') == "vda":
+                volume_id = bdm.get('volume_id')
+                if volume_id is not None:
+                    try:
+                        volume = self.volume_api.get(context,
+                                volume_id)
+                        return volume
+                    except Exception:
+                        raise exception.InvalidBDMVolume(volume_id)
+        return None
+
     def _create_instance(self, context, instance_type,
                image_href, kernel_id, ramdisk_id,
                min_count, max_count,
@@ -710,7 +732,13 @@ class API(base.Base):
         block_device_mapping = block_device_mapping or []
         if not instance_type:
             instance_type = flavors.get_default_instance_type()
-        image_id, image = self._get_image(context, image_href)
+
+        if image_href:
+            image_id, image = self._get_image(context, image_href)
+        else:
+            image_id = None
+            image = self._get_volume(context,
+                    block_device_mapping)
 
         handle_az = self._handle_availability_zone
         availability_zone, forced_host, forced_node = handle_az(
