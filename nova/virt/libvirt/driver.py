@@ -2096,7 +2096,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                   disk_info['dev'],
                                   disk_info['type'],
                                   self.disk_cachemode,
-                                  inst_type['extra_specs'])
+                                  inst_type['extra_specs'],
+                                  self.get_hypervisor_version())
 
     def get_guest_storage_config(self, instance, image_meta,
                                  disk_info,

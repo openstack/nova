@@ -318,6 +318,9 @@ class LibvirtConnTestCase(test.TestCase):
                             <host><cpu><arch>x86_64</arch></cpu></host>
                           </capabilities>"""
 
+            def getVersion(self):
+                return 1005001
+
             def getLibVersion(self):
                 return (0 * 1000 * 1000) + (9 * 1000) + 11
 
@@ -2794,7 +2797,8 @@ class LibvirtConnTestCase(test.TestCase):
         # create_fake_libvirt_mock() mocks importutils.import_class().
         network_info = _fake_network_info(self.stubs, 1)
         self.create_fake_libvirt_mock(getLibVersion=fake_getLibVersion,
-                                      getCapabilities=fake_getCapabilities)
+                                      getCapabilities=fake_getCapabilities,
+                                      getVersion=lambda: 1005001)
 
         instance_ref = self.test_instance
         instance_ref['image_ref'] = 123456  # we send an int to test sha1 call
@@ -4911,15 +4915,26 @@ class LibvirtUtilsTestCase(test.TestCase):
     def test_pick_disk_driver_name(self):
         type_map = {'kvm': ([True, 'qemu'], [False, 'qemu'], [None, 'qemu']),
                     'qemu': ([True, 'qemu'], [False, 'qemu'], [None, 'qemu']),
-                    'xen': ([True, 'phy'], [False, 'tap'], [None, 'tap']),
+                    'xen': ([True, 'phy'], [False, 'tap2'], [None, 'tap2']),
                     'uml': ([True, None], [False, None], [None, None]),
                     'lxc': ([True, None], [False, None], [None, None])}
 
         for (libvirt_type, checks) in type_map.iteritems():
+            if libvirt_type == "xen":
+                version = 4001000
+            else:
+                version = 1005001
+
             self.flags(libvirt_type=libvirt_type)
             for (is_block_dev, expected_result) in checks:
-                result = libvirt_utils.pick_disk_driver_name(is_block_dev)
+                result = libvirt_utils.pick_disk_driver_name(version,
+                                                             is_block_dev)
                 self.assertEquals(result, expected_result)
+
+    def test_pick_disk_driver_name_xen_4_0_0(self):
+        self.flags(libvirt_type="xen")
+        result = libvirt_utils.pick_disk_driver_name(4000000, False)
+        self.assertEquals(result, "tap")
 
     def test_get_disk_size(self):
         self.mox.StubOutWithMock(os.path, 'exists')

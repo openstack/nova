@@ -202,5 +202,5 @@ def get_instance_path(instance, forceold=False, relative=False):
                                            relative=relative)
 
 
-def pick_disk_driver_name(is_block_dev=False):
+def pick_disk_driver_name(hypervisor_version, is_block_dev=False):
     return "qemu"
