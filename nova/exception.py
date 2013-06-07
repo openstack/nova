@@ -1241,6 +1241,19 @@ class CoreAPIMissing(NovaException):
     message = _("Core API extensions are missing: %(missing_apis)s")
 
 
+class AgentError(NovaException):
+    message = _('Error during following call to agent: %(method)s')
+
+
+class AgentTimeout(AgentError):
+    message = _('Unable to contact guest agent. '
+                'The following call timed out: %(method)s')
+
+
+class AgentNotImplemented(AgentError):
+    message = _('Agent does not support the call: %(method)s')
+
+
 class InstanceGroupNotFound(NotFound):
     message = _("Instance group %(group_uuid)s could not be found.")
 

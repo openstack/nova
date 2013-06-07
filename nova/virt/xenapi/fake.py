@@ -565,7 +565,7 @@ class SessionBase(object):
         return 12 * 1024 * 1024 * 1024
 
     def _plugin_agent_version(self, method, args):
-        return as_json(returncode='0', message='1.0')
+        return as_json(returncode='0', message='1.0\\r\\n')
 
     def _plugin_agent_key_init(self, method, args):
         return as_json(returncode='D0', message='1')
@@ -578,6 +578,13 @@ class SessionBase(object):
 
     def _plugin_agent_resetnetwork(self, method, args):
         return as_json(returncode='0', message='success')
+
+    def _plugin_agent_agentupdate(self, method, args):
+        url = args["url"]
+        md5 = args["md5sum"]
+        message = "success with %(url)s and hash:%(md5)s" % dict(url=url,
+                                                                 md5=md5)
+        return as_json(returncode='0', message=message)
 
     def _plugin_noop(self, method, args):
         return ''
