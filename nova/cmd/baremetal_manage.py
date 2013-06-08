@@ -101,8 +101,10 @@ CATEGORIES = {
 
 
 def methods_of(obj):
-    """Get all callable methods of an object that don't start with underscore
-    returns a list of tuples of the form (method_name, method)"""
+    """Get all callable methods of an object that don't start with underscore.
+
+    returns a list of tuples of the form (method_name, method)
+    """
     result = []
     for i in dir(obj):
         if callable(getattr(obj, i)) and not i.startswith('_'):

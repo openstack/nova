@@ -550,7 +550,8 @@ def file_delete(path):
 def find_disk(virt_dom):
     """Find root device path for instance
 
-    May be file or device"""
+    May be file or device
+    """
     xml_desc = virt_dom.XMLDesc(0)
     domain = etree.fromstring(xml_desc)
     if CONF.libvirt_type == 'lxc':

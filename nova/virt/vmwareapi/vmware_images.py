@@ -36,7 +36,8 @@ def start_transfer(context, read_file_handle, data_size,
     """Start the data transfer from the reader to the writer.
     Reader writes to the pipe and the writer reads from the pipe. This means
     that the total transfer time boils down to the slower of the read/write
-    and not the addition of the two times."""
+    and not the addition of the two times.
+    """
 
     if not image_meta:
         image_meta = {}

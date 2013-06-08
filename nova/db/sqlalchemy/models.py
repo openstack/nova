@@ -104,7 +104,8 @@ class ComputeNode(BASE, NovaBase):
 
 class ComputeNodeStat(BASE, NovaBase):
     """Stats related to the current workload of a compute host that are
-    intended to aid in making scheduler decisions."""
+    intended to aid in making scheduler decisions.
+    """
     __tablename__ = 'compute_node_stats'
     __table_args__ = (
         Index('ix_compute_node_stats_compute_node_id', 'compute_node_id'),

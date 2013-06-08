@@ -2769,7 +2769,8 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def host_maintenance_mode(self, context, host, mode):
         """Start/Stop host maintenance window. On start, it triggers
-        guest VMs evacuation."""
+        guest VMs evacuation.
+        """
         return self.driver.host_maintenance_mode(host, mode)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
@@ -2967,7 +2968,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     def _attach_volume_boot(self, context, instance, volume, mountpoint):
         """Attach a volume to an instance at boot time. So actual attach
-        is done by instance creation"""
+        is done by instance creation.
+        """
 
         instance_id = instance['id']
         instance_uuid = instance['uuid']
@@ -3923,7 +3925,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         """Align instance power state between the database and hypervisor.
 
         If the instance is not found on the hypervisor, but is in the database,
-        then a stop() API will be called on the instance."""
+        then a stop() API will be called on the instance.
+        """
 
         # We re-query the DB to get the latest instance info to minimize
         # (not eliminate) race condition.

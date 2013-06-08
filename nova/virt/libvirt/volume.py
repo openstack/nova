@@ -795,7 +795,8 @@ class LibvirtFibreChannelVolumeDriver(LibvirtBaseVolumeDriver):
 
 class LibvirtScalityVolumeDriver(LibvirtBaseVolumeDriver):
     """Scality SOFS Nova driver. Provide hypervisors with access
-    to sparse files on SOFS. """
+    to sparse files on SOFS.
+    """
 
     def __init__(self, connection):
         """Create back-end to SOFS and check connection."""

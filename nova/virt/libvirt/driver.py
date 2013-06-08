@@ -420,7 +420,8 @@ class LibvirtDriver(driver.ComputeDriver):
         permitted to use libvirt python APIs, and the
         driver.queue_event method. In particular any use
         of logging is forbidden, since it will confuse
-        eventlet's greenthread integration"""
+        eventlet's greenthread integration
+        """
 
         while True:
             libvirt.virEventRunDefaultImpl()
@@ -430,7 +431,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
         This is a green thread which waits for events to
         arrive from the libvirt event loop thread. This
-        then dispatches the events to the compute manager."""
+        then dispatches the events to the compute manager.
+        """
 
         while True:
             self._dispatch_events()
@@ -442,7 +444,8 @@ class LibvirtDriver(driver.ComputeDriver):
         NB: this method is executing in a native thread, not
         an eventlet coroutine. It can only invoke other libvirt
         APIs, or use self.queue_event(). Any use of logging APIs
-        in particular is forbidden."""
+        in particular is forbidden.
+        """
 
         self = opaque
 
@@ -465,7 +468,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
         This method is called by the native event thread to
         put events on the queue for later dispatch by the
-        green thread."""
+        green thread.
+        """
 
         if self._event_queue is None:
             LOG.debug("Event loop thread is not active, "
@@ -484,7 +488,8 @@ class LibvirtDriver(driver.ComputeDriver):
         """Wait for & dispatch events from native thread
 
         Blocks until native thread indicates some events
-        are ready. Then dispatches all queued events."""
+        are ready. Then dispatches all queued events.
+        """
 
         # Wait to be notified that there are some
         # events pending
@@ -507,7 +512,8 @@ class LibvirtDriver(driver.ComputeDriver):
         """Create a self-pipe for the native thread to synchronize on.
 
         This code is taken from the eventlet tpool module, under terms
-        of the Apache License v2.0."""
+        of the Apache License v2.0.
+        """
 
         self._event_queue = native_Queue.Queue()
         try:
@@ -1936,7 +1942,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def get_host_capabilities(self):
         """Returns an instance of config.LibvirtConfigCaps representing
-           the capabilities of the host"""
+           the capabilities of the host.
+        """
         if not self._caps:
             xmlstr = self._conn.getCapabilities()
             self._caps = vconfig.LibvirtConfigCaps()
@@ -1951,7 +1958,8 @@ class LibvirtDriver(driver.ComputeDriver):
     def get_host_cpu_for_guest(self):
         """Returns an instance of config.LibvirtConfigGuestCPU
            representing the host's CPU model & topology with
-           policy for configuring a guest to match"""
+           policy for configuring a guest to match
+        """
 
         caps = self.get_host_capabilities()
         hostcpu = caps.host.cpu
@@ -2796,7 +2804,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def get_all_volume_usage(self, context, compute_host_bdms):
         """Return usage info for volumes attached to vms on
-           a given host"""
+           a given host.
+        """
         vol_usage = []
 
         for instance_bdms in compute_host_bdms:
@@ -3118,7 +3127,9 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _check_shared_storage_test_file(self, filename):
         """Confirms existence of the tmpfile under CONF.instances_path.
-        Cannot confirm tmpfile return False."""
+
+        Cannot confirm tmpfile return False.
+        """
         tmp_file = os.path.join(CONF.instances_path, filename)
         if not os.path.exists(tmp_file):
             return False
@@ -3526,7 +3537,8 @@ class LibvirtDriver(driver.ComputeDriver):
     def get_host_stats(self, refresh=False):
         """Return the current state of the host.
 
-        If 'refresh' is True, run update the stats first."""
+        If 'refresh' is True, run update the stats first.
+        """
         return self.host_state.get_host_stats(refresh=refresh)
 
     def get_host_uptime(self, host):
@@ -3709,7 +3721,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _cleanup_failed_migration(self, inst_base):
         """Make sure that a failed migrate doesn't prevent us from rolling
-        back in a revert."""
+        back in a revert.
+        """
         shutil.rmtree(inst_base)
 
     def finish_revert_migration(self, instance, network_info,
@@ -3857,7 +3870,8 @@ class HostState(object):
     def get_host_stats(self, refresh=False):
         """Return the current state of the host.
 
-        If 'refresh' is True, run update the stats first."""
+        If 'refresh' is True, run update the stats first.
+        """
         if refresh:
             self.update_status()
         return self._stats

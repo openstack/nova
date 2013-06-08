@@ -557,7 +557,8 @@ class API(base.Base):
                                          block_device_mapping,
                                          auto_disk_config, reservation_id):
         """Verify all the input parameters regardless of the provisioning
-        strategy being performed."""
+        strategy being performed.
+        """
         if min_count > 1 or max_count > 1:
             if any(map(lambda bdm: 'volume_id' in bdm, block_device_mapping)):
                 msg = _('Cannot attach one or more volumes to multiple'
@@ -722,7 +723,8 @@ class API(base.Base):
                reservation_id=None, scheduler_hints=None):
         """Verify all the input parameters regardless of the provisioning
         strategy being performed and schedule the instance(s) for
-        creation."""
+        creation.
+        """
 
         # Normalize and setup some parameters
         if reservation_id is None:
@@ -2622,7 +2624,8 @@ class HostAPI(base.Base):
 
     def set_host_maintenance(self, context, host_name, mode):
         """Start/Stop host maintenance window. On start, it triggers
-        guest VMs evacuation."""
+        guest VMs evacuation.
+        """
         host_name = self._assert_host_exists(context, host_name)
         return self.rpcapi.host_maintenance_mode(context,
                 host_param=host_name, mode=mode, host=host_name)
@@ -2656,10 +2659,11 @@ class HostAPI(base.Base):
         return self.db.service_get_by_compute_host(context, host_name)
 
     def service_update(self, context, host_name, binary, params_to_update):
-        """
-        Enable / Disable a service.
+        """Enable / Disable a service.
+
         For compute services, this stops new builds and migrations going to
-        the host."""
+        the host.
+        """
         service = db.service_get_by_args(context, host_name, binary)
         return db.service_update(context, service['id'], params_to_update)
 

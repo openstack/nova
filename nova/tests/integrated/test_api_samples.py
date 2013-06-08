@@ -2132,7 +2132,9 @@ class AdminActionsSamplesJsonTest(ServersSampleBase):
 
     def setUp(self):
         """setUp Method for AdminActions api samples extension
-        This method creates the server that will be used in each tests"""
+
+        This method creates the server that will be used in each tests
+        """
         super(AdminActionsSamplesJsonTest, self).setUp()
         self.uuid = self._post_server()
 

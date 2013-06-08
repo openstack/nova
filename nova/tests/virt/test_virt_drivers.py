@@ -39,7 +39,8 @@ def catch_notimplementederror(f):
 
     If a particular call makes a driver raise NotImplementedError, we
     log it so that we can extract this information afterwards to
-    automatically generate a hypervisor/feature support matrix."""
+    automatically generate a hypervisor/feature support matrix.
+    """
     def wrapped_func(self, *args, **kwargs):
         try:
             return f(self, *args, **kwargs)
@@ -147,7 +148,8 @@ class _FakeDriverBackendTestCase(object):
 class VirtDriverLoaderTestCase(_FakeDriverBackendTestCase, test.TestCase):
     """Test that ComputeManager can successfully load both
     old style and new style drivers and end up with the correct
-    final class"""
+    final class.
+    """
 
     # if your driver supports being tested in a fake way, it can go here
     #

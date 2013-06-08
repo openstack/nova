@@ -306,8 +306,9 @@ class SchedulerManager(manager.Manager):
         return self.backdoor_port
 
     def select_hosts(self, context, request_spec, filter_properties):
-        """Returns host(s) best suited for this request_spec and
-        filter_properties"""
+        """Returns host(s) best suited for this request_spec
+        and filter_properties.
+        """
         hosts = self.driver.select_hosts(context, request_spec,
             filter_properties)
         return jsonutils.to_primitive(hosts)

@@ -84,8 +84,10 @@ class DNSEntry(object):
 
     def __init__(self, ldap_object):
         """ldap_object is an instance of ldap.LDAPObject.
+
            It should already be initialized and bound before
-           getting passed in here."""
+           getting passed in here.
+        """
         self.lobj = ldap_object
         self.ldap_tuple = None
         self.qualified_domain = None
@@ -307,7 +309,8 @@ class LdapDNS(dns_driver.DNSDriver):
     """Driver for PowerDNS using ldap as a back end.
 
        This driver assumes ldap-method=strict, with all domains
-       in the top-level, aRecords only."""
+       in the top-level, aRecords only.
+    """
 
     def __init__(self):
         self.lobj = ldap.initialize(CONF.ldap_dns_url)

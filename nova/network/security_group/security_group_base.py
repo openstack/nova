@@ -179,7 +179,8 @@ class SecurityGroupBase(object):
 
     def populate_security_groups(self, instance, security_groups):
         """Called when populating the database for an instances
-        security groups."""
+        security groups.
+        """
         raise NotImplementedError()
 
     def create_security_group(self, context, name, description):

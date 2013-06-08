@@ -478,7 +478,8 @@ class API(base.Base):
     def setup_networks_on_host(self, context, instance, host=None,
                                                         teardown=False):
         """Setup or teardown the network structures on hosts related to
-           instance"""
+           instance.
+        """
         host = host or instance['host']
         # NOTE(tr3buchet): host is passed in cases where we need to setup
         # or teardown the networks on a host which has been migrated to/from

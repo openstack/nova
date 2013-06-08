@@ -296,12 +296,15 @@ class VMwareESXDriver(driver.ComputeDriver):
 
     def update_host_status(self):
         """Update the status info of the host, and return those values
-           to the calling program."""
+           to the calling program.
+        """
         return self.host_state.update_status()
 
     def get_host_stats(self, refresh=False):
-        """Return the current state of the host. If 'refresh' is
-           True, run the update first."""
+        """Return the current state of the host.
+
+           If 'refresh' is True, run the update first.
+        """
         return self.host_state.get_host_stats(refresh=refresh)
 
     def host_power_action(self, host, action):
@@ -310,7 +313,8 @@ class VMwareESXDriver(driver.ComputeDriver):
 
     def host_maintenance_mode(self, host, mode):
         """Start/Stop host maintenance window. On start, it triggers
-           guest VMs evacuation."""
+           guest VMs evacuation.
+        """
         return self._host.host_maintenance_mode(host, mode)
 
     def set_host_enabled(self, host, enabled):

@@ -34,7 +34,8 @@ def _translate_keys(cons):
 
 def _translate_detail_keys(cons):
     """Coerces a console instance into proper dictionary format with
-    correctly mapped attributes """
+    correctly mapped attributes.
+    """
     pool = cons['pool']
     info = {'id': cons['id'],
             'console_type': pool['console_type'],

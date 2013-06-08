@@ -83,7 +83,8 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
     def nova_dhcp_filter():
         """The standard allow-dhcp-server filter is an <ip> one, so it uses
            ebtables to allow traffic through. Without a corresponding rule in
-           iptables, it'll get blocked anyway."""
+           iptables, it'll get blocked anyway.
+        """
 
         return '''<filter name='nova-allow-dhcp-server' chain='ipv4'>
                     <uuid>891e4787-e5c0-d59b-cbd6-41bc3c6b36fc</uuid>

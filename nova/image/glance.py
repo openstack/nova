@@ -246,7 +246,8 @@ class GlanceImageService(object):
 
     def get_location(self, context, image_id):
         """Returns the direct url representing the backend storage location,
-        or None if this attribute is not shown by Glance."""
+        or None if this attribute is not shown by Glance.
+        """
         try:
             client = GlanceClientWrapper()
             image_meta = client.call(context, 2, 'get', image_id)

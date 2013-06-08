@@ -272,13 +272,15 @@ class FakeDriver(driver.ComputeDriver):
 
     def get_all_bw_counters(self, instances):
         """Return bandwidth usage counters for each interface on each
-           running VM"""
+           running VM.
+        """
         bw = []
         return bw
 
     def get_all_volume_usage(self, context, compute_host_bdms):
         """Return usage info for volumes attached to vms on
-           a given host"""
+           a given host.
+        """
         volusage = []
         return volusage
 
@@ -408,7 +410,8 @@ class FakeDriver(driver.ComputeDriver):
 
     def host_maintenance_mode(self, host, mode):
         """Start/Stop host maintenance window. On start, it triggers
-        guest VMs evacuation."""
+        guest VMs evacuation.
+        """
         if not mode:
             return 'off_maintenance'
         return 'on_maintenance'

@@ -57,8 +57,10 @@ class _StorageDict(dict):
         self.clear()
 
     def hgetall(self, key):
-        """Returns the hash for the given key; creates
-        the hash if the key doesn't exist."""
+        """Returns the hash for the given key
+
+        Creates the hash if the key doesn't exist.
+        """
         try:
             return self[key]
         except KeyError:

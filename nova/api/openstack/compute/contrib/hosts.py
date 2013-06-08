@@ -201,7 +201,8 @@ class HostController(object):
 
     def _set_host_maintenance(self, context, host_name, mode=True):
         """Start/Stop host maintenance window. On start, it triggers
-        guest VMs evacuation."""
+        guest VMs evacuation.
+        """
         LOG.audit(_("Putting host %(host_name)s in maintenance mode "
                     "%(mode)s."),
                   {'host_name': host_name, 'mode': mode})
@@ -218,8 +219,10 @@ class HostController(object):
 
     def _set_enabled_status(self, context, host_name, enabled):
         """Sets the specified host's ability to accept new instances.
+
         :param enabled: a boolean - if False no new VMs will be able to start
-        on the host"""
+        on the host
+        """
         if enabled:
             LOG.audit(_("Enabling host %s.") % host_name)
         else:

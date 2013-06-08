@@ -26,7 +26,8 @@ class ComputeCapabilitiesFilter(filters.BaseHostFilter):
 
     def _satisfies_extra_specs(self, capabilities, instance_type):
         """Check that the capabilities provided by the compute service
-        satisfy the extra specs associated with the instance type"""
+        satisfy the extra specs associated with the instance type.
+        """
         if 'extra_specs' not in instance_type:
             return True
 

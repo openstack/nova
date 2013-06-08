@@ -190,7 +190,8 @@ class NovaObject(object):
     @classmethod
     def obj_name(cls):
         """Return a canonical name for this object which will be used over
-        the wire for remote hydration."""
+        the wire for remote hydration.
+        """
         return cls.__name__
 
     @classmethod

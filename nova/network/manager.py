@@ -232,7 +232,8 @@ class RPCAllocateFixedIP(object):
 
     def deallocate_fixed_ip(self, context, address, host=None, teardown=True):
         """Call the superclass deallocate_fixed_ip if i'm the correct host
-        otherwise call to the correct host"""
+        otherwise call to the correct host
+        """
         fixed_ip = self.db.fixed_ip_get_by_address(context, address)
         network = self._get_network_by_id(context, fixed_ip['network_id'])
 
@@ -578,7 +579,8 @@ class NetworkManager(manager.Manager):
     def build_network_info_model(self, context, vifs, networks,
                                  rxtx_factor, instance_host):
         """Builds a NetworkInfo object containing all network information
-        for an instance"""
+        for an instance.
+        """
         nw_info = network_model.NetworkInfo()
         for vif in vifs:
             vif_dict = {'id': vif['uuid'],

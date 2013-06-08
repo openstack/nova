@@ -200,7 +200,8 @@ def create_vbd(vm_ref, vdi_ref, userdevice=0):
 
 def after_VBD_create(vbd_ref, vbd_rec):
     """Create read-only fields and backref from VM and VDI to VBD when VBD
-    is created."""
+    is created.
+    """
     vbd_rec['currently_attached'] = False
     vbd_rec['device'] = ''
 
@@ -243,7 +244,8 @@ def create_task(name_label):
 
 def create_local_pifs():
     """Adds a PIF for each to the local database with VLAN=-1.
-       Do this one per host."""
+       Do this one per host.
+    """
     for host_ref in _db_content['host'].keys():
         _create_local_pif(host_ref)
 
@@ -251,7 +253,8 @@ def create_local_pifs():
 def create_local_srs():
     """Create an SR that looks like the one created on the local disk by
     default by the XenServer installer.  Do this one per host. Also, fake
-    the installation of an ISO SR."""
+    the installation of an ISO SR.
+    """
     for host_ref in _db_content['host'].keys():
         create_sr(name_label='Local storage',
                   type='lvm',
@@ -365,7 +368,8 @@ def check_for_session_leaks():
 
 def as_value(s):
     """Helper function for simulating XenAPI plugin responses.  It
-    escapes and wraps the given argument."""
+    escapes and wraps the given argument.
+    """
     return '<value>%s</value>' % saxutils.escape(s)
 
 
@@ -373,7 +377,8 @@ def as_json(*args, **kwargs):
     """Helper function for simulating XenAPI plugin responses for those
     that are returning JSON.  If this function is given plain arguments,
     then these are rendered as a JSON list.  If it's given keyword
-    arguments then these are rendered as a JSON dict."""
+    arguments then these are rendered as a JSON dict.
+    """
     arg = args or kwargs
     return jsonutils.dumps(arg)
 

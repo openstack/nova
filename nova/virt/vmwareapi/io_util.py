@@ -36,7 +36,8 @@ GLANCE_POLL_INTERVAL = 5
 
 class ThreadSafePipe(queue.LightQueue):
     """The pipe to hold the data which the reader writes to and the writer
-    reads from."""
+    reads from.
+    """
 
     def __init__(self, maxsize, transfer_size):
         queue.LightQueue.__init__(self, maxsize)
@@ -44,9 +45,12 @@ class ThreadSafePipe(queue.LightQueue):
         self.transferred = 0
 
     def read(self, chunk_size):
-        """Read data from the pipe. Chunksize if ignored for we have ensured
+        """Read data from the pipe.
+
+        Chunksize if ignored for we have ensured
         that the data chunks written to the pipe by readers is the same as the
-        chunks asked for by the Writer."""
+        chunks asked for by the Writer.
+        """
         if self.transferred < self.transfer_size:
             data_item = self.get()
             self.transferred += len(data_item)
@@ -73,7 +77,8 @@ class ThreadSafePipe(queue.LightQueue):
 
 class GlanceWriteThread(object):
     """Ensures that image data is written to in the glance client and that
-    it is in correct ('active')state."""
+    it is in correct ('active')state.
+    """
 
     def __init__(self, context, input, image_service, image_id,
             image_meta=None):
@@ -92,7 +97,8 @@ class GlanceWriteThread(object):
 
         def _inner():
             """Function to do the image data transfer through an update
-            and thereon checks if the state is 'active'."""
+            and thereon checks if the state is 'active'.
+            """
             self.image_service.update(self.context,
                                       self.image_id,
                                       self.image_meta,
@@ -143,7 +149,8 @@ class GlanceWriteThread(object):
 
 class IOThread(object):
     """Class that reads chunks from the input file and writes them to the
-    output file till the transfer is completely done."""
+    output file till the transfer is completely done.
+    """
 
     def __init__(self, input, output):
         self.input = input
@@ -156,7 +163,8 @@ class IOThread(object):
 
         def _inner():
             """Read data from the input and write the same to the output
-            until the transfer completes."""
+            until the transfer completes.
+            """
             self._running = True
             while self._running:
                 try:

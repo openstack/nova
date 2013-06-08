@@ -405,7 +405,8 @@ class LinuxNetworkTestCase(test.TestCase):
     def test_linux_bridge_driver_plug(self):
         """Makes sure plug doesn't drop FORWARD by default.
 
-        Ensures bug 890195 doesn't reappear."""
+        Ensures bug 890195 doesn't reappear.
+        """
 
         def fake_execute(*args, **kwargs):
             return "", ""
@@ -423,7 +424,8 @@ class LinuxNetworkTestCase(test.TestCase):
     def test_vlan_override(self):
         """Makes sure vlan_interface flag overrides network bridge_interface.
 
-        Allows heterogeneous networks a la bug 833426"""
+        Allows heterogeneous networks a la bug 833426
+        """
 
         driver = linux_net.LinuxBridgeInterfaceDriver()
 
@@ -452,7 +454,8 @@ class LinuxNetworkTestCase(test.TestCase):
     def test_flat_override(self):
         """Makes sure flat_interface flag overrides network bridge_interface.
 
-        Allows heterogeneous networks a la bug 833426"""
+        Allows heterogeneous networks a la bug 833426
+        """
 
         driver = linux_net.LinuxBridgeInterfaceDriver()
 

@@ -1062,7 +1062,8 @@ class ComputeTestCase(BaseTestCase):
         """spawn failure test.
 
         Make sure that when there is a spawning problem,
-        the instance goes to ERROR state, keeping the task state"""
+        the instance goes to ERROR state, keeping the task state.
+        """
         def fake(*args, **kwargs):
             raise test.TestingException()
         self.stubs.Set(self.compute.driver, 'spawn', fake)
@@ -1080,7 +1081,8 @@ class ComputeTestCase(BaseTestCase):
         """spawn network deallocate test.
 
         Make sure that when an instance is not found during spawn
-        that the network is deallocated"""
+        that the network is deallocated
+        """
         instance = self._create_instance()
 
         def fake(*args, **kwargs):
@@ -3575,7 +3577,8 @@ class ComputeTestCase(BaseTestCase):
 
     def test_resize_same_source_fails(self):
         """Ensure instance fails to migrate when source and destination are
-        the same host"""
+        the same host.
+        """
         reservations = self._ensure_quota_reservations_rolledback()
         instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, instance=instance)
@@ -7388,7 +7391,8 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_reservation_id_one_instance(self):
         """Verify building an instance has a reservation_id that
-        matches return value from create"""
+        matches return value from create.
+        """
         (refs, resv_id) = self.compute_api.create(self.context,
                 flavors.get_default_flavor(), None)
         try:
@@ -7400,7 +7404,7 @@ class ComputeAPITestCase(BaseTestCase):
     def test_reservation_ids_two_instances(self):
         """Verify building 2 instances at once results in a
         reservation_id being returned equal to reservation id set
-        in both instances
+        in both instances.
         """
         (refs, resv_id) = self.compute_api.create(self.context,
                 flavors.get_default_flavor(), None,
@@ -8222,7 +8226,8 @@ def _create_service_entries(context, values={'avail_zone1': ['fake_host1',
 
 class ComputeAPIAggrTestCase(BaseTestCase):
     """This is for unit coverage of aggregate-related methods
-    defined in nova.compute.api."""
+    defined in nova.compute.api.
+    """
 
     def setUp(self):
         super(ComputeAPIAggrTestCase, self).setUp()
@@ -8332,7 +8337,8 @@ class ComputeAPIAggrTestCase(BaseTestCase):
 
 class ComputeAggrTestCase(BaseTestCase):
     """This is for unit coverage of aggregate-related methods
-    defined in nova.compute.manager."""
+    defined in nova.compute.manager.
+    """
 
     def setUp(self):
         super(ComputeAggrTestCase, self).setUp()

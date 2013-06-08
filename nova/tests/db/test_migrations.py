@@ -1418,8 +1418,11 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         self.assertTrue(db_utils.check_shadow_table(engine, 'console_pools'))
 
     def _unique_constraint_check_migrate_185(self, engine, check=True):
-        """Test check unique constraint behavior. It should be the same before
-        and after migration because we changed their names only."""
+        """Test check unique constraint behavior.
+
+        It should be the same before and after migration because we
+        changed their names only.
+        """
 
         data_list = [
             ("floating_ips", {'address': '10.12.14.16', 'deleted': 0}),

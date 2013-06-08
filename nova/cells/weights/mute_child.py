@@ -58,7 +58,8 @@ class MuteChildWeigher(weights.BaseCellWeigher):
     def _weigh_object(self, cell, weight_properties):
         """Check cell against the last_seen timestamp that indicates the time
         that the most recent capability or capacity update was received from
-        the given cell."""
+        the given cell.
+        """
 
         last_seen = cell.last_seen
         secs = CONF.cells.mute_child_interval

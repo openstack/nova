@@ -56,7 +56,8 @@ class InstanceEvent(Event):
     All events emitted by a virtualization driver which
     are associated with a virtual domain instance are
     subclasses of this base object. This object records
-    the UUID associated with the instance."""
+    the UUID associated with the instance.
+    """
 
     def __init__(self, uuid, timestamp=None):
         super(InstanceEvent, self).__init__(timestamp)
@@ -74,7 +75,8 @@ class LifecycleEvent(InstanceEvent):
     events of this class are emitted. The EVENT_LIFECYCLE_XX
     constants defined why lifecycle change occurred. This
     event allows detection of an instance starting/stopping
-    without need for polling"""
+    without need for polling.
+    """
 
     def __init__(self, uuid, transition, timestamp=None):
         super(LifecycleEvent, self).__init__(uuid, timestamp)

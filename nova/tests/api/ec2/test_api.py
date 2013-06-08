@@ -276,7 +276,8 @@ class ApiEc2TestCase(test.TestCase):
 
     def test_describe_instances(self):
         """Test that, after creating a user and a project, the describe
-        instances call to the API works properly"""
+        instances call to the API works properly.
+        """
         self.expect_http()
         self.mox.ReplayAll()
         self.assertEqual(self.ec2.get_all_instances(), [])
@@ -290,7 +291,8 @@ class ApiEc2TestCase(test.TestCase):
 
     def test_get_all_key_pairs(self):
         """Test that, after creating a user and project and generating
-         a key pair, that the API call to list key pairs works properly"""
+         a key pair, that the API call to list key pairs works properly.
+         """
         keyname = "".join(random.choice("sdiuisudfsdcnpaqwertasd")
                           for x in range(random.randint(4, 8)))
         self.expect_http()
@@ -302,7 +304,8 @@ class ApiEc2TestCase(test.TestCase):
 
     def test_create_duplicate_key_pair(self):
         """Test that, after successfully generating a keypair,
-        requesting a second keypair with the same name fails sanely"""
+        requesting a second keypair with the same name fails sanely.
+        """
         self.expect_http()
         self.mox.ReplayAll()
         self.ec2.create_key_pair('test')
@@ -351,10 +354,11 @@ class ApiEc2TestCase(test.TestCase):
 
     def test_group_name_valid_chars_security_group(self):
         """Test that we sanely handle invalid security group names.
+
          EC2 API Spec states we should only accept alphanumeric characters,
          spaces, dashes, and underscores. Amazon implementation
-         accepts more characters - so, [:print:] is ok. """
-
+         accepts more characters - so, [:print:] is ok.
+         """
         bad_strict_ec2 = "aa \t\x01\x02\x7f"
         bad_amazon_ec2 = "aa #^% -=99"
         test_raise = [
@@ -385,7 +389,9 @@ class ApiEc2TestCase(test.TestCase):
 
     def test_group_name_valid_length_security_group(self):
         """Test that we sanely handle invalid security group names.
-         API Spec states that the length should not exceed 255 chars """
+
+         API Spec states that the length should not exceed 255 char.
+        """
         self.expect_http()
         self.mox.ReplayAll()
 
