@@ -143,6 +143,20 @@ class Certificate(BASE, NovaBase):
 class Instance(BASE, NovaBase):
     """Represents a guest VM."""
     __tablename__ = 'instances'
+    __table_args__ = (
+        Index('instances_host_deleted_idx',
+              'host', 'deleted'),
+        Index('instances_reservation_id_idx',
+              'reservation_id'),
+        Index('instances_terminated_at_launched_at_idx',
+              'terminated_at', 'launched_at'),
+        Index('instances_uuid_deleted_idx',
+              'uuid', 'deleted'),
+        Index('instances_task_state_updated_at_idx',
+              'task_state', 'updated_at'),
+        Index('instances_host_node_deleted_idx',
+              'host', 'node', 'deleted')
+    )
     injected_files = []
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -172,87 +186,87 @@ class Instance(BASE, NovaBase):
     def _extra_keys(self):
         return ['name']
 
-    user_id = Column(String(255))
-    project_id = Column(String(255))
+    user_id = Column(String(255), nullable=True)
+    project_id = Column(String(255), nullable=True)
 
-    image_ref = Column(String(255))
-    kernel_id = Column(String(255))
-    ramdisk_id = Column(String(255))
-    hostname = Column(String(255))
+    image_ref = Column(String(255), nullable=True)
+    kernel_id = Column(String(255), nullable=True)
+    ramdisk_id = Column(String(255), nullable=True)
+    hostname = Column(String(255), nullable=True)
 
-    launch_index = Column(Integer)
-    key_name = Column(String(255))
+    launch_index = Column(Integer, nullable=True)
+    key_name = Column(String(255), nullable=True)
     key_data = Column(Text)
 
-    power_state = Column(Integer)
-    vm_state = Column(String(255))
-    task_state = Column(String(255))
+    power_state = Column(Integer, nullable=True)
+    vm_state = Column(String(255), nullable=True)
+    task_state = Column(String(255), nullable=True)
 
-    memory_mb = Column(Integer)
-    vcpus = Column(Integer)
-    root_gb = Column(Integer)
-    ephemeral_gb = Column(Integer)
+    memory_mb = Column(Integer, nullable=True)
+    vcpus = Column(Integer, nullable=True)
+    root_gb = Column(Integer, nullable=True)
+    ephemeral_gb = Column(Integer, nullable=True)
 
     # This is not related to hostname, above.  It refers
     #  to the nova node.
-    host = Column(String(255))  # , ForeignKey('hosts.id'))
+    host = Column(String(255), nullable=True)  # , ForeignKey('hosts.id'))
     # To identify the "ComputeNode" which the instance resides in.
     # This equals to ComputeNode.hypervisor_hostname.
-    node = Column(String(255))
+    node = Column(String(255), nullable=True)
 
     # *not* flavor_id
-    instance_type_id = Column(Integer)
+    instance_type_id = Column(Integer, nullable=True)
 
-    user_data = Column(Text)
+    user_data = Column(Text, nullable=True)
 
-    reservation_id = Column(String(255))
+    reservation_id = Column(String(255), nullable=True)
 
-    scheduled_at = Column(DateTime)
-    launched_at = Column(DateTime)
-    terminated_at = Column(DateTime)
+    scheduled_at = Column(DateTime, nullable=True)
+    launched_at = Column(DateTime, nullable=True)
+    terminated_at = Column(DateTime, nullable=True)
 
-    availability_zone = Column(String(255))
+    availability_zone = Column(String(255), nullable=True)
 
     # User editable field for display in user-facing UIs
-    display_name = Column(String(255))
-    display_description = Column(String(255))
+    display_name = Column(String(255), nullable=True)
+    display_description = Column(String(255), nullable=True)
 
     # To remember on which host an instance booted.
     # An instance may have moved to another host by live migration.
-    launched_on = Column(Text)
-    locked = Column(Boolean)
+    launched_on = Column(Text, nullable=True)
+    locked = Column(Boolean, nullable=True)
 
-    os_type = Column(String(255))
-    architecture = Column(String(255))
-    vm_mode = Column(String(255))
-    uuid = Column(String(36))
+    os_type = Column(String(255), nullable=True)
+    architecture = Column(String(255), nullable=True)
+    vm_mode = Column(String(255), nullable=True)
+    uuid = Column(String(36), unique=True)
 
-    root_device_name = Column(String(255))
+    root_device_name = Column(String(255), nullable=True)
     default_ephemeral_device = Column(String(255), nullable=True)
     default_swap_device = Column(String(255), nullable=True)
-    config_drive = Column(String(255))
+    config_drive = Column(String(255), nullable=True)
 
     # User editable field meant to represent what ip should be used
     # to connect to the instance
-    access_ip_v4 = Column(types.IPAddress())
-    access_ip_v6 = Column(types.IPAddress())
+    access_ip_v4 = Column(types.IPAddress(), nullable=True)
+    access_ip_v6 = Column(types.IPAddress(), nullable=True)
 
-    auto_disk_config = Column(Boolean())
-    progress = Column(Integer)
+    auto_disk_config = Column(Boolean(), nullable=True)
+    progress = Column(Integer, nullable=True)
 
     # EC2 instance_initiated_shutdown_terminate
     # True: -> 'terminate'
     # False: -> 'stop'
     # Note(maoy): currently Nova will always stop instead of terminate
     # no matter what the flag says. So we set the default to False.
-    shutdown_terminate = Column(Boolean(), default=False, nullable=False)
+    shutdown_terminate = Column(Boolean(), default=False, nullable=True)
 
     # EC2 disable_api_termination
-    disable_terminate = Column(Boolean(), default=False, nullable=False)
+    disable_terminate = Column(Boolean(), default=False, nullable=True)
 
     # OpenStack compute cell name.  This will only be set at the top of
     # the cells tree and it'll be a full cell name such as 'api!hop1!hop2'
-    cell_name = Column(String(255))
+    cell_name = Column(String(255), nullable=True)
 
 
 class InstanceInfoCache(BASE, NovaBase):
