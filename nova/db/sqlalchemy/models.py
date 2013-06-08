@@ -59,8 +59,9 @@ class ComputeNode(BASE, NovaBase):
     """Represents a running compute service on a host."""
 
     __tablename__ = 'compute_nodes'
+    __table_args__ = ()
     id = Column(Integer, primary_key=True)
-    service_id = Column(Integer, ForeignKey('services.id'), nullable=True)
+    service_id = Column(Integer, ForeignKey('services.id'), nullable=False)
     service = relationship(Service,
                            backref=backref('compute_node'),
                            foreign_keys=service_id,
@@ -68,23 +69,23 @@ class ComputeNode(BASE, NovaBase):
                                 'ComputeNode.service_id == Service.id,'
                                 'ComputeNode.deleted == 0)')
 
-    vcpus = Column(Integer)
-    memory_mb = Column(Integer)
-    local_gb = Column(Integer)
-    vcpus_used = Column(Integer)
-    memory_mb_used = Column(Integer)
-    local_gb_used = Column(Integer)
-    hypervisor_type = Column(Text)
-    hypervisor_version = Column(Integer)
-    hypervisor_hostname = Column(String(255))
+    vcpus = Column(Integer, nullable=False)
+    memory_mb = Column(Integer, nullable=False)
+    local_gb = Column(Integer, nullable=False)
+    vcpus_used = Column(Integer, nullable=False)
+    memory_mb_used = Column(Integer, nullable=False)
+    local_gb_used = Column(Integer, nullable=False)
+    hypervisor_type = Column(Text, nullable=False)
+    hypervisor_version = Column(Integer, nullable=False)
+    hypervisor_hostname = Column(String(255), nullable=True)
 
     # Free Ram, amount of activity (resize, migration, boot, etc) and
     # the number of running VM's are a good starting point for what's
     # important when making scheduling decisions.
-    free_ram_mb = Column(Integer)
-    free_disk_gb = Column(Integer)
-    current_workload = Column(Integer)
-    running_vms = Column(Integer)
+    free_ram_mb = Column(Integer, nullable=True)
+    free_disk_gb = Column(Integer, nullable=True)
+    current_workload = Column(Integer, nullable=True)
+    running_vms = Column(Integer, nullable=True)
 
     # Note(masumotok): Expected Strings example:
     #
@@ -97,7 +98,7 @@ class ComputeNode(BASE, NovaBase):
     # above, since it is copied from <cpu> tag of getCapabilities()
     # (See libvirt.virtConnection).
     cpu_info = Column(Text, nullable=True)
-    disk_available_least = Column(Integer)
+    disk_available_least = Column(Integer, nullable=True)
 
 
 class ComputeNodeStat(BASE, NovaBase):
