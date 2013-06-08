@@ -8750,14 +8750,37 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         self.assertRaises(exception.AggregateNotFound,
                           self.api.delete_aggregate, self.context, aggr['id'])
 
+    def test_update_aggregate(self):
+        # Ensure metadata can be updated.
+        aggr = self.api.create_aggregate(self.context, 'fake_aggregate',
+                                         'fake_zone')
+        test_notifier.NOTIFICATIONS = []
+        aggr = self.api.update_aggregate(self.context, aggr['id'],
+                                         {'name': 'new_fake_aggregate'})
+        self.assertEqual(len(test_notifier.NOTIFICATIONS), 2)
+        msg = test_notifier.NOTIFICATIONS[0]
+        self.assertEqual(msg['event_type'],
+                         'aggregate.updateprop.start')
+        msg = test_notifier.NOTIFICATIONS[1]
+        self.assertEqual(msg['event_type'],
+                         'aggregate.updateprop.end')
+
     def test_update_aggregate_metadata(self):
         # Ensure metadata can be updated.
         aggr = self.api.create_aggregate(self.context, 'fake_aggregate',
                                          'fake_zone')
         metadata = {'foo_key1': 'foo_value1',
                     'foo_key2': 'foo_value2', }
+        test_notifier.NOTIFICATIONS = []
         aggr = self.api.update_aggregate_metadata(self.context, aggr['id'],
                                                   metadata)
+        self.assertEqual(len(test_notifier.NOTIFICATIONS), 2)
+        msg = test_notifier.NOTIFICATIONS[0]
+        self.assertEqual(msg['event_type'],
+                         'aggregate.updatemetadata.start')
+        msg = test_notifier.NOTIFICATIONS[1]
+        self.assertEqual(msg['event_type'],
+                         'aggregate.updatemetadata.end')
         metadata['foo_key1'] = None
         expected = self.api.update_aggregate_metadata(self.context,
                                              aggr['id'], metadata)
@@ -8767,9 +8790,25 @@ class ComputeAPIAggrTestCase(BaseTestCase):
 
     def test_delete_aggregate(self):
         # Ensure we can delete an aggregate.
+        test_notifier.NOTIFICATIONS = []
         aggr = self.api.create_aggregate(self.context, 'fake_aggregate',
                                          'fake_zone')
+        self.assertEqual(len(test_notifier.NOTIFICATIONS), 2)
+        msg = test_notifier.NOTIFICATIONS[0]
+        self.assertEqual(msg['event_type'],
+                         'aggregate.create.start')
+        msg = test_notifier.NOTIFICATIONS[1]
+        self.assertEqual(msg['event_type'],
+                         'aggregate.create.end')
+        test_notifier.NOTIFICATIONS = []
         self.api.delete_aggregate(self.context, aggr['id'])
+        self.assertEqual(len(test_notifier.NOTIFICATIONS), 2)
+        msg = test_notifier.NOTIFICATIONS[0]
+        self.assertEqual(msg['event_type'],
+                         'aggregate.delete.start')
+        msg = test_notifier.NOTIFICATIONS[1]
+        self.assertEqual(msg['event_type'],
+                         'aggregate.delete.end')
         db.aggregate_get(self.context.elevated(read_deleted='yes'),
                          aggr['id'])
         self.assertRaises(exception.AggregateNotFound,
@@ -8792,8 +8831,16 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         fake_host = values[fake_zone][0]
         aggr = self.api.create_aggregate(self.context,
                                          'fake_aggregate', fake_zone)
+        test_notifier.NOTIFICATIONS = []
         aggr = self.api.add_host_to_aggregate(self.context,
                                               aggr['id'], fake_host)
+        self.assertEqual(len(test_notifier.NOTIFICATIONS), 2)
+        msg = test_notifier.NOTIFICATIONS[0]
+        self.assertEqual(msg['event_type'],
+                         'aggregate.addhost.start')
+        msg = test_notifier.NOTIFICATIONS[1]
+        self.assertEqual(msg['event_type'],
+                         'aggregate.addhost.end')
         self.assertEqual(len(aggr['hosts']), 1)
 
     def test_add_host_to_aggregate_multiple(self):
@@ -8824,9 +8871,17 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         for host in values[fake_zone]:
             aggr = self.api.add_host_to_aggregate(self.context,
                                                   aggr['id'], host)
+        test_notifier.NOTIFICATIONS = []
         expected = self.api.remove_host_from_aggregate(self.context,
                                                        aggr['id'],
                                                        values[fake_zone][0])
+        self.assertEqual(len(test_notifier.NOTIFICATIONS), 2)
+        msg = test_notifier.NOTIFICATIONS[0]
+        self.assertEqual(msg['event_type'],
+                         'aggregate.removehost.start')
+        msg = test_notifier.NOTIFICATIONS[1]
+        self.assertEqual(msg['event_type'],
+                         'aggregate.removehost.end')
         self.assertEqual(len(aggr['hosts']) - 1, len(expected['hosts']))
 
     def test_remove_host_from_aggregate_raise_not_found(self):
