@@ -69,7 +69,7 @@ class SecurityGroupBase(object):
             # specified, but only if a source group was specified.
             ip_proto_upper = ip_protocol.upper() if ip_protocol else ''
             if (ip_proto_upper == 'ICMP' and
-                from_port is None and to_port is None):
+                    from_port is None and to_port is None):
                 from_port = -1
                 to_port = -1
             elif (ip_proto_upper in ['TCP', 'UDP'] and from_port is None
@@ -101,14 +101,14 @@ class SecurityGroupBase(object):
             # Verify that from_port must always be less than
             # or equal to to_port
             if (ip_protocol.upper() in ['TCP', 'UDP'] and
-                (from_port > to_port)):
+                    (from_port > to_port)):
                 raise exception.InvalidPortRange(from_port=from_port,
                       to_port=to_port, msg="Former value cannot"
                                             " be greater than the later")
 
             # Verify valid TCP, UDP port ranges
             if (ip_protocol.upper() in ['TCP', 'UDP'] and
-                (from_port < 1 or to_port > 65535)):
+                    (from_port < 1 or to_port > 65535)):
                 raise exception.InvalidPortRange(from_port=from_port,
                       to_port=to_port, msg="Valid TCP ports should"
                                            " be between 1-65535")
@@ -116,7 +116,7 @@ class SecurityGroupBase(object):
             # Verify ICMP type and code
             if (ip_protocol.upper() == "ICMP" and
                 (from_port < -1 or from_port > 255 or
-                to_port < -1 or to_port > 255)):
+                 to_port < -1 or to_port > 255)):
                 raise exception.InvalidPortRange(from_port=from_port,
                       to_port=to_port, msg="For ICMP, the"
                                            " type:code must be valid")

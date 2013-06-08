@@ -2148,7 +2148,7 @@ class LibvirtDriver(driver.ComputeDriver):
                              '/dev/' + disklocal.target_dev})
 
                 for eph in driver.block_device_info_get_ephemerals(
-                    block_device_info):
+                        block_device_info):
                     diskeph = self.get_guest_disk_config(
                         instance,
                         blockinfo.get_eph_disk(eph),
@@ -3809,7 +3809,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # then ensure we're in 'raw' format so we can extend file system.
             fmt = info['type']
             if (size and fmt == 'qcow2' and
-                disk.can_resize_fs(info['path'], size, use_cow=True)):
+                    disk.can_resize_fs(info['path'], size, use_cow=True)):
                 path_raw = info['path'] + '_raw'
                 utils.execute('qemu-img', 'convert', '-f', 'qcow2',
                               '-O', 'raw', info['path'], path_raw)

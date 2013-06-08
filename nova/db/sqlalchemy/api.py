@@ -4473,7 +4473,7 @@ def vol_usage_update(context, id, rd_req, rd_bytes, wr_req, wr_bytes,
             if (rd_req < current_usage['curr_reads'] or
                 rd_bytes < current_usage['curr_read_bytes'] or
                 wr_req < current_usage['curr_writes'] or
-                wr_bytes < current_usage['curr_write_bytes']):
+                    wr_bytes < current_usage['curr_write_bytes']):
                 LOG.info(_("Volume(%s) has lower stats then what is in "
                            "the database. Instance must have been rebooted "
                            "or crashed. Updating totals.") % id)

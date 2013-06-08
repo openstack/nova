@@ -153,7 +153,7 @@ class LibvirtNetVolumeDriver(LibvirtBaseVolumeDriver):
         conf.source_ports = netdisk_properties.get('ports', [])
         auth_enabled = netdisk_properties.get('auth_enabled')
         if (conf.source_protocol == 'rbd' and
-            CONF.rbd_secret_uuid):
+                CONF.rbd_secret_uuid):
             conf.auth_secret_uuid = CONF.rbd_secret_uuid
             auth_enabled = True  # Force authentication locally
             if CONF.rbd_user:

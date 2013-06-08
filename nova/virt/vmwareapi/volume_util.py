@@ -109,7 +109,7 @@ def find_st(session, data, cluster=None):
             for target in adapter.target:
                 if (getattr(target.transport, 'address', None) and
                     target.transport.address[0] == target_portal and
-                    target.transport.iScsiName == target_iqn):
+                        target.transport.iScsiName == target_iqn):
                     if not target.lun:
                         return result
                     for lun in target.lun:

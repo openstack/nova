@@ -240,7 +240,7 @@ def _downgrade_bdm_v2(meta, bdm_table):
 
     for instance_uuid, in itertools.chain(
         instance_q.execute().fetchall(),
-        instance_shadow_q.execute().fetchall()):
+            instance_shadow_q.execute().fetchall()):
         # Get all the bdms for an instance
         bdm_q = select(
             [bdm_table.c.id, bdm_table.c.source_type, bdm_table.c.guest_format]

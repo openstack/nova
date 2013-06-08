@@ -828,7 +828,7 @@ class SessionBase(object):
             val = params[2]
 
             if (ref in _db_content[cls] and
-                field in _db_content[cls][ref]):
+                    field in _db_content[cls][ref]):
                 _db_content[cls][ref][field] = val
                 return
 
@@ -897,7 +897,7 @@ class SessionBase(object):
 
     def _check_session(self, params):
         if (self._session is None or
-            self._session not in _db_content['session']):
+                self._session not in _db_content['session']):
             raise Failure(['HANDLE_INVALID', 'session', self._session])
         if len(params) == 0 or params[0] != self._session:
             LOG.debug(_('Raising NotImplemented'))

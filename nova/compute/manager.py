@@ -396,7 +396,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                           instance_uuid,
                                                           **kwargs)
         if (instance_ref['host'] == self.host and
-            instance_ref['node'] in self.driver.get_available_nodes()):
+                instance_ref['node'] in self.driver.get_available_nodes()):
 
             rt = self._get_resource_tracker(instance_ref.get('node'))
             rt.update_usage(context, instance_ref)
@@ -759,7 +759,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     def _get_instance_nw_info(self, context, instance):
         """Get a list of dictionaries of network data of an instance."""
         if (not hasattr(instance, 'system_metadata') or
-            len(instance['system_metadata']) == 0):
+                len(instance['system_metadata']) == 0):
             # NOTE(danms): Several places in the code look up instances without
             # pulling system_metadata for performance, and call this function.
             # If we get an instance without it, re-fetch so that the call
@@ -827,7 +827,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 continue
 
             if ((bdm['snapshot_id'] is not None) and
-                (bdm['volume_id'] is None)):
+                    (bdm['volume_id'] is None)):
                 # TODO(yamahata): default name and description
                 snapshot = self.volume_api.get_snapshot(context,
                                                         bdm['snapshot_id'])

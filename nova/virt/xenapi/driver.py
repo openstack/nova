@@ -758,7 +758,7 @@ class XenAPISession(object):
             LOG.debug(_("Got exception: %s"), exc)
             if (len(exc.details) == 4 and
                 exc.details[0] == 'XENAPI_PLUGIN_EXCEPTION' and
-                exc.details[2] == 'Failure'):
+                    exc.details[2] == 'Failure'):
                 params = None
                 try:
                     # FIXME(comstud): eval is evil.

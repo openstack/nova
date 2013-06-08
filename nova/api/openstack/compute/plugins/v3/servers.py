@@ -1299,7 +1299,7 @@ class ServersController(wsgi.Controller):
     def _action_change_password(self, req, id, body):
         context = req.environ['nova.context']
         if (not 'changePassword' in body
-            or 'adminPass' not in body['changePassword']):
+                or 'adminPass' not in body['changePassword']):
             msg = _("No adminPass was specified")
             raise exc.HTTPBadRequest(explanation=msg)
         password = body['changePassword']['adminPass']

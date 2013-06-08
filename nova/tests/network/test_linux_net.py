@@ -200,7 +200,7 @@ def get_associated(context, network_id, host=None, address=None):
     for datum in fixed_ips:
         if (datum['network_id'] == network_id and datum['allocated']
             and datum['instance_uuid'] is not None
-            and datum['virtual_interface_id'] is not None):
+                and datum['virtual_interface_id'] is not None):
             instance = instances[datum['instance_uuid']]
             if host and host != instance['host']:
                 continue

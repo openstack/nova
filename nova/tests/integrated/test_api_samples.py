@@ -291,7 +291,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             template_data = self._read_template(name)
 
         if (self.generate_samples and
-            not os.path.exists(self._get_sample(name))):
+                not os.path.exists(self._get_sample(name))):
             self._write_sample(name, response_data)
             sample_data = response_data
         else:
@@ -429,7 +429,7 @@ class ApiSamplesTrap(ApiSampleTestBase):
             # NOTE(danms): if you add an extension, it must come with
             # api_samples tests!
             if (extension not in tests and
-                extension not in do_not_approve_additions):
+                    extension not in do_not_approve_additions):
                 missing_tests.append(extension)
 
         if missing_tests:

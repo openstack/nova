@@ -377,7 +377,7 @@ def get_disk_mapping(virt_type, instance,
         mapping['disk.local'] = eph_info
 
     for eph in driver.block_device_info_get_ephemerals(
-        block_device_info):
+            block_device_info):
         disk_dev = block_device.strip_dev(eph['device_name'])
         disk_bus = get_disk_bus_for_disk_dev(virt_type, disk_dev)
 

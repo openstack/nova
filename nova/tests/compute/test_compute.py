@@ -1402,7 +1402,7 @@ class ComputeTestCase(BaseTestCase):
         instance['vm_state'] = 'some_random_state'
 
         with testtools.ExpectedException(
-            exception.InstanceNotRescuable, expected_message):
+                exception.InstanceNotRescuable, expected_message):
                 self.compute.rescue_instance(
                     self.context, instance=instance,
                     rescue_password='password')
@@ -4536,7 +4536,7 @@ class ComputeTestCase(BaseTestCase):
             self.assertNotEqual(migration_ref, None)
             for migration in migrations:
                 if (migration['instance_uuid'] ==
-                    migration_ref['instance_uuid']):
+                        migration_ref['instance_uuid']):
                     migration['status'] = 'confirmed'
 
         self.stubs.Set(db, 'instance_get_by_uuid',
@@ -7063,7 +7063,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertThat(bdms, matchers.DictListMatches(expected_result))
 
         for bdm in db.block_device_mapping_get_all_by_instance(
-            self.context, instance['uuid']):
+                self.context, instance['uuid']):
             db.block_device_mapping_destroy(self.context, bdm['id'])
         instance = db.instance_get_by_uuid(self.context, instance['uuid'])
         self.compute.terminate_instance(self.context, instance)
@@ -8876,7 +8876,7 @@ class EvacuateHostTestCase(BaseTestCase):
 
         # cleanup
         for bdms in db.block_device_mapping_get_all_by_instance(
-            self.context, self.inst_ref['uuid']):
+                self.context, self.inst_ref['uuid']):
             db.block_device_mapping_destroy(self.context, bdms['id'])
 
     def test_rebuild_on_host_with_shared_storage(self):

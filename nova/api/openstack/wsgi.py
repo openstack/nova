@@ -254,7 +254,7 @@ class XMLDeserializer(TextDeserializer):
         for node in parent.childNodes:
             if (node.localName == name and
                 node.namespaceURI and
-                node.namespaceURI == namespace):
+                    node.namespaceURI == namespace):
                 return node
         return None
 
@@ -1020,7 +1020,7 @@ class Resource(wsgi.Application):
                 meth = getattr(self.controller, action)
         except AttributeError:
             if (not self.wsgi_actions or
-                action not in _ROUTES_METHODS + ['action']):
+                    action not in _ROUTES_METHODS + ['action']):
                 # Propagate the error
                 raise
         else:

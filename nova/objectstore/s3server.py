@@ -239,7 +239,7 @@ class BucketHandler(BaseRequestHandler):
                                             bucket_name))
         terse = int(self.get_argument("terse", 0))
         if (not path.startswith(self.application.directory) or
-            not os.path.isdir(path)):
+                not os.path.isdir(path)):
             self.set_404()
             return
         object_names = []
@@ -290,7 +290,7 @@ class BucketHandler(BaseRequestHandler):
         path = os.path.abspath(os.path.join(
             self.application.directory, bucket_name))
         if (not path.startswith(self.application.directory) or
-            os.path.exists(path)):
+                os.path.exists(path)):
             self.set_status(403)
             return
         fileutils.ensure_tree(path)
@@ -300,7 +300,7 @@ class BucketHandler(BaseRequestHandler):
         path = os.path.abspath(os.path.join(
             self.application.directory, bucket_name))
         if (not path.startswith(self.application.directory) or
-            not os.path.isdir(path)):
+                not os.path.isdir(path)):
             self.set_404()
             return
         if len(os.listdir(path)) > 0:
@@ -316,7 +316,7 @@ class ObjectHandler(BaseRequestHandler):
         object_name = urllib.unquote(object_name)
         path = self._object_path(bucket, object_name)
         if (not path.startswith(self.application.directory) or
-            not os.path.isfile(path)):
+                not os.path.isfile(path)):
             self.set_404()
             return
         info = os.stat(path)
@@ -334,7 +334,7 @@ class ObjectHandler(BaseRequestHandler):
         bucket_dir = os.path.abspath(os.path.join(
             self.application.directory, bucket))
         if (not bucket_dir.startswith(self.application.directory) or
-            not os.path.isdir(bucket_dir)):
+                not os.path.isdir(bucket_dir)):
             self.set_404()
             return
         path = self._object_path(bucket, object_name)
@@ -354,7 +354,7 @@ class ObjectHandler(BaseRequestHandler):
         object_name = urllib.unquote(object_name)
         path = self._object_path(bucket, object_name)
         if (not path.startswith(self.application.directory) or
-            not os.path.isfile(path)):
+                not os.path.isfile(path)):
             self.set_404()
             return
         os.unlink(path)

@@ -357,7 +357,7 @@ class Domain(object):
 
     def attachDeviceFlags(self, xml, flags):
         if (flags & VIR_DOMAIN_AFFECT_LIVE and
-            self._state != VIR_DOMAIN_RUNNING):
+                self._state != VIR_DOMAIN_RUNNING):
             raise libvirtError("AFFECT_LIVE only allowed for running domains!")
         self.attachDevice(xml)
 

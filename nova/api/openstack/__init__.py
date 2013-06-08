@@ -260,7 +260,7 @@ class APIRouterV3(base_wsgi.Router):
                 # Check whitelist is either empty or if not then the extension
                 # is in the whitelist
                 if (not CONF.osapi_v3.extensions_whitelist or
-                    ext.obj.alias in CONF.osapi_v3.extensions_whitelist):
+                        ext.obj.alias in CONF.osapi_v3.extensions_whitelist):
 
                     # Check the extension is not in the blacklist
                     if ext.obj.alias not in CONF.osapi_v3.extensions_blacklist:

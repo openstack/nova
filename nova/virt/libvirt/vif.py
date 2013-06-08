@@ -111,7 +111,7 @@ class LibvirtBaseVIFDriver(object):
         # to the global config parameter
         if (model is None and
             CONF.libvirt_type in ('kvm', 'qemu') and
-            CONF.libvirt_use_virtio_for_bridges):
+                    CONF.libvirt_use_virtio_for_bridges):
             model = "virtio"
 
         # Workaround libvirt bug, where it mistakenly
@@ -332,7 +332,7 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
 
         network, mapping = vif
         if (not network.get('multi_host') and
-            mapping.get('should_create_bridge')):
+                    mapping.get('should_create_bridge')):
             if mapping.get('should_create_vlan'):
                 iface = CONF.vlan_interface or network['bridge_interface']
                 LOG.debug(_('Ensuring vlan %(vlan)s and bridge %(bridge)s'),

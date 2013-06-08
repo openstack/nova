@@ -621,7 +621,7 @@ class FloatingIP(object):
 
         for db_domain in db_domain_list:
             if (db_domain in floating_driver_domain_list or
-                db_domain in instance_driver_domain_list):
+                    db_domain in instance_driver_domain_list):
                     domain_entry = self._prepare_domain_entry(context,
                                                               db_domain)
                     if domain_entry:

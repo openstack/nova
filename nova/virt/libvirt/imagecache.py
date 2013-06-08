@@ -300,7 +300,7 @@ class ImageCacheManager(object):
                              task_states.RESIZE_MIGRATED,
                              task_states.RESIZE_FINISH]
             if instance['task_state'] in resize_states or \
-                instance['vm_state'] == vm_states.RESIZED:
+                    instance['vm_state'] == vm_states.RESIZED:
                 self.instance_names.add(instance['name'] + '_resize')
                 self.instance_names.add(instance['uuid'] + '_resize')
 
@@ -406,7 +406,7 @@ class ImageCacheManager(object):
                 # shared storage), then we don't need to checksum again.
                 if (stored_timestamp and
                     time.time() - stored_timestamp <
-                    CONF.checksum_interval_seconds):
+                        CONF.checksum_interval_seconds):
                     return True
 
                 # NOTE(mikal): If there is no timestamp, then the checksum was
@@ -494,7 +494,7 @@ class ImageCacheManager(object):
             self.unexplained_images.remove(base_file)
 
         if (base_file and os.path.exists(base_file)
-            and os.path.isfile(base_file)):
+                and os.path.isfile(base_file)):
             # _verify_checksum returns True if the checksum is ok, and None if
             # there is no checksum file
             checksum_result = self._verify_checksum(img_id, base_file)

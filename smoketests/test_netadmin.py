@@ -74,7 +74,7 @@ class AddressTests(base.UserSmokeTestCase):
         for rule in groups[0].rules:
             if (rule.ip_protocol == 'tcp' and
                 int(rule.from_port) <= 22 and
-                int(rule.to_port) >= 22):
+                    int(rule.to_port) >= 22):
                 ssh_authorized = True
                 break
         if not ssh_authorized:

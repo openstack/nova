@@ -297,7 +297,7 @@ class LibvirtConfigCPU(LibvirtConfigObject):
 
         if (self.sockets is not None and
             self.cores is not None and
-            self.threads is not None):
+                self.threads is not None):
             top = etree.Element("topology")
             top.set("sockets", str(self.sockets))
             top.set("cores", str(self.cores))
@@ -484,7 +484,7 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
         dev.set("device", self.source_device)
         if (self.driver_name is not None or
             self.driver_format is not None or
-            self.driver_cache is not None):
+                self.driver_cache is not None):
             drv = etree.Element("driver")
             if self.driver_name is not None:
                 drv.set("name", self.driver_name)

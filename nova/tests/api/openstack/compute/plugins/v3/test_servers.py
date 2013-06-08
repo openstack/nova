@@ -1821,7 +1821,7 @@ class ServersControllerCreateTest(test.TestCase):
         def rpc_call_wrapper(context, topic, msg, timeout=None):
             """Stub out the scheduler creating the instance entry."""
             if (topic == CONF.scheduler_topic and
-                msg['method'] == 'run_instance'):
+                    msg['method'] == 'run_instance'):
                 request_spec = msg['args']['request_spec']
                 num_instances = request_spec.get('num_instances', 1)
                 instances = []
@@ -1954,7 +1954,7 @@ class ServersControllerCreateTest(test.TestCase):
         req.headers["content-type"] = "application/json"
         with testtools.ExpectedException(
             webob.exc.HTTPBadRequest,
-            'Image 76fa36fc-c930-4bf3-8c8a-ea2a2420deb6 is not active.'):
+                'Image 76fa36fc-c930-4bf3-8c8a-ea2a2420deb6 is not active.'):
                 self.controller.create(req, body)
 
     def test_create_server_image_too_large(self):
@@ -1983,7 +1983,7 @@ class ServersControllerCreateTest(test.TestCase):
         req.headers["content-type"] = "application/json"
         with testtools.ExpectedException(
             webob.exc.HTTPBadRequest,
-            "Instance type's disk is too small for requested image."):
+                "Instance type's disk is too small for requested image."):
                 self.controller.create(req, body)
 
     # TODO(cyeoh): bp-v3-api-unittests

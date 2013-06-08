@@ -71,7 +71,7 @@ class ViewBuilder(object):
             # check for existing key
             for limit in limits:
                 if (limit["uri"] == rate_limit["URI"] and
-                    limit["regex"] == rate_limit["regex"]):
+                        limit["regex"] == rate_limit["regex"]):
                     _rate_limit_key = limit
                     break
 

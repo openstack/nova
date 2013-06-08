@@ -146,7 +146,7 @@ def create_network_spec(client_factory, vif_info):
     mac_address = vif_info['mac_address']
     backing = None
     if (network_ref and
-        network_ref['type'] == "DistributedVirtualPortgroup"):
+            network_ref['type'] == "DistributedVirtualPortgroup"):
         backing_name = ''.join(['ns0:VirtualEthernetCardDistributed',
                                 'VirtualPortBackingInfo'])
         backing = client_factory.create(backing_name)
@@ -280,7 +280,7 @@ def get_rdm_disk(hardware_devices, uuid):
         if (device.__class__.__name__ == "VirtualDisk" and
             device.backing.__class__.__name__ ==
                 "VirtualDiskRawDiskMappingVer1BackingInfo" and
-            device.backing.lunUuid == uuid):
+                device.backing.lunUuid == uuid):
             return device
 
 

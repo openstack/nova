@@ -111,7 +111,7 @@ class MiniDNS(dns_driver.DNSDriver):
         for line in infile:
             entry = self.parse_line(line)
             if ((not entry) or
-                entry['name'] != self.qualify(name, domain)):
+                    entry['name'] != self.qualify(name, domain)):
                 outfile.write(line)
             else:
                 deleted = True
@@ -133,7 +133,7 @@ class MiniDNS(dns_driver.DNSDriver):
         for line in infile:
             entry = self.parse_line(line)
             if (entry and
-                entry['name'] == self.qualify(name, domain)):
+                    entry['name'] == self.qualify(name, domain)):
                 outfile.write("%s   %s   %s\n" %
                     (address, self.qualify(name, domain), entry['type']))
             else:
@@ -162,7 +162,7 @@ class MiniDNS(dns_driver.DNSDriver):
         for line in infile:
             entry = self.parse_line(line)
             if (entry and
-                entry['name'] == self.qualify(name, domain)):
+                    entry['name'] == self.qualify(name, domain)):
                 entries.append(entry['address'])
         infile.close()
         return entries
@@ -195,7 +195,7 @@ class MiniDNS(dns_driver.DNSDriver):
         for line in infile:
             entry = self.parse_line(line)
             if ((not entry) or
-                entry['domain'] != fqdomain.lower()):
+                    entry['domain'] != fqdomain.lower()):
                 outfile.write(line)
             else:
                 LOG.info(_("deleted %s"), entry)
