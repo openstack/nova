@@ -25,7 +25,8 @@ from nova import exception
 from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
-authorize = extensions.extension_authorizer('compute', 'hosts')
+ALIAS = 'os-hosts'
+authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
 
 
 class HostIndexTemplate(xmlutil.TemplateBuilder):
@@ -39,25 +40,6 @@ class HostIndexTemplate(xmlutil.TemplateBuilder):
         return xmlutil.MasterTemplate(root, 1)
 
 
-class HostUpdateTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('host')
-        root.set('host')
-        root.set('status')
-        root.set('maintenance_mode')
-
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class HostActionTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('host')
-        root.set('host')
-        root.set('power_action')
-
-        return xmlutil.MasterTemplate(root, 1)
-
-
 class HostShowTemplate(xmlutil.TemplateBuilder):
     def construct(self):
         root = xmlutil.TemplateElement('host')
@@ -66,25 +48,6 @@ class HostShowTemplate(xmlutil.TemplateBuilder):
         root.append(elem)
 
         return xmlutil.MasterTemplate(root, 1)
-
-
-class HostUpdateDeserializer(wsgi.XMLDeserializer):
-    def default(self, string):
-        node = xmlutil.safe_minidom_parse_string(string)
-
-        updates = {}
-        updates_node = self.find_first_child_named(node, 'updates')
-        if updates_node is not None:
-            maintenance = self.find_first_child_named(updates_node,
-                                                      'maintenance_mode')
-            if maintenance is not None:
-                updates[maintenance.tagName] = self.extract_text(maintenance)
-
-            status = self.find_first_child_named(updates_node, 'status')
-            if status is not None:
-                updates[status.tagName] = self.extract_text(status)
-
-        return dict(body=updates)
 
 
 class HostController(object):
@@ -147,12 +110,10 @@ class HostController(object):
                           'zone': service['availability_zone']})
         return {'hosts': hosts}
 
-    @wsgi.serializers(xml=HostUpdateTemplate)
-    @wsgi.deserializers(xml=HostUpdateDeserializer)
     def update(self, req, id, body):
         """
-        :param body: example format {'status': 'enable',
-                                     'maintenance_mode': 'enable'}
+        :param body: example format {'updates': {'status': 'enable',
+                                     'maintenance_mode': 'enable'}}
         :returns:
         """
         def read_enabled(orig_val, msg):
@@ -174,7 +135,8 @@ class HostController(object):
         context = req.environ['nova.context']
         authorize(context)
         # See what the user wants to 'update'
-        params = dict([(k.strip().lower(), v) for k, v in body.iteritems()])
+        params = dict([(k.strip().lower(), v)
+                       for k, v in body['updates'].iteritems()])
         orig_status = status = params.pop('status', None)
         orig_maint_mode = maint_mode = params.pop('maintenance_mode', None)
         # Validate the request
@@ -196,8 +158,9 @@ class HostController(object):
             result['status'] = self._set_enabled_status(context, id, status)
         if maint_mode is not None:
             result['maintenance_mode'] = self._set_host_maintenance(context,
-                id, maint_mode)
-        return result
+                                                                    id,
+                                                                    maint_mode)
+        return {'host': result}
 
     def _set_host_maintenance(self, context, host_name, mode=True):
         """Start/Stop host maintenance window. On start, it triggers
@@ -228,7 +191,7 @@ class HostController(object):
             LOG.audit(_("Disabling host %s.") % host_name)
         try:
             result = self.api.set_host_enabled(context, host_name=host_name,
-                    enabled=enabled)
+                                               enabled=enabled)
         except NotImplementedError:
             msg = _("Virt driver does not implement host disabled status.")
             raise webob.exc.HTTPNotImplemented(explanation=msg)
@@ -244,23 +207,21 @@ class HostController(object):
         authorize(context)
         try:
             result = self.api.host_power_action(context, host_name=host_name,
-                    action=action)
+                                                action=action)
         except NotImplementedError:
             msg = _("Virt driver does not implement host power management.")
             raise webob.exc.HTTPNotImplemented(explanation=msg)
         except exception.NotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
-        return {"host": host_name, "power_action": result}
+        return {"host": {"host": host_name,
+                         "power_action": result}}
 
-    @wsgi.serializers(xml=HostActionTemplate)
     def startup(self, req, id):
         return self._host_power_action(req, host_name=id, action="startup")
 
-    @wsgi.serializers(xml=HostActionTemplate)
     def shutdown(self, req, id):
         return self._host_power_action(req, host_name=id, action="shutdown")
 
-    @wsgi.serializers(xml=HostActionTemplate)
     def reboot(self, req, id):
         return self._host_power_action(req, host_name=id, action="reboot")
 
@@ -348,18 +309,20 @@ class HostController(object):
         return {'host': resources}
 
 
-class Hosts(extensions.ExtensionDescriptor):
+class Hosts(extensions.V3APIExtensionBase):
     """Admin-only host administration."""
 
     name = "Hosts"
-    alias = "os-hosts"
-    namespace = "http://docs.openstack.org/compute/ext/hosts/api/v1.1"
-    updated = "2011-06-29T00:00:00+00:00"
+    alias = ALIAS
+    namespace = "http://docs.openstack.org/compute/ext/hosts/api/v3"
+    version = 1
 
     def get_resources(self):
         resources = [extensions.ResourceExtension('os-hosts',
                 HostController(),
-                collection_actions={'update': 'PUT'},
                 member_actions={"startup": "GET", "shutdown": "GET",
                         "reboot": "GET"})]
         return resources
+
+    def get_controller_extensions(self):
+        return []
