@@ -49,10 +49,12 @@ class KeypairAPITestCase(test_compute.BaseTestCase):
 
     def _keypair_db_call_stubs(self):
 
-        def db_key_pair_get_all_by_user(self, user_id):
-            return []
+        def db_key_pair_get_all_by_user(context, user_id):
+            return [{'name': self.existing_key_name,
+                     'public_key': self.pub_key,
+                     'fingerprint': self.fingerprint}]
 
-        def db_key_pair_create(self, keypair):
+        def db_key_pair_create(context, keypair):
             pass
 
         def db_key_pair_destroy(context, user_id, name):
@@ -163,3 +165,10 @@ class GetKeypairTestCase(KeypairAPITestCase):
                                                 self.ctxt.user_id,
                                                 self.existing_key_name)
         self.assertEqual(self.existing_key_name, keypair['name'])
+
+
+class GetKeypairsTestCase(KeypairAPITestCase):
+    def test_success(self):
+        keypairs = self.keypair_api.get_key_pairs(self.ctxt, self.ctxt.user_id)
+        self.assertEqual([self.existing_key_name],
+                         [k['name'] for k in keypairs])

@@ -2780,13 +2780,11 @@ class AggregateAPI(base.Base):
 
 
 class KeypairAPI(base.Base):
-    """Sub-set of the Compute Manager API for managing key pairs."""
-    def __init__(self, **kwargs):
-        super(KeypairAPI, self).__init__(**kwargs)
+    """Subset of the Compute Manager API for managing key pairs."""
 
-    def _validate_keypair_name(self, context, user_id, key_name):
-        safechars = "_- " + string.digits + string.ascii_letters
-        clean_value = "".join(x for x in key_name if x in safechars)
+    def _validate_new_key_pair(self, context, user_id, key_name):
+        safe_chars = "_- " + string.digits + string.ascii_letters
+        clean_value = "".join(x for x in key_name if x in safe_chars)
         if clean_value != key_name:
             raise exception.InvalidKeypair(
                 _("Keypair name contains unsafe characters"))
@@ -2795,15 +2793,15 @@ class KeypairAPI(base.Base):
             raise exception.InvalidKeypair(
                 _('Keypair name must be between 1 and 255 characters long'))
 
-    def import_key_pair(self, context, user_id, key_name, public_key):
-        """Import a key pair using an existing public key."""
-        self._validate_keypair_name(context, user_id, key_name)
-
         count = QUOTAS.count(context, 'key_pairs', user_id)
         try:
             QUOTAS.limit_check(context, key_pairs=count + 1)
         except exception.OverQuota:
             raise exception.KeypairLimitExceeded()
+
+    def import_key_pair(self, context, user_id, key_name, public_key):
+        """Import a key pair using an existing public key."""
+        self._validate_new_key_pair(context, user_id, key_name)
 
         fingerprint = crypto.generate_fingerprint(public_key)
 
@@ -2817,13 +2815,7 @@ class KeypairAPI(base.Base):
 
     def create_key_pair(self, context, user_id, key_name):
         """Create a new key pair."""
-        self._validate_keypair_name(context, user_id, key_name)
-
-        count = QUOTAS.count(context, 'key_pairs', user_id)
-        try:
-            QUOTAS.limit_check(context, key_pairs=count + 1)
-        except exception.OverQuota:
-            raise exception.KeypairLimitExceeded()
+        self._validate_new_key_pair(context, user_id, key_name)
 
         private_key, public_key, fingerprint = crypto.generate_key_pair()
 
@@ -2832,6 +2824,7 @@ class KeypairAPI(base.Base):
                    'fingerprint': fingerprint,
                    'public_key': public_key,
                    'private_key': private_key}
+
         self.db.key_pair_create(context, keypair)
         return keypair
 
@@ -2839,24 +2832,20 @@ class KeypairAPI(base.Base):
         """Delete a keypair by name."""
         self.db.key_pair_destroy(context, user_id, key_name)
 
+    def _get_key_pair(self, key_pair):
+        return {'name': key_pair['name'],
+                'public_key': key_pair['public_key'],
+                'fingerprint': key_pair['fingerprint']}
+
     def get_key_pairs(self, context, user_id):
         """List key pairs."""
         key_pairs = self.db.key_pair_get_all_by_user(context, user_id)
-        rval = []
-        for key_pair in key_pairs:
-            rval.append({
-                'name': key_pair['name'],
-                'public_key': key_pair['public_key'],
-                'fingerprint': key_pair['fingerprint'],
-            })
-        return rval
+        return [self._get_key_pair(k) for k in key_pairs]
 
     def get_key_pair(self, context, user_id, key_name):
         """Get a keypair by name."""
         key_pair = self.db.key_pair_get(context, user_id, key_name)
-        return {'name': key_pair['name'],
-                'public_key': key_pair['public_key'],
-                'fingerprint': key_pair['fingerprint']}
+        return self._get_key_pair(key_pair)
 
 
 class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
