@@ -58,6 +58,8 @@
     "compute_extension:extended_ips_mac": "",
     "compute_extension:extended_vif_net": "",
     "compute_extension:v3:extension_info:discoverable": "",
+    "compute_extension:extended_volumes": "",
+    "compute_extension:v3:os-extended-volumes": "",
     "compute_extension:fixed_ips": "rule:admin_api",
     "compute_extension:v3:os-fixed-ips:discoverable": "",
     "compute_extension:v3:os-fixed-ips": "rule:admin_api",

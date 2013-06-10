@@ -193,6 +193,7 @@ class ExtensionControllerTest(ExtensionTestCase):
             "ExtendedVIFNet",
             "Evacuate",
             "ExtendedStatus",
+            "ExtendedVolumes",
             "ExtendedServerAttributes",
             "FixedIPs",
             "FlavorAccess",

@@ -1,0 +1,58 @@
+{
+    "server": {
+        "accessIPv4": "",
+        "accessIPv6": "",
+        "addresses": {
+            "private": [
+                {
+                    "addr": "192.168.0.3",
+                    "version": 4
+                }
+            ]
+        },
+        "created": "2013-02-07T19:35:09Z",
+        "flavor": {
+            "id": "1",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/openstack/flavors/1",
+                    "rel": "bookmark"
+                }
+            ]
+        },
+        "hostId": "570eff4776ab310707d11d181037337197086998a8b3305c90bf87c8",
+        "id": "ecb5e433-fa75-4db2-af3d-a29ae8618edc",
+        "image": {
+            "id": "70a599e0-31e7-49b7-b260-868f441e862b",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/openstack/images/70a599e0-31e7-49b7-b260-868f441e862b",
+                    "rel": "bookmark"
+                }
+            ]
+        },
+        "links": [
+            {
+                "href": "http://openstack.example.com/v2/openstack/servers/ecb5e433-fa75-4db2-af3d-a29ae8618edc",
+                "rel": "self"
+            },
+            {
+                "href": "http://openstack.example.com/openstack/servers/ecb5e433-fa75-4db2-af3d-a29ae8618edc",
+                "rel": "bookmark"
+            }
+        ],
+        "metadata": {
+            "My Server Name": "Apache1"
+        },
+        "name": "new-server-test",
+        "progress": 0,
+        "status": "ACTIVE",
+        "tenant_id": "openstack",
+        "updated": "2013-02-07T19:35:10Z",
+        "user_id": "fake",
+        "os-extended-volumes:volumes_attached": [
+            {"id": "volume_id1"},
+            {"id": "volume_id2"}
+        ]
+    }
+}
