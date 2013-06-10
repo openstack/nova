@@ -2788,12 +2788,12 @@ class KeypairAPI(base.Base):
         safechars = "_- " + string.digits + string.ascii_letters
         clean_value = "".join(x for x in key_name if x in safechars)
         if clean_value != key_name:
-            msg = _("Keypair name contains unsafe characters")
-            raise exception.InvalidKeypair(explanation=msg)
+            raise exception.InvalidKeypair(
+                _("Keypair name contains unsafe characters"))
 
         if not 0 < len(key_name) < 256:
-            msg = _('Keypair name must be between 1 and 255 characters long')
-            raise exception.InvalidKeypair(explanation=msg)
+            raise exception.InvalidKeypair(
+                _('Keypair name must be between 1 and 255 characters long'))
 
     def import_key_pair(self, context, user_id, key_name, public_key):
         """Import a key pair using an existing public key."""
@@ -2805,11 +2805,7 @@ class KeypairAPI(base.Base):
         except exception.OverQuota:
             raise exception.KeypairLimitExceeded()
 
-        try:
-            fingerprint = crypto.generate_fingerprint(public_key)
-        except exception.InvalidKeypair:
-            msg = _("Keypair data is invalid")
-            raise exception.InvalidKeypair(explanation=msg)
+        fingerprint = crypto.generate_fingerprint(public_key)
 
         keypair = {'user_id': user_id,
                    'name': key_name,

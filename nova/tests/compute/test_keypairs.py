@@ -83,32 +83,39 @@ class CreateImportSharedTestMixIn(object):
     up by the test runner unless they are part of a 'concrete' test case.
     """
 
-    def assertKeyNameRaises(self, exc_class, name):
+    def assertKeyNameRaises(self, exc_class, expected_message, name):
         func = getattr(self.keypair_api, self.func_name)
 
         args = []
         if self.func_name == 'import_key_pair':
             args.append(self.pub_key)
 
-        self.assertRaises(exc_class, func, self.ctxt, self.ctxt.user_id,
-                          name, *args)
+        exc = self.assertRaises(exc_class, func, self.ctxt, self.ctxt.user_id,
+                                name, *args)
+        self.assertEqual(expected_message, unicode(exc))
 
     def test_name_too_short(self):
-        self.assertKeyNameRaises(exception.InvalidKeypair, '')
+        msg = _('Keypair name must be between 1 and 255 characters long')
+        self.assertKeyNameRaises(exception.InvalidKeypair, msg, '')
 
     def test_name_too_long(self):
-        self.assertKeyNameRaises(exception.InvalidKeypair, 'x' * 256)
+        msg = _('Keypair name must be between 1 and 255 characters long')
+        self.assertKeyNameRaises(exception.InvalidKeypair, msg, 'x' * 256)
 
     def test_invalid_chars(self):
-        self.assertKeyNameRaises(exception.InvalidKeypair,
-                                 '* BAD CHARACTERS! *')
+        msg = _("Keypair name contains unsafe characters")
+        self.assertKeyNameRaises(exception.InvalidKeypair, msg,
+                                 '* BAD CHARACTERS!  *')
 
     def test_already_exists(self):
         def db_key_pair_create_duplicate(context, keypair):
             raise exception.KeyPairExists(key_name=keypair.get('name', ''))
 
         self.stubs.Set(db, "key_pair_create", db_key_pair_create_duplicate)
-        self.assertKeyNameRaises(exception.KeyPairExists,
+
+        msg = (_("Key pair %(key_name)s already exists.") %
+               {'key_name': self.existing_key_name})
+        self.assertKeyNameRaises(exception.KeyPairExists, msg,
                                  self.existing_key_name)
 
     def test_quota_limit(self):
@@ -116,7 +123,9 @@ class CreateImportSharedTestMixIn(object):
             return CONF.quota_key_pairs
 
         self.stubs.Set(QUOTAS, "count", fake_quotas_count)
-        self.assertKeyNameRaises(exception.KeypairLimitExceeded, 'foo')
+
+        msg = _("Maximum number of key pairs exceeded")
+        self.assertKeyNameRaises(exception.KeypairLimitExceeded, msg, 'foo')
 
 
 class CreateKeypairTestCase(KeypairAPITestCase, CreateImportSharedTestMixIn):
@@ -141,9 +150,11 @@ class ImportKeypairTestCase(KeypairAPITestCase, CreateImportSharedTestMixIn):
         self.assertEqual(self.pub_key, keypair['public_key'])
 
     def test_bad_key_data(self):
-        self.assertRaises(exception.InvalidKeypair,
-                          self.keypair_api.import_key_pair,
-                          self.ctxt, self.ctxt.user_id, 'foo', 'bad key data')
+        exc = self.assertRaises(exception.InvalidKeypair,
+                                self.keypair_api.import_key_pair,
+                                self.ctxt, self.ctxt.user_id, 'foo',
+                                'bad key data')
+        self.assertEqual(u'Keypair data is invalid', unicode(exc))
 
 
 class GetKeypairTestCase(KeypairAPITestCase):
