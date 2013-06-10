@@ -929,14 +929,11 @@ class LibvirtDriver(driver.ComputeDriver):
                                'world wide port names'),
                           instance=instance)
 
-        if not self._initiator and not self._fc_wwnns and not self._fc_wwpns:
-            msg = _("No Volume Connector found.")
-            LOG.error(msg)
-            raise exception.NovaException(msg)
-
         connector = {'ip': CONF.my_ip,
-                     'initiator': self._initiator,
                      'host': CONF.host}
+
+        if self._initiator:
+            connector['initiator'] = self._initiator
 
         if self._fc_wwnns and self._fc_wwpns:
             connector["wwnns"] = self._fc_wwnns
