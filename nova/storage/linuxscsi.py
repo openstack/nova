@@ -112,8 +112,11 @@ def find_multipath_device(device):
             # on /etc/multipath.conf settings.
             if info[1][:2] == "dm":
                 mdev = "/dev/%s" % info[1]
+                mdev_id = info[0]
             elif info[2][:2] == "dm":
                 mdev = "/dev/%s" % info[2]
+                mdev_id = info[1].replace('(', '')
+                mdev_id = mdev_id.replace(')', '')
 
             if mdev is None:
                 LOG.warn(_("Couldn't find multipath device %(line)s")
@@ -139,6 +142,7 @@ def find_multipath_device(device):
 
     if mdev is not None:
         info = {"device": mdev,
+                "id": mdev_id,
                 "devices": devices}
         return info
     return None

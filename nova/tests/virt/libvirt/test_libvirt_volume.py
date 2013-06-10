@@ -593,6 +593,7 @@ class LibvirtVolumeTestCase(test.TestCase):
         libvirt_driver = volume.LibvirtFibreChannelVolumeDriver(self.fake_conn)
         multipath_devname = '/dev/md-1'
         devices = {"device": multipath_devname,
+                   "id": "1234567890",
                    "devices": [{'device': '/dev/sdb',
                                 'address': '1:0:0:1',
                                 'host': 1, 'channel': 0,
