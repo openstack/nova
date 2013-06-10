@@ -45,10 +45,12 @@ class Service(BASE, NovaBase):
     """Represents a running service on a host."""
 
     __tablename__ = 'services'
+    __table_args__ = ()
+
     id = Column(Integer, primary_key=True)
-    host = Column(String(255))  # , ForeignKey('hosts.id'))
-    binary = Column(String(255))
-    topic = Column(String(255))
+    host = Column(String(255), nullable=True)  # , ForeignKey('hosts.id'))
+    binary = Column(String(255), nullable=True)
+    topic = Column(String(255), nullable=True)
     report_count = Column(Integer, nullable=False, default=0)
     disabled = Column(Boolean, default=False)
 
