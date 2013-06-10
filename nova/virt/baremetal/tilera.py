@@ -35,22 +35,13 @@ from nova.virt.baremetal import base
 from nova.virt.baremetal import db
 from nova.virt.baremetal import utils as bm_utils
 
-tilera_opts = [
-    cfg.StrOpt('net_config_template',
-               default='$pybasedir/nova/virt/baremetal/'
-                            'net-dhcp.ubuntu.template',
-               help='Template file for injected network config'),
-    ]
 
 LOG = logging.getLogger(__name__)
 
-baremetal_group = cfg.OptGroup(name='baremetal',
-                               title='Baremetal Options')
-
 CONF = cfg.CONF
-CONF.register_group(baremetal_group)
-CONF.register_opts(tilera_opts, baremetal_group)
 CONF.import_opt('use_ipv6', 'nova.netconf')
+CONF.import_opt('net_config_template', 'nova.virt.baremetal.pxe',
+                group='baremetal')
 
 CHEETAH = None
 

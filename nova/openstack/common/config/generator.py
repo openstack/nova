@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright 2012 SINA Corporation
@@ -17,7 +18,6 @@
 #
 # @author: Zhongyue Luo, SINA Corporation.
 #
-
 """Extracts OpenStack config option info from module(s)."""
 
 import imp
@@ -29,8 +29,10 @@ import textwrap
 
 from oslo.config import cfg
 
+from nova.openstack.common import gettextutils
 from nova.openstack.common import importutils
 
+gettextutils.install('nova')
 
 STROPT = "StrOpt"
 BOOLOPT = "BoolOpt"
@@ -58,7 +60,7 @@ BASEDIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
 WORDWRAP_WIDTH = 60
 
 
-def main(srcfiles):
+def generate(srcfiles):
     mods_by_pkg = dict()
     for filepath in srcfiles:
         pkg_name = filepath.split(os.sep)[1]
@@ -104,58 +106,37 @@ def _import_module(mod_str):
             return sys.modules[mod_str[4:]]
         else:
             return importutils.import_module(mod_str)
-    except (ValueError, AttributeError) as err:
-        return None
     except ImportError as ie:
         sys.stderr.write("%s\n" % str(ie))
         return None
-    except Exception as e:
+    except Exception:
         return None
 
 
-def _guess_groups(opt, mod_obj):
-    groups = []
+def _is_in_group(opt, group):
+    "Check if opt is in group."
+    for key, value in group._opts.items():
+        if value['opt'] == opt:
+            return True
+    return False
 
+
+def _guess_groups(opt, mod_obj):
     # is it in the DEFAULT group?
-    if (opt.dest in cfg.CONF and
-        not isinstance(cfg.CONF[opt.dest], cfg.CONF.GroupAttr)):
-        groups.append('DEFAULT')
+    if _is_in_group(opt, cfg.CONF):
+        return 'DEFAULT'
 
     # what other groups is it in?
     for key, value in cfg.CONF.items():
-        if not isinstance(value, cfg.CONF.GroupAttr):
-            continue
-        if opt.dest not in value:
-            continue
-        groups.append(key)
+        if isinstance(value, cfg.CONF.GroupAttr):
+            if _is_in_group(opt, value._group):
+                return value._group.name
 
-    if len(groups) == 1:
-        return groups[0]
-
-    group = None
-    for g in groups:
-        if g in mod_obj.__name__:
-            group = g
-            break
-
-    if group is None and 'DEFAULT' in groups:
-        sys.stderr.write("Guessing that " + opt.dest +
-                         " in " + mod_obj.__name__ +
-                         " is in DEFAULT group out of " +
-                         ','.join(groups) + "\n")
-        return 'DEFAULT'
-
-    if group is None:
-        sys.stderr.write("Unable to guess what group " + opt.dest +
-                         " in " + mod_obj.__name__ +
-                         " is in out of " + ','.join(groups) + "\n")
-        sys.exit(1)
-
-    sys.stderr.write("Guessing that " + opt.dest +
-                     " in " + mod_obj.__name__ +
-                     " is in the " + group +
-                     " group out of " + ','.join(groups) + "\n")
-    return group
+    raise RuntimeError(
+        "Unable to find group for option %s, "
+        "maybe it's defined twice in the same group?"
+        % opt.name
+    )
 
 
 def _list_opts(obj):
@@ -262,8 +243,11 @@ def _print_opt(opt):
         sys.exit(1)
 
 
-if __name__ == '__main__':
+def main():
     if len(sys.argv) < 2:
-        print "usage: python %s [srcfile]...\n" % sys.argv[0]
+        print "usage: %s [srcfile]...\n" % sys.argv[0]
         sys.exit(0)
-    main(sys.argv[1:])
+    generate(sys.argv[1:])
+
+if __name__ == '__main__':
+    main()
