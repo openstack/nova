@@ -4745,7 +4745,7 @@ disk size: 4.4M''', ''))
         self.stubs.Set(os, 'unlink', fake_unlink)
         self.stubs.Set(images, 'fetch', lambda *_: None)
         self.stubs.Set(images, 'qemu_img_info', fake_qemu_img_info)
-        self.stubs.Set(utils, 'delete_if_exists', fake_rm_on_errror)
+        self.stubs.Set(fileutils, 'delete_if_exists', fake_rm_on_errror)
 
         context = 'opaque context'
         image_id = '4'

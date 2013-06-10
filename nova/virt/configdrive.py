@@ -169,7 +169,7 @@ class ConfigDriveBuilder(object):
 
     def cleanup(self):
         if self.imagefile:
-            utils.delete_if_exists(self.imagefile)
+            fileutils.delete_if_exists(self.imagefile)
 
         try:
             shutil.rmtree(self.tempdir)
