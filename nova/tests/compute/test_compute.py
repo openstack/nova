@@ -378,6 +378,27 @@ class ComputeVolumeTestCase(BaseTestCase):
                                                  block_device_mapping)
         self.assertEqual(self.cinfo.get('serial'), self.volume_id)
 
+    def test_boot_volume_metadata(self):
+        self.mox.StubOutWithMock(self.compute_api.volume_api, 'get')
+        block_device_mapping = [{
+            'id': 1,
+            'no_device': None,
+            'virtual_name': None,
+            'snapshot_id': None,
+            'volume_id': self.volume_id,
+            'status': 'active',
+            'device_name': 'vda',
+            'delete_on_termination': False,
+            'volume_image_metadata':
+                {'test_key': 'test_value'}
+        }]
+        sentinel = object()
+        self.compute_api.volume_api.get(self.context,
+                self.volume_id).AndReturn(sentinel)
+        self.mox.ReplayAll()
+        vol = self.compute_api._get_volume(self.context, block_device_mapping)
+        self.assertIs(vol, sentinel)
+
     def test_poll_volume_usage_disabled(self):
         ctxt = 'MockContext'
         self.mox.StubOutWithMock(self.compute, '_get_host_volume_bdms')
