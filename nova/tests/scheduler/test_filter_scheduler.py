@@ -734,3 +734,12 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         hosts = sched.select_hosts(fake_context, request_spec, {})
         self.assertEquals(len(hosts), 10)
         self.assertEquals(hosts, selected_hosts)
+
+    def test_select_hosts_no_valid_host(self):
+
+        def _return_no_host(*args, **kwargs):
+            return []
+
+        self.stubs.Set(self.driver, '_schedule', _return_no_host)
+        self.assertRaises(exception.NoValidHost,
+                          self.driver.select_hosts, self.context, {}, {})
