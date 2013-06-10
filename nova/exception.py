@@ -221,6 +221,17 @@ class InvalidBDMVolume(InvalidBDM):
                 "failed to get volume %(id)s.")
 
 
+class InvalidBDMFormat(InvalidBDM):
+    message = _("Block Device Mapping is Invalid: "
+                "some fields are not recognized, "
+                "or have invalid values.")
+
+
+class InvalidBDMForLegacy(InvalidBDM):
+    message = _("Block Device Mapping cannot "
+                "be converted to legacy format. ")
+
+
 class VolumeUnattached(Invalid):
     message = _("Volume %(volume_id)s is not attached to anything")
 

@@ -20,7 +20,9 @@ Tests for Block Device utility functions.
 """
 
 from nova import block_device
+from nova import exception
 from nova import test
+from nova.tests import matchers
 
 
 class BlockDeviceTestCase(test.TestCase):
@@ -126,3 +128,124 @@ class BlockDeviceTestCase(test.TestCase):
         _assert_volume_in_mapping('sdf', True)
         _assert_volume_in_mapping('sdg', False)
         _assert_volume_in_mapping('sdh1', False)
+
+
+class TestBlockDeviceDict(test.TestCase):
+    def setUp(self):
+        super(TestBlockDeviceDict, self).setUp()
+
+        BDM = block_device.BlockDeviceDict
+
+        self.new_mapping = [
+            BDM({'id': 1, 'instance_uuid': 'fake-instance',
+                 'device_name': '/dev/sdb1',
+                 'source_type': 'blank',
+                 'destination_type': 'local',
+                 'delete_on_termination': True,
+                 'guest_format': 'swap',
+                 'boot_index': -1}),
+            BDM({'id': 2, 'instance_uuid': 'fake-instance',
+                 'device_name': '/dev/sdc1',
+                 'source_type': 'blank',
+                 'destination_type': 'local',
+                 'delete_on_termination': True,
+                 'boot_index': -1}),
+            BDM({'id': 3, 'instance_uuid': 'fake-instance',
+                 'device_name': '/dev/sda1',
+                 'source_type': 'volume',
+                 'destination_type': 'volume',
+                 'volume_id': 'fake-folume-id-1',
+                 'connection_info': "{'fake': 'connection_info'}",
+                 'boot_index': -1}),
+            BDM({'id': 4, 'instance_uuid': 'fake-instance',
+                 'device_name': '/dev/sda2',
+                 'source_type': 'snapshot',
+                 'destination_type': 'volume',
+                 'connection_info': "{'fake': 'connection_info'}",
+                 'snapshot_id': 'fake-snapshot-id-1',
+                 'volume_id': 'fake-volume-id-2',
+                 'boot_index': -1}),
+            BDM({'id': 5, 'instance_uuid': 'fake-instance',
+                 'no_device': True,
+                 'device_name': '/dev/vdc'}),
+        ]
+
+        self.legacy_mapping = [
+            {'id': 1, 'instance_uuid': 'fake-instance',
+             'device_name': '/dev/sdb1',
+             'delete_on_termination': True,
+             'virtual_name': 'swap'},
+            {'id': 2, 'instance_uuid': 'fake-instance',
+             'device_name': '/dev/sdc1',
+             'delete_on_termination': True,
+             'virtual_name': 'ephemeral0'},
+            {'id': 3, 'instance_uuid': 'fake-instance',
+             'device_name': '/dev/sda1',
+             'volume_id': 'fake-folume-id-1',
+             'connection_info': "{'fake': 'connection_info'}"},
+            {'id': 4, 'instance_uuid': 'fake-instance',
+             'device_name': '/dev/sda2',
+             'connection_info': "{'fake': 'connection_info'}",
+             'snapshot_id': 'fake-snapshot-id-1',
+             'volume_id': 'fake-volume-id-2'},
+            {'id': 5, 'instance_uuid': 'fake-instance',
+             'no_device': True,
+             'device_name': '/dev/vdc'},
+        ]
+
+    def test_init(self):
+        self.stubs.Set(block_device.BlockDeviceDict, '_fields',
+                       set(['field1', 'field2']))
+        self.stubs.Set(block_device.BlockDeviceDict, '_db_only_fields',
+                       set(['db_field1', 'db_field2']))
+
+        # Make sure db fields are not picked up if they are not
+        # in the original dict
+        dev_dict = block_device.BlockDeviceDict({'field1': 'foo',
+                                                 'field2': 'bar',
+                                                 'db_field1': 'baz'})
+        self.assertTrue('field1' in dev_dict)
+        self.assertTrue('field2' in dev_dict)
+        self.assertTrue('db_field1' in dev_dict)
+        self.assertFalse('db_field2'in dev_dict)
+
+        # Make sure all expected fields are defaulted
+        dev_dict = block_device.BlockDeviceDict({'field1': 'foo'})
+        self.assertTrue('field1' in dev_dict)
+        self.assertTrue('field2' in dev_dict)
+        self.assertTrue(dev_dict['field2'] is None)
+        self.assertFalse('db_field1' in dev_dict)
+        self.assertFalse('db_field2'in dev_dict)
+
+        # Unless they are not meant to be
+        dev_dict = block_device.BlockDeviceDict({'field1': 'foo'},
+            do_not_default=set(['field2']))
+        self.assertTrue('field1' in dev_dict)
+        self.assertFalse('field2' in dev_dict)
+        self.assertFalse('db_field1' in dev_dict)
+        self.assertFalse('db_field2'in dev_dict)
+
+        # Assert basic validation works
+        # NOTE (ndipanov):  Move to separate test once we have
+        #                   more complex validations in place
+        self.assertRaises(exception.InvalidBDMFormat,
+                          block_device.BlockDeviceDict,
+                          {'field1': 'foo', 'bogus_field': 'lame_val'})
+
+    def test_from_legacy(self):
+        for legacy, new in zip(self.legacy_mapping, self.new_mapping):
+            self.assertThat(
+                block_device.BlockDeviceDict.from_legacy(legacy),
+                matchers.IsSubDictOf(new))
+
+    def test_legacy(self):
+        for legacy, new in zip(self.legacy_mapping, self.new_mapping):
+            self.assertThat(
+                legacy,
+                matchers.IsSubDictOf(new.legacy()))
+
+    def test_legacy_mapping(self):
+        got_legacy = block_device.legacy_mapping(self.new_mapping)
+
+        for legacy, expected in zip(got_legacy, self.legacy_mapping):
+            self.assertThat(expected, matchers.IsSubDictOf(legacy))
