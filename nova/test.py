@@ -189,7 +189,12 @@ class TestingException(Exception):
 
 
 class TestCase(testtools.TestCase):
-    """Test case base class for all unit tests."""
+    """Test case base class for all unit tests.
+
+    Due to the slowness of DB access, please consider deriving from
+    `NoDBTestCase` first.
+    """
+    USES_DB = True
 
     def setUp(self):
         """Run before each test method to initialize test environment."""
@@ -217,13 +222,15 @@ class TestCase(testtools.TestCase):
         self.log_fixture = self.useFixture(fixtures.FakeLogger())
         self.useFixture(conf_fixture.ConfFixture(CONF))
 
-        global _DB_CACHE
-        if not _DB_CACHE:
-            _DB_CACHE = Database(session, migration,
-                                    sql_connection=CONF.sql_connection,
-                                    sqlite_db=CONF.sqlite_db,
-                                    sqlite_clean_db=CONF.sqlite_clean_db)
-        self.useFixture(_DB_CACHE)
+        if self.USES_DB:
+            global _DB_CACHE
+            if not _DB_CACHE:
+                _DB_CACHE = Database(session, migration,
+                                        sql_connection=CONF.sql_connection,
+                                        sqlite_db=CONF.sqlite_db,
+                                        sqlite_clean_db=CONF.sqlite_clean_db)
+
+            self.useFixture(_DB_CACHE)
 
         mox_fixture = self.useFixture(MoxStubout())
         self.mox = mox_fixture.mox
@@ -274,3 +281,12 @@ class TimeOverride(fixtures.Fixture):
         super(TimeOverride, self).setUp()
         timeutils.set_time_override()
         self.addCleanup(timeutils.clear_time_override)
+
+
+class NoDBTestCase(TestCase):
+    """
+    `NoDBTestCase` differs from TestCase in that DB access is not supported.
+    This makes tests run significantly faster. If possible, all new tests
+    should derive from this class.
+    """
+    USES_DB = False

@@ -23,7 +23,7 @@ from nova.tests import matchers
 from nova.tests.scheduler import fakes
 
 
-class TestWeighedHost(test.TestCase):
+class TestWeighedHost(test.NoDBTestCase):
     def test_dict_conversion(self):
         host_state = fakes.FakeHostState('somehost', None, {})
         host = weights.WeighedHost(host_state, 'someweight')
@@ -38,7 +38,7 @@ class TestWeighedHost(test.TestCase):
         self.assertIn('RAMWeigher', class_names)
 
 
-class RamWeigherTestCase(test.TestCase):
+class RamWeigherTestCase(test.NoDBTestCase):
     def setUp(self):
         super(RamWeigherTestCase, self).setUp()
         self.host_manager = fakes.FakeHostManager()

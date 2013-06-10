@@ -48,7 +48,7 @@ from nova.tests.scheduler import fakes
 from nova import utils
 
 
-class SchedulerManagerTestCase(test.TestCase):
+class SchedulerManagerTestCase(test.NoDBTestCase):
     """Test case for scheduler manager."""
 
     manager_cls = manager.SchedulerManager
@@ -373,7 +373,7 @@ class SchedulerManagerTestCase(test.TestCase):
                                               self.context, None, request)
 
 
-class SchedulerTestCase(test.TestCase):
+class SchedulerTestCase(test.NoDBTestCase):
     """Test case for base scheduler driver class."""
 
     # So we can subclass this test and re-use tests if we need.
@@ -435,9 +435,13 @@ class SchedulerTestCase(test.TestCase):
         self.assertEqual(result, ['host2'])
 
     def _live_migration_instance(self):
-        inst_type = flavors.get_instance_type(1)
-        # NOTE(danms): we have _got_ to stop doing this!
-        inst_type['memory_mb'] = 1024
+        inst_type = {'memory_mb': 1024, 'root_gb': 40, 'deleted_at': None,
+                     'name': u'm1.medium', 'deleted': 0, 'created_at': None,
+                     'ephemeral_gb': 0, 'updated_at': None, 'disabled': False,
+                     'vcpus': 2, 'extra_specs': {}, 'swap': 0,
+                     'rxtx_factor': 1.0, 'is_public': True, 'flavorid': u'3',
+                     'vcpu_weight': None, 'id': 1}
+
         sys_meta = utils.dict_to_metadata(
             flavors.save_instance_type_info({}, inst_type))
         return {'id': 31337,
@@ -952,7 +956,7 @@ class SchedulerDriverBaseTestCase(SchedulerTestCase):
                          fake_request_spec, {}, {}, {}, None)
 
 
-class SchedulerDriverModuleTestCase(test.TestCase):
+class SchedulerDriverModuleTestCase(test.NoDBTestCase):
     """Test case for scheduler driver module methods."""
 
     def setUp(self):

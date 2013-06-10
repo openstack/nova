@@ -37,7 +37,7 @@ class FakeFilterClass2(filters.BaseHostFilter):
         pass
 
 
-class HostManagerTestCase(test.TestCase):
+class HostManagerTestCase(test.NoDBTestCase):
     """Test case for HostManager class."""
 
     def setUp(self):
@@ -358,7 +358,7 @@ class HostManagerTestCase(test.TestCase):
                          8388608)
 
 
-class HostManagerChangedNodesTestCase(test.TestCase):
+class HostManagerChangedNodesTestCase(test.NoDBTestCase):
     """Test case for HostManager class."""
 
     def setUp(self):
@@ -416,7 +416,7 @@ class HostManagerChangedNodesTestCase(test.TestCase):
         self.assertEqual(len(host_states_map), 0)
 
 
-class HostStateTestCase(test.TestCase):
+class HostStateTestCase(test.NoDBTestCase):
     """Test case for HostState class."""
 
     # update_from_compute_node() and consume_from_instance() are tested

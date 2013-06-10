@@ -18,7 +18,6 @@ Tests For Filter Scheduler.
 
 import mox
 
-from nova.compute import flavors
 from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
@@ -78,6 +77,10 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         compute_utils.add_instance_fault_from_exc(fake_context,
                 mox.IsA(conductor_api.LocalAPI), new_ref,
                 mox.IsA(exception.NoValidHost), mox.IgnoreArg())
+
+        self.mox.StubOutWithMock(db, 'compute_node_get_all')
+        db.compute_node_get_all(mox.IgnoreArg()).AndReturn([])
+
         self.mox.ReplayAll()
         sched.schedule_run_instance(
                 fake_context, request_spec, None, None, None, None, {})
@@ -240,6 +243,10 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         request_spec = dict(instance_properties=instance_properties)
         filter_properties = {}
 
+        self.mox.StubOutWithMock(db, 'compute_node_get_all')
+        db.compute_node_get_all(mox.IgnoreArg()).AndReturn([])
+        self.mox.ReplayAll()
+
         sched._schedule(self.context, request_spec,
                 filter_properties=filter_properties)
 
@@ -254,6 +261,10 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         instance_properties = {'project_id': '12345', 'os_type': 'Linux'}
         request_spec = dict(instance_properties=instance_properties)
         filter_properties = {}
+
+        self.mox.StubOutWithMock(db, 'compute_node_get_all')
+        db.compute_node_get_all(mox.IgnoreArg()).AndReturn([])
+        self.mox.ReplayAll()
 
         sched._schedule(self.context, request_spec,
                 filter_properties=filter_properties)
@@ -271,6 +282,10 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         retry = dict(num_attempts=1)
         filter_properties = dict(retry=retry)
+
+        self.mox.StubOutWithMock(db, 'compute_node_get_all')
+        db.compute_node_get_all(mox.IgnoreArg()).AndReturn([])
+        self.mox.ReplayAll()
 
         sched._schedule(self.context, request_spec,
                 filter_properties=filter_properties)
@@ -335,10 +350,22 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         sched = fakes.FakeFilterScheduler()
 
         image = 'image'
-        instance = db.instance_create(self.context, {})
+        instance = {'disable_terminate': False,
+                    'uuid': 'fakeuuid',
+                    'deleted': 0, 'info_cache': {},
+                    'created_at': None,
+                    'system_metadata': [], 'shutdown_terminate': False,
+                    'id': 1, 'security_groups': [], 'metadata': []}
 
         instance_properties = {'project_id': 'fake', 'os_type': 'Linux'}
-        instance_type = flavors.get_instance_type_by_name("m1.tiny")
+        instance_type = {
+             'memory_mb': 1024, 'root_gb': 40, 'deleted_at': None,
+             'name': u'm1.medium', 'deleted': 0, 'created_at': None,
+             'ephemeral_gb': 0, 'updated_at': None, 'disabled': False,
+             'vcpus': 2, 'extra_specs': {}, 'swap': 0,
+             'rxtx_factor': 1.0, 'is_public': True, 'flavorid': u'3',
+             'vcpu_weight': None, 'id': 1}
+
         request_spec = {'instance_properties': instance_properties,
                         'instance_type': instance_type}
         retry = {'hosts': [], 'num_attempts': 1}
