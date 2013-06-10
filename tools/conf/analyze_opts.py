@@ -44,8 +44,8 @@ class PropertyCollecter(iniparser.BaseParser):
     def collect_properties(cls, lineiter, sample_format=False):
         def clean_sample(f):
             for line in f:
-                if line.startswith("# ") and line != '# nova.conf sample #\n':
-                    line = line[2:]
+                if line.startswith("#") and not line.startswith("# "):
+                    line = line[1:]
                 yield line
         pc = cls()
         if sample_format:
