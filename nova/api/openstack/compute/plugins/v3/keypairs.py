@@ -95,12 +95,10 @@ class KeypairController(object):
             raise webob.exc.HTTPRequestEntityTooLarge(
                         explanation=msg,
                         headers={'Retry-After': 0})
-        except exception.InvalidKeypair:
-            msg = _("Keypair data is invalid")
-            raise webob.exc.HTTPBadRequest(explanation=msg)
-        except exception.KeyPairExists:
-            msg = _("Key pair '%s' already exists.") % name
-            raise webob.exc.HTTPConflict(explanation=msg)
+        except exception.InvalidKeypair as exc:
+            raise webob.exc.HTTPBadRequest(explanation=exc.format_message())
+        except exception.KeyPairExists as exc:
+            raise webob.exc.HTTPConflict(explanation=exc.format_message())
 
     def delete(self, req, id):
         """

@@ -895,7 +895,7 @@ class RotationRequiredForBackup(NovaException):
 
 
 class KeyPairExists(Duplicate):
-    message = _("Key pair %(key_name)s already exists.")
+    message = _("Key pair '%(key_name)s' already exists.")
 
 
 class InstanceExists(Duplicate):

@@ -100,8 +100,12 @@ class KeypairsTest(test.TestCase):
         req.headers['Content-Type'] = 'application/json'
         res = req.get_response(self.app)
         self.assertEqual(res.status_int, 400)
+        res_dict = jsonutils.loads(res.body)
+        self.assertEqual(
+            'Keypair name must be between 1 and 255 characters long',
+            res_dict['badRequest']['message'])
 
-    def test_keypair_create_with_invalid_name(self):
+    def test_keypair_create_with_name_too_long(self):
         body = {
             'keypair': {
                 'name': 'a' * 256
@@ -113,6 +117,10 @@ class KeypairsTest(test.TestCase):
         req.headers['Content-Type'] = 'application/json'
         res = req.get_response(self.app)
         self.assertEqual(res.status_int, 400)
+        res_dict = jsonutils.loads(res.body)
+        self.assertEqual(
+            'Keypair name must be between 1 and 255 characters long',
+            res_dict['badRequest']['message'])
 
     def test_keypair_create_with_non_alphanumeric_name(self):
         body = {
@@ -127,6 +135,10 @@ class KeypairsTest(test.TestCase):
         res = req.get_response(self.app)
         res_dict = jsonutils.loads(res.body)
         self.assertEqual(res.status_int, 400)
+        res_dict = jsonutils.loads(res.body)
+        self.assertEqual(
+            "Keypair name contains unsafe characters",
+            res_dict['badRequest']['message'])
 
     def test_keypair_import(self):
         body = {
@@ -183,6 +195,10 @@ class KeypairsTest(test.TestCase):
         req.headers['Content-Type'] = 'application/json'
         res = req.get_response(self.app)
         self.assertEqual(res.status_int, 413)
+        res_dict = jsonutils.loads(res.body)
+        self.assertEqual(
+            "Quota exceeded, too many key pairs.",
+            res_dict['overLimit']['message'])
 
     def test_keypair_create_quota_limit(self):
 
@@ -203,6 +219,10 @@ class KeypairsTest(test.TestCase):
         req.headers['Content-Type'] = 'application/json'
         res = req.get_response(self.app)
         self.assertEqual(res.status_int, 413)
+        res_dict = jsonutils.loads(res.body)
+        self.assertEqual(
+            "Quota exceeded, too many key pairs.",
+            res_dict['overLimit']['message'])
 
     def test_keypair_create_duplicate(self):
         self.stubs.Set(db, "key_pair_create", db_key_pair_create_duplicate)
@@ -213,6 +233,10 @@ class KeypairsTest(test.TestCase):
         req.headers['Content-Type'] = 'application/json'
         res = req.get_response(self.app)
         self.assertEqual(res.status_int, 409)
+        res_dict = jsonutils.loads(res.body)
+        self.assertEqual(
+            "Key pair 'create_duplicate' already exists.",
+            res_dict['conflictingRequest']['message'])
 
     def test_keypair_import_bad_key(self):
         body = {
@@ -228,6 +252,10 @@ class KeypairsTest(test.TestCase):
         req.headers['Content-Type'] = 'application/json'
         res = req.get_response(self.app)
         self.assertEqual(res.status_int, 400)
+
+        res_dict = jsonutils.loads(res.body)
+        self.assertEqual("Keypair data is invalid",
+                         res_dict['badRequest']['message'])
 
     def test_keypair_delete(self):
         req = webob.Request.blank('/v2/fake/os-keypairs/FAKE')
@@ -305,7 +333,7 @@ class KeypairsTest(test.TestCase):
             self.assertTrue('key_name' in server_dict)
             self.assertEquals(server_dict['key_name'], '')
 
-    def test_keypair_create_with_invalid_keypairBody(self):
+    def test_keypair_create_with_invalid_keypair_body(self):
         body = {'alpha': {'name': 'create_test'}}
         req = webob.Request.blank('/v1.1/fake/os-keypairs')
         req.method = 'POST'

@@ -113,7 +113,7 @@ class CreateImportSharedTestMixIn(object):
 
         self.stubs.Set(db, "key_pair_create", db_key_pair_create_duplicate)
 
-        msg = (_("Key pair %(key_name)s already exists.") %
+        msg = (_("Key pair '%(key_name)s' already exists.") %
                {'key_name': self.existing_key_name})
         self.assertKeyNameRaises(exception.KeyPairExists, msg,
                                  self.existing_key_name)
