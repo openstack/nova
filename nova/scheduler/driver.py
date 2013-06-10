@@ -144,13 +144,6 @@ class Scheduler(object):
                 for member in members
                 if member.get('host') is not None]
 
-    def schedule_prep_resize(self, context, image, request_spec,
-                             filter_properties, instance, instance_type,
-                             reservations):
-        """Must override schedule_prep_resize method for scheduler to work."""
-        msg = _("Driver must implement schedule_prep_resize")
-        raise NotImplementedError(msg)
-
     def schedule_run_instance(self, context, request_spec,
                               admin_password, injected_files,
                               requested_networks, is_first_time,
