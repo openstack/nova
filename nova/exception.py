@@ -1178,7 +1178,7 @@ class InstanceRecreateNotSupported(Invalid):
 
 
 class ServiceGroupUnavailable(NovaException):
-    message = _("The service from servicegroup driver %(driver) is "
+    message = _("The service from servicegroup driver %(driver)s is "
                 "temporarily unavailable.")
 
 
