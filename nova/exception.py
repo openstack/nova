@@ -1220,3 +1220,7 @@ class OrphanedObjectError(NovaException):
 
 class IncompatibleObjectVersion(NovaException):
     message = _('Version %(objver)s of %(objname)s is not supported')
+
+
+class CoreAPIMissing(NovaException):
+    message = _("Core API extensions are missing: %(missing_apis)s")

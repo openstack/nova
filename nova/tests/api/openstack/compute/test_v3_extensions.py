@@ -15,9 +15,12 @@
 #    under the License.
 
 from oslo.config import cfg
+import stevedore
 
+from nova.api import openstack
 from nova.api.openstack import compute
 from nova.api.openstack.compute import plugins
+from nova import exception
 from nova import test
 
 CONF = cfg.CONF
@@ -28,7 +31,34 @@ class fake_bad_extension(object):
     alias = "fake-bad"
 
 
+class fake_stevedore_enabled_extensions(object):
+    def __init__(self, namespace, check_func, invoke_on_load=False,
+                 invoke_args=(), invoke_kwds={}):
+        self.extensions = []
+
+    def map(self, func, *args, **kwds):
+        pass
+
+    def __iter__(self):
+        return iter(self.extensions)
+
+
+class fake_loaded_extension_info(object):
+    def __init__(self):
+        self.extensions = {}
+
+    def register_extension(self, ext):
+        self.extensions[ext] = ext
+        return True
+
+    def get_extensions(self):
+        return {'core1': None, 'core2': None, 'noncore1': None}
+
+
 class ExtensionLoadingTestCase(test.TestCase):
+
+    def _set_v3_core(self, core_extensions):
+        openstack.API_V3_CORE_EXTENSIONS = core_extensions
 
     def test_extensions_loaded(self):
         app = compute.APIRouterV3()
@@ -70,3 +100,42 @@ class ExtensionLoadingTestCase(test.TestCase):
         self.assertNotIn('os-fixed-ips', app._loaded_extension_info.extensions)
         self.assertIn('servers', app._loaded_extension_info.extensions)
         self.assertEqual(len(app._loaded_extension_info.extensions), 1)
+
+    def test_get_missing_core_extensions(self):
+        v3_core = openstack.API_V3_CORE_EXTENSIONS
+        openstack.API_V3_CORE_EXTENSIONS = set(['core1', 'core2'])
+        self.addCleanup(self._set_v3_core, v3_core)
+        self.assertEqual(len(compute.APIRouterV3.get_missing_core_extensions(
+            ['core1', 'core2', 'noncore1'])), 0)
+        missing_core = compute.APIRouterV3.get_missing_core_extensions(
+            ['core1'])
+        self.assertEqual(len(missing_core), 1)
+        self.assertIn('core2', missing_core)
+        missing_core = compute.APIRouterV3.get_missing_core_extensions([])
+        self.assertEqual(len(missing_core), 2)
+        self.assertIn('core1', missing_core)
+        self.assertIn('core2', missing_core)
+        missing_core = compute.APIRouterV3.get_missing_core_extensions(
+            ['noncore1'])
+        self.assertEqual(len(missing_core), 2)
+        self.assertIn('core1', missing_core)
+        self.assertIn('core2', missing_core)
+
+    def test_core_extensions_present(self):
+        self.stubs.Set(stevedore.enabled, 'EnabledExtensionManager',
+                       fake_stevedore_enabled_extensions)
+        self.stubs.Set(plugins, 'LoadedExtensionInfo',
+                       fake_loaded_extension_info)
+        v3_core = openstack.API_V3_CORE_EXTENSIONS
+        openstack.API_V3_CORE_EXTENSIONS = set(['core1', 'core2'])
+        self.addCleanup(self._set_v3_core, v3_core)
+        # if no core API extensions are missing then an exception will
+        # not be raised when creating an instance of compute.APIRouterV3
+        _ = compute.APIRouterV3()
+
+    def test_core_extensions_missing(self):
+        self.stubs.Set(stevedore.enabled, 'EnabledExtensionManager',
+                       fake_stevedore_enabled_extensions)
+        self.stubs.Set(plugins, 'LoadedExtensionInfo',
+                       fake_loaded_extension_info)
+        self.assertRaises(exception.CoreAPIMissing, compute.APIRouterV3)
