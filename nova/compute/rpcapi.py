@@ -422,9 +422,10 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                     filter_properties=None, node=None):
         instance_p = jsonutils.to_primitive(instance)
         instance_type_p = jsonutils.to_primitive(instance_type)
+        image_p = jsonutils.to_primitive(image)
         self.cast(ctxt, self.make_msg('prep_resize',
                 instance=instance_p, instance_type=instance_type_p,
-                image=image, reservations=reservations,
+                image=image_p, reservations=reservations,
                 request_spec=request_spec,
                 filter_properties=filter_properties,
                 node=node),
