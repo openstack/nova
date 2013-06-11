@@ -1235,3 +1235,25 @@ class IncompatibleObjectVersion(NovaException):
 
 class CoreAPIMissing(NovaException):
     message = _("Core API extensions are missing: %(missing_apis)s")
+
+
+class InstanceGroupNotFound(NotFound):
+    message = _("Instance group %(group_uuid)s could not be found.")
+
+
+class InstanceGroupIdExists(Duplicate):
+    message = _("Instance group %(group_uuid)s already exists.")
+
+
+class InstanceGroupMetadataNotFound(NotFound):
+    message = _("Instance group %(group_uuid)s has no metadata with "
+                "key %(metadata_key)s.")
+
+
+class InstanceGroupMemberNotFound(NotFound):
+    message = _("Instance group %(group_uuid)s has no member with "
+                "id %(instance_id)s.")
+
+
+class InstanceGroupPolicyNotFound(NotFound):
+    message = _("Instance group %(group_uuid)s has no policy %(policy)s.")

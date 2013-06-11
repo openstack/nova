@@ -1039,3 +1039,72 @@ class TaskLog(BASE, NovaBase):
     message = Column(String(255), nullable=False)
     task_items = Column(Integer(), default=0)
     errors = Column(Integer(), default=0)
+
+
+class InstanceGroupMember(BASE, NovaBase):
+    """Represents the members for an instance group."""
+    __tablename__ = 'instance_group_member'
+    id = Column(Integer, primary_key=True, nullable=False)
+    instance_id = Column(String(255), nullable=False)
+    group_id = Column(Integer, ForeignKey('instance_groups.id'),
+                      nullable=False)
+
+
+class InstanceGroupPolicy(BASE, NovaBase):
+    """Represents the policy type for an instance group."""
+    __tablename__ = 'instance_group_policy'
+    id = Column(Integer, primary_key=True, nullable=False)
+    policy = Column(String(255), nullable=False)
+    group_id = Column(Integer, ForeignKey('instance_groups.id'),
+                      nullable=False)
+
+
+class InstanceGroupMetadata(BASE, NovaBase):
+    """Represents a key/value pair for an instance group."""
+    __tablename__ = 'instance_group_metadata'
+    id = Column(Integer, primary_key=True, nullable=False)
+    key = Column(String(255), nullable=False)
+    value = Column(String(255), nullable=False)
+    group_id = Column(Integer, ForeignKey('instance_groups.id'),
+                      nullable=False)
+
+
+class InstanceGroup(BASE, NovaBase):
+    """Represents an instance group.
+
+    A group will maintain a collection of instances and the relationship
+    between them.
+    """
+
+    __tablename__ = 'instance_groups'
+    __table_args__ = (schema.UniqueConstraint("uuid", "deleted"), )
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String(255))
+    project_id = Column(String(255))
+    uuid = Column(String(36), nullable=False)
+    name = Column(String(255))
+    _policies = relationship(InstanceGroupPolicy, primaryjoin='and_('
+        'InstanceGroup.id == InstanceGroupPolicy.group_id,'
+        'InstanceGroupPolicy.deleted == 0,'
+        'InstanceGroup.deleted == 0)')
+    _metadata = relationship(InstanceGroupMetadata, primaryjoin='and_('
+        'InstanceGroup.id == InstanceGroupMetadata.group_id,'
+        'InstanceGroupMetadata.deleted == 0,'
+        'InstanceGroup.deleted == 0)')
+    _members = relationship(InstanceGroupMember, primaryjoin='and_('
+        'InstanceGroup.id == InstanceGroupMember.group_id,'
+        'InstanceGroupMember.deleted == 0,'
+        'InstanceGroup.deleted == 0)')
+
+    @property
+    def policies(self):
+        return [p.policy for p in self._policies]
+
+    @property
+    def metadetails(self):
+        return dict((m.key, m.value) for m in self._metadata)
+
+    @property
+    def members(self):
+        return [m.instance_id for m in self._members]
