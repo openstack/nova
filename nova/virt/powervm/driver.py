@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 IBM Corp.
+# Copyright 2013 IBM Corp.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -160,10 +160,6 @@ class PowerVMDriver(driver.ComputeDriver):
                              'disk_format': image_meta['disk_format'],
                              'container_format': image_meta['container_format']
                             }
-
-        if 'architecture' in image_meta['properties']:
-            arch = image_meta['properties']['architecture']
-            new_snapshot_meta['properties']['architecture'] = arch
 
         # disk capture and glance upload
         self._powervm.capture_image(context, instance, image_id,
