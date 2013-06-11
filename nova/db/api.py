@@ -1013,20 +1013,20 @@ def ec2_snapshot_create(context, snapshot_id, forced_id=None):
 ####################
 
 
-def block_device_mapping_create(context, values):
+def block_device_mapping_create(context, values, legacy=True):
     """Create an entry of block device mapping."""
-    return IMPL.block_device_mapping_create(context, values)
+    return IMPL.block_device_mapping_create(context, values, legacy)
 
 
-def block_device_mapping_update(context, bdm_id, values):
+def block_device_mapping_update(context, bdm_id, values, legacy=True):
     """Update an entry of block device mapping."""
-    return IMPL.block_device_mapping_update(context, bdm_id, values)
+    return IMPL.block_device_mapping_update(context, bdm_id, values, legacy)
 
 
-def block_device_mapping_update_or_create(context, values):
+def block_device_mapping_update_or_create(context, values, legacy=True):
     """Update an entry of block device mapping.
     If not existed, create a new entry"""
-    return IMPL.block_device_mapping_update_or_create(context, values)
+    return IMPL.block_device_mapping_update_or_create(context, values, legacy)
 
 
 def block_device_mapping_get_all_by_instance(context, instance_uuid):

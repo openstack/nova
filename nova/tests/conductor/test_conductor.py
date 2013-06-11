@@ -321,7 +321,7 @@ class _BaseTestCase(object):
             self.context, fake_inst['uuid']).AndReturn('fake-result')
         self.mox.ReplayAll()
         result = self.conductor.block_device_mapping_get_all_by_instance(
-            self.context, fake_inst)
+            self.context, fake_inst, legacy=False)
         self.assertEqual(result, 'fake-result')
 
     def test_instance_get_active_by_window_joined(self):

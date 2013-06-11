@@ -1058,8 +1058,9 @@ class CloudController(object):
         """Format InstanceBlockDeviceMappingResponseItemType."""
         root_device_type = 'instance-store'
         mapping = []
-        for bdm in db.block_device_mapping_get_all_by_instance(context,
-                                                               instance_uuid):
+        for bdm in block_device.legacy_mapping(
+            db.block_device_mapping_get_all_by_instance(context,
+                                                        instance_uuid)):
             volume_id = bdm['volume_id']
             if (volume_id is None or bdm['no_device']):
                 continue

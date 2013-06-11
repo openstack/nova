@@ -188,19 +188,24 @@ class MetadataTestCase(test.TestCase):
             return [{'volume_id': 87654321,
                      'snapshot_id': None,
                      'no_device': None,
-                     'virtual_name': None,
+                     'source_type': 'volume',
+                     'destination_type': 'volume',
                      'delete_on_termination': True,
                      'device_name': '/dev/sdh'},
                     {'volume_id': None,
                      'snapshot_id': None,
                      'no_device': None,
-                     'virtual_name': 'swap',
+                     'source_type': 'blank',
+                     'destination_type': 'local',
+                     'guest_format': 'swap',
                      'delete_on_termination': None,
                      'device_name': '/dev/sdc'},
                     {'volume_id': None,
                      'snapshot_id': None,
                      'no_device': None,
-                     'virtual_name': 'ephemeral0',
+                     'source_type': 'blank',
+                     'destination_type': 'local',
+                     'guest_format': None,
                      'delete_on_termination': None,
                      'device_name': '/dev/sdb'}]
 
@@ -214,6 +219,7 @@ class MetadataTestCase(test.TestCase):
                     'ebs0': '/dev/sdh'}
 
         capi = conductor_api.LocalAPI()
+
         self.assertEqual(base._format_instance_mapping(capi, ctxt,
                          instance_ref0), block_device._DEFAULT_MAPPINGS)
         self.assertEqual(base._format_instance_mapping(capi, ctxt,

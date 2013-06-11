@@ -843,7 +843,8 @@ class ServerActionsControllerTest(test.TestCase):
 
         def fake_block_device_mapping_get_all_by_instance(context, inst_id):
             return [dict(volume_id=_fake_id('a'),
-                         virtual_name=None,
+                         source_type='snapshot',
+                         destination_type='volume',
                          volume_size=1,
                          device_name='vda',
                          snapshot_id=1,
