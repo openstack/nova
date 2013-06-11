@@ -3299,7 +3299,7 @@ class XenAPIInjectMetadataTestCase(stubs.XenAPITestBase):
         self.xenstore = dict(persist={}, ephem={})
 
         def fake_get_vm_opaque_ref(inst, instance):
-            self.assertEqual(instance, 'instance')
+            self.assertEqual(instance, {'uuid': 'fake'})
             return 'vm_ref'
 
         def fake_add_to_param_xenstore(inst, vm_ref, key, val):
@@ -3312,12 +3312,12 @@ class XenAPIInjectMetadataTestCase(stubs.XenAPITestBase):
                 del self.xenstore['persist'][key]
 
         def fake_write_to_xenstore(inst, instance, path, value, vm_ref=None):
-            self.assertEqual(instance, 'instance')
+            self.assertEqual(instance, {'uuid': 'fake'})
             self.assertEqual(vm_ref, 'vm_ref')
             self.xenstore['ephem'][path] = jsonutils.dumps(value)
 
         def fake_delete_from_xenstore(inst, instance, path, vm_ref=None):
-            self.assertEqual(instance, 'instance')
+            self.assertEqual(instance, {'uuid': 'fake'})
             self.assertEqual(vm_ref, 'vm_ref')
             if path in self.xenstore['ephem']:
                 del self.xenstore['ephem'][path]
@@ -3346,7 +3346,8 @@ class XenAPIInjectMetadataTestCase(stubs.XenAPITestBase):
                                   # Check xenstore key sanitizing
                         system_metadata=[{'key': 'sys_a', 'value': 1},
                                          {'key': 'sys_b', 'value': 2},
-                                         {'key': 'sys_c', 'value': 3}])
+                                         {'key': 'sys_c', 'value': 3}],
+                        uuid='fake')
         self.conn._vmops.inject_instance_metadata(instance, 'vm_ref')
 
         self.assertEqual(self.xenstore, {
@@ -3363,6 +3364,7 @@ class XenAPIInjectMetadataTestCase(stubs.XenAPITestBase):
     def test_change_instance_metadata_add(self):
         # Test XenStore key sanitizing here, too.
         diff = {'test.key': ['+', 4]}
+        instance = {'uuid': 'fake'}
         self.xenstore = {
             'persist': {
                 'vm-data/user-metadata/a': '1',
@@ -3376,7 +3378,7 @@ class XenAPIInjectMetadataTestCase(stubs.XenAPITestBase):
                 },
             }
 
-        self.conn._vmops.change_instance_metadata('instance', diff)
+        self.conn._vmops.change_instance_metadata(instance, diff)
 
         self.assertEqual(self.xenstore, {
                 'persist': {
@@ -3395,6 +3397,7 @@ class XenAPIInjectMetadataTestCase(stubs.XenAPITestBase):
 
     def test_change_instance_metadata_update(self):
         diff = dict(b=['+', 4])
+        instance = {'uuid': 'fake'}
         self.xenstore = {
             'persist': {
                 'vm-data/user-metadata/a': '1',
@@ -3408,7 +3411,7 @@ class XenAPIInjectMetadataTestCase(stubs.XenAPITestBase):
                 },
             }
 
-        self.conn._vmops.change_instance_metadata('instance', diff)
+        self.conn._vmops.change_instance_metadata(instance, diff)
 
         self.assertEqual(self.xenstore, {
                 'persist': {
@@ -3425,6 +3428,7 @@ class XenAPIInjectMetadataTestCase(stubs.XenAPITestBase):
 
     def test_change_instance_metadata_delete(self):
         diff = dict(b=['-'])
+        instance = {'uuid': 'fake'}
         self.xenstore = {
             'persist': {
                 'vm-data/user-metadata/a': '1',
@@ -3438,7 +3442,7 @@ class XenAPIInjectMetadataTestCase(stubs.XenAPITestBase):
                 },
             }
 
-        self.conn._vmops.change_instance_metadata('instance', diff)
+        self.conn._vmops.change_instance_metadata(instance, diff)
 
         self.assertEqual(self.xenstore, {
                 'persist': {

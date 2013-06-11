@@ -1097,6 +1097,7 @@ class VMOps(object):
 
     def inject_instance_metadata(self, instance, vm_ref):
         """Inject instance metadata into xenstore."""
+        @utils.synchronized('xenstore-' + instance['uuid'])
         def store_meta(topdir, data_list):
             for item in data_list:
                 key = self._sanitize_xenstore_key(item['key'])
@@ -1110,9 +1111,8 @@ class VMOps(object):
     def change_instance_metadata(self, instance, diff):
         """Apply changes to instance metadata to xenstore."""
         vm_ref = self._get_vm_opaque_ref(instance)
-        for key, change in diff.items():
-            key = self._sanitize_xenstore_key(key)
-            location = 'vm-data/user-metadata/%s' % key
+
+        def process_change(location, change):
             if change[0] == '-':
                 self._remove_from_param_xenstore(vm_ref, location)
                 try:
@@ -1130,6 +1130,14 @@ class VMOps(object):
                 except KeyError:
                     # catch KeyError for domid if instance isn't running
                     pass
+
+        @utils.synchronized('xenstore-' + instance['uuid'])
+        def update_meta():
+            for key, change in diff.items():
+                key = self._sanitize_xenstore_key(key)
+                location = 'vm-data/user-metadata/%s' % key
+                process_change(location, change)
+        update_meta()
 
     def _find_root_vdi_ref(self, vm_ref):
         """Find and return the root vdi ref for a VM."""
@@ -1524,19 +1532,22 @@ class VMOps(object):
         vm_ref = vm_ref or self._get_vm_opaque_ref(instance)
         LOG.debug(_("Injecting network info to xenstore"), instance=instance)
 
-        for vif in network_info:
-            xs_data = self._vif_xenstore_data(vif)
-            location = ('vm-data/networking/%s' %
-                        vif['address'].replace(':', ''))
-            self._add_to_param_xenstore(vm_ref,
-                                        location,
-                                        jsonutils.dumps(xs_data))
-            try:
-                self._write_to_xenstore(instance, location, xs_data,
-                                        vm_ref=vm_ref)
-            except KeyError:
-                # catch KeyError for domid if instance isn't running
-                pass
+        @utils.synchronized('xenstore-' + instance['uuid'])
+        def update_nwinfo():
+            for vif in network_info:
+                xs_data = self._vif_xenstore_data(vif)
+                location = ('vm-data/networking/%s' %
+                            vif['address'].replace(':', ''))
+                self._add_to_param_xenstore(vm_ref,
+                                            location,
+                                            jsonutils.dumps(xs_data))
+                try:
+                    self._write_to_xenstore(instance, location, xs_data,
+                                            vm_ref=vm_ref)
+                except KeyError:
+                    # catch KeyError for domid if instance isn't running
+                    pass
+        update_nwinfo()
 
     def _create_vifs(self, vm_ref, instance, network_info):
         """Creates vifs for an instance."""
