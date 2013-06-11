@@ -1896,6 +1896,25 @@ class UsedLimitsSamplesXmlTest(UsedLimitsSamplesJsonTest):
     ctype = "xml"
 
 
+class UsedLimitsForAdminSamplesJsonTest(ApiSampleTestBase):
+    extends_name = ("nova.api.openstack.compute.contrib.used_limits."
+                    "Used_limits")
+    extension_name = (
+        "nova.api.openstack.compute.contrib.used_limits_for_admin."
+        "Used_limits_for_admin")
+
+    def test_get_used_limits_for_admin(self):
+        tenant_id = 'openstack'
+        response = self._do_get('limits?tenant_id=%s' % tenant_id)
+        subs = self._get_regexes()
+        return self._verify_response('usedlimitsforadmin-get-resp', subs,
+                                     response, 200)
+
+
+class UsedLimitsForAdminSamplesXmlTest(UsedLimitsForAdminSamplesJsonTest):
+    ctype = "xml"
+
+
 class MultipleCreateJsonTest(ServersSampleBase):
     extension_name = ("nova.api.openstack.compute.contrib.multiple_create."
                       "Multiple_create")

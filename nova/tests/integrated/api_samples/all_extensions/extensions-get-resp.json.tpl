@@ -513,6 +513,14 @@
             "updated": "%(timestamp)s"
         },
         {
+            "alias": "os-used-limits-for-admin",
+            "description": "%(text)s",
+            "links": [],
+            "name": "UsedLimitsForAdmin",
+            "namespace": "http://docs.openstack.org/compute/ext/used_limits_for_admin/api/v1.1",
+            "updated": "%(timestamp)s"
+        },
+        {
             "alias": "os-user-data",
             "description": "%(text)s",
             "links": [],
