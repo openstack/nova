@@ -257,7 +257,7 @@ class Scheduler(object):
 
         # If dest is not specified, have scheduler pick one.
         if dest is None:
-            instance_type = flavors.extract_instance_type(instance_ref)
+            instance_type = flavors.extract_flavor(instance_ref)
             if not instance_ref['image_ref']:
                 image = None
             else:

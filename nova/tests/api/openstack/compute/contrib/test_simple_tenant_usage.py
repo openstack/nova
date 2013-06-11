@@ -59,7 +59,7 @@ FAKE_INST_TYPE = {'id': 1,
 
 def get_fake_db_instance(start, end, instance_id, tenant_id):
     sys_meta = utils.dict_to_metadata(
-        flavors.save_instance_type_info({}, FAKE_INST_TYPE))
+        flavors.save_flavor_info({}, FAKE_INST_TYPE))
     return {'id': instance_id,
             'uuid': '00000000-0000-0000-0000-00000000000000%02d' % instance_id,
             'image_ref': '1',
@@ -415,7 +415,7 @@ class SimpleTenantUsageControllerTest(test.TestCase):
         class FakeComputeAPI:
             def get_instance_type(self, context, flavor_type):
                 if flavor_type == 1:
-                    return flavors.get_default_instance_type()
+                    return flavors.get_default_flavor()
                 else:
                     raise exception.InstanceTypeNotFound(flavor_type)
 
@@ -429,11 +429,11 @@ class SimpleTenantUsageControllerTest(test.TestCase):
                              instance_type_id=1,
                              vm_state='deleted',
                              deleted=0)
-        basetype = flavors.get_default_instance_type()
+        basetype = flavors.get_default_flavor()
         sys_meta = utils.dict_to_metadata(
-            flavors.save_instance_type_info({}, basetype))
+            flavors.save_flavor_info({}, basetype))
         self.baseinst['system_metadata'] = sys_meta
-        self.basetype = flavors.extract_instance_type(self.baseinst)
+        self.basetype = flavors.extract_flavor(self.baseinst)
 
     def test_get_flavor_from_sys_meta(self):
         # Non-deleted instances get their type information from their
@@ -458,7 +458,7 @@ class SimpleTenantUsageControllerTest(test.TestCase):
                                      deleted=1)
         flavor = self.controller._get_flavor(self.context, self.compute_api,
                                              inst_without_sys_meta, {})
-        self.assertEqual(flavor, flavors.get_default_instance_type())
+        self.assertEqual(flavor, flavors.get_default_flavor())
 
     def test_get_flavor_from_deleted_with_id_of_deleted(self):
         # Verify the legacy behavior of instance_type_id pointing to a

@@ -180,7 +180,7 @@ def create_instance(testcase):
     fake.stub_out_image_service(testcase.stubs)
     ctxt = context.get_admin_context()
     instance_type = db.instance_type_get(ctxt, 1)
-    sys_meta = flavors.save_instance_type_info({}, instance_type)
+    sys_meta = flavors.save_flavor_info({}, instance_type)
     return db.instance_create(ctxt,
                     {'user_id': 'fake',
                      'project_id': 'fake',

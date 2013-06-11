@@ -311,7 +311,7 @@ class API(base.Base):
         """
         self._refresh_quantum_extensions_cache()
         if 'nvp-qos' in self.extensions:
-            instance_type = flavors.extract_instance_type(instance)
+            instance_type = flavors.extract_flavor(instance)
             rxtx_factor = instance_type.get('rxtx_factor')
             port_req_body['port']['rxtx_factor'] = rxtx_factor
 

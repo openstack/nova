@@ -290,7 +290,7 @@ class PowerVMDriver(driver.ComputeDriver):
         """
         lpar_obj = self._powervm._create_lpar_instance(instance, network_info)
 
-        instance_type = flavors.extract_instance_type(instance)
+        instance_type = flavors.extract_flavor(instance)
         new_lv_size = instance_type['root_gb']
         old_lv_size = disk_info['old_lv_size']
         if 'root_disk_file' in disk_info:

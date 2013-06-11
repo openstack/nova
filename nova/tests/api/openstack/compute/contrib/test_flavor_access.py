@@ -27,7 +27,7 @@ from nova import test
 from nova.tests.api.openstack import fakes
 
 
-def generate_instance_type(flavorid, ispublic):
+def generate_flavor(flavorid, ispublic):
     return {
         'id': flavorid,
         'flavorid': str(flavorid),
@@ -49,10 +49,10 @@ def generate_instance_type(flavorid, ispublic):
 
 
 INSTANCE_TYPES = {
-        '0': generate_instance_type(0, True),
-        '1': generate_instance_type(1, True),
-        '2': generate_instance_type(2, False),
-        '3': generate_instance_type(3, False)}
+        '0': generate_flavor(0, True),
+        '1': generate_flavor(1, True),
+        '2': generate_flavor(2, False),
+        '3': generate_flavor(3, False)}
 
 
 ACCESS_LIST = [{'flavor_id': '2', 'project_id': 'proj2'},
@@ -60,7 +60,7 @@ ACCESS_LIST = [{'flavor_id': '2', 'project_id': 'proj2'},
                {'flavor_id': '3', 'project_id': 'proj3'}]
 
 
-def fake_get_instance_type_access_by_flavor_id(flavorid):
+def fake_get_flavor_access_by_flavor_id(flavorid):
     res = []
     for access in ACCESS_LIST:
         if access['flavor_id'] == flavorid:
@@ -68,7 +68,7 @@ def fake_get_instance_type_access_by_flavor_id(flavorid):
     return res
 
 
-def fake_get_instance_type_by_flavor_id(flavorid):
+def fake_get_flavor_by_flavor_id(flavorid):
     return INSTANCE_TYPES[flavorid]
 
 
@@ -80,7 +80,7 @@ def _has_flavor_access(flavorid, projectid):
     return False
 
 
-def fake_get_all_types(context, inactive=0, filters=None):
+def fake_get_all_flavors(context, inactive=0, filters=None):
     if filters == None or filters['is_public'] == None:
         return INSTANCE_TYPES
 
@@ -121,11 +121,11 @@ class FlavorAccessTest(test.TestCase):
         self.flavor_action_controller = flavor_access.FlavorActionController()
         self.req = FakeRequest()
         self.context = self.req.environ['nova.context']
-        self.stubs.Set(flavors, 'get_instance_type_by_flavor_id',
-                       fake_get_instance_type_by_flavor_id)
-        self.stubs.Set(flavors, 'get_all_types', fake_get_all_types)
-        self.stubs.Set(flavors, 'get_instance_type_access_by_flavor_id',
-                       fake_get_instance_type_access_by_flavor_id)
+        self.stubs.Set(flavors, 'get_flavor_by_flavor_id',
+                       fake_get_flavor_by_flavor_id)
+        self.stubs.Set(flavors, 'get_all_flavors', fake_get_all_flavors)
+        self.stubs.Set(flavors, 'get_flavor_access_by_flavor_id',
+                       fake_get_flavor_access_by_flavor_id)
 
     def _verify_flavor_list(self, result, expected):
         # result already sorted by flavor_id
@@ -246,11 +246,11 @@ class FlavorAccessTest(test.TestCase):
                          resp.obj['flavor'])
 
     def test_add_tenant_access(self):
-        def stub_add_instance_type_access(flavorid, projectid, ctxt=None):
+        def stub_add_flavor_access(flavorid, projectid, ctxt=None):
             self.assertEqual('3', flavorid, "flavorid")
             self.assertEqual("proj2", projectid, "projectid")
-        self.stubs.Set(flavors, 'add_instance_type_access',
-                       stub_add_instance_type_access)
+        self.stubs.Set(flavors, 'add_flavor_access',
+                       stub_add_flavor_access)
         expected = {'flavor_access':
             [{'flavor_id': '3', 'tenant_id': 'proj3'}]}
         body = {'addTenantAccess': {'tenant': 'proj2'}}
@@ -261,11 +261,11 @@ class FlavorAccessTest(test.TestCase):
         self.assertEqual(result, expected)
 
     def test_add_tenant_access_with_already_added_access(self):
-        def stub_add_instance_type_access(flavorid, projectid, ctxt=None):
+        def stub_add_flavor_access(flavorid, projectid, ctxt=None):
             raise exception.FlavorAccessExists(flavor_id=flavorid,
                                                project_id=projectid)
-        self.stubs.Set(flavors, 'add_instance_type_access',
-                       stub_add_instance_type_access)
+        self.stubs.Set(flavors, 'add_flavor_access',
+                       stub_add_flavor_access)
         body = {'addTenantAccess': {'tenant': 'proj2'}}
         req = fakes.HTTPRequest.blank('/v2/fake/flavors/2/action',
                                       use_admin_context=True)
@@ -274,11 +274,11 @@ class FlavorAccessTest(test.TestCase):
                           self.req, '3', body)
 
     def test_remove_tenant_access_with_bad_access(self):
-        def stub_remove_instance_type_access(flavorid, projectid, ctxt=None):
+        def stub_remove_flavor_access(flavorid, projectid, ctxt=None):
             raise exception.FlavorAccessNotFound(flavor_id=flavorid,
                                                  project_id=projectid)
-        self.stubs.Set(flavors, 'remove_instance_type_access',
-                       stub_remove_instance_type_access)
+        self.stubs.Set(flavors, 'remove_flavor_access',
+                       stub_remove_flavor_access)
         body = {'removeTenantAccess': {'tenant': 'proj2'}}
         req = fakes.HTTPRequest.blank('/v2/fake/flavors/2/action',
                                       use_admin_context=True)

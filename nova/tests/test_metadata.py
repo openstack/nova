@@ -77,8 +77,8 @@ INSTANCES = (
 
 def get_default_sys_meta():
     return utils.dict_to_metadata(
-        flavors.save_instance_type_info(
-            {}, flavors.get_default_instance_type()))
+        flavors.save_flavor_info(
+            {}, flavors.get_default_flavor()))
 
 
 def return_non_existing_address(*args, **kwarg):

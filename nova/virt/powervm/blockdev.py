@@ -177,7 +177,7 @@ class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
 
         # calculate root device size in bytes
         # we respect the minimum root device size in constants
-        instance_type = flavors.extract_instance_type(instance)
+        instance_type = flavors.extract_flavor(instance)
         size_gb = max(instance_type['root_gb'], constants.POWERVM_MIN_ROOT_GB)
         size = size_gb * 1024 * 1024 * 1024
 

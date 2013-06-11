@@ -39,11 +39,11 @@ FAKE_FLAVORS = {
 }
 
 
-def fake_instance_type_get_by_flavor_id(flavorid):
+def fake_flavor_get_by_flavor_id(flavorid):
     return FAKE_FLAVORS['flavor %s' % flavorid]
 
 
-def fake_instance_type_get_all(*args, **kwargs):
+def fake_flavor_get_all(*args, **kwargs):
     return FAKE_FLAVORS
 
 
@@ -57,11 +57,11 @@ class FlavorDisabledTest(test.TestCase):
               '.flavor_disabled.Flavor_disabled')
         self.flags(osapi_compute_extension=[ext])
         fakes.stub_out_nw_api(self.stubs)
-        self.stubs.Set(flavors, "get_all_types",
-                       fake_instance_type_get_all)
+        self.stubs.Set(flavors, "get_all_flavors",
+                       fake_flavor_get_all)
         self.stubs.Set(flavors,
-                       "get_instance_type_by_flavor_id",
-                       fake_instance_type_get_by_flavor_id)
+                       "get_flavor_by_flavor_id",
+                       fake_flavor_get_by_flavor_id)
 
     def _make_request(self, url):
         req = webob.Request.blank(url)

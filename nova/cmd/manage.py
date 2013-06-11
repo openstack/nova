@@ -617,7 +617,7 @@ class VmCommands(object):
                            context.get_admin_context(), host)
 
         for instance in instances:
-            instance_type = flavors.extract_instance_type(instance)
+            instance_type = flavors.extract_flavor(instance)
             print ("%-10s %-15s %-10s %-10s %-26s %-9s %-9s %-9s"
                    " %-10s %-10s %-10s %-5d" % (instance['display_name'],
                                                 instance['host'],
@@ -928,9 +928,9 @@ class InstanceTypeCommands(object):
         """Lists all active or specific instance types / flavors."""
         try:
             if name is None:
-                inst_types = flavors.get_all_types()
+                inst_types = flavors.get_all_flavors()
             else:
-                inst_types = flavors.get_instance_type_by_name(name)
+                inst_types = flavors.get_flavor_by_name(name)
         except db_exc.DBError as e:
             _db_error(e)
         if isinstance(inst_types.values()[0], dict):
@@ -946,7 +946,7 @@ class InstanceTypeCommands(object):
         """Add key/value pair to specified instance type's extra_specs."""
         try:
             try:
-                inst_type = flavors.get_instance_type_by_name(name)
+                inst_type = flavors.get_flavor_by_name(name)
             except exception.InstanceTypeNotFoundByName as e:
                 print e
                 return(2)
@@ -968,7 +968,7 @@ class InstanceTypeCommands(object):
         """Delete the specified extra spec for instance type."""
         try:
             try:
-                inst_type = flavors.get_instance_type_by_name(name)
+                inst_type = flavors.get_flavor_by_name(name)
             except exception.InstanceTypeNotFoundByName as e:
                 print e
                 return(2)

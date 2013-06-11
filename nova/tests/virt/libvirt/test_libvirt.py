@@ -321,7 +321,7 @@ class LibvirtConnTestCase(test.TestCase):
                        lambda *a, **k: self.conn)
 
         instance_type = db.instance_type_get(self.context, 5)
-        sys_meta = flavors.save_instance_type_info({}, instance_type)
+        sys_meta = flavors.save_flavor_info({}, instance_type)
 
         nova.tests.image.fake.stub_out_image_service(self.stubs)
         self.test_instance = {
@@ -2613,7 +2613,7 @@ class LibvirtConnTestCase(test.TestCase):
         instance_ref['image_ref'] = 123456  # we send an int to test sha1 call
         instance_type = db.instance_type_get(self.context,
                                              instance_ref['instance_type_id'])
-        sys_meta = flavors.save_instance_type_info({}, instance_type)
+        sys_meta = flavors.save_flavor_info({}, instance_type)
         instance_ref['system_metadata'] = sys_meta
         instance = db.instance_create(self.context, instance_ref)
 
@@ -4815,15 +4815,15 @@ class LibvirtDriverTestCase(test.TestCase):
         if not params:
             params = {}
 
-        sys_meta = flavors.save_instance_type_info(
-            {}, flavors.get_instance_type_by_name('m1.tiny'))
+        sys_meta = flavors.save_flavor_info(
+            {}, flavors.get_flavor_by_name('m1.tiny'))
 
         inst = {}
         inst['image_ref'] = '1'
         inst['reservation_id'] = 'r-fakeres'
         inst['user_id'] = 'fake'
         inst['project_id'] = 'fake'
-        type_id = flavors.get_instance_type_by_name('m1.tiny')['id']
+        type_id = flavors.get_flavor_by_name('m1.tiny')['id']
         inst['instance_type_id'] = type_id
         inst['ami_launch_index'] = 0
         inst['host'] = 'host1'

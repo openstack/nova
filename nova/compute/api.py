@@ -599,7 +599,7 @@ class API(base.Base):
         root_device_name = block_device.properties_root_device_name(
             image.get('properties', {}))
 
-        system_metadata = flavors.save_instance_type_info(
+        system_metadata = flavors.save_flavor_info(
             dict(), instance_type)
 
         base_options = {
@@ -731,7 +731,7 @@ class API(base.Base):
         max_count = max_count or min_count
         block_device_mapping = block_device_mapping or []
         if not instance_type:
-            instance_type = flavors.get_default_instance_type()
+            instance_type = flavors.get_default_flavor()
 
         if image_href:
             image_id, image = self._get_image(context, image_href)
@@ -1244,9 +1244,8 @@ class API(base.Base):
                     new_instance['instance_type_id'] ==
                         migration_ref['new_instance_type_id']):
                 old_inst_type_id = migration_ref['old_instance_type_id']
-                get_inst_type_by_id = flavors.get_instance_type
                 try:
-                    old_inst_type = get_inst_type_by_id(old_inst_type_id)
+                    old_inst_type = flavors.get_flavor(old_inst_type_id)
                 except exception.InstanceTypeNotFound:
                     LOG.warning(_("instance type %(old_inst_type_id)d "
                                   "not found") % locals())
@@ -1340,7 +1339,7 @@ class API(base.Base):
     def restore(self, context, instance):
         """Restore a previously deleted (but not reclaimed) instance."""
         # Reserve quotas
-        instance_type = flavors.extract_instance_type(instance)
+        instance_type = flavors.extract_flavor(instance)
         num_instances, quota_reservations = self._check_num_instances_quota(
                 context, instance_type, 1, 1)
 
@@ -1420,7 +1419,7 @@ class API(base.Base):
     #NOTE(bcwaldon): this doesn't really belong in this class
     def get_instance_type(self, context, instance_type_id):
         """Get an instance type by instance type id."""
-        return flavors.get_instance_type(instance_type_id)
+        return flavors.get_flavor(instance_type_id)
 
     def get(self, context, instance_id):
         """Get a single instance with the given instance_id."""
@@ -1477,7 +1476,7 @@ class API(base.Base):
         filters = {}
 
         def _remap_flavor_filter(flavor_id):
-            instance_type = flavors.get_instance_type_by_flavor_id(
+            instance_type = flavors.get_flavor_by_flavor_id(
                     flavor_id)
 
             filters['instance_type_id'] = instance_type['id']
@@ -1756,7 +1755,7 @@ class API(base.Base):
 
         #disk format of vhd is non-shrinkable
         if orig_image.get('disk_format') == 'vhd':
-            instance_type = flavors.extract_instance_type(instance)
+            instance_type = flavors.extract_flavor(instance)
             min_disk = instance_type['root_gb']
         else:
             #set new image values to the original image values
@@ -1834,7 +1833,7 @@ class API(base.Base):
         orig_image_ref = instance['image_ref'] or ''
         files_to_inject = kwargs.pop('files_to_inject', [])
         metadata = kwargs.get('metadata', {})
-        instance_type = flavors.extract_instance_type(instance)
+        instance_type = flavors.extract_flavor(instance)
 
         image_id, image = self._get_image(context, image_href)
 
@@ -2003,9 +2002,9 @@ class API(base.Base):
         Calculate deltas required to reverse a prior upsizing
         quota adjustment.
         """
-        old_instance_type = flavors.get_instance_type(
+        old_instance_type = flavors.get_flavor(
             migration_ref['old_instance_type_id'])
-        new_instance_type = flavors.get_instance_type(
+        new_instance_type = flavors.get_flavor(
             migration_ref['new_instance_type_id'])
 
         return API._resize_quota_delta(context, new_instance_type,
@@ -2016,9 +2015,9 @@ class API(base.Base):
         """
         Calculate deltas required to adjust quota for an instance downsize.
         """
-        old_instance_type = flavors.extract_instance_type(instance,
+        old_instance_type = flavors.extract_flavor(instance,
                                                                  'old_')
-        new_instance_type = flavors.extract_instance_type(instance,
+        new_instance_type = flavors.extract_flavor(instance,
                                                                  'new_')
         return API._resize_quota_delta(context, new_instance_type,
                                        old_instance_type, 1, -1)
@@ -2038,7 +2037,7 @@ class API(base.Base):
         the original flavor_id. If flavor_id is not None, the instance should
         be migrated to a new host and resized to the new flavor_id.
         """
-        current_instance_type = flavors.extract_instance_type(instance)
+        current_instance_type = flavors.extract_flavor(instance)
 
         # If flavor_id is not provided, only migrate the instance.
         if not flavor_id:
@@ -2046,7 +2045,7 @@ class API(base.Base):
                       instance=instance)
             new_instance_type = current_instance_type
         else:
-            new_instance_type = flavors.get_instance_type_by_flavor_id(
+            new_instance_type = flavors.get_flavor_by_flavor_id(
                     flavor_id, read_deleted="no")
 
         current_instance_type_name = current_instance_type['name']

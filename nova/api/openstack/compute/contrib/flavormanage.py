@@ -40,7 +40,7 @@ class FlavorManageController(wsgi.Controller):
         authorize(context)
 
         try:
-            flavor = flavors.get_instance_type_by_flavor_id(
+            flavor = flavors.get_flavor_by_flavor_id(
                     id, read_deleted="no")
         except exception.NotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())

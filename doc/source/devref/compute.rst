@@ -64,10 +64,10 @@ The :mod:`nova.virt.images` Module
     :show-inheritance:
 
 
-The :mod:`nova.compute.instance_types` Module
+The :mod:`nova.compute.flavors` Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. automodule:: nova.compute.instance_types
+.. automodule:: nova.compute.flavors
     :noindex:
     :members:
     :undoc-members:

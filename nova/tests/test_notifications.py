@@ -69,8 +69,8 @@ class NotificationsTestCase(test.TestCase):
         self.instance = self._wrapped_create()
 
     def _wrapped_create(self, params=None):
-        instance_type = flavors.get_instance_type_by_name('m1.tiny')
-        sys_meta = flavors.save_instance_type_info({}, instance_type)
+        instance_type = flavors.get_flavor_by_name('m1.tiny')
+        sys_meta = flavors.save_flavor_info({}, instance_type)
         inst = {}
         inst['image_ref'] = 1
         inst['user_id'] = self.user_id

@@ -1798,7 +1798,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                      user_id=instance['user_id'],
                                      project_id=instance['project_id'])
 
-        inst_type = flavors.extract_instance_type(instance)
+        inst_type = flavors.extract_flavor(instance)
 
         # NOTE(ndipanov): Even if disk_mapping was passed in, which
         # currently happens only on rescue - we still don't want to

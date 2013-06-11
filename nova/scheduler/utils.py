@@ -28,6 +28,6 @@ def build_request_spec(image, instances):
     request_spec = {
             'image': image,
             'instance_properties': instance,
-            'instance_type': flavors.extract_instance_type(instance),
+            'instance_type': flavors.extract_flavor(instance),
             'instance_uuids': [inst['uuid'] for inst in instances]}
     return request_spec

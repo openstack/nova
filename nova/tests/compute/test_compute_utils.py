@@ -185,7 +185,7 @@ class ComputeValidateDeviceTestCase(test.TestCase):
                 'ephemeral_gb': 10,
                 'swap': 0,
                 })
-        self.stubs.Set(flavors, 'get_instance_type',
+        self.stubs.Set(flavors, 'get_flavor',
                        lambda instance_type_id, ctxt=None: self.instance_type)
         device = self._validate_device()
         self.assertEqual(device, '/dev/xvdc')
@@ -195,7 +195,7 @@ class ComputeValidateDeviceTestCase(test.TestCase):
                 'ephemeral_gb': 0,
                 'swap': 10,
                 })
-        self.stubs.Set(flavors, 'get_instance_type',
+        self.stubs.Set(flavors, 'get_flavor',
                        lambda instance_type_id, ctxt=None: self.instance_type)
         device = self._validate_device()
         self.assertEqual(device, '/dev/xvdb')
@@ -205,7 +205,7 @@ class ComputeValidateDeviceTestCase(test.TestCase):
                 'ephemeral_gb': 10,
                 'swap': 10,
                 })
-        self.stubs.Set(flavors, 'get_instance_type',
+        self.stubs.Set(flavors, 'get_flavor',
                        lambda instance_type_id, ctxt=None: self.instance_type)
         device = self._validate_device()
         self.assertEqual(device, '/dev/xvdd')
@@ -215,7 +215,7 @@ class ComputeValidateDeviceTestCase(test.TestCase):
                 'ephemeral_gb': 0,
                 'swap': 10,
                 })
-        self.stubs.Set(flavors, 'get_instance_type',
+        self.stubs.Set(flavors, 'get_flavor',
                        lambda instance_type_id, ctxt=None: self.instance_type)
         device = self._validate_device()
         self.assertEqual(device, '/dev/xvdb')
@@ -258,8 +258,8 @@ class UsageInfoTestCase(test.TestCase):
 
     def _create_instance(self, params={}):
         """Create a test instance."""
-        instance_type = flavors.get_instance_type_by_name('m1.tiny')
-        sys_meta = flavors.save_instance_type_info({}, instance_type)
+        instance_type = flavors.get_flavor_by_name('m1.tiny')
+        sys_meta = flavors.save_flavor_info({}, instance_type)
         inst = {}
         inst['image_ref'] = 1
         inst['reservation_id'] = 'r-fakeres'
@@ -294,7 +294,7 @@ class UsageInfoTestCase(test.TestCase):
         self.assertEquals(payload['user_id'], self.user_id)
         self.assertEquals(payload['instance_id'], instance['uuid'])
         self.assertEquals(payload['instance_type'], 'm1.tiny')
-        type_id = flavors.get_instance_type_by_name('m1.tiny')['id']
+        type_id = flavors.get_flavor_by_name('m1.tiny')['id']
         self.assertEquals(str(payload['instance_type_id']), str(type_id))
         for attr in ('display_name', 'created_at', 'launched_at',
                      'state', 'state_description',
@@ -330,7 +330,7 @@ class UsageInfoTestCase(test.TestCase):
         self.assertEquals(payload['user_id'], self.user_id)
         self.assertEquals(payload['instance_id'], instance['uuid'])
         self.assertEquals(payload['instance_type'], 'm1.tiny')
-        type_id = flavors.get_instance_type_by_name('m1.tiny')['id']
+        type_id = flavors.get_flavor_by_name('m1.tiny')['id']
         self.assertEquals(str(payload['instance_type_id']), str(type_id))
         for attr in ('display_name', 'created_at', 'launched_at',
                      'state', 'state_description',
@@ -357,7 +357,7 @@ class UsageInfoTestCase(test.TestCase):
         self.assertEquals(payload['user_id'], self.user_id)
         self.assertEquals(payload['instance_id'], instance['uuid'])
         self.assertEquals(payload['instance_type'], 'm1.tiny')
-        type_id = flavors.get_instance_type_by_name('m1.tiny')['id']
+        type_id = flavors.get_flavor_by_name('m1.tiny')['id']
         self.assertEquals(str(payload['instance_type_id']), str(type_id))
         for attr in ('display_name', 'created_at', 'launched_at',
                      'state', 'state_description',
@@ -393,7 +393,7 @@ class UsageInfoTestCase(test.TestCase):
         self.assertEquals(payload['user_id'], self.user_id)
         self.assertEquals(payload['instance_id'], instance['uuid'])
         self.assertEquals(payload['instance_type'], 'm1.tiny')
-        type_id = flavors.get_instance_type_by_name('m1.tiny')['id']
+        type_id = flavors.get_flavor_by_name('m1.tiny')['id']
         self.assertEquals(str(payload['instance_type_id']), str(type_id))
         for attr in ('display_name', 'created_at', 'launched_at',
                      'state', 'state_description', 'image_meta'):

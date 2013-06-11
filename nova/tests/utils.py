@@ -72,7 +72,7 @@ def get_test_instance(context=None, instance_type=None):
         instance_type = get_test_instance_type(context)
 
     metadata = {}
-    flavors.save_instance_type_info(metadata, instance_type, '')
+    flavors.save_flavor_info(metadata, instance_type, '')
 
     test_instance = {'memory_kb': '2048000',
                      'basepath': '/some/path',

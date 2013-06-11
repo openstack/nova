@@ -151,7 +151,7 @@ def get_device_name_for_instance(context, instance, bdms, device):
     # NOTE(vish): remove this when xenapi is properly setting
     #             default_ephemeral_device and default_swap_device
     if driver.compute_driver_matches('xenapi.XenAPIDriver'):
-        instance_type = flavors.extract_instance_type(instance)
+        instance_type = flavors.extract_flavor(instance)
         if instance_type['ephemeral_gb']:
             used_letters.add('b')
 

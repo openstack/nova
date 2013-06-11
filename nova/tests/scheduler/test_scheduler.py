@@ -443,7 +443,7 @@ class SchedulerTestCase(test.NoDBTestCase):
                      'vcpu_weight': None, 'id': 1}
 
         sys_meta = utils.dict_to_metadata(
-            flavors.save_instance_type_info({}, inst_type))
+            flavors.save_flavor_info({}, inst_type))
         return {'id': 31337,
                 'uuid': 'fake_uuid',
                 'name': 'fake-instance',
@@ -792,7 +792,7 @@ class SchedulerTestCase(test.NoDBTestCase):
 
         # Confirm dest is picked by scheduler if not set.
         self.mox.StubOutWithMock(self.driver, 'select_hosts')
-        self.mox.StubOutWithMock(flavors, 'extract_instance_type')
+        self.mox.StubOutWithMock(flavors, 'extract_flavor')
 
         request_spec = {'instance_properties': instance,
                         'instance_type': {},
@@ -803,7 +803,7 @@ class SchedulerTestCase(test.NoDBTestCase):
         ignore_hosts = [instance['host']]
         filter_properties = {'ignore_hosts': ignore_hosts}
 
-        flavors.extract_instance_type(instance).AndReturn({})
+        flavors.extract_flavor(instance).AndReturn({})
         self.driver.select_hosts(self.context, request_spec,
                                  filter_properties).AndReturn(['fake_host2'])
 
@@ -818,7 +818,7 @@ class SchedulerTestCase(test.NoDBTestCase):
 
         # Confirm dest is picked by scheduler if not set.
         self.mox.StubOutWithMock(self.driver, 'select_hosts')
-        self.mox.StubOutWithMock(flavors, 'extract_instance_type')
+        self.mox.StubOutWithMock(flavors, 'extract_flavor')
 
         request_spec = {'instance_properties': instance,
                         'instance_type': {},
@@ -828,7 +828,7 @@ class SchedulerTestCase(test.NoDBTestCase):
         ignore_hosts = [instance['host']]
         filter_properties = {'ignore_hosts': ignore_hosts}
 
-        flavors.extract_instance_type(instance).AndReturn({})
+        flavors.extract_flavor(instance).AndReturn({})
         self.driver.select_hosts(self.context, request_spec,
                                  filter_properties).AndReturn(['fake_host2'])
 
@@ -841,7 +841,7 @@ class SchedulerTestCase(test.NoDBTestCase):
         instance = self._live_migration_instance()
 
         # Confirm scheduler picks target host if none given.
-        self.mox.StubOutWithMock(flavors, 'extract_instance_type')
+        self.mox.StubOutWithMock(flavors, 'extract_flavor')
         self.mox.StubOutWithMock(self.driver, '_live_migration_src_check')
         self.mox.StubOutWithMock(self.driver, 'select_hosts')
         self.mox.StubOutWithMock(self.driver, '_live_migration_common_check')
@@ -860,7 +860,7 @@ class SchedulerTestCase(test.NoDBTestCase):
 
         self.driver._live_migration_src_check(self.context, instance)
 
-        flavors.extract_instance_type(
+        flavors.extract_flavor(
                 instance).MultipleTimes().AndReturn({})
 
         # First selected host raises exception.InvalidHypervisorType
