@@ -1237,6 +1237,13 @@ class TestQuantumv2(test.TestCase):
             self.moxed_client, '1.1.1.1', 1)
         self.assertEqual(floatingips, [])
 
+    def test_get_all_empty_list_networks(self):
+        api = quantumapi.API()
+        self.moxed_client.list_networks().AndReturn({'networks': []})
+        self.mox.ReplayAll()
+        networks = api.get_all(self.context)
+        self.assertEqual(networks, [])
+
 
 class TestQuantumv2ModuleMethods(test.TestCase):
     def test_ensure_requested_network_ordering_no_preference_ids(self):
