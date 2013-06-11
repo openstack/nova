@@ -420,7 +420,7 @@ class ServerSecurityGroupController(SecurityGroupControllerBase):
             raise exc.HTTPNotFound(explanation=exp.format_message())
 
         groups = self.security_group_api.get_instance_security_groups(
-            context, instance['id'], instance['uuid'], True)
+            context, instance['uuid'], True)
         result = [self._format_security_group(context, group)
                     for group in groups]
 

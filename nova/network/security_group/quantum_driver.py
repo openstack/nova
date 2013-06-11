@@ -293,17 +293,14 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                     pass
         return instances_security_group_bindings
 
-    def get_instance_security_groups(self, context, instance_id,
-                                     instance_uuid=None, detailed=False):
+    def get_instance_security_groups(self, context, instance_uuid,
+                                     detailed=False):
         """Returns the security groups that are associated with an instance.
         If detailed is True then it also returns the full details of the
         security groups associated with an instance.
         """
         quantum = quantumv2.get_client(context)
-        if instance_uuid:
-            params = {'device_id': instance_uuid}
-        else:
-            params = {'device_id': instance_id}
+        params = {'device_id': instance_uuid}
         ports = quantum.list_ports(**params)
         security_groups = quantum.list_security_groups().get('security_groups')
 

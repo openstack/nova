@@ -64,7 +64,7 @@ class VirtAPIBaseTest(test.TestCase, test.APICoverage):
 
     def test_security_group_get_by_instance(self):
         self.assertExpected('security_group_get_by_instance',
-                            {'id': 'fake-id'})
+                            {'uuid': 'fake-id'})
 
     def test_security_group_rule_get_by_security_group(self):
         self.assertExpected('security_group_rule_get_by_security_group',
@@ -99,11 +99,12 @@ class FakeVirtAPITest(VirtAPIBaseTest):
         self.mox.StubOutWithMock(db, db_method)
 
         if method in ('aggregate_metadata_add', 'aggregate_metadata_delete',
-                      'security_group_rule_get_by_security_group',
-                      'security_group_get_by_instance'):
+                      'security_group_rule_get_by_security_group'):
             # NOTE(danms): FakeVirtAPI will convert the first argument to
             # argument['id'], so expect that in the actual db call
             e_args = tuple([args[0]['id']] + list(args[1:]))
+        elif method in ('test_security_group_get_by_instance'):
+            e_args = tuple([args[0]['uuid']] + list(args[1:]))
         else:
             e_args = args
 

@@ -462,7 +462,7 @@ class FakeVirtAPI(virtapi.VirtAPI):
         return db.aggregate_metadata_delete(context, aggregate['id'], key)
 
     def security_group_get_by_instance(self, context, instance):
-        return db.security_group_get_by_instance(context, instance['id'])
+        return db.security_group_get_by_instance(context, instance['uuid'])
 
     def security_group_rule_get_by_security_group(self, context,
                                                   security_group):

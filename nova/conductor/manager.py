@@ -239,7 +239,7 @@ class ConductorManager(manager.Manager):
 
     def security_group_get_by_instance(self, context, instance):
         group = self.db.security_group_get_by_instance(context,
-                                                       instance['id'])
+                                                       instance['uuid'])
         return jsonutils.to_primitive(group)
 
     def security_group_rule_get_by_security_group(self, context, secgroup):
