@@ -1376,6 +1376,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         as necessary.
         """
         instance_uuid = instance['uuid']
+        image = instance['image_ref']
 
         if context.is_admin and context.project_id != instance['project_id']:
             project_id = instance['project_id']
@@ -1429,6 +1430,15 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._quota_commit(context, reservations, project_id=project_id)
         # ensure block device mappings are not leaked
         self.conductor_api.block_device_mapping_destroy(context, bdms)
+        # NOTE(ndipanov): Delete the dummy image BDM as well. This will not
+        #                 be needed once the manager code is using the image
+        if image:
+            # Do not convert to legacy here - we want them all
+            leftover_bdm = \
+                self.conductor_api.block_device_mapping_get_all_by_instance(
+                    context, instance)
+            self.conductor_api.block_device_mapping_destroy(context,
+                                                            leftover_bdm)
 
         self._notify_about_instance_usage(context, instance, "delete.end",
                 system_metadata=system_meta)

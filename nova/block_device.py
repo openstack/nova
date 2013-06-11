@@ -166,6 +166,21 @@ def is_safe_for_update(block_device_dict):
                       bdm_db_only_fields)
 
 
+def create_image_bdm(image_ref, boot_index=0):
+    """Create a block device dict based on the image_ref.
+
+    This is useful in the API layer to keep the compatibility
+    with having an image_ref as a field in the instance requests
+    """
+    return BlockDeviceDict(
+        {'source_type': 'image',
+         'image_id': image_ref,
+         'delete_on_termination': True,
+         'boot_index': boot_index,
+         'device_type': 'disk',
+         'destination_type': 'local'})
+
+
 def legacy_mapping(block_device_mapping):
     """Transform a list of block devices of an instance back to the
     legacy data format."""
