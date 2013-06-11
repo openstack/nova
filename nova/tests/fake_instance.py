@@ -21,6 +21,7 @@ from nova.objects import instance as instance_obj
 def fake_db_instance(**updates):
     db_instance = {
         'id': 1,
+        'deleted': False,
         'uuid': str(uuid.uuid4()),
         'user_id': 'fake-user',
         'project_id': 'fake-project',

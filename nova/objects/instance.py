@@ -149,7 +149,10 @@ class Instance(base.NovaObject):
         for field in instance.fields:
             if field in ['metadata', 'system_metadata']:
                 continue
-            instance[field] = db_inst[field]
+            elif field == 'deleted':
+                instance.deleted = db_inst['deleted'] == db_inst['id']
+            else:
+                instance[field] = db_inst[field]
 
         if 'metadata' in expected_attrs:
             instance['metadata'] = utils.metadata_to_dict(db_inst['metadata'])
