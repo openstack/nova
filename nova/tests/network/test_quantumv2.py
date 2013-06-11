@@ -1370,6 +1370,13 @@ class TestQuantumv2(test.TestCase):
         self.assertEqual(nw_info[0]['type'], model.VIF_TYPE_BRIDGE)
         self.assertEqual(nw_info[0]['network']['bridge'], 'brqnet-id')
 
+    def test_get_all_empty_list_networks(self):
+        api = quantumapi.API()
+        self.moxed_client.list_networks().AndReturn({'networks': []})
+        self.mox.ReplayAll()
+        networks = api.get_all(self.context)
+        self.assertEqual(networks, [])
+
 
 class TestQuantumv2ModuleMethods(test.TestCase):
     def test_ensure_requested_network_ordering_no_preference_ids(self):

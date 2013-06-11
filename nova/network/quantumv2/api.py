@@ -540,7 +540,7 @@ class API(base.Base):
     def get_all(self, context):
         """Get all networks for client."""
         client = quantumv2.get_client(context)
-        networks = client.list_networks().get('networks') or {}
+        networks = client.list_networks().get('networks')
         for network in networks:
             network['label'] = network['name']
         return networks
