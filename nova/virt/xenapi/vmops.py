@@ -508,11 +508,7 @@ class VMOps(object):
                 disk_image_type)
         self._setup_vm_networking(instance, vm_ref, vdis, network_info,
                 rescue)
-
-        # NOTE(mikal): file injection only happens if we are _not_ using a
-        # configdrive.
-        if not configdrive.required_by(instance):
-            self.inject_instance_metadata(instance, vm_ref)
+        self.inject_instance_metadata(instance, vm_ref)
 
         return vm_ref
 
