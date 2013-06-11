@@ -18,10 +18,19 @@
 Base RPC client and server common to all services.
 """
 
+from oslo.config import cfg
+
 from nova.openstack.common import jsonutils
 from nova.openstack.common import rpc
 import nova.openstack.common.rpc.proxy as rpc_proxy
 
+
+CONF = cfg.CONF
+rpcapi_cap_opt = cfg.StrOpt('baseapi',
+        default=None,
+        help='Set a version cap for messages sent to the base api in any '
+             'service')
+CONF.register_opt(rpcapi_cap_opt, 'upgrade_levels')
 
 _NAMESPACE = 'baseapi'
 
@@ -45,9 +54,16 @@ class BaseAPI(rpc_proxy.RpcProxy):
     #
     BASE_RPC_API_VERSION = '1.0'
 
+    VERSION_ALIASES = {
+        # baseapi was added in havana
+    }
+
     def __init__(self, topic):
+        version_cap = self.VERSION_ALIASES.get(CONF.upgrade_levels.baseapi,
+                                               CONF.upgrade_levels.baseapi)
         super(BaseAPI, self).__init__(topic=topic,
-                default_version=self.BASE_RPC_API_VERSION)
+                default_version=self.BASE_RPC_API_VERSION,
+                version_cap=version_cap)
         self.namespace = _NAMESPACE
 
     def ping(self, context, arg, timeout=None):

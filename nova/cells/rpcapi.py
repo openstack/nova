@@ -33,6 +33,11 @@ CONF = cfg.CONF
 CONF.import_opt('enable', 'nova.cells.opts', group='cells')
 CONF.import_opt('topic', 'nova.cells.opts', group='cells')
 
+rpcapi_cap_opt = cfg.StrOpt('cells',
+        default=None,
+        help='Set a version cap for messages sent to local cells services')
+CONF.register_opt(rpcapi_cap_opt, 'upgrade_levels')
+
 
 class CellsAPI(rpc_proxy.RpcProxy):
     '''Cells client-side RPC API
@@ -49,15 +54,27 @@ class CellsAPI(rpc_proxy.RpcProxy):
         1.5 - Adds actions_get(), action_get_by_request_id(), and
               action_events_get()
         1.6 - Adds consoleauth_delete_tokens() and validate_console_port()
+
+        ... Grizzly supports message version 1.6.  So, any changes to existing
+        methods in 2.x after that point should be done such that they can
+        handle the version_cap being set to 1.6.
+
         1.7 - Adds service_update()
         1.8 - Adds build_instances(), deprecates schedule_run_instance()
         1.9 - Adds get_capacities()
     '''
     BASE_RPC_API_VERSION = '1.0'
 
+    VERSION_ALIASES = {
+        'grizzly': '1.6'
+    }
+
     def __init__(self):
+        version_cap = self.VERSION_ALIASES.get(CONF.upgrade_levels.cells,
+                                               CONF.upgrade_levels.cells)
         super(CellsAPI, self).__init__(topic=CONF.cells.topic,
-                default_version=self.BASE_RPC_API_VERSION)
+                default_version=self.BASE_RPC_API_VERSION,
+                version_cap=version_cap)
 
     def cast_compute_api_method(self, ctxt, cell_name, method,
             *args, **kwargs):

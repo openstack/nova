@@ -34,6 +34,11 @@ CONF = cfg.CONF
 CONF.register_opts(cell_rpc_driver_opts, group='cells')
 CONF.import_opt('call_timeout', 'nova.cells.opts', group='cells')
 
+rpcapi_cap_opt = cfg.StrOpt('intercell',
+        default=None,
+        help='Set a version cap for messages sent between cells services')
+CONF.register_opt(rpcapi_cap_opt, 'upgrade_levels')
+
 _CELL_TO_CELL_RPC_API_VERSION = '1.0'
 
 
@@ -103,9 +108,21 @@ class InterCellRPCAPI(rpc_proxy.RpcProxy):
 
     API version history:
         1.0 - Initial version.
+
+        ... Grizzly supports message version 1.0.  So, any changes to existing
+        methods in 2.x after that point should be done such that they can
+        handle the version_cap being set to 1.0.
     """
+
+    VERSION_ALIASES = {
+        'grizzly': '1.0',
+    }
+
     def __init__(self, default_version):
-        super(InterCellRPCAPI, self).__init__(None, default_version)
+        version_cap = self.VERSION_ALIASES.get(CONF.upgrade_levels.intercell,
+                                               CONF.upgrade_levels.intercell)
+        super(InterCellRPCAPI, self).__init__(None, default_version,
+                version_cap=version_cap)
 
     @staticmethod
     def _get_server_params_for_cell(next_hop):

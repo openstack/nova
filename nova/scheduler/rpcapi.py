@@ -32,6 +32,11 @@ rpcapi_opts = [
 CONF = cfg.CONF
 CONF.register_opts(rpcapi_opts)
 
+rpcapi_cap_opt = cfg.StrOpt('scheduler',
+        default=None,
+        help='Set a version cap for messages sent to scheduler services')
+CONF.register_opt(rpcapi_cap_opt, 'upgrade_levels')
+
 
 class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     '''Client side of the scheduler rpc API.
@@ -58,6 +63,10 @@ class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 - accepts a list of capabilities
         2.5 - Add get_backdoor_port()
         2.6 - Add select_hosts()
+
+        ... Grizzly supports message version 2.6.  So, any changes to existing
+        methods in 2.x after that point should be done such that they can
+        handle the version_cap being set to 2.6.
     '''
 
     #
@@ -70,9 +79,16 @@ class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     #
     BASE_RPC_API_VERSION = '2.0'
 
+    VERSION_ALIASES = {
+        'grizzly': '2.6',
+    }
+
     def __init__(self):
+        version_cap = self.VERSION_ALIASES.get(CONF.upgrade_levels.scheduler,
+                                               CONF.upgrade_levels.scheduler)
         super(SchedulerAPI, self).__init__(topic=CONF.scheduler_topic,
-                default_version=self.BASE_RPC_API_VERSION)
+                default_version=self.BASE_RPC_API_VERSION,
+                version_cap=version_cap)
 
     def run_instance(self, ctxt, request_spec, admin_password,
             injected_files, requested_networks, is_first_time,

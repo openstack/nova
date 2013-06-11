@@ -37,6 +37,11 @@ rpcapi_opts = [
 CONF = cfg.CONF
 CONF.register_opts(rpcapi_opts)
 
+rpcapi_cap_opt = cfg.StrOpt('network',
+        default=None,
+        help='Set a version cap for messages sent to network services')
+CONF.register_opt(rpcapi_cap_opt, 'upgrade_levels')
+
 
 class NetworkAPI(rpc_proxy.RpcProxy):
     '''Client side of the network rpc API.
@@ -54,6 +59,10 @@ class NetworkAPI(rpc_proxy.RpcProxy):
         1.8 - Adds macs to allocate_for_instance
         1.9 - Adds rxtx_factor to [add|remove]_fixed_ip, removes instance_uuid
               from allocate_for_instance and instance_get_nw_info
+
+        ... Grizzly supports message version 1.9.  So, any changes to existing
+        methods in 2.x after that point should be done such that they can
+        handle the version_cap being set to 1.9.
     '''
 
     #
@@ -66,11 +75,18 @@ class NetworkAPI(rpc_proxy.RpcProxy):
     #
     BASE_RPC_API_VERSION = '1.0'
 
+    VERSION_ALIASES = {
+        'grizzly': '1.9',
+    }
+
     def __init__(self, topic=None):
         topic = topic if topic else CONF.network_topic
+        version_cap = self.VERSION_ALIASES.get(CONF.upgrade_levels.network,
+                                               CONF.upgrade_levels.network)
         super(NetworkAPI, self).__init__(
                 topic=topic,
-                default_version=self.BASE_RPC_API_VERSION)
+                default_version=self.BASE_RPC_API_VERSION,
+                version_cap=version_cap)
 
     def get_all_networks(self, ctxt):
         return self.call(ctxt, self.make_msg('get_all_networks'))
