@@ -452,3 +452,40 @@ class TestRemoteObject(_RemoteTest, _TestObject):
         obj = MyObj2.get(ctxt)
         self.assertEqual(obj.bar, 'bar')
         self.assertRemotes()
+
+
+class TestObjectListBase(test.TestCase):
+    def test_list_like_operations(self):
+        class Foo(base.ObjectListBase, base.NovaObject):
+            pass
+
+        objlist = Foo()
+        objlist._context = 'foo'
+        objlist.objects = [1, 2, 3]
+        self.assertTrue(list(objlist), objlist.objects)
+        self.assertEqual(len(objlist), 3)
+        self.assertIn(2, objlist)
+        self.assertEqual(list(objlist[:1]), [1])
+        self.assertEqual(objlist[:1]._context, 'foo')
+        self.assertEqual(objlist[2], 3)
+        self.assertEqual(objlist.count(1), 1)
+        self.assertEqual(objlist.index(2), 1)
+
+    def test_serialization(self):
+        class Foo(base.ObjectListBase, base.NovaObject):
+            pass
+
+        class Bar(base.NovaObject):
+            fields = {'foo': str}
+
+        obj = Foo()
+        obj.objects = []
+        for i in 'abc':
+            bar = Bar()
+            bar.foo = i
+            obj.objects.append(bar)
+
+        obj2 = base.NovaObject.obj_from_primitive(obj.obj_to_primitive())
+        self.assertFalse(obj is obj2)
+        self.assertEqual([x.foo for x in obj],
+                         [y.foo for y in obj2])
