@@ -153,7 +153,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
     @classmethod
     def _get_sample(cls, name):
         dirname = os.path.dirname(os.path.abspath(__file__))
-        dirname = os.path.join(dirname, "../../../doc")
+        dirname = os.path.normpath(os.path.join(dirname, "../../../doc"))
         return cls._get_sample_path(name, dirname)
 
     @classmethod
