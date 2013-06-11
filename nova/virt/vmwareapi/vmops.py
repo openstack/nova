@@ -182,7 +182,7 @@ class VMwareVMOps(object):
                 vif_infos.append({'network_name': network_name,
                                   'mac_address': mac_address,
                                   'network_ref': network_ref,
-                                  'iface_id': vif.get_meta('iface_id'),
+                                  'iface_id': vif['id'],
                                  })
             return vif_infos
 
