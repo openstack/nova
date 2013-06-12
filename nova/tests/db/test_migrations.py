@@ -1520,6 +1520,10 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
             for q in instance_qs
         )
 
+        self.assertEqual(len(bdm_1s), 3)
+        self.assertEqual(len(bdm_2s), 2)
+        self.assertEqual(len(bdm_3s), 4)
+
         # Instance 1
         self.assertEqual(bdm_1s[0].source_type, 'volume')
         self.assertEqual(bdm_1s[0].destination_type, 'volume')

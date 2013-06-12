@@ -52,10 +52,11 @@ def strip_dev(device_name):
 def upgrade(migrate_engine):
     meta = MetaData(bind=migrate_engine)
 
-    for table in ('block_device_mapping', 'shadow_block_device_mapping'):
-        block_device_mapping = Table(table,
-                                     meta, autoload=True)
+    tables = [Table(table, meta, autoload=True)
+              for table in
+              ('block_device_mapping', 'shadow_block_device_mapping')]
 
+    for block_device_mapping in tables:
         source_type = Column('source_type', String(255))
         destination_type = Column('destination_type', String(255))
         guest_format = Column('guest_format', String(255))
@@ -75,8 +76,9 @@ def upgrade(migrate_engine):
         device_name = block_device_mapping.c.device_name
         device_name.alter(nullable=True)
 
-        _upgrade_bdm_v2(meta, block_device_mapping)
+    _upgrade_bdm_v2(meta, *tables)
 
+    for block_device_mapping in tables:
         virtual_name = block_device_mapping.c.virtual_name
         virtual_name.drop()
 
@@ -104,13 +106,15 @@ def downgrade(migrate_engine):
         block_device_mapping.c.image_id.drop()
 
 
-def _upgrade_bdm_v2(meta, bdm_table):
+def _upgrade_bdm_v2(meta, bdm_table, bdm_shadow_table):
     # Rows needed to do the upgrade
     _bdm_rows_v1 = ('id', 'device_name', 'virtual_name',
                     'snapshot_id', 'volume_id', 'instance_uuid')
 
     _bdm_rows_v2 = ('id', 'source_type', 'destination_type', 'guest_format',
                     'device_type', 'disk_bus', 'boot_index', 'image_id')
+
+    _instance_cols = ('uuid', 'image_ref', 'root_device_name')
 
     def _get_columns(table, names):
         return [getattr(table.c, name) for name in names]
@@ -126,85 +130,92 @@ def _upgrade_bdm_v2(meta, bdm_table):
     instance_table = Table('instances', meta, autoload=True)
     instance_shadow_table = Table('shadow_instances', meta, autoload=True)
 
-    for instance in itertools.chain(
-        instance_table.select().execute().fetchall(),
-        instance_shadow_table.select().execute().fetchall()):
-        # Get all the bdms for an instance
-        bdm_q = select(_get_columns(bdm_table, _bdm_rows_v1)).where(
-            bdm_table.c.instance_uuid == instance.uuid)
+    live_q = select(_get_columns(instance_table, _instance_cols) +
+                    _get_columns(bdm_table, _bdm_rows_v1),
+                    from_obj=instance_table.join(bdm_table,
+                        instance_table.c.uuid == bdm_table.c.instance_uuid))
 
-        bdms_v1 = [val for val in bdm_q.execute().fetchall()]
-        bdms_v2 = []
-        image_bdm = None
+    live_on_shadow_q = select(_get_columns(instance_table, _instance_cols) +
+                    _get_columns(bdm_shadow_table, _bdm_rows_v1),
+                    from_obj=instance_table.join(bdm_shadow_table,
+                        instance_table.c.uuid ==
+                        bdm_shadow_table.c.instance_uuid))
 
-        for bdm in bdms_v1:
-            bdm_v2 = _default_bdm()
-            # Copy over some fields we'll need
-            bdm_v2['id'] = bdm['id']
-            bdm_v2['device_name'] = bdm['device_name']
+    shadow_q = select(_get_columns(instance_shadow_table, _instance_cols) +
+                    _get_columns(bdm_shadow_table, _bdm_rows_v1),
+                    from_obj=instance_shadow_table.join(bdm_shadow_table,
+                        instance_shadow_table.c.uuid ==
+                        bdm_shadow_table.c.instance_uuid))
 
-            virt_name = bdm.virtual_name
-            if _is_swap_or_ephemeral(virt_name):
-                bdm_v2['source_type'] = 'blank'
+    instance_image_dict = {}
 
-                if virt_name == 'swap':
-                    bdm_v2['guest_format'] = 'swap'
-                else:
-                    bdm_v2['guest_format'] = CONF.default_ephemeral_format
+    for ((instance_uuid, instance_image_ref, instance_root_device,
+         bdm_id, device_name, virtual_name, snapshot_id, volume_id,
+         _), is_shadow) in itertools.chain(
+            ((data, False) for data in live_q.execute().fetchall()),
+            ((data, True) for data in live_on_shadow_q.execute().fetchall()),
+            ((data, True) for data in shadow_q.execute().fetchall())):
 
-                bdms_v2.append(bdm_v2)
-
-            elif bdm.snapshot_id:
-                bdm_v2['source_type'] = 'snapshot'
-                bdm_v2['destination_type'] = 'volume'
-
-                bdms_v2.append(bdm_v2)
-
-            elif bdm.volume_id:
-                bdm_v2['source_type'] = 'volume'
-                bdm_v2['destination_type'] = 'volume'
-
-                bdms_v2.append(bdm_v2)
-            else:  # Log a warning that the bdm is not as expected
-                LOG.warn("Got an unexpected block device %s"
-                         "that cannot be converted to v2 format" % bdm)
-
-        if instance.image_ref:
+        if instance_image_ref and instance_uuid not in instance_image_dict:
             image_bdm = _default_bdm()
             image_bdm['source_type'] = 'image'
-            image_bdm['instance_uuid'] = instance.uuid
-            image_bdm['image_id'] = instance.image_ref
+            image_bdm['instance_uuid'] = instance_uuid
+            image_bdm['image_id'] = instance_image_ref
+            image_bdm['boot_index'] = 0
+            instance_image_dict[instance_uuid] = image_bdm
+
+        bdm_v2 = _default_bdm()
+        # Copy over some fields we'll need
+        bdm_v2['id'] = bdm_id
+        bdm_v2['device_name'] = device_name
+
+        virt_name = virtual_name
+        if _is_swap_or_ephemeral(virt_name):
+            bdm_v2['source_type'] = 'blank'
+
+            if virt_name == 'swap':
+                bdm_v2['guest_format'] = 'swap'
+            else:
+                bdm_v2['guest_format'] = CONF.default_ephemeral_format
+
+        elif snapshot_id:
+            bdm_v2['source_type'] = 'snapshot'
+            bdm_v2['destination_type'] = 'volume'
+
+        elif volume_id:
+            bdm_v2['source_type'] = 'volume'
+            bdm_v2['destination_type'] = 'volume'
+
+        else:  # Log a warning that the bdm is not as expected
+            LOG.warn("Got an unexpected block device %s"
+                     "that cannot be converted to v2 format")
 
         # NOTE (ndipanov): Mark only the image or the bootable volume
         #                  with boot index, as we don't support it yet.
         #                  Also, make sure that instances started with
         #                  the old syntax of specifying an image *and*
         #                  a bootable volume still have consistend data.
-        bootable = [bdm for bdm in bdms_v2
-                    if strip_dev(bdm['device_name']) ==
-                       strip_dev(instance.root_device_name)
-                    and bdm['source_type'] != 'blank']
+        bootable = ((strip_dev(device_name) ==
+                    strip_dev(instance_root_device))
+                    and bdm_v2['source_type'] != 'blank')
 
-        if len(bootable) > 1:
-            LOG.warn("Found inconsistent block device data for "
-                     "instance %s - non-unique bootable device."
-                     % instance.uuid)
         if bootable:
-            bootable[0]['boot_index'] = 0
-        elif instance.image_ref:
-            image_bdm['boot_index'] = 0
-        else:
-            LOG.warn("No bootable device found for instance %s."
-                     % instance.uuid)
+            bdm_v2['boot_index'] = 0
+            if instance_uuid in instance_image_dict:
+                instance_image_dict[instance_uuid]['boot_index'] = -1
 
         # Update the DB
-        if image_bdm:
-            bdm_table.insert().values(**image_bdm).execute()
+        my_table = bdm_table
+        if is_shadow:
+            my_table = bdm_shadow_table
 
-        for bdm in bdms_v2:
-            bdm_table.update().where(
-                bdm_table.c.id == bdm['id']
-            ).values(**bdm).execute()
+        my_table.update().where(
+            my_table.c.id == bdm_id
+            ).values(**bdm_v2).execute()
+
+    # Create image bdms
+    for instance_uuid, image_bdm in instance_image_dict.iteritems():
+        bdm_table.insert().values(**image_bdm).execute()
 
 
 def _downgrade_bdm_v2(meta, bdm_table):
