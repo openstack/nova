@@ -138,8 +138,7 @@ def make_step_decorator(context, instance, instance_update):
         step_info['current'] += 1
         progress = round(float(step_info['current']) /
                          step_info['total'] * 100)
-        LOG.debug(_("Updating progress to %(progress)d"), locals(),
-                  instance=instance)
+        LOG.debug(_("Updating progress to %d"), progress, instance=instance)
         instance_update(context, instance['uuid'], {'progress': progress})
 
     def step_decorator(f):
@@ -173,8 +172,8 @@ class VMOps(object):
         self.vif_driver = vif_impl(xenapi_session=self._session)
         self.default_root_dev = '/dev/sda'
 
-        msg = _("Importing image upload handler: %s")
-        LOG.debug(msg % CONF.xenapi_image_upload_handler)
+        LOG.debug(_("Importing image upload handler: %s"),
+                  CONF.xenapi_image_upload_handler)
         self.image_upload_handler = importutils.import_object(
                                 CONF.xenapi_image_upload_handler)
 
@@ -777,7 +776,8 @@ class VMOps(object):
 
     def _migrate_vhd(self, instance, vdi_uuid, dest, sr_path, seq_num):
         LOG.debug(_("Migrating VHD '%(vdi_uuid)s' with seq_num %(seq_num)d"),
-                  locals(), instance=instance)
+                  {'vdi_uuid': vdi_uuid, 'seq_num': seq_num},
+                  instance=instance)
         instance_uuid = instance['uuid']
         try:
             self._session.call_plugin_serialized('migration', 'transfer_vhd',
@@ -803,7 +803,7 @@ class VMOps(object):
         # better approximation would use the percentage of the VM image that
         # has been streamed to the destination host.
         progress = round(float(step) / total_steps * 100)
-        LOG.debug(_("Updating progress to %(progress)d"), locals(),
+        LOG.debug(_("Updating progress to %d"), progress,
                   instance=instance)
         self._virtapi.instance_update(context, instance['uuid'],
                                       {'progress': progress})
@@ -872,9 +872,9 @@ class VMOps(object):
                 undo_mgr, old_vdi_ref)
             transfer_vhd_to_dest(new_vdi_ref, new_vdi_uuid)
         except Exception as error:
-            msg = _("_migrate_disk_resizing_down failed. "
-                    "Restoring orig vm due_to: %{exception}.")
-            LOG.exception(msg, instance=instance)
+            LOG.exception(_("_migrate_disk_resizing_down failed. "
+                            "Restoring orig vm due_to: %s."), error,
+                          instance=instance)
             undo_mgr._rollback()
             raise exception.InstanceFaultRollback(error)
 
@@ -989,7 +989,9 @@ class VMOps(object):
             # Resize up. Simple VDI resize will do the trick
             vdi_uuid = root_vdi['uuid']
             LOG.debug(_("Resizing up VDI %(vdi_uuid)s from %(old_gb)dGB to "
-                        "%(new_gb)dGB"), locals(), instance=instance)
+                        "%(new_gb)dGB"),
+                      {'vdi_uuid': vdi_uuid, 'old_gb': old_gb,
+                       'new_gb': new_gb}, instance=instance)
             resize_func_name = self.check_resize_func_name()
             self._session.call_xenapi(resize_func_name, root_vdi['ref'],
                     str(new_disk_size))
@@ -1566,11 +1568,12 @@ class VMOps(object):
             vif_rec = self.vif_driver.plug(instance, vif,
                                            vm_ref=vm_ref, device=device)
             network_ref = vif_rec['network']
-            LOG.debug(_('Creating VIF for network %(network_ref)s'),
-                      locals(), instance=instance)
+            LOG.debug(_('Creating VIF for network %s'),
+                      network_ref, instance=instance)
             vif_ref = self._session.call_xenapi('VIF.create', vif_rec)
             LOG.debug(_('Created VIF %(vif_ref)s, network %(network_ref)s'),
-                      locals(), instance=instance)
+                      {'vif_ref': vif_ref, 'network_ref': network_ref},
+                      instance=instance)
 
     def plug_vifs(self, instance, network_info):
         """Set up VIF networking on the host."""
@@ -1635,16 +1638,19 @@ class VMOps(object):
             err_msg = e.details[-1].splitlines()[-1]
             if 'TIMEOUT:' in err_msg:
                 LOG.error(_('TIMEOUT: The call to %(method)s timed out. '
-                            'args=%(args)r'), locals(), instance=instance)
+                            'args=%(args)r'),
+                          {'method': method, 'args': args}, instance=instance)
                 return {'returncode': 'timeout', 'message': err_msg}
             elif 'NOT IMPLEMENTED:' in err_msg:
                 LOG.error(_('NOT IMPLEMENTED: The call to %(method)s is not'
                             ' supported by the agent. args=%(args)r'),
-                          locals(), instance=instance)
+                          {'method': method, 'args': args}, instance=instance)
                 return {'returncode': 'notimplemented', 'message': err_msg}
             else:
                 LOG.error(_('The call to %(method)s returned an error: %(e)s. '
-                            'args=%(args)r'), locals(), instance=instance)
+                            'args=%(args)r'),
+                          {'method': method, 'args': args, 'e': e},
+                          instance=instance)
                 return {'returncode': 'error', 'message': err_msg}
             return None
 
@@ -1698,9 +1704,9 @@ class VMOps(object):
         try:
             return current_aggregate.metadetails[hostname]
         except KeyError:
-            reason = _('Destination host:%(hostname)s must be in the same '
-                       'aggregate as the source server')
-            raise exception.MigrationPreCheckError(reason=reason % locals())
+            reason = _('Destination host:%s must be in the same '
+                       'aggregate as the source server') % hostname
+            raise exception.MigrationPreCheckError(reason=reason)
 
     def _ensure_host_in_aggregate(self, context, hostname):
         self._get_host_uuid_from_aggregate(context, hostname)

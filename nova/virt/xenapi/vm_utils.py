@@ -367,7 +367,9 @@ def unplug_vbd(session, vbd_ref):
                 return
             elif err == 'DEVICE_DETACH_REJECTED':
                 LOG.info(_('VBD %(vbd_ref)s detach rejected, attempt'
-                           ' %(num_attempt)d/%(max_attempts)d'), locals())
+                           ' %(num_attempt)d/%(max_attempts)d'),
+                         {'vbd_ref': vbd_ref, 'num_attempt': num_attempt,
+                          'max_attempts': max_attempts})
             else:
                 LOG.exception(exc)
                 raise volume_utils.StorageError(
@@ -410,15 +412,17 @@ def create_vbd(session, vm_ref, vdi_ref, userdevice, vbd_type='disk',
     vbd_rec['qos_algorithm_params'] = {}
     vbd_rec['qos_supported_algorithms'] = []
     LOG.debug(_('Creating %(vbd_type)s-type VBD for VM %(vm_ref)s,'
-                ' VDI %(vdi_ref)s ... '), locals())
+                ' VDI %(vdi_ref)s ... '),
+              {'vbd_type': vbd_type, 'vm_ref': vm_ref, 'vdi_ref': vdi_ref})
     vbd_ref = session.call_xenapi('VBD.create', vbd_rec)
     LOG.debug(_('Created VBD %(vbd_ref)s for VM %(vm_ref)s,'
-                ' VDI %(vdi_ref)s.'), locals())
+                ' VDI %(vdi_ref)s.'),
+              {'vbd_ref': vbd_ref, 'vm_ref': vm_ref, 'vdi_ref': vdi_ref})
     if osvol:
         # set osvol=True in other-config to indicate this is an
         # attached nova (or cinder) volume
-        session.call_xenapi("VBD.add_to_other_config",
-                                  vbd_ref, 'osvol', "True")
+        session.call_xenapi('VBD.add_to_other_config',
+                            vbd_ref, 'osvol', 'True')
     return vbd_ref
 
 
@@ -467,7 +471,9 @@ def create_vdi(session, sr_ref, instance, name_label, disk_type, virtual_size,
           'tags': []})
     LOG.debug(_('Created VDI %(vdi_ref)s (%(name_label)s,'
                 ' %(virtual_size)s, %(read_only)s) on %(sr_ref)s.'),
-              locals())
+              {'vdi_ref': vdi_ref, 'name_label': name_label,
+               'virtual_size': virtual_size, 'read_only': read_only,
+               'sr_ref': sr_ref})
     return vdi_ref
 
 
@@ -591,7 +597,8 @@ def _clone_vdi(session, vdi_to_clone_ref):
     """Clones a VDI and return the new VDIs reference."""
     vdi_ref = session.call_xenapi('VDI.clone', vdi_to_clone_ref)
     LOG.debug(_('Cloned VDI %(vdi_ref)s from VDI '
-                '%(vdi_to_clone_ref)s') % locals())
+                '%(vdi_to_clone_ref)s'),
+              {'vdi_ref': vdi_ref, 'vdi_to_clone_ref': vdi_to_clone_ref})
     return vdi_ref
 
 
@@ -635,8 +642,7 @@ def get_vdi_for_vm_safely(session, vm_ref):
         if vbd_rec['userdevice'] == '0':
             vdi_rec = session.call_xenapi("VDI.get_record", vbd_rec['VDI'])
             return vbd_rec['VDI'], vdi_rec
-    raise exception.NovaException(_("No primary VDI found for %(vm_ref)s")
-                                  % locals())
+    raise exception.NovaException(_("No primary VDI found for %s") % vm_ref)
 
 
 @contextlib.contextmanager
@@ -966,8 +972,7 @@ def _create_cached_image(context, session, instance, name_label,
     if CONF.use_cow_images and sr_type != "ext":
         LOG.warning(_("Fast cloning is only supported on default local SR "
                       "of type ext. SR on this system was found to be of "
-                      "type %(sr_type)s. Ignoring the cow flag.")
-                      % locals())
+                      "type %s. Ignoring the cow flag."), sr_type)
 
     cache_vdi_ref = _find_cached_image(session, image_id, sr_ref)
     if cache_vdi_ref is None:
@@ -1056,7 +1061,8 @@ def _fetch_image(context, session, instance, name_label, image_id, image_type):
         vdi_uuid = vdi['uuid']
         LOG.debug(_("Fetched VDIs of type '%(vdi_type)s' with UUID"
                     " '%(vdi_uuid)s'"),
-                  locals(), instance=instance)
+                  {'vdi_type': vdi_type, 'vdi_uuid': vdi_uuid},
+                  instance=instance)
 
     return vdis
 
@@ -1066,9 +1072,10 @@ def _fetch_using_dom0_plugin_with_retry(context, session, image_id,
     max_attempts = CONF.glance_num_retries + 1
     sleep_time = 0.5
     for attempt_num in xrange(1, max_attempts + 1):
-        LOG.info(_('download_vhd %(image_id)s, '
-                   'attempt %(attempt_num)d/%(max_attempts)d, '
-                   'params: %(params)s') % locals())
+        LOG.info(_('download_vhd %(image_id)s, attempt '
+                   '%(attempt_num)d/%(max_attempts)d, params: %(params)s'),
+                 {'image_id': image_id, 'attempt_num': attempt_num,
+                  'max_attempts': max_attempts, 'params': params})
 
         try:
             if callback:
@@ -1125,7 +1132,7 @@ def _fetch_vhd_image(context, session, instance, image_id):
 
     Returns: A list of dictionaries that describe VDIs
     """
-    LOG.debug(_("Asking xapi to fetch vhd image %(image_id)s"), locals(),
+    LOG.debug(_("Asking xapi to fetch vhd image %s"), image_id,
               instance=instance)
 
     params = {'image_id': image_id,
@@ -1201,7 +1208,9 @@ def _get_vdi_chain_size(session, vdi_uuid):
         cur_vdi_uuid = vdi_rec['uuid']
         vdi_size_bytes = int(vdi_rec['physical_utilisation'])
         LOG.debug(_('vdi_uuid=%(cur_vdi_uuid)s vdi_size_bytes='
-                    '%(vdi_size_bytes)d'), locals())
+                    '%(vdi_size_bytes)d'),
+                  {'cur_vdi_uuid': cur_vdi_uuid,
+                   'vdi_size_bytes': vdi_size_bytes})
         size_bytes += vdi_size_bytes
     return size_bytes
 
@@ -1241,7 +1250,8 @@ def _fetch_disk_image(context, session, instance, name_label, image_id,
     # DISK restores
     image_type_str = ImageType.to_string(image_type)
     LOG.debug(_("Fetching image %(image_id)s, type %(image_type_str)s"),
-              locals(), instance=instance)
+              {'image_id': image_id, 'image_type_str': image_type_str},
+              instance=instance)
 
     if image_type == ImageType.DISK_ISO:
         sr_ref = _safe_find_iso_sr(session)
@@ -1253,7 +1263,8 @@ def _fetch_disk_image(context, session, instance, name_label, image_id,
     meta = image_service.show(context, image_id)
     virtual_size = int(meta['size'])
     vdi_size = virtual_size
-    LOG.debug(_("Size for image %(image_id)s: %(virtual_size)d"), locals(),
+    LOG.debug(_("Size for image %(image_id)s: %(virtual_size)d"),
+              {'image_id': image_id, 'virtual_size': virtual_size},
               instance=instance)
     if image_type == ImageType.DISK:
         # Make room for MBR.
@@ -1263,7 +1274,8 @@ def _fetch_disk_image(context, session, instance, name_label, image_id,
         max_size = CONF.max_kernel_ramdisk_size
         raise exception.NovaException(
             _("Kernel/Ramdisk image is too large: %(vdi_size)d bytes, "
-              "max %(max_size)d bytes") % locals())
+              "max %(max_size)d bytes") %
+            {'vdi_size': vdi_size, 'max_size': max_size})
 
     vdi_ref = create_vdi(session, sr_ref, instance, name_label,
                          image_type_str, vdi_size)
@@ -1345,8 +1357,8 @@ def determine_disk_image_type(image_meta):
     image_type = getattr(ImageType, image_type_str)
 
     image_ref = image_meta['id']
-    msg = _("Detected %(image_type_str)s format for image %(image_ref)s")
-    LOG.debug(msg % locals())
+    LOG.debug(_("Detected %(image_type_str)s format for image %(image_ref)s"),
+              {'image_type_str': image_type_str, 'image_ref': image_ref})
 
     return image_type
 
@@ -1400,8 +1412,8 @@ def determine_is_pv(session, vdi_ref, disk_image_type, os_type):
         with vdi_attached_here(session, vdi_ref, read_only=True) as dev:
             is_pv = _is_vdi_pv(dev)
     else:
-        msg = _("Unknown image format %(disk_image_type)s") % locals()
-        raise exception.NovaException(msg)
+        raise exception.NovaException(_("Unknown image format %s") %
+                                      disk_image_type)
 
     return is_pv
 
@@ -1534,7 +1546,7 @@ def compile_diagnostics(record):
 
         return diags
     except expat.ExpatError as e:
-        LOG.exception(_('Unable to parse rrd of %(vm_uuid)s') % locals())
+        LOG.exception(_('Unable to parse rrd of %s'), e)
         return {"Unable to retrieve diagnostics": e}
 
 
@@ -1629,7 +1641,7 @@ def _find_iso_sr(session):
     """Return the storage repository to hold ISO images."""
     host = session.get_xenapi_host()
     for sr_ref, sr_rec in session.get_all_refs_and_recs('SR'):
-        LOG.debug(_("ISO: looking at SR %(sr_rec)s") % locals())
+        LOG.debug(_("ISO: looking at SR %s"), sr_rec)
         if not sr_rec['content_type'] == 'iso':
             LOG.debug(_("ISO: not iso content"))
             continue
@@ -1646,11 +1658,11 @@ def _find_iso_sr(session):
             LOG.debug(_("ISO: ISO, looking to see if it is host local"))
             pbd_rec = session.get_rec('PBD', pbd_ref)
             if not pbd_rec:
-                LOG.debug(_("ISO: PBD %(pbd_ref)s disappeared") % locals())
+                LOG.debug(_("ISO: PBD %s disappeared"), pbd_ref)
                 continue
             pbd_rec_host = pbd_rec['host']
-            LOG.debug(_("ISO: PBD matching, want %(pbd_rec)s, "
-                        "have %(host)s") % locals())
+            LOG.debug(_("ISO: PBD matching, want %(pbd_rec)s, have %(host)s"),
+                      {'pbd_rec': pbd_rec, 'host': host})
             if pbd_rec_host == host:
                 LOG.debug(_("ISO: SR with local PBD"))
                 return sr_ref
@@ -1675,7 +1687,8 @@ def _get_rrd(server, vm_uuid):
         return xml.read()
     except IOError:
         LOG.exception(_('Unable to obtain RRD XML for VM %(vm_uuid)s with '
-                        'server details: %(server)s.') % locals())
+                        'server details: %(server)s.'),
+                      {'vm_uuid': vm_uuid, 'server': server})
         return None
 
 
@@ -1691,7 +1704,7 @@ def _get_rrd_updates(server, start_time):
         return xml.read()
     except IOError:
         LOG.exception(_('Unable to obtain RRD XML updates with '
-                        'server details: %(server)s.') % locals())
+                        'server details: %s.'), server)
         return None
 
 
@@ -1804,7 +1817,8 @@ def _get_vhd_parent_uuid(session, vdi_ref):
 
     parent_uuid = vdi_rec['sm_config']['vhd-parent']
     vdi_uuid = vdi_rec['uuid']
-    LOG.debug(_("VHD %(vdi_uuid)s has parent %(parent_uuid)s") % locals())
+    LOG.debug(_('VHD %(vdi_uuid)s has parent %(parent_uuid)s'),
+              {'vdi_uuid': vdi_uuid, 'parent_uuid': parent_uuid})
     return parent_uuid
 
 
@@ -1893,7 +1907,9 @@ def _wait_for_vhd_coalesce(session, instance, sr_ref, vdi_ref,
         if original_parent_uuid and (parent_uuid != original_parent_uuid):
             LOG.debug(_("Parent %(parent_uuid)s doesn't match original parent"
                         " %(original_parent_uuid)s, waiting for coalesce..."),
-                      locals(), instance=instance)
+                      {'parent_uuid': parent_uuid,
+                       'original_parent_uuid': original_parent_uuid},
+                      instance=instance)
         else:
             parent_ref = session.call_xenapi("VDI.get_by_uuid", parent_uuid)
             base_uuid = _get_vhd_parent_uuid(session, parent_ref)
@@ -1901,8 +1917,8 @@ def _wait_for_vhd_coalesce(session, instance, sr_ref, vdi_ref,
 
         greenthread.sleep(CONF.xenapi_vhd_coalesce_poll_interval)
 
-    msg = (_("VHD coalesce attempts exceeded (%(max_attempts)d)"
-             ", giving up...") % locals())
+    msg = (_("VHD coalesce attempts exceeded (%d)"
+             ", giving up...") % max_attempts)
     raise exception.NovaException(msg)
 
 
@@ -1974,11 +1990,13 @@ def vdi_attached_here(session, vdi_ref, read_only=False):
         try:
             LOG.debug(_('Plugging VBD %s done.'), vbd_ref)
             orig_dev = session.call_xenapi("VBD.get_device", vbd_ref)
-            LOG.debug(_('VBD %(vbd_ref)s plugged as %(orig_dev)s') % locals())
+            LOG.debug(_('VBD %(vbd_ref)s plugged as %(orig_dev)s'),
+                      {'vbd_ref': vbd_ref, 'orig_dev': orig_dev})
             dev = _remap_vbd_dev(orig_dev)
             if dev != orig_dev:
                 LOG.debug(_('VBD %(vbd_ref)s plugged into wrong dev, '
-                            'remapping to %(dev)s') % locals())
+                            'remapping to %(dev)s'),
+                          {'vbd_ref': vbd_ref, 'dev': dev})
             _wait_for_device(dev)
             yield dev
         finally:
@@ -2052,7 +2070,8 @@ def _get_partitions(dev):
         start = int(start.rstrip('s'))
         end = int(end.rstrip('s'))
         size = int(size.rstrip('s'))
-        LOG.debug(_("  %(num)s: %(ptype)s %(size)d sectors") % locals())
+        LOG.debug(_("  %(num)s: %(ptype)s %(size)d sectors"),
+                  {'num': num, 'ptype': ptype, 'size': size})
         partitions.append((num, start, size, ptype))
 
     return partitions
@@ -2078,7 +2097,9 @@ def _write_partition(virtual_size, dev):
     primary_last = MBR_SIZE_SECTORS + (virtual_size / SECTOR_SIZE) - 1
 
     LOG.debug(_('Writing partition table %(primary_first)d %(primary_last)d'
-                ' to %(dev_path)s...'), locals())
+                ' to %(dev_path)s...'),
+              {'primary_first': primary_first, 'primary_last': primary_last,
+               'dev_path': dev_path})
 
     def execute(*cmd, **kwargs):
         return utils.execute(*cmd, **kwargs)
@@ -2131,10 +2152,11 @@ def _resize_part_and_fs(dev, start, old_sectors, new_sectors):
         # Resizing down, resize filesystem before partition resize
         min_sectors = _get_min_sectors(partition_path)
         if min_sectors >= new_sectors:
-            reason = _('Resize down not allowed because minimum '
+            reason = (_('Resize down not allowed because minimum '
                        'filesystem sectors %(min_sectors)d is too big '
-                       'for target sectors %(new_sectors)d')
-            raise exception.ResizeError(reason=(reason % locals()))
+                       'for target sectors %(new_sectors)d') %
+                      {'min_sectors': min_sectors, 'new_sectors': new_sectors})
+            raise exception.ResizeError(reason=reason)
         utils.execute('resize2fs', partition_path, '%ds' % size,
                       run_as_root=True)
 
@@ -2175,7 +2197,8 @@ def _sparse_copy(src_path, dst_path, virtual_size, block_size=4096):
 
     LOG.debug(_("Starting sparse_copy src=%(src_path)s dst=%(dst_path)s "
                 "virtual_size=%(virtual_size)d block_size=%(block_size)d"),
-              locals())
+              {'src_path': src_path, 'dst_path': dst_path,
+               'virtual_size': virtual_size, 'block_size': block_size})
 
     # NOTE(sirp): we need read/write access to the devices; since we don't have
     # the luxury of shelling out to a sudo'd command, we temporarily take
@@ -2209,7 +2232,8 @@ def _sparse_copy(src_path, dst_path, virtual_size, block_size=4096):
     compression_pct = float(skipped_bytes) / bytes_read * 100
 
     LOG.debug(_("Finished sparse_copy in %(duration).2f secs, "
-                "%(compression_pct).2f%% reduction in size"), locals())
+                "%(compression_pct).2f%% reduction in size"),
+              {'duration': duration, 'compression_pct': compression_pct})
 
 
 def _copy_partition(session, src_ref, dst_ref, partition, virtual_size):

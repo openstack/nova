@@ -99,16 +99,19 @@ def _call_agent(session, instance, vm_ref, method, addl_args=None,
         err_msg = e.details[-1].splitlines()[-1]
         if 'TIMEOUT:' in err_msg:
             LOG.error(_('TIMEOUT: The call to %(method)s timed out. '
-                        'args=%(args)r'), locals(), instance=instance)
+                        'args=%(args)r'),
+                      {'method': method, 'args': args}, instance=instance)
             return {'returncode': 'timeout', 'message': err_msg}
         elif 'NOT IMPLEMENTED:' in err_msg:
             LOG.error(_('NOT IMPLEMENTED: The call to %(method)s is not'
                         ' supported by the agent. args=%(args)r'),
-                      locals(), instance=instance)
+                      {'method': method, 'args': args}, instance=instance)
             return {'returncode': 'notimplemented', 'message': err_msg}
         else:
             LOG.error(_('The call to %(method)s returned an error: %(e)s. '
-                        'args=%(args)r'), locals(), instance=instance)
+                        'args=%(args)r'),
+                      {'method': method, 'args': args, 'e': e},
+                      instance=instance)
             return {'returncode': 'error', 'message': err_msg}
         return None
 
@@ -117,9 +120,10 @@ def _call_agent(session, instance, vm_ref, method, addl_args=None,
     try:
         return jsonutils.loads(ret)
     except TypeError:
-        LOG.error(_('The agent call to %(method)s returned an invalid'
-                    ' response: %(ret)r. path=%(path)s; args=%(args)r'),
-                  locals(), instance=instance)
+        LOG.error(_('The agent call to %(method)s returned an invalid '
+                    'response: %(ret)r. args=%(args)r'),
+                  {'method': method, 'ret': ret, 'args': args},
+                  instance=instance)
         return {'returncode': 'error',
                 'message': 'unable to deserialize response'}
 
@@ -127,8 +131,8 @@ def _call_agent(session, instance, vm_ref, method, addl_args=None,
 def _get_agent_version(session, instance, vm_ref):
     resp = _call_agent(session, instance, vm_ref, 'version')
     if resp['returncode'] != '0':
-        LOG.error(_('Failed to query agent version: %(resp)r'),
-                  locals(), instance=instance)
+        LOG.error(_('Failed to query agent version: %r'),
+                  resp, instance=instance)
         return None
 
     # Some old versions of the Windows agent have a trailing \\r\\n
@@ -176,7 +180,7 @@ class XenAPIBasedAgent(object):
         resp = _call_agent(
             self.session, self.instance, self.vm_ref, 'agentupdate', args)
         if resp['returncode'] != '0':
-            LOG.error(_('Failed to update agent: %(resp)r'), locals(),
+            LOG.error(_('Failed to update agent: %r'), resp,
                       instance=self.instance)
             return None
         return resp['message']
@@ -201,7 +205,7 @@ class XenAPIBasedAgent(object):
 
         # Successful return code from key_init is 'D0'
         if resp['returncode'] != 'D0':
-            msg = _('Failed to exchange keys: %(resp)r') % locals()
+            msg = _('Failed to exchange keys: %r') % resp
             LOG.error(msg, instance=self.instance)
             raise NotImplementedError(msg)
 
@@ -221,7 +225,7 @@ class XenAPIBasedAgent(object):
 
         # Successful return code from password is '0'
         if resp['returncode'] != '0':
-            msg = _('Failed to update password: %(resp)r') % locals()
+            msg = _('Failed to exchange keys: %r') % resp
             LOG.error(msg, instance=self.instance)
             raise NotImplementedError(msg)
 
@@ -270,7 +274,7 @@ class XenAPIBasedAgent(object):
         resp = _call_agent(
             self.session, self.instance, self.vm_ref, 'inject_file', args)
         if resp['returncode'] != '0':
-            LOG.error(_('Failed to inject file: %(resp)r'), locals(),
+            LOG.error(_('Failed to inject file: %r'), resp,
                       instance=self.instance)
             return None
 
@@ -283,7 +287,7 @@ class XenAPIBasedAgent(object):
             self.session, self.instance, self.vm_ref, 'resetnetwork',
             timeout=CONF.agent_resetnetwork_timeout)
         if resp['returncode'] != '0':
-            LOG.error(_('Failed to reset network: %(resp)r'), locals(),
+            LOG.error(_('Failed to reset network: %r'), resp,
                       instance=self.instance)
             return None
 

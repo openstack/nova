@@ -48,7 +48,7 @@ def _handle_sr_params(params):
 
 
 def create_sr(session, label, params):
-    LOG.debug(_('Creating SR %(label)s') % locals())
+    LOG.debug(_('Creating SR %s'), label)
     sr_type, sr_desc = _handle_sr_params(params)
     sr_ref = session.call_xenapi("SR.create",
                 session.get_xenapi_host(),
@@ -58,7 +58,7 @@ def create_sr(session, label, params):
 
 
 def introduce_sr(session, sr_uuid, label, params):
-    LOG.debug(_('Introducing SR %(label)s') % locals())
+    LOG.debug(_('Introducing SR %s'), label)
 
     sr_type, sr_desc = _handle_sr_params(params)
 
@@ -119,7 +119,7 @@ def unplug_pbds(session, sr_ref):
         pbds = session.call_xenapi("SR.get_PBDs", sr_ref)
     except session.XenAPI.Failure as exc:
         LOG.warn(_('Ignoring exception %(exc)s when getting PBDs'
-                   ' for %(sr_ref)s') % locals())
+                   ' for %(sr_ref)s'), {'exc': exc, 'sr_ref': sr_ref})
         return
 
     for pbd in pbds:
@@ -127,7 +127,7 @@ def unplug_pbds(session, sr_ref):
             session.call_xenapi("PBD.unplug", pbd)
         except session.XenAPI.Failure as exc:
             LOG.warn(_('Ignoring exception %(exc)s when unplugging'
-                       ' PBD %(pbd)s') % locals())
+                       ' PBD %(pbd)s'), {'exc': exc, 'pbd': pbd})
 
 
 def introduce_vdi(session, sr_ref, vdi_uuid=None, target_lun=None):
@@ -199,8 +199,8 @@ def purge_sr(session, sr_ref):
 def get_device_number(mountpoint):
     device_number = mountpoint_to_number(mountpoint)
     if device_number < 0:
-        raise StorageError(_('Unable to obtain target information'
-                ' %(mountpoint)s') % locals())
+        raise StorageError(_('Unable to obtain target information %s') %
+                           mountpoint)
     return device_number
 
 
@@ -234,12 +234,12 @@ def parse_volume_info(connection_data):
     target_port = _get_target_port(target_portal)
     target_iqn = connection_data['target_iqn']
     LOG.debug('(vol_id,number,host,port,iqn): (%s,%s,%s,%s)',
-              volume_id, target_host, target_port, target_iqn)
+              (volume_id, target_host, target_port, target_iqn))
     if (volume_id is None or
         target_host is None or
         target_iqn is None):
         raise StorageError(_('Unable to obtain target information'
-                ' %(connection_data)s') % locals())
+                             ' %s') % connection_data)
     volume_info = {}
     volume_info['id'] = volume_id
     volume_info['target'] = target_host

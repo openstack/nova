@@ -70,7 +70,12 @@ class GlanceStore(object):
                             " ID %(image_id)s"
                             " glance server: %(glance_host)s:%(glance_port)d"
                             " attempt %(attempt_num)d/%(max_attempts)d"),
-                            locals(), instance=instance)
+                          {'vdi_uuids': vdi_uuids,
+                           'image_id': image_id,
+                           'glance_host': glance_host,
+                           'glance_port': glance_port,
+                           'attempt_num': attempt_num,
+                           'max_attempts': max_attempts}, instance=instance)
 
                 return session.call_plugin_serialized('glance',
                                                       'upload_vhd',

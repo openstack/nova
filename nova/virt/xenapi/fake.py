@@ -76,7 +76,8 @@ LOG = logging.getLogger(__name__)
 def log_db_contents(msg=None):
     text = msg or ""
     content = pprint.pformat(_db_content)
-    LOG.debug(_("%(text)s: _db_content => %(content)s") % locals())
+    LOG.debug(_("%(text)s: _db_content => %(content)s"),
+              {'text': text, 'content': content})
 
 
 def reset():
@@ -478,9 +479,13 @@ class SessionBase(object):
             return ref
         else:
             # SR not found in db, so we create one
-            params = {}
-            params.update(locals())
-            del params['self']
+            params = {'sr_uuid': sr_uuid,
+                      'label': label,
+                      'desc': desc,
+                      'type': type,
+                      'content_type': content_type,
+                      'shared': shared,
+                      'sm_config': sm_config}
             sr_ref = _create_object('SR', params)
             _db_content['SR'][sr_ref]['uuid'] = sr_uuid
             _db_content['SR'][sr_ref]['forgotten'] = 0
@@ -732,8 +737,8 @@ class SessionBase(object):
             if impl is not None:
 
                 def callit(*params):
-                    localname = name
-                    LOG.debug(_('Calling %(localname)s %(impl)s') % locals())
+                    LOG.debug(_('Calling %(name)s %(impl)s'),
+                              {'name': name, 'impl': impl})
                     self._check_session(params)
                     return impl(*params)
                 return callit

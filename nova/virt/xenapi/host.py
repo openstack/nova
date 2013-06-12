@@ -67,11 +67,11 @@ class Host(object):
                         name = vm_rec['name_label']
                         uuid = _uuid_find(ctxt, host, name)
                         if not uuid:
-                            msg = _('Instance %(name)s running on %(host)s'
-                                    ' could not be found in the database:'
-                                    ' assuming it is a worker VM and skip'
-                                    ' ping migration to a new host')
-                            LOG.info(msg % locals())
+                            LOG.info(_('Instance %(name)s running on %(host)s'
+                                       ' could not be found in the database:'
+                                       ' assuming it is a worker VM and skip'
+                                       ' ping migration to a new host'),
+                                     {'name': name, 'host': host})
                             continue
                     instance = instance_obj.Instance.get_by_uuid(ctxt, uuid)
                     vm_counter = vm_counter + 1
@@ -98,8 +98,9 @@ class Host(object):
 
                     break
                 except self._session.XenAPI.Failure:
-                    LOG.exception(_('Unable to migrate VM %(vm_ref)s'
-                                    'from %(host)s') % locals())
+                    LOG.exception(_('Unable to migrate VM %(vm_ref)s '
+                                    'from %(host)s'),
+                                  {'vm_ref': vm_ref, 'host': host})
                     instance.host = host
                     instance.vm_state = vm_states.ACTIVE
                     instance.save()
@@ -202,7 +203,7 @@ def call_xenhost(session, method, arg_dict):
         return None
     except session.XenAPI.Failure as e:
         LOG.error(_("The call to %(method)s returned "
-                    "an error: %(e)s.") % locals())
+                    "an error: %(e)s."), {'method': method, 'e': e})
         return e.details[1]
 
 
