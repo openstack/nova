@@ -2504,18 +2504,6 @@ def network_get_by_cidr(context, cidr):
 
 
 @require_admin_context
-def network_get_all_by_instance(context, instance_id):
-    result = _network_get_query(context).\
-                 filter_by(instance_id=instance_id).\
-                 all()
-
-    if not result:
-        raise exception.NetworkNotFoundForInstance(instance_id=instance_id)
-
-    return result
-
-
-@require_admin_context
 def network_get_all_by_host(context, host):
     session = get_session()
     fixed_host_filter = or_(models.FixedIp.host == host,

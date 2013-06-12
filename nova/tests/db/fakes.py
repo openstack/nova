@@ -282,10 +282,6 @@ def stub_out_db_network_api(stubs):
         nets = filter(lambda n: n['host'] == host, networks)
         return [FakeModel(n) for n in nets]
 
-    def fake_network_get_all_by_instance(context, instance_id):
-        nets = filter(lambda n: n['instance_id'] == instance_id, networks)
-        return [FakeModel(n) for n in nets]
-
     def fake_network_set_host(context, network_id, host_id):
         nets = filter(lambda n: n['id'] == network_id, networks)
         for net in nets:
@@ -327,7 +323,6 @@ def stub_out_db_network_api(stubs):
              fake_network_get,
              fake_network_get_all,
              fake_network_get_all_by_host,
-             fake_network_get_all_by_instance,
              fake_network_set_host,
              fake_network_update,
              fake_project_get_networks]
@@ -435,20 +430,11 @@ def stub_out_db_instance_api(stubs, injected=True):
                 return inst_type
         return None
 
-    def fake_network_get_all_by_instance(context, instance_id):
-        # Even instance numbers are on vlan networks
-        if instance_id % 2 == 0:
-            return [FakeModel(vlan_network_fields)]
-        else:
-            return [FakeModel(flat_network_fields)]
-
     def fake_fixed_ip_get_by_instance(context, instance_id):
         return [FakeModel(fixed_ip_fields)]
 
-    funcs = [fake_network_get_all_by_instance,
-             fake_instance_type_get_all,
+    funcs = [fake_instance_type_get_all,
              fake_instance_type_get_by_name,
              fake_instance_type_get,
-             fake_network_get_all_by_instance,
              fake_fixed_ip_get_by_instance]
     stub_out(stubs, funcs)
