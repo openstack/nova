@@ -1,0 +1,80 @@
+#!/usr/bin/python
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
+"""
+To configure this plugin, you must set the following xenstore key:
+/local/logconsole/@ = "/var/log/xen/guest/console.%d"
+
+This can be done by running:
+xenstore-write /local/logconsole/@ "/var/log/xen/guest/console.%d"
+
+WARNING:
+You should ensure appropriate log rotation to ensure
+guests are not able to consume too much Dom0 disk space,
+and equally should not be able to stop other guests from logging.
+Adding and removing the following xenstore key will reopen the log,
+as will be required after a log rotate:
+/local/logconsole/<dom_id>
+"""
+
+import base64
+import logging
+import os
+import zlib
+
+import XenAPIPlugin
+
+import pluginlib_nova
+pluginlib_nova.configure_logging("console")
+
+CONSOLE_LOG_DIR = '/var/log/xen/guest'
+CONSOLE_LOG_FILE_PATTERN = CONSOLE_LOG_DIR + '/console.%d'
+
+MAX_CONSOLE_BYTES = 102400
+SEEK_SET = 0
+SEEK_END = 2
+
+
+def _last_bytes(file_like_object):
+    try:
+        file_like_object.seek(-MAX_CONSOLE_BYTES, SEEK_END)
+    except IOError, e:
+        if e.errno == 22:
+            file_like_object.seek(0, SEEK_SET)
+        else:
+            raise
+    return file_like_object.read()
+
+
+def get_console_log(session, arg_dict):
+    try:
+        raw_dom_id = arg_dict['dom_id']
+    except KeyError:
+        raise pluginlib_nova.PluginError("Missing dom_id")
+    try:
+        dom_id = int(raw_dom_id)
+    except ValueError:
+        raise pluginlib_nova.PluginError("Invalid dom_id")
+
+    logfile = CONSOLE_LOG_FILE_PATTERN % dom_id
+    try:
+        log_content = pluginlib_nova.with_file(logfile, 'rb', _last_bytes)
+    except IOError, e:
+        msg = "Error reading console: %s" % e
+        logging.debug(msg)
+        raise pluginlib_nova.PluginError(msg)
+    return base64.b64encode(zlib.compress(log_content))
+
+
+if __name__ == "__main__":
+    XenAPIPlugin.dispatch({"get_console_log": get_console_log})

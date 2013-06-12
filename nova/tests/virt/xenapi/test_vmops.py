@@ -18,8 +18,12 @@
 
 from nova.compute import task_states
 from nova.compute import vm_mode
+from nova import exception
 from nova import test
+from nova.tests.virt.xenapi import stubs
 from nova.virt import fake
+from nova.virt.xenapi import driver as xenapi_conn
+from nova.virt.xenapi import fake as xenapi_fake
 from nova.virt.xenapi import vm_utils
 from nova.virt.xenapi import vmops
 
@@ -166,3 +170,74 @@ class VMOpsTestCase(test.TestCase):
         self.assertTrue(self._vmops._is_xsm_sr_check_relaxed())
 
         self.assertEqual(self.make_plugin_call_count, 1)
+
+
+class GetConsoleOutputTestCase(stubs.XenAPITestBase):
+    def setUp(self):
+        super(GetConsoleOutputTestCase, self).setUp()
+        stubs.stubout_session(self.stubs, xenapi_fake.SessionBase)
+        self._session = xenapi_conn.XenAPISession('test_url', 'root',
+                'test_pass', fake.FakeVirtAPI())
+        self.vmops = vmops.VMOps(self._session, fake.FakeVirtAPI())
+        self.vms = []
+
+    def tearDown(self):
+        super(GetConsoleOutputTestCase, self).tearDown()
+        for vm in self.vms:
+            xenapi_fake.destroy_vm(vm)
+
+    def _create_vm(self, name, state):
+        vm = xenapi_fake.create_vm(name, state)
+        self.vms.append(vm)
+        return vm
+
+    def test_get_console_output_works(self):
+        self.mox.StubOutWithMock(self.vmops, '_get_dom_id')
+
+        instance = {"name": "dummy"}
+        self.vmops._get_dom_id(instance, check_rescue=True).AndReturn(42)
+        self.mox.ReplayAll()
+
+        self.assertEqual("dom_id: 42", self.vmops.get_console_output(instance))
+
+    def test_get_console_output_throws_nova_exception(self):
+        self.mox.StubOutWithMock(self.vmops, '_get_dom_id')
+
+        instance = {"name": "dummy"}
+        # dom_id=0 used to trigger exception in fake XenAPI
+        self.vmops._get_dom_id(instance, check_rescue=True).AndReturn(0)
+        self.mox.ReplayAll()
+
+        self.assertRaises(exception.NovaException,
+                self.vmops.get_console_output, instance)
+
+    def test_get_dom_id_works(self):
+        instance = {"name": "dummy"}
+        vm_ref = self._create_vm("dummy", "Running")
+        vm_rec = xenapi_fake.get_record("VM", vm_ref)
+
+        self.assertEqual(vm_rec["domid"], self.vmops._get_dom_id(instance))
+
+    def test_get_dom_id_works_with_rescue_vm(self):
+        instance = {"name": "dummy"}
+        vm_ref = self._create_vm("dummy-rescue", "Running")
+        vm_rec = xenapi_fake.get_record("VM", vm_ref)
+
+        self.assertEqual(vm_rec["domid"],
+                self.vmops._get_dom_id(instance, check_rescue=True))
+
+    def test_get_dom_id_raises_not_found(self):
+        instance = {"name": "dummy"}
+        vm_ref = self._create_vm("notdummy", "Running")
+        vm_rec = xenapi_fake.get_record("VM", vm_ref)
+
+        self.assertRaises(exception.NotFound,
+                self.vmops._get_dom_id, instance)
+
+    def test_get_dom_id_works_with_vmref(self):
+        instance = {"name": "dummy"}
+        vm_ref = self._create_vm("dummy", "Running")
+        vm_rec = xenapi_fake.get_record("VM", vm_ref)
+
+        self.assertEqual(vm_rec["domid"],
+                self.vmops._get_dom_id(vm_ref=vm_ref))
