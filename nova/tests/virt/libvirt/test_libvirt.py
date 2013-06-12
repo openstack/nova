@@ -4606,11 +4606,11 @@ disk size: 4.4M''', ''))
             os.close(dst_fd)
             os.unlink(dst_path)
 
-            libvirt_utils.write_to_file(dst_path, 'hello', umask=0277)
+            libvirt_utils.write_to_file(dst_path, 'hello', umask=0o277)
             with open(dst_path, 'r') as fp:
                 self.assertEquals(fp.read(), 'hello')
             mode = os.stat(dst_path).st_mode
-            self.assertEquals(mode & 0277, 0)
+            self.assertEquals(mode & 0o277, 0)
         finally:
             os.unlink(dst_path)
 

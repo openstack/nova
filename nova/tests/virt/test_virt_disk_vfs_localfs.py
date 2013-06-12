@@ -98,7 +98,7 @@ def fake_execute(*args, **kwargs):
                 "content": "Hello World",
                 "gid": 100,
                 "uid": 100,
-                "mode": 0700
+                "mode": 0o700
                 }
         return files[path]["content"], ""
     elif args[0] == "tee":
@@ -113,7 +113,7 @@ def fake_execute(*args, **kwargs):
                 "content": "Hello World",
                 "gid": 100,
                 "uid": 100,
-                "mode": 0700,
+                "mode": 0o700,
                 }
         if append:
             files[path]["content"] += kwargs["process_input"]
@@ -306,8 +306,8 @@ class VirtDiskVFSLocalFSTest(test.TestCase):
         vfs.imgdir = "/scratch/dir"
         vfs.read_file("/some/file")
 
-        vfs.set_permissions("/some/file", 0777)
-        self.assertEquals(files["/scratch/dir/some/file"]["mode"], 0777)
+        vfs.set_permissions("/some/file", 0o777)
+        self.assertEquals(files["/scratch/dir/some/file"]["mode"], 0o777)
 
         root_helper = 'sudo nova-rootwrap %s' % CONF.rootwrap_config
         self.assertEqual(commands,

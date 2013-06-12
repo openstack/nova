@@ -56,7 +56,7 @@ def fake_service_get_all(context, disabled=None):
                                datetime.datetime(2012, 12, 26, 14, 45, 25, 0),
                                "fake_host-1", False),
                 __fake_service("nova-sched", "internal",
-                               datetime.datetime(2012, 11, 14, 9, 57, 03, 0),
+                               datetime.datetime(2012, 11, 14, 9, 57, 3, 0),
                                datetime.datetime(2012, 12, 26, 14, 45, 25, 0),
                                "fake_host-1", False),
                 __fake_service("nova-network", "internal",

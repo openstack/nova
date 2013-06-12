@@ -59,7 +59,7 @@ class VirtDiskTest(test.TestCase):
 
         self.assertTrue("/root/.ssh" in vfs.handle.files)
         self.assertEquals(vfs.handle.files["/root/.ssh"],
-                          {'isdir': True, 'gid': 0, 'uid': 0, 'mode': 0700})
+                          {'isdir': True, 'gid': 0, 'uid': 0, 'mode': 0o700})
         self.assertTrue("/root/.ssh/authorized_keys" in vfs.handle.files)
         self.assertEquals(vfs.handle.files["/root/.ssh/authorized_keys"],
                           {'isdir': False,
@@ -67,7 +67,7 @@ class VirtDiskTest(test.TestCase):
                                       "key was injected by Nova\nmysshkey\n",
                            'gid': 100,
                            'uid': 100,
-                           'mode': 0600})
+                           'mode': 0o600})
 
         vfs.teardown()
 
@@ -89,11 +89,11 @@ class VirtDiskTest(test.TestCase):
                                       "-RF root/.ssh 2>/dev/null || :\n",
                            'gid': 100,
                            'uid': 100,
-                           'mode': 0700})
+                           'mode': 0o700})
 
         self.assertTrue("/root/.ssh" in vfs.handle.files)
         self.assertEquals(vfs.handle.files["/root/.ssh"],
-                          {'isdir': True, 'gid': 0, 'uid': 0, 'mode': 0700})
+                          {'isdir': True, 'gid': 0, 'uid': 0, 'mode': 0o700})
         self.assertTrue("/root/.ssh/authorized_keys" in vfs.handle.files)
         self.assertEquals(vfs.handle.files["/root/.ssh/authorized_keys"],
                           {'isdir': False,
@@ -101,7 +101,7 @@ class VirtDiskTest(test.TestCase):
                                       "key was injected by Nova\nmysshkey\n",
                            'gid': 100,
                            'uid': 100,
-                           'mode': 0600})
+                           'mode': 0o600})
 
         vfs.teardown()
 
@@ -124,7 +124,7 @@ class VirtDiskTest(test.TestCase):
                             "root/.ssh 2>/dev/null || :\n",
                  'gid': 100,
                  'uid': 100,
-                 'mode': 0700})
+                 'mode': 0o700})
         vfs.teardown()
 
     def test_inject_net(self):
@@ -139,7 +139,7 @@ class VirtDiskTest(test.TestCase):
                           {'content': 'mynetconfig',
                            'gid': 100,
                            'isdir': False,
-                           'mode': 0700,
+                           'mode': 0o700,
                            'uid': 100})
         vfs.teardown()
 
@@ -158,7 +158,7 @@ class VirtDiskTest(test.TestCase):
                                       '"eek": "wizz"}',
                            'gid': 100,
                            'isdir': False,
-                           'mode': 0700,
+                           'mode': 0o700,
                            'uid': 100})
         vfs.teardown()
 
@@ -190,7 +190,7 @@ class VirtDiskTest(test.TestCase):
                                       "/sbin/nologin\n",
                            'gid': 100,
                            'isdir': False,
-                           'mode': 0700,
+                           'mode': 0o700,
                            'uid': 100})
         shadow = vfs.handle.files["/etc/shadow"]
 
@@ -204,7 +204,7 @@ class VirtDiskTest(test.TestCase):
                                           "daemon:*:14495:0:99999:7:::\n",
                                'gid': 100,
                                'isdir': False,
-                               'mode': 0700,
+                               'mode': 0o700,
                                'uid': 100})
         else:
             self.assertEquals(shadow,
@@ -214,6 +214,6 @@ class VirtDiskTest(test.TestCase):
                                           "daemon:*:14495:0:99999:7:::\n",
                                'gid': 100,
                                'isdir': False,
-                               'mode': 0700,
+                               'mode': 0o700,
                                'uid': 100})
         vfs.teardown()

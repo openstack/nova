@@ -173,10 +173,10 @@ class VirtDiskVFSGuestFSTest(test.TestCase):
         vfs.setup()
         vfs.read_file("/some/file")
 
-        self.assertEquals(vfs.handle.files["/some/file"]["mode"], 0700)
+        self.assertEquals(vfs.handle.files["/some/file"]["mode"], 0o700)
 
-        vfs.set_permissions("/some/file", 0777)
-        self.assertEquals(vfs.handle.files["/some/file"]["mode"], 0777)
+        vfs.set_permissions("/some/file", 0o7777)
+        self.assertEquals(vfs.handle.files["/some/file"]["mode"], 0o7777)
 
         vfs.teardown()
 

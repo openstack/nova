@@ -62,7 +62,7 @@ class GuestFS(object):
                 "isdir": True,
                 "gid": 100,
                 "uid": 100,
-                "mode": 0700
+                "mode": 0o700
                 }
 
     def read_file(self, path):
@@ -72,7 +72,7 @@ class GuestFS(object):
                 "content": "Hello World",
                 "gid": 100,
                 "uid": 100,
-                "mode": 0700
+                "mode": 0o700
                 }
 
         return self.files[path]["content"]
@@ -84,7 +84,7 @@ class GuestFS(object):
                 "content": "Hello World",
                 "gid": 100,
                 "uid": 100,
-                "mode": 0700
+                "mode": 0o700
                 }
 
         self.files[path]["content"] = content
@@ -96,7 +96,7 @@ class GuestFS(object):
                 "content": "Hello World",
                 "gid": 100,
                 "uid": 100,
-                "mode": 0700
+                "mode": 0o700
                 }
 
         self.files[path]["content"] = self.files[path]["content"] + content
