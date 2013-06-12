@@ -5472,6 +5472,43 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute.terminate_instance(self.context,
             instance=jsonutils.to_primitive(instance))
 
+    def test_allow_confirm_resize_on_instance_in_deleting_task_state(self):
+        instance = self._create_fake_instance()
+        old_type = instance_types.extract_instance_type(instance)
+        new_type = instance_types.get_instance_type_by_flavor_id('4')
+        sys_meta = utils.metadata_to_dict(instance['system_metadata'])
+        sys_meta = instance_types.save_instance_type_info(sys_meta,
+                                                          old_type, 'old_')
+        sys_meta = instance_types.save_instance_type_info(sys_meta,
+                                                          new_type, 'new_')
+        sys_meta = instance_types.save_instance_type_info(sys_meta,
+                                                          new_type)
+
+        fake_rt = self.mox.CreateMockAnything()
+
+        def fake_confirm_resize(*args, **kwargs):
+            pass
+
+        def fake_get_resource_tracker(self):
+            return fake_rt
+
+        self.stubs.Set(fake_rt, 'confirm_resize', fake_confirm_resize)
+        self.stubs.Set(self.compute, '_get_resource_tracker',
+                               fake_get_resource_tracker)
+
+        migration = db.migration_create(self.context.elevated(),
+                                        {'instance_uuid': instance['uuid'],
+                                         'status': 'finished'})
+        instance = db.instance_update(self.context, instance['uuid'],
+                                      {'task_state': task_states.DELETING,
+                                       'vm_state': vm_states.RESIZED,
+                                       'system_metadata': sys_meta})
+
+        self.compute.confirm_resize(self.context, instance,
+                                    migration=migration)
+        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
+        self.assertEqual(vm_states.ACTIVE, instance['vm_state'])
+
     def test_resize_revert_through_api(self):
         instance = jsonutils.to_primitive(self._create_fake_instance())
         instance = db.instance_get_by_uuid(self.context, instance['uuid'])
