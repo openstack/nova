@@ -1,0 +1,8 @@
+{
+    "service": {
+        "binary": "nova-compute",
+        "host": "host1",
+        "disabled_reason": "test2",
+        "status": "disabled"
+    }
+}

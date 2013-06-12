@@ -1,0 +1,5 @@
+{
+    "host": "host1",
+    "binary": "nova-compute",
+    "disabled_reason": "test2"
+}

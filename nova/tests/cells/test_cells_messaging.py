@@ -784,6 +784,7 @@ class CellsTargetedMethodsTestCase(test.TestCase):
         result = response.value_or_raise()
         result.pop('created_at', None)
         result.pop('updated_at', None)
+        result.pop('disabled_reason', None)
         expected_result = dict(
             deleted=0, deleted_at=None,
             binary=fake_service['binary'],

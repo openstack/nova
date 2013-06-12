@@ -204,6 +204,9 @@
   <extension alias="os-services" updated="2012-10-28T00:00:00-00:00" namespace="http://docs.openstack.org/compute/ext/services/api/v2" name="Services">
     <description>Services support.</description>
   </extension>
+  <extension alias="os-extended-services" updated="2013-05-17T00:00:00-00:00" namespace="http://docs.openstack.org/compute/ext/extended_services/api/v2" name="ExtendedServices">
+    <description>Extended services support.</description>
+  </extension>
   <extension alias="os-simple-tenant-usage" updated="2011-08-19T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/os-simple-tenant-usage/api/v1.1" name="SimpleTenantUsage">
     <description>Simple tenant usage extension.</description>
   </extension>

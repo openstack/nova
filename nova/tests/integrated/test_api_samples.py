@@ -30,6 +30,7 @@ from oslo.config import cfg
 from nova.api.metadata import password
 from nova.api.openstack.compute.contrib import coverage_ext
 from nova.api.openstack.compute.contrib import fping
+from nova.api.openstack.compute.extensions import ExtensionManager as ext_mgr
 # Import extensions to pull in osapi_compute_extension CONF option used below.
 from nova.cells import state
 from nova.cloudpipe import pipelib
@@ -1965,6 +1966,9 @@ class ServicesJsonTest(ApiSampleTestBase):
         super(ServicesJsonTest, self).tearDown()
         timeutils.clear_time_override()
 
+    def fake_load(self, *args):
+        return True
+
     def test_services_list(self):
         """Return a list of all agent builds."""
         response = self._do_get('os-services')
@@ -1996,8 +2000,52 @@ class ServicesJsonTest(ApiSampleTestBase):
                 "binary": "nova-compute"}
         self._verify_response('service-disable-put-resp', subs, response, 200)
 
+    def test_service_detail(self):
+        """
+        Return a list of all running services with the disable reason
+        information if that exists.
+        """
+        self.stubs.Set(ext_mgr, "is_loaded", self.fake_load)
+        response = self._do_get('os-services')
+        self.assertEqual(response.status, 200)
+        subs = {'binary': 'nova-compute',
+                'host': 'host1',
+                'zone': 'nova',
+                'status': 'disabled',
+                'state': 'up'}
+        subs.update(self._get_regexes())
+        return self._verify_response('services-get-resp',
+                                     subs, response, 200)
+
+    def test_service_disable_log_reason(self):
+        """Disable an existing service and log the reason."""
+        self.stubs.Set(ext_mgr, "is_loaded", self.fake_load)
+        subs = {"host": "host1",
+                'binary': 'nova-compute',
+                'disabled_reason': 'test2'}
+        response = self._do_put('os-services/disable-log-reason',
+                                'service-disable-log-put-req', subs)
+        return self._verify_response('service-disable-log-put-resp',
+                                     subs, response, 200)
+
 
 class ServicesXmlTest(ServicesJsonTest):
+    ctype = 'xml'
+
+
+class ExtendedServicesJsonTest(ApiSampleTestBase):
+    """
+    This extension is extending the functionalities of the
+    Services extension so the funcionalities introduced by this extension
+    are tested in the ServicesJsonTest and ServicesXmlTest classes.
+    """
+
+    extension_name = ("nova.api.openstack.compute.contrib."
+                      "extended_services.Extended_services")
+
+
+class ExtendedServicesXmlTest(ExtendedServicesJsonTest):
+    """This extension is tested in the ServicesXmlTest class."""
     ctype = 'xml'
 
 

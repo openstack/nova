@@ -53,6 +53,7 @@ class Service(BASE, NovaBase):
     topic = Column(String(255), nullable=True)
     report_count = Column(Integer, nullable=False, default=0)
     disabled = Column(Boolean, default=False)
+    disabled_reason = Column(String(255))
 
 
 class ComputeNode(BASE, NovaBase):
