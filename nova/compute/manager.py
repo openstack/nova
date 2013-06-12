@@ -2221,7 +2221,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             instance = self._instance_update(context, instance['uuid'],
                                              vm_state=vm_state,
                                              task_state=None,
-                                             expected_task_state=None)
+                                             expected_task_state=[None,
+                                             task_states.DELETING])
 
             self._notify_about_instance_usage(
                 context, instance, "resize.confirm.end",
