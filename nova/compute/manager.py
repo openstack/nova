@@ -4067,6 +4067,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             return
 
         filters = {'vm_state': vm_states.SOFT_DELETED,
+                   'task_state': None,
                    'host': self.host}
         instances = self.conductor_api.instance_get_all_by_filters(context,
                                                                    filters)
