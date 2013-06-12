@@ -21,7 +21,7 @@
 SQLAlchemy models for nova data.
 """
 
-from sqlalchemy import Column, Integer, BigInteger, String, schema
+from sqlalchemy import Column, Index, Integer, BigInteger, String, schema
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import ForeignKey, DateTime, Boolean, Text, Float
 from sqlalchemy.orm import relationship, backref, object_mapper
@@ -105,10 +105,17 @@ class ComputeNodeStat(BASE, NovaBase):
     """Stats related to the current workload of a compute host that are
     intended to aid in making scheduler decisions."""
     __tablename__ = 'compute_node_stats'
+    __table_args__ = (
+        Index('ix_compute_node_stats_compute_node_id', 'compute_node_id'),
+        Index('compute_node_stats_node_id_and_deleted_idx',
+              'compute_node_id', 'deleted')
+    )
+
     id = Column(Integer, primary_key=True)
-    key = Column(String(511))
-    value = Column(String(255))
-    compute_node_id = Column(Integer, ForeignKey('compute_nodes.id'))
+    key = Column(String(511), nullable=False)
+    value = Column(String(255), nullable=False)
+    compute_node_id = Column(Integer, ForeignKey('compute_nodes.id'),
+                             nullable=False)
 
     primary_join = ('and_(ComputeNodeStat.compute_node_id == '
                     'ComputeNode.id, ComputeNodeStat.deleted == 0)')
