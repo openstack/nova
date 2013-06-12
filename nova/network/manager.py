@@ -1249,8 +1249,6 @@ class NetworkManager(manager.Manager):
                                                          instance['uuid'])
         for vif in vifs:
             network = self.db.network_get(context, vif['network_id'])
-            fixed_ips = self.db.fixed_ips_by_virtual_interface(context,
-                                                               vif['id'])
             if not network['multi_host']:
                 #NOTE (tr3buchet): if using multi_host, host is instance[host]
                 host = network['host']
