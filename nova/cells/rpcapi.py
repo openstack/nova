@@ -97,7 +97,7 @@ class CellsAPI(rpc_proxy.RpcProxy):
                 build_inst_kwargs['image'])
         self.cast(ctxt, self.make_msg('build_instances',
             build_inst_kwargs=build_inst_kwargs),
-                version=1.8)
+                version='1.8')
 
     def instance_update_at_top(self, ctxt, instance):
         """Update instance at API level."""
