@@ -869,11 +869,13 @@ def _generate_disk(session, instance, vm_ref, userdevice, name_label,
                 utils.execute('mkfs', '-t', fs_type, partition_path,
                               run_as_root=True)
 
-        # 4. Create VBD between instance VM and swap VDI
+        # 4. Create VBD between instance VM and VDI
         create_vbd(session, vm_ref, vdi_ref, userdevice, bootable=False)
     except Exception:
         with excutils.save_and_reraise_exception():
             destroy_vdi(session, vdi_ref)
+
+    return vdi_ref
 
 
 def generate_swap(session, instance, vm_ref, userdevice, name_label, swap_mb):
@@ -886,11 +888,42 @@ def generate_swap(session, instance, vm_ref, userdevice, name_label, swap_mb):
                    'swap', swap_mb, fs_type)
 
 
-def generate_ephemeral(session, instance, vm_ref, userdevice, name_label,
-                       size_gb):
-    _generate_disk(session, instance, vm_ref, userdevice, name_label,
-                   'ephemeral', size_gb * 1024,
-                   CONF.default_ephemeral_format)
+def generate_ephemeral(session, instance, vm_ref, first_userdevice,
+                       initial_name_label, total_size_gb):
+    # NOTE(johngarbutt): max possible size of a VHD disk is 2043GB
+    if total_size_gb % 1024 == 0:
+        max_size_gb = 1024
+    else:
+        max_size_gb = 2000
+
+    left_to_allocate = total_size_gb
+    first_userdevice = int(first_userdevice)
+    userdevice = first_userdevice
+    name_label = initial_name_label
+
+    vdi_refs = []
+    try:
+        while left_to_allocate > 0:
+            size_gb = min(max_size_gb, left_to_allocate)
+
+            ref = _generate_disk(session, instance, vm_ref, str(userdevice),
+                                 name_label, 'ephemeral', size_gb * 1024,
+                                 CONF.default_ephemeral_format)
+            vdi_refs.append(ref)
+
+            left_to_allocate -= size_gb
+            userdevice += 1
+            label_number = userdevice - first_userdevice
+            name_label = "%s (%d)" % (initial_name_label, label_number)
+    except Exception as exc:
+        with excutils.save_and_reraise_exception():
+            LOG.debug(_("Error when generating ephemeral disk. "
+                        "Device: %(userdevice)s Size GB: %(size_gb)s "
+                        "Error: %(exc)s"), {
+                            userdevice: userdevice,
+                            size_gb: size_gb,
+                            exc: exc})
+            safe_destroy_vdis(session, vdi_refs)
 
 
 def generate_iso_blank_root_disk(session, instance, vm_ref, userdevice,
