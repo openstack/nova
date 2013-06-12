@@ -49,6 +49,7 @@ from nova import network
 from nova.network.security_group import openstack_driver
 from nova.network.security_group import security_group_base
 from nova import notifications
+from nova.objects import instance as instance_obj
 from nova.openstack.common import excutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
@@ -1382,10 +1383,16 @@ class API(base.Base):
         """Stop an instance."""
         LOG.debug(_("Going to try to stop instance"), instance=instance)
 
-        instance = self.update(context, instance,
-                    task_state=task_states.POWERING_OFF,
-                    expected_task_state=None,
-                    progress=0)
+        # NOTE(danms): Temporary transition to objects. Remove after
+        # compute/manager.py _sync_instance_power_state() is migrated.
+        if isinstance(instance, dict):
+            instance = instance_obj.Instance._from_db_object(
+                instance_obj.Instance(), instance)
+            instance._context = context
+
+        instance.task_state = task_states.POWERING_OFF
+        instance.progress = 0
+        instance.save(expected_task_state=None)
 
         self._record_action_start(context, instance, instance_actions.STOP)
 
@@ -1399,9 +1406,8 @@ class API(base.Base):
         """Start an instance."""
         LOG.debug(_("Going to try to start instance"), instance=instance)
 
-        instance = self.update(context, instance,
-                               task_state=task_states.POWERING_ON,
-                               expected_task_state=None)
+        instance.task_state = task_states.POWERING_ON
+        instance.save(expected_task_state=None)
 
         self._record_action_start(context, instance, instance_actions.START)
         # TODO(yamahata): injected_files isn't supported right now.

@@ -35,6 +35,7 @@ from nova import block_device
 from nova import compute
 from nova.compute import api as compute_api
 from nova.compute import flavors
+from nova.compute import instance_actions
 from nova.compute import manager as compute_manager
 from nova.compute import power_state
 from nova.compute import rpcapi as compute_rpcapi
@@ -49,6 +50,7 @@ from nova.image import glance
 from nova.network import api as network_api
 from nova.network import model as network_model
 from nova.network.security_group import openstack_driver
+from nova.objects import instance as instance_obj
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
@@ -63,6 +65,7 @@ from nova import quota
 from nova import test
 from nova.tests.compute import fake_resource_tracker
 from nova.tests.db import fakes as db_fakes
+from nova.tests import fake_instance
 from nova.tests import fake_instance_actions
 from nova.tests import fake_network
 from nova.tests import fake_network_cache_model
@@ -237,6 +240,7 @@ class BaseTestCase(test.TestCase):
 
         inst = {}
         inst['vm_state'] = vm_states.ACTIVE
+        inst['task_state'] = None
         inst['image_ref'] = FAKE_IMAGE_REF
         inst['reservation_id'] = 'r-fakeres'
         inst['user_id'] = self.user_id
@@ -253,10 +257,26 @@ class BaseTestCase(test.TestCase):
         inst['architecture'] = 'x86_64'
         inst['os_type'] = 'Linux'
         inst['system_metadata'] = make_fake_sys_meta()
+        inst['locked'] = False
         inst.update(params)
         _create_service_entries(self.context.elevated(),
                 {'fake_zone': [inst['host']]})
         return db.instance_create(self.context, inst)
+
+    def _create_instance_obj(self, params=None, type_name='m1.tiny'):
+        """Create a test instance object."""
+        instance = instance_obj.Instance()
+        instance.uuid = uuidutils.generate_uuid()
+        instance.cell_name = 'api!child'
+
+        def _fake_db_create(_ctxt, inst):
+            for k, v in inst.items():
+                setattr(instance, k, v)
+            return instance
+
+        self.stubs.Set(db, 'instance_create', _fake_db_create)
+        return self._create_fake_instance(params=params,
+                type_name=type_name)
 
     def _create_instance(self, params=None, type_name='m1.tiny'):
         """Create a test instance. Returns uuid."""
@@ -713,6 +733,16 @@ class ComputeTestCase(BaseTestCase):
         self.assertTrue(called['started'])
         self.assertTrue(called['finished'])
         self.assertEqual('An unknown exception occurred.', called['message'])
+
+    def test_object_compat(self):
+        db_inst = fake_instance.fake_db_instance()
+
+        @compute_manager.object_compat
+        def test_fn(_self, context, instance):
+            self.assertTrue(isinstance(instance, instance_obj.Instance))
+            self.assertEqual(instance.uuid, db_inst['uuid'])
+
+        test_fn(None, self.context, instance=db_inst)
 
     def test_create_instance_with_img_ref_associates_config_drive(self):
         # Make sure create associates a config drive.
@@ -1261,7 +1291,12 @@ class ComputeTestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance=instance)
         db.instance_update(self.context, instance['uuid'],
                            {"task_state": task_states.POWERING_OFF})
-        self.compute.stop_instance(self.context, instance=instance)
+        inst_uuid = instance['uuid']
+        extra = ['system_metadata', 'metadata']
+        inst_obj = instance_obj.Instance.get_by_uuid(self.context,
+                                                     inst_uuid,
+                                                     expected_attrs=extra)
+        self.compute.stop_instance(self.context, instance=inst_obj)
         self.compute.terminate_instance(self.context, instance=instance)
 
     def test_start(self):
@@ -1270,10 +1305,15 @@ class ComputeTestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance=instance)
         db.instance_update(self.context, instance['uuid'],
                            {"task_state": task_states.POWERING_OFF})
-        self.compute.stop_instance(self.context, instance=instance)
-        db.instance_update(self.context, instance['uuid'],
-                           {"task_state": task_states.POWERING_ON})
-        self.compute.start_instance(self.context, instance=instance)
+        extra = ['system_metadata', 'metadata']
+        inst_uuid = instance['uuid']
+        inst_obj = instance_obj.Instance.get_by_uuid(self.context,
+                                                     inst_uuid,
+                                                     expected_attrs=extra)
+        self.compute.stop_instance(self.context, instance=inst_obj)
+        inst_obj.task_state = task_states.POWERING_ON
+        inst_obj.save(self.context)
+        self.compute.start_instance(self.context, instance=inst_obj)
         self.compute.terminate_instance(self.context, instance=instance)
 
     def test_stop_start_no_image(self):
@@ -1282,10 +1322,15 @@ class ComputeTestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance=instance)
         db.instance_update(self.context, instance['uuid'],
                            {"task_state": task_states.POWERING_OFF})
-        self.compute.stop_instance(self.context, instance=instance)
-        db.instance_update(self.context, instance['uuid'],
-                           {"task_state": task_states.POWERING_ON})
-        self.compute.start_instance(self.context, instance=instance)
+        extra = ['system_metadata', 'metadata']
+        inst_uuid = instance['uuid']
+        inst_obj = instance_obj.Instance.get_by_uuid(self.context,
+                                                     inst_uuid,
+                                                     expected_attrs=extra)
+        self.compute.stop_instance(self.context, instance=inst_obj)
+        inst_obj.task_state = task_states.POWERING_ON
+        inst_obj.save(self.context)
+        self.compute.start_instance(self.context, instance=inst_obj)
         self.compute.terminate_instance(self.context, instance=instance)
 
     def test_rescue(self):
@@ -1361,11 +1406,15 @@ class ComputeTestCase(BaseTestCase):
 
         instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, instance=instance)
-        db.instance_update(self.context, instance['uuid'],
-                           {"task_state": task_states.POWERING_ON})
-        self.compute.start_instance(self.context, instance=instance)
+        extra = ['system_metadata', 'metadata']
+        inst_obj = instance_obj.Instance.get_by_uuid(self.context,
+                                                     instance['uuid'],
+                                                     expected_attrs=extra)
+        inst_obj.task_state = task_states.POWERING_ON
+        inst_obj.save(self.context)
+        self.compute.start_instance(self.context, instance=inst_obj)
         self.assertTrue(called['power_on'])
-        self.compute.terminate_instance(self.context, instance=instance)
+        self.compute.terminate_instance(self.context, instance=inst_obj)
 
     def test_power_off(self):
         # Ensure instance can be powered off.
@@ -1380,11 +1429,15 @@ class ComputeTestCase(BaseTestCase):
 
         instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, instance=instance)
-        db.instance_update(self.context, instance['uuid'],
-                           {"task_state": task_states.POWERING_OFF})
-        self.compute.stop_instance(self.context, instance=instance)
+        extra = ['system_metadata', 'metadata']
+        inst_obj = instance_obj.Instance.get_by_uuid(self.context,
+                                                     instance['uuid'],
+                                                     expected_attrs=extra)
+        inst_obj.task_state = task_states.POWERING_OFF
+        inst_obj.save(self.context)
+        self.compute.stop_instance(self.context, instance=inst_obj)
         self.assertTrue(called['power_off'])
-        self.compute.terminate_instance(self.context, instance=instance)
+        self.compute.terminate_instance(self.context, instance=inst_obj)
 
     def test_pause(self):
         # Ensure instance can be paused and unpaused.
@@ -5387,47 +5440,85 @@ class ComputeAPITestCase(BaseTestCase):
             db.instance_destroy(self.context, ref[0]['uuid'])
 
     def test_start(self):
-        instance = jsonutils.to_primitive(self._create_fake_instance())
-        instance_uuid = instance['uuid']
-        self.compute.run_instance(self.context, instance=instance)
+        # Undo setUp() stubs (test_compute_cells)
+        self.stubs.UnsetAll()
+        instance = self._create_instance_obj()
+        instance.vm_state = vm_states.STOPPED
 
-        db.instance_update(self.context, instance['uuid'],
-                           {"task_state": task_states.POWERING_OFF})
-        self.compute.stop_instance(self.context, instance=instance)
+        self.mox.StubOutWithMock(instance, 'save')
+        self.mox.StubOutWithMock(self.compute_api,
+                '_record_action_start')
+        self.mox.StubOutWithMock(
+                self.compute_api.compute_rpcapi,
+                'start_instance')
 
-        instance = db.instance_get_by_uuid(self.context, instance_uuid)
-        self.assertEqual(instance['task_state'], None)
+        instance.save(expected_task_state=None)
+        self.compute_api._record_action_start(self.context,
+                instance, instance_actions.START)
+        self.compute_api.compute_rpcapi.start_instance(
+                self.context, instance)
+
+        self.mox.ReplayAll()
 
         self.compute_api.start(self.context, instance)
+        self.assertEqual(task_states.POWERING_ON,
+                         instance.task_state)
 
-        instance = db.instance_get_by_uuid(self.context, instance_uuid)
-        self.assertEqual(instance['task_state'], task_states.POWERING_ON)
-
-        db.instance_destroy(self.context, instance['uuid'])
+    def test_start_invalid_state(self):
+        # Undo setUp() stubs (test_compute_cells)
+        self.stubs.UnsetAll()
+        instance = self._create_instance_obj()
+        instance.vm_state = vm_states.ACTIVE
+        self.assertRaises(exception.InstanceInvalidState,
+                          self.compute_api.start,
+                          self.context, instance)
 
     def test_start_no_host(self):
-        instance = self._create_fake_instance(params={'host': ''})
-
+        # Undo setUp() stubs (test_compute_cells)
+        self.stubs.UnsetAll()
+        instance = self._create_instance_obj()
+        instance.vm_state = vm_states.STOPPED
+        instance.host = ''
         self.assertRaises(exception.InstanceNotReady,
                           self.compute_api.start,
                           self.context, instance)
 
-        db.instance_destroy(self.context, instance['uuid'])
-
     def test_stop(self):
-        instance = jsonutils.to_primitive(self._create_fake_instance())
-        instance_uuid = instance['uuid']
-        self.compute.run_instance(self.context, instance=instance)
+        # Undo setUp() stubs (test_compute_cells)
+        self.stubs.UnsetAll()
+        instance = self._create_instance_obj()
+        instance.task_state = None
+        # Make sure this gets reset
+        instance.progress = 99
 
-        instance = db.instance_get_by_uuid(self.context, instance_uuid)
-        self.assertEqual(instance['task_state'], None)
+        self.mox.StubOutWithMock(instance, 'save')
+        self.mox.StubOutWithMock(self.compute_api,
+                '_record_action_start')
+        self.mox.StubOutWithMock(
+                self.compute_api.compute_rpcapi,
+                'stop_instance')
+
+        instance.save(expected_task_state=None)
+        self.compute_api._record_action_start(self.context,
+                instance, instance_actions.STOP)
+        self.compute_api.compute_rpcapi.stop_instance(
+                self.context, instance, cast=True)
+
+        self.mox.ReplayAll()
 
         self.compute_api.stop(self.context, instance)
+        self.assertEqual(task_states.POWERING_OFF,
+                         instance.task_state)
+        self.assertEqual(0, instance.progress)
 
-        instance = db.instance_get_by_uuid(self.context, instance_uuid)
-        self.assertEqual(instance['task_state'], task_states.POWERING_OFF)
-
-        db.instance_destroy(self.context, instance['uuid'])
+    def test_stop_invalid_state(self):
+        # Undo setUp() stubs (test_compute_cells)
+        self.stubs.UnsetAll()
+        instance = self._create_instance_obj()
+        instance.vm_state = vm_states.PAUSED
+        self.assertRaises(exception.InstanceInvalidState,
+                          self.compute_api.stop,
+                          self.context, instance)
 
     def test_stop_a_stopped_inst(self):
         instance = jsonutils.to_primitive(self._create_fake_instance(
@@ -5440,45 +5531,13 @@ class ComputeAPITestCase(BaseTestCase):
         db.instance_destroy(self.context, instance['uuid'])
 
     def test_stop_no_host(self):
-        instance = self._create_fake_instance(params={'host': ''})
-
+        # Undo setUp() stubs (test_compute_cells)
+        self.stubs.UnsetAll()
+        instance = self._create_instance_obj()
+        instance.host = ''
         self.assertRaises(exception.InstanceNotReady,
                           self.compute_api.stop,
                           self.context, instance)
-
-        db.instance_destroy(self.context, instance['uuid'])
-
-    def test_start_shutdown(self):
-        def check_state(instance_uuid, power_state_, vm_state_, task_state_):
-            instance = db.instance_get_by_uuid(self.context, instance_uuid)
-            self.assertEqual(instance['power_state'], power_state_)
-            self.assertEqual(instance['vm_state'], vm_state_)
-            self.assertEqual(instance['task_state'], task_state_)
-
-        def start_check_state(instance_uuid,
-                              power_state_, vm_state_, task_state_):
-            instance = db.instance_get_by_uuid(self.context, instance_uuid)
-            self.compute_api.start(self.context, instance)
-            check_state(instance_uuid, power_state_, vm_state_, task_state_)
-
-        instance = jsonutils.to_primitive(self._create_fake_instance())
-        self.compute.run_instance(self.context, instance=instance)
-
-        check_state(instance['uuid'], power_state.RUNNING, vm_states.ACTIVE,
-                    None)
-
-        # NOTE(yamahata): emulate compute.manager._sync_power_state() that
-        # the instance is shutdown by itself
-        db.instance_update(self.context, instance['uuid'],
-                           {'power_state': power_state.NOSTATE,
-                            'vm_state': vm_states.STOPPED})
-        check_state(instance['uuid'], power_state.NOSTATE, vm_states.STOPPED,
-                    None)
-
-        start_check_state(instance['uuid'], power_state.NOSTATE,
-                          vm_states.STOPPED, task_states.POWERING_ON)
-
-        db.instance_destroy(self.context, instance['uuid'])
 
     def test_delete(self):
         instance, instance_uuid = self._run_instance(params={
