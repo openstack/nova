@@ -218,6 +218,32 @@ class LibvirtVolumeTestCase(test.TestCase):
         self.assertEqual(tree.find('./source/auth'), None)
         libvirt_driver.disconnect_volume(connection_info, "vde")
 
+    def test_libvirt_rbd_driver_hosts(self):
+        libvirt_driver = volume.LibvirtNetVolumeDriver(self.fake_conn)
+        name = 'volume-00000001'
+        vol = {'id': 1, 'name': name}
+        connection_info = self.rbd_connection(vol)
+        disk_info = {
+            "bus": "virtio",
+            "dev": "vde",
+            "type": "disk",
+            }
+        hosts = ['example.com', '1.2.3.4', '::1']
+        ports = [None, '6790', '6791']
+        connection_info['data']['hosts'] = hosts
+        connection_info['data']['ports'] = ports
+        conf = libvirt_driver.connect_volume(connection_info, disk_info)
+        tree = conf.format_dom()
+        self.assertEqual(tree.get('type'), 'network')
+        self.assertEqual(tree.find('./source').get('protocol'), 'rbd')
+        rbd_name = '%s/%s' % ('rbd', name)
+        self.assertEqual(tree.find('./source').get('name'), rbd_name)
+        self.assertEqual(tree.find('./source/auth'), None)
+        found_hosts = tree.findall('./source/host')
+        self.assertEqual([host.get('name') for host in found_hosts], hosts)
+        self.assertEqual([host.get('port') for host in found_hosts], ports)
+        libvirt_driver.disconnect_volume(connection_info, "vde")
+
     def test_libvirt_rbd_driver_auth_enabled(self):
         libvirt_driver = volume.LibvirtNetVolumeDriver(self.fake_conn)
         name = 'volume-00000001'

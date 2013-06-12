@@ -131,7 +131,7 @@ class LibvirtFakeVolumeDriver(LibvirtBaseVolumeDriver):
                                           disk_info)
         conf.source_type = "network"
         conf.source_protocol = "fake"
-        conf.source_host = "fake"
+        conf.source_name = "fake"
         return conf
 
 
@@ -145,10 +145,12 @@ class LibvirtNetVolumeDriver(LibvirtBaseVolumeDriver):
         conf = super(LibvirtNetVolumeDriver,
                      self).connect_volume(connection_info,
                                           disk_info)
+        netdisk_properties = connection_info['data']
         conf.source_type = "network"
         conf.source_protocol = connection_info['driver_volume_type']
-        conf.source_host = connection_info['data']['name']
-        netdisk_properties = connection_info['data']
+        conf.source_name = netdisk_properties.get('name')
+        conf.source_hosts = netdisk_properties.get('hosts', [])
+        conf.source_ports = netdisk_properties.get('ports', [])
         auth_enabled = netdisk_properties.get('auth_enabled')
         if (conf.source_protocol == 'rbd' and
             CONF.rbd_secret_uuid):
