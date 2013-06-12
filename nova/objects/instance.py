@@ -15,6 +15,7 @@
 from nova import db
 from nova import notifications
 from nova.objects import base
+from nova.objects import instance_info_cache
 from nova.objects import utils as obj_utils
 from nova import utils
 
@@ -24,7 +25,17 @@ from oslo.config import cfg
 CONF = cfg.CONF
 
 
+# These are fields that can be specified as expected_attrs
+INSTANCE_OPTIONAL_FIELDS = ['metadata', 'system_metadata']
+# These are fields that are always joined by the db right now
+INSTANCE_IMPLIED_FIELDS = ['info_cache']
+
+
 class Instance(base.NovaObject):
+    # Version 1.0: Initial version
+    # Version 1.1: Added info_cache
+    VERSION = '1.1'
+
     fields = {
         'id': int,
 
@@ -94,6 +105,9 @@ class Instance(base.NovaObject):
         'metadata': dict,
         'system_metadata': dict,
 
+        'info_cache': obj_utils.nested_object_or_none(
+            instance_info_cache.InstanceInfoCache)
+
         }
 
     @property
@@ -132,10 +146,14 @@ class Instance(base.NovaObject):
     _attr_scheduled_at_to_primitive = obj_utils.dt_serializer('scheduled_at')
     _attr_launched_at_to_primitive = obj_utils.dt_serializer('launched_at')
     _attr_terminated_at_to_primitive = obj_utils.dt_serializer('terminated_at')
+    _attr_info_cache_to_primitive = obj_utils.obj_serializer('info_cache')
 
     _attr_scheduled_at_from_primitive = obj_utils.dt_deserializer
     _attr_launched_at_from_primitive = obj_utils.dt_deserializer
     _attr_terminated_at_from_primitive = obj_utils.dt_deserializer
+
+    def _attr_info_cache_from_primitive(self, val):
+        return base.NovaObject.obj_from_primitive(val)
 
     @staticmethod
     def _from_db_object(instance, db_inst, expected_attrs=None):
@@ -147,7 +165,7 @@ class Instance(base.NovaObject):
             expected_attrs = []
         # Most of the field names match right now, so be quick
         for field in instance.fields:
-            if field in ['metadata', 'system_metadata']:
+            if field in INSTANCE_OPTIONAL_FIELDS + INSTANCE_IMPLIED_FIELDS:
                 continue
             elif field == 'deleted':
                 instance.deleted = db_inst['deleted'] == db_inst['id']
@@ -159,6 +177,13 @@ class Instance(base.NovaObject):
         if 'system_metadata' in expected_attrs:
             instance['system_metadata'] = utils.metadata_to_dict(
                 db_inst['system_metadata'])
+        # NOTE(danms): info_cache and security_groups are almost always joined
+        # in the DB layer right now, so check to see if they're filled instead
+        # of looking at expected_attrs
+        if db_inst['info_cache']:
+            instance['info_cache'] = instance_info_cache.InstanceInfoCache()
+            instance_info_cache.InstanceInfoCache._from_db_object(
+                instance['info_cache'], db_inst['info_cache'])
 
         instance.obj_reset_changes()
         return instance
@@ -174,6 +199,9 @@ class Instance(base.NovaObject):
             columns_to_join.append('metadata')
         if 'system_metadata' in expected_attrs:
             columns_to_join.append('system_metadata')
+        # NOTE(danms): The DB API currently always joins info_cache and
+        # security_groups for get operations, so don't add them to the
+        # list of columns
 
         db_inst = db.instance_get_by_uuid(context, uuid,
                                           columns_to_join)
@@ -193,28 +221,33 @@ class Instance(base.NovaObject):
         """
         updates = {}
         changes = self.obj_what_changed()
-        for field in changes:
-            updates[field] = self[field]
+        for field in self.fields:
+            if (hasattr(self, base.get_attrname(field)) and
+                isinstance(self[field], base.NovaObject)):
+                self[field].save(context)
+            elif field in changes:
+                updates[field] = self[field]
         if expected_task_state is not None:
             updates['expected_task_state'] = expected_task_state
-        old_ref, inst_ref = db.instance_update_and_get_original(context,
-                                                                self.uuid,
-                                                                updates)
 
-        expected_attrs = []
-        for attr in ('metadata', 'system_metadata'):
-            if hasattr(self, base.get_attrname(attr)):
-                expected_attrs.append(attr)
-        Instance._from_db_object(self, inst_ref, expected_attrs)
-        if 'vm_state' in changes or 'task_state' in changes:
-            notifications.send_update(context, old_ref, inst_ref)
+        if updates:
+            old_ref, inst_ref = db.instance_update_and_get_original(context,
+                                                                    self.uuid,
+                                                                    updates)
+            expected_attrs = []
+            for attr in INSTANCE_OPTIONAL_FIELDS:
+                if hasattr(self, base.get_attrname(attr)):
+                    expected_attrs.append(attr)
+            Instance._from_db_object(self, inst_ref, expected_attrs)
+            if 'vm_state' in changes or 'task_state' in changes:
+                notifications.send_update(context, old_ref, inst_ref)
 
         self.obj_reset_changes()
 
     @base.remotable
     def refresh(self, context):
         extra = []
-        for field in ['system_metadata', 'metadata']:
+        for field in INSTANCE_OPTIONAL_FIELDS:
             if hasattr(self, base.get_attrname(field)):
                 extra.append(field)
         current = self.__class__.get_by_uuid(context, uuid=self.uuid,
@@ -230,6 +263,8 @@ class Instance(base.NovaObject):
             extra.append('system_metadata')
         elif attrname == 'metadata':
             extra.append('metadata')
+        elif attrname == 'info_cache':
+            extra.append('info_cache')
 
         if not extra:
             raise Exception('Cannot load "%s" from instance' % attrname)
