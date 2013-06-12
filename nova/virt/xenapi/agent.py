@@ -328,7 +328,7 @@ def find_guest_agent(base_dir):
 
 
 def should_use_agent(instance):
-    sys_meta = instance["system_metadata"]
+    sys_meta = utils.instance_sys_meta(instance)
     if USE_AGENT_SM_KEY not in sys_meta:
         return CONF.xenapi_use_agent_default
     else:
