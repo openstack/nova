@@ -201,6 +201,7 @@ def deploy(address, port, iqn, lun, image_path, pxe_config_path,
     login_iscsi(address, port, iqn)
     try:
         root_uuid = work_on_disk(dev, root_mb, swap_mb, image_path)
+        switch_pxe_config(pxe_config_path, root_uuid)
     except processutils.ProcessExecutionError as err:
         # Log output if there was a error
         LOG.error("Cmd     : %s" % err.cmd)
@@ -208,7 +209,6 @@ def deploy(address, port, iqn, lun, image_path, pxe_config_path,
         LOG.error("StdErr  : %s" % err.stderr)
     finally:
         logout_iscsi(address, port, iqn)
-    switch_pxe_config(pxe_config_path, root_uuid)
     # Ensure the node started netcat on the port after POST the request.
     time.sleep(3)
     notify(address, 10000)
