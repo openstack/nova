@@ -559,7 +559,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 # NOTE(mriedem): check old_vm_state for STOPPED here, if it's
                 # not in system_metadata we default to True for backwards
                 # compatibility
-                sys_meta = utils.metadata_to_dict(instance['system_metadata'])
+                sys_meta = utils.instance_sys_meta(instance)
                 power_on = sys_meta.get('old_vm_state') != vm_states.STOPPED
 
                 block_dev_info = self._get_instance_volume_block_device_info(
@@ -659,8 +659,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         """Initialization for a standalone compute service."""
         self.driver.init_host(host=self.host)
         context = nova.context.get_admin_context()
-        instances = self.conductor_api.instance_get_all_by_host(context,
-                                                                self.host)
+        instances = instance_obj.InstanceList.get_by_host(
+            context, self.host, expected_attrs=['info_cache'])
 
         if CONF.defer_iptables_apply:
             self.driver.filter_defer_apply_on()

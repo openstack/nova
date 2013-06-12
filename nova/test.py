@@ -41,6 +41,7 @@ from nova import context
 from nova import db
 from nova.db import migration
 from nova.network import manager as network_manager
+from nova.objects import base as objects_base
 from nova.openstack.common.db.sqlalchemy import session
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
@@ -231,6 +232,10 @@ class TestCase(testtools.TestCase):
                                         sqlite_clean_db=CONF.sqlite_clean_db)
 
             self.useFixture(_DB_CACHE)
+
+        # NOTE(danms): Make sure to reset us back to non-remote objects
+        # for each test to avoid interactions.
+        objects_base.NovaObject.indirection_api = None
 
         mox_fixture = self.useFixture(MoxStubout())
         self.mox = mox_fixture.mox

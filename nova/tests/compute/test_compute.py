@@ -63,6 +63,7 @@ from nova.openstack.common import uuidutils
 from nova import policy
 from nova import quota
 from nova import test
+from nova.tests.api.openstack import fakes
 from nova.tests.compute import fake_resource_tracker
 from nova.tests.db import fakes as db_fakes
 from nova.tests import fake_instance
@@ -4769,19 +4770,27 @@ class ComputeTestCase(BaseTestCase):
     def test_init_host(self):
         our_host = self.compute.host
         fake_context = 'fake-context'
-        startup_instances = ['inst1', 'inst2', 'inst3']
+        inst = dict(fakes.stub_instance(1),
+                    deleted_at=None, created_at=None, updated_at=None,
+                    deleted=0, info_cache={'instance_uuid': 'fake-uuid',
+                                           'network_info': None})
+        startup_instances = [inst, inst, inst]
 
         def _do_mock_calls(defer_iptables_apply):
             self.compute.driver.init_host(host=our_host)
             context.get_admin_context().AndReturn(fake_context)
-            self.compute.conductor_api.instance_get_all_by_host(
-                    fake_context, our_host).AndReturn(startup_instances)
+            db.instance_get_all_by_host(
+                    fake_context, our_host, columns_to_join=['info_cache']
+                    ).AndReturn(startup_instances)
             if defer_iptables_apply:
                 self.compute.driver.filter_defer_apply_on()
             self.compute._destroy_evacuated_instances(fake_context)
-            self.compute._init_instance(fake_context, startup_instances[0])
-            self.compute._init_instance(fake_context, startup_instances[1])
-            self.compute._init_instance(fake_context, startup_instances[2])
+            self.compute._init_instance(fake_context,
+                                        mox.IsA(instance_obj.Instance))
+            self.compute._init_instance(fake_context,
+                                        mox.IsA(instance_obj.Instance))
+            self.compute._init_instance(fake_context,
+                                        mox.IsA(instance_obj.Instance))
             if defer_iptables_apply:
                 self.compute.driver.filter_defer_apply_off()
             self.compute._report_driver_status(fake_context)
@@ -4792,8 +4801,7 @@ class ComputeTestCase(BaseTestCase):
                                  'filter_defer_apply_on')
         self.mox.StubOutWithMock(self.compute.driver,
                 'filter_defer_apply_off')
-        self.mox.StubOutWithMock(self.compute.conductor_api,
-                                 'instance_get_all_by_host')
+        self.mox.StubOutWithMock(db, 'instance_get_all_by_host')
         self.mox.StubOutWithMock(context, 'get_admin_context')
         self.mox.StubOutWithMock(self.compute,
                 '_destroy_evacuated_instances')
@@ -4837,8 +4845,7 @@ class ComputeTestCase(BaseTestCase):
 
         self.mox.StubOutWithMock(self.compute.driver, 'init_host')
         self.mox.StubOutWithMock(self.compute.driver, 'destroy')
-        self.mox.StubOutWithMock(self.compute.conductor_api,
-                                 'instance_get_all_by_host')
+        self.mox.StubOutWithMock(db, 'instance_get_all_by_host')
         self.mox.StubOutWithMock(context, 'get_admin_context')
         self.mox.StubOutWithMock(self.compute, 'init_virt_events')
         self.mox.StubOutWithMock(self.compute, '_get_instances_on_driver')
@@ -4849,8 +4856,9 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute.driver.init_host(host=our_host)
         context.get_admin_context().AndReturn(fake_context)
-        self.compute.conductor_api.instance_get_all_by_host(
-            fake_context, our_host).AndReturn([])
+        db.instance_get_all_by_host(fake_context, our_host,
+                                    columns_to_join=['info_cache']
+                                    ).AndReturn([])
         self.compute.init_virt_events()
 
         # simulate failed instance
@@ -4920,7 +4928,7 @@ class ComputeTestCase(BaseTestCase):
             }
         fixed = dict(instance, task_state=None)
         self.mox.StubOutWithMock(compute_utils, 'get_nw_info_for_instance')
-        self.mox.StubOutWithMock(utils, 'metadata_to_dict')
+        self.mox.StubOutWithMock(utils, 'instance_sys_meta')
         self.mox.StubOutWithMock(self.compute.driver, 'plug_vifs')
         self.mox.StubOutWithMock(self.compute.driver,
                                  'finish_revert_migration')
@@ -4932,7 +4940,7 @@ class ComputeTestCase(BaseTestCase):
         compute_utils.get_nw_info_for_instance(instance).AndReturn(
             network_model.NetworkInfo())
         self.compute.driver.plug_vifs(instance, [])
-        utils.metadata_to_dict(instance['system_metadata']).AndReturn(sys_meta)
+        utils.instance_sys_meta(instance).AndReturn(sys_meta)
         self.compute._get_instance_volume_block_device_info(
             self.context, instance).AndReturn([])
         self.compute.driver.finish_revert_migration(instance, [], [], power_on)
