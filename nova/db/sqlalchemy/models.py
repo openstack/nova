@@ -129,11 +129,15 @@ class ComputeNodeStat(BASE, NovaBase):
 class Certificate(BASE, NovaBase):
     """Represents a x509 certificate."""
     __tablename__ = 'certificates'
+    __table_args__ = (
+        Index('certificates_project_id_deleted_idx', 'project_id', 'deleted'),
+        Index('certificates_user_id_deleted_idx', 'user_id', 'deleted')
+    )
     id = Column(Integer, primary_key=True)
 
-    user_id = Column(String(255))
-    project_id = Column(String(255))
-    file_name = Column(String(255))
+    user_id = Column(String(255), nullable=True)
+    project_id = Column(String(255), nullable=True)
+    file_name = Column(String(255), nullable=True)
 
 
 class Instance(BASE, NovaBase):
