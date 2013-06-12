@@ -363,7 +363,7 @@ class DbApiTestCase(DbTestCase):
                 'fake_host2')
         self.assertEqual(0, len(results))
 
-        updated_at = datetime.datetime(2000, 01, 01, 12, 00, 00)
+        updated_at = datetime.datetime(2000, 1, 1, 12, 0, 0)
         values = {"status": "finished", "updated_at": updated_at,
                 "dest_compute": "fake_host2"}
         migration = db.migration_create(ctxt, values)
@@ -398,7 +398,7 @@ class DbApiTestCase(DbTestCase):
 
         # Ensure one rebooting instance with updated_at older than 10 seconds
         # is returned.
-        updated_at = datetime.datetime(2000, 01, 01, 12, 00, 00)
+        updated_at = datetime.datetime(2000, 1, 1, 12, 0, 0)
         values = {"task_state": "rebooting", "updated_at": updated_at}
         instance = db.instance_create(ctxt, values)
         results = db.instance_get_all_hung_in_rebooting(ctxt, 10)

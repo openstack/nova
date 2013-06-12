@@ -56,7 +56,7 @@ class BareMetalIPMITestCase(test.TestCase):
         pw_file = ipmi._make_password_file(self.node['pm_password'])
         try:
             self.assertTrue(os.path.isfile(pw_file))
-            self.assertEqual(os.stat(pw_file)[stat.ST_MODE] & 0777, 0600)
+            self.assertEqual(os.stat(pw_file)[stat.ST_MODE] & 0o777, 0o600)
             with open(pw_file, "r") as f:
                 pm_password = f.read()
             self.assertEqual(pm_password, self.node['pm_password'])

@@ -999,13 +999,13 @@ def restart_dhcp(context, dev, network_ref):
         #             are not in multi_host mode.
         optsfile = _dhcp_file(dev, 'opts')
         write_to_file(optsfile, get_dhcp_opts(context, network_ref))
-        os.chmod(optsfile, 0644)
+        os.chmod(optsfile, 0o644)
 
     if network_ref['multi_host']:
         _add_dhcp_mangle_rule(dev)
 
     # Make sure dnsmasq can actually read it (it setuid()s to "nobody")
-    os.chmod(conffile, 0644)
+    os.chmod(conffile, 0o644)
 
     pid = _dnsmasq_pid_for(dev)
 
@@ -1091,7 +1091,7 @@ interface %s
     write_to_file(conffile, conf_str)
 
     # Make sure radvd can actually read it (it setuid()s to "nobody")
-    os.chmod(conffile, 0644)
+    os.chmod(conffile, 0o644)
 
     pid = _ra_pid_for(dev)
 

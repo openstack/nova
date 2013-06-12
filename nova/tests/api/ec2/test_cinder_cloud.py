@@ -601,8 +601,8 @@ class CinderCloudTestCase(test.TestCase):
             {'device': 'sdc3', 'virtual': 'swap'},
             {'device': 'sdc4', 'virtual': 'swap'}]
         block_device_mapping1 = [
-            {'device_name': '/dev/sdb1', 'snapshot_id': 01234567},
-            {'device_name': '/dev/sdb2', 'volume_id': 01234567},
+            {'device_name': '/dev/sdb1', 'snapshot_id': 1234567},
+            {'device_name': '/dev/sdb2', 'volume_id': 1234567},
             {'device_name': '/dev/sdb3', 'virtual_name': 'ephemeral5'},
             {'device_name': '/dev/sdb4', 'no_device': True},
 
@@ -625,7 +625,7 @@ class CinderCloudTestCase(test.TestCase):
 
         mappings2 = [{'device': '/dev/sda1', 'virtual': 'root'}]
         block_device_mapping2 = [{'device_name': '/dev/sdb1',
-                                  'snapshot_id': 01234567}]
+                                  'snapshot_id': 1234567}]
         image2 = {
             'id': '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
             'name': 'fake_name',

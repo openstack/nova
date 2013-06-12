@@ -707,8 +707,8 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
             'task_name': 'The name of the task',
             'state': 'The state of the task',
             'host': 'compute-host1',
-            'period_beginning': str(datetime.datetime(2013, 02, 11)),
-            'period_ending': str(datetime.datetime(2013, 02, 12)),
+            'period_beginning': str(datetime.datetime(2013, 2, 11)),
+            'period_ending': str(datetime.datetime(2013, 2, 12)),
             'message': 'The task_log message',
             }
         result = task_log.insert().values(data).execute()
@@ -1433,8 +1433,8 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
             ('key_pairs', {'user_id': 1, 'name': "name_qwer", 'deleted': 0}),
             ('networks', {'vlan': '123', 'deleted': 0}),
             ('task_log', {'task_name': 'task_123', 'host': 'localhost',
-                          'period_beginning': datetime.datetime(2013, 02, 11),
-                          'period_ending': datetime.datetime(2015, 01, 01),
+                          'period_beginning': datetime.datetime(2013, 2, 11),
+                          'period_ending': datetime.datetime(2015, 1, 1),
                           'state': 'state_1', 'message': 'msg_1'}),
             ('virtual_interfaces', {'address': '192.168.0.0'})
         ]

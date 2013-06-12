@@ -1774,7 +1774,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # NOTE(vish): No need add the suffix to console.log
         libvirt_utils.write_to_file(
-            self._get_console_log_path(instance), '', 007)
+            self._get_console_log_path(instance), '', 7)
 
         if not disk_images:
             disk_images = {'image_id': instance['image_ref'],

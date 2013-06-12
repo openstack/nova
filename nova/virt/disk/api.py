@@ -425,7 +425,7 @@ def _setup_selinux_for_keys(fs, sshdir):
         restorecon.insert(0, '#!/bin/sh')
 
     _inject_file_into_fs(fs, rclocal, ''.join(restorecon), append=True)
-    fs.set_permissions(rclocal, 0700)
+    fs.set_permissions(rclocal, 0o700)
 
 
 def _inject_key_into_fs(key, fs):
@@ -439,7 +439,7 @@ def _inject_key_into_fs(key, fs):
     sshdir = os.path.join('root', '.ssh')
     fs.make_path(sshdir)
     fs.set_ownership(sshdir, "root", "root")
-    fs.set_permissions(sshdir, 0700)
+    fs.set_permissions(sshdir, 0o700)
 
     keyfile = os.path.join(sshdir, 'authorized_keys')
 
@@ -452,7 +452,7 @@ def _inject_key_into_fs(key, fs):
     ])
 
     _inject_file_into_fs(fs, keyfile, key_data, append=True)
-    fs.set_permissions(keyfile, 0600)
+    fs.set_permissions(keyfile, 0o600)
 
     _setup_selinux_for_keys(fs, sshdir)
 
@@ -467,7 +467,7 @@ def _inject_net_into_fs(net, fs):
     netdir = os.path.join('etc', 'network')
     fs.make_path(netdir)
     fs.set_ownership(netdir, "root", "root")
-    fs.set_permissions(netdir, 0744)
+    fs.set_permissions(netdir, 0o744)
 
     netfile = os.path.join('etc', 'network', 'interfaces')
     _inject_file_into_fs(fs, netfile, net)
