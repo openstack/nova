@@ -394,8 +394,10 @@ class ComputeManager(manager.SchedulerDependentManager):
                       instance_uuid=instance_uuid)
 
     def _get_instances_on_driver(self, context, filters=None):
-        """Return a list of instance records that match the instances found
-        on the hypervisor.
+        """Return a list of instance records for the instances found
+        on the hypervisor which satisfy the specified filters. If filters=None
+        return a list of instance records for all the instances found on the
+        hypervisor.
         """
         if not filters:
             filters = {}
@@ -404,10 +406,6 @@ class ComputeManager(manager.SchedulerDependentManager):
             filters['uuid'] = driver_uuids
             local_instances = self.conductor_api.instance_get_all_by_filters(
                     context, filters, columns_to_join=[])
-            local_instance_uuids = [inst['uuid'] for inst in local_instances]
-            for uuid in set(driver_uuids) - set(local_instance_uuids):
-                LOG.error(_('Instance %(uuid)s found in the hypervisor, but '
-                            'not in the database'), locals())
             return local_instances
         except NotImplementedError:
             pass
@@ -422,9 +420,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         for driver_instance in driver_instances:
             instance = name_map.get(driver_instance)
             if not instance:
-                LOG.error(_('Instance %(driver_instance)s found in the '
-                            'hypervisor, but not in the database'),
-                          locals())
                 continue
             local_instances.append(instance)
         return local_instances
