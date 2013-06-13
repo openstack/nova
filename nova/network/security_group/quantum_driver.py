@@ -179,7 +179,8 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
         Note: the Nova security group API doesn't support adding muliple
         security group rules at once but the EC2 one does. Therefore,
         this function is writen to support both. Multiple rules are
-        installed to a security group in quantum using bulk support."""
+        installed to a security group in quantum using bulk support.
+        """
 
         quantum = quantumv2.get_client(context)
         body = self._make_quantum_security_group_rules_list(vals)
@@ -265,7 +266,8 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
 
     def get_instances_security_groups_bindings(self, context):
         """Returns a dict(instance_id, [security_groups]) to allow obtaining
-        all of the instances and their security groups in one shot."""
+        all of the instances and their security groups in one shot.
+        """
         quantum = quantumv2.get_client(context)
         ports = quantum.list_ports().get('ports')
         security_groups = quantum.list_security_groups().get('security_groups')

@@ -154,8 +154,10 @@ class HostOps(object):
         self._stats = data
 
     def get_host_stats(self, refresh=False):
-        """Return the current state of the host. If 'refresh' is
-           True, run the update first."""
+        """Return the current state of the host.
+
+           If 'refresh' is True, run the update first.
+        """
         LOG.debug(_("get_host_stats called"))
 
         if refresh or not self._stats:

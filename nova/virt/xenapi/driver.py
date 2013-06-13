@@ -238,7 +238,8 @@ class XenAPIDriver(driver.ComputeDriver):
                                    instance_type, network_info,
                                    block_device_info=None):
         """Transfers the VHD of a running instance to another host, then shuts
-        off the instance copies over the COW disk"""
+        off the instance copies over the COW disk
+        """
         # NOTE(vish): Xen currently does not use network info.
         return self._vmops.migrate_disk_and_power_off(context, instance,
                     dest, instance_type, block_device_info)
@@ -307,7 +308,8 @@ class XenAPIDriver(driver.ComputeDriver):
 
     def get_all_bw_counters(self, instances):
         """Return bandwidth usage counters for each interface on each
-           running VM"""
+           running VM.
+        """
 
         # we only care about VMs that correspond to a nova-managed
         # instance:
@@ -456,13 +458,15 @@ class XenAPIDriver(driver.ComputeDriver):
 
     def get_instance_disk_info(self, instance_name):
         """Used by libvirt for live migration. We rely on xenapi
-        checks to do this for us."""
+        checks to do this for us.
+        """
         pass
 
     def pre_block_migration(self, ctxt, instance_ref, disk_info_json):
         """Used by libvirt for live migration. We rely on xenapi
         checks to do this for us. May be used in the future to
-        populate the vdi/vif maps"""
+        populate the vdi/vif maps.
+        """
         pass
 
     def live_migration(self, ctxt, instance_ref, dest,
@@ -524,29 +528,34 @@ class XenAPIDriver(driver.ComputeDriver):
         """Updates security group rules for all instances associated with a
         given security group.
 
-        Invoked when security group rules are updated."""
+        Invoked when security group rules are updated.
+        """
         return self._vmops.refresh_security_group_rules(security_group_id)
 
     def refresh_security_group_members(self, security_group_id):
         """Updates security group rules for all instances associated with a
         given security group.
 
-        Invoked when instances are added/removed to a security group."""
+        Invoked when instances are added/removed to a security group.
+        """
         return self._vmops.refresh_security_group_members(security_group_id)
 
     def refresh_instance_security_rules(self, instance):
         """Updates security group rules for specified instance.
 
         Invoked when instances are added/removed to a security group
-        or when a rule is added/removed to a security group."""
+        or when a rule is added/removed to a security group.
+        """
         return self._vmops.refresh_instance_security_rules(instance)
 
     def refresh_provider_fw_rules(self):
         return self._vmops.refresh_provider_fw_rules()
 
     def get_host_stats(self, refresh=False):
-        """Return the current state of the host. If 'refresh' is
-           True, run the update first."""
+        """Return the current state of the host.
+
+           If 'refresh' is True, run the update first.
+         """
         return self.host_state.get_host_stats(refresh=refresh)
 
     def host_power_action(self, host, action):
@@ -572,7 +581,8 @@ class XenAPIDriver(driver.ComputeDriver):
 
     def host_maintenance_mode(self, host, mode):
         """Start/Stop host maintenance window. On start, it triggers
-        guest VMs evacuation."""
+        guest VMs evacuation.
+        """
         return self._host.host_maintenance_mode(host, mode)
 
     def add_to_aggregate(self, context, aggregate, host, **kwargs):
@@ -670,7 +680,8 @@ class XenAPISession(object):
 
     def _get_product_version_and_brand(self):
         """Return a tuple of (major, minor, rev) for the host version and
-        a string of the product brand"""
+        a string of the product brand.
+        """
         software_version = self._get_software_version()
 
         product_version_str = software_version.get('product_version')

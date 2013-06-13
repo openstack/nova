@@ -57,7 +57,8 @@ class Host(object):
 
     def host_maintenance_mode(self, host, mode):
         """Start/Stop host maintenance window. On start, it triggers
-        guest VMs evacuation."""
+        guest VMs evacuation.
+        """
         host_mor = self._session._call_method(vim_util, "get_objects",
                                               "HostSystem")[0].obj
         LOG.debug(_("Set maintenance mod on %(host)s to %(mode)s") % locals())

@@ -136,7 +136,8 @@ class ComputeDriver(object):
 
     def init_host(self, host):
         """Initialize anything that is necessary for the driver to function,
-        including catching up with currently running VM's on the given host."""
+        including catching up with currently running VM's on the given host.
+        """
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
@@ -290,12 +291,14 @@ class ComputeDriver(object):
 
     def get_all_bw_counters(self, instances):
         """Return bandwidth usage counters for each interface on each
-           running VM"""
+           running VM.
+        """
         raise NotImplementedError()
 
     def get_all_volume_usage(self, context, compute_host_bdms):
         """Return usage info for volumes attached to vms on
-           a given host"""
+           a given host.-
+        """
         raise NotImplementedError()
 
     def get_host_ip_addr(self):
@@ -741,7 +744,8 @@ class ComputeDriver(object):
 
     def host_maintenance_mode(self, host, mode):
         """Start/Stop host maintenance window. On start, it triggers
-        guest VMs evacuation."""
+        guest VMs evacuation.
+        """
         raise NotImplementedError()
 
     def set_host_enabled(self, host, enabled):
@@ -922,7 +926,8 @@ class ComputeDriver(object):
         Register a callback to receive asynchronous event
         notifications from hypervisors. The callback will
         be invoked with a single parameter, which will be
-        an instance of the nova.virt.event.Event class."""
+        an instance of the nova.virt.event.Event class.
+        """
 
         self._compute_event_callback = callback
 
@@ -931,7 +936,8 @@ class ComputeDriver(object):
 
         Invokes the event callback registered by the
         compute manager to dispatch the event. This
-        must only be invoked from a green thread."""
+        must only be invoked from a green thread.
+        """
 
         if not self._compute_event_callback:
             LOG.debug("Discarding event %s" % str(event))

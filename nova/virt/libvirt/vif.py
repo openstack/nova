@@ -495,7 +495,8 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
 class LibvirtBridgeDriver(LibvirtGenericVIFDriver):
     """Retained in Grizzly for compatibility with Quantum
        drivers which do not yet report 'vif_type' port binding.
-       Will be deprecated in Havana, and removed in Ixxxx."""
+       Will be deprecated in Havana, and removed in Ixxxx.
+    """
 
     def get_config(self, instance, network, mapping, image_meta):
         LOG.deprecated(_("The LibvirtBridgeDriver VIF driver is now "
@@ -515,7 +516,8 @@ class LibvirtBridgeDriver(LibvirtGenericVIFDriver):
 class LibvirtOpenVswitchDriver(LibvirtGenericVIFDriver):
     """Retained in Grizzly for compatibility with Quantum
        drivers which do not yet report 'vif_type' port binding.
-       Will be deprecated in Havana, and removed in Ixxxx."""
+       Will be deprecated in Havana, and removed in Ixxxx.
+    """
 
     def get_bridge_name(self, network):
         return network.get('bridge') or CONF.libvirt_ovs_bridge
@@ -543,7 +545,8 @@ class LibvirtOpenVswitchDriver(LibvirtGenericVIFDriver):
 class LibvirtHybridOVSBridgeDriver(LibvirtGenericVIFDriver):
     """Retained in Grizzly for compatibility with Quantum
        drivers which do not yet report 'vif_type' port binding.
-       Will be deprecated in Havana, and removed in Ixxxx."""
+       Will be deprecated in Havana, and removed in Ixxxx.
+    """
 
     def get_bridge_name(self, network):
         return network.get('bridge') or CONF.libvirt_ovs_bridge
@@ -571,7 +574,8 @@ class LibvirtHybridOVSBridgeDriver(LibvirtGenericVIFDriver):
 class LibvirtOpenVswitchVirtualPortDriver(LibvirtGenericVIFDriver):
     """Retained in Grizzly for compatibility with Quantum
        drivers which do not yet report 'vif_type' port binding.
-       Will be deprecated in Havana, and removed in Ixxxx."""
+       Will be deprecated in Havana, and removed in Ixxxx.
+    """
 
     def get_bridge_name(self, network):
         return network.get('bridge') or CONF.libvirt_ovs_bridge
@@ -599,7 +603,8 @@ class LibvirtOpenVswitchVirtualPortDriver(LibvirtGenericVIFDriver):
 class QuantumLinuxBridgeVIFDriver(LibvirtGenericVIFDriver):
     """Retained in Grizzly for compatibility with Quantum
        drivers which do not yet report 'vif_type' port binding.
-       Will be deprecated in Havana, and removed in Ixxxx."""
+       Will be deprecated in Havana, and removed in Ixxxx.
+    """
 
     def get_bridge_name(self, network):
         def_bridge = ("brq" + network['id'])[:network_model.NIC_NAME_LEN]

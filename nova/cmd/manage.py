@@ -139,19 +139,22 @@ class ShellCommands(object):
     def bpython(self):
         """Runs a bpython shell.
 
-        Falls back to Ipython/python shell if unavailable"""
+        Falls back to Ipython/python shell if unavailable
+        """
         self.run('bpython')
 
     def ipython(self):
         """Runs an Ipython shell.
 
-        Falls back to Python shell if unavailable"""
+        Falls back to Python shell if unavailable
+        """
         self.run('ipython')
 
     def python(self):
         """Runs a python shell.
 
-        Falls back to Python shell if unavailable"""
+        Falls back to Python shell if unavailable
+        """
         self.run('python')
 
     @args('--shell', metavar='<bpython|ipython|python >',
@@ -193,7 +196,9 @@ class ShellCommands(object):
     @args('--path', metavar='<path>', help='Script path')
     def script(self, path):
         """Runs the script from the specified path with flags set properly.
-        arguments: path"""
+
+        arguments: path
+        """
         exec(compile(open(path).read(), path, 'exec'), locals(), globals())
 
 
@@ -335,13 +340,17 @@ class FixedIpCommands(object):
     @args('--address', metavar='<ip address>', help='IP address')
     def reserve(self, address):
         """Mark fixed ip as reserved
-        arguments: address"""
+
+        arguments: address
+        """
         return self._set_reserved(address, True)
 
     @args('--address', metavar='<ip address>', help='IP address')
     def unreserve(self, address):
         """Mark fixed ip as free to use
-        arguments: address"""
+
+        arguments: address
+        """
         return self._set_reserved(address, False)
 
     def _set_reserved(self, address, reserved):
@@ -421,8 +430,10 @@ class FloatingIpCommands(object):
 
     @args('--host', metavar='<host>', help='Host')
     def list(self, host=None):
-        """Lists all floating ips (optionally by host)
-        Note: if host is given, only active floating IPs are returned"""
+        """Lists all floating ips (optionally by host).
+
+        Note: if host is given, only active floating IPs are returned
+        """
         ctxt = context.get_admin_context()
         try:
             if host is None:
@@ -810,7 +821,8 @@ class HostCommands(object):
 
     def list(self, zone=None):
         """Show a list of all physical hosts. Filter by zone.
-        args: [zone]"""
+        args: [zone]
+        """
         print "%-25s\t%-15s" % (_('host'),
                                 _('zone'))
         ctxt = context.get_admin_context()
@@ -1008,7 +1020,9 @@ class AgentBuildCommands(object):
 
     def list(self, hypervisor=None):
         """Lists all agent builds.
-        arguments: <none>"""
+
+        arguments: <none>
+        """
         fmt = "%-10s  %-8s  %12s  %s"
         ctxt = context.get_admin_context()
         by_hypervisor = {}
@@ -1178,7 +1192,9 @@ CATEGORIES = {
 
 def methods_of(obj):
     """Get all callable methods of an object that don't start with underscore
-    returns a list of tuples of the form (method_name, method)"""
+
+    returns a list of tuples of the form (method_name, method)
+    """
     result = []
     for i in dir(obj):
         if callable(getattr(obj, i)) and not i.startswith('_'):

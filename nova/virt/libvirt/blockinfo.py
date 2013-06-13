@@ -84,7 +84,8 @@ def has_disk_dev(mapping, disk_dev):
        corresponding disk_info tuple has a device name
        matching disk_dev
 
-       Returns True if the disk_dev is in use."""
+       Returns True if the disk_dev is in use.
+    """
 
     for disk in mapping:
         info = mapping[disk]
@@ -102,7 +103,8 @@ def get_dev_prefix_for_disk_bus(disk_bus):
        form a disk dev 'hda'
 
        Returns the dev prefix or raises an
-       exception if the disk bus is unknown."""
+       exception if the disk bus is unknown.
+    """
 
     if CONF.libvirt_disk_prefix:
         return CONF.libvirt_disk_prefix
@@ -134,7 +136,8 @@ def get_dev_count_for_disk_bus(disk_bus):
        Determine how many disks can be supported in
        a single VM for a particular disk bus.
 
-       Returns the number of disks supported."""
+       Returns the number of disks supported.
+    """
 
     if disk_bus == "ide":
         return 4
@@ -201,7 +204,8 @@ def get_disk_bus_for_device_type(virt_type,
        return 'virtio', while for a CDROM it will return 'ide'
 
        Returns the disk_bus, or returns None if the device
-       type is not supported for this virtualization"""
+       type is not supported for this virtualization
+    """
 
     # Prefer a disk bus set against the image first of all
     if image_meta:
@@ -241,7 +245,8 @@ def get_disk_bus_for_disk_dev(virt_type, disk_dev):
        the currently configured virtualization technology
 
        Returns the disk bus, or raises an Exception if
-       the disk dev prefix is unknown."""
+       the disk dev prefix is unknown.
+    """
 
     if disk_dev[:2] == 'hd':
         return "ide"
@@ -274,7 +279,8 @@ def get_next_disk_info(mapping, disk_bus,
        determine the next available disk dev that can be assigned
        for the disk bus.
 
-       Returns the disk_info for the next available disk."""
+       Returns the disk_info for the next available disk.
+    """
 
     disk_dev = find_disk_dev_for_disk_bus(mapping,
                                           disk_bus,
@@ -298,7 +304,8 @@ def get_disk_mapping(virt_type, instance,
        'disk.local', 'disk.swap' and 'disk.config' images have
        been overriden by the block device mapping.
 
-       Returns the guest disk mapping for the devices."""
+       Returns the guest disk mapping for the devices.
+    """
 
     inst_type = flavors.extract_flavor(instance)
 
@@ -425,7 +432,8 @@ def get_disk_info(virt_type, instance, block_device_info=None,
             - cdrom_bus: the bus for CDROMs
             - mapping: the disk mapping
 
-       Returns the disk mapping disk."""
+       Returns the disk mapping disk.
+    """
 
     disk_bus = get_disk_bus_for_device_type(virt_type, image_meta, "disk")
     cdrom_bus = get_disk_bus_for_device_type(virt_type, image_meta, "cdrom")

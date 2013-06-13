@@ -47,7 +47,8 @@ def get_table(engine, name):
     """Returns an sqlalchemy table dynamically from db.
 
     Needed because the models don't work for us in migrations
-    as models will be far out of sync with the current data."""
+    as models will be far out of sync with the current data.
+    """
     metadata = MetaData()
     metadata.bind = engine
     return Table(name, metadata, autoload=True)

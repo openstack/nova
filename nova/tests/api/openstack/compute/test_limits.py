@@ -778,7 +778,8 @@ def wire_HTTPConnection_to_WSGI(host, app):
     """
     class HTTPConnectionDecorator(object):
         """Wraps the real HTTPConnection class so that when you instantiate
-        the class you might instead get a fake instance."""
+        the class you might instead get a fake instance.
+        """
 
         def __init__(self, wrapped):
             self.wrapped = wrapped

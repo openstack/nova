@@ -1069,7 +1069,8 @@ class VlanNetworkTestCase(test.TestCase):
 
     def test_ip_association_and_allocation_of_other_project(self):
         """Makes sure that we cannot deallocaate or disassociate
-        a public ip of other project"""
+        a public ip of other project.
+        """
 
         def network_get(_context, network_id, project_only="allow_none"):
             return networks[network_id]
@@ -1123,7 +1124,8 @@ class VlanNetworkTestCase(test.TestCase):
     def test_deallocate_fixed(self):
         """Verify that release is called properly.
 
-        Ensures https://bugs.launchpad.net/nova/+bug/973442 doesn't return"""
+        Ensures https://bugs.launchpad.net/nova/+bug/973442 doesn't return
+        """
 
         def network_get(_context, network_id, project_only="allow_none"):
             return networks[network_id]
@@ -1193,7 +1195,8 @@ class VlanNetworkTestCase(test.TestCase):
     def test_deallocate_fixed_no_vif(self):
         """Verify that deallocate doesn't raise when no vif is returned.
 
-        Ensures https://bugs.launchpad.net/nova/+bug/968457 doesn't return"""
+        Ensures https://bugs.launchpad.net/nova/+bug/968457 doesn't return
+        """
 
         def network_get(_context, network_id, project_only="allow_none"):
             return networks[network_id]
@@ -1905,7 +1908,8 @@ class RPCAllocateTestCase(test.TestCase):
         """Test to verify bug 855030 doesn't resurface.
 
         Mekes sure _rpc_allocate_fixed_ip returns a value so the call
-        returns properly and the greenpool completes."""
+        returns properly and the greenpool completes.
+        """
         address = '10.10.10.10'
 
         def fake_allocate(*args, **kwargs):

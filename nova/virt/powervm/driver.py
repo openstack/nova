@@ -69,7 +69,8 @@ class PowerVMDriver(driver.ComputeDriver):
 
     def init_host(self, host):
         """Initialize anything that is necessary for the driver to function,
-        including catching up with currently running VM's on the given host."""
+        including catching up with currently running VM's on the given host.
+        """
         pass
 
     def get_info(self, instance):

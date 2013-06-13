@@ -183,7 +183,8 @@ def create_image_bdm(image_ref, boot_index=0):
 
 def legacy_mapping(block_device_mapping):
     """Transform a list of block devices of an instance back to the
-    legacy data format."""
+    legacy data format.
+    """
 
     legacy_block_device_mapping = []
 

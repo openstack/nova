@@ -496,7 +496,8 @@ def _prep_stats_dict(values):
 @require_admin_context
 def compute_node_create(context, values):
     """Creates a new ComputeNode and populates the capacity fields
-    with the most recent data."""
+    with the most recent data.
+    """
     _prep_stats_dict(values)
     convert_datetimes(values, 'created_at', 'deleted_at', 'updated_at')
 

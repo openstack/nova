@@ -45,7 +45,8 @@ LOG = logging.getLogger(__name__)
 
 class LocalAPI(object):
     """A local version of the conductor API that does database updates
-    locally instead of via RPC"""
+    locally instead of via RPC.
+    """
 
     def __init__(self):
         # TODO(danms): This needs to be something more generic for

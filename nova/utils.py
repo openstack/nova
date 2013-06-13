@@ -208,7 +208,8 @@ def last_completed_audit_period(unit=None, before=None):
 
     returns:  2 tuple of datetimes (begin, end)
               The begin timestamp of this audit period is the same as the
-              end of the previous."""
+              end of the previous.
+    """
     if not unit:
         unit = CONF.instance_usage_audit_period
 
@@ -637,8 +638,11 @@ def get_shortened_ipv6_cidr(address):
 
 
 def is_valid_cidr(address):
-    """Check if the provided ipv4 or ipv6 address is a valid
-    CIDR address or not"""
+    """Check if address is valid
+
+    The provided address can be a IPv6 or a IPv4
+    CIDR address.
+    """
     try:
         # Validate the correct CIDR Address
         netaddr.IPNetwork(address)
@@ -661,8 +665,10 @@ def is_valid_cidr(address):
 
 
 def get_ip_version(network):
-    """Returns the IP version of a network (IPv4 or IPv6). Raises
-    AddrFormatError if invalid network."""
+    """Returns the IP version of a network (IPv4 or IPv6).
+
+    Raises AddrFormatError if invalid network.
+    """
     if netaddr.IPNetwork(network).version == 6:
         return "IPv6"
     elif netaddr.IPNetwork(network).version == 4:
@@ -1062,7 +1068,8 @@ def get_wrapped_function(function):
 
 class ExceptionHelper(object):
     """Class to wrap another and translate the ClientExceptions raised by its
-    function calls to the actual ones"""
+    function calls to the actual ones.
+    """
 
     def __init__(self, target):
         self._target = target

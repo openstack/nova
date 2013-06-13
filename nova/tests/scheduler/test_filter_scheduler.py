@@ -160,7 +160,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
     def test_schedule_happy_day(self):
         """Make sure there's nothing glaringly wrong with _schedule()
-        by doing a happy day pass through."""
+        by doing a happy day pass through.
+        """
 
         self.next_weight = 1.0
 
@@ -625,7 +626,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
     def test_schedule_large_host_pool(self):
         """Hosts should still be chosen if pool size
-        is larger than number of filtered hosts"""
+        is larger than number of filtered hosts.
+        """
 
         sched = fakes.FakeFilterScheduler()
 
@@ -653,7 +655,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
     def test_schedule_chooses_best_host(self):
         """If scheduler_host_subset_size is 1, the largest host with greatest
-        weight should be returned"""
+        weight should be returned.
+        """
 
         self.flags(scheduler_host_subset_size=1)
 
@@ -697,8 +700,10 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
     def test_select_hosts_happy_day(self):
         """select_hosts is basically a wrapper around the _select() method.
+
         Similar to the _select tests, this just does a happy path test to
-        ensure there is nothing glaringly wrong."""
+        ensure there is nothing glaringly wrong.
+        """
 
         self.next_weight = 1.0
 

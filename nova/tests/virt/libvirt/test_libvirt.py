@@ -309,6 +309,7 @@ class LibvirtConnTestCase(test.TestCase):
 
         class FakeConn():
             def getCapabilities(self):
+                """Ensure standard capabilities being returned."""
                 return """<capabilities>
                             <host><cpu><arch>x86_64</arch></cpu></host>
                           </capabilities>"""
@@ -4841,7 +4842,8 @@ class LibvirtDriverTestCase(test.TestCase):
 
     def test_migrate_disk_and_power_off_exception(self):
         """Test for nova.virt.libvirt.libvirt_driver.LivirtConnection
-        .migrate_disk_and_power_off. """
+        .migrate_disk_and_power_off.
+        """
 
         self.counter = 0
         self.checked_shared_storage = False
@@ -4885,7 +4887,8 @@ class LibvirtDriverTestCase(test.TestCase):
 
     def test_migrate_disk_and_power_off(self):
         """Test for nova.virt.libvirt.libvirt_driver.LivirtConnection
-        .migrate_disk_and_power_off. """
+        .migrate_disk_and_power_off.
+        """
 
         disk_info = [{'type': 'qcow2', 'path': '/test/disk',
                       'virt_disk_size': '10737418240',
@@ -4957,7 +4960,8 @@ class LibvirtDriverTestCase(test.TestCase):
 
     def _test_finish_migration(self, power_on):
         """Test for nova.virt.libvirt.libvirt_driver.LivirtConnection
-        .finish_migration. """
+        .finish_migration.
+        """
 
         disk_info = [{'type': 'qcow2', 'path': '/test/disk',
                       'local_gb': 10, 'backing_file': '/base/disk'},
@@ -5037,7 +5041,8 @@ class LibvirtDriverTestCase(test.TestCase):
 
     def _test_finish_revert_migration(self, power_on):
         """Test for nova.virt.libvirt.libvirt_driver.LivirtConnection
-        .finish_revert_migration. """
+        .finish_revert_migration.
+        """
         powered_on = power_on
         self.fake_create_domain_called = False
 
@@ -5324,8 +5329,7 @@ class LibvirtDriverTestCase(test.TestCase):
 
 
 class LibvirtVolumeUsageTestCase(test.TestCase):
-    """Test for nova.virt.libvirt.libvirt_driver.LibvirtDriver
-       .get_all_volume_usage"""
+    """Test for LibvirtDriver.get_all_volume_usage."""
 
     def setUp(self):
         super(LibvirtVolumeUsageTestCase, self).setUp()

@@ -41,7 +41,8 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
     def test_filter_hosts_avoid(self):
         """Test to make sure _filter_hosts() filters original hosts if
-        avoid_original_host is True."""
+        avoid_original_host is True.
+        """
 
         hosts = ['host1', 'host2', 'host3']
         request_spec = dict(instance_properties=dict(host='host2'))
@@ -53,7 +54,8 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
     def test_filter_hosts_no_avoid(self):
         """Test to make sure _filter_hosts() does not filter original
-        hosts if avoid_original_host is False."""
+        hosts if avoid_original_host is False.
+        """
 
         hosts = ['host1', 'host2', 'host3']
         request_spec = dict(instance_properties=dict(host='host2'))

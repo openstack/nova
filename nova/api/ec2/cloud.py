@@ -1369,7 +1369,8 @@ class CloudController(object):
 
     def terminate_instances(self, context, instance_id, **kwargs):
         """Terminate each instance in instance_id, which is a list of ec2 ids.
-        instance_id is a kwarg so its name cannot be modified."""
+        instance_id is a kwarg so its name cannot be modified.
+        """
         previous_states = self._ec2_ids_to_instances(context, instance_id)
         LOG.debug(_("Going to start terminating instances"))
         for instance in previous_states:
@@ -1388,7 +1389,8 @@ class CloudController(object):
 
     def stop_instances(self, context, instance_id, **kwargs):
         """Stop each instances in instance_id.
-        Here instance_id is a list of instance ids"""
+        Here instance_id is a list of instance ids
+        """
         instances = self._ec2_ids_to_instances(context, instance_id, True)
         LOG.debug(_("Going to stop instances"))
         for instance in instances:
@@ -1397,7 +1399,8 @@ class CloudController(object):
 
     def start_instances(self, context, instance_id, **kwargs):
         """Start each instances in instance_id.
-        Here instance_id is a list of instance ids"""
+        Here instance_id is a list of instance ids
+        """
         instances = self._ec2_ids_to_instances(context, instance_id, True)
         LOG.debug(_("Going to start instances"))
         for instance in instances:

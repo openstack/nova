@@ -1534,7 +1534,8 @@ def compile_metrics(start_time, stop_time=None):
     """Compile bandwidth usage, cpu, and disk metrics for all VMs on
        this host.
        Note that some stats, like bandwidth, do not seem to be very
-       accurate in some of the data from XenServer (mdragon). """
+       accurate in some of the data from XenServer (mdragon).
+    """
     start_time = int(start_time)
 
     xml = _get_rrd_updates(_get_rrd_server(), start_time)
@@ -2359,7 +2360,8 @@ def _prepare_injectables(inst, network_info):
 
 def ensure_correct_host(session):
     """Ensure we're connected to the host we're running on. This is the
-    required configuration for anything that uses vdi_attached_here."""
+    required configuration for anything that uses vdi_attached_here.
+    """
     this_vm_uuid = get_this_vm_uuid()
 
     try:

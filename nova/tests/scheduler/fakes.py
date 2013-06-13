@@ -77,7 +77,8 @@ class FakeHostManager(host_manager.HostManager):
     """host1: free_ram_mb=1024-512-512=0, free_disk_gb=1024-512-512=0
        host2: free_ram_mb=2048-512=1536  free_disk_gb=2048-512=1536
        host3: free_ram_mb=4096-1024=3072  free_disk_gb=4096-1024=3072
-       host4: free_ram_mb=8192  free_disk_gb=8192"""
+       host4: free_ram_mb=8192  free_disk_gb=8192
+    """
 
     def __init__(self):
         super(FakeHostManager, self).__init__()

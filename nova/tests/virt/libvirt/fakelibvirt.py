@@ -618,6 +618,7 @@ class Connection(object):
         self._event_callbacks[eventid] = [callback, opaque]
 
     def getCapabilities(self):
+        """Return spoofed capabilities."""
         return '''<capabilities>
   <host>
     <uuid>cef19ce0-0ca2-11df-855d-b19fbce37686</uuid>

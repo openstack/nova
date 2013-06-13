@@ -44,8 +44,11 @@ class GlanceFileRead(object):
         self.iter = self.get_next()
 
     def read(self, chunk_size):
-        """Read an item from the queue. The chunk size is ignored for the
-        Client ImageBodyIterator uses its own CHUNKSIZE."""
+        """Read an item from the queue.
+
+        The chunk size is ignored for the Client ImageBodyIterator
+        uses its own CHUNKSIZE.
+        """
         try:
             return self.iter.next()
         except StopIteration:

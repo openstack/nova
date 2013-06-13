@@ -1001,7 +1001,8 @@ class VMOps(object):
 
     def check_resize_func_name(self):
         """Check the function name used to resize an instance based
-        on product_brand and product_version."""
+        on product_brand and product_version.
+        """
 
         brand = self._session.product_brand
         version = self._session.product_version
@@ -1412,7 +1413,8 @@ class VMOps(object):
 
     def get_all_bw_counters(self):
         """Return running bandwidth counter for each interface on each
-           running VM"""
+           running VM.
+        """
         counters = vm_utils.fetch_bandwidth(self._session)
         bw = {}
         for vm_ref, vm_rec in vm_utils.list_vms(self._session):

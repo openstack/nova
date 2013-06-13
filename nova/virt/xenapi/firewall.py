@@ -63,8 +63,10 @@ class Dom0IptablesFirewallDriver(firewall.IptablesFirewallDriver):
 
     def _provider_rules(self):
         """Generate a list of rules from provider for IP4 & IP6.
+
         Note: We could not use the common code from virt.firewall because
-        XS doesn't accept the '-m multiport' option"""
+        XS doesn't accept the '-m multiport' option.
+        """
 
         ctxt = context.get_admin_context()
         ipv4_rules = []

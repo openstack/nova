@@ -235,7 +235,8 @@ def remove_flavor_access(flavorid, projectid, ctxt=None):
 
 def extract_flavor(instance, prefix=''):
     """Create an InstanceType-like object from instance's system_metadata
-    information."""
+    information.
+    """
 
     instance_type = {}
     sys_meta = utils.instance_sys_meta(instance)
@@ -253,7 +254,8 @@ def save_flavor_info(metadata, instance_type, prefix=''):
 
     This can be used to update system_metadata in place from a type, as well
     as stash information about another instance_type for later use (such as
-    during resize)."""
+    during resize).
+    """
 
     for key in system_metadata_flavor_props.keys():
         to_key = '%sinstance_type_%s' % (prefix, key)
@@ -263,7 +265,8 @@ def save_flavor_info(metadata, instance_type, prefix=''):
 
 def delete_flavor_info(metadata, *prefixes):
     """Delete flavor instance_type information from instance's system_metadata
-    by prefix."""
+    by prefix.
+    """
 
     for key in system_metadata_flavor_props.keys():
         for prefix in prefixes:

@@ -888,8 +888,10 @@ def network_delete_safe(context, network_id):
 
 def network_disassociate(context, network_id, disassociate_host=True,
                          disassociate_project=True):
-    """Disassociate the network from project or host and raise if it does
-    not exist."""
+    """Disassociate the network from project or host
+
+    Raises if it does not exist.
+    """
     return IMPL.network_disassociate(context, network_id, disassociate_host,
                                      disassociate_project)
 
@@ -1110,7 +1112,9 @@ def block_device_mapping_update(context, bdm_id, values, legacy=True):
 
 def block_device_mapping_update_or_create(context, values, legacy=True):
     """Update an entry of block device mapping.
-    If not existed, create a new entry"""
+
+    If not existed, create a new entry
+    """
     return IMPL.block_device_mapping_update_or_create(context, values, legacy)
 
 
@@ -1412,8 +1416,11 @@ def instance_type_extra_specs_delete(context, flavor_id, key):
 
 def instance_type_extra_specs_update_or_create(context, flavor_id,
                                                extra_specs):
-    """Create or update instance type extra specs. This adds or modifies the
-    key/value pairs specified in the extra specs dict argument"""
+    """Create or update instance type extra specs.
+
+    This adds or modifies the key/value pairs specified in the
+    extra specs dict argument
+    """
     IMPL.instance_type_extra_specs_update_or_create(context, flavor_id,
                                                     extra_specs)
 
@@ -1557,7 +1564,9 @@ def vol_usage_update(context, id, rd_req, rd_bytes, wr_req, wr_bytes,
                      last_refreshed=None, update_totals=False,
                      session=None):
     """Update cached volume usage for a volume
-       Creates new record if needed."""
+
+       Creates new record if needed.
+    """
     return IMPL.vol_usage_update(context, id, rd_req, rd_bytes, wr_req,
                                  wr_bytes, instance_id, project_id, user_id,
                                  availability_zone,
@@ -1607,7 +1616,8 @@ def aggregate_metadata_get_by_host(context, host, key=None):
 
     Returns a dictionary where each value is a set, this is to cover the case
     where there two aggregates have different values for the same key.
-    Optional key filter"""
+    Optional key filter
+    """
     return IMPL.aggregate_metadata_get_by_host(context, host, key)
 
 
@@ -1622,8 +1632,10 @@ def aggregate_host_get_by_metadata_key(context, key):
 
 
 def aggregate_update(context, aggregate_id, values):
-    """Update the attributes of an aggregates. If values contains a metadata
-    key, it updates the aggregate metadata too."""
+    """Update the attributes of an aggregates.
+
+    If values contains a metadata key, it updates the aggregate metadata too.
+    """
     return IMPL.aggregate_update(context, aggregate_id, values)
 
 

@@ -158,7 +158,8 @@ class Lockout(wsgi.Middleware):
 
     There is a possible race condition where simultaneous requests could
     sneak in before the lockout hits, but this is extremely rare and would
-    only result in a couple of extra failed attempts."""
+    only result in a couple of extra failed attempts.
+    """
 
     def __init__(self, application):
         """middleware can use fake for testing."""

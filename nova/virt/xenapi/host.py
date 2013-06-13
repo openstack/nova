@@ -49,7 +49,8 @@ class Host(object):
 
     def host_maintenance_mode(self, host, mode):
         """Start/Stop host maintenance window. On start, it triggers
-        guest VMs evacuation."""
+        guest VMs evacuation.
+        """
         if not mode:
             return 'off_maintenance'
         host_list = [host_ref for host_ref in

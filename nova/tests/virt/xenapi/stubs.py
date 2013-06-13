@@ -99,7 +99,9 @@ def stubout_determine_is_pv_objectstore(stubs):
 
 def stubout_is_snapshot(stubs):
     """Always returns true
-        xenapi fake driver does not create vmrefs for snapshots """
+
+        xenapi fake driver does not create vmrefs for snapshots.
+    """
 
     def f(*args):
         return True

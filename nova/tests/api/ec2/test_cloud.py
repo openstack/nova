@@ -2346,7 +2346,8 @@ class CloudTestCase(test.TestCase):
     def test_instance_initiated_shutdown_behavior(self):
         def test_dia_iisb(expected_result, **kwargs):
             """test describe_instance_attribute
-            attribute instance_initiated_shutdown_behavior"""
+            attribute instance_initiated_shutdown_behavior
+            """
             kwargs.update({'instance_type': CONF.default_flavor,
                            'max_count': 1})
             instance_id = self._run_instance(**kwargs)

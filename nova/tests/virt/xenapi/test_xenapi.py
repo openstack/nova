@@ -1780,7 +1780,8 @@ class CompareVersionTestCase(test.TestCase):
 
 class XenAPIHostTestCase(stubs.XenAPITestBase):
     """Tests HostState, which holds metrics from XenServer that get
-    reported back to the Schedulers."""
+    reported back to the Schedulers.
+    """
 
     def setUp(self):
         super(XenAPIHostTestCase, self).setUp()
@@ -2742,7 +2743,8 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
 
     def test_add_host_to_aggregate_invalid_changing_status(self):
         """Ensure InvalidAggregateAction is raised when adding host while
-        aggregate is not ready."""
+        aggregate is not ready.
+        """
         aggregate = self._aggregate_setup(aggr_state=pool_states.CHANGING)
         self.assertRaises(exception.InvalidAggregateAction,
                           self.conn.add_to_aggregate, self.context,
@@ -2750,7 +2752,8 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
 
     def test_add_host_to_aggregate_invalid_dismissed_status(self):
         """Ensure InvalidAggregateAction is raised when aggregate is
-        deleted."""
+        deleted.
+        """
         aggregate = self._aggregate_setup(aggr_state=pool_states.DISMISSED)
         self.assertRaises(exception.InvalidAggregateAction,
                           self.conn.add_to_aggregate, self.context,
@@ -2758,7 +2761,8 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
 
     def test_add_host_to_aggregate_invalid_error_status(self):
         """Ensure InvalidAggregateAction is raised when aggregate is
-        in error."""
+        in error.
+        """
         aggregate = self._aggregate_setup(aggr_state=pool_states.ERROR)
         self.assertRaises(exception.InvalidAggregateAction,
                           self.conn.add_to_aggregate, self.context,
@@ -2788,7 +2792,8 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
 
     def test_remove_host_from_aggregate_invalid_dismissed_status(self):
         """Ensure InvalidAggregateAction is raised when aggregate is
-        deleted."""
+        deleted.
+        """
         aggregate = self._aggregate_setup(aggr_state=pool_states.DISMISSED)
         self.assertRaises(exception.InvalidAggregateAction,
                           self.conn.remove_from_aggregate, self.context,
@@ -2796,7 +2801,8 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
 
     def test_remove_host_from_aggregate_invalid_changing_status(self):
         """Ensure InvalidAggregateAction is raised when aggregate is
-        changing."""
+        changing.
+        """
         aggregate = self._aggregate_setup(aggr_state=pool_states.CHANGING)
         self.assertRaises(exception.InvalidAggregateAction,
                           self.conn.remove_from_aggregate, self.context,
