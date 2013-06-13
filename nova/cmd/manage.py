@@ -72,7 +72,6 @@ from nova.openstack.common.db import exception as db_exc
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
-from nova.openstack.common import timeutils
 from nova import quota
 from nova import servicegroup
 from nova import version
@@ -655,7 +654,6 @@ class ServiceCommands(object):
         """
         servicegroup_api = servicegroup.API()
         ctxt = context.get_admin_context()
-        now = timeutils.utcnow()
         services = db.service_get_all(ctxt)
         services = availability_zones.set_availability_zones(ctxt, services)
         if host:
@@ -1003,13 +1001,12 @@ class AgentBuildCommands(object):
                 hypervisor='xen'):
         """Creates a new agent build."""
         ctxt = context.get_admin_context()
-        agent_build = db.agent_build_create(ctxt,
-                                            {'hypervisor': hypervisor,
-                                             'os': os,
-                                             'architecture': architecture,
-                                             'version': version,
-                                             'url': url,
-                                             'md5hash': md5hash})
+        db.agent_build_create(ctxt, {'hypervisor': hypervisor,
+                                     'os': os,
+                                     'architecture': architecture,
+                                     'version': version,
+                                     'url': url,
+                                     'md5hash': md5hash})
 
     def delete(self, os, architecture, hypervisor='xen'):
         """Deletes an existing agent build."""

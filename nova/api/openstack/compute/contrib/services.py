@@ -183,8 +183,7 @@ class ServiceController(object):
             raise webob.exc.HTTPUnprocessableEntity(detail=msg)
 
         try:
-            svc = self.host_api.service_update(context, host, binary,
-                                               status_detail)
+            self.host_api.service_update(context, host, binary, status_detail)
         except exception.ServiceNotFound:
             raise webob.exc.HTTPNotFound(_("Unknown service"))
 

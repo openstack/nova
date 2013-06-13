@@ -802,7 +802,6 @@ class CloudController(object):
             'detaching': 'in-use'}
 
         instance_ec2_id = None
-        instance_data = None
 
         if volume.get('instance_uuid', None):
             instance_uuid = volume['instance_uuid']
@@ -810,8 +809,7 @@ class CloudController(object):
                     instance_uuid)
 
             instance_ec2_id = ec2utils.id_to_ec2_inst_id(instance_uuid)
-            instance_data = '%s[%s]' % (instance_ec2_id,
-                                        instance['host'])
+
         v = {}
         v['volumeId'] = ec2utils.id_to_ec2_vol_id(volume['id'])
         v['status'] = valid_ec2_api_volume_status_map.get(volume['status'],

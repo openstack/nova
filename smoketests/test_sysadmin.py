@@ -161,7 +161,6 @@ class InstanceTests(base.UserSmokeTestCase):
         self.data['instance'] = reservation.instances[0]
 
     def test_003_instance_runs_within_60_seconds(self):
-        instance = self.data['instance']
         # allow 60 seconds to exit pending with IP
         if not self.wait_for_running(self.data['instance']):
             self.fail('instance failed to start')

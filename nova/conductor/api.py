@@ -395,7 +395,7 @@ class API(LocalAPI):
                 self.base_rpcapi.ping(context, '1.21 GigaWatts',
                                       timeout=timeout)
                 break
-            except rpc_common.Timeout as e:
+            except rpc_common.Timeout:
                 LOG.warning(_('Timed out waiting for nova-conductor. '
                                 'Is it running? Or did this service start '
                                 'before nova-conductor?'))

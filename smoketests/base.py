@@ -98,7 +98,7 @@ class SmokeTestCase(unittest.TestCase):
             try:
                 conn = self.connect_ssh(ip, key_name)
                 conn.close()
-            except Exception as e:
+            except Exception:
                 time.sleep(wait)
             else:
                 return True

@@ -494,7 +494,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                           'assuming it\'s not on shared storage'),
                         instance=instance)
             shared_storage = False
-        except Exception as e:
+        except Exception:
             LOG.exception(_('Failed to check if instance shared'),
                       instance=instance)
         finally:

@@ -60,7 +60,7 @@ class InterfaceAttachmentController(object):
 
         port_id = id
         try:
-            instance = self.compute_api.get(context, server_id)
+            self.compute_api.get(context, server_id)
         except exception.NotFound:
             raise exc.HTTPNotFound()
 

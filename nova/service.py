@@ -286,7 +286,7 @@ class Service(service.Service):
         """Perform basic config checks before starting processing."""
         # Make sure the tempdir exists and is writable
         try:
-            with utils.tempdir() as tmpdir:
+            with utils.tempdir():
                 pass
         except Exception as e:
             LOG.error(_('Temporary directory is invalid: %s'), e)

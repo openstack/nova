@@ -153,7 +153,7 @@ class AttestationService(object):
                 return httplib.OK, res
             return status_code, None
 
-        except (socket.error, IOError) as e:
+        except (socket.error, IOError):
             return IOError, None
 
     def _request(self, cmd, subcmd, hosts):

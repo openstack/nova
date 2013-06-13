@@ -57,7 +57,7 @@ class XCPVNCProxy(object):
         while True:
             try:
                 d = source.recv(32384)
-            except Exception as e:
+            except Exception:
                 d = None
 
             # If recv fails, send a write shutdown the other direction
@@ -68,7 +68,7 @@ class XCPVNCProxy(object):
             try:
                 # sendall raises an exception on write error, unlike send
                 dest.sendall(d)
-            except Exception as e:
+            except Exception:
                 source.close()
                 dest.close()
                 break
@@ -102,7 +102,6 @@ class XCPVNCProxy(object):
 
         client = req.environ['eventlet.input'].get_socket()
         client.sendall("HTTP/1.1 200 OK\r\n\r\n")
-        socketsserver = None
         sockets['client'] = client
         sockets['server'] = server
 
