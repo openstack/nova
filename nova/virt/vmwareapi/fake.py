@@ -60,6 +60,7 @@ def reset():
     create_network()
     create_host_network_system()
     create_host()
+    create_host()
     create_datacenter()
     create_datastore()
     create_res_pool()
@@ -351,10 +352,9 @@ class Network(ManagedObject):
 class ResourcePool(ManagedObject):
     """Resource Pool class."""
 
-    def __init__(self, name="test-rpool", value="resgroup-test"):
+    def __init__(self, name="test_ResPool", value="resgroup-test"):
         super(ResourcePool, self).__init__("rp")
         self.set("name", name)
-        self.set("name", "test_ResPool")
         summary = DataObject()
         runtime = DataObject()
         config = DataObject()
@@ -377,6 +377,7 @@ class ResourcePool(ManagedObject):
         config.memoryAllocation = memoryAllocation
         config.cpuAllocation = cpuAllocation
         self.set("summary", summary)
+        self.set("summary.runtime.memory", memory)
         self.set("config", config)
         parent = ManagedObjectReference(value=value,
                                         name=name)
@@ -414,17 +415,12 @@ class ClusterComputeResource(ManagedObject):
         summary.numEffectiveHosts = 0
         summary.totalMemory = 0
         summary.effectiveMemory = 0
+        summary.effectiveCpu = 10000
         self.set("summary", summary)
-        self.set("summary.effectiveCpu", 10000)
 
-    def _add_resource_pool(self, r_pool):
+    def _add_root_resource_pool(self, r_pool):
         if r_pool:
-            r_pools = self.get("resourcePool")
-            if r_pools is None:
-                r_pools = DataObject()
-                r_pools.ManagedObjectReference = []
-                self.set("resourcePool", r_pools)
-            r_pools.ManagedObjectReference.append(r_pool)
+            self.set("resourcePool", r_pool)
 
     def _add_host(self, host_sys):
         if host_sys:
@@ -544,6 +540,7 @@ class HostSystem(ManagedObject):
         self.set("capability.maxHostSupportedVcpus", 600)
         self.set("summary.runtime.inMaintenanceMode", False)
         self.set("runtime.connectionState", "connected")
+        self.set("summary.hardware", hardware)
         self.set("config.network.pnic", net_info_pnic)
         self.set("connected", connected)
 
@@ -672,8 +669,9 @@ def create_network():
 def create_cluster(name):
     cluster = ClusterComputeResource(name=name)
     cluster._add_host(_get_object_refs("HostSystem")[0])
+    cluster._add_host(_get_object_refs("HostSystem")[1])
     cluster._add_datastore(_get_object_refs("Datastore")[0])
-    cluster._add_resource_pool(_get_object_refs("ResourcePool")[0])
+    cluster._add_root_resource_pool(_get_object_refs("ResourcePool")[0])
     _create_object('ClusterComputeResource', cluster)
 
 

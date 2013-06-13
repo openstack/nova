@@ -167,15 +167,22 @@ def get_object_properties(vim, collector, mobj, type, properties):
 
 def get_dynamic_property(vim, mobj, type, property_name):
     """Gets a particular property of the Managed Object."""
-    obj_content = get_object_properties(vim, None, mobj, type, [property_name])
+    property_dict = get_dynamic_properties(vim, mobj, type, [property_name])
+    return property_dict.get(property_name)
+
+
+def get_dynamic_properties(vim, mobj, type, property_names):
+    """Gets the specified properties of the Managed Object."""
+    obj_content = get_object_properties(vim, None, mobj, type, property_names)
     if hasattr(obj_content, 'token'):
         vim.CancelRetrievePropertiesEx(token=obj_content.token)
-    property_value = None
+    property_dict = {}
     if obj_content.objects:
-        dynamic_property = obj_content.objects[0].propSet
-        if dynamic_property:
-            property_value = dynamic_property[0].val
-    return property_value
+        dynamic_properties = obj_content.objects[0].propSet
+        if dynamic_properties:
+            for prop in dynamic_properties:
+                property_dict[prop.name] = prop.val
+    return property_dict
 
 
 def get_objects(vim, type, properties_to_collect=None, all=False):
@@ -260,3 +267,8 @@ def get_properties_for_a_collection_of_objects(vim, type,
     return vim.RetrievePropertiesEx(
             vim.get_service_content().propertyCollector,
             specSet=[prop_filter_spec], options=options)
+
+
+def get_about_info(vim):
+    """Get the About Info from the service content."""
+    return vim.get_service_content().about
