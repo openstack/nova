@@ -44,8 +44,13 @@ cells_opts = [
                 help='Percentage of cell capacity to hold in reserve. '
                      'Affects both memory and disk utilization'),
     cfg.StrOpt('cell_type',
-                default=None,
-                help='Type of cell: api or compute'),
+               default=None,
+               help='Type of cell: api or compute'),
+    cfg.IntOpt("mute_child_interval",
+               default=300,
+               help='Number of seconds after which a lack of capability and '
+                     'capacity updates signals the child cell is to be '
+                     'treated as a mute.'),
 ]
 
 cfg.CONF.register_opts(cells_opts, group='cells')

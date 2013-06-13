@@ -42,6 +42,7 @@ LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
 CONF.import_opt('name', 'nova.cells.opts', group='cells')
 CONF.import_opt('reserve_percent', 'nova.cells.opts', group='cells')
+CONF.import_opt('mute_child_interval', 'nova.cells.opts', group='cells')
 #CONF.import_opt('capabilities', 'nova.cells.opts', group='cells')
 CONF.register_opts(cell_state_manager_opts, group='cells')
 
@@ -340,6 +341,9 @@ class CellStateManager(base.Base):
         capabs = copy.deepcopy(self.my_cell_state.capabilities)
         if include_children:
             for cell in self.child_cells.values():
+                if timeutils.is_older_than(cell.last_seen,
+                                CONF.cells.mute_child_interval):
+                    continue
                 for capab_name, values in cell.capabilities.items():
                     if capab_name not in capabs:
                         capabs[capab_name] = set([])
