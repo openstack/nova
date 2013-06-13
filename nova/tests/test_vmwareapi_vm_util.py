@@ -101,12 +101,10 @@ class VMwareVMUtilTestCase(test.TestCase):
                 fake_session(), cluster="fake-cluster")
 
     def test_get_host_ref_from_id(self):
-
-        fake_host_sys = fake.HostSystem(
-            fake.ManagedObjectReference("HostSystem", "host-123"))
+        fake_host_name = "ha-host"
+        fake_host_sys = fake.HostSystem(fake_host_name)
 
         fake_host_id = fake_host_sys.obj.value
-        fake_host_name = "ha-host"
 
         ref = vm_util.get_host_ref_from_id(
             fake_session([fake_host_sys]), fake_host_id, ['name'])
@@ -119,30 +117,20 @@ class VMwareVMUtilTestCase(test.TestCase):
         self.assertEquals(fake_host_name, host_name)
 
     def test_get_host_name_for_vm(self):
-
-        fake_vm = fake.ManagedObject(
-            "VirtualMachine", fake.ManagedObjectReference(
-                "vm-123", "VirtualMachine"))
-        fake_vm.propSet.append(
-            fake.Property('name', 'vm-123'))
+        fake_host = fake.HostSystem()
+        fake_host_id = fake_host.obj.value
+        fake_vm = fake.VirtualMachine(name='vm-123',
+                                      runtime_host=fake_host.obj)
 
         vm_ref = vm_util.get_vm_ref_from_name(
                 fake_session([fake_vm]), 'vm-123')
 
         self.assertIsNotNone(vm_ref)
 
-        fake_results = [
-            fake.ObjectContent(
-                None, [
-                    fake.Property('runtime.host',
-                              fake.ManagedObjectReference(
-                                'host-123', 'HostSystem'))
-                ])]
-
         host_id = vm_util.get_host_id_from_vm_ref(
-            fake_session(fake_results), vm_ref)
+            fake_session([fake_vm]), vm_ref)
 
-        self.assertEqual('host-123', host_id)
+        self.assertEqual(fake_host_id, host_id)
 
     def test_property_from_property_set(self):
 
