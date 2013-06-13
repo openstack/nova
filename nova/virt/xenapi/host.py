@@ -23,6 +23,7 @@ from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context
 from nova import exception
+from nova.objects import instance as instance_obj
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.virt.xenapi import pool_states
@@ -63,7 +64,7 @@ class Host(object):
                     uuid = vm_rec['other_config'].get('nova_uuid')
                     if not uuid:
                         name = vm_rec['name_label']
-                        uuid = _uuid_find(self._virtapi, ctxt, host, name)
+                        uuid = _uuid_find(ctxt, host, name)
                         if not uuid:
                             msg = _('Instance %(name)s running on %(host)s'
                                     ' could not be found in the database:'
@@ -207,11 +208,11 @@ def call_xenhost(session, method, arg_dict):
         return e.details[1]
 
 
-def _uuid_find(virtapi, context, host, name_label):
+def _uuid_find(context, host, name_label):
     """Return instance uuid by name_label."""
-    for i in virtapi.instance_get_all_by_host(context, host):
+    for i in instance_obj.InstanceList.get_by_host(context, host):
         if i.name == name_label:
-            return i['uuid']
+            return i.uuid
     return None
 
 
