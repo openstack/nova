@@ -32,14 +32,18 @@ from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests import matchers
+from nova import utils
 
 
 TEST_LIMITS = [
-    limits.Limit("GET", "/delayed", "^/delayed", 1, limits.PER_MINUTE),
-    limits.Limit("POST", "*", ".*", 7, limits.PER_MINUTE),
-    limits.Limit("POST", "/servers", "^/servers", 3, limits.PER_MINUTE),
-    limits.Limit("PUT", "*", "", 10, limits.PER_MINUTE),
-    limits.Limit("PUT", "/servers", "^/servers", 5, limits.PER_MINUTE),
+    limits.Limit("GET", "/delayed", "^/delayed", 1,
+                 utils.TIME_UNITS['MINUTE']),
+    limits.Limit("POST", "*", ".*", 7, utils.TIME_UNITS['MINUTE']),
+    limits.Limit("POST", "/servers", "^/servers", 3,
+                 utils.TIME_UNITS['MINUTE']),
+    limits.Limit("PUT", "*", "", 10, utils.TIME_UNITS['MINUTE']),
+    limits.Limit("PUT", "/servers", "^/servers", 5,
+                 utils.TIME_UNITS['MINUTE']),
 ]
 NS = {
     'atom': 'http://www.w3.org/2005/Atom',
@@ -312,7 +316,7 @@ class LimitsControllerTest(BaseLimitTestSuite):
                           req, 1, {})
 
 
-class TestLimiter(limits.Limiter):
+class MockLimiter(limits.Limiter):
     pass
 
 
@@ -331,12 +335,12 @@ class LimitMiddlewareTest(BaseLimitTestSuite):
         super(LimitMiddlewareTest, self).setUp()
         _limits = '(GET, *, .*, 1, MINUTE)'
         self.app = limits.RateLimitingMiddleware(self._empty_app, _limits,
-                                                 "%s.TestLimiter" %
+                                                 "%s.MockLimiter" %
                                                  self.__class__.__module__)
 
     def test_limit_class(self):
         # Test that middleware selected correct limiter class.
-        assert isinstance(self.app._limiter, TestLimiter)
+        assert isinstance(self.app._limiter, MockLimiter)
 
     def test_good_request(self):
         # Test successful GET request through middleware.
@@ -485,8 +489,8 @@ class ParseLimitsTest(BaseLimitTestSuite):
         self.assertEqual([t.value for t in l], expected)
 
         # ...and the units...
-        expected = [limits.PER_MINUTE, limits.PER_HOUR,
-                    limits.PER_SECOND, limits.PER_DAY]
+        expected = [utils.TIME_UNITS['MINUTE'], utils.TIME_UNITS['HOUR'],
+                    utils.TIME_UNITS['SECOND'], utils.TIME_UNITS['DAY']]
         self.assertEqual([t.unit for t in l], expected)
 
 
