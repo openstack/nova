@@ -277,6 +277,36 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
                           self.context, inst, dest, block_migration,
                           disk_over_commit)
 
+    def test_live_migration_set_vmstate_error(self):
+        inst = {"uuid": "fake-instance-id",
+                "vm_state": vm_states.ACTIVE, }
+
+        dest = 'fake_host'
+        block_migration = False
+        disk_over_commit = False
+
+        self._mox_schedule_method_helper('schedule_live_migration')
+        self.mox.StubOutWithMock(compute_utils, 'add_instance_fault_from_exc')
+        self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
+
+        self.manager.driver.schedule_live_migration(self.context,
+                    inst, dest, block_migration, disk_over_commit).AndRaise(
+                    ValueError)
+        db.instance_update_and_get_original(self.context, inst["uuid"],
+                                {"vm_state": vm_states.ERROR,
+                                }).AndReturn((inst, inst))
+        compute_utils.add_instance_fault_from_exc(self.context,
+                                mox.IsA(conductor_api.LocalAPI), inst,
+                                mox.IsA(ValueError),
+                                mox.IgnoreArg())
+
+        self.mox.ReplayAll()
+        self.stub_out_client_exceptions()
+        self.assertRaises(ValueError,
+                          self.manager.live_migration,
+                          self.context, inst, dest, block_migration,
+                          disk_over_commit)
+
     def test_prep_resize_no_valid_host_back_in_active_state(self):
         fake_instance_uuid = 'fake-instance-id'
         fake_instance = {'uuid': fake_instance_uuid}
