@@ -2952,16 +2952,15 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
         try:
             self.ensure_default(context)
 
-            if self.db.security_group_exists(context,
-                                             context.project_id, name):
-                msg = _('Security group %s already exists') % name
-                self.raise_group_already_exists(msg)
-
             group = {'user_id': context.user_id,
                      'project_id': context.project_id,
                      'name': name,
                      'description': description}
-            group_ref = self.db.security_group_create(context, group)
+            try:
+                group_ref = self.db.security_group_create(context, group)
+            except exception.SecurityGroupExists:
+                msg = _('Security group %s already exists') % name
+                self.raise_group_already_exists(msg)
             # Commit the reservation
             QUOTAS.commit(context, reservations)
         except Exception:

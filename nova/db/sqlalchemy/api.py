@@ -3213,7 +3213,12 @@ def _security_group_create(context, values, session=None):
     # once save() is called.  This will get cleaned up in next orm pass.
     security_group_ref.rules
     security_group_ref.update(values)
-    security_group_ref.save(session=session)
+    try:
+        security_group_ref.save(session=session)
+    except db_exc.DBDuplicateEntry:
+        raise exception.SecurityGroupExists(
+                project_id=values['project_id'],
+                security_group_name=values['name'])
     return security_group_ref
 
 
@@ -3308,15 +3313,6 @@ def security_group_get_by_instance(context, instance_uuid):
 
 
 @require_context
-def security_group_exists(context, project_id, group_name):
-    try:
-        group = security_group_get_by_name(context, project_id, group_name)
-        return group is not None
-    except exception.NotFound:
-        return False
-
-
-@require_context
 def security_group_in_use(context, group_id):
     session = get_session()
     with session.begin():
@@ -3356,7 +3352,15 @@ def security_group_update(context, security_group_id, values):
             raise exception.SecurityGroupNotFound(
                     security_group_id=security_group_id)
         security_group_ref.update(values)
-        return security_group_ref
+        name = security_group_ref['name']
+        project_id = security_group_ref['project_id']
+        try:
+            security_group_ref.save(session=session)
+        except db_exc.DBDuplicateEntry:
+            raise exception.SecurityGroupExists(
+                    project_id=project_id,
+                    security_group_name=name)
+    return security_group_ref
 
 
 def security_group_ensure_default(context):

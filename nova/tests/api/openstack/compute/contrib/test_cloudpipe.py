@@ -19,7 +19,6 @@ from oslo.config import cfg
 from nova.api.openstack.compute.contrib import cloudpipe
 from nova.api.openstack import wsgi
 from nova.compute import utils as compute_utils
-from nova import db
 from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.api.openstack import fakes
@@ -47,11 +46,6 @@ def compute_api_get_all(context, search_opts=None):
         return [fake_vpn_instance()]
 
 
-def db_security_group_exists(context, project_id, group_name):
-    # used in pipelib
-    return True
-
-
 def utils_vpn_ping(addr, port, timoeout=0.05, session_id=None):
     return True
 
@@ -63,8 +57,6 @@ class CloudpipeTest(test.TestCase):
         self.controller = cloudpipe.CloudpipeController()
         self.stubs.Set(self.controller.compute_api, "get_all",
                        compute_api_get_all_empty)
-        self.stubs.Set(db, "security_group_exists",
-                       db_security_group_exists)
         self.stubs.Set(utils, 'vpn_ping', utils_vpn_ping)
 
     def test_cloudpipe_list_no_network(self):

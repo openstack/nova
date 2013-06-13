@@ -741,6 +741,11 @@ class SecurityGroupNotFoundForRule(SecurityGroupNotFound):
     message = _("Security group with rule %(rule_id)s not found.")
 
 
+class SecurityGroupExists(Invalid):
+    message = _("Security group %(security_group_name)s already exists "
+                "for project %(project_id)s.")
+
+
 class SecurityGroupExistsForInstance(Invalid):
     message = _("Security group %(security_group_id)s is already associated"
                 " with the instance %(instance_id)s")

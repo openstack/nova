@@ -142,13 +142,14 @@ class CloudPipe(object):
 
     def setup_security_group(self, context):
         group_name = '%s%s' % (context.project_id, CONF.vpn_key_suffix)
-        if db.security_group_exists(context, context.project_id, group_name):
-            return group_name
         group = {'user_id': context.user_id,
                  'project_id': context.project_id,
                  'name': group_name,
                  'description': 'Group for vpn'}
-        group_ref = db.security_group_create(context, group)
+        try:
+            group_ref = db.security_group_create(context, group)
+        except exception.SecurityGroupExists:
+            return group_name
         rule = {'parent_group_id': group_ref['id'],
                 'cidr': '0.0.0.0/0',
                 'protocol': 'udp',

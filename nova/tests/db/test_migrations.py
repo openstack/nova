@@ -1669,6 +1669,36 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
                           cells.insert().execute,
                           {'name': 'name_123', 'deleted': 0})
 
+    def _pre_upgrade_190(self, engine):
+        security_groups = db_utils.get_table(engine, 'security_groups')
+        data = [
+            {'name': 'group1', 'project_id': 'fake', 'deleted': 0},
+            {'name': 'group1', 'project_id': 'fake', 'deleted': 0},
+            {'name': 'group2', 'project_id': 'fake', 'deleted': 0},
+        ]
+
+        for item in data:
+            security_groups.insert().values(item).execute()
+
+    def _check_190(self, engine, data):
+        security_groups = db_utils.get_table(engine, 'security_groups')
+
+        def get_(name, project_id, deleted):
+            deleted_value = 0 if not deleted else security_groups.c.id
+            return security_groups.select().\
+                        where(security_groups.c.name == name).\
+                        where(security_groups.c.project_id == project_id).\
+                        where(security_groups.c.deleted == deleted_value).\
+                        execute().\
+                        fetchall()
+
+        self.assertEqual(1, len(get_('group1', 'fake', False)))
+        self.assertEqual(1, len(get_('group1', 'fake', True)))
+        self.assertEqual(1, len(get_('group2', 'fake', False)))
+        self.assertRaises(sqlalchemy.exc.IntegrityError,
+                          security_groups.insert().execute,
+                          dict(name='group2', project_id='fake', deleted=0))
+
 
 class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""
