@@ -183,7 +183,7 @@ class CommonDeserializer(wsgi.MetadataXMLDeserializer):
 
         attributes = ["name", "imageRef", "flavorRef", "adminPass",
                       "accessIPv4", "accessIPv6", "key_name",
-                      "availability_zone", "min_count", "max_count"]
+                      "min_count", "max_count"]
         for attr in attributes:
             if server_node.getAttribute(attr):
                 server[attr] = server_node.getAttribute(attr)
@@ -895,13 +895,6 @@ class ServersController(wsgi.Controller):
         #    user_data = server_dict.get('user_data')
         #self._validate_user_data(user_data)
 
-        availability_zone = None
-        # TODO(cyeoh): bp v3-api-core-as-extensions
-        # Replace with an extension point when the
-        # os-availability-zone extension is ported
-        #if self.ext_mgr.is_loaded('os-availability-zone'):
-        #    availability_zone = server_dict.get('availability_zone')
-
         block_device_mapping = None
         # TODO(cyeoh): bp v3-api-core-as-extensions
         # Replace with an extension point when the os-volumes
@@ -977,7 +970,6 @@ class ServersController(wsgi.Controller):
                             requested_networks=requested_networks,
                             security_group=sg_names,
                             user_data=user_data,
-                            availability_zone=availability_zone,
                             block_device_mapping=block_device_mapping,
                             auto_disk_config=auto_disk_config,
                             **create_kwargs)

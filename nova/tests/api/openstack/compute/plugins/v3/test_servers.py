@@ -2711,33 +2711,6 @@ class ServersControllerCreateTest(test.TestCase):
     #     self._test_create_extra(params)
 
     # TODO(cyeoh): bp-v3-api-unittests
-    # This needs to be ported to the os-availability-zone extension tests
-    # def test_create_instance_with_availability_zone_enabled(self):
-    #     self.ext_mgr.extensions = {'os-availability-zone': 'fake'}
-    #     availability_zone = 'fake'
-    #     params = {'availability_zone': availability_zone}
-    #     old_create = compute_api.API.create
-
-    #     def create(*args, **kwargs):
-    #         self.assertEqual(kwargs['availability_zone'], availability_zone)
-    #         return old_create(*args, **kwargs)
-
-    #     self.stubs.Set(compute_api.API, 'create', create)
-    #     self._test_create_extra(params)
-
-    def test_create_instance_with_availability_zone_disabled(self):
-        availability_zone = 'fake'
-        params = {'availability_zone': availability_zone}
-        old_create = compute_api.API.create
-
-        def create(*args, **kwargs):
-            self.assertEqual(kwargs['availability_zone'], None)
-            return old_create(*args, **kwargs)
-
-        self.stubs.Set(compute_api.API, 'create', create)
-        self._test_create_extra(params)
-
-    # TODO(cyeoh): bp-v3-api-unittests
     # This needs to be ported to the os-multi-create extension tests
     # def test_create_instance_with_multiple_create_enabled(self):
     #     self.ext_mgr.extensions = {'os-multiple-create': 'fake'}
@@ -3841,21 +3814,6 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
                 "flavorRef": "1",
                 "networks": [{"uuid": "1", "fixed_ip": "10.0.1.12"},
                              {"uuid": "1", "fixed_ip": "10.0.2.12"}],
-                }}
-        self.assertEquals(request['body'], expected)
-
-    def test_request_with_availability_zone(self):
-        serial_request = """
-    <server xmlns="http://docs.openstack.org/compute/api/v2"
-     name="new-server-test" imageRef="1" flavorRef="1"
-     availability_zone="some_zone:some_host">
-    </server>"""
-        request = self.deserializer.deserialize(serial_request)
-        expected = {"server": {
-                "name": "new-server-test",
-                "imageRef": "1",
-                "flavorRef": "1",
-                "availability_zone": "some_zone:some_host",
                 }}
         self.assertEquals(request['body'], expected)
 
