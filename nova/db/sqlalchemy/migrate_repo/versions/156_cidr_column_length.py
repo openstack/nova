@@ -40,7 +40,7 @@ def upgrade(migrate_engine):
             migrate_engine.execute(
                 "ALTER TABLE %(table)s "
                 "ALTER COLUMN %(column)s TYPE INET USING %(column)s::INET"
-                % locals())
+                % {'table': table, 'column': column})
     else:
         for table, column in CIDR_TABLE_COLUMNS:
             t = Table(table, meta, autoload=True)
