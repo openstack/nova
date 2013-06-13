@@ -261,6 +261,27 @@ run --parallel` will run it in parallel (this is the default incantation tox
 uses.) More information about testr can be found at:
 http://wiki.openstack.org/testr
 
+Building Docs
+-------------
+Normal Sphinx docs can be built via the setuptools `build_sphinx` command. To
+do this via `tox`, simply run `tox -evenv -- python setup.py build_sphinx`,
+which will cause a virtualenv with all of the needed dependencies to be
+created and then inside of the virtualenv, the docs will be created and
+put into doc/build/html.
+
+If you'd like a PDF of the documentation, you'll need LaTeX installed, and
+additionally some fonts. On Ubuntu systems, you can get what you need with::
+
+    apt-get install texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended
+
+Then run `build_sphinx_latex`, change to the build dir and run `make`.
+Like so::
+
+    tox -evenv -- python setup.py build_sphinx_latex
+    cd build/sphinx/latex
+    make
+
+You should wind up with a PDF - Nova.pdf.
 
 oslo-incubator
 ----------------
