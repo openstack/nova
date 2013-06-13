@@ -51,7 +51,7 @@ CONF.import_opt('web', 'nova.cmd.novnc')
 
 def main():
     # Setup flags
-    CONF.set_defaults(CONF, web='/usr/share/novnc')
+    CONF.set_default('web', '/usr/share/novnc')
     config.parse_args(sys.argv)
 
     if CONF.ssl_only and not os.path.exists(CONF.cert):
