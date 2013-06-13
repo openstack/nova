@@ -3178,132 +3178,6 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create, req, body)
 
-    # TODO(cyeoh): bp-v3-api-unittests
-    # This needs to be ported to the os-config-drive extension tests
-    # def test_create_instance_with_config_drive(self):
-    #     self.ext_mgr.extensions = {'os-config-drive': 'fake'}
-    #     image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-    #     flavor_ref = 'http://localhost/v3/fake/flavors/3'
-    #     body = {
-    #         'server': {
-    #             'name': 'config_drive_test',
-    #             'imageRef': image_href,
-    #             'flavorRef': flavor_ref,
-    #             'metadata': {
-    #                 'hello': 'world',
-    #                 'open': 'stack',
-    #             },
-    #             'personality': {},
-    #             'config_drive': "true",
-    #         },
-    #     }
-
-    #     req = fakes.HTTPRequestV3.blank('/servers')
-    #     req.method = 'POST'
-    #     req.body = jsonutils.dumps(body)
-    #     req.headers["content-type"] = "application/json"
-    #     res = self.controller.create(req, body).obj
-
-    #     server = res['server']
-    #     self.assertEqual(FAKE_UUID, server['id'])
-
-    # TODO(cyeoh): bp-v3-api-unittests
-    # This needs to be ported to the os-config-drive extension tests
-    # def test_create_instance_with_config_drive_as_id(self):
-    #     self.ext_mgr.extensions = {'os-config-drive': 'fake'}
-    #     image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-    #     flavor_ref = 'http://localhost/v3/fake/flavors/3'
-    #     body = {
-    #         'server': {
-    #             'name': 'config_drive_test',
-    #             'imageRef': image_href,
-    #             'flavorRef': flavor_ref,
-    #             'metadata': {
-    #                 'hello': 'world',
-    #                 'open': 'stack',
-    #             },
-    #             'personality': {},
-    #             'config_drive': image_href,
-    #         },
-    #     }
-
-    #     req = fakes.HTTPRequestV3.blank('/servers')
-    #     req.method = 'POST'
-    #     req.body = jsonutils.dumps(body)
-    #     req.headers["content-type"] = "application/json"
-    #     res = self.controller.create(req, body).obj
-
-    #     server = res['server']
-    #     self.assertEqual(FAKE_UUID, server['id'])
-
-    # TODO(cyeoh): bp-v3-api-unittests
-    # This needs to be ported to the os-config-drive extension tests
-    # def test_create_instance_with_bad_config_drive(self):
-    #     self.ext_mgr.extensions = {'os-config-drive': 'fake'}
-    #     image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-    #     flavor_ref = 'http://localhost/v3/fake/flavors/3'
-    #     body = {
-    #         'server': {
-    #             'name': 'config_drive_test',
-    #             'imageRef': image_href,
-    #             'flavorRef': flavor_ref,
-    #             'metadata': {
-    #                 'hello': 'world',
-    #                 'open': 'stack',
-    #             },
-    #             'personality': {},
-    #             'config_drive': 'asdf',
-    #         },
-    #     }
-
-    #     req = fakes.HTTPRequestV3.blank('/servers')
-    #     req.method = 'POST'
-    #     req.body = jsonutils.dumps(body)
-    #     req.headers["content-type"] = "application/json"
-
-    #     self.assertRaises(webob.exc.HTTPBadRequest,
-    #                       self.controller.create, req, body)
-
-    # TODO(cyeoh): bp-v3-api-unittests
-    # This needs to be ported to the os-config-drive extension tests
-    # def test_create_instance_without_config_drive(self):
-    #     self.ext_mgr.extensions = {'os-config-drive': 'fake'}
-    #     image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-    #     flavor_ref = 'http://localhost/v3/fake/flavors/3'
-    #     body = {
-    #         'server': {
-    #             'name': 'config_drive_test',
-    #             'imageRef': image_href,
-    #             'flavorRef': flavor_ref,
-    #             'metadata': {
-    #                 'hello': 'world',
-    #                 'open': 'stack',
-    #             },
-    #             'personality': {},
-    #         },
-    #     }
-
-    #     req = fakes.HTTPRequestV3.blank('/servers')
-    #     req.method = 'POST'
-    #     req.body = jsonutils.dumps(body)
-    #     req.headers["content-type"] = "application/json"
-    #     res = self.controller.create(req, body).obj
-
-    #     server = res['server']
-    #     self.assertEqual(FAKE_UUID, server['id'])
-
-    def test_create_instance_with_config_drive_disabled(self):
-        config_drive = [{'config_drive': 'foo'}]
-        params = {'config_drive': config_drive}
-        old_create = compute_api.API.create
-
-        def create(*args, **kwargs):
-            self.assertEqual(kwargs['config_drive'], None)
-            return old_create(*args, **kwargs)
-
-        self.stubs.Set(compute_api.API, 'create', create)
-        self._test_create_extra(params)
-
     def test_create_instance_bad_href(self):
         image_href = 'asdf'
         flavor_ref = 'http://localhost/v3/flavors/3'
@@ -3507,7 +3381,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
 
     def setUp(self):
         super(TestServerCreateRequestXMLDeserializer, self).setUp()
-        self.deserializer = servers.CreateDeserializer()
+        self.deserializer = servers.CreateDeserializer(None)
 
     def test_minimal_request(self):
         serial_request = """
@@ -4063,26 +3937,6 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
                 ]
                 }}
         self.assertEquals(request['body'], expected)
-
-    # TODO(cyeoh): bp-v3-api-unittests
-    # This needs to be ported to the os-config-drive extension tests
-    # def test_request_with_config_drive(self):
-    #     serial_request = """
-    # <server xmlns="http://docs.openstack.org/compute/api/v2"
-    #     name="config_drive_test"
-    #     imageRef="1"
-    #     flavorRef="1"
-    #     config_drive="true"/>"""
-    #     request = self.deserializer.deserialize(serial_request)
-    #     expected = {
-    #         "server": {
-    #             "name": "config_drive_test",
-    #             "imageRef": "1",
-    #             "flavorRef": "1",
-    #             "config_drive": "true"
-    #         },
-    #     }
-    #     self.assertEquals(request['body'], expected)
 
     def test_corrupt_xml(self):
         """Should throw a 400 error on corrupt xml."""
