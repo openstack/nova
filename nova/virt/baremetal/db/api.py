@@ -121,42 +121,6 @@ def bm_node_associate_and_update(context, node_uuid, values):
     return IMPL.bm_node_associate_and_update(context, node_uuid, values)
 
 
-def bm_pxe_ip_create(context, address, server_address):
-    return IMPL.bm_pxe_ip_create(context, address, server_address)
-
-
-def bm_pxe_ip_create_direct(context, bm_pxe_ip):
-    return IMPL.bm_pxe_ip_create_direct(context, bm_pxe_ip)
-
-
-def bm_pxe_ip_destroy(context, ip_id):
-    return IMPL.bm_pxe_ip_destroy(context, ip_id)
-
-
-def bm_pxe_ip_destroy_by_address(context, address):
-    return IMPL.bm_pxe_ip_destroy_by_address(context, address)
-
-
-def bm_pxe_ip_get_all(context):
-    return IMPL.bm_pxe_ip_get_all(context)
-
-
-def bm_pxe_ip_get(context, ip_id):
-    return IMPL.bm_pxe_ip_get(context, ip_id)
-
-
-def bm_pxe_ip_get_by_bm_node_id(context, bm_node_id):
-    return IMPL.bm_pxe_ip_get_by_bm_node_id(context, bm_node_id)
-
-
-def bm_pxe_ip_associate(context, bm_node_id):
-    return IMPL.bm_pxe_ip_associate(context, bm_node_id)
-
-
-def bm_pxe_ip_disassociate(context, bm_node_id):
-    return IMPL.bm_pxe_ip_disassociate(context, bm_node_id)
-
-
 def bm_interface_get(context, if_id):
     return IMPL.bm_interface_get(context, if_id)
 

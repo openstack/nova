@@ -1746,6 +1746,13 @@ class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         columns = [c.name for c in bm_nodes.columns]
         self.assertNotIn(u'prov_mac_address', columns)
 
+    def _check_008(self, engine, data):
+        self.assertRaises(sqlalchemy.exc.NoSuchTableError,
+                          db_utils.get_table, engine, 'bm_pxe_ips')
+
+    def _post_downgrade_008(self, engine):
+        db_utils.get_table(engine, 'bm_pxe_ips')
+
 
 class ProjectTestCase(test.TestCase):
 

@@ -54,15 +54,6 @@ class BareMetalNode(BASE, models.NovaBase):
     swap_mb = Column(Integer)
 
 
-class BareMetalPxeIp(BASE, models.NovaBase):
-    __tablename__ = 'bm_pxe_ips'
-    id = Column(Integer, primary_key=True)
-    deleted = Column(Boolean, default=False)
-    address = Column(String(255), unique=True)
-    server_address = Column(String(255), unique=True)
-    bm_node_id = Column(Integer, ForeignKey('bm_nodes.id'), nullable=True)
-
-
 class BareMetalInterface(BASE, models.NovaBase):
     __tablename__ = 'bm_interfaces'
     id = Column(Integer, primary_key=True)
