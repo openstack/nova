@@ -789,15 +789,18 @@ class NetworkManager(manager.Manager):
                                     instance_uuid=instance_id, ip=address)
 
     def _validate_instance_zone_for_dns_domain(self, context, instance):
-        # FIXME(vish): The zone isn't usually set in the instance so I
-        #              believe this code needs to be changed.
-        instance_zone = instance.get('availability_zone')
         if not self.instance_dns_domain:
             return True
-
         instance_domain = self.instance_dns_domain
-        domainref = self.db.dnsdomain_get(context, instance_zone)
+
+        domainref = self.db.dnsdomain_get(context, instance_domain)
+        if domainref is None:
+            LOG.warn(_('instance-dns-zone not found |%s|.'),
+                     instance_domain, instance=instance)
+            return True
         dns_zone = domainref.availability_zone
+
+        instance_zone = instance.get('availability_zone')
         if dns_zone and (dns_zone != instance_zone):
             LOG.warn(_('instance-dns-zone is |%(domain)s|, '
                        'which is in availability zone |%(zone)s|. '
