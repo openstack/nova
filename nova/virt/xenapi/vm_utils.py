@@ -758,7 +758,7 @@ def resize_disk(session, instance, vdi_ref, instance_type):
 
     try:
         # Resize partition and filesystem down
-        auto_configure_disk(session, copy_ref, instance_type['root_gb'])
+        _auto_configure_disk(session, copy_ref, instance_type['root_gb'])
 
         # Create new VDI
         vdi_size = instance_type['root_gb'] * 1024 * 1024 * 1024
@@ -778,7 +778,7 @@ def resize_disk(session, instance, vdi_ref, instance_type):
         destroy_vdi(session, copy_ref)
 
 
-def auto_configure_disk(session, vdi_ref, new_gb):
+def _auto_configure_disk(session, vdi_ref, new_gb):
     """Partition and resize FS to match the size specified by
     flavors.root_gb.
 
@@ -798,12 +798,25 @@ def auto_configure_disk(session, vdi_ref, new_gb):
         partitions = _get_partitions(dev)
 
         if len(partitions) != 1:
-            return
+            reason = _('Disk must have only one partition.')
+            raise exception.CannotResizeDisk(reason=reason)
 
         _num, start, old_sectors, ptype = partitions[0]
         if ptype in ('ext3', 'ext4'):
             new_sectors = new_gb * 1024 * 1024 * 1024 / SECTOR_SIZE
             _resize_part_and_fs(dev, start, old_sectors, new_sectors)
+        else:
+            reason = _('Disk contains a filesystem '
+                       'we are unable to resize: %s')
+            raise exception.CannotResizeDisk(reason=(reason % ptype))
+
+
+def try_auto_configure_disk(session, vdi_ref, new_gb):
+    try:
+        _auto_configure_disk(session, vdi_ref, new_gb)
+    except exception.CannotResizeDisk as e:
+        msg = _('Attempted auto_configure_disk failed because: %s')
+        LOG.warn(msg % e)
 
 
 def _generate_disk(session, instance, vm_ref, userdevice, name_label,

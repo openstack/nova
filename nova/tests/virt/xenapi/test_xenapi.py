@@ -1322,6 +1322,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         db_fakes.stub_out_db_instance_api(self.stubs)
         xenapi_fake.create_network('fake', CONF.flat_network_bridge)
+        xenapi_fake.create_local_srs()
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id, self.project_id)
@@ -1542,16 +1543,40 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
                               dict(base_copy='hurr', cow='durr'),
                               network_info, image_meta, resize_instance=False)
 
-    def test_migrate_no_auto_disk_config_no_resize_down(self):
-        # Resize down should fail when auto_disk_config not set.
+    @stub_vm_utils_with_vdi_attached_here
+    def test_migrate_too_many_partitions_no_resize_down(self):
         instance_values = self.instance_values
         instance_values['root_gb'] = 40
-        instance_values['auto_disk_config'] = False
         instance = db.instance_create(self.context, instance_values)
         xenapi_fake.create_vm(instance['name'], 'Running')
         instance_type = db.instance_type_get_by_name(self.context, 'm1.small')
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
-        self.assertRaises(exception.ResizeError,
+
+        def fake_get_partitions(partition):
+            return [(1, 2, 3, 4), (1, 2, 3, 4)]
+
+        self.stubs.Set(vm_utils, '_get_partitions', fake_get_partitions)
+
+        self.assertRaises(exception.InstanceFaultRollback,
+                          conn.migrate_disk_and_power_off,
+                          self.context, instance,
+                          '127.0.0.1', instance_type, None)
+
+    @stub_vm_utils_with_vdi_attached_here
+    def test_migrate_bad_fs_type_no_resize_down(self):
+        instance_values = self.instance_values
+        instance_values['root_gb'] = 40
+        instance = db.instance_create(self.context, instance_values)
+        xenapi_fake.create_vm(instance['name'], 'Running')
+        instance_type = db.instance_type_get_by_name(self.context, 'm1.small')
+        conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
+
+        def fake_get_partitions(partition):
+            return [(1, 2, 3, "ext2")]
+
+        self.stubs.Set(vm_utils, '_get_partitions', fake_get_partitions)
+
+        self.assertRaises(exception.InstanceFaultRollback,
                           conn.migrate_disk_and_power_off,
                           self.context, instance,
                           '127.0.0.1', instance_type, None)
