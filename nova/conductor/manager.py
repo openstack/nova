@@ -338,6 +338,8 @@ class ConductorManager(manager.Manager):
         result = self.db.vol_get_usage_by_time(context, start_time)
         return jsonutils.to_primitive(result)
 
+    # NOTE(kerrin): The last_refreshed argument is unused by this method
+    # and can be removed in v2.0 of the RPC API.
     def vol_usage_update(self, context, vol_id, rd_req, rd_bytes, wr_req,
                          wr_bytes, instance, last_refreshed=None,
                          update_totals=False):
@@ -351,7 +353,7 @@ class ConductorManager(manager.Manager):
                                              instance['project_id'],
                                              instance['user_id'],
                                              instance['availability_zone'],
-                                             last_refreshed, update_totals,
+                                             update_totals,
                                              session)
 
         # We have just updated the database, so send the notification now

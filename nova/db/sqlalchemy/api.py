@@ -4402,19 +4402,18 @@ def vol_get_usage_by_time(context, begin):
 @require_context
 def vol_usage_update(context, id, rd_req, rd_bytes, wr_req, wr_bytes,
                      instance_id, project_id, user_id, availability_zone,
-                     last_refreshed=None, update_totals=False, session=None):
+                     update_totals=False, session=None):
     if not session:
         session = get_session()
 
-    if last_refreshed is None:
-        last_refreshed = timeutils.utcnow()
+    refreshed = timeutils.utcnow()
 
     with session.begin():
         values = {}
         # NOTE(dricco): We will be mostly updating current usage records vs
         # updating total or creating records. Optimize accordingly.
         if not update_totals:
-            values = {'curr_last_refreshed': last_refreshed,
+            values = {'curr_last_refreshed': refreshed,
                       'curr_reads': rd_req,
                       'curr_read_bytes': rd_bytes,
                       'curr_writes': wr_req,
@@ -4424,7 +4423,7 @@ def vol_usage_update(context, id, rd_req, rd_bytes, wr_req, wr_bytes,
                       'user_id': user_id,
                       'availability_zone': availability_zone}
         else:
-            values = {'tot_last_refreshed': last_refreshed,
+            values = {'tot_last_refreshed': refreshed,
                       'tot_reads': models.VolumeUsage.tot_reads + rd_req,
                       'tot_read_bytes': models.VolumeUsage.tot_read_bytes +
                                         rd_bytes,
@@ -4453,7 +4452,6 @@ def vol_usage_update(context, id, rd_req, rd_bytes, wr_req, wr_bytes,
                            "the database. Instance must have been rebooted "
                            "or crashed. Updating totals.") % id)
                 if not update_totals:
-                    values['tot_last_refreshed'] = last_refreshed
                     values['tot_reads'] = (models.VolumeUsage.tot_reads +
                                            current_usage['curr_reads'])
                     values['tot_read_bytes'] = (
@@ -4482,8 +4480,6 @@ def vol_usage_update(context, id, rd_req, rd_bytes, wr_req, wr_bytes,
             return current_usage
 
         vol_usage = models.VolumeUsage()
-        vol_usage.tot_last_refreshed = timeutils.utcnow()
-        vol_usage.curr_last_refreshed = timeutils.utcnow()
         vol_usage.volume_id = id
         vol_usage.instance_uuid = instance_id
         vol_usage.project_id = project_id
@@ -4491,11 +4487,13 @@ def vol_usage_update(context, id, rd_req, rd_bytes, wr_req, wr_bytes,
         vol_usage.availability_zone = availability_zone
 
         if not update_totals:
+            vol_usage.curr_last_refreshed = refreshed
             vol_usage.curr_reads = rd_req
             vol_usage.curr_read_bytes = rd_bytes
             vol_usage.curr_writes = wr_req
             vol_usage.curr_write_bytes = wr_bytes
         else:
+            vol_usage.tot_last_refreshed = refreshed
             vol_usage.tot_reads = rd_req
             vol_usage.tot_read_bytes = rd_bytes
             vol_usage.tot_writes = wr_req

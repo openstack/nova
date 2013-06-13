@@ -14,6 +14,8 @@
 
 """Tests for the conductor service."""
 
+import datetime
+
 import mox
 
 from nova.api.ec2 import ec2utils
@@ -376,35 +378,24 @@ class _BaseTestCase(object):
     def test_vol_usage_update(self):
         # the vol_usage_update method sends the volume usage notifications
         # as well as updating the database
-        self.mox.StubOutWithMock(db, 'vol_usage_update')
+        now = datetime.datetime(1, 1, 1)
+        self.mox.StubOutWithMock(timeutils, 'utcnow')
+        # nova.context
+        timeutils.utcnow().AndReturn(0)
+        # vol_usage_update 1
+        timeutils.utcnow().AndReturn(now)
+        # openstack.common.notifier
+        timeutils.utcnow().AndReturn(now)
+        self.mox.ReplayAll()
+
         inst = self._create_fake_instance({
                 'project_id': 'fake-project_id',
                 'user_id': 'fake-user_id',
                 })
-        fake_usage = {'tot_last_refreshed': 20,
-                      'curr_last_refreshed': 10,
-                      'volume_id': 'fake-vol',
-                      'instance_uuid': inst['uuid'],
-                      'project_id': 'fake-project_id',
-                      'user_id': 'fake-user_id',
-                      'availability_zone': 'fake-az',
-                      'tot_reads': 11,
-                      'curr_reads': 22,
-                      'tot_read_bytes': 33,
-                      'curr_read_bytes': 44,
-                      'tot_writes': 55,
-                      'curr_writes': 66,
-                      'tot_write_bytes': 77,
-                      'curr_write_bytes': 88}
-        db.vol_usage_update(self.context, 'fake-vol', 'rd-req', 'rd-bytes',
-                            'wr-req', 'wr-bytes', inst['uuid'],
-                            'fake-project_id', 'fake-user_id', 'fake-az',
-                            'fake-refr', 'fake-bool', mox.IgnoreArg()).\
-                            AndReturn(fake_usage)
-        self.mox.ReplayAll()
-        self.conductor.vol_usage_update(self.context, 'fake-vol', 'rd-req',
-                                        'rd-bytes', 'wr-req', 'wr-bytes',
-                                        inst, 'fake-refr', 'fake-bool')
+
+        self.conductor.vol_usage_update(self.context, 'fake-vol',
+                                        22, 33, 44, 55, inst,
+                                        '2013-06-05T16:53:27.0', False)
 
         self.assertEquals(len(test_notifier.NOTIFICATIONS), 1)
         msg = test_notifier.NOTIFICATIONS[0]
@@ -412,11 +403,72 @@ class _BaseTestCase(object):
         self.assertEquals(payload['instance_id'], inst['uuid'])
         self.assertEquals(payload['user_id'], 'fake-user_id')
         self.assertEquals(payload['tenant_id'], 'fake-project_id')
-        self.assertEquals(payload['reads'], 33)
-        self.assertEquals(payload['read_bytes'], 77)
-        self.assertEquals(payload['writes'], 121)
-        self.assertEquals(payload['write_bytes'], 165)
+        self.assertEquals(payload['reads'], 22)
+        self.assertEquals(payload['read_bytes'], 33)
+        self.assertEquals(payload['writes'], 44)
+        self.assertEquals(payload['write_bytes'], 55)
         self.assertEquals(payload['availability_zone'], 'fake-az')
+        self.assertEquals(payload['last_refreshed'], '0001-01-01 00:00:00')
+
+        # We need to unset and verify that we call the timutils.utcnow method
+        # correctly now, as this method gets called as part of the setup
+        # for the ConductorAPITestCase testcase.
+        self.mox.UnsetStubs()
+        self.mox.VerifyAll()
+
+    def test_vol_usage_update_again(self):
+        # Test updating the volume usage a second time and make sure that
+        # the database queries to update and generate the volume usage
+        # event payload continue to work
+        now = datetime.datetime(1, 1, 1, 0, 0, 0)
+        self.mox.StubOutWithMock(timeutils, 'utcnow')
+        # nova.context
+        timeutils.utcnow().AndReturn(0)
+
+        # vol_usage_update call
+        timeutils.utcnow().AndReturn(now)
+        # openstack.common.notifier
+        timeutils.utcnow().AndReturn(now)
+
+        now2 = datetime.datetime(1, 1, 1, 0, 1, 0)
+        # vol_usage_update second call
+        timeutils.utcnow().AndReturn(now2)
+        # openstack.common.notifier
+        timeutils.utcnow().AndReturn(now2)
+
+        self.mox.ReplayAll()
+
+        inst = self._create_fake_instance({
+                'project_id': 'fake-project_id',
+                'user_id': 'fake-user_id',
+                })
+
+        self.conductor.vol_usage_update(self.context, 'fake-vol',
+                                        22, 33, 44, 55, inst,
+                                        '2013-06-05T16:53:27.0', False)
+
+        self.conductor.vol_usage_update(self.context, 'fake-vol',
+                                        122, 133, 144, 155, inst,
+                                        '2013-06-05T16:53:27.0', False)
+
+        self.assertEquals(len(test_notifier.NOTIFICATIONS), 2)
+        msg = test_notifier.NOTIFICATIONS[1]
+        payload = msg['payload']
+        self.assertEquals(payload['instance_id'], inst['uuid'])
+        self.assertEquals(payload['user_id'], 'fake-user_id')
+        self.assertEquals(payload['tenant_id'], 'fake-project_id')
+        self.assertEquals(payload['reads'], 122)
+        self.assertEquals(payload['read_bytes'], 133)
+        self.assertEquals(payload['writes'], 144)
+        self.assertEquals(payload['write_bytes'], 155)
+        self.assertEquals(payload['availability_zone'], 'fake-az')
+        self.assertEquals(payload['last_refreshed'], '0001-01-01 00:01:00')
+
+        # We need to unset and verify that we call the timutils.utcnow method
+        # correctly now, as this method gets called as part of the setup
+        # for the ConductorAPITestCase testcase.
+        self.mox.UnsetStubs()
+        self.mox.VerifyAll()
 
     def test_compute_node_create(self):
         self.mox.StubOutWithMock(db, 'compute_node_create')

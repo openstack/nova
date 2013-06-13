@@ -290,8 +290,13 @@ def usage_volume_info(vol_usage):
 
     tot_refreshed = vol_usage['tot_last_refreshed']
     curr_refreshed = vol_usage['curr_last_refreshed']
-    last_refreshed_time = (tot_refreshed if tot_refreshed > curr_refreshed
-                           else curr_refreshed)
+    if tot_refreshed and curr_refreshed:
+        last_refreshed_time = max(tot_refreshed, curr_refreshed)
+    elif tot_refreshed:
+        last_refreshed_time = tot_refreshed
+    else:
+        # curr_refreshed must be set
+        last_refreshed_time = curr_refreshed
 
     usage_info = dict(
           volume_id=vol_usage['volume_id'],
