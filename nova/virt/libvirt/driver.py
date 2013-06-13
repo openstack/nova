@@ -714,6 +714,11 @@ class LibvirtDriver(driver.ComputeDriver):
                     state = LIBVIRT_POWER_STATE[state]
                     if state == power_state.SHUTDOWN:
                         is_okay = True
+                elif errcode == libvirt.VIR_ERR_OPERATION_TIMEOUT:
+                    LOG.warn(_("Cannot destroy instance, operation time out"),
+                            instance=instance)
+                    reason = _("operation time out")
+                    raise exception.InstancePowerOffFailure(reason=reason)
 
                 if not is_okay:
                     with excutils.save_and_reraise_exception():
