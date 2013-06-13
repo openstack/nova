@@ -26,6 +26,7 @@ inline callbacks.
 import eventlet
 eventlet.monkey_patch(os=False)
 
+import copy
 import os
 import shutil
 import sys
@@ -234,8 +235,12 @@ class TestCase(testtools.TestCase):
             self.useFixture(_DB_CACHE)
 
         # NOTE(danms): Make sure to reset us back to non-remote objects
-        # for each test to avoid interactions.
+        # for each test to avoid interactions. Also, backup the object
+        # registry.
         objects_base.NovaObject.indirection_api = None
+        self._base_test_obj_backup = copy.copy(
+            objects_base.NovaObject._obj_classes)
+        self.addCleanup(self._restore_obj_registry)
 
         mox_fixture = self.useFixture(MoxStubout())
         self.mox = mox_fixture.mox
@@ -245,6 +250,9 @@ class TestCase(testtools.TestCase):
         self.policy = self.useFixture(policy_fixture.PolicyFixture())
         CONF.set_override('fatal_exception_format_errors', True)
         CONF.set_override('enabled', True, 'osapi_v3')
+
+    def _restore_obj_registry(self):
+        objects_base.NovaObject._obj_classes = self._base_test_obj_backup
 
     def _clear_attrs(self):
         # Delete attributes that don't start with _ so they don't pin
