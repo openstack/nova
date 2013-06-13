@@ -444,12 +444,6 @@ class FakeVirtAPI(virtapi.VirtAPI):
                                                    instance_uuid,
                                                    updates)
 
-    def instance_get_by_uuid(self, context, instance_uuid):
-        return db.instance_get_by_uuid(context, instance_uuid)
-
-    def instance_get_all_by_host(self, context, host):
-        return db.instance_get_all_by_host(context, host)
-
     def aggregate_get_by_host(self, context, host, key=None):
         return db.aggregate_get_by_host(context, host, key=key)
 

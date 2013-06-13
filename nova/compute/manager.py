@@ -304,14 +304,6 @@ class ComputeVirtAPI(virtapi.VirtAPI):
                                               instance_uuid,
                                               **updates)
 
-    def instance_get_by_uuid(self, context, instance_uuid):
-        return self._compute.conductor_api.instance_get_by_uuid(
-            context, instance_uuid)
-
-    def instance_get_all_by_host(self, context, host):
-        return self._compute.conductor_api.instance_get_all_by_host(
-            context, host)
-
     def aggregate_get_by_host(self, context, host, key=None):
         return self._compute.conductor_api.aggregate_get_by_host(context,
                                                                  host, key=key)
