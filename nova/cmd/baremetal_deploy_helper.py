@@ -32,6 +32,7 @@ from wsgiref import simple_server
 
 from nova import config
 from nova import context as nova_context
+from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
 from nova import utils
@@ -186,7 +187,12 @@ def work_on_disk(dev, root_mb, swap_mb, image_path):
         return
     dd(image_path, root_part)
     mkswap(swap_part)
-    root_uuid = block_uuid(root_part)
+
+    try:
+        root_uuid = block_uuid(root_part)
+    except processutils.ProcessExecutionError as err:
+        with excutils.save_and_reraise_exception():
+            LOG.error("Failed to detect root device UUID.")
     return root_uuid
 
 
@@ -201,14 +207,15 @@ def deploy(address, port, iqn, lun, image_path, pxe_config_path,
     login_iscsi(address, port, iqn)
     try:
         root_uuid = work_on_disk(dev, root_mb, swap_mb, image_path)
-        switch_pxe_config(pxe_config_path, root_uuid)
     except processutils.ProcessExecutionError as err:
-        # Log output if there was a error
-        LOG.error("Cmd     : %s" % err.cmd)
-        LOG.error("StdOut  : %s" % err.stdout)
-        LOG.error("StdErr  : %s" % err.stderr)
+        with excutils.save_and_reraise_exception():
+            # Log output if there was a error
+            LOG.error("Cmd     : %s" % err.cmd)
+            LOG.error("StdOut  : %s" % err.stdout)
+            LOG.error("StdErr  : %s" % err.stderr)
     finally:
         logout_iscsi(address, port, iqn)
+    switch_pxe_config(pxe_config_path, root_uuid)
     # Ensure the node started netcat on the port after POST the request.
     time.sleep(3)
     notify(address, 10000)
