@@ -20,6 +20,7 @@
 
 import os.path
 import tempfile
+import testtools
 
 import eventlet
 import httplib2
@@ -27,6 +28,7 @@ import paste
 
 import nova.exception
 from nova import test
+from nova.tests import utils
 import nova.wsgi
 import urllib2
 import webob
@@ -101,6 +103,7 @@ class TestWSGIServer(test.TestCase):
         server.stop()
         server.wait()
 
+    @testtools.skipIf(not utils.is_ipv6_supported(), "no ipv6 support")
     def test_start_random_port_with_ipv6(self):
         server = nova.wsgi.Server("test_random_port", None,
             host="::1", port=0)
@@ -198,6 +201,7 @@ class TestWSGIServerWithSSL(test.TestCase):
         fake_ssl_server.stop()
         fake_ssl_server.wait()
 
+    @testtools.skipIf(not utils.is_ipv6_supported(), "no ipv6 support")
     def test_app_using_ipv6_and_ssl(self):
         greetings = 'Hello, World!!!'
 
@@ -210,6 +214,7 @@ class TestWSGIServerWithSSL(test.TestCase):
                                   host="::1",
                                   port=0,
                                   use_ssl=True)
+
         server.start()
 
         response = urllib2.urlopen('https://[::1]:%d/' % server.port)

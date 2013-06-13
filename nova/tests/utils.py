@@ -14,7 +14,9 @@
 #    License for the specific language governing permissions and limitations
 #
 
+import errno
 import platform
+import socket
 
 from oslo.config import cfg
 
@@ -200,3 +202,15 @@ def killer_xml_body():
         'c': '&b;' * 10,
         'd': '&c;' * 9999,
     }).strip()
+
+
+def is_ipv6_supported():
+    has_ipv6_support = True
+    try:
+        s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+    except socket.error as e:
+        if e.errno == errno.EAFNOSUPPORT:
+            has_ipv6_support = False
+        else:
+            raise e
+    return has_ipv6_support

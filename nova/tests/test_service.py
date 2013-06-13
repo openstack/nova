@@ -21,6 +21,7 @@ Unit Tests for remote procedure calls using queue
 """
 
 import sys
+import testtools
 
 import mox
 from oslo.config import cfg
@@ -31,6 +32,7 @@ from nova import exception
 from nova import manager
 from nova import service
 from nova import test
+from nova.tests import utils
 from nova import wsgi
 
 test_service_opts = [
@@ -184,6 +186,7 @@ class TestWSGIService(test.TestCase):
         self.assertNotEqual(0, test_service.port)
         test_service.stop()
 
+    @testtools.skipIf(not utils.is_ipv6_supported(), "no ipv6 support")
     def test_service_random_port_with_ipv6(self):
         CONF.set_default("test_service_listen", "::1")
         test_service = service.WSGIService("test_service")
