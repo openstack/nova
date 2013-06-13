@@ -39,15 +39,6 @@ class CertificateTemplate(xmlutil.TemplateBuilder):
         return xmlutil.MasterTemplate(root, 1)
 
 
-class CertificatesTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('certificates')
-        elem = xmlutil.SubTemplateElement(root, 'certificate',
-                                          selector='certificates')
-        make_certificate(elem)
-        return xmlutil.MasterTemplate(root, 1)
-
-
 def _translate_certificate_view(certificate, private_key=None):
     return {
         'data': certificate,
@@ -65,7 +56,7 @@ class CertificatesController(object):
 
     @wsgi.serializers(xml=CertificateTemplate)
     def show(self, req, id):
-        """Return a list of certificates."""
+        """Return certificate information."""
         context = req.environ['nova.context']
         authorize(context)
         if id != 'root':
@@ -77,7 +68,7 @@ class CertificatesController(object):
 
     @wsgi.serializers(xml=CertificateTemplate)
     def create(self, req, body=None):
-        """Return a list of certificates."""
+        """Create a certificate."""
         context = req.environ['nova.context']
         authorize(context)
         pk, cert = self.cert_rpcapi.generate_x509_cert(context,
