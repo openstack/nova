@@ -246,9 +246,8 @@ class _BaseTestCase(object):
         self.mox.StubOutWithMock(db, 'aggregate_metadata_delete')
         db.aggregate_metadata_delete(mox.IgnoreArg(), aggregate['id'], 'fake')
         self.mox.ReplayAll()
-        result = self.conductor.aggregate_metadata_delete(self.context,
-                                                       aggregate,
-                                                       'fake')
+        self.conductor.aggregate_metadata_delete(self.context, aggregate,
+                                                 'fake')
 
     def test_aggregate_metadata_get_by_host(self):
         self.mox.StubOutWithMock(db, 'aggregate_metadata_get_by_host')

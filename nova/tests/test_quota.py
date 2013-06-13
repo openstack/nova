@@ -227,7 +227,7 @@ class QuotaIntegrationTestCase(test.TestCase):
 
         timeutils.advance_time_seconds(80)
 
-        result = quota.QUOTAS.expire(self.context)
+        quota.QUOTAS.expire(self.context)
 
         assertInstancesReserved(0)
 

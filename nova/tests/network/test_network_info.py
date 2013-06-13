@@ -372,7 +372,7 @@ class NetworkInfoTests(test.TestCase):
         ninfo = model.NetworkInfo([fake_network_cache_model.new_vif(),
                 fake_network_cache_model.new_vif(
                         {'address': 'bb:bb:bb:bb:bb:bb'})])
-        deserialized = model.NetworkInfo.hydrate(ninfo)
+        model.NetworkInfo.hydrate(ninfo)
         self.assertEqual(ninfo.fixed_ips(),
                 [fake_network_cache_model.new_ip({'address': '10.10.0.2'}),
                  fake_network_cache_model.new_ip(

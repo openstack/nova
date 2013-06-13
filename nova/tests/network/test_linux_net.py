@@ -861,7 +861,6 @@ class LinuxNetworkTestCase(test.TestCase):
         self.stubs.Set(ln, 'ensure_ebtables_rules', lambda *a, **kw: None)
         net = {'bridge': 'br100', 'cidr': '10.0.0.0/24'}
         ln.ensure_floating_forward('10.10.10.10', '10.0.0.1', 'eth0', net)
-        one_forward_rules = len(linux_net.iptables_manager.ipv4['nat'].rules)
         ln.ensure_floating_forward('10.10.10.11', '10.0.0.10', 'eth0', net)
         two_forward_rules = len(linux_net.iptables_manager.ipv4['nat'].rules)
         ln.ensure_floating_forward('10.10.10.10', '10.0.0.3', 'eth0', net)

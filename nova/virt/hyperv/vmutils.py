@@ -335,7 +335,7 @@ class VMUtils(object):
     def get_vm_storage_paths(self, vm_name):
         vm = self._lookup_vm_check(vm_name)
 
-        vs_man_svc = self._conn.Msvm_VirtualSystemManagementService()[0]
+        self._conn.Msvm_VirtualSystemManagementService()
         vmsettings = vm.associators(
             wmi_result_class='Msvm_VirtualSystemSettingData')
         rasds = vmsettings[0].associators(

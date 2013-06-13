@@ -106,7 +106,7 @@ def get_tftp_image_info(instance):
             }
     try:
         image_info['kernel'][0] = str(instance['kernel_id'])
-    except KeyError as e:
+    except KeyError:
         pass
 
     missing_labels = []
@@ -347,7 +347,7 @@ class Tilera(base.NodeDriver):
                 user_data = instance['user_data']
                 try:
                     self._iptables_set(node_ip, user_data)
-                except Exception as ex:
+                except Exception:
                     self.deactivate_bootloader(context, node, instance)
                     raise exception.NovaException(_("Node is "
                           "unknown error state."))

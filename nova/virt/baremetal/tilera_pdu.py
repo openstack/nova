@@ -109,7 +109,7 @@ class Pdu(base.PowerManager):
                 return CONF.baremetal.tile_pdu_off
         else:
             try:
-                out = utils.execute(CONF.baremetal.tile_pdu_mgr,
+                utils.execute(CONF.baremetal.tile_pdu_mgr,
                           CONF.baremetal.tile_pdu_ip, mode)
                 time.sleep(CONF.baremetal.tile_power_wait)
                 return mode

@@ -555,7 +555,7 @@ class LibvirtDriver(driver.ComputeDriver):
         event_thread.start()
 
         LOG.debug("Starting green dispatch thread")
-        dispatch_thread = eventlet.spawn(self._dispatch_thread)
+        eventlet.spawn(self._dispatch_thread)
 
     def init_host(self, host):
         if not self.has_min_version(MIN_LIBVIRT_VERSION):
@@ -593,7 +593,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     libvirt.VIR_DOMAIN_EVENT_ID_LIFECYCLE,
                     self._event_lifecycle_callback,
                     self)
-            except Exception as e:
+            except Exception:
                 LOG.warn(_("URI %s does not support events"),
                          self.uri())
 
@@ -1116,7 +1116,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 if state == power_state.RUNNING:
                     flags |= libvirt.VIR_DOMAIN_AFFECT_LIVE
                 virt_dom.attachDeviceFlags(cfg.to_xml(), flags)
-            except libvirt.libvirtError as ex:
+            except libvirt.libvirtError:
                 LOG.error(_('attaching network adapter failed.'),
                          instance=instance)
                 self.vif_driver.unplug(instance, (network, mapping))
@@ -3075,7 +3075,6 @@ class LibvirtDriver(driver.ComputeDriver):
                     (disk_available_gb * 1024) - CONF.reserved_host_disk_mb
 
         # Compare CPU
-        src = instance['host']
         source_cpu_info = src_compute_info['cpu_info']
         self._compare_cpu(source_cpu_info)
 

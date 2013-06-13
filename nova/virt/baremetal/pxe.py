@@ -213,7 +213,7 @@ def get_tftp_image_info(instance, instance_type):
         image_info['ramdisk'][0] = str(instance['ramdisk_id'])
         image_info['deploy_kernel'][0] = get_deploy_aki_id(instance_type)
         image_info['deploy_ramdisk'][0] = get_deploy_ari_id(instance_type)
-    except KeyError as e:
+    except KeyError:
         pass
 
     missing_labels = []
