@@ -42,7 +42,7 @@ def make_class_properties(cls):
         def getter(self, name=name, typefn=typefn):
             attrname = get_attrname(name)
             if not hasattr(self, attrname):
-                self.obj_load(name)
+                self.obj_load_attr(name)
             return getattr(self, attrname)
 
         def setter(self, value, name=name, typefn=typefn):
