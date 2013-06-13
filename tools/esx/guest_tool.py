@@ -21,7 +21,6 @@ On Windows we require pyWin32 installed on Python.
 """
 
 import array
-import gettext
 import logging
 import os
 import platform
@@ -31,7 +30,8 @@ import subprocess
 import sys
 import time
 
-gettext.install('nova', unicode=1)
+from nova.openstack.common.gettextutils import _
+
 
 PLATFORM_WIN = 'win32'
 PLATFORM_LINUX = 'linux2'

@@ -23,6 +23,7 @@ import webob.dec
 import webob.exc
 
 from nova import context
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova import wsgi

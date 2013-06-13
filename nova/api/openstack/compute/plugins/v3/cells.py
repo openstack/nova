@@ -28,6 +28,7 @@ from nova.cells import rpc_driver
 from nova.cells import rpcapi as cells_rpcapi
 from nova.compute import api as compute
 from nova import exception
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 

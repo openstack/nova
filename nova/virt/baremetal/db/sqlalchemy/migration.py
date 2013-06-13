@@ -23,6 +23,7 @@ import os
 import sqlalchemy
 
 from nova import exception
+from nova.openstack.common.gettextutils import _
 from nova.virt.baremetal.db import migration
 from nova.virt.baremetal.db.sqlalchemy import session
 

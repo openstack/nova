@@ -151,7 +151,7 @@ class ExtensionLoadingTestCase(test.TestCase):
         self.addCleanup(self._set_v3_core, v3_core)
         # if no core API extensions are missing then an exception will
         # not be raised when creating an instance of compute.APIRouterV3
-        _ = compute.APIRouterV3()
+        compute.APIRouterV3()
 
     def test_core_extensions_missing(self):
         self.stubs.Set(stevedore.enabled, 'EnabledExtensionManager',

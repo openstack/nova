@@ -21,6 +21,7 @@ from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 import nova.cert.rpcapi
 from nova import network
+from nova.openstack.common.gettextutils import _
 
 ALIAS = "os-certificates"
 authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)

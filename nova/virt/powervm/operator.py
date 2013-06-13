@@ -23,6 +23,7 @@ from oslo.config import cfg
 
 from nova.compute import power_state
 from nova.openstack.common import excutils
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
 from nova.virt.powervm import blockdev

@@ -18,6 +18,7 @@
 from sqlalchemy import BigInteger, Column, MetaData, Table
 from sqlalchemy.types import NullType
 
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)

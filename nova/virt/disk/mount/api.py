@@ -18,6 +18,7 @@
 import os
 import time
 
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova import utils

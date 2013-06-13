@@ -26,6 +26,7 @@ from oslo.config import cfg
 from nova import exception
 from nova.network import linux_net
 from nova.network import model as network_model
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
 from nova import utils

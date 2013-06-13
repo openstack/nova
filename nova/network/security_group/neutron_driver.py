@@ -29,6 +29,7 @@ from nova import exception
 from nova.network import neutronv2
 from nova.network.security_group import security_group_base
 from nova.openstack.common import excutils
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import uuidutils
 from nova import utils

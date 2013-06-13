@@ -29,6 +29,7 @@ from nova import context
 from nova import db
 from nova import exception
 from nova.openstack.common.db import exception as db_exc
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import strutils
 from nova import utils

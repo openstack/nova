@@ -26,6 +26,7 @@ import urllib
 from oslo.config import cfg
 
 from nova import exception
+from nova.openstack.common.gettextutils import _
 from nova import utils
 
 CONF = cfg.CONF

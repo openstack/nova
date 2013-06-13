@@ -27,6 +27,7 @@ from nova import db
 from nova import exception
 from nova import network
 from nova.openstack.common import fileutils
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import timeutils
 from nova import utils
 

@@ -20,13 +20,16 @@
 #
 
 import gettext
-gettext.install('nova', unicode=1)
 import httplib
 import logging
 import logging.handlers
 import re
 import time
 import XenAPI
+
+
+translations = gettext.translation('nova', fallback=True)
+_ = translations.ugettext
 
 
 ##### Logging setup

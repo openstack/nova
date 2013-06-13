@@ -19,6 +19,7 @@
 import base64
 import re
 
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 
 

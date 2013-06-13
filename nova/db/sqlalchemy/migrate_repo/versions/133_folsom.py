@@ -20,6 +20,7 @@ from sqlalchemy import Boolean, BigInteger, Column, DateTime, Float, ForeignKey
 from sqlalchemy import Index, Integer, MetaData, String, Table, Text
 from sqlalchemy import dialects
 
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)

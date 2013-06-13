@@ -34,6 +34,7 @@ from nova.api.ec2 import ec2utils
 import nova.cert.rpcapi
 from nova import exception
 from nova.image import glance
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
 from nova import utils

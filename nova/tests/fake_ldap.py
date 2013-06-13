@@ -25,6 +25,7 @@ library to work with nova.
 
 import fnmatch
 
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 
 

@@ -31,6 +31,7 @@ from nova.conductor import api as conductor_api
 from nova import db
 from nova import exception
 from nova import notifications
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.notifier import api as notifier

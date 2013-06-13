@@ -19,6 +19,7 @@ import tempfile
 
 from nova import exception
 from nova.openstack.common import excutils
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt.disk.mount import loop

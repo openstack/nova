@@ -24,6 +24,7 @@ from nova.compute import vm_states
 from nova import context
 from nova import exception
 from nova.objects import instance as instance_obj
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.virt.xenapi import pool_states

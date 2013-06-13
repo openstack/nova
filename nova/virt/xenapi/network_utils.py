@@ -20,6 +20,8 @@ records and their attributes like bridges, PIFs, QoS, as well as
 their lookup functions.
 """
 
+from nova.openstack.common.gettextutils import _
+
 
 def find_network_with_name_label(session, name_label):
     networks = session.call_xenapi('network.get_by_name_label', name_label)

@@ -26,6 +26,7 @@ from oslo.config import cfg
 
 from nova import exception
 from nova.objects import base as objects_base
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.rpc import proxy as rpc_proxy

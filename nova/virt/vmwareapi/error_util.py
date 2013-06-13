@@ -19,6 +19,9 @@
 Exception classes and SOAP response error checking module.
 """
 
+from nova.openstack.common.gettextutils import _
+
+
 FAULT_NOT_AUTHENTICATED = "NotAuthenticated"
 FAULT_ALREADY_EXISTS = "AlreadyExists"
 

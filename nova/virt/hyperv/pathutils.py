@@ -19,6 +19,7 @@ import os
 import shutil
 
 from eventlet.green import subprocess
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from oslo.config import cfg
 

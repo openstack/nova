@@ -24,6 +24,7 @@ from xml import sax
 from xml.sax import expatreader
 
 from nova import exception
+from nova.openstack.common.gettextutils import _
 from nova import utils
 
 

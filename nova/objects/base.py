@@ -19,6 +19,7 @@ import collections
 from nova import context
 from nova import exception
 from nova.objects import utils as obj_utils
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common.rpc import common as rpc_common
 import nova.openstack.common.rpc.dispatcher

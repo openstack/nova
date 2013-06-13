@@ -15,6 +15,7 @@
 # under the License.
 """Support for mounting images with the loop device."""
 
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt.disk.mount import api

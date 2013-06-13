@@ -23,6 +23,7 @@ from nova.api.openstack.compute.views import addresses as view_addresses
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
+from nova.openstack.common.gettextutils import _
 
 
 def make_network(elem):

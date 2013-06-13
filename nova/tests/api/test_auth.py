@@ -16,6 +16,7 @@ import json
 import webob
 
 import nova.api.auth
+from nova.openstack.common.gettextutils import _
 from nova import test
 
 

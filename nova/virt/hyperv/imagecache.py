@@ -23,6 +23,7 @@ from oslo.config import cfg
 
 from nova.compute import flavors
 from nova.openstack.common import excutils
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt.hyperv import pathutils

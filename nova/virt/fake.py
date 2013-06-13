@@ -31,6 +31,7 @@ from nova.compute import power_state
 from nova.compute import task_states
 from nova import db
 from nova import exception
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.virt import driver
 from nova.virt import virtapi

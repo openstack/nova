@@ -20,6 +20,7 @@ import webob.exc
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import db
+from nova.openstack.common.gettextutils import _
 
 authorize = extensions.extension_authorizer('compute', 'cloudpipe_update')
 

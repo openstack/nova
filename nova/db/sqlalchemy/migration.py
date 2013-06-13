@@ -22,6 +22,7 @@ import os
 from nova.db import migration
 from nova import exception
 from nova.openstack.common.db.sqlalchemy import session as db_session
+from nova.openstack.common.gettextutils import _
 
 
 import migrate

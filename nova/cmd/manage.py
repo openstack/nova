@@ -70,6 +70,7 @@ from nova.db import migration
 from nova import exception
 from nova.openstack.common import cliutils
 from nova.openstack.common.db import exception as db_exc
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import rpc

@@ -19,16 +19,6 @@ If you do not follow the project conventions, your code may cause the
 LocalizationTestCase.test_multiple_positional_format_placeholders test to fail
 in nova/tests/test_localization.py.
 
-The ``_()`` function is brought into the global scope by doing::
+The ``_()`` function is found by doing::
 
-    from nova.openstack.common import gettextutils
-    gettextutils.install('nova')
-
-These lines are needed in any toplevel script before any nova modules are
-imported. If this code is missing, it may result in an error that looks like::
-
-    NameError: name '_' is not defined
-
-The gettextutils.install() function also queries the NOVA_LOCALEDIR environment
-variable to allow overriding the default localedir with a specific custom
-location for Nova's message catalog.
+    from nova.openstack.common.gettextutils import _

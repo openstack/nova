@@ -21,6 +21,7 @@ import eventlet
 import netaddr
 
 from nova import exception
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 
 

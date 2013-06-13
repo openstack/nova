@@ -60,6 +60,7 @@ from oslo.config import cfg
 
 from nova import config
 from nova.openstack.common import cliutils
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova import version
 from nova.virt.baremetal.db import migration as bmdb_migration

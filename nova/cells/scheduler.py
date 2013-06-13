@@ -31,6 +31,7 @@ from nova.compute import vm_states
 from nova import conductor
 from nova.db import base
 from nova import exception
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova.scheduler import utils as scheduler_utils

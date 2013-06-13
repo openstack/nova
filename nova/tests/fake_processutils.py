@@ -20,6 +20,7 @@ import re
 
 from eventlet import greenthread
 
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
 

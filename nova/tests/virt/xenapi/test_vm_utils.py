@@ -28,6 +28,7 @@ from nova.compute import flavors
 from nova import context
 from nova import db
 from nova import exception
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.virt.xenapi import stubs

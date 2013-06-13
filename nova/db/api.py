@@ -48,6 +48,7 @@ from oslo.config import cfg
 from nova.cells import rpcapi as cells_rpcapi
 from nova import exception
 from nova.openstack.common.db import api as db_api
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 
 

@@ -21,6 +21,7 @@ from nova.api.openstack import common
 from nova.api.openstack import wsgi
 from nova import exception
 from nova.image import glance
+from nova.openstack.common.gettextutils import _
 
 
 class Controller(object):

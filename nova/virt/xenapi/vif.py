@@ -21,6 +21,7 @@
 
 from oslo.config import cfg
 
+from nova.openstack.common.gettextutils import _
 from nova.virt.xenapi import network_utils
 from nova.virt.xenapi import vm_utils
 

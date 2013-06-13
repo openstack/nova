@@ -19,6 +19,7 @@ Management class for host-related functions (start, reboot, etc).
 """
 
 from nova import exception
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util

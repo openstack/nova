@@ -28,6 +28,7 @@ from nova.compute import vm_states
 from nova import conductor
 from nova import context
 from nova import exception
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging

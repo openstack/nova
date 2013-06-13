@@ -18,6 +18,7 @@ from nova import db
 from nova import exception
 from nova.objects import base
 from nova.objects import utils
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)

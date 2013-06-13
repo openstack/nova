@@ -14,11 +14,8 @@
 
 import contextlib
 import datetime
-import gettext
 import iso8601
 import netaddr
-
-gettext.install('nova')
 
 from nova.conductor import rpcapi as conductor_rpcapi
 from nova import context

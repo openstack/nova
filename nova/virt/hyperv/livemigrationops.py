@@ -21,6 +21,7 @@ Management class for live migration VM operations.
 from oslo.config import cfg
 
 from nova.openstack.common import excutils
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.virt.hyperv import imagecache
 from nova.virt.hyperv import livemigrationutils

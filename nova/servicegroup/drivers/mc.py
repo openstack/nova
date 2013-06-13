@@ -21,6 +21,7 @@ from oslo.config import cfg
 
 from nova import conductor
 from nova import context
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import memorycache
 from nova.openstack.common import timeutils

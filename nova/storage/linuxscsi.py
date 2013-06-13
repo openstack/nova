@@ -16,6 +16,7 @@
 
 """Generic linux scsi subsystem utilities."""
 
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import loopingcall
 from nova.openstack.common import processutils

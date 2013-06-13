@@ -30,9 +30,6 @@ Run on compute-worker (not Dom0):
 
     python ./tools/xenserver/populate_other_config.py [--dry-run|--verbose]
 """
-import gettext
-gettext.install('nova', unicode=1)
-
 import os
 import sys
 

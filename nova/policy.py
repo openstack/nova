@@ -22,6 +22,7 @@ import os.path
 from oslo.config import cfg
 
 from nova import exception
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import policy
 from nova import utils
 

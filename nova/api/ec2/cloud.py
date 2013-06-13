@@ -44,6 +44,7 @@ from nova.image import s3
 from nova import network
 from nova.network.security_group import neutron_driver
 from nova.objects import instance as instance_obj
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import quota

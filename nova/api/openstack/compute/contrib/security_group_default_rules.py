@@ -25,6 +25,7 @@ from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import exception
 from nova.network.security_group import openstack_driver
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 
 

@@ -25,6 +25,7 @@ from nova.compute import flavors
 from nova.compute import task_states
 from nova.image import glance
 from nova.openstack.common import excutils
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
 from nova.virt import images

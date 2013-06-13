@@ -32,6 +32,7 @@ from oslo.config import cfg
 
 from nova import config
 from nova.objectstore import s3server
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova import service
 from nova import utils

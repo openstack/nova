@@ -19,6 +19,7 @@ from oslo.config import cfg
 from nova import baserpc
 from nova.conductor import manager
 from nova.conductor import rpcapi
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common.rpc import common as rpc_common
 from nova import utils

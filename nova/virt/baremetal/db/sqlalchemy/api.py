@@ -29,6 +29,7 @@ import nova.context
 from nova.db.sqlalchemy import api as sqlalchemy_api
 from nova import exception
 from nova.openstack.common.db import exception as db_exc
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
 from nova.virt.baremetal.db.sqlalchemy import models
