@@ -105,7 +105,8 @@ class _FakeDriverBackendTestCase(object):
         def fake_make_drive(_self, _path):
             pass
 
-        def fake_get_instance_disk_info(_self, instance, xml=None):
+        def fake_get_instance_disk_info(_self, instance, xml=None,
+                                        block_device_info=None):
             return '[]'
 
         self.stubs.Set(nova.virt.libvirt.driver.LibvirtDriver,
