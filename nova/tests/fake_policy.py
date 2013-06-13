@@ -112,6 +112,7 @@ policy_data = """
     "compute_extension:baremetal_nodes": "",
     "compute_extension:cells": "",
     "compute_extension:certificates": "",
+    "compute_extension:v3:os-certificates": "",
     "compute_extension:cloudpipe": "",
     "compute_extension:cloudpipe_update": "",
     "compute_extension:config_drive": "",
