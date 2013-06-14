@@ -143,6 +143,11 @@ class TestNeutronv2Base(test.TestCase):
                          'availability_zone': 'nova',
                          'host': 'some_host',
                          'security_groups': []}
+        self.instance2 = {'project_id': '9d049e4b60b64716978ab415e6fbd5c0',
+                         'uuid': str(uuid.uuid4()),
+                         'display_name': 'test_instance2',
+                         'availability_zone': 'nova',
+                         'security_groups': []}
         self.nets1 = [{'id': 'my_netid1',
                       'name': 'my_netname1',
                       'tenant_id': 'my_tenantid'}]
@@ -162,7 +167,7 @@ class TestNeutronv2Base(test.TestCase):
 
         self.port_address = '10.0.1.2'
         self.port_data1 = [{'network_id': 'my_netid1',
-                           'device_id': 'device_id1',
+                           'device_id': self.instance2['uuid'],
                            'device_owner': 'compute:nova',
                            'id': 'my_portid1',
                            'fixed_ips': [{'ip_address': self.port_address,
@@ -173,14 +178,16 @@ class TestNeutronv2Base(test.TestCase):
                              'floating_ip_address': '172.0.1.2'}]
         self.dhcp_port_data1 = [{'fixed_ips': [{'ip_address': '10.0.1.9',
                                                'subnet_id': 'my_subid1'}]}]
+        self.port_address2 = '10.0.2.2'
         self.port_data2 = []
         self.port_data2.append(self.port_data1[0])
         self.port_data2.append({'network_id': 'my_netid2',
-                                'device_id': 'device_id2',
+                                'device_id': self.instance['uuid'],
                                 'device_owner': 'compute:nova',
                                 'id': 'my_portid2',
-                                'fixed_ips': [{'ip_address': '10.0.2.2',
-                                               'subnet_id': 'my_subid2'}],
+                                'fixed_ips':
+                                        [{'ip_address': self.port_address2,
+                                          'subnet_id': 'my_subid2'}],
                                 'mac_address': 'my_mac2', })
         self.float_data2 = []
         self.float_data2.append(self.float_data1[0])
@@ -950,8 +957,8 @@ class TestNeutronv2(TestNeutronv2Base):
         filters = {'ip': '^10\\.0\\.1\\.2$'}
         api = neutronapi.API()
         result = api.get_instance_uuids_by_ip_filter(self.context, filters)
-        self.assertEquals('device_id1', result[0]['instance_uuid'])
-        self.assertEquals('device_id2', result[1]['instance_uuid'])
+        self.assertEquals(self.instance2['uuid'], result[0]['instance_uuid'])
+        self.assertEquals(self.instance['uuid'], result[1]['instance_uuid'])
 
     def test_get_fixed_ip_by_address_fails_for_no_ports(self):
         address = self._mock_list_ports(port_data=[])
@@ -964,7 +971,7 @@ class TestNeutronv2(TestNeutronv2Base):
         address = self._mock_list_ports(port_data=self.port_data1)
         api = neutronapi.API()
         result = api.get_fixed_ip_by_address(self.context, address)
-        self.assertEquals('device_id1', result['instance_uuid'])
+        self.assertEquals(self.instance2['uuid'], result['instance_uuid'])
 
     def test_get_fixed_ip_by_address_fails_for_more_than_1_port(self):
         address = self._mock_list_ports()
@@ -1205,37 +1212,67 @@ class TestNeutronv2(TestNeutronv2Base):
         self.assertRaises(exception.FloatingIpAssociated,
                           api.release_floating_ip, self.context, address)
 
-    def _setup_mock_for_refresh_cache(self, api):
+    def _setup_mock_for_refresh_cache(self, api, instances):
         nw_info = self.mox.CreateMock(model.NetworkInfo)
-        nw_info.json()
         self.mox.StubOutWithMock(api, '_get_instance_nw_info')
-        api._get_instance_nw_info(mox.IgnoreArg(), self.instance).\
-            AndReturn(nw_info)
         self.mox.StubOutWithMock(api.db, 'instance_info_cache_update')
-        api.db.instance_info_cache_update(mox.IgnoreArg(),
-                                          self.instance['uuid'],
-                                          mox.IgnoreArg())
+        for instance in instances:
+            nw_info.json()
+            api._get_instance_nw_info(mox.IgnoreArg(), instance).\
+                AndReturn(nw_info)
+            api.db.instance_info_cache_update(mox.IgnoreArg(),
+                                              instance['uuid'],
+                                              mox.IgnoreArg())
 
     def test_associate_floating_ip(self):
         api = neutronapi.API()
-        address = self.fip_associated['floating_ip_address']
-        fixed_address = self.fip_associated['fixed_ip_address']
-        fip_id = self.fip_associated['id']
+        address = self.fip_unassociated['floating_ip_address']
+        fixed_address = self.port_address2
+        fip_id = self.fip_unassociated['id']
 
         search_opts = {'device_owner': 'compute:nova',
                        'device_id': self.instance['uuid']}
         self.moxed_client.list_ports(**search_opts).\
             AndReturn({'ports': [self.port_data2[1]]})
         self.moxed_client.list_floatingips(floating_ip_address=address).\
-            AndReturn({'floatingips': [self.fip_associated]})
+            AndReturn({'floatingips': [self.fip_unassociated]})
         self.moxed_client.update_floatingip(
             fip_id, {'floatingip': {'port_id': self.fip_associated['port_id'],
                                     'fixed_ip_address': fixed_address}})
-        self._setup_mock_for_refresh_cache(api)
+        self._setup_mock_for_refresh_cache(api, [self.instance])
 
         self.mox.ReplayAll()
         api.associate_floating_ip(self.context, self.instance,
                                   address, fixed_address)
+
+    def test_reassociate_floating_ip(self):
+        api = neutronapi.API()
+        address = self.fip_associated['floating_ip_address']
+        old_fixed_address = self.fip_associated['fixed_ip_address']
+        new_fixed_address = self.port_address
+        fip_id = self.fip_associated['id']
+
+        search_opts = {'device_owner': 'compute:nova',
+                       'device_id': self.instance2['uuid']}
+        self.moxed_client.list_ports(**search_opts).\
+            AndReturn({'ports': [self.port_data2[0]]})
+        self.moxed_client.list_floatingips(floating_ip_address=address).\
+            AndReturn({'floatingips': [self.fip_associated]})
+        self.moxed_client.update_floatingip(
+            fip_id, {'floatingip': {'port_id': 'my_portid1',
+                                    'fixed_ip_address': new_fixed_address}})
+        self.moxed_client.show_port(self.fip_associated['port_id']).\
+                AndReturn({'port': self.port_data2[1]})
+        self.mox.StubOutWithMock(api.db, 'instance_get_by_uuid')
+        api.db.instance_get_by_uuid(mox.IgnoreArg(),
+                                   self.instance['uuid']).\
+             AndReturn(self.instance)
+        self._setup_mock_for_refresh_cache(api, [self.instance,
+                                                 self.instance2])
+
+        self.mox.ReplayAll()
+        api.associate_floating_ip(self.context, self.instance2,
+                                  address, new_fixed_address)
 
     def test_associate_floating_ip_not_found_fixed_ip(self):
         api = neutronapi.API()
@@ -1261,14 +1298,14 @@ class TestNeutronv2(TestNeutronv2Base):
             AndReturn({'floatingips': [self.fip_associated]})
         self.moxed_client.update_floatingip(
             fip_id, {'floatingip': {'port_id': None}})
-        self._setup_mock_for_refresh_cache(api)
+        self._setup_mock_for_refresh_cache(api, [self.instance])
 
         self.mox.ReplayAll()
         api.disassociate_floating_ip(self.context, self.instance, address)
 
     def test_add_fixed_ip_to_instance(self):
         api = neutronapi.API()
-        self._setup_mock_for_refresh_cache(api)
+        self._setup_mock_for_refresh_cache(api, [self.instance])
         network_id = 'my_netid1'
         search_opts = {'network_id': network_id}
         self.moxed_client.list_subnets(
@@ -1295,7 +1332,7 @@ class TestNeutronv2(TestNeutronv2Base):
 
     def test_remove_fixed_ip_from_instance(self):
         api = neutronapi.API()
-        self._setup_mock_for_refresh_cache(api)
+        self._setup_mock_for_refresh_cache(api, [self.instance])
         address = '10.0.0.3'
         zone = 'compute:%s' % self.instance['availability_zone']
         search_opts = {'device_id': self.instance['uuid'],

@@ -584,6 +584,20 @@ class API(base.Base):
                  'fixed_ip_address': fixed_address}
         client.update_floatingip(fip['id'], {'floatingip': param})
 
+        if fip['port_id']:
+            port = client.show_port(fip['port_id'])['port']
+            orig_instance_uuid = port['device_id']
+
+            msg_dict = dict(address=floating_address,
+                            instance_id=orig_instance_uuid)
+            LOG.info(_('re-assign floating IP %(address)s from '
+                       'instance %(instance_id)s') % msg_dict)
+            orig_instance = self.db.instance_get_by_uuid(context,
+                                                         orig_instance_uuid)
+
+            # purge cached nw info for the original instance
+            update_instance_info_cache(self, context, orig_instance)
+
     def get_all(self, context):
         """Get all networks for client."""
         client = neutronv2.get_client(context)
