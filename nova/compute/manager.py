@@ -3173,6 +3173,9 @@ class ComputeManager(manager.SchedulerDependentManager):
             'no_device': None}
         self.conductor_api.block_device_mapping_update_or_create(context,
                                                                  values)
+        info = dict(volume_id=volume_id)
+        self._notify_about_instance_usage(
+            context, instance, "volume.attach", extra_usage_info=info)
 
     def _detach_volume(self, context, instance, bdm):
         """Do the actual driver detach using block device mapping."""
@@ -3235,6 +3238,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.volume_api.detach(context.elevated(), volume_id)
         self.conductor_api.block_device_mapping_destroy_by_instance_and_volume(
             context, instance, volume_id)
+        info = dict(volume_id=volume_id)
+        self._notify_about_instance_usage(
+            context, instance, "volume.detach", extra_usage_info=info)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def remove_volume_connection(self, context, volume_id, instance):
