@@ -284,6 +284,7 @@ class _TestInstanceListObject(object):
             self.assertTrue(isinstance(inst_list.objects[i],
                                        instance.Instance))
             self.assertEqual(inst_list.objects[i].uuid, fakes[i]['uuid'])
+            self.assertEqual(inst_list.objects[i]._context, ctxt)
         self.assertEqual(inst_list.obj_what_changed(), set())
         self.assertRemotes()
 

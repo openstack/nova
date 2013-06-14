@@ -236,7 +236,7 @@ class NovaObject(object):
         return value
 
     @classmethod
-    def obj_from_primitive(cls, primitive):
+    def obj_from_primitive(cls, primitive, context=None):
         """Simple base-case hydration.
 
         This calls self._attr_from_primitive() for each item in fields.
@@ -252,6 +252,7 @@ class NovaObject(object):
         objdata = primitive['nova_object.data']
         objclass = cls.obj_class_from_name(objname, objver)
         self = objclass()
+        self._context = context
         for name in self.fields:
             if name in objdata:
                 setattr(self, name,
@@ -409,7 +410,11 @@ class ObjectListBase(object):
 
     def _attr_objects_from_primitive(self, value):
         """Deserialization of object list."""
-        return [NovaObject.obj_from_primitive(x) for x in value]
+        objects = []
+        for entity in value:
+            obj = NovaObject.obj_from_primitive(entity, context=self._context)
+            objects.append(obj)
+        return objects
 
 
 class NovaObjectSerializer(nova.openstack.common.rpc.serializer.Serializer):
@@ -428,6 +433,5 @@ class NovaObjectSerializer(nova.openstack.common.rpc.serializer.Serializer):
 
     def deserialize_entity(self, context, entity):
         if isinstance(entity, dict) and 'nova_object.name' in entity:
-            entity = NovaObject.obj_from_primitive(entity)
-            entity._context = context
+            entity = NovaObject.obj_from_primitive(entity, context=context)
         return entity
