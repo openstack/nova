@@ -850,7 +850,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         extra_usage_info = {}
 
-        def notify(status, msg=None):
+        def notify(status, msg=None, **kwargs):
             """Send a create.{start,error,end} notification."""
             type_ = "create.%(status)s" % dict(status=status)
             info = extra_usage_info.copy()
@@ -858,7 +858,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 msg = ""
             info['message'] = msg
             self._notify_about_instance_usage(context, instance, type_,
-                    extra_usage_info=info)
+                    extra_usage_info=info, **kwargs)
 
         try:
             image_meta = self._prebuild_instance(context, instance)
@@ -867,10 +867,11 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             notify("start")  # notify that build is starting
 
-            instance = self._build_instance(context, request_spec,
-                    filter_properties, requested_networks, injected_files,
-                    admin_password, is_first_time, node, instance, image_meta)
-            notify("end", msg=_("Success"))  # notify that build is done
+            instance, network_info = self._build_instance(context,
+                    request_spec, filter_properties, requested_networks,
+                    injected_files, admin_password, is_first_time, node,
+                    instance, image_meta)
+            notify("end", msg=_("Success"), network_info=network_info)
 
         except exception.RescheduledException as e:
             # Instance build encountered an error, and has been rescheduled.
@@ -1002,7 +1003,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 raise exc_info[0], exc_info[1], exc_info[2]
 
         # spawn success
-        return instance
+        return instance, network_info
 
     def _log_original_error(self, exc_info, instance_uuid):
         type_, value, tb = exc_info
