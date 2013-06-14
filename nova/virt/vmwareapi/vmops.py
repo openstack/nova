@@ -155,10 +155,13 @@ class VMwareVMOps(object):
                                                 "lsiLogic")
             disk_type = image_properties.get("vmware_disktype",
                                              "preallocated")
-            return vmdk_file_size_in_kb, os_type, adapter_type, disk_type
+            # Get the network card type from the image properties.
+            vif_model = image_properties.get("hw_vif_model", "VirtualE1000")
+            return (vmdk_file_size_in_kb, os_type, adapter_type, disk_type,
+                vif_model)
 
         (vmdk_file_size_in_kb, os_type, adapter_type,
-         disk_type) = _get_image_properties()
+            disk_type, vif_model) = _get_image_properties()
 
         vm_folder_ref = self._get_vmfolder_ref()
         res_pool_ref = self._get_res_pool_ref()
@@ -183,6 +186,7 @@ class VMwareVMOps(object):
                                   'mac_address': mac_address,
                                   'network_ref': network_ref,
                                   'iface_id': vif['id'],
+                                  'vif_model': vif_model
                                  })
             return vif_infos
 
