@@ -94,9 +94,15 @@ def _get_unique_constraints_in_sqlite(migrate_engine, table_name):
     table = Table(table_name, meta, autoload=True)
 
     sql_data = migrate_engine.execute(
-        """SELECT sql FROM sqlite_master
-        WHERE type = 'table' and name = '{0}';"""
-        .format(table_name)
+        """
+            SELECT sql
+            FROM
+                sqlite_master
+            WHERE
+                type = 'table' AND
+                name = :table_name;
+        """,
+        table_name=table_name
     ).fetchone()[0]
 
     uniques = set([
