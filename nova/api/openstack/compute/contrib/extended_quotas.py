@@ -17,9 +17,12 @@ from nova.api.openstack import extensions
 
 
 class Extended_quotas(extensions.ExtensionDescriptor):
-    """Adds ability for admins to delete quota."""
+    """Adds ability for admins to delete quota
+    and optionally force the update Quota command.
+    """
 
     name = "ExtendedQuotas"
     alias = "os-extended-quotas"
-    namespace = "http://docs.openstack.org/compute/ext/quota-delete/api/v1.1"
-    updated = "2013-05-23T00:00:00+00:00"
+    namespace = ("http://docs.openstack.org/compute/ext/extended_quotas"
+                 "/api/v1.1")
+    updated = "2013-06-09T00:00:00+00:00"
