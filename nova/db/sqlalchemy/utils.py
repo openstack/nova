@@ -15,6 +15,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import re
+
 from migrate.changeset import UniqueConstraint
 from sqlalchemy import Boolean
 from sqlalchemy import CheckConstraint
@@ -27,6 +29,7 @@ from sqlalchemy import func
 from sqlalchemy import Index
 from sqlalchemy import Integer
 from sqlalchemy import MetaData
+from sqlalchemy import schema
 from sqlalchemy.sql.expression import literal_column
 from sqlalchemy.sql.expression import UpdateBase
 from sqlalchemy.sql import select
@@ -84,6 +87,28 @@ def _get_not_supported_column(col_name_col_instance, column_name):
     return column
 
 
+def _get_unique_constraints_in_sqlite(migrate_engine, table_name):
+    regexp = "CONSTRAINT (\w+) UNIQUE \(([^\)]+)\)"
+
+    meta = MetaData(bind=migrate_engine)
+    table = Table(table_name, meta, autoload=True)
+
+    sql_data = migrate_engine.execute(
+        """SELECT sql FROM sqlite_master
+        WHERE type = 'table' and name = '{0}';"""
+        .format(table_name)
+    ).fetchone()[0]
+
+    uniques = set([
+        schema.UniqueConstraint(
+            *[getattr(table.c, c.strip()) for c in cols.split(",")], name=name
+        )
+        for name, cols in re.findall(regexp, sql_data)
+    ])
+
+    return uniques
+
+
 def _drop_unique_constraint_in_sqlite(migrate_engine, table_name, uc_name,
                                       **col_name_col_instance):
     insp = reflection.Inspector.from_engine(migrate_engine)
@@ -98,6 +123,9 @@ def _drop_unique_constraint_in_sqlite(migrate_engine, table_name, uc_name,
             columns.append(new_column)
         else:
             columns.append(column.copy())
+
+    uniques = _get_unique_constraints_in_sqlite(migrate_engine, table_name)
+    table.constraints.update(uniques)
 
     constraints = [constraint for constraint in table.constraints
                     if not constraint.name == uc_name]
