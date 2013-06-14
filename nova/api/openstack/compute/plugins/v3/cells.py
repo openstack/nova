@@ -37,7 +37,8 @@ CONF = cfg.CONF
 CONF.import_opt('name', 'nova.cells.opts', group='cells')
 CONF.import_opt('capabilities', 'nova.cells.opts', group='cells')
 
-authorize = extensions.extension_authorizer('compute', 'cells')
+ALIAS = "os-cells"
+authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
 
 
 def make_cell(elem):
@@ -145,13 +146,12 @@ def _scrub_cell(cell, detail=False):
     return cell_info
 
 
-class Controller(object):
+class CellsController(object):
     """Controller for Cell resources."""
 
-    def __init__(self, ext_mgr):
+    def __init__(self):
         self.compute_api = compute.API()
         self.cells_rpcapi = cells_rpcapi.CellsAPI()
-        self.ext_mgr = ext_mgr
 
     def _get_cells(self, ctxt, req, detail=False):
         """Return all cells."""
@@ -198,9 +198,6 @@ class Controller(object):
         """Return capacities for a given cell or all cells."""
         # TODO(kaushikc): return capacities as a part of cell info and
         # cells detail calls in v3, along with capabilities
-        if not self.ext_mgr.is_loaded('os-cell-capacities'):
-            raise exc.HTTPNotFound()
-
         context = req.environ['nova.context']
         authorize(context)
         try:
@@ -320,15 +317,15 @@ class Controller(object):
                 updated_since=updated_since, deleted=deleted)
 
 
-class Cells(extensions.ExtensionDescriptor):
+class Cells(extensions.V3APIExtensionBase):
     """Enables cells-related functionality such as adding neighbor cells,
     listing neighbor cells, and getting the capabilities of the local cell.
     """
 
     name = "Cells"
-    alias = "os-cells"
-    namespace = "http://docs.openstack.org/compute/ext/cells/api/v1.1"
-    updated = "2013-05-14T00:00:00+00:00"
+    alias = ALIAS
+    namespace = "http://docs.openstack.org/compute/ext/cells/api/v3"
+    version = 1
 
     def get_resources(self):
         coll_actions = {
@@ -341,7 +338,10 @@ class Cells(extensions.ExtensionDescriptor):
                 'capacities': 'GET',
                 }
 
-        res = extensions.ResourceExtension('os-cells',
-                Controller(self.ext_mgr), collection_actions=coll_actions,
-                member_actions=memb_actions)
+        res = extensions.ResourceExtension(ALIAS, CellsController(),
+                                           collection_actions=coll_actions,
+                                           member_actions=memb_actions)
         return [res]
+
+    def get_controller_extensions(self):
+        return []

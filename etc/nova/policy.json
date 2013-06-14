@@ -33,6 +33,7 @@
     "compute_extension:attach_interfaces": "",
     "compute_extension:baremetal_nodes": "rule:admin_api",
     "compute_extension:cells": "rule:admin_api",
+    "compute_extension:v3:os-cells": "rule:admin_api",
     "compute_extension:certificates": "",
     "compute_extension:v3:os-certificates": "",
     "compute_extension:cloudpipe": "rule:admin_api",
