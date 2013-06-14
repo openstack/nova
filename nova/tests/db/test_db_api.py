@@ -151,26 +151,6 @@ class DbApiTestCase(DbTestCase):
 
         self.flags(osapi_compute_unique_server_name_scope=None)
 
-    def test_instance_metadata_get_all_query(self):
-        self.create_instance_with_args(metadata={'foo': 'bar'})
-        self.create_instance_with_args(metadata={'baz': 'quux'})
-
-        result = db.instance_metadata_get_all(self.context, [])
-        self.assertEqual(2, len(result))
-
-        result = db.instance_metadata_get_all(self.context,
-                                              [{'key': 'foo'}])
-        self.assertEqual(1, len(result))
-
-        result = db.instance_metadata_get_all(self.context,
-                                              [{'value': 'quux'}])
-        self.assertEqual(1, len(result))
-
-        result = db.instance_metadata_get_all(self.context,
-                                              [{'value': 'quux'},
-                                               {'key': 'foo'}])
-        self.assertEqual(2, len(result))
-
     def test_ec2_ids_not_found_are_printable(self):
         def check_exc_format(method):
             try:
@@ -1617,6 +1597,64 @@ class SecurityGroupTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertTrue(db.security_group_exists(self.ctxt,
                                                  self.ctxt.project_id,
                                                  'default'))
+
+
+class InstanceMetadataTestCase(test.TestCase):
+
+    """Tests for db.api.instance_metadata_* methods."""
+
+    def setUp(self):
+        super(InstanceMetadataTestCase, self).setUp()
+        self.ctxt = context.get_admin_context()
+
+    def test_instance_metadata_get(self):
+        instance = db.instance_create(self.ctxt, {'metadata':
+                                                    {'key': 'value'}})
+        self.assertEqual({'key': 'value'}, db.instance_metadata_get(
+                                            self.ctxt, instance['uuid']))
+
+    def test_instance_metadata_get_all(self):
+        instances = []
+        expected = []
+        for i in range(2):
+            instances.append(db.instance_create(self.ctxt,
+                        {'metadata': {'key%d' % i: 'value%d' % i}}))
+            expected.append({'instance_id': instances[i]['uuid'],
+                        'key': 'key%d' % i, 'value': 'value%d' % i})
+        self.assertEqual(expected, db.instance_metadata_get_all(self.ctxt, []))
+        self.assertEqual(expected[:1], db.instance_metadata_get_all(self.ctxt,
+                                                        [{'key': 'key0'}]))
+        self.assertEqual(expected[1:2], db.instance_metadata_get_all(self.ctxt,
+                                                        [{'value': 'value1'}]))
+        self.assertEqual(expected[:2], db.instance_metadata_get_all(self.ctxt,
+                                                        [{'value': 'value1'},
+                                                         {'key': 'key0'}]))
+
+    def test_instance_metadata_delete(self):
+        instance = db.instance_create(self.ctxt,
+                                      {'metadata': {'key': 'val',
+                                                    'key1': 'val1'}})
+        db.instance_metadata_delete(self.ctxt, instance['uuid'], 'key1')
+        self.assertEqual({'key': 'val'}, db.instance_metadata_get(
+                                            self.ctxt, instance['uuid']))
+
+    def test_instance_metadata_update(self):
+        instance = db.instance_create(self.ctxt, {'host': 'h1',
+                    'project_id': 'p1', 'metadata': {'key': 'value'}})
+
+        # This should add new key/value pair
+        metadata = db.instance_metadata_update(
+                    self.ctxt, instance['uuid'],
+                    {'new_key': 'new_value'}, False)
+        metadata = db.instance_metadata_get(self.ctxt, instance['uuid'])
+        self.assertEqual(metadata, {'key': 'value', 'new_key': 'new_value'})
+
+        # This should leave only one key/value pair
+        metadata = db.instance_metadata_update(
+                    self.ctxt, instance['uuid'],
+                    {'new_key': 'new_value'}, True)
+        metadata = db.instance_metadata_get(self.ctxt, instance['uuid'])
+        self.assertEqual(metadata, {'new_key': 'new_value'})
 
 
 class ServiceTestCase(test.TestCase, ModelsObjectComparatorMixin):
