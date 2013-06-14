@@ -994,15 +994,19 @@ class ComputeManager(manager.SchedulerDependentManager):
                                        set_access_ip=set_access_ip)
         except exception.InstanceNotFound:
             # the instance got deleted during the spawn
-            with excutils.save_and_reraise_exception():
-                # Make sure the async call finishes
-                if network_info is not None:
-                    network_info.wait(do_raise=False)
-                try:
-                    self._deallocate_network(context, instance)
-                except Exception:
-                    LOG.exception(_('Failed to dealloc network for '
-                                    'deleted instance'), instance=instance)
+            # Make sure the async call finishes
+            msg = _("Instance disappeared during build")
+            if network_info is not None:
+                network_info.wait(do_raise=False)
+            try:
+                self._deallocate_network(context, instance)
+            except Exception:
+                msg = _('Failed to dealloc network '
+                        'for deleted instance')
+                LOG.exception(msg, instance=instance)
+            raise exception.BuildAbortException(
+                instance_uuid=instance['uuid'],
+                reason=msg)
         except exception.UnexpectedTaskStateError as e:
             exc_info = sys.exc_info()
             # Make sure the async call finishes
@@ -1949,53 +1953,70 @@ class ComputeManager(manager.SchedulerDependentManager):
         context = context.elevated()
 
         current_power_state = self._get_power_state(context, instance)
-        instance = self._instance_update(context, instance['uuid'],
-                power_state=current_power_state)
-
-        LOG.audit(_('instance snapshotting'), context=context,
+        try:
+            instance = self._instance_update(context, instance['uuid'],
+                                             power_state=current_power_state)
+            LOG.audit(_('instance snapshotting'), context=context,
                   instance=instance)
 
-        if instance['power_state'] != power_state.RUNNING:
-            state = instance['power_state']
-            running = power_state.RUNNING
-            LOG.warn(_('trying to snapshot a non-running instance: '
+            if instance['power_state'] != power_state.RUNNING:
+                state = instance['power_state']
+                running = power_state.RUNNING
+                LOG.warn(_('trying to snapshot a non-running instance: '
                        '(state: %(state)s expected: %(running)s)'),
                      {'state': state, 'running': running},
                      instance=instance)
 
-        self._notify_about_instance_usage(
+            self._notify_about_instance_usage(
                 context, instance, "snapshot.start")
 
-        if image_type == 'snapshot':
-            expected_task_state = task_states.IMAGE_SNAPSHOT
+            if image_type == 'snapshot':
+                expected_task_state = task_states.IMAGE_SNAPSHOT
 
-        elif image_type == 'backup':
-            expected_task_state = task_states.IMAGE_BACKUP
+            elif image_type == 'backup':
+                expected_task_state = task_states.IMAGE_BACKUP
 
-        def update_task_state(task_state, expected_state=expected_task_state):
-            return self._instance_update(context, instance['uuid'],
-                    task_state=task_state,
-                    expected_task_state=expected_state)
+            def update_task_state(task_state,
+                                  expected_state=expected_task_state):
+                return self._instance_update(context, instance['uuid'],
+                                         task_state=task_state,
+                                         expected_task_state=expected_state
+                )
 
-        self.driver.snapshot(context, instance, image_id, update_task_state)
-        # The instance could have changed from the driver.  But since
-        # we're doing a fresh update here, we'll grab the changes.
+            self.driver.snapshot(context, instance, image_id,
+                                 update_task_state)
+            # The instance could have changed from the driver.  But since
+            # we're doing a fresh update here, we'll grab the changes.
 
-        instance = self._instance_update(context, instance['uuid'],
-                task_state=None,
-                expected_task_state=task_states.IMAGE_UPLOADING)
+            instance = self._instance_update(context, instance['uuid'],
+                                             task_state=None,
+                                             expected_task_state=
+                                             task_states.IMAGE_UPLOADING)
 
-        if image_type == 'snapshot' and rotation:
-            raise exception.ImageRotationNotAllowed()
+            if image_type == 'snapshot' and rotation:
+                raise exception.ImageRotationNotAllowed()
 
-        elif image_type == 'backup' and rotation >= 0:
-            self._rotate_backups(context, instance, backup_type, rotation)
+            elif image_type == 'backup' and rotation >= 0:
+                self._rotate_backups(context, instance, backup_type, rotation)
 
-        elif image_type == 'backup':
-            raise exception.RotationRequiredForBackup()
+            elif image_type == 'backup':
+                raise exception.RotationRequiredForBackup()
 
-        self._notify_about_instance_usage(
-                context, instance, "snapshot.end")
+            self._notify_about_instance_usage(context, instance,
+                                               "snapshot.end")
+
+        except exception.InstanceNotFound:
+            # the instance got deleted during the snapshot
+            # Quickly bail out of here
+            msg = _("Instance disappeared during snapshot")
+            LOG.debug(msg, instance=instance)
+        except exception.UnexpectedTaskStateError as e:
+            actual_task_state = e.kwargs.get('actual', None)
+            if actual_task_state == 'deleting':
+                msg = _('Instance was deleted during snapshot.')
+                LOG.debug(msg, instance=instance)
+            else:
+                raise
 
     @wrap_instance_fault
     def _rotate_backups(self, context, instance, backup_type, rotation):
