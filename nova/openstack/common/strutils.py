@@ -19,18 +19,33 @@
 System-level utilities and helper functions.
 """
 
+import re
 import sys
+import unicodedata
 
 from nova.openstack.common.gettextutils import _
 
 
+# Used for looking up extensions of text
+# to their 'multiplied' byte amount
+BYTE_MULTIPLIERS = {
+    '': 1,
+    't': 1024 ** 4,
+    'g': 1024 ** 3,
+    'm': 1024 ** 2,
+    'k': 1024,
+}
+BYTE_REGEX = re.compile(r'(^-?\d+)(\D*)')
+
 TRUE_STRINGS = ('1', 't', 'true', 'on', 'y', 'yes')
 FALSE_STRINGS = ('0', 'f', 'false', 'off', 'n', 'no')
 
+SLUGIFY_STRIP_RE = re.compile(r"[^\w\s-]")
+SLUGIFY_HYPHENATE_RE = re.compile(r"[-\s]+")
+
 
 def int_from_bool_as_string(subject):
-    """
-    Interpret a string as a boolean and return either 1 or 0.
+    """Interpret a string as a boolean and return either 1 or 0.
 
     Any string value in:
 
@@ -44,8 +59,7 @@ def int_from_bool_as_string(subject):
 
 
 def bool_from_string(subject, strict=False):
-    """
-    Interpret a string as a boolean.
+    """Interpret a string as a boolean.
 
     A case-insensitive match is performed such that strings matching 't',
     'true', 'on', 'y', 'yes', or '1' are considered True and, when
@@ -78,9 +92,7 @@ def bool_from_string(subject, strict=False):
 
 
 def safe_decode(text, incoming=None, errors='strict'):
-    """
-    Decodes incoming str using `incoming` if they're
-    not already unicode.
+    """Decodes incoming str using `incoming` if they're not already unicode.
 
     :param incoming: Text's current encoding
     :param errors: Errors handling policy. See here for valid
@@ -119,11 +131,10 @@ def safe_decode(text, incoming=None, errors='strict'):
 
 def safe_encode(text, incoming=None,
                 encoding='utf-8', errors='strict'):
-    """
-    Encodes incoming str/unicode using `encoding`. If
-    incoming is not specified, text is expected to
-    be encoded with current python's default encoding.
-    (`sys.getdefaultencoding`)
+    """Encodes incoming str/unicode using `encoding`.
+
+    If incoming is not specified, text is expected to be encoded with
+    current python's default encoding. (`sys.getdefaultencoding`)
 
     :param incoming: Text's current encoding
     :param encoding: Expected encoding for text (Default UTF-8)
@@ -148,3 +159,58 @@ def safe_encode(text, incoming=None,
         return text.encode(encoding, errors)
 
     return text
+
+
+def to_bytes(text, default=0):
+    """Converts a string into an integer of bytes.
+
+    Looks at the last characters of the text to determine
+    what conversion is needed to turn the input text into a byte number.
+    Supports "B, K(B), M(B), G(B), and T(B)". (case insensitive)
+
+    :param text: String input for bytes size conversion.
+    :param default: Default return value when text is blank.
+
+    """
+    match = BYTE_REGEX.search(text)
+    if match:
+        magnitude = int(match.group(1))
+        mult_key_org = match.group(2)
+        if not mult_key_org:
+            return magnitude
+    elif text:
+        msg = _('Invalid string format: %s') % text
+        raise TypeError(msg)
+    else:
+        return default
+    mult_key = mult_key_org.lower().replace('b', '', 1)
+    multiplier = BYTE_MULTIPLIERS.get(mult_key)
+    if multiplier is None:
+        msg = _('Unknown byte multiplier: %s') % mult_key_org
+        raise TypeError(msg)
+    return magnitude * multiplier
+
+
+def to_slug(value, incoming=None, errors="strict"):
+    """Normalize string.
+
+    Convert to lowercase, remove non-word characters, and convert spaces
+    to hyphens.
+
+    Inspired by Django's `slugify` filter.
+
+    :param value: Text to slugify
+    :param incoming: Text's current encoding
+    :param errors: Errors handling policy. See here for valid
+        values http://docs.python.org/2/library/codecs.html
+    :returns: slugified unicode representation of `value`
+    :raises TypeError: If text is not an instance of basestring
+    """
+    value = safe_decode(value, incoming, errors)
+    # NOTE(aababilov): no need to use safe_(encode|decode) here:
+    # encodings are always "ascii", error handling is always "ignore"
+    # and types are always known (first: unicode; second: str)
+    value = unicodedata.normalize("NFKD", value).encode(
+        "ascii", "ignore").decode("ascii")
+    value = SLUGIFY_STRIP_RE.sub("", value).strip().lower()
+    return SLUGIFY_HYPHENATE_RE.sub("-", value)

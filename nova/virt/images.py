@@ -30,6 +30,7 @@ from nova import exception
 from nova.image import glance
 from nova.openstack.common import fileutils
 from nova.openstack.common import log as logging
+from nova.openstack.common import strutils
 from nova import utils
 
 LOG = logging.getLogger(__name__)
@@ -90,8 +91,8 @@ class QemuImgInfo(object):
         if real_size:
             details = real_size.group(1)
         try:
-            details = utils.to_bytes(details)
-        except (TypeError, ValueError):
+            details = strutils.to_bytes(details)
+        except TypeError:
             pass
         return details
 
