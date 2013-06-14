@@ -182,6 +182,11 @@ class API(base.Base):
 
         nets = self._get_available_networks(context, instance['project_id'],
                                             net_ids)
+
+        if not nets:
+            LOG.warn(_("No network configured!"), instance=instance)
+            return []
+
         security_groups = kwargs.get('security_groups', [])
         security_group_ids = []
 
