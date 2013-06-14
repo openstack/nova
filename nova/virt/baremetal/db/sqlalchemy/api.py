@@ -402,8 +402,7 @@ def bm_interface_set_vif_uuid(context, if_id, vif_uuid):
             if str(e).find('IntegrityError') != -1:
                 raise exception.NovaException(_("Baremetal interface %s "
                         "already in use") % vif_uuid)
-            else:
-                raise e
+            raise
 
 
 @sqlalchemy_api.require_admin_context

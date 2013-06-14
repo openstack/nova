@@ -17,6 +17,8 @@
 #
 # @author: Aaron Rosen, Nicira Networks, Inc.
 
+import sys
+
 from oslo.config import cfg
 from quantumclient.common import exceptions as q_exc
 from quantumclient.quantum import v2_0 as quantumv20
@@ -50,6 +52,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
             security_group = quantum.create_security_group(
                 body).get('security_group')
         except q_exc.QuantumClientException as e:
+            exc_info = sys.exc_info()
             LOG.exception(_("Quantum Error creating security group %s"),
                           name)
             if e.status_code == 401:
@@ -57,7 +60,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                 # as this error code could be related to bad input or over
                 # quota
                 raise exc.HTTPBadRequest()
-            raise e
+            raise exc_info[0], exc_info[1], exc_info[2]
         return self._convert_to_nova_security_group_format(security_group)
 
     def update_security_group(self, context, security_group,
@@ -68,6 +71,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
             security_group = quantum.update_security_group(
                 security_group['id'], body).get('security_group')
         except q_exc.QuantumClientException as e:
+            exc_info = sys.exc_info()
             LOG.exception(_("Quantum Error updating security group %s"),
                           name)
             if e.status_code == 401:
@@ -75,7 +79,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                 # as this error code could be related to bad input or over
                 # quota
                 raise exc.HTTPBadRequest()
-            raise e
+            raise exc_info[0], exc_info[1], exc_info[2]
         return self._convert_to_nova_security_group_format(security_group)
 
     def _convert_to_nova_security_group_format(self, security_group):
@@ -120,12 +124,13 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                     quantum, 'security_group', name)
             group = quantum.show_security_group(id).get('security_group')
         except q_exc.QuantumClientException as e:
+            exc_info = sys.exc_info()
             if e.status_code == 404:
                 LOG.debug(_("Quantum security group %s not found"), name)
                 self.raise_not_found(e.message)
             else:
                 LOG.error(_("Quantum Error: %s"), e)
-                raise e
+                raise exc_info[0], exc_info[1], exc_info[2]
 
         return self._convert_to_nova_security_group_format(group)
 
@@ -143,9 +148,9 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
         try:
             security_groups = quantum.list_security_groups(**search_opts).get(
                 'security_groups')
-        except q_exc.QuantumClientException as e:
-            LOG.exception(_("Quantum Error getting security groups"))
-            raise e
+        except q_exc.QuantumClientException:
+            with excutils.save_and_reraise_exception():
+                LOG.exception(_("Quantum Error getting security groups"))
         converted_rules = []
         for security_group in security_groups:
             converted_rules.append(
@@ -165,13 +170,14 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
         try:
             quantum.delete_security_group(security_group['id'])
         except q_exc.QuantumClientException as e:
+            exc_info = sys.exc_info()
             if e.status_code == 404:
                 self.raise_not_found(e.message)
             elif e.status_code == 409:
                 self.raise_invalid_property(e.message)
             else:
                 LOG.error(_("Quantum Error: %s"), e)
-                raise e
+                raise exc_info[0], exc_info[1], exc_info[2]
 
     def add_rules(self, context, id, name, vals):
         """Add security group rule(s) to security group.
@@ -188,13 +194,14 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
             rules = quantum.create_security_group_rule(
                 body).get('security_group_rules')
         except q_exc.QuantumClientException as e:
+            exc_info = sys.exc_info()
             if e.status_code == 409:
                 LOG.exception(_("Quantum Error getting security group %s"),
                               name)
                 self.raise_not_found(e.message)
             else:
                 LOG.exception(_("Quantum Error:"))
-                raise e
+                raise exc_info[0], exc_info[1], exc_info[2]
         converted_rules = []
         for rule in rules:
             converted_rules.append(
@@ -246,9 +253,8 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
             for rule_id in range(0, len(rule_ids)):
                 quantum.delete_security_group_rule(rule_ids.pop())
         except q_exc.QuantumClientException as e:
-            LOG.exception(_("Quantum Error unable to delete %s"),
-                          rule_ids)
-            raise e
+            with excutils.save_and_reraise_exception():
+                LOG.exception(_("Quantum Error unable to delete %s"), rule_ids)
 
     def get_rule(self, context, id):
         quantum = quantumv2.get_client(context)
@@ -256,12 +262,13 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
             rule = quantum.show_security_group_rule(
                 id).get('security_group_rule')
         except q_exc.QuantumClientException as e:
+            exc_info = sys.exc_info()
             if e.status_code == 404:
                 LOG.debug(_("Quantum security group rule %s not found"), id)
                 self.raise_not_found(e.message)
             else:
                 LOG.error(_("Quantum Error: %s"), e)
-                raise e
+                raise exc_info[0], exc_info[1], exc_info[2]
         return self._convert_to_nova_security_group_rule_format(rule)
 
     def get_instances_security_groups_bindings(self, context):
@@ -350,19 +357,20 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
             security_group_id = quantumv20.find_resourceid_by_name_or_id(
                 quantum, 'security_group', security_group_name)
         except q_exc.QuantumClientException as e:
+            exc_info = sys.exc_info()
             if e.status_code == 404:
                 msg = ("Security group %s is not found for project %s" %
                        (security_group_name, context.project_id))
                 self.raise_not_found(msg)
             else:
                 LOG.exception(_("Quantum Error:"))
-                raise e
+                raise exc_info[0], exc_info[1], exc_info[2]
         params = {'device_id': instance['uuid']}
         try:
             ports = quantum.list_ports(**params).get('ports')
-        except q_exc.QuantumClientException as e:
+        except q_exc.QuantumClientException:
+            with excutils.save_and_reraise_exception():
                 LOG.exception(_("Quantum Error:"))
-                raise e
 
         if not ports:
             msg = ("instance_id %s could not be found as device id on"
@@ -398,19 +406,20 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
             security_group_id = quantumv20.find_resourceid_by_name_or_id(
                 quantum, 'security_group', security_group_name)
         except q_exc.QuantumClientException as e:
+            exc_info = sys.exc_info()
             if e.status_code == 404:
                 msg = ("Security group %s is not found for project %s" %
                        (security_group_name, context.project_id))
                 self.raise_not_found(msg)
             else:
                 LOG.exception(_("Quantum Error:"))
-                raise e
+                raise exc_info[0], exc_info[1], exc_info[2]
         params = {'device_id': instance['uuid']}
         try:
             ports = quantum.list_ports(**params).get('ports')
-        except q_exc.QuantumClientException as e:
+        except q_exc.QuantumClientException:
+            with excutils.save_and_reraise_exception():
                 LOG.exception(_("Quantum Error:"))
-                raise e
 
         if not ports:
             msg = ("instance_id %s could not be found as device id on"
@@ -438,8 +447,8 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                 quantum.update_port(port['id'], {'port': updated_port})
                 found_security_group = True
             except Exception:
-                LOG.exception(_("Quantum Error:"))
-                raise e
+                with excutils.save_and_reraise_exception():
+                    LOG.exception(_("Quantum Error:"))
         if not found_security_group:
             msg = (_("Security group %(security_group_name)s not assocaited "
                      "with the instance %(instance)s"),
