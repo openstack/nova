@@ -647,10 +647,11 @@ def get_fs_info(path):
             'used': used}
 
 
-def fetch_image(context, target, image_id, user_id, project_id, max_size=0):
+def fetch_image(context, target, image_id, user_id, project_id,
+                max_size=0, imagehandler_args=None):
     """Grab image."""
     images.fetch_to_raw(context, image_id, target, user_id, project_id,
-                        max_size=max_size)
+                        max_size=max_size, imagehandler_args=imagehandler_args)
 
 
 def get_instance_path(instance, forceold=False, relative=False):

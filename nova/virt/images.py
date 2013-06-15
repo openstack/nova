@@ -19,17 +19,18 @@
 Handling of VM disk images.
 """
 
+import functools
 import os
 
 from oslo.config import cfg
 
 from nova import exception
-from nova.image import glance
 from nova.openstack.common import fileutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import imageutils
 from nova.openstack.common import log as logging
 from nova import utils
+from nova.virt import imagehandler
 
 LOG = logging.getLogger(__name__)
 
@@ -61,23 +62,61 @@ def convert_image(source, dest, out_format, run_as_root=False):
     utils.execute(*cmd, run_as_root=run_as_root)
 
 
-def fetch(context, image_href, path, _user_id, _project_id, max_size=0):
-    # TODO(vish): Improve context handling and add owner and auth data
-    #             when it is added to glance.  Right now there is no
-    #             auth checking in glance, so we assume that access was
-    #             checked before we got here.
-    (image_service, image_id) = glance.get_remote_image_service(context,
-                                                                image_href)
-    with fileutils.remove_path_on_error(path):
-        image_service.download(context, image_id, dst_path=path)
+def _remove_image_on_exec(context, image_href, user_id, project_id,
+                          imagehandler_args, image_path):
+    for handler, loc, image_meta in imagehandler.handle_image(context,
+                                                              image_href,
+                                                              user_id,
+                                                              project_id,
+                                                              image_path):
+        # The loop will stop when the handle function returns success.
+        handler.remove_image(context, image_href, image_meta, image_path,
+                             user_id, project_id, loc, **imagehandler_args)
+    fileutils.delete_if_exists(image_path)
 
 
-def fetch_to_raw(context, image_href, path, user_id, project_id, max_size=0):
+def fetch(context, image_href, path, _user_id, _project_id,
+          max_size=0, imagehandler_args=None):
+    """Fetch image and returns whether the image was stored locally."""
+    imagehandler_args = imagehandler_args or {}
+    _remove_image_fun = functools.partial(_remove_image_on_exec,
+                                          context, image_href,
+                                          _user_id, _project_id,
+                                          imagehandler_args)
+
+    fetched_to_local = True
+    with fileutils.remove_path_on_error(path, remove=_remove_image_fun):
+        for handler, loc, image_meta in imagehandler.handle_image(context,
+                                                                  image_href,
+                                                                  _user_id,
+                                                                  _project_id,
+                                                                  path):
+            # The loop will stop when the handle function returns success.
+            handler.fetch_image(context, image_href, image_meta, path,
+                                _user_id, _project_id, loc,
+                                **imagehandler_args)
+            fetched_to_local = handler.is_local()
+    return fetched_to_local
+
+
+def fetch_to_raw(context, image_href, path, user_id, project_id,
+                 max_size=0, imagehandler_args=None):
     path_tmp = "%s.part" % path
-    fetch(context, image_href, path_tmp, user_id, project_id,
-          max_size=max_size)
+    fetched_to_local = fetch(context, image_href, path_tmp,
+                             user_id, project_id,
+                             max_size=max_size,
+                             imagehandler_args=imagehandler_args)
 
-    with fileutils.remove_path_on_error(path_tmp):
+    if not fetched_to_local:
+        return
+
+    imagehandler_args = imagehandler_args or {}
+    _remove_image_fun = functools.partial(_remove_image_on_exec,
+                                          context, image_href,
+                                          user_id, project_id,
+                                          imagehandler_args)
+
+    with fileutils.remove_path_on_error(path_tmp, remove=_remove_image_fun):
         data = qemu_img_info(path_tmp)
 
         fmt = data.file_format
@@ -112,9 +151,9 @@ def fetch_to_raw(context, image_href, path, user_id, project_id, max_size=0):
         if fmt != "raw" and CONF.force_raw_images:
             staged = "%s.converted" % path
             LOG.debug("%s was %s, converting to raw" % (image_href, fmt))
+
             with fileutils.remove_path_on_error(staged):
                 convert_image(path_tmp, staged, 'raw')
-                os.unlink(path_tmp)
 
                 data = qemu_img_info(staged)
                 if data.file_format != "raw":
@@ -122,6 +161,36 @@ def fetch_to_raw(context, image_href, path, user_id, project_id, max_size=0):
                         reason=_("Converted to raw, but format is now %s") %
                         data.file_format)
 
-                os.rename(staged, path)
+                for handler_context in imagehandler.handle_image(context,
+                                                                 image_href,
+                                                                 user_id,
+                                                                 project_id,
+                                                                 staged):
+                    (handler, loc, image_meta) = handler_context
+                    # The loop will stop when the handle function
+                    # return success.
+                    handler.move_image(context, image_href, image_meta,
+                                       staged, path,
+                                       user_id, project_id, loc,
+                                       **imagehandler_args)
+
+                for handler_context in imagehandler.handle_image(context,
+                                                                 image_href,
+                                                                 user_id,
+                                                                 project_id,
+                                                                 path_tmp):
+                    (handler, loc, image_meta) = handler_context
+                    handler.remove_image(context, image_href, image_meta,
+                                         path_tmp, user_id, project_id, loc,
+                                         **imagehandler_args)
         else:
-            os.rename(path_tmp, path)
+            for handler_context in imagehandler.handle_image(context,
+                                                             image_href,
+                                                             user_id,
+                                                             project_id,
+                                                             path_tmp):
+                (handler, loc, image_meta) = handler_context
+                handler.move_image(context, image_href, image_meta,
+                                   path_tmp, path,
+                                   user_id, project_id, loc,
+                                   **imagehandler_args)

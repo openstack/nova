@@ -230,6 +230,12 @@ class _FakeImageService(object):
             return 'fake_location'
         return None
 
+    def get_locations(self, context, image_id):
+        if image_id in self.images:
+            return ['fake_location', 'fake_location2']
+        return []
+
+
 _fakeImageService = _FakeImageService()
 
 
