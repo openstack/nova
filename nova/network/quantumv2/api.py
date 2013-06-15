@@ -706,6 +706,8 @@ class API(base.Base):
 
     def _get_floating_ip_by_address(self, client, address):
         """Get floatingip from floating ip address."""
+        if not address:
+            raise exception.FloatingIpNotFoundForAddress(address=address)
         data = client.list_floatingips(floating_ip_address=address)
         fips = data['floatingips']
         if len(fips) == 0:
