@@ -27,6 +27,7 @@ terminating it.
 
 """
 
+
 import base64
 import contextlib
 import functools
@@ -1817,14 +1818,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         current_power_state = self._get_power_state(context, instance)
 
-        # Don't change it out of rescue mode
-        new_vm_state = vm_states.ACTIVE
-        if instance['vm_state'] == vm_states.RESCUED:
-            new_vm_state = vm_states.RESCUED
-
         instance = self._instance_update(context, instance['uuid'],
-                                         power_state=current_power_state,
-                                         vm_state=new_vm_state)
+                                         power_state=current_power_state)
 
         if instance['power_state'] != power_state.RUNNING:
             state = instance['power_state']
@@ -1839,23 +1834,46 @@ class ComputeManager(manager.SchedulerDependentManager):
                     context, instance, bad_devices, block_device_info)
 
         try:
+            # Don't change it out of rescue mode
+            if instance['vm_state'] == vm_states.RESCUED:
+                new_vm_state = vm_states.RESCUED
+            else:
+                new_vm_state = vm_states.ACTIVE
+            new_power_state = None
+
             self.driver.reboot(context, instance,
                                self._legacy_nw_info(network_info),
                                reboot_type,
                                block_device_info=block_device_info,
                                bad_volumes_callback=bad_volumes_callback)
-        except Exception as exc:
-            LOG.error(_('Cannot reboot instance: %s'), exc,
-                      context=context, instance=instance)
-            compute_utils.add_instance_fault_from_exc(context,
-                    self.conductor_api, instance, exc, sys.exc_info())
-            # Fall through and reset task_state to None
 
-        current_power_state = self._get_power_state(context, instance)
+        except Exception as error:
+            # Can't use save_and_reraise as we don't know yet if we
+            # will re-raise or not
+            type_, value, tb = sys.exc_info()
+
+            compute_utils.add_instance_fault_from_exc(context,
+                            self.conductor_api, instance, error,
+                            sys.exc_info())
+
+            # if the reboot failed but the VM is running don't
+            # put it into an error state
+            new_power_state = self._get_power_state(context, instance)
+            if new_power_state == power_state.RUNNING:
+                LOG.warning(_('Reboot failed but instance is running'),
+                            context=context, instance=instance)
+            else:
+                LOG.error(_('Cannot reboot instance: %(error)s'),
+                          locals(), context=context, instance=instance)
+                self._set_instance_error_state(context, instance['uuid'])
+                raise type_, value, tb
+
+        if not new_power_state:
+            new_power_state = self._get_power_state(context, instance)
         try:
             instance = self._instance_update(context, instance['uuid'],
-                                             power_state=current_power_state,
-                                             vm_state=vm_states.ACTIVE,
+                                             power_state=new_power_state,
+                                             vm_state=new_vm_state,
                                              task_state=None)
         except exception.InstanceNotFound:
             LOG.warn(_("Instance disappeared during reboot"),

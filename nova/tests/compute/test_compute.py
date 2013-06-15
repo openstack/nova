@@ -1537,7 +1537,8 @@ class ComputeTestCase(BaseTestCase):
                 instance=jsonutils.to_primitive(instance))
 
     def _test_reboot(self, soft, legacy_nwinfo_driver,
-                     test_delete=False, test_unrescue=False):
+                     test_delete=False, test_unrescue=False,
+                     fail_reboot=False, fail_running=False):
         # This is a true unit test, so we don't need the network stubs.
         fake_network.unset_stub_network_methods(self.stubs)
 
@@ -1550,11 +1551,16 @@ class ComputeTestCase(BaseTestCase):
 
         instance = dict(uuid='fake-instance',
                         power_state='unknown',
-                        vm_state=vm_states.ACTIVE)
+                        vm_state=vm_states.ACTIVE,
+                        launched_at=timeutils.utcnow())
         updated_instance1 = dict(uuid='updated-instance1',
-                                 power_state='fake')
+                                 power_state='fake',
+                                 vm_state=vm_states.ACTIVE,
+                                 launched_at=timeutils.utcnow())
         updated_instance2 = dict(uuid='updated-instance2',
-                                 power_state='fake')
+                                 power_state='fake',
+                                 vm_state=vm_states.ACTIVE,
+                                 launched_at=timeutils.utcnow())
 
         if test_unrescue:
             instance['vm_state'] = vm_states.RESCUED
@@ -1564,7 +1570,8 @@ class ComputeTestCase(BaseTestCase):
 
         fake_block_dev_info = 'fake_block_dev_info'
         fake_power_state1 = 'fake_power_state1'
-        fake_power_state2 = 'fake_power_state2'
+        fake_power_state2 = power_state.RUNNING
+        fake_power_state3 = 'fake_power_state3'
         reboot_type = soft and 'SOFT' or 'HARD'
 
         # Beginning of calls we expect.
@@ -1587,8 +1594,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute._get_power_state(econtext,
                 instance).AndReturn(fake_power_state1)
         self.compute._instance_update(econtext, instance['uuid'],
-                power_state=fake_power_state1,
-                vm_state=instance['vm_state']).AndReturn(updated_instance1)
+                power_state=fake_power_state1).AndReturn(updated_instance1)
 
         # Reboot should check the driver to see if legacy nwinfo is
         # needed.  If it is, the model's legacy() method should be
@@ -1619,15 +1625,24 @@ class ComputeTestCase(BaseTestCase):
             # within `reboot_instance`, we don't have access to its value and
             # can't stub it out, thus we skip that comparison.
             kwargs.pop('bad_volumes_callback')
+            if fail_reboot:
+                raise exception.InstanceNotFound(instance_id='instance-0000')
 
         self.stubs.Set(self.compute.driver, 'reboot', fake_reboot)
 
         # Power state should be updated again
-        self.compute._get_power_state(econtext,
-                updated_instance1).AndReturn(fake_power_state2)
+        if not fail_reboot or fail_running:
+            new_power_state = fake_power_state2
+            self.compute._get_power_state(econtext,
+                    updated_instance1).AndReturn(fake_power_state2)
+        else:
+            new_power_state = fake_power_state3
+            self.compute._get_power_state(econtext,
+                    updated_instance1).AndReturn(fake_power_state3)
+
         if test_delete:
             self.compute._instance_update(econtext, updated_instance1['uuid'],
-                    power_state=fake_power_state2,
+                    power_state=new_power_state,
                     task_state=None,
                     vm_state=vm_states.ACTIVE).AndRaise(
                         exception.InstanceNotFound(
@@ -1635,9 +1650,15 @@ class ComputeTestCase(BaseTestCase):
             self.compute._notify_about_instance_usage(econtext,
                                                       updated_instance1,
                                                       'reboot.end')
+        elif fail_reboot and not fail_running:
+            self.compute._instance_update(econtext, updated_instance1['uuid'],
+                    vm_state=vm_states.ERROR).AndRaise(
+                        exception.InstanceNotFound(
+                            instance_id=updated_instance1['uuid']))
+
         else:
             self.compute._instance_update(econtext, updated_instance1['uuid'],
-                    power_state=fake_power_state2,
+                    power_state=new_power_state,
                     task_state=None,
                     vm_state=vm_states.ACTIVE).AndReturn(updated_instance2)
             self.compute._notify_about_instance_usage(econtext,
@@ -1645,9 +1666,18 @@ class ComputeTestCase(BaseTestCase):
                                                       'reboot.end')
 
         self.mox.ReplayAll()
-        self.compute.reboot_instance(self.context, instance=instance,
-                                     block_device_info=fake_block_dev_info,
-                                     reboot_type=reboot_type)
+
+        if not fail_reboot or fail_running:
+            self.compute.reboot_instance(self.context, instance=instance,
+                                         block_device_info=fake_block_dev_info,
+                                         reboot_type=reboot_type)
+        else:
+            self.assertRaises(exception.InstanceNotFound,
+                              self.compute.reboot_instance,
+                              self.context, instance=instance,
+                              block_device_info=fake_block_dev_info,
+                              reboot_type=reboot_type)
+
         self.assertEqual(expected_call_info, reboot_call_info)
 
     def test_reboot_soft(self):
@@ -1679,6 +1709,13 @@ class ComputeTestCase(BaseTestCase):
 
     def test_reboot_hard_legacy_nwinfo_driver(self):
         self._test_reboot(False, True)
+
+    def test_reboot_fail(self):
+        self._test_reboot(False, False, fail_reboot=True)
+
+    def test_reboot_fail_running(self):
+        self._test_reboot(False, False, fail_reboot=True,
+                          fail_running=True)
 
     def test_set_admin_password(self):
         # Ensure instance can have its admin password set.
