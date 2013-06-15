@@ -28,6 +28,7 @@ from oslo.config import cfg
 
 from nova import exception
 from nova.image import glance
+from nova.openstack.common import fileutils
 from nova.openstack.common import log as logging
 from nova import utils
 
@@ -183,7 +184,7 @@ def fetch(context, image_href, path, _user_id, _project_id):
     #             checked before we got here.
     (image_service, image_id) = glance.get_remote_image_service(context,
                                                                 image_href)
-    with utils.remove_path_on_error(path):
+    with fileutils.remove_path_on_error(path):
         with open(path, "wb") as image_file:
             image_service.download(context, image_id, image_file)
 
@@ -192,7 +193,7 @@ def fetch_to_raw(context, image_href, path, user_id, project_id):
     path_tmp = "%s.part" % path
     fetch(context, image_href, path_tmp, user_id, project_id)
 
-    with utils.remove_path_on_error(path_tmp):
+    with fileutils.remove_path_on_error(path_tmp):
         data = qemu_img_info(path_tmp)
 
         fmt = data.file_format
@@ -209,7 +210,7 @@ def fetch_to_raw(context, image_href, path, user_id, project_id):
         if fmt != "raw" and CONF.force_raw_images:
             staged = "%s.converted" % path
             LOG.debug("%s was %s, converting to raw" % (image_href, fmt))
-            with utils.remove_path_on_error(staged):
+            with fileutils.remove_path_on_error(staged):
                 convert_image(path_tmp, staged, 'raw')
                 os.unlink(path_tmp)
 

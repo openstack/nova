@@ -3003,7 +3003,7 @@ class LibvirtDriver(driver.ComputeDriver):
         return os.path.exists(data['filename'])
 
     def check_instance_shared_storage_cleanup(self, ctxt, data):
-        utils.delete_if_exists(data["filename"])
+        fileutils.delete_if_exists(data["filename"])
 
     def check_can_live_migrate_destination(self, ctxt, instance_ref,
                                            src_compute_info, dst_compute_info,
