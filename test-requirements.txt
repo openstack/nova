@@ -1,6 +1,3 @@
-# Packages needed for dev testing
-distribute>=0.6.24
-
 # Install bounded pep8/pyflakes first, then let flake8 install
 pep8==1.4.5
 pyflakes==0.7.2
