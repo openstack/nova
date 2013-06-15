@@ -50,7 +50,7 @@ class QemuImgInfo(object):
     SIZE_RE = re.compile(r"\(\s*(\d+)\s+bytes\s*\)", re.I)
 
     def __init__(self, cmd_output=None):
-        details = self._parse(cmd_output)
+        details = self._parse(cmd_output or '')
         self.image = details.get('image')
         self.backing_file = details.get('backing_file')
         self.file_format = details.get('file_format')
@@ -95,7 +95,6 @@ class QemuImgInfo(object):
         return details
 
     def _extract_details(self, root_cmd, root_details, lines_after):
-        consumed_lines = 0
         real_details = root_details
         if root_cmd == 'backing_file':
             # Replace it with the real backing file
@@ -112,31 +111,30 @@ class QemuImgInfo(object):
             if not lines_after or not lines_after[0].startswith("ID"):
                 msg = _("Snapshot list encountered but no header found!")
                 raise ValueError(msg)
-            consumed_lines += 1
-            possible_contents = lines_after[1:]
+            del lines_after[0]
             real_details = []
             # This is the sprintf pattern we will try to match
             # "%-10s%-20s%7s%20s%15s"
             # ID TAG VM SIZE DATE VM CLOCK (current header)
-            for line in possible_contents:
-                line_pieces = line.split(None)
+            while lines_after:
+                line = lines_after[0]
+                line_pieces = line.split()
                 if len(line_pieces) != 6:
                     break
-                else:
-                    # Check against this pattern in the final position
-                    # "%02d:%02d:%02d.%03d"
-                    date_pieces = line_pieces[5].split(":")
-                    if len(date_pieces) != 3:
-                        break
-                    real_details.append({
-                        'id': line_pieces[0],
-                        'tag': line_pieces[1],
-                        'vm_size': line_pieces[2],
-                        'date': line_pieces[3],
-                        'vm_clock': line_pieces[4] + " " + line_pieces[5],
-                    })
-                    consumed_lines += 1
-        return (real_details, consumed_lines)
+                # Check against this pattern in the final position
+                # "%02d:%02d:%02d.%03d"
+                date_pieces = line_pieces[5].split(":")
+                if len(date_pieces) != 3:
+                    break
+                real_details.append({
+                    'id': line_pieces[0],
+                    'tag': line_pieces[1],
+                    'vm_size': line_pieces[2],
+                    'date': line_pieces[3],
+                    'vm_clock': line_pieces[4] + " " + line_pieces[5],
+                })
+                del lines_after[0]
+        return real_details
 
     def _parse(self, cmd_output):
         # Analysis done of qemu-img.c to figure out what is going on here
@@ -147,30 +145,18 @@ class QemuImgInfo(object):
         # TODO(harlowja): newer versions might have a json output format
         #                 we should switch to that whenever possible.
         #                 see: http://bit.ly/XLJXDX
-        if not cmd_output:
-            cmd_output = ''
         contents = {}
-        lines = cmd_output.splitlines()
-        i = 0
-        line_am = len(lines)
-        while i < line_am:
-            line = lines[i]
-            if not line.strip():
-                i += 1
-                continue
-            consumed_lines = 0
+        lines = [x for x in cmd_output.splitlines() if x.strip()]
+        while lines:
+            line = lines.pop(0)
             top_level = self.TOP_LEVEL_RE.match(line)
             if top_level:
                 root = self._canonicalize(top_level.group(1))
                 if not root:
-                    i += 1
                     continue
                 root_details = top_level.group(2).strip()
-                details, consumed_lines = self._extract_details(root,
-                                                                root_details,
-                                                                lines[i + 1:])
+                details = self._extract_details(root, root_details, lines)
                 contents[root] = details
-            i += consumed_lines + 1
         return contents
 
 
