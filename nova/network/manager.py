@@ -1409,15 +1409,12 @@ class NetworkManager(manager.Manager):
         if CONF.fake_network:
             return
 
-        for network_id in network_ids:
-            network = self.db.network_get(context, network_id)
-            if not network['multi_host']:
-                continue
-            host_networks = self.db.network_get_all_by_host(context, self.host)
-            for host_network in host_networks:
-                if host_network['id'] == network_id:
-                    dev = self.driver.get_dev(network)
-                    self.driver.update_dns(context, dev, network)
+        networks = [network for network in
+                    self.db.network_get_all_by_host(context, self.host)
+                    if network['multi_host'] and network['id'] in network_ids]
+        for network in networks:
+            dev = self.driver.get_dev(network)
+            self.driver.update_dns(context, dev, network)
 
     def add_network_to_project(self, ctxt, project_id, network_uuid):
         raise NotImplementedError()
