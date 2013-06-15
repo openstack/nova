@@ -169,15 +169,15 @@ def drop_unique_constraint(migrate_engine, table_name, uc_name, *columns,
                             are required only for columns that have unsupported
                             types by sqlite. For example BigInteger.
     """
-    if migrate_engine.name in ["mysql", "postgresql"]:
+    if migrate_engine.name == "sqlite":
+        _drop_unique_constraint_in_sqlite(migrate_engine, table_name, uc_name,
+                                          **col_name_col_instance)
+    else:
         meta = MetaData()
         meta.bind = migrate_engine
         t = Table(table_name, meta, autoload=True)
         uc = UniqueConstraint(*columns, table=t, name=uc_name)
         uc.drop()
-    else:
-        _drop_unique_constraint_in_sqlite(migrate_engine, table_name, uc_name,
-                                          **col_name_col_instance)
 
 
 def drop_old_duplicate_entries_from_table(migrate_engine, table_name,
