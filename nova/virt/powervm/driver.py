@@ -90,6 +90,10 @@ class PowerVMDriver(driver.ComputeDriver):
         """Return currently known host stats."""
         return self._powervm.get_host_stats(refresh=refresh)
 
+    def get_host_uptime(self, host):
+        """Returns the result of calling "uptime" on the target host."""
+        return self._powervm.get_host_uptime(host)
+
     def plug_vifs(self, instance, network_info):
         pass
 
