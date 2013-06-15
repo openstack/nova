@@ -1082,7 +1082,20 @@ class LibvirtConnTestCase(test.TestCase):
         self.mox.ReplayAll()
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instances = conn.list_instances()
-        # Only one should be listed, since domain with ID 0 must be skiped
+        # Only one should be listed, since domain with ID 0 must be skipped
+        self.assertEquals(len(instances), 1)
+
+    def test_list_instance_uuids(self):
+        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
+        libvirt_driver.LibvirtDriver._conn.lookupByID = self.fake_lookup
+        libvirt_driver.LibvirtDriver._conn.numOfDomains = lambda: 2
+        libvirt_driver.LibvirtDriver._conn.listDomainsID = lambda: [0, 1]
+        libvirt_driver.LibvirtDriver._conn.listDefinedDomains = lambda: []
+
+        self.mox.ReplayAll()
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instances = conn.list_instance_uuids()
+        # Only one should be listed, since domain with ID 0 must be skipped
         self.assertEquals(len(instances), 1)
 
     def test_list_defined_instances(self):
@@ -1118,6 +1131,63 @@ class LibvirtConnTestCase(test.TestCase):
         instances = conn.list_instances()
         # None should be listed, since we fake deleted the last one
         self.assertEquals(len(instances), 0)
+
+    def test_list_instance_uuids_when_instance_deleted(self):
+
+        def fake_lookup(instance_name):
+            raise libvirt.libvirtError("we deleted an instance!")
+
+        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
+        libvirt_driver.LibvirtDriver._conn.lookupByID = fake_lookup
+        libvirt_driver.LibvirtDriver._conn.numOfDomains = lambda: 1
+        libvirt_driver.LibvirtDriver._conn.listDomainsID = lambda: [0, 1]
+        libvirt_driver.LibvirtDriver._conn.listDefinedDomains = lambda: []
+
+        self.mox.StubOutWithMock(libvirt.libvirtError, "get_error_code")
+        libvirt.libvirtError.get_error_code().AndReturn(
+            libvirt.VIR_ERR_NO_DOMAIN)
+
+        self.mox.ReplayAll()
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instances = conn.list_instance_uuids()
+        # None should be listed, since we fake deleted the last one
+        self.assertEquals(len(instances), 0)
+
+    def test_list_instances_throws_nova_exception(self):
+        def fake_lookup(instance_name):
+            raise libvirt.libvirtError("we deleted an instance!")
+
+        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
+        libvirt_driver.LibvirtDriver._conn.lookupByID = fake_lookup
+        libvirt_driver.LibvirtDriver._conn.numOfDomains = lambda: 1
+        libvirt_driver.LibvirtDriver._conn.listDomainsID = lambda: [0, 1]
+        libvirt_driver.LibvirtDriver._conn.listDefinedDomains = lambda: []
+
+        self.mox.StubOutWithMock(libvirt.libvirtError, "get_error_code")
+        libvirt.libvirtError.get_error_code().AndReturn(
+            libvirt.VIR_ERR_INTERNAL_ERROR)
+
+        self.mox.ReplayAll()
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertRaises(exception.NovaException, conn.list_instances)
+
+    def test_list_instance_uuids_throws_nova_exception(self):
+        def fake_lookup(instance_name):
+            raise libvirt.libvirtError("we deleted an instance!")
+
+        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
+        libvirt_driver.LibvirtDriver._conn.lookupByID = fake_lookup
+        libvirt_driver.LibvirtDriver._conn.numOfDomains = lambda: 1
+        libvirt_driver.LibvirtDriver._conn.listDomainsID = lambda: [0, 1]
+        libvirt_driver.LibvirtDriver._conn.listDefinedDomains = lambda: []
+
+        self.mox.StubOutWithMock(libvirt.libvirtError, "get_error_code")
+        libvirt.libvirtError.get_error_code().AndReturn(
+            libvirt.VIR_ERR_INTERNAL_ERROR)
+
+        self.mox.ReplayAll()
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertRaises(exception.NovaException, conn.list_instance_uuids)
 
     def test_get_all_block_devices(self):
         xml = [

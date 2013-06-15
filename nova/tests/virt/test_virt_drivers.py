@@ -211,6 +211,10 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         self.connection.list_instances()
 
     @catch_notimplementederror
+    def test_list_instance_uuids(self):
+        self.connection.list_instance_uuids()
+
+    @catch_notimplementederror
     def test_spawn(self):
         instance_ref, network_info = self._get_running_instance()
         domains = self.connection.list_instances()
