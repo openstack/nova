@@ -1901,6 +1901,17 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute.terminate_instance(self.context, instance=instance)
 
+    def test_live_snapshot(self):
+        # Ensure instance can be live_snapshotted.
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+        name = "myfakesnapshot"
+        self.compute.run_instance(self.context, instance=instance)
+        db.instance_update(self.context, instance['uuid'],
+                           {"task_state": task_states.IMAGE_LIVE_SNAPSHOT})
+        self.compute.live_snapshot_instance(self.context, name,
+                                            instance=instance)
+        self.compute.terminate_instance(self.context, instance=instance)
+
     def test_snapshot(self):
         # Ensure instance can be snapshotted.
         instance = jsonutils.to_primitive(self._create_fake_instance())
