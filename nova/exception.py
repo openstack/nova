@@ -482,6 +482,10 @@ class ISCSITargetNotFoundForVolume(NotFound):
     msg_fmt = _("No target id found for volume %(volume_id)s.")
 
 
+class ISERTargetNotFoundForVolume(NotFound):
+    message = _("No target id found for volume %(volume_id)s.")
+
+
 class DiskNotFound(NotFound):
     msg_fmt = _("No disk at %(location)s")
 

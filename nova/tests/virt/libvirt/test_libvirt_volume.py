@@ -167,6 +167,17 @@ class LibvirtVolumeTestCase(test.TestCase):
                               '-n', 'node.startup', '-v', 'automatic')]
         self.assertEqual(self.executes, expected_commands)
 
+    def iser_connection(self, volume, location, iqn):
+        return {
+                'driver_volume_type': 'iser',
+                'data': {
+                    'volume_id': volume['id'],
+                    'target_portal': location,
+                    'target_iqn': iqn,
+                    'target_lun': 1,
+                }
+        }
+
     def sheepdog_connection(self, volume):
         return {
             'driver_volume_type': 'sheepdog',
@@ -347,6 +358,61 @@ class LibvirtVolumeTestCase(test.TestCase):
         target_portals = ['fake_portal1', 'fake_portal2']
         libvirt_driver._get_multipath_device_name = lambda x: mpdev_filepath
         conf = libvirt_driver.connect_volume(connection_info, self.disk_info)
+        tree = conf.format_dom()
+        self.assertEqual(tree.find('./source').get('dev'), mpdev_filepath)
+        libvirt_driver.disconnect_volume(connection_info, 'vde')
+
+    def test_libvirt_kvm_iser_volume_with_multipath(self):
+        self.flags(libvirt_iser_use_multipath=True)
+        self.stubs.Set(os.path, 'exists', lambda x: True)
+        devs = ['/dev/mapper/sda', '/dev/mapper/sdb']
+        self.stubs.Set(self.fake_conn, 'get_all_block_devices', lambda: devs)
+        libvirt_driver = volume.LibvirtISERVolumeDriver(self.fake_conn)
+        name = 'volume-00000001'
+        location = '10.0.2.15:3260'
+        iqn = 'iqn.2010-10.org.iser.openstack:%s' % name
+        vol = {'id': 1, 'name': name}
+        connection_info = self.iser_connection(vol, location, iqn)
+        mpdev_filepath = '/dev/mapper/foo'
+        connection_info['data']['device_path'] = mpdev_filepath
+        disk_info = {
+            "bus": "virtio",
+            "dev": "vde",
+            "type": "disk",
+            }
+        target_portals = ['fake_portal1', 'fake_portal2']
+        libvirt_driver._get_multipath_device_name = lambda x: mpdev_filepath
+        conf = libvirt_driver.connect_volume(connection_info, disk_info)
+        tree = conf.format_dom()
+        self.assertEqual(tree.find('./source').get('dev'), mpdev_filepath)
+        libvirt_driver.disconnect_volume(connection_info, 'vde')
+
+    def test_libvirt_kvm_iser_volume_with_multipath_getmpdev(self):
+        self.flags(libvirt_iser_use_multipath=True)
+        self.stubs.Set(os.path, 'exists', lambda x: True)
+        libvirt_driver = volume.LibvirtISERVolumeDriver(self.fake_conn)
+        name0 = 'volume-00000000'
+        location0 = '10.0.2.15:3260'
+        iqn0 = 'iqn.2010-10.org.iser.openstack:%s' % name0
+        vol0 = {'id': 0, 'name': name0}
+        dev0 = '/dev/disk/by-path/ip-%s-iscsi-%s-lun-0' % (location0, iqn0)
+        name = 'volume-00000001'
+        location = '10.0.2.15:3260'
+        iqn = 'iqn.2010-10.org.iser.openstack:%s' % name
+        vol = {'id': 1, 'name': name}
+        dev = '/dev/disk/by-path/ip-%s-iscsi-%s-lun-1' % (location, iqn)
+        devs = [dev0, dev]
+        self.stubs.Set(self.fake_conn, 'get_all_block_devices', lambda: devs)
+        connection_info = self.iser_connection(vol, location, iqn)
+        mpdev_filepath = '/dev/mapper/foo'
+        disk_info = {
+            "bus": "virtio",
+            "dev": "vde",
+            "type": "disk",
+            }
+        target_portals = ['fake_portal1', 'fake_portal2']
+        libvirt_driver._get_multipath_device_name = lambda x: mpdev_filepath
+        conf = libvirt_driver.connect_volume(connection_info, disk_info)
         tree = conf.format_dom()
         self.assertEqual(tree.find('./source').get('dev'), mpdev_filepath)
         libvirt_driver.disconnect_volume(connection_info, 'vde')
