@@ -23,6 +23,7 @@ from nova.compute import vm_states
 from nova import context
 from nova import db
 from nova import exception
+from nova.objects import instance as instance_obj
 from nova.openstack.common import rpc
 from nova.openstack.common import timeutils
 from nova import test
@@ -630,6 +631,60 @@ class CellsTargetedMethodsTestCase(test.TestCase):
         self.tgt_db_inst.instance_get_by_uuid(self.ctxt,
                 instance_uuid).AndReturn('fake_instance')
         self.tgt_compute_api.reboot(self.ctxt, 'fake_instance', 2, 3,
+                arg1='val1', arg2='val2').AndReturn('fake_result')
+        self.mox.ReplayAll()
+
+        response = self.src_msg_runner.run_compute_api_method(
+                self.ctxt,
+                self.tgt_cell_name,
+                method_info,
+                True)
+        result = response.value_or_raise()
+        self.assertEqual('fake_result', result)
+
+    def test_run_compute_api_method_expects_obj(self):
+        instance_uuid = 'fake_instance_uuid'
+        method_info = {'method': 'start',
+                       'method_args': (instance_uuid, 2, 3),
+                       'method_kwargs': {'arg1': 'val1', 'arg2': 'val2'}}
+        self.mox.StubOutWithMock(self.tgt_compute_api, 'start')
+        self.mox.StubOutWithMock(self.tgt_db_inst, 'instance_get_by_uuid')
+
+        self.tgt_db_inst.instance_get_by_uuid(self.ctxt,
+                instance_uuid).AndReturn('fake_instance')
+
+        def get_instance_mock():
+            # NOTE(comstud): This block of code simulates the following
+            # mox code:
+            #
+            # self.mox.StubOutWithMock(instance_obj, 'Instance',
+            #                          use_mock_anything=True)
+            # self.mox.StubOutWithMock(instance_obj.Instance,
+            #                          '_from_db_object')
+            # instance_mock = self.mox.CreateMock(instance_obj.Instance)
+            # instance_obj.Instance().AndReturn(instance_mock)
+            #
+            # Unfortunately, the above code fails on py27 do to some
+            # issue with the Mock object do to similar issue as this:
+            # https://code.google.com/p/pymox/issues/detail?id=35
+            #
+            class FakeInstance(object):
+                def _from_db_object(obj, db_obj):
+                    pass
+
+            instance_mock = FakeInstance()
+
+            def fake_instance():
+                return instance_mock
+
+            self.stubs.Set(instance_obj, 'Instance', fake_instance)
+            self.mox.StubOutWithMock(instance_mock, '_from_db_object')
+            return instance_mock
+
+        instance = get_instance_mock()
+        instance._from_db_object(
+                instance, 'fake_instance').AndReturn(instance)
+        self.tgt_compute_api.start(self.ctxt, instance, 2, 3,
                 arg1='val1', arg2='val2').AndReturn('fake_result')
         self.mox.ReplayAll()
 

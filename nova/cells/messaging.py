@@ -36,6 +36,7 @@ from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import context
 from nova.db import base
 from nova import exception
+from nova.objects import instance as instance_obj
 from nova.openstack.common import excutils
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
@@ -678,6 +679,13 @@ class _TargetedMessageMethods(_BaseMessageMethods):
                 instance = {'uuid': instance_uuid}
                 self.msg_runner.instance_destroy_at_top(message.ctxt,
                                                         instance)
+        # FIXME(comstud): This is temporary/transitional until I can
+        # work out a better way to pass full objects down.
+        EXPECTS_OBJECTS = ['start', 'stop']
+        if method in EXPECTS_OBJECTS:
+            inst_obj = instance_obj.Instance()
+            inst_obj._from_db_object(inst_obj, instance)
+            instance = inst_obj
         args[0] = instance
         return fn(message.ctxt, *args, **method_info['method_kwargs'])
 
