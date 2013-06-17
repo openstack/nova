@@ -197,3 +197,48 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.stubs.Set(self.driver, '_schedule', _return_no_host)
         self.assertRaises(exception.NoValidHost,
                           self.driver.select_hosts, self.context, {}, {})
+
+    def test_select_destinations(self):
+        ctxt = context.RequestContext('fake', 'fake', False)
+        ctxt_elevated = 'fake-context-elevated'
+        request_spec = {'num_instances': 2}
+
+        self.mox.StubOutWithMock(ctxt, 'elevated')
+        self.mox.StubOutWithMock(self.driver, 'hosts_up')
+        self.mox.StubOutWithMock(random, 'choice')
+
+        hosts_full = ['host1', 'host2', 'host3', 'host4']
+
+        ctxt.elevated().AndReturn(ctxt_elevated)
+        self.driver.hosts_up(ctxt_elevated, 'compute').AndReturn(hosts_full)
+        random.choice(hosts_full).AndReturn('host3')
+
+        ctxt.elevated().AndReturn(ctxt_elevated)
+        self.driver.hosts_up(ctxt_elevated, 'compute').AndReturn(hosts_full)
+        random.choice(hosts_full).AndReturn('host2')
+
+        self.mox.ReplayAll()
+        dests = self.driver.select_destinations(ctxt, request_spec, {})
+        self.assertEquals(2, len(dests))
+        (host, node) = dests[0]
+        self.assertEquals('host3', host)
+        self.assertEquals(None, node)
+        (host, node) = dests[1]
+        self.assertEquals('host2', host)
+        self.assertEquals(None, node)
+
+    def test_select_destinations_no_valid_host(self):
+
+        def _return_no_host(*args, **kwargs):
+            return []
+
+        self.mox.StubOutWithMock(self.driver, 'hosts_up')
+        self.driver.hosts_up(mox.IgnoreArg(),
+                mox.IgnoreArg()).AndReturn([1, 2])
+        self.stubs.Set(self.driver, '_filter_hosts', _return_no_host)
+        self.mox.ReplayAll()
+
+        request_spec = {'num_instances': 1}
+        self.assertRaises(exception.NoValidHost,
+                          self.driver.select_destinations, self.context,
+                          request_spec, {})

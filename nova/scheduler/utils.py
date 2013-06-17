@@ -36,5 +36,8 @@ def build_request_spec(ctxt, image, instances):
             'image': image,
             'instance_properties': instance,
             'instance_type': instance_type,
+            'num_instances': len(instances),
+            # NOTE(alaski): This should be removed as logic moves from the
+            # scheduler to conductor.  Provides backwards compatibility now.
             'instance_uuids': [inst['uuid'] for inst in instances]}
     return jsonutils.to_primitive(request_spec)

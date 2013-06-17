@@ -60,7 +60,7 @@ QUOTAS = quota.QUOTAS
 class SchedulerManager(manager.Manager):
     """Chooses a host to run instances on."""
 
-    RPC_API_VERSION = '2.6'
+    RPC_API_VERSION = '2.7'
 
     def __init__(self, scheduler_driver=None, *args, **kwargs):
         if not scheduler_driver:
@@ -324,3 +324,14 @@ class SchedulerManager(manager.Manager):
         hosts = self.driver.select_hosts(context, request_spec,
             filter_properties)
         return jsonutils.to_primitive(hosts)
+
+    @rpc_common.client_exceptions(exception.NoValidHost)
+    def select_destinations(self, context, request_spec, filter_properties):
+        """Returns destinations(s) best suited for this request_spec and
+        filter_properties.
+
+        The result should be a list of (host, nodename) tuples.
+        """
+        dests = self.driver.select_destinations(context, request_spec,
+            filter_properties)
+        return jsonutils.to_primitive(dests)

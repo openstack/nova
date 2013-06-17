@@ -609,3 +609,58 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.stubs.Set(self.driver, '_schedule', _return_no_host)
         self.assertRaises(exception.NoValidHost,
                           self.driver.select_hosts, self.context, {}, {})
+
+    def test_select_destinations(self):
+        """select_destinations is basically a wrapper around _schedule().
+
+        Similar to the _schedule tests, this just does a happy path test to
+        ensure there is nothing glaringly wrong.
+        """
+
+        self.next_weight = 1.0
+
+        selected_hosts = []
+        selected_nodes = []
+
+        def _fake_weigh_objects(_self, functions, hosts, options):
+            self.next_weight += 2.0
+            host_state = hosts[0]
+            selected_hosts.append(host_state.host)
+            selected_nodes.append(host_state.nodename)
+            return [weights.WeighedHost(host_state, self.next_weight)]
+
+        sched = fakes.FakeFilterScheduler()
+        fake_context = context.RequestContext('user', 'project',
+            is_admin=True)
+
+        self.stubs.Set(sched.host_manager, 'get_filtered_hosts',
+            fake_get_filtered_hosts)
+        self.stubs.Set(weights.HostWeightHandler,
+            'get_weighed_objects', _fake_weigh_objects)
+        fakes.mox_host_manager_db_calls(self.mox, fake_context)
+
+        request_spec = {'instance_type': {'memory_mb': 512, 'root_gb': 512,
+                                          'ephemeral_gb': 0,
+                                          'vcpus': 1},
+                        'instance_properties': {'project_id': 1,
+                                                'root_gb': 512,
+                                                'memory_mb': 512,
+                                                'ephemeral_gb': 0,
+                                                'vcpus': 1,
+                                                'os_type': 'Linux'},
+                        'num_instances': 1}
+        self.mox.ReplayAll()
+        dests = sched.select_destinations(fake_context, request_spec, {})
+        (host, node) = dests[0]
+        self.assertEquals(host, selected_hosts[0])
+        self.assertEquals(node, selected_nodes[0])
+
+    def test_select_destinations_no_valid_host(self):
+
+        def _return_no_host(*args, **kwargs):
+            return []
+
+        self.stubs.Set(self.driver, '_schedule', _return_no_host)
+        self.assertRaises(exception.NoValidHost,
+                self.driver.select_destinations, self.context,
+                {'num_instances': 1}, {})

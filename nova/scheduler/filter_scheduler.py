@@ -161,6 +161,22 @@ class FilterScheduler(driver.Scheduler):
             raise exception.NoValidHost(reason="")
         return hosts
 
+    def select_destinations(self, context, request_spec, filter_properties):
+        """Selects a filtered set of hosts and nodes."""
+        num_instances = request_spec['num_instances']
+        instance_uuids = request_spec.get('instance_uuids')
+        selected_hosts = self._schedule(context, request_spec,
+                                        filter_properties, instance_uuids)
+
+        # Couldn't fulfill the request_spec
+        if len(selected_hosts) < num_instances:
+            raise exception.NoValidHost(reason='')
+
+        dests = []
+        for host in selected_hosts:
+            dests.append((host.obj.host, host.obj.nodename))
+        return dests
+
     def _provision_resource(self, context, weighed_host, request_spec,
             filter_properties, requested_networks, injected_files,
             admin_password, is_first_time, instance_uuid=None):

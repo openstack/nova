@@ -527,6 +527,10 @@ class SchedulerDriverBaseTestCase(SchedulerTestCase):
         self.assertRaises(NotImplementedError,
                           self.driver.select_hosts, self.context, {}, {})
 
+    def test_unimplemented_select_destinations(self):
+        self.assertRaises(NotImplementedError,
+                self.driver.select_destinations, self.context, {}, {})
+
 
 class SchedulerDriverModuleTestCase(test.NoDBTestCase):
     """Test case for scheduler driver module methods."""
