@@ -367,7 +367,11 @@ class Quota(BASE, NovaBase):
     """
 
     __tablename__ = 'quotas'
-    __table_args__ = ()
+    __table_args__ = (
+        schema.UniqueConstraint("project_id", "resource", "deleted",
+        name="uniq_quotas0project_id0resource0deleted"
+        ),
+    )
     id = Column(Integer, primary_key=True)
 
     project_id = Column(String(255), nullable=True)

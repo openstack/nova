@@ -1699,6 +1699,36 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
                           security_groups.insert().execute,
                           dict(name='group2', project_id='fake', deleted=0))
 
+    def _pre_upgrade_191(self, engine):
+        quotas = db_utils.get_table(engine, 'quotas')
+        data = [
+            {'project_id': 'project1', 'resource': 'resource1', 'deleted': 0},
+            {'project_id': 'project1', 'resource': 'resource1', 'deleted': 0},
+            {'project_id': 'project2', 'resource': 'resource1', 'deleted': 0},
+        ]
+        for item in data:
+            quotas.insert().values(item).execute()
+        return data
+
+    def _check_191(self, engine, data):
+        quotas = db_utils.get_table(engine, 'quotas')
+
+        def get_(project_id, deleted):
+            deleted_value = 0 if not deleted else quotas.c.id
+            return quotas.select().\
+                   where(quotas.c.project_id == project_id).\
+                   where(quotas.c.deleted == deleted_value).\
+                   execute().\
+                   fetchall()
+
+        self.assertEqual(1, len(get_('project1', False)))
+        self.assertEqual(1, len(get_('project1', True)))
+        self.assertEqual(1, len(get_('project2', False)))
+        self.assertRaises(sqlalchemy.exc.IntegrityError,
+                          quotas.insert().execute,
+                          {'project_id': 'project1', 'resource': 'resource1',
+                           'deleted': 0})
+
 
 class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""

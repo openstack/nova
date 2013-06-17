@@ -4753,6 +4753,11 @@ class QuotaTestCase(test.TestCase, ModelsObjectComparatorMixin):
         for key, value in expected.iteritems():
             self.assertEqual(value, quota_usage[key])
 
+    def test_quota_create_exists(self):
+        db.quota_create(self.ctxt, 'project1', 'resource1', 41)
+        self.assertRaises(exception.QuotaExists, db.quota_create, self.ctxt,
+                          'project1', 'resource1', 42)
+
 
 class QuotaClassTestCase(test.TestCase, ModelsObjectComparatorMixin):
 

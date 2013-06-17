@@ -704,6 +704,11 @@ class QuotaNotFound(NotFound):
     message = _("Quota could not be found")
 
 
+class QuotaExists(Duplicate):
+    message = _("Quota exists for project %(project_id)s, "
+                "resource %(resource)s")
+
+
 class QuotaResourceUnknown(QuotaNotFound):
     message = _("Unknown quota resources %(unknown)s.")
 

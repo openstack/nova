@@ -162,9 +162,9 @@ class QuotaSetsController(object):
                         raise webob.exc.HTTPBadRequest(explanation=msg)
 
             try:
-                db.quota_update(context, project_id, key, value)
-            except exception.ProjectQuotaNotFound:
                 db.quota_create(context, project_id, key, value)
+            except exception.QuotaExists:
+                db.quota_update(context, project_id, key, value)
             except exception.AdminRequired:
                 raise webob.exc.HTTPForbidden()
         return {'quota_set': self._get_quotas(context, id)}
