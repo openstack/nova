@@ -1643,6 +1643,35 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         rows = services.select().execute().fetchall()
         self.assertFalse('disabled_reason' in rows[0])
 
+    def _pre_upgrade_189(self, engine):
+        cells = db_utils.get_table(engine, 'cells')
+        data = [
+                {'name': 'name_123', 'deleted': 0},
+                {'name': 'name_123', 'deleted': 0},
+                {'name': 'name_345', 'deleted': 0},
+        ]
+        for item in data:
+            cells.insert().values(item).execute()
+        return data
+
+    def _check_189(self, engine, data):
+        cells = db_utils.get_table(engine, 'cells')
+
+        def get_(name, deleted):
+            deleted_value = 0 if not deleted else cells.c.id
+            return cells.select().\
+                   where(cells.c.name == name).\
+                   where(cells.c.deleted == deleted_value).\
+                   execute().\
+                   fetchall()
+
+        self.assertEqual(1, len(get_('name_123', False)))
+        self.assertEqual(1, len(get_('name_123', True)))
+        self.assertEqual(1, len(get_('name_345', False)))
+        self.assertRaises(sqlalchemy.exc.IntegrityError,
+                          cells.insert().execute,
+                          {'name': 'name_123', 'deleted': 0})
+
 
 class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""

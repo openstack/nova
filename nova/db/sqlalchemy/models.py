@@ -859,6 +859,10 @@ class Cell(BASE, NovaBase):
     of entries with is_parent=True or False
     """
     __tablename__ = 'cells'
+    __table_args__ = (schema.UniqueConstraint(
+        "name", "deleted", name="uniq_cell_name0deleted"
+        ),
+    )
     id = Column(Integer, primary_key=True)
     # Name here is the 'short name' of a cell.  For instance: 'child1'
     name = Column(String(255))

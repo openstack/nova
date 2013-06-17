@@ -825,6 +825,10 @@ class CellNotFound(NotFound):
     message = _("Cell %(cell_name)s doesn't exist.")
 
 
+class CellExists(Duplicate):
+    message = _("Cell with name %(name)s already exists.")
+
+
 class CellRoutingInconsistency(NovaException):
     message = _("Inconsistency in cell routing: %(reason)s")
 
