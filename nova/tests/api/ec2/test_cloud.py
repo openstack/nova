@@ -2210,7 +2210,8 @@ class CloudTestCase(test.TestCase):
         def fake_block_device_mapping_get_all_by_instance(context, inst_id):
             return [dict(snapshot_id=snapshots[0],
                          volume_id=volumes[0],
-                         virtual_name=None,
+                         source_type='snapshot',
+                         destination_type='volume',
                          volume_size=1,
                          device_name='vda',
                          delete_on_termination=False,

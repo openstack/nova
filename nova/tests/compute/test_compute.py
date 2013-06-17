@@ -8115,6 +8115,39 @@ class ComputeAPITestCase(BaseTestCase):
                                                              filters)
         self.assertEqual(migrations, [migration])
 
+    def _setup_get_instance_bdm_mox(self):
+        new_bdm = object()
+
+        self.mox.StubOutWithMock(self.compute_api.db,
+                       'block_device_mapping_get_all_by_instance')
+        self.compute_api.db.\
+            block_device_mapping_get_all_by_instance(
+                mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(new_bdm)
+        return new_bdm
+
+    def test_get_instance_bdms_legacy(self):
+        expected = self._setup_get_instance_bdm_mox()
+        self.mox.ReplayAll()
+
+        instance = {'uuid': 'fake-instance'}
+
+        self.assertEqual(expected,
+                         self.compute_api.get_instance_bdms({},
+                            instance, legacy=False))
+
+    def test_get_instance_bdms_default(self):
+        new_bdm = self._setup_get_instance_bdm_mox()
+        expected = legacy_bdm = object()
+
+        self.mox.StubOutWithMock(block_device, 'legacy_mapping')
+        block_device.legacy_mapping(new_bdm).AndReturn(legacy_bdm)
+        self.mox.ReplayAll()
+
+        instance = {'uuid': 'fake-instance'}
+
+        self.assertEqual(expected,
+                         self.compute_api.get_instance_bdms({}, instance))
+
 
 def fake_rpc_method(context, topic, msg, do_cast=True):
     pass
