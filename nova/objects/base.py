@@ -182,6 +182,7 @@ class NovaObject(object):
         'deleted_at': obj_utils.datetime_or_str_or_none,
         'deleted': bool,
         }
+    obj_extra_fields = []
 
     def __init__(self):
         self._changed_fields = set()
@@ -330,8 +331,9 @@ class NovaObject(object):
 
         NOTE(danms): May be removed in the future.
         """
-        for name in self.fields:
-            if hasattr(self, get_attrname(name)):
+        for name in self.fields.keys() + self.obj_extra_fields:
+            if (hasattr(self, get_attrname(name)) or
+                name in self.obj_extra_fields):
                 yield name, getattr(self, name)
 
     items = lambda self: list(self.iteritems())
