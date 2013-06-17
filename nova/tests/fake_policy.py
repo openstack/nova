@@ -119,6 +119,7 @@ policy_data = """
     "compute_extension:v3:os-admin-actions:resetState": "",
     "compute_extension:v3:os-admin-actions:migrate": "",
     "compute_extension:aggregates": "",
+    "compute_extension:v3:os-aggregates": "",
     "compute_extension:agents": "",
     "compute_extension:v3:os-agents": "",
     "compute_extension:attach_interfaces": "",
