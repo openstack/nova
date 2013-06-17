@@ -28,9 +28,10 @@ from nova import compute
 from nova import exception
 from nova import utils
 
-authorize = extensions.extension_authorizer('compute', 'fping')
+ALIAS = "os-fping"
+authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
 authorize_all_tenants = extensions.extension_authorizer(
-    'compute', 'fping:all_tenants')
+    'compute', 'v3:' + ALIAS + ':all_tenants')
 fping_opts = [
     cfg.StrOpt("fping_path",
                default="/usr/sbin/fping",
@@ -142,16 +143,18 @@ class FpingController(object):
             raise exc.HTTPNotFound()
 
 
-class Fping(extensions.ExtensionDescriptor):
+class Fping(extensions.V3APIExtensionBase):
     """Fping Management Extension."""
 
     name = "Fping"
-    alias = "os-fping"
-    namespace = "http://docs.openstack.org/compute/ext/fping/api/v1.1"
-    updated = "2012-07-06T00:00:00+00:00"
+    alias = ALIAS
+    namespace = "http://docs.openstack.org/compute/ext/fping/api/v3"
+    version = 1
 
     def get_resources(self):
-        res = extensions.ResourceExtension(
-            "os-fping",
-            FpingController())
-        return [res]
+        resources = [
+            extensions.ResourceExtension(ALIAS, FpingController())]
+        return resources
+
+    def get_controller_extensions(self):
+        return []
