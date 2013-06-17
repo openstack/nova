@@ -1729,6 +1729,29 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
                           {'project_id': 'project1', 'resource': 'resource1',
                            'deleted': 0})
 
+    def _check_192(self, engine, data):
+        virtual_if = db_utils.get_table(engine, 'virtual_interfaces')
+        values = {'address': 'address0', 'deleted': 0}
+        virtual_if.insert().values(values).execute()
+        values['deleted'] = 1
+        virtual_if.insert().values(values).execute()
+        values['deleted'] = 0
+        self.assertRaises(sqlalchemy.exc.IntegrityError,
+                          virtual_if.insert().execute,
+                          values)
+
+    def _post_downgrade_192(self, engine):
+        virtual_if = db_utils.get_table(engine, 'virtual_interfaces')
+        deleted = virtual_if.select().\
+                  where(virtual_if.c.deleted != 0).\
+                  execute().fetchall()
+        self.assertEqual([], deleted)
+        values = {'address': 'address1'}
+        virtual_if.insert().values(values).execute()
+        self.assertRaises(sqlalchemy.exc.IntegrityError,
+                          virtual_if.insert().execute,
+                          values)
+
 
 class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""

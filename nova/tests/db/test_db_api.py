@@ -4212,11 +4212,8 @@ class VirtualInterfaceTestCase(test.TestCase, ModelsObjectComparatorMixin):
                         'created_at', 'uuid']
         self._assertEqualObjects(vif, self._get_base_values(), ignored_keys)
 
-    @test.testtools.skip("bug 1156227")
     def test_virtual_interface_create_with_duplicate_address(self):
         vif = self._create_virt_interface({})
-        # NOTE(boris-42): Due to the bug 1156227 this won't work. In havana-1
-        #                 it will be fixed.
         self.assertRaises(exception.VirtualInterfaceCreateException,
                           self._create_virt_interface, {"uuid": vif['uuid']})
 
