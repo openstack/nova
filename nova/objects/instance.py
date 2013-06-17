@@ -256,6 +256,7 @@ class Instance(base.NovaObject):
             if (hasattr(self, base.get_attrname(field)) and
                 self[field] != current[field]):
                 self[field] = current[field]
+        self.obj_reset_changes()
 
     def obj_load_attr(self, attrname):
         extra = []

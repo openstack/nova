@@ -163,6 +163,7 @@ class _TestInstanceObject(object):
         inst.refresh()
         self.assertEqual(inst.host, 'new-host')
         self.assertRemotes()
+        self.assertEqual(set([]), inst.obj_what_changed())
 
     def test_save(self):
         ctxt = context.get_admin_context()

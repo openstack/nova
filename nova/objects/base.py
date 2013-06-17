@@ -311,7 +311,7 @@ class NovaObject(object):
         raise NotImplementedError('Cannot save anything in the base class')
 
     def obj_what_changed(self):
-        """Returns a list of fields that have been modified."""
+        """Returns a set of fields that have been modified."""
         return self._changed_fields
 
     def obj_reset_changes(self, fields=None):
