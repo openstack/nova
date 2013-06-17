@@ -3692,19 +3692,19 @@ class VolumeUsageDBApiTestCase(test.TestCase):
         vol_usages = db.vol_get_usage_by_time(ctxt, start_time)
         self.assertEqual(len(vol_usages), 0)
 
-        db.vol_usage_update(ctxt, 1, rd_req=10, rd_bytes=20,
+        db.vol_usage_update(ctxt, u'1', rd_req=10, rd_bytes=20,
                             wr_req=30, wr_bytes=40,
                             instance_id='fake-instance-uuid1',
                             project_id='fake-project-uuid1',
                             user_id='fake-user-uuid1',
                             availability_zone='fake-az')
-        db.vol_usage_update(ctxt, 2, rd_req=100, rd_bytes=200,
+        db.vol_usage_update(ctxt, u'2', rd_req=100, rd_bytes=200,
                             wr_req=300, wr_bytes=400,
                             instance_id='fake-instance-uuid2',
                             project_id='fake-project-uuid2',
                             user_id='fake-user-uuid2',
                             availability_zone='fake-az')
-        db.vol_usage_update(ctxt, 1, rd_req=1000, rd_bytes=2000,
+        db.vol_usage_update(ctxt, u'1', rd_req=1000, rd_bytes=2000,
                             wr_req=3000, wr_bytes=4000,
                             instance_id='fake-instance-uuid1',
                             project_id='fake-project-uuid1',
@@ -3731,7 +3731,7 @@ class VolumeUsageDBApiTestCase(test.TestCase):
         timeutils.utcnow().AndReturn(now3)
         self.mox.ReplayAll()
 
-        db.vol_usage_update(ctxt, 1, rd_req=100, rd_bytes=200,
+        db.vol_usage_update(ctxt, u'1', rd_req=100, rd_bytes=200,
                             wr_req=300, wr_bytes=400,
                             instance_id='fake-instance-uuid',
                             project_id='fake-project-uuid',
@@ -3741,7 +3741,7 @@ class VolumeUsageDBApiTestCase(test.TestCase):
         self.assertEqual(current_usage['tot_reads'], 0)
         self.assertEqual(current_usage['curr_reads'], 100)
 
-        db.vol_usage_update(ctxt, 1, rd_req=200, rd_bytes=300,
+        db.vol_usage_update(ctxt, u'1', rd_req=200, rd_bytes=300,
                             wr_req=400, wr_bytes=500,
                             instance_id='fake-instance-uuid',
                             project_id='fake-project-uuid',
@@ -3752,7 +3752,7 @@ class VolumeUsageDBApiTestCase(test.TestCase):
         self.assertEqual(current_usage['tot_reads'], 200)
         self.assertEqual(current_usage['curr_reads'], 0)
 
-        db.vol_usage_update(ctxt, 1, rd_req=300, rd_bytes=400,
+        db.vol_usage_update(ctxt, u'1', rd_req=300, rd_bytes=400,
                             wr_req=500, wr_bytes=600,
                             instance_id='fake-instance-uuid',
                             project_id='fake-project-uuid',
@@ -3762,7 +3762,7 @@ class VolumeUsageDBApiTestCase(test.TestCase):
         self.assertEqual(current_usage['tot_reads'], 200)
         self.assertEqual(current_usage['curr_reads'], 300)
 
-        db.vol_usage_update(ctxt, 1, rd_req=400, rd_bytes=500,
+        db.vol_usage_update(ctxt, u'1', rd_req=400, rd_bytes=500,
                             wr_req=600, wr_bytes=700,
                             instance_id='fake-instance-uuid',
                             project_id='fake-project-uuid',
@@ -3800,7 +3800,7 @@ class VolumeUsageDBApiTestCase(test.TestCase):
         vol_usages = db.vol_get_usage_by_time(ctxt, start_time)
         self.assertEqual(len(vol_usages), 0)
 
-        db.vol_usage_update(ctxt, 1,
+        db.vol_usage_update(ctxt, u'1',
                             rd_req=10000, rd_bytes=20000,
                             wr_req=30000, wr_bytes=40000,
                             instance_id='fake-instance-uuid1',
@@ -3810,7 +3810,7 @@ class VolumeUsageDBApiTestCase(test.TestCase):
 
         # Instance rebooted or crashed. block device stats were reset and are
         # less then the previous values
-        db.vol_usage_update(ctxt, 1,
+        db.vol_usage_update(ctxt, u'1',
                             rd_req=100, rd_bytes=200,
                             wr_req=300, wr_bytes=400,
                             instance_id='fake-instance-uuid1',
@@ -3818,7 +3818,7 @@ class VolumeUsageDBApiTestCase(test.TestCase):
                             availability_zone='fake-az',
                             user_id='fake-user-uuid1')
 
-        db.vol_usage_update(ctxt, 1,
+        db.vol_usage_update(ctxt, u'1',
                             rd_req=200, rd_bytes=300,
                             wr_req=400, wr_bytes=500,
                             instance_id='fake-instance-uuid1',
@@ -3854,7 +3854,7 @@ class VolumeUsageDBApiTestCase(test.TestCase):
         vol_usages = db.vol_get_usage_by_time(ctxt, start_time)
         self.assertEqual(len(vol_usages), 0)
 
-        db.vol_usage_update(ctxt, 1,
+        db.vol_usage_update(ctxt, u'1',
                             rd_req=10000, rd_bytes=20000,
                             wr_req=30000, wr_bytes=40000,
                             instance_id='fake-instance-uuid1',
@@ -3864,7 +3864,7 @@ class VolumeUsageDBApiTestCase(test.TestCase):
 
         # Instance rebooted or crashed. block device stats were reset and are
         # less then the previous values
-        db.vol_usage_update(ctxt, 1,
+        db.vol_usage_update(ctxt, u'1',
                             rd_req=100, rd_bytes=200,
                             wr_req=300, wr_bytes=400,
                             instance_id='fake-instance-uuid1',
