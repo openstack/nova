@@ -554,7 +554,7 @@ class API(base.Base):
                     image, instance_type)
 
     def _validate_and_build_base_options(self, context, instance_type,
-                                         image, image_href, image_id,
+                                         boot_meta, image_href, image_id,
                                          kernel_id, ramdisk_id, min_count,
                                          max_count, display_name,
                                          display_description, key_name,
@@ -590,14 +590,14 @@ class API(base.Base):
             except base64.binascii.Error:
                 raise exception.InstanceUserDataMalformed()
 
-        self._checks_for_create_and_rebuild(context, image_id, image,
+        self._checks_for_create_and_rebuild(context, image_id, boot_meta,
                 instance_type, metadata, injected_files)
 
         self._check_requested_secgroups(context, security_groups)
         self._check_requested_networks(context, requested_networks)
 
         kernel_id, ramdisk_id = self._handle_kernel_and_ramdisk(
-                context, kernel_id, ramdisk_id, image)
+                context, kernel_id, ramdisk_id, boot_meta)
 
         config_drive = self._check_config_drive(config_drive)
 
@@ -607,7 +607,7 @@ class API(base.Base):
             key_data = key_pair['public_key']
 
         root_device_name = block_device.properties_root_device_name(
-            image.get('properties', {}))
+            boot_meta.get('properties', {}))
 
         system_metadata = flavors.save_flavor_info(
             dict(), instance_type)
@@ -642,7 +642,7 @@ class API(base.Base):
             'system_metadata': system_metadata}
 
         options_from_image = self._inherit_properties_from_image(
-                image, auto_disk_config)
+                boot_meta, auto_disk_config)
 
         base_options.update(options_from_image)
 
@@ -661,7 +661,7 @@ class API(base.Base):
         return filter_properties
 
     def _provision_instances(self, context, instance_type, min_count,
-            max_count, base_options, image, security_groups,
+            max_count, base_options, boot_meta, security_groups,
             block_device_mapping):
         # Reserve quotas
         num_instances, quota_reservations = self._check_num_instances_quota(
@@ -672,7 +672,7 @@ class API(base.Base):
             for i in xrange(num_instances):
                 options = base_options.copy()
                 instance = self.create_db_entry_for_new_instance(
-                        context, instance_type, image, options,
+                        context, instance_type, boot_meta, options,
                         security_groups, block_device_mapping,
                         num_instances, i)
 
@@ -697,7 +697,7 @@ class API(base.Base):
         QUOTAS.commit(context, quota_reservations)
         return instances
 
-    def _get_volume(self, context, block_device_mapping):
+    def _get_volume_image_metadata(self, context, block_device_mapping):
         """If we are booting from a volume, we need to get the
         volume details from Cinder and make sure we pass the
         metadata back accordingly.
@@ -712,7 +712,7 @@ class API(base.Base):
                     try:
                         volume = self.volume_api.get(context,
                                 volume_id)
-                        return volume
+                        return volume['volume_image_metadata']
                     except Exception:
                         raise exception.InvalidBDMVolume(volume_id)
         return None
@@ -744,10 +744,12 @@ class API(base.Base):
             instance_type = flavors.get_default_flavor()
 
         if image_href:
-            image_id, image = self._get_image(context, image_href)
+            image_id, boot_meta = self._get_image(context, image_href)
         else:
             image_id = None
-            image = self._get_volume(context,
+            boot_meta = {}
+            boot_meta['properties'] = \
+                self._get_volume_image_metadata(context,
                     block_device_mapping)
 
         handle_az = self._handle_availability_zone
@@ -755,7 +757,7 @@ class API(base.Base):
                                                             availability_zone)
 
         base_options = self._validate_and_build_base_options(context,
-                instance_type, image, image_href, image_id, kernel_id,
+                instance_type, boot_meta, image_href, image_id, kernel_id,
                 ramdisk_id, min_count, max_count, display_name,
                 display_description, key_name, key_data, security_groups,
                 availability_zone, user_data, metadata, injected_files,
@@ -763,7 +765,7 @@ class API(base.Base):
                 block_device_mapping, auto_disk_config, reservation_id)
 
         instances = self._provision_instances(context, instance_type,
-                min_count, max_count, base_options, image, security_groups,
+                min_count, max_count, base_options, boot_meta, security_groups,
                 block_device_mapping)
 
         filter_properties = self._build_filter_properties(context,
@@ -774,7 +776,7 @@ class API(base.Base):
                                       instance_actions.CREATE)
 
         self.compute_task_api.build_instances(context,
-                instances=instances, image=image,
+                instances=instances, image=boot_meta,
                 filter_properties=filter_properties,
                 admin_password=admin_password,
                 injected_files=injected_files,
