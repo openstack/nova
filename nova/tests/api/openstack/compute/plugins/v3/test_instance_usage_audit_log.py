@@ -15,7 +15,8 @@
 
 import datetime
 
-from nova.api.openstack.compute.contrib import instance_usage_audit_log as ial
+from nova.api.openstack.compute.plugins.v3 import \
+    instance_usage_audit_log as ial
 from nova import context
 from nova import db
 from nova.openstack.common import timeutils
@@ -118,7 +119,7 @@ class InstanceUsageAuditLogTest(test.TestCase):
             return TEST_COMPUTE_SERVICES
 
         self.stubs.Set(utils, 'last_completed_audit_period',
-                            fake_last_completed_audit_period)
+                       fake_last_completed_audit_period)
         self.stubs.Set(db, 'service_get_all',
                        fake_service_get_all)
         self.stubs.Set(db, 'task_log_get_all',
@@ -129,10 +130,10 @@ class InstanceUsageAuditLogTest(test.TestCase):
         timeutils.clear_time_override()
 
     def test_index(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/os-instance_usage_audit_log')
+        req = fakes.HTTPRequestV3.blank('/os-instance_usage_audit_log')
         result = self.controller.index(req)
-        self.assertIn('instance_usage_audit_logs', result)
-        logs = result['instance_usage_audit_logs']
+        self.assertIn('instance_usage_audit_log', result)
+        logs = result['instance_usage_audit_log']
         self.assertEquals(57, logs['total_instances'])
         self.assertEquals(0, logs['total_errors'])
         self.assertEquals(4, len(logs['log']))
@@ -143,8 +144,7 @@ class InstanceUsageAuditLogTest(test.TestCase):
         self.assertEquals("ALL hosts done. 0 errors.", logs['overall_status'])
 
     def test_show(self):
-        req = fakes.HTTPRequest.blank(
-                    '/v2/fake/os-instance_usage_audit_log/show')
+        req = fakes.HTTPRequestV3.blank('/os-instance_usage_audit_log/show')
         result = self.controller.show(req, '2012-07-05 10:00:00')
         self.assertIn('instance_usage_audit_log', result)
         logs = result['instance_usage_audit_log']
@@ -158,8 +158,7 @@ class InstanceUsageAuditLogTest(test.TestCase):
         self.assertEquals("ALL hosts done. 0 errors.", logs['overall_status'])
 
     def test_show_with_running(self):
-        req = fakes.HTTPRequest.blank(
-                    '/v2/fake/os-instance_usage_audit_log/show')
+        req = fakes.HTTPRequestV3.blank('/os-instance_usage_audit_log/show')
         result = self.controller.show(req, '2012-07-06 10:00:00')
         self.assertIn('instance_usage_audit_log', result)
         logs = result['instance_usage_audit_log']
@@ -174,8 +173,7 @@ class InstanceUsageAuditLogTest(test.TestCase):
                           logs['overall_status'])
 
     def test_show_with_errors(self):
-        req = fakes.HTTPRequest.blank(
-                    '/v2/fake/os-instance_usage_audit_log/show')
+        req = fakes.HTTPRequestV3.blank('/os-instance_usage_audit_log/show')
         result = self.controller.show(req, '2012-07-07 10:00:00')
         self.assertIn('instance_usage_audit_log', result)
         logs = result['instance_usage_audit_log']
