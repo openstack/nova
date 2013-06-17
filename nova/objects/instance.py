@@ -110,6 +110,8 @@ class Instance(base.NovaObject):
 
         }
 
+    obj_extra_fields = ['name']
+
     @property
     def name(self):
         try:

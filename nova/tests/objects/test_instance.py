@@ -212,6 +212,15 @@ class _TestInstanceObject(object):
         inst.info_cache.network_info = 'bar'
         inst.save()
 
+    def test_iteritems_with_extra_attrs(self):
+        self.stubs.Set(instance.Instance, 'name', 'foo')
+        inst = instance.Instance()
+        inst.uuid = 'fake-uuid'
+        self.assertEqual(inst.items(),
+                         {'uuid': 'fake-uuid',
+                          'name': 'foo',
+                          }.items())
+
 
 class TestInstanceObject(test_objects._LocalTest,
                          _TestInstanceObject):
