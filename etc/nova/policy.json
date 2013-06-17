@@ -102,6 +102,7 @@
     "compute_extension:security_group_default_rules": "rule:admin_api",
     "compute_extension:security_groups": "",
     "compute_extension:server_diagnostics": "rule:admin_api",
+    "compute_extension:v3:os-server-diagnostics": "rule:admin_api",
     "compute_extension:server_password": "",
     "compute_extension:server_usage": "",
     "compute_extension:services": "rule:admin_api",
