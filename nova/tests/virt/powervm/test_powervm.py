@@ -269,9 +269,12 @@ class PowerVMDriverTestCase(test.TestCase):
             self._loc_expected_task_state = expected_state
 
         loc_context = context.get_admin_context()
+        arch = 'fake_arch'
         properties = {'instance_id': self.instance['id'],
-                      'user_id': str(loc_context.user_id)}
-        sent_meta = {'name': 'fake_snap', 'is_public': False,
+                      'user_id': str(loc_context.user_id),
+                      'architecture': arch}
+        snapshot_name = 'fake_snap'
+        sent_meta = {'name': snapshot_name, 'is_public': False,
                      'status': 'creating', 'properties': properties}
         image_service = fake.FakeImageService()
         recv_meta = image_service.create(loc_context, sent_meta)
@@ -282,6 +285,12 @@ class PowerVMDriverTestCase(test.TestCase):
 
         self.assertTrue(self._loc_task_state == task_states.IMAGE_UPLOADING and
             self._loc_expected_task_state == task_states.IMAGE_PENDING_UPLOAD)
+
+        snapshot = image_service.show(context, recv_meta['id'])
+        self.assertEquals(snapshot['properties']['image_state'], 'available')
+        self.assertEquals(snapshot['properties']['architecture'], arch)
+        self.assertEquals(snapshot['status'], 'active')
+        self.assertEquals(snapshot['name'], snapshot_name)
 
     def _set_get_info_stub(self, state):
         def fake_get_instance(instance_name):
