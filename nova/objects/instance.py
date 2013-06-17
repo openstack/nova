@@ -191,7 +191,7 @@ class Instance(base.NovaObject):
         return instance
 
     @base.remotable_classmethod
-    def get_by_uuid(cls, context, uuid=None, expected_attrs=None):
+    def get_by_uuid(cls, context, uuid, expected_attrs=None):
         if expected_attrs is None:
             expected_attrs = []
 

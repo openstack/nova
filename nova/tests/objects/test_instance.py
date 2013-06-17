@@ -90,7 +90,7 @@ class _TestInstanceObject(object):
         self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
         db.instance_get_by_uuid(ctxt, 'uuid', []).AndReturn(self.fake_instance)
         self.mox.ReplayAll()
-        inst = instance.Instance.get_by_uuid(ctxt, uuid='uuid')
+        inst = instance.Instance.get_by_uuid(ctxt, 'uuid')
         # Make sure these weren't loaded
         for attr in instance.INSTANCE_OPTIONAL_FIELDS:
             attrname = base.get_attrname(attr)
