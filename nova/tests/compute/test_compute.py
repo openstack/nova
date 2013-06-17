@@ -4333,9 +4333,11 @@ class ComputeTestCase(BaseTestCase):
         instance_map = {}
         instances = []
         for x in xrange(5):
-            uuid = 'fake-uuid-%s' % x
-            instance_map[uuid] = {'uuid': uuid, 'host': CONF.host}
-            instances.append(instance_map[uuid])
+            inst_uuid = 'fake-uuid-%s' % x
+            instance_map[inst_uuid] = fake_instance.fake_db_instance(
+                uuid=inst_uuid, host=CONF.host, created_at=None)
+            # These won't be in our instance since they're not requested
+            instances.append(instance_map[inst_uuid])
 
         call_info = {'get_all_by_host': 0, 'get_by_uuid': 0,
                 'get_nw_info': 0, 'expected_instance': None}
@@ -4345,7 +4347,7 @@ class ComputeTestCase(BaseTestCase):
             self.assertEqual(columns_to_join, [])
             return instances[:]
 
-        def fake_instance_get_by_uuid(context, instance_uuid):
+        def fake_instance_get_by_uuid(context, instance_uuid, columns_to_join):
             if instance_uuid not in instance_map:
                 raise exception.InstanceNotFound(instance_id=instance_uuid)
             call_info['get_by_uuid'] += 1
@@ -4357,12 +4359,13 @@ class ComputeTestCase(BaseTestCase):
             # and is ignored.  However, the below increment of
             # 'get_nw_info' won't happen, and you'll get an assert
             # failure checking it below.
-            self.assertEqual(call_info['expected_instance'], instance)
+            self.assertEqual(call_info['expected_instance']['uuid'],
+                             instance['uuid'])
             call_info['get_nw_info'] += 1
 
-        self.stubs.Set(self.compute.conductor_api, 'instance_get_all_by_host',
+        self.stubs.Set(db, 'instance_get_all_by_host',
                 fake_instance_get_all_by_host)
-        self.stubs.Set(self.compute.conductor_api, 'instance_get_by_uuid',
+        self.stubs.Set(db, 'instance_get_by_uuid',
                 fake_instance_get_by_uuid)
         self.stubs.Set(self.compute, '_get_instance_nw_info',
                 fake_get_instance_nw_info)
