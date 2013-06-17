@@ -24,28 +24,28 @@ class AgentEnabledCase(test.TestCase):
     def test_agent_is_present(self):
         self.flags(xenapi_use_agent_default=False)
         instance = {"system_metadata":
-            {"image_xenapi_use_agent": "true"}}
+            [{"key": "image_xenapi_use_agent", "value": "true"}]}
         self.assertTrue(agent.should_use_agent(instance))
 
     def test_agent_is_disabled(self):
         self.flags(xenapi_use_agent_default=True)
         instance = {"system_metadata":
-            {"image_xenapi_use_agent": "false"}}
+            [{"key": "image_xenapi_use_agent", "value": "false"}]}
         self.assertFalse(agent.should_use_agent(instance))
 
     def test_agent_uses_deafault_when_prop_invalid(self):
         self.flags(xenapi_use_agent_default=True)
         instance = {"system_metadata":
-            {"image_xenapi_use_agent": "bob"},
+            [{"key": "image_xenapi_use_agent", "value": "bob"}],
             "uuid": "uuid"}
         self.assertTrue(agent.should_use_agent(instance))
 
     def test_agent_default_not_present(self):
         self.flags(xenapi_use_agent_default=False)
-        instance = {"system_metadata": {}}
+        instance = {"system_metadata": []}
         self.assertFalse(agent.should_use_agent(instance))
 
     def test_agent_default_present(self):
         self.flags(xenapi_use_agent_default=True)
-        instance = {"system_metadata": {}}
+        instance = {"system_metadata": []}
         self.assertTrue(agent.should_use_agent(instance))
