@@ -4048,7 +4048,10 @@ def instance_type_extra_specs_update_or_create(context, flavor_id, specs):
 def cell_create(context, values):
     cell = models.Cell()
     cell.update(values)
-    cell.save()
+    try:
+        cell.save()
+    except db_exc.DBDuplicateEntry:
+        raise exception.CellExists(name=values['name'])
     return cell
 
 

@@ -4967,6 +4967,11 @@ class CellTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertRaises(exception.CellNotFound, db.cell_update, self.ctxt,
                           'cellnotinbase', self._get_cell_base_values())
 
+    def test_cell_create_exists(self):
+        db.cell_create(self.ctxt, self._get_cell_base_values())
+        self.assertRaises(exception.CellExists, db.cell_create,
+                          self.ctxt, self._get_cell_base_values())
+
 
 class ArchiveTestCase(test.TestCase):
 
