@@ -26,6 +26,7 @@ import re
 import shutil
 import tempfile
 
+from eventlet import greenthread
 from lxml import etree
 from oslo.config import cfg
 from xml.dom import minidom
@@ -3164,6 +3165,90 @@ class LibvirtConnTestCase(test.TestCase):
                        'unfilter_instance', fake_unfilter_instance)
         self.stubs.Set(os.path, 'exists', fake_os_path_exists)
         conn.destroy(instance, [], None, False)
+
+    def test_reboot_different_ids(self):
+        class FakeLoopingCall:
+            def start(self, *a, **k):
+                return self
+
+            def wait(self):
+                return None
+
+        self.flags(libvirt_wait_soft_reboot_seconds=1)
+        info_tuple = ('fake', 'fake', 'fake', 'also_fake')
+        self.reboot_create_called = False
+
+        # Mock domain
+        mock_domain = self.mox.CreateMock(libvirt.virDomain)
+        mock_domain.info().AndReturn(
+            (libvirt_driver.VIR_DOMAIN_RUNNING,) + info_tuple)
+        mock_domain.ID().AndReturn('some_fake_id')
+        mock_domain.shutdown()
+        mock_domain.info().AndReturn(
+            (libvirt_driver.VIR_DOMAIN_CRASHED,) + info_tuple)
+        mock_domain.ID().AndReturn('some_other_fake_id')
+
+        self.mox.ReplayAll()
+
+        def fake_lookup_by_name(instance_name):
+            return mock_domain
+
+        def fake_create_domain(**kwargs):
+            self.reboot_create_called = True
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = {"name": "instancename", "id": "instanceid",
+                    "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64"}
+        self.stubs.Set(conn, '_lookup_by_name', fake_lookup_by_name)
+        self.stubs.Set(conn, '_create_domain', fake_create_domain)
+        self.stubs.Set(loopingcall, 'FixedIntervalLoopingCall',
+                       lambda *a, **k: FakeLoopingCall())
+        conn.reboot(None, instance, [])
+        self.assertTrue(self.reboot_create_called)
+
+    def test_reboot_same_ids(self):
+        class FakeLoopingCall:
+            def start(self, *a, **k):
+                return self
+
+            def wait(self):
+                return None
+
+        self.flags(libvirt_wait_soft_reboot_seconds=1)
+        info_tuple = ('fake', 'fake', 'fake', 'also_fake')
+        self.reboot_hard_reboot_called = False
+
+        # Mock domain
+        mock_domain = self.mox.CreateMock(libvirt.virDomain)
+        mock_domain.info().AndReturn(
+            (libvirt_driver.VIR_DOMAIN_RUNNING,) + info_tuple)
+        mock_domain.ID().AndReturn('some_fake_id')
+        mock_domain.shutdown()
+        mock_domain.info().AndReturn(
+            (libvirt_driver.VIR_DOMAIN_CRASHED,) + info_tuple)
+        mock_domain.ID().AndReturn('some_fake_id')
+
+        self.mox.ReplayAll()
+
+        def fake_lookup_by_name(instance_name):
+            return mock_domain
+
+        def fake_hard_reboot(*args, **kwargs):
+            self.reboot_hard_reboot_called = True
+
+        def fake_sleep(interval):
+            pass
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = {"name": "instancename", "id": "instanceid",
+                    "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64"}
+        self.stubs.Set(conn, '_lookup_by_name', fake_lookup_by_name)
+        self.stubs.Set(greenthread, 'sleep', fake_sleep)
+        self.stubs.Set(conn, '_hard_reboot', fake_hard_reboot)
+        self.stubs.Set(loopingcall, 'FixedIntervalLoopingCall',
+                       lambda *a, **k: FakeLoopingCall())
+        conn.reboot(None, instance, [])
+        self.assertTrue(self.reboot_hard_reboot_called)
 
     def test_destroy_undefines(self):
         mock = self.mox.CreateMock(libvirt.virDomain)
