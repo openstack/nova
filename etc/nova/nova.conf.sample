@@ -515,8 +515,8 @@
 # (string value)
 #vpn_image_id=0
 
-# Instance type for vpn instances (string value)
-#vpn_instance_type=m1.tiny
+# Flavor for vpn instances (string value)
+#vpn_flavor=m1.tiny
 
 # Template for cloudpipe instance boot script (string value)
 #boot_script_template=$pybasedir/nova/cloudpipe/bootscript.template
@@ -641,8 +641,8 @@
 # Options defined in nova.compute.flavors
 #
 
-# default instance type to use, testing only (string value)
-#default_instance_type=m1.small
+# default flavor to use, testing only (string value)
+#default_flavor=m1.small
 
 
 #
