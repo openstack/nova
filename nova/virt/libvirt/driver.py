@@ -351,8 +351,9 @@ class LibvirtDriver(driver.ComputeDriver):
         for mode_str in CONF.disk_cachemodes:
             disk_type, sep, cache_mode = mode_str.partition('=')
             if cache_mode not in self.valid_cachemodes:
-                LOG.warn(_("Invalid cachemode %(cache_mode)s specified "
-                           "for disk type %(disk_type)s.") % locals())
+                LOG.warn(_('Invalid cachemode %(cache_mode)s specified '
+                           'for disk type %(disk_type)s.'),
+                         {'cache_mode': cache_mode, 'disk_type': disk_type})
                 continue
             self.disk_cachemodes[disk_type] = cache_mode
 
@@ -562,8 +563,8 @@ class LibvirtDriver(driver.ComputeDriver):
             minor = MIN_LIBVIRT_VERSION[1]
             micro = MIN_LIBVIRT_VERSION[2]
             LOG.error(_('Nova requires libvirt version '
-                        '%(major)i.%(minor)i.%(micro)i or greater.') %
-                        locals())
+                        '%(major)i.%(minor)i.%(micro)i or greater.'),
+                      {'major': major, 'minor': minor, 'micro': micro})
 
         libvirt.registerErrorHandler(libvirt_error_handler, None)
         libvirt.virEventRegisterDefaultImpl()
@@ -778,9 +779,10 @@ class LibvirtDriver(driver.ComputeDriver):
 
                 if not is_okay:
                     with excutils.save_and_reraise_exception():
-                        LOG.error(_("Error from libvirt during destroy. "
-                                      "Code=%(errcode)s Error=%(e)s") %
-                                    locals(), instance=instance)
+                        LOG.error(_('Error from libvirt during destroy. '
+                                    'Code=%(errcode)s Error=%(e)s'),
+                                  {'errcode': errcode, 'e': e},
+                                  instance=instance)
 
         def _wait_for_destroy(expected_domid):
             """Called at an interval until the VM is gone."""
@@ -853,9 +855,9 @@ class LibvirtDriver(driver.ComputeDriver):
             except libvirt.libvirtError as e:
                 with excutils.save_and_reraise_exception():
                     errcode = e.get_error_code()
-                    LOG.error(_("Error from libvirt during undefine. "
-                                  "Code=%(errcode)s Error=%(e)s") %
-                                locals(), instance=instance)
+                    LOG.error(_('Error from libvirt during undefine. '
+                                'Code=%(errcode)s Error=%(e)s') %
+                              {'errcode': errcode, 'e': e}, instance=instance)
 
     def _cleanup(self, instance, network_info, block_device_info,
                  destroy_disks):
@@ -879,9 +881,10 @@ class LibvirtDriver(driver.ComputeDriver):
                 else:
                     retry = False
                     errcode = e.get_error_code()
-                    LOG.error(_("Error from libvirt during unfilter. "
-                                  "Code=%(errcode)s Error=%(e)s") %
-                                locals(), instance=instance)
+                    LOG.error(_('Error from libvirt during unfilter. '
+                                'Code=%(errcode)s Error=%(e)s') %
+                              {'errcode': errcode, 'e': e},
+                              instance=instance)
                     reason = "Error unfiltering instance."
                     raise exception.InstanceTerminationFailure(reason=reason)
             except Exception:
@@ -907,7 +910,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         if destroy_disks:
             target = libvirt_utils.get_instance_path(instance)
-            LOG.info(_('Deleting instance files %(target)s') % locals(),
+            LOG.info(_('Deleting instance files %s'), target,
                      instance=instance)
             if os.path.exists(target):
                 # If we fail to get rid of the directory
@@ -916,8 +919,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 try:
                     shutil.rmtree(target)
                 except OSError as e:
-                    LOG.error(_("Failed to cleanup directory %(target)s: %(e)s"
-                                ) % locals())
+                    LOG.error(_('Failed to cleanup directory %(target)s: '
+                                '%(e)s'), {'target': target, 'e': e})
 
             #NOTE(bfilippov): destroy all LVM disks for this instance
             self._cleanup_lvm(instance)
@@ -1605,7 +1608,8 @@ class LibvirtDriver(driver.ComputeDriver):
         return out
 
     def _append_to_file(self, data, fpath):
-        LOG.info(_('data: %(data)r, fpath: %(fpath)r') % locals())
+        LOG.info(_('data: %(data)r, fpath: %(fpath)r'),
+                 {'data': data, 'fpath': fpath})
         fp = open(fpath, 'a+')
         fp.write(data)
         return fpath
@@ -1959,10 +1963,16 @@ class LibvirtDriver(driver.ComputeDriver):
                 injection_path = image('disk').path
                 img_id = instance['image_ref']
 
-                for inj in ('key', 'net', 'metadata', 'admin_pass', 'files'):
-                    if locals()[inj]:
+                for inj, val in [('key', key),
+                                 ('net', net),
+                                 ('metadata', metadata),
+                                 ('admin_pass', admin_pass),
+                                 ('files', files)]:
+                    if val:
                         LOG.info(_('Injecting %(inj)s into image '
-                                   '%(img_id)s'), locals(), instance=instance)
+                                   '%(img_id)s'),
+                                 {'inj': inj, 'img_id': img_id},
+                                 instance=instance)
                 try:
                     disk.inject_data(injection_path,
                                      key, net, metadata, admin_pass, files,
@@ -1972,7 +1982,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 except Exception as e:
                     with excutils.save_and_reraise_exception():
                         LOG.error(_('Error injecting data into image '
-                                    '%(img_id)s (%(e)s)') % locals(),
+                                    '%(img_id)s (%(e)s)'),
+                                  {'img_id': img_id, 'e': e},
                                   instance=instance)
 
         if CONF.libvirt_type == 'uml':
@@ -2384,12 +2395,14 @@ class LibvirtDriver(driver.ComputeDriver):
     def to_xml(self, instance, network_info, disk_info,
                image_meta=None, rescue=None,
                block_device_info=None, write_to_disk=False):
-        LOG.debug(_("Start to_xml instance=%(instance)s "
-                    "network_info=%(network_info)s "
-                    "disk_info=%(disk_info)s "
-                    "image_meta=%(image_meta)s rescue=%(rescue)s"
-                    "block_device_info=%(block_device_info)s") %
-                  locals())
+        LOG.debug(_('Start to_xml instance=%(instance)s '
+                    'network_info=%(network_info)s '
+                    'disk_info=%(disk_info)s '
+                    'image_meta=%(image_meta)s rescue=%(rescue)s'
+                    'block_device_info=%(block_device_info)s'),
+                  {'instance': instance, 'network_info': network_info,
+                   'disk_info': disk_info, 'image_meta': image_meta,
+                   'rescue': rescue, 'block_device_info': block_device_info})
         conf = self.get_guest_config(instance, network_info, image_meta,
                                      disk_info, rescue, block_device_info)
         xml = conf.to_xml()
@@ -2399,7 +2412,8 @@ class LibvirtDriver(driver.ComputeDriver):
             xml_path = os.path.join(instance_dir, 'libvirt.xml')
             libvirt_utils.write_to_file(xml_path, xml)
 
-        LOG.debug(_('End to_xml instance=%(instance)s xml=%(xml)s') % locals())
+        LOG.debug(_('End to_xml instance=%(instance)s xml=%(xml)s'),
+                  {'instance': instance, 'xml': xml})
         return xml
 
     def _lookup_by_id(self, instance_id):
@@ -2437,8 +2451,11 @@ class LibvirtDriver(driver.ComputeDriver):
             if error_code == libvirt.VIR_ERR_NO_DOMAIN:
                 raise exception.InstanceNotFound(instance_id=instance_name)
 
-            msg = _("Error from libvirt while looking up %(instance_name)s: "
-                    "[Error Code %(error_code)s] %(ex)s") % locals()
+            msg = (_('Error from libvirt while looking up %(instance_name)s: '
+                     '[Error Code %(error_code)s] %(ex)s') %
+                   {'instance_name': instance_name,
+                    'error_code': error_code,
+                    'ex': ex})
             raise exception.NovaException(msg)
 
     def get_info(self, instance):
@@ -2911,13 +2928,14 @@ class LibvirtDriver(driver.ComputeDriver):
             return domain.blockStats(disk)
         except libvirt.libvirtError as e:
             errcode = e.get_error_code()
-            LOG.info(_("Getting block stats failed, device might have "
-                       "been detached. Instance=%(instance_name)s "
-                       "Disk=%(disk)s Code=%(errcode)s Error=%(e)s")
-                       % locals())
+            LOG.info(_('Getting block stats failed, device might have '
+                       'been detached. Instance=%(instance_name)s '
+                       'Disk=%(disk)s Code=%(errcode)s Error=%(e)s'),
+                     {'instance_name': instance_name, 'disk': disk,
+                      'errcode': errcode, 'e': e})
         except exception.InstanceNotFound:
-            LOG.info(_("Could not find domain in libvirt for instance %s. "
-                       "Cannot get block stats for device") % instance_name)
+            LOG.info(_('Could not find domain in libvirt for instance %s. '
+                       'Cannot get block stats for device'), instance_name)
 
     def interface_stats(self, instance_name, interface):
         """
@@ -3127,12 +3145,14 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # Check that available disk > necessary disk
         if (available - necessary) < 0:
-            instance_uuid = instance['uuid']
-            reason = _("Unable to migrate %(instance_uuid)s: "
-                       "Disk of instance is too large(available"
-                       " on destination host:%(available)s "
-                       "< need:%(necessary)s)")
-            raise exception.MigrationPreCheckError(reason=reason % locals())
+            reason = (_('Unable to migrate %(instance_uuid)s: '
+                        'Disk of instance is too large(available'
+                        ' on destination host:%(available)s '
+                        '< need:%(necessary)s)') %
+                      {'instance_uuid': instance['uuid'],
+                       'available': available,
+                       'necessary': necessary})
+            raise exception.MigrationPreCheckError(reason=reason)
 
     def _compare_cpu(self, cpu_info):
         """Checks the host cpu is compatible to a cpu given by xml.
@@ -3172,11 +3192,11 @@ class LibvirtDriver(driver.ComputeDriver):
         except libvirt.libvirtError as e:
             with excutils.save_and_reraise_exception():
                 ret = e.message
-                LOG.error(m % locals())
+                LOG.error(m, {'ret': ret, 'u': u})
 
         if ret <= 0:
-            LOG.error(m % locals())
-            raise exception.InvalidCPUInfo(reason=m % locals())
+            LOG.error(m, {'ret': ret, 'u': u})
+            raise exception.InvalidCPUInfo(reason=m % {'ret': ret, 'u': u})
 
     def _create_shared_storage_test_file(self):
         """Makes tmpfile under CONF.instances_path."""
@@ -3304,7 +3324,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         except Exception as e:
             with excutils.save_and_reraise_exception():
-                LOG.error(_("Live Migration failure: %(e)s") % locals(),
+                LOG.error(_("Live Migration failure: %s"), e,
                           instance=instance)
                 recover_method(context, instance, dest, block_migration)
 
@@ -3518,9 +3538,12 @@ class LibvirtDriver(driver.ComputeDriver):
                 xml = virt_dom.XMLDesc(0)
             except libvirt.libvirtError as ex:
                 error_code = ex.get_error_code()
-                msg = _("Error from libvirt while getting description of "
-                        "%(instance_name)s: [Error Code %(error_code)s] "
-                        "%(ex)s") % locals()
+                msg = (_('Error from libvirt while getting description of '
+                         '%(instance_name)s: [Error Code %(error_code)s] '
+                         '%(ex)s') %
+                       {'instance_name': instance_name,
+                        'error_code': error_code,
+                        'ex': ex})
                 LOG.warn(msg)
                 raise exception.InstanceNotFound(instance_id=instance_name)
 
@@ -3535,14 +3558,12 @@ class LibvirtDriver(driver.ComputeDriver):
             path = path_node.get('file')
 
             if disk_type != 'file':
-                LOG.debug(_('skipping %(path)s since it looks like volume') %
-                          locals())
+                LOG.debug(_('skipping %s since it looks like volume'), path)
                 continue
 
             if not path:
-                LOG.debug(_('skipping disk for %(instance_name)s as it'
-                            ' does not have a path') %
-                          locals())
+                LOG.debug(_('skipping disk for %s as it does not have a path'),
+                          instance_name)
                 continue
 
             # get the real disk size or
@@ -3581,8 +3602,8 @@ class LibvirtDriver(driver.ComputeDriver):
                         info['over_committed_disk_size'])
             except OSError as e:
                 if e.errno == errno.ENOENT:
-                    LOG.error(_("Getting disk size of %(i_name)s: %(e)s") %
-                              locals())
+                    LOG.error(_('Getting disk size of %(i_name)s: %(e)s'),
+                              {'i_name': i_name, 'e': e})
                 else:
                     raise
             except exception.InstanceNotFound:
@@ -3913,9 +3934,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def instance_on_disk(self, instance):
         # ensure directories exist and are writable
         instance_path = libvirt_utils.get_instance_path(instance)
-        LOG.debug(_('Checking instance files accessability'
-                   '%(instance_path)s')
-                 % locals())
+        LOG.debug(_('Checking instance files accessability %s'), instance_path)
         return os.access(instance_path, os.W_OK)
 
     def inject_network_info(self, instance, nw_info):
