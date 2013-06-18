@@ -39,7 +39,7 @@ def make_class_properties(cls):
     cls.fields.update(NovaObject.fields)
     for name, typefn in cls.fields.iteritems():
 
-        def getter(self, name=name, typefn=typefn):
+        def getter(self, name=name):
             attrname = get_attrname(name)
             if not hasattr(self, attrname):
                 self.obj_load_attr(name)
