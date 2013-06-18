@@ -19,3 +19,4 @@ def register_all():
     # need to receive it via RPC.
     __import__('nova.objects.instance')
     __import__('nova.objects.instance_info_cache')
+    __import__('nova.objects.security_group')
