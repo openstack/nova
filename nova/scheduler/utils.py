@@ -24,10 +24,10 @@ def build_request_spec(image, instances):
     The request_spec assumes that all instances to be scheduled are the same
     type.
     """
-    instance = jsonutils.to_primitive(instances[0])
+    instance = instances[0]
     request_spec = {
             'image': image,
             'instance_properties': instance,
             'instance_type': flavors.extract_flavor(instance),
             'instance_uuids': [inst['uuid'] for inst in instances]}
-    return request_spec
+    return jsonutils.to_primitive(request_spec)
