@@ -19,8 +19,6 @@ import uuid
 
 import mox
 from oslo.config import cfg
-from quantumclient import client as quantum_client
-from quantumclient.common import exceptions as quantum_exceptions
 from quantumclient.v2_0 import client
 
 from nova.compute import flavors
@@ -103,17 +101,6 @@ class TestQuantumClient(test.TestCase):
             insecure=False).AndReturn(None)
         self.mox.ReplayAll()
         quantumv2.get_client(my_context)
-
-    def test_cached_admin_client(self):
-        self.mox.StubOutWithMock(quantum_client.HTTPClient, "authenticate")
-
-        # should be called one time only
-        quantum_client.HTTPClient.authenticate()
-        self.mox.ReplayAll()
-
-        admin1 = quantumv2.get_client(None, admin=True)
-        admin2 = quantumv2.get_client(None, admin=True)
-        self.assertIs(admin1, admin2)
 
     def test_withouttoken_keystone_connection_error(self):
         self.flags(quantum_auth_strategy='keystone')
@@ -1236,7 +1223,7 @@ class TestQuantumv2(test.TestCase):
 
     def test_list_floating_ips_without_l3_support(self):
         api = quantumapi.API()
-        QuantumNotFound = quantum_exceptions.QuantumClientException(
+        QuantumNotFound = quantumv2.exceptions.QuantumClientException(
             status_code=404)
         self.moxed_client.list_floatingips(
             fixed_ip_address='1.1.1.1', port_id=1).AndRaise(QuantumNotFound)
