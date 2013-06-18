@@ -15,19 +15,26 @@
 """Utility methods for scheduling."""
 
 from nova.compute import flavors
+from nova import db
 from nova.openstack.common import jsonutils
 
 
-def build_request_spec(image, instances):
+def build_request_spec(ctxt, image, instances):
     """Build a request_spec for the scheduler.
 
     The request_spec assumes that all instances to be scheduled are the same
     type.
     """
     instance = instances[0]
+    instance_type = flavors.extract_flavor(instance)
+    # NOTE(comstud): This is a bit ugly, but will get cleaned up when
+    # we're passing an InstanceType internal object.
+    extra_specs = db.instance_type_extra_specs_get(ctxt,
+                                                   instance_type['flavorid'])
+    instance_type['extra_specs'] = extra_specs
     request_spec = {
             'image': image,
             'instance_properties': instance,
-            'instance_type': flavors.extract_flavor(instance),
+            'instance_type': instance_type,
             'instance_uuids': [inst['uuid'] for inst in instances]}
     return jsonutils.to_primitive(request_spec)

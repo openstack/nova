@@ -214,7 +214,8 @@ class CellsScheduler(base.Base):
         instance_uuids = [inst['uuid'] for inst in
                 build_inst_kwargs['instances']]
         instances = build_inst_kwargs['instances']
-        request_spec = scheduler_utils.build_request_spec(image, instances)
+        request_spec = scheduler_utils.build_request_spec(message.ctxt,
+                                                          image, instances)
         filter_properties = copy.copy(build_inst_kwargs['filter_properties'])
         filter_properties.update({'context': message.ctxt,
                                   'scheduler': self,

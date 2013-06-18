@@ -541,7 +541,8 @@ class ComputeTaskManager(object):
     def build_instances(self, context, instances, image, filter_properties,
             admin_password, injected_files, requested_networks,
             security_groups, block_device_mapping):
-        request_spec = scheduler_utils.build_request_spec(image, instances)
+        request_spec = scheduler_utils.build_request_spec(context, image,
+                                                          instances)
         # NOTE(alaski): For compatibility until a new scheduler method is used.
         request_spec.update({'block_device_mapping': block_device_mapping,
                              'security_group': security_groups})
