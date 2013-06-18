@@ -502,3 +502,40 @@ class TestObjectListBase(test.TestCase):
         self.assertFalse(obj is obj2)
         self.assertEqual([x.foo for x in obj],
                          [y.foo for y in obj2])
+
+
+class TestObjectSerializer(test.TestCase):
+    def test_serialize_entity_primitive(self):
+        ser = base.NovaObjectSerializer()
+        for thing in (1, 'foo', [1, 2], {'foo': 'bar'}):
+            self.assertEqual(thing, ser.serialize_entity(None, thing))
+
+    def test_deserialize_entity_primitive(self):
+        ser = base.NovaObjectSerializer()
+        for thing in (1, 'foo', [1, 2], {'foo': 'bar'}):
+            self.assertEqual(thing, ser.deserialize_entity(None, thing))
+
+    def test_object_serialization(self):
+        ser = base.NovaObjectSerializer()
+        ctxt = context.get_admin_context()
+        obj = MyObj()
+        primitive = ser.serialize_entity(ctxt, obj)
+        self.assertTrue('nova_object.name' in primitive)
+        obj2 = ser.deserialize_entity(ctxt, primitive)
+        self.assertTrue(isinstance(obj2, MyObj))
+        self.assertEqual(ctxt, obj2._context)
+
+    def test_object_serialization_iterables(self):
+        ser = base.NovaObjectSerializer()
+        ctxt = context.get_admin_context()
+        obj = MyObj()
+        for iterable in (list, tuple, set):
+            thing = iterable([obj])
+            primitive = ser.serialize_entity(ctxt, thing)
+            self.assertEqual(1, len(primitive))
+            for item in primitive:
+                self.assertFalse(isinstance(item, base.NovaObject))
+            thing2 = ser.deserialize_entity(ctxt, primitive)
+            self.assertEqual(1, len(thing2))
+            for item in thing2:
+                self.assertTrue(isinstance(item, MyObj))

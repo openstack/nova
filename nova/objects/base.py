@@ -425,13 +425,35 @@ class NovaObjectSerializer(nova.openstack.common.rpc.serializer.Serializer):
     that needs to accept or return NovaObjects as arguments or result values
     should pass this to its RpcProxy and RpcDispatcher objects.
     """
+    def _process_iterable(self, context, action_fn, values):
+        """Process an iterable, taking an action on each value.
+        :param:context: Request context
+        :param:action_fn: Action to take on each item in values
+        :param:values: Iterable container of things to take action on
+        :returns: A new container of the same type (except set) with
+                  items from values having had action applied.
+        """
+        iterable = values.__class__
+        if iterable == set:
+            # NOTE(danms): A set can't have an unhashable value inside, such as
+            # a dict. Convert sets to tuples, which is fine, since we can't
+            # send them over RPC anyway.
+            iterable = tuple
+        return iterable([action_fn(context, value) for value in values])
+
     def serialize_entity(self, context, entity):
-        if (hasattr(entity, 'obj_to_primitive') and
-            callable(entity.obj_to_primitive)):
+        if isinstance(entity, (tuple, list, set)):
+            entity = self._process_iterable(context, self.serialize_entity,
+                                            entity)
+        elif (hasattr(entity, 'obj_to_primitive') and
+              callable(entity.obj_to_primitive)):
             entity = entity.obj_to_primitive()
         return entity
 
     def deserialize_entity(self, context, entity):
         if isinstance(entity, dict) and 'nova_object.name' in entity:
             entity = NovaObject.obj_from_primitive(entity, context=context)
+        elif isinstance(entity, (tuple, list, set)):
+            entity = self._process_iterable(context, self.deserialize_entity,
+                                            entity)
         return entity
