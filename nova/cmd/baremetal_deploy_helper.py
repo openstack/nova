@@ -91,6 +91,7 @@ def make_partitions(dev, root_mb, swap_mb):
     stdin_command = ('1,%d,83;\n,%d,82;\n0,0;\n0,0;\n' % (root_mb, swap_mb))
     utils.execute('sfdisk', '-uM', dev, process_input=stdin_command,
             run_as_root=True,
+            attempts=3,
             check_exit_code=[0])
     # avoid "device is busy"
     time.sleep(3)
