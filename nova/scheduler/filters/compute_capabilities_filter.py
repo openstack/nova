@@ -46,7 +46,7 @@ class ComputeCapabilitiesFilter(filters.BaseHostFilter):
                     return False
                 if cap is None:
                     return False
-            if not extra_specs_ops.match(cap, req):
+            if not extra_specs_ops.match(str(cap), req):
                 return False
         return True
 
