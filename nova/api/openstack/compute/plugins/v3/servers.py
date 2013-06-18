@@ -1019,11 +1019,8 @@ class ServersController(wsgi.Controller):
         req.cache_db_instances(instances)
         server = self._view_builder.create(req, instances[0])
 
-        if '_is_precooked' in server['server'].keys():
-            del server['server']['_is_precooked']
-        else:
-            if CONF.enable_instance_password:
-                server['server']['adminPass'] = password
+        if CONF.enable_instance_password:
+            server['server']['adminPass'] = password
 
         robj = wsgi.ResponseObject(server)
 

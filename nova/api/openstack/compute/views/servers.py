@@ -54,14 +54,6 @@ class ViewBuilder(common.ViewBuilder):
         self._flavor_builder = views_flavors.ViewBuilder()
         self._image_builder = views_images.ViewBuilder()
 
-    def _skip_precooked(func):
-        def wrapped(self, request, instance):
-            if instance.get("_is_precooked"):
-                return dict(server=instance)
-            else:
-                return func(self, request, instance)
-        return wrapped
-
     def create(self, request, instance):
         """View that should be returned when an instance is created."""
         return {
@@ -73,7 +65,6 @@ class ViewBuilder(common.ViewBuilder):
             },
         }
 
-    @_skip_precooked
     def basic(self, request, instance):
         """Generic, non-detailed view of an instance."""
         return {
@@ -86,7 +77,6 @@ class ViewBuilder(common.ViewBuilder):
             },
         }
 
-    @_skip_precooked
     def show(self, request, instance):
         """Detailed view of a single instance."""
         server = {
