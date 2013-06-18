@@ -23,16 +23,17 @@ class InstanceInfoCache(base.NovaObject):
         }
 
     @staticmethod
-    def _from_db_object(info_cache, db_obj):
+    def _from_db_object(context, info_cache, db_obj):
         info_cache.instance_uuid = db_obj['instance_uuid']
         info_cache.network_info = db_obj['network_info']
         info_cache.obj_reset_changes()
+        info_cache._context = context
         return info_cache
 
     @base.remotable_classmethod
     def get_by_instance_uuid(cls, context, instance_uuid):
         db_obj = db.instance_info_cache_get(context, instance_uuid)
-        return InstanceInfoCache._from_db_object(cls(), db_obj)
+        return InstanceInfoCache._from_db_object(context, cls(), db_obj)
 
     @base.remotable
     def save(self, context):
