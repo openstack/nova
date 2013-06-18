@@ -140,6 +140,20 @@ class VMwareAPIVMTestCase(test.TestCase):
         vmwareapi_fake.cleanup()
         nova.tests.image.fake.FakeImageService_reset()
 
+    def test_VC_Connection(self):
+        self.attempts = 0
+        self.login_session = vmwareapi_fake.FakeVim()._login()
+
+        def _fake_login(_self):
+            self.attempts += 1
+            if self.attempts == 1:
+                raise exception.NovaException('Here is my fake exception')
+            return self.login_session
+
+        self.stubs.Set(vmwareapi_fake.FakeVim, '_login', _fake_login)
+        self.conn = driver.VMwareAPISession()
+        self.assertEqual(self.attempts, 2)
+
     def _create_instance_in_the_db(self, node=None):
         if not node:
             node = self.node_name
