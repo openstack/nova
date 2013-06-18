@@ -262,6 +262,7 @@ class BaseTestCase(test.TestCase):
         inst['created_at'] = timeutils.utcnow()
         inst['updated_at'] = timeutils.utcnow()
         inst['launched_at'] = timeutils.utcnow()
+        inst['security_groups'] = []
         inst.update(params)
         _create_service_entries(self.context.elevated(),
                 {'fake_zone': [inst['host']]})
@@ -275,7 +276,10 @@ class BaseTestCase(test.TestCase):
 
         def _fake_db_create(_ctxt, inst):
             for k, v in inst.items():
-                setattr(instance, k, v)
+                if k == 'security_groups':
+                    setattr(instance, k, v or None)
+                else:
+                    setattr(instance, k, v)
             return instance
 
         self.stubs.Set(db, 'instance_create', _fake_db_create)
@@ -4851,7 +4855,8 @@ class ComputeTestCase(BaseTestCase):
         inst = dict(fakes.stub_instance(1),
                     deleted_at=None, created_at=None, updated_at=None,
                     deleted=0, info_cache={'instance_uuid': 'fake-uuid',
-                                           'network_info': None})
+                                           'network_info': None},
+                    security_groups=None)
         startup_instances = [inst, inst, inst]
 
         def _do_mock_calls(defer_iptables_apply):

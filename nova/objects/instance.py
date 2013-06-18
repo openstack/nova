@@ -16,6 +16,7 @@ from nova import db
 from nova import notifications
 from nova.objects import base
 from nova.objects import instance_info_cache
+from nova.objects import security_group
 from nova.objects import utils as obj_utils
 from nova import utils
 
@@ -28,13 +29,14 @@ CONF = cfg.CONF
 # These are fields that can be specified as expected_attrs
 INSTANCE_OPTIONAL_FIELDS = ['metadata', 'system_metadata']
 # These are fields that are always joined by the db right now
-INSTANCE_IMPLIED_FIELDS = ['info_cache']
+INSTANCE_IMPLIED_FIELDS = ['info_cache', 'security_groups']
 
 
 class Instance(base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Added info_cache
-    VERSION = '1.1'
+    # Version 1.2: Added security_groups
+    VERSION = '1.2'
 
     fields = {
         'id': int,
@@ -106,8 +108,10 @@ class Instance(base.NovaObject):
         'system_metadata': dict,
 
         'info_cache': obj_utils.nested_object_or_none(
-            instance_info_cache.InstanceInfoCache)
+            instance_info_cache.InstanceInfoCache),
 
+        'security_groups': obj_utils.nested_object_or_none(
+            security_group.SecurityGroupList),
         }
 
     obj_extra_fields = ['name']
@@ -149,12 +153,17 @@ class Instance(base.NovaObject):
     _attr_launched_at_to_primitive = obj_utils.dt_serializer('launched_at')
     _attr_terminated_at_to_primitive = obj_utils.dt_serializer('terminated_at')
     _attr_info_cache_to_primitive = obj_utils.obj_serializer('info_cache')
+    _attr_security_groups_to_primitive = obj_utils.obj_serializer(
+        'security_groups')
 
     _attr_scheduled_at_from_primitive = obj_utils.dt_deserializer
     _attr_launched_at_from_primitive = obj_utils.dt_deserializer
     _attr_terminated_at_from_primitive = obj_utils.dt_deserializer
 
     def _attr_info_cache_from_primitive(self, val):
+        return base.NovaObject.obj_from_primitive(val)
+
+    def _attr_security_groups_from_primitive(self, val):
         return base.NovaObject.obj_from_primitive(val)
 
     @staticmethod
@@ -186,6 +195,11 @@ class Instance(base.NovaObject):
             instance['info_cache'] = instance_info_cache.InstanceInfoCache()
             instance_info_cache.InstanceInfoCache._from_db_object(
                     context, instance['info_cache'], db_inst['info_cache'])
+        if db_inst['security_groups']:
+            instance['security_groups'] = security_group.SecurityGroupList()
+            security_group._make_secgroup_list(context,
+                                               instance['security_groups'],
+                                               db_inst['security_groups'])
 
         instance._context = context
         instance.obj_reset_changes()
@@ -211,6 +225,13 @@ class Instance(base.NovaObject):
         return Instance._from_db_object(context, cls(), db_inst,
                                         expected_attrs)
 
+    def _save_info_cache(self, context):
+        self.info_cache.save(context)
+
+    def _save_security_groups(self, context):
+        for secgroup in self.security_groups:
+            secgroup.save(context)
+
     @base.remotable
     def save(self, context, expected_task_state=None):
         """Save updates to this instance
@@ -228,7 +249,7 @@ class Instance(base.NovaObject):
         for field in self.fields:
             if (hasattr(self, base.get_attrname(field)) and
                 isinstance(self[field], base.NovaObject)):
-                self[field].save(context)
+                getattr(self, '_save_%s' % field)(context)
             elif field in changes:
                 updates[field] = self[field]
         if expected_task_state is not None:
@@ -270,6 +291,8 @@ class Instance(base.NovaObject):
             extra.append('metadata')
         elif attrname == 'info_cache':
             extra.append('info_cache')
+        elif attrname == 'security_groups':
+            extra.append('security_groups')
 
         if not extra:
             raise Exception('Cannot load "%s" from instance' % attrname)
