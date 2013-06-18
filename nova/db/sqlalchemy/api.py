@@ -603,18 +603,6 @@ def compute_node_statistics(context):
 
 
 @require_admin_context
-def certificate_get(context, certificate_id):
-    result = model_query(context, models.Certificate).\
-                     filter_by(id=certificate_id).\
-                     first()
-
-    if not result:
-        raise exception.CertificateNotFound(certificate_id=certificate_id)
-
-    return result
-
-
-@require_admin_context
 def certificate_create(context, values):
     certificate_ref = models.Certificate()
     for (key, value) in values.iteritems():

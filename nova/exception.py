@@ -673,10 +673,6 @@ class KeypairNotFound(NotFound):
     message = _("Keypair %(name)s not found for user %(user_id)s")
 
 
-class CertificateNotFound(NotFound):
-    message = _("Certificate %(certificate_id)s not found.")
-
-
 class ServiceNotFound(NotFound):
     message = _("Service %(service_id)s could not be found.")
 
