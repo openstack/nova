@@ -389,7 +389,7 @@ class _BaseTestCase(object):
                             fake_inst['project_id'],
                             fake_inst['user_id'],
                             fake_inst['availability_zone'],
-                            False, mox.IgnoreArg()).AndReturn('fake-usage')
+                            False).AndReturn('fake-usage')
         compute_utils.usage_volume_info('fake-usage').AndReturn('fake-info')
         notifier_api.notify(self.context,
                             'conductor.%s' % self.conductor_manager.host,

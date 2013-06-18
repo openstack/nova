@@ -26,7 +26,6 @@ from nova import network
 from nova.network.security_group import openstack_driver
 from nova import notifications
 from nova.objects import base as nova_object
-from nova.openstack.common.db.sqlalchemy import session as db_session
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.notifier import api as notifier
@@ -343,9 +342,6 @@ class ConductorManager(manager.Manager):
     def vol_usage_update(self, context, vol_id, rd_req, rd_bytes, wr_req,
                          wr_bytes, instance, last_refreshed=None,
                          update_totals=False):
-        # The session object is needed here, as the vol_usage object returned
-        # needs to bound to it in order to refresh its data
-        session = db_session.get_session()
         vol_usage = self.db.vol_usage_update(context, vol_id,
                                              rd_req, rd_bytes,
                                              wr_req, wr_bytes,
@@ -353,8 +349,7 @@ class ConductorManager(manager.Manager):
                                              instance['project_id'],
                                              instance['user_id'],
                                              instance['availability_zone'],
-                                             update_totals,
-                                             session)
+                                             update_totals)
 
         # We have just updated the database, so send the notification now
         notifier.notify(context, 'conductor.%s' % self.host, 'volume.usage',
