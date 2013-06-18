@@ -31,6 +31,11 @@ rpcapi_opts = [
 CONF = cfg.CONF
 CONF.register_opts(rpcapi_opts)
 
+rpcapi_cap_opt = cfg.StrOpt('cert',
+        default=None,
+        help='Set a version cap for messages sent to cert services')
+CONF.register_opt(rpcapi_cap_opt, 'upgrade_levels')
+
 
 class CertAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     '''Client side of the cert rpc API.
@@ -39,6 +44,10 @@ class CertAPI(nova.openstack.common.rpc.proxy.RpcProxy):
 
         1.0 - Initial version.
         1.1 - Added get_backdoor_port()
+
+        ... Grizzly supports message version 1.1.  So, any changes to existing
+        methods in 2.x after that point should be done such that they can
+        handle the version_cap being set to 1.1.
     '''
 
     #
@@ -51,10 +60,17 @@ class CertAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     #
     BASE_RPC_API_VERSION = '1.0'
 
+    VERSION_ALIASES = {
+        'grizzly': '1.1',
+    }
+
     def __init__(self):
+        version_cap = self.VERSION_ALIASES.get(CONF.upgrade_levels.cert,
+                                               CONF.upgrade_levels.cert)
         super(CertAPI, self).__init__(
                 topic=CONF.cert_topic,
-                default_version=self.BASE_RPC_API_VERSION)
+                default_version=self.BASE_RPC_API_VERSION,
+                version_cap=version_cap)
 
     def revoke_certs_by_user(self, ctxt, user_id):
         return self.call(ctxt, self.make_msg('revoke_certs_by_user',

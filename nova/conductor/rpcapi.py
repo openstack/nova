@@ -22,6 +22,11 @@ import nova.openstack.common.rpc.proxy
 
 CONF = cfg.CONF
 
+rpcapi_cap_opt = cfg.StrOpt('conductor',
+        default=None,
+        help='Set a version cap for messages sent to conductor services')
+CONF.register_opt(rpcapi_cap_opt, 'upgrade_levels')
+
 
 class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     """Client side of the conductor RPC API
@@ -88,6 +93,11 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.47 - Added columns_to_join to instance_get_all_by_host and
                  instance_get_all_by_filters
     1.48 - Added compute_unrescue
+
+        ... Grizzly supports message version 1.48.  So, any changes to existing
+        methods in 2.x after that point should be done such that they can
+        handle the version_cap being set to 1.48.
+
     1.49 - Added columns_to_join to instance_get_by_uuid
     1.50 - Added object_action() and object_class_action()
     1.51 - Added the 'legacy' argument to
@@ -96,11 +106,18 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
 
     BASE_RPC_API_VERSION = '1.0'
 
+    VERSION_ALIASES = {
+        'grizzly': '1.48',
+    }
+
     def __init__(self):
+        version_cap = self.VERSION_ALIASES.get(CONF.upgrade_levels.conductor,
+                                               CONF.upgrade_levels.conductor)
         super(ConductorAPI, self).__init__(
             topic=CONF.conductor.topic,
             default_version=self.BASE_RPC_API_VERSION,
-            serializer=objects_base.NovaObjectSerializer())
+            serializer=objects_base.NovaObjectSerializer(),
+            version_cap=version_cap)
 
     def instance_update(self, context, instance_uuid, updates,
                         service=None):
@@ -119,10 +136,16 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
 
     def instance_get_by_uuid(self, context, instance_uuid,
                              columns_to_join=None):
-        msg = self.make_msg('instance_get_by_uuid',
-                            instance_uuid=instance_uuid,
-                            columns_to_join=columns_to_join)
-        return self.call(context, msg, version='1.49')
+        if self.can_send_version('1.49'):
+            version = '1.49'
+            msg = self.make_msg('instance_get_by_uuid',
+                                instance_uuid=instance_uuid,
+                                columns_to_join=columns_to_join)
+        else:
+            version = '1.2'
+            msg = self.make_msg('instance_get_by_uuid',
+                                instance_uuid=instance_uuid)
+        return self.call(context, msg, version=version)
 
     def migration_get(self, context, migration_id):
         msg = self.make_msg('migration_get', migration_id=migration_id)

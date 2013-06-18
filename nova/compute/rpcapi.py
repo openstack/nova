@@ -36,6 +36,11 @@ rpcapi_opts = [
 CONF = cfg.CONF
 CONF.register_opts(rpcapi_opts)
 
+rpcapi_cap_opt = cfg.StrOpt('compute',
+        default=None,
+        help='Set a version cap for messages sent to compute services')
+CONF.register_opt(rpcapi_cap_opt, 'upgrade_levels')
+
 
 def _compute_topic(topic, ctxt, host, instance):
     '''Get the topic to use for a message.
@@ -167,6 +172,11 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                vnc on the correct port
         2.27 - Adds 'reservations' to terminate_instance() and
                soft_delete_instance()
+
+        ... Grizzly supports message version 2.27.  So, any changes to existing
+        methods in 2.x after that point should be done such that they can
+        handle the version_cap being set to 2.27.
+
         2.28 - Adds check_instance_shared_storage()
         2.29 - Made start_instance() and stop_instance() take new-world
                instance objects
@@ -182,11 +192,18 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     #
     BASE_RPC_API_VERSION = '2.0'
 
+    VERSION_ALIASES = {
+        'grizzly': '2.27',
+    }
+
     def __init__(self):
+        version_cap = self.VERSION_ALIASES.get(CONF.upgrade_levels.compute,
+                                               CONF.upgrade_levels.compute)
         super(ComputeAPI, self).__init__(
                 topic=CONF.compute_topic,
                 default_version=self.BASE_RPC_API_VERSION,
-                serializer=objects_base.NovaObjectSerializer())
+                serializer=objects_base.NovaObjectSerializer(),
+                version_cap=version_cap)
 
     def add_aggregate_host(self, ctxt, aggregate, host_param, host,
                            slave_info=None):
