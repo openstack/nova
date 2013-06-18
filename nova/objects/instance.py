@@ -15,6 +15,7 @@
 from nova import db
 from nova import notifications
 from nova.objects import base
+from nova.objects import instance_fault
 from nova.objects import instance_info_cache
 from nova.objects import security_group
 from nova.objects import utils as obj_utils
@@ -27,11 +28,11 @@ CONF = cfg.CONF
 
 
 # These are fields that can be specified as expected_attrs
-INSTANCE_OPTIONAL_FIELDS = ['metadata', 'system_metadata']
+INSTANCE_OPTIONAL_FIELDS = ['metadata', 'system_metadata', 'fault']
 # These are fields that are always joined by the db right now
 INSTANCE_IMPLIED_FIELDS = ['info_cache', 'security_groups']
 # These are fields that are optional but don't translate to db columns
-INSTANCE_OPTIONAL_NON_COLUMNS = []
+INSTANCE_OPTIONAL_NON_COLUMNS = ['fault']
 
 
 class Instance(base.NovaObject):
@@ -114,6 +115,10 @@ class Instance(base.NovaObject):
 
         'security_groups': obj_utils.nested_object_or_none(
             security_group.SecurityGroupList),
+
+        'fault': obj_utils.nested_object_or_none(
+            instance_fault.InstanceFault),
+
         }
 
     obj_extra_fields = ['name']
@@ -190,6 +195,10 @@ class Instance(base.NovaObject):
         if 'system_metadata' in expected_attrs:
             instance['system_metadata'] = utils.metadata_to_dict(
                 db_inst['system_metadata'])
+        if 'fault' in expected_attrs:
+            instance['fault'] = (
+                instance_fault.InstanceFault.get_latest_for_instance(
+                    context, instance.uuid))
         # NOTE(danms): info_cache and security_groups are almost always joined
         # in the DB layer right now, so check to see if they're filled instead
         # of looking at expected_attrs
@@ -233,6 +242,10 @@ class Instance(base.NovaObject):
     def _save_security_groups(self, context):
         for secgroup in self.security_groups:
             secgroup.save(context)
+
+    def _save_instance_fault(self, context):
+        # NOTE(danms): I don't think we need to worry about this, do we?
+        pass
 
     @base.remotable
     def save(self, context, expected_task_state=None):
@@ -295,6 +308,8 @@ class Instance(base.NovaObject):
             extra.append('info_cache')
         elif attrname == 'security_groups':
             extra.append('security_groups')
+        elif attrname == 'fault':
+            extra.append('fault')
 
         if not extra:
             raise Exception('Cannot load "%s" from instance' % attrname)
@@ -307,11 +322,24 @@ class Instance(base.NovaObject):
 
 
 def _make_instance_list(context, inst_list, db_inst_list, expected_attrs):
+    get_fault = expected_attrs and 'fault' in expected_attrs
+    inst_faults = {}
+    if get_fault:
+        # Build an instance_uuid:latest-fault mapping
+        expected_attrs.remove('fault')
+        instance_uuids = [inst['uuid'] for inst in db_inst_list]
+        faults = instance_fault.InstanceFaultList.get_by_instance_uuids(
+            context, instance_uuids)
+        for fault in faults:
+            if fault.instance_uuid not in inst_faults:
+                inst_faults[fault.instance_uuid] = fault
+
     inst_list.objects = []
     for db_inst in db_inst_list:
         inst_obj = Instance._from_db_object(context, Instance(), db_inst,
                                             expected_attrs=expected_attrs)
-        inst_obj._context = context
+        if get_fault:
+            inst_obj.fault = inst_faults.get(inst_obj.uuid, None)
         inst_list.objects.append(inst_obj)
     inst_list.obj_reset_changes()
     return inst_list
