@@ -18,3 +18,4 @@ def register_all():
     # function in order for it to be registered by services that may
     # need to receive it via RPC.
     __import__('nova.objects.instance')
+    __import__('nova.objects.instance_info_cache')
