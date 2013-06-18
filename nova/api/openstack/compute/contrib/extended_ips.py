@@ -94,7 +94,7 @@ def make_server(elem):
 class ExtendedIpsServerTemplate(xmlutil.TemplateBuilder):
     def construct(self):
         root = xmlutil.TemplateElement('server', selector='server')
-        elem = xmlutil.SubTemplateElement(root, 'server', selector='servers')
+        xmlutil.SubTemplateElement(root, 'server', selector='servers')
         make_server(root)
         return xmlutil.SlaveTemplate(root, 1, nsmap={
             Extended_ips.alias: Extended_ips.namespace})

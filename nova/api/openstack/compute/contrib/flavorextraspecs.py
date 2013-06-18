@@ -104,7 +104,7 @@ class FlavorExtraSpecsController(object):
             extra_spec = db.instance_type_extra_specs_get_item(context,
                                                                flavor_id, id)
             return extra_spec
-        except exception.InstanceTypeExtraSpecsNotFound as e:
+        except exception.InstanceTypeExtraSpecsNotFound:
             raise exc.HTTPNotFound()
 
     def delete(self, req, flavor_id, id):

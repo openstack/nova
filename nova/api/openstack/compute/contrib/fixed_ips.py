@@ -69,8 +69,7 @@ class FixedIPController(object):
             fixed_ip = db.fixed_ip_get_by_address(context, address)
             db.fixed_ip_update(context, fixed_ip['address'],
                                {'reserved': reserved})
-        except (exception.FixedIpNotFoundForAddress,
-                exception.FixedIpInvalid) as ex:
+        except (exception.FixedIpNotFoundForAddress, exception.FixedIpInvalid):
             msg = _("Fixed IP %s not found") % address
             raise webob.exc.HTTPNotFound(explanation=msg)
 

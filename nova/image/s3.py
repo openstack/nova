@@ -198,13 +198,11 @@ class S3ImageService(object):
     def _s3_parse_manifest(self, context, metadata, manifest):
         manifest = etree.fromstring(manifest)
         image_format = 'ami'
-        image_type = 'machine'
 
         try:
             kernel_id = manifest.find('machine_configuration/kernel_id').text
             if kernel_id == 'true':
                 image_format = 'aki'
-                image_type = 'kernel'
                 kernel_id = None
         except Exception:
             kernel_id = None
@@ -213,7 +211,6 @@ class S3ImageService(object):
             ramdisk_id = manifest.find('machine_configuration/ramdisk_id').text
             if ramdisk_id == 'true':
                 image_format = 'ari'
-                image_type = 'ramdisk'
                 ramdisk_id = None
         except Exception:
             ramdisk_id = None
@@ -270,7 +267,7 @@ class S3ImageService(object):
 
         #TODO(bcwaldon): right now, this removes user-defined ids.
         # We need to re-enable this.
-        image_id = metadata.pop('id', None)
+        metadata.pop('id', None)
 
         image = self.service.create(context, metadata)
 

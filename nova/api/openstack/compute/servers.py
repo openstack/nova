@@ -552,10 +552,10 @@ class Controller(wsgi.Controller):
                                                      search_opts=search_opts,
                                                      limit=limit,
                                                      marker=marker)
-        except exception.MarkerNotFound as e:
+        except exception.MarkerNotFound:
             msg = _('marker [%s] not found') % marker
             raise exc.HTTPBadRequest(explanation=msg)
-        except exception.FlavorNotFound as e:
+        except exception.FlavorNotFound:
             log_msg = _("Flavor '%s' could not be found ")
             LOG.debug(log_msg, search_opts['flavor'])
             instance_list = []
@@ -1093,11 +1093,11 @@ class Controller(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'resize')
-        except exception.ImageNotAuthorized as image_error:
+        except exception.ImageNotAuthorized:
             msg = _("You are not authorized to access the image "
                     "the instance was started with.")
             raise exc.HTTPUnauthorized(explanation=msg)
-        except exception.ImageNotFound as image_error:
+        except exception.ImageNotFound:
             msg = _("Image that the instance was started "
                     "with could not be found.")
             raise exc.HTTPBadRequest(explanation=msg)

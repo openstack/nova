@@ -325,7 +325,7 @@ class API(base.Base):
         for port in ports:
             try:
                 quantumv2.get_client(context).delete_port(port['id'])
-            except Exception as ex:
+            except Exception:
                 LOG.exception(_("Failed to delete quantum port %(portid)s ")
                               % {'portid': port['id']})
 

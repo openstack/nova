@@ -111,9 +111,6 @@ def _upgrade_bdm_v2(meta, bdm_table, bdm_shadow_table):
     _bdm_rows_v1 = ('id', 'device_name', 'virtual_name',
                     'snapshot_id', 'volume_id', 'instance_uuid')
 
-    _bdm_rows_v2 = ('id', 'source_type', 'destination_type', 'guest_format',
-                    'device_type', 'disk_bus', 'boot_index', 'image_id')
-
     _instance_cols = ('uuid', 'image_ref', 'root_device_name')
 
     def _get_columns(table, names):

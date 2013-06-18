@@ -96,7 +96,7 @@ class InstanceTestsFromPublic(base.UserSmokeTestCase):
                     conn = self.connect_ssh(
                                         self.data['ip_v6'], TEST_KEY)
                     conn.close()
-                except Exception as ex:
+                except Exception:
                     time.sleep(1)
                 else:
                     break

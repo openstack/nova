@@ -49,7 +49,6 @@ def convert_password(context, password):
 
 def handle_password(req, meta_data):
     ctxt = context.get_admin_context()
-    password = meta_data.password
     if req.method == 'GET':
         return meta_data.password
     elif req.method == 'POST':

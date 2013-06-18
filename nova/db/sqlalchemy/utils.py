@@ -73,7 +73,7 @@ def visit_insert_from_select(element, compiler, **kw):
 def _get_not_supported_column(col_name_col_instance, column_name):
     try:
         column = col_name_col_instance[column_name]
-    except Exception as e:
+    except Exception:
         msg = _("Please specify column %s in col_name_col_instance "
                 "param. It is required because column has unsupported "
                 "type by sqlite).")
