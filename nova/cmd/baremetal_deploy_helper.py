@@ -287,9 +287,13 @@ class BareMetalDeploy(object):
             port = q.get('p', '3260')
             iqn = q['n']
             lun = q.get('l', '1')
+            err_msg = q.get('e')
         except KeyError as e:
             start_response('400 Bad Request', [('Content-type', 'text/plain')])
             return "parameter '%s' is not defined" % e
+
+        if err_msg:
+            LOG.error('Deploy agent error message: ' + err_msg)
 
         context = nova_context.get_admin_context()
         d = db.bm_node_get(context, node_id)
