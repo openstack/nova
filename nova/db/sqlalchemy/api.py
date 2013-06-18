@@ -3424,10 +3424,10 @@ def _security_group_rule_get_query(context, session=None):
 
 
 @require_context
-def security_group_rule_get(context, security_group_rule_id, session=None):
-    result = _security_group_rule_get_query(context, session=session).\
-                         filter_by(id=security_group_rule_id).\
-                         first()
+def security_group_rule_get(context, security_group_rule_id):
+    result = (_security_group_rule_get_query(context).
+                         filter_by(id=security_group_rule_id).
+                         first())
 
     if not result:
         raise exception.SecurityGroupNotFoundForRule(
@@ -3437,23 +3437,21 @@ def security_group_rule_get(context, security_group_rule_id, session=None):
 
 
 @require_context
-def security_group_rule_get_by_security_group(context, security_group_id,
-                                              session=None):
-    return _security_group_rule_get_query(context, session=session).\
-            filter_by(parent_group_id=security_group_id).\
+def security_group_rule_get_by_security_group(context, security_group_id):
+    return (_security_group_rule_get_query(context).
+            filter_by(parent_group_id=security_group_id).
             options(joinedload_all('grantee_group.instances.'
-                                   'system_metadata')).\
-            all()
+                                   'system_metadata')).
+            all())
 
 
 @require_context
 def security_group_rule_get_by_security_group_grantee(context,
-                                                      security_group_id,
-                                                      session=None):
+                                                      security_group_id):
 
-    return _security_group_rule_get_query(context, session=session).\
-                         filter_by(group_id=security_group_id).\
-                         all()
+    return (_security_group_rule_get_query(context).
+                         filter_by(group_id=security_group_id).
+                         all())
 
 
 @require_context
@@ -3466,22 +3464,20 @@ def security_group_rule_create(context, values):
 
 @require_context
 def security_group_rule_destroy(context, security_group_rule_id):
-    session = get_session()
-    with session.begin():
-        count = _security_group_rule_get_query(context, session=session).\
-                        filter_by(id=security_group_rule_id).\
-                        soft_delete()
-        if count == 0:
-            raise exception.SecurityGroupNotFoundForRule(
-                                               rule_id=security_group_rule_id)
+    count = (_security_group_rule_get_query(context).
+                    filter_by(id=security_group_rule_id).
+                    soft_delete())
+    if count == 0:
+        raise exception.SecurityGroupNotFoundForRule(
+                                            rule_id=security_group_rule_id)
 
 
 @require_context
 def security_group_rule_count_by_group(context, security_group_id):
-    return model_query(context, models.SecurityGroupIngressRule,
-                   read_deleted="no").\
-                   filter_by(parent_group_id=security_group_id).\
-                   count()
+    return (model_query(context, models.SecurityGroupIngressRule,
+                   read_deleted="no").
+                   filter_by(parent_group_id=security_group_id).
+                   count())
 
 #
 ###################
