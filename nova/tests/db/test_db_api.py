@@ -1299,10 +1299,11 @@ class ModelsObjectComparatorMixin(object):
             self.assertEqual(value, obj2[key])
 
     def _assertEqualListsOfObjects(self, objs1, objs2, ignored_keys=None):
-        self.assertEqual(len(objs1), len(objs2))
-        objs2 = dict([(o['id'], o) for o in objs2])
-        for o1 in objs1:
-            self._assertEqualObjects(o1, objs2[o1['id']], ignored_keys)
+        obj_to_dict = lambda o: self._dict_from_object(o, ignored_keys)
+        sort_key = lambda d: [d[k] for k in sorted(d)]
+        conv_and_sort = lambda obj: sorted(map(obj_to_dict, obj), key=sort_key)
+
+        self.assertEqual(conv_and_sort(objs1), conv_and_sort(objs2))
 
     def _assertEqualListsOfPrimitivesAsSets(self, primitives1, primitives2):
         self.assertEqual(len(primitives1), len(primitives2))
