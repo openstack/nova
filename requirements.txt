@@ -1,5 +1,5 @@
 d2to1>=0.2.10,<0.3
-pbr>=0.5,<0.6
+pbr>=0.5.16,<0.6
 SQLAlchemy>=0.7.8,<0.7.99
 Cheetah>=2.4.4
 amqplib>=0.6.1
@@ -30,4 +30,4 @@ python-keystoneclient>=0.2.0
 six
 stevedore>=0.9
 websockify<0.4
-oslo.config>=1.1.0
+http://tarballs.openstack.org/oslo.config/oslo.config-1.2.0a2.tar.gz#egg=oslo.config-1.2.0a2
