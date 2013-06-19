@@ -1,5 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
+# Copyright (c) 2013 Hewlett-Packard Development Company, L.P.
 # Copyright (c) 2012 VMware, Inc.
 # Copyright (c) 2011 Citrix Systems, Inc.
 # Copyright 2011 OpenStack Foundation
@@ -111,6 +112,7 @@ class VMwareAPIVMTestCase(test.TestCase):
                    use_linked_clone=False)
         self.user_id = 'fake'
         self.project_id = 'fake'
+        self.node_name = 'test_url'
         self.context = context.RequestContext(self.user_id, self.project_id)
         vmwareapi_fake.reset()
         db_fakes.stub_out_db_instance_api(self.stubs)
@@ -143,6 +145,7 @@ class VMwareAPIVMTestCase(test.TestCase):
                   'ramdisk_id': "1",
                   'mac_address': "de:ad:be:ef:be:ef",
                   'instance_type': 'm1.large',
+                  'node': self.node_name,
                   }
         self.instance = db.instance_create(None, values)
 
@@ -500,6 +503,41 @@ class VMwareAPIVMTestCase(test.TestCase):
     def test_finish_revert_migration_power_off(self):
         self._test_finish_revert_migration(power_on=False)
 
+    def test_diagnostics_non_existent_vm(self):
+        self._create_instance_in_the_db()
+        self.assertRaises(exception.InstanceNotFound,
+                          self.conn.get_diagnostics,
+                          self.instance)
+
+    def test_get_console_pool_info(self):
+        info = self.conn.get_console_pool_info("console_type")
+        self.assertEquals(info['address'], 'test_url')
+        self.assertEquals(info['username'], 'test_username')
+        self.assertEquals(info['password'], 'test_pass')
+
+    def test_get_vnc_console_non_existent(self):
+        self._create_instance_in_the_db()
+        self.assertRaises(exception.InstanceNotFound,
+                          self.conn.get_vnc_console,
+                          self.instance)
+
+    def test_get_vnc_console(self):
+        self._create_instance_in_the_db()
+        self._create_vm()
+        vnc_dict = self.conn.get_vnc_console(self.instance)
+        self.assertEquals(vnc_dict['host'], "test_url")
+        self.assertEquals(vnc_dict['port'], 5910)
+
+    def test_host_ip_addr(self):
+        self.assertEquals(self.conn.get_host_ip_addr(), "test_url")
+
+    def test_get_volume_connector(self):
+        self._create_instance_in_the_db()
+        connector_dict = self.conn.get_volume_connector(self.instance)
+        self.assertEquals(connector_dict['ip'], "test_url")
+        self.assertEquals(connector_dict['initiator'], "iscsi-name")
+        self.assertEquals(connector_dict['host'], "test_url")
+
 
 class VMwareAPIHostTestCase(test.TestCase):
     """Unit tests for Vmware API host calls."""
@@ -547,3 +585,30 @@ class VMwareAPIHostTestCase(test.TestCase):
 
     def test_host_maintenance_off(self):
         self._test_host_action(self.conn.host_maintenance_mode, False)
+
+
+class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
+
+    def setUp(self):
+        super(VMwareAPIVCDriverTestCase, self).setUp()
+        self.flags(
+                   vmwareapi_cluster_name='test_cluster',
+                   vmwareapi_task_poll_interval=10,
+                   vnc_enabled=False
+                   )
+        self.conn = driver.VMwareVCDriver(None, False)
+
+    def tearDown(self):
+        super(VMwareAPIVCDriverTestCase, self).tearDown()
+        vmwareapi_fake.cleanup()
+
+    def test_get_available_resource(self):
+        stats = self.conn.get_available_resource(self.node_name)
+        self.assertEquals(stats['vcpus'], 16)
+        self.assertEquals(stats['local_gb'], 1024)
+        self.assertEquals(stats['local_gb_used'], 1024 - 500)
+        self.assertEquals(stats['memory_mb'], 1024)
+        self.assertEquals(stats['memory_mb_used'], 1024 - 524)
+        self.assertEquals(stats['hypervisor_type'], 'VMware ESXi')
+        self.assertEquals(stats['hypervisor_version'], '5.0.0')
+        self.assertEquals(stats['hypervisor_hostname'], 'test_url')

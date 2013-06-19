@@ -1,5 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
+# Copyright (c) 2013 Hewlett-Packard Development Company, L.P.
 # Copyright (c) 2011 Citrix Systems, Inc.
 # Copyright 2011 OpenStack Foundation
 #
@@ -74,6 +75,7 @@ def stub_out_db_instance_api(stubs):
             'vcpus': type_data['vcpus'],
             'mac_addresses': [{'address': values['mac_address']}],
             'root_gb': type_data['root_gb'],
+            'node': values['node'],
             }
         return FakeModel(base_options)
 
