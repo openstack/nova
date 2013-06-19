@@ -41,7 +41,6 @@ class AggregateMultiTenancyIsolation(filters.BaseHostFilter):
 
         if metadata != {}:
             if tenant_id not in metadata["filter_tenant_id"]:
-                LOG.debug(_("%(host_state)s fails tenant id on "
-                    "aggregate"), locals())
+                LOG.debug(_("%s fails tenant id on aggregate"), host_state)
                 return False
         return True
