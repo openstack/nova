@@ -59,7 +59,6 @@ CONF.register_group(baremetal_vp)
 CONF.register_opts(opts, baremetal_vp)
 
 _conn = None
-_virtual_power_settings = None
 _vp_cmd = None
 _cmds = None
 
@@ -84,7 +83,6 @@ class VirtualPowerManager(base.PowerManager):
     """
     def __init__(self, **kwargs):
         global _conn
-        global _virtual_power_settings
         global _cmds
 
         if _cmds is None:
