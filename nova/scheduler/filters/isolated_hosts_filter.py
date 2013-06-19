@@ -30,7 +30,10 @@ CONF.register_opts(isolated_opts)
 
 
 class IsolatedHostsFilter(filters.BaseHostFilter):
-    """Returns host."""
+    """Keep specified images to selected hosts."""
+
+   # The configurtaion values do not change within a request
+    run_filter_once_per_request = True
 
     def host_passes(self, host_state, filter_properties):
         """

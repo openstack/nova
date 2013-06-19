@@ -30,6 +30,9 @@ class ComputeFilter(filters.BaseHostFilter):
     def __init__(self):
         self.servicegroup_api = servicegroup.API()
 
+    # Host state does not change within a request
+    run_filter_once_per_request = True
+
     def host_passes(self, host_state, filter_properties):
         """Returns True for only active compute nodes."""
         capabilities = host_state.capabilities

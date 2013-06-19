@@ -294,7 +294,7 @@ class HostManager(object):
         return good_filters
 
     def get_filtered_hosts(self, hosts, filter_properties,
-            filter_class_names=None):
+            filter_class_names=None, index=0):
         """Filter hosts and return only ones passing all filters."""
 
         def _strip_ignore_hosts(host_map, hosts_to_ignore):
@@ -365,7 +365,7 @@ class HostManager(object):
             hosts = name_to_cls_map.itervalues()
 
         return self.filter_handler.get_filtered_objects(filter_classes,
-                hosts, filter_properties)
+                hosts, filter_properties, index)
 
     def get_weighed_hosts(self, hosts, weight_properties):
         """Weigh the hosts."""

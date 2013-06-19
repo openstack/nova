@@ -33,11 +33,11 @@ from nova.tests.scheduler import fakes
 from nova.tests.scheduler import test_scheduler
 
 
-def fake_get_filtered_hosts(hosts, filter_properties):
+def fake_get_filtered_hosts(hosts, filter_properties, index):
     return list(hosts)
 
 
-def fake_get_group_filtered_hosts(hosts, filter_properties):
+def fake_get_group_filtered_hosts(hosts, filter_properties, index):
     group_hosts = filter_properties.get('group_hosts') or []
     if group_hosts:
         hosts = list(hosts)
