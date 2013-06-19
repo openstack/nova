@@ -68,15 +68,11 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
     def test_basic_schedule_run_instance(self):
         ctxt = context.RequestContext('fake', 'fake', False)
         ctxt_elevated = 'fake-context-elevated'
-        fake_args = (1, 2, 3)
         instance_opts = {'fake_opt1': 'meow', 'launch_index': -1}
         instance1 = {'uuid': 'fake-uuid1'}
         instance2 = {'uuid': 'fake-uuid2'}
         request_spec = {'instance_uuids': ['fake-uuid1', 'fake-uuid2'],
                         'instance_properties': instance_opts}
-        instance1_encoded = {'uuid': 'fake-uuid1', '_is_precooked': False}
-        instance2_encoded = {'uuid': 'fake-uuid2', '_is_precooked': False}
-        reservations = ['resv1', 'resv2']
 
         def inc_launch_index(*args):
             request_spec['instance_properties']['launch_index'] = (
@@ -118,7 +114,6 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
     def test_basic_schedule_run_instance_no_hosts(self):
         ctxt = context.RequestContext('fake', 'fake', False)
         ctxt_elevated = 'fake-context-elevated'
-        fake_args = (1, 2, 3)
         uuid = 'fake-uuid1'
         instance_opts = {'fake_opt1': 'meow', 'launch_index': -1}
         request_spec = {'instance_uuids': [uuid],
@@ -170,10 +165,7 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
     def test_select_hosts(self):
         ctxt = context.RequestContext('fake', 'fake', False)
         ctxt_elevated = 'fake-context-elevated'
-        fake_args = (1, 2, 3)
         instance_opts = {'fake_opt1': 'meow', 'launch_index': -1}
-        instance1 = {'uuid': 'fake-uuid1'}
-        instance2 = {'uuid': 'fake-uuid2'}
         request_spec = {'instance_uuids': ['fake-uuid1', 'fake-uuid2'],
                         'instance_properties': instance_opts}
 
