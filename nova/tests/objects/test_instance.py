@@ -22,6 +22,7 @@ from nova.objects import base
 from nova.objects import instance
 from nova.objects import security_group
 from nova.openstack.common import timeutils
+from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests.objects import test_objects
 
@@ -383,3 +384,10 @@ class TestInstanceListObject(test_objects._LocalTest,
 class TestRemoteInstanceListObject(test_objects._RemoteTest,
                                    _TestInstanceListObject):
     pass
+
+
+class TestInstanceObjectMisc(test.TestCase):
+    def test_expected_cols(self):
+        self.stubs.Set(instance, 'INSTANCE_OPTIONAL_NON_COLUMNS', ['bar'])
+        self.assertEqual(['foo'], instance.expected_cols(['foo', 'bar']))
+        self.assertEqual(None, instance.expected_cols(None))

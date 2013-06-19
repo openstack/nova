@@ -30,6 +30,8 @@ CONF = cfg.CONF
 INSTANCE_OPTIONAL_FIELDS = ['metadata', 'system_metadata']
 # These are fields that are always joined by the db right now
 INSTANCE_IMPLIED_FIELDS = ['info_cache', 'security_groups']
+# These are fields that are optional but don't translate to db columns
+INSTANCE_OPTIONAL_NON_COLUMNS = []
 
 
 class Instance(base.NovaObject):
@@ -315,6 +317,14 @@ def _make_instance_list(context, inst_list, db_inst_list, expected_attrs):
     return inst_list
 
 
+def expected_cols(expected_attrs):
+    """Return expected_attrs that are columns needing joining."""
+    if expected_attrs:
+        return list(set(expected_attrs) - set(INSTANCE_OPTIONAL_NON_COLUMNS))
+    else:
+        return expected_attrs
+
+
 class InstanceList(base.ObjectListBase, base.NovaObject):
     @base.remotable_classmethod
     def get_by_filters(cls, context, filters,
@@ -322,15 +332,14 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
                        expected_attrs=None):
         db_inst_list = db.instance_get_all_by_filters(
             context, filters, sort_key, sort_dir, limit, marker,
-            columns_to_join=expected_attrs)
-
+            columns_to_join=expected_cols(expected_attrs))
         return _make_instance_list(context, cls(), db_inst_list,
                                    expected_attrs)
 
     @base.remotable_classmethod
     def get_by_host(cls, context, host, expected_attrs=None):
         db_inst_list = db.instance_get_all_by_host(
-            context, host, columns_to_join=expected_attrs)
+            context, host, columns_to_join=expected_cols(expected_attrs))
         return _make_instance_list(context, cls(), db_inst_list,
                                    expected_attrs)
 
