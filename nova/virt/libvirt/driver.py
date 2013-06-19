@@ -291,7 +291,7 @@ MIN_LIBVIRT_LIVESNAPSHOT_VERSION = (1, 0, 0)
 MIN_QEMU_LIVESNAPSHOT_VERSION = (1, 3, 0)
 
 
-def libvirt_error_handler(ctxt, err):
+def libvirt_error_handler(context, err):
     # Just ignore instead of default outputting to stderr.
     pass
 
@@ -2986,7 +2986,7 @@ class LibvirtDriver(driver.ComputeDriver):
                'disk_available_least': _get_disk_available_least()}
         return dic
 
-    def check_instance_shared_storage_local(self, ctxt, instance):
+    def check_instance_shared_storage_local(self, context, instance):
         dirpath = libvirt_utils.get_instance_path(instance)
 
         if not os.path.exists(dirpath):
@@ -2999,13 +2999,13 @@ class LibvirtDriver(driver.ComputeDriver):
         os.close(fd)
         return {"filename": tmp_file}
 
-    def check_instance_shared_storage_remote(self, ctxt, data):
+    def check_instance_shared_storage_remote(self, context, data):
         return os.path.exists(data['filename'])
 
-    def check_instance_shared_storage_cleanup(self, ctxt, data):
+    def check_instance_shared_storage_cleanup(self, context, data):
         fileutils.delete_if_exists(data["filename"])
 
-    def check_can_live_migrate_destination(self, ctxt, instance_ref,
+    def check_can_live_migrate_destination(self, context, instance,
                                            src_compute_info, dst_compute_info,
                                            block_migration=False,
                                            disk_over_commit=False):
@@ -3014,8 +3014,8 @@ class LibvirtDriver(driver.ComputeDriver):
         This runs checks on the destination host, and then calls
         back to the source host to check the results.
 
-        :param ctxt: security context
-        :param instance_ref: nova.db.sqlalchemy.models.Instance
+        :param context: security context
+        :param instance: nova.db.sqlalchemy.models.Instance
         :param block_migration: if true, prepare for block migration
         :param disk_over_commit: if true, allow disk over commit
         :returns: a dict containing:
@@ -3031,7 +3031,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     (disk_available_gb * 1024) - CONF.reserved_host_disk_mb
 
         # Compare CPU
-        src = instance_ref['host']
+        src = instance['host']
         source_cpu_info = src_compute_info['cpu_info']
         self._compare_cpu(source_cpu_info)
 
@@ -3043,16 +3043,17 @@ class LibvirtDriver(driver.ComputeDriver):
                 "disk_over_commit": disk_over_commit,
                 "disk_available_mb": disk_available_mb}
 
-    def check_can_live_migrate_destination_cleanup(self, ctxt,
+    def check_can_live_migrate_destination_cleanup(self, context,
                                                    dest_check_data):
         """Do required cleanup on dest host after check_can_live_migrate calls
 
-        :param ctxt: security context
+        :param context: security context
         """
         filename = dest_check_data["filename"]
         self._cleanup_shared_storage_test_file(filename)
 
-    def check_can_live_migrate_source(self, ctxt, instance, dest_check_data):
+    def check_can_live_migrate_source(self, context, instance,
+                                      dest_check_data):
         """Check if it is possible to execute live migration.
 
         This checks if the live migration can succeed, based on the
@@ -3077,7 +3078,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 reason = _("Block migration can not be used "
                            "with shared storage.")
                 raise exception.InvalidLocalStorage(reason=reason, path=source)
-            self._assert_dest_node_has_enough_disk(ctxt, instance,
+            self._assert_dest_node_has_enough_disk(context, instance,
                                     dest_check_data['disk_available_mb'],
                                     dest_check_data['disk_over_commit'])
 
@@ -3096,7 +3097,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return dest_check_data
 
-    def _assert_dest_node_has_enough_disk(self, context, instance_ref,
+    def _assert_dest_node_has_enough_disk(self, context, instance,
                                              available_mb, disk_over_commit):
         """Checks if destination has enough disk for block migration."""
         # Libvirt supports qcow2 disk format,which is usually compressed
@@ -3113,7 +3114,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if available_mb:
             available = available_mb * (1024 ** 2)
 
-        ret = self.get_instance_disk_info(instance_ref['name'])
+        ret = self.get_instance_disk_info(instance['name'])
         disk_infos = jsonutils.loads(ret)
 
         necessary = 0
@@ -3126,7 +3127,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # Check that available disk > necessary disk
         if (available - necessary) < 0:
-            instance_uuid = instance_ref['uuid']
+            instance_uuid = instance['uuid']
             reason = _("Unable to migrate %(instance_uuid)s: "
                        "Disk of instance is too large(available"
                        " on destination host:%(available)s "
@@ -3203,7 +3204,7 @@ class LibvirtDriver(driver.ComputeDriver):
         tmp_file = os.path.join(CONF.instances_path, filename)
         os.remove(tmp_file)
 
-    def ensure_filtering_rules_for_instance(self, instance_ref, network_info,
+    def ensure_filtering_rules_for_instance(self, instance, network_info,
                                             time_module=None):
         """Ensure that an instance's filtering rules are enabled.
 
@@ -3218,21 +3219,21 @@ class LibvirtDriver(driver.ComputeDriver):
         if not time_module:
             time_module = greenthread
 
-        self.firewall_driver.setup_basic_filtering(instance_ref, network_info)
-        self.firewall_driver.prepare_instance_filter(instance_ref,
+        self.firewall_driver.setup_basic_filtering(instance, network_info)
+        self.firewall_driver.prepare_instance_filter(instance,
                 network_info)
 
         # nwfilters may be defined in a separate thread in the case
         # of libvirt non-blocking mode, so we wait for completion
         timeout_count = range(CONF.live_migration_retry_count)
         while timeout_count:
-            if self.firewall_driver.instance_filter_exists(instance_ref,
+            if self.firewall_driver.instance_filter_exists(instance,
                                                            network_info):
                 break
             timeout_count.pop()
             if len(timeout_count) == 0:
                 msg = _('The firewall filter for %s does not exist')
-                raise exception.NovaException(msg % instance_ref["name"])
+                raise exception.NovaException(msg % instance["name"])
             time_module.sleep(1)
 
     def filter_defer_apply_on(self):
@@ -3241,13 +3242,13 @@ class LibvirtDriver(driver.ComputeDriver):
     def filter_defer_apply_off(self):
         self.firewall_driver.filter_defer_apply_off()
 
-    def live_migration(self, ctxt, instance_ref, dest,
+    def live_migration(self, context, instance, dest,
                        post_method, recover_method, block_migration=False,
                        migrate_data=None):
         """Spawning live_migration operation for distributing high-load.
 
-        :params ctxt: security context
-        :params instance_ref:
+        :params context: security context
+        :params instance:
             nova.db.sqlalchemy.models.Instance object
             instance object that is migrated.
         :params dest: destination host
@@ -3263,17 +3264,17 @@ class LibvirtDriver(driver.ComputeDriver):
 
         """
 
-        greenthread.spawn(self._live_migration, ctxt, instance_ref, dest,
+        greenthread.spawn(self._live_migration, context, instance, dest,
                           post_method, recover_method, block_migration,
                           migrate_data)
 
-    def _live_migration(self, ctxt, instance_ref, dest, post_method,
+    def _live_migration(self, context, instance, dest, post_method,
                         recover_method, block_migration=False,
                         migrate_data=None):
         """Do live migration.
 
-        :params ctxt: security context
-        :params instance_ref:
+        :params context: security context
+        :params instance:
             nova.db.sqlalchemy.models.Instance object
             instance object that is migrated.
         :params dest: destination host
@@ -3295,7 +3296,7 @@ class LibvirtDriver(driver.ComputeDriver):
             flagvals = [getattr(libvirt, x.strip()) for x in flaglist]
             logical_sum = reduce(lambda x, y: x | y, flagvals)
 
-            dom = self._lookup_by_name(instance_ref["name"])
+            dom = self._lookup_by_name(instance["name"])
             dom.migrateToURI(CONF.live_migration_uri % dest,
                              logical_sum,
                              None,
@@ -3304,8 +3305,8 @@ class LibvirtDriver(driver.ComputeDriver):
         except Exception as e:
             with excutils.save_and_reraise_exception():
                 LOG.error(_("Live Migration failure: %(e)s") % locals(),
-                          instance=instance_ref)
-                recover_method(ctxt, instance_ref, dest, block_migration)
+                          instance=instance)
+                recover_method(context, instance, dest, block_migration)
 
         # Waiting for completion of live_migration.
         timer = loopingcall.FixedIntervalLoopingCall(f=None)
@@ -3313,10 +3314,10 @@ class LibvirtDriver(driver.ComputeDriver):
         def wait_for_live_migration():
             """waiting for live migration completion."""
             try:
-                self.get_info(instance_ref)['state']
+                self.get_info(instance)['state']
             except exception.NotFound:
                 timer.stop()
-                post_method(ctxt, instance_ref, dest, block_migration,
+                post_method(context, instance, dest, block_migration,
                             migrate_data)
 
         timer.f = wait_for_live_migration
@@ -3412,7 +3413,7 @@ class LibvirtDriver(driver.ComputeDriver):
                              instance=instance)
                     greenthread.sleep(1)
 
-    def pre_block_migration(self, ctxt, instance, disk_info_json):
+    def pre_block_migration(self, context, instance, disk_info_json):
         """Preparation for block migration."""
         # NOTE (rmk): When preparing for a block migration, the instance dir
         #             should not exist on the destination hypervisor.
@@ -3420,11 +3421,11 @@ class LibvirtDriver(driver.ComputeDriver):
         if os.path.exists(instance_dir):
             raise exception.DestinationDiskExists(path=instance_dir)
         os.mkdir(instance_dir)
-        self._create_images_and_backing(ctxt, instance, disk_info_json)
+        self._create_images_and_backing(context, instance, disk_info_json)
 
-    def _create_images_and_backing(self, ctxt, instance, disk_info_json):
+    def _create_images_and_backing(self, context, instance, disk_info_json):
         """
-        :params ctxt: security context
+        :params context: security context
         :params instance:
             nova.db.sqlalchemy.models.Instance object
             instance object that is migrated.
@@ -3453,7 +3454,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                                  instance_disk,
                                                  CONF.libvirt_images_type)
                 image.cache(fetch_func=libvirt_utils.fetch_image,
-                            context=ctxt,
+                            context=context,
                             filename=cache_name,
                             image_id=instance['image_ref'],
                             user_id=instance['user_id'],
@@ -3462,17 +3463,17 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # if image has kernel and ramdisk, just download
         # following normal way.
-        self._fetch_instance_kernel_ramdisk(ctxt, instance)
+        self._fetch_instance_kernel_ramdisk(context, instance)
 
-    def post_live_migration_at_destination(self, ctxt,
-                                           instance_ref,
+    def post_live_migration_at_destination(self, context,
+                                           instance,
                                            network_info,
                                            block_migration,
                                            block_device_info=None):
         """Post operation of live migration at destination host.
 
-        :param ctxt: security context
-        :param instance_ref:
+        :param context: security context
+        :param instance:
             nova.db.sqlalchemy.models.Instance object
             instance object that is migrated.
         :param network_info: instance network information
@@ -3480,23 +3481,23 @@ class LibvirtDriver(driver.ComputeDriver):
         """
         # Define migrated instance, otherwise, suspend/destroy does not work.
         dom_list = self._conn.listDefinedDomains()
-        if instance_ref["name"] not in dom_list:
+        if instance["name"] not in dom_list:
             # In case of block migration, destination does not have
             # libvirt.xml
             disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
-                                                instance_ref)
-            self.to_xml(instance_ref, network_info, disk_info,
+                                                instance)
+            self.to_xml(instance, network_info, disk_info,
                         block_device_info, write_to_disk=True)
             # libvirt.xml should be made by to_xml(), but libvirt
             # does not accept to_xml() result, since uuid is not
             # included in to_xml() result.
-            dom = self._lookup_by_name(instance_ref["name"])
+            dom = self._lookup_by_name(instance["name"])
             self._conn.defineXML(dom.XMLDesc(0))
 
     def get_instance_disk_info(self, instance_name, xml=None):
         """Preparation block migration.
 
-        :params instance_ref:
+        :params instance:
             nova.db.sqlalchemy.models.Instance object
             instance object that is migrated.
         :return:
@@ -3591,9 +3592,9 @@ class LibvirtDriver(driver.ComputeDriver):
             greenthread.sleep(0)
         return disk_over_committed_size
 
-    def unfilter_instance(self, instance_ref, network_info):
+    def unfilter_instance(self, instance, network_info):
         """See comments of same method in firewall_driver."""
-        self.firewall_driver.unfilter_instance(instance_ref,
+        self.firewall_driver.unfilter_instance(instance,
                                                network_info=network_info)
 
     def get_host_stats(self, refresh=False):
