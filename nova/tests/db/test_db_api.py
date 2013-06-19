@@ -1313,6 +1313,54 @@ class ModelsObjectComparatorMixin(object):
             self.assertIn(primitive, primitives1)
 
 
+class InstanceSystemMetadataTestCase(test.TestCase):
+
+    """Tests for db.api.instance_system_metadata_* methods."""
+
+    def setUp(self):
+        super(InstanceSystemMetadataTestCase, self).setUp()
+        values = {'host': 'h1', 'project_id': 'p1',
+                  'system_metadata': {'key': 'value'}}
+        self.ctxt = context.get_admin_context()
+        self.instance = db.instance_create(self.ctxt, values)
+
+    def test_instance_system_metadata_get(self):
+        metadata = db.instance_system_metadata_get(self.ctxt,
+                                                   self.instance['uuid'])
+        self.assertEqual(metadata, {'key': 'value'})
+
+    def test_instance_system_metadata_update_new_pair(self):
+        db.instance_system_metadata_update(
+                    self.ctxt, self.instance['uuid'],
+                    {'new_key': 'new_value'}, False)
+        metadata = db.instance_system_metadata_get(self.ctxt,
+                                                   self.instance['uuid'])
+        self.assertEqual(metadata, {'key': 'value', 'new_key': 'new_value'})
+
+    def test_instance_system_metadata_update_existent_pair(self):
+        db.instance_system_metadata_update(
+                    self.ctxt, self.instance['uuid'],
+                    {'key': 'new_value'}, True)
+        metadata = db.instance_system_metadata_get(self.ctxt,
+                                                   self.instance['uuid'])
+        self.assertEqual(metadata, {'key': 'new_value'})
+
+    def test_instance_system_metadata_update_delete_true(self):
+        db.instance_system_metadata_update(
+                    self.ctxt, self.instance['uuid'],
+                    {'new_key': 'new_value'}, True)
+        metadata = db.instance_system_metadata_get(self.ctxt,
+                                                   self.instance['uuid'])
+        self.assertEqual(metadata, {'new_key': 'new_value'})
+
+    @test.testtools.skip("bug 1189462")
+    def test_instance_system_metadata_update_nonexistent(self):
+        self.assertRaises(exception.InstanceNotFound,
+                          db.instance_system_metadata_update,
+                          self.ctxt, 'nonexistent-uuid',
+                          {'key': 'value'}, True)
+
+
 class ReservationTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     """Tests for db.api.reservation_* methods."""
