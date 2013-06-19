@@ -4441,19 +4441,27 @@ class ComputeTestCase(BaseTestCase):
             self.assertTrue(instance)
 
     def test_poll_unconfirmed_resizes(self):
-        instances = [{'uuid': 'fake_uuid1', 'vm_state': vm_states.RESIZED,
-                      'task_state': None},
-                     {'uuid': 'noexist'},
-                     {'uuid': 'fake_uuid2', 'vm_state': vm_states.ERROR,
-                      'task_state': None},
-                     {'uuid': 'fake_uuid3', 'vm_state': vm_states.ACTIVE,
-                      'task_state': task_states.REBOOTING},
-                     {'uuid': 'fake_uuid4', 'vm_state': vm_states.RESIZED,
-                      'task_state': None},
-                     {'uuid': 'fake_uuid5', 'vm_state': vm_states.ACTIVE,
-                      'task_state': None},
-                     {'uuid': 'fake_uuid6', 'vm_state': vm_states.RESIZED,
-                      'task_state': 'deleting'}]
+        instances = [
+            fake_instance.fake_db_instance(uuid='fake_uuid1',
+                                           vm_state=vm_states.RESIZED,
+                                           task_state=None),
+            fake_instance.fake_db_instance(uuid='noexist'),
+            fake_instance.fake_db_instance(uuid='fake_uuid2',
+                                           vm_state=vm_states.ERROR,
+                                           task_state=None),
+            fake_instance.fake_db_instance(uuid='fake_uuid3',
+                                           vm_state=vm_states.ACTIVE,
+                                           task_state=
+                                           task_states.REBOOTING),
+            fake_instance.fake_db_instance(uuid='fake_uuid4',
+                                           vm_state=vm_states.RESIZED,
+                                           task_state=None),
+            fake_instance.fake_db_instance(uuid='fake_uuid5',
+                                           vm_state=vm_states.ACTIVE,
+                                           task_state=None),
+            fake_instance.fake_db_instance(uuid='fake_uuid6',
+                                           vm_state=vm_states.RESIZED,
+                                           task_state='deleting')]
         expected_migration_status = {'fake_uuid1': 'confirmed',
                                      'noexist': 'error',
                                      'fake_uuid2': 'error',

@@ -3707,8 +3707,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                      {'migration_id': migration['id'],
                       'instance_uuid': instance_uuid})
             try:
-                instance = self.conductor_api.instance_get_by_uuid(
-                    context, instance_uuid)
+                instance = instance_obj.Instance.get_by_uuid(context,
+                                                             instance_uuid)
             except exception.InstanceNotFound:
                 reason = (_("Instance %s not found") %
                           instance_uuid)
