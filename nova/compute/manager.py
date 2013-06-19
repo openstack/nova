@@ -4181,8 +4181,13 @@ class ComputeManager(manager.SchedulerDependentManager):
                                "'%s' which is marked as "
                                "DELETED but still present on host."),
                              instance['name'], instance=instance)
-                    self._shutdown_instance(context, instance, bdms)
-                    self._cleanup_volumes(context, instance['uuid'], bdms)
+                    try:
+                        self._shutdown_instance(context, instance, bdms)
+                        self._cleanup_volumes(context, instance['uuid'], bdms)
+                    except Exception as e:
+                        LOG.warning(_("Periodic cleanup failed to delete "
+                                      "instance: %s"),
+                                    unicode(e), instance=instance)
                 else:
                     raise Exception(_("Unrecognized value '%s'"
                                       " for CONF.running_deleted_"
