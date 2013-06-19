@@ -135,13 +135,6 @@ class ServerAdminPassTemplate(xmlutil.TemplateBuilder):
         return xmlutil.SlaveTemplate(root, 1, nsmap=server_nsmap)
 
 
-class ServerMultipleCreateTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('server')
-        root.set('reservation_id')
-        return xmlutil.MasterTemplate(root, 1, nsmap=server_nsmap)
-
-
 def FullServerTemplate():
     master = ServerTemplate()
     master.attach(ServerAdminPassTemplate())
@@ -167,15 +160,10 @@ class CommonDeserializer(wsgi.MetadataXMLDeserializer):
         server_node = self.find_first_child_named(node, 'server')
 
         attributes = ["name", "image_ref", "flavor_ref", "admin_pass",
-                      "access_ip_v4", "access_ip_v6", "key_name",
-                      "min_count", "max_count"]
+                      "access_ip_v4", "access_ip_v6", "key_name"]
         for attr in attributes:
             if server_node.getAttribute(attr):
                 server[attr] = server_node.getAttribute(attr)
-
-        res_id = server_node.getAttribute('return_reservation_id')
-        if res_id:
-            server['return_reservation_id'] = strutils.bool_from_string(res_id)
 
         metadata_node = self.find_first_child_named(server_node, "metadata")
         if metadata_node is not None:
@@ -795,6 +783,17 @@ class ServersController(wsgi.Controller):
         if list(self.create_extension_manager):
             self.create_extension_manager.map(self._create_extension_point,
                                               server_dict, create_kwargs)
+
+        # NOTE(cyeoh): Although an extension can set
+        # return_reservation_id in order to request that a reservation
+        # id be returned to the client instead of the newly created
+        # instance information we do not want to pass this parameter
+        # to the compute create call which always returns both. We use
+        # this flag after the instance create call to determine what
+        # to return to the client
+        return_reservation_id = create_kwargs.pop('return_reservation_id',
+                                                  False)
+
         # TODO(cyeoh): bp v3-api-core-as-extensions
         # Replace with an extension point when the security groups
         # extension is ported
@@ -850,43 +849,6 @@ class ServersController(wsgi.Controller):
         #            bdm['delete_on_termination'] = strutils.bool_from_string(
         #                bdm['delete_on_termination'])
 
-        ret_resv_id = False
-        # min_count and max_count are optional.  If they exist, they may come
-        # in as strings.  Verify that they are valid integers and > 0.
-        # Also, we want to default 'min_count' to 1, and default
-        # 'max_count' to be 'min_count'.
-        min_count = 1
-        max_count = 1
-        # TODO(cyeoh): bp v3-api-core-as-extensions
-        # Replace with an extension point when the os-multiple-create
-        # extension is ported
-        #if self.ext_mgr.is_loaded('os-multiple-create'):
-        #    ret_resv_id = server_dict.get('return_reservation_id', False)
-        #    min_count = server_dict.get('min_count', 1)
-        #    max_count = server_dict.get('max_count', min_count)
-
-        try:
-            min_count = int(str(min_count))
-        except ValueError:
-            msg = _('min_count must be an integer value')
-            raise exc.HTTPBadRequest(explanation=msg)
-        if min_count < 1:
-            msg = _('min_count must be > 0')
-            raise exc.HTTPBadRequest(explanation=msg)
-
-        try:
-            max_count = int(str(max_count))
-        except ValueError:
-            msg = _('max_count must be an integer value')
-            raise exc.HTTPBadRequest(explanation=msg)
-        if max_count < 1:
-            msg = _('max_count must be > 0')
-            raise exc.HTTPBadRequest(explanation=msg)
-
-        if min_count > max_count:
-            msg = _('min_count must be <= max_count')
-            raise exc.HTTPBadRequest(explanation=msg)
-
         try:
             inst_type = flavors.get_flavor_by_flavor_id(
                     flavor_id, ctxt=context, read_deleted="no")
@@ -900,8 +862,6 @@ class ServersController(wsgi.Controller):
                             access_ip_v4=access_ip_v4,
                             access_ip_v6=access_ip_v6,
                             admin_password=password,
-                            min_count=min_count,
-                            max_count=max_count,
                             requested_networks=requested_networks,
                             security_group=sg_names,
                             block_device_mapping=block_device_mapping,
@@ -943,9 +903,10 @@ class ServersController(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=error.format_message())
 
         # If the caller wanted a reservation_id, return it
-        if ret_resv_id:
-            return wsgi.ResponseObject({'reservation_id': resv_id},
-                                       xml=ServerMultipleCreateTemplate)
+        if return_reservation_id:
+            return wsgi.ResponseObject(
+                {'servers_reservation': {'reservation_id': resv_id}},
+                xml=wsgi.XMLDictSerializer)
 
         req.cache_db_instances(instances)
         server = self._view_builder.create(req, instances[0])
