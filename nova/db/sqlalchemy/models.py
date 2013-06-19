@@ -367,11 +367,12 @@ class Quota(BASE, NovaBase):
     """
 
     __tablename__ = 'quotas'
+    __table_args__ = ()
     id = Column(Integer, primary_key=True)
 
-    project_id = Column(String(255), index=True)
+    project_id = Column(String(255), nullable=True)
 
-    resource = Column(String(255))
+    resource = Column(String(255), nullable=False)
     hard_limit = Column(Integer, nullable=True)
 
 
@@ -384,11 +385,14 @@ class QuotaClass(BASE, NovaBase):
     """
 
     __tablename__ = 'quota_classes'
+    __table_args__ = (
+        Index('ix_quota_classes_class_name', 'class_name'),
+    )
     id = Column(Integer, primary_key=True)
 
-    class_name = Column(String(255), index=True)
+    class_name = Column(String(255), nullable=True)
 
-    resource = Column(String(255))
+    resource = Column(String(255), nullable=True)
     hard_limit = Column(Integer, nullable=True)
 
 
@@ -396,13 +400,16 @@ class QuotaUsage(BASE, NovaBase):
     """Represents the current usage for a given resource."""
 
     __tablename__ = 'quota_usages'
+    __table_args__ = (
+        Index('ix_quota_usages_project_id', 'project_id'),
+    )
     id = Column(Integer, primary_key=True)
 
-    project_id = Column(String(255), index=True)
-    resource = Column(String(255))
+    project_id = Column(String(255), nullable=True)
+    resource = Column(String(255), nullable=True)
 
-    in_use = Column(Integer)
-    reserved = Column(Integer)
+    in_use = Column(Integer, nullable=False)
+    reserved = Column(Integer, nullable=False)
 
     @property
     def total(self):
