@@ -973,6 +973,13 @@ def dict_to_metadata(metadata):
     return result
 
 
+def instance_meta(instance):
+    if isinstance(instance['metadata'], dict):
+        return instance['metadata']
+    else:
+        return metadata_to_dict(instance['metadata'])
+
+
 def instance_sys_meta(instance):
     if isinstance(instance['system_metadata'], dict):
         return instance['system_metadata']

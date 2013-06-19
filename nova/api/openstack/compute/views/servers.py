@@ -25,6 +25,7 @@ from nova.api.openstack.compute.views import images as views_images
 from nova.compute import flavors
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
+from nova import utils
 
 
 LOG = logging.getLogger(__name__)
@@ -132,8 +133,7 @@ class ViewBuilder(common.ViewBuilder):
 
     @staticmethod
     def _get_metadata(instance):
-        metadata = instance.get("metadata", [])
-        return dict((item['key'], item['value']) for item in metadata)
+        return utils.instance_meta(instance)
 
     @staticmethod
     def _get_vm_state(instance):
