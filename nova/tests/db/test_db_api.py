@@ -1970,10 +1970,10 @@ class ServiceTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_service_get_all_by_host(self):
         values = [
-            {'host': 'host1', 'topic': 't1'},
-            {'host': 'host1', 'topic': 't1'},
+            {'host': 'host1', 'topic': 't11', 'binary': 'b11'},
+            {'host': 'host1', 'topic': 't12', 'binary': 'b12'},
             {'host': 'host2', 'topic': 't1'},
-            {'host': 'host3', 'topic': 't2'}
+            {'host': 'host3', 'topic': 't1'}
         ]
         services = [self._create_service(vals) for vals in values]
 
@@ -2019,6 +2019,20 @@ class ServiceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertRaises(exception.HostBinaryNotFound,
                           db.service_get_by_args,
                           self.ctxt, 'non-exists-host', 'a')
+
+    def test_service_binary_exists_exception(self):
+        db.service_create(self.ctxt, self._get_base_values())
+        values = self._get_base_values()
+        values.update({'topic': 'top1'})
+        self.assertRaises(exception.ServiceBinaryExists, db.service_create,
+                          self.ctxt, values)
+
+    def test_service_topic_exists_exceptions(self):
+        db.service_create(self.ctxt, self._get_base_values())
+        values = self._get_base_values()
+        values.update({'binary': 'bin1'})
+        self.assertRaises(exception.ServiceTopicExists, db.service_create,
+                          self.ctxt, values)
 
 
 class BaseInstanceTypeTestCase(test.TestCase, ModelsObjectComparatorMixin):
@@ -4972,8 +4986,11 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_compute_node_search_by_hypervisor(self):
         nodes_created = []
+        new_service = copy.copy(self.service_dict)
         for i in xrange(3):
-            service = db.service_create(self.ctxt, self.service_dict)
+            new_service['binary'] += str(i)
+            new_service['topic'] += str(i)
+            service = db.service_create(self.ctxt, new_service)
             self.compute_node_dict['service_id'] = service['id']
             self.compute_node_dict['hypervisor_hostname'] = 'testhost' + str(i)
             self.compute_node_dict['stats'] = self.stats

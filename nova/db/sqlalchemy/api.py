@@ -430,7 +430,14 @@ def service_create(context, values):
     service_ref.update(values)
     if not CONF.enable_new_services:
         service_ref.disabled = True
-    service_ref.save()
+    try:
+        service_ref.save()
+    except db_exc.DBDuplicateEntry as e:
+        if 'binary' in e.columns:
+            raise exception.ServiceBinaryExists(host=values.get('host'),
+                        binary=values.get('binary'))
+        raise exception.ServiceTopicExists(host=values.get('host'),
+                        topic=values.get('topic'))
     return service_ref
 
 
