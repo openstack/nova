@@ -19,6 +19,7 @@ import webob
 from nova.api.openstack.compute.contrib import extended_status
 from nova import compute
 from nova import exception
+from nova.objects import instance as instance_obj
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
@@ -30,16 +31,21 @@ UUID3 = '00000000-0000-0000-0000-000000000003'
 
 def fake_compute_get(*args, **kwargs):
     return fakes.stub_instance(1, uuid=UUID3, task_state="kayaking",
-            vm_state="slightly crunchy", power_state="empowered")
+            vm_state="slightly crunchy", power_state=1)
 
 
 def fake_compute_get_all(*args, **kwargs):
-    return [
+    db_list = [
         fakes.stub_instance(1, uuid=UUID1, task_state="task-1",
-                vm_state="vm-1", power_state="power-1"),
+                vm_state="vm-1", power_state=1),
         fakes.stub_instance(2, uuid=UUID2, task_state="task-2",
-                vm_state="vm-2", power_state="power-2"),
+                vm_state="vm-2", power_state=2),
     ]
+
+    fields = instance_obj.INSTANCE_DEFAULT_FIELDS
+    return instance_obj._make_instance_list(args[1],
+                                            instance_obj.InstanceList(),
+                                            db_list, fields)
 
 
 class ExtendedStatusTest(test.TestCase):
@@ -70,7 +76,7 @@ class ExtendedStatusTest(test.TestCase):
 
     def assertServerStates(self, server, vm_state, power_state, task_state):
         self.assertEqual(server.get('%svm_state' % self.prefix), vm_state)
-        self.assertEqual(server.get('%spower_state' % self.prefix),
+        self.assertEqual(int(server.get('%spower_state' % self.prefix)),
                          power_state)
         self.assertEqual(server.get('%stask_state' % self.prefix), task_state)
 
@@ -81,7 +87,7 @@ class ExtendedStatusTest(test.TestCase):
         self.assertEqual(res.status_int, 200)
         self.assertServerStates(self._get_server(res.body),
                                 vm_state='slightly crunchy',
-                                power_state='empowered',
+                                power_state=1,
                                 task_state='kayaking')
 
     def test_detail(self):
@@ -92,7 +98,7 @@ class ExtendedStatusTest(test.TestCase):
         for i, server in enumerate(self._get_servers(res.body)):
             self.assertServerStates(server,
                                     vm_state='vm-%s' % (i + 1),
-                                    power_state='power-%s' % (i + 1),
+                                    power_state=(i + 1),
                                     task_state='task-%s' % (i + 1))
 
     def test_no_instance_passthrough_404(self):

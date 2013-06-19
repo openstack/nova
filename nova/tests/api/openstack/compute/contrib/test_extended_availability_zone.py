@@ -21,6 +21,7 @@ from nova import availability_zones
 from nova import compute
 from nova.compute import vm_states
 from nova import exception
+from nova.objects import instance as instance_obj
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
@@ -55,7 +56,11 @@ def fake_compute_get_all(*args, **kwargs):
                                 vm_state=vm_states.ACTIVE)
     inst2 = fakes.stub_instance(2, uuid=UUID2, host="all-host",
                                 vm_state=vm_states.ACTIVE)
-    return [inst1, inst2]
+    db_list = [inst1, inst2]
+    fields = instance_obj.INSTANCE_DEFAULT_FIELDS
+    return instance_obj._make_instance_list(args[1],
+                                            instance_obj.InstanceList(),
+                                            db_list, fields)
 
 
 def fake_get_host_availability_zone(context, host):

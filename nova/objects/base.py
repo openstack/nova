@@ -475,7 +475,7 @@ class NovaObjectSerializer(nova.openstack.common.rpc.serializer.Serializer):
 
 
 def obj_to_primitive(obj):
-    """Recrusively turn an object into a python primitive.
+    """Recursively turn an object into a python primitive.
 
     A NovaObject becomes a dict, and anything that implements ObjectListBase
     becomes a list.

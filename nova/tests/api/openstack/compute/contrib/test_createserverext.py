@@ -363,6 +363,7 @@ class CreateserverextTest(test.TestCase):
 
     def test_get_server_by_id_verify_security_groups_json(self):
         self.stubs.Set(db, 'instance_get', fakes.fake_instance_get())
+        self.stubs.Set(db, 'instance_get_by_uuid', fakes.fake_instance_get())
         req = webob.Request.blank('/v2/fake/os-create-server-ext/1')
         req.headers['Content-Type'] = 'application/json'
         response = req.get_response(fakes.wsgi_app(
@@ -375,6 +376,7 @@ class CreateserverextTest(test.TestCase):
 
     def test_get_server_by_id_verify_security_groups_xml(self):
         self.stubs.Set(db, 'instance_get', fakes.fake_instance_get())
+        self.stubs.Set(db, 'instance_get_by_uuid', fakes.fake_instance_get())
         req = webob.Request.blank('/v2/fake/os-create-server-ext/1')
         req.headers['Accept'] = 'application/xml'
         response = req.get_response(fakes.wsgi_app(

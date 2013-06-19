@@ -49,6 +49,8 @@ from nova import network
 from nova.network.security_group import openstack_driver
 from nova.network.security_group import security_group_base
 from nova import notifications
+from nova.objects import base as obj_base
+from nova.objects import instance as instance_obj
 from nova.openstack.common import excutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
@@ -1430,7 +1432,7 @@ class API(base.Base):
         """Get an instance type by instance type id."""
         return flavors.get_flavor(instance_type_id)
 
-    def get(self, context, instance_id):
+    def get(self, context, instance_id, want_objects=False):
         """Get a single instance with the given instance_id."""
         # NOTE(ameade): we still need to support integer ids for ec2
         try:
@@ -1445,13 +1447,19 @@ class API(base.Base):
 
         check_policy(context, 'get', instance)
 
-        inst = dict(instance.iteritems())
-        # NOTE(comstud): Doesn't get returned with iteritems
-        inst['name'] = instance['name']
+        if want_objects:
+            inst = instance_obj.Instance._from_db_object(
+                context, instance_obj.Instance(), instance,
+                expected_attrs=['metadata', 'system_metadata',
+                                'security_groups', 'info_cache'])
+        else:
+            inst = dict(instance.iteritems())
+            # NOTE(comstud): Doesn't get returned with iteritems
+            inst['name'] = instance['name']
         return inst
 
     def get_all(self, context, search_opts=None, sort_key='created_at',
-                sort_dir='desc', limit=None, marker=None):
+                sort_dir='desc', limit=None, marker=None, want_objects=False):
         """Get all instances filtered by one of the given parameters.
 
         If there is no filter and the context is an admin, it will retrieve
@@ -1531,14 +1539,13 @@ class API(base.Base):
                                                      sort_key, sort_dir,
                                                      limit=limit,
                                                      marker=marker)
+        if want_objects:
+            return inst_models
 
         # Convert the models to dictionaries
         instances = []
         for inst_model in inst_models:
-            instance = dict(inst_model.iteritems())
-            # NOTE(comstud): Doesn't get returned by iteritems
-            instance['name'] = inst_model['name']
-            instances.append(instance)
+            instances.append(obj_base.obj_to_primitive(inst_model))
 
         return instances
 
@@ -1554,9 +1561,11 @@ class API(base.Base):
             uuids = set([r['instance_uuid'] for r in res])
             filters['uuid'] = uuids
 
-        return self.db.instance_get_all_by_filters(context, filters,
-                                                   sort_key, sort_dir,
-                                                   limit=limit, marker=marker)
+        fields = ['metadata', 'system_metadata', 'info_cache',
+                  'security_groups']
+        return instance_obj.InstanceList.get_by_filters(
+            context, filters=filters, sort_key=sort_key, sort_dir=sort_dir,
+            limit=limit, marker=marker, expected_attrs=fields)
 
     @wrap_check_policy
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED])

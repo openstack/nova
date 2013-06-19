@@ -18,26 +18,39 @@ import webob
 
 from nova.api.openstack.compute.contrib import extended_server_attributes
 from nova import compute
+from nova import db
 from nova import exception
+from nova.objects import instance as instance_obj
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
 
+from oslo.config import cfg
+
+
+NAME_FMT = cfg.CONF.instance_name_template
 UUID1 = '00000000-0000-0000-0000-000000000001'
 UUID2 = '00000000-0000-0000-0000-000000000002'
 UUID3 = '00000000-0000-0000-0000-000000000003'
 
 
 def fake_compute_get(*args, **kwargs):
-    return fakes.stub_instance(1, uuid=UUID3, host="host-fake",
-                               node="node-fake")
+    fields = instance_obj.INSTANCE_DEFAULT_FIELDS
+    return instance_obj.Instance._from_db_object(
+        args[1], instance_obj.Instance(),
+        fakes.stub_instance(1, uuid=UUID3, host="host-fake",
+                            node="node-fake"), fields)
 
 
 def fake_compute_get_all(*args, **kwargs):
-    return [
+    db_list = [
         fakes.stub_instance(1, uuid=UUID1, host="host-1", node="node-1"),
         fakes.stub_instance(2, uuid=UUID2, host="host-2", node="node-2")
     ]
+    fields = instance_obj.INSTANCE_DEFAULT_FIELDS
+    return instance_obj._make_instance_list(args[1],
+                                            instance_obj.InstanceList(),
+                                            db_list, fields)
 
 
 class ExtendedServerAttributesTest(test.TestCase):
@@ -49,6 +62,7 @@ class ExtendedServerAttributesTest(test.TestCase):
         fakes.stub_out_nw_api(self.stubs)
         self.stubs.Set(compute.api.API, 'get', fake_compute_get)
         self.stubs.Set(compute.api.API, 'get_all', fake_compute_get_all)
+        self.stubs.Set(db, 'instance_get_by_uuid', fake_compute_get)
         self.flags(
             osapi_compute_extension=[
                 'nova.api.openstack.compute.contrib.select_extensions'],
@@ -81,7 +95,7 @@ class ExtendedServerAttributesTest(test.TestCase):
         self.assertServerAttributes(self._get_server(res.body),
                                 host='host-fake',
                                 node='node-fake',
-                                instance_name='instance-1')
+                                instance_name=NAME_FMT % 1)
 
     def test_detail(self):
         url = '/v2/fake/servers/detail'
@@ -92,7 +106,7 @@ class ExtendedServerAttributesTest(test.TestCase):
             self.assertServerAttributes(server,
                                     host='host-%s' % (i + 1),
                                     node='node-%s' % (i + 1),
-                                    instance_name='instance-%s' % (i + 1))
+                                    instance_name=NAME_FMT % (i + 1))
 
     def test_no_instance_passthrough_404(self):
 

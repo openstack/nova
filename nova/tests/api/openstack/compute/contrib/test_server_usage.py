@@ -20,6 +20,7 @@ from lxml import etree
 from nova.api.openstack.compute.contrib import server_usage
 from nova import compute
 from nova import exception
+from nova.objects import instance as instance_obj
 from nova.openstack.common import jsonutils
 from nova.openstack.common import timeutils
 from nova import test
@@ -40,12 +41,16 @@ def fake_compute_get(*args, **kwargs):
 
 
 def fake_compute_get_all(*args, **kwargs):
-    return [
+    db_list = [
         fakes.stub_instance(2, uuid=UUID1, launched_at=DATE2,
                             terminated_at=DATE3),
         fakes.stub_instance(3, uuid=UUID2, launched_at=DATE1,
                             terminated_at=DATE3),
     ]
+    fields = instance_obj.INSTANCE_DEFAULT_FIELDS
+    return instance_obj._make_instance_list(args[1],
+                                            instance_obj.InstanceList(),
+                                            db_list, fields)
 
 
 class ServerUsageTest(test.TestCase):

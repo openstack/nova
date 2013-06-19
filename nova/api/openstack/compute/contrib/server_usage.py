@@ -30,7 +30,12 @@ class ServerUsageController(wsgi.Controller):
     def _extend_server(self, server, instance):
         for k in ['launched_at', 'terminated_at']:
             key = "%s:%s" % (Server_usage.alias, k)
-            server[key] = instance[k]
+            # NOTE(danms): Historically, this timestamp has been generated
+            # merely by grabbing str(datetime) of a TZ-naive object. The
+            # only way we can keep that with instance objects is to strip
+            # the tzinfo from the stamp and str() it.
+            server[key] = (instance[k].replace(tzinfo=None)
+                           if instance[k] else None)
 
     @wsgi.extends
     def show(self, req, resp_obj, id):

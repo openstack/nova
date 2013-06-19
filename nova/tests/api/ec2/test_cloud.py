@@ -21,6 +21,7 @@ import base64
 import copy
 import datetime
 import functools
+import iso8601
 import os
 import string
 import tempfile
@@ -871,6 +872,8 @@ class CloudTestCase(test.TestCase):
         self.stubs.Set(compute_rpcapi.ComputeAPI, 'change_instance_metadata',
                        fake_change_instance_metadata)
 
+        utc = iso8601.iso8601.Utc()
+
         # Create some test images
         sys_meta = flavors.save_flavor_info(
             {}, flavors.get_flavor(1))
@@ -883,7 +886,8 @@ class CloudTestCase(test.TestCase):
                 'vm_state': 'active',
                 'launched_at': timeutils.utcnow(),
                 'hostname': 'server-1111',
-                'created_at': datetime.datetime(2012, 5, 1, 1, 1, 1),
+                'created_at': datetime.datetime(2012, 5, 1, 1, 1, 1,
+                                                tzinfo=utc),
                 'system_metadata': sys_meta
         }
 
@@ -895,7 +899,8 @@ class CloudTestCase(test.TestCase):
                 'vm_state': 'active',
                 'launched_at': timeutils.utcnow(),
                 'hostname': 'server-1112',
-                'created_at': datetime.datetime(2012, 5, 1, 1, 1, 2),
+                'created_at': datetime.datetime(2012, 5, 1, 1, 1, 2,
+                                                tzinfo=utc),
                 'system_metadata': sys_meta
         }
 
@@ -939,7 +944,8 @@ class CloudTestCase(test.TestCase):
                               'ipAddress': '1.2.3.4',
                               'keyName': 'None (None, host1)',
                               'launchTime':
-                                  datetime.datetime(2012, 5, 1, 1, 1, 1),
+                                  datetime.datetime(2012, 5, 1, 1, 1, 1,
+                                                    tzinfo=utc),
                               'placement': {
                                   'availabilityZone': 'nova'},
                               'privateDnsName': u'server-1111',
@@ -970,7 +976,8 @@ class CloudTestCase(test.TestCase):
                                'ipAddress': '1.2.3.4',
                                'keyName': u'None (None, host2)',
                                'launchTime':
-                                   datetime.datetime(2012, 5, 1, 1, 1, 2),
+                                   datetime.datetime(2012, 5, 1, 1, 1, 2,
+                                                     tzinfo=utc),
                                'placement': {
                                    'availabilityZone': 'nova'},
                                'privateDnsName': u'server-1112',
@@ -1056,25 +1063,30 @@ class CloudTestCase(test.TestCase):
                 'system_metadata': sys_meta,
         }
 
+        utc = iso8601.iso8601.Utc()
+
         inst1_kwargs = {}
         inst1_kwargs.update(inst_base)
         inst1_kwargs['host'] = 'host1'
         inst1_kwargs['hostname'] = 'server-1111'
-        inst1_kwargs['created_at'] = datetime.datetime(2012, 5, 1, 1, 1, 1)
+        inst1_kwargs['created_at'] = datetime.datetime(2012, 5, 1, 1, 1, 1,
+                                                       tzinfo=utc)
         inst1 = db.instance_create(self.context, inst1_kwargs)
 
         inst2_kwargs = {}
         inst2_kwargs.update(inst_base)
         inst2_kwargs['host'] = 'host2'
         inst2_kwargs['hostname'] = 'server-2222'
-        inst2_kwargs['created_at'] = datetime.datetime(2012, 2, 1, 1, 1, 1)
+        inst2_kwargs['created_at'] = datetime.datetime(2012, 2, 1, 1, 1, 1,
+                                                       tzinfo=utc)
         inst2 = db.instance_create(self.context, inst2_kwargs)
 
         inst3_kwargs = {}
         inst3_kwargs.update(inst_base)
         inst3_kwargs['host'] = 'host3'
         inst3_kwargs['hostname'] = 'server-3333'
-        inst3_kwargs['created_at'] = datetime.datetime(2012, 2, 5, 1, 1, 1)
+        inst3_kwargs['created_at'] = datetime.datetime(2012, 2, 5, 1, 1, 1,
+                                                       tzinfo=utc)
         inst3 = db.instance_create(self.context, inst3_kwargs)
 
         comp1 = db.service_create(self.context, {'host': 'host1',
