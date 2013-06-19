@@ -4926,6 +4926,19 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertNotEqual(self.item['updated_at'],
                                  item_updated['updated_at'])
 
+    def test_compute_node_update_override_updated_at(self):
+        # Update the record once so updated_at is set.
+        first = db.compute_node_update(self.ctxt, self.item['id'],
+                                       {'free_ram_mb': '12'})
+        self.assertIsNotNone(first['updated_at'])
+
+        # Update a second time. Make sure that the updated_at value we send
+        # is overridden.
+        second = db.compute_node_update(self.ctxt, self.item['id'],
+                                        {'updated_at': first.updated_at,
+                                         'free_ram_mb': '13'})
+        self.assertNotEqual(first['updated_at'], second['updated_at'])
+
     def test_compute_node_stat_unchanged(self):
         # don't update unchanged stat values:
         stats = self.item['stats']
