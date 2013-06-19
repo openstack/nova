@@ -60,7 +60,6 @@ from nova.db import base
 from nova.objects import base as objects_base
 from nova.openstack.common import log as logging
 from nova.openstack.common import periodic_task
-from nova.openstack.common.plugin import pluginmanager
 from nova.openstack.common.rpc import dispatcher as rpc_dispatcher
 from nova.scheduler import rpcapi as scheduler_rpcapi
 
@@ -78,14 +77,9 @@ class Manager(base.Base, periodic_task.PeriodicTasks):
         if not host:
             host = CONF.host
         self.host = host
-        self.load_plugins()
         self.backdoor_port = None
         self.service_name = service_name
         super(Manager, self).__init__(db_driver)
-
-    def load_plugins(self):
-        pluginmgr = pluginmanager.PluginManager('nova', self.__class__)
-        pluginmgr.load_plugins()
 
     def create_rpc_dispatcher(self, backdoor_port=None, additional_apis=None):
         '''Get the rpc dispatcher for this manager.
@@ -150,10 +144,6 @@ class SchedulerDependentManager(Manager):
         self.scheduler_rpcapi = scheduler_rpcapi.SchedulerAPI()
         super(SchedulerDependentManager, self).__init__(host, db_driver,
                 service_name)
-
-    def load_plugins(self):
-        pluginmgr = pluginmanager.PluginManager('nova', self.service_name)
-        pluginmgr.load_plugins()
 
     def update_service_capabilities(self, capabilities):
         """Remember these capabilities to send on next periodic update."""
