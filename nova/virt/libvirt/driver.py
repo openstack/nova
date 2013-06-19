@@ -557,9 +557,6 @@ class LibvirtDriver(driver.ComputeDriver):
         dispatch_thread = eventlet.spawn(self._dispatch_thread)
 
     def init_host(self, host):
-        libvirt.registerErrorHandler(libvirt_error_handler, None)
-        libvirt.virEventRegisterDefaultImpl()
-
         if not self.has_min_version(MIN_LIBVIRT_VERSION):
             major = MIN_LIBVIRT_VERSION[0]
             minor = MIN_LIBVIRT_VERSION[1]
@@ -567,6 +564,9 @@ class LibvirtDriver(driver.ComputeDriver):
             LOG.error(_('Nova requires libvirt version '
                         '%(major)i.%(minor)i.%(micro)i or greater.') %
                         locals())
+
+        libvirt.registerErrorHandler(libvirt_error_handler, None)
+        libvirt.virEventRegisterDefaultImpl()
 
         self._init_events()
 
