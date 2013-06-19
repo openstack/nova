@@ -308,6 +308,7 @@ class SchedulerManager(manager.Manager):
     def get_backdoor_port(self, context):
         return self.backdoor_port
 
+    @rpc_common.client_exceptions(exception.NoValidHost)
     def select_hosts(self, context, request_spec, filter_properties):
         """Returns host(s) best suited for this request_spec
         and filter_properties.

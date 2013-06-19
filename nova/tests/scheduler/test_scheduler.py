@@ -402,6 +402,17 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
         self.manager._set_vm_state_and_notify('foo', {'vm_state': 'foo'},
                                               self.context, None, request)
 
+    def test_select_hosts_throws_rpc_clientexception(self):
+        self.mox.StubOutWithMock(self.manager.driver, 'select_hosts')
+
+        self.manager.driver.select_hosts(self.context, {}, {}).AndRaise(
+                exception.NoValidHost(reason=""))
+
+        self.mox.ReplayAll()
+        self.assertRaises(rpc_common.ClientException,
+                          self.manager.select_hosts,
+                          self.context, {}, {})
+
 
 class SchedulerTestCase(test.NoDBTestCase):
     """Test case for base scheduler driver class."""
