@@ -33,6 +33,8 @@ INSTANCE_OPTIONAL_FIELDS = ['metadata', 'system_metadata', 'fault']
 INSTANCE_IMPLIED_FIELDS = ['info_cache', 'security_groups']
 # These are fields that are optional but don't translate to db columns
 INSTANCE_OPTIONAL_NON_COLUMNS = ['fault']
+# These are all fields that most query calls load by default
+INSTANCE_DEFAULT_FIELDS = INSTANCE_OPTIONAL_FIELDS + INSTANCE_IMPLIED_FIELDS
 
 
 class Instance(base.NovaObject):
@@ -359,7 +361,7 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
                        sort_key=None, sort_dir=None, limit=None, marker=None,
                        expected_attrs=None):
         db_inst_list = db.instance_get_all_by_filters(
-            context, filters, sort_key, sort_dir, limit, marker,
+            context, filters, sort_key, sort_dir, limit=limit, marker=marker,
             columns_to_join=expected_cols(expected_attrs))
         return _make_instance_list(context, cls(), db_inst_list,
                                    expected_attrs)

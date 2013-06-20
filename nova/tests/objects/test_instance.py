@@ -316,7 +316,7 @@ class _TestInstanceListObject(object):
         ctxt = context.get_admin_context()
         self.mox.StubOutWithMock(db, 'instance_get_all_by_filters')
         db.instance_get_all_by_filters(ctxt, {'foo': 'bar'}, 'uuid', 'asc',
-                                       None, None,
+                                       limit=None, marker=None,
                                        columns_to_join=['metadata']).AndReturn(
                                            fakes)
         self.mox.ReplayAll()
