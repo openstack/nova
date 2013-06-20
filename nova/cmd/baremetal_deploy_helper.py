@@ -177,14 +177,14 @@ def work_on_disk(dev, root_mb, swap_mb, image_path):
     swap_part = "%s-part2" % dev
 
     if not is_block_device(dev):
-        LOG.warn("parent device '%s' not found", dev)
+        LOG.warn(_("parent device '%s' not found"), dev)
         return
     make_partitions(dev, root_mb, swap_mb)
     if not is_block_device(root_part):
-        LOG.warn("root device '%s' not found", root_part)
+        LOG.warn(_("root device '%s' not found"), root_part)
         return
     if not is_block_device(swap_part):
-        LOG.warn("swap device '%s' not found", swap_part)
+        LOG.warn(_("swap device '%s' not found"), swap_part)
         return
     dd(image_path, root_part)
     mkswap(swap_part)
@@ -193,7 +193,7 @@ def work_on_disk(dev, root_mb, swap_mb, image_path):
         root_uuid = block_uuid(root_part)
     except processutils.ProcessExecutionError as err:
         with excutils.save_and_reraise_exception():
-            LOG.error("Failed to detect root device UUID.")
+            LOG.error(_("Failed to detect root device UUID."))
     return root_uuid
 
 
@@ -211,9 +211,9 @@ def deploy(address, port, iqn, lun, image_path, pxe_config_path,
     except processutils.ProcessExecutionError as err:
         with excutils.save_and_reraise_exception():
             # Log output if there was a error
-            LOG.error("Cmd     : %s" % err.cmd)
-            LOG.error("StdOut  : %s" % err.stdout)
-            LOG.error("StdErr  : %s" % err.stderr)
+            LOG.error(_("Cmd     : %s"), err.cmd)
+            LOG.error(_("StdOut  : %s"), err.stdout)
+            LOG.error(_("StdErr  : %s"), err.stderr)
     finally:
         logout_iscsi(address, port, iqn)
     switch_pxe_config(pxe_config_path, root_uuid)
@@ -249,11 +249,11 @@ class Worker(threading.Thread):
                           {'task_state': baremetal_states.DEPLOYING})
                     deploy(**params)
                 except Exception:
-                    LOG.exception(_('deployment to node %s failed') % node_id)
+                    LOG.exception(_('deployment to node %s failed'), node_id)
                     db.bm_node_update(context, node_id,
                           {'task_state': baremetal_states.DEPLOYFAIL})
                 else:
-                    LOG.info(_('deployment to node %s done') % node_id)
+                    LOG.info(_('deployment to node %s done'), node_id)
                     db.bm_node_update(context, node_id,
                           {'task_state': baremetal_states.DEPLOYDONE})
 
@@ -275,7 +275,7 @@ class BareMetalDeploy(object):
             return 'Not Implemented'
 
     def post(self, environ, start_response):
-        LOG.info("post: environ=%s", environ)
+        LOG.info(_("post: environ=%s"), environ)
         inpt = environ['wsgi.input']
         length = int(environ.get('CONTENT_LENGTH', 0))
 
@@ -294,7 +294,7 @@ class BareMetalDeploy(object):
             return "parameter '%s' is not defined" % e
 
         if err_msg:
-            LOG.error('Deploy agent error message: ' + err_msg)
+            LOG.error(_('Deploy agent error message: %s'), err_msg)
 
         context = nova_context.get_admin_context()
         d = db.bm_node_get(context, node_id)
@@ -316,7 +316,8 @@ class BareMetalDeploy(object):
         if not self.worker.isAlive():
             self.worker = Worker()
             self.worker.start()
-        LOG.info("request is queued: node %s, params %s", node_id, params)
+        LOG.info(_("request is queued: node %(node_id)s, params %(params)s"),
+                  {'node_id': node_id, 'params': params})
         QUEUE.put((node_id, params))
         # Requests go to Worker.run()
         start_response('200 OK', [('Content-type', 'text/plain')])
