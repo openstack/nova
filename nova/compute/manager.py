@@ -3615,20 +3615,20 @@ class ComputeManager(manager.SchedulerDependentManager):
         while not instance or instance['host'] != self.host:
             if instance_uuids:
                 try:
-                    instance = self.conductor_api.instance_get_by_uuid(context,
-                        instance_uuids.pop(0))
+                    instance = instance_obj.Instance.get_by_uuid(
+                        context, instance_uuids.pop(0))
                 except exception.InstanceNotFound:
                     # Instance is gone.  Try to grab another.
                     continue
             else:
                 # No more in our copy of uuids.  Pull from the DB.
-                db_instances = self.conductor_api.instance_get_all_by_host(
-                        context, self.host, columns_to_join=[])
+                db_instances = instance_obj.InstanceList.get_by_host(
+                    context, self.host, expected_attrs=[])
                 if not db_instances:
                     # None.. just return.
                     return
-                instance = db_instances.pop(0)
-                instance_uuids = [inst['uuid'] for inst in db_instances]
+                instance = db_instances[0]
+                instance_uuids = [inst['uuid'] for inst in db_instances[1:]]
                 self._instance_uuids_to_heal = instance_uuids
 
         # We have an instance now and it's ours
