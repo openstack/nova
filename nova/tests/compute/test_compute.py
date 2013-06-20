@@ -1214,6 +1214,30 @@ class ComputeTestCase(BaseTestCase):
         LOG.info(_("After terminating instances: %s"), instances)
         self.assertEqual(len(instances), 0)
 
+    def test_terminate_no_fixed_ips(self):
+        # This is as reported in LP bug 1192893
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+
+        self.compute.run_instance(self.context, instance=instance)
+
+        instances = db.instance_get_all(self.context)
+        LOG.info(_("Running instances: %s"), instances)
+        self.assertEqual(len(instances), 1)
+
+        self.mox.StubOutWithMock(self.compute, '_get_instance_nw_info')
+        self.compute._get_instance_nw_info(
+                mox.IgnoreArg(),
+                mox.IgnoreArg()).AndRaise(
+                    exception.NoMoreFixedIps()
+                )
+        self.mox.ReplayAll()
+
+        self.compute.terminate_instance(self.context, instance=instance)
+
+        instances = db.instance_get_all(self.context)
+        LOG.info(_("After terminating instances: %s"), instances)
+        self.assertEqual(len(instances), 0)
+
     def test_terminate_failure_leaves_task_state(self):
         """Ensure that a failure in terminate_instance does not result
         in the task state being reverted from DELETING (see LP 1046236).
