@@ -17,7 +17,7 @@
 
 policy_data = """
 {
-    "admin_api": "role:admin",
+    "admin_api": "is_admin:True",
 
     "cells_scheduler_filter:TargetCellFilter": "is_admin:True",
 
@@ -155,6 +155,7 @@ policy_data = """
     "compute_extension:hide_server_addresses": "",
     "compute_extension:hosts": "",
     "compute_extension:hypervisors": "",
+    "compute_extension:v3:os-hypervisors": "rule:admin_api",
     "compute_extension:image_size": "",
     "compute_extension:v3:os-images": "",
     "compute_extension:instance_actions": "",
