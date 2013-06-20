@@ -377,12 +377,14 @@ class HostManager(object):
 
         if service_name != 'compute':
             LOG.debug(_('Ignoring %(service_name)s service update '
-                    'from %(host)s'), locals())
+                        'from %(host)s'), {'service_name': service_name,
+                                           'host': host})
             return
 
         state_key = (host, capabilities.get('hypervisor_hostname'))
         LOG.debug(_("Received %(service_name)s service update from "
-                    "%(state_key)s.") % locals())
+                    "%(state_key)s."), {'service_name': service_name,
+                                        'state_key': state_key})
         # Copy the capabilities, so we don't modify the original dict
         capab_copy = dict(capabilities)
         capab_copy["timestamp"] = timeutils.utcnow()  # Reported time
@@ -423,7 +425,7 @@ class HostManager(object):
         for state_key in dead_nodes:
             host, node = state_key
             LOG.info(_("Removing dead compute node %(host)s:%(node)s "
-                       "from scheduler") % locals())
+                       "from scheduler") % {'host': host, 'node': node})
             del self.host_state_map[state_key]
 
         return self.host_state_map.itervalues()

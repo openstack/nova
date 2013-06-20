@@ -208,7 +208,8 @@ class SchedulerManager(manager.Manager):
         # The refactoring could go further but trying to minimize changes
         # for essex timeframe
 
-        LOG.warning(_("Failed to schedule_%(method)s: %(ex)s") % locals())
+        LOG.warning(_("Failed to schedule_%(method)s: %(ex)s"),
+                    {'method': method, 'ex': ex})
 
         vm_state = updates['vm_state']
         properties = request_spec.get('instance_properties', {})
@@ -222,8 +223,8 @@ class SchedulerManager(manager.Manager):
         for instance_uuid in request_spec.get('instance_uuids') or uuids:
             if instance_uuid:
                 state = vm_state.upper()
-                LOG.warning(_('Setting instance to %(state)s state.'),
-                            locals(), instance_uuid=instance_uuid)
+                LOG.warning(_('Setting instance to %s state.'), state,
+                            instance_uuid=instance_uuid)
 
                 # update instance state and notify on the transition
                 (old_ref, new_ref) = self.db.instance_update_and_get_original(

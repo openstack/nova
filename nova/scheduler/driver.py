@@ -60,8 +60,8 @@ def handle_schedule_error(context, ex, instance_uuid, request_spec):
     if not isinstance(ex, exception.NoValidHost):
         LOG.exception(_("Exception during scheduler.run_instance"))
     state = vm_states.ERROR.upper()
-    LOG.warning(_('Setting instance to %(state)s state.'),
-                locals(), instance_uuid=instance_uuid)
+    LOG.warning(_('Setting instance to %s state.'), state,
+                instance_uuid=instance_uuid)
 
     # update instance state and notify on the transition
     (old_ref, new_ref) = db.instance_update_and_get_original(context,
@@ -339,7 +339,9 @@ class Scheduler(object):
             reason = _("Unable to migrate %(instance_uuid)s to %(dest)s: "
                        "Lack of memory(host:%(avail)s <= "
                        "instance:%(mem_inst)s)")
-            raise exception.MigrationPreCheckError(reason=reason % locals())
+            raise exception.MigrationPreCheckError(reason=reason %
+                {'instance_uuid': instance_uuid, 'dest': dest, 'avail': avail,
+                 'mem_inst': mem_inst})
 
     def _get_compute_info(self, context, host):
         """get compute node's information specified by key
