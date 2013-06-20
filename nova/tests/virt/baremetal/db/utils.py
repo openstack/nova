@@ -39,18 +39,6 @@ def new_bm_node(**kwargs):
     return h
 
 
-def new_bm_pxe_ip(**kwargs):
-    x = bm_models.BareMetalPxeIp()
-    x.id = kwargs.pop('id', None)
-    x.address = kwargs.pop('address', None)
-    x.server_address = kwargs.pop('server_address', None)
-    x.bm_node_id = kwargs.pop('bm_node_id', None)
-    if len(kwargs) > 0:
-        raise test.TestingException("unknown field: %s"
-                                    % ','.join(kwargs.keys()))
-    return x
-
-
 def new_bm_interface(**kwargs):
     x = bm_models.BareMetalInterface()
     x.id = kwargs.pop('id', None)
