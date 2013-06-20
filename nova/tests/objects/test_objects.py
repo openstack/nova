@@ -441,6 +441,13 @@ class _TestObject(object):
                     }
         self.assertEqual(obj.obj_to_primitive(), expected)
 
+    def test_contains(self):
+        obj = MyObj()
+        self.assertFalse('foo' in obj)
+        obj.foo = 1
+        self.assertTrue('foo' in obj)
+        self.assertFalse('does_not_exist' in obj)
+
 
 class TestObject(_LocalTest, _TestObject):
     pass
