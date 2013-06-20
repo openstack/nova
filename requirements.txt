@@ -30,4 +30,4 @@ python-keystoneclient>=0.2.0
 six
 stevedore>=0.9
 websockify<0.4
-http://tarballs.openstack.org/oslo.config/oslo.config-1.2.0a2.tar.gz#egg=oslo.config-1.2.0a2
+oslo.config>=1.1.0
