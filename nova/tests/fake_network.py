@@ -27,6 +27,9 @@ from nova.network import manager as network_manager
 from nova.network import model as network_model
 from nova.network import nova_ipam_lib
 from nova.network import rpcapi as network_rpcapi
+from nova.objects import base as obj_base
+from nova.objects import instance_info_cache
+from nova.openstack.common import jsonutils
 from nova.virt.libvirt import config as libvirt_config
 
 
@@ -456,7 +459,7 @@ def _get_fake_cache():
         ipv6_addr = 'fe80:b33f::a8bb:ccff:fedd:eeff'
         info[0]['network']['subnets'].append({'cidr': 'fe80:b33f::/64',
                                               'ips': [_ip(ipv6_addr)]})
-    return info
+    return jsonutils.dumps(info)
 
 
 def _get_instances_with_cached_ips(orig_func, *args, **kwargs):
@@ -464,9 +467,22 @@ def _get_instances_with_cached_ips(orig_func, *args, **kwargs):
     entries
     """
     instances = orig_func(*args, **kwargs)
-    if isinstance(instances, list):
+    context = args[0]
+
+    def _info_cache_for(instance):
+        info_cache = {'network_info': _get_fake_cache(),
+                      'instance_uuid': instance['uuid']}
+        if isinstance(instance, obj_base.NovaObject):
+            _info_cache = instance_info_cache.InstanceInfoCache()
+            instance_info_cache.InstanceInfoCache._from_db_object(context,
+                                                                  _info_cache,
+                                                                  info_cache)
+            info_cache = _info_cache
+        instance['info_cache'] = info_cache
+
+    if isinstance(instances, (list, obj_base.ObjectListBase)):
         for instance in instances:
-            instance['info_cache'] = {'network_info': _get_fake_cache()}
+            _info_cache_for(instance)
     else:
-        instances['info_cache'] = {'network_info': _get_fake_cache()}
+        _info_cache_for(instances)
     return instances
