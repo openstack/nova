@@ -532,7 +532,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
     def test_basic_schedule_run_instances_anti_affinity(self):
         filter_properties = {'scheduler_hints':
-                             {'instance_group': 'fake_uuid'}}
+                             {'group': 'cats'}}
         # Request spec 1
         instance_opts1 = {'project_id': 1, 'os_type': 'Linux',
                           'memory_mb': 512, 'root_gb': 512,
@@ -562,24 +562,19 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         self.mox.StubOutWithMock(driver, 'instance_update_db')
         self.mox.StubOutWithMock(compute_rpcapi.ComputeAPI, 'run_instance')
-        self.mox.StubOutWithMock(sched, 'instance_group_data')
+        self.mox.StubOutWithMock(sched, 'group_hosts')
 
         instance1_1 = {'uuid': 'fake-uuid1-1'}
         instance1_2 = {'uuid': 'fake-uuid1-2'}
 
-        group_data = {'instance_group': {'uuid': 'fake_uuid',
-                                         'policies': ['anti-affinity']},
-                      'instances': []}
-        sched.instance_group_data(mox.IgnoreArg(),
-                'fake_uuid').AndReturn(group_data)
+        sched.group_hosts(mox.IgnoreArg(), 'cats').AndReturn([])
 
         def inc_launch_index1(*args, **kwargs):
             request_spec1['instance_properties']['launch_index'] = (
                 request_spec1['instance_properties']['launch_index'] + 1)
 
         expected_metadata = {'system_metadata':
-                             {'system': 'metadata',
-                              'instance_group': 'fake_uuid'}}
+                             {'system': 'metadata', 'group': 'cats'}}
         driver.instance_update_db(fake_context, instance1_1['uuid'],
                 extra_values=expected_metadata).WithSideEffects(
                 inc_launch_index1).AndReturn(instance1_1)

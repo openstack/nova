@@ -94,14 +94,6 @@ def instance_update_db(context, instance_uuid, extra_values=None):
     values = {'host': None, 'node': None, 'scheduled_at': now}
     if extra_values:
         values.update(extra_values)
-        # Get the instance_group if it exists. This will be written to the
-        # system_metadata as it will be used when the VM is deleted
-        system_metadata = extra_values.get('system_metadata', None)
-        if system_metadata:
-            instance_group = system_metadata.get('instance_group', None)
-            if instance_group:
-                conductor_api.instance_group_members_add(context,
-                        instance_group, [instance_uuid])
 
     return db.instance_update(context, instance_uuid, values)
 
@@ -147,17 +139,15 @@ class Scheduler(object):
                 for service in services
                 if self.servicegroup_api.service_is_up(service)]
 
-    def instance_group_data(self, context, group_uuid):
-        """Return the the group data for the instance group."""
+    def group_hosts(self, context, group):
+        """Return the list of hosts that have VM's from the group."""
 
-        return conductor_api.instance_group_get_all(context, group_uuid)
-
-    def instance_group_hosts(self, context, instance_group):
-        """Return the list of hosts that have VM's from the instance_group."""
-
-        instances = instance_group['instances']
-        return [instance['host'] for instance in instances
-                if instance.get('host') is not None]
+        # The system_metadata 'group' will be filtered
+        members = db.instance_get_all_by_filters(context,
+                {'deleted': False, 'group': group})
+        return [member['host']
+                for member in members
+                if member.get('host') is not None]
 
     def schedule_prep_resize(self, context, image, request_spec,
                              filter_properties, instance, instance_type,

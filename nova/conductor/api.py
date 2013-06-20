@@ -109,21 +109,6 @@ class LocalAPI(object):
     def instance_fault_create(self, context, values):
         return self._manager.instance_fault_create(context, values)
 
-    def instance_group_members_add(self, context, group_uuid, members,
-                                   set_delete=False):
-        return self._manager.instance_group_members_add(context,
-                                                        group_uuid,
-                                                        members,
-                                                        set_delete=set_delete)
-
-    def instance_group_member_delete(self, context, group_uuid, instance_id):
-        return self._manager.instance_group_member_delete(context,
-                                                          group_uuid,
-                                                          instance_id)
-
-    def instance_group_get_all(self, context, group_uuid):
-        return self._manager.instance_group_get_all(context, group_uuid)
-
     def migration_get(self, context, migration_id):
         return self._manager.migration_get(context, migration_id)
 
