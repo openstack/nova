@@ -3677,62 +3677,64 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @periodic_task.periodic_task
     def _poll_unconfirmed_resizes(self, context):
-        if CONF.resize_confirm_window > 0:
-            capi = self.conductor_api
-            migrations = capi.migration_get_unconfirmed_by_dest_compute(
-                    context, CONF.resize_confirm_window, self.host)
+        if CONF.resize_confirm_window == 0:
+            return
 
-            migrations_info = dict(migration_count=len(migrations),
-                    confirm_window=CONF.resize_confirm_window)
+        capi = self.conductor_api
+        migrations = capi.migration_get_unconfirmed_by_dest_compute(
+                context, CONF.resize_confirm_window, self.host)
 
-            if migrations_info["migration_count"] > 0:
-                LOG.info(_("Found %(migration_count)d unconfirmed migrations "
-                           "older than %(confirm_window)d seconds"),
-                         migrations_info)
+        migrations_info = dict(migration_count=len(migrations),
+                confirm_window=CONF.resize_confirm_window)
 
-            def _set_migration_to_error(migration, reason, **kwargs):
-                LOG.warn(_("Setting migration %(migration_id)s to error: "
-                           "%(reason)s"),
-                         {'migration_id': migration['id'], 'reason': reason},
-                         **kwargs)
-                self.conductor_api.migration_update(context, migration,
-                                                    'error')
+        if migrations_info["migration_count"] > 0:
+            LOG.info(_("Found %(migration_count)d unconfirmed migrations "
+                       "older than %(confirm_window)d seconds"),
+                     migrations_info)
 
-            for migration in migrations:
-                instance_uuid = migration['instance_uuid']
-                LOG.info(_("Automatically confirming migration "
-                           "%(migration_id)s for instance %(instance_uuid)s"),
-                         {'migration_id': migration['id'],
-                          'instance_uuid': instance_uuid})
-                try:
-                    instance = self.conductor_api.instance_get_by_uuid(
-                        context, instance_uuid)
-                except exception.InstanceNotFound:
-                    reason = (_("Instance %s not found") %
-                              instance_uuid)
-                    _set_migration_to_error(migration, reason)
-                    continue
-                if instance['vm_state'] == vm_states.ERROR:
-                    reason = _("In ERROR state")
-                    _set_migration_to_error(migration, reason,
-                                            instance=instance)
-                    continue
-                vm_state = instance['vm_state']
-                task_state = instance['task_state']
-                if vm_state != vm_states.RESIZED or task_state is not None:
-                    reason = (_("In states %(vm_state)s/%(task_state)s, not "
-                               "RESIZED/None") %
-                              {'vm_state': vm_state,
-                               'task_state': task_state})
-                    _set_migration_to_error(migration, reason,
-                                            instance=instance)
-                    continue
-                try:
-                    self.conductor_api.compute_confirm_resize(
-                        context, instance, migration_ref=migration)
-                except Exception as e:
-                    LOG.error(_("Error auto-confirming resize: %s. "
-                                "Will retry later.") % e, instance=instance)
+        def _set_migration_to_error(migration, reason, **kwargs):
+            LOG.warn(_("Setting migration %(migration_id)s to error: "
+                       "%(reason)s"),
+                     {'migration_id': migration['id'], 'reason': reason},
+                     **kwargs)
+            self.conductor_api.migration_update(context, migration,
+                                                'error')
+
+        for migration in migrations:
+            instance_uuid = migration['instance_uuid']
+            LOG.info(_("Automatically confirming migration "
+                       "%(migration_id)s for instance %(instance_uuid)s"),
+                     {'migration_id': migration['id'],
+                      'instance_uuid': instance_uuid})
+            try:
+                instance = self.conductor_api.instance_get_by_uuid(
+                    context, instance_uuid)
+            except exception.InstanceNotFound:
+                reason = (_("Instance %s not found") %
+                          instance_uuid)
+                _set_migration_to_error(migration, reason)
+                continue
+            if instance['vm_state'] == vm_states.ERROR:
+                reason = _("In ERROR state")
+                _set_migration_to_error(migration, reason,
+                                        instance=instance)
+                continue
+            vm_state = instance['vm_state']
+            task_state = instance['task_state']
+            if vm_state != vm_states.RESIZED or task_state is not None:
+                reason = (_("In states %(vm_state)s/%(task_state)s, not "
+                           "RESIZED/None") %
+                          {'vm_state': vm_state,
+                           'task_state': task_state})
+                _set_migration_to_error(migration, reason,
+                                        instance=instance)
+                continue
+            try:
+                self.conductor_api.compute_confirm_resize(
+                    context, instance, migration_ref=migration)
+            except Exception as e:
+                LOG.error(_("Error auto-confirming resize: %s. "
+                            "Will retry later.") % e, instance=instance)
 
     @periodic_task.periodic_task
     def _instance_usage_audit(self, context):
