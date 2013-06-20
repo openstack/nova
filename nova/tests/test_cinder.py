@@ -14,7 +14,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import httplib2
 import urlparse
 
 from cinderclient import exceptions as cinder_exception
@@ -76,9 +75,9 @@ class FakeHTTPClient(cinder.cinder_client.client.HTTPClient):
 
         status, body = getattr(self, callback)(**kwargs)
         if hasattr(status, 'items'):
-            return httplib2.Response(status), body
+            return status, body
         else:
-            return httplib2.Response({"status": status}), body
+            return {"status": status}, body
 
     def get_volumes_1234(self, **kw):
         volume = {'volume': _stub_volume(id='1234')}
