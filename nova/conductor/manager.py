@@ -67,7 +67,7 @@ class ConductorManager(manager.Manager):
     namespace.  See the ComputeTaskManager class for details.
     """
 
-    RPC_API_VERSION = '1.51'
+    RPC_API_VERSION = '1.52'
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(service_name='conductor',
@@ -319,6 +319,13 @@ class ConductorManager(manager.Manager):
         self.db.instance_destroy(context, instance['uuid'])
 
     def instance_info_cache_delete(self, context, instance):
+        # Delete the instance from the instance_group member data
+        system_meta = self.db.instance_system_metadata_get(context,
+                instance['uuid'])
+        instance_group = system_meta.get('instance_group', None)
+        if instance_group:
+            self.db.instance_group_member_delete(context, instance_group,
+                                                 instance['uuid'])
         self.db.instance_info_cache_delete(context, instance['uuid'])
 
     def instance_info_cache_update(self, context, instance, values):
@@ -332,6 +339,32 @@ class ConductorManager(manager.Manager):
     def instance_fault_create(self, context, values):
         result = self.db.instance_fault_create(context, values)
         return jsonutils.to_primitive(result)
+
+    def instance_group_members_add(self, context, group_uuid, members,
+                                   set_delete=False):
+        result = self.db.instance_group_members_add(context, group_uuid,
+                members, set_delete=set_delete)
+        return jsonutils.to_primitive(result)
+
+    def instance_group_member_delete(self, context, group_uuid, instance_id):
+        result = self.db.instance_group_member_delete(context,
+                group_uuid, instance_id)
+        return jsonutils.to_primitive(result)
+
+    def instance_group_get_all(self, context, group_uuid):
+        instance_group = self.db.instance_group_get(context, group_uuid)
+        instances = []
+        for member in instance_group['members']:
+            try:
+                instance = self.db.instance_get_by_uuid(context, member)
+                if instance:
+                    instances.append(instance)
+            except exception.InstanceNotFound:
+                LOG.error(_("Invalid instance %(member)s in instance "
+                            " group %(group)s"),
+                          {'member': member, 'group': group_uuid})
+        return jsonutils.to_primitive({'instance_group': instance_group,
+                                       'instances': instances})
 
     # NOTE(kerrin): This method can be removed in v2.0 of the RPC API.
     def vol_get_usage_by_time(self, context, start_time):

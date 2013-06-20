@@ -173,11 +173,11 @@ class FilterScheduler(driver.Scheduler):
 
         # Update the metadata if necessary
         scheduler_hints = filter_properties.get('scheduler_hints') or {}
-        group = scheduler_hints.get('group', None)
+        group_uuid = scheduler_hints.get('instance_group', None)
         values = None
-        if group:
+        if group_uuid:
             values = request_spec['instance_properties']['system_metadata']
-            values.update({'group': group})
+            values.update({'instance_group': group_uuid})
             values = {'system_metadata': values}
 
         updated_instance = driver.instance_update_db(context,
@@ -300,17 +300,19 @@ class FilterScheduler(driver.Scheduler):
         instance_properties = request_spec['instance_properties']
         instance_type = request_spec.get("instance_type", None)
 
-        # Get the group
+        # Get the instance_group
         update_group_hosts = False
         scheduler_hints = filter_properties.get('scheduler_hints') or {}
-        group = scheduler_hints.get('group', None)
-        if group:
-            group_hosts = self.group_hosts(elevated, group)
-            update_group_hosts = True
-            if 'group_hosts' not in filter_properties:
-                filter_properties.update({'group_hosts': []})
-            configured_hosts = filter_properties['group_hosts']
-            filter_properties['group_hosts'] = configured_hosts + group_hosts
+        group_uuid = scheduler_hints.get('instance_group', None)
+        if group_uuid:
+            group_data = self.instance_group_data(elevated, group_uuid)
+            if 'anti-affinity' in group_data['instance_group']['policies']:
+                update_group_hosts = True
+                group_hosts = self.instance_group_hosts(elevated, group_data)
+                if 'group_hosts' not in filter_properties:
+                    filter_properties.update({'group_hosts': []})
+                user_hosts = filter_properties['group_hosts']
+                filter_properties['group_hosts'] = user_hosts + group_hosts
 
         config_options = self._get_configuration_options()
 

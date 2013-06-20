@@ -102,6 +102,8 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.50 - Added object_action() and object_class_action()
     1.51 - Added the 'legacy' argument to
            block_device_mapping_get_all_by_instance
+    1.52 - Added instance_group_members_add, instance_group_member_delete and
+                 instance_group_get_all
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -332,6 +334,22 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     def instance_fault_create(self, context, values):
         msg = self.make_msg('instance_fault_create', values=values)
         return self.call(context, msg, version='1.36')
+
+    def instance_group_members_add(self, context, group_uuid, members,
+                                   set_delete=False):
+        msg = self.make_msg('instance_group_members_add',
+                            group_uuid=group_uuid, members=members,
+                            set_delete=set_delete)
+        return self.call(context, msg, version='1.52')
+
+    def instance_group_member_delete(self, context, group_uuid, instance_id):
+        msg = self.make_msg('instance_group_member_delete',
+                            group_uuid=group_uuid, instance_id=instance_id)
+        return self.call(context, msg, version='1.52')
+
+    def instance_group_get_all(self, context, group_uuid):
+        msg = self.make_msg('instance_group_get_all', group_uuid=group_uuid)
+        return self.call(context, msg, version='1.52')
 
     def action_event_start(self, context, values):
         values_p = jsonutils.to_primitive(values)

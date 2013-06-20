@@ -340,7 +340,25 @@ class _BaseTestCase(object):
         self.conductor.instance_destroy(self.context, {'uuid': 'fake-uuid'})
 
     def test_instance_info_cache_delete(self):
+        self.mox.StubOutWithMock(db, 'instance_system_metadata_get')
         self.mox.StubOutWithMock(db, 'instance_info_cache_delete')
+        fake_data = {}
+        db.instance_system_metadata_get(self.context,
+                'fake-uuid').AndReturn(fake_data)
+        db.instance_info_cache_delete(self.context, 'fake-uuid')
+        self.mox.ReplayAll()
+        self.conductor.instance_info_cache_delete(self.context,
+                                                  {'uuid': 'fake-uuid'})
+
+    def test_instance_info_cache_delete_with_instance_group(self):
+        self.mox.StubOutWithMock(db, 'instance_system_metadata_get')
+        self.mox.StubOutWithMock(db, 'instance_group_member_delete')
+        self.mox.StubOutWithMock(db, 'instance_info_cache_delete')
+        fake_data = {'instance_group': 'fake-group'}
+        db.instance_system_metadata_get(self.context,
+                'fake-uuid').AndReturn(fake_data)
+        db.instance_group_member_delete(self.context, 'fake-group',
+                'fake-uuid')
         db.instance_info_cache_delete(self.context, 'fake-uuid')
         self.mox.ReplayAll()
         self.conductor.instance_info_cache_delete(self.context,
@@ -437,6 +455,38 @@ class _BaseTestCase(object):
         result = self.conductor.instance_fault_create(self.context,
                                                       'fake-values')
         self.assertEqual(result, 'fake-result')
+
+    def test_instance_group_members_add(self):
+        self.mox.StubOutWithMock(db, 'instance_group_members_add')
+        db.instance_group_members_add(self.context, 'fake-uuid',
+                'fake-members', set_delete=False).AndReturn('fake-members')
+        self.mox.ReplayAll()
+        result = self.conductor.instance_group_members_add(self.context,
+                'fake-uuid', 'fake-members', set_delete=False)
+        self.assertEqual(result, 'fake-members')
+
+    def test_instance_group_member_delete(self):
+        self.mox.StubOutWithMock(db, 'instance_group_member_delete')
+        db.instance_group_member_delete(self.context, 'fake-uuid',
+                'fake-instance-id').AndReturn('fake-result')
+        self.mox.ReplayAll()
+        result = self.conductor.instance_group_member_delete(self.context,
+                'fake-uuid', 'fake-instance-id')
+        self.assertEqual(result, 'fake-result')
+
+    def test_instance_group_get_all(self):
+        self.mox.StubOutWithMock(db, 'instance_group_get')
+        self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
+        group = {'uuid': 'fake-uuid',
+                 'members': ['fake-instance-id']}
+        db.instance_group_get(self.context, 'fake-uuid').AndReturn(group)
+        db.instance_get_by_uuid(self.context,
+                'fake-instance-id').AndReturn('fake-instance')
+        self.mox.ReplayAll()
+        result = self.conductor.instance_group_get_all(self.context,
+                'fake-uuid')
+        self.assertEqual(result, {'instance_group': group,
+                                  'instances': ['fake-instance']})
 
     def test_task_log_get(self):
         self.mox.StubOutWithMock(db, 'task_log_get')
