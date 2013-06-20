@@ -839,6 +839,10 @@ class ConsoleTypeInvalid(Invalid):
     msg_fmt = _("Invalid console type %(console_type)s")
 
 
+class ConsoleTypeUnavailable(Invalid):
+    message = _("Unavailable console type %(console_type)s")
+
+
 class InstanceTypeNotFound(NotFound):
     msg_fmt = _("Instance type %(instance_type_id)s could not be found.")
 

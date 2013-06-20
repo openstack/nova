@@ -4204,6 +4204,86 @@ class LibvirtConnTestCase(test.TestCase):
                           power_on=False)
         self.assertTrue(self.log_error_called)
 
+    def test_get_vnc_console(self):
+        instance_ref = db.instance_create(self.context, self.test_instance)
+        dummyxml = ("<domain type='kvm'><name>instance-0000000a</name>"
+                    "<devices>"
+                    "<graphics type='vnc' port='5900'/>"
+                    "</devices></domain>")
+
+        vdmock = self.mox.CreateMock(libvirt.virDomain)
+        self.mox.StubOutWithMock(vdmock, "XMLDesc")
+        vdmock.XMLDesc(0).AndReturn(dummyxml)
+
+        def fake_lookup(instance_name):
+            if instance_name == instance_ref['name']:
+                return vdmock
+        self.create_fake_libvirt_mock(lookupByName=fake_lookup)
+
+        self.mox.ReplayAll()
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        vnc_dict = conn.get_vnc_console(instance_ref)
+        self.assertEquals(vnc_dict['port'], '5900')
+
+    def test_get_vnc_console_unavailable(self):
+        instance_ref = db.instance_create(self.context, self.test_instance)
+        dummyxml = ("<domain type='kvm'><name>instance-0000000a</name>"
+                    "<devices></devices></domain>")
+
+        vdmock = self.mox.CreateMock(libvirt.virDomain)
+        self.mox.StubOutWithMock(vdmock, "XMLDesc")
+        vdmock.XMLDesc(0).AndReturn(dummyxml)
+
+        def fake_lookup(instance_name):
+            if instance_name == instance_ref['name']:
+                return vdmock
+        self.create_fake_libvirt_mock(lookupByName=fake_lookup)
+
+        self.mox.ReplayAll()
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertRaises(exception.ConsoleTypeUnavailable,
+                          conn.get_vnc_console, instance_ref)
+
+    def test_get_spice_console(self):
+        instance_ref = db.instance_create(self.context, self.test_instance)
+        dummyxml = ("<domain type='kvm'><name>instance-0000000a</name>"
+                    "<devices>"
+                    "<graphics type='spice' port='5950'/>"
+                    "</devices></domain>")
+
+        vdmock = self.mox.CreateMock(libvirt.virDomain)
+        self.mox.StubOutWithMock(vdmock, "XMLDesc")
+        vdmock.XMLDesc(0).AndReturn(dummyxml)
+
+        def fake_lookup(instance_name):
+            if instance_name == instance_ref['name']:
+                return vdmock
+        self.create_fake_libvirt_mock(lookupByName=fake_lookup)
+
+        self.mox.ReplayAll()
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        spice_dict = conn.get_spice_console(instance_ref)
+        self.assertEquals(spice_dict['port'], '5950')
+
+    def test_get_spice_console_unavailable(self):
+        instance_ref = db.instance_create(self.context, self.test_instance)
+        dummyxml = ("<domain type='kvm'><name>instance-0000000a</name>"
+                    "<devices></devices></domain>")
+
+        vdmock = self.mox.CreateMock(libvirt.virDomain)
+        self.mox.StubOutWithMock(vdmock, "XMLDesc")
+        vdmock.XMLDesc(0).AndReturn(dummyxml)
+
+        def fake_lookup(instance_name):
+            if instance_name == instance_ref['name']:
+                return vdmock
+        self.create_fake_libvirt_mock(lookupByName=fake_lookup)
+
+        self.mox.ReplayAll()
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertRaises(exception.ConsoleTypeUnavailable,
+                          conn.get_spice_console, instance_ref)
+
 
 class HostStateTestCase(test.TestCase):
 
