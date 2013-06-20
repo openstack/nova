@@ -436,8 +436,9 @@ class Reservation(BASE, NovaBase):
 class Snapshot(BASE, NovaBase):
     """Represents a block storage device that can be attached to a VM."""
     __tablename__ = 'snapshots'
-    id = Column(String(36), primary_key=True)
-    deleted = Column(String(36), default="")
+    __table_args__ = ()
+    id = Column(String(36), primary_key=True, nullable=False)
+    deleted = Column(String(36), default="", nullable=True)
 
     @property
     def name(self):
@@ -447,16 +448,17 @@ class Snapshot(BASE, NovaBase):
     def volume_name(self):
         return CONF.volume_name_template % self.volume_id
 
-    user_id = Column(String(255))
-    project_id = Column(String(255))
+    user_id = Column(String(255), nullable=True)
+    project_id = Column(String(255), nullable=True)
 
-    volume_id = Column(String(36))
-    status = Column(String(255))
-    progress = Column(String(255))
-    volume_size = Column(Integer)
+    volume_id = Column(String(36), nullable=False)
+    status = Column(String(255), nullable=True)
+    progress = Column(String(255), nullable=True)
+    volume_size = Column(Integer, nullable=True)
+    scheduled_at = Column(DateTime, nullable=True)
 
-    display_name = Column(String(255))
-    display_description = Column(String(255))
+    display_name = Column(String(255), nullable=True)
+    display_description = Column(String(255), nullable=True)
 
 
 class BlockDeviceMapping(BASE, NovaBase):
@@ -686,13 +688,16 @@ class VirtualInterface(BASE, NovaBase):
     __tablename__ = 'virtual_interfaces'
     __table_args__ = (
         schema.UniqueConstraint("address",
-                                name="unique_virtual_interfaces0address"),
+                                name="uniq_virtual_interfaces0address"),
+        Index('network_id', 'network_id'),
+        Index('virtual_interfaces_instance_uuid_fkey', 'instance_uuid'),
     )
-    id = Column(Integer, primary_key=True)
-    address = Column(String(255), unique=True)
-    network_id = Column(Integer, nullable=False)
-    instance_uuid = Column(String(36), nullable=False)
-    uuid = Column(String(36))
+    id = Column(Integer, primary_key=True, nullable=False)
+    address = Column(String(255), unique=True, nullable=True)
+    network_id = Column(Integer, nullable=True)
+    instance_uuid = Column(String(36), ForeignKey('instances.uuid'),
+                           nullable=True)
+    uuid = Column(String(36), nullable=True)
 
 
 # TODO(vish): can these both come from the same baseclass?
@@ -997,6 +1002,7 @@ class VolumeIdMapping(BASE, NovaBase):
 class SnapshotIdMapping(BASE, NovaBase):
     """Compatibility layer for the EC2 snapshot service."""
     __tablename__ = 'snapshot_id_mappings'
+    __table_args__ = ()
     id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
     uuid = Column(String(36), nullable=False)
 
@@ -1061,16 +1067,21 @@ class TaskLog(BASE, NovaBase):
             'task_name', 'host', 'period_beginning', 'period_ending',
             name="uniq_task_log0task_name0host0period_beginning0period_ending"
         ),
+        Index('ix_task_log_period_beginning', 'period_beginning'),
+        Index('ix_task_log_host', 'host'),
+        Index('ix_task_log_period_ending', 'period_ending'),
     )
     id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
     task_name = Column(String(255), nullable=False)
     state = Column(String(255), nullable=False)
-    host = Column(String(255))
-    period_beginning = Column(DateTime, default=timeutils.utcnow)
-    period_ending = Column(DateTime, default=timeutils.utcnow)
+    host = Column(String(255), nullable=False)
+    period_beginning = Column(DateTime, default=timeutils.utcnow,
+                              nullable=False)
+    period_ending = Column(DateTime, default=timeutils.utcnow,
+                           nullable=False)
     message = Column(String(255), nullable=False)
-    task_items = Column(Integer(), default=0)
-    errors = Column(Integer(), default=0)
+    task_items = Column(Integer(), default=0, nullable=True)
+    errors = Column(Integer(), default=0, nullable=True)
 
 
 class InstanceGroupMember(BASE, NovaBase):
