@@ -14,12 +14,13 @@
 
 from nova import db
 from nova.objects import base
+from nova.objects import utils
 
 
 class InstanceInfoCache(base.NovaObject):
     fields = {
         'instance_uuid': str,
-        'network_info': str,
+        'network_info': utils.str_or_none,
         }
 
     @staticmethod
