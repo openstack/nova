@@ -31,6 +31,7 @@ from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context
+from nova import crypto
 from nova import db
 from nova import exception
 from nova.openstack.common import importutils
@@ -983,13 +984,14 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
             actual_injected_files.append((path, contents))
             return jsonutils.dumps({'returncode': '0', 'message': 'success'})
 
-        def noop(*args, **kwargs):
-            pass
-
         self.stubs.Set(stubs.FakeSessionForVMTests,
                        '_plugin_agent_inject_file', fake_inject_file)
-        self.stubs.Set(agent.XenAPIBasedAgent,
-                       'set_admin_password', noop)
+
+        def fake_encrypt_text(sshkey, new_pass):
+            self.assertEqual("fake_keydata", sshkey)
+            return "fake"
+
+        self.stubs.Set(crypto, 'ssh_encrypt_text', fake_encrypt_text)
 
         expected_data = ('\n# The following ssh key was injected by '
                          'Nova\nfake_keydata\n')
@@ -1019,6 +1021,93 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
                          injected_files=injected_files)
         self.check_vm_params_for_linux()
         self.assertEquals(actual_injected_files, injected_files)
+
+    def test_spawn_agent_upgrade(self):
+        self.flags(xenapi_use_agent_default=True)
+        actual_injected_files = []
+
+        def fake_agent_build(_self, *args):
+            return {"version": "1.1.0", "architecture": "x86-64",
+                    "hypervisor": "xen", "os": "windows",
+                    "url": "url", "md5hash": "asdf"}
+
+        self.stubs.Set(self.conn.virtapi, 'agent_build_get_by_triple',
+                       fake_agent_build)
+
+        self._test_spawn(IMAGE_VHD, None, None,
+                         os_type="linux", architecture="x86-64")
+
+    def test_spawn_agent_upgrade_fails_silently(self):
+        self.flags(xenapi_use_agent_default=True)
+        actual_injected_files = []
+
+        def fake_agent_build(_self, *args):
+            return {"version": "1.1.0", "architecture": "x86-64",
+                    "hypervisor": "xen", "os": "windows",
+                    "url": "url", "md5hash": "asdf"}
+
+        self.stubs.Set(self.conn.virtapi, 'agent_build_get_by_triple',
+                       fake_agent_build)
+
+        def fake_agent_update(self, method, args):
+            raise xenapi_fake.Failure(["fake_error"])
+
+        self.stubs.Set(stubs.FakeSessionForVMTests,
+                       '_plugin_agent_agentupdate', fake_agent_update)
+
+        self._test_spawn(IMAGE_VHD, None, None,
+                         os_type="linux", architecture="x86-64")
+
+    def _test_spawn_fails_with(self, trigger, expected_exception):
+        self.flags(xenapi_use_agent_default=True)
+        self.flags(agent_version_timeout=0)
+        actual_injected_files = []
+
+        def fake_agent_version(self, method, args):
+            raise xenapi_fake.Failure([trigger])
+
+        self.stubs.Set(stubs.FakeSessionForVMTests,
+                       '_plugin_agent_version', fake_agent_version)
+
+        self.assertRaises(expected_exception, self._test_spawn,
+                IMAGE_VHD, None, None, os_type="linux", architecture="x86-64")
+
+    def test_spawn_fails_with_agent_timeout(self):
+        self._test_spawn_fails_with("TIMEOUT:fake", exception.AgentTimeout)
+
+    def test_spawn_fails_with_agent_not_implemented(self):
+        self._test_spawn_fails_with("NOT IMPLEMENTED:fake",
+                                    exception.AgentNotImplemented)
+
+    def test_spawn_fails_with_agent_error(self):
+        self._test_spawn_fails_with("fake_error", exception.AgentError)
+
+    def test_spawn_fails_with_agent_bad_return(self):
+        self.flags(xenapi_use_agent_default=True)
+        self.flags(agent_version_timeout=0)
+        actual_injected_files = []
+
+        def fake_agent_version(self, method, args):
+            return xenapi_fake.as_json(returncode='-1', message='fake')
+        self.stubs.Set(stubs.FakeSessionForVMTests,
+                       '_plugin_agent_version', fake_agent_version)
+
+        self.assertRaises(exception.AgentError, self._test_spawn,
+                IMAGE_VHD, None, None, os_type="linux", architecture="x86-64")
+
+    def test_spawn_fails_agent_not_implemented(self):
+        # Test spawning with injected_files.
+        self.flags(xenapi_use_agent_default=True)
+        self.flags(agent_version_timeout=0)
+        actual_injected_files = []
+
+        def fake_agent_version(self, method, args):
+            raise xenapi_fake.Failure(["NOT IMPLEMENTED:fake"])
+        self.stubs.Set(stubs.FakeSessionForVMTests,
+                       '_plugin_agent_version', fake_agent_version)
+
+        self.assertRaises(exception.AgentNotImplemented, self._test_spawn,
+                IMAGE_VHD, None, None, os_type="linux", architecture="x86-64")
 
     def test_rescue(self):
         instance = self._create_instance()
