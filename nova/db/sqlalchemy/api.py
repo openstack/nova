@@ -4396,9 +4396,8 @@ def vol_get_usage_by_time(context, begin):
 @require_context
 def vol_usage_update(context, id, rd_req, rd_bytes, wr_req, wr_bytes,
                      instance_id, project_id, user_id, availability_zone,
-                     update_totals=False, session=None):
-    if not session:
-        session = get_session()
+                     update_totals=False):
+    session = get_session()
 
     refreshed = timeutils.utcnow()
 
@@ -4471,6 +4470,8 @@ def vol_usage_update(context, id, rd_req, rd_bytes, wr_req, wr_bytes,
                         current_usage['curr_write_bytes'] + wr_bytes)
 
             current_usage.update(values)
+            current_usage.save(session=session)
+            session.refresh(current_usage)
             return current_usage
 
         vol_usage = models.VolumeUsage()
