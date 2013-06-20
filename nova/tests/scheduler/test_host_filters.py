@@ -542,6 +542,64 @@ class HostFiltersTestCase(test.NoDBTestCase):
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
         self.assertEqual(2048 * 2.0, host.limits['memory_mb'])
 
+    def test_aggregate_ram_filter_value_error(self):
+        self._stub_service_is_up(True)
+        filt_cls = self.class_map['AggregateRamFilter']()
+        self.flags(ram_allocation_ratio=1.0)
+        filter_properties = {'context': self.context,
+                             'instance_type': {'memory_mb': 1024}}
+        capabilities = {'enabled': True}
+        service = {'disabled': False}
+        host = fakes.FakeHostState('host1', 'node1',
+                {'free_ram_mb': 1024, 'total_usable_ram_mb': 1024,
+                 'capabilities': capabilities, 'service': service})
+        self._create_aggregate_with_host(name='fake_aggregate',
+                hosts=['host1'],
+                metadata={'ram_allocation_ratio': 'XXX'})
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+        self.assertEqual(1024 * 1.0, host.limits['memory_mb'])
+
+    def test_aggregate_ram_filter_default_value(self):
+        self._stub_service_is_up(True)
+        filt_cls = self.class_map['AggregateRamFilter']()
+        self.flags(ram_allocation_ratio=1.0)
+        filter_properties = {'context': self.context,
+                             'instance_type': {'memory_mb': 1024}}
+        capabilities = {'enabled': True}
+        service = {'disabled': False}
+        host = fakes.FakeHostState('host1', 'node1',
+                {'free_ram_mb': 1023, 'total_usable_ram_mb': 1024,
+                 'capabilities': capabilities, 'service': service})
+        # False: fallback to default flag w/o aggregates
+        self.assertFalse(filt_cls.host_passes(host, filter_properties))
+        self._create_aggregate_with_host(name='fake_aggregate',
+                hosts=['host1'],
+                metadata={'ram_allocation_ratio': '2.0'})
+        # True: use ratio from aggregates
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+        self.assertEqual(1024 * 2.0, host.limits['memory_mb'])
+
+    def test_aggregate_ram_filter_conflict_values(self):
+        self._stub_service_is_up(True)
+        filt_cls = self.class_map['AggregateRamFilter']()
+        self.flags(ram_allocation_ratio=1.0)
+        filter_properties = {'context': self.context,
+                             'instance_type': {'memory_mb': 1024}}
+        capabilities = {'enabled': True}
+        service = {'disabled': False}
+        host = fakes.FakeHostState('host1', 'node1',
+                {'free_ram_mb': 1023, 'total_usable_ram_mb': 1024,
+                 'capabilities': capabilities, 'service': service})
+        self._create_aggregate_with_host(name='fake_aggregate1',
+                hosts=['host1'],
+                metadata={'ram_allocation_ratio': '1.5'})
+        self._create_aggregate_with_host(name='fake_aggregate2',
+                hosts=['host1'],
+                metadata={'ram_allocation_ratio': '2.0'})
+        # use the minimum ratio from aggregates
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+        self.assertEqual(1024 * 1.5, host.limits['memory_mb'])
+
     def test_disk_filter_passes(self):
         self._stub_service_is_up(True)
         filt_cls = self.class_map['DiskFilter']()
