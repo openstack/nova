@@ -885,6 +885,21 @@ class TestNeutronv2(TestNeutronv2Base):
                           api.validate_networks,
                           self.context, requested_networks)
 
+    def test_validate_networks_not_specified(self):
+        requested_networks = []
+        self.moxed_client.list_networks(
+            tenant_id=self.context.project_id,
+            shared=False).AndReturn(
+                {'networks': self.nets1})
+        self.moxed_client.list_networks(
+            shared=True).AndReturn(
+                {'networks': self.nets2})
+        self.mox.ReplayAll()
+        api = neutronapi.API()
+        self.assertRaises(exception.NetworkAmbiguous,
+                          api.validate_networks,
+                          self.context, requested_networks)
+
     def _mock_list_ports(self, port_data=None):
         if port_data is None:
             port_data = self.port_data2

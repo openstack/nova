@@ -404,6 +404,9 @@ class API(base.Base):
         """validate the networks passed at the time of creating
         the server
         """
+        if not requested_networks:
+            return
+
         return self.network_rpcapi.validate_networks(context,
                                                      requested_networks)
 

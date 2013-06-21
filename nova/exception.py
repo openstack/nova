@@ -558,6 +558,11 @@ class NetworkNotFoundForProject(NotFound):
                 "is not assigned to the project %(project_id)s.")
 
 
+class NetworkAmbiguous(Invalid):
+    message = _("More than one possible network found. Specify "
+                "network ID(s) to select which one(s) to connect to,")
+
+
 class DatastoreNotFound(NotFound):
     message = _("Could not find the datastore reference(s) which the VM uses.")
 
