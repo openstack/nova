@@ -16,7 +16,7 @@
 from lxml import etree
 import webob
 
-from nova.api.openstack.compute.contrib import extended_status
+from nova.api.openstack.compute.plugins.v3 import extended_status
 from nova import compute
 from nova import db
 from nova import exception
@@ -50,7 +50,7 @@ def fake_compute_get_all(*args, **kwargs):
 
 class ExtendedStatusTest(test.TestCase):
     content_type = 'application/json'
-    prefix = 'OS-EXT-STS:'
+    prefix = 'os-extended-status:'
 
     def setUp(self):
         super(ExtendedStatusTest, self).setUp()
@@ -58,15 +58,13 @@ class ExtendedStatusTest(test.TestCase):
         self.stubs.Set(compute.api.API, 'get', fake_compute_get)
         self.stubs.Set(compute.api.API, 'get_all', fake_compute_get_all)
         self.stubs.Set(db, 'instance_get_by_uuid', fake_compute_get)
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Extended_status'])
 
     def _make_request(self, url):
         req = webob.Request.blank(url)
         req.headers['Accept'] = self.content_type
-        res = req.get_response(fakes.wsgi_app(init_only=('servers',)))
+        res = req.get_response(fakes.wsgi_app_v3(
+            init_only=('servers',
+                       'os-extended-status')))
         return res
 
     def _get_server(self, body):
@@ -82,7 +80,7 @@ class ExtendedStatusTest(test.TestCase):
         self.assertEqual(server.get('%stask_state' % self.prefix), task_state)
 
     def test_show(self):
-        url = '/v2/fake/servers/%s' % UUID3
+        url = '/v3/servers/%s' % UUID3
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 200)
@@ -92,7 +90,7 @@ class ExtendedStatusTest(test.TestCase):
                                 task_state='kayaking')
 
     def test_detail(self):
-        url = '/v2/fake/servers/detail'
+        url = '/v3/servers/detail'
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 200)
@@ -108,7 +106,7 @@ class ExtendedStatusTest(test.TestCase):
             raise exception.InstanceNotFound(instance_id='fake')
 
         self.stubs.Set(compute.api.API, 'get', fake_compute_get)
-        url = '/v2/fake/servers/70f6db34-de8d-4fbd-aafb-4065bdfa6115'
+        url = '/v3/servers/70f6db34-de8d-4fbd-aafb-4065bdfa6115'
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 404)
@@ -116,7 +114,7 @@ class ExtendedStatusTest(test.TestCase):
 
 class ExtendedStatusXmlTest(ExtendedStatusTest):
     content_type = 'application/xml'
-    prefix = '{%s}' % extended_status.Extended_status.namespace
+    prefix = '{%s}' % extended_status.ExtendedStatus.namespace
 
     def _get_server(self, body):
         return etree.XML(body)

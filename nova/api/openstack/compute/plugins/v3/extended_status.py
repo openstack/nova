@@ -19,7 +19,8 @@ from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import compute
 
-authorize = extensions.soft_extension_authorizer('compute', 'extended_status')
+ALIAS = "os-extended-status"
+authorize = extensions.soft_extension_authorizer('compute', 'v3:' + ALIAS)
 
 
 class ExtendedStatusController(wsgi.Controller):
@@ -29,7 +30,7 @@ class ExtendedStatusController(wsgi.Controller):
 
     def _extend_server(self, server, instance):
         for state in ['task_state', 'vm_state', 'power_state']:
-            key = "%s:%s" % (Extended_status.alias, state)
+            key = "%s:%s" % (ExtendedStatus.alias, state)
             server[key] = instance[state]
 
     @wsgi.extends
@@ -58,28 +59,31 @@ class ExtendedStatusController(wsgi.Controller):
                 self._extend_server(server, db_instance)
 
 
-class Extended_status(extensions.ExtensionDescriptor):
+class ExtendedStatus(extensions.V3APIExtensionBase):
     """Extended Status support."""
 
     name = "ExtendedStatus"
-    alias = "OS-EXT-STS"
+    alias = ALIAS
     namespace = ("http://docs.openstack.org/compute/ext/"
-                 "extended_status/api/v1.1")
-    updated = "2011-11-03T00:00:00+00:00"
+                 "extended_status/api/v3")
+    version = 1
 
     def get_controller_extensions(self):
         controller = ExtendedStatusController()
         extension = extensions.ControllerExtension(self, 'servers', controller)
         return [extension]
 
+    def get_resources(self):
+        return []
+
 
 def make_server(elem):
-    elem.set('{%s}task_state' % Extended_status.namespace,
-             '%s:task_state' % Extended_status.alias)
-    elem.set('{%s}power_state' % Extended_status.namespace,
-             '%s:power_state' % Extended_status.alias)
-    elem.set('{%s}vm_state' % Extended_status.namespace,
-             '%s:vm_state' % Extended_status.alias)
+    elem.set('{%s}task_state' % ExtendedStatus.namespace,
+             '%s:task_state' % ExtendedStatus.alias)
+    elem.set('{%s}power_state' % ExtendedStatus.namespace,
+             '%s:power_state' % ExtendedStatus.alias)
+    elem.set('{%s}vm_state' % ExtendedStatus.namespace,
+             '%s:vm_state' % ExtendedStatus.alias)
 
 
 class ExtendedStatusTemplate(xmlutil.TemplateBuilder):
@@ -87,7 +91,7 @@ class ExtendedStatusTemplate(xmlutil.TemplateBuilder):
         root = xmlutil.TemplateElement('server', selector='server')
         make_server(root)
         return xmlutil.SlaveTemplate(root, 1, nsmap={
-            Extended_status.alias: Extended_status.namespace})
+            ExtendedStatus.alias: ExtendedStatus.namespace})
 
 
 class ExtendedStatusesTemplate(xmlutil.TemplateBuilder):
@@ -96,4 +100,4 @@ class ExtendedStatusesTemplate(xmlutil.TemplateBuilder):
         elem = xmlutil.SubTemplateElement(root, 'server', selector='servers')
         make_server(elem)
         return xmlutil.SlaveTemplate(root, 1, nsmap={
-            Extended_status.alias: Extended_status.namespace})
+            ExtendedStatus.alias: ExtendedStatus.namespace})

@@ -53,6 +53,7 @@
     "compute_extension:extended_server_attributes": "rule:admin_api",
     "compute_extension:v3:os-extended-server-attributes": "rule:admin_api",
     "compute_extension:extended_status": "",
+    "compute_extension:v3:os-extended-status": "",
     "compute_extension:extended_availability_zone": "",
     "compute_extension:v3:os-extended-availability-zone": "",
     "compute_extension:extended_ips": "",
