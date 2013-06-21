@@ -1154,25 +1154,33 @@ class ServersControllerTest(ControllerTest):
             self.assertEqual(s['host_id'], host_ids[i % 2])
             self.assertEqual(s['name'], 'server%d' % (i + 1))
 
-    def _delete_server_instance(self, uuid=FAKE_UUID):
-        fakes.stub_out_instance_quota(self.stubs, 0, 10)
-        req = fakes.HTTPRequestV3.blank('/servers/%s' % uuid)
-        req.method = 'DELETE'
 
+class ServersControllerDeleteTest(ControllerTest):
+
+    def setUp(self):
+        super(ServersControllerDeleteTest, self).setUp()
         self.server_delete_called = False
-
-        self.stubs.Set(db, 'instance_get_by_uuid',
-                       fakes.fake_instance_get(vm_state=vm_states.ACTIVE))
 
         def instance_destroy_mock(*args, **kwargs):
             self.server_delete_called = True
+
         self.stubs.Set(db, 'instance_destroy', instance_destroy_mock)
 
+    def _create_delete_request(self, uuid):
+        fakes.stub_out_instance_quota(self.stubs, 0, 10)
+        req = fakes.HTTPRequestV3.blank('/servers/%s' % uuid)
+        req.method = 'DELETE'
+        return req
+
+    def _delete_server_instance(self, uuid=FAKE_UUID):
+        req = self._create_delete_request(uuid)
+        self.stubs.Set(db, 'instance_get_by_uuid',
+                fakes.fake_instance_get(vm_state=vm_states.ACTIVE))
         self.controller.delete(req, uuid)
 
     def test_delete_server_instance(self):
         self._delete_server_instance()
-        self.assertEqual(self.server_delete_called, True)
+        self.assertTrue(self.server_delete_called)
 
     def test_delete_server_instance_not_found(self):
         self.assertRaises(webob.exc.HTTPNotFound,
@@ -1180,38 +1188,21 @@ class ServersControllerTest(ControllerTest):
                           uuid='non-existent-uuid')
 
     def test_delete_server_instance_while_building(self):
-        fakes.stub_out_instance_quota(self.stubs, 0, 10)
-        req = fakes.HTTPRequestV3.blank('/servers/%s' % FAKE_UUID)
-        req.method = 'DELETE'
-
-        self.server_delete_called = False
-
-        def instance_destroy_mock(*args, **kwargs):
-            self.server_delete_called = True
-        self.stubs.Set(db, 'instance_destroy', instance_destroy_mock)
-
+        req = self._create_delete_request(FAKE_UUID)
         self.controller.delete(req, FAKE_UUID)
 
-        self.assertEqual(self.server_delete_called, True)
+        self.assertTrue(self.server_delete_called)
 
     def test_delete_server_instance_while_resize(self):
-        req = fakes.HTTPRequestV3.blank('/servers/%s' % FAKE_UUID)
-        req.method = 'DELETE'
-
-        self.server_delete_called = False
-
+        req = self._create_delete_request(FAKE_UUID)
         self.stubs.Set(db, 'instance_get_by_uuid',
                 fakes.fake_instance_get(vm_state=vm_states.ACTIVE,
                                         task_state=task_states.RESIZE_PREP))
 
-        def instance_destroy_mock(*args, **kwargs):
-            self.server_delete_called = True
-        self.stubs.Set(db, 'instance_destroy', instance_destroy_mock)
-
         self.controller.delete(req, FAKE_UUID)
         # Delete shoud be allowed in any case, even during resizing,
         # because it may get stuck.
-        self.assertEqual(self.server_delete_called, True)
+        self.assertTrue(self.server_delete_called)
 
 
 class ServersControllerRebuildInstanceTest(ControllerTest):
