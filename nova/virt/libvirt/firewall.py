@@ -245,9 +245,8 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
                     # This happens when the instance filter is still in
                     # use (ie. when the instance has not terminated properly)
                     raise
-                LOG.debug(_('The nwfilter(%(instance_filter_name)s) '
-                            'is not found.') % locals(),
-                          instance=instance)
+                LOG.debug(_('The nwfilter(%s) is not found.'),
+                          instance_filter_name, instance=instance)
 
     def _define_filters(self, filter_name, filter_children):
         self._define_filter(self._filter_container(filter_name,
@@ -269,7 +268,9 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
             except libvirt.libvirtError:
                 name = instance['name']
                 LOG.debug(_('The nwfilter(%(instance_filter_name)s) for'
-                            '%(name)s is not found.') % locals(),
+                            '%(name)s is not found.'),
+                          {'instance_filter_name': instance_filter_name,
+                           'name': name},
                           instance=instance)
                 return False
         return True

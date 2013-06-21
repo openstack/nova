@@ -262,9 +262,10 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
     def get_config(self, instance, network, mapping, image_meta):
         vif_type = mapping.get('vif_type')
 
-        LOG.debug(_("vif_type=%(vif_type)s instance=%(instance)s "
-                    "network=%(network)s mapping=%(mapping)s")
-                  % locals())
+        LOG.debug(_('vif_type=%(vif_type)s instance=%(instance)s '
+                    'network=%(network)s mapping=%(mapping)s'),
+                  {'vif_type': vif_type, 'instance': instance,
+                   'network': network, 'mapping': mapping})
 
         if vif_type is None:
             raise exception.NovaException(
@@ -383,9 +384,10 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
         network, mapping = vif
         vif_type = mapping.get('vif_type')
 
-        LOG.debug(_("vif_type=%(vif_type)s instance=%(instance)s "
-                    "network=%(network)s mapping=%(mapping)s")
-                  % locals())
+        LOG.debug(_('vif_type=%(vif_type)s instance=%(instance)s '
+                    'network=%(network)s mapping=%(mapping)s'),
+                  {'vif_type': vif_type, 'instance': instance,
+                   'network': network, 'mapping': mapping})
 
         if vif_type is None:
             raise exception.NovaException(
@@ -470,9 +472,10 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
         network, mapping = vif
         vif_type = mapping.get('vif_type')
 
-        LOG.debug(_("vif_type=%(vif_type)s instance=%(instance)s "
-                    "network=%(network)s mapping=%(mapping)s")
-                  % locals())
+        LOG.debug(_('vif_type=%(vif_type)s instance=%(instance)s '
+                    'network=%(network)s mapping=%(mapping)s'),
+                  {'vif_type': vif_type, 'instance': instance,
+                   'network': network, 'mapping': mapping})
 
         if vif_type is None:
             raise exception.NovaException(
