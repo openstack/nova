@@ -19,7 +19,6 @@ from oslo.config import cfg
 
 from nova.api.openstack import extensions as base_extensions
 from nova.openstack.common import log as logging
-from nova.openstack.common.plugin import pluginmanager
 
 ext_opts = [
     cfg.MultiStrOpt('osapi_compute_extension',
@@ -38,10 +37,6 @@ class ExtensionManager(base_extensions.ExtensionManager):
     def __init__(self):
         LOG.audit(_('Initializing extension manager.'))
         self.cls_list = CONF.osapi_compute_extension
-        self.PluginManager = pluginmanager.PluginManager('nova',
-                                                         'compute-extensions')
-        self.PluginManager.load_plugins()
-        self.cls_list.append(self.PluginManager.plugin_extension_factory)
         self.extensions = {}
         self.sorted_ext_list = []
         self._load_extensions()
