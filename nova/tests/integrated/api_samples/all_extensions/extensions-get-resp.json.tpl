@@ -513,6 +513,14 @@
             "updated": "%(timestamp)s"
         },
         {
+            "alias": "os-shelve",
+            "description": "%(text)s",
+            "links": [],
+            "name": "Shelve",
+            "namespace": "http://docs.openstack.org/compute/ext/shelve/api/v1.1",
+            "updated": "%(timestamp)s"
+        },
+        {
             "alias": "os-simple-tenant-usage",
             "description": "%(text)s",
             "links": [],

@@ -513,6 +513,14 @@
             "updated": "2013-05-17T00:00:00-00:00"
         },
         {
+            "alias": "os-shelve",
+            "description": "Instance shelve mode.",
+            "links": [],
+            "name": "Shelve",
+            "namespace": "http://docs.openstack.org/compute/ext/shelve/api/v1.1",
+            "updated": "2013-04-06T00:00:00+00:00"
+        },
+        {
             "alias": "os-simple-tenant-usage",
             "description": "Simple tenant usage extension.",
             "links": [],

@@ -192,6 +192,9 @@
   <extension alias="os-server-start-stop" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/servers/api/v1.1" name="ServerStartStop">
     <description>%(text)s</description>
   </extension>
+  <extension alias="os-shelve" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/shelve/api/v1.1" name="Shelve">
+    <description>%(text)s</description>
+  </extension>
   <extension alias="os-simple-tenant-usage" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/os-simple-tenant-usage/api/v1.1" name="SimpleTenantUsage">
     <description>%(text)s</description>
   </extension>
