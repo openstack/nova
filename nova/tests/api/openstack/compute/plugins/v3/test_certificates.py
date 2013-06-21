@@ -15,7 +15,7 @@
 
 from lxml import etree
 
-from nova.api.openstack.compute.contrib import certificates
+from nova.api.openstack.compute.plugins.v3 import certificates
 from nova import context
 from nova.openstack.common import rpc
 from nova import test
@@ -44,7 +44,7 @@ class CertificatesTest(test.TestCase):
 
     def test_certificates_show_root(self):
         self.stubs.Set(rpc, 'call', fake_get_root_cert)
-        req = fakes.HTTPRequest.blank('/v2/fake/os-certificates/root')
+        req = fakes.HTTPRequestV3.blank('/os-certificates/root')
         res_dict = self.controller.show(req, 'root')
 
         cert = fake_get_root_cert(self.context)
@@ -53,7 +53,7 @@ class CertificatesTest(test.TestCase):
 
     def test_certificates_create_certificate(self):
         self.stubs.Set(rpc, 'call', fake_create_cert)
-        req = fakes.HTTPRequest.blank('/v2/fake/os-certificates/')
+        req = fakes.HTTPRequestV3.blank('/os-certificates/')
         res_dict = self.controller.create(req)
 
         pk, cert = fake_create_cert(self.context)

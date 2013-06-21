@@ -22,7 +22,8 @@ from nova.api.openstack import xmlutil
 import nova.cert.rpcapi
 from nova import network
 
-authorize = extensions.extension_authorizer('compute', 'certificates')
+ALIAS = "os-certificates"
+authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
 
 
 def make_certificate(elem):
@@ -85,21 +86,21 @@ class CertificatesController(object):
         return {'certificate': _translate_certificate_view(cert, pk)}
 
 
-class Certificates(extensions.ExtensionDescriptor):
+class Certificates(extensions.V3APIExtensionBase):
     """Certificates support."""
 
     name = "Certificates"
-    alias = "os-certificates"
+    alias = ALIAS
     namespace = ("http://docs.openstack.org/compute/ext/"
-                 "certificates/api/v1.1")
-    updated = "2012-01-19T00:00:00+00:00"
+                 "certificates/api/v3")
+    version = 1
 
     def get_resources(self):
-        resources = []
-
-        res = extensions.ResourceExtension('os-certificates',
-                         CertificatesController(),
-                         member_actions={})
-        resources.append(res)
-
+        resources = [
+            extensions.ResourceExtension('os-certificates',
+                                         CertificatesController(),
+                                         member_actions={})]
         return resources
+
+    def get_controller_extensions(self):
+        return []
