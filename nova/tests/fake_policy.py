@@ -133,6 +133,7 @@ policy_data = """
     "compute_extension:v3:os-extended-server-attributes": "",
     "compute_extension:extended_status": "",
     "compute_extension:extended_availability_zone": "",
+    "compute_extension:v3:os-extended-availability-zone": "",
     "compute_extension:extended_ips": "",
     "compute_extension:extended_ips_mac": "",
     "compute_extension:extended_vif_net": "",
