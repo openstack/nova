@@ -26,6 +26,7 @@ from nova.compute import vm_states
 import nova.db
 from nova import exception
 from nova.openstack.common import jsonutils
+from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.api.openstack import fakes
 
@@ -77,6 +78,7 @@ def return_server(context, server_id):
             'uuid': '0cc3346e-9fef-4445-abe6-5d2b2690ec64',
             'name': 'fake',
             'locked': False,
+            'launched_at': timeutils.utcnow(),
             'vm_state': vm_states.ACTIVE}
 
 
@@ -85,6 +87,7 @@ def return_server_by_uuid(context, server_uuid):
             'uuid': '0cc3346e-9fef-4445-abe6-5d2b2690ec64',
             'name': 'fake',
             'locked': False,
+            'launched_at': timeutils.utcnow(),
             'vm_state': vm_states.ACTIVE}
 
 

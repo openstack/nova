@@ -26,6 +26,7 @@ from nova.conductor import api as conductor_api
 from nova import context
 from nova import exception
 from nova.openstack.common import jsonutils
+from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.api.openstack import fakes
 
@@ -41,6 +42,7 @@ INSTANCE = {
              "tenant_id": 'fake_tenant_id',
              "created_at": datetime.datetime(2010, 10, 10, 12, 0, 0),
              "updated_at": datetime.datetime(2010, 11, 11, 11, 0, 0),
+             "launched_at": datetime.datetime(2010, 11, 11, 11, 0, 0),
              "security_groups": [{"id": 1, "name": "test"}],
              "progress": 0,
              "image_ref": 'http://foo.com/123',
@@ -61,7 +63,7 @@ def fake_compute_api_raises_invalid_state(*args, **kwargs):
 
 def fake_compute_api_get(self, context, instance_id):
     return {'id': 1, 'uuid': instance_id, 'vm_state': vm_states.ACTIVE,
-            'task_state': None}
+            'task_state': None, 'launched_at': timeutils.utcnow()}
 
 
 class AdminActionsTest(test.TestCase):
