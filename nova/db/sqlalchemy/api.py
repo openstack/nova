@@ -2788,6 +2788,7 @@ def _get_quota_usages(context, session, project_id):
 
 
 @require_context
+@_retry_on_deadlock
 def quota_reserve(context, resources, quotas, deltas, expire,
                   until_refresh, max_age, project_id=None):
     elevated = context.elevated()
