@@ -501,7 +501,7 @@ class StorageRepositoryNotFound(NotFound):
     message = _("Cannot find SR to read/write VDI.")
 
 
-class NetworkDuplicated(NovaException):
+class NetworkDuplicated(Invalid):
     message = _("Network %(network_id)s is duplicated.")
 
 
@@ -550,15 +550,15 @@ class DatastoreNotFound(NotFound):
     message = _("Could not find the datastore reference(s) which the VM uses.")
 
 
-class PortInUse(NovaException):
+class PortInUse(Invalid):
     message = _("Port %(port_id)s is still in use.")
 
 
-class PortNotUsable(NovaException):
+class PortNotUsable(Invalid):
     message = _("Port %(port_id)s not usable for instance %(instance)s.")
 
 
-class PortNotFree(NovaException):
+class PortNotFree(Invalid):
     message = _("No free port available for instance %(instance)s.")
 
 
