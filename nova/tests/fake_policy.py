@@ -123,6 +123,7 @@ policy_data = """
     "compute_extension:agents": "",
     "compute_extension:v3:os-agents": "",
     "compute_extension:attach_interfaces": "",
+    "compute_extension:v3:os-attach-interfaces": "",
     "compute_extension:baremetal_nodes": "",
     "compute_extension:cells": "",
     "compute_extension:v3:os-cells": "",

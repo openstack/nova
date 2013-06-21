@@ -46,6 +46,7 @@
     "compute_extension:agents": "rule:admin_api",
     "compute_extension:v3:os-agents": "rule:admin_api",
     "compute_extension:attach_interfaces": "",
+    "compute_extension:v3:os-attach-interfaces": "",
     "compute_extension:baremetal_nodes": "rule:admin_api",
     "compute_extension:cells": "rule:admin_api",
     "compute_extension:v3:os-cells": "rule:admin_api",

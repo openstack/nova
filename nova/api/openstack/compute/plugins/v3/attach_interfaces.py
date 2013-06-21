@@ -26,7 +26,9 @@ from nova.openstack.common import log as logging
 
 
 LOG = logging.getLogger(__name__)
-authorize = extensions.extension_authorizer('compute', 'attach_interfaces')
+ALIAS = 'os-attach-interfaces'
+authorize = extensions.extension_authorizer('compute',
+                                            'v3:' + ALIAS)
 
 
 def _translate_interface_attachment_view(port_info):
@@ -61,8 +63,8 @@ class InterfaceAttachmentController(object):
         port_id = id
         try:
             self.compute_api.get(context, server_id)
-        except exception.NotFound:
-            raise exc.HTTPNotFound()
+        except exception.InstanceNotFound as err:
+            raise exc.HTTPNotFound(explanation=err.format_message())
 
         try:
             port_info = self.network_api.show_port(context, port_id)
@@ -72,7 +74,7 @@ class InterfaceAttachmentController(object):
         if port_info['port']['device_id'] != server_id:
             raise exc.HTTPNotFound()
 
-        return {'interfaceAttachment': _translate_interface_attachment_view(
+        return {'interface_attachment': _translate_interface_attachment_view(
                 port_info['port'])}
 
     def create(self, req, server_id, body):
@@ -84,7 +86,7 @@ class InterfaceAttachmentController(object):
         port_id = None
         req_ip = None
         if body:
-            attachment = body['interfaceAttachment']
+            attachment = body['interface_attachment']
             network_id = attachment.get('net_id', None)
             port_id = attachment.get('port_id', None)
             try:
@@ -99,19 +101,17 @@ class InterfaceAttachmentController(object):
 
         try:
             instance = self.compute_api.get(context, server_id)
-            LOG.audit(_("Attach interface"), instance=instance)
+            LOG.audit(_("Attach interface to %s"), instance=instance)
             network_info = self.compute_api.attach_interface(context,
                 instance, network_id, port_id, req_ip)
-        except exception.NotFound as e:
-            LOG.exception(e)
-            raise exc.HTTPNotFound()
-        except NotImplementedError:
-            msg = _("Network driver does not support this function.")
-            raise webob.exc.HTTPNotImplemented(explanation=msg)
+        except exception.InstanceNotFound as err:
+            raise exc.HTTPNotFound(explanation=err.format_message())
+        except NotImplementedError as e:
+            raise webob.exc.HTTPNotImplemented(explanation=e.format_message())
         except exception.InterfaceAttachFailed as e:
             LOG.exception(e)
-            msg = _("Failed to attach interface")
-            raise webob.exc.HTTPInternalServerError(explanation=msg)
+            raise webob.exc.HTTPInternalServerError(
+                explanation=e.format_message())
 
         network, mapping = network_info
         return self.show(req, server_id, mapping['vif_uuid'])
@@ -130,17 +130,15 @@ class InterfaceAttachmentController(object):
         try:
             instance = self.compute_api.get(context, server_id)
             LOG.audit(_("Detach interface %s"), port_id, instance=instance)
-
-        except exception.NotFound:
-            raise exc.HTTPNotFound()
+        except exception.InstanceNotFound as err:
+            raise exc.HTTPNotFound(explanation=err.format_message())
         try:
             self.compute_api.detach_interface(context,
                 instance, port_id=port_id)
         except exception.PortNotFound:
             raise exc.HTTPNotFound()
-        except NotImplementedError:
-            msg = _("Network driver does not support this function.")
-            raise webob.exc.HTTPNotImplemented(explanation=msg)
+        except NotImplementedError as e:
+            raise webob.exc.HTTPNotImplemented(explanation=e.format_message())
 
         return webob.Response(status_int=202)
 
@@ -151,8 +149,8 @@ class InterfaceAttachmentController(object):
 
         try:
             instance = self.compute_api.get(context, server_id)
-        except exception.NotFound:
-            raise exc.HTTPNotFound()
+        except exception.InstanceNotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
 
         results = []
         search_opts = {'device_id': instance['uuid']}
@@ -168,25 +166,27 @@ class InterfaceAttachmentController(object):
         ports = data.get('ports', [])
         results = [entity_maker(port) for port in ports]
 
-        return {'interfaceAttachments': results}
+        return {'interface_attachments': results}
 
 
-class Attach_interfaces(extensions.ExtensionDescriptor):
+class AttachInterfaces(extensions.V3APIExtensionBase):
     """Attach interface support."""
 
     name = "AttachInterfaces"
-    alias = "os-attach-interfaces"
-    namespace = "http://docs.openstack.org/compute/ext/interfaces/api/v1.1"
-    updated = "2012-07-22T00:00:00+00:00"
+    alias = ALIAS
+    namespace = "http://docs.openstack.org/compute/ext/interfaces/api/v3"
+    version = 1
 
     def get_resources(self):
-        resources = []
-
-        res = extensions.ResourceExtension('os-interface',
-                                           InterfaceAttachmentController(),
-                                           parent=dict(
+        res = [extensions.ResourceExtension(ALIAS,
+                                            InterfaceAttachmentController(),
+                                            parent=dict(
                                                 member_name='server',
-                                                collection_name='servers'))
-        resources.append(res)
+                                                collection_name='servers'))]
+        return res
 
-        return resources
+    def get_controller_extensions(self):
+        """It's an abstract function V3APIExtensionBase and the extension
+        will not be loaded without it.
+        """
+        return []
