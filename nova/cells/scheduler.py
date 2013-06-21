@@ -175,9 +175,10 @@ class CellsScheduler(base.Base):
         """Attempt to build instance(s) or send msg to child cell."""
         ctxt = message.ctxt
         instance_properties = build_inst_kwargs['instances'][0]
-        instance_type = build_inst_kwargs['instance_type']
+        filter_properties = build_inst_kwargs['filter_properties']
+        instance_type = filter_properties['instance_type']
         image = build_inst_kwargs['image']
-        security_groups = build_inst_kwargs['security_group']
+        security_groups = build_inst_kwargs['security_groups']
         block_device_mapping = build_inst_kwargs['block_device_mapping']
 
         LOG.debug(_("Building instances with routing_path=%(routing_path)s"),

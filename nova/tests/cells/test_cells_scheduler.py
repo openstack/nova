@@ -84,10 +84,9 @@ class CellsSchedulerTestCase(test.TestCase):
                 'block_device_mapping': 'fake_bdm'}
         self.build_inst_kwargs = {
                 'instances': self.instances,
-                'instance_type': 'fake_type',
                 'image': 'fake_image',
-                'filter_properties': {},
-                'security_group': 'fake_sec_groups',
+                'filter_properties': {'instance_type': 'fake_type'},
+                'security_groups': 'fake_sec_groups',
                 'block_device_mapping': 'fake_bdm'}
 
     def test_create_instances_here(self):
@@ -284,10 +283,11 @@ class CellsSchedulerTestCase(test.TestCase):
         self.assertEqual(self.instance_uuids, call_info['instance_uuids'])
         self.assertEqual(self.build_inst_kwargs['instances'][0],
                 call_info['instance_properties'])
-        self.assertEqual(self.build_inst_kwargs['instance_type'],
-                call_info['instance_type'])
+        self.assertEqual(
+            self.build_inst_kwargs['filter_properties']['instance_type'],
+            call_info['instance_type'])
         self.assertEqual(self.build_inst_kwargs['image'], call_info['image'])
-        self.assertEqual(self.build_inst_kwargs['security_group'],
+        self.assertEqual(self.build_inst_kwargs['security_groups'],
                 call_info['security_groups'])
         self.assertEqual(self.build_inst_kwargs['block_device_mapping'],
                 call_info['block_device_mapping'])
