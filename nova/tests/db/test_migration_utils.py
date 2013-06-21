@@ -19,7 +19,7 @@ import warnings
 from migrate.changeset import UniqueConstraint
 from sqlalchemy.dialects import mysql
 from sqlalchemy import Boolean, Index, Integer, DateTime, String
-from sqlalchemy import MetaData, Table, Column
+from sqlalchemy import MetaData, Table, Column, ForeignKey
 from sqlalchemy.engine import reflection
 from sqlalchemy.exc import NoSuchTableError
 from sqlalchemy.exc import SAWarning
@@ -514,3 +514,28 @@ class TestMigrationUtils(test_migrations.BaseMigrationTestCase):
         #                 but sqlalchemy will set it to NullType.
         self.assertTrue(isinstance(table.c.foo.type, NullType))
         self.assertTrue(isinstance(table.c.deleted.type, Boolean))
+
+    def test_drop_unique_constraint_in_sqlite_fk_recreate(self):
+        engine = self.engines['sqlite']
+        meta = MetaData()
+        meta.bind = engine
+        parent_table = Table('table0', meta,
+                       Column('id', Integer, primary_key=True),
+                       Column('foo', Integer))
+        parent_table.create()
+        table_name = 'table1'
+        table = Table(table_name, meta,
+                      Column('id', Integer, primary_key=True),
+                      Column('baz', Integer),
+                      Column('bar', Integer, ForeignKey("table0.id")),
+                      UniqueConstraint('baz', name='constr1'))
+        table.create()
+        utils.drop_unique_constraint(engine, table_name, 'constr1', 'baz')
+
+        insp = reflection.Inspector.from_engine(engine)
+        f_keys = insp.get_foreign_keys(table_name)
+        self.assertEqual(len(f_keys), 1)
+        f_key = f_keys[0]
+        self.assertEqual(f_key['referred_table'], 'table0')
+        self.assertEqual(f_key['referred_columns'], ['id'])
+        self.assertEqual(f_key['constrained_columns'], ['bar'])
