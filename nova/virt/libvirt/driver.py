@@ -1208,6 +1208,18 @@ class LibvirtDriver(driver.ComputeDriver):
                                 REQ_HYPERVISOR_LIVESNAPSHOT) \
                 and not source_format == "lvm":
             live_snapshot = True
+            # Abort is an idempotent operation, so make sure any block
+            # jobs which may have failed are ended. This operation also
+            # confims the running instance, as opposed to the system as a
+            # whole, has a new enough version of the hypervisor (bug 1193146).
+            try:
+                virt_dom.blockJobAbort(disk_path, 0)
+            except libvirt.libvirtError as ex:
+                error_code = ex.get_error_code()
+                if error_code == libvirt.VIR_ERR_CONFIG_UNSUPPORTED:
+                    live_snapshot = False
+                else:
+                    pass
         else:
             live_snapshot = False
 
@@ -1278,13 +1290,6 @@ class LibvirtDriver(driver.ComputeDriver):
         """Snapshot an instance without downtime."""
         # Save a copy of the domain's running XML file
         xml = domain.XMLDesc(0)
-
-        # Abort is an idempotent operation, so make sure any block
-        # jobs which may have failed are ended.
-        try:
-            domain.blockJobAbort(disk_path, 0)
-        except Exception:
-            pass
 
         def _wait_for_block_job(domain, disk_path):
             status = domain.blockJobInfo(disk_path, 0)
