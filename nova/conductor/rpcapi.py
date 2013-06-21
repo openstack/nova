@@ -102,6 +102,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.50 - Added object_action() and object_class_action()
     1.51 - Added the 'legacy' argument to
            block_device_mapping_get_all_by_instance
+    1.52 - Pass instance objects for compute_confirm_resize
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -459,11 +460,10 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         return self.call(context, msg, version='1.43')
 
     def compute_confirm_resize(self, context, instance, migration_ref):
-        instance_p = jsonutils.to_primitive(instance)
         migration_p = jsonutils.to_primitive(migration_ref)
-        msg = self.make_msg('compute_confirm_resize', instance=instance_p,
+        msg = self.make_msg('compute_confirm_resize', instance=instance,
                             migration_ref=migration_p)
-        return self.call(context, msg, version='1.46')
+        return self.call(context, msg, version='1.52')
 
     def compute_unrescue(self, context, instance):
         instance_p = jsonutils.to_primitive(instance)

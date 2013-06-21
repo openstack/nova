@@ -66,7 +66,7 @@ class ConductorManager(manager.Manager):
     namespace.  See the ComputeTaskManager class for details.
     """
 
-    RPC_API_VERSION = '1.51'
+    RPC_API_VERSION = '1.52'
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(service_name='conductor',
@@ -475,6 +475,9 @@ class ConductorManager(manager.Manager):
         self.compute_api.stop(context, instance, do_cast)
 
     def compute_confirm_resize(self, context, instance, migration_ref):
+        if isinstance(instance, nova_object.NovaObject):
+            # NOTE(danms): Remove this at RPC API v2.0
+            instance = dict(instance.items())
         self.compute_api.confirm_resize(context, instance, migration_ref)
 
     def compute_unrescue(self, context, instance):
