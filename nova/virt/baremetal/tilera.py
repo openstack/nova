@@ -55,31 +55,7 @@ def _get_cheetah():
 
 
 def build_network_config(network_info):
-    try:
-        assert isinstance(network_info, list)
-    except AssertionError:
-        network_info = [network_info]
-    interfaces = []
-    for id, (network, mapping) in enumerate(network_info):
-        address_v6 = None
-        gateway_v6 = None
-        netmask_v6 = None
-        if CONF.use_ipv6:
-            address_v6 = mapping['ip6s'][0]['ip']
-            netmask_v6 = mapping['ip6s'][0]['netmask']
-            gateway_v6 = mapping['gateway_v6']
-        interface = {
-                'name': 'eth%d' % id,
-                'address': mapping['ips'][0]['ip'],
-                'gateway': mapping['gateway'],
-                'netmask': mapping['ips'][0]['netmask'],
-                'dns': ' '.join(mapping['dns']),
-                'address_v6': address_v6,
-                'gateway_v6': gateway_v6,
-                'netmask_v6': netmask_v6,
-            }
-        interfaces.append(interface)
-
+    interfaces = bm_utils.map_network_interfaces(network_info, CONF.use_ipv6)
     cheetah = _get_cheetah()
     network_config = str(cheetah(
             open(CONF.baremetal.net_config_template).read(),
@@ -262,7 +238,7 @@ class Tilera(base.NodeDriver):
         bm_utils.unlink_without_raise(get_image_file_path(instance))
         bm_utils.rmtree_without_raise(get_image_dir_path(instance))
 
-    def activate_bootloader(self, context, node, instance):
+    def activate_bootloader(self, context, node, instance, network_info):
         """Configure Tilera boot loader for an instance
 
         Kernel and ramdisk images are downloaded by cache_tftp_images,

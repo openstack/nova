@@ -28,7 +28,7 @@ class FakeDriver(base.NodeDriver):
     def destroy_images(self, context, node, instance):
         pass
 
-    def activate_bootloader(self, context, node, instance):
+    def activate_bootloader(self, context, node, instance, **kwargs):
         pass
 
     def deactivate_bootloader(self, context, node, instance):
