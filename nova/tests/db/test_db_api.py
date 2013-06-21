@@ -30,6 +30,7 @@ from sqlalchemy.dialects import sqlite
 from sqlalchemy import exc
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import MetaData
+from sqlalchemy.orm import exc as sqlalchemy_orm_exc
 from sqlalchemy.orm import query
 from sqlalchemy.sql.expression import select
 
@@ -1620,18 +1621,39 @@ class SecurityGroupTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertRaises(exception.SecurityGroupNotFound,
                           db.security_group_get,
                           self.ctxt, security_group1['id'])
-        self._assertEqualObjects(db.security_group_get(self.ctxt,
-                                                       security_group2['id']),
-                                 security_group2)
+        self._assertEqualObjects(db.security_group_get(
+                self.ctxt, security_group2['id'],
+                columns_to_join=['instances']), security_group2)
 
     def test_security_group_get(self):
         security_group1 = self._create_security_group({})
         security_group2 = self._create_security_group(
                 {'name': 'fake_sec_group2'})
         real_security_group = db.security_group_get(self.ctxt,
-                                              security_group1['id'])
+                                              security_group1['id'],
+                                              columns_to_join=['instances'])
         self._assertEqualObjects(security_group1,
                                  real_security_group)
+
+    def test_security_group_get_no_instances(self):
+        instance = db.instance_create(self.ctxt, {})
+        sid = self._create_security_group({'instances': [instance]})['id']
+
+        session = get_session()
+        self.mox.StubOutWithMock(sqlalchemy_api, 'get_session')
+        sqlalchemy_api.get_session().AndReturn(session)
+        sqlalchemy_api.get_session().AndReturn(session)
+        self.mox.ReplayAll()
+
+        security_group = db.security_group_get(self.ctxt, sid,
+                                               columns_to_join=['instances'])
+        session.expunge(security_group)
+        self.assertEqual(1, len(security_group['instances']))
+
+        security_group = db.security_group_get(self.ctxt, sid)
+        session.expunge(security_group)
+        self.assertRaises(sqlalchemy_orm_exc.DetachedInstanceError,
+                          getattr, security_group, 'instances')
 
     def test_security_group_get_not_found_exception(self):
         self.assertRaises(exception.SecurityGroupNotFound,
