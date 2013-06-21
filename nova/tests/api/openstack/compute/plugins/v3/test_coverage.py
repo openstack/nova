@@ -96,7 +96,7 @@ class CoverageExtensionTest(test.TestCase):
         body = {'start': {}}
         url = '/v3/os-coverage/action'
         res = self._make_request(url, body)
-        self.assertEqual(res.status_int, 200)
+        self.assertEqual(res.status_int, 204)
 
     def test_stop_coverage_action(self):
         self.stubs.Set(coverage_ext.CoverageController,
@@ -174,13 +174,13 @@ class CoverageExtensionTest(test.TestCase):
         req.headers["content-type"] = "application/json"
         res = req.get_response(fakes.wsgi_app_v3(
                                fake_auth_context=self.admin_context))
-        self.assertEqual(res.status_int, 404)
+        self.assertEqual(res.status_int, 409)
 
     def test_report_coverage_action_nostart(self):
         body = {'report': {}}
         url = '/v3/os-coverage/action'
         res = self._make_request(url, body)
-        self.assertEqual(res.status_int, 404)
+        self.assertEqual(res.status_int, 409)
 
     def test_reset_coverage_action_while_coverage_running(self):
         self.stubs.Set(coverage_ext.CoverageController,
@@ -188,10 +188,10 @@ class CoverageExtensionTest(test.TestCase):
         body = {'reset': {}}
         url = '/v3/os-coverage/action'
         res = self._make_request(url, body)
-        self.assertEqual(res.status_int, 200)
+        self.assertEqual(res.status_int, 204)
 
     def test_reset_coverage_action_while_coverage_stopped(self):
         body = {'reset': {}}
         url = '/v3/os-coverage/action'
         res = self._make_request(url, body)
-        self.assertEqual(res.status_int, 200)
+        self.assertEqual(res.status_int, 204)

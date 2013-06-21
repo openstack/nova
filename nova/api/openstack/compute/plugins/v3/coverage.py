@@ -29,6 +29,7 @@ from oslo.config import cfg
 from webob import exc
 
 from nova.api.openstack import extensions
+from nova.api.openstack import wsgi
 from nova import baserpc
 from nova import db
 from nova.openstack.common import log as logging
@@ -41,7 +42,7 @@ CONF = cfg.CONF
 
 
 def _import_coverage():
-    """This function ensure loading coverage module from python-coverage."""
+    """This function ensures loading coverage module from python-coverage."""
     try:
         path = sys.path[:]
         if os.getcwd() in path:
@@ -57,7 +58,7 @@ def _import_coverage():
 coverage = _import_coverage()
 
 
-class CoverageController(object):
+class CoverageController(wsgi.Controller):
     """The Coverage report API controller for the OpenStack API."""
     def __init__(self):
         self.data_path = None
@@ -125,8 +126,18 @@ class CoverageController(object):
         tn.write("print 'finished'\n")
         tn.expect([re.compile('finished')])
 
+    def _check_coverage_module_loaded(self):
+        if not self.coverInst:
+            msg = _("Python coverage module is not installed.")
+            raise exc.HTTPServiceUnavailable(explanation=msg)
+
+    @extensions.expected_errors(503)
+    @wsgi.action('start')
+    @wsgi.response(204)
     def _start_coverage(self, req, body):
         '''Begin recording coverage information.'''
+        authorize(req.environ['nova.context'])
+        self._check_coverage_module_loaded()
         LOG.debug(_("Coverage begin"))
         body = body['start']
         self.combine = False
@@ -170,12 +181,16 @@ class CoverageController(object):
             return True
         return False
 
-    def _stop_coverage(self, req):
+    @extensions.expected_errors((409, 503))
+    @wsgi.action('stop')
+    def _stop_coverage(self, req, body):
+        authorize(req.environ['nova.context'])
+        self._check_coverage_module_loaded()
         for service in self.services:
             self._stop_coverage_telnet(service['telnet'])
         if self._check_coverage():
             msg = _("Coverage not running")
-            raise exc.HTTPNotFound(explanation=msg)
+            raise exc.HTTPConflict(explanation=msg)
         return {'path': self.data_path}
 
     def _report_coverage_telnet(self, tn, path, xml=False):
@@ -193,8 +208,12 @@ class CoverageController(object):
             tn.expect([re.compile('finished')])
         tn.close()
 
+    @extensions.expected_errors((400, 409, 503))
+    @wsgi.action('report')
     def _report_coverage(self, req, body):
-        self._stop_coverage(req)
+        authorize(req.environ['nova.context'])
+        self._check_coverage_module_loaded()
+        self._stop_coverage(req, {'stop': {}})
         xml = False
         html = False
         path = None
@@ -259,7 +278,12 @@ class CoverageController(object):
         tn.write("print 'finished'\n")
         tn.expect([re.compile('finished')])
 
-    def _reset_coverage(self, req):
+    @extensions.expected_errors(503)
+    @wsgi.action('reset')
+    @wsgi.response(204)
+    def _reset_coverage(self, req, body):
+        authorize(req.environ['nova.context'])
+        self._check_coverage_module_loaded()
         # Reopen telnet connections if they are closed.
         for service in self.services:
             if not service['telnet'].get_socket():
@@ -267,35 +291,14 @@ class CoverageController(object):
 
         # Stop coverage if it is started.
         try:
-            self._stop_coverage(req)
-        except exc.HTTPNotFound:
+            self._stop_coverage(req, {'stop': {}})
+        except exc.HTTPConflict:
             pass
 
         for service in self.services:
             self._reset_coverage_telnet(service['telnet'])
             service['telnet'].close()
         self.coverInst.erase()
-
-    def action(self, req, body):
-        _actions = {
-                'start': self._start_coverage,
-                'stop': self._stop_coverage,
-                'report': self._report_coverage,
-                'reset': self._reset_coverage,
-        }
-        authorize(req.environ['nova.context'])
-        if not self.coverInst:
-            msg = _("Python coverage module is not installed.")
-            raise exc.HTTPServiceUnavailable(explanation=msg)
-        for action, data in body.iteritems():
-            if action == 'stop' or action == 'reset':
-                return _actions[action](req)
-            elif action == 'report' or action == 'start':
-                return _actions[action](req, body)
-            else:
-                msg = _("Coverage doesn't have %s action") % action
-                raise exc.HTTPBadRequest(explanation=msg)
-        raise exc.HTTPBadRequest(explanation=_("Invalid request body"))
 
 
 class Coverage(extensions.V3APIExtensionBase):
