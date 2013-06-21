@@ -43,15 +43,12 @@ class HideServerAddressesTest(test.TestCase):
     def setUp(self):
         super(HideServerAddressesTest, self).setUp()
         fakes.stub_out_nw_api(self.stubs)
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Hide_server_addresses'])
 
     def _make_request(self, url):
         req = webob.Request.blank(url)
         req.headers['Accept'] = self.content_type
-        res = req.get_response(fakes.wsgi_app(init_only=('servers',)))
+        res = req.get_response(fakes.wsgi_app_v3(
+            init_only=('servers', 'os-hide-server-addresses')))
         return res
 
     @staticmethod
@@ -79,7 +76,7 @@ class HideServerAddressesTest(test.TestCase):
         self.stubs.Set(compute.api.API, 'get',
                        fake_compute_get(instance_id, uuid=uuid,
                                         vm_state=vm_states.BUILDING))
-        res = self._make_request('/v2/fake/servers/%s' % uuid)
+        res = self._make_request('/v3/servers/%s' % uuid)
         self.assertEqual(res.status_int, 200)
 
         server = self._get_server(res.body)
@@ -92,7 +89,7 @@ class HideServerAddressesTest(test.TestCase):
         self.stubs.Set(compute.api.API, 'get',
                        fake_compute_get(instance_id, uuid=uuid,
                                         vm_state=vm_states.ACTIVE))
-        res = self._make_request('/v2/fake/servers/%s' % uuid)
+        res = self._make_request('/v3/servers/%s' % uuid)
         self.assertEqual(res.status_int, 200)
 
         server = self._get_server(res.body)
@@ -112,7 +109,7 @@ class HideServerAddressesTest(test.TestCase):
                 args[1], instance_obj.InstanceList(), instances, fields)
 
         self.stubs.Set(compute.api.API, 'get_all', get_all)
-        res = self._make_request('/v2/fake/servers/detail')
+        res = self._make_request('/v3/servers/detail')
 
         self.assertEqual(res.status_int, 200)
         servers = self._get_servers(res.body)
@@ -130,7 +127,7 @@ class HideServerAddressesTest(test.TestCase):
             raise exception.InstanceNotFound(instance_id='fake')
 
         self.stubs.Set(compute.api.API, 'get', fake_compute_get)
-        res = self._make_request('/v2/fake/servers/' + fakes.get_fake_uuid())
+        res = self._make_request('/v3/servers/' + fakes.get_fake_uuid())
 
         self.assertEqual(res.status_int, 404)
 
