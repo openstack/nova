@@ -52,18 +52,14 @@ class FixedIpTest(test.TestCase):
         self.stubs.Set(compute.api.API, "remove_fixed_ip",
                        compute_api_remove_fixed_ip)
         self.stubs.Set(compute.api.API, 'get', compute_api_get)
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Multinic'])
-        self.app = fakes.wsgi_app(init_only=('servers',))
+        self.app = fakes.wsgi_app_v3(init_only=('servers', 'os-multinic'))
 
     def test_add_fixed_ip(self):
         global last_add_fixed_ip
         last_add_fixed_ip = (None, None)
 
         body = dict(addFixedIp=dict(networkId='test_net'))
-        req = webob.Request.blank('/v2/fake/servers/%s/action' % UUID)
+        req = webob.Request.blank('/v3/servers/%s/action' % UUID)
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers['content-type'] = 'application/json'
@@ -77,7 +73,7 @@ class FixedIpTest(test.TestCase):
         last_add_fixed_ip = (None, None)
 
         body = dict(addFixedIp=dict())
-        req = webob.Request.blank('/v2/fake/servers/%s/action' % UUID)
+        req = webob.Request.blank('/v3/servers/%s/action' % UUID)
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers['content-type'] = 'application/json'
@@ -91,7 +87,7 @@ class FixedIpTest(test.TestCase):
         last_remove_fixed_ip = (None, None)
 
         body = dict(removeFixedIp=dict(address='10.10.10.1'))
-        req = webob.Request.blank('/v2/fake/servers/%s/action' % UUID)
+        req = webob.Request.blank('/v3/servers/%s/action' % UUID)
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers['content-type'] = 'application/json'
@@ -105,7 +101,7 @@ class FixedIpTest(test.TestCase):
         last_remove_fixed_ip = (None, None)
 
         body = dict(removeFixedIp=dict())
-        req = webob.Request.blank('/v2/fake/servers/%s/action' % UUID)
+        req = webob.Request.blank('/v3/servers/%s/action' % UUID)
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers['content-type'] = 'application/json'

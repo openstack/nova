@@ -95,6 +95,7 @@
     "compute_extension:v3:os-keypairs:discoverable": "",
     "compute_extension:v3:os-keypairs": "",
     "compute_extension:multinic": "",
+    "compute_extension:v3:os-multinic": "",
     "compute_extension:networks": "rule:admin_api",
     "compute_extension:networks:view": "",
     "compute_extension:networks_associate": "rule:admin_api",
