@@ -116,16 +116,6 @@ class Scheduler(object):
                 for service in services
                 if self.servicegroup_api.service_is_up(service)]
 
-    def group_hosts(self, context, group):
-        """Return the list of hosts that have VM's from the group."""
-
-        # The system_metadata 'group' will be filtered
-        members = db.instance_get_all_by_filters(context,
-                {'deleted': False, 'system_metadata': {'group': group}})
-        return [member['host']
-                for member in members
-                if member.get('host') is not None]
-
     def schedule_run_instance(self, context, request_spec,
                               admin_password, injected_files,
                               requested_networks, is_first_time,

@@ -16,21 +16,26 @@
 Tests For Filter Scheduler.
 """
 
+import contextlib
+import mock
+import uuid
+
 import mox
 
-from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova.conductor import api as conductor_api
 from nova import context
 from nova import db
 from nova import exception
+from nova.objects import instance_group as instance_group_obj
 from nova.pci import pci_request
 from nova.scheduler import driver
 from nova.scheduler import filter_scheduler
 from nova.scheduler import host_manager
 from nova.scheduler import utils as scheduler_utils
 from nova.scheduler import weights
+from nova.tests import fake_instance
 from nova.tests.scheduler import fakes
 from nova.tests.scheduler import test_scheduler
 
@@ -45,6 +50,15 @@ def fake_get_group_filtered_hosts(hosts, filter_properties, index):
         hosts = list(hosts)
         hosts.pop(0)
         return hosts
+    else:
+        return list(hosts)
+
+
+def fake_get_group_filtered_affinity_hosts(hosts, filter_properties, index):
+    group_hosts = filter_properties.get('group_hosts') or []
+    if group_hosts:
+        affinity_host = hosts.pop(0)
+        return [affinity_host]
     else:
         return list(hosts)
 
@@ -362,71 +376,35 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         self.assertEqual({'vcpus': 5}, host_state.limits)
 
-    def test_basic_schedule_run_instances_anti_affinity(self):
-        filter_properties = {'scheduler_hints':
-                             {'group': 'cats'}}
-        # Request spec 1
-        instance_opts1 = {'project_id': 1, 'os_type': 'Linux',
-                          'memory_mb': 512, 'root_gb': 512,
-                          'ephemeral_gb': 0, 'vcpus': 1,
-                          'system_metadata': {'system': 'metadata'}}
-        request_spec1 = {'instance_uuids': ['fake-uuid1-1', 'fake-uuid1-2'],
-                         'instance_properties': instance_opts1,
-                         'instance_type': {'memory_mb': 512, 'root_gb': 512,
-                                           'ephemeral_gb': 0, 'vcpus': 1}}
-        self.next_weight = 1.0
-
-        def _fake_weigh_objects(_self, functions, hosts, options):
-            self.next_weight += 2.0
-            host_state = hosts[0]
-            return [weights.WeighedHost(host_state, self.next_weight)]
-
+    def test_group_details_in_filter_properties(self):
         sched = fakes.FakeFilterScheduler()
 
-        fake_context = context.RequestContext('user', 'project',
-                is_admin=True)
+        instance = fake_instance.fake_instance_obj(self.context,
+                params={'host': 'hostA'})
 
-        self.stubs.Set(sched.host_manager, 'get_filtered_hosts',
-                fake_get_group_filtered_hosts)
-        self.stubs.Set(weights.HostWeightHandler,
-                'get_weighed_objects', _fake_weigh_objects)
-        fakes.mox_host_manager_db_calls(self.mox, fake_context)
+        group = instance_group_obj.InstanceGroup()
+        group.uuid = str(uuid.uuid4())
+        group.members = [instance.uuid]
+        group.policies = ['anti-affinity']
 
-        self.mox.StubOutWithMock(driver, 'instance_update_db')
-        self.mox.StubOutWithMock(compute_rpcapi.ComputeAPI, 'run_instance')
-        self.mox.StubOutWithMock(sched, 'group_hosts')
+        filter_properties = {
+            'scheduler_hints': {
+                'group': group.uuid,
+            },
+        }
 
-        instance1_1 = {'uuid': 'fake-uuid1-1'}
-        instance1_2 = {'uuid': 'fake-uuid1-2'}
-
-        sched.group_hosts(mox.IgnoreArg(), 'cats').AndReturn([])
-
-        def inc_launch_index1(*args, **kwargs):
-            request_spec1['instance_properties']['launch_index'] = (
-                request_spec1['instance_properties']['launch_index'] + 1)
-
-        expected_metadata = {'system_metadata':
-                             {'system': 'metadata', 'group': 'cats'}}
-        driver.instance_update_db(fake_context, instance1_1['uuid'],
-                extra_values=expected_metadata).WithSideEffects(
-                inc_launch_index1).AndReturn(instance1_1)
-        compute_rpcapi.ComputeAPI.run_instance(fake_context, host='host3',
-                instance=instance1_1, requested_networks=None,
-                injected_files=None, admin_password=None, is_first_time=None,
-                request_spec=request_spec1, filter_properties=mox.IgnoreArg(),
-                node='node3', legacy_bdm_in_spec=False)
-
-        driver.instance_update_db(fake_context, instance1_2['uuid'],
-                extra_values=expected_metadata).WithSideEffects(
-                inc_launch_index1).AndReturn(instance1_2)
-        compute_rpcapi.ComputeAPI.run_instance(fake_context, host='host4',
-                instance=instance1_2, requested_networks=None,
-                injected_files=None, admin_password=None, is_first_time=None,
-                request_spec=request_spec1, filter_properties=mox.IgnoreArg(),
-                node='node4', legacy_bdm_in_spec=False)
-        self.mox.ReplayAll()
-        sched.schedule_run_instance(fake_context, request_spec1,
-                None, None, None, None, filter_properties, False)
+        with contextlib.nested(
+            mock.patch.object(instance_group_obj.InstanceGroup, 'get_by_uuid',
+                               return_value=group),
+            mock.patch.object(instance_group_obj.InstanceGroup, 'get_hosts',
+                               return_value=['hostA']),
+        ) as (get_group, get_hosts):
+            update_group_hosts = sched._setup_instance_group(self.context,
+                    filter_properties)
+            self.assertTrue(update_group_hosts)
+            self.assertEqual(set(['hostA']), filter_properties['group_hosts'])
+            self.assertEqual(['anti-affinity'],
+                    filter_properties['group_policies'])
 
     def test_schedule_host_pool(self):
         """Make sure the scheduler_host_subset_size property works properly."""

@@ -25,6 +25,7 @@ from oslo.config import cfg
 
 from nova.compute import rpcapi as compute_rpcapi
 from nova import exception
+from nova.objects import instance_group as instance_group_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.pci import pci_request
@@ -157,17 +158,9 @@ class FilterScheduler(driver.Scheduler):
 
         # Update the metadata if necessary
         scheduler_hints = filter_properties.get('scheduler_hints') or {}
-        group = scheduler_hints.get('group', None)
-        values = None
-        if group:
-            values = request_spec['instance_properties']['system_metadata']
-            values.update({'group': group})
-            values = {'system_metadata': values}
-
         try:
             updated_instance = driver.instance_update_db(context,
-                    instance_uuid, extra_values=values)
-
+                                                         instance_uuid)
         except exception.InstanceNotFound:
             LOG.warning(_("Instance disappeared during scheduling"),
                         context=context, instance_uuid=instance_uuid)
@@ -265,6 +258,24 @@ class FilterScheduler(driver.Scheduler):
                       'instance_uuid': instance_uuid})
             raise exception.NoValidHost(reason=msg)
 
+    @staticmethod
+    def _setup_instance_group(context, filter_properties):
+        update_group_hosts = False
+        scheduler_hints = filter_properties.get('scheduler_hints') or {}
+        group_uuid = scheduler_hints.get('group', None)
+        if group_uuid:
+            group = instance_group_obj.InstanceGroup.get_by_uuid(context,
+                    group_uuid)
+            policies = set(('anti-affinity', 'affinity'))
+            if any((policy in policies) for policy in group.policies):
+                update_group_hosts = True
+                filter_properties.setdefault('group_hosts', set())
+                user_hosts = filter_properties['group_hosts']
+                group_hosts = set(group.get_hosts(context))
+                filter_properties['group_hosts'] = user_hosts | group_hosts
+                filter_properties['group_policies'] = group.policies
+        return update_group_hosts
+
     def _schedule(self, context, request_spec, filter_properties,
                   instance_uuids=None):
         """Returns a list of hosts that meet the required specs,
@@ -274,17 +285,8 @@ class FilterScheduler(driver.Scheduler):
         instance_properties = request_spec['instance_properties']
         instance_type = request_spec.get("instance_type", None)
 
-        # Get the group
-        update_group_hosts = False
-        scheduler_hints = filter_properties.get('scheduler_hints') or {}
-        group = scheduler_hints.get('group', None)
-        if group:
-            group_hosts = self.group_hosts(elevated, group)
-            update_group_hosts = True
-            if 'group_hosts' not in filter_properties:
-                filter_properties.update({'group_hosts': []})
-            configured_hosts = filter_properties['group_hosts']
-            filter_properties['group_hosts'] = configured_hosts + group_hosts
+        update_group_hosts = self._setup_instance_group(context,
+                filter_properties)
 
         config_options = self._get_configuration_options()
 
@@ -348,7 +350,7 @@ class FilterScheduler(driver.Scheduler):
             # will change for the next instance.
             chosen_host.obj.consume_from_instance(instance_properties)
             if update_group_hosts is True:
-                filter_properties['group_hosts'].append(chosen_host.obj.host)
+                filter_properties['group_hosts'].add(chosen_host.obj.host)
         return selected_hosts
 
     def _get_all_host_states(self, context):

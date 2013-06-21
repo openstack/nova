@@ -1558,27 +1558,39 @@ class HostFiltersTestCase(test.NoDBTestCase):
     def test_group_anti_affinity_filter_passes(self):
         filt_cls = self.class_map['GroupAntiAffinityFilter']()
         host = fakes.FakeHostState('host1', 'node1', {})
-        filter_properties = {'group_hosts': []}
+        filter_properties = {}
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
-        filter_properties = {'group_hosts': ['host2']}
+        filter_properties = {'group_policies': ['affinity']}
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+        filter_properties = {'group_policies': ['anti-affinity']}
+        filter_properties['group_hosts'] = []
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+        filter_properties['group_hosts'] = ['host2']
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
 
     def test_group_anti_affinity_filter_fails(self):
         filt_cls = self.class_map['GroupAntiAffinityFilter']()
         host = fakes.FakeHostState('host1', 'node1', {})
-        filter_properties = {'group_hosts': ['host1']}
+        filter_properties = {'group_policies': ['anti-affinity'],
+                             'group_hosts': ['host1']}
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
 
     def test_group_affinity_filter_passes(self):
         filt_cls = self.class_map['GroupAffinityFilter']()
         host = fakes.FakeHostState('host1', 'node1', {})
-        filter_properties = {'group_hosts': ['host1']}
+        filter_properties = {}
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+        filter_properties = {'group_policies': ['anti-affinity']}
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+        filter_properties = {'group_policies': ['affinity'],
+                             'group_hosts': ['host1']}
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
 
     def test_group_affinity_filter_fails(self):
         filt_cls = self.class_map['GroupAffinityFilter']()
         host = fakes.FakeHostState('host1', 'node1', {})
-        filter_properties = {'group_hosts': ['host2']}
+        filter_properties = {'group_policies': ['affinity'],
+                             'group_hosts': ['host2']}
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
 
     def test_aggregate_multi_tenancy_isolation_with_meta_passes(self):

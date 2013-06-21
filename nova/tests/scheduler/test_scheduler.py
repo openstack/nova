@@ -532,3 +532,25 @@ class SchedulerDriverBaseTestCase(SchedulerTestCase):
     def test_unimplemented_select_destinations(self):
         self.assertRaises(NotImplementedError,
                 self.driver.select_destinations, self.context, {}, {})
+
+
+class SchedulerInstanceGroupData(test.TestCase):
+
+    driver_cls = driver.Scheduler
+
+    def setUp(self):
+        super(SchedulerInstanceGroupData, self).setUp()
+        self.user_id = 'fake_user'
+        self.project_id = 'fake_project'
+        self.context = context.RequestContext(self.user_id, self.project_id)
+        self.driver = self.driver_cls()
+
+    def _get_default_values(self):
+        return {'name': 'fake_name',
+                'user_id': self.user_id,
+                'project_id': self.project_id}
+
+    def _create_instance_group(self, context, values, policies=None,
+                               metadata=None, members=None):
+        return db.instance_group_create(context, values, policies=policies,
+                                        metadata=metadata, members=members)
