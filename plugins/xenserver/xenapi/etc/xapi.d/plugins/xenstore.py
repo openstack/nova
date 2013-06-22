@@ -159,7 +159,13 @@ def delete_record(self, arg_dict):
     VM and the specified path from xenstore.
     """
     cmd = ["xenstore-rm", "/local/domain/%(dom_id)s/%(path)s" % arg_dict]
-    ret, result = _run_command(cmd)
+    try:
+        ret, result = _run_command(cmd)
+    except XenstoreError, e:
+        if 'could not remove path' in e.stderr:
+            # Entry already gone.  We're good to go.
+            return ''
+        raise
     return result
 
 
