@@ -13,6 +13,10 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import re
+
+session_check = re.compile("\w*def [a-zA-Z0-9].*[(].*session.*[)]")
+
 
 def import_no_db_in_virt(logical_line, filename):
     """Check for db calls from nova/virt
@@ -50,6 +54,13 @@ def except_python3x_compatible(logical_line, filename):
         yield(0, "N308: Python 3.x incompatible 'except x,y:' construct")
 
 
+def no_db_session_in_public_api(logical_line, filename):
+    if "db/api.py" in filename or "db/sqlalchemy/api.py" in filename:
+        if session_check.match(logical_line):
+            yield (0, "N309: public db api methods may not accept session")
+
+
 def factory(register):
     register(import_no_db_in_virt)
     register(except_python3x_compatible)
+    register(no_db_session_in_public_api)
