@@ -21,7 +21,6 @@ paramiko
 pyasn1
 Babel>=0.9.6
 iso8601>=0.1.4
-httplib2
 requests>=1.1,<1.2.1 # order-dependent python-cinderclient req cap, bug 1182271
 python-cinderclient>=1.0.1
 python-quantumclient>=2.2.0,<3.0.0
