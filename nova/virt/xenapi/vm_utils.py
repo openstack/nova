@@ -1017,7 +1017,7 @@ def _create_image(context, session, instance, name_label, image_id,
     elif cache_images == 'all':
         cache = True
     elif cache_images == 'some':
-        sys_meta = utils.metadata_to_dict(instance['system_metadata'])
+        sys_meta = utils.instance_sys_meta(instance)
         try:
             cache = strutils.bool_from_string(sys_meta['image_cache_in_nova'])
         except KeyError:
@@ -1112,7 +1112,7 @@ def _image_uses_bittorrent(context, instance):
     if xenapi_torrent_images == 'all':
         bittorrent = True
     elif xenapi_torrent_images == 'some':
-        sys_meta = utils.metadata_to_dict(instance['system_metadata'])
+        sys_meta = utils.instance_sys_meta(instance)
         try:
             bittorrent = strutils.bool_from_string(
                 sys_meta['image_bittorrent'])

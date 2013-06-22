@@ -813,12 +813,10 @@ class _BroadcastMessageMethods(_BaseMessageMethods):
             info_cache.pop('id', None)
             info_cache.pop('instance', None)
 
-        # Fixup system_metadata (should be a dict for update, not a list)
-        if ('system_metadata' in instance and
-                isinstance(instance['system_metadata'], list)):
-            sys_metadata = dict([(md['key'], md['value'])
-                    for md in instance['system_metadata']])
-            instance['system_metadata'] = sys_metadata
+        if 'system_metadata' in instance:
+            # Make sure we have the dict form that we need for
+            # instance_update.
+            instance['system_metadata'] = utils.instance_sys_meta(instance)
 
         LOG.debug(_("Got update for instance: %(instance)s"),
                   {'instance': instance}, instance_uuid=instance_uuid)
