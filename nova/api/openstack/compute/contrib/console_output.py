@@ -69,7 +69,7 @@ class ConsoleOutputController(wsgi.Controller):
             raise webob.exc.HTTPConflict(explanation=e.format_message())
 
         # XML output is not correctly escaped, so remove invalid characters
-        remove_re = re.compile('[\x00-\x08\x0B-\x0C\x0E-\x1F-\x0D]')
+        remove_re = re.compile('[\x00-\x08\x0B-\x1F]')
         output = remove_re.sub('', output)
 
         return {'output': output}
