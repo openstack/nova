@@ -58,5 +58,7 @@ class NetworkUtils(object):
         if ret_val != 0:
             raise vmutils.HyperVException(_("Failed to create vswitch port "
                                             "%(port_name)s on switch "
-                                            "%(vswitch_path)s") % locals())
+                                            "%(vswitch_path)s") %
+                                          {'port_name': port_name,
+                                           'vswitch_path': vswitch_path})
         return new_port

@@ -119,13 +119,16 @@ class VMOps(object):
         try:
             if CONF.use_cow_images:
                 LOG.debug(_("Creating differencing VHD. Parent: "
-                            "%(base_vhd_path)s, Target: %(root_vhd_path)s")
-                          % locals())
+                            "%(base_vhd_path)s, Target: %(root_vhd_path)s"),
+                          {'base_vhd_path': base_vhd_path,
+                           'root_vhd_path': root_vhd_path})
                 self._vhdutils.create_differencing_vhd(root_vhd_path,
                                                        base_vhd_path)
             else:
                 LOG.debug(_("Copying VHD image %(base_vhd_path)s to target: "
-                            "%(root_vhd_path)s") % locals())
+                            "%(root_vhd_path)s"),
+                          {'base_vhd_path': base_vhd_path,
+                           'root_vhd_path': root_vhd_path})
                 self._pathutils.copyfile(base_vhd_path, root_vhd_path)
 
                 base_vhd_info = self._vhdutils.get_vhd_info(base_vhd_path)
@@ -137,7 +140,9 @@ class VMOps(object):
                                                     "smaller size"))
                 elif root_vhd_size > base_vhd_size:
                     LOG.debug(_("Resizing VHD %(root_vhd_path)s to new "
-                                "size %(root_vhd_size)s") % locals())
+                                "size %(root_vhd_size)s"),
+                              {'base_vhd_path': base_vhd_path,
+                               'root_vhd_path': root_vhd_path})
                     self._vhdutils.resize_vhd(root_vhd_path, root_vhd_size)
         except Exception:
             with excutils.save_and_reraise_exception():
@@ -336,9 +341,11 @@ class VMOps(object):
         try:
             self._vmutils.set_vm_state(vm_name, req_state)
             LOG.debug(_("Successfully changed state of VM %(vm_name)s"
-                        " to: %(req_state)s") % locals())
+                        " to: %(req_state)s"),
+                      {'vm_name': vm_name, 'req_state': req_state})
         except Exception as ex:
             LOG.exception(ex)
-            msg = _("Failed to change vm state of %(vm_name)s"
-                    " to %(req_state)s") % locals()
+            msg = (_("Failed to change vm state of %(vm_name)s"
+                     " to %(req_state)s") %
+                   {'vm_name': vm_name, 'req_state': req_state})
             raise vmutils.HyperVException(msg)
