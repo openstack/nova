@@ -196,10 +196,6 @@ class CommonDeserializer(wsgi.MetadataXMLDeserializer):
         if metadata_node is not None:
             server["metadata"] = self.extract_metadata(metadata_node)
 
-        user_data_node = self.find_first_child_named(server_node, "user_data")
-        if user_data_node is not None:
-            server["user_data"] = self.extract_text(user_data_node)
-
         personality = self._extract_personality(server_node)
         if personality is not None:
             server["personality"] = personality
@@ -772,14 +768,6 @@ class ServersController(wsgi.Controller):
         except TypeError:
             return None
 
-    def _validate_user_data(self, user_data):
-        """Check if the user_data is encoded properly."""
-        if not user_data:
-            return
-        if self._decode_base64(user_data) is None:
-            expl = _('Userdata content cannot be decoded')
-            raise exc.HTTPBadRequest(explanation=expl)
-
     def _validate_access_ipv4(self, address):
         if not utils.is_valid_ipv4(address):
             expl = _('accessIPv4 is not proper IPv4 format')
@@ -887,14 +875,6 @@ class ServersController(wsgi.Controller):
             msg = _("Invalid flavorRef provided.")
             raise exc.HTTPBadRequest(explanation=msg)
 
-        user_data = None
-        # TODO(cyeoh): bp v3-api-core-as-extensions
-        # Replace with an extension point when the os-user-data
-        # extension is ported
-        #if self.ext_mgr.is_loaded('os-user-data'):
-        #    user_data = server_dict.get('user_data')
-        #self._validate_user_data(user_data)
-
         block_device_mapping = None
         # TODO(cyeoh): bp v3-api-core-as-extensions
         # Replace with an extension point when the os-volumes
@@ -969,7 +949,6 @@ class ServersController(wsgi.Controller):
                             max_count=max_count,
                             requested_networks=requested_networks,
                             security_group=sg_names,
-                            user_data=user_data,
                             block_device_mapping=block_device_mapping,
                             auto_disk_config=auto_disk_config,
                             **create_kwargs)
@@ -1005,7 +984,8 @@ class ServersController(wsgi.Controller):
                 exception.InstanceTypeNotFound,
                 exception.InvalidMetadata,
                 exception.InvalidRequest,
-                exception.SecurityGroupNotFound) as error:
+                exception.SecurityGroupNotFound,
+                exception.InstanceUserDataMalformed) as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
 
         # If the caller wanted a reservation_id, return it

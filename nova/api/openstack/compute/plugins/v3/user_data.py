@@ -17,11 +17,25 @@
 from nova.api.openstack import extensions
 
 
-class User_data(extensions.ExtensionDescriptor):
+class UserData(extensions.V3APIExtensionBase):
     """Add user_data to the Create Server v1.1 API."""
 
     name = "UserData"
     alias = "os-user-data"
     namespace = ("http://docs.openstack.org/compute/ext/"
-                 "userdata/api/v1.1")
-    updated = "2012-08-07T00:00:00+00:00"
+                 "userdata/api/v3")
+    version = 1
+
+    def get_controller_extensions(self):
+        return []
+
+    def get_resources(self):
+        return []
+
+    def server_create(self, server_dict, create_kwargs):
+        create_kwargs['user_data'] = server_dict.get('user_data')
+
+    def server_xml_extract_server_deserialize(self, server_node, server_dict):
+        user_data = server_node.getAttribute('user_data')
+        if user_data:
+            server_dict['user_data'] = user_data
