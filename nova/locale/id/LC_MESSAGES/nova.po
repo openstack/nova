@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  Nova\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/nova\n"
-"POT-Creation-Date: 2013-06-19 19:38+0000\n"
+"POT-Creation-Date: 2013-06-24 19:37+0000\n"
 "PO-Revision-Date: 2013-05-28 17:08+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: Indonesian "
@@ -80,298 +80,298 @@ msgstr ""
 msgid "Flags path: %s"
 msgstr ""
 
-#: nova/exception.py:112
+#: nova/exception.py:113
 msgid "An unknown exception occurred."
 msgstr ""
 
-#: nova/exception.py:133 nova/openstack/common/rpc/common.py:87
+#: nova/exception.py:135 nova/openstack/common/rpc/common.py:87
 msgid "Exception in string format operation"
 msgstr ""
 
-#: nova/exception.py:153
+#: nova/exception.py:155
 msgid "Unknown"
 msgstr ""
 
-#: nova/exception.py:163
+#: nova/exception.py:165
 #, python-format
 msgid "Failed to encrypt text: %(reason)s"
 msgstr ""
 
-#: nova/exception.py:167
+#: nova/exception.py:169
 #, python-format
 msgid "Failed to decrypt text: %(reason)s"
 msgstr ""
 
-#: nova/exception.py:171
+#: nova/exception.py:173
 msgid "Virtual Interface creation failed"
 msgstr ""
 
-#: nova/exception.py:175
+#: nova/exception.py:177
 msgid "5 attempts to create virtual interfacewith unique mac address failed"
 msgstr ""
 
-#: nova/exception.py:180
+#: nova/exception.py:182
 #, python-format
 msgid "Connection to glance host %(host)s:%(port)s failed: %(reason)s"
 msgstr ""
 
-#: nova/exception.py:185
+#: nova/exception.py:187
 msgid "Not authorized."
 msgstr ""
 
-#: nova/exception.py:190
+#: nova/exception.py:192
 msgid "User does not have admin privileges"
 msgstr ""
 
-#: nova/exception.py:194
+#: nova/exception.py:196
 #, python-format
 msgid "Policy doesn't allow %(action)s to be performed."
 msgstr ""
 
-#: nova/exception.py:198
+#: nova/exception.py:200
 #, python-format
 msgid "Image %(image_id)s is not active."
 msgstr ""
 
-#: nova/exception.py:202
+#: nova/exception.py:204
 #, python-format
 msgid "Not authorized for image %(image_id)s."
 msgstr ""
 
-#: nova/exception.py:206
+#: nova/exception.py:208
 msgid "Unacceptable parameters."
 msgstr ""
 
-#: nova/exception.py:211
+#: nova/exception.py:213
 msgid "Block Device Mapping is Invalid."
 msgstr ""
 
-#: nova/exception.py:215
+#: nova/exception.py:217
 #, python-format
 msgid "Block Device Mapping is Invalid: failed to get snapshot %(id)s."
 msgstr ""
 
-#: nova/exception.py:220
+#: nova/exception.py:222
 #, python-format
 msgid "Block Device Mapping is Invalid: failed to get volume %(id)s."
 msgstr ""
 
-#: nova/exception.py:225
+#: nova/exception.py:227
 msgid ""
 "Block Device Mapping is Invalid: some fields are not recognized, or have "
 "invalid values."
 msgstr ""
 
-#: nova/exception.py:231
+#: nova/exception.py:233
 msgid "Block Device Mapping cannot be converted to legacy format. "
 msgstr ""
 
-#: nova/exception.py:236
+#: nova/exception.py:238
 #, python-format
 msgid "Volume %(volume_id)s is not attached to anything"
 msgstr ""
 
-#: nova/exception.py:240
+#: nova/exception.py:242
 #, python-format
 msgid ""
 "Volume %(volume_id)s did not finish being created even after we waited "
 "%(seconds)s seconds or %(attempts)s attempts."
 msgstr ""
 
-#: nova/exception.py:246 nova/api/ec2/cloud.py:473
+#: nova/exception.py:248 nova/api/ec2/cloud.py:473
 msgid "Keypair data is invalid"
 msgstr ""
 
-#: nova/exception.py:250
+#: nova/exception.py:252
 msgid "The request is invalid."
 msgstr ""
 
-#: nova/exception.py:254
+#: nova/exception.py:256
 msgid "Invalid input received"
 msgstr ""
 
-#: nova/exception.py:258
+#: nova/exception.py:260
 msgid "Invalid volume"
 msgstr ""
 
-#: nova/exception.py:262 nova/api/openstack/compute/servers.py:1338
+#: nova/exception.py:264 nova/api/openstack/compute/servers.py:1338
 #: nova/api/openstack/compute/contrib/admin_actions.py:242
 #: nova/api/openstack/compute/plugins/v3/servers.py:1426
 msgid "Invalid metadata"
 msgstr ""
 
-#: nova/exception.py:266
+#: nova/exception.py:268
 msgid "Invalid metadata size"
 msgstr ""
 
-#: nova/exception.py:270
+#: nova/exception.py:272
 #, python-format
 msgid "Invalid port range %(from_port)s:%(to_port)s. %(msg)s"
 msgstr ""
 
-#: nova/exception.py:274
+#: nova/exception.py:276
 #, python-format
 msgid "Invalid IP protocol %(protocol)s."
 msgstr ""
 
-#: nova/exception.py:278
+#: nova/exception.py:280
 #, python-format
 msgid "Invalid content type %(content_type)s."
 msgstr ""
 
-#: nova/exception.py:282
+#: nova/exception.py:284
 #, python-format
 msgid "Invalid cidr %(cidr)s."
 msgstr ""
 
-#: nova/exception.py:286 nova/openstack/common/db/exception.py:44
+#: nova/exception.py:288 nova/openstack/common/db/exception.py:44
 msgid "Invalid Parameter: Unicode is not supported by the current database."
 msgstr ""
 
-#: nova/exception.py:293
+#: nova/exception.py:295
 #, python-format
 msgid "%(err)s"
 msgstr ""
 
-#: nova/exception.py:297
+#: nova/exception.py:299
 #, python-format
 msgid ""
 "Cannot perform action '%(action)s' on aggregate %(aggregate_id)s. Reason:"
 " %(reason)s."
 msgstr ""
 
-#: nova/exception.py:302
+#: nova/exception.py:304
 #, python-format
 msgid "Group not valid. Reason: %(reason)s"
 msgstr ""
 
-#: nova/exception.py:306 nova/openstack/common/db/sqlalchemy/utils.py:33
+#: nova/exception.py:308 nova/openstack/common/db/sqlalchemy/utils.py:33
 msgid "Sort key supplied was not valid."
 msgstr ""
 
-#: nova/exception.py:310
+#: nova/exception.py:312
 #, python-format
 msgid ""
 "Instance %(instance_uuid)s in %(attr)s %(state)s. Cannot %(method)s while"
 " the instance is in this state."
 msgstr ""
 
-#: nova/exception.py:315
+#: nova/exception.py:317
 #, python-format
 msgid "Instance %(instance_id)s is not running."
 msgstr ""
 
-#: nova/exception.py:319
+#: nova/exception.py:321
 #, python-format
 msgid "Instance %(instance_id)s is not in rescue mode"
 msgstr ""
 
-#: nova/exception.py:323
+#: nova/exception.py:325
 #, python-format
 msgid "Instance %(instance_id)s cannot be rescued: %(reason)s"
 msgstr ""
 
-#: nova/exception.py:327
+#: nova/exception.py:329
 #, python-format
 msgid "Instance %(instance_id)s is not ready"
 msgstr ""
 
-#: nova/exception.py:331
+#: nova/exception.py:333
 msgid "Failed to suspend instance"
 msgstr ""
 
-#: nova/exception.py:335
+#: nova/exception.py:337
 #, python-format
 msgid "Failed to resume instance: %(reason)s."
 msgstr ""
 
-#: nova/exception.py:339
+#: nova/exception.py:341
 #, python-format
 msgid "Failed to power on instance: %(reason)s."
 msgstr ""
 
-#: nova/exception.py:343
+#: nova/exception.py:345
 #, python-format
 msgid "Failed to power off instance: %(reason)s."
 msgstr ""
 
-#: nova/exception.py:347
+#: nova/exception.py:349
 msgid "Failed to reboot instance"
 msgstr ""
 
-#: nova/exception.py:351
+#: nova/exception.py:353
 msgid "Failed to terminate instance"
 msgstr ""
 
-#: nova/exception.py:355
+#: nova/exception.py:357
 msgid "Failed to deploy instance"
 msgstr ""
 
-#: nova/exception.py:359
+#: nova/exception.py:361
 msgid "Service is unavailable at this time."
 msgstr ""
 
-#: nova/exception.py:363
+#: nova/exception.py:365
 msgid "Insufficient compute resources."
 msgstr ""
 
-#: nova/exception.py:367
+#: nova/exception.py:369
 #, python-format
 msgid "Compute service of %(host)s is unavailable at this time."
 msgstr ""
 
-#: nova/exception.py:371
+#: nova/exception.py:373
 #, python-format
 msgid "Unable to migrate instance (%(instance_id)s) to current host (%(host)s)."
 msgstr ""
 
-#: nova/exception.py:376
+#: nova/exception.py:378
 msgid "The supplied hypervisor type of is invalid."
 msgstr ""
 
-#: nova/exception.py:380
+#: nova/exception.py:382
 msgid "The instance requires a newer hypervisor version than has been provided."
 msgstr ""
 
-#: nova/exception.py:385
+#: nova/exception.py:387
 #, python-format
 msgid ""
 "The supplied disk path (%(path)s) already exists, it is expected not to "
 "exist."
 msgstr ""
 
-#: nova/exception.py:390
+#: nova/exception.py:392
 #, python-format
 msgid "The supplied device path (%(path)s) is invalid."
 msgstr ""
 
-#: nova/exception.py:394
+#: nova/exception.py:396
 #, python-format
 msgid "The supplied device path (%(path)s) is in use."
 msgstr ""
 
-#: nova/exception.py:399
+#: nova/exception.py:401
 #, python-format
 msgid "The supplied device (%(device)s) is busy."
 msgstr ""
 
-#: nova/exception.py:403
+#: nova/exception.py:405
 msgid "Unacceptable CPU info"
 msgstr ""
 
-#: nova/exception.py:407
+#: nova/exception.py:409
 #, python-format
 msgid "%(address)s is not a valid IP v4/6 address."
 msgstr ""
 
-#: nova/exception.py:411
+#: nova/exception.py:413
 #, python-format
 msgid ""
 "VLAN tag is not appropriate for the port group %(bridge)s. Expected VLAN "
 "tag is %(tag)s, but the one associated with the port group is %(pgroup)s."
 msgstr ""
 
-#: nova/exception.py:417
+#: nova/exception.py:419
 #, python-format
 msgid ""
 "vSwitch which contains the port group %(bridge)s is not associated with "
@@ -379,85 +379,85 @@ msgid ""
 "one associated is %(actual)s."
 msgstr ""
 
-#: nova/exception.py:424
+#: nova/exception.py:426
 #, python-format
 msgid "Disk format %(disk_format)s is not acceptable"
 msgstr ""
 
-#: nova/exception.py:428
+#: nova/exception.py:430
 #, python-format
 msgid "Image %(image_id)s is unacceptable: %(reason)s"
 msgstr ""
 
-#: nova/exception.py:432
+#: nova/exception.py:434
 #, python-format
 msgid "Instance %(instance_id)s is unacceptable: %(reason)s"
 msgstr ""
 
-#: nova/exception.py:436
+#: nova/exception.py:438
 #, python-format
 msgid "Ec2 id %(ec2_id)s is unacceptable."
 msgstr ""
 
-#: nova/exception.py:440
+#: nova/exception.py:442
 #, python-format
 msgid "Expected a uuid but received %(uuid)s."
 msgstr ""
 
-#: nova/exception.py:444
+#: nova/exception.py:446
 #, python-format
 msgid "Invalid ID received %(id)s."
 msgstr ""
 
-#: nova/exception.py:448
+#: nova/exception.py:450
 msgid "Constraint not met."
 msgstr ""
 
-#: nova/exception.py:453
+#: nova/exception.py:455
 msgid "Resource could not be found."
 msgstr ""
 
-#: nova/exception.py:458
+#: nova/exception.py:460
 #, python-format
 msgid "No agent-build associated with id %(id)s."
 msgstr ""
 
-#: nova/exception.py:462
+#: nova/exception.py:464
 #, python-format
 msgid "Volume %(volume_id)s could not be found."
 msgstr ""
 
-#: nova/exception.py:466
+#: nova/exception.py:468
 #, python-format
 msgid "Snapshot %(snapshot_id)s could not be found."
 msgstr ""
 
-#: nova/exception.py:470
+#: nova/exception.py:472
 #, python-format
 msgid "No target id found for volume %(volume_id)s."
 msgstr ""
 
-#: nova/exception.py:474
+#: nova/exception.py:476
 #, python-format
 msgid "No disk at %(location)s"
 msgstr ""
 
-#: nova/exception.py:478
+#: nova/exception.py:480
 #, python-format
 msgid "Could not find a handler for %(driver_type)s volume."
 msgstr ""
 
-#: nova/exception.py:482
+#: nova/exception.py:484
 #, python-format
 msgid "Invalid image href %(image_href)s."
 msgstr ""
 
-#: nova/exception.py:486
+#: nova/exception.py:488
 #, python-format
 msgid "Image %(image_id)s could not be found."
 msgstr ""
 
-#: nova/exception.py:490
+#: nova/exception.py:492
 #, python-format
 msgid ""
 "Image %(image_id)s could not be found. The nova EC2 API assigns image ids"
@@ -465,896 +465,911 @@ msgid ""
 "image ids since adding this image?"
 msgstr ""
 
-#: nova/exception.py:497
+#: nova/exception.py:499
 #, python-format
 msgid "Project %(project_id)s could not be found."
 msgstr ""
 
-#: nova/exception.py:501
+#: nova/exception.py:503
 msgid "Cannot find SR to read/write VDI."
 msgstr ""
 
-#: nova/exception.py:505
+#: nova/exception.py:507
 #, python-format
 msgid "Network %(network_id)s is duplicated."
 msgstr ""
 
-#: nova/exception.py:509
+#: nova/exception.py:511
 #, python-format
 msgid "Network %(network_id)s is still in use."
 msgstr ""
 
-#: nova/exception.py:513
+#: nova/exception.py:515
 #, python-format
 msgid "%(req)s is required to create a network."
 msgstr ""
 
-#: nova/exception.py:517
+#: nova/exception.py:519
 #, python-format
 msgid "Network %(network_id)s could not be found."
 msgstr ""
 
-#: nova/exception.py:521
+#: nova/exception.py:523
 #, python-format
 msgid "Port id %(port_id)s could not be found."
 msgstr ""
 
-#: nova/exception.py:525
+#: nova/exception.py:527
 #, python-format
 msgid "Network could not be found for bridge %(bridge)s"
 msgstr ""
 
-#: nova/exception.py:529
+#: nova/exception.py:531
 #, python-format
 msgid "Network could not be found for uuid %(uuid)s"
 msgstr ""
 
-#: nova/exception.py:533
+#: nova/exception.py:535
 #, python-format
 msgid "Network could not be found with cidr %(cidr)s."
 msgstr ""
 
-#: nova/exception.py:537
+#: nova/exception.py:539
 #, python-format
 msgid "Network could not be found for instance %(instance_id)s."
 msgstr ""
 
-#: nova/exception.py:541
+#: nova/exception.py:543
 msgid "No networks defined."
 msgstr ""
 
-#: nova/exception.py:545
+#: nova/exception.py:547
 #, python-format
 msgid ""
 "Either Network uuid %(network_uuid)s is not present or is not assigned to"
 " the project %(project_id)s."
 msgstr ""
 
-#: nova/exception.py:550
+#: nova/exception.py:552
 msgid "Could not find the datastore reference(s) which the VM uses."
 msgstr ""
 
-#: nova/exception.py:554
+#: nova/exception.py:556
 #, python-format
 msgid "Port %(port_id)s is still in use."
 msgstr ""
 
-#: nova/exception.py:558
+#: nova/exception.py:560
 #, python-format
 msgid "Port %(port_id)s not usable for instance %(instance)s."
 msgstr ""
 
-#: nova/exception.py:562
+#: nova/exception.py:564
 #, python-format
 msgid "No free port available for instance %(instance)s."
 msgstr ""
 
-#: nova/exception.py:566
+#: nova/exception.py:568
 #, python-format
 msgid "No fixed IP associated with id %(id)s."
 msgstr ""
 
-#: nova/exception.py:570
+#: nova/exception.py:572
 #, python-format
 msgid "Fixed ip not found for address %(address)s."
 msgstr ""
 
-#: nova/exception.py:574
+#: nova/exception.py:576
 #, python-format
 msgid "Instance %(instance_uuid)s has zero fixed ips."
 msgstr ""
 
-#: nova/exception.py:578
+#: nova/exception.py:580
 #, python-format
 msgid "Network host %(host)s has zero fixed ips in network %(network_id)s."
 msgstr ""
 
-#: nova/exception.py:583
+#: nova/exception.py:585
 #, python-format
 msgid "Instance %(instance_uuid)s doesn't have fixed ip '%(ip)s'."
 msgstr ""
 
-#: nova/exception.py:587
+#: nova/exception.py:589
 #, python-format
 msgid ""
 "Fixed IP address (%(address)s) does not exist in network "
 "(%(network_uuid)s)."
 msgstr ""
 
-#: nova/exception.py:592
+#: nova/exception.py:594
 #, python-format
 msgid ""
 "Fixed IP address %(address)s is already in use on instance "
 "%(instance_uuid)s."
 msgstr ""
 
-#: nova/exception.py:597
+#: nova/exception.py:599
 #, python-format
 msgid "More than one instance is associated with fixed ip address '%(address)s'."
 msgstr ""
 
-#: nova/exception.py:602
+#: nova/exception.py:604
 #, python-format
 msgid "Fixed IP address %(address)s is invalid."
 msgstr ""
 
-#: nova/exception.py:606
+#: nova/exception.py:608
 msgid "Zero fixed ips available."
 msgstr ""
 
-#: nova/exception.py:610
+#: nova/exception.py:612
 msgid "Zero fixed ips could be found."
 msgstr ""
 
-#: nova/exception.py:619
+#: nova/exception.py:621
 #, python-format
 msgid "Floating ip %(address)s already exists."
 msgstr ""
 
-#: nova/exception.py:623
+#: nova/exception.py:625
 #, python-format
 msgid "Floating ip not found for id %(id)s."
 msgstr ""
 
-#: nova/exception.py:627
+#: nova/exception.py:629
 #, python-format
 msgid "The DNS entry %(name)s already exists in domain %(domain)s."
 msgstr ""
 
-#: nova/exception.py:631
+#: nova/exception.py:633
 #, python-format
 msgid "Floating ip not found for address %(address)s."
 msgstr ""
 
-#: nova/exception.py:635
+#: nova/exception.py:637
 #, python-format
 msgid "Floating ip not found for host %(host)s."
 msgstr ""
 
-#: nova/exception.py:639
+#: nova/exception.py:641
 #, python-format
 msgid "Multiple floating ips are found for address %(address)s."
 msgstr ""
 
-#: nova/exception.py:643
+#: nova/exception.py:645
 msgid "Floating ip pool not found."
 msgstr ""
 
-#: nova/exception.py:648
+#: nova/exception.py:650
 msgid "Zero floating ips available."
 msgstr ""
 
-#: nova/exception.py:653
+#: nova/exception.py:655
 #, python-format
 msgid "Floating ip %(address)s is associated."
 msgstr ""
 
-#: nova/exception.py:657
+#: nova/exception.py:659
 #, python-format
 msgid "Floating ip %(address)s is not associated."
 msgstr ""
 
-#: nova/exception.py:661
+#: nova/exception.py:663
 msgid "Zero floating ips exist."
 msgstr ""
 
-#: nova/exception.py:665
+#: nova/exception.py:667
 #, python-format
 msgid "Interface %(interface)s not found."
 msgstr ""
 
-#: nova/exception.py:669
+#: nova/exception.py:671
 msgid "Cannot disassociate auto assigined floating ip"
 msgstr ""
 
-#: nova/exception.py:673
+#: nova/exception.py:675
 #, python-format
 msgid "Keypair %(name)s not found for user %(user_id)s"
 msgstr ""
 
-#: nova/exception.py:677
+#: nova/exception.py:679
 #, python-format
 msgid "Service %(service_id)s could not be found."
 msgstr ""
 
-#: nova/exception.py:681
+#: nova/exception.py:683
 #, python-format
 msgid "Host %(host)s could not be found."
 msgstr ""
 
-#: nova/exception.py:685
+#: nova/exception.py:687
 #, python-format
 msgid "Compute host %(host)s could not be found."
 msgstr ""
 
-#: nova/exception.py:689
+#: nova/exception.py:691
 #, python-format
 msgid "Could not find binary %(binary)s on host %(host)s."
 msgstr ""
 
-#: nova/exception.py:693
+#: nova/exception.py:695
 #, python-format
 msgid "Invalid reservation expiration %(expire)s."
 msgstr ""
 
-#: nova/exception.py:697
+#: nova/exception.py:699
 #, python-format
 msgid ""
 "Change would make usage less than 0 for the following resources: "
 "%(unders)s"
 msgstr ""
 
-#: nova/exception.py:702
+#: nova/exception.py:704
 msgid "Quota could not be found"
 msgstr ""
 
-#: nova/exception.py:706
+#: nova/exception.py:708
 #, python-format
 msgid "Unknown quota resources %(unknown)s."
 msgstr ""
 
-#: nova/exception.py:710
+#: nova/exception.py:712
 #, python-format
 msgid "Quota for project %(project_id)s could not be found."
 msgstr ""
 
-#: nova/exception.py:714
+#: nova/exception.py:716
 #, python-format
 msgid "Quota class %(class_name)s could not be found."
 msgstr ""
 
-#: nova/exception.py:718
+#: nova/exception.py:720
 #, python-format
 msgid "Quota usage for project %(project_id)s could not be found."
 msgstr ""
 
-#: nova/exception.py:722
+#: nova/exception.py:724
 #, python-format
 msgid "Quota reservation %(uuid)s could not be found."
 msgstr ""
 
-#: nova/exception.py:726
+#: nova/exception.py:728
 #, python-format
 msgid "Quota exceeded for resources: %(overs)s"
 msgstr ""
 
-#: nova/exception.py:730
+#: nova/exception.py:732
 #, python-format
 msgid "Security group %(security_group_id)s not found."
 msgstr ""
 
-#: nova/exception.py:734
+#: nova/exception.py:736
 #, python-format
 msgid "Security group %(security_group_id)s not found for project %(project_id)s."
 msgstr ""
 
-#: nova/exception.py:739
+#: nova/exception.py:741
 #, python-format
 msgid "Security group with rule %(rule_id)s not found."
 msgstr ""
 
-#: nova/exception.py:743
+#: nova/exception.py:745
 #, python-format
 msgid ""
 "Security group %(security_group_id)s is already associated with the "
 "instance %(instance_id)s"
 msgstr ""
 
-#: nova/exception.py:748
+#: nova/exception.py:750
 #, python-format
 msgid ""
 "Security group %(security_group_id)s is not associated with the instance "
 "%(instance_id)s"
 msgstr ""
 
-#: nova/exception.py:753
+#: nova/exception.py:755
 #, python-format
 msgid "Security group default rule (%rule_id)s not found."
 msgstr ""
 
-#: nova/exception.py:757
+#: nova/exception.py:759
 msgid ""
 "Network requires port_security_enabled and subnet associated in order to "
 "apply security groups."
 msgstr ""
 
-#: nova/exception.py:762
+#: nova/exception.py:764
 msgid "No Unique Match Found."
 msgstr ""
 
-#: nova/exception.py:767
+#: nova/exception.py:769
 #, python-format
 msgid "Migration %(migration_id)s could not be found."
 msgstr ""
 
-#: nova/exception.py:771
+#: nova/exception.py:773
 #, python-format
 msgid "Migration not found for instance %(instance_id)s with status %(status)s."
 msgstr ""
 
-#: nova/exception.py:776
+#: nova/exception.py:778
 #, python-format
 msgid "Console pool %(pool_id)s could not be found."
 msgstr ""
 
-#: nova/exception.py:780
+#: nova/exception.py:782
 #, python-format
 msgid ""
 "Console pool of type %(console_type)s for compute host %(compute_host)s "
 "on proxy host %(host)s not found."
 msgstr ""
 
-#: nova/exception.py:786
+#: nova/exception.py:788
 #, python-format
 msgid "Console %(console_id)s could not be found."
 msgstr ""
 
-#: nova/exception.py:790
+#: nova/exception.py:792
 #, python-format
 msgid "Console for instance %(instance_uuid)s could not be found."
 msgstr ""
 
-#: nova/exception.py:794
+#: nova/exception.py:796
 #, python-format
 msgid ""
 "Console for instance %(instance_uuid)s in pool %(pool_id)s could not be "
 "found."
 msgstr ""
 
-#: nova/exception.py:799
+#: nova/exception.py:801
 #, python-format
 msgid "Invalid console type %(console_type)s"
 msgstr ""
 
-#: nova/exception.py:803
+#: nova/exception.py:805
 #, python-format
 msgid "Instance type %(instance_type_id)s could not be found."
 msgstr ""
 
-#: nova/exception.py:807
+#: nova/exception.py:809
 #, python-format
 msgid "Instance type with name %(instance_type_name)s could not be found."
 msgstr ""
 
-#: nova/exception.py:812
+#: nova/exception.py:814
 #, python-format
 msgid "Flavor %(flavor_id)s could not be found."
 msgstr ""
 
-#: nova/exception.py:816
+#: nova/exception.py:818
 #, python-format
 msgid "Flavor access not found for %(flavor_id)s / %(project_id)s combination."
 msgstr ""
 
-#: nova/exception.py:821
+#: nova/exception.py:823
 #, python-format
 msgid "Cell %(cell_name)s doesn't exist."
 msgstr ""
 
-#: nova/exception.py:825
+#: nova/exception.py:827
 #, python-format
 msgid "Cell with name %(name)s already exists."
 msgstr ""
 
-#: nova/exception.py:829
+#: nova/exception.py:831
 #, python-format
 msgid "Inconsistency in cell routing: %(reason)s"
 msgstr ""
 
-#: nova/exception.py:833
+#: nova/exception.py:835
 #, python-format
 msgid "Service API method not found: %(detail)s"
 msgstr ""
 
-#: nova/exception.py:837
+#: nova/exception.py:839
 msgid "Timeout waiting for response from cell"
 msgstr ""
 
-#: nova/exception.py:841
+#: nova/exception.py:843
 #, python-format
 msgid "Cell message has reached maximum hop count: %(hop_count)s"
 msgstr ""
 
-#: nova/exception.py:845
+#: nova/exception.py:847
 msgid "No cells available matching scheduling criteria."
 msgstr ""
 
-#: nova/exception.py:849
+#: nova/exception.py:851
 #, python-format
 msgid "Exception received during cell processing: %(exc_name)s."
 msgstr ""
 
-#: nova/exception.py:853
+#: nova/exception.py:855
 #, python-format
 msgid "Cell is not known for instance %(instance_uuid)s"
 msgstr ""
 
-#: nova/exception.py:857
+#: nova/exception.py:859
 #, python-format
 msgid "Scheduler Host Filter %(filter_name)s could not be found."
 msgstr ""
 
-#: nova/exception.py:861
+#: nova/exception.py:863
 #, python-format
 msgid "Instance %(instance_uuid)s has no metadata with key %(metadata_key)s."
 msgstr ""
 
-#: nova/exception.py:866
+#: nova/exception.py:868
 #, python-format
 msgid ""
 "Instance %(instance_uuid)s has no system metadata with key "
 "%(metadata_key)s."
 msgstr ""
 
-#: nova/exception.py:871
+#: nova/exception.py:873
 #, python-format
 msgid ""
 "Instance Type %(instance_type_id)s has no extra specs with key "
 "%(extra_specs_key)s."
 msgstr ""
 
-#: nova/exception.py:876
+#: nova/exception.py:878
 #, python-format
 msgid "File %(file_path)s could not be found."
 msgstr ""
 
-#: nova/exception.py:880
+#: nova/exception.py:882
 msgid "Zero files could be found."
 msgstr ""
 
-#: nova/exception.py:884
+#: nova/exception.py:886
 #, python-format
 msgid "Virtual switch associated with the network adapter %(adapter)s not found."
 msgstr ""
 
-#: nova/exception.py:889
+#: nova/exception.py:891
 #, python-format
 msgid "Network adapter %(adapter)s could not be found."
 msgstr ""
 
-#: nova/exception.py:893
+#: nova/exception.py:895
 #, python-format
 msgid "Class %(class_name)s could not be found: %(exception)s"
 msgstr ""
 
-#: nova/exception.py:897
+#: nova/exception.py:899
 msgid "Action not allowed."
 msgstr ""
 
-#: nova/exception.py:901
+#: nova/exception.py:903
 msgid "Rotation is not allowed for snapshots"
 msgstr ""
 
-#: nova/exception.py:905
+#: nova/exception.py:907
 msgid "Rotation param is required for backup image_type"
 msgstr ""
 
-#: nova/exception.py:909 nova/tests/compute/test_keypairs.py:118
+#: nova/exception.py:911 nova/tests/compute/test_keypairs.py:118
 #, python-format
 msgid "Key pair '%(key_name)s' already exists."
 msgstr ""
 
-#: nova/exception.py:913
+#: nova/exception.py:915
 #, python-format
 msgid "Instance %(name)s already exists."
 msgstr ""
 
-#: nova/exception.py:917
+#: nova/exception.py:919
 #, python-format
 msgid "Instance Type with name %(name)s already exists."
 msgstr ""
 
-#: nova/exception.py:921
+#: nova/exception.py:923
 #, python-format
 msgid "Instance Type with ID %(flavor_id)s already exists."
 msgstr ""
 
-#: nova/exception.py:925
+#: nova/exception.py:927
 #, python-format
 msgid ""
 "Flavor access alreay exists for flavor %(flavor_id)s and project "
 "%(project_id)s combination."
 msgstr ""
 
-#: nova/exception.py:930
+#: nova/exception.py:932
 #, python-format
 msgid "%(path)s is not on shared storage: %(reason)s"
 msgstr ""
 
-#: nova/exception.py:934
+#: nova/exception.py:936
 #, python-format
 msgid "%(path)s is not on local storage: %(reason)s"
 msgstr ""
 
-#: nova/exception.py:938
+#: nova/exception.py:940
 msgid "Migration error"
 msgstr ""
 
-#: nova/exception.py:942
+#: nova/exception.py:944
 msgid "Migration pre-check error"
 msgstr ""
 
-#: nova/exception.py:946
+#: nova/exception.py:948
 #, python-format
 msgid "Malformed message body: %(reason)s"
 msgstr ""
 
-#: nova/exception.py:952
+#: nova/exception.py:954
 #, python-format
 msgid "Could not find config at %(path)s"
 msgstr ""
 
-#: nova/exception.py:956
+#: nova/exception.py:958
 #, python-format
 msgid "Could not load paste app '%(name)s' from %(path)s"
 msgstr ""
 
-#: nova/exception.py:960
+#: nova/exception.py:962
 msgid "When resizing, instances must change flavor!"
 msgstr ""
 
-#: nova/exception.py:964
+#: nova/exception.py:966
 #, python-format
 msgid "Resize error: %(reason)s"
 msgstr ""
 
-#: nova/exception.py:968
+#: nova/exception.py:970
 #, python-format
 msgid "Server disk was unable to be resized because: %(reason)s"
 msgstr ""
 
-#: nova/exception.py:972
+#: nova/exception.py:974
 msgid "Instance type's memory is too small for requested image."
 msgstr ""
 
-#: nova/exception.py:976
+#: nova/exception.py:978
 msgid "Instance type's disk is too small for requested image."
 msgstr ""
 
-#: nova/exception.py:980
+#: nova/exception.py:982
 #, python-format
 msgid "Insufficient free memory on compute node to start %(uuid)s."
 msgstr ""
 
-#: nova/exception.py:984
+#: nova/exception.py:986
 msgid "Could not fetch bandwidth/cpu/disk metrics for this host."
 msgstr ""
 
-#: nova/exception.py:988
+#: nova/exception.py:990
 #, python-format
 msgid "No valid host was found. %(reason)s"
 msgstr ""
 
-#: nova/exception.py:992
+#: nova/exception.py:994
 msgid "Quota exceeded"
 msgstr ""
 
-#: nova/exception.py:999
+#: nova/exception.py:1001
 #, python-format
 msgid ""
 "Quota exceeded for %(overs)s: Requested %(req)s, but already used "
 "%(used)d of %(allowed)d %(resource)s"
 msgstr ""
 
-#: nova/exception.py:1004
+#: nova/exception.py:1006
 msgid "Maximum number of floating ips exceeded"
 msgstr ""
 
-#: nova/exception.py:1008
+#: nova/exception.py:1010
 msgid "Maximum number of fixed ips exceeded"
 msgstr ""
 
-#: nova/exception.py:1012
+#: nova/exception.py:1014
 #, python-format
 msgid "Maximum number of metadata items exceeds %(allowed)d"
 msgstr ""
 
-#: nova/exception.py:1016
+#: nova/exception.py:1018
 msgid "Personality file limit exceeded"
 msgstr ""
 
-#: nova/exception.py:1020
+#: nova/exception.py:1022
 msgid "Personality file path too long"
 msgstr ""
 
-#: nova/exception.py:1024
+#: nova/exception.py:1026
 msgid "Personality file content too long"
 msgstr ""
 
-#: nova/exception.py:1028 nova/tests/compute/test_keypairs.py:129
+#: nova/exception.py:1030 nova/tests/compute/test_keypairs.py:129
 msgid "Maximum number of key pairs exceeded"
 msgstr ""
 
-#: nova/exception.py:1032
+#: nova/exception.py:1034
 msgid "Maximum number of security groups or rules exceeded"
 msgstr ""
 
-#: nova/exception.py:1036
+#: nova/exception.py:1038
 #, python-format
 msgid ""
 "Aggregate %(aggregate_id)s: action '%(action)s' caused an error: "
 "%(reason)s."
 msgstr ""
 
-#: nova/exception.py:1041
+#: nova/exception.py:1043
 #, python-format
 msgid "Aggregate %(aggregate_id)s could not be found."
 msgstr ""
 
-#: nova/exception.py:1045
+#: nova/exception.py:1047
 #, python-format
 msgid "Aggregate %(aggregate_name)s already exists."
 msgstr ""
 
-#: nova/exception.py:1049
+#: nova/exception.py:1051
 #, python-format
 msgid "Aggregate %(aggregate_id)s has no host %(host)s."
 msgstr ""
 
-#: nova/exception.py:1053
+#: nova/exception.py:1055
 #, python-format
 msgid "Aggregate %(aggregate_id)s has no metadata with key %(metadata_key)s."
 msgstr ""
 
-#: nova/exception.py:1058
+#: nova/exception.py:1060
 #, python-format
 msgid "Aggregate %(aggregate_id)s already has host %(host)s."
 msgstr ""
 
-#: nova/exception.py:1062
+#: nova/exception.py:1064
 msgid "Unable to create instance type"
 msgstr ""
 
-#: nova/exception.py:1066
+#: nova/exception.py:1068
 #, python-format
 msgid "Failed to set admin password on %(instance)s because %(reason)s"
 msgstr ""
 
-#: nova/exception.py:1072
+#: nova/exception.py:1074
 #, python-format
 msgid "Detected existing vlan with id %(vlan)d"
 msgstr ""
 
-#: nova/exception.py:1076
+#: nova/exception.py:1078
 msgid "There was a conflict when trying to complete your request."
 msgstr ""
 
-#: nova/exception.py:1081
+#: nova/exception.py:1083
 #, python-format
 msgid "Instance %(instance_id)s could not be found."
 msgstr ""
 
-#: nova/exception.py:1085
+#: nova/exception.py:1087
 #, python-format
 msgid "Info cache for instance %(instance_uuid)s could not be found."
 msgstr ""
 
-#: nova/exception.py:1090
+#: nova/exception.py:1092
 #, python-format
 msgid "Node %(node_id)s could not be found."
 msgstr ""
 
-#: nova/exception.py:1094
+#: nova/exception.py:1096
 #, python-format
 msgid "Node with UUID %(node_uuid)s could not be found."
 msgstr ""
 
-#: nova/exception.py:1098
+#: nova/exception.py:1100
 #, python-format
 msgid "Marker %(marker)s could not be found."
 msgstr ""
 
-#: nova/exception.py:1102
+#: nova/exception.py:1104
 #, python-format
 msgid "Invalid id: %(val)s (expecting \"i-...\")."
 msgstr ""
 
-#: nova/exception.py:1106
+#: nova/exception.py:1108
 #, python-format
 msgid "Could not fetch image %(image_id)s"
 msgstr ""
 
-#: nova/exception.py:1110
+#: nova/exception.py:1112
 #, python-format
 msgid "Could not upload image %(image_id)s"
 msgstr ""
 
-#: nova/exception.py:1114
+#: nova/exception.py:1116
 #, python-format
 msgid "Task %(task_name)s is already running on host %(host)s"
 msgstr ""
 
-#: nova/exception.py:1118
+#: nova/exception.py:1120
 #, python-format
 msgid "Task %(task_name)s is not running on host %(host)s"
 msgstr ""
 
-#: nova/exception.py:1122
+#: nova/exception.py:1124
 #, python-format
 msgid "Instance %(instance_uuid)s is locked"
 msgstr ""
 
-#: nova/exception.py:1126
+#: nova/exception.py:1128
 #, python-format
 msgid "Could not mount vfat config drive. %(operation)s failed. Error: %(error)s"
 msgstr ""
 
-#: nova/exception.py:1131
+#: nova/exception.py:1133
 #, python-format
 msgid "Unknown config drive format %(format)s. Select one of iso9660 or vfat."
 msgstr ""
 
-#: nova/exception.py:1136
+#: nova/exception.py:1138
 #, python-format
 msgid "Failed to attach network adapter device to %(instance)s"
 msgstr ""
 
-#: nova/exception.py:1140
+#: nova/exception.py:1142
 #, python-format
 msgid "Failed to detach network adapter device from  %(instance)s"
 msgstr ""
 
-#: nova/exception.py:1144
+#: nova/exception.py:1146
 #, python-format
 msgid ""
 "User data too large. User data must be no larger than %(maxsize)s bytes "
 "once base64 encoded. Your data is %(length)d bytes"
 msgstr ""
 
-#: nova/exception.py:1150
+#: nova/exception.py:1152
 msgid "User data needs to be valid base 64."
 msgstr ""
 
-#: nova/exception.py:1154
+#: nova/exception.py:1156
 #, python-format
 msgid ""
 "unexpected task state: expecting %(expected)s but the actual state is "
 "%(actual)s"
 msgstr ""
 
-#: nova/exception.py:1159
+#: nova/exception.py:1161
 #, python-format
 msgid ""
 "Action for request_id %(request_id)s on instance %(instance_uuid)s not "
 "found"
 msgstr ""
 
-#: nova/exception.py:1164
+#: nova/exception.py:1166
 #, python-format
 msgid "Event %(event)s not found for action id %(action_id)s"
 msgstr ""
 
-#: nova/exception.py:1168
+#: nova/exception.py:1170
 #, python-format
 msgid ""
 "unexpected VM state: expecting %(expected)s but the actual state is "
 "%(actual)s"
 msgstr ""
 
-#: nova/exception.py:1173
+#: nova/exception.py:1175
 #, python-format
 msgid "The CA file for %(project)s could not be found"
 msgstr ""
 
-#: nova/exception.py:1177
+#: nova/exception.py:1179
 #, python-format
 msgid "The CRL file for %(project)s could not be found"
 msgstr ""
 
-#: nova/exception.py:1181
+#: nova/exception.py:1183
 msgid "Instance recreate is not implemented by this virt driver."
 msgstr ""
 
-#: nova/exception.py:1185
+#: nova/exception.py:1187
 #, python-format
 msgid ""
 "The service from servicegroup driver %(driver)s is temporarily "
 "unavailable."
 msgstr ""
 
-#: nova/exception.py:1190
+#: nova/exception.py:1192
 #, python-format
 msgid "%(binary)s attempted direct database access which is not allowed by policy"
 msgstr ""
 
-#: nova/exception.py:1195
+#: nova/exception.py:1197
 #, python-format
 msgid "Virtualization type '%(virt)s' is not supported by this compute driver"
 msgstr ""
 
-#: nova/exception.py:1200
+#: nova/exception.py:1202
 #, python-format
 msgid ""
 "Requested hardware '%(model)s' is not supported by the '%(virt)s' virt "
 "driver"
 msgstr ""
 
-#: nova/exception.py:1205
+#: nova/exception.py:1207
 #, python-format
 msgid "Invalid Base 64 data for file %(path)s"
 msgstr ""
 
-#: nova/exception.py:1209
+#: nova/exception.py:1211
 #, python-format
 msgid "Build of instance %(instance_uuid)s aborted: %(reason)s"
 msgstr ""
 
-#: nova/exception.py:1213
+#: nova/exception.py:1215
 #, python-format
 msgid "Build of instance %(instance_uuid)s was re-scheduled: %(reason)s"
 msgstr ""
 
-#: nova/exception.py:1218
+#: nova/exception.py:1220
 #, python-format
 msgid "Shadow table with name %(name)s already exists."
 msgstr ""
 
-#: nova/exception.py:1223
+#: nova/exception.py:1225
 #, python-format
 msgid "Instance rollback performed due to: %s"
 msgstr ""
 
-#: nova/exception.py:1229
+#: nova/exception.py:1231
 #, python-format
 msgid "Unsupported object type %(objtype)s"
 msgstr ""
 
-#: nova/exception.py:1233
+#: nova/exception.py:1235
 #, python-format
 msgid "Cannot call %(method)s on orphaned %(objtype)s object"
 msgstr ""
 
-#: nova/exception.py:1237
+#: nova/exception.py:1239
 #, python-format
 msgid "Version %(objver)s of %(objname)s is not supported"
 msgstr ""
 
-#: nova/exception.py:1241
+#: nova/exception.py:1243
 #, python-format
 msgid "Core API extensions are missing: %(missing_apis)s"
 msgstr ""
 
-#: nova/exception.py:1245
+#: nova/exception.py:1247
+#, python-format
+msgid "Error during following call to agent: %(method)s"
+msgstr ""
+
+#: nova/exception.py:1251
+#, python-format
+msgid "Unable to contact guest agent. The following call timed out: %(method)s"
+msgstr ""
+
+#: nova/exception.py:1256
+#, python-format
+msgid "Agent does not support the call: %(method)s"
+msgstr ""
+
+#: nova/exception.py:1260
 #, python-format
 msgid "Instance group %(group_uuid)s could not be found."
 msgstr ""
 
-#: nova/exception.py:1249
+#: nova/exception.py:1264
 #, python-format
 msgid "Instance group %(group_uuid)s already exists."
 msgstr ""
 
-#: nova/exception.py:1253
+#: nova/exception.py:1268
 #, python-format
 msgid "Instance group %(group_uuid)s has no metadata with key %(metadata_key)s."
 msgstr ""
 
-#: nova/exception.py:1258
+#: nova/exception.py:1273
 #, python-format
 msgid "Instance group %(group_uuid)s has no member with id %(instance_id)s."
 msgstr ""
 
-#: nova/exception.py:1263
+#: nova/exception.py:1278
 #, python-format
 msgid "Instance group %(group_uuid)s has no policy %(policy)s."
 msgstr ""
@@ -1369,15 +1384,15 @@ msgstr ""
 msgid "Running %(name)s post-hook: %(obj)s"
 msgstr ""
 
-#: nova/manager.py:172
+#: nova/manager.py:162
 msgid "Notifying Schedulers of capabilities ..."
 msgstr ""
 
-#: nova/notifications.py:112 nova/notifications.py:152
+#: nova/notifications.py:116 nova/notifications.py:156
 msgid "Failed to send state update notification"
 msgstr ""
 
-#: nova/notifications.py:233
+#: nova/notifications.py:241
 msgid "Failed to get nw_info"
 msgstr ""
 
@@ -1399,17 +1414,17 @@ msgstr ""
 msgid "Failed to commit reservations %(reservations)s"
 msgstr ""
 
-#: nova/quota.py:996
+#: nova/quota.py:997
 #, python-format
 msgid "Committed reservations %(reservations)s"
 msgstr ""
 
-#: nova/quota.py:1016
+#: nova/quota.py:1017
 #, python-format
 msgid "Failed to roll back reservations %(reservations)s"
 msgstr ""
 
-#: nova/quota.py:1018
+#: nova/quota.py:1020
 #, python-format
 msgid "Rolled back reservations %(reservations)s"
 msgstr ""
@@ -1727,7 +1742,7 @@ msgstr ""
 
 #: nova/api/ec2/cloud.py:451 nova/api/ec2/cloud.py:470
 #: nova/api/openstack/compute/contrib/keypairs.py:93
-#: nova/api/openstack/compute/plugins/v3/keypairs.py:94
+#: nova/api/openstack/compute/plugins/v3/keypairs.py:95
 msgid "Quota exceeded, too many key pairs."
 msgstr ""
 
@@ -2134,87 +2149,105 @@ msgstr ""
 msgid "Invalid image metadata"
 msgstr ""
 
-#: nova/api/openstack/common.py:362
+#: nova/api/openstack/common.py:363
 #, python-format
 msgid "Cannot '%(action)s' while instance is in %(attr)s %(state)s"
 msgstr ""
 
 #: nova/api/openstack/common.py:366
 #, python-format
+msgid "Cannot '%s' an instance which has never been active"
+msgstr ""
+
+#: nova/api/openstack/common.py:369
+#, python-format
 msgid "Instance is in an invalid state for '%s'"
 msgstr ""
 
-#: nova/api/openstack/common.py:446
+#: nova/api/openstack/common.py:449
 msgid "Rejecting snapshot request, snapshots currently disabled"
 msgstr ""
 
-#: nova/api/openstack/common.py:448
+#: nova/api/openstack/common.py:451
 msgid "Instance snapshots are not permitted at this time."
 msgstr ""
 
-#: nova/api/openstack/extensions.py:196
+#: nova/api/openstack/extensions.py:197
 #, python-format
 msgid "Loaded extension: %s"
 msgstr ""
 
-#: nova/api/openstack/extensions.py:235
+#: nova/api/openstack/extensions.py:236
 #: nova/api/openstack/compute/plugins/__init__.py:46
 #, python-format
 msgid "Ext name: %s"
 msgstr ""
 
-#: nova/api/openstack/extensions.py:236
+#: nova/api/openstack/extensions.py:237
 #: nova/api/openstack/compute/plugins/__init__.py:47
 #, python-format
 msgid "Ext alias: %s"
 msgstr ""
 
-#: nova/api/openstack/extensions.py:237
+#: nova/api/openstack/extensions.py:238
 #: nova/api/openstack/compute/plugins/__init__.py:48
 #, python-format
 msgid "Ext description: %s"
 msgstr ""
 
-#: nova/api/openstack/extensions.py:239
+#: nova/api/openstack/extensions.py:240
 #: nova/api/openstack/compute/plugins/__init__.py:50
 #, python-format
 msgid "Ext namespace: %s"
 msgstr ""
 
-#: nova/api/openstack/extensions.py:240
+#: nova/api/openstack/extensions.py:241
 #, python-format
 msgid "Ext updated: %s"
 msgstr ""
 
-#: nova/api/openstack/extensions.py:242
+#: nova/api/openstack/extensions.py:243
 #: nova/api/openstack/compute/plugins/__init__.py:53
 #, python-format
 msgid "Exception loading extension: %s"
 msgstr ""
 
-#: nova/api/openstack/extensions.py:256
+#: nova/api/openstack/extensions.py:257
 #, python-format
 msgid "Loading extension %s"
 msgstr ""
 
-#: nova/api/openstack/extensions.py:265
+#: nova/api/openstack/extensions.py:266
 #, python-format
 msgid "Calling extension factory %s"
 msgstr ""
 
-#: nova/api/openstack/extensions.py:277
+#: nova/api/openstack/extensions.py:278
 #, python-format
 msgid "Failed to load extension %(ext_factory)s: %(exc)s"
 msgstr ""
 
-#: nova/api/openstack/extensions.py:348
+#: nova/api/openstack/extensions.py:349
 #, python-format
 msgid "Failed to load extension %(classpath)s: %(exc)s"
 msgstr ""
 
-#: nova/api/openstack/extensions.py:371
+#: nova/api/openstack/extensions.py:372
 #, python-format
 msgid "Failed to load extension %(ext_name)s:%(exc)s"
+msgstr ""
+
+#: nova/api/openstack/extensions.py:485
+msgid "Unexpected exception in API method"
+msgstr ""
+
+#: nova/api/openstack/extensions.py:486
+#, python-format
+msgid ""
+"Unexpected API Error. Please report this at "
+"http://bugs.launchpad.net/nova/ and attach the Nova API log if possible."
+"\n"
+"%s"
 msgstr ""
 
 #: nova/api/openstack/wsgi.py:208 nova/api/openstack/wsgi.py:626
@@ -2264,6 +2297,7 @@ msgstr ""
 #: nova/api/openstack/compute/server_metadata.py:126
 #: nova/api/openstack/compute/contrib/admin_actions.py:211
 #: nova/api/openstack/compute/contrib/evacuate.py:47
+#: nova/api/openstack/compute/plugins/v3/evacuate.py:48
 msgid "Malformed request body"
 msgstr ""
 
@@ -2310,7 +2344,7 @@ msgstr ""
 msgid "subclasses must implement construct()!"
 msgstr ""
 
-#: nova/api/openstack/compute/extensions.py:39
+#: nova/api/openstack/compute/extensions.py:38
 msgid "Initializing extension manager."
 msgstr ""
 
@@ -2652,9 +2686,9 @@ msgstr ""
 
 #: nova/api/openstack/compute/servers.py:1228
 #: nova/api/openstack/compute/contrib/aggregates.py:143
-#: nova/api/openstack/compute/contrib/coverage_ext.py:284
+#: nova/api/openstack/compute/contrib/coverage_ext.py:285
 #: nova/api/openstack/compute/contrib/keypairs.py:78
-#: nova/api/openstack/compute/plugins/v3/keypairs.py:79
+#: nova/api/openstack/compute/plugins/v3/keypairs.py:80
 #: nova/api/openstack/compute/plugins/v3/servers.py:1316
 msgid "Invalid request body"
 msgstr ""
@@ -2716,6 +2750,7 @@ msgstr ""
 #: nova/api/openstack/compute/contrib/admin_actions.py:321
 #: nova/api/openstack/compute/contrib/multinic.py:41
 #: nova/api/openstack/compute/contrib/rescue.py:42
+#: nova/api/openstack/compute/plugins/v3/rescue.py:43
 msgid "Server not found"
 msgstr ""
 
@@ -2876,7 +2911,8 @@ msgstr ""
 msgid "Only 'updated_since' and 'project_id' are understood."
 msgstr ""
 
-#: nova/api/openstack/compute/contrib/certificates.py:71
+#: nova/api/openstack/compute/contrib/certificates.py:62
+#: nova/api/openstack/compute/plugins/v3/certificates.py:63
 msgid "Only root certificate can be retrieved."
 msgstr ""
 
@@ -2916,32 +2952,32 @@ msgstr ""
 msgid "Coverage begin"
 msgstr ""
 
-#: nova/api/openstack/compute/contrib/coverage_ext.py:163
+#: nova/api/openstack/compute/contrib/coverage_ext.py:164
 msgid "Coverage not running"
 msgstr ""
 
-#: nova/api/openstack/compute/contrib/coverage_ext.py:192
+#: nova/api/openstack/compute/contrib/coverage_ext.py:193
 msgid "Invalid path"
 msgstr ""
 
-#: nova/api/openstack/compute/contrib/coverage_ext.py:196
+#: nova/api/openstack/compute/contrib/coverage_ext.py:197
 msgid "No path given for report file"
 msgstr ""
 
-#: nova/api/openstack/compute/contrib/coverage_ext.py:203
+#: nova/api/openstack/compute/contrib/coverage_ext.py:204
 msgid "You can't use html reports without combining"
 msgstr ""
 
-#: nova/api/openstack/compute/contrib/coverage_ext.py:216
+#: nova/api/openstack/compute/contrib/coverage_ext.py:217
 #, python-format
 msgid "Directory conflict: %s already exists"
 msgstr ""
 
-#: nova/api/openstack/compute/contrib/coverage_ext.py:274
+#: nova/api/openstack/compute/contrib/coverage_ext.py:275
 msgid "Python coverage module is not installed."
 msgstr ""
 
-#: nova/api/openstack/compute/contrib/coverage_ext.py:282
+#: nova/api/openstack/compute/contrib/coverage_ext.py:283
 #, python-format
 msgid "Coverage doesn't have %s action"
 msgstr ""
@@ -2952,26 +2988,29 @@ msgid "%s must be either 'MANUAL' or 'AUTO'."
 msgstr ""
 
 #: nova/api/openstack/compute/contrib/evacuate.py:59
+#: nova/api/openstack/compute/plugins/v3/evacuate.py:60
 msgid "admin password can't be changed on existing disk"
 msgstr ""
 
 #: nova/api/openstack/compute/contrib/evacuate.py:67
+#: nova/api/openstack/compute/plugins/v3/evacuate.py:68
 msgid "host and onSharedStorage must be specified."
 msgstr ""
 
 #: nova/api/openstack/compute/contrib/evacuate.py:78
+#: nova/api/openstack/compute/plugins/v3/evacuate.py:79
 #, python-format
 msgid "Error in evacuate, %s"
 msgstr ""
 
 #: nova/api/openstack/compute/contrib/fixed_ips.py:40
-#: nova/api/openstack/compute/plugins/v3/fixed_ips.py:43
+#: nova/api/openstack/compute/plugins/v3/fixed_ips.py:44
 #, python-format
 msgid "Fixed IP %s has been deleted"
 msgstr ""
 
 #: nova/api/openstack/compute/contrib/fixed_ips.py:73
-#: nova/api/openstack/compute/plugins/v3/fixed_ips.py:77
+#: nova/api/openstack/compute/plugins/v3/fixed_ips.py:79
 #, python-format
 msgid "Fixed IP %s not found"
 msgstr ""
@@ -3019,7 +3058,7 @@ msgstr ""
 
 #: nova/api/openstack/compute/contrib/floating_ips.py:216
 #: nova/api/openstack/compute/contrib/floating_ips.py:281
-#: nova/api/openstack/compute/contrib/security_groups.py:445
+#: nova/api/openstack/compute/contrib/security_groups.py:457
 msgid "Missing parameter dict"
 msgstr ""
 
@@ -3293,7 +3332,7 @@ msgid "Malformed scheduler_hints attribute"
 msgstr ""
 
 #: nova/api/openstack/compute/contrib/security_group_default_rules.py:129
-#: nova/api/openstack/compute/contrib/security_groups.py:352
+#: nova/api/openstack/compute/contrib/security_groups.py:371
 msgid "Not enough parameters to build a valid rule."
 msgstr ""
 
@@ -3310,16 +3349,16 @@ msgstr ""
 msgid "security group default rule not found"
 msgstr ""
 
-#: nova/api/openstack/compute/contrib/security_groups.py:360
+#: nova/api/openstack/compute/contrib/security_groups.py:379
 #, python-format
 msgid "Bad prefix for network in cidr %s"
 msgstr ""
 
-#: nova/api/openstack/compute/contrib/security_groups.py:448
+#: nova/api/openstack/compute/contrib/security_groups.py:460
 msgid "Security group not specified"
 msgstr ""
 
-#: nova/api/openstack/compute/contrib/security_groups.py:452
+#: nova/api/openstack/compute/contrib/security_groups.py:464
 msgid "Security group name cannot be empty"
 msgstr ""
 
@@ -3402,12 +3441,12 @@ msgstr ""
 msgid "Ext version: %i"
 msgstr ""
 
-#: nova/api/openstack/compute/plugins/v3/fixed_ips.py:62
+#: nova/api/openstack/compute/plugins/v3/fixed_ips.py:64
 #, python-format
 msgid "Reserving IP address %s"
 msgstr ""
 
-#: nova/api/openstack/compute/plugins/v3/fixed_ips.py:65
+#: nova/api/openstack/compute/plugins/v3/fixed_ips.py:67
 #, python-format
 msgid "Unreserving IP address %s"
 msgstr ""
@@ -3490,38 +3529,38 @@ msgstr ""
 msgid "Received capacities from child cell %(cell_name)s: %(capacities)s"
 msgstr ""
 
-#: nova/cells/messaging.py:823
+#: nova/cells/messaging.py:821
 #, python-format
 msgid "Got update for instance: %(instance)s"
 msgstr ""
 
-#: nova/cells/messaging.py:866
+#: nova/cells/messaging.py:864
 msgid "Got update to delete instance"
 msgstr ""
 
-#: nova/cells/messaging.py:881
+#: nova/cells/messaging.py:879
 #, python-format
 msgid "Got broadcast to %(delete_type)s delete instance"
 msgstr ""
 
-#: nova/cells/messaging.py:895
+#: nova/cells/messaging.py:893
 #, python-format
 msgid "Got message to create instance fault: %(instance_fault)s"
 msgstr ""
 
-#: nova/cells/messaging.py:916
+#: nova/cells/messaging.py:914
 #, python-format
 msgid ""
 "Forcing a sync of instances, project_id=%(projid_str)s, "
 "updated_since=%(since_str)s"
 msgstr ""
 
-#: nova/cells/messaging.py:1101
+#: nova/cells/messaging.py:1099
 #, python-format
 msgid "Updating parents with our capabilities: %(capabs)s"
 msgstr ""
 
-#: nova/cells/messaging.py:1121
+#: nova/cells/messaging.py:1119
 #, python-format
 msgid "Updating parents with our capacities: %(capacities)s"
 msgstr ""
@@ -3536,28 +3575,28 @@ msgstr ""
 msgid "Scheduling with routing_path=%(routing_path)s"
 msgstr ""
 
-#: nova/cells/scheduler.py:165 nova/cells/scheduler.py:204
+#: nova/cells/scheduler.py:165 nova/cells/scheduler.py:205
 #, python-format
 msgid "Couldn't communicate with cell '%s'"
 msgstr ""
 
-#: nova/cells/scheduler.py:169 nova/cells/scheduler.py:208
+#: nova/cells/scheduler.py:169 nova/cells/scheduler.py:209
 msgid "Couldn't communicate with any cells"
 msgstr ""
 
-#: nova/cells/scheduler.py:183
+#: nova/cells/scheduler.py:184
 #, python-format
 msgid "Building instances with routing_path=%(routing_path)s"
 msgstr ""
 
-#: nova/cells/scheduler.py:252
+#: nova/cells/scheduler.py:254
 #, python-format
 msgid ""
 "No cells available when scheduling.  Will retry in %(sleep_time)s "
 "second(s)"
 msgstr ""
 
-#: nova/cells/scheduler.py:258
+#: nova/cells/scheduler.py:260
 #, python-format
 msgid "Error scheduling instances %(instance_uuids)s"
 msgstr ""
@@ -3616,17 +3655,17 @@ msgstr ""
 msgid "Failed to load %s"
 msgstr ""
 
-#: nova/cmd/baremetal_deploy_helper.py:243
+#: nova/cmd/baremetal_deploy_helper.py:244
 #, python-format
 msgid "start deployment for node %(node_id)s, params %(params)s"
 msgstr ""
 
-#: nova/cmd/baremetal_deploy_helper.py:251
+#: nova/cmd/baremetal_deploy_helper.py:252
 #, python-format
 msgid "deployment to node %s failed"
 msgstr ""
 
-#: nova/cmd/baremetal_deploy_helper.py:255
+#: nova/cmd/baremetal_deploy_helper.py:256
 #, python-format
 msgid "deployment to node %s done"
 msgstr ""
@@ -3984,244 +4023,244 @@ msgstr ""
 msgid "cell_type must be configured as 'api' or 'compute'"
 msgstr ""
 
-#: nova/compute/api.py:293
+#: nova/compute/api.py:302
 msgid "Cannot run any more instances of this type."
 msgstr ""
 
-#: nova/compute/api.py:300
+#: nova/compute/api.py:309
 #, python-format
 msgid "Can only run %s more instances of this type."
 msgstr ""
 
-#: nova/compute/api.py:309
+#: nova/compute/api.py:318
 #, python-format
 msgid ""
 "%(overs)s quota exceeded for %(pid)s, tried to run %(min_count)s "
 "instances. %(msg)s"
 msgstr ""
 
-#: nova/compute/api.py:329
+#: nova/compute/api.py:338
 #, python-format
 msgid ""
 "Quota exceeded for %(pid)s, tried to set %(num_metadata)s metadata "
 "properties"
 msgstr ""
 
-#: nova/compute/api.py:339
+#: nova/compute/api.py:348
 msgid "Metadata property key blank"
 msgstr ""
 
-#: nova/compute/api.py:343
+#: nova/compute/api.py:352
 msgid "Metadata property key greater than 255 characters"
 msgstr ""
 
-#: nova/compute/api.py:347
+#: nova/compute/api.py:356
 msgid "Metadata property value greater than 255 characters"
 msgstr ""
 
-#: nova/compute/api.py:480
+#: nova/compute/api.py:489
 msgid "Failed to set instance name using multi_instance_display_name_template."
 msgstr ""
 
-#: nova/compute/api.py:563
+#: nova/compute/api.py:572
 msgid "Cannot attach one or more volumes to multiple instances"
 msgstr ""
 
-#: nova/compute/api.py:661
+#: nova/compute/api.py:670
 #, python-format
 msgid "Going to run %s instances..."
 msgstr ""
 
-#: nova/compute/api.py:806
+#: nova/compute/api.py:815
 #, python-format
 msgid "bdm %s"
 msgstr ""
 
-#: nova/compute/api.py:833
+#: nova/compute/api.py:842
 #, python-format
 msgid "block_device_mapping %s"
 msgstr ""
 
-#: nova/compute/api.py:1116
+#: nova/compute/api.py:1125
 msgid "instance termination disabled"
 msgstr ""
 
-#: nova/compute/api.py:1252
+#: nova/compute/api.py:1261
 #, python-format
 msgid "instance type %(old_inst_type_id)d not found"
 msgstr ""
 
-#: nova/compute/api.py:1258
+#: nova/compute/api.py:1267
 msgid "going to delete a resizing instance"
 msgstr ""
 
-#: nova/compute/api.py:1268
+#: nova/compute/api.py:1277
 #, python-format
 msgid "instance's host %s is down, deleting from database"
 msgstr ""
 
-#: nova/compute/api.py:1311
+#: nova/compute/api.py:1321
 msgid "Going to try to soft delete instance"
 msgstr ""
 
-#: nova/compute/api.py:1335
+#: nova/compute/api.py:1346
 msgid "Going to try to terminate instance"
 msgstr ""
 
-#: nova/compute/api.py:1385
+#: nova/compute/api.py:1397
 msgid "Going to try to stop instance"
 msgstr ""
 
-#: nova/compute/api.py:1401
+#: nova/compute/api.py:1413
 msgid "Going to try to start instance"
 msgstr ""
 
-#: nova/compute/api.py:1473
+#: nova/compute/api.py:1485
 #, python-format
 msgid "Searching by: %s"
 msgstr ""
 
-#: nova/compute/api.py:1710
+#: nova/compute/api.py:1722
 #, python-format
 msgid "snapshot for %s"
 msgstr ""
 
-#: nova/compute/api.py:2046
+#: nova/compute/api.py:2060
 msgid "flavor_id is None. Assuming migration."
 msgstr ""
 
-#: nova/compute/api.py:2055
+#: nova/compute/api.py:2069
 #, python-format
 msgid ""
 "Old instance type %(current_instance_type_name)s,  new instance type "
 "%(new_instance_type_name)s"
 msgstr ""
 
-#: nova/compute/api.py:2103
+#: nova/compute/api.py:2117
 #, python-format
 msgid "%(overs)s quota exceeded for %(pid)s, tried to resize instance."
 msgstr ""
 
-#: nova/compute/api.py:2241
+#: nova/compute/api.py:2256
 msgid "Cannot rescue a volume-backed instance"
 msgstr ""
 
-#: nova/compute/api.py:2346
+#: nova/compute/api.py:2361
 msgid "Locking"
 msgstr ""
 
-#: nova/compute/api.py:2354
+#: nova/compute/api.py:2369
 msgid "Unlocking"
 msgstr ""
 
-#: nova/compute/api.py:2426
+#: nova/compute/api.py:2441
 msgid "Volume must be attached in order to detach."
 msgstr ""
 
-#: nova/compute/api.py:2540
+#: nova/compute/api.py:2555
 #, python-format
 msgid "Going to try to live migrate instance to %s"
 msgstr ""
 
-#: nova/compute/api.py:2562
+#: nova/compute/api.py:2577
 msgid "vm evacuation scheduled"
 msgstr ""
 
-#: nova/compute/api.py:2566
+#: nova/compute/api.py:2581
 #, python-format
 msgid ""
 "Instance compute service state on %(inst_host)s expected to be down, but "
 "it was up."
 msgstr ""
 
-#: nova/compute/api.py:2814 nova/tests/compute/test_keypairs.py:108
+#: nova/compute/api.py:2829 nova/tests/compute/test_keypairs.py:108
 msgid "Keypair name contains unsafe characters"
 msgstr ""
 
-#: nova/compute/api.py:2818 nova/tests/compute/test_keypairs.py:100
+#: nova/compute/api.py:2833 nova/tests/compute/test_keypairs.py:100
 #: nova/tests/compute/test_keypairs.py:104
 msgid "Keypair name must be between 1 and 255 characters long"
 msgstr ""
 
-#: nova/compute/api.py:2900
+#: nova/compute/api.py:2915
 #, python-format
 msgid "Security group %s is not a string or unicode"
 msgstr ""
 
-#: nova/compute/api.py:2903
+#: nova/compute/api.py:2918
 #, python-format
 msgid "Security group %s cannot be empty."
 msgstr ""
 
-#: nova/compute/api.py:2911
+#: nova/compute/api.py:2926
 #, python-format
 msgid ""
 "Value (%(value)s) for parameter Group%(property)s is invalid. Content "
 "limited to '%(allowed)'."
 msgstr ""
 
-#: nova/compute/api.py:2917
+#: nova/compute/api.py:2932
 #, python-format
 msgid "Security group %s should not be greater than 255 characters."
 msgstr ""
 
-#: nova/compute/api.py:2935
+#: nova/compute/api.py:2950
 msgid "Quota exceeded, too many security groups."
 msgstr ""
 
-#: nova/compute/api.py:2938
+#: nova/compute/api.py:2953
 #, python-format
 msgid "Create Security Group %s"
 msgstr ""
 
-#: nova/compute/api.py:2945
+#: nova/compute/api.py:2960
 #, python-format
 msgid "Security group %s already exists"
 msgstr ""
 
-#: nova/compute/api.py:2964
+#: nova/compute/api.py:2979
 #, python-format
 msgid "Unable to update system group '%s'"
 msgstr ""
 
-#: nova/compute/api.py:3024
+#: nova/compute/api.py:3039
 #, python-format
 msgid "Unable to delete system group '%s'"
 msgstr ""
 
-#: nova/compute/api.py:3029
+#: nova/compute/api.py:3044
 msgid "Security group is still in use"
 msgstr ""
 
-#: nova/compute/api.py:3037
+#: nova/compute/api.py:3052
 msgid "Failed to update usages deallocating security group"
 msgstr ""
 
-#: nova/compute/api.py:3040
+#: nova/compute/api.py:3055
 #, python-format
 msgid "Delete security group %s"
 msgstr ""
 
-#: nova/compute/api.py:3117 nova/compute/api.py:3191
+#: nova/compute/api.py:3132 nova/compute/api.py:3206
 #, python-format
 msgid "Rule (%s) not found"
 msgstr ""
 
-#: nova/compute/api.py:3133
+#: nova/compute/api.py:3148
 msgid "Quota exceeded, too many security group rules."
 msgstr ""
 
-#: nova/compute/api.py:3136
+#: nova/compute/api.py:3151
 #, python-format
 msgid "Authorize security group ingress %s"
 msgstr ""
 
-#: nova/compute/api.py:3145
+#: nova/compute/api.py:3160
 #, python-format
 msgid "Revoke security group ingress %s"
 msgstr ""
 
-#: nova/compute/api.py:3198
+#: nova/compute/api.py:3213
 msgid "Security group id should be integer"
 msgstr ""
 
@@ -4285,12 +4324,12 @@ msgstr ""
 
 #: nova/compute/flavors.py:101
 #, python-format
-msgid "'%s' argument must be greater than 0"
+msgid "'%s' argument must be a positive integer"
 msgstr ""
 
 #: nova/compute/flavors.py:110
 #, python-format
-msgid "'%s' argument must be greater than or equal to 0"
+msgid "'%s' argument must be an integer greater than or equal to 0"
 msgstr ""
 
 #: nova/compute/flavors.py:119
@@ -4410,270 +4449,270 @@ msgstr ""
 msgid "Setting up bdm %s"
 msgstr ""
 
-#: nova/compute/manager.py:901
+#: nova/compute/manager.py:902
 msgid "Success"
 msgstr ""
 
-#: nova/compute/manager.py:924
+#: nova/compute/manager.py:925
 msgid "Instance disappeared before we could start it"
 msgstr ""
 
-#: nova/compute/manager.py:951 nova/compute/manager.py:2466
+#: nova/compute/manager.py:952 nova/compute/manager.py:2466
 #, python-format
 msgid "No node specified, defaulting to %s"
 msgstr ""
 
-#: nova/compute/manager.py:995
+#: nova/compute/manager.py:996
 msgid "Failed to dealloc network for deleted instance"
 msgstr ""
 
-#: nova/compute/manager.py:1004
+#: nova/compute/manager.py:1005
 msgid "Instance was deleted during spawn."
 msgstr ""
 
-#: nova/compute/manager.py:1035
+#: nova/compute/manager.py:1036
 #, python-format
 msgid "Error: %s"
 msgstr ""
 
-#: nova/compute/manager.py:1052
+#: nova/compute/manager.py:1053
 msgid "Clean up resource before rescheduling."
 msgstr ""
 
-#: nova/compute/manager.py:1077 nova/compute/manager.py:2519
+#: nova/compute/manager.py:1078 nova/compute/manager.py:2519
 msgid "Error trying to reschedule"
 msgstr ""
 
-#: nova/compute/manager.py:1090
+#: nova/compute/manager.py:1091
 msgid "Retry info not present, will not reschedule"
 msgstr ""
 
-#: nova/compute/manager.py:1095
+#: nova/compute/manager.py:1096
 msgid "No request spec, will not reschedule"
 msgstr ""
 
-#: nova/compute/manager.py:1101
+#: nova/compute/manager.py:1102
 #, python-format
 msgid "Re-scheduling %(method)s: attempt %(num)d"
 msgstr ""
 
-#: nova/compute/manager.py:1130
+#: nova/compute/manager.py:1131
 msgid "Instance build timed out. Set to error state."
 msgstr ""
 
-#: nova/compute/manager.py:1140
+#: nova/compute/manager.py:1141
 msgid "Starting instance..."
 msgstr ""
 
-#: nova/compute/manager.py:1164
+#: nova/compute/manager.py:1165
 msgid "Allocating IP information in the background."
 msgstr ""
 
-#: nova/compute/manager.py:1175
+#: nova/compute/manager.py:1176
 msgid "Instance failed network setup"
 msgstr ""
 
-#: nova/compute/manager.py:1177
+#: nova/compute/manager.py:1178
 #, python-format
 msgid "Instance network_info: |%s|"
 msgstr ""
 
-#: nova/compute/manager.py:1188
+#: nova/compute/manager.py:1189
 msgid "Instance failed block device setup"
 msgstr ""
 
-#: nova/compute/manager.py:1207
+#: nova/compute/manager.py:1208
 msgid "Instance failed to spawn"
 msgstr ""
 
-#: nova/compute/manager.py:1258
+#: nova/compute/manager.py:1259
 msgid "Deallocating network for instance"
 msgstr ""
 
-#: nova/compute/manager.py:1332
+#: nova/compute/manager.py:1333
 msgid "Failed to deallocate network for instance."
 msgstr ""
 
-#: nova/compute/manager.py:1339
+#: nova/compute/manager.py:1340
 #, python-format
 msgid "%(action_str)s instance"
 msgstr ""
 
-#: nova/compute/manager.py:1382
+#: nova/compute/manager.py:1383
 #, python-format
 msgid "Ignoring DiskNotFound: %s"
 msgstr ""
 
-#: nova/compute/manager.py:1385
+#: nova/compute/manager.py:1386
 #, python-format
 msgid "Ignoring VolumeNotFound: %s"
 msgstr ""
 
-#: nova/compute/manager.py:1392
+#: nova/compute/manager.py:1393
 #, python-format
 msgid "terminating bdm %s"
 msgstr ""
 
-#: nova/compute/manager.py:1440
+#: nova/compute/manager.py:1441
 #, python-format
 msgid "Ignoring volume cleanup failure due to %s"
 msgstr ""
 
-#: nova/compute/manager.py:1502 nova/compute/manager.py:2701
-#: nova/compute/manager.py:4224
+#: nova/compute/manager.py:1503 nova/compute/manager.py:2701
+#: nova/compute/manager.py:4226
 #, python-format
 msgid "%s. Setting instance vm_state to ERROR"
 msgstr ""
 
-#: nova/compute/manager.py:1654
+#: nova/compute/manager.py:1655
 msgid "Rebuilding instance"
 msgstr ""
 
-#: nova/compute/manager.py:1667
+#: nova/compute/manager.py:1668
 msgid "Invalid state of instance files on shared storage"
 msgstr ""
 
-#: nova/compute/manager.py:1671
+#: nova/compute/manager.py:1672
 msgid "disk on shared storage, recreating using existing disk"
 msgstr ""
 
-#: nova/compute/manager.py:1675
+#: nova/compute/manager.py:1676
 #, python-format
 msgid "disk not on shared storagerebuilding from: '%s'"
 msgstr ""
 
-#: nova/compute/manager.py:1758
+#: nova/compute/manager.py:1759
 #, python-format
 msgid "bringing vm to original state: '%s'"
 msgstr ""
 
-#: nova/compute/manager.py:1790
+#: nova/compute/manager.py:1791
 #, python-format
 msgid "Detaching from volume api: %s"
 msgstr ""
 
-#: nova/compute/manager.py:1808
+#: nova/compute/manager.py:1809
 msgid "Rebooting instance"
 msgstr ""
 
-#: nova/compute/manager.py:1827
+#: nova/compute/manager.py:1828
 #, python-format
 msgid ""
 "trying to reboot a non-running instance: (state: %(state)s expected: "
 "%(running)s)"
 msgstr ""
 
-#: nova/compute/manager.py:1863
+#: nova/compute/manager.py:1864
 msgid "Reboot failed but instance is running"
 msgstr ""
 
-#: nova/compute/manager.py:1866
+#: nova/compute/manager.py:1867
 #, python-format
 msgid "Cannot reboot instance: %(error)s"
 msgstr ""
 
-#: nova/compute/manager.py:1879
+#: nova/compute/manager.py:1880
 msgid "Instance disappeared during reboot"
 msgstr ""
 
-#: nova/compute/manager.py:1906
+#: nova/compute/manager.py:1907
 msgid "instance snapshotting"
 msgstr ""
 
-#: nova/compute/manager.py:1912
+#: nova/compute/manager.py:1913
 #, python-format
 msgid ""
 "trying to snapshot a non-running instance: (state: %(state)s expected: "
 "%(running)s)"
 msgstr ""
 
-#: nova/compute/manager.py:1973
+#: nova/compute/manager.py:1974
 #, python-format
 msgid "Found %(num_images)d images (rotation: %(rotation)d)"
 msgstr ""
 
-#: nova/compute/manager.py:1981
+#: nova/compute/manager.py:1982
 #, python-format
 msgid "Rotating out %d backups"
 msgstr ""
 
-#: nova/compute/manager.py:1986
+#: nova/compute/manager.py:1987
 #, python-format
 msgid "Deleting image %s"
 msgstr ""
 
-#: nova/compute/manager.py:2014
+#: nova/compute/manager.py:2015
 #, python-format
 msgid "Failed to set admin password. Instance %s is not running"
 msgstr ""
 
-#: nova/compute/manager.py:2021
+#: nova/compute/manager.py:2022
 msgid "Root password set"
 msgstr ""
 
-#: nova/compute/manager.py:2028
+#: nova/compute/manager.py:2029
 msgid "set_admin_password is not implemented by this driver or guest instance."
 msgstr ""
 
-#: nova/compute/manager.py:2043
+#: nova/compute/manager.py:2044
 #, python-format
 msgid "set_admin_password failed: %s"
 msgstr ""
 
-#: nova/compute/manager.py:2050
+#: nova/compute/manager.py:2051
 msgid "error setting admin password"
 msgstr ""
 
-#: nova/compute/manager.py:2063
+#: nova/compute/manager.py:2064
 #, python-format
 msgid ""
 "trying to inject a file into a non-running (state: %(current_state)s "
 "expected: %(expected_state)s)"
 msgstr ""
 
-#: nova/compute/manager.py:2068
+#: nova/compute/manager.py:2069
 #, python-format
 msgid "injecting file to %s"
 msgstr ""
 
-#: nova/compute/manager.py:2088
+#: nova/compute/manager.py:2089
 msgid ""
 "Unable to find a different image to use for rescue VM, using instance's "
 "current image"
 msgstr ""
 
-#: nova/compute/manager.py:2101
+#: nova/compute/manager.py:2102
 msgid "Rescuing"
 msgstr ""
 
-#: nova/compute/manager.py:2120
+#: nova/compute/manager.py:2121
 msgid "Error trying to Rescue Instance"
 msgstr ""
 
-#: nova/compute/manager.py:2124
+#: nova/compute/manager.py:2125
 #, python-format
 msgid "Driver Error: %s"
 msgstr ""
 
-#: nova/compute/manager.py:2142
+#: nova/compute/manager.py:2143
 msgid "Unrescuing"
 msgstr ""
 
-#: nova/compute/manager.py:2163
+#: nova/compute/manager.py:2164
 #, python-format
 msgid "Changing instance metadata according to %r"
 msgstr ""
 
-#: nova/compute/manager.py:2385
+#: nova/compute/manager.py:2386
 #, python-format
 msgid "Updating instance to original state: '%s'"
 msgstr ""
 
-#: nova/compute/manager.py:2419
+#: nova/compute/manager.py:2420
 msgid "Instance has no source host"
 msgstr ""
 
-#: nova/compute/manager.py:2425
+#: nova/compute/manager.py:2426
 msgid "destination same as source!"
 msgstr ""
 
@@ -4815,153 +4854,153 @@ msgstr ""
 msgid "Updated the info_cache for instance"
 msgstr ""
 
-#: nova/compute/manager.py:3688
+#: nova/compute/manager.py:3690
 #, python-format
 msgid ""
 "Found %(migration_count)d unconfirmed migrations older than "
 "%(confirm_window)d seconds"
 msgstr ""
 
-#: nova/compute/manager.py:3693
+#: nova/compute/manager.py:3695
 #, python-format
 msgid "Setting migration %(migration_id)s to error: %(reason)s"
 msgstr ""
 
-#: nova/compute/manager.py:3702
+#: nova/compute/manager.py:3704
 #, python-format
 msgid ""
 "Automatically confirming migration %(migration_id)s for instance "
 "%(instance_uuid)s"
 msgstr ""
 
-#: nova/compute/manager.py:3710
+#: nova/compute/manager.py:3712
 #, python-format
 msgid "Instance %s not found"
 msgstr ""
 
-#: nova/compute/manager.py:3715
+#: nova/compute/manager.py:3717
 msgid "In ERROR state"
 msgstr ""
 
-#: nova/compute/manager.py:3722
+#: nova/compute/manager.py:3724
 #, python-format
 msgid "In states %(vm_state)s/%(task_state)s, not RESIZED/None"
 msgstr ""
 
-#: nova/compute/manager.py:3733
+#: nova/compute/manager.py:3735
 #, python-format
 msgid "Error auto-confirming resize: %s. Will retry later."
 msgstr ""
 
-#: nova/compute/manager.py:3749
+#: nova/compute/manager.py:3751
 #, python-format
 msgid ""
 "Running instance usage audit for host %(host)s from %(begin_time)s to "
 "%(end_time)s. %(number_instances)s instances."
 msgstr ""
 
-#: nova/compute/manager.py:3769
+#: nova/compute/manager.py:3771
 #, python-format
 msgid "Failed to generate usage audit for instance on host %s"
 msgstr ""
 
-#: nova/compute/manager.py:3793
+#: nova/compute/manager.py:3795
 msgid "Updating bandwidth usage cache"
 msgstr ""
 
-#: nova/compute/manager.py:3896
+#: nova/compute/manager.py:3898
 msgid "Updating volume usage cache"
 msgstr ""
 
-#: nova/compute/manager.py:3910
+#: nova/compute/manager.py:3912
 msgid "Updating host status"
 msgstr ""
 
-#: nova/compute/manager.py:3937
+#: nova/compute/manager.py:3939
 #, python-format
 msgid ""
 "Found %(num_db_instances)s in the database and %(num_vm_instances)s on "
 "the hypervisor."
 msgstr ""
 
-#: nova/compute/manager.py:3944 nova/compute/manager.py:3993
+#: nova/compute/manager.py:3946 nova/compute/manager.py:3995
 msgid "During sync_power_state the instance has a pending task. Skip."
 msgstr ""
 
-#: nova/compute/manager.py:3980
+#: nova/compute/manager.py:3982
 #, python-format
 msgid ""
 "During the sync_power process the instance has moved from host %(src)s to"
 " host %(dst)s"
 msgstr ""
 
-#: nova/compute/manager.py:4017
+#: nova/compute/manager.py:4019
 msgid "Instance shutdown by itself. Calling the stop API."
 msgstr ""
 
-#: nova/compute/manager.py:4029 nova/compute/manager.py:4038
-#: nova/compute/manager.py:4068
+#: nova/compute/manager.py:4031 nova/compute/manager.py:4040
+#: nova/compute/manager.py:4070
 msgid "error during stop() in sync_power_state."
 msgstr ""
 
-#: nova/compute/manager.py:4033
+#: nova/compute/manager.py:4035
 msgid "Instance is suspended unexpectedly. Calling the stop API."
 msgstr ""
 
-#: nova/compute/manager.py:4049
+#: nova/compute/manager.py:4051
 msgid "Instance is paused unexpectedly. Ignore."
 msgstr ""
 
-#: nova/compute/manager.py:4055
+#: nova/compute/manager.py:4057
 msgid "Instance is unexpectedly not found. Ignore."
 msgstr ""
 
-#: nova/compute/manager.py:4061
+#: nova/compute/manager.py:4063
 msgid "Instance is not stopped. Calling the stop API."
 msgstr ""
 
-#: nova/compute/manager.py:4077
+#: nova/compute/manager.py:4079
 msgid "Instance is not (soft-)deleted."
 msgstr ""
 
-#: nova/compute/manager.py:4085
+#: nova/compute/manager.py:4087
 msgid "CONF.reclaim_instance_interval <= 0, skipping..."
 msgstr ""
 
-#: nova/compute/manager.py:4098
+#: nova/compute/manager.py:4100
 msgid "Reclaiming deleted instance"
 msgstr ""
 
-#: nova/compute/manager.py:4125
+#: nova/compute/manager.py:4127
 #, python-format
 msgid "Deleting orphan compute node %s"
 msgstr ""
 
-#: nova/compute/manager.py:4135 nova/compute/resource_tracker.py:321
+#: nova/compute/manager.py:4137 nova/compute/resource_tracker.py:321
 #, python-format
 msgid "No service record for host %s"
 msgstr ""
 
-#: nova/compute/manager.py:4175
+#: nova/compute/manager.py:4177
 #, python-format
 msgid ""
 "Detected instance with name label '%s' which is marked as DELETED but "
 "still present on host."
 msgstr ""
 
-#: nova/compute/manager.py:4181
+#: nova/compute/manager.py:4183
 #, python-format
 msgid ""
 "Destroying instance with name label '%s' which is marked as DELETED but "
 "still present on host."
 msgstr ""
 
-#: nova/compute/manager.py:4188
+#: nova/compute/manager.py:4190
 #, python-format
 msgid "Unrecognized value '%s' for CONF.running_deleted_instance_action"
 msgstr ""
 
-#: nova/compute/manager.py:4215
+#: nova/compute/manager.py:4217
 #, python-format
 msgid "Setting instance back to ACTIVE after: %s"
 msgstr ""
@@ -5081,12 +5120,12 @@ msgid ""
 "start before nova-conductor?"
 msgstr ""
 
-#: nova/conductor/manager.py:115
+#: nova/conductor/manager.py:114
 #, python-format
 msgid "Instance update attempted for '%(key)s' on %(instance_uuid)s"
 msgstr ""
 
-#: nova/conductor/manager.py:290
+#: nova/conductor/manager.py:289
 msgid "Invalid block_device_mapping_destroy invocation"
 msgstr ""
 
@@ -5172,7 +5211,7 @@ msgstr ""
 msgid "Failed to notify cells of bw_usage update"
 msgstr ""
 
-#: nova/db/api.py:1690
+#: nova/db/api.py:1689
 msgid "Failed to notify cells of instance fault"
 msgstr ""
 
@@ -5227,7 +5266,7 @@ msgstr ""
 msgid "Change will make usage less than 0 for the following resources: %(unders)s"
 msgstr ""
 
-#: nova/db/sqlalchemy/api.py:4445
+#: nova/db/sqlalchemy/api.py:4444
 #, python-format
 msgid ""
 "Volume(%s) has lower stats then what is in the database. Instance must "
@@ -5842,75 +5881,75 @@ msgstr ""
 msgid "Multiple floating IP pools matches found for name '%s'"
 msgstr ""
 
-#: nova/network/security_group/quantum_driver.py:53
+#: nova/network/security_group/quantum_driver.py:56
 #, python-format
 msgid "Quantum Error creating security group %s"
 msgstr ""
 
-#: nova/network/security_group/quantum_driver.py:71
+#: nova/network/security_group/quantum_driver.py:75
 #, python-format
 msgid "Quantum Error updating security group %s"
 msgstr ""
 
-#: nova/network/security_group/quantum_driver.py:124
+#: nova/network/security_group/quantum_driver.py:129
 #, python-format
 msgid "Quantum security group %s not found"
 msgstr ""
 
-#: nova/network/security_group/quantum_driver.py:127
-#: nova/network/security_group/quantum_driver.py:173
-#: nova/network/security_group/quantum_driver.py:263
+#: nova/network/security_group/quantum_driver.py:132
+#: nova/network/security_group/quantum_driver.py:179
+#: nova/network/security_group/quantum_driver.py:270
 #, python-format
 msgid "Quantum Error: %s"
 msgstr ""
 
-#: nova/network/security_group/quantum_driver.py:147
+#: nova/network/security_group/quantum_driver.py:153
 msgid "Quantum Error getting security groups"
 msgstr ""
 
-#: nova/network/security_group/quantum_driver.py:157
+#: nova/network/security_group/quantum_driver.py:162
 msgid "Security group id should be uuid"
 msgstr ""
 
-#: nova/network/security_group/quantum_driver.py:192
+#: nova/network/security_group/quantum_driver.py:199
 #, python-format
 msgid "Quantum Error getting security group %s"
 msgstr ""
 
-#: nova/network/security_group/quantum_driver.py:196
-#: nova/network/security_group/quantum_driver.py:358
-#: nova/network/security_group/quantum_driver.py:364
-#: nova/network/security_group/quantum_driver.py:391
-#: nova/network/security_group/quantum_driver.py:406
-#: nova/network/security_group/quantum_driver.py:412
-#: nova/network/security_group/quantum_driver.py:441
+#: nova/network/security_group/quantum_driver.py:203
+#: nova/network/security_group/quantum_driver.py:366
+#: nova/network/security_group/quantum_driver.py:373
+#: nova/network/security_group/quantum_driver.py:399
+#: nova/network/security_group/quantum_driver.py:415
+#: nova/network/security_group/quantum_driver.py:422
+#: nova/network/security_group/quantum_driver.py:451
 msgid "Quantum Error:"
 msgstr ""
 
-#: nova/network/security_group/quantum_driver.py:249
+#: nova/network/security_group/quantum_driver.py:257
 #, python-format
 msgid "Quantum Error unable to delete %s"
 msgstr ""
 
-#: nova/network/security_group/quantum_driver.py:260
+#: nova/network/security_group/quantum_driver.py:267
 #, python-format
 msgid "Quantum security group rule %s not found"
 msgstr ""
 
-#: nova/network/security_group/quantum_driver.py:374
+#: nova/network/security_group/quantum_driver.py:382
 #, python-format
 msgid ""
 "Cannot add security group %(name)s to %(instance)s since the port "
 "%(port_id)s does not meet security requirements"
 msgstr ""
 
-#: nova/network/security_group/quantum_driver.py:384
-#: nova/network/security_group/quantum_driver.py:434
+#: nova/network/security_group/quantum_driver.py:392
+#: nova/network/security_group/quantum_driver.py:443
 #, python-format
 msgid "Adding security group %(security_group_id)s to port %(port_id)s"
 msgstr ""
 
-#: nova/network/security_group/quantum_driver.py:444
+#: nova/network/security_group/quantum_driver.py:453
 #, python-format
 msgid ""
 "Security group %(security_group_name)s not assocaited with the instance "
@@ -5936,7 +5975,7 @@ msgstr ""
 msgid "Unable to instantiate unregistered object type %(objtype)s"
 msgstr ""
 
-#: nova/objects/base.py:304
+#: nova/objects/base.py:305
 #, python-format
 msgid "Cannot load '%(attrname)s' in the base class"
 msgstr ""
@@ -6201,11 +6240,6 @@ msgstr ""
 #: nova/openstack/common/notifier/rpc_notifier2.py:51
 #, python-format
 msgid "Could not send notification to %(topic)s. Payload=%(message)s"
-msgstr ""
-
-#: nova/openstack/common/plugin/pluginmanager.py:66
-#, python-format
-msgid "Failed to load plugin %(plug)s: %(exc)s"
 msgstr ""
 
 #: nova/openstack/common/rpc/__init__.py:106
@@ -6644,9 +6678,9 @@ msgstr ""
 msgid "Exception during scheduler.run_instance"
 msgstr ""
 
-#: nova/scheduler/driver.py:63 nova/scheduler/manager.py:225
+#: nova/scheduler/driver.py:63 nova/scheduler/manager.py:226
 #, python-format
-msgid "Setting instance to %(state)s state."
+msgid "Setting instance to %s state."
 msgstr ""
 
 #: nova/scheduler/driver.py:156
@@ -6746,18 +6780,18 @@ msgstr ""
 msgid "Ignoring %(service_name)s service update from %(host)s"
 msgstr ""
 
-#: nova/scheduler/host_manager.py:384
+#: nova/scheduler/host_manager.py:385
 #, python-format
 msgid "Received %(service_name)s service update from %(state_key)s."
 msgstr ""
 
-#: nova/scheduler/host_manager.py:403
+#: nova/scheduler/host_manager.py:405
 #: nova/scheduler/filters/trusted_filter.py:214
 #, python-format
 msgid "No service for compute ID %s"
 msgstr ""
 
-#: nova/scheduler/host_manager.py:425
+#: nova/scheduler/host_manager.py:427
 #, python-format
 msgid "Removing dead compute node %(host)s:%(node)s from scheduler"
 msgstr ""
@@ -6772,9 +6806,9 @@ msgstr ""
 msgid "Could not stat scheduler options file %(filename)s: '%(e)s'"
 msgstr ""
 
-#: nova/scheduler/scheduler_options.py:79
+#: nova/scheduler/scheduler_options.py:80
 #, python-format
-msgid "Could not decode scheduler options: '%(e)s'"
+msgid "Could not decode scheduler options: '%s'"
 msgstr ""
 
 #: nova/scheduler/filters/affinity_filter.py:95
@@ -6798,7 +6832,7 @@ msgstr ""
 
 #: nova/scheduler/filters/aggregate_multitenancy_isolation.py:44
 #, python-format
-msgid "%(host_state)s fails tenant id on aggregate"
+msgid "%s fails tenant id on aggregate"
 msgstr ""
 
 #: nova/scheduler/filters/compute_capabilities_filter.py:58
@@ -7075,42 +7109,42 @@ msgstr ""
 msgid "Quota exceeded for cores: Requested 2, but already used 9 of 10 cores"
 msgstr ""
 
-#: nova/tests/compute/test_compute.py:1130
-#: nova/tests/compute/test_compute.py:1148
-#: nova/tests/compute/test_compute.py:1199
-#: nova/tests/compute/test_compute.py:1226
-#: nova/tests/compute/test_compute.py:1272
-#: nova/tests/compute/test_compute.py:4124
+#: nova/tests/compute/test_compute.py:1133
+#: nova/tests/compute/test_compute.py:1151
+#: nova/tests/compute/test_compute.py:1202
+#: nova/tests/compute/test_compute.py:1229
+#: nova/tests/compute/test_compute.py:1276
+#: nova/tests/compute/test_compute.py:4129
 #, python-format
 msgid "Running instances: %s"
 msgstr ""
 
-#: nova/tests/compute/test_compute.py:1136
-#: nova/tests/compute/test_compute.py:1171
-#: nova/tests/compute/test_compute.py:1214
-#: nova/tests/compute/test_compute.py:1244
+#: nova/tests/compute/test_compute.py:1139
+#: nova/tests/compute/test_compute.py:1174
+#: nova/tests/compute/test_compute.py:1217
+#: nova/tests/compute/test_compute.py:1247
 #, python-format
 msgid "After terminating instances: %s"
 msgstr ""
 
-#: nova/tests/compute/test_compute.py:1814
+#: nova/tests/compute/test_compute.py:1818
 msgid "Internal error"
 msgstr ""
 
-#: nova/tests/compute/test_compute.py:4135
+#: nova/tests/compute/test_compute.py:4140
 #, python-format
 msgid "After force-killing instances: %s"
 msgstr ""
 
-#: nova/tests/compute/test_compute.py:4635
+#: nova/tests/compute/test_compute.py:4651
 msgid "wrong host/node"
 msgstr ""
 
-#: nova/tests/compute/test_compute.py:9437
+#: nova/tests/compute/test_compute.py:9549
 msgid "spawn error"
 msgstr ""
 
-#: nova/tests/db/test_migrations.py:1801
+#: nova/tests/db/test_migrations.py:1808
 #, python-format
 msgid ""
 "The following migrations are missing a downgrade:\n"
@@ -7237,12 +7271,12 @@ msgid ""
 "left to copy"
 msgstr ""
 
-#: nova/tests/virt/xenapi/test_xenapi.py:899
+#: nova/tests/virt/xenapi/test_xenapi.py:905
 #, python-format
 msgid "Creating files in %s to simulate guest agent"
 msgstr ""
 
-#: nova/tests/virt/xenapi/test_xenapi.py:910
+#: nova/tests/virt/xenapi/test_xenapi.py:916
 #, python-format
 msgid "Removing simulated guest agent files in %s"
 msgstr ""
@@ -7279,7 +7313,7 @@ msgstr ""
 msgid "Key '%(key)s' not in instances '%(inst)s'"
 msgstr ""
 
-#: nova/virt/firewall.py:189 nova/virt/libvirt/firewall.py:306
+#: nova/virt/firewall.py:189 nova/virt/libvirt/firewall.py:307
 msgid "Attempted to unfilter instance which is not filtered"
 msgstr ""
 
@@ -7333,37 +7367,37 @@ msgstr ""
 msgid "Baremetal node id not supplied to driver for %r"
 msgstr ""
 
-#: nova/virt/baremetal/driver.py:257
+#: nova/virt/baremetal/driver.py:258
 #, python-format
 msgid "Error deploying instance %(instance)s on baremetal node %(node)s."
 msgstr ""
 
-#: nova/virt/baremetal/driver.py:284
+#: nova/virt/baremetal/driver.py:285
 #, python-format
 msgid "Baremetal power manager failed to restart node for instance %r"
 msgstr ""
 
-#: nova/virt/baremetal/driver.py:295
+#: nova/virt/baremetal/driver.py:296
 #, python-format
 msgid "Destroy called on non-existing instance %s"
 msgstr ""
 
-#: nova/virt/baremetal/driver.py:313
+#: nova/virt/baremetal/driver.py:314
 #, python-format
 msgid "Error from baremetal driver during destroy: %s"
 msgstr ""
 
-#: nova/virt/baremetal/driver.py:318
+#: nova/virt/baremetal/driver.py:319
 #, python-format
 msgid "Error while recording destroy failure in baremetal database: %s"
 msgstr ""
 
-#: nova/virt/baremetal/driver.py:328
+#: nova/virt/baremetal/driver.py:329
 #, python-format
 msgid "Baremetal power manager failed to stop node for instance %r"
 msgstr ""
 
-#: nova/virt/baremetal/driver.py:340
+#: nova/virt/baremetal/driver.py:341
 #, python-format
 msgid "Baremetal power manager failed to start node for instance %r"
 msgstr ""
@@ -7411,85 +7445,85 @@ msgstr ""
 msgid "Activate node called, but node %s is already active"
 msgstr ""
 
-#: nova/virt/baremetal/pxe.py:92
+#: nova/virt/baremetal/pxe.py:109
 #, python-format
 msgid "Building PXE config for deployment %s."
 msgstr ""
 
-#: nova/virt/baremetal/pxe.py:231
+#: nova/virt/baremetal/pxe.py:228
 #, python-format
 msgid ""
 "Can not activate PXE bootloader. The following boot parameters were not "
 "passed to baremetal driver: %s"
 msgstr ""
 
-#: nova/virt/baremetal/pxe.py:255 nova/virt/baremetal/tilera.py:170
+#: nova/virt/baremetal/pxe.py:252 nova/virt/baremetal/tilera.py:146
 #, python-format
 msgid "Fetching kernel and ramdisk for instance %s"
 msgstr ""
 
-#: nova/virt/baremetal/pxe.py:287 nova/virt/baremetal/tilera.py:201
+#: nova/virt/baremetal/pxe.py:284 nova/virt/baremetal/tilera.py:177
 #, python-format
 msgid "Fetching image %(ami)s for instance %(name)s"
 msgstr ""
 
-#: nova/virt/baremetal/pxe.py:327 nova/virt/baremetal/tilera.py:237
+#: nova/virt/baremetal/pxe.py:324 nova/virt/baremetal/tilera.py:213
 #, python-format
 msgid "Injecting files into image for instance %(name)s"
 msgstr ""
 
-#: nova/virt/baremetal/pxe.py:459 nova/virt/baremetal/tilera.py:356
+#: nova/virt/baremetal/pxe.py:457 nova/virt/baremetal/tilera.py:332
 #, python-format
 msgid "Node associated with another instance while waiting for deploy of %s"
 msgstr ""
 
-#: nova/virt/baremetal/pxe.py:466
+#: nova/virt/baremetal/pxe.py:464
 #, python-format
 msgid "PXE deploy started for instance %s"
 msgstr ""
 
-#: nova/virt/baremetal/pxe.py:471
+#: nova/virt/baremetal/pxe.py:469
 #, python-format
 msgid "PXE deploy completed for instance %s"
 msgstr ""
 
-#: nova/virt/baremetal/pxe.py:475
+#: nova/virt/baremetal/pxe.py:473
 #, python-format
 msgid "PXE deploy failed for instance %s"
 msgstr ""
 
-#: nova/virt/baremetal/pxe.py:477 nova/virt/baremetal/tilera.py:381
+#: nova/virt/baremetal/pxe.py:475 nova/virt/baremetal/tilera.py:357
 #, python-format
 msgid "Baremetal node deleted while waiting for deployment of instance %s"
 msgstr ""
 
-#: nova/virt/baremetal/pxe.py:482
+#: nova/virt/baremetal/pxe.py:480
 #, python-format
 msgid "Timeout reached while waiting for PXE deploy of instance %s"
 msgstr ""
 
-#: nova/virt/baremetal/tilera.py:145
+#: nova/virt/baremetal/tilera.py:121
 #, python-format
 msgid ""
 "Can not activate Tilera bootloader. The following boot parameters were "
 "not passed to baremetal driver: %s"
 msgstr ""
 
-#: nova/virt/baremetal/tilera.py:362
+#: nova/virt/baremetal/tilera.py:338
 #, python-format
 msgid "Tilera deploy started for instance %s"
 msgstr ""
 
-#: nova/virt/baremetal/tilera.py:368
+#: nova/virt/baremetal/tilera.py:344
 #, python-format
 msgid "Tilera deploy completed for instance %s"
 msgstr ""
 
-#: nova/virt/baremetal/tilera.py:376
+#: nova/virt/baremetal/tilera.py:352
 msgid "Node is unknown error state."
 msgstr ""
 
-#: nova/virt/baremetal/tilera.py:379
+#: nova/virt/baremetal/tilera.py:355
 #, python-format
 msgid "Tilera deploy failed for instance %s"
 msgstr ""
@@ -7586,12 +7620,12 @@ msgstr ""
 msgid "virtual_power_host_pass/key not set. Can not Start"
 msgstr ""
 
-#: nova/virt/baremetal/volume_driver.py:122
+#: nova/virt/baremetal/volume_driver.py:123
 #, python-format
 msgid "baremetal driver was unable to delete tid %s"
 msgstr ""
 
-#: nova/virt/baremetal/volume_driver.py:186
+#: nova/virt/baremetal/volume_driver.py:187
 #, python-format
 msgid "Could not determine iscsi initiator name for instance %s"
 msgstr ""
@@ -7601,7 +7635,7 @@ msgstr ""
 msgid "No fixed PXE IP is associated to %s"
 msgstr ""
 
-#: nova/virt/baremetal/volume_driver.py:259
+#: nova/virt/baremetal/volume_driver.py:260
 #, python-format
 msgid "detach volume could not find tid for %s"
 msgstr ""
@@ -7615,22 +7649,18 @@ msgstr ""
 msgid "Failed to associate instance %(i_uuid)s to baremetal node %(n_uuid)s."
 msgstr ""
 
-#: nova/virt/baremetal/db/sqlalchemy/api.py:329
-msgid "No more PXE IPs available"
-msgstr ""
-
-#: nova/virt/baremetal/db/sqlalchemy/api.py:351
-#: nova/virt/baremetal/db/sqlalchemy/api.py:393
+#: nova/virt/baremetal/db/sqlalchemy/api.py:246
+#: nova/virt/baremetal/db/sqlalchemy/api.py:288
 #, python-format
 msgid "Baremetal interface %s not found"
 msgstr ""
 
-#: nova/virt/baremetal/db/sqlalchemy/api.py:403
+#: nova/virt/baremetal/db/sqlalchemy/api.py:298
 #, python-format
 msgid "Baremetal interface %s already in use"
 msgstr ""
 
-#: nova/virt/baremetal/db/sqlalchemy/api.py:417
+#: nova/virt/baremetal/db/sqlalchemy/api.py:311
 #, python-format
 msgid "Baremetal virtual interface %s not found"
 msgstr ""
@@ -7743,12 +7773,12 @@ msgid ""
 msgstr ""
 
 #: nova/virt/disk/mount/api.py:45 nova/virt/disk/mount/api.py:61
-#: nova/virt/disk/vfs/localfs.py:67
+#: nova/virt/disk/vfs/localfs.py:68
 msgid "Using LoopMount"
 msgstr ""
 
 #: nova/virt/disk/mount/api.py:50 nova/virt/disk/mount/api.py:66
-#: nova/virt/disk/vfs/localfs.py:72
+#: nova/virt/disk/vfs/localfs.py:73
 msgid "Using NbdMount"
 msgstr ""
 
@@ -8001,12 +8031,12 @@ msgstr ""
 msgid "chown uid=%(uid)d gid=%(gid)s"
 msgstr ""
 
-#: nova/virt/disk/vfs/localfs.py:46
+#: nova/virt/disk/vfs/localfs.py:47
 #, python-format
 msgid "File path %s not valid"
 msgstr ""
 
-#: nova/virt/disk/vfs/localfs.py:80
+#: nova/virt/disk/vfs/localfs.py:82
 #, python-format
 msgid "Failed to mount image %(ex)s)"
 msgstr ""
@@ -8064,7 +8094,7 @@ msgstr ""
 msgid "get_available_resource called"
 msgstr ""
 
-#: nova/virt/hyperv/hostops.py:135 nova/virt/libvirt/driver.py:3943
+#: nova/virt/hyperv/hostops.py:135 nova/virt/libvirt/driver.py:3968
 #: nova/virt/xenapi/host.py:148
 msgid "Updating host stats"
 msgstr ""
@@ -8416,12 +8446,12 @@ msgstr ""
 msgid "Using config drive for instance: %s"
 msgstr ""
 
-#: nova/virt/hyperv/vmops.py:227 nova/virt/libvirt/driver.py:1924
+#: nova/virt/hyperv/vmops.py:227 nova/virt/libvirt/driver.py:1933
 #, python-format
 msgid "Creating config drive at %(path)s"
 msgstr ""
 
-#: nova/virt/hyperv/vmops.py:235 nova/virt/libvirt/driver.py:1931
+#: nova/virt/hyperv/vmops.py:235 nova/virt/libvirt/driver.py:1940
 #, python-format
 msgid "Creating config drive failed with error: %s"
 msgstr ""
@@ -8579,7 +8609,7 @@ msgstr ""
 msgid "Detaching physical disk from instance: %s"
 msgstr ""
 
-#: nova/virt/hyperv/volumeops.py:186 nova/virt/libvirt/driver.py:956
+#: nova/virt/hyperv/volumeops.py:186 nova/virt/libvirt/driver.py:959
 msgid "Could not determine iscsi initiator name"
 msgstr ""
 
@@ -8618,236 +8648,236 @@ msgstr ""
 msgid "Invalid cachemode %(cache_mode)s specified for disk type %(disk_type)s."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:564
+#: nova/virt/libvirt/driver.py:565
 #, python-format
 msgid "Nova requires libvirt version %(major)i.%(minor)i.%(micro)i or greater."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:578
+#: nova/virt/libvirt/driver.py:579
 #, python-format
 msgid "Connecting to libvirt: %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:596
+#: nova/virt/libvirt/driver.py:597
 #, python-format
 msgid "URI %s does not support events"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:606
+#: nova/virt/libvirt/driver.py:607
 #, python-format
 msgid "URI %s does not support connection events"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:616
+#: nova/virt/libvirt/driver.py:617
 #, python-format
 msgid "Connection to libvirt lost: %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:629
+#: nova/virt/libvirt/driver.py:630
 msgid "Connection to libvirt broke"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:651 nova/virt/libvirt/driver.py:654
+#: nova/virt/libvirt/driver.py:652 nova/virt/libvirt/driver.py:655
 #, python-format
 msgid "Can not handle authentication request for %d credentials"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:672
+#: nova/virt/libvirt/driver.py:673
 #, python-format
 msgid "Connection to libvirt failed: %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:781
+#: nova/virt/libvirt/driver.py:782
 #, python-format
 msgid "Error from libvirt during destroy. Code=%(errcode)s Error=%(e)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:796
+#: nova/virt/libvirt/driver.py:798
 msgid "During wait destroy, instance disappeared."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:801
+#: nova/virt/libvirt/driver.py:803
 msgid "Instance destroyed successfully."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:811
+#: nova/virt/libvirt/driver.py:813
 msgid "Instance may be started again."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:821
+#: nova/virt/libvirt/driver.py:823
 msgid "Going to destroy instance again."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:840
+#: nova/virt/libvirt/driver.py:842
 msgid "Error from libvirt during undefineFlags. Retrying with undefine"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:856
+#: nova/virt/libvirt/driver.py:858
 #, python-format
 msgid "Error from libvirt during undefine. Code=%(errcode)s Error=%(e)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:876
+#: nova/virt/libvirt/driver.py:878
 msgid "Instance may be still running, destroy it again."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:882
+#: nova/virt/libvirt/driver.py:884
 #, python-format
 msgid "Error from libvirt during unfilter. Code=%(errcode)s Error=%(e)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:910
+#: nova/virt/libvirt/driver.py:913
 #, python-format
-msgid "Deleting instance files %(target)s"
+msgid "Deleting instance files %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:919
+#: nova/virt/libvirt/driver.py:922
 #, python-format
 msgid "Failed to cleanup directory %(target)s: %(e)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:962
+#: nova/virt/libvirt/driver.py:965
 msgid "Could not determine fibre channel world wide node names"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:969
+#: nova/virt/libvirt/driver.py:972
 msgid "Could not determine fibre channel world wide port names"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1093
+#: nova/virt/libvirt/driver.py:1096
 msgid "During detach_volume, instance disappeared."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1117
+#: nova/virt/libvirt/driver.py:1120
 msgid "attaching network adapter failed."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1137
+#: nova/virt/libvirt/driver.py:1140
 msgid "During detach_interface, instance disappeared."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1141
+#: nova/virt/libvirt/driver.py:1144
 msgid "detaching network adapter failed."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1227
+#: nova/virt/libvirt/driver.py:1242
 msgid "Beginning live snapshot process"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1230
+#: nova/virt/libvirt/driver.py:1245
 msgid "Beginning cold snapshot process"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1259
+#: nova/virt/libvirt/driver.py:1274
 msgid "Snapshot extracted, beginning image upload"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1271
+#: nova/virt/libvirt/driver.py:1286
 msgid "Snapshot image upload complete"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1344
+#: nova/virt/libvirt/driver.py:1352
 msgid "Instance soft rebooted successfully."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1348
+#: nova/virt/libvirt/driver.py:1356
 msgid "Failed to soft reboot instance."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1383
+#: nova/virt/libvirt/driver.py:1391
 msgid "Instance shutdown successfully."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1391
+#: nova/virt/libvirt/driver.py:1399
 msgid "Instance may have been rebooted during soft reboot, so return now."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1439
+#: nova/virt/libvirt/driver.py:1447
 msgid "Instance rebooted successfully."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1585
+#: nova/virt/libvirt/driver.py:1593
 msgid "Instance is running"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1592 nova/virt/powervm/operator.py:220
+#: nova/virt/libvirt/driver.py:1600 nova/virt/powervm/operator.py:220
 msgid "Instance spawned successfully."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1608
+#: nova/virt/libvirt/driver.py:1616
 #, python-format
 msgid "data: %(data)r, fpath: %(fpath)r"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1645 nova/virt/libvirt/driver.py:1671
+#: nova/virt/libvirt/driver.py:1654 nova/virt/libvirt/driver.py:1680
 #, python-format
 msgid "Truncated console log returned, %d bytes ignored"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1660 nova/virt/xenapi/vmops.py:1442
+#: nova/virt/libvirt/driver.py:1669 nova/virt/xenapi/vmops.py:1446
 msgid "Guest does not have a console available"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1729
+#: nova/virt/libvirt/driver.py:1738
 #, python-format
 msgid "Path '%(path)s' supports direct I/O"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1733
+#: nova/virt/libvirt/driver.py:1742
 #, python-format
 msgid "Path '%(path)s' does not support direct I/O: '%(ex)s'"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1738 nova/virt/libvirt/driver.py:1743
+#: nova/virt/libvirt/driver.py:1747 nova/virt/libvirt/driver.py:1752
 #, python-format
 msgid "Error on '%(path)s' while checking direct I/O: '%(ex)s'"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1814
+#: nova/virt/libvirt/driver.py:1823
 msgid "Creating image"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1915
+#: nova/virt/libvirt/driver.py:1924
 msgid "Using config drive"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1964
+#: nova/virt/libvirt/driver.py:1977
 #, python-format
 msgid "Injecting %(inj)s into image %(img_id)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1974
+#: nova/virt/libvirt/driver.py:1989
 #, python-format
 msgid "Error injecting data into image %(img_id)s (%(e)s)"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2033
+#: nova/virt/libvirt/driver.py:2049
 #, python-format
 msgid ""
 "Config requested an explicit CPU model, but the current libvirt "
 "hypervisor '%s' does not support selecting CPU models"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2039
+#: nova/virt/libvirt/driver.py:2055
 msgid "Config requested a custom CPU model, but no model name was provided"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2043
+#: nova/virt/libvirt/driver.py:2059
 msgid "A CPU model name should not be set when a host CPU model is requested"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2047
+#: nova/virt/libvirt/driver.py:2063
 #, python-format
 msgid "CPU mode '%(mode)s' model '%(model)s' was chosen"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2063
+#: nova/virt/libvirt/driver.py:2079
 msgid ""
 "Passthrough of the host CPU was requested but this libvirt version does "
 "not support this feature"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2387
+#: nova/virt/libvirt/driver.py:2403
 #, python-format
 msgid ""
 "Start to_xml instance=%(instance)s network_info=%(network_info)s "
@@ -8855,76 +8885,76 @@ msgid ""
 "rescue=%(rescue)sblock_device_info=%(block_device_info)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2402
+#: nova/virt/libvirt/driver.py:2420
 #, python-format
 msgid "End to_xml instance=%(instance)s xml=%(xml)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2419
+#: nova/virt/libvirt/driver.py:2438
 #, python-format
 msgid ""
 "Error from libvirt while looking up %(instance_id)s: [Error Code "
 "%(error_code)s] %(ex)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2440
+#: nova/virt/libvirt/driver.py:2459
 #, python-format
 msgid ""
 "Error from libvirt while looking up %(instance_name)s: [Error Code "
 "%(error_code)s] %(ex)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2540 nova/virt/libvirt/driver.py:2731
-#: nova/virt/libvirt/driver.py:2757
+#: nova/virt/libvirt/driver.py:2562 nova/virt/libvirt/driver.py:2753
+#: nova/virt/libvirt/driver.py:2779
 #, python-format
 msgid "libvirt can't find a domain with id: %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2622 nova/virt/libvirt/driver.py:2626
+#: nova/virt/libvirt/driver.py:2644 nova/virt/libvirt/driver.py:2648
 #, python-format
 msgid "Invalid range expression %r"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2635
+#: nova/virt/libvirt/driver.py:2657
 #, python-format
 msgid "Invalid exclusion expression %r"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2642
+#: nova/virt/libvirt/driver.py:2664
 #, python-format
 msgid "Invalid inclusion expression %r"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2647
+#: nova/virt/libvirt/driver.py:2669
 #, python-format
 msgid "No CPUs available after parsing %r"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2664
+#: nova/virt/libvirt/driver.py:2686
 msgid ""
 "Cannot get the number of cpu, because this function is not implemented "
 "for this platform. "
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2674
+#: nova/virt/libvirt/driver.py:2696
 msgid "Invalid vcpu_pin_set config, out of hypervisor cpu range."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2726
+#: nova/virt/libvirt/driver.py:2748
 #, python-format
 msgid "couldn't obtain the vpu count from domain id: %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2798
+#: nova/virt/libvirt/driver.py:2820
 msgid "libvirt version is too old (does not support getVersion)"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2883
+#: nova/virt/libvirt/driver.py:2905
 #, python-format
 msgid "Trying to get stats for the volume %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2896
+#: nova/virt/libvirt/driver.py:2918
 #, python-format
 msgid ""
 "Got volume usage stats for the volume=%(volume)s, instance=%(instance)s, "
@@ -8932,50 +8962,50 @@ msgid ""
 "wr_bytes=%(wr_bytes)d"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2914
+#: nova/virt/libvirt/driver.py:2936
 #, python-format
 msgid ""
 "Getting block stats failed, device might have been detached. "
 "Instance=%(instance_name)s Disk=%(disk)s Code=%(errcode)s Error=%(e)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2919
+#: nova/virt/libvirt/driver.py:2942
 #, python-format
 msgid ""
 "Could not find domain in libvirt for instance %s. Cannot get block stats "
 "for device"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2996
+#: nova/virt/libvirt/driver.py:3019
 #, python-format
 msgid ""
 "Creating tmpfile %s to verify with other compute node that the instance "
 "is on the same shared storage."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3077
+#: nova/virt/libvirt/driver.py:3101
 msgid "Block migration can not be used with shared storage."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3085
+#: nova/virt/libvirt/driver.py:3109
 msgid "Live migration can not be used without shared storage."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3130
+#: nova/virt/libvirt/driver.py:3153
 #, python-format
 msgid ""
 "Unable to migrate %(instance_uuid)s: Disk of instance is too "
 "large(available on destination host:%(available)s < need:%(necessary)s)"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3155
+#: nova/virt/libvirt/driver.py:3181
 #, python-format
 msgid ""
 "Instance launched has CPU info:\n"
 "%s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3167
+#: nova/virt/libvirt/driver.py:3193
 #, python-format
 msgid ""
 "CPU doesn't have compatibility.\n"
@@ -8985,69 +9015,69 @@ msgid ""
 "Refer to %(u)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3184
+#: nova/virt/libvirt/driver.py:3210
 #, python-format
 msgid ""
 "Creating tmpfile %s to notify to other compute nodes that they should "
 "mount the same storage."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3234
+#: nova/virt/libvirt/driver.py:3260
 #, python-format
 msgid "The firewall filter for %s does not exist"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3306
+#: nova/virt/libvirt/driver.py:3332
 #, python-format
-msgid "Live Migration failure: %(e)s"
+msgid "Live Migration failure: %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3408
+#: nova/virt/libvirt/driver.py:3434
 #, python-format
 msgid "plug_vifs() failed %(cnt)d. Retry up to %(max_retry)d."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3520
+#: nova/virt/libvirt/driver.py:3546
 #, python-format
 msgid ""
 "Error from libvirt while getting description of %(instance_name)s: [Error"
 " Code %(error_code)s] %(ex)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3537
+#: nova/virt/libvirt/driver.py:3566
 #, python-format
-msgid "skipping %(path)s since it looks like volume"
+msgid "skipping %s since it looks like volume"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3542
+#: nova/virt/libvirt/driver.py:3570
 #, python-format
-msgid "skipping disk for %(instance_name)s as it does not have a path"
+msgid "skipping disk for %s as it does not have a path"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3583
+#: nova/virt/libvirt/driver.py:3610
 #, python-format
 msgid "Getting disk size of %(i_name)s: %(e)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3653
+#: nova/virt/libvirt/driver.py:3680
 msgid "Starting migrate_disk_and_power_off"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3721
+#: nova/virt/libvirt/driver.py:3748
 msgid "Instance running successfully."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3727
+#: nova/virt/libvirt/driver.py:3754
 msgid "Starting finish_migration"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3792
+#: nova/virt/libvirt/driver.py:3819
 msgid "Starting finish_revert_migration"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3915
+#: nova/virt/libvirt/driver.py:3942
 #, python-format
-msgid "Checking instance files accessability%(instance_path)s"
+msgid "Checking instance files accessability %s"
 msgstr ""
 
 #: nova/virt/libvirt/firewall.py:51
@@ -9066,15 +9096,15 @@ msgstr ""
 
 #: nova/virt/libvirt/firewall.py:248
 #, python-format
-msgid "The nwfilter(%(instance_filter_name)s) is not found."
+msgid "The nwfilter(%s) is not found."
 msgstr ""
 
-#: nova/virt/libvirt/firewall.py:271
+#: nova/virt/libvirt/firewall.py:270
 #, python-format
 msgid "The nwfilter(%(instance_filter_name)s) for%(name)s is not found."
 msgstr ""
 
-#: nova/virt/libvirt/firewall.py:287
+#: nova/virt/libvirt/firewall.py:288
 msgid "iptables firewall: Setup Basic Filtering"
 msgstr ""
 
@@ -9265,47 +9295,47 @@ msgstr ""
 msgid "Can't retrieve root device path from instance libvirt configuration"
 msgstr ""
 
-#: nova/virt/libvirt/vif.py:265 nova/virt/libvirt/vif.py:386
-#: nova/virt/libvirt/vif.py:473
+#: nova/virt/libvirt/vif.py:265 nova/virt/libvirt/vif.py:387
+#: nova/virt/libvirt/vif.py:475
 #, python-format
 msgid ""
 "vif_type=%(vif_type)s instance=%(instance)s network=%(network)s "
 "mapping=%(mapping)s"
 msgstr ""
 
-#: nova/virt/libvirt/vif.py:271 nova/virt/libvirt/vif.py:392
-#: nova/virt/libvirt/vif.py:479
+#: nova/virt/libvirt/vif.py:272 nova/virt/libvirt/vif.py:394
+#: nova/virt/libvirt/vif.py:482
 msgid "vif_type parameter must be present for this vif_driver implementation"
 msgstr ""
 
-#: nova/virt/libvirt/vif.py:292 nova/virt/libvirt/vif.py:405
-#: nova/virt/libvirt/vif.py:492
+#: nova/virt/libvirt/vif.py:293 nova/virt/libvirt/vif.py:407
+#: nova/virt/libvirt/vif.py:495
 #, python-format
 msgid "Unexpected vif_type=%s"
 msgstr ""
 
-#: nova/virt/libvirt/vif.py:304
+#: nova/virt/libvirt/vif.py:305
 #, python-format
 msgid "Ensuring vlan %(vlan)s and bridge %(bridge)s"
 msgstr ""
 
-#: nova/virt/libvirt/vif.py:314
+#: nova/virt/libvirt/vif.py:315
 #, python-format
 msgid "Ensuring bridge %s"
 msgstr ""
 
-#: nova/virt/libvirt/vif.py:422 nova/virt/libvirt/vif.py:451
+#: nova/virt/libvirt/vif.py:424 nova/virt/libvirt/vif.py:453
 msgid "Failed while unplugging vif"
 msgstr ""
 
-#: nova/virt/libvirt/vif.py:502
+#: nova/virt/libvirt/vif.py:505
 msgid ""
 "The LibvirtBridgeDriver VIF driver is now deprecated and will be removed "
 "in the next release. Please use the LibvirtGenericVIFDriver VIF driver, "
 "together with a network plugin that reports the 'vif_type' attribute"
 msgstr ""
 
-#: nova/virt/libvirt/vif.py:529
+#: nova/virt/libvirt/vif.py:532
 msgid ""
 "The LibvirtOpenVswitchDriver VIF driver is now deprecated and will be "
 "removed in the next release. Please use the LibvirtGenericVIFDriver VIF "
@@ -9313,7 +9343,7 @@ msgid ""
 "attribute"
 msgstr ""
 
-#: nova/virt/libvirt/vif.py:558
+#: nova/virt/libvirt/vif.py:561
 msgid ""
 "The LibvirtHybridOVSBridgeDriver VIF driver is now deprecated and will be"
 " removed in the next release. Please use the LibvirtGenericVIFDriver VIF "
@@ -9321,7 +9351,7 @@ msgid ""
 "attribute"
 msgstr ""
 
-#: nova/virt/libvirt/vif.py:587
+#: nova/virt/libvirt/vif.py:590
 msgid ""
 "The LibvirtOpenVswitchVirtualPortDriver VIF driver is now deprecated and "
 "will be removed in the next release. Please use the "
@@ -9329,7 +9359,7 @@ msgid ""
 "reports the 'vif_type' attribute"
 msgstr ""
 
-#: nova/virt/libvirt/vif.py:614
+#: nova/virt/libvirt/vif.py:617
 msgid ""
 "The QuantumLinuxBridgeVIFDriver VIF driver is now deprecated and will be "
 "removed in the next release. Please use the LibvirtGenericVIFDriver VIF "
@@ -9726,34 +9756,34 @@ msgstr ""
 msgid "%(text)s: _db_content => %(content)s"
 msgstr ""
 
-#: nova/virt/vmwareapi/fake.py:133
+#: nova/virt/vmwareapi/fake.py:140
 #, python-format
 msgid "Property %(attr)s not set for the managed object %(name)s"
 msgstr ""
 
-#: nova/virt/vmwareapi/fake.py:494
+#: nova/virt/vmwareapi/fake.py:540
 msgid "There is no VM registered"
 msgstr ""
 
-#: nova/virt/vmwareapi/fake.py:496 nova/virt/vmwareapi/fake.py:673
+#: nova/virt/vmwareapi/fake.py:542 nova/virt/vmwareapi/fake.py:719
 #, python-format
 msgid "Virtual Machine with ref %s is not there"
 msgstr ""
 
-#: nova/virt/vmwareapi/fake.py:559
+#: nova/virt/vmwareapi/fake.py:605
 #, python-format
 msgid "Logging out a session that is invalid or already logged out: %s"
 msgstr ""
 
-#: nova/virt/vmwareapi/fake.py:574
+#: nova/virt/vmwareapi/fake.py:620
 msgid "Session is faulty"
 msgstr ""
 
-#: nova/virt/vmwareapi/fake.py:577
+#: nova/virt/vmwareapi/fake.py:623
 msgid "Session Invalid"
 msgstr ""
 
-#: nova/virt/vmwareapi/fake.py:670
+#: nova/virt/vmwareapi/fake.py:716
 msgid "No Virtual Machine has been registered yet"
 msgstr ""
 
@@ -10130,7 +10160,7 @@ msgstr ""
 msgid "Migrated VM to host %s"
 msgstr ""
 
-#: nova/virt/vmwareapi/vmops.py:1019 nova/virt/xenapi/vmops.py:1386
+#: nova/virt/vmwareapi/vmops.py:1019 nova/virt/xenapi/vmops.py:1390
 #, python-format
 msgid "Found %(instance_count)d hung reboots older than %(timeout)d seconds"
 msgstr ""
@@ -10288,106 +10318,87 @@ msgstr ""
 msgid "Mountpoint %(mountpoint)s detached from instance %(instance_name)s"
 msgstr ""
 
-#: nova/virt/xenapi/agent.py:101 nova/virt/xenapi/vmops.py:1640
+#: nova/virt/xenapi/agent.py:102 nova/virt/xenapi/vmops.py:1644
 #, python-format
 msgid "TIMEOUT: The call to %(method)s timed out. args=%(args)r"
 msgstr ""
 
-#: nova/virt/xenapi/agent.py:106 nova/virt/xenapi/vmops.py:1645
+#: nova/virt/xenapi/agent.py:107 nova/virt/xenapi/vmops.py:1649
 #, python-format
 msgid ""
 "NOT IMPLEMENTED: The call to %(method)s is not supported by the agent. "
 "args=%(args)r"
 msgstr ""
 
-#: nova/virt/xenapi/agent.py:111 nova/virt/xenapi/vmops.py:1650
+#: nova/virt/xenapi/agent.py:112 nova/virt/xenapi/vmops.py:1654
 #, python-format
 msgid "The call to %(method)s returned an error: %(e)s. args=%(args)r"
 msgstr ""
 
-#: nova/virt/xenapi/agent.py:123
+#: nova/virt/xenapi/agent.py:122
 #, python-format
 msgid ""
 "The agent call to %(method)s returned an invalid response: %(ret)r. "
 "args=%(args)r"
 msgstr ""
 
-#: nova/virt/xenapi/agent.py:134
+#: nova/virt/xenapi/agent.py:129
 #, python-format
-msgid "Failed to query agent version: %r"
+msgid "The agent call to %(method)s returned an an error: %(ret)r. args=%(args)r"
 msgstr ""
 
-#: nova/virt/xenapi/agent.py:153
+#: nova/virt/xenapi/agent.py:155
 msgid "Querying agent version"
 msgstr ""
 
-#: nova/virt/xenapi/agent.py:167
-msgid "Reached maximum time attempting to query agent version"
-msgstr ""
-
-#: nova/virt/xenapi/agent.py:175
+#: nova/virt/xenapi/agent.py:174
 #, python-format
 msgid "Updating agent to %s"
 msgstr ""
 
 #: nova/virt/xenapi/agent.py:183
 #, python-format
-msgid "Failed to update agent: %r"
+msgid "Unable to update the agent due to: %(exc)s"
 msgstr ""
 
-#: nova/virt/xenapi/agent.py:197
+#: nova/virt/xenapi/agent.py:215
 msgid "Setting admin password"
 msgstr ""
 
-#: nova/virt/xenapi/agent.py:208 nova/virt/xenapi/agent.py:228
-#, python-format
-msgid "Failed to exchange keys: %r"
-msgstr ""
-
-#: nova/virt/xenapi/agent.py:249
+#: nova/virt/xenapi/agent.py:231
 msgid "Skipping setting of ssh key for Windows."
 msgstr ""
 
-#: nova/virt/xenapi/agent.py:264
+#: nova/virt/xenapi/agent.py:247
 #, python-format
 msgid "Injecting file path: %r"
 msgstr ""
 
-#: nova/virt/xenapi/agent.py:277
-#, python-format
-msgid "Failed to inject file: %r"
-msgstr ""
-
-#: nova/virt/xenapi/agent.py:284
+#: nova/virt/xenapi/agent.py:257
 msgid "Resetting network"
 msgstr ""
 
-#: nova/virt/xenapi/agent.py:290
-#, python-format
-msgid "Failed to reset network: %r"
-msgstr ""
-
-#: nova/virt/xenapi/agent.py:313
+#: nova/virt/xenapi/agent.py:279
 msgid ""
 "XenServer tools installed in this image are capable of network injection."
 "  Networking files will not bemanipulated"
 msgstr ""
 
-#: nova/virt/xenapi/agent.py:321
+#: nova/virt/xenapi/agent.py:287
 msgid ""
 "XenServer tools are present in this image but are not capable of network "
 "injection"
 msgstr ""
 
-#: nova/virt/xenapi/agent.py:325
+#: nova/virt/xenapi/agent.py:291
 msgid "XenServer tools are not installed in this image"
 msgstr ""
 
-#: nova/virt/xenapi/agent.py:339
+#: nova/virt/xenapi/agent.py:305
 msgid "Invalid 'agent_present' value. Falling back to the default."
 msgstr ""
 
-#: nova/virt/xenapi/agent.py:392
+#: nova/virt/xenapi/agent.py:358
 #, python-format
 msgid "OpenSSL error: %s"
 msgstr ""
@@ -10425,32 +10436,32 @@ msgstr ""
 msgid "Got exception: %s"
 msgstr ""
 
-#: nova/virt/xenapi/fake.py:705 nova/virt/xenapi/fake.py:809
-#: nova/virt/xenapi/fake.py:828 nova/virt/xenapi/fake.py:896
+#: nova/virt/xenapi/fake.py:712 nova/virt/xenapi/fake.py:816
+#: nova/virt/xenapi/fake.py:835 nova/virt/xenapi/fake.py:903
 msgid "Raising NotImplemented"
 msgstr ""
 
-#: nova/virt/xenapi/fake.py:707
+#: nova/virt/xenapi/fake.py:714
 #, python-format
 msgid "xenapi.fake does not have an implementation for %s"
 msgstr ""
 
-#: nova/virt/xenapi/fake.py:740
+#: nova/virt/xenapi/fake.py:747
 #, python-format
 msgid "Calling %(name)s %(impl)s"
 msgstr ""
 
-#: nova/virt/xenapi/fake.py:746
+#: nova/virt/xenapi/fake.py:753
 #, python-format
 msgid "Calling getter %s"
 msgstr ""
 
-#: nova/virt/xenapi/fake.py:749
+#: nova/virt/xenapi/fake.py:756
 #, python-format
 msgid "Calling setter %s"
 msgstr ""
 
-#: nova/virt/xenapi/fake.py:811
+#: nova/virt/xenapi/fake.py:818
 #, python-format
 msgid ""
 "xenapi.fake does not have an implementation for %s or it has been called "
@@ -11140,63 +11151,67 @@ msgstr ""
 msgid "VM is not present, skipping destroy..."
 msgstr ""
 
-#: nova/virt/xenapi/vmops.py:1303
+#: nova/virt/xenapi/vmops.py:1260
+msgid "XenAPI failed to power the instance off"
+msgstr ""
+
+#: nova/virt/xenapi/vmops.py:1307
 #, python-format
 msgid "Instance is already in Rescue Mode: %s"
 msgstr ""
 
-#: nova/virt/xenapi/vmops.py:1337
+#: nova/virt/xenapi/vmops.py:1341
 msgid "VM is not present, skipping soft delete..."
 msgstr ""
 
-#: nova/virt/xenapi/vmops.py:1390
+#: nova/virt/xenapi/vmops.py:1394
 msgid "Automatically hard rebooting"
 msgstr ""
 
-#: nova/virt/xenapi/vmops.py:1540
+#: nova/virt/xenapi/vmops.py:1544
 msgid "Injecting network info to xenstore"
 msgstr ""
 
-#: nova/virt/xenapi/vmops.py:1562
+#: nova/virt/xenapi/vmops.py:1566
 msgid "Creating vifs"
 msgstr ""
 
-#: nova/virt/xenapi/vmops.py:1571
+#: nova/virt/xenapi/vmops.py:1575
 #, python-format
 msgid "Creating VIF for network %s"
 msgstr ""
 
-#: nova/virt/xenapi/vmops.py:1574
+#: nova/virt/xenapi/vmops.py:1578
 #, python-format
 msgid "Created VIF %(vif_ref)s, network %(network_ref)s"
 msgstr ""
 
-#: nova/virt/xenapi/vmops.py:1603
+#: nova/virt/xenapi/vmops.py:1607
 msgid "Injecting hostname to xenstore"
 msgstr ""
 
-#: nova/virt/xenapi/vmops.py:1707
+#: nova/virt/xenapi/vmops.py:1711
 #, python-format
 msgid "Destination host:%s must be in the same aggregate as the source server"
 msgstr ""
 
-#: nova/virt/xenapi/vmops.py:1728
+#: nova/virt/xenapi/vmops.py:1732
 msgid "No suitable network for migrate"
 msgstr ""
 
-#: nova/virt/xenapi/vmops.py:1740
+#: nova/virt/xenapi/vmops.py:1744
 msgid "Migrate Receive failed"
 msgstr ""
 
-#: nova/virt/xenapi/vmops.py:1814
+#: nova/virt/xenapi/vmops.py:1818
 msgid "XAPI supporting relax-xsm-sr-check=true requried"
 msgstr ""
 
-#: nova/virt/xenapi/vmops.py:1825
+#: nova/virt/xenapi/vmops.py:1829
 msgid "VM.assert_can_migrate failed"
 msgstr ""
 
-#: nova/virt/xenapi/vmops.py:1878
+#: nova/virt/xenapi/vmops.py:1882
 msgid "Migrate Send failed"
 msgstr ""
 
@@ -11337,9 +11352,60 @@ msgstr ""
 msgid "status must be 'available'"
 msgstr ""
 
-#~ msgid "Certificate %(certificate_id)s not found."
+#~ msgid "'%s' argument must be greater than 0"
 #~ msgstr ""
 
-#~ msgid "quantum authentication failed"
+#~ msgid "'%s' argument must be greater than or equal to 0"
+#~ msgstr ""
+
+#~ msgid "Failed to load plugin %(plug)s: %(exc)s"
+#~ msgstr ""
+
+#~ msgid "Setting instance to %(state)s state."
+#~ msgstr ""
+
+#~ msgid "Could not decode scheduler options: '%(e)s'"
+#~ msgstr ""
+
+#~ msgid "%(host_state)s fails tenant id on aggregate"
+#~ msgstr ""
+
+#~ msgid "No more PXE IPs available"
+#~ msgstr ""
+
+#~ msgid "Deleting instance files %(target)s"
+#~ msgstr ""
+
+#~ msgid "Live Migration failure: %(e)s"
+#~ msgstr ""
+
+#~ msgid "skipping %(path)s since it looks like volume"
+#~ msgstr ""
+
+#~ msgid "skipping disk for %(instance_name)s as it does not have a path"
+#~ msgstr ""
+
+#~ msgid "Checking instance files accessability%(instance_path)s"
+#~ msgstr ""
+
+#~ msgid "The nwfilter(%(instance_filter_name)s) is not found."
+#~ msgstr ""
+
+#~ msgid "Failed to query agent version: %r"
+#~ msgstr ""
+
+#~ msgid "Reached maximum time attempting to query agent version"
+#~ msgstr ""
+
+#~ msgid "Failed to update agent: %r"
+#~ msgstr ""
+
+#~ msgid "Failed to exchange keys: %r"
+#~ msgstr ""
+
+#~ msgid "Failed to inject file: %r"
+#~ msgstr ""
+
+#~ msgid "Failed to reset network: %r"
 #~ msgstr ""
 
