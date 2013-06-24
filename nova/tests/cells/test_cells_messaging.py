@@ -640,6 +640,7 @@ class CellsTargetedMethodsTestCase(test.TestCase):
         methods_cls = self.tgt_msg_runner.methods_by_type['targeted']
         self.tgt_methods_cls = methods_cls
         self.tgt_compute_api = methods_cls.compute_api
+        self.tgt_host_api = methods_cls.host_api
         self.tgt_db_inst = methods_cls.db
         self.tgt_c_rpcapi = methods_cls.compute_rpcapi
 
@@ -1201,6 +1202,20 @@ class CellsTargetedMethodsTestCase(test.TestCase):
 
     def test_resume_instance(self):
         self._test_instance_action_method('resume', (), {}, (), {}, False)
+
+    def test_get_host_uptime(self):
+        host_name = "fake-host"
+        host_uptime = (" 08:32:11 up 93 days, 18:25, 12 users,  load average:"
+                       " 0.20, 0.12, 0.14")
+        self.mox.StubOutWithMock(self.tgt_host_api, 'get_host_uptime')
+        self.tgt_host_api.get_host_uptime(self.ctxt, host_name).\
+            AndReturn(host_uptime)
+        self.mox.ReplayAll()
+        response = self.src_msg_runner.get_host_uptime(self.ctxt,
+                                                       self.tgt_cell_name,
+                                                       host_name)
+        expected_host_uptime = response.value_or_raise()
+        self.assertEqual(host_uptime, expected_host_uptime)
 
 
 class CellsBroadcastMethodsTestCase(test.TestCase):

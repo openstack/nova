@@ -402,3 +402,14 @@ class ComputeHostAPICellsTestCase(ComputeHostAPITestCase):
         # The corresponing Compute test case depends on the
         # _assert_host_exists which is a no-op in the cells api
         pass
+
+    def test_get_host_uptime(self):
+        self.mox.StubOutWithMock(self.host_api.cells_rpcapi,
+                                 'get_host_uptime')
+
+        self.host_api.cells_rpcapi.get_host_uptime(self.ctxt,
+                                                   'fake-host'). \
+            AndReturn('fake-response')
+        self.mox.ReplayAll()
+        result = self.host_api.get_host_uptime(self.ctxt, 'fake-host')
+        self.assertEqual('fake-response', result)

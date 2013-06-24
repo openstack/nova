@@ -852,6 +852,9 @@ class _TargetedMessageMethods(_BaseMessageMethods):
         """Resume an instance via compute_api.suspend()."""
         self._call_compute_api_with_obj(message.ctxt, instance, 'resume')
 
+    def get_host_uptime(self, message, host_name):
+        return self.host_api.get_host_uptime(message.ctxt, host_name)
+
 
 class _BroadcastMessageMethods(_BaseMessageMethods):
     """These are the methods that can be called as a part of a broadcast
@@ -1366,6 +1369,14 @@ class MessageRunner(object):
                                   'service_get_by_compute_host',
                                   method_kwargs, 'down', cell_name,
                                   need_response=True)
+        return message.process()
+
+    def get_host_uptime(self, ctxt, cell_name, host_name):
+        method_kwargs = dict(host_name=host_name)
+        message = _TargetedMessage(self, ctxt,
+                                   'get_host_uptime',
+                                   method_kwargs, 'down', cell_name,
+                                   need_response=True)
         return message.process()
 
     def service_update(self, ctxt, cell_name, host_name, binary,

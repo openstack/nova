@@ -73,6 +73,7 @@ class CellsAPI(rpc_proxy.RpcProxy):
         1.14 - Adds reboot_instance()
         1.15 - Adds suspend_instance() and resume_instance()
         1.16 - Adds instance_update_from_api()
+        1.17 - Adds get_host_uptime()
     '''
     BASE_RPC_API_VERSION = '1.0'
 
@@ -223,6 +224,14 @@ class CellsAPI(rpc_proxy.RpcProxy):
         return self.call(ctxt, self.make_msg('service_get_by_compute_host',
                                              host_name=host_name),
                          version='1.2')
+
+    def get_host_uptime(self, context, host_name):
+        """Gets the host uptime in a particular cell. The cell name should
+        be encoded within the host_name
+        """
+        return self.call(context, self.make_msg('get_host_uptime',
+                                                host_name=host_name),
+                         version='1.17')
 
     def service_update(self, ctxt, host_name, binary, params_to_update):
         """

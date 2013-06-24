@@ -276,6 +276,16 @@ class CellsAPITestCase(test.TestCase):
                            version='1.2')
         self.assertEqual(result, 'fake_response')
 
+    def test_get_host_uptime(self):
+        call_info = self._stub_rpc_method('call', 'fake_response')
+        result = self.cells_rpcapi.get_host_uptime(
+            self.fake_context, host_name='fake-host-name')
+        expected_args = {'host_name': 'fake-host-name'}
+        self._check_result(call_info, 'get_host_uptime',
+                           expected_args,
+                           version='1.17')
+        self.assertEqual(result, 'fake_response')
+
     def test_service_update(self):
         call_info = self._stub_rpc_method('call', 'fake_response')
         result = self.cells_rpcapi.service_update(

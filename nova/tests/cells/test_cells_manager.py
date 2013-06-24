@@ -304,6 +304,24 @@ class CellsManagerClassTestCase(test.TestCase):
                 host_name=cell_and_host)
         self.assertEqual(expected_response, response)
 
+    def test_get_host_uptime(self):
+        fake_cell = 'parent!fake-cell'
+        fake_host = 'fake-host'
+        fake_cell_and_host = cells_utils.cell_with_item(fake_cell, fake_host)
+        host_uptime = (" 08:32:11 up 93 days, 18:25, 12 users,  load average:"
+                       " 0.20, 0.12, 0.14")
+        fake_response = messaging.Response(fake_cell, host_uptime, False)
+
+        self.mox.StubOutWithMock(self.msg_runner,
+                                 'get_host_uptime')
+        self.msg_runner.get_host_uptime(self.ctxt, fake_cell, fake_host).\
+            AndReturn(fake_response)
+        self.mox.ReplayAll()
+
+        response = self.cells_manager.get_host_uptime(self.ctxt,
+                                                      fake_cell_and_host)
+        self.assertEqual(host_uptime, response)
+
     def test_service_update(self):
         fake_cell = 'fake-cell'
         fake_response = messaging.Response(

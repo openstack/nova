@@ -579,6 +579,10 @@ class HostAPI(compute_api.HostAPI):
         """
         pass
 
+    def get_host_uptime(self, context, host_name):
+        """Returns the result of calling "uptime" on the target host."""
+        return self.cells_rpcapi.get_host_uptime(context, host_name)
+
     def service_get_all(self, context, filters=None, set_zones=False):
         if filters is None:
             filters = {}
