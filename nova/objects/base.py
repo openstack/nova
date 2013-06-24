@@ -464,3 +464,20 @@ class NovaObjectSerializer(nova.openstack.common.rpc.serializer.Serializer):
             entity = self._process_iterable(context, self.deserialize_entity,
                                             entity)
         return entity
+
+
+def obj_to_primitive(obj):
+    """Recrusively turn an object into a python primitive.
+
+    A NovaObject becomes a dict, and anything that implements ObjectListBase
+    becomes a list.
+    """
+    if isinstance(obj, ObjectListBase):
+        return [obj_to_primitive(x) for x in obj]
+    elif isinstance(obj, NovaObject):
+        result = {}
+        for key, value in obj.iteritems():
+            result[key] = obj_to_primitive(value)
+        return result
+    else:
+        return obj
