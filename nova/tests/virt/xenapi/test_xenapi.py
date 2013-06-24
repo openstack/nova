@@ -788,11 +788,6 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
 
         Verifies that the VM and VDIs created are properly cleaned up.
         """
-        def fake_hard_shutdown_vm(session, instance, vm_ref):
-            return True
-
-        self.stubs.Set(vm_utils, 'hard_shutdown_vm',
-                       fake_hard_shutdown_vm)
         stubs.stubout_attach_disks(self.stubs)
         vdi_recs_start = self._list_vdis()
         start_vms = self._list_vms()
