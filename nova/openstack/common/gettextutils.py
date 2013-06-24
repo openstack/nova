@@ -28,6 +28,7 @@ import copy
 import gettext
 import logging.handlers
 import os
+import re
 import UserString
 
 _localedir = os.environ.get('nova'.upper() + '_LOCALEDIR')
@@ -122,14 +123,44 @@ class Message(UserString.UserString, object):
 
         return unicode(full_msg)
 
+    def _save_dictionary_parameter(self, dict_param):
+        full_msg = self.data
+        # look for %(blah) fields in string;
+        # ignore %% and deal with the
+        # case where % is first character on the line
+        keys = re.findall('(?:[^%]|^)%\((\w*)\)[a-z]', full_msg)
+
+        # if we don't find any %(blah) blocks but have a %s
+        if not keys and re.findall('(?:[^%]|^)%[a-z]', full_msg):
+            # apparently the full dictionary is the parameter
+            params = copy.deepcopy(dict_param)
+        else:
+            params = {}
+            for key in keys:
+                try:
+                    params[key] = copy.deepcopy(dict_param[key])
+                except TypeError:
+                    # cast uncopyable thing to unicode string
+                    params[key] = unicode(dict_param[key])
+
+        return params
+
     def _save_parameters(self, other):
         # we check for None later to see if
         # we actually have parameters to inject,
         # so encapsulate if our parameter is actually None
         if other is None:
             self.params = (other, )
+        elif isinstance(other, dict):
+            self.params = self._save_dictionary_parameter(other)
         else:
-            self.params = copy.deepcopy(other)
+            # fallback to casting to unicode,
+            # this will handle the problematic python code-like
+            # objects that cannot be deep-copied
+            try:
+                self.params = copy.deepcopy(other)
+            except TypeError:
+                self.params = unicode(other)
 
         return self
 
