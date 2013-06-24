@@ -28,6 +28,7 @@ authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
 
 
 class FixedIPController(object):
+    @extensions.expected_errors(404)
     def show(self, req, id):
         """Return data about the given fixed ip."""
         context = req.environ['nova.context']
@@ -55,6 +56,7 @@ class FixedIPController(object):
 
         return fixed_ip_info
 
+    @extensions.expected_errors((400, 404))
     def action(self, req, id, body):
         context = req.environ['nova.context']
         authorize(context)

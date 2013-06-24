@@ -17,6 +17,7 @@
 #    under the License.
 
 import abc
+import functools
 import os
 
 import webob.dec
@@ -451,3 +452,42 @@ class V3APIExtensionBase(object):
     def version(self):
         """Version of the extension."""
         pass
+
+
+def expected_errors(errors):
+    """Decorator for v3 API methods which specifies expected exceptions.
+
+    Specify which exceptions may occur when an API method is called. If an
+    unexpected exception occurs then return a 500 instead and ask the user
+    of the API to file a bug report.
+    """
+    def decorator(f):
+        @functools.wraps(f)
+        def wrapped(*args, **kwargs):
+            try:
+                return f(*args, **kwargs)
+            except Exception as exc:
+                if isinstance(exc, webob.exc.WSGIHTTPException):
+                    if isinstance(errors, int):
+                        t_errors = (errors,)
+                    else:
+                        t_errors = errors
+                    if exc.code in t_errors:
+                        raise
+                elif isinstance(exc, exception.PolicyNotAuthorized):
+                    # Note(cyeoh): Special case to handle
+                    # PolicyNotAuthorized exceptions so every
+                    # extension method does not need to wrap authorize
+                    # calls. ResourceExceptionHandler silently
+                    # converts NotAuthorized to HTTPForbidden
+                    raise
+
+                LOG.exception(_("Unexpected exception in API method"))
+                msg = _('Unexpected API Error. Please report this at '
+                    'http://bugs.launchpad.net/nova/ and attach the Nova '
+                    'API log if possible.\n%s') % type(exc)
+                raise webob.exc.HTTPInternalServerError(explanation=msg)
+
+        return wrapped
+
+    return decorator
