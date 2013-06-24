@@ -52,7 +52,11 @@ class ConsoleOutputController(wsgi.Controller):
 
         if length is not None:
             try:
-                int(length)
+                # NOTE(maurosr): cast length into a string before cast into an
+                # integer to avoid thing like: int(2.5) which is 2 instead of
+                # raise ValueError like it would when we try int("2.5"). This
+                # can be removed once we have api validation landed.
+                int(str(length))
             except ValueError:
                 raise webob.exc.HTTPBadRequest(_('Length in request body must '
                                                  'be an integer value'))
