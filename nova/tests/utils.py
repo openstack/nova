@@ -212,5 +212,5 @@ def is_ipv6_supported():
         if e.errno == errno.EAFNOSUPPORT:
             has_ipv6_support = False
         else:
-            raise e
+            raise
     return has_ipv6_support

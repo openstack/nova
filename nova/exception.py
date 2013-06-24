@@ -25,6 +25,7 @@ SHOULD include dedicated exception logging.
 """
 
 import functools
+import sys
 
 from oslo.config import cfg
 import webob.exc
@@ -127,7 +128,8 @@ class NovaException(Exception):
             try:
                 message = self.message % kwargs
 
-            except Exception as e:
+            except Exception:
+                exc_info = sys.exc_info()
                 # kwargs doesn't match a variable in the message
                 # log the issue and the kwargs
                 LOG.exception(_('Exception in string format operation'))
@@ -135,7 +137,7 @@ class NovaException(Exception):
                     LOG.error("%s: %s" % (name, value))
 
                 if CONF.fatal_exception_format_errors:
-                    raise e
+                    raise exc_info[0], exc_info[1], exc_info[2]
                 else:
                     # at least get the core message out if something happened
                     message = self.message

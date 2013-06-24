@@ -18,6 +18,7 @@ import os
 import tempfile
 
 from nova import exception
+from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt.disk.mount import loop
@@ -77,10 +78,9 @@ class VFSLocalFS(vfs.VFS):
                 raise exception.NovaException(mount.error)
             self.mount = mount
         except Exception as e:
-            LOG.debug(_("Failed to mount image %(ex)s)") %
-                      {'ex': str(e)})
-            self.teardown()
-            raise e
+            with excutils.save_and_reraise_exception():
+                LOG.debug(_("Failed to mount image %(ex)s)"), {'ex': str(e)})
+                self.teardown()
 
     def teardown(self):
         try:
