@@ -1345,7 +1345,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         # get network info before tearing down
         try:
             network_info = self._get_instance_nw_info(context, instance)
-        except exception.NetworkNotFound:
+        except (exception.NetworkNotFound, exception.NoMoreFixedIps):
             network_info = network_model.NetworkInfo()
 
         # NOTE(vish) get bdms before destroying the instance
