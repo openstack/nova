@@ -25,12 +25,13 @@ from nova.openstack.common import strutils
 from nova import utils
 
 LOG = logging.getLogger(__name__)
-authorize = extensions.extension_authorizer('compute', 'evacuate')
+ALIAS = "os-evacuate"
+authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
 
 
-class Controller(wsgi.Controller):
+class EvacuateController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
-        super(Controller, self).__init__(*args, **kwargs)
+        super(EvacuateController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
 
     @wsgi.action('evacuate')
@@ -83,15 +84,18 @@ class Controller(wsgi.Controller):
             return {'adminPass': password}
 
 
-class Evacuate(extensions.ExtensionDescriptor):
+class Evacuate(extensions.V3APIExtensionBase):
     """Enables server evacuation."""
 
     name = "Evacuate"
-    alias = "os-evacuate"
-    namespace = "http://docs.openstack.org/compute/ext/evacuate/api/v2"
-    updated = "2013-01-06T00:00:00+00:00"
+    alias = ALIAS
+    namespace = "http://docs.openstack.org/compute/ext/evacuate/api/v3"
+    version = 1
+
+    def get_resources(self):
+        return []
 
     def get_controller_extensions(self):
-        controller = Controller()
+        controller = EvacuateController()
         extension = extensions.ControllerExtension(self, 'servers', controller)
         return [extension]

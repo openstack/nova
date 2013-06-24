@@ -44,6 +44,7 @@
     "compute_extension:deferred_delete": "",
     "compute_extension:disk_config": "",
     "compute_extension:evacuate": "rule:admin_api",
+    "compute_extension:v3:os-evacuate": "rule:admin_api",
     "compute_extension:extended_server_attributes": "rule:admin_api",
     "compute_extension:extended_status": "",
     "compute_extension:extended_availability_zone": "",

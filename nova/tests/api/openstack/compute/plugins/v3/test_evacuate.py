@@ -57,8 +57,8 @@ class EvacuateTest(test.TestCase):
         ctxt.user_id = 'fake'
         ctxt.project_id = 'fake'
         ctxt.is_admin = True
-        app = fakes.wsgi_app(fake_auth_context=ctxt)
-        req = webob.Request.blank('/v2/fake/servers/%s/action' % self.UUID)
+        app = fakes.wsgi_app_v3(fake_auth_context=ctxt)
+        req = webob.Request.blank('/v3/servers/%s/action' % self.UUID)
         req.method = 'POST'
         req.body = jsonutils.dumps({
             'evacuate': {
@@ -75,9 +75,9 @@ class EvacuateTest(test.TestCase):
         ctxt.user_id = 'fake'
         ctxt.project_id = 'fake'
         ctxt.is_admin = True
-        app = fakes.wsgi_app(fake_auth_context=ctxt)
+        app = fakes.wsgi_app_v3(fake_auth_context=ctxt)
         uuid = self.UUID
-        req = webob.Request.blank('/v2/fake/servers/%s/action' % uuid)
+        req = webob.Request.blank('/v3/servers/%s/action' % uuid)
         req.method = 'POST'
         req.body = jsonutils.dumps({
             'evacuate': {
@@ -104,9 +104,9 @@ class EvacuateTest(test.TestCase):
         ctxt.user_id = 'fake'
         ctxt.project_id = 'fake'
         ctxt.is_admin = True
-        app = fakes.wsgi_app(fake_auth_context=ctxt)
+        app = fakes.wsgi_app_v3(fake_auth_context=ctxt)
         uuid = self.UUID
-        req = webob.Request.blank('/v2/fake/servers/%s/action' % uuid)
+        req = webob.Request.blank('/v3/servers/%s/action' % uuid)
         req.method = 'POST'
         req.body = jsonutils.dumps({
             'evacuate': {
@@ -131,9 +131,9 @@ class EvacuateTest(test.TestCase):
         ctxt.user_id = 'fake'
         ctxt.project_id = 'fake'
         ctxt.is_admin = True
-        app = fakes.wsgi_app(fake_auth_context=ctxt)
+        app = fakes.wsgi_app_v3(fake_auth_context=ctxt)
         uuid = self.UUID
-        req = webob.Request.blank('/v2/fake/servers/%s/action' % uuid)
+        req = webob.Request.blank('/v3/servers/%s/action' % uuid)
         req.method = 'POST'
         req.body = jsonutils.dumps({
             'evacuate': {
@@ -160,9 +160,9 @@ class EvacuateTest(test.TestCase):
         ctxt.user_id = 'fake'
         ctxt.project_id = 'fake'
         ctxt.is_admin = True
-        app = fakes.wsgi_app(fake_auth_context=ctxt)
+        app = fakes.wsgi_app_v3(fake_auth_context=ctxt)
         uuid = self.UUID
-        req = webob.Request.blank('/v2/fake/servers/%s/action' % uuid)
+        req = webob.Request.blank('/v3/servers/%s/action' % uuid)
         req.method = 'POST'
         req.body = jsonutils.dumps({
             'evacuate': {
@@ -183,9 +183,9 @@ class EvacuateTest(test.TestCase):
 
     def test_not_admin(self):
         ctxt = context.RequestContext('fake', 'fake', is_admin=False)
-        app = fakes.wsgi_app(fake_auth_context=ctxt)
+        app = fakes.wsgi_app_v3(fake_auth_context=ctxt)
         uuid = self.UUID
-        req = webob.Request.blank('/v2/fake/servers/%s/action' % uuid)
+        req = webob.Request.blank('/v3/servers/%s/action' % uuid)
         req.method = 'POST'
         req.body = jsonutils.dumps({
             'evacuate': {
