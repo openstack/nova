@@ -88,6 +88,7 @@
     "compute_extension:quotas:delete": "rule:admin_api",
     "compute_extension:quota_classes": "",
     "compute_extension:rescue": "",
+    "compute_extension:v3:os-rescue": "",
     "compute_extension:security_group_default_rules": "rule:admin_api",
     "compute_extension:security_groups": "",
     "compute_extension:server_diagnostics": "rule:admin_api",
