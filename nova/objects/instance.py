@@ -158,7 +158,7 @@ class Instance(base.NovaObject):
         return base.NovaObject.obj_from_primitive(val)
 
     @staticmethod
-    def _from_db_object(instance, db_inst, expected_attrs=None):
+    def _from_db_object(context, instance, db_inst, expected_attrs=None):
         """Method to help with migration to objects.
 
         Converts a database entity to a formal object.
@@ -185,8 +185,9 @@ class Instance(base.NovaObject):
         if db_inst['info_cache']:
             instance['info_cache'] = instance_info_cache.InstanceInfoCache()
             instance_info_cache.InstanceInfoCache._from_db_object(
-                instance['info_cache'], db_inst['info_cache'])
+                    context, instance['info_cache'], db_inst['info_cache'])
 
+        instance._context = context
         instance.obj_reset_changes()
         return instance
 
@@ -207,7 +208,8 @@ class Instance(base.NovaObject):
 
         db_inst = db.instance_get_by_uuid(context, uuid,
                                           columns_to_join)
-        return Instance._from_db_object(cls(), db_inst, expected_attrs)
+        return Instance._from_db_object(context, cls(), db_inst,
+                                        expected_attrs)
 
     @base.remotable
     def save(self, context, expected_task_state=None):
@@ -240,7 +242,7 @@ class Instance(base.NovaObject):
             for attr in INSTANCE_OPTIONAL_FIELDS:
                 if hasattr(self, base.get_attrname(attr)):
                     expected_attrs.append(attr)
-            Instance._from_db_object(self, inst_ref, expected_attrs)
+            Instance._from_db_object(context, self, inst_ref, expected_attrs)
             if 'vm_state' in changes or 'task_state' in changes:
                 notifications.send_update(context, old_ref, inst_ref)
 
@@ -282,7 +284,7 @@ class Instance(base.NovaObject):
 def _make_instance_list(context, inst_list, db_inst_list, expected_attrs):
     inst_list.objects = []
     for db_inst in db_inst_list:
-        inst_obj = Instance._from_db_object(Instance(), db_inst,
+        inst_obj = Instance._from_db_object(context, Instance(), db_inst,
                                             expected_attrs=expected_attrs)
         inst_obj._context = context
         inst_list.objects.append(inst_obj)

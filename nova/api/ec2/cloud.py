@@ -211,9 +211,8 @@ def db_to_inst_obj(context, db_instance):
     # NOTE(danms): This is a temporary helper method for converting
     # Instance DB objects to NovaObjects without needing to re-query.
     inst_obj = instance_obj.Instance._from_db_object(
-        instance_obj.Instance(), db_instance,
+        context, instance_obj.Instance(), db_instance,
         expected_attrs=['system_metadata', 'metadata'])
-    inst_obj._context = context
     return inst_obj
 
 

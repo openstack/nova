@@ -282,7 +282,8 @@ def object_compat(function):
         instance = kwargs['instance']
         if isinstance(instance, dict):
             kwargs['instance'] = instance_obj.Instance._from_db_object(
-                instance_obj.Instance(), instance, expected_attrs=metas)
+                context, instance_obj.Instance(), instance,
+                expected_attrs=metas)
             kwargs['instance']._context = context
         return function(self, context, **kwargs)
 
