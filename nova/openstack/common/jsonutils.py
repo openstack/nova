@@ -41,6 +41,7 @@ import json
 import types
 import xmlrpclib
 
+import netaddr
 import six
 
 from nova.openstack.common import timeutils
@@ -137,6 +138,8 @@ def to_primitive(value, convert_instances=False, convert_datetime=True,
             # Likely an instance of something. Watch for cycles.
             # Ignore class member vars.
             return recursive(value.__dict__, level=level + 1)
+        elif isinstance(value, netaddr.IPAddress):
+            return six.text_type(value)
         else:
             if any(test(value) for test in _nasty_type_tests):
                 return six.text_type(value)
