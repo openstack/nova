@@ -1253,7 +1253,11 @@ class VMOps(object):
                         instance=instance)
             return
 
-        vm_utils.hard_shutdown_vm(self._session, instance, vm_ref)
+        shutdown_success = vm_utils.hard_shutdown_vm(self._session, instance,
+                                                     vm_ref)
+        if not shutdown_success:
+            raise exception.InstancePowerOffFailure(
+                            _("XenAPI failed to power the instance off"))
 
         if destroy_disks:
             self._volumeops.detach_all(vm_ref)
