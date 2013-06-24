@@ -24,8 +24,8 @@ from nova.api.openstack import wsgi
 from nova import compute
 from nova import exception
 
-
-authorize = extensions.extension_authorizer('compute', 'console_output')
+ALIAS = "os-console-output"
+authorize = extensions.extension_authorizer('compute', "v3:" + ALIAS)
 
 
 class ConsoleOutputController(wsgi.Controller):
@@ -33,7 +33,8 @@ class ConsoleOutputController(wsgi.Controller):
         super(ConsoleOutputController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
 
-    @wsgi.action('os-getConsoleOutput')
+    @wsgi.action('get_console_output')
+    @wsgi.response(200)
     def get_console_output(self, req, id, body):
         """Get text console output."""
         context = req.environ['nova.context']
@@ -45,9 +46,9 @@ class ConsoleOutputController(wsgi.Controller):
             raise webob.exc.HTTPNotFound(_('Instance not found'))
 
         try:
-            length = body['os-getConsoleOutput'].get('length')
+            length = body['get_console_output'].get('length')
         except (TypeError, KeyError):
-            raise webob.exc.HTTPBadRequest(_('os-getConsoleOutput malformed '
+            raise webob.exc.HTTPBadRequest(_('get_console_output malformed '
                                              'or missing from request body'))
 
         if length is not None:
@@ -77,16 +78,19 @@ class ConsoleOutputController(wsgi.Controller):
         return {'output': output}
 
 
-class Console_output(extensions.ExtensionDescriptor):
+class ConsoleOutput(extensions.V3APIExtensionBase):
     """Console log output support, with tailing ability."""
 
     name = "ConsoleOutput"
-    alias = "os-console-output"
+    alias = ALIAS
     namespace = ("http://docs.openstack.org/compute/ext/"
-                 "os-console-output/api/v2")
-    updated = "2011-12-08T00:00:00+00:00"
+                 "os-console-output/api/v3")
+    version = 1
 
     def get_controller_extensions(self):
         controller = ConsoleOutputController()
         extension = extensions.ControllerExtension(self, 'servers', controller)
         return [extension]
+
+    def get_resources(self):
+        return []
