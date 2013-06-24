@@ -138,7 +138,8 @@ def get_device_name_for_instance(context, instance, bdms, device):
         prefix = '/dev/xvd'
 
     if req_prefix != prefix:
-        LOG.debug(_("Using %(prefix)s instead of %(req_prefix)s") % locals())
+        LOG.debug(_("Using %(prefix)s instead of %(req_prefix)s"),
+                  {'prefix': prefix, 'req_prefix': req_prefix})
 
     used_letters = set()
     for device_path in mappings.itervalues():
