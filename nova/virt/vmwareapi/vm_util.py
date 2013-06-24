@@ -709,23 +709,18 @@ def get_host_ref(session, cluster=None):
 
 def _get_datastore_ref_and_name(data_stores, datastore_regex=None):
     for elem in data_stores.objects:
-        ds_name = None
-        ds_type = None
-        ds_cap = None
-        ds_free = None
-        for prop in elem.propSet:
-            if prop.name == "summary.type":
-                ds_type = prop.val
-            elif prop.name == "summary.name":
-                ds_name = prop.val
-            elif prop.name == "summary.capacity":
-                ds_cap = prop.val
-            elif prop.name == "summary.freeSpace":
-                ds_free = prop.val
-        # Local storage identifier
-        if ds_type == "VMFS" or ds_type == "NFS":
+        propset_dict = dict([(prop.name, prop.val) for prop in elem.propSet])
+        # Local storage identifier vSphere doesn't support CIFS or
+        # vfat for datastores, therefore filtered
+        ds_type = propset_dict['summary.type']
+        ds_name = propset_dict['summary.name']
+        if ((ds_type == 'VMFS' or ds_type == 'NFS') and
+                propset_dict['summary.accessible']):
             if not datastore_regex or datastore_regex.match(ds_name):
-                return elem.obj, ds_name, ds_cap, ds_free
+                return (elem.obj,
+                        ds_name,
+                        propset_dict['summary.capacity'],
+                        propset_dict['summary.freeSpace'])
 
 
 def get_datastore_ref_and_name(session, cluster=None, host=None,
@@ -734,7 +729,8 @@ def get_datastore_ref_and_name(session, cluster=None, host=None,
     if cluster is None and host is None:
         data_stores = session._call_method(vim_util, "get_objects",
                     "Datastore", ["summary.type", "summary.name",
-                                  "summary.capacity", "summary.freeSpace"])
+                                  "summary.capacity", "summary.freeSpace",
+                                  "summary.accessible"])
     else:
         if cluster is not None:
             datastore_ret = session._call_method(
@@ -754,8 +750,8 @@ def get_datastore_ref_and_name(session, cluster=None, host=None,
                                 "get_properties_for_a_collection_of_objects",
                                 "Datastore", data_store_mors,
                                 ["summary.type", "summary.name",
-                                 "summary.capacity", "summary.freeSpace"])
-
+                                 "summary.capacity", "summary.freeSpace",
+                                 "summary.accessible"])
     while data_stores:
         token = _get_token(data_stores)
         results = _get_datastore_ref_and_name(data_stores, datastore_regex)
