@@ -25,12 +25,10 @@ from nova.conductor import api as conductor_api
 from nova import context
 from nova import db
 from nova import exception
-from nova.openstack.common import rpc
 from nova.scheduler import driver
 from nova.scheduler import filter_scheduler
 from nova.scheduler import host_manager
 from nova.scheduler import weights
-from nova import servicegroup
 from nova.tests.scheduler import fakes
 from nova.tests.scheduler import test_scheduler
 
@@ -392,143 +390,6 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         self.assertEqual([['host', 'node']],
                          filter_properties['retry']['hosts'])
-
-    def test_live_migration_dest_check_service_memory_overcommit(self):
-        instance = self._live_migration_instance()
-
-        # Live-migration should work since default is to overcommit memory.
-        self.mox.StubOutWithMock(self.driver, '_live_migration_src_check')
-        self.mox.StubOutWithMock(db, 'service_get_by_compute_host')
-        self.mox.StubOutWithMock(servicegroup.API, 'service_is_up')
-        self.mox.StubOutWithMock(self.driver, '_get_compute_info')
-        self.mox.StubOutWithMock(self.driver, '_live_migration_common_check')
-        self.mox.StubOutWithMock(rpc, 'call')
-        self.mox.StubOutWithMock(self.driver.compute_rpcapi, 'live_migration')
-
-        dest = 'fake_host2'
-        block_migration = False
-        disk_over_commit = False
-
-        self.driver._live_migration_src_check(self.context, instance)
-        db.service_get_by_compute_host(self.context,
-                dest).AndReturn('fake_service3')
-        self.servicegroup_api.service_is_up('fake_service3').AndReturn(True)
-
-        self.driver._get_compute_info(self.context, dest).AndReturn(
-                                                       {'memory_mb': 2048,
-                                                        'free_disk_gb': 512,
-                                                        'local_gb_used': 512,
-                                                        'free_ram_mb': 512,
-                                                        'local_gb': 1024,
-                                                        'vcpus': 4,
-                                                        'vcpus_used': 2,
-                                                        'updated_at': None})
-
-        self.driver._live_migration_common_check(self.context, instance, dest)
-
-        rpc.call(self.context, "compute.fake_host2",
-                   {"method": 'check_can_live_migrate_destination',
-                    "namespace": None,
-                    "args": {'instance': instance,
-                             'block_migration': block_migration,
-                             'disk_over_commit': disk_over_commit},
-                    "version": compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION},
-                 None).AndReturn({})
-
-        self.driver.compute_rpcapi.live_migration(self.context,
-                host=instance['host'], instance=instance, dest=dest,
-                block_migration=block_migration, migrate_data={})
-
-        self.mox.ReplayAll()
-        result = self.driver.schedule_live_migration(self.context,
-                instance=instance, dest=dest,
-                block_migration=block_migration,
-                disk_over_commit=disk_over_commit)
-        self.assertEqual(result, None)
-
-    def test_live_migration_assert_memory_no_overcommit(self):
-        # Test that memory check passes with no memory overcommit.
-        def fake_get(context, host):
-            return {'memory_mb': 2048,
-                    'free_disk_gb': 512,
-                    'local_gb_used': 512,
-                    'free_ram_mb': 1024,
-                    'local_gb': 1024,
-                    'vcpus': 4,
-                    'vcpus_used': 2,
-                    'updated_at': None}
-
-        self.stubs.Set(self.driver, '_get_compute_info', fake_get)
-
-        self.flags(ram_allocation_ratio=1.0)
-        instance = self._live_migration_instance()
-        dest = 'fake_host2'
-        result = self.driver._assert_compute_node_has_enough_memory(
-                self.context, instance, dest)
-        self.assertEqual(result, None)
-
-    def test_live_migration_assert_memory_no_overcommit_lack_memory(self):
-        # Test that memory check fails with no memory overcommit.
-        def fake_get(context, host):
-            return {'memory_mb': 2048,
-                    'free_disk_gb': 512,
-                    'local_gb_used': 512,
-                    'free_ram_mb': 1023,
-                    'local_gb': 1024,
-                    'vcpus': 4,
-                    'vcpus_used': 2,
-                    'updated_at': None}
-
-        self.stubs.Set(self.driver, '_get_compute_info', fake_get)
-
-        self.flags(ram_allocation_ratio=1.0)
-        instance = self._live_migration_instance()
-        dest = 'fake_host2'
-        self.assertRaises(exception.MigrationError,
-                self.driver._assert_compute_node_has_enough_memory,
-                context, instance, dest)
-
-    def test_live_migration_assert_memory_overcommit(self):
-        # Test that memory check passes with memory overcommit.
-        def fake_get(context, host):
-            return {'memory_mb': 2048,
-                    'free_disk_gb': 512,
-                    'local_gb_used': 512,
-                    'free_ram_mb': -1024,
-                    'local_gb': 1024,
-                    'vcpus': 4,
-                    'vcpus_used': 2,
-                    'updated_at': None}
-
-        self.stubs.Set(self.driver, '_get_compute_info', fake_get)
-
-        self.flags(ram_allocation_ratio=2.0)
-        instance = self._live_migration_instance()
-        dest = 'fake_host2'
-        result = self.driver._assert_compute_node_has_enough_memory(
-                self.context, instance, dest)
-        self.assertEqual(result, None)
-
-    def test_live_migration_assert_memory_overcommit_lack_memory(self):
-        # Test that memory check fails with memory overcommit.
-        def fake_get(context, host):
-            return {'memory_mb': 2048,
-                    'free_disk_gb': 512,
-                    'local_gb_used': 512,
-                    'free_ram_mb': -1025,
-                    'local_gb': 1024,
-                    'vcpus': 4,
-                    'vcpus_used': 2,
-                    'updated_at': None}
-
-        self.stubs.Set(self.driver, '_get_compute_info', fake_get)
-
-        self.flags(ram_allocation_ratio=2.0)
-        instance = self._live_migration_instance()
-        dest = 'fake_host2'
-        self.assertRaises(exception.MigrationError,
-                self.driver._assert_compute_node_has_enough_memory,
-                self.context, instance, dest)
 
     def test_basic_schedule_run_instances_anti_affinity(self):
         filter_properties = {'scheduler_hints':

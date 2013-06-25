@@ -30,6 +30,7 @@ from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova.conductor import api as conductor_api
+from nova.conductor.tasks import live_migrate
 import nova.context
 from nova import exception
 from nova import manager
@@ -102,9 +103,8 @@ class SchedulerManager(manager.Manager):
     def live_migration(self, context, instance, dest,
                        block_migration, disk_over_commit):
         try:
-            return self.driver.schedule_live_migration(
-                context, instance, dest,
-                block_migration, disk_over_commit)
+            self._schedule_live_migration(context, instance, dest,
+                    block_migration, disk_over_commit)
         except (exception.NoValidHost,
                 exception.ComputeServiceUnavailable,
                 exception.InvalidHypervisorType,
@@ -130,6 +130,13 @@ class SchedulerManager(manager.Manager):
                 self._set_vm_state_and_notify('live_migration',
                                              {'vm_state': vm_states.ERROR},
                                              context, ex, request_spec)
+
+    def _schedule_live_migration(self, context, instance, dest,
+            block_migration, disk_over_commit):
+        task = live_migrate.LiveMigrationTask(context, instance,
+                    dest, block_migration, disk_over_commit,
+                    self.driver.select_hosts)
+        return task.execute()
 
     def run_instance(self, context, request_spec, admin_password,
             injected_files, requested_networks, is_first_time,

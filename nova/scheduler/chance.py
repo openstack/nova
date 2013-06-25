@@ -25,6 +25,7 @@ import random
 
 from oslo.config import cfg
 
+from nova.compute import rpcapi as compute_rpcapi
 from nova import exception
 from nova.scheduler import driver
 
@@ -34,6 +35,10 @@ CONF.import_opt('compute_topic', 'nova.compute.rpcapi')
 
 class ChanceScheduler(driver.Scheduler):
     """Implements Scheduler as a random node selector."""
+
+    def __init__(self, *args, **kwargs):
+        super(ChanceScheduler, self).__init__(*args, **kwargs)
+        self.compute_rpcapi = compute_rpcapi.ComputeAPI()
 
     def _filter_hosts(self, request_spec, hosts, filter_properties):
         """Filter a list of hosts based on request_spec."""

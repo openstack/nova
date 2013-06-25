@@ -47,7 +47,7 @@ from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 import nova.quota
-from nova.scheduler import driver
+from nova.scheduler import manager as scheduler_manager
 from nova.servicegroup import api as service_group_api
 from nova import test
 from nova.tests.api.openstack.compute.contrib import test_coverage_ext
@@ -2213,23 +2213,13 @@ class AdminActionsSamplesJsonTest(ServersSampleBase):
 
     def test_post_live_migrate_server(self):
         # Get api samples to server live migrate request.
-        def fake_live_migration_src_check(self, context, instance_ref):
-            """Skip live migration scheduler checks."""
+        def fake_live_migration(self, context, instance, dest,
+                                block_migration, disk_over_commit):
             return
 
-        def fake_live_migration_dest_check(self, context, instance_ref, dest):
-            """Skip live migration scheduler checks."""
-            return dest
-
-        def fake_live_migration_common(self, context, instance_ref, dest):
-            """Skip live migration scheduler checks."""
-            return
-        self.stubs.Set(driver.Scheduler, '_live_migration_src_check',
-                       fake_live_migration_src_check)
-        self.stubs.Set(driver.Scheduler, '_live_migration_dest_check',
-                       fake_live_migration_dest_check)
-        self.stubs.Set(driver.Scheduler, '_live_migration_common_check',
-                       fake_live_migration_common)
+        self.stubs.Set(scheduler_manager.SchedulerManager,
+                       'live_migration',
+                       fake_live_migration)
 
         def fake_get_compute(context, host):
             service = dict(host=host,
