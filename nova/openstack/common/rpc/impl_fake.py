@@ -122,7 +122,7 @@ class Connection(object):
 
 
 def create_connection(conf, new=True):
-    """Create a connection"""
+    """Create a connection."""
     return Connection()
 
 
@@ -179,7 +179,7 @@ def cleanup():
 
 
 def fanout_cast(conf, context, topic, msg):
-    """Cast to all consumers of a topic"""
+    """Cast to all consumers of a topic."""
     check_serialize(msg)
     method = msg.get('method')
     if not method:
