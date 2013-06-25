@@ -106,6 +106,9 @@ compute_opts = [
                 default=False,
                 help='Whether to start guests that were running before the '
                      'host rebooted'),
+    cfg.IntOpt('network_allocate_retries',
+               default=0,
+               help="Number of times to retry network allocation on failures"),
     ]
 
 interval_opts = [
@@ -1147,6 +1150,50 @@ class ComputeManager(manager.SchedulerDependentManager):
                               expected_task_state=(task_states.SCHEDULING,
                                                    None))
 
+    def _allocate_network_async(self, context, instance, requested_networks,
+                                macs, security_groups, is_vpn):
+        """Method used to allocate networks in the background.
+
+        Broken out for testing.
+        """
+        LOG.debug(_("Allocating IP information in the background."),
+                  instance=instance)
+        retries = CONF.network_allocate_retries
+        if retries < 0:
+            LOG.warn(_("Treating negative config value (%(retries)s) for "
+                       "'network_allocate_retries' as 0."),
+                     {'retries': retries})
+        attempts = retries > 1 and retries + 1 or 1
+        retry_time = 1
+        for attempt in range(1, attempts + 1):
+            try:
+                nwinfo = self.network_api.allocate_for_instance(
+                        context, instance, vpn=is_vpn,
+                        requested_networks=requested_networks,
+                        macs=macs,
+                        conductor_api=self.conductor_api,
+                        security_groups=security_groups)
+                LOG.debug(_('Instance network_info: |%s|'), nwinfo,
+                          instance=instance)
+                return nwinfo
+            except Exception:
+                exc_info = sys.exc_info()
+                log_info = {'attempt': attempt,
+                            'attempts': attempts}
+                if attempt == attempts:
+                    LOG.exception(_('Instance failed network setup '
+                                    'after %(attempts)d attempt(s)'),
+                                  log_info)
+                    raise exc_info[0], exc_info[1], exc_info[2]
+                LOG.warn(_('Instance failed network setup '
+                           '(attempt %(attempt)d of %(attempts)d)'),
+                         log_info, instance=instance)
+                time.sleep(retry_time)
+                retry_time *= 2
+                if retry_time > 30:
+                    retry_time = 30
+        # Not reached.
+
     def _allocate_network(self, context, instance, requested_networks, macs,
                           security_groups):
         """Start network allocation asynchronously.  Return an instance
@@ -1161,25 +1208,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                                          task_state=task_states.NETWORKING,
                                          expected_task_state=None)
         is_vpn = pipelib.is_vpn_image(instance['image_ref'])
-
-        def async_alloc():
-            LOG.debug(_("Allocating IP information in the background."),
-                      instance=instance)
-            try:
-                nwinfo = self.network_api.allocate_for_instance(
-                        context, instance, vpn=is_vpn,
-                        requested_networks=requested_networks,
-                        macs=macs,
-                        conductor_api=self.conductor_api,
-                        security_groups=security_groups)
-            except Exception:
-                with excutils.save_and_reraise_exception():
-                    LOG.exception(_('Instance failed network setup'),
-                                  instance=instance)
-            LOG.debug(_('Instance network_info: |%s|'), nwinfo,
-                      instance=instance)
-            return nwinfo
-        return network_model.NetworkInfoAsyncWrapper(async_alloc)
+        return network_model.NetworkInfoAsyncWrapper(
+                self._allocate_network_async, context, instance,
+                requested_networks, macs, security_groups, is_vpn)
 
     def _prep_block_device(self, context, instance, bdms):
         """Set up the block device for an instance with error logging."""
