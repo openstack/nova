@@ -250,6 +250,9 @@ class BareMetalDriver(driver.ComputeDriver):
                         )
             self.driver.activate_bootloader(context, node, instance,
                                             network_info=network_info)
+            # NOTE(deva): ensure node is really off before we turn it on
+            #             fixes bug https://code.launchpad.net/bugs/1178919
+            self.power_off(instance, node)
             self.power_on(context, instance, network_info, block_device_info,
                           node)
             self.driver.activate_node(context, node, instance)
