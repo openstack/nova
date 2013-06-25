@@ -316,9 +316,6 @@ class HostFiltersTestCase(test.NoDBTestCase):
     def test_affinity_different_filter_handles_none(self):
         filt_cls = self.class_map['DifferentHostFilter']()
         host = fakes.FakeHostState('host1', 'node1', {})
-        instance = fakes.FakeInstance(context=self.context,
-                                         params={'host': 'host2'})
-        instance_uuid = instance.uuid
 
         filter_properties = {'context': self.context.elevated(),
                              'scheduler_hints': None}
@@ -381,9 +378,6 @@ class HostFiltersTestCase(test.NoDBTestCase):
     def test_affinity_same_filter_handles_none(self):
         filt_cls = self.class_map['SameHostFilter']()
         host = fakes.FakeHostState('host1', 'node1', {})
-        instance = fakes.FakeInstance(context=self.context,
-                                         params={'host': 'host2'})
-        instance_uuid = instance.uuid
 
         filter_properties = {'context': self.context.elevated(),
                              'scheduler_hints': None}
@@ -953,7 +947,6 @@ class HostFiltersTestCase(test.NoDBTestCase):
                                                'local_gb': 200},
                            'scheduler_hints': {'query': json_query}}
         capabilities = {'enabled': True}
-        service = {'disabled': True}
         host = fakes.FakeHostState('host1', 'node1',
                 {'free_ram_mb': 1024,
                  'free_disk_mb': 200 * 1024,
@@ -1385,6 +1378,8 @@ class HostFiltersTestCase(test.NoDBTestCase):
         filt_cls = self.class_map['IoOpsFilter']()
         host = fakes.FakeHostState('host1', 'node1',
                                    {'num_io_ops': 8})
+        filter_properties = {}
+        self.assertFalse(filt_cls.host_passes(host, filter_properties))
 
     def test_filter_num_instances_passes(self):
         self.flags(max_instances_per_host=5)

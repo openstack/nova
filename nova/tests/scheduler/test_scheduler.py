@@ -83,7 +83,7 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
         self.manager.driver.update_service_capabilities(service_name,
                 host, {})
         self.mox.ReplayAll()
-        result = self.manager.update_service_capabilities(self.context,
+        self.manager.update_service_capabilities(self.context,
                 service_name=service_name, host=host, capabilities={})
         self.mox.VerifyAll()
 
@@ -93,7 +93,7 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
         self.manager.driver.update_service_capabilities(
                 service_name, host, capabilities)
         self.mox.ReplayAll()
-        result = self.manager.update_service_capabilities(self.context,
+        self.manager.update_service_capabilities(self.context,
                 service_name=service_name, host=host,
                 capabilities=capabilities)
 
@@ -461,7 +461,7 @@ class SchedulerTestCase(test.NoDBTestCase):
         self.driver.host_manager.update_service_capabilities(
                 service_name, host, capabilities)
         self.mox.ReplayAll()
-        result = self.driver.update_service_capabilities(service_name,
+        self.driver.update_service_capabilities(service_name,
                 host, capabilities)
 
     def test_hosts_up(self):
@@ -502,12 +502,10 @@ class SchedulerTestCase(test.NoDBTestCase):
 
 class SchedulerDriverBaseTestCase(SchedulerTestCase):
     """Test cases for base scheduler driver class methods
-       that can't will fail if the driver is changed.
+       that will fail if the driver is changed.
     """
 
     def test_unimplemented_schedule_run_instance(self):
-        fake_args = (1, 2, 3)
-        fake_kwargs = {'cat': 'meow'}
         fake_request_spec = {'instance_properties':
                 {'uuid': 'uuid'}}
 
@@ -517,8 +515,6 @@ class SchedulerDriverBaseTestCase(SchedulerTestCase):
                          None, None)
 
     def test_unimplemented_schedule_prep_resize(self):
-        fake_args = (1, 2, 3)
-        fake_kwargs = {'cat': 'meow'}
         fake_request_spec = {'instance_properties':
                 {'uuid': 'uuid'}}
 
