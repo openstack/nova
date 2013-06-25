@@ -21,6 +21,7 @@ from nova.api.openstack import wsgi
 from nova import db
 from nova import exception
 from nova.openstack.common import jsonutils
+from nova.openstack.common import policy
 from nova import quota
 from nova import test
 from nova.tests.api.openstack import fakes
@@ -344,6 +345,98 @@ class KeypairsTest(test.TestCase):
         self.assertEqual(res.status_int, 400)
         self.assertEqual(res_dict['badRequest']['message'],
                          "Invalid request body")
+
+
+class KeypairPolicyTest(test.TestCase):
+
+    def setUp(self):
+        super(KeypairPolicyTest, self).setUp()
+        self.KeyPairController = keypairs.KeypairController()
+
+        def _db_key_pair_get(context, user_id, name):
+            return {'name': 'foo', 'public_key': 'XXX', 'fingerprint': 'YYY'}
+
+        self.stubs.Set(db, "key_pair_get",
+                       _db_key_pair_get)
+        self.stubs.Set(db, "key_pair_get_all_by_user",
+                       db_key_pair_get_all_by_user)
+        self.stubs.Set(db, "key_pair_create",
+                       db_key_pair_create)
+        self.stubs.Set(db, "key_pair_destroy",
+                       db_key_pair_destroy)
+
+    def test_keypair_list_fail_policy(self):
+        rules = policy.Rules({'compute_extension:keypairs:index':
+                             policy.parse_rule('role:admin')})
+        policy.set_rules(rules)
+        req = fakes.HTTPRequest.blank('/v2/fake/os-keypairs')
+        self.assertRaises(exception.NotAuthorized,
+                          self.KeyPairController.index,
+                          req)
+
+    def test_keypair_list_pass_policy(self):
+        rules = policy.Rules({'compute_extension:keypairs:index':
+                             policy.parse_rule('')})
+        policy.set_rules(rules)
+        req = fakes.HTTPRequest.blank('/v2/fake/os-keypairs')
+        res = self.KeyPairController.index(req)
+        self.assertTrue('keypairs' in res)
+
+    def test_keypair_show_fail_policy(self):
+        rules = policy.Rules({'compute_extension:keypairs:show':
+                             policy.parse_rule('role:admin')})
+        policy.set_rules(rules)
+        req = fakes.HTTPRequest.blank('/v2/fake/os-keypairs/FAKE')
+        self.assertRaises(exception.NotAuthorized,
+                          self.KeyPairController.show,
+                          req, 'FAKE')
+
+    def test_keypair_show_pass_policy(self):
+        rules = policy.Rules({'compute_extension:keypairs:show':
+                             policy.parse_rule('')})
+        policy.set_rules(rules)
+        req = fakes.HTTPRequest.blank('/v2/fake/os-keypairs/FAKE')
+        res = self.KeyPairController.show(req, 'FAKE')
+        self.assertTrue('keypair' in res)
+
+    def test_keypair_create_fail_policy(self):
+        rules = policy.Rules({'compute_extension:keypairs:create':
+                             policy.parse_rule('role:admin')})
+        policy.set_rules(rules)
+        req = fakes.HTTPRequest.blank('/v2/fake/os-keypairs')
+        req.method = 'POST'
+        self.assertRaises(exception.NotAuthorized,
+                          self.KeyPairController.create,
+                          req, {})
+
+    def test_keypair_create_pass_policy(self):
+        body = {'keypair': {'name': 'create_test'}}
+        rules = policy.Rules({'compute_extension:keypairs:create':
+                             policy.parse_rule('')})
+        policy.set_rules(rules)
+        req = fakes.HTTPRequest.blank('/v2/fake/os-keypairs')
+        req.method = 'POST'
+        res = self.KeyPairController.create(req, body)
+        self.assertTrue('keypair' in res)
+
+    def test_keypair_delete_fail_policy(self):
+        rules = policy.Rules({'compute_extension:keypairs:delete':
+                             policy.parse_rule('role:admin')})
+        policy.set_rules(rules)
+        req = fakes.HTTPRequest.blank('/v2/fake/os-keypairs/FAKE')
+        req.method = 'DELETE'
+        self.assertRaises(exception.NotAuthorized,
+                          self.KeyPairController.delete,
+                          req, 'FAKE')
+
+    def test_keypair_delete_pass_policy(self):
+        rules = policy.Rules({'compute_extension:keypairs:delete':
+                             policy.parse_rule('')})
+        policy.set_rules(rules)
+        req = fakes.HTTPRequest.blank('/v2/fake/os-keypairs/FAKE')
+        req.method = 'DELETE'
+        res = self.KeyPairController.delete(req, 'FAKE')
+        self.assertEqual(res.status_int, 202)
 
 
 class KeypairsXMLSerializerTest(test.TestCase):

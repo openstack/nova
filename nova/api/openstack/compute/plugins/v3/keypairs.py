@@ -71,7 +71,7 @@ class KeypairController(object):
         """
 
         context = req.environ['nova.context']
-        authorize(context)
+        authorize(context, action='create')
 
         try:
             params = body['keypair']
@@ -107,7 +107,7 @@ class KeypairController(object):
         Delete a keypair with a given name
         """
         context = req.environ['nova.context']
-        authorize(context)
+        authorize(context, action='delete')
         try:
             self.api.delete_key_pair(context, context.user_id, id)
         except exception.KeypairNotFound:
@@ -119,7 +119,7 @@ class KeypairController(object):
     def show(self, req, id):
         """Return data for the given key name."""
         context = req.environ['nova.context']
-        authorize(context)
+        authorize(context, action='show')
 
         try:
             keypair = self.api.get_key_pair(context, context.user_id, id)
@@ -133,7 +133,7 @@ class KeypairController(object):
         List of keypairs for a user
         """
         context = req.environ['nova.context']
-        authorize(context)
+        authorize(context, action='index')
         key_pairs = self.api.get_key_pairs(context, context.user_id)
         rval = []
         for key_pair in key_pairs:
