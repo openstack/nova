@@ -966,6 +966,11 @@ class InstanceTypeExtraSpecs(BASE, NovaBase):
     __table_args__ = (
         Index('instance_type_extra_specs_instance_type_id_key_idx',
               'instance_type_id', 'key'),
+        schema.UniqueConstraint(
+              "instance_type_id", "key", "deleted",
+              name=("uniq_instance_type_extra_specs0"
+                    "instance_type_id0key0deleted")
+        ),
     )
     id = Column(Integer, primary_key=True)
     key = Column(String(255))

@@ -43,6 +43,7 @@ from nova.db.sqlalchemy import api as sqlalchemy_api
 from nova.db.sqlalchemy import models
 from nova.db.sqlalchemy import utils as db_utils
 from nova import exception
+from nova.openstack.common.db import exception as db_exc
 from nova.openstack.common.db.sqlalchemy import session as db_session
 from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
@@ -2558,6 +2559,23 @@ class InstanceTypeExtraSpecsTestCase(BaseInstanceTypeTestCase):
         self.assertRaises(exception.FlavorNotFound,
                           db.flavor_extra_specs_update_or_create,
                           self.ctxt, 'nonexists', {})
+
+    def test_instance_type_extra_specs_update_or_create_retry(self):
+
+        def counted():
+            def get_id(context, flavorid, session):
+                get_id.counter += 1
+                raise db_exc.DBDuplicateEntry
+            get_id.counter = 0
+            return get_id
+
+        get_id = counted()
+        self.stubs.Set(sqlalchemy_api,
+                       '_instance_type_get_id_from_flavor', get_id)
+        self.assertRaises(db_exc.DBDuplicateEntry, sqlalchemy_api.
+                          flavor_extra_specs_update_or_create,
+                          self.ctxt, 1, {}, 5)
+        self.assertEqual(get_id.counter, 5)
 
 
 class InstanceTypeAccessTestCase(BaseInstanceTypeTestCase):

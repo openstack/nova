@@ -2290,6 +2290,48 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
             for index in indexes:
                 self.assertIn(index, indexes)
 
+    def _pre_upgrade_202(self, engine):
+        fake_types = [
+                {'id': 35, 'name': 'type1', 'memory_mb': 128, 'vcpus': 1,
+                 'root_gb': 10, 'ephemeral_gb': 0, 'flavorid': "1", 'swap': 0,
+                 'rxtx_factor': 1.0, 'vcpu_weight': 1, 'disabled': False,
+                 'is_public': True},
+                {'id': 36, 'name': 'type2', 'memory_mb': 512, 'vcpus': 1,
+                 'root_gb': 10, 'ephemeral_gb': 5, 'flavorid': "2", 'swap': 0,
+                 'rxtx_factor': 1.5, 'vcpu_weight': 2, 'disabled': False,
+                 'is_public': True},
+            ]
+        instance_types = db_utils.get_table(engine, 'instance_types')
+        engine.execute(instance_types.insert(), fake_types)
+        specs = db_utils.get_table(engine, 'instance_type_extra_specs')
+        data = [
+                {'instance_type_id': 35, 'key': 'key1', 'deleted': 0},
+                {'instance_type_id': 35, 'key': 'key1', 'deleted': 0},
+                {'instance_type_id': 36, 'key': 'key1', 'deleted': 0},
+        ]
+        for item in data:
+            specs.insert().values(item).execute()
+        return data
+
+    def _check_202(self, engine, data):
+        specs = db_utils.get_table(engine, 'instance_type_extra_specs')
+
+        def get_(typeid, deleted):
+            deleted_value = 0 if not deleted else specs.c.id
+            return specs.select().\
+                   where(specs.c.instance_type_id == typeid).\
+                   where(specs.c.deleted == deleted_value).\
+                   execute().\
+                   fetchall()
+
+        self.assertEqual(1, len(get_(35, False)))
+        self.assertEqual(1, len(get_(35, True)))
+        self.assertEqual(1, len(get_(36, False)))
+        self.assertRaises(sqlalchemy.exc.IntegrityError,
+                          specs.insert().execute,
+                          {'instance_type_id': 35, 'key': 'key1',
+                           'deleted': 0})
+
 
 class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""

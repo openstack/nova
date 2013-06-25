@@ -4097,36 +4097,41 @@ def flavor_extra_specs_delete(context, flavor_id, key):
 
 
 @require_context
-def flavor_extra_specs_update_or_create(context, flavor_id, specs):
-    # NOTE(boris-42): There is a race condition in this method. We should add
-    #                 UniqueConstraint on (instance_type_id, key, deleted) to
-    #                 avoid duplicated instance_type_extra_specs. This will be
-    #                 possible after bp/db-unique-keys implementation.
-    session = get_session()
-    with session.begin():
-        instance_type_id = \
-                _instance_type_get_id_from_flavor(context, flavor_id, session)
+def flavor_extra_specs_update_or_create(context, flavor_id, specs,
+                                               max_retries=10):
+    for attempt in xrange(max_retries):
+        try:
+            session = get_session()
+            with session.begin():
+                instance_type_id = _instance_type_get_id_from_flavor(context,
+                                                         flavor_id, session)
 
-        spec_refs = model_query(context, models.InstanceTypeExtraSpecs,
-                                session=session, read_deleted="no").\
-            filter_by(instance_type_id=instance_type_id).\
-            filter(models.InstanceTypeExtraSpecs.key.in_(specs.keys())).\
-            all()
+                spec_refs = model_query(context, models.InstanceTypeExtraSpecs,
+                                        session=session, read_deleted="no").\
+                  filter_by(instance_type_id=instance_type_id).\
+                  filter(models.InstanceTypeExtraSpecs.key.in_(specs.keys())).\
+                  all()
 
-        existing_keys = set()
-        for spec_ref in spec_refs:
-            key = spec_ref["key"]
-            existing_keys.add(key)
-            spec_ref.update({"value": specs[key]})
+                existing_keys = set()
+                for spec_ref in spec_refs:
+                    key = spec_ref["key"]
+                    existing_keys.add(key)
+                    spec_ref.update({"value": specs[key]})
 
-        for key, value in specs.iteritems():
-            if key in existing_keys:
-                continue
-            spec_ref = models.InstanceTypeExtraSpecs()
-            spec_ref.update({"key": key, "value": value,
-                             "instance_type_id": instance_type_id})
-            session.add(spec_ref)
-    return specs
+                for key, value in specs.iteritems():
+                    if key in existing_keys:
+                        continue
+                    spec_ref = models.InstanceTypeExtraSpecs()
+                    spec_ref.update({"key": key, "value": value,
+                                     "instance_type_id": instance_type_id})
+                    session.add(spec_ref)
+
+            return specs
+        except db_exc.DBDuplicateEntry:
+            # a concurrent transaction has been committed,
+            # try again unless this was the last attempt
+            if attempt == max_retries - 1:
+                raise
 
 
 ####################
