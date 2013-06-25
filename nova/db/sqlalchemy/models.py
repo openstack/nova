@@ -763,25 +763,31 @@ class DNSDomain(BASE, NovaBase):
 class ConsolePool(BASE, NovaBase):
     """Represents pool of consoles on the same physical node."""
     __tablename__ = 'console_pools'
+    __table_args__ = ()
     id = Column(Integer, primary_key=True)
-    address = Column(types.IPAddress())
-    username = Column(String(255))
-    password = Column(String(255))
-    console_type = Column(String(255))
-    public_hostname = Column(String(255))
-    host = Column(String(255))
-    compute_host = Column(String(255))
+    address = Column(types.IPAddress(), nullable=True)
+    username = Column(String(255), nullable=True)
+    password = Column(String(255), nullable=True)
+    console_type = Column(String(255), nullable=True)
+    public_hostname = Column(String(255), nullable=True)
+    host = Column(String(255), nullable=True)
+    compute_host = Column(String(255), nullable=True)
 
 
 class Console(BASE, NovaBase):
     """Represents a console session for an instance."""
     __tablename__ = 'consoles'
+    __table_args__ = (
+        Index('consoles_instance_uuid_idx', 'instance_uuid'),
+    )
     id = Column(Integer, primary_key=True)
-    instance_name = Column(String(255))
-    instance_uuid = Column(String(36))
-    password = Column(String(255))
+    instance_name = Column(String(255), nullable=True)
+    instance_uuid = Column(String(36), ForeignKey('instances.uuid'),
+                           nullable=True)
+    password = Column(String(255), nullable=True)
     port = Column(Integer, nullable=True)
-    pool_id = Column(Integer, ForeignKey('console_pools.id'))
+    pool_id = Column(Integer, ForeignKey('console_pools.id'),
+                           nullable=True)
     pool = relationship(ConsolePool, backref=backref('consoles'))
 
 
