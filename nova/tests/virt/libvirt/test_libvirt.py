@@ -77,6 +77,7 @@ CONF.import_opt('compute_manager', 'nova.service')
 CONF.import_opt('host', 'nova.netconf')
 CONF.import_opt('my_ip', 'nova.netconf')
 CONF.import_opt('base_dir_name', 'nova.virt.libvirt.imagecache')
+CONF.import_opt('instances_path', 'nova.compute.manager')
 
 _fake_network_info = fake_network.fake_get_instance_nw_info
 _fake_stub_out_get_nw_info = fake_network.stub_out_nw_api_get_instance_nw_info
@@ -286,8 +287,9 @@ class LibvirtConnTestCase(test.TestCase):
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = context.get_admin_context()
-        self.flags(instances_path='')
-        self.flags(libvirt_snapshots_directory='')
+        temp_dir = self.useFixture(fixtures.TempDir()).path
+        self.flags(instances_path=temp_dir)
+        self.flags(libvirt_snapshots_directory=temp_dir)
         self.useFixture(fixtures.MonkeyPatch(
             'nova.virt.libvirt.driver.libvirt_utils',
             fake_libvirt_utils))
@@ -342,6 +344,9 @@ class LibvirtConnTestCase(test.TestCase):
                 'instance_type_id': '5',  # m1.small
                 'extra_specs': {},
                 'system_metadata': sys_meta}
+
+    def relpath(self, path):
+        return os.path.relpath(path, CONF.instances_path)
 
     def tearDown(self):
         nova.tests.image.fake.FakeImageService_reset()
@@ -2078,8 +2083,8 @@ class LibvirtConnTestCase(test.TestCase):
             else:
                 suffix = ''
             if expect_kernel:
-                check = (lambda t: t.find('./os/kernel').text.split(
-                    '/')[1], 'kernel' + suffix)
+                check = (lambda t: self.relpath(t.find('./os/kernel').text).
+                         split('/')[1], 'kernel' + suffix)
             else:
                 check = (lambda t: t.find('./os/kernel'), None)
             check_list.append(check)
@@ -2094,8 +2099,8 @@ class LibvirtConnTestCase(test.TestCase):
                 check_list.append(check)
 
             if expect_ramdisk:
-                check = (lambda t: t.find('./os/initrd').text.split(
-                    '/')[1], 'ramdisk' + suffix)
+                check = (lambda t: self.relpath(t.find('./os/initrd').text).
+                         split('/')[1], 'ramdisk' + suffix)
             else:
                 check = (lambda t: t.find('./os/initrd'), None)
             check_list.append(check)
@@ -2146,8 +2151,9 @@ class LibvirtConnTestCase(test.TestCase):
                 check = (lambda t: t.findall('./devices/serial')[1].get(
                         'type'), 'pty')
                 check_list.append(check)
-                check = (lambda t: t.findall('./devices/serial/source')[0].get(
-                        'path').split('/')[1], 'console.log')
+                check = (lambda t: self.relpath(t.findall(
+                         './devices/serial/source')[0].get('path')).
+                         split('/')[1], 'console.log')
                 check_list.append(check)
             else:
                 check = (lambda t: t.find('./devices/console').get(
@@ -2159,16 +2165,16 @@ class LibvirtConnTestCase(test.TestCase):
             (lambda t: t.find('./memory').text, '2097152')]
         if rescue:
             common_checks += [
-                (lambda t: t.findall('./devices/disk/source')[0].get(
-                    'file').split('/')[1], 'disk.rescue'),
-                (lambda t: t.findall('./devices/disk/source')[1].get(
-                    'file').split('/')[1], 'disk')]
+                (lambda t: self.relpath(t.findall('./devices/disk/source')[0].
+                    get('file')).split('/')[1], 'disk.rescue'),
+                (lambda t: self.relpath(t.findall('./devices/disk/source')[1].
+                    get('file')).split('/')[1], 'disk')]
         else:
-            common_checks += [(lambda t: t.findall(
-                './devices/disk/source')[0].get('file').split('/')[1],
+            common_checks += [(lambda t: self.relpath(t.findall(
+                './devices/disk/source')[0].get('file')).split('/')[1],
                                'disk')]
-            common_checks += [(lambda t: t.findall(
-                './devices/disk/source')[1].get('file').split('/')[1],
+            common_checks += [(lambda t: self.relpath(t.findall(
+                './devices/disk/source')[1].get('file')).split('/')[1],
                                'disk.local')]
 
         for (libvirt_type, (expected_uri, checks)) in type_uri_map.iteritems():
