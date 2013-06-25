@@ -33,9 +33,6 @@ from nova import quota
 ALIAS = "os-quota-sets"
 QUOTAS = quota.QUOTAS
 LOG = logging.getLogger(__name__)
-NON_QUOTA_KEYS = ['tenant_id', 'id', 'force']
-
-
 authorize_update = extensions.extension_authorizer('compute',
                                                    'v3:%s:update' % ALIAS)
 authorize_show = extensions.extension_authorizer('compute',
@@ -60,13 +57,8 @@ class QuotaSetsController(object):
 
     def _format_quota_set(self, project_id, quota_set):
         """Convert the quota object to a result dict."""
-
-        result = dict(id=str(project_id))
-
-        for resource in QUOTAS.resources:
-            result[resource] = quota_set[resource]
-
-        return dict(quota_set=result)
+        quota_set.update(id=project_id)
+        return dict(quota_set=quota_set)
 
     def _validate_quota_limit(self, limit, minimum, maximum):
         # NOTE: -1 is a flag value for unlimited
@@ -118,13 +110,12 @@ class QuotaSetsController(object):
         force_update = False
 
         for key, value in body['quota_set'].items():
-            if (key not in QUOTAS and
-                    key not in NON_QUOTA_KEYS):
+            if key not in QUOTAS and key != 'force':
                 bad_keys.append(key)
                 continue
             if key == 'force':
                 force_update = strutils.bool_from_string(value)
-            elif key not in NON_QUOTA_KEYS and value:
+            elif key != 'force' and value:
                 try:
                     value = int(value)
                 except (ValueError, TypeError):
@@ -132,8 +123,6 @@ class QuotaSetsController(object):
                             "integer.") % {'value': value, 'key': key}
                     LOG.warn(msg)
                     raise webob.exc.HTTPBadRequest(explanation=msg)
-
-        LOG.debug(_("force update quotas: %s") % force_update)
 
         if len(bad_keys) > 0:
             msg = _("Bad key(s) %s in quota_set") % ",".join(bad_keys)
@@ -151,8 +140,10 @@ class QuotaSetsController(object):
         except exception.NotAuthorized:
             raise webob.exc.HTTPForbidden()
 
-        for key, value in body['quota_set'].items():
-            if key in NON_QUOTA_KEYS or not value:
+        LOG.debug(_("Force update quotas: %s"), force_update)
+
+        for key, value in body['quota_set'].iteritems():
+            if key == 'force' or not value:
                 continue
             # validate whether already used and reserved exceeds the new
             # quota, this check will be ignored if admin want to force
@@ -186,7 +177,8 @@ class QuotaSetsController(object):
                                 user_id=user_id)
             except exception.AdminRequired:
                 raise webob.exc.HTTPForbidden()
-        return {'quota_set': self._get_quotas(context, id, user_id=user_id)}
+        return self._format_quota_set(id, self._get_quotas(context, id,
+                                                           user_id=user_id))
 
     @wsgi.serializers(xml=QuotaTemplate)
     def defaults(self, req, id):
@@ -194,6 +186,7 @@ class QuotaSetsController(object):
         authorize_show(context)
         return self._format_quota_set(id, QUOTAS.get_defaults(context))
 
+    @wsgi.response(204)
     def delete(self, req, id):
         context = req.environ['nova.context']
         authorize_delete(context)
@@ -206,7 +199,6 @@ class QuotaSetsController(object):
                                                        id, user_id)
             else:
                 QUOTAS.destroy_all_by_project(context, id)
-            return webob.Response(status_int=202)
         except exception.NotAuthorized:
             raise webob.exc.HTTPForbidden()
 
