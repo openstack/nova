@@ -171,17 +171,6 @@ class VMOpsTestCase(test.TestCase):
 
         self.assertEqual(self.make_plugin_call_count, 1)
 
-    def test_destroy_raises_when_shutdown_fails(self):
-        vm_ref = "vm_reference"
-        fake_instance = "instance"
-
-        self.mox.StubOutWithMock(vm_utils, 'hard_shutdown_vm')
-        vm_utils.hard_shutdown_vm(self._session, fake_instance,
-                                  vm_ref).AndReturn(False)
-        self.mox.ReplayAll()
-        self.assertRaises(exception.InstancePowerOffFailure,
-                          self._vmops._destroy, fake_instance, vm_ref)
-
 
 class GetConsoleOutputTestCase(stubs.XenAPITestBase):
     def setUp(self):
