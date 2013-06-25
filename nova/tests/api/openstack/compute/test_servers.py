@@ -267,25 +267,18 @@ class ServersControllerTest(ControllerTest):
         self.assertNotEqual(server1['server']['hostId'],
                             server2['server']['hostId'])
 
-    def test_get_server_by_id(self):
-        self.flags(use_ipv6=True)
-        image_bookmark = "http://localhost/fake/images/10"
-        flavor_bookmark = "http://localhost/fake/flavors/1"
-
-        uuid = FAKE_UUID
-        req = fakes.HTTPRequest.blank('/fake/servers/%s' % uuid)
-        res_dict = self.controller.show(req, uuid)
-
-        expected_server = {
+    def _get_server_data_dict(self, uuid, image_bookmark, flavor_bookmark,
+                              status="ACTIVE", progress=100):
+        return {
             "server": {
                 "id": uuid,
                 "user_id": "fake_user",
                 "tenant_id": "fake_project",
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
-                "progress": 0,
+                "progress": progress,
                 "name": "server1",
-                "status": "BUILD",
+                "status": status,
                 "accessIPv4": "",
                 "accessIPv6": "",
                 "hostId": '',
@@ -329,6 +322,20 @@ class ServersControllerTest(ControllerTest):
             }
         }
 
+    def test_get_server_by_id(self):
+        self.flags(use_ipv6=True)
+        image_bookmark = "http://localhost/fake/images/10"
+        flavor_bookmark = "http://localhost/fake/flavors/1"
+
+        uuid = FAKE_UUID
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % uuid)
+        res_dict = self.controller.show(req, uuid)
+
+        expected_server = self._get_server_data_dict(uuid,
+                                                     image_bookmark,
+                                                     flavor_bookmark,
+                                                     status="BUILD",
+                                                     progress=0)
         self.assertThat(res_dict, matchers.DictMatches(expected_server))
 
     def test_get_server_with_active_status_by_id(self):
@@ -342,59 +349,9 @@ class ServersControllerTest(ControllerTest):
         uuid = FAKE_UUID
         req = fakes.HTTPRequest.blank('/fake/servers/%s' % uuid)
         res_dict = self.controller.show(req, uuid)
-        expected_server = {
-            "server": {
-                "id": uuid,
-                "user_id": "fake_user",
-                "tenant_id": "fake_project",
-                "updated": "2010-11-11T11:00:00Z",
-                "created": "2010-10-10T12:00:00Z",
-                "progress": 100,
-                "name": "server1",
-                "status": "ACTIVE",
-                "accessIPv4": "",
-                "accessIPv6": "",
-                "hostId": '',
-                "image": {
-                    "id": "10",
-                    "links": [
-                        {
-                            "rel": "bookmark",
-                            "href": image_bookmark,
-                        },
-                    ],
-                },
-                "flavor": {
-                    "id": "1",
-                  "links": [
-                      {
-                          "rel": "bookmark",
-                          "href": flavor_bookmark,
-                      },
-                  ],
-                },
-                "addresses": {
-                    'test1': [
-                        {'version': 4, 'addr': '192.168.1.100'},
-                        {'version': 6, 'addr': '2001:db8:0:1::1'}
-                    ]
-                },
-                "metadata": {
-                    "seq": "1",
-                },
-                "links": [
-                    {
-                        "rel": "self",
-                        "href": "http://localhost/v2/fake/servers/%s" % uuid,
-                    },
-                    {
-                        "rel": "bookmark",
-                        "href": "http://localhost/fake/servers/%s" % uuid,
-                    },
-                ],
-            }
-        }
-
+        expected_server = self._get_server_data_dict(uuid,
+                                                     image_bookmark,
+                                                     flavor_bookmark)
         self.assertThat(res_dict, matchers.DictMatches(expected_server))
 
     def test_get_server_with_id_image_ref_by_id(self):
@@ -411,59 +368,9 @@ class ServersControllerTest(ControllerTest):
         uuid = FAKE_UUID
         req = fakes.HTTPRequest.blank('/fake/servers/%s' % uuid)
         res_dict = self.controller.show(req, uuid)
-        expected_server = {
-            "server": {
-                "id": uuid,
-                "user_id": "fake_user",
-                "tenant_id": "fake_project",
-                "updated": "2010-11-11T11:00:00Z",
-                "created": "2010-10-10T12:00:00Z",
-                "progress": 100,
-                "name": "server1",
-                "status": "ACTIVE",
-                "accessIPv4": "",
-                "accessIPv6": "",
-                "hostId": '',
-                "image": {
-                    "id": "10",
-                    "links": [
-                        {
-                            "rel": "bookmark",
-                            "href": image_bookmark,
-                        },
-                    ],
-                },
-                "flavor": {
-                    "id": "1",
-                  "links": [
-                      {
-                          "rel": "bookmark",
-                          "href": flavor_bookmark,
-                      },
-                  ],
-                },
-                "addresses": {
-                    'test1': [
-                        {'version': 4, 'addr': '192.168.1.100'},
-                        {'version': 6, 'addr': '2001:db8:0:1::1'}
-                    ]
-                },
-                "metadata": {
-                    "seq": "1",
-                },
-                "links": [
-                    {
-                        "rel": "self",
-                        "href": "http://localhost/v2/fake/servers/%s" % uuid,
-                    },
-                    {
-                        "rel": "bookmark",
-                        "href": "http://localhost/fake/servers/%s" % uuid,
-                    },
-                ],
-            }
-        }
-
+        expected_server = self._get_server_data_dict(uuid,
+                                                     image_bookmark,
+                                                     flavor_bookmark)
         self.assertThat(res_dict, matchers.DictMatches(expected_server))
 
     def test_get_server_addresses_from_cache(self):
