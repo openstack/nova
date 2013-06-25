@@ -19,7 +19,7 @@
 from lxml import etree
 import webob
 
-from nova.api.openstack.compute.contrib import quotas
+from nova.api.openstack.compute.plugins.v3 import quota_sets as quotas
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import context as context_maker
@@ -77,9 +77,9 @@ class QuotaSetsTest(test.TestCase):
         self.assertEqual(qs['key_pairs'], 100)
 
     def test_quotas_defaults(self):
-        uri = '/v2/fake_tenant/os-quota-sets/fake_tenant/defaults'
+        uri = '/os-quota-sets/fake_tenant/defaults'
 
-        req = fakes.HTTPRequest.blank(uri)
+        req = fakes.HTTPRequestV3.blank(uri)
         res_dict = self.controller.defaults(req, 'fake_tenant')
 
         expected = {'quota_set': {
@@ -100,14 +100,14 @@ class QuotaSetsTest(test.TestCase):
         self.assertEqual(res_dict, expected)
 
     def test_quotas_show_as_admin(self):
-        req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/1234',
+        req = fakes.HTTPRequestV3.blank('/os-quota-sets/1234',
                                       use_admin_context=True)
         res_dict = self.controller.show(req, 1234)
 
         self.assertEqual(res_dict, quota_set('1234'))
 
     def test_quotas_show_as_unauthorized_user(self):
-        req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/1234')
+        req = fakes.HTTPRequestV3.blank('/os-quota-sets/1234')
         self.assertRaises(webob.exc.HTTPForbidden, self.controller.show,
                           req, 1234)
 
@@ -124,7 +124,7 @@ class QuotaSetsTest(test.TestCase):
                               'security_group_rules': 20,
                               'key_pairs': 100, 'fixed_ips': -1}}
 
-        req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/update_me',
+        req = fakes.HTTPRequestV3.blank('/os-quota-sets/update_me',
                                       use_admin_context=True)
         res_dict = self.controller.update(req, 'update_me', body)
 
@@ -142,7 +142,7 @@ class QuotaSetsTest(test.TestCase):
                               'security_group_rules': 20,
                               'key_pairs': 100}}
 
-        req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/update_me')
+        req = fakes.HTTPRequestV3.blank('/os-quota-sets/update_me')
         self.assertRaises(webob.exc.HTTPForbidden, self.controller.update,
                           req, 'update_me', body)
 
@@ -154,7 +154,7 @@ class QuotaSetsTest(test.TestCase):
                               'metadata_items': -2, 'injected_files': -2,
                               'injected_file_content_bytes': -2}}
 
-        req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/update_me',
+        req = fakes.HTTPRequestV3.blank('/os-quota-sets/update_me',
                                       use_admin_context=True)
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
                           req, 'update_me', body)
@@ -167,7 +167,7 @@ class QuotaSetsTest(test.TestCase):
                               'metadata_items': -2, 'injected_files': -2,
                               'injected_file_content_bytes': -2}}
 
-        req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/update_me',
+        req = fakes.HTTPRequestV3.blank('/os-quota-sets/update_me',
                                       use_admin_context=True)
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
                           req, 'update_me', body)
@@ -194,7 +194,7 @@ class QuotaSetsTest(test.TestCase):
                               'security_groups': 10,
                               'security_group_rules': 20,
                               'key_pairs': 100}}
-        req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/update_me',
+        req = fakes.HTTPRequestV3.blank('/os-quota-sets/update_me',
                                       use_admin_context=True)
         self.ext_mgr.is_loaded('os-extended-quotas').AndReturn(True)
         self.mox.ReplayAll()
@@ -222,7 +222,7 @@ class QuotaSetsTest(test.TestCase):
                               'security_groups': 10,
                               'security_group_rules': 20,
                               'key_pairs': 100}}
-        req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/update_me',
+        req = fakes.HTTPRequestV3.blank('/os-quota-sets/update_me',
                                       use_admin_context=True)
         self.ext_mgr.is_loaded('os-extended-quotas').AndReturn(True)
         self.mox.ReplayAll()
@@ -240,7 +240,7 @@ class QuotaSetsTest(test.TestCase):
                               'security_groups': 10,
                               'security_group_rules': 20,
                               'key_pairs': 100}}
-        req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/update_me',
+        req = fakes.HTTPRequestV3.blank('/os-quota-sets/update_me',
                                       use_admin_context=True)
         self.ext_mgr.is_loaded('os-extended-quotas').AndReturn(True)
         self.mox.ReplayAll()
@@ -250,20 +250,20 @@ class QuotaSetsTest(test.TestCase):
     def test_delete_quotas_when_extension_not_loaded(self):
         self.ext_mgr.is_loaded('os-extended-quotas').AndReturn(False)
         self.mox.ReplayAll()
-        req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/1234')
+        req = fakes.HTTPRequestV3.blank('/os-quota-sets/1234')
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.delete,
                           req, 1234)
 
     def test_quotas_delete_as_unauthorized_user(self):
         self.ext_mgr.is_loaded('os-extended-quotas').AndReturn(True)
         self.mox.ReplayAll()
-        req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/1234')
+        req = fakes.HTTPRequestV3.blank('/os-quota-sets/1234')
         self.assertRaises(webob.exc.HTTPForbidden, self.controller.delete,
                           req, 1234)
 
     def test_quotas_delete_as_admin(self):
         context = context_maker.get_admin_context()
-        self.req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/1234')
+        self.req = fakes.HTTPRequestV3.blank('/os-quota-sets/1234')
         self.req.environ['nova.context'] = context
         self.ext_mgr.is_loaded('os-extended-quotas').AndReturn(True)
         self.mox.StubOutWithMock(quota.QUOTAS,
@@ -371,7 +371,7 @@ class ExtendedQuotasTest(test.TestCase):
 
         self.stubs.Set(quotas.QuotaSetsController, '_get_quotas',
                        fake_get_quotas)
-        req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/update_me',
+        req = fakes.HTTPRequestV3.blank('/os-quota-sets/update_me',
                                       use_admin_context=True)
         self.ext_mgr.is_loaded('os-extended-quotas').AndReturn(True)
         self.mox.ReplayAll()
@@ -382,7 +382,7 @@ class ExtendedQuotasTest(test.TestCase):
     def test_quotas_force_update_exceed_in_used(self):
         self.stubs.Set(quotas.QuotaSetsController, '_get_quotas',
                        fake_get_quotas)
-        req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/update_me',
+        req = fakes.HTTPRequestV3.blank('/os-quota-sets/update_me',
                                       use_admin_context=True)
         expected = {'quota_set': {'ram': 25600, 'instances': 200, 'cores': 10}}
         body = {'quota_set': {'ram': 25600,

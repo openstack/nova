@@ -28,14 +28,18 @@ from nova.openstack.common import strutils
 from nova import quota
 
 
+ALIAS = "os-quota-sets"
 QUOTAS = quota.QUOTAS
 LOG = logging.getLogger(__name__)
 NON_QUOTA_KEYS = ['tenant_id', 'id', 'force']
 
 
-authorize_update = extensions.extension_authorizer('compute', 'quotas:update')
-authorize_show = extensions.extension_authorizer('compute', 'quotas:show')
-authorize_delete = extensions.extension_authorizer('compute', 'quotas:delete')
+authorize_update = extensions.extension_authorizer('compute',
+                                                   'v3:%s:update' % ALIAS)
+authorize_show = extensions.extension_authorizer('compute',
+                                                 'v3:%s:show' % ALIAS)
+authorize_delete = extensions.extension_authorizer('compute',
+                                                   'v3:%s:delete' % ALIAS)
 
 
 class QuotaTemplate(xmlutil.TemplateBuilder):
@@ -188,20 +192,23 @@ class QuotaSetsController(object):
         raise webob.exc.HTTPNotFound()
 
 
-class Quotas(extensions.ExtensionDescriptor):
+class QuotaSets(extensions.V3APIExtensionBase):
     """Quotas management support."""
 
     name = "Quotas"
-    alias = "os-quota-sets"
-    namespace = "http://docs.openstack.org/compute/ext/quotas-sets/api/v1.1"
-    updated = "2011-08-08T00:00:00+00:00"
+    alias = ALIAS
+    namespace = "http://docs.openstack.org/compute/ext/os-quotas-sets/api/v3"
+    version = 1
 
     def get_resources(self):
         resources = []
 
-        res = extensions.ResourceExtension('os-quota-sets',
+        res = extensions.ResourceExtension(ALIAS,
                                             QuotaSetsController(self.ext_mgr),
                                             member_actions={'defaults': 'GET'})
         resources.append(res)
 
         return resources
+
+    def get_controller_extensions(self):
+        return []
