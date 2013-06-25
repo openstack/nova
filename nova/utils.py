@@ -321,6 +321,62 @@ def last_octet(address):
     return int(address.split('.')[-1])
 
 
+def get_my_ipv4_address():
+    """Run ip route/addr commands to figure out the best ipv4
+    """
+    LOCALHOST = '127.0.0.1'
+    try:
+        out = execute('ip', '-f', 'inet', '-o', 'route', 'show',
+                      run_as_root=True)
+
+        # Find the default route
+        regex_default = ('default\s*via\s*'
+                         '(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'
+                         '\s*dev\s*(\w*)\s*')
+        default_routes = re.findall(regex_default, out[0])
+        if not default_routes:
+            return LOCALHOST
+        gateway, iface = default_routes[0]
+
+        # Find the right subnet for the gateway/interface for
+        # the default route
+        route = ('(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\/(\d{1,2})'
+              '\s*dev\s*(\w*)\s*')
+        for match in re.finditer(route, out[0]):
+            subnet = netaddr.IPNetwork(match.group(1) + "/" + match.group(2))
+            if (match.group(3) == iface and
+                netaddr.IPAddress(gateway) in subnet):
+                try:
+                    return _get_ipv4_address_for_interface(iface)
+                except exception.NovaException:
+                    pass
+    except Exception as ex:
+        LOG.error(_("Couldn't get IPv4 : %(ex)s") % {'ex': ex})
+    return LOCALHOST
+
+
+def _get_ipv4_address_for_interface(iface):
+    """Run ip addr show for an interface and grab its ipv4 addresses
+    """
+    try:
+        out = execute('ip', '-f', 'inet', '-o', 'addr', 'show', iface,
+                      run_as_root=True)
+        regexp_address = re.compile('inet\s*'
+                                    '(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})')
+        address = [m.group(1) for m in regexp_address.finditer(out[0])
+                   if m.group(1) != '127.0.0.1']
+        if address:
+            return address[0]
+        else:
+            msg = _('IPv4 address is not found.: %s') % out[0]
+            raise exception.NovaException(msg)
+    except Exception as ex:
+        msg = _("Couldn't get IPv4 of %(interface)s"
+                " : %(ex)s") % {'interface': iface, 'ex': ex}
+        LOG.error(msg)
+        raise exception.NovaException(msg)
+
+
 def get_my_linklocal(interface):
     try:
         if_str = execute('ip', '-f', 'inet6', '-o', 'addr', 'show', interface)
