@@ -2716,6 +2716,20 @@ class ServersControllerCreateTest(test.TestCase):
             return old_create(*args, **kwargs)
 
         self.stubs.Set(compute_api.API, 'create', create)
+
+        try:
+            self._test_create_extra(params)
+        except webob.exc.HTTPBadRequest as e:
+            expected = 'The requested availability zone is not available'
+            self.assertEquals(e.explanation, expected)
+        admin_context = context.get_admin_context()
+        service1 = db.service_create(admin_context, {'host': 'host1_zones',
+                                         'binary': "nova-compute",
+                                         'topic': 'compute',
+                                         'report_count': 0})
+        agg = db.aggregate_create(admin_context,
+                {'name': 'agg1'}, {'availability_zone': availability_zone})
+        db.aggregate_host_add(admin_context, agg['id'], 'host1_zones')
         self._test_create_extra(params)
 
     def test_create_instance_with_availability_zone_disabled(self):

@@ -598,8 +598,8 @@ class API(base.Base):
                                          max_count, display_name,
                                          display_description, key_name,
                                          key_data, security_groups,
-                                         availability_zone, user_data,
-                                         metadata, injected_files,
+                                         availability_zone, forced_host,
+                                         user_data, metadata, injected_files,
                                          access_ip_v4, access_ip_v6,
                                          requested_networks, config_drive,
                                          block_device_mapping,
@@ -611,6 +611,13 @@ class API(base.Base):
             if any(map(lambda bdm: 'volume_id' in bdm, block_device_mapping)):
                 msg = _('Cannot attach one or more volumes to multiple'
                         ' instances')
+                raise exception.InvalidRequest(msg)
+        if availability_zone:
+            available_zones = availability_zones.\
+                get_availability_zones(context.elevated(), True)
+            if forced_host is None and availability_zone not in \
+                    available_zones:
+                msg = _('The requested availability zone is not available')
                 raise exception.InvalidRequest(msg)
         if instance_type['disabled']:
             raise exception.InstanceTypeNotFound(
@@ -799,9 +806,10 @@ class API(base.Base):
                 instance_type, boot_meta, image_href, image_id, kernel_id,
                 ramdisk_id, min_count, max_count, display_name,
                 display_description, key_name, key_data, security_groups,
-                availability_zone, user_data, metadata, injected_files,
-                access_ip_v4, access_ip_v6, requested_networks, config_drive,
-                block_device_mapping, auto_disk_config, reservation_id)
+                availability_zone, forced_host, user_data, metadata,
+                injected_files, access_ip_v4, access_ip_v6, requested_networks,
+                config_drive, block_device_mapping, auto_disk_config,
+                reservation_id)
 
         instances = self._provision_instances(context, instance_type,
                 min_count, max_count, base_options, boot_meta, security_groups,
