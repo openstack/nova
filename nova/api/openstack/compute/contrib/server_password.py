@@ -39,7 +39,7 @@ class ServerPasswordTemplate(xmlutil.TemplateBuilder):
 
 
 class ServerPasswordController(object):
-    """The flavor access API controller for the OpenStack API."""
+    """The Server Password API controller for the OpenStack API."""
     def __init__(self):
         self.compute_api = compute.API()
 
