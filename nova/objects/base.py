@@ -353,6 +353,13 @@ class NovaObject(object):
         """
         setattr(self, name, value)
 
+    def __contains__(self, name):
+        """For backwards-compatibility with dict-based objects.
+
+        NOTE(danms): May be removed in the future.
+        """
+        return hasattr(self, get_attrname(name))
+
     def get(self, key, value=None):
         """For backwards-compatibility with dict-based objects.
 
