@@ -1050,3 +1050,13 @@ def spawn_n(func, *args, **kwargs):
     interfering with the service spawns.
     """
     eventlet.spawn_n(func, *args, **kwargs)
+
+
+def is_none_string(val):
+    """
+    Check if a string represents a None value.
+    """
+    if not isinstance(val, basestring):
+        return False
+
+    return val.lower() == 'none'
