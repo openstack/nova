@@ -716,7 +716,7 @@ class TestSecurityGroupRules(test.TestCase):
         db1 = security_group_db(self.sg1)
         db2 = security_group_db(self.sg2)
 
-        def return_security_group(context, group_id):
+        def return_security_group(context, group_id, columns_to_join=None):
             if group_id == db1['id']:
                 return db1
             if group_id == db2['id']:

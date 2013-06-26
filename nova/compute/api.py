@@ -3216,7 +3216,8 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
     def trigger_rules_refresh(self, context, id):
         """Called when a rule is added to or removed from a security_group."""
 
-        security_group = self.db.security_group_get(context, id)
+        security_group = self.db.security_group_get(
+            context, id, columns_to_join=['instances'])
 
         for instance in security_group['instances']:
             if instance['host'] is not None:
@@ -3242,8 +3243,8 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
         security_groups = set()
         for rule in security_group_rules:
             security_group = self.db.security_group_get(
-                                                    context,
-                                                    rule['parent_group_id'])
+                context, rule['parent_group_id'],
+                columns_to_join=['instances'])
             security_groups.add(security_group)
 
         # ..then we find the instances that are members of these groups..
