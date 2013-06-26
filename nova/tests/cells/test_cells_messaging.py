@@ -1426,3 +1426,173 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
         self.mox.ReplayAll()
 
         self.src_msg_runner.consoleauth_delete_tokens(self.ctxt, fake_uuid)
+
+    def test_bdm_update_or_create_with_none_create(self):
+        fake_bdm = {'id': 'fake_id',
+                    'volume_id': 'fake_volume_id'}
+        expected_bdm = fake_bdm.copy()
+        expected_bdm.pop('id')
+
+        # Shouldn't be called for these 2 cells
+        self.mox.StubOutWithMock(self.src_db_inst,
+                'block_device_mapping_update_or_create')
+        self.mox.StubOutWithMock(self.mid_db_inst,
+                'block_device_mapping_update_or_create')
+
+        self.mox.StubOutWithMock(self.tgt_db_inst,
+                'block_device_mapping_update_or_create')
+        self.tgt_db_inst.block_device_mapping_update_or_create(
+                self.ctxt, expected_bdm, legacy=False)
+
+        self.mox.ReplayAll()
+
+        self.src_msg_runner.bdm_update_or_create_at_top(self.ctxt,
+                                                        fake_bdm,
+                                                        create=None)
+
+    def test_bdm_update_or_create_with_true_create(self):
+        fake_bdm = {'id': 'fake_id',
+                    'volume_id': 'fake_volume_id'}
+        expected_bdm = fake_bdm.copy()
+        expected_bdm.pop('id')
+
+        # Shouldn't be called for these 2 cells
+        self.mox.StubOutWithMock(self.src_db_inst,
+                'block_device_mapping_create')
+        self.mox.StubOutWithMock(self.mid_db_inst,
+                'block_device_mapping_create')
+
+        self.mox.StubOutWithMock(self.tgt_db_inst,
+                'block_device_mapping_create')
+        self.tgt_db_inst.block_device_mapping_create(
+                self.ctxt, fake_bdm, legacy=False)
+
+        self.mox.ReplayAll()
+
+        self.src_msg_runner.bdm_update_or_create_at_top(self.ctxt,
+                                                        fake_bdm,
+                                                        create=True)
+
+    def test_bdm_update_or_create_with_false_create_vol_id(self):
+        fake_bdm = {'id': 'fake_id',
+                    'instance_uuid': 'fake_instance_uuid',
+                    'device_name': 'fake_device_name',
+                    'volume_id': 'fake_volume_id'}
+        expected_bdm = fake_bdm.copy()
+        expected_bdm.pop('id')
+
+        fake_inst_bdms = [{'id': 1,
+                           'volume_id': 'not-a-match',
+                           'device_name': 'not-a-match'},
+                          {'id': 2,
+                           'volume_id': 'fake_volume_id',
+                           'device_name': 'not-a-match'},
+                          {'id': 3,
+                           'volume_id': 'not-a-match',
+                           'device_name': 'not-a-match'}]
+
+        # Shouldn't be called for these 2 cells
+        self.mox.StubOutWithMock(self.src_db_inst,
+                'block_device_mapping_update')
+        self.mox.StubOutWithMock(self.mid_db_inst,
+                'block_device_mapping_update')
+
+        self.mox.StubOutWithMock(self.tgt_db_inst,
+                'block_device_mapping_get_all_by_instance')
+        self.mox.StubOutWithMock(self.tgt_db_inst,
+                'block_device_mapping_update')
+
+        self.tgt_db_inst.block_device_mapping_get_all_by_instance(
+                self.ctxt, 'fake_instance_uuid').AndReturn(
+                        fake_inst_bdms)
+        # Should try to update ID 2.
+        self.tgt_db_inst.block_device_mapping_update(
+                self.ctxt, 2, expected_bdm, legacy=False)
+
+        self.mox.ReplayAll()
+
+        self.src_msg_runner.bdm_update_or_create_at_top(self.ctxt,
+                                                        fake_bdm,
+                                                        create=False)
+
+    def test_bdm_update_or_create_with_false_create_dev_name(self):
+        fake_bdm = {'id': 'fake_id',
+                    'instance_uuid': 'fake_instance_uuid',
+                    'device_name': 'fake_device_name',
+                    'volume_id': 'fake_volume_id'}
+        expected_bdm = fake_bdm.copy()
+        expected_bdm.pop('id')
+
+        fake_inst_bdms = [{'id': 1,
+                           'volume_id': 'not-a-match',
+                           'device_name': 'not-a-match'},
+                          {'id': 2,
+                           'volume_id': 'not-a-match',
+                           'device_name': 'fake_device_name'},
+                          {'id': 3,
+                           'volume_id': 'not-a-match',
+                           'device_name': 'not-a-match'}]
+
+        # Shouldn't be called for these 2 cells
+        self.mox.StubOutWithMock(self.src_db_inst,
+                'block_device_mapping_update')
+        self.mox.StubOutWithMock(self.mid_db_inst,
+                'block_device_mapping_update')
+
+        self.mox.StubOutWithMock(self.tgt_db_inst,
+                'block_device_mapping_get_all_by_instance')
+        self.mox.StubOutWithMock(self.tgt_db_inst,
+                'block_device_mapping_update')
+
+        self.tgt_db_inst.block_device_mapping_get_all_by_instance(
+                self.ctxt, 'fake_instance_uuid').AndReturn(
+                        fake_inst_bdms)
+        # Should try to update ID 2.
+        self.tgt_db_inst.block_device_mapping_update(
+                self.ctxt, 2, expected_bdm, legacy=False)
+
+        self.mox.ReplayAll()
+
+        self.src_msg_runner.bdm_update_or_create_at_top(self.ctxt,
+                                                        fake_bdm,
+                                                        create=False)
+
+    def test_bdm_destroy_by_volume(self):
+        fake_instance_uuid = 'fake-instance-uuid'
+        fake_volume_id = 'fake-volume-name'
+
+        # Shouldn't be called for these 2 cells
+        self.mox.StubOutWithMock(self.src_db_inst,
+                'block_device_mapping_destroy_by_instance_and_volume')
+        self.mox.StubOutWithMock(self.mid_db_inst,
+                'block_device_mapping_destroy_by_instance_and_volume')
+
+        self.mox.StubOutWithMock(self.tgt_db_inst,
+                'block_device_mapping_destroy_by_instance_and_volume')
+        self.tgt_db_inst.block_device_mapping_destroy_by_instance_and_volume(
+                self.ctxt, fake_instance_uuid, fake_volume_id)
+
+        self.mox.ReplayAll()
+
+        self.src_msg_runner.bdm_destroy_at_top(self.ctxt, fake_instance_uuid,
+                                               volume_id=fake_volume_id)
+
+    def test_bdm_destroy_by_device(self):
+        fake_instance_uuid = 'fake-instance-uuid'
+        fake_device_name = 'fake-device-name'
+
+        # Shouldn't be called for these 2 cells
+        self.mox.StubOutWithMock(self.src_db_inst,
+                'block_device_mapping_destroy_by_instance_and_device')
+        self.mox.StubOutWithMock(self.mid_db_inst,
+                'block_device_mapping_destroy_by_instance_and_device')
+
+        self.mox.StubOutWithMock(self.tgt_db_inst,
+                'block_device_mapping_destroy_by_instance_and_device')
+        self.tgt_db_inst.block_device_mapping_destroy_by_instance_and_device(
+                self.ctxt, fake_instance_uuid, fake_device_name)
+
+        self.mox.ReplayAll()
+
+        self.src_msg_runner.bdm_destroy_at_top(self.ctxt, fake_instance_uuid,
+                                               device_name=fake_device_name)

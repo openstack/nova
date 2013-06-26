@@ -846,7 +846,8 @@ class _BroadcastMessageMethods(_BaseMessageMethods):
             except exception.NotFound:
                 # FIXME(comstud): Strange.  Need to handle quotas here,
                 # if we actually want this code to remain..
-                self.db.instance_create(message.ctxt, instance)
+                self.db.instance_create(message.ctxt, instance,
+                                        legacy=False)
         if info_cache:
             try:
                 self.db.instance_info_cache_update(
@@ -956,6 +957,60 @@ class _BroadcastMessageMethods(_BaseMessageMethods):
             return
         self.consoleauth_rpcapi.delete_tokens_for_instance(message.ctxt,
                                                            instance_uuid)
+
+    def bdm_update_or_create_at_top(self, message, bdm, create):
+        """Create or update a block device mapping in API cells.  If
+        create is True, only try to create.  If create is None, try to
+        update but fall back to create.  If create is False, only attempt
+        to update.  This maps to nova-conductor's behavior.
+        """
+        if not self._at_the_top():
+            return
+        items_to_remove = ['id']
+        for key in items_to_remove:
+            bdm.pop(key, None)
+        if create is None:
+            self.db.block_device_mapping_update_or_create(message.ctxt,
+                                                          bdm,
+                                                          legacy=False)
+            return
+        elif create is True:
+            self.db.block_device_mapping_create(message.ctxt, bdm,
+                                                legacy=False)
+            return
+        # Unfortunately this update call wants BDM ID... but we don't know
+        # what it is in this cell.  Search for it.. try matching either
+        # device_name or volume_id.
+        dev_name = bdm['device_name']
+        vol_id = bdm['volume_id']
+        instance_bdms = self.db.block_device_mapping_get_all_by_instance(
+                message.ctxt, bdm['instance_uuid'])
+        for instance_bdm in instance_bdms:
+            if dev_name and instance_bdm['device_name'] == dev_name:
+                break
+            if vol_id and instance_bdm['volume_id'] == vol_id:
+                break
+        else:
+            LOG.warn(_("No match when trying to update BDM: %(bdm)s"),
+                     dict(bdm=bdm))
+            return
+        self.db.block_device_mapping_update(message.ctxt,
+                                            instance_bdm['id'], bdm,
+                                            legacy=False)
+
+    def bdm_destroy_at_top(self, message, instance_uuid, device_name,
+                           volume_id):
+        """Destroy a block device mapping in API cells by device name
+        or volume_id.  device_name or volume_id can be None, but not both.
+        """
+        if not self._at_the_top():
+            return
+        if device_name:
+            self.db.block_device_mapping_destroy_by_instance_and_device(
+                    message.ctxt, instance_uuid, device_name)
+        elif volume_id:
+            self.db.block_device_mapping_destroy_by_instance_and_volume(
+                    message.ctxt, instance_uuid, volume_id)
 
 
 _CELL_MESSAGE_TYPE_TO_MESSAGE_CLS = {'targeted': _TargetedMessage,
@@ -1341,6 +1396,25 @@ class MessageRunner(object):
                                    method_kwargs, 'down',
                                    cell_name, need_response=True)
         return message.process()
+
+    def bdm_update_or_create_at_top(self, ctxt, bdm, create=None):
+        """Update/Create a BDM at top level cell."""
+        message = _BroadcastMessage(self, ctxt,
+                                    'bdm_update_or_create_at_top',
+                                    dict(bdm=bdm, create=create),
+                                    'up', run_locally=False)
+        message.process()
+
+    def bdm_destroy_at_top(self, ctxt, instance_uuid, device_name=None,
+                           volume_id=None):
+        """Destroy a BDM at top level cell."""
+        method_kwargs = dict(instance_uuid=instance_uuid,
+                             device_name=device_name,
+                             volume_id=volume_id)
+        message = _BroadcastMessage(self, ctxt, 'bdm_destroy_at_top',
+                                    method_kwargs,
+                                    'up', run_locally=False)
+        message.process()
 
     @staticmethod
     def get_message_types():
