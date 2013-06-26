@@ -579,7 +579,8 @@ class FakeVim(object):
                   "vmPathName": config_spec.files.vmPathName,
                   "numCpu": config_spec.numCPUs,
                   "mem": config_spec.memoryMB,
-                  "virtual_device": config_spec.deviceChange}
+                  "virtual_device": config_spec.deviceChange,
+                  "extra_config": config_spec.extraConfig}
         virtual_machine = VirtualMachine(**vm_dict)
         _create_object("VirtualMachine", virtual_machine)
         task_mdo = create_task(method, "success")
