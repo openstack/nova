@@ -335,14 +335,14 @@ class VMwareAPIVMTestCase(test.TestCase):
         self.conn.power_off(self.instance)
         info = self.conn.get_info({'uuid': 'fake-uuid'})
         self._check_vm_info(info, power_state.SHUTDOWN)
-        self.conn.power_on(self.instance)
+        self.conn.power_on(self.context, self.instance, self.network_info)
         info = self.conn.get_info({'uuid': 'fake-uuid'})
         self._check_vm_info(info, power_state.RUNNING)
 
     def test_power_on_non_existent(self):
         self._create_instance_in_the_db()
         self.assertRaises(exception.InstanceNotFound, self.conn.power_on,
-                          self.instance)
+                          self.context, self.instance, self.network_info)
 
     def test_power_off(self):
         self._create_vm()
@@ -427,7 +427,7 @@ class VMwareAPIVMTestCase(test.TestCase):
             self.assertEquals(4, step)
             self.assertEqual(vmops.RESIZE_TOTAL_STEPS, total_steps)
 
-        self.stubs.Set(self.conn._vmops, "power_on", fake_power_on)
+        self.stubs.Set(self.conn._vmops, "_power_on", fake_power_on)
         self.stubs.Set(self.conn._vmops, "_update_instance_progress",
                        fake_vmops_update_instance_progress)
 
@@ -439,6 +439,7 @@ class VMwareAPIVMTestCase(test.TestCase):
                                    instance=self.instance,
                                    disk_info=None,
                                    network_info=None,
+                                   block_device_info=None,
                                    image_meta=None,
                                    power_on=power_on)
         # verify the results
@@ -475,15 +476,20 @@ class VMwareAPIVMTestCase(test.TestCase):
             self.assertEquals(self.vm_name, vm_name)
             return vmwareapi_fake._get_objects("VirtualMachine")[0]
 
+        def fake_get_vm_ref_from_uuid(session, vm_uuid):
+            return vmwareapi_fake._get_objects("VirtualMachine")[0]
+
         def fake_call_method(*args, **kwargs):
             pass
 
         def fake_wait_for_task(*args, **kwargs):
             pass
 
-        self.stubs.Set(self.conn._vmops, "power_on", fake_power_on)
+        self.stubs.Set(self.conn._vmops, "_power_on", fake_power_on)
         self.stubs.Set(self.conn._vmops, "_get_orig_vm_name_label",
                        fake_get_orig_vm_name_label)
+        self.stubs.Set(vm_util, "get_vm_ref_from_uuid",
+                       fake_get_vm_ref_from_uuid)
         self.stubs.Set(vm_util, "get_vm_ref_from_name",
                        fake_get_vm_ref_from_name)
         self.stubs.Set(self.conn._session, "_call_method", fake_call_method)
