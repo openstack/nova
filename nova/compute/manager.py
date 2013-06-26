@@ -4114,7 +4114,12 @@ class ComputeManager(manager.SchedulerDependentManager):
                 # NOTE(comstud): Quotas were already accounted for when
                 # the instance was soft deleted, so there's no need to
                 # pass reservations here.
-                self._delete_instance(context, instance, bdms)
+                try:
+                    self._delete_instance(context, instance, bdms)
+                except Exception as e:
+                    LOG.warning(_("Periodic reclaim failed to delete "
+                                  "instance: %s"),
+                                unicode(e), instance=instance)
 
     @periodic_task.periodic_task
     def update_available_resource(self, context):

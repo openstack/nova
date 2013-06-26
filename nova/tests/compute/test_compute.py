@@ -5239,6 +5239,54 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute._reclaim_queued_deletes(ctxt)
 
+    def test_reclaim_queued_deletes_continue_on_error(self):
+        # Verify that reclaim continues on error.
+        self.flags(reclaim_instance_interval=3600)
+        ctxt = context.get_admin_context()
+
+        deleted_at = (timeutils.utcnow() -
+                      datetime.timedelta(hours=1, minutes=5))
+        instance1 = self._create_fake_instance(
+                params={'host': CONF.host,
+                        'vm_state': vm_states.SOFT_DELETED,
+                        'deleted_at': deleted_at})
+        instance2 = self._create_fake_instance(
+                params={'host': CONF.host,
+                        'vm_state': vm_states.SOFT_DELETED,
+                        'deleted_at': deleted_at})
+        instances = []
+        instance_ref1 = get_primitive_instance_by_uuid(ctxt, instance1['uuid'])
+        instances.append(instance_ref1)
+        instance_ref2 = get_primitive_instance_by_uuid(ctxt, instance2['uuid'])
+        instances.append(instance_ref2)
+
+        self.mox.StubOutWithMock(self.compute.conductor_api,
+                                 'instance_get_all_by_filters')
+        self.mox.StubOutWithMock(self.compute, '_deleted_old_enough')
+        self.mox.StubOutWithMock(self.compute.conductor_api,
+                                 'block_device_mapping_get_all_by_instance')
+        self.mox.StubOutWithMock(self.compute, '_delete_instance')
+
+        self.compute.conductor_api.instance_get_all_by_filters(
+                ctxt, mox.IgnoreArg()).AndReturn(instances)
+
+        # The first instance delete fails.
+        self.compute._deleted_old_enough(instance_ref1, 3600).AndReturn(True)
+        self.compute.conductor_api.block_device_mapping_get_all_by_instance(
+                ctxt, instance_ref1).AndReturn(None)
+        self.compute._delete_instance(ctxt, instance_ref1, None).AndRaise(
+                test.TestingException)
+
+        # The second instance delete that follows.
+        self.compute._deleted_old_enough(instance_ref2, 3600).AndReturn(True)
+        self.compute.conductor_api.block_device_mapping_get_all_by_instance(
+                ctxt, instance_ref2).AndReturn(None)
+        self.compute._delete_instance(ctxt, instance_ref2, None)
+
+        self.mox.ReplayAll()
+
+        self.compute._reclaim_queued_deletes(ctxt)
+
     def test_sync_power_states(self):
         ctxt = self.context.elevated()
         self._create_fake_instance({'host': self.compute.host})
