@@ -19,7 +19,7 @@ from oslo.config import cfg
 import webob
 
 from nova.api.openstack import compute
-from nova.api.openstack.compute.contrib import admin_actions
+from nova.api.openstack.compute.plugins.v3 import admin_actions
 from nova.compute import api as compute_api
 from nova.compute import vm_states
 from nova.conductor import api as conductor_api
@@ -88,15 +88,11 @@ class AdminActionsTest(test.TestCase):
         self.UUID = uuid.uuid4()
         for _method in self._methods:
             self.stubs.Set(compute_api.API, _method, fake_compute_api)
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Admin_actions'])
 
     def test_admin_api_actions(self):
-        app = fakes.wsgi_app(init_only=('servers',))
+        app = fakes.wsgi_app_v3(init_only=('servers', 'os-admin-actions'))
         for _action in self._actions:
-            req = webob.Request.blank('/v2/fake/servers/%s/action' %
+            req = webob.Request.blank('/v3/servers/%s/action' %
                     self.UUID)
             req.method = 'POST'
             req.body = jsonutils.dumps({_action: None})
@@ -105,13 +101,13 @@ class AdminActionsTest(test.TestCase):
             self.assertEqual(res.status_int, 202)
 
     def test_admin_api_actions_raise_conflict_on_invalid_state(self):
-        app = fakes.wsgi_app(init_only=('servers',))
+        app = fakes.wsgi_app_v3(init_only=('servers', 'os-admin-actions'))
 
         for _action, _method in self._actions_that_check_state:
             self.stubs.Set(compute_api.API, _method,
                 fake_compute_api_raises_invalid_state)
 
-            req = webob.Request.blank('/v2/fake/servers/%s/action' %
+            req = webob.Request.blank('/v3/servers/%s/action' %
                     self.UUID)
             req.method = 'POST'
             req.body = jsonutils.dumps({_action: None})
@@ -126,8 +122,9 @@ class AdminActionsTest(test.TestCase):
         ctxt.user_id = 'fake'
         ctxt.project_id = 'fake'
         ctxt.is_admin = True
-        app = fakes.wsgi_app(fake_auth_context=ctxt, init_only=('servers',))
-        req = webob.Request.blank('/v2/fake/servers/%s/action' % self.UUID)
+        app = fakes.wsgi_app_v3(fake_auth_context=ctxt,
+                                init_only=('servers', 'os-admin-actions'))
+        req = webob.Request.blank('/v3/servers/%s/action' % self.UUID)
         req.method = 'POST'
         req.body = jsonutils.dumps({
             'os-migrateLive': {
@@ -160,8 +157,9 @@ class AdminActionsTest(test.TestCase):
         ctxt.user_id = 'fake'
         ctxt.project_id = 'fake'
         ctxt.is_admin = True
-        app = fakes.wsgi_app(fake_auth_context=ctxt, init_only=('servers',))
-        req = webob.Request.blank('/v2/fake/servers/%s/action' % self.UUID)
+        app = fakes.wsgi_app_v3(fake_auth_context=ctxt,
+                                init_only=('servers', 'os-admin-actions'))
+        req = webob.Request.blank('/v3/servers/%s/action' % self.UUID)
         req.method = 'POST'
         req.body = jsonutils.dumps({
             'os-migrateLive': {
@@ -179,8 +177,9 @@ class AdminActionsTest(test.TestCase):
         ctxt.user_id = 'fake'
         ctxt.project_id = 'fake'
         ctxt.is_admin = True
-        app = fakes.wsgi_app(fake_auth_context=ctxt, init_only=('servers',))
-        req = webob.Request.blank('/v2/fake/servers/%s/action' % self.UUID)
+        app = fakes.wsgi_app_v3(fake_auth_context=ctxt,
+                                init_only=('servers', 'os-admin-actions'))
+        req = webob.Request.blank('/v3/servers/%s/action' % self.UUID)
         req.method = 'POST'
         req.body = jsonutils.dumps({
             'os-migrateLive': {
@@ -216,8 +215,9 @@ class AdminActionsTest(test.TestCase):
         ctxt.user_id = 'fake'
         ctxt.project_id = 'fake'
         ctxt.is_admin = True
-        app = fakes.wsgi_app(fake_auth_context=ctxt, init_only=('servers',))
-        req = webob.Request.blank('/v2/fake/servers/%s/action' % self.UUID)
+        app = fakes.wsgi_app_v3(fake_auth_context=ctxt,
+                                init_only=('servers', 'os-admin-actions'))
+        req = webob.Request.blank('/v3/servers/%s/action' % self.UUID)
         req.method = 'POST'
         req.body = jsonutils.dumps({
             'os-migrateLive': {
@@ -253,8 +253,9 @@ class AdminActionsTest(test.TestCase):
         ctxt.user_id = 'fake'
         ctxt.project_id = 'fake'
         ctxt.is_admin = True
-        app = fakes.wsgi_app(fake_auth_context=ctxt, init_only=('servers',))
-        req = webob.Request.blank('/v2/fake/servers/%s/action' % self.UUID)
+        app = fakes.wsgi_app_v3(fake_auth_context=ctxt,
+                                init_only=('servers', 'os-admin-actions'))
+        req = webob.Request.blank('/v3/servers/%s/action' % self.UUID)
         req.method = 'POST'
         req.body = jsonutils.dumps({
             'os-migrateLive': {
@@ -290,8 +291,9 @@ class AdminActionsTest(test.TestCase):
         ctxt.user_id = 'fake'
         ctxt.project_id = 'fake'
         ctxt.is_admin = True
-        app = fakes.wsgi_app(fake_auth_context=ctxt, init_only=('servers',))
-        req = webob.Request.blank('/v2/fake/servers/%s/action' % self.UUID)
+        app = fakes.wsgi_app_v3(fake_auth_context=ctxt,
+                                init_only=('servers', 'os-admin-actions'))
+        req = webob.Request.blank('/v3/servers/%s/action' % self.UUID)
         req.method = 'POST'
         req.body = jsonutils.dumps({
             'os-migrateLive': {
@@ -330,12 +332,13 @@ class CreateBackupTests(test.TestCase):
 
         self.stubs.Set(compute_api.API, 'get', fake_compute_api_get)
         self.backup_stubs = fakes.stub_out_compute_api_backup(self.stubs)
-        self.app = compute.APIRouter(init_only=('servers',))
+        self.app = compute.APIRouterV3(init_only=('servers',
+                                                  'os-admin-actions'))
         self.uuid = uuid.uuid4()
 
     def _get_request(self, body):
-        url = '/fake/servers/%s/action' % self.uuid
-        req = fakes.HTTPRequest.blank(url)
+        url = '/servers/%s/action' % self.uuid
+        req = fakes.HTTPRequestV3.blank(url)
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = jsonutils.dumps(body)
@@ -504,8 +507,8 @@ class ResetStateTests(test.TestCase):
         self.stubs.Set(compute_api.API, 'update', fake_update)
         self.admin_api = admin_actions.AdminActionsController()
 
-        url = '/fake/servers/%s/action' % self.uuid
-        self.request = fakes.HTTPRequest.blank(url)
+        url = '/servers/%s/action' % self.uuid
+        self.request = fakes.HTTPRequestV3.blank(url)
 
     def test_no_state(self):
         self.assertRaises(webob.exc.HTTPBadRequest,
