@@ -75,6 +75,11 @@ class StubGlanceClient(object):
     def update(self, image_id, **metadata):
         for i, image in enumerate(self._images):
             if image.id == str(image_id):
+                # If you try to update a non-authorized image, it raises
+                # HTTPForbidden
+                if image.owner == 'authorized_fake':
+                    raise glanceclient.exc.HTTPForbidden
+
                 for k, v in metadata.items():
                     setattr(self._images[i], k, v)
                 return self._images[i]

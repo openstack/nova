@@ -271,6 +271,10 @@ def _make_image_fixtures():
 
     # Image without a name
     add_fixture(id=image_id, is_public=True, status='active', properties={})
+    # Image for permission tests
+    image_id += 1
+    add_fixture(id=image_id, is_public=True, status='active', properties={},
+                owner='authorized_fake')
 
     return fixtures
 
