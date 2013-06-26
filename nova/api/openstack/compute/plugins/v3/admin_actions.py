@@ -127,11 +127,11 @@ class AdminActionsController(wsgi.Controller):
             raise exc.HTTPBadRequest()
         return webob.Response(status_int=202)
 
-    @wsgi.action('resetNetwork')
+    @wsgi.action('reset_network')
     def _reset_network(self, req, id, body):
         """Permit admins to reset networking on a server."""
         context = req.environ['nova.context']
-        authorize(context, 'resetNetwork')
+        authorize(context, 'reset_network')
         try:
             instance = self.compute_api.get(context, id)
             self.compute_api.reset_network(context, instance)
@@ -141,11 +141,11 @@ class AdminActionsController(wsgi.Controller):
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
-    @wsgi.action('injectNetworkInfo')
+    @wsgi.action('inject_network_info')
     def _inject_network_info(self, req, id, body):
         """Permit admins to inject network info into a server."""
         context = req.environ['nova.context']
-        authorize(context, 'injectNetworkInfo')
+        authorize(context, 'inject_network_info')
         try:
             instance = self.compute_api.get(context, id)
             self.compute_api.inject_network_info(context, instance)
@@ -189,7 +189,7 @@ class AdminActionsController(wsgi.Controller):
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
-    @wsgi.action('createBackup')
+    @wsgi.action('create_backup')
     def _create_backup(self, req, id, body):
         """Backup a server instance.
 
@@ -202,10 +202,10 @@ class AdminActionsController(wsgi.Controller):
 
         """
         context = req.environ["nova.context"]
-        authorize(context, 'createBackup')
+        authorize(context, 'create_backup')
 
         try:
-            entity = body["createBackup"]
+            entity = body["create_backup"]
         except (KeyError, TypeError):
             raise exc.HTTPBadRequest(_("Malformed request body"))
 
@@ -215,20 +215,20 @@ class AdminActionsController(wsgi.Controller):
             rotation = entity["rotation"]
 
         except KeyError as missing_key:
-            msg = _("createBackup entity requires %s attribute") % missing_key
+            msg = _("create_backup entity requires %s attribute") % missing_key
             raise exc.HTTPBadRequest(explanation=msg)
 
         except TypeError:
-            msg = _("Malformed createBackup entity")
+            msg = _("Malformed create_backup entity")
             raise exc.HTTPBadRequest(explanation=msg)
 
         try:
             rotation = int(rotation)
         except ValueError:
-            msg = _("createBackup attribute 'rotation' must be an integer")
+            msg = _("create_backup attribute 'rotation' must be an integer")
             raise exc.HTTPBadRequest(explanation=msg)
         if rotation < 0:
-            msg = _("createBackup attribute 'rotation' must be greater "
+            msg = _("create_backup attribute 'rotation' must be greater "
                     "than or equal to zero")
             raise exc.HTTPBadRequest(explanation=msg)
 
@@ -251,7 +251,7 @@ class AdminActionsController(wsgi.Controller):
                     backup_type, rotation, extra_properties=props)
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                    'createBackup')
+                    'create_backup')
 
         resp = webob.Response(status_int=202)
 
@@ -263,16 +263,16 @@ class AdminActionsController(wsgi.Controller):
 
         return resp
 
-    @wsgi.action('os-migrateLive')
+    @wsgi.action('migrate_live')
     def _migrate_live(self, req, id, body):
         """Permit admins to (live) migrate a server to a new host."""
         context = req.environ["nova.context"]
-        authorize(context, 'migrateLive')
+        authorize(context, 'migrate_live')
 
         try:
-            block_migration = body["os-migrateLive"]["block_migration"]
-            disk_over_commit = body["os-migrateLive"]["disk_over_commit"]
-            host = body["os-migrateLive"]["host"]
+            block_migration = body["migrate_live"]["block_migration"]
+            disk_over_commit = body["migrate_live"]["disk_over_commit"]
+            host = body["migrate_live"]["host"]
         except (TypeError, KeyError):
             msg = _("host, block_migration and disk_over_commit must "
                     "be specified for live migration.")
@@ -300,15 +300,15 @@ class AdminActionsController(wsgi.Controller):
 
         return webob.Response(status_int=202)
 
-    @wsgi.action('os-resetState')
+    @wsgi.action('reset_state')
     def _reset_state(self, req, id, body):
         """Permit admins to reset the state of a server."""
         context = req.environ["nova.context"]
-        authorize(context, 'resetState')
+        authorize(context, 'reset_state')
 
         # Identify the desired state from the body
         try:
-            state = state_map[body["os-resetState"]["state"]]
+            state = state_map[body["reset_state"]["state"]]
         except (TypeError, KeyError):
             msg = _("Desired state must be specified.  Valid states "
                     "are: %s") % ', '.join(sorted(state_map.keys()))
@@ -321,7 +321,7 @@ class AdminActionsController(wsgi.Controller):
             raise exc.HTTPNotFound(_("Server not found"))
         except Exception:
             readable = traceback.format_exc()
-            LOG.exception(_("Compute.api::resetState %s"), readable)
+            LOG.exception(_("Compute.api::reset_state %s"), readable)
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
@@ -330,7 +330,7 @@ class AdminActions(extensions.V3APIExtensionBase):
     """Enable admin-only server actions
 
     Actions include: pause, unpause, suspend, resume, migrate,
-    resetNetwork, injectNetworkInfo, lock, unlock, createBackup
+    reset_network, inject_network_info, lock, unlock, create_backup
     """
 
     name = "AdminActions"

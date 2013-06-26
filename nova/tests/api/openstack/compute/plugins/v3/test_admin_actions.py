@@ -69,7 +69,7 @@ def fake_compute_api_get(self, context, instance_id):
 class AdminActionsTest(test.TestCase):
 
     _actions = ('pause', 'unpause', 'suspend', 'resume', 'migrate',
-                'resetNetwork', 'injectNetworkInfo', 'lock', 'unlock')
+                'reset_network', 'inject_network_info', 'lock', 'unlock')
 
     _methods = ('pause', 'unpause', 'suspend', 'resume', 'resize',
                 'reset_network', 'inject_network_info', 'lock', 'unlock')
@@ -127,7 +127,7 @@ class AdminActionsTest(test.TestCase):
         req = webob.Request.blank('/v3/servers/%s/action' % self.UUID)
         req.method = 'POST'
         req.body = jsonutils.dumps({
-            'os-migrateLive': {
+            'migrate_live': {
                 'host': 'hostname',
                 'block_migration': False,
                 'disk_over_commit': False,
@@ -162,7 +162,7 @@ class AdminActionsTest(test.TestCase):
         req = webob.Request.blank('/v3/servers/%s/action' % self.UUID)
         req.method = 'POST'
         req.body = jsonutils.dumps({
-            'os-migrateLive': {
+            'migrate_live': {
                 'dummy': 'hostname',
                 'block_migration': False,
                 'disk_over_commit': False,
@@ -182,7 +182,7 @@ class AdminActionsTest(test.TestCase):
         req = webob.Request.blank('/v3/servers/%s/action' % self.UUID)
         req.method = 'POST'
         req.body = jsonutils.dumps({
-            'os-migrateLive': {
+            'migrate_live': {
                 'host': 'hostname',
                 'block_migration': False,
                 'disk_over_commit': False,
@@ -220,7 +220,7 @@ class AdminActionsTest(test.TestCase):
         req = webob.Request.blank('/v3/servers/%s/action' % self.UUID)
         req.method = 'POST'
         req.body = jsonutils.dumps({
-            'os-migrateLive': {
+            'migrate_live': {
                 'host': 'hostname',
                 'block_migration': False,
                 'disk_over_commit': False,
@@ -258,7 +258,7 @@ class AdminActionsTest(test.TestCase):
         req = webob.Request.blank('/v3/servers/%s/action' % self.UUID)
         req.method = 'POST'
         req.body = jsonutils.dumps({
-            'os-migrateLive': {
+            'migrate_live': {
                 'host': 'hostname',
                 'block_migration': False,
                 'disk_over_commit': False,
@@ -296,7 +296,7 @@ class AdminActionsTest(test.TestCase):
         req = webob.Request.blank('/v3/servers/%s/action' % self.UUID)
         req.method = 'POST'
         req.body = jsonutils.dumps({
-            'os-migrateLive': {
+            'migrate_live': {
                 'host': 'hostname',
                 'block_migration': False,
                 'disk_over_commit': False,
@@ -346,7 +346,7 @@ class CreateBackupTests(test.TestCase):
 
     def test_create_backup_with_metadata(self):
         body = {
-            'createBackup': {
+            'create_backup': {
                 'name': 'Backup 1',
                 'backup_type': 'daily',
                 'rotation': 1,
@@ -362,7 +362,7 @@ class CreateBackupTests(test.TestCase):
 
     def test_create_backup_with_too_much_metadata(self):
         body = {
-            'createBackup': {
+            'create_backup': {
                 'name': 'Backup 1',
                 'backup_type': 'daily',
                 'rotation': 1,
@@ -370,7 +370,7 @@ class CreateBackupTests(test.TestCase):
             },
         }
         for num in range(CONF.quota_metadata_items + 1):
-            body['createBackup']['metadata']['foo%i' % num] = "bar"
+            body['create_backup']['metadata']['foo%i' % num] = "bar"
 
         request = self._get_request(body)
         response = request.get_response(self.app)
@@ -379,7 +379,7 @@ class CreateBackupTests(test.TestCase):
     def test_create_backup_no_name(self):
         # Name is required for backups.
         body = {
-            'createBackup': {
+            'create_backup': {
                 'backup_type': 'daily',
                 'rotation': 1,
             },
@@ -392,7 +392,7 @@ class CreateBackupTests(test.TestCase):
     def test_create_backup_no_rotation(self):
         # Rotation is required for backup requests.
         body = {
-            'createBackup': {
+            'create_backup': {
                 'name': 'Backup 1',
                 'backup_type': 'daily',
             },
@@ -407,7 +407,7 @@ class CreateBackupTests(test.TestCase):
         for backup requests
         """
         body = {
-            'createBackup': {
+            'create_backup': {
                 'name': 'Backup 1',
                 'backup_type': 'daily',
                 'rotation': -1,
@@ -421,7 +421,7 @@ class CreateBackupTests(test.TestCase):
     def test_create_backup_no_backup_type(self):
         # Backup Type (daily or weekly) is required for backup requests.
         body = {
-            'createBackup': {
+            'create_backup': {
                 'name': 'Backup 1',
                 'rotation': 1,
             },
@@ -432,7 +432,7 @@ class CreateBackupTests(test.TestCase):
         self.assertEqual(response.status_int, 400)
 
     def test_create_backup_bad_entity(self):
-        body = {'createBackup': 'go'}
+        body = {'create_backup': 'go'}
 
         request = self._get_request(body)
         response = request.get_response(self.app)
@@ -441,7 +441,7 @@ class CreateBackupTests(test.TestCase):
     def test_create_backup_rotation_is_zero(self):
         # The happy path for creating backups if rotation is zero.
         body = {
-            'createBackup': {
+            'create_backup': {
                 'name': 'Backup 1',
                 'backup_type': 'daily',
                 'rotation': 0,
@@ -457,7 +457,7 @@ class CreateBackupTests(test.TestCase):
     def test_create_backup_rotation_is_positive(self):
         # The happy path for creating backups if rotation is positive.
         body = {
-            'createBackup': {
+            'create_backup': {
                 'name': 'Backup 1',
                 'backup_type': 'daily',
                 'rotation': 1,
@@ -472,7 +472,7 @@ class CreateBackupTests(test.TestCase):
 
     def test_create_backup_raises_conflict_on_invalid_state(self):
         body = {
-            'createBackup': {
+            'create_backup': {
                 'name': 'Backup 1',
                 'backup_type': 'daily',
                 'rotation': 1,
@@ -514,23 +514,23 @@ class ResetStateTests(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.admin_api._reset_state,
                           self.request, 'inst_id',
-                          {"os-resetState": None})
+                          {"reset_state": None})
 
     def test_bad_state(self):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.admin_api._reset_state,
                           self.request, 'inst_id',
-                          {"os-resetState": {"state": "spam"}})
+                          {"reset_state": {"state": "spam"}})
 
     def test_no_instance(self):
         self.exists = False
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.admin_api._reset_state,
                           self.request, 'inst_id',
-                          {"os-resetState": {"state": "active"}})
+                          {"reset_state": {"state": "active"}})
 
     def test_reset_active(self):
-        body = {"os-resetState": {"state": "active"}}
+        body = {"reset_state": {"state": "active"}}
         result = self.admin_api._reset_state(self.request, 'inst_id', body)
 
         self.assertEqual(result.status_int, 202)
@@ -538,7 +538,7 @@ class ResetStateTests(test.TestCase):
                                            task_state=None))
 
     def test_reset_error(self):
-        body = {"os-resetState": {"state": "error"}}
+        body = {"reset_state": {"state": "error"}}
         result = self.admin_api._reset_state(self.request, 'inst_id', body)
 
         self.assertEqual(result.status_int, 202)
