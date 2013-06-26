@@ -419,7 +419,7 @@ def get_fake_uuid(token=0):
 
 
 def fake_instance_get(**kwargs):
-    def _return_server(context, uuid):
+    def _return_server(context, uuid, columns_to_join=None):
         return stub_instance(1, **kwargs)
     return _return_server
 
@@ -435,6 +435,8 @@ def fake_instance_get_all_by_filters(num_servers=5, **kwargs):
         if "limit" in kwargs:
             limit = kwargs["limit"]
 
+        if 'columns_to_join' in kwargs:
+            kwargs.pop('columns_to_join')
         for i in xrange(num_servers):
             uuid = get_fake_uuid(i)
             server = stub_instance(id=i + 1, uuid=uuid,
@@ -504,6 +506,8 @@ def stub_instance(id, user_id=None, project_id=None, host=None,
         "id": int(id),
         "created_at": datetime.datetime(2010, 10, 10, 12, 0, 0),
         "updated_at": datetime.datetime(2010, 11, 11, 11, 0, 0),
+        "deleted_at": datetime.datetime(2010, 12, 12, 10, 0, 0),
+        "deleted": None,
         "user_id": user_id,
         "project_id": project_id,
         "image_ref": image_ref,
@@ -556,6 +560,7 @@ def stub_instance(id, user_id=None, project_id=None, host=None,
         "os_type": ""}
 
     instance.update(info_cache)
+    instance['info_cache']['instance_uuid'] = instance['uuid']
 
     return instance
 
