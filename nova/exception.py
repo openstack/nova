@@ -668,7 +668,7 @@ class NoFloatingIpInterface(NotFound):
 
 
 class CannotDisassociateAutoAssignedFloatingIP(NovaException):
-    message = _("Cannot disassociate auto assigined floating ip")
+    message = _("Cannot disassociate auto assigned floating ip")
 
 
 class KeypairNotFound(NotFound):
@@ -924,7 +924,7 @@ class InstanceTypeIdExists(Duplicate):
 
 
 class FlavorAccessExists(Duplicate):
-    message = _("Flavor access alreay exists for flavor %(flavor_id)s "
+    message = _("Flavor access already exists for flavor %(flavor_id)s "
                 "and project %(project_id)s combination.")
 
 
