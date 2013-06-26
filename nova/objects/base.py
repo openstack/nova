@@ -367,6 +367,14 @@ class NovaObject(object):
         """
         return self[key]
 
+    def update(self, updates):
+        """For backwards-compatibility with dict-base objects.
+
+        NOTE(danms): May be removed in the future.
+        """
+        for key, value in updates.items():
+            self[key] = value
+
 
 class ObjectListBase(object):
     """Mixin class for lists of objects.
