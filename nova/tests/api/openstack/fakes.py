@@ -488,7 +488,10 @@ def stub_instance(id, user_id=None, project_id=None, host=None,
         key_data = ''
 
     if security_groups is None:
-        security_groups = [{"id": 1, "name": "test"}]
+        security_groups = [{"id": 1, "name": "test", "description": "Foo:",
+                            "project_id": "project", "user_id": "user",
+                            "created_at": None, "updated_at": None,
+                            "deleted_at": None, "deleted": False}]
 
     # ReservationID isn't sent back, hack it in there.
     server_name = name or "server%s" % id

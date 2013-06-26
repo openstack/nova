@@ -20,6 +20,7 @@ from nova import context
 from nova import db
 from nova.objects import base
 from nova.objects import instance
+from nova.objects import security_group
 from nova.openstack.common import timeutils
 from nova.tests.api.openstack import fakes
 from nova.tests.objects import test_objects
@@ -41,6 +42,7 @@ class _TestInstanceObject(object):
                 tzinfo=iso8601.iso8601.Utc(), microsecond=0))
         fake_instance['deleted'] = False
         fake_instance['info_cache']['instance_uuid'] = fake_instance['uuid']
+        fake_instance['security_groups'] = None
         return fake_instance
 
     def test_datetime_deserialization(self):
@@ -213,6 +215,40 @@ class _TestInstanceObject(object):
         inst.info_cache.network_info = 'bar'
         inst.save()
 
+    def test_with_security_groups(self):
+        ctxt = context.get_admin_context()
+        fake_inst = dict(self.fake_instance)
+        fake_uuid = fake_inst['uuid']
+        fake_inst['security_groups'] = [
+            {'id': 1, 'name': 'secgroup1', 'description': 'fake-desc',
+             'user_id': 'fake-user', 'project_id': 'fake_project',
+             'created_at': None, 'updated_at': None, 'deleted_at': None,
+             'deleted': False},
+            {'id': 2, 'name': 'secgroup2', 'description': 'fake-desc',
+             'user_id': 'fake-user', 'project_id': 'fake_project',
+             'created_at': None, 'updated_at': None, 'deleted_at': None,
+             'deleted': False},
+            ]
+        self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
+        self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
+        self.mox.StubOutWithMock(db, 'security_group_update')
+        db.instance_get_by_uuid(ctxt, fake_uuid, []).AndReturn(fake_inst)
+        db.security_group_update(ctxt, 1, {'description': 'changed'}
+                                 ).AndReturn(fake_inst['security_groups'][0])
+        self.mox.ReplayAll()
+        inst = instance.Instance.get_by_uuid(ctxt, fake_uuid)
+        self.assertEqual(len(inst.security_groups), 2)
+        for index, group in enumerate(fake_inst['security_groups']):
+            for key in group:
+                self.assertEqual(group[key],
+                                 inst.security_groups[index][key])
+                self.assertTrue(isinstance(inst.security_groups[index],
+                                           security_group.SecurityGroup))
+        self.assertEqual(inst.security_groups.obj_what_changed(), set())
+        inst.security_groups[0].description = 'changed'
+        inst.save()
+        self.assertEqual(inst.security_groups.obj_what_changed(), set())
+
     def test_iteritems_with_extra_attrs(self):
         self.stubs.Set(instance.Instance, 'name', 'foo')
         inst = instance.Instance()
@@ -248,6 +284,7 @@ class _TestInstanceListObject(object):
                 tzinfo=iso8601.iso8601.Utc(), microsecond=0))
         fake_instance['info_cache'] = {'network_info': 'foo',
                                        'instance_uuid': fake_instance['uuid']}
+        fake_instance['security_groups'] = []
         fake_instance['deleted'] = 0
         if updates:
             fake_instance.update(updates)
