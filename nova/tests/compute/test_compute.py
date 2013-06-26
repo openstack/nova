@@ -19,6 +19,7 @@
 """Tests for compute service."""
 
 import base64
+import contextlib
 import copy
 import datetime
 import operator
@@ -28,6 +29,7 @@ import time
 import traceback
 import uuid
 
+import mock
 import mox
 from oslo.config import cfg
 
@@ -4345,32 +4347,35 @@ class ComputeTestCase(BaseTestCase):
                             'power_state': power_state.PAUSED})
 
         # creating mocks
-        self.mox.StubOutWithMock(self.compute.driver, 'unfilter_instance')
-        self.compute.driver.unfilter_instance(inst_ref, [])
-        self.mox.StubOutWithMock(self.compute.conductor_api,
-                                 'network_migrate_instance_start')
-        migration = {'source_compute': srchost,
-                     'dest_compute': dest, }
-        self.compute.conductor_api.network_migrate_instance_start(c, inst_ref,
-                                                                  migration)
+        with contextlib.nested(
+            mock.patch.object(self.compute.driver, 'post_live_migration'),
+            mock.patch.object(self.compute.driver, 'unfilter_instance'),
+            mock.patch.object(self.compute.conductor_api,
+                              'network_migrate_instance_start'),
+            mock.patch.object(self.compute.compute_rpcapi,
+                              'post_live_migration_at_destination'),
+            mock.patch.object(self.compute.driver, 'unplug_vifs'),
+            mock.patch.object(self.compute.network_api,
+                              'setup_networks_on_host')
+        ) as (
+            post_live_migration, unfilter_instance,
+            network_migrate_instance_start, post_live_migration_at_destination,
+            unplug_vifs, setup_networks_on_host
+        ):
+            self.compute._post_live_migration(c, inst_ref, dest)
 
-        self.mox.StubOutWithMock(self.compute.compute_rpcapi,
-                                 'post_live_migration_at_destination')
-        self.compute.compute_rpcapi.post_live_migration_at_destination(
-            c, inst_ref, False, dest)
-
-        self.mox.StubOutWithMock(self.compute.driver, 'unplug_vifs')
-        self.compute.driver.unplug_vifs(inst_ref, [])
-
-        self.mox.StubOutWithMock(self.compute.network_api,
-                                 'setup_networks_on_host')
-        self.compute.network_api.setup_networks_on_host(c, inst_ref,
-                                                        self.compute.host,
-                                                        teardown=True)
-
-        # start test
-        self.mox.ReplayAll()
-        self.compute._post_live_migration(c, inst_ref, dest)
+            post_live_migration.assert_has_calls([
+                mock.call(c, inst_ref, {'block_device_mapping': []})])
+            unfilter_instance.assert_has_calls([mock.call(inst_ref, [])])
+            migration = {'source_compute': srchost,
+                         'dest_compute': dest, }
+            network_migrate_instance_start.assert_has_calls([
+                mock.call(c, inst_ref, migration)])
+            post_live_migration_at_destination.assert_has_calls([
+                mock.call(c, inst_ref, False, dest)])
+            unplug_vifs.assert_has_calls([mock.call(inst_ref, [])])
+            setup_networks_on_host.assert_has_calls([
+                mock.call(c, inst_ref, self.compute.host, teardown=True)])
 
     def _begin_post_live_migration_at_destination(self):
         self.mox.StubOutWithMock(self.compute.network_api,

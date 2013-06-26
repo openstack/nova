@@ -15,6 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import contextlib
 import copy
 import errno
 import eventlet
@@ -27,6 +28,7 @@ import tempfile
 
 from eventlet import greenthread
 from lxml import etree
+import mock
 from oslo.config import cfg
 from xml.dom import minidom
 
@@ -2756,6 +2758,31 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEquals(info[1]['over_committed_disk_size'], 18146236825)
 
         db.instance_destroy(self.context, instance_ref['uuid'])
+
+    def test_post_live_migration(self):
+        vol = {'block_device_mapping': [
+                  {'connection_info': 'dummy1', 'mount_device': '/dev/sda'},
+                  {'connection_info': 'dummy2', 'mount_device': '/dev/sdb'}]}
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        inst_ref = {'id': 'foo'}
+        cntx = context.get_admin_context()
+
+        # Set up the mock expectations
+        with contextlib.nested(
+            mock.patch.object(driver, 'block_device_info_get_mapping',
+                              return_value=vol['block_device_mapping']),
+            mock.patch.object(conn, 'volume_driver_method')
+        ) as (block_device_info_get_mapping, volume_driver_method):
+            conn.post_live_migration(cntx, inst_ref, vol)
+
+            block_device_info_get_mapping.assert_has_calls([
+                mock.call(vol)])
+            volume_driver_method.assert_has_calls([
+                mock.call('disconnect_volume',
+                          v['connection_info'],
+                          v['mount_device'].rpartition("/")[2])
+                for v in vol['block_device_mapping']])
 
     def test_get_instance_disk_info_excludes_volumes(self):
         # Test data
