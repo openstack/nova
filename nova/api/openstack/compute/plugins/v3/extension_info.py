@@ -19,6 +19,10 @@ import webob.exc
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
+from nova.openstack.common import log as logging
+
+
+LOG = logging.getLogger(__name__)
 
 
 def make_ext(elem):
@@ -64,11 +68,25 @@ class ExtensionInfoController(object):
         ext_data['version'] = ext.version
         return ext_data
 
+    def _get_extensions(self, context):
+        """Filter extensions list based on policy"""
+
+        discoverable_extensions = dict()
+        for alias, ext in self.extension_info.get_extensions().iteritems():
+            authorize = extensions.soft_extension_authorizer(
+                'compute', 'v3:' + alias)
+            if authorize(context, action='discoverable'):
+                discoverable_extensions[alias] = ext
+            else:
+                LOG.debug(_("Filter out extension %s from discover list"), alias)
+        return discoverable_extensions
+
     @wsgi.serializers(xml=ExtensionsTemplate)
     def index(self, req):
+        context = req.environ['nova.context']
 
         sorted_ext_list = sorted(
-            self.extension_info.get_extensions().iteritems())
+            self._get_extensions(context).iteritems())
 
         extensions = []
         for _alias, ext in sorted_ext_list:
@@ -77,9 +95,10 @@ class ExtensionInfoController(object):
 
     @wsgi.serializers(xml=ExtensionTemplate)
     def show(self, req, id):
+        context = req.environ['nova.context']
         try:
             # NOTE(dprince): the extensions alias is used as the 'id' for show
-            ext = self.extension_info.get_extensions()[id]
+            ext = self._get_extensions(context)[id]
         except KeyError:
             raise webob.exc.HTTPNotFound()
 
