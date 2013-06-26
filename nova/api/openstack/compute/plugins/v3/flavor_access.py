@@ -25,13 +25,13 @@ from nova.api.openstack import xmlutil
 from nova.compute import flavors
 from nova import exception
 
-
-authorize = extensions.soft_extension_authorizer('compute', 'flavor_access')
+ALIAS = 'os-flavor-access'
+authorize = extensions.soft_extension_authorizer('compute', 'v3:' + ALIAS)
 
 
 def make_flavor(elem):
-    elem.set('{%s}is_public' % Flavor_access.namespace,
-             '%s:is_public' % Flavor_access.alias)
+    elem.set('{%s}is_public' % FlavorAccess.namespace,
+             '%s:is_public' % FlavorAccess.alias)
 
 
 def make_flavor_access(elem):
@@ -43,8 +43,8 @@ class FlavorTemplate(xmlutil.TemplateBuilder):
     def construct(self):
         root = xmlutil.TemplateElement('flavor', selector='flavor')
         make_flavor(root)
-        alias = Flavor_access.alias
-        namespace = Flavor_access.namespace
+        alias = FlavorAccess.alias
+        namespace = FlavorAccess.namespace
         return xmlutil.SlaveTemplate(root, 1, nsmap={alias: namespace})
 
 
@@ -53,8 +53,8 @@ class FlavorsTemplate(xmlutil.TemplateBuilder):
         root = xmlutil.TemplateElement('flavors')
         elem = xmlutil.SubTemplateElement(root, 'flavor', selector='flavors')
         make_flavor(elem)
-        alias = Flavor_access.alias
-        namespace = Flavor_access.namespace
+        alias = FlavorAccess.alias
+        namespace = FlavorAccess.namespace
         return xmlutil.SlaveTemplate(root, 1, nsmap={alias: namespace})
 
 
@@ -126,7 +126,7 @@ class FlavorActionController(wsgi.Controller):
         return rval
 
     def _extend_flavor(self, flavor_rval, flavor_ref):
-        key = "%s:is_public" % (Flavor_access.alias)
+        key = "%s:is_public" % (FlavorAccess.alias)
         flavor_rval[key] = flavor_ref['is_public']
 
     @wsgi.extends
@@ -197,25 +197,21 @@ class FlavorActionController(wsgi.Controller):
         return _marshall_flavor_access(id)
 
 
-class Flavor_access(extensions.ExtensionDescriptor):
+class FlavorAccess(extensions.V3APIExtensionBase):
     """Flavor access support."""
 
     name = "FlavorAccess"
-    alias = "os-flavor-access"
-    namespace = ("http://docs.openstack.org/compute/ext/"
-                 "flavor_access/api/v2")
-    updated = "2012-08-01T00:00:00+00:00"
+    alias = ALIAS
+    namespace = "http://docs.openstack.org/compute/ext/%s/api/v3" % ALIAS
+    version = 1
 
     def get_resources(self):
-        resources = []
-
         res = extensions.ResourceExtension(
-            'os-flavor-access',
+            ALIAS,
             controller=FlavorAccessController(),
             parent=dict(member_name='flavor', collection_name='flavors'))
-        resources.append(res)
 
-        return resources
+        return [res]
 
     def get_controller_extensions(self):
         extension = extensions.ControllerExtension(
