@@ -902,20 +902,20 @@ class VMOps(object):
                                                step=2,
                                                total_steps=RESIZE_TOTAL_STEPS)
 
-        # 3. Now power down the instance
-        self._resize_ensure_vm_is_shutdown(instance, vm_ref)
-        self._update_instance_progress(context, instance,
-                                       step=3,
-                                       total_steps=RESIZE_TOTAL_STEPS)
+            # 3. Now power down the instance
+            self._resize_ensure_vm_is_shutdown(instance, vm_ref)
+            self._update_instance_progress(context, instance,
+                                           step=3,
+                                           total_steps=RESIZE_TOTAL_STEPS)
 
-        # 4. Transfer the COW VHD
-        vdi_ref, vm_vdi_rec = vm_utils.get_vdi_for_vm_safely(
+            # 4. Transfer the COW VHD
+            vdi_ref, vm_vdi_rec = vm_utils.get_vdi_for_vm_safely(
                 self._session, vm_ref)
-        cow_uuid = vm_vdi_rec['uuid']
-        self._migrate_vhd(instance, cow_uuid, dest, sr_path, 0)
-        self._update_instance_progress(context, instance,
-                                       step=4,
-                                       total_steps=RESIZE_TOTAL_STEPS)
+            cow_uuid = vm_vdi_rec['uuid']
+            self._migrate_vhd(instance, cow_uuid, dest, sr_path, 0)
+            self._update_instance_progress(context, instance,
+                                           step=4,
+                                           total_steps=RESIZE_TOTAL_STEPS)
 
     def _apply_orig_vm_name_label(self, instance, vm_ref):
         # NOTE(sirp): in case we're resizing to the same host (for dev
