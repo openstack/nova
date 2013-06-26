@@ -19,6 +19,7 @@ from nova.compute import task_states
 from nova.compute import vm_states
 from nova import db
 from nova import exception
+from nova.openstack.common import jsonutils
 from nova.openstack.common import timeutils
 from nova.scheduler import filters
 from nova.scheduler import host_manager
@@ -512,3 +513,31 @@ class HostStateTestCase(test.NoDBTestCase):
         self.assertEqual(1, host.task_states[None])
         self.assertEqual(2, host.num_instances_by_os_type['Linux'])
         self.assertEqual(1, host.num_io_ops)
+
+    def test_resources_consumption_from_compute_node(self):
+        metrics = [
+            dict(name='res1',
+                 value=1.0,
+                 source='source1',
+                 timestamp=None),
+            dict(name='res2',
+                 value="string2",
+                 source='source2',
+                 timestamp=None),
+        ]
+        hyper_ver_int = utils.convert_version_to_int('6.0.0')
+        compute = dict(metrics=jsonutils.dumps(metrics),
+                       memory_mb=0, free_disk_gb=0, local_gb=0,
+                       local_gb_used=0, free_ram_mb=0, vcpus=0, vcpus_used=0,
+                       updated_at=None, host_ip='127.0.0.1',
+                       hypervisor_version=hyper_ver_int)
+
+        host = host_manager.HostState("fakehost", "fakenode")
+        host.update_from_compute_node(compute)
+
+        self.assertEqual(len(host.metrics), 2)
+        self.assertEqual(set(['res1', 'res2']), set(host.metrics.keys()))
+        self.assertEqual(1.0, host.metrics['res1'].value)
+        self.assertEqual('source1', host.metrics['res1'].source)
+        self.assertEqual('string2', host.metrics['res2'].value)
+        self.assertEqual('source2', host.metrics['res2'].source)
