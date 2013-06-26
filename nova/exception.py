@@ -982,10 +982,6 @@ class InsufficientFreeMemory(NovaException):
     message = _("Insufficient free memory on compute node to start %(uuid)s.")
 
 
-class CouldNotFetchMetrics(NovaException):
-    message = _("Could not fetch bandwidth/cpu/disk metrics for this host.")
-
-
 class NoValidHost(NovaException):
     message = _("No valid host was found. %(reason)s")
 

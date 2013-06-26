@@ -22,7 +22,6 @@ their attributes like VDIs, VIFs, as well as their lookup functions.
 """
 
 import contextlib
-import decimal
 import os
 import re
 import time
@@ -1555,22 +1554,6 @@ def fetch_bandwidth(session):
     return bw
 
 
-def compile_metrics(start_time, stop_time=None):
-    """Compile bandwidth usage, cpu, and disk metrics for all VMs on
-       this host.
-       Note that some stats, like bandwidth, do not seem to be very
-       accurate in some of the data from XenServer (mdragon).
-    """
-    start_time = int(start_time)
-
-    xml = _get_rrd_updates(_get_rrd_server(), start_time)
-    if xml:
-        doc = minidom.parseString(xml)
-        return _parse_rrd_update(doc, start_time, stop_time)
-
-    raise exception.CouldNotFetchMetrics()
-
-
 def _scan_sr(session, sr_ref=None):
     """Scans the SR specified by sr_ref."""
     if sr_ref:
@@ -1690,103 +1673,6 @@ def _get_rrd(server, vm_uuid):
                         'server details: %(server)s.'),
                       {'vm_uuid': vm_uuid, 'server': server})
         return None
-
-
-def _get_rrd_updates(server, start_time):
-    """Return the RRD updates XML as a string."""
-    try:
-        xml = urllib.urlopen("%s://%s:%s@%s/rrd_updates?start=%s" % (
-            server[0],
-            CONF.xenapi_connection_username,
-            CONF.xenapi_connection_password,
-            server[1],
-            start_time))
-        return xml.read()
-    except IOError:
-        LOG.exception(_('Unable to obtain RRD XML updates with '
-                        'server details: %s.'), server)
-        return None
-
-
-def _parse_rrd_meta(doc):
-    data = {}
-    meta = doc.getElementsByTagName('meta')[0]
-    for tag in ('start', 'end', 'step'):
-        data[tag] = int(meta.getElementsByTagName(tag)[0].firstChild.data)
-    legend = meta.getElementsByTagName('legend')[0]
-    data['legend'] = [child.firstChild.data for child in legend.childNodes]
-    return data
-
-
-def _parse_rrd_data(doc):
-    dnode = doc.getElementsByTagName('data')[0]
-    return [dict(
-            time=int(child.getElementsByTagName('t')[0].firstChild.data),
-            values=[decimal.Decimal(valnode.firstChild.data)
-                  for valnode in child.getElementsByTagName('v')])
-            for child in dnode.childNodes]
-
-
-def _parse_rrd_update(doc, start, until=None):
-    sum_data = {}
-    meta = _parse_rrd_meta(doc)
-    data = _parse_rrd_data(doc)
-    for col, collabel in enumerate(meta['legend']):
-        _datatype, _objtype, uuid, name = collabel.split(':')
-        vm_data = sum_data.get(uuid, dict())
-        if name.startswith('vif'):
-            vm_data[name] = _integrate_series(data, col, start, until)
-        else:
-            vm_data[name] = _average_series(data, col, until)
-        sum_data[uuid] = vm_data
-    return sum_data
-
-
-def _average_series(data, col, until=None):
-    vals = [row['values'][col] for row in data
-            if (not until or (row['time'] <= until)) and
-                row['values'][col].is_finite()]
-    if vals:
-        try:
-            return (sum(vals) / len(vals)).quantize(decimal.Decimal('1.0000'))
-        except decimal.InvalidOperation:
-            # (mdragon) Xenserver occasionally returns odd values in
-            # data that will throw an error on averaging (see bug 918490)
-            # These are hard to find, since, whatever those values are,
-            # Decimal seems to think they are a valid number, sortof.
-            # We *think* we've got the the cases covered, but just in
-            # case, log and return NaN, so we don't break reporting of
-            # other statistics.
-            LOG.error(_("Invalid statistics data from Xenserver: %s")
-                      % str(vals))
-            return decimal.Decimal('NaN')
-    else:
-        return decimal.Decimal('0.0000')
-
-
-def _integrate_series(data, col, start, until=None):
-    total = decimal.Decimal('0.0000')
-    prev_time = int(start)
-    prev_val = None
-    for row in reversed(data):
-        if not until or (row['time'] <= until):
-            time = row['time']
-            val = row['values'][col]
-            if val.is_nan():
-                val = decimal.Decimal('0.0000')
-            if prev_val is None:
-                prev_val = val
-            if prev_val >= val:
-                total += ((val * (time - prev_time)) +
-                          (decimal.Decimal('0.5000') * (prev_val - val) *
-                          (time - prev_time)))
-            else:
-                total += ((prev_val * (time - prev_time)) +
-                          (decimal.Decimal('0.5000') * (val - prev_val) *
-                          (time - prev_time)))
-            prev_time = time
-            prev_val = val
-    return total.quantize(decimal.Decimal('1.0000'))
 
 
 def _get_all_vdis_in_sr(session, sr_ref):
