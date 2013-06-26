@@ -24,6 +24,8 @@ from nova.objects import security_group
 from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.api.openstack import fakes
+from nova.tests import fake_instance
+from nova.tests.objects import test_instance_fault
 from nova.tests.objects import test_objects
 
 
@@ -105,7 +107,7 @@ class _TestInstanceObject(object):
         self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
         db.instance_get_by_uuid(
             ctxt, 'uuid',
-            instance.INSTANCE_OPTIONAL_FIELDS).AndReturn(self.fake_instance)
+            ['metadata', 'system_metadata']).AndReturn(self.fake_instance)
         self.mox.ReplayAll()
         inst = instance.Instance.get_by_uuid(
             ctxt, 'uuid', expected_attrs=instance.INSTANCE_OPTIONAL_FIELDS)
@@ -250,6 +252,24 @@ class _TestInstanceObject(object):
         inst.save()
         self.assertEqual(inst.security_groups.obj_what_changed(), set())
 
+    def test_with_fault(self):
+        ctxt = context.get_admin_context()
+        fake_inst = dict(self.fake_instance)
+        fake_uuid = fake_inst['uuid']
+        fake_faults = [dict(x, instance_uuid=fake_uuid)
+                       for x in test_instance_fault.fake_faults['fake-uuid']]
+        self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
+        self.mox.StubOutWithMock(db, 'instance_fault_get_by_instance_uuids')
+        db.instance_get_by_uuid(ctxt, fake_uuid, []).AndReturn(
+            self.fake_instance)
+        db.instance_fault_get_by_instance_uuids(ctxt, [fake_uuid]).AndReturn(
+            {fake_uuid: fake_faults})
+        self.mox.ReplayAll()
+        inst = instance.Instance.get_by_uuid(ctxt, fake_uuid,
+                                             expected_attrs=['fault'])
+        self.assertEqual(fake_faults[0], dict(inst.fault.items()))
+        self.assertRemotes()
+
     def test_iteritems_with_extra_attrs(self):
         self.stubs.Set(instance.Instance, 'name', 'foo')
         inst = instance.Instance()
@@ -374,6 +394,27 @@ class _TestInstanceListObject(object):
                                        instance.Instance))
             self.assertEqual(inst_list.objects[i].uuid, fakes[i]['uuid'])
         self.assertRemotes()
+
+    def test_with_fault(self):
+        ctxt = context.get_admin_context()
+        fake_insts = [
+            fake_instance.fake_db_instance(uuid='fake-uuid', host='host'),
+            fake_instance.fake_db_instance(uuid='fake-inst2', host='host'),
+            ]
+        fake_faults = test_instance_fault.fake_faults
+        self.mox.StubOutWithMock(db, 'instance_get_all_by_host')
+        self.mox.StubOutWithMock(db, 'instance_fault_get_by_instance_uuids')
+        db.instance_get_all_by_host(ctxt, 'host', columns_to_join=[]
+                                    ).AndReturn(fake_insts)
+        db.instance_fault_get_by_instance_uuids(
+            ctxt, [x['uuid'] for x in fake_insts]).AndReturn(fake_faults)
+        self.mox.ReplayAll()
+        instances = instance.InstanceList.get_by_host(ctxt, 'host',
+                                                      expected_attrs=['fault'])
+        self.assertEqual(2, len(instances))
+        self.assertEqual(fake_faults['fake-uuid'][0],
+                         dict(instances[0].fault.iteritems()))
+        self.assertEqual(None, instances[1].fault)
 
 
 class TestInstanceListObject(test_objects._LocalTest,
