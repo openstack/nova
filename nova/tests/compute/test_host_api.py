@@ -17,6 +17,7 @@ from nova.cells import utils as cells_utils
 from nova import compute
 from nova.compute import rpcapi as compute_rpcapi
 from nova import context
+from nova import exception
 from nova.openstack.common import rpc
 from nova import test
 
@@ -38,7 +39,7 @@ class ComputeHostAPITestCase(test.TestCase):
         """Sets it so that the host API always thinks that 'fake_host'
         exists.
         """
-        def fake_assert_host_exists(context, host_name):
+        def fake_assert_host_exists(context, host_name, must_be_up=False):
             return 'fake_host'
         self.stubs.Set(self.host_api, '_assert_host_exists',
                                     fake_assert_host_exists)
@@ -79,6 +80,21 @@ class ComputeHostAPITestCase(test.TestCase):
         self.mox.ReplayAll()
         result = self.host_api.get_host_uptime(self.ctxt, 'fake_host')
         self.assertEqual('fake-result', result)
+
+    def test_get_host_uptime_service_down(self):
+        def fake_service_get_by_compute_host(context, host_name):
+            return {id: 1}
+        self.stubs.Set(self.host_api.db, 'service_get_by_compute_host',
+                                    fake_service_get_by_compute_host)
+
+        def fake_service_is_up(service):
+            return False
+        self.stubs.Set(self.host_api.servicegroup_api,
+                       'service_is_up', fake_service_is_up)
+
+        self.assertRaises(exception.ComputeServiceUnavailable,
+                          self.host_api.get_host_uptime, self.ctxt,
+                          'fake_host')
 
     def test_host_power_action(self):
         self._mock_assert_host_exists()
@@ -381,3 +397,8 @@ class ComputeHostAPICellsTestCase(ComputeHostAPITestCase):
                 'fake-begin', 'fake-end', host='fake-host',
                 state='fake-state')
         self.assertEqual('fake-response', result)
+
+    def test_get_host_uptime_service_down(self):
+        # The corresponing Compute test case depends on the
+        # _assert_host_exists which is a no-op in the cells api
+        pass
