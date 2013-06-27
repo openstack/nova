@@ -95,7 +95,7 @@ class FlavorAccessController(object):
         authorize(context)
 
         try:
-            flavor = flavors.get_flavor_by_flavor_id(flavor_id)
+            flavor = flavors.get_flavor_by_flavor_id(flavor_id, ctxt=context)
         except exception.FlavorNotFound:
             explanation = _("Flavor not found.")
             raise webob.exc.HTTPNotFound(explanation=explanation)

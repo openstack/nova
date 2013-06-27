@@ -3811,9 +3811,16 @@ def _dict_with_extra_specs(inst_type_query):
 
 
 def _instance_type_get_query(context, session=None, read_deleted=None):
-    return model_query(context, models.InstanceTypes, session=session,
+    query = model_query(context, models.InstanceTypes, session=session,
                        read_deleted=read_deleted).\
-                    options(joinedload('extra_specs'))
+                       options(joinedload('extra_specs'))
+    if not context.is_admin:
+        the_filter = [models.InstanceTypes.is_public == True]
+        the_filter.extend([
+            models.InstanceTypes.projects.any(project_id=context.project_id)
+        ])
+        query = query.filter(or_(*the_filter))
+    return query
 
 
 @require_context
@@ -3901,9 +3908,9 @@ def instance_type_get_by_name(context, name):
 
 
 @require_context
-def instance_type_get_by_flavor_id(context, flavor_id):
+def instance_type_get_by_flavor_id(context, flavor_id, read_deleted):
     """Returns a dict describing specific flavor_id."""
-    result = _instance_type_get_query(context).\
+    result = _instance_type_get_query(context, read_deleted=read_deleted).\
                         filter_by(flavorid=flavor_id).\
                         first()
     if not result:
