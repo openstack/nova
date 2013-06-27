@@ -135,6 +135,7 @@ policy_data = """
     "compute_extension:flavor_access": "",
     "compute_extension:v3:os-flavor-access": "",
     "compute_extension:flavor_disabled": "",
+    "compute_extension:v3:os-flavor-disabled": "",
     "compute_extension:flavor_rxtx": "",
     "compute_extension:flavor_swap": "",
     "compute_extension:flavorextradata": "",

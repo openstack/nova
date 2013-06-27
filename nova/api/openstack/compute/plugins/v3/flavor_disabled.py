@@ -18,15 +18,15 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 
-
-authorize = extensions.soft_extension_authorizer('compute', 'flavor_disabled')
+ALIAS = 'os-flavor-disabled'
+authorize = extensions.soft_extension_authorizer('compute', 'v3:' + ALIAS)
 
 
 class FlavorDisabledController(wsgi.Controller):
     def _extend_flavors(self, req, flavors):
         for flavor in flavors:
             db_flavor = req.get_db_flavor(flavor['id'])
-            key = "%s:disabled" % Flavor_disabled.alias
+            key = "%s:disabled" % FlavorDisabled.alias
             flavor[key] = db_flavor['disabled']
 
     def _show(self, req, resp_obj):
@@ -52,24 +52,26 @@ class FlavorDisabledController(wsgi.Controller):
         self._extend_flavors(req, list(resp_obj.obj['flavors']))
 
 
-class Flavor_disabled(extensions.ExtensionDescriptor):
+class FlavorDisabled(extensions.V3APIExtensionBase):
     """Support to show the disabled status of a flavor."""
 
     name = "FlavorDisabled"
-    alias = "OS-FLV-DISABLED"
-    namespace = ("http://docs.openstack.org/compute/ext/"
-                 "flavor_disabled/api/v1.1")
-    updated = "2012-08-29T00:00:00+00:00"
+    alias = ALIAS
+    namespace = "http://docs.openstack.org/compute/ext/%s/api/v3" % ALIAS
+    version = 1
 
     def get_controller_extensions(self):
         controller = FlavorDisabledController()
         extension = extensions.ControllerExtension(self, 'flavors', controller)
         return [extension]
 
+    def get_resources(self):
+        return []
+
 
 def make_flavor(elem):
-    elem.set('{%s}disabled' % Flavor_disabled.namespace,
-             '%s:disabled' % Flavor_disabled.alias)
+    elem.set('{%s}disabled' % FlavorDisabled.namespace,
+             '%s:disabled' % FlavorDisabled.alias)
 
 
 class FlavorDisabledTemplate(xmlutil.TemplateBuilder):
@@ -77,7 +79,7 @@ class FlavorDisabledTemplate(xmlutil.TemplateBuilder):
         root = xmlutil.TemplateElement('flavor', selector='flavor')
         make_flavor(root)
         return xmlutil.SlaveTemplate(root, 1, nsmap={
-            Flavor_disabled.alias: Flavor_disabled.namespace})
+            FlavorDisabled.alias: FlavorDisabled.namespace})
 
 
 class FlavorsDisabledTemplate(xmlutil.TemplateBuilder):
@@ -86,4 +88,4 @@ class FlavorsDisabledTemplate(xmlutil.TemplateBuilder):
         elem = xmlutil.SubTemplateElement(root, 'flavor', selector='flavors')
         make_flavor(elem)
         return xmlutil.SlaveTemplate(root, 1, nsmap={
-            Flavor_disabled.alias: Flavor_disabled.namespace})
+            FlavorDisabled.alias: FlavorDisabled.namespace})

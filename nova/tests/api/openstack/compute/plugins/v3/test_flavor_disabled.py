@@ -15,7 +15,7 @@
 from lxml import etree
 import webob
 
-from nova.api.openstack.compute.contrib import flavor_disabled
+from nova.api.openstack.compute.plugins.v3 import flavor_disabled
 from nova.compute import flavors
 from nova.openstack.common import jsonutils
 from nova import test
@@ -49,13 +49,10 @@ def fake_flavor_get_all(*args, **kwargs):
 
 class FlavorDisabledTest(test.TestCase):
     content_type = 'application/json'
-    prefix = '%s:' % flavor_disabled.Flavor_disabled.alias
+    prefix = '%s:' % flavor_disabled.FlavorDisabled.alias
 
     def setUp(self):
         super(FlavorDisabledTest, self).setUp()
-        ext = ('nova.api.openstack.compute.contrib'
-              '.flavor_disabled.Flavor_disabled')
-        self.flags(osapi_compute_extension=[ext])
         fakes.stub_out_nw_api(self.stubs)
         self.stubs.Set(flavors, "get_all_flavors",
                        fake_flavor_get_all)
@@ -66,8 +63,9 @@ class FlavorDisabledTest(test.TestCase):
     def _make_request(self, url):
         req = webob.Request.blank(url)
         req.headers['Accept'] = self.content_type
-        res = req.get_response(fakes.wsgi_app())
-        return res
+        app = fakes.wsgi_app_v3(init_only=('servers', 'flavors',
+                                           'os-flavor-disabled'))
+        return req.get_response(app)
 
     def _get_flavor(self, body):
         return jsonutils.loads(body).get('flavor')
@@ -79,17 +77,14 @@ class FlavorDisabledTest(test.TestCase):
         self.assertEqual(str(flavor.get('%sdisabled' % self.prefix)), disabled)
 
     def test_show(self):
-        url = '/v2/fake/flavors/1'
-        res = self._make_request(url)
-
-        self.assertEqual(res.status_int, 200)
+        res = self._make_request('/v3/flavors/1')
+        self.assertEqual(res.status_int, 200, res.body)
         self.assertFlavorDisabled(self._get_flavor(res.body), 'False')
 
     def test_detail(self):
-        url = '/v2/fake/flavors/detail'
-        res = self._make_request(url)
+        res = self._make_request('/v3/flavors/detail')
 
-        self.assertEqual(res.status_int, 200)
+        self.assertEqual(res.status_int, 200, res.body)
         flavors = self._get_flavors(res.body)
         self.assertFlavorDisabled(flavors[0], 'False')
         self.assertFlavorDisabled(flavors[1], 'True')
@@ -97,7 +92,7 @@ class FlavorDisabledTest(test.TestCase):
 
 class FlavorDisabledXmlTest(FlavorDisabledTest):
     content_type = 'application/xml'
-    prefix = '{%s}' % flavor_disabled.Flavor_disabled.namespace
+    prefix = '{%s}' % flavor_disabled.FlavorDisabled.namespace
 
     def _get_flavor(self, body):
         return etree.XML(body)
