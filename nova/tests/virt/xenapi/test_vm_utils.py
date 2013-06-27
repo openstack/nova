@@ -266,7 +266,7 @@ class FetchVhdImageTestCase(test.TestCase):
         self._apply_stubouts()
         self._common_params_setup(True)
 
-        vm_utils._add_bittorrent_params(self.params)
+        vm_utils._add_bittorrent_params(self.image_id, self.params)
 
         vm_utils._fetch_using_dom0_plugin_with_retry(self.context,
             self.session, self.image_id, "bittorrent", self.params,
@@ -289,7 +289,7 @@ class FetchVhdImageTestCase(test.TestCase):
         self._common_params_setup(True)
         self.mox.StubOutWithMock(self.session, 'call_xenapi')
 
-        vm_utils._add_bittorrent_params(self.params)
+        vm_utils._add_bittorrent_params(self.image_id, self.params)
 
         vm_utils._fetch_using_dom0_plugin_with_retry(self.context,
             self.session, self.image_id, "bittorrent", self.params,

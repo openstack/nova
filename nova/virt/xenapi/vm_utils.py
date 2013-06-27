@@ -1142,7 +1142,7 @@ def _fetch_vhd_image(context, session, instance, image_id):
     if _image_uses_bittorrent(context, instance):
         plugin_name = 'bittorrent'
         callback = None
-        _add_bittorrent_params(params)
+        _add_bittorrent_params(image_id, params)
     else:
         plugin_name = 'glance'
         callback = _generate_glance_callback(context)
@@ -1180,20 +1180,18 @@ def _generate_glance_callback(context):
     return pick_glance
 
 
-def _add_bittorrent_params(params):
-        params['torrent_base_url'] = CONF.xenapi_torrent_base_url
-        params['torrent_seed_duration'] = CONF.xenapi_torrent_seed_duration
-        params['torrent_seed_chance'] = CONF.xenapi_torrent_seed_chance
-        params['torrent_max_last_accessed'] =\
-                CONF.xenapi_torrent_max_last_accessed
-        params['torrent_listen_port_start'] =\
-                CONF.xenapi_torrent_listen_port_start
-        params['torrent_listen_port_end'] =\
-                CONF.xenapi_torrent_listen_port_end
-        params['torrent_download_stall_cutoff'] =\
-                CONF.xenapi_torrent_download_stall_cutoff
-        params['torrent_max_seeder_processes_per_host'] =\
-                CONF.xenapi_torrent_max_seeder_processes_per_host
+def _add_bittorrent_params(image_id, params):
+    params['torrent_url'] = urlparse.urljoin(CONF.xenapi_torrent_base_url,
+                                             "%s.torrent" % image_id)
+    params['torrent_seed_duration'] = CONF.xenapi_torrent_seed_duration
+    params['torrent_seed_chance'] = CONF.xenapi_torrent_seed_chance
+    params['torrent_max_last_accessed'] = CONF.xenapi_torrent_max_last_accessed
+    params['torrent_listen_port_start'] = CONF.xenapi_torrent_listen_port_start
+    params['torrent_listen_port_end'] = CONF.xenapi_torrent_listen_port_end
+    params['torrent_download_stall_cutoff'] = \
+            CONF.xenapi_torrent_download_stall_cutoff
+    params['torrent_max_seeder_processes_per_host'] = \
+            CONF.xenapi_torrent_max_seeder_processes_per_host
 
 
 def _get_vdi_chain_size(session, vdi_uuid):
