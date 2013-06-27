@@ -313,7 +313,7 @@
 
 # whether to use per-user rate limiting for the api. (boolean
 # value)
-#api_rate_limit=true
+#api_rate_limit=false
 
 # The strategy to use for auth: noauth or keystone. (string
 # value)
