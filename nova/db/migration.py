@@ -21,7 +21,8 @@
 from nova import utils
 
 
-IMPL = utils.LazyPluggable('db_backend',
+IMPL = utils.LazyPluggable('backend',
+                           config_group='database',
                            sqlalchemy='nova.db.sqlalchemy.migration')
 
 INIT_VERSION = 132

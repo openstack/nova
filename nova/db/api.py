@@ -35,8 +35,8 @@ these objects be simple dictionaries.
 :db_backend:  string to lookup in the list of LazyPluggable backends.
               `sqlalchemy` is the only supported backend right now.
 
-:sql_connection:  string specifying the sqlalchemy connection to use, like:
-                  `sqlite:///var/lib/nova/nova.sqlite`.
+:connection:  string specifying the sqlalchemy connection to use, like:
+              `sqlite:///var/lib/nova/nova.sqlite`.
 
 :enable_new_services:  when adding a new service to the database, is it in the
                        pool of available hardware (Default: True)

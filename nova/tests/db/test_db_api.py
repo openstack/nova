@@ -179,7 +179,7 @@ def _create_aggregate_with_hosts(context=context.get_admin_context(),
 class NotDbApiTestCase(DbTestCase):
     def setUp(self):
         super(NotDbApiTestCase, self).setUp()
-        self.flags(sql_connection="notdb://")
+        self.flags(connection='notdb://', group='database')
 
     def test_instance_get_all_by_filters_regex_unsupported_db(self):
         # Ensure that the 'LIKE' operator is used for unsupported dbs.

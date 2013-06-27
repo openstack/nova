@@ -1303,62 +1303,14 @@
 
 
 #
-# Options defined in nova.openstack.common.db.api
-#
-
-# The backend to use for db (string value)
-#db_backend=sqlalchemy
-
-# Enable the experimental use of thread pooling for all DB API
-# calls (boolean value)
-#dbapi_use_tpool=false
-
-
-#
 # Options defined in nova.openstack.common.db.sqlalchemy.session
 #
-
-# The SQLAlchemy connection string used to connect to the
-# database (string value)
-#sql_connection=sqlite:////nova/openstack/common/db/$sqlite_db
 
 # the filename to use with sqlite (string value)
 #sqlite_db=nova.sqlite
 
-# timeout before idle sql connections are reaped (integer
-# value)
-#sql_idle_timeout=3600
-
-# If passed, use synchronous mode for sqlite (boolean value)
+# If true, use synchronous mode for sqlite (boolean value)
 #sqlite_synchronous=true
-
-# Minimum number of SQL connections to keep open in a pool
-# (integer value)
-#sql_min_pool_size=1
-
-# Maximum number of SQL connections to keep open in a pool
-# (integer value)
-#sql_max_pool_size=5
-
-# maximum db connection retries during startup. (setting -1
-# implies an infinite retry count) (integer value)
-#sql_max_retries=10
-
-# interval between retries of opening a sql connection
-# (integer value)
-#sql_retry_interval=10
-
-# If set, use this value for max_overflow with sqlalchemy
-# (integer value)
-#sql_max_overflow=<None>
-
-# Verbosity of SQL debugging information. 0=None,
-# 100=Everything (integer value)
-#sql_connection_debug=0
-
-# Add python stack traces to SQL as comment strings (boolean
-# value)
-#sql_connection_trace=false
 
 
 #
@@ -2553,23 +2505,67 @@
 #manager=nova.conductor.manager.ConductorManager
 
 
-[ssl]
+[database]
 
 #
-# Options defined in nova.openstack.common.sslutils
+# Options defined in nova.openstack.common.db.api
 #
 
-# CA certificate file to use to verify connecting clients
-# (string value)
-#ca_file=<None>
+# The backend to use for db (string value)
+#backend=sqlalchemy
 
-# Certificate file to use when starting the server securely
-# (string value)
-#cert_file=<None>
+# Enable the experimental use of thread pooling for all DB API
+# calls (boolean value)
+#use_tpool=false
 
-# Private key file to use when starting the server securely
-# (string value)
-#key_file=<None>
+
+#
+# Options defined in nova.openstack.common.db.sqlalchemy.session
+#
+
+# The SQLAlchemy connection string used to connect to the
+# database (string value)
+#connection=sqlite:////nova/openstack/common/db/$sqlite_db
+
+# The SQLAlchemy connection string used to connect to the
+# slave database (string value)
+#slave_connection=
+
+# timeout before idle sql connections are reaped (integer
+# value)
+#idle_timeout=3600
+
+# Minimum number of SQL connections to keep open in a pool
+# (integer value)
+#min_pool_size=1
+
+# Maximum number of SQL connections to keep open in a pool
+# (integer value)
+#max_pool_size=<None>
+
+# maximum db connection retries during startup. (setting -1
+# implies an infinite retry count) (integer value)
+#max_retries=10
+
+# interval between retries of opening a sql connection
+# (integer value)
+#retry_interval=10
+
+# If set, use this value for max_overflow with sqlalchemy
+# (integer value)
+#max_overflow=<None>
+
+# Verbosity of SQL debugging information. 0=None,
+# 100=Everything (integer value)
+#connection_debug=0
+
+# Add python stack traces to SQL as comment strings (boolean
+# value)
+#connection_trace=false
+
+# If set, use this value for pool_timeout with sqlalchemy
+# (integer value)
+#pool_timeout=<None>
 
 
 [cells]
@@ -2920,6 +2916,25 @@
 
 # Password for Redis server. (optional) (string value)
 #password=<None>
+
+
+[ssl]
+
+#
+# Options defined in nova.openstack.common.sslutils
+#
+
+# CA certificate file to use to verify connecting clients
+# (string value)
+#ca_file=<None>
+
+# Certificate file to use when starting the server securely
+# (string value)
+#cert_file=<None>
+
+# Private key file to use when starting the server securely
+# (string value)
+#key_file=<None>
 
 
 [trusted_computing]
