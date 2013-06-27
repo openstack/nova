@@ -46,7 +46,13 @@ def _link(src, dst):
 
 def _rename(src, dst):
     LOG.info("Renaming file '%s' -> '%s'" % (src, dst))
-    os.rename(src, dst)
+    try:
+        os.rename(src, dst)
+    except OSError, e:
+        if e.errno == errno.EXDEV:
+            LOG.error("Invalid cross-device link.  Perhaps %s and %s should "
+                      "be symlinked on the same filesystem?" % (src, dst))
+        raise
 
 
 def make_subprocess(cmdline, stdout=False, stderr=False, stdin=False,
