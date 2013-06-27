@@ -25,7 +25,8 @@ from nova import test
 from nova.tests.api.openstack import fakes
 
 
-def fake_get_instance_type_by_flavor_id(flavorid, read_deleted='yes'):
+def fake_get_instance_type_by_flavor_id(flavorid, ctxt=None,
+                                        read_deleted='yes'):
     if flavorid == 'failtest':
         raise exception.NotFound("Not found sucka!")
     elif not str(flavorid) == '1234':

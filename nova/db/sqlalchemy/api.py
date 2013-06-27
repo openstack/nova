@@ -3910,7 +3910,7 @@ def instance_type_create(context, values):
             pass
         try:
             instance_type_get_by_flavor_id(context, values['flavorid'],
-                                           session)
+                    read_deleted='no', session=session)
             raise exception.InstanceTypeExists(name=values['name'])
         except exception.FlavorNotFound:
             pass
@@ -3952,9 +3952,16 @@ def _dict_with_extra_specs(inst_type_query):
 
 
 def _instance_type_get_query(context, session=None, read_deleted=None):
-    return model_query(context, models.InstanceTypes, session=session,
+    query = model_query(context, models.InstanceTypes, session=session,
                        read_deleted=read_deleted).\
-                     options(joinedload('extra_specs'))
+                       options(joinedload('extra_specs'))
+    if not context.is_admin:
+        the_filter = [models.InstanceTypes.is_public == True]
+        the_filter.extend([
+            models.InstanceTypes.projects.any(project_id=context.project_id)
+        ])
+        query = query.filter(or_(*the_filter))
+    return query
 
 
 @require_context
@@ -4029,9 +4036,11 @@ def instance_type_get_by_name(context, name, session=None):
 
 
 @require_context
-def instance_type_get_by_flavor_id(context, flavor_id, session=None):
+def instance_type_get_by_flavor_id(context, flavor_id, read_deleted,
+                                   session=None):
     """Returns a dict describing specific flavor_id"""
-    result = _instance_type_get_query(context, session=session).\
+    result = _instance_type_get_query(context, read_deleted=read_deleted,
+                                      session=session).\
                     filter_by(flavorid=flavor_id).\
                     first()
 
@@ -4083,7 +4092,7 @@ def instance_type_access_add(context, flavor_id, project_id):
     session = get_session()
     with session.begin():
         instance_type_ref = instance_type_get_by_flavor_id(context, flavor_id,
-                                                           session=session)
+                read_deleted='no', session=session)
         instance_type_id = instance_type_ref['id']
         access_ref = _instance_type_access_query(context, session=session).\
                         filter_by(instance_type_id=instance_type_id).\
@@ -4111,7 +4120,7 @@ def instance_type_access_remove(context, flavor_id, project_id):
     session = get_session()
     with session.begin():
         instance_type_ref = instance_type_get_by_flavor_id(context, flavor_id,
-                                                           session=session)
+                read_deleted='no', session=session)
         instance_type_id = instance_type_ref['id']
         access_ref = _instance_type_access_query(context, session=session).\
                         filter_by(instance_type_id=instance_type_id).\
@@ -4447,7 +4456,8 @@ def instance_type_extra_specs_update_or_create(context, flavor_id,
                                                specs):
     session = get_session()
     spec_ref = None
-    instance_type = instance_type_get_by_flavor_id(context, flavor_id)
+    instance_type = instance_type_get_by_flavor_id(context, flavor_id,
+                                                   read_deleted='no')
     for key, value in specs.iteritems():
         try:
             spec_ref = instance_type_extra_specs_get_item(

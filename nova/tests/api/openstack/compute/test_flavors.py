@@ -54,7 +54,7 @@ FAKE_FLAVORS = {
 }
 
 
-def fake_instance_type_get_by_flavor_id(flavorid):
+def fake_instance_type_get_by_flavor_id(flavorid, ctxt=None):
     return FAKE_FLAVORS['flavor %s' % flavorid]
 
 
@@ -80,7 +80,7 @@ def empty_instance_type_get_all(inactive=False, filters=None):
     return {}
 
 
-def return_instance_type_not_found(flavor_id):
+def return_instance_type_not_found(flavor_id, ctxt=None):
     raise exception.InstanceTypeNotFound(flavor_id=flavor_id)
 
 
