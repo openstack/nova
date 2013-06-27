@@ -714,7 +714,6 @@ class TestQuantumv2(test.TestCase):
         port_data = number == 1 and self.port_data1 or self.port_data2
         self.moxed_client.delete_port(port_data[0]['id'])
 
-        nets = [port_data[0]['network_id']]
         quantumv2.get_client(mox.IgnoreArg(), admin=True).AndReturn(
             self.moxed_client)
         self.moxed_client.list_ports(
@@ -1056,7 +1055,6 @@ class TestQuantumv2(test.TestCase):
 
     def test_allocate_floating_ip_with_pool_id(self):
         api = quantumapi.API()
-        pool_name = self.fip_pool['name']
         pool_id = self.fip_pool['id']
         search_opts = {'router:external': True,
                        'fields': 'id',
@@ -1100,7 +1098,6 @@ class TestQuantumv2(test.TestCase):
     def test_release_floating_ip_associated(self):
         api = quantumapi.API()
         address = self.fip_associated['floating_ip_address']
-        fip_id = self.fip_associated['id']
 
         self.moxed_client.list_floatingips(floating_ip_address=address).\
             AndReturn({'floatingips': [self.fip_associated]})
@@ -1144,7 +1141,6 @@ class TestQuantumv2(test.TestCase):
         api = quantumapi.API()
         address = self.fip_associated['floating_ip_address']
         fixed_address = self.fip_associated['fixed_ip_address']
-        fip_id = self.fip_associated['id']
 
         search_opts = {'device_owner': 'compute:nova',
                        'device_id': self.instance['uuid']}
@@ -1178,7 +1174,6 @@ class TestQuantumv2(test.TestCase):
         self.moxed_client.list_subnets(
             **search_opts).AndReturn({'subnets': self.subnet_data_n})
 
-        zone = 'compute:%s' % self.instance['availability_zone']
         search_opts = {'device_id': self.instance['uuid'],
                        'device_owner': 'compute:nova',
                        'network_id': network_id}

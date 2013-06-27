@@ -103,15 +103,9 @@ class MemcachedServiceGroupTestCase(test.TestCase):
             ServiceFixture(host3, self._binary, self._topic)).serv
         serv3.start()
 
-        service_ref1 = db.service_get_by_args(self._ctx,
-                                              host1,
-                                              self._binary)
-        service_ref2 = db.service_get_by_args(self._ctx,
-                                              host2,
-                                              self._binary)
-        service_ref3 = db.service_get_by_args(self._ctx,
-                                              host3,
-                                              self._binary)
+        db.service_get_by_args(self._ctx, host1, self._binary)
+        db.service_get_by_args(self._ctx, host2, self._binary)
+        db.service_get_by_args(self._ctx, host3, self._binary)
 
         host1key = str("%s:%s" % (self._topic, host1))
         host2key = str("%s:%s" % (self._topic, host2))
@@ -198,9 +192,7 @@ class MemcachedServiceGroupTestCase(test.TestCase):
         serv = self.useFixture(
             ServiceFixture(self._host, self._binary, self._topic)).serv
         serv.start()
-        service_ref = db.service_get_by_args(self._ctx,
-                                             self._host,
-                                             self._binary)
+        db.service_get_by_args(self._ctx, self._host, self._binary)
         self.servicegroup_api = servicegroup.API()
 
         # updating model_disconnected

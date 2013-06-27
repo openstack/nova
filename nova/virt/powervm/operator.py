@@ -766,11 +766,11 @@ class BaseOperator(object):
 
     def _decompress_image_file(self, file_path, outfile_path):
         command = "/usr/bin/gunzip -c %s > %s" % (file_path, outfile_path)
-        output = self.run_vios_command_as_root(command)
+        self.run_vios_command_as_root(command)
 
         # Remove compressed image file
         command = "/usr/bin/rm %s" % file_path
-        output = self.run_vios_command_as_root(command)
+        self.run_vios_command_as_root(command)
 
         return outfile_path
 

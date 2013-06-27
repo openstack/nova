@@ -3184,7 +3184,7 @@ class ExtendedAvailabilityZoneJsonTests(ServersSampleBase):
         self._verify_response('server-get-resp', subs, response, 200)
 
     def test_detail(self):
-        uuid = self._post_server()
+        self._post_server()
         response = self._do_get('servers/detail')
         subs = self._get_regexes()
         subs['hostid'] = '[a-f0-9]+'
@@ -3418,7 +3418,7 @@ class ConfigDriveSampleJsonTest(ServersSampleBase):
                               response, 200)
 
     def test_config_drive_detail(self):
-        uuid = self._post_server()
+        self._post_server()
         response = self._do_get('servers/detail')
         subs = self._get_regexes()
         subs['hostid'] = '[a-f0-9]+'
@@ -3496,7 +3496,7 @@ class FlavorAccessSampleJsonTests(ApiSampleTestBase):
 
     def test_flavor_access_add_tenant(self):
         self._create_flavor()
-        response = self._add_tenant()
+        self._add_tenant()
 
     def test_flavor_access_remove_tenant(self):
         self._create_flavor()

@@ -286,7 +286,7 @@ class DbApiTestCase(DbTestCase):
     def test_instance_get_all_by_filters_deleted_and_soft_deleted(self):
         inst1 = self.create_instance_with_args()
         inst2 = self.create_instance_with_args(vm_state=vm_states.SOFT_DELETED)
-        inst3 = self.create_instance_with_args()
+        self.create_instance_with_args()
         db.instance_destroy(self.context, inst1['uuid'])
         result = db.instance_get_all_by_filters(self.context,
                                                 {'deleted': True})
@@ -296,8 +296,8 @@ class DbApiTestCase(DbTestCase):
 
     def test_instance_get_all_by_filters_deleted_no_soft_deleted(self):
         inst1 = self.create_instance_with_args()
-        inst2 = self.create_instance_with_args(vm_state=vm_states.SOFT_DELETED)
-        inst3 = self.create_instance_with_args()
+        self.create_instance_with_args(vm_state=vm_states.SOFT_DELETED)
+        self.create_instance_with_args()
         db.instance_destroy(self.context, inst1['uuid'])
         result = db.instance_get_all_by_filters(self.context,
                                                 {'deleted': True,
@@ -948,8 +948,8 @@ class AggregateDBApiTestCase(test.TestCase):
         values2 = {'name': 'fake_aggregate4'}
         a1 = _create_aggregate_with_hosts(context=ctxt,
                                           metadata={'goodkey': 'good'})
-        a2 = _create_aggregate_with_hosts(context=ctxt, values=values)
-        a3 = _create_aggregate(context=ctxt, values=values2)
+        _create_aggregate_with_hosts(context=ctxt, values=values)
+        _create_aggregate(context=ctxt, values=values2)
         # filter result by key
         r1 = db.aggregate_get_by_host(ctxt, 'foo.openstack.org', key='goodkey')
         self.assertEqual([a1['id']], [x['id'] for x in r1])
@@ -958,9 +958,9 @@ class AggregateDBApiTestCase(test.TestCase):
         ctxt = context.get_admin_context()
         values = {'name': 'fake_aggregate2'}
         values2 = {'name': 'fake_aggregate3'}
-        a1 = _create_aggregate_with_hosts(context=ctxt)
-        a2 = _create_aggregate_with_hosts(context=ctxt, values=values)
-        a3 = _create_aggregate_with_hosts(context=ctxt, values=values2,
+        _create_aggregate_with_hosts(context=ctxt)
+        _create_aggregate_with_hosts(context=ctxt, values=values)
+        _create_aggregate_with_hosts(context=ctxt, values=values2,
                 hosts=['bar.openstack.org'], metadata={'badkey': 'bad'})
         r1 = db.aggregate_metadata_get_by_host(ctxt, 'foo.openstack.org')
         self.assertEqual(r1['fake_key1'], set(['fake_value1']))
@@ -970,8 +970,8 @@ class AggregateDBApiTestCase(test.TestCase):
         ctxt = context.get_admin_context()
         values = {'name': 'fake_aggregate2'}
         values2 = {'name': 'fake_aggregate3'}
-        a1 = _create_aggregate_with_hosts(context=ctxt)
-        a2 = _create_aggregate_with_hosts(context=ctxt, values=values)
+        _create_aggregate_with_hosts(context=ctxt)
+        _create_aggregate_with_hosts(context=ctxt, values=values)
         a3 = _create_aggregate_with_hosts(context=ctxt, values=values2,
                 hosts=['foo.openstack.org'], metadata={'good': 'value'})
         r1 = db.aggregate_metadata_get_by_host(ctxt, 'foo.openstack.org',
@@ -988,9 +988,9 @@ class AggregateDBApiTestCase(test.TestCase):
         ctxt = context.get_admin_context()
         values = {'name': 'fake_aggregate2'}
         values2 = {'name': 'fake_aggregate3'}
-        a1 = _create_aggregate_with_hosts(context=ctxt)
-        a2 = _create_aggregate_with_hosts(context=ctxt, values=values)
-        a3 = _create_aggregate_with_hosts(context=ctxt, values=values2,
+        _create_aggregate_with_hosts(context=ctxt)
+        _create_aggregate_with_hosts(context=ctxt, values=values)
+        _create_aggregate_with_hosts(context=ctxt, values=values2,
                 hosts=['foo.openstack.org'], metadata={'good': 'value'})
         r1 = db.aggregate_host_get_by_metadata_key(ctxt, key='good')
         self.assertEqual(r1, {'foo.openstack.org': set(['value'])})
@@ -1464,7 +1464,7 @@ class ReservationTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def test_reservation_expire(self):
         self.values['expire'] = datetime.datetime.utcnow() + datetime.\
                         timedelta(days=1)
-        reservations = self._quota_reserve()
+        self._quota_reserve()
         db.reservation_expire(self.ctxt)
 
         expected = {'project_id': 'project1',
@@ -1628,8 +1628,7 @@ class SecurityGroupTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_security_group_get(self):
         security_group1 = self._create_security_group({})
-        security_group2 = self._create_security_group(
-                {'name': 'fake_sec_group2'})
+        self._create_security_group({'name': 'fake_sec_group2'})
         real_security_group = db.security_group_get(self.ctxt,
                                               security_group1['id'],
                                               columns_to_join=['instances'])
@@ -1742,8 +1741,8 @@ class SecurityGroupTestCase(test.TestCase, ModelsObjectComparatorMixin):
             {'name': 'fake2', 'project_id': 'fake_proj1'},
             {'name': 'fake3', 'project_id': 'fake_proj2'},
         ]
-        security_groups = [self._create_security_group(vals)
-                           for vals in values]
+        for vals in values:
+            self._create_security_group(vals)
 
         real = []
         for project in ('fake_proj1', 'fake_proj2'):
@@ -1776,7 +1775,7 @@ class SecurityGroupTestCase(test.TestCase, ModelsObjectComparatorMixin):
                                                   self.ctxt.project_id,
                                                   'default'))
 
-        default_group = db.security_group_ensure_default(self.ctxt)
+        db.security_group_ensure_default(self.ctxt)
 
         self.assertTrue(db.security_group_exists(self.ctxt,
                                                  self.ctxt.project_id,
@@ -1896,7 +1895,7 @@ class ServiceTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_service_get(self):
         service1 = self._create_service({})
-        service2 = self._create_service({'host': 'some_other_fake_host'})
+        self._create_service({'host': 'some_other_fake_host'})
         real_service1 = db.service_get(self.ctxt, service1['id'])
         self._assertEqualObjects(service1, real_service1,
                                  ignored_keys=['compute_node'])
@@ -1921,7 +1920,7 @@ class ServiceTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_service_get_by_host_and_topic(self):
         service1 = self._create_service({'host': 'host1', 'topic': 'topic1'})
-        service2 = self._create_service({'host': 'host2', 'topic': 'topic2'})
+        self._create_service({'host': 'host2', 'topic': 'topic2'})
 
         real_service1 = db.service_get_by_host_and_topic(self.ctxt,
                                                          host='host1',
@@ -3693,24 +3692,24 @@ class VolumeUsageDBApiTestCase(test.TestCase):
         vol_usages = db.vol_get_usage_by_time(ctxt, start_time)
         self.assertEqual(len(vol_usages), 0)
 
-        vol_usage = db.vol_usage_update(ctxt, 1, rd_req=10, rd_bytes=20,
-                                        wr_req=30, wr_bytes=40,
-                                        instance_id='fake-instance-uuid1',
-                                        project_id='fake-project-uuid1',
-                                        user_id='fake-user-uuid1',
-                                        availability_zone='fake-az')
-        vol_usage = db.vol_usage_update(ctxt, 2, rd_req=100, rd_bytes=200,
-                                        wr_req=300, wr_bytes=400,
-                                        instance_id='fake-instance-uuid2',
-                                        project_id='fake-project-uuid2',
-                                        user_id='fake-user-uuid2',
-                                        availability_zone='fake-az')
-        vol_usage = db.vol_usage_update(ctxt, 1, rd_req=1000, rd_bytes=2000,
-                                        wr_req=3000, wr_bytes=4000,
-                                        instance_id='fake-instance-uuid1',
-                                        project_id='fake-project-uuid1',
-                                        user_id='fake-user-uuid1',
-                                        availability_zone='fake-az')
+        db.vol_usage_update(ctxt, 1, rd_req=10, rd_bytes=20,
+                            wr_req=30, wr_bytes=40,
+                            instance_id='fake-instance-uuid1',
+                            project_id='fake-project-uuid1',
+                            user_id='fake-user-uuid1',
+                            availability_zone='fake-az')
+        db.vol_usage_update(ctxt, 2, rd_req=100, rd_bytes=200,
+                            wr_req=300, wr_bytes=400,
+                            instance_id='fake-instance-uuid2',
+                            project_id='fake-project-uuid2',
+                            user_id='fake-user-uuid2',
+                            availability_zone='fake-az')
+        db.vol_usage_update(ctxt, 1, rd_req=1000, rd_bytes=2000,
+                            wr_req=3000, wr_bytes=4000,
+                            instance_id='fake-instance-uuid1',
+                            project_id='fake-project-uuid1',
+                            user_id='fake-user-uuid1',
+                            availability_zone='fake-az')
 
         vol_usages = db.vol_get_usage_by_time(ctxt, start_time)
         self.assertEqual(len(vol_usages), 2)
@@ -3732,44 +3731,44 @@ class VolumeUsageDBApiTestCase(test.TestCase):
         timeutils.utcnow().AndReturn(now3)
         self.mox.ReplayAll()
 
-        vol_usage = db.vol_usage_update(ctxt, 1, rd_req=100, rd_bytes=200,
-                                        wr_req=300, wr_bytes=400,
-                                        instance_id='fake-instance-uuid',
-                                        project_id='fake-project-uuid',
-                                        user_id='fake-user-uuid',
-                                        availability_zone='fake-az')
+        db.vol_usage_update(ctxt, 1, rd_req=100, rd_bytes=200,
+                            wr_req=300, wr_bytes=400,
+                            instance_id='fake-instance-uuid',
+                            project_id='fake-project-uuid',
+                            user_id='fake-user-uuid',
+                            availability_zone='fake-az')
         current_usage = db.vol_get_usage_by_time(ctxt, start_time)[0]
         self.assertEqual(current_usage['tot_reads'], 0)
         self.assertEqual(current_usage['curr_reads'], 100)
 
-        vol_usage = db.vol_usage_update(ctxt, 1, rd_req=200, rd_bytes=300,
-                                        wr_req=400, wr_bytes=500,
-                                        instance_id='fake-instance-uuid',
-                                        project_id='fake-project-uuid',
-                                        user_id='fake-user-uuid',
-                                        availability_zone='fake-az',
-                                        update_totals=True)
+        db.vol_usage_update(ctxt, 1, rd_req=200, rd_bytes=300,
+                            wr_req=400, wr_bytes=500,
+                            instance_id='fake-instance-uuid',
+                            project_id='fake-project-uuid',
+                            user_id='fake-user-uuid',
+                            availability_zone='fake-az',
+                            update_totals=True)
         current_usage = db.vol_get_usage_by_time(ctxt, start_time)[0]
         self.assertEqual(current_usage['tot_reads'], 200)
         self.assertEqual(current_usage['curr_reads'], 0)
 
-        vol_usage = db.vol_usage_update(ctxt, 1, rd_req=300, rd_bytes=400,
-                                        wr_req=500, wr_bytes=600,
-                                        instance_id='fake-instance-uuid',
-                                        project_id='fake-project-uuid',
-                                        availability_zone='fake-az',
-                                        user_id='fake-user-uuid')
+        db.vol_usage_update(ctxt, 1, rd_req=300, rd_bytes=400,
+                            wr_req=500, wr_bytes=600,
+                            instance_id='fake-instance-uuid',
+                            project_id='fake-project-uuid',
+                            availability_zone='fake-az',
+                            user_id='fake-user-uuid')
         current_usage = db.vol_get_usage_by_time(ctxt, start_time)[0]
         self.assertEqual(current_usage['tot_reads'], 200)
         self.assertEqual(current_usage['curr_reads'], 300)
 
-        vol_usage = db.vol_usage_update(ctxt, 1, rd_req=400, rd_bytes=500,
-                                        wr_req=600, wr_bytes=700,
-                                        instance_id='fake-instance-uuid',
-                                        project_id='fake-project-uuid',
-                                        user_id='fake-user-uuid',
-                                        availability_zone='fake-az',
-                                        update_totals=True)
+        db.vol_usage_update(ctxt, 1, rd_req=400, rd_bytes=500,
+                            wr_req=600, wr_bytes=700,
+                            instance_id='fake-instance-uuid',
+                            project_id='fake-project-uuid',
+                            user_id='fake-user-uuid',
+                            availability_zone='fake-az',
+                            update_totals=True)
 
         vol_usages = db.vol_get_usage_by_time(ctxt, start_time)
 
@@ -4714,7 +4713,7 @@ class QuotaTestCase(test.TestCase, ModelsObjectComparatorMixin):
             self.ctxt, 'p1', 'nonexitent_resource')
 
     def test_quota_usage_get(self):
-        reservations = _quota_reserve(self.ctxt, 'p1')
+        _quota_reserve(self.ctxt, 'p1')
         quota_usage = db.quota_usage_get(self.ctxt, 'p1', 'res0')
         expected = {'resource': 'res0', 'project_id': 'p1',
                     'in_use': 0, 'reserved': 0, 'total': 0}
@@ -4722,7 +4721,7 @@ class QuotaTestCase(test.TestCase, ModelsObjectComparatorMixin):
             self.assertEqual(value, quota_usage[key])
 
     def test_quota_usage_get_all_by_project(self):
-        reservations = _quota_reserve(self.ctxt, 'p1')
+        _quota_reserve(self.ctxt, 'p1')
         expected = {'project_id': 'p1',
                     'res0': {'in_use': 0, 'reserved': 0},
                     'res1': {'in_use': 1, 'reserved': 1},
@@ -4735,8 +4734,7 @@ class QuotaTestCase(test.TestCase, ModelsObjectComparatorMixin):
             self.ctxt, 'p1', 'resource', in_use=42)
 
     def test_quota_usage_update(self):
-        reservations = _quota_reserve(self.ctxt, 'p1')
-        until_refresh = datetime.datetime.now() + datetime.timedelta(days=1)
+        _quota_reserve(self.ctxt, 'p1')
         db.quota_usage_update(self.ctxt, 'p1', 'res0', in_use=42, reserved=43)
         quota_usage = db.quota_usage_get(self.ctxt, 'p1', 'res0')
         expected = {'resource': 'res0', 'project_id': 'p1',
@@ -4792,7 +4790,7 @@ class QuotaClassTestCase(test.TestCase, ModelsObjectComparatorMixin):
                             'resource0': 0, 'resource1': 1, 'resource2': 2})
 
     def test_quota_class_update(self):
-        qc = db.quota_class_create(self.ctxt, 'class name', 'resource', 42)
+        db.quota_class_create(self.ctxt, 'class name', 'resource', 42)
         db.quota_class_update(self.ctxt, 'class name', 'resource', 43)
         self.assertEqual(db.quota_class_get(self.ctxt, 'class name',
                                     'resource').hard_limit, 43)

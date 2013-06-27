@@ -806,8 +806,6 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     def _check_153(self, engine, data):
         fake_types, fake_instances = data
         # NOTE(danms): Fetch all the tables and data from scratch after change
-        instances = db_utils.get_table(engine, 'instances')
-        instance_types = db_utils.get_table(engine, 'instance_types')
         sys_meta = db_utils.get_table(engine, 'instance_system_metadata')
 
         # Collect all system metadata, indexed by instance_uuid
@@ -1073,7 +1071,6 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         for result in results:
             the_id = result['id']
             key = result['key']
-            value = result['value']
             original = data[the_id]
 
             if key == 'instance_type_baz':

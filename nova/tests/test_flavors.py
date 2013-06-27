@@ -69,11 +69,8 @@ class InstanceTypeTestCase(test.TestCase):
         project_id = 'fake'
         ctxt = context.RequestContext(user_id, project_id, is_admin=True)
         flavor_id = 'flavor1'
-        type_ref = flavors.create('some flavor', 256, 1, 120, 100,
-                                          flavorid=flavor_id)
-        access_ref = flavors.add_flavor_access(flavor_id,
-                                                             project_id,
-                                                             ctxt=ctxt)
+        flavors.create('some flavor', 256, 1, 120, 100, flavorid=flavor_id)
+        flavors.add_flavor_access(flavor_id, project_id, ctxt=ctxt)
         self.assertRaises(exception.FlavorAccessExists,
                           flavors.add_flavor_access,
                           flavor_id, project_id, ctxt)
@@ -92,10 +89,8 @@ class InstanceTypeTestCase(test.TestCase):
         project_id = 'fake'
         ctxt = context.RequestContext(user_id, project_id, is_admin=True)
         flavor_id = 'flavor1'
-        type_ref = flavors.create('some flavor', 256, 1, 120, 100,
-                                          flavorid=flavor_id)
-        access_ref = flavors.add_flavor_access(flavor_id, project_id,
-                                                      ctxt)
+        flavors.create('some flavor', 256, 1, 120, 100, flavorid=flavor_id)
+        flavors.add_flavor_access(flavor_id, project_id, ctxt)
         flavors.remove_flavor_access(flavor_id, project_id, ctxt)
 
         projects = flavors.get_flavor_access_by_flavor_id(flavor_id,
@@ -107,8 +102,7 @@ class InstanceTypeTestCase(test.TestCase):
         project_id = 'fake'
         ctxt = context.RequestContext(user_id, project_id, is_admin=True)
         flavor_id = 'flavor1'
-        type_ref = flavors.create('some flavor', 256, 1, 120, 100,
-                                          flavorid=flavor_id)
+        flavors.create('some flavor', 256, 1, 120, 100, flavorid=flavor_id)
         self.assertRaises(exception.FlavorAccessNotFound,
                           flavors.remove_flavor_access,
                           flavor_id, project_id, ctxt=ctxt)

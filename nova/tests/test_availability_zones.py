@@ -179,8 +179,8 @@ class AvailabilityZoneTestCases(test.TestCase):
                                                    disabled=False)
         service4 = self._create_service_with_topic('compute', 'host4',
                                                    disabled=True)
-        service5 = self._create_service_with_topic('compute', 'host5',
-                                                   disabled=True)
+        self._create_service_with_topic('compute', 'host5',
+                                        disabled=True)
 
         self._add_to_aggregate(service1, self.agg)
         self._add_to_aggregate(service2, self.agg)

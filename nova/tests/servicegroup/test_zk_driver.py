@@ -40,7 +40,7 @@ class ZKServiceGroupTestCase(test.TestCase):
         self.flags(servicegroup_driver='zk')
         self.flags(address='localhost:2181', group="zookeeper")
         try:
-            _unused = zk.ZooKeeperDriver()
+            zk.ZooKeeperDriver()
         except ImportError:
             self.skipTest("Unable to test due to lack of ZooKeeper")
 
