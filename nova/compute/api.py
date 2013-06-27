@@ -496,21 +496,20 @@ class API(base.Base):
                 instance['uuid'], updates)
         return instance
 
-    def _check_config_drive(self, context, config_drive):
-        try:
-            bool_like = strutils.bool_from_string(config_drive, strict=True)
-        except ValueError:
-            bool_like = False
-
-        if config_drive is None:
-            return None, None
-        elif bool_like:
-            return None, bool_like
+    def _check_config_drive(self, config_drive):
+        if config_drive:
+            try:
+                bool_val = strutils.bool_from_string(config_drive,
+                                                     strict=True)
+            except ValueError:
+                raise exception.ConfigDriveInvalidValue(option=config_drive)
         else:
-            cd_image_service, config_drive_id = \
-                glance.get_remote_image_service(context, config_drive)
-            cd_image_service.show(context, config_drive_id)
-            return config_drive_id, None
+            bool_val = False
+        # FIXME(comstud):  Bug ID 1193438 filed for this. This looks silly,
+        # but this is because the config drive column is a String.  False
+        # is represented by using an empty string.  And for whatever
+        # reason, we rely on the DB to cast True to a String.
+        return True if bool_val else ''
 
     def _check_requested_image(self, context, image_id, image, instance_type):
         if not image:
@@ -598,8 +597,7 @@ class API(base.Base):
         kernel_id, ramdisk_id = self._handle_kernel_and_ramdisk(
                 context, kernel_id, ramdisk_id, image)
 
-        config_drive_id, config_drive = self._check_config_drive(
-            context, config_drive)
+        config_drive = self._check_config_drive(config_drive)
 
         if key_data is None and key_name:
             key_pair = self.db.key_pair_get(context, context.user_id,
@@ -619,8 +617,7 @@ class API(base.Base):
             'ramdisk_id': ramdisk_id or '',
             'power_state': power_state.NOSTATE,
             'vm_state': vm_states.BUILDING,
-            'config_drive_id': config_drive_id or '',
-            'config_drive': config_drive or '',
+            'config_drive': config_drive,
             'user_id': context.user_id,
             'project_id': context.project_id,
             'instance_type_id': instance_type['id'],

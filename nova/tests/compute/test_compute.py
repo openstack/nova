@@ -9592,42 +9592,31 @@ class CheckConfigDriveTestCase(test.TestCase):
     def setUp(self):
         super(CheckConfigDriveTestCase, self).setUp()
         self.compute_api = compute.API()
-        self.context = context.RequestContext(
-                'fake_user_id', 'fake_project_id')
 
-        self.called = called = {'show': False}
-
-        def fake_get_remote_image_service(context, image_id):
-            class FakeGlance(object):
-                def show(self, context, image_id):
-                    called['show'] = True
-
-            return FakeGlance(), image_id
-
-        self.stubs.Set(glance, 'get_remote_image_service',
-                       fake_get_remote_image_service)
-
-    def tearDown(self):
-        self.stubs.UnsetAll()
-        super(CheckConfigDriveTestCase, self).tearDown()
-
-    def assertCheck(self, expected, config_drive):
+    def _assertCheck(self, expected, config_drive):
         self.assertEqual(expected,
-                         self.compute_api._check_config_drive(
-                             self.context, config_drive))
+                         self.compute_api._check_config_drive(config_drive))
 
-    def test_value_is_none(self):
-        self.assertFalse(self.called['show'])
-        self.assertCheck((None, None), None)
-        self.assertFalse(self.called['show'])
+    def _assertInvalid(self, config_drive):
+        self.assertRaises(exception.ConfigDriveInvalidValue,
+                          self.compute_api._check_config_drive,
+                          config_drive)
 
-    def test_bool_string_or_id(self):
-        self.assertCheck((None, True), "true")
-        self.assertCheck((None, True), 1)
-        self.assertCheck((None, True), 't')
+    def test_config_drive_false_values(self):
+        self._assertCheck('', None)
+        self._assertCheck('', '')
+        self._assertCheck('', 'False')
+        self._assertCheck('', 'f')
+        self._assertCheck('', '0')
 
-    def test_value_is_image_id(self):
-        self.assertCheck(("fake-uuid", None), "fake-uuid")
+    def test_config_drive_true_values(self):
+        self._assertCheck(True, 'True')
+        self._assertCheck(True, 't')
+        self._assertCheck(True, '1')
+
+    def test_config_drive_bogus_values_raise(self):
+        self._assertInvalid('asd')
+        self._assertInvalid(uuidutils.generate_uuid())
 
 
 class CheckRequestedImageTestCase(test.TestCase):

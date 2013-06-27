@@ -3412,8 +3412,8 @@ class ConfigDriveSampleJsonTest(ServersSampleBase):
         response = self._do_get('servers/%s' % uuid)
         subs = self._get_regexes()
         subs['hostid'] = '[a-f0-9]+'
-        # config drive can be an uuid or empty value
-        subs['cdrive'] = '(%s)?' % subs['uuid']
+        # config drive can be a string for True or empty value for False
+        subs['cdrive'] = '.*'
         self._verify_response('server-config-drive-get-resp', subs,
                               response, 200)
 
@@ -3422,8 +3422,8 @@ class ConfigDriveSampleJsonTest(ServersSampleBase):
         response = self._do_get('servers/detail')
         subs = self._get_regexes()
         subs['hostid'] = '[a-f0-9]+'
-        # config drive can be an uuid or empty value
-        subs['cdrive'] = '(%s)?' % subs['uuid']
+        # config drive can be a string for True or empty value for False
+        subs['cdrive'] = '.*'
         self._verify_response('servers-config-drive-details-resp',
                               subs, response, 200)
 

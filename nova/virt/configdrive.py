@@ -179,7 +179,3 @@ class ConfigDriveBuilder(object):
 
 def required_by(instance):
     return instance.get('config_drive') or CONF.force_config_drive
-
-
-def enabled_for(instance):
-    return required_by(instance) or instance.get('config_drive_id')

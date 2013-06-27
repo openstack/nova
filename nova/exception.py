@@ -1124,6 +1124,10 @@ class InstanceIsLocked(InstanceInvalidState):
     message = _("Instance %(instance_uuid)s is locked")
 
 
+class ConfigDriveInvalidValue(Invalid):
+    message = _("Invalid value for Config Drive option: %(option)s")
+
+
 class ConfigDriveMountFailed(NovaException):
     message = _("Could not mount vfat config drive. %(operation)s failed. "
                 "Error: %(error)s")
