@@ -1677,7 +1677,7 @@ def instance_get_all_by_filters(context, filters, sort_key, sort_dir,
 
         'changes-since' - only return instances updated after
         'deleted' - only return (or exclude) deleted instances
-        'soft-deleted' - modify behavior of 'deleted' to either
+        'soft_deleted' - modify behavior of 'deleted' to either
                          include or exclude instances whose
                          vm_state is SOFT_DELETED.
     """
