@@ -95,6 +95,14 @@ BYTE_MULTIPLIERS = {
     'k': 1024,
 }
 
+# used in limits
+TIME_UNITS = {
+    'SECOND': 1,
+    'MINUTE': 60,
+    'HOUR': 3600,
+    'DAY': 84400
+}
+
 synchronized = lockutils.synchronized_with_prefix('nova-')
 
 
