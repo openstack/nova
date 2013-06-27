@@ -960,6 +960,11 @@ class FlavorExtraSpecsNotFound(NotFound):
                 "key %(extra_specs_key)s.")
 
 
+class ComputeHostMetricNotFound(NotFound):
+    msg_fmt = _("Metric %(name)s could not be found on the compute "
+                "host node %(host)s.%(node)s.")
+
+
 class FileNotFound(NotFound):
     msg_fmt = _("File %(file_path)s could not be found.")
 

@@ -2022,97 +2022,24 @@
 #cinder_cross_az_attach=true
 
 
-[docker]
+[keymgr]
 
 #
-# Options defined in nova.virt.docker.driver
+# Options defined in nova.keymgr
 #
 
-# Default TCP port to find the docker-registry container
-# (integer value)
-#registry_default_port=5042
-
-
-[hyperv]
-
-#
-# Options defined in nova.virt.hyperv.pathutils
-#
-
-# The name of a Windows share name mapped to the
-# "instances_path" dir and used by the resize feature to copy
-# files to the target host. If left blank, an administrative
-# share will be used, looking for the same "instances_path"
-# used locally (string value)
-#instances_path_share=
-
-
-#
-# Options defined in nova.virt.hyperv.utilsfactory
-#
-
-# Force V1 WMI utility classes (boolean value)
-#force_hyperv_utils_v1=false
-
-# Force V1 volume utility class (boolean value)
-#force_volumeutils_v1=false
-
-
-#
-# Options defined in nova.virt.hyperv.vif
-#
-
-# External virtual switch Name, if not provided, the first
-# external virtual switch is used (string value)
-#vswitch_name=<None>
-
-
-#
-# Options defined in nova.virt.hyperv.vmops
-#
-
-# Required for live migration among hosts with different CPU
-# features (boolean value)
-#limit_cpu_features=false
-
-# Sets the admin password in the config drive image (boolean
+# The full class name of the key manager API class (string
 # value)
-#config_drive_inject_password=false
-
-# qemu-img is used to convert between different image types
-# (string value)
-#qemu_img_cmd=qemu-img.exe
-
-# Attaches the Config Drive image as a cdrom drive instead of
-# a disk drive (boolean value)
-#config_drive_cdrom=false
-
-# Enables metrics collections for an instance by using
-# Hyper-V's metric APIs. Collected data can by retrieved by
-# other apps and services, e.g.: Ceilometer. Requires Hyper-V
-# / Windows Server 2012 and above (boolean value)
-#enable_instance_metrics_collection=false
-
-# Enables dynamic memory allocation (ballooning) when set to a
-# value greater than 1. The value expresses the ratio between
-# the total RAM assigned to an instance and its startup RAM
-# amount. For example a ratio of 2.0 for an instance with
-# 1024MB of RAM implies 512MB of RAM allocated at startup
-# (floating point value)
-#dynamic_memory_ratio=1.0
+#api_class=nova.keymgr.conf_key_mgr.ConfKeyManager
 
 
 #
-# Options defined in nova.virt.hyperv.volumeops
+# Options defined in nova.keymgr.conf_key_mgr
 #
 
-# The number of times to retry to attach a volume (integer
+# Fixed key returned by key manager, specified in hex (string
 # value)
-#volume_attach_retry_count=10
-
-# Interval between volume attachment attempts, in seconds
-# (integer value)
-#volume_attach_retry_interval=5
+#fixed_key=<None>
 
 
 [zookeeper]
@@ -2137,6 +2064,109 @@
 #sg_retry_interval=5
 
 
+[image_file_url]
+
+#
+# Options defined in nova.image.download.file
+#
+
+# A list of filesystems that will be configured in this file
+# under the sections image_file_url:<list entry name> (list
+# value)
+#filesystems=
+
+
+[vmware]
+
+#
+# Options defined in nova.virt.vmwareapi.driver
+#
+
+# URL for connection to VMware ESX/VC host. Required if
+# compute_driver is vmwareapi.VMwareESXDriver or
+# vmwareapi.VMwareVCDriver. (string value)
+#host_ip=<None>
+
+# Username for connection to VMware ESX/VC host. Used only if
+# compute_driver is vmwareapi.VMwareESXDriver or
+# vmwareapi.VMwareVCDriver. (string value)
+#host_username=<None>
+
+# Password for connection to VMware ESX/VC host. Used only if
+# compute_driver is vmwareapi.VMwareESXDriver or
+# vmwareapi.VMwareVCDriver. (string value)
+#host_password=<None>
+
+# Name of a VMware Cluster ComputeResource. Used only if
+# compute_driver is vmwareapi.VMwareVCDriver. (multi valued)
+#cluster_name=<None>
+
+# Regex to match the name of a datastore. Used only if
+# compute_driver is vmwareapi.VMwareVCDriver. (string value)
+#datastore_regex=<None>
+
+# The interval used for polling of remote tasks. Used only if
+# compute_driver is vmwareapi.VMwareESXDriver or
+# vmwareapi.VMwareVCDriver. (floating point value)
+#task_poll_interval=5.0
+
+# The number of times we retry on failures, e.g., socket
+# error, etc. Used only if compute_driver is
+# vmwareapi.VMwareESXDriver or vmwareapi.VMwareVCDriver.
+# (integer value)
+#api_retry_count=10
+
+# VNC starting port (integer value)
+#vnc_port=5900
+
+# Total number of VNC ports (integer value)
+#vnc_port_total=10000
+
+# Whether to use linked clone (boolean value)
+#use_linked_clone=true
+
+
+#
+# Options defined in nova.virt.vmwareapi.vif
+#
+
+# Physical ethernet adapter name for vlan networking (string
+# value)
+#vlan_interface=vmnic0
+
+
+#
+# Options defined in nova.virt.vmwareapi.vim
+#
+
+# Optional VIM Service WSDL Location e.g
+# http://<server>/vimService.wsdl. Optional over-ride to
+# default location for bug work-arounds (string value)
+#wsdl_location=<None>
+
+
+#
+# Options defined in nova.virt.vmwareapi.vim_util
+#
+
+# The maximum number of ObjectContent data objects that should
+# be returned in a single result. A positive value will cause
+# the operation to suspend the retrieval when the count of
+# objects reaches the specified maximum. The server may still
+# limit the count to something less than the configured value.
+# Any remaining objects may be retrieved with additional
+# requests. (integer value)
+#maximum_objects=100
+
+
+#
+# Options defined in nova.virt.vmwareapi.vmops
+#
+
+# Name of Integration Bridge (string value)
+#integration_bridge=br-int
+
+
 [osapi_v3]
 
 #
@@ -2154,6 +2184,246 @@
 # be loaded if it exists in this list. Specify the extension
 # aliases here. (list value)
 #extensions_whitelist=
+
+
+[xenserver]
+
+#
+# Options defined in nova.virt.xenapi.agent
+#
+
+# number of seconds to wait for agent reply (integer value)
+#agent_timeout=30
+
+# number of seconds to wait for agent to be fully operational
+# (integer value)
+#agent_version_timeout=300
+
+# number of seconds to wait for agent reply to resetnetwork
+# request (integer value)
+#agent_resetnetwork_timeout=60
+
+# Specifies the path in which the xenapi guest agent should be
+# located. If the agent is present, network configuration is
+# not injected into the image. Used if
+# compute_driver=xenapi.XenAPIDriver and  flat_injected=True
+# (string value)
+#agent_path=usr/sbin/xe-update-networking
+
+# Disables the use of the XenAPI agent in any image regardless
+# of what image properties are present. (boolean value)
+#disable_agent=false
+
+# Determines if the xenapi agent should be used when the image
+# used does not contain a hint to declare if the agent is
+# present or not. The hint is a glance property
+# "xenapi_use_agent" that has the value "true" or "false".
+# Note that waiting for the agent when it is not present will
+# significantly increase server boot times. (boolean value)
+#use_agent_default=false
+
+
+#
+# Options defined in nova.virt.xenapi.client.session
+#
+
+# Timeout in seconds for XenAPI login. (integer value)
+#login_timeout=10
+
+# Maximum number of concurrent XenAPI connections. Used only
+# if compute_driver=xenapi.XenAPIDriver (integer value)
+#connection_concurrent=5
+
+
+#
+# Options defined in nova.virt.xenapi.driver
+#
+
+# URL for connection to XenServer/Xen Cloud Platform. A
+# special value of unix://local can be used to connect to the
+# local unix socket.  Required if
+# compute_driver=xenapi.XenAPIDriver (string value)
+#connection_url=<None>
+
+# Username for connection to XenServer/Xen Cloud Platform.
+# Used only if compute_driver=xenapi.XenAPIDriver (string
+# value)
+#connection_username=root
+
+# Password for connection to XenServer/Xen Cloud Platform.
+# Used only if compute_driver=xenapi.XenAPIDriver (string
+# value)
+#connection_password=<None>
+
+# The interval used for polling of coalescing vhds. Used only
+# if compute_driver=xenapi.XenAPIDriver (floating point value)
+#vhd_coalesce_poll_interval=5.0
+
+# Ensure compute service is running on host XenAPI connects
+# to. (boolean value)
+#check_host=true
+
+# Max number of times to poll for VHD to coalesce. Used only
+# if compute_driver=xenapi.XenAPIDriver (integer value)
+#vhd_coalesce_max_attempts=5
+
+# Base path to the storage repository (string value)
+#sr_base_path=/var/run/sr-mount
+
+# iSCSI Target Host (string value)
+#target_host=<None>
+
+# iSCSI Target Port, 3260 Default (string value)
+#target_port=3260
+
+# IQN Prefix (string value)
+#iqn_prefix=iqn.2010-10.org.openstack
+
+# Used to enable the remapping of VBD dev (Works around an
+# issue in Ubuntu Maverick) (boolean value)
+#remap_vbd_dev=false
+
+# Specify prefix to remap VBD dev to (ex. /dev/xvdb ->
+# /dev/sdb) (string value)
+#remap_vbd_dev_prefix=sd
+
+
+#
+# Options defined in nova.virt.xenapi.image.bittorrent
+#
+
+# Base URL for torrent files. (string value)
+#torrent_base_url=<None>
+
+# Probability that peer will become a seeder. (1.0 = 100%)
+# (floating point value)
+#torrent_seed_chance=1.0
+
+# Number of seconds after downloading an image via BitTorrent
+# that it should be seeded for other peers. (integer value)
+#torrent_seed_duration=3600
+
+# Cached torrent files not accessed within this number of
+# seconds can be reaped (integer value)
+#torrent_max_last_accessed=86400
+
+# Beginning of port range to listen on (integer value)
+#torrent_listen_port_start=6881
+
+# End of port range to listen on (integer value)
+#torrent_listen_port_end=6891
+
+# Number of seconds a download can remain at the same progress
+# percentage w/o being considered a stall (integer value)
+#torrent_download_stall_cutoff=600
+
+# Maximum number of seeder processes to run concurrently
+# within a given dom0. (-1 = no limit) (integer value)
+#torrent_max_seeder_processes_per_host=1
+
+
+#
+# Options defined in nova.virt.xenapi.pool
+#
+
+# To use for hosts with different CPUs (boolean value)
+#use_join_force=true
+
+
+#
+# Options defined in nova.virt.xenapi.vif
+#
+
+# Name of Integration Bridge used by Open vSwitch (string
+# value)
+#ovs_integration_bridge=xapi1
+
+
+#
+# Options defined in nova.virt.xenapi.vm_utils
+#
+
+# Cache glance images locally. `all` will cache all images,
+# `some` will only cache images that have the image_property
+# `cache_in_nova=True`, and `none` turns off caching entirely
+# (string value)
+#cache_images=all
+
+# Compression level for images, e.g., 9 for gzip -9. Range is
+# 1-9, 9 being most compressed but most CPU intensive on dom0.
+# (integer value)
+#image_compression_level=<None>
+
+# Default OS type (string value)
+#default_os_type=linux
+
+# Time to wait for a block device to be created (integer
+# value)
+#block_device_creation_timeout=10
+
+# Maximum size in bytes of kernel or ramdisk images (integer
+# value)
+#max_kernel_ramdisk_size=16777216
+
+# Filter for finding the SR to be used to install guest
+# instances on. To use the Local Storage in default
+# XenServer/XCP installations set this flag to other-config
+# :i18n-key=local-storage. To select an SR with a different
+# matching criteria, you could set it to other-
+# config:my_favorite_sr=true. On the other hand, to fall back
+# on the Default SR, as displayed by XenCenter, set this flag
+# to: default-sr:true (string value)
+#sr_matching_filter=default-sr:true
+
+# Whether to use sparse_copy for copying data on a resize down
+# (False will use standard dd). This speeds up resizes down
+# considerably since large runs of zeros won't have to be
+# rsynced (boolean value)
+#sparse_copy=true
+
+# Maximum number of retries to unplug VBD (integer value)
+#num_vbd_unplug_retries=10
+
+# Whether or not to download images via Bit Torrent
+# (all|some|none). (string value)
+#torrent_images=none
+
+# Name of network to use for booting iPXE ISOs (string value)
+#ipxe_network_name=<None>
+
+# URL to the iPXE boot menu (string value)
+#ipxe_boot_menu_url=<None>
+
+# Name and optionally path of the tool used for ISO image
+# creation (string value)
+#ipxe_mkisofs_cmd=mkisofs
+
+
+#
+# Options defined in nova.virt.xenapi.vmops
+#
+
+# number of seconds to wait for instance to go to running
+# state (integer value)
+#running_timeout=60
+
+# The XenAPI VIF driver using XenServer Network APIs. (string
+# value)
+#vif_driver=nova.virt.xenapi.vif.XenAPIBridgeDriver
+
+# Dom0 plugin driver used to handle image uploads. (string
+# value)
+#image_upload_handler=nova.virt.xenapi.image.glance.GlanceStore
+
+
+[rpc_notifier2]
+
+#
+# Options defined in nova.openstack.common.notifier.rpc_notifier2
+#
+
+# AMQP topic(s) used for OpenStack notifications (list value)
+#topics=notifications
 
 
 [conductor]
@@ -2174,239 +2444,6 @@
 # Number of workers for OpenStack Conductor service (integer
 # value)
 #workers=<None>
-
-
-[keymgr]
-
-#
-# Options defined in nova.keymgr
-#
-
-# The full class name of the key manager API class (string
-# value)
-#api_class=nova.keymgr.conf_key_mgr.ConfKeyManager
-
-
-#
-# Options defined in nova.keymgr.conf_key_mgr
-#
-
-# Fixed key returned by key manager, specified in hex (string
-# value)
-#fixed_key=<None>
-
-
-[cells]
-
-#
-# Options defined in nova.cells.manager
-#
-
-# Cells communication driver to use (string value)
-#driver=nova.cells.rpc_driver.CellsRPCDriver
-
-# Number of seconds after an instance was updated or deleted
-# to continue to update cells (integer value)
-#instance_updated_at_threshold=3600
-
-# Number of instances to update per periodic task run (integer
-# value)
-#instance_update_num_instances=1
-
-
-#
-# Options defined in nova.cells.messaging
-#
-
-# Maximum number of hops for cells routing. (integer value)
-#max_hop_count=10
-
-# Cells scheduler to use (string value)
-#scheduler=nova.cells.scheduler.CellsScheduler
-
-
-#
-# Options defined in nova.cells.opts
-#
-
-# Enable cell functionality (boolean value)
-#enable=false
-
-# the topic cells nodes listen on (string value)
-#topic=cells
-
-# Manager for cells (string value)
-#manager=nova.cells.manager.CellsManager
-
-# name of this cell (string value)
-#name=nova
-
-# Key/Multi-value list with the capabilities of the cell (list
-# value)
-#capabilities=hypervisor=xenserver;kvm,os=linux;windows
-
-# Seconds to wait for response from a call to a cell. (integer
-# value)
-#call_timeout=60
-
-# Percentage of cell capacity to hold in reserve. Affects both
-# memory and disk utilization (floating point value)
-#reserve_percent=10.0
-
-# Type of cell: api or compute (string value)
-#cell_type=compute
-
-# Number of seconds after which a lack of capability and
-# capacity updates signals the child cell is to be treated as
-# a mute. (integer value)
-#mute_child_interval=300
-
-# Seconds between bandwidth updates for cells. (integer value)
-#bandwidth_update_interval=600
-
-
-#
-# Options defined in nova.cells.rpc_driver
-#
-
-# Base queue name to use when communicating between cells.
-# Various topics by message type will be appended to this.
-# (string value)
-#rpc_driver_queue_base=cells.intercell
-
-
-#
-# Options defined in nova.cells.scheduler
-#
-
-# Filter classes the cells scheduler should use.  An entry of
-# "nova.cells.filters.all_filters"maps to all cells filters
-# included with nova. (list value)
-#scheduler_filter_classes=nova.cells.filters.all_filters
-
-# Weigher classes the cells scheduler should use.  An entry of
-# "nova.cells.weights.all_weighers"maps to all cell weighers
-# included with nova. (list value)
-#scheduler_weight_classes=nova.cells.weights.all_weighers
-
-# How many retries when no cells are available. (integer
-# value)
-#scheduler_retries=10
-
-# How often to retry in seconds when no cells are available.
-# (integer value)
-#scheduler_retry_delay=2
-
-
-#
-# Options defined in nova.cells.state
-#
-
-# Seconds between getting fresh cell info from db. (integer
-# value)
-#db_check_interval=60
-
-# Configuration file from which to read cells configuration.
-# If given, overrides reading cells from the database. (string
-# value)
-#cells_config=<None>
-
-
-#
-# Options defined in nova.cells.weights.mute_child
-#
-
-# Multiplier used to weigh mute children.  (The value should
-# be negative.) (floating point value)
-#mute_weight_multiplier=-10.0
-
-# Weight value assigned to mute children.  (The value should
-# be positive.) (floating point value)
-#mute_weight_value=1000.0
-
-
-#
-# Options defined in nova.cells.weights.ram_by_instance_type
-#
-
-# Multiplier used for weighing ram.  Negative numbers mean to
-# stack vs spread. (floating point value)
-#ram_weight_multiplier=10.0
-
-
-[database]
-
-#
-# Options defined in nova.openstack.common.db.api
-#
-
-# The backend to use for db (string value)
-#backend=sqlalchemy
-
-# Enable the experimental use of thread pooling for all DB API
-# calls (boolean value)
-#use_tpool=false
-
-
-#
-# Options defined in nova.openstack.common.db.sqlalchemy.session
-#
-
-# The SQLAlchemy connection string used to connect to the
-# database (string value)
-#connection=sqlite:////nova/openstack/common/db/$sqlite_db
-
-# The SQLAlchemy connection string used to connect to the
-# slave database (string value)
-#slave_connection=
-
-# timeout before idle sql connections are reaped (integer
-# value)
-#idle_timeout=3600
-
-# Minimum number of SQL connections to keep open in a pool
-# (integer value)
-#min_pool_size=1
-
-# Maximum number of SQL connections to keep open in a pool
-# (integer value)
-#max_pool_size=<None>
-
-# maximum db connection retries during startup. (setting -1
-# implies an infinite retry count) (integer value)
-#max_retries=10
-
-# interval between retries of opening a sql connection
-# (integer value)
-#retry_interval=10
-
-# If set, use this value for max_overflow with sqlalchemy
-# (integer value)
-#max_overflow=<None>
-
-# Verbosity of SQL debugging information. 0=None,
-# 100=Everything (integer value)
-#connection_debug=0
-
-# Add python stack traces to SQL as comment strings (boolean
-# value)
-#connection_trace=false
-
-# If set, use this value for pool_timeout with sqlalchemy
-# (integer value)
-#pool_timeout=<None>
-
-
-[image_file_url]
-
-#
-# Options defined in nova.image.download.file
-#
-
-# A list of filesystems that will be configured in this file
-# under the sections image_file_url:<list entry name> (list
-# value)
-#filesystems=
 
 
 [libvirt]
@@ -2650,6 +2687,364 @@
 #qemu_allowed_storage_drivers=
 
 
+[metrics]
+
+#
+# Options defined in nova.scheduler.weights.metrics
+#
+
+# Multiplier used for weighing metrics. (floating point value)
+#weight_multiplier=1.0
+
+# How the metrics are going to be weighed. This should be in
+# the form of "<name1>=<ratio1>, <name2>=<ratio2>, ...", where
+# <nameX> is one of the metric to be weighed, and <ratioX> is
+# the corresponding ratio. So for "name1=1.0, name2=-1.0" The
+# final weight would be name1.value * 1.0 + name2.value *
+# -1.0. (list value)
+#weight_setting=
+
+
+[ssl]
+
+#
+# Options defined in nova.openstack.common.sslutils
+#
+
+# CA certificate file to use to verify connecting clients
+# (string value)
+#ca_file=<None>
+
+# Certificate file to use when starting the server securely
+# (string value)
+#cert_file=<None>
+
+# Private key file to use when starting the server securely
+# (string value)
+#key_file=<None>
+
+
+[matchmaker_ring]
+
+#
+# Options defined in nova.openstack.common.rpc.matchmaker_ring
+#
+
+# Matchmaker ring file (JSON) (string value)
+#ringfile=/etc/oslo/matchmaker_ring.json
+
+
+[spice]
+
+#
+# Options defined in nova.spice
+#
+
+# location of spice html5 console proxy, in the form
+# "http://127.0.0.1:6082/spice_auto.html" (string value)
+#html5proxy_base_url=http://127.0.0.1:6082/spice_auto.html
+
+# IP address on which instance spice server should listen
+# (string value)
+#server_listen=127.0.0.1
+
+# the address to which proxy clients (like nova-
+# spicehtml5proxy) should connect (string value)
+#server_proxyclient_address=127.0.0.1
+
+# enable spice related features (boolean value)
+#enabled=false
+
+# enable spice guest agent support (boolean value)
+#agent_enabled=true
+
+# keymap for spice (string value)
+#keymap=en-us
+
+
+[hyperv]
+
+#
+# Options defined in nova.virt.hyperv.pathutils
+#
+
+# The name of a Windows share name mapped to the
+# "instances_path" dir and used by the resize feature to copy
+# files to the target host. If left blank, an administrative
+# share will be used, looking for the same "instances_path"
+# used locally (string value)
+#instances_path_share=
+
+
+#
+# Options defined in nova.virt.hyperv.utilsfactory
+#
+
+# Force V1 WMI utility classes (boolean value)
+#force_hyperv_utils_v1=false
+
+# Force V1 volume utility class (boolean value)
+#force_volumeutils_v1=false
+
+
+#
+# Options defined in nova.virt.hyperv.vif
+#
+
+# External virtual switch Name, if not provided, the first
+# external virtual switch is used (string value)
+#vswitch_name=<None>
+
+
+#
+# Options defined in nova.virt.hyperv.vmops
+#
+
+# Required for live migration among hosts with different CPU
+# features (boolean value)
+#limit_cpu_features=false
+
+# Sets the admin password in the config drive image (boolean
+# value)
+#config_drive_inject_password=false
+
+# qemu-img is used to convert between different image types
+# (string value)
+#qemu_img_cmd=qemu-img.exe
+
+# Attaches the Config Drive image as a cdrom drive instead of
+# a disk drive (boolean value)
+#config_drive_cdrom=false
+
+# Enables metrics collections for an instance by using
+# Hyper-V's metric APIs. Collected data can by retrieved by
+# other apps and services, e.g.: Ceilometer. Requires Hyper-V
+# / Windows Server 2012 and above (boolean value)
+#enable_instance_metrics_collection=false
+
+# Enables dynamic memory allocation (ballooning) when set to a
+# value greater than 1. The value expresses the ratio between
+# the total RAM assigned to an instance and its startup RAM
+# amount. For example a ratio of 2.0 for an instance with
+# 1024MB of RAM implies 512MB of RAM allocated at startup
+# (floating point value)
+#dynamic_memory_ratio=1.0
+
+
+#
+# Options defined in nova.virt.hyperv.volumeops
+#
+
+# The number of times to retry to attach a volume (integer
+# value)
+#volume_attach_retry_count=10
+
+# Interval between volume attachment attempts, in seconds
+# (integer value)
+#volume_attach_retry_interval=5
+
+
+[database]
+
+#
+# Options defined in nova.openstack.common.db.api
+#
+
+# The backend to use for db (string value)
+#backend=sqlalchemy
+
+# Enable the experimental use of thread pooling for all DB API
+# calls (boolean value)
+#use_tpool=false
+
+
+#
+# Options defined in nova.openstack.common.db.sqlalchemy.session
+#
+
+# The SQLAlchemy connection string used to connect to the
+# database (string value)
+#connection=sqlite:////nova/openstack/common/db/$sqlite_db
+
+# The SQLAlchemy connection string used to connect to the
+# slave database (string value)
+#slave_connection=
+
+# timeout before idle sql connections are reaped (integer
+# value)
+#idle_timeout=3600
+
+# Minimum number of SQL connections to keep open in a pool
+# (integer value)
+#min_pool_size=1
+
+# Maximum number of SQL connections to keep open in a pool
+# (integer value)
+#max_pool_size=<None>
+
+# maximum db connection retries during startup. (setting -1
+# implies an infinite retry count) (integer value)
+#max_retries=10
+
+# interval between retries of opening a sql connection
+# (integer value)
+#retry_interval=10
+
+# If set, use this value for max_overflow with sqlalchemy
+# (integer value)
+#max_overflow=<None>
+
+# Verbosity of SQL debugging information. 0=None,
+# 100=Everything (integer value)
+#connection_debug=0
+
+# Add python stack traces to SQL as comment strings (boolean
+# value)
+#connection_trace=false
+
+# If set, use this value for pool_timeout with sqlalchemy
+# (integer value)
+#pool_timeout=<None>
+
+
+[cells]
+
+#
+# Options defined in nova.cells.manager
+#
+
+# Cells communication driver to use (string value)
+#driver=nova.cells.rpc_driver.CellsRPCDriver
+
+# Number of seconds after an instance was updated or deleted
+# to continue to update cells (integer value)
+#instance_updated_at_threshold=3600
+
+# Number of instances to update per periodic task run (integer
+# value)
+#instance_update_num_instances=1
+
+
+#
+# Options defined in nova.cells.messaging
+#
+
+# Maximum number of hops for cells routing. (integer value)
+#max_hop_count=10
+
+# Cells scheduler to use (string value)
+#scheduler=nova.cells.scheduler.CellsScheduler
+
+
+#
+# Options defined in nova.cells.opts
+#
+
+# Enable cell functionality (boolean value)
+#enable=false
+
+# the topic cells nodes listen on (string value)
+#topic=cells
+
+# Manager for cells (string value)
+#manager=nova.cells.manager.CellsManager
+
+# name of this cell (string value)
+#name=nova
+
+# Key/Multi-value list with the capabilities of the cell (list
+# value)
+#capabilities=hypervisor=xenserver;kvm,os=linux;windows
+
+# Seconds to wait for response from a call to a cell. (integer
+# value)
+#call_timeout=60
+
+# Percentage of cell capacity to hold in reserve. Affects both
+# memory and disk utilization (floating point value)
+#reserve_percent=10.0
+
+# Type of cell: api or compute (string value)
+#cell_type=compute
+
+# Number of seconds after which a lack of capability and
+# capacity updates signals the child cell is to be treated as
+# a mute. (integer value)
+#mute_child_interval=300
+
+# Seconds between bandwidth updates for cells. (integer value)
+#bandwidth_update_interval=600
+
+
+#
+# Options defined in nova.cells.rpc_driver
+#
+
+# Base queue name to use when communicating between cells.
+# Various topics by message type will be appended to this.
+# (string value)
+#rpc_driver_queue_base=cells.intercell
+
+
+#
+# Options defined in nova.cells.scheduler
+#
+
+# Filter classes the cells scheduler should use.  An entry of
+# "nova.cells.filters.all_filters"maps to all cells filters
+# included with nova. (list value)
+#scheduler_filter_classes=nova.cells.filters.all_filters
+
+# Weigher classes the cells scheduler should use.  An entry of
+# "nova.cells.weights.all_weighers"maps to all cell weighers
+# included with nova. (list value)
+#scheduler_weight_classes=nova.cells.weights.all_weighers
+
+# How many retries when no cells are available. (integer
+# value)
+#scheduler_retries=10
+
+# How often to retry in seconds when no cells are available.
+# (integer value)
+#scheduler_retry_delay=2
+
+
+#
+# Options defined in nova.cells.state
+#
+
+# Seconds between getting fresh cell info from db. (integer
+# value)
+#db_check_interval=60
+
+# Configuration file from which to read cells configuration.
+# If given, overrides reading cells from the database. (string
+# value)
+#cells_config=<None>
+
+
+#
+# Options defined in nova.cells.weights.mute_child
+#
+
+# Multiplier used to weigh mute children.  (The value should
+# be negative.) (floating point value)
+#mute_weight_multiplier=-10.0
+
+# Weight value assigned to mute children.  (The value should
+# be positive.) (floating point value)
+#mute_weight_value=1000.0
+
+
+#
+# Options defined in nova.cells.weights.ram_by_instance_type
+#
+
+# Multiplier used for weighing ram.  Negative numbers mean to
+# stack vs spread. (floating point value)
+#ram_weight_multiplier=10.0
+
+
 [baremetal]
 
 #
@@ -2815,16 +3210,6 @@
 #iscsi_iqn_prefix=iqn.2010-10.org.openstack.baremetal
 
 
-[rpc_notifier2]
-
-#
-# Options defined in nova.openstack.common.notifier.rpc_notifier2
-#
-
-# AMQP topic(s) used for OpenStack notifications (list value)
-#topics=notifications
-
-
 [matchmaker_redis]
 
 #
@@ -2841,253 +3226,15 @@
 #password=<None>
 
 
-[xenserver]
+[docker]
 
 #
-# Options defined in nova.virt.xenapi.agent
+# Options defined in nova.virt.docker.driver
 #
 
-# number of seconds to wait for agent reply (integer value)
-#agent_timeout=30
-
-# number of seconds to wait for agent to be fully operational
+# Default TCP port to find the docker-registry container
 # (integer value)
-#agent_version_timeout=300
-
-# number of seconds to wait for agent reply to resetnetwork
-# request (integer value)
-#agent_resetnetwork_timeout=60
-
-# Specifies the path in which the xenapi guest agent should be
-# located. If the agent is present, network configuration is
-# not injected into the image. Used if
-# compute_driver=xenapi.XenAPIDriver and  flat_injected=True
-# (string value)
-#agent_path=usr/sbin/xe-update-networking
-
-# Disables the use of the XenAPI agent in any image regardless
-# of what image properties are present. (boolean value)
-#disable_agent=false
-
-# Determines if the xenapi agent should be used when the image
-# used does not contain a hint to declare if the agent is
-# present or not. The hint is a glance property
-# "xenapi_use_agent" that has the value "true" or "false".
-# Note that waiting for the agent when it is not present will
-# significantly increase server boot times. (boolean value)
-#use_agent_default=false
-
-
-#
-# Options defined in nova.virt.xenapi.client.session
-#
-
-# Timeout in seconds for XenAPI login. (integer value)
-#login_timeout=10
-
-# Maximum number of concurrent XenAPI connections. Used only
-# if compute_driver=xenapi.XenAPIDriver (integer value)
-#connection_concurrent=5
-
-
-#
-# Options defined in nova.virt.xenapi.driver
-#
-
-# URL for connection to XenServer/Xen Cloud Platform. A
-# special value of unix://local can be used to connect to the
-# local unix socket.  Required if
-# compute_driver=xenapi.XenAPIDriver (string value)
-#connection_url=<None>
-
-# Username for connection to XenServer/Xen Cloud Platform.
-# Used only if compute_driver=xenapi.XenAPIDriver (string
-# value)
-#connection_username=root
-
-# Password for connection to XenServer/Xen Cloud Platform.
-# Used only if compute_driver=xenapi.XenAPIDriver (string
-# value)
-#connection_password=<None>
-
-# The interval used for polling of coalescing vhds. Used only
-# if compute_driver=xenapi.XenAPIDriver (floating point value)
-#vhd_coalesce_poll_interval=5.0
-
-# Ensure compute service is running on host XenAPI connects
-# to. (boolean value)
-#check_host=true
-
-# Max number of times to poll for VHD to coalesce. Used only
-# if compute_driver=xenapi.XenAPIDriver (integer value)
-#vhd_coalesce_max_attempts=5
-
-# Base path to the storage repository (string value)
-#sr_base_path=/var/run/sr-mount
-
-# iSCSI Target Host (string value)
-#target_host=<None>
-
-# iSCSI Target Port, 3260 Default (string value)
-#target_port=3260
-
-# IQN Prefix (string value)
-#iqn_prefix=iqn.2010-10.org.openstack
-
-# Used to enable the remapping of VBD dev (Works around an
-# issue in Ubuntu Maverick) (boolean value)
-#remap_vbd_dev=false
-
-# Specify prefix to remap VBD dev to (ex. /dev/xvdb ->
-# /dev/sdb) (string value)
-#remap_vbd_dev_prefix=sd
-
-
-#
-# Options defined in nova.virt.xenapi.image.bittorrent
-#
-
-# Base URL for torrent files. (string value)
-#torrent_base_url=<None>
-
-# Probability that peer will become a seeder. (1.0 = 100%)
-# (floating point value)
-#torrent_seed_chance=1.0
-
-# Number of seconds after downloading an image via BitTorrent
-# that it should be seeded for other peers. (integer value)
-#torrent_seed_duration=3600
-
-# Cached torrent files not accessed within this number of
-# seconds can be reaped (integer value)
-#torrent_max_last_accessed=86400
-
-# Beginning of port range to listen on (integer value)
-#torrent_listen_port_start=6881
-
-# End of port range to listen on (integer value)
-#torrent_listen_port_end=6891
-
-# Number of seconds a download can remain at the same progress
-# percentage w/o being considered a stall (integer value)
-#torrent_download_stall_cutoff=600
-
-# Maximum number of seeder processes to run concurrently
-# within a given dom0. (-1 = no limit) (integer value)
-#torrent_max_seeder_processes_per_host=1
-
-
-#
-# Options defined in nova.virt.xenapi.pool
-#
-
-# To use for hosts with different CPUs (boolean value)
-#use_join_force=true
-
-
-#
-# Options defined in nova.virt.xenapi.vif
-#
-
-# Name of Integration Bridge used by Open vSwitch (string
-# value)
-#ovs_integration_bridge=xapi1
-
-
-#
-# Options defined in nova.virt.xenapi.vm_utils
-#
-
-# Cache glance images locally. `all` will cache all images,
-# `some` will only cache images that have the image_property
-# `cache_in_nova=True`, and `none` turns off caching entirely
-# (string value)
-#cache_images=all
-
-# Compression level for images, e.g., 9 for gzip -9. Range is
-# 1-9, 9 being most compressed but most CPU intensive on dom0.
-# (integer value)
-#image_compression_level=<None>
-
-# Default OS type (string value)
-#default_os_type=linux
-
-# Time to wait for a block device to be created (integer
-# value)
-#block_device_creation_timeout=10
-
-# Maximum size in bytes of kernel or ramdisk images (integer
-# value)
-#max_kernel_ramdisk_size=16777216
-
-# Filter for finding the SR to be used to install guest
-# instances on. To use the Local Storage in default
-# XenServer/XCP installations set this flag to other-config
-# :i18n-key=local-storage. To select an SR with a different
-# matching criteria, you could set it to other-
-# config:my_favorite_sr=true. On the other hand, to fall back
-# on the Default SR, as displayed by XenCenter, set this flag
-# to: default-sr:true (string value)
-#sr_matching_filter=default-sr:true
-
-# Whether to use sparse_copy for copying data on a resize down
-# (False will use standard dd). This speeds up resizes down
-# considerably since large runs of zeros won't have to be
-# rsynced (boolean value)
-#sparse_copy=true
-
-# Maximum number of retries to unplug VBD (integer value)
-#num_vbd_unplug_retries=10
-
-# Whether or not to download images via Bit Torrent
-# (all|some|none). (string value)
-#torrent_images=none
-
-# Name of network to use for booting iPXE ISOs (string value)
-#ipxe_network_name=<None>
-
-# URL to the iPXE boot menu (string value)
-#ipxe_boot_menu_url=<None>
-
-# Name and optionally path of the tool used for ISO image
-# creation (string value)
-#ipxe_mkisofs_cmd=mkisofs
-
-
-#
-# Options defined in nova.virt.xenapi.vmops
-#
-
-# number of seconds to wait for instance to go to running
-# state (integer value)
-#running_timeout=60
-
-# The XenAPI VIF driver using XenServer Network APIs. (string
-# value)
-#vif_driver=nova.virt.xenapi.vif.XenAPIBridgeDriver
-
-# Dom0 plugin driver used to handle image uploads. (string
-# value)
-#image_upload_handler=nova.virt.xenapi.image.glance.GlanceStore
-
-
-[ssl]
-
-#
-# Options defined in nova.openstack.common.sslutils
-#
-
-# CA certificate file to use to verify connecting clients
-# (string value)
-#ca_file=<None>
-
-# Certificate file to use when starting the server securely
-# (string value)
-#cert_file=<None>
-
-# Private key file to use when starting the server securely
-# (string value)
-#key_file=<None>
+#registry_default_port=5042
 
 
 [trusted_computing]
@@ -3206,135 +3353,6 @@
 # Set a version cap for messages sent to scheduler services
 # (string value)
 #scheduler=<None>
-
-
-[matchmaker_ring]
-
-#
-# Options defined in nova.openstack.common.rpc.matchmaker_ring
-#
-
-# Matchmaker ring file (JSON) (string value)
-#ringfile=/etc/oslo/matchmaker_ring.json
-
-
-[vmware]
-
-#
-# Options defined in nova.virt.vmwareapi.driver
-#
-
-# URL for connection to VMware ESX/VC host. Required if
-# compute_driver is vmwareapi.VMwareESXDriver or
-# vmwareapi.VMwareVCDriver. (string value)
-#host_ip=<None>
-
-# Username for connection to VMware ESX/VC host. Used only if
-# compute_driver is vmwareapi.VMwareESXDriver or
-# vmwareapi.VMwareVCDriver. (string value)
-#host_username=<None>
-
-# Password for connection to VMware ESX/VC host. Used only if
-# compute_driver is vmwareapi.VMwareESXDriver or
-# vmwareapi.VMwareVCDriver. (string value)
-#host_password=<None>
-
-# Name of a VMware Cluster ComputeResource. Used only if
-# compute_driver is vmwareapi.VMwareVCDriver. (multi valued)
-#cluster_name=<None>
-
-# Regex to match the name of a datastore. Used only if
-# compute_driver is vmwareapi.VMwareVCDriver. (string value)
-#datastore_regex=<None>
-
-# The interval used for polling of remote tasks. Used only if
-# compute_driver is vmwareapi.VMwareESXDriver or
-# vmwareapi.VMwareVCDriver. (floating point value)
-#task_poll_interval=5.0
-
-# The number of times we retry on failures, e.g., socket
-# error, etc. Used only if compute_driver is
-# vmwareapi.VMwareESXDriver or vmwareapi.VMwareVCDriver.
-# (integer value)
-#api_retry_count=10
-
-# VNC starting port (integer value)
-#vnc_port=5900
-
-# Total number of VNC ports (integer value)
-#vnc_port_total=10000
-
-# Whether to use linked clone (boolean value)
-#use_linked_clone=true
-
-
-#
-# Options defined in nova.virt.vmwareapi.vif
-#
-
-# Physical ethernet adapter name for vlan networking (string
-# value)
-#vlan_interface=vmnic0
-
-
-#
-# Options defined in nova.virt.vmwareapi.vim
-#
-
-# Optional VIM Service WSDL Location e.g
-# http://<server>/vimService.wsdl. Optional over-ride to
-# default location for bug work-arounds (string value)
-#wsdl_location=<None>
-
-
-#
-# Options defined in nova.virt.vmwareapi.vim_util
-#
-
-# The maximum number of ObjectContent data objects that should
-# be returned in a single result. A positive value will cause
-# the operation to suspend the retrieval when the count of
-# objects reaches the specified maximum. The server may still
-# limit the count to something less than the configured value.
-# Any remaining objects may be retrieved with additional
-# requests. (integer value)
-#maximum_objects=100
-
-
-#
-# Options defined in nova.virt.vmwareapi.vmops
-#
-
-# Name of Integration Bridge (string value)
-#integration_bridge=br-int
-
-
-[spice]
-
-#
-# Options defined in nova.spice
-#
-
-# location of spice html5 console proxy, in the form
-# "http://127.0.0.1:6082/spice_auto.html" (string value)
-#html5proxy_base_url=http://127.0.0.1:6082/spice_auto.html
-
-# IP address on which instance spice server should listen
-# (string value)
-#server_listen=127.0.0.1
-
-# the address to which proxy clients (like nova-
-# spicehtml5proxy) should connect (string value)
-#server_proxyclient_address=127.0.0.1
-
-# enable spice related features (boolean value)
-#enabled=false
-
-# enable spice guest agent support (boolean value)
-#agent_enabled=true
-
-# keymap for spice (string value)
-#keymap=en-us
 
 
 [keystone_authtoken]
