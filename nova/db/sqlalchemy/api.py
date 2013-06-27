@@ -1562,9 +1562,10 @@ def _instance_get_by_uuid(context, uuid, session=None, columns_to_join=None):
 
 
 @require_context
-def instance_get(context, instance_id):
+def instance_get(context, instance_id, columns_to_join=None):
     try:
-        result = _build_instance_get(context).filter_by(id=instance_id).first()
+        result = _build_instance_get(context, columns_to_join=columns_to_join
+                                     ).filter_by(id=instance_id).first()
 
         if not result:
             raise exception.InstanceNotFound(instance_id=instance_id)

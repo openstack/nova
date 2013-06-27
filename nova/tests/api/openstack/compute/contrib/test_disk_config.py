@@ -66,7 +66,7 @@ class DiskConfigTestCase(test.TestCase):
 
         self.stubs.Set(db, 'instance_get', fake_instance_get)
 
-        def fake_instance_get_by_uuid(context, uuid, columns_to_get=None):
+        def fake_instance_get_by_uuid(context, uuid, columns_to_join=None):
             for instance in FAKE_INSTANCES:
                 if uuid == instance['uuid']:
                     return instance
