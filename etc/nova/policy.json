@@ -79,6 +79,7 @@
     "compute_extension:hosts": "rule:admin_api",
     "compute_extension:hypervisors": "rule:admin_api",
     "compute_extension:image_size": "",
+    "compute_extension:v3:os-images": "",
     "compute_extension:instance_actions": "",
     "compute_extension:instance_actions:events": "rule:admin_api",
     "compute_extension:instance_usage_audit_log": "rule:admin_api",

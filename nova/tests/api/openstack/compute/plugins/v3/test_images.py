@@ -25,7 +25,7 @@ import urlparse
 from lxml import etree
 import webob
 
-from nova.api.openstack.compute import images
+from nova.api.openstack.compute.plugins.v3 import images
 from nova.api.openstack.compute.views import images as images_view
 from nova.api.openstack import xmlutil
 from nova import exception
@@ -54,18 +54,18 @@ class ImagesControllerTest(test.TestCase):
         fakes.stub_out_compute_api_backup(self.stubs)
         fakes.stub_out_glance(self.stubs)
 
-        self.controller = images.Controller()
+        self.controller = images.ImagesController()
 
     def test_get_image(self):
-        fake_req = fakes.HTTPRequest.blank('/v2/fake/images/123')
+        fake_req = fakes.HTTPRequestV3.blank('/os-images/123')
         actual_image = self.controller.show(fake_req, '124')
 
-        href = "http://localhost/v2/fake/images/124"
-        bookmark = "http://localhost/fake/images/124"
+        href = "http://localhost/v3/images/124"
+        bookmark = "http://localhost/images/124"
         alternate = "%s/fake/images/124" % glance.generate_glance_url()
         server_uuid = "aa640691-d1a7-4a67-9d3c-d35ee6b3cc74"
-        server_href = "http://localhost/v2/fake/servers/" + server_uuid
-        server_bookmark = "http://localhost/fake/servers/" + server_uuid
+        server_href = "http://localhost/v3/servers/" + server_uuid
+        server_bookmark = "http://localhost/servers/" + server_uuid
 
         expected_image = {
             "image": {
@@ -113,14 +113,14 @@ class ImagesControllerTest(test.TestCase):
     def test_get_image_with_custom_prefix(self):
         self.flags(osapi_compute_link_prefix='https://zoo.com:42',
                    osapi_glance_link_prefix='http://circus.com:34')
-        fake_req = fakes.HTTPRequest.blank('/v2/fake/images/123')
+        fake_req = fakes.HTTPRequestV3.blank('/v3/os-images/124')
         actual_image = self.controller.show(fake_req, '124')
-        href = "https://zoo.com:42/v2/fake/images/124"
-        bookmark = "https://zoo.com:42/fake/images/124"
+        href = "https://zoo.com:42/v3/images/124"
+        bookmark = "https://zoo.com:42/images/124"
         alternate = "http://circus.com:34/fake/images/124"
         server_uuid = "aa640691-d1a7-4a67-9d3c-d35ee6b3cc74"
-        server_href = "https://zoo.com:42/v2/fake/servers/" + server_uuid
-        server_bookmark = "https://zoo.com:42/fake/servers/" + server_uuid
+        server_href = "https://zoo.com:42/v3/servers/" + server_uuid
+        server_bookmark = "https://zoo.com:42/servers/" + server_uuid
 
         expected_image = {
             "image": {
@@ -165,18 +165,18 @@ class ImagesControllerTest(test.TestCase):
         self.assertThat(actual_image, matchers.DictMatches(expected_image))
 
     def test_get_image_404(self):
-        fake_req = fakes.HTTPRequest.blank('/v2/fake/images/unknown')
+        fake_req = fakes.HTTPRequestV3.blank('/os-images/unknown')
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller.show, fake_req, 'unknown')
 
     def test_get_image_details(self):
-        request = fakes.HTTPRequest.blank('/v2/fake/images/detail')
+        request = fakes.HTTPRequestV3.blank('/os-images/detail')
         response = self.controller.detail(request)
         response_list = response["images"]
 
         server_uuid = "aa640691-d1a7-4a67-9d3c-d35ee6b3cc74"
-        server_href = "http://localhost/v2/fake/servers/" + server_uuid
-        server_bookmark = "http://localhost/fake/servers/" + server_uuid
+        server_href = "http://localhost/v3/servers/" + server_uuid
+        server_bookmark = "http://localhost/servers/" + server_uuid
         alternate = "%s/fake/images/%s"
 
         expected = [{
@@ -191,11 +191,11 @@ class ImagesControllerTest(test.TestCase):
             'minRam': 128,
             "links": [{
                 "rel": "self",
-                "href": "http://localhost/v2/fake/images/123",
+                "href": "http://localhost/v3/images/123",
             },
             {
                 "rel": "bookmark",
-                "href": "http://localhost/fake/images/123",
+                "href": "http://localhost/images/123",
             },
             {
                 "rel": "alternate",
@@ -229,11 +229,11 @@ class ImagesControllerTest(test.TestCase):
             },
             "links": [{
                 "rel": "self",
-                "href": "http://localhost/v2/fake/images/124",
+                "href": "http://localhost/v3/images/124",
             },
             {
                 "rel": "bookmark",
-                "href": "http://localhost/fake/images/124",
+                "href": "http://localhost/images/124",
             },
             {
                 "rel": "alternate",
@@ -267,11 +267,11 @@ class ImagesControllerTest(test.TestCase):
             },
             "links": [{
                 "rel": "self",
-                "href": "http://localhost/v2/fake/images/125",
+                "href": "http://localhost/v3/images/125",
             },
             {
                 "rel": "bookmark",
-                "href": "http://localhost/fake/images/125",
+                "href": "http://localhost/images/125",
             },
             {
                 "rel": "alternate",
@@ -305,11 +305,11 @@ class ImagesControllerTest(test.TestCase):
             },
             "links": [{
                 "rel": "self",
-                "href": "http://localhost/v2/fake/images/126",
+                "href": "http://localhost/v3/images/126",
             },
             {
                 "rel": "bookmark",
-                "href": "http://localhost/fake/images/126",
+                "href": "http://localhost/images/126",
             },
             {
                 "rel": "alternate",
@@ -343,11 +343,11 @@ class ImagesControllerTest(test.TestCase):
             },
             "links": [{
                 "rel": "self",
-                "href": "http://localhost/v2/fake/images/127",
+                "href": "http://localhost/v3/images/127",
             },
             {
                 "rel": "bookmark",
-                "href": "http://localhost/fake/images/127",
+                "href": "http://localhost/images/127",
             },
             {
                 "rel": "alternate",
@@ -381,11 +381,11 @@ class ImagesControllerTest(test.TestCase):
             },
             "links": [{
                 "rel": "self",
-                "href": "http://localhost/v2/fake/images/128",
+                "href": "http://localhost/v3/images/128",
             },
             {
                 "rel": "bookmark",
-                "href": "http://localhost/fake/images/128",
+                "href": "http://localhost/images/128",
             },
             {
                 "rel": "alternate",
@@ -419,11 +419,11 @@ class ImagesControllerTest(test.TestCase):
             },
             "links": [{
                 "rel": "self",
-                "href": "http://localhost/v2/fake/images/129",
+                "href": "http://localhost/v3/images/129",
             },
             {
                 "rel": "bookmark",
-                "href": "http://localhost/fake/images/129",
+                "href": "http://localhost/images/129",
             },
             {
                 "rel": "alternate",
@@ -443,11 +443,11 @@ class ImagesControllerTest(test.TestCase):
             'minRam': 0,
             "links": [{
                 "rel": "self",
-                "href": "http://localhost/v2/fake/images/130",
+                "href": "http://localhost/v3/images/130",
             },
             {
                 "rel": "bookmark",
-                "href": "http://localhost/fake/images/130",
+                "href": "http://localhost/images/130",
             },
             {
                 "rel": "alternate",
@@ -460,14 +460,14 @@ class ImagesControllerTest(test.TestCase):
         self.assertThat(expected, matchers.DictListMatches(response_list))
 
     def test_get_image_details_with_limit(self):
-        request = fakes.HTTPRequest.blank('/v2/fake/images/detail?limit=2')
+        request = fakes.HTTPRequestV3.blank('/os-images/detail?limit=2')
         response = self.controller.detail(request)
         response_list = response["images"]
         response_links = response["images_links"]
 
         server_uuid = "aa640691-d1a7-4a67-9d3c-d35ee6b3cc74"
-        server_href = "http://localhost/v2/fake/servers/" + server_uuid
-        server_bookmark = "http://localhost/fake/servers/" + server_uuid
+        server_href = "http://localhost/v3/servers/" + server_uuid
+        server_bookmark = "http://localhost/servers/" + server_uuid
         alternate = "%s/fake/images/%s"
 
         expected = [{
@@ -482,11 +482,11 @@ class ImagesControllerTest(test.TestCase):
             'minRam': 128,
             "links": [{
                 "rel": "self",
-                "href": "http://localhost/v2/fake/images/123",
+                "href": "http://localhost/v3/images/123",
             },
             {
                 "rel": "bookmark",
-                "href": "http://localhost/fake/images/123",
+                "href": "http://localhost/images/123",
             },
             {
                 "rel": "alternate",
@@ -520,11 +520,11 @@ class ImagesControllerTest(test.TestCase):
             },
             "links": [{
                 "rel": "self",
-                "href": "http://localhost/v2/fake/images/124",
+                "href": "http://localhost/v3/images/124",
             },
             {
                 "rel": "bookmark",
-                "href": "http://localhost/fake/images/124",
+                "href": "http://localhost/images/124",
             },
             {
                 "rel": "alternate",
@@ -536,7 +536,7 @@ class ImagesControllerTest(test.TestCase):
         self.assertThat(expected, matchers.DictListMatches(response_list))
 
         href_parts = urlparse.urlparse(response_links[0]['href'])
-        self.assertEqual('/v2/fake/images', href_parts.path)
+        self.assertEqual('/v3/images', href_parts.path)
         params = urlparse.parse_qs(href_parts.query)
 
         self.assertThat({'limit': ['2'], 'marker': ['124']},
@@ -545,47 +545,47 @@ class ImagesControllerTest(test.TestCase):
     def test_image_detail_filter_with_name(self):
         image_service = self.mox.CreateMockAnything()
         filters = {'name': 'testname'}
-        request = fakes.HTTPRequest.blank('/v2/fake/images/detail'
+        request = fakes.HTTPRequestV3.blank('/v3/os-images/detail'
                                           '?name=testname')
         context = request.environ['nova.context']
         image_service.detail(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
-        controller = images.Controller(image_service=image_service)
+        controller = images.ImagesController(image_service=image_service)
         controller.detail(request)
 
     def test_image_detail_filter_with_status(self):
         image_service = self.mox.CreateMockAnything()
         filters = {'status': 'active'}
-        request = fakes.HTTPRequest.blank('/v2/fake/images/detail'
+        request = fakes.HTTPRequestV3.blank('/v3/os-images/detail'
                                           '?status=ACTIVE')
         context = request.environ['nova.context']
         image_service.detail(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
-        controller = images.Controller(image_service=image_service)
+        controller = images.ImagesController(image_service=image_service)
         controller.detail(request)
 
     def test_image_detail_filter_with_property(self):
         image_service = self.mox.CreateMockAnything()
         filters = {'property-test': '3'}
-        request = fakes.HTTPRequest.blank('/v2/fake/images/detail'
+        request = fakes.HTTPRequestV3.blank('/v3/os-images/detail'
                                           '?property-test=3')
         context = request.environ['nova.context']
         image_service.detail(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
-        controller = images.Controller(image_service=image_service)
+        controller = images.ImagesController(image_service=image_service)
         controller.detail(request)
 
     def test_image_detail_filter_server_href(self):
         image_service = self.mox.CreateMockAnything()
         uuid = 'fa95aaf5-ab3b-4cd8-88c0-2be7dd051aaf'
         ref = 'http://localhost:8774/servers/' + uuid
-        url = '/v2/fake/images/detail?server=' + ref
+        url = '/v3/os-images/detail?server=' + ref
         filters = {'property-instance_uuid': uuid}
-        request = fakes.HTTPRequest.blank(url)
+        request = fakes.HTTPRequestV3.blank(url)
         context = request.environ['nova.context']
         image_service.detail(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
-        controller = images.Controller(image_service=image_service)
+        controller = images.ImagesController(image_service=image_service)
         controller.detail(request)
 
     def test_image_detail_filter_server_uuid(self):
@@ -593,53 +593,53 @@ class ImagesControllerTest(test.TestCase):
         uuid = 'fa95aaf5-ab3b-4cd8-88c0-2be7dd051aaf'
         url = '/v2/fake/images/detail?server=' + uuid
         filters = {'property-instance_uuid': uuid}
-        request = fakes.HTTPRequest.blank(url)
+        request = fakes.HTTPRequestV3.blank(url)
         context = request.environ['nova.context']
         image_service.detail(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
-        controller = images.Controller(image_service=image_service)
+        controller = images.ImagesController(image_service=image_service)
         controller.detail(request)
 
     def test_image_detail_filter_changes_since(self):
         image_service = self.mox.CreateMockAnything()
         filters = {'changes-since': '2011-01-24T17:08Z'}
-        request = fakes.HTTPRequest.blank('/v2/fake/images/detail'
+        request = fakes.HTTPRequestV3.blank('/v3/os-images/detail'
                                           '?changes-since=2011-01-24T17:08Z')
         context = request.environ['nova.context']
         image_service.detail(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
-        controller = images.Controller(image_service=image_service)
+        controller = images.ImagesController(image_service=image_service)
         controller.detail(request)
 
     def test_image_detail_filter_with_type(self):
         image_service = self.mox.CreateMockAnything()
         filters = {'property-image_type': 'BASE'}
-        request = fakes.HTTPRequest.blank('/v2/fake/images/detail?type=BASE')
+        request = fakes.HTTPRequestV3.blank('/v3/os-images/detail?type=BASE')
         context = request.environ['nova.context']
         image_service.detail(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
-        controller = images.Controller(image_service=image_service)
+        controller = images.ImagesController(image_service=image_service)
         controller.detail(request)
 
     def test_image_detail_filter_not_supported(self):
         image_service = self.mox.CreateMockAnything()
         filters = {'status': 'active'}
-        request = fakes.HTTPRequest.blank('/v2/fake/images/detail?status='
+        request = fakes.HTTPRequestV3.blank('/v3/os-images/detail?status='
                                           'ACTIVE&UNSUPPORTEDFILTER=testname')
         context = request.environ['nova.context']
         image_service.detail(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
-        controller = images.Controller(image_service=image_service)
+        controller = images.ImagesController(image_service=image_service)
         controller.detail(request)
 
     def test_image_detail_no_filters(self):
         image_service = self.mox.CreateMockAnything()
         filters = {}
-        request = fakes.HTTPRequest.blank('/v2/fake/images/detail')
+        request = fakes.HTTPRequestV3.blank('/v3/os-images/detail')
         context = request.environ['nova.context']
         image_service.detail(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
-        controller = images.Controller(image_service=image_service)
+        controller = images.ImagesController(image_service=image_service)
         controller.detail(request)
 
     def test_image_detail_invalid_marker(self):
@@ -648,19 +648,19 @@ class ImagesControllerTest(test.TestCase):
             def detail(self, *args, **kwargs):
                 raise exception.Invalid('meow')
 
-        request = fakes.HTTPRequest.blank('/v2/images?marker=invalid')
-        controller = images.Controller(image_service=InvalidImageService())
+        request = fakes.HTTPRequestV3.blank('/v3/os-images?marker=invalid')
+        controller = images.ImagesController(image_service=InvalidImageService())
         self.assertRaises(webob.exc.HTTPBadRequest, controller.detail, request)
 
     def test_generate_alternate_link(self):
         view = images_view.ViewBuilder()
-        request = fakes.HTTPRequest.blank('/v2/fake/images/1')
+        request = fakes.HTTPRequestV3.blank('/v3/os-images/1')
         generated_url = view._get_alternate_link(request, 1)
         actual_url = "%s/fake/images/1" % glance.generate_glance_url()
         self.assertEqual(generated_url, actual_url)
 
     def test_delete_image(self):
-        request = fakes.HTTPRequest.blank('/v2/fake/images/124')
+        request = fakes.HTTPRequestV3.blank('/v3/os-images/124')
         request.method = 'DELETE'
         response = self.controller.delete(request, '124')
         self.assertEqual(response.status_int, 204)
@@ -671,14 +671,14 @@ class ImagesControllerTest(test.TestCase):
         deleted_image_id = 128
         # see nova.tests.api.openstack.fakes:_make_image_fixtures
 
-        request = fakes.HTTPRequest.blank(
-              '/v2/fake/images/%s' % deleted_image_id)
+        request = fakes.HTTPRequestV3.blank(
+              '/v3/os-images/%s' % deleted_image_id)
         request.method = 'DELETE'
         self.assertRaises(webob.exc.HTTPForbidden, self.controller.delete,
              request, '%s' % deleted_image_id)
 
     def test_delete_image_not_found(self):
-        request = fakes.HTTPRequest.blank('/v2/fake/images/300')
+        request = fakes.HTTPRequestV3.blank('/v3/os-images/300')
         request.method = 'DELETE'
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller.delete, request, '300')
@@ -688,11 +688,11 @@ class ImageXMLSerializationTest(test.TestCase):
 
     TIMESTAMP = "2010-10-11T10:30:22Z"
     SERVER_UUID = 'aa640691-d1a7-4a67-9d3c-d35ee6b3cc74'
-    SERVER_HREF = 'http://localhost/v2/fake/servers/' + SERVER_UUID
-    SERVER_BOOKMARK = 'http://localhost/fake/servers/' + SERVER_UUID
-    IMAGE_HREF = 'http://localhost/v2/fake/images/%s'
-    IMAGE_NEXT = 'http://localhost/v2/fake/images?limit=%s&marker=%s'
-    IMAGE_BOOKMARK = 'http://localhost/fake/images/%s'
+    SERVER_HREF = 'http://localhost/v3/servers/' + SERVER_UUID
+    SERVER_BOOKMARK = 'http://localhost/servers/' + SERVER_UUID
+    IMAGE_HREF = 'http://localhost/v3/os-images/%s'
+    IMAGE_NEXT = 'http://localhost/v3/os-images?limit=%s&marker=%s'
+    IMAGE_BOOKMARK = 'http://localhost/os-images/%s'
 
     def test_xml_declaration(self):
         serializer = images.ImageTemplate()
