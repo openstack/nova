@@ -15,6 +15,17 @@
 
 """
 Module dedicated functions/classes dealing with rate limiting requests.
+
+This module handles rate liming at a per-user level, so it should not be used
+to prevent intentional Denial of Service attacks, as we can assume a DOS can
+easily come through multiple user accounts. DOS protection should be done at a
+different layer.  Instead this module should be used to protect against
+unintentional user actions. With that in mind the limits set here should be
+high enough as to not rate-limit any intentional actions.
+
+To find good rate-limit values, check how long requests are taking (see logs)
+in your environment to assess your capabilities and multiply out to get
+figures.
 """
 
 import collections
@@ -210,13 +221,13 @@ class Limit(object):
 # a regular-expression to match, value and unit of measure (PER_DAY, etc.)
 
 DEFAULT_LIMITS = [
-    Limit("POST", "*", ".*", 10, utils.TIME_UNITS['MINUTE']),
-    Limit("POST", "*/servers", "^/servers", 50, utils.TIME_UNITS['DAY']),
-    Limit("PUT", "*", ".*", 10, utils.TIME_UNITS['MINUTE']),
-    Limit("GET", "*changes-since*", ".*changes-since.*", 3,
+    Limit("POST", "*", ".*", 120, utils.TIME_UNITS['MINUTE']),
+    Limit("POST", "*/servers", "^/servers", 120, utils.TIME_UNITS['MINUTE']),
+    Limit("PUT", "*", ".*", 120, utils.TIME_UNITS['MINUTE']),
+    Limit("GET", "*changes-since*", ".*changes-since.*", 120,
           utils.TIME_UNITS['MINUTE']),
-    Limit("DELETE", "*", ".*", 100, utils.TIME_UNITS['MINUTE']),
-    Limit("GET", "*/os-fping", "^/os-fping", 12, utils.TIME_UNITS['HOUR']),
+    Limit("DELETE", "*", ".*", 120, utils.TIME_UNITS['MINUTE']),
+    Limit("GET", "*/os-fping", "^/os-fping", 12, utils.TIME_UNITS['MINUTE']),
 ]
 
 
