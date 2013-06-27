@@ -2591,6 +2591,23 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self._test_create_extra, params)
 
+    def test_create_instance_with_invalid_size(self):
+        self.ext_mgr.extensions = {'os-volumes': 'fake'}
+        bdm = [{'delete_on_termination': 1,
+                'device_name': 'vda',
+                'volume_size': "hello world",
+                'volume_id': '11111111-1111-1111-1111-111111111111'}]
+        params = {'block_device_mapping': bdm}
+        old_create = compute_api.API.create
+
+        def create(*args, **kwargs):
+            self.assertEqual(kwargs['block_device_mapping'], bdm)
+            return old_create(*args, **kwargs)
+
+        self.stubs.Set(compute_api.API, 'create', create)
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self._test_create_extra, params)
+
     def test_create_instance_with_bdm_delete_on_termination(self):
         self.ext_mgr.extensions = {'os-volumes': 'fake'}
         bdm = [{'device_name': 'foo1', 'volume_id': 'fake_vol',

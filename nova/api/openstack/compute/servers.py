@@ -580,12 +580,40 @@ class Controller(wsgi.Controller):
     def _validate_server_name(self, value):
         self._check_string_length(value, 'Server name', max_length=255)
 
-    def _validate_device_name(self, value):
-        self._check_string_length(value, 'Device name', max_length=255)
+    def _validate_int_value(self, str_value, str_name,
+            min_value=None, max_value=None):
+        try:
+            value = int(str(str_value))
+        except ValueError:
+            msg = _('%(value_name)s must be an integer')
+            raise exc.HTTPBadRequest(explanation=msg % (
+                {'value_name': str_name}))
 
-        if ' ' in value:
+        if min_value is not None:
+            if value < min_value:
+                msg = _('%(value_name)s must be >= %(min_value)d')
+                raise exc.HTTPBadRequest(explanation=msg % (
+                    {'value_name': str_name,
+                     'min_value': min_value}))
+        if max_value is not None:
+            if value > max_value:
+                msg = _('%{value_name}s must be <= %(max_value)d')
+                raise exc.HTTPBadRequest(explanation=msg % (
+                    {'value_name': str_name,
+                     'max_value': max_value}))
+        return value
+
+    def _validate_block_device(self, bd):
+        self._check_string_length(bd['device_name'],
+                'Device name', max_length=255)
+
+        if ' ' in bd['device_name']:
             msg = _("Device name cannot include spaces.")
             raise exc.HTTPBadRequest(explanation=msg)
+
+        if 'volume_size' in bd:
+            self._validate_int_value(bd['volume_size'], 'volume_size',
+                                     min_value=0)
 
     def _get_injected_files(self, personality):
         """Create a list of injected files from the personality attribute.
@@ -821,7 +849,10 @@ class Controller(wsgi.Controller):
         if self.ext_mgr.is_loaded('os-volumes'):
             block_device_mapping = server_dict.get('block_device_mapping', [])
             for bdm in block_device_mapping:
-                self._validate_device_name(bdm["device_name"])
+                # Ignore empty volume size
+                if 'volume_size' in bdm and not bdm['volume_size']:
+                    del bdm['volume_size']
+                self._validate_block_device(bdm)
                 if 'delete_on_termination' in bdm:
                     bdm['delete_on_termination'] = strutils.bool_from_string(
                         bdm['delete_on_termination'])
@@ -838,23 +869,10 @@ class Controller(wsgi.Controller):
             min_count = server_dict.get('min_count', 1)
             max_count = server_dict.get('max_count', min_count)
 
-        try:
-            min_count = int(str(min_count))
-        except ValueError:
-            msg = _('min_count must be an integer value')
-            raise exc.HTTPBadRequest(explanation=msg)
-        if min_count < 1:
-            msg = _('min_count must be > 0')
-            raise exc.HTTPBadRequest(explanation=msg)
-
-        try:
-            max_count = int(str(max_count))
-        except ValueError:
-            msg = _('max_count must be an integer value')
-            raise exc.HTTPBadRequest(explanation=msg)
-        if max_count < 1:
-            msg = _('max_count must be > 0')
-            raise exc.HTTPBadRequest(explanation=msg)
+        min_count = self._validate_int_value(min_count, "min_count",
+                                             min_value=1)
+        max_count = self._validate_int_value(max_count, "max_count",
+                                             min_value=1)
 
         if min_count > max_count:
             msg = _('min_count must be <= max_count')
