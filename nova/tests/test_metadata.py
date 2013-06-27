@@ -71,6 +71,7 @@ INSTANCES = (
      'info_cache': {'network_info': []},
      'hostname': 'test.novadomain',
      'display_name': 'my_displayname',
+     'metadata': {}
     },
 )
 

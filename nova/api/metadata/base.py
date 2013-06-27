@@ -32,6 +32,8 @@ from nova.compute import flavors
 from nova import conductor
 from nova import context
 from nova import network
+from nova import utils
+
 from nova.openstack.common import timeutils
 from nova.virt import netutils
 
@@ -127,9 +129,7 @@ class InstanceMetadata():
         self.address = address
 
         # expose instance metadata.
-        self.launch_metadata = {}
-        for item in instance.get('metadata', []):
-            self.launch_metadata[item['key']] = item['value']
+        self.launch_metadata = utils.instance_meta(instance)
 
         self.password = password.extract_password(instance)
 
