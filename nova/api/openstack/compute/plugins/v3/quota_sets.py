@@ -56,9 +56,6 @@ class QuotaTemplate(xmlutil.TemplateBuilder):
 
 class QuotaSetsController(object):
 
-    def __init__(self, ext_mgr):
-        self.ext_mgr = ext_mgr
-
     def _format_quota_set(self, project_id, quota_set):
         """Convert the quota object to a result dict."""
 
@@ -100,25 +97,14 @@ class QuotaSetsController(object):
         project_id = id
 
         bad_keys = []
-
-        # By default, we can force update the quota if the extended
-        # is not loaded
-        force_update = True
-        extended_loaded = False
-        if self.ext_mgr.is_loaded('os-extended-quotas'):
-            # force optional has been enabled, the default value of
-            # force_update need to be changed to False
-            extended_loaded = True
-            force_update = False
+        force_update = False
 
         for key, value in body['quota_set'].items():
             if (key not in QUOTAS and
                     key not in NON_QUOTA_KEYS):
                 bad_keys.append(key)
                 continue
-            if key == 'force' and extended_loaded:
-                # only check the force optional when the extended has
-                # been loaded
+            if key == 'force':
                 force_update = strutils.bool_from_string(value)
             elif key not in NON_QUOTA_KEYS and value:
                 try:
@@ -180,16 +166,14 @@ class QuotaSetsController(object):
         return self._format_quota_set(id, QUOTAS.get_defaults(context))
 
     def delete(self, req, id):
-        if self.ext_mgr.is_loaded('os-extended-quotas'):
-            context = req.environ['nova.context']
-            authorize_delete(context)
-            try:
-                nova.context.authorize_project_context(context, id)
-                QUOTAS.destroy_all_by_project(context, id)
-                return webob.Response(status_int=202)
-            except exception.NotAuthorized:
-                raise webob.exc.HTTPForbidden()
-        raise webob.exc.HTTPNotFound()
+        context = req.environ['nova.context']
+        authorize_delete(context)
+        try:
+            nova.context.authorize_project_context(context, id)
+            QUOTAS.destroy_all_by_project(context, id)
+            return webob.Response(status_int=202)
+        except exception.NotAuthorized:
+            raise webob.exc.HTTPForbidden()
 
 
 class QuotaSets(extensions.V3APIExtensionBase):
@@ -204,7 +188,7 @@ class QuotaSets(extensions.V3APIExtensionBase):
         resources = []
 
         res = extensions.ResourceExtension(ALIAS,
-                                            QuotaSetsController(self.ext_mgr),
+                                            QuotaSetsController(),
                                             member_actions={'defaults': 'GET'})
         resources.append(res)
 
