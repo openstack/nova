@@ -1434,7 +1434,8 @@ class LibvirtDriver(driver.ComputeDriver):
                           write_to_disk=True)
 
         # NOTE (rmk): Re-populate any missing backing files.
-        disk_info_json = self.get_instance_disk_info(instance['name'], xml)
+        disk_info_json = self.get_instance_disk_info(instance['name'], xml,
+                                                     block_device_info)
         self._create_images_and_backing(context, instance, disk_info_json)
 
         # Initialize all the necessary networking, block devices and
@@ -3539,7 +3540,8 @@ class LibvirtDriver(driver.ComputeDriver):
             dom = self._lookup_by_name(instance["name"])
             self._conn.defineXML(dom.XMLDesc(0))
 
-    def get_instance_disk_info(self, instance_name, xml=None):
+    def get_instance_disk_info(self, instance_name, xml=None,
+                               block_device_info=None):
         """Preparation block migration.
 
         :params instance:
@@ -3572,15 +3574,27 @@ class LibvirtDriver(driver.ComputeDriver):
                 LOG.warn(msg)
                 raise exception.InstanceNotFound(instance_id=instance_name)
 
+        # NOTE (rmk): When block_device_info is provided, we will use it to
+        #             filter out devices which are actually volumes.
+        block_device_mapping = driver.block_device_info_get_mapping(
+            block_device_info)
+
+        volume_devices = set()
+        for vol in block_device_mapping:
+            disk_dev = vol['mount_device'].rpartition("/")[2]
+            volume_devices.add(disk_dev)
+
         disk_info = []
         doc = etree.fromstring(xml)
         disk_nodes = doc.findall('.//devices/disk')
         path_nodes = doc.findall('.//devices/disk/source')
         driver_nodes = doc.findall('.//devices/disk/driver')
+        target_nodes = doc.findall('.//devices/disk/target')
 
         for cnt, path_node in enumerate(path_nodes):
             disk_type = disk_nodes[cnt].get('type')
             path = path_node.get('file')
+            target = target_nodes[cnt].attrib['dev']
 
             if disk_type != 'file':
                 LOG.debug(_('skipping %s since it looks like volume'), path)
@@ -3589,6 +3603,11 @@ class LibvirtDriver(driver.ComputeDriver):
             if not path:
                 LOG.debug(_('skipping disk for %s as it does not have a path'),
                           instance_name)
+                continue
+
+            if target in volume_devices:
+                LOG.debug(_('skipping disk %(path)s (%(target)s) as it is a '
+                            'volume'), {'path': path, 'target': target})
                 continue
 
             # get the real disk size or
@@ -3699,7 +3718,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                    block_device_info=None):
         LOG.debug(_("Starting migrate_disk_and_power_off"),
                    instance=instance)
-        disk_info_text = self.get_instance_disk_info(instance['name'])
+        disk_info_text = self.get_instance_disk_info(instance['name'],
+                block_device_info=block_device_info)
         disk_info = jsonutils.loads(disk_info_text)
 
         # copy disks to destination
