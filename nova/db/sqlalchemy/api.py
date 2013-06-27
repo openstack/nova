@@ -4891,24 +4891,13 @@ def aggregate_host_delete(context, aggregate_id, host):
 @require_admin_context
 @require_aggregate_exists
 def aggregate_host_add(context, aggregate_id, host):
-    # NOTE(boris-42): There is a race condition in this method and it will be
-    #                 rewritten after bp/db-unique-keys implementation.
-    session = get_session()
-    with session.begin():
-        host_ref = _aggregate_get_query(context,
-                                        models.AggregateHost,
-                                        models.AggregateHost.aggregate_id,
-                                        aggregate_id,
-                                        session=session,
-                                        read_deleted='no').\
-                            filter_by(host=host).\
-                            first()
-        if host_ref:
-            raise exception.AggregateHostExists(host=host,
+    host_ref = models.AggregateHost()
+    host_ref.update({"host": host, "aggregate_id": aggregate_id})
+    try:
+        host_ref.save()
+    except db_exc.DBDuplicateEntry:
+        raise exception.AggregateHostExists(host=host,
                                             aggregate_id=aggregate_id)
-        host_ref = models.AggregateHost()
-        host_ref.update({"host": host, "aggregate_id": aggregate_id})
-        host_ref.save(session=session)
     return host_ref
 
 

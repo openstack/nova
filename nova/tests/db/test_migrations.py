@@ -2003,6 +2003,48 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
              'compute_host': '192.168.122.8', 'deleted': 0},
         )
 
+    def _pre_upgrade_199(self, engine):
+        fake_aggregates = [{'id': 5, 'name': 'name1'},
+                            {'id': 6, 'name': 'name2'}]
+        aggregates = db_utils.get_table(engine, 'aggregates')
+        engine.execute(aggregates.insert(), fake_aggregates)
+
+        fake_metadata = [{'aggregate_id': 5, 'key': 'availability_zone',
+                           'value': 'custom_az'},
+                          {'aggregate_id': 6, 'key': 'availability_zone',
+                           'value': 'custom_az'}]
+        metadata = db_utils.get_table(engine, 'aggregate_metadata')
+        engine.execute(metadata.insert(), fake_metadata)
+
+        ahosts = db_utils.get_table(engine, 'aggregate_hosts')
+        data = [
+                {'host': 'host1', 'aggregate_id': 5, 'deleted': 0},
+                {'host': 'host1', 'aggregate_id': 5, 'deleted': 0},
+                {'host': 'host2', 'aggregate_id': 6, 'deleted': 0},
+        ]
+        for item in data:
+            ahosts.insert().values(item).execute()
+        return data
+
+    def _check_199(self, engine, data):
+        ahosts = db_utils.get_table(engine, 'aggregate_hosts')
+
+        def get_(host, deleted):
+            deleted_value = 0 if not deleted else ahosts.c.id
+            return ahosts.select().\
+                   where(ahosts.c.host == host).\
+                   where(ahosts.c.deleted == deleted_value).\
+                   execute().\
+                   fetchall()
+
+        self.assertEqual(1, len(get_('host1', False)))
+        self.assertEqual(1, len(get_('host1', True)))
+        self.assertEqual(1, len(get_('host2', False)))
+        self.assertRaises(sqlalchemy.exc.IntegrityError,
+                          ahosts.insert().execute,
+                          {'host': 'host2', 'aggregate_id': 6,
+                           'deleted': 0})
+
 
 class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""

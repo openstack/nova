@@ -924,6 +924,11 @@ class Cell(BASE, NovaBase):
 class AggregateHost(BASE, NovaBase):
     """Represents a host that is member of an aggregate."""
     __tablename__ = 'aggregate_hosts'
+    __table_args__ = (schema.UniqueConstraint(
+        "host", "aggregate_id", "deleted",
+         name="uniq_aggregate_hosts0host0aggregate_id0deleted"
+        ),
+    )
     id = Column(Integer, primary_key=True, autoincrement=True)
     host = Column(String(255), unique=False)
     aggregate_id = Column(Integer, ForeignKey('aggregates.id'), nullable=False)
