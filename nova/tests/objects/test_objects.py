@@ -178,6 +178,31 @@ class TestUtils(test.TestCase):
         self.assertEqual(utils.dt_deserializer(None, None), None)
         self.assertRaises(ValueError, utils.dt_deserializer, None, 'foo')
 
+    def test_obj_to_primitive_list(self):
+        class MyList(base.ObjectListBase, base.NovaObject):
+            pass
+        mylist = MyList()
+        mylist.objects = [1, 2, 3]
+        self.assertEqual([1, 2, 3], base.obj_to_primitive(mylist))
+
+    def test_obj_to_primitive_dict(self):
+        myobj = MyObj()
+        myobj.foo = 1
+        myobj.bar = 'foo'
+        self.assertEqual({'foo': 1, 'bar': 'foo'},
+                         base.obj_to_primitive(myobj))
+
+    def test_obj_to_primitive_recursive(self):
+        class MyList(base.ObjectListBase, base.NovaObject):
+            pass
+
+        mylist = MyList()
+        mylist.objects = [MyObj(), MyObj()]
+        for i, value in enumerate(mylist):
+            value.foo = i
+        self.assertEqual([{'foo': 0}, {'foo': 1}],
+                         base.obj_to_primitive(mylist))
+
 
 class _BaseTestCase(test.TestCase):
     def setUp(self):
