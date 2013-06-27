@@ -209,7 +209,7 @@ def get_instance_type_by_flavor_id(flavorid, ctxt=None, read_deleted="yes"):
     if ctxt is None:
         ctxt = context.get_admin_context(read_deleted=read_deleted)
 
-    return db.instance_type_get_by_flavor_id(ctxt, flavorid)
+    return db.instance_type_get_by_flavor_id(ctxt, flavorid, read_deleted)
 
 
 def get_instance_type_access_by_flavor_id(flavorid, ctxt=None):
