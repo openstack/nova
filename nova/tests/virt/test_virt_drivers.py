@@ -60,7 +60,7 @@ class _FakeDriverBackendTestCase(object):
         # So that the _supports_direct_io does the test based
         # on the current working directory, instead of the
         # default instances_path which doesn't exist
-        self.flags(instances_path='')
+        self.flags(instances_path=self.useFixture(fixtures.TempDir()).path)
 
         # Put fakelibvirt in place
         if 'libvirt' in sys.modules:
