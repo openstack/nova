@@ -44,6 +44,7 @@ from nova.openstack.common import fileutils
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import loopingcall
+from nova.openstack.common import processutils
 from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests import fake_network
@@ -4021,6 +4022,88 @@ class LibvirtConnTestCase(test.TestCase):
         conn.get_host_ip_addr().AndReturn('foo')
         self.mox.ReplayAll()
         self.assertTrue(conn._is_storage_shared_with('foo', '/path'))
+
+    def test_create_domain_define_xml_fails(self):
+        """
+        Tests that the xml is logged when defining the domain fails.
+        """
+        fake_xml = "<test>this is a test</test>"
+
+        def fake_defineXML(xml):
+            self.assertEquals(fake_xml, xml)
+            raise libvirt.libvirtError('virDomainDefineXML() failed')
+
+        self.log_error_called = False
+
+        def fake_error(msg):
+            self.log_error_called = True
+            self.assertTrue(fake_xml in msg)
+
+        self.stubs.Set(nova.virt.libvirt.driver.LOG, 'error', fake_error)
+
+        self.create_fake_libvirt_mock(defineXML=fake_defineXML)
+        self.mox.ReplayAll()
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        self.assertRaises(libvirt.libvirtError, conn._create_domain, fake_xml)
+        self.assertTrue(self.log_error_called)
+
+    def test_create_domain_with_flags_fails(self):
+        """
+        Tests that the xml is logged when creating the domain with flags fails.
+        """
+        fake_xml = "<test>this is a test</test>"
+        fake_domain = FakeVirtDomain(fake_xml)
+
+        def fake_createWithFlags(launch_flags):
+            raise libvirt.libvirtError('virDomainCreateWithFlags() failed')
+
+        self.log_error_called = False
+
+        def fake_error(msg):
+            self.log_error_called = True
+            self.assertTrue(fake_xml in msg)
+
+        self.stubs.Set(fake_domain, 'createWithFlags', fake_createWithFlags)
+        self.stubs.Set(nova.virt.libvirt.driver.LOG, 'error', fake_error)
+
+        self.create_fake_libvirt_mock()
+        self.mox.ReplayAll()
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        self.assertRaises(libvirt.libvirtError, conn._create_domain,
+                          domain=fake_domain)
+        self.assertTrue(self.log_error_called)
+
+    def test_create_domain_enable_hairpin_fails(self):
+        """
+        Tests that the xml is logged when enabling hairpin mode for the domain
+        fails.
+        """
+        fake_xml = "<test>this is a test</test>"
+        fake_domain = FakeVirtDomain(fake_xml)
+
+        def fake_enable_hairpin(launch_flags):
+            raise processutils.ProcessExecutionError('error')
+
+        self.log_error_called = False
+
+        def fake_error(msg):
+            self.log_error_called = True
+            self.assertTrue(fake_xml in msg)
+
+        self.stubs.Set(nova.virt.libvirt.driver.LOG, 'error', fake_error)
+
+        self.create_fake_libvirt_mock()
+        self.mox.ReplayAll()
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        self.stubs.Set(conn, '_enable_hairpin', fake_enable_hairpin)
+
+        self.assertRaises(processutils.ProcessExecutionError,
+                          conn._create_domain,
+                          domain=fake_domain,
+                          power_on=False)
+        self.assertTrue(self.log_error_called)
 
 
 class HostStateTestCase(test.TestCase):
