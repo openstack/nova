@@ -1310,6 +1310,52 @@ class HostFiltersTestCase(test.NoDBTestCase):
                 {'vcpus_total': 4, 'vcpus_used': 8})
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
 
+    def test_aggregate_core_filter_value_error(self):
+        filt_cls = self.class_map['AggregateCoreFilter']()
+        filter_properties = {'context': self.context,
+                             'instance_type': {'vcpus': 1}}
+        self.flags(cpu_allocation_ratio=2)
+        host = fakes.FakeHostState('host1', 'node1',
+                {'vcpus_total': 4, 'vcpus_used': 7})
+        self._create_aggregate_with_host(name='fake_aggregate',
+                hosts=['host1'],
+                metadata={'cpu_allocation_ratio': 'XXX'})
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+        self.assertEqual(4 * 2, host.limits['vcpu'])
+
+    def test_aggregate_core_filter_default_value(self):
+        filt_cls = self.class_map['AggregateCoreFilter']()
+        filter_properties = {'context': self.context,
+                             'instance_type': {'vcpus': 1}}
+        self.flags(cpu_allocation_ratio=2)
+        host = fakes.FakeHostState('host1', 'node1',
+                {'vcpus_total': 4, 'vcpus_used': 8})
+        # False: fallback to default flag w/o aggregates
+        self.assertFalse(filt_cls.host_passes(host, filter_properties))
+        self._create_aggregate_with_host(name='fake_aggregate',
+                hosts=['host1'],
+                metadata={'cpu_allocation_ratio': '3'})
+        # True: use ratio from aggregates
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+        self.assertEqual(4 * 3, host.limits['vcpu'])
+
+    def test_aggregate_core_filter_conflict_values(self):
+        filt_cls = self.class_map['AggregateCoreFilter']()
+        filter_properties = {'context': self.context,
+                             'instance_type': {'vcpus': 1}}
+        self.flags(cpu_allocation_ratio=1)
+        host = fakes.FakeHostState('host1', 'node1',
+                {'vcpus_total': 4, 'vcpus_used': 8})
+        self._create_aggregate_with_host(name='fake_aggregate1',
+                hosts=['host1'],
+                metadata={'cpu_allocation_ratio': '2'})
+        self._create_aggregate_with_host(name='fake_aggregate2',
+                hosts=['host1'],
+                metadata={'cpu_allocation_ratio': '3'})
+        # use the minimum ratio from aggregates
+        self.assertFalse(filt_cls.host_passes(host, filter_properties))
+        self.assertEqual(4 * 2, host.limits['vcpu'])
+
     @staticmethod
     def _make_zone_request(zone, is_admin=False):
         ctxt = context.RequestContext('fake', 'fake', is_admin=is_admin)

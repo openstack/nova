@@ -73,6 +73,11 @@ There are some standard filter classes to use (:mod:`nova.scheduler.filters`):
 * |ComputeFilter| - passes all hosts that are operational and enabled.
 * |CoreFilter| - filters based on CPU core utilization. It passes hosts with
   sufficient number of CPU cores.
+* |AggregateCoreFilter| - filters hosts by CPU core number with per-aggregate
+  cpu_allocation_ratio setting. If no per-aggregate value is found, it will
+  fall back to the global default cpu_allocation_ratio. If more than one value
+  is found for a host (meaning the host is in two differenet aggregate with
+  different ratio settings), the minimum value will be used.
 * |IsolatedHostsFilter| - filter based on "image_isolated" and "host_isolated"
   flags.
 * |JsonFilter| - allows simple JSON-based grammar for selecting hosts.
@@ -282,6 +287,7 @@ in :mod:`nova.tests.scheduler`.
 .. |ComputeCapabilitiesFilter| replace:: :class:`ComputeCapabilitiesFilter <nova.scheduler.filters.compute_capabilities_filter.ComputeCapabilitiesFilter>`
 .. |ComputeFilter| replace:: :class:`ComputeFilter <nova.scheduler.filters.compute_filter.ComputeFilter>`
 .. |CoreFilter| replace:: :class:`CoreFilter <nova.scheduler.filters.core_filter.CoreFilter>`
+.. |AggregateCoreFilter| replace:: :class:`AggregateCoreFilter <nova.scheduler.filters.core_filter.AggregateCoreFilter>`
 .. |IsolatedHostsFilter| replace:: :class:`IsolatedHostsFilter <nova.scheduler.filters.isolated_hosts_filter>`
 .. |JsonFilter| replace:: :class:`JsonFilter <nova.scheduler.filters.json_filter.JsonFilter>`
 .. |RamFilter| replace:: :class:`RamFilter <nova.scheduler.filters.ram_filter.RamFilter>`
