@@ -273,6 +273,41 @@ def legacy_mapping(block_device_mapping):
     return legacy_block_device_mapping
 
 
+def from_legacy_mapping(legacy_block_device_mapping, image_uuid='',
+                        root_device_name=None):
+    """Transform a legacy list of block devices to the new data format."""
+
+    new_bdms = [BlockDeviceDict.from_legacy(legacy_bdm)
+                for legacy_bdm in legacy_block_device_mapping]
+    image_bdm = None
+    volume_backed = False
+
+    # Try to assign boot_device
+    if not root_device_name and not image_uuid:
+        # NOTE (ndipanov): If there is no root_device, pick the first non
+        #                  blank one.
+        non_blank = [bdm for bdm in new_bdms if bdm['source_type'] != 'blank']
+        if non_blank:
+            non_blank[0]['boot_index'] = 0
+    else:
+        for bdm in new_bdms:
+            if (bdm['source_type'] in ('volume', 'snapshot', 'image') and
+                    root_device_name is not None and
+                    (strip_dev(bdm.get('device_name')) ==
+                     strip_dev(root_device_name))):
+                bdm['boot_index'] = 0
+                volume_backed = True
+            elif not bdm['no_device']:
+                bdm['boot_index'] = -1
+            else:
+                bdm['boot_index'] = None
+
+        if not volume_backed and image_uuid:
+            image_bdm = create_image_bdm(image_uuid, boot_index=0)
+
+    return ([image_bdm] if image_bdm else []) + new_bdms
+
+
 def properties_root_device_name(properties):
     """get root device name from image meta data.
     If it isn't specified, return None.

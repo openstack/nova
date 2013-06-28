@@ -977,7 +977,8 @@ class Controller(wsgi.Controller):
                 exception.InvalidMetadata,
                 exception.InvalidRequest,
                 exception.PortNotFound,
-                exception.SecurityGroupNotFound) as error:
+                exception.SecurityGroupNotFound,
+                exception.InvalidBDM) as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
         except exception.PortInUse as error:
             raise exc.HTTPConflict(explanation=error.format_message())
