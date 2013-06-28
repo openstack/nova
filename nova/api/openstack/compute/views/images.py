@@ -149,3 +149,44 @@ class ViewBuilder(common.ViewBuilder):
             "saving": 50,
             "active": 100,
         }.get(image.get("status"), 0)
+
+
+class ViewBuilderV3(ViewBuilder):
+
+    def show(self, request, image):
+        """Return a dictionary with image details."""
+        image_dict = {
+            "id": image.get("id"),
+            "name": image.get("name"),
+            "size": int(image.get("size") or 0),
+            "minRam": int(image.get("min_ram") or 0),
+            "minDisk": int(image.get("min_disk") or 0),
+            "metadata": image.get("properties", {}),
+            "created": self._format_date(image.get("created_at")),
+            "updated": self._format_date(image.get("updated_at")),
+            "status": self._get_status(image),
+            "progress": self._get_progress(image),
+            "links": self._get_links(request,
+                                     image["id"],
+                                     self._collection_name),
+        }
+
+        instance_uuid = image.get("properties", {}).get("instance_uuid")
+
+        if instance_uuid is not None:
+            server_ref = self._get_href_link(request, instance_uuid, 'servers')
+            image_dict["server"] = {
+                "id": instance_uuid,
+                "links": [{
+                    "rel": "self",
+                    "href": server_ref,
+                },
+                {
+                    "rel": "bookmark",
+                    "href": self._get_bookmark_link(request,
+                                                    instance_uuid,
+                                                    'servers'),
+                }],
+            }
+
+        return dict(image=image_dict)
