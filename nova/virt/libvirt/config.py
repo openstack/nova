@@ -476,6 +476,8 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
         self.disk_write_iops_sec = None
         self.disk_total_bytes_sec = None
         self.disk_total_iops_sec = None
+        self.logical_block_size = None
+        self.physical_block_size = None
 
     def format_dom(self):
         dev = super(LibvirtConfigGuestDisk, self).format_dom()
@@ -556,6 +558,20 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
 
         if len(iotune) > 0:
             dev.append(iotune)
+
+        # Block size tuning
+        if (self.logical_block_size is not None or
+                self.physical_block_size is not None):
+
+            blockio = etree.Element("blockio")
+            if self.logical_block_size is not None:
+                blockio.set('logical_block_size', self.logical_block_size)
+
+            if self.physical_block_size is not None:
+                blockio.set('physical_block_size', self.physical_block_size)
+
+            dev.append(blockio)
+
         return dev
 
 

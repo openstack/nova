@@ -290,6 +290,8 @@ MIN_LIBVIRT_CLOSE_CALLBACK_VERSION = (1, 0, 1)
 REQ_HYPERVISOR_LIVESNAPSHOT = "QEMU"
 MIN_LIBVIRT_LIVESNAPSHOT_VERSION = (1, 0, 0)
 MIN_QEMU_LIVESNAPSHOT_VERSION = (1, 3, 0)
+# block size tuning requirements
+MIN_LIBVIRT_BLOCKIO_VERSION = (0, 10, 2)
 
 
 def libvirt_error_handler(context, err):
@@ -1017,6 +1019,27 @@ class LibvirtDriver(driver.ComputeDriver):
                                                        disk_dev),
             'type': 'disk',
             }
+
+        # Note(cfb): If the volume has a custom block size, check that
+        #            that we are using QEMU/KVM and libvirt >= 0.10.2. The
+        #            prescence of a block size is considered mandatory by
+        #            cinder so we fail if we can't honor the request.
+        data = {}
+        if ('data' in connection_info):
+            data = connection_info['data']
+        if ('logical_block_size' in data or 'physical_block_size' in data):
+            if CONF.libvirt_type != "kvm" and CONF.libvirt_type != "qemu":
+                msg = _("Volume sets block size, but the current "
+                        "libvirt hypervisor '%s' does not support custom "
+                        "block size") % CONF.libvirt_type
+                raise exception.InvalidHypervisorType(msg)
+
+            if not self.has_min_version(MIN_LIBVIRT_BLOCKIO_VERSION):
+                ver = ".".join([str(x) for x in MIN_LIBVIRT_BLOCKIO_VERSION])
+                msg = _("Volume sets block size, but libvirt '%s' or later is "
+                        "required.") % ver
+                raise exception.Invalid(msg)
+
         conf = self.volume_driver_method('connect_volume',
                                          connection_info,
                                          disk_info)

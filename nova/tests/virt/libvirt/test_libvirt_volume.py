@@ -97,8 +97,31 @@ class LibvirtVolumeTestCase(test.TestCase):
         }
         conf = libvirt_driver.connect_volume(connection_info, self.disk_info)
         tree = conf.format_dom()
-        self.assertEqual(tree.get('type'), 'block')
-        self.assertEqual(tree.find('./serial').text, 'fake_serial')
+        self.assertEqual('block', tree.get('type'))
+        self.assertEqual('fake_serial', tree.find('./serial').text)
+        self.assertEqual(None, tree.find('./blockio'))
+
+    def test_libvirt_volume_driver_blockio(self):
+        libvirt_driver = volume.LibvirtVolumeDriver(self.fake_conn)
+        connection_info = {
+            'driver_volume_type': 'fake',
+            'data': {
+                'device_path': '/foo',
+                'logical_block_size': '4096',
+                'physical_block_size': '4096',
+                },
+            'serial': 'fake_serial',
+            }
+        disk_info = {
+            "bus": "virtio",
+            "dev": "vde",
+            "type": "disk",
+            }
+        conf = libvirt_driver.connect_volume(connection_info, disk_info)
+        tree = conf.format_dom()
+        blockio = tree.find('./blockio')
+        self.assertEqual('4096', blockio.get('logical_block_size'))
+        self.assertEqual('4096', blockio.get('physical_block_size'))
 
     def iscsi_connection(self, volume, location, iqn):
         return {
