@@ -21,6 +21,8 @@ import socket
 
 from oslo.config import cfg
 
+from nova import utils
+
 CONF = cfg.CONF
 
 
@@ -40,7 +42,7 @@ def _get_my_ip():
         csock.close()
         return addr
     except socket.error:
-        return "127.0.0.1"
+        return utils.get_my_ipv4_address()
 
 
 netconf_opts = [
