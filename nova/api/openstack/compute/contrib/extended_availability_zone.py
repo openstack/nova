@@ -20,7 +20,7 @@
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
-from nova import availability_zones
+from nova import availability_zones as avail_zone
 
 authorize = extensions.soft_extension_authorizer('compute',
                                                  'extended_availability_zone')
@@ -29,8 +29,13 @@ authorize = extensions.soft_extension_authorizer('compute',
 class ExtendedAZController(wsgi.Controller):
     def _extend_server(self, context, server, instance):
         key = "%s:availability_zone" % Extended_availability_zone.alias
-        server[key] = availability_zones.get_instance_availability_zone(
-                                                            context, instance)
+        az = avail_zone.get_instance_availability_zone(context, instance)
+        if not az and instance.get('availability_zone'):
+            # Likely hasn't reached a viable compute node yet so give back the
+            # desired availability_zone that *may* exist in the instance
+            # record itself.
+            az = instance['availability_zone']
+        server[key] = az
 
     @wsgi.extends
     def show(self, req, resp_obj, id):

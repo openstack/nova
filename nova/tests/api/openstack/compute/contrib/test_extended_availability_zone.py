@@ -19,6 +19,7 @@ import webob
 from nova.api.openstack.compute.contrib import extended_availability_zone
 from nova import availability_zones
 from nova import compute
+from nova.compute import vm_states
 from nova import exception
 from nova.openstack.common import jsonutils
 from nova import test
@@ -29,19 +30,40 @@ UUID2 = '00000000-0000-0000-0000-000000000002'
 UUID3 = '00000000-0000-0000-0000-000000000003'
 
 
+def fake_compute_get_az(*args, **kwargs):
+    inst = fakes.stub_instance(1, uuid=UUID3, host="get-host",
+                               vm_state=vm_states.ACTIVE,
+                               availability_zone='fakeaz')
+    return inst
+
+
+def fake_compute_get_empty(*args, **kwargs):
+    inst = fakes.stub_instance(1, uuid=UUID3, host="",
+                               vm_state=vm_states.ACTIVE,
+                               availability_zone='fakeaz')
+    return inst
+
+
 def fake_compute_get(*args, **kwargs):
-    inst = fakes.stub_instance(1, uuid=UUID3, host="get-host")
+    inst = fakes.stub_instance(1, uuid=UUID3, host="get-host",
+                               vm_state=vm_states.ACTIVE)
     return inst
 
 
 def fake_compute_get_all(*args, **kwargs):
-    inst1 = fakes.stub_instance(1, uuid=UUID1, host="all-host")
-    inst2 = fakes.stub_instance(2, uuid=UUID2, host="all-host")
+    inst1 = fakes.stub_instance(1, uuid=UUID1, host="all-host",
+                                vm_state=vm_states.ACTIVE)
+    inst2 = fakes.stub_instance(2, uuid=UUID2, host="all-host",
+                                vm_state=vm_states.ACTIVE)
     return [inst1, inst2]
 
 
 def fake_get_host_availability_zone(context, host):
     return host
+
+
+def fake_get_no_host_availability_zone(context, host):
+    return None
 
 
 class ExtendedServerAttributesTest(test.TestCase):
@@ -50,6 +72,7 @@ class ExtendedServerAttributesTest(test.TestCase):
 
     def setUp(self):
         super(ExtendedServerAttributesTest, self).setUp()
+        availability_zones._reset_cache()
         fakes.stub_out_nw_api(self.stubs)
         self.stubs.Set(compute.api.API, 'get', fake_compute_get)
         self.stubs.Set(compute.api.API, 'get_all', fake_compute_get_all)
@@ -76,6 +99,28 @@ class ExtendedServerAttributesTest(test.TestCase):
     def assertServerAttributes(self, server, az):
         self.assertEqual(server.get('%savailability_zone' % self.prefix),
                          az)
+
+    def test_show_no_host_az(self):
+        self.stubs.Set(compute.api.API, 'get', fake_compute_get_az)
+        self.stubs.Set(availability_zones, 'get_host_availability_zone',
+                       fake_get_no_host_availability_zone)
+
+        url = '/v2/fake/servers/%s' % UUID3
+        res = self._make_request(url)
+
+        self.assertEqual(res.status_int, 200)
+        self.assertServerAttributes(self._get_server(res.body), 'fakeaz')
+
+    def test_show_empty_host_az(self):
+        self.stubs.Set(compute.api.API, 'get', fake_compute_get_empty)
+        self.stubs.Set(availability_zones, 'get_host_availability_zone',
+                       fake_get_no_host_availability_zone)
+
+        url = '/v2/fake/servers/%s' % UUID3
+        res = self._make_request(url)
+
+        self.assertEqual(res.status_int, 200)
+        self.assertServerAttributes(self._get_server(res.body), 'fakeaz')
 
     def test_show(self):
         url = '/v2/fake/servers/%s' % UUID3
