@@ -21,10 +21,11 @@ from nova.api.openstack import xmlutil
 from nova import compute
 from nova import exception
 
+ALIAS = "os-instance-actions"
 authorize_actions = extensions.extension_authorizer('compute',
-                                                    'instance_actions')
+                                                    'v3:' + ALIAS)
 authorize_events = extensions.soft_extension_authorizer('compute',
-                                                    'instance_actions:events')
+                                                    'v3:' + ALIAS + ':events')
 
 ACTION_KEYS = ['action', 'instance_uuid', 'request_id', 'user_id',
                'project_id', 'start_time', 'message']
@@ -47,17 +48,17 @@ def make_action(elem):
 
 class InstanceActionsTemplate(xmlutil.TemplateBuilder):
     def construct(self):
-        root = xmlutil.TemplateElement('instanceActions')
-        elem = xmlutil.SubTemplateElement(root, 'instanceAction',
-                                          selector='instanceActions')
+        root = xmlutil.TemplateElement('instance_actions')
+        elem = xmlutil.SubTemplateElement(root, 'instance_action',
+                                          selector='instance_actions')
         make_actions(elem)
         return xmlutil.MasterTemplate(root, 1)
 
 
 class InstanceActionTemplate(xmlutil.TemplateBuilder):
     def construct(self):
-        root = xmlutil.TemplateElement('instanceAction',
-                                       selector='instanceAction')
+        root = xmlutil.TemplateElement('instance_action',
+                                       selector='instance_action')
         make_action(root)
         return xmlutil.MasterTemplate(root, 1)
 
@@ -92,18 +93,22 @@ class InstanceActionsController(wsgi.Controller):
         authorize_actions(context, target=instance)
         actions_raw = self.action_api.actions_get(context, instance)
         actions = [self._format_action(action) for action in actions_raw]
-        return {'instanceActions': actions}
+        return {'instance_actions': actions}
 
     @wsgi.serializers(xml=InstanceActionTemplate)
     def show(self, req, server_id, id):
         """Return data about the given instance action."""
         context = req.environ['nova.context']
-        instance = self.compute_api.get(context, server_id)
+        try:
+            instance = self.compute_api.get(context, server_id)
+        except exception.InstanceNotFound as err:
+            raise exc.HTTPNotFound(explanation=err.format_message())
         authorize_actions(context, target=instance)
         action = self.action_api.action_get_by_request_id(context, instance,
                                                           id)
         if action is None:
-            raise exc.HTTPNotFound()
+            msg = _("Action %s not found") % id
+            raise exc.HTTPNotFound(msg)
 
         action_id = action['id']
         action = self._format_action(action)
@@ -111,17 +116,17 @@ class InstanceActionsController(wsgi.Controller):
             events_raw = self.action_api.action_events_get(context, instance,
                                                            action_id)
             action['events'] = [self._format_event(evt) for evt in events_raw]
-        return {'instanceAction': action}
+        return {'instance_action': action}
 
 
-class Instance_actions(extensions.ExtensionDescriptor):
+class InstanceActions(extensions.V3APIExtensionBase):
     """View a log of actions and events taken on an instance."""
 
     name = "InstanceActions"
-    alias = "os-instance-actions"
+    alias = ALIAS
     namespace = ("http://docs.openstack.org/compute/ext/"
-                 "instance-actions/api/v1.1")
-    updated = "2013-02-08T00:00:00+00:00"
+                 "instance-actions/api/v3")
+    version = 1
 
     def get_resources(self):
         ext = extensions.ResourceExtension('os-instance-actions',
@@ -130,3 +135,9 @@ class Instance_actions(extensions.ExtensionDescriptor):
                                                member_name='server',
                                                collection_name='servers'))
         return [ext]
+
+    def get_controller_extensions(self):
+        """It's an abstract function V3APIExtensionBase and the extension
+        will not be loaded without it.
+        """
+        return []
