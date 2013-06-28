@@ -1,17 +1,19 @@
-# Chinese (Traditional) translation for nova
-# Copyright (c) 2011 Rosetta Contributors and Canonical Ltd 2011
-# This file is distributed under the same license as the nova package.
-# FIRST AUTHOR <EMAIL@ADDRESS>, 2011.
+# Polish (Poland) translations for nova.
+# Copyright (C) 2013 ORGANIZATION
+# This file is distributed under the same license as the nova project.
 #
+# Translators:
 msgid ""
 msgstr ""
-"Project-Id-Version:  nova\n"
-"Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
+"Project-Id-Version:  Nova\n"
+"Report-Msgid-Bugs-To: https://bugs.launchpad.net/nova\n"
 "POT-Creation-Date: 2013-06-28 19:37+0000\n"
-"PO-Revision-Date: 2012-03-07 02:00+0000\n"
-"Last-Translator: Charles Hsu <charles0126+openstack@gmail.com>\n"
-"Language-Team: Chinese (Traditional) <zh_TW@li.org>\n"
-"Plural-Forms: nplurals=1; plural=0\n"
+"PO-Revision-Date: 2013-06-28 18:59+0000\n"
+"Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
+"Language-Team: Polish (Poland) "
+"(http://www.transifex.com/projects/p/openstack/language/pl_PL/)\n"
+"Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && "
+"(n%100<10 || n%100>=20) ? 1 : 2)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -38,7 +40,7 @@ msgstr ""
 
 #: nova/crypto.py:58
 msgid "Filename of private key"
-msgstr "Private key 私鑰檔案名稱"
+msgstr ""
 
 #: nova/crypto.py:61
 msgid "Filename of root Certificate Revocation List"
@@ -46,15 +48,15 @@ msgstr ""
 
 #: nova/crypto.py:64
 msgid "Where we keep our keys"
-msgstr "我們的keys留存於何處"
+msgstr ""
 
 #: nova/crypto.py:67
 msgid "Where we keep our root CA"
-msgstr "我們的根憑證留存於何處"
+msgstr ""
 
 #: nova/crypto.py:70
 msgid "Should we use a CA for each project?"
-msgstr "是否需要一個project 使用一個CA"
+msgstr ""
 
 #: nova/crypto.py:74
 #, python-format
@@ -81,7 +83,7 @@ msgstr ""
 
 #: nova/exception.py:113
 msgid "An unknown exception occurred."
-msgstr "發生一個未知例外"
+msgstr ""
 
 #: nova/exception.py:135 nova/openstack/common/rpc/common.py:87
 msgid "Exception in string format operation"
@@ -92,22 +94,22 @@ msgid "Unknown"
 msgstr ""
 
 #: nova/exception.py:165
-#, fuzzy, python-format
+#, python-format
 msgid "Failed to encrypt text: %(reason)s"
-msgstr "內文解碼失敗"
+msgstr ""
 
 #: nova/exception.py:169
-#, fuzzy, python-format
+#, python-format
 msgid "Failed to decrypt text: %(reason)s"
-msgstr "內文解碼失敗"
+msgstr ""
 
 #: nova/exception.py:173
 msgid "Virtual Interface creation failed"
-msgstr "建立虛擬介面失敗"
+msgstr ""
 
 #: nova/exception.py:177
 msgid "5 attempts to create virtual interfacewith unique mac address failed"
-msgstr "連續嘗試 5 次建立唯一網路位置(MAC)的虛擬介面失敗"
+msgstr ""
 
 #: nova/exception.py:182
 #, python-format
@@ -116,11 +118,11 @@ msgstr ""
 
 #: nova/exception.py:187
 msgid "Not authorized."
-msgstr "未被授權"
+msgstr ""
 
 #: nova/exception.py:192
 msgid "User does not have admin privileges"
-msgstr "使用者並沒有管理者權力"
+msgstr ""
 
 #: nova/exception.py:196
 #, python-format
@@ -139,7 +141,7 @@ msgstr ""
 
 #: nova/exception.py:208
 msgid "Unacceptable parameters."
-msgstr "不可接受的參數值"
+msgstr ""
 
 #: nova/exception.py:213
 msgid "Block Device Mapping is Invalid."
@@ -179,7 +181,7 @@ msgstr ""
 
 #: nova/exception.py:248 nova/api/ec2/cloud.py:472
 msgid "Keypair data is invalid"
-msgstr "無效的Keypair"
+msgstr ""
 
 #: nova/exception.py:252
 msgid "The request is invalid."
@@ -280,9 +282,9 @@ msgid "Failed to suspend instance"
 msgstr ""
 
 #: nova/exception.py:337
-#, fuzzy, python-format
+#, python-format
 msgid "Failed to resume instance: %(reason)s."
-msgstr "無法掛載Volume 到虛擬機器 %s"
+msgstr ""
 
 #: nova/exception.py:341
 #, python-format
@@ -303,9 +305,8 @@ msgid "Failed to terminate instance"
 msgstr ""
 
 #: nova/exception.py:357
-#, fuzzy
 msgid "Failed to deploy instance"
-msgstr "無法卸載 Volume %s"
+msgstr ""
 
 #: nova/exception.py:361
 msgid "Service is unavailable at this time."
@@ -540,9 +541,9 @@ msgid "Port %(port_id)s is still in use."
 msgstr ""
 
 #: nova/exception.py:560
-#, fuzzy, python-format
+#, python-format
 msgid "Port %(port_id)s not usable for instance %(instance)s."
-msgstr "掛載點 %(mountpoint)s 掛載到虛擬機器 %(instance_name)s"
+msgstr ""
 
 #: nova/exception.py:564
 #, python-format
@@ -1211,9 +1212,9 @@ msgid "Unknown config drive format %(format)s. Select one of iso9660 or vfat."
 msgstr ""
 
 #: nova/exception.py:1142
-#, fuzzy, python-format
+#, python-format
 msgid "Failed to attach network adapter device to %(instance)s"
-msgstr "無法掛載Volume 到虛擬機器 %s"
+msgstr ""
 
 #: nova/exception.py:1146
 #, python-format
@@ -1301,14 +1302,14 @@ msgid "Invalid Base 64 data for file %(path)s"
 msgstr ""
 
 #: nova/exception.py:1215
-#, fuzzy, python-format
+#, python-format
 msgid "Build of instance %(instance_uuid)s aborted: %(reason)s"
-msgstr "掛載點 %(mountpoint)s 掛載到虛擬機器 %(instance_name)s"
+msgstr ""
 
 #: nova/exception.py:1219
-#, fuzzy, python-format
+#, python-format
 msgid "Build of instance %(instance_uuid)s was re-scheduled: %(reason)s"
-msgstr "掛載點 %(mountpoint)s 掛載到虛擬機器 %(instance_name)s"
+msgstr ""
 
 #: nova/exception.py:1224
 #, python-format
@@ -1549,19 +1550,19 @@ msgid "%(name)s listening on %(host)s:%(port)s"
 msgstr ""
 
 #: nova/wsgi.py:140
-#, fuzzy, python-format
+#, python-format
 msgid "Unable to find cert_file : %s"
-msgstr "找不到Volume %s"
+msgstr ""
 
 #: nova/wsgi.py:144
-#, fuzzy, python-format
+#, python-format
 msgid "Unable to find ca_file : %s"
-msgstr "找不到Volume %s"
+msgstr ""
 
 #: nova/wsgi.py:148
-#, fuzzy, python-format
+#, python-format
 msgid "Unable to find key_file : %s"
-msgstr "找不到Volume %s"
+msgstr ""
 
 #: nova/wsgi.py:152
 msgid ""
@@ -2004,9 +2005,8 @@ msgid "Request must include either Timestamp or Expires, but cannot contain both
 msgstr ""
 
 #: nova/api/ec2/ec2utils.py:267
-#, fuzzy
 msgid "Timestamp is invalid."
-msgstr "無效的Keypair"
+msgstr ""
 
 #: nova/api/metadata/handler.py:108
 msgid ""
@@ -2041,9 +2041,9 @@ msgid "Invalid proxy request signature."
 msgstr ""
 
 #: nova/api/metadata/handler.py:185 nova/api/metadata/handler.py:192
-#, fuzzy, python-format
+#, python-format
 msgid "Failed to get metadata for instance id: %s"
-msgstr "無法掛載Volume 到虛擬機器 %s"
+msgstr ""
 
 #: nova/api/openstack/__init__.py:79
 #, python-format
@@ -2661,9 +2661,8 @@ msgstr ""
 
 #: nova/api/openstack/compute/servers.py:1108
 #: nova/api/openstack/compute/plugins/v3/servers.py:1187
-#, fuzzy
 msgid "Invalid instance image."
-msgstr "無效的快照(snapshot)"
+msgstr ""
 
 #: nova/api/openstack/compute/servers.py:1129
 #: nova/api/openstack/compute/plugins/v3/servers.py:1208
@@ -2755,12 +2754,12 @@ msgstr ""
 #: nova/api/openstack/compute/contrib/admin_actions.py:94
 #, python-format
 msgid "compute.api::suspend %s"
-msgstr "compute.api::暫停 %s"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/admin_actions.py:111
 #, python-format
 msgid "compute.api::resume %s"
-msgstr "compute.api::繼續 %s"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/admin_actions.py:127
 #, python-format
@@ -2842,9 +2841,9 @@ msgid "Desired state must be specified.  Valid states are: %s"
 msgstr ""
 
 #: nova/api/openstack/compute/contrib/admin_actions.py:324
-#, fuzzy, python-format
+#, python-format
 msgid "Compute.api::resetState %s"
-msgstr "compute.api::繼續 %s"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/aggregates.py:89
 #, python-format
@@ -2894,9 +2893,8 @@ msgid "Network driver does not support this function."
 msgstr ""
 
 #: nova/api/openstack/compute/contrib/attach_interfaces.py:113
-#, fuzzy
 msgid "Failed to attach interface"
-msgstr "無法掛載Volume 到虛擬機器 %s"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/attach_interfaces.py:121
 msgid "Attachments update is not supported"
@@ -2953,9 +2951,9 @@ msgid ""
 msgstr ""
 
 #: nova/api/openstack/compute/contrib/cloudpipe_update.py:41
-#, fuzzy, python-format
+#, python-format
 msgid "Unknown action %s"
-msgstr "發生一個未知例外"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/console_output.py:50
 msgid "os-getConsoleOutput malformed or missing from request body"
@@ -2966,9 +2964,8 @@ msgid "Length in request body must be an integer value"
 msgstr ""
 
 #: nova/api/openstack/compute/contrib/console_output.py:65
-#, fuzzy
 msgid "Unable to get console"
-msgstr "無法卸載 Volume %s"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/consoles.py:51
 msgid "Instance not yet ready"
@@ -2988,9 +2985,8 @@ msgid "Coverage not running"
 msgstr ""
 
 #: nova/api/openstack/compute/contrib/coverage_ext.py:193
-#, fuzzy
 msgid "Invalid path"
-msgstr "無效的快照(snapshot)"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/coverage_ext.py:197
 msgid "No path given for report file"
@@ -3577,14 +3573,13 @@ msgid "Received capacities from child cell %(cell_name)s: %(capacities)s"
 msgstr ""
 
 #: nova/cells/messaging.py:829
-#, fuzzy, python-format
+#, python-format
 msgid "Got update for instance: %(instance)s"
-msgstr "掛載點 %(mountpoint)s 掛載到虛擬機器 %(instance_name)s"
+msgstr ""
 
 #: nova/cells/messaging.py:873
-#, fuzzy
 msgid "Got update to delete instance"
-msgstr "掛載點 %(mountpoint)s 掛載到虛擬機器 %(instance_name)s"
+msgstr ""
 
 #: nova/cells/messaging.py:888
 #, python-format
@@ -3712,9 +3707,9 @@ msgid "Launching VPN for %s"
 msgstr ""
 
 #: nova/cmd/all.py:60 nova/cmd/all.py:66 nova/cmd/all.py:89
-#, fuzzy, python-format
+#, python-format
 msgid "Failed to load %s"
-msgstr "找不到Volume %s"
+msgstr ""
 
 #: nova/cmd/baremetal_deploy_helper.py:180
 #, python-format
@@ -4173,9 +4168,8 @@ msgid "Failed to set instance name using multi_instance_display_name_template."
 msgstr ""
 
 #: nova/compute/api.py:571
-#, fuzzy
 msgid "Cannot attach one or more volumes to multiple instances"
-msgstr "無法掛載Volume 到虛擬機器 %s"
+msgstr ""
 
 #: nova/compute/api.py:667
 #, python-format
@@ -4193,9 +4187,8 @@ msgid "block_device_mapping %s"
 msgstr ""
 
 #: nova/compute/api.py:1122
-#, fuzzy
 msgid "instance termination disabled"
-msgstr "建立虛擬介面失敗"
+msgstr ""
 
 #: nova/compute/api.py:1258
 #, python-format
@@ -4331,14 +4324,14 @@ msgid "Security group %s already exists"
 msgstr ""
 
 #: nova/compute/api.py:2976
-#, fuzzy, python-format
+#, python-format
 msgid "Unable to update system group '%s'"
-msgstr "找不到Volume %s"
+msgstr ""
 
 #: nova/compute/api.py:3036
-#, fuzzy, python-format
+#, python-format
 msgid "Unable to delete system group '%s'"
-msgstr "找不到Volume %s"
+msgstr ""
 
 #: nova/compute/api.py:3041
 msgid "Security group is still in use"
@@ -4525,9 +4518,8 @@ msgid "Hypervisor driver does not support resume guests"
 msgstr ""
 
 #: nova/compute/manager.py:610
-#, fuzzy
 msgid "Failed to resume instance"
-msgstr "無法掛載Volume 到虛擬機器 %s"
+msgstr ""
 
 #: nova/compute/manager.py:620
 msgid "Hypervisor driver does not support firewall rules"
@@ -4720,9 +4712,9 @@ msgid "bringing vm to original state: '%s'"
 msgstr ""
 
 #: nova/compute/manager.py:1839
-#, fuzzy, python-format
+#, python-format
 msgid "Detaching from volume api: %s"
-msgstr "無法卸載 Volume %s"
+msgstr ""
 
 #: nova/compute/manager.py:1857
 msgid "Rebooting instance"
@@ -4819,9 +4811,8 @@ msgid "Rescuing"
 msgstr ""
 
 #: nova/compute/manager.py:2169
-#, fuzzy
 msgid "Error trying to Rescue Instance"
-msgstr "無法掛載Volume 到虛擬機器 %s"
+msgstr ""
 
 #: nova/compute/manager.py:2173
 #, python-format
@@ -4918,9 +4909,9 @@ msgid ""
 msgstr ""
 
 #: nova/compute/manager.py:3129
-#, fuzzy, python-format
+#, python-format
 msgid "Failed to attach volume %(volume_id)s at %(mountpoint)s"
-msgstr "卸載_Volume: %(instance_name)s, %(mountpoint)s"
+msgstr ""
 
 #: nova/compute/manager.py:3160
 #, python-format
@@ -4928,14 +4919,13 @@ msgid "Detach volume %(volume_id)s from mountpoint %(mp)s"
 msgstr ""
 
 #: nova/compute/manager.py:3171
-#, fuzzy
 msgid "Detaching volume from unknown instance"
-msgstr "無法掛載Volume 到虛擬機器 %s"
+msgstr ""
 
 #: nova/compute/manager.py:3178
-#, fuzzy, python-format
+#, python-format
 msgid "Failed to detach volume %(volume_id)s from %(mp)s"
-msgstr "卸載_Volume: %(instance_name)s, %(mountpoint)s"
+msgstr ""
 
 #: nova/compute/manager.py:3202
 msgid "Updating volume usage cache with totals"
@@ -5936,9 +5926,8 @@ msgid "minidns file is |%s|"
 msgstr ""
 
 #: nova/network/minidns.py:75 nova/network/minidns.py:106
-#, fuzzy
 msgid "Invalid name"
-msgstr "無效的快照(snapshot)"
+msgstr ""
 
 #: nova/network/minidns.py:78
 msgid "This driver only supports type 'a'"
@@ -6482,9 +6471,8 @@ msgid "Sending %(event_type)s on %(topic)s"
 msgstr ""
 
 #: nova/openstack/common/rpc/common.py:75
-#, fuzzy
 msgid "An unknown RPC related exception occurred."
-msgstr "發生一個未知例外"
+msgstr ""
 
 #: nova/openstack/common/rpc/common.py:105
 #, python-format
@@ -6689,9 +6677,9 @@ msgid "CONSUMER GOT %s"
 msgstr ""
 
 #: nova/openstack/common/rpc/impl_zmq.py:465
-#, fuzzy, python-format
+#, python-format
 msgid "Creating proxy for topic: %s"
-msgstr "無法掛載Volume 到虛擬機器 %s"
+msgstr ""
 
 #: nova/openstack/common/rpc/impl_zmq.py:471
 msgid "Topic contained dangerous characters."
@@ -6703,9 +6691,8 @@ msgid "ROUTER RELAY-OUT SUCCEEDED %(data)s"
 msgstr ""
 
 #: nova/openstack/common/rpc/impl_zmq.py:505
-#, fuzzy
 msgid "Topic socket file creation failed."
-msgstr "建立虛擬介面失敗"
+msgstr ""
 
 #: nova/openstack/common/rpc/impl_zmq.py:510
 #, python-format
@@ -6865,9 +6852,9 @@ msgid "Request Spec: %s"
 msgstr ""
 
 #: nova/scheduler/filter_scheduler.py:100
-#, fuzzy, python-format
+#, python-format
 msgid "Choosing host %(weighed_host)s for instance %(instance_uuid)s"
-msgstr "掛載點 %(mountpoint)s 掛載到虛擬機器 %(instance_name)s"
+msgstr ""
 
 #: nova/scheduler/filter_scheduler.py:242
 msgid "Invalid value for 'scheduler_max_attempts', must be >= 1"
@@ -7594,14 +7581,9 @@ msgid "Password not supplied to IPMI"
 msgstr ""
 
 #: nova/virt/baremetal/ipmi.py:135
-#, fuzzy, python-format
+#, python-format
 msgid "ipmitool stdout: '%(out)s', stderr: '%(err)s'"
 msgstr ""
-"%(description)s\n"
-"命令: %(cmd)s\n"
-"退出代碼: %(exit_code)s\n"
-"標準輸出: %(stdout)r\n"
-"標準錯誤輸出: %(stderr)r"
 
 #: nova/virt/baremetal/ipmi.py:157
 msgid "IPMI power on failed"
@@ -7633,9 +7615,9 @@ msgid ""
 msgstr ""
 
 #: nova/virt/baremetal/pxe.py:252 nova/virt/baremetal/tilera.py:146
-#, fuzzy, python-format
+#, python-format
 msgid "Fetching kernel and ramdisk for instance %s"
-msgstr "無法掛載Volume 到虛擬機器 %s"
+msgstr ""
 
 #: nova/virt/baremetal/pxe.py:284 nova/virt/baremetal/tilera.py:177
 #, python-format
@@ -7643,9 +7625,9 @@ msgid "Fetching image %(ami)s for instance %(name)s"
 msgstr ""
 
 #: nova/virt/baremetal/pxe.py:324 nova/virt/baremetal/tilera.py:213
-#, fuzzy, python-format
+#, python-format
 msgid "Injecting files into image for instance %(name)s"
-msgstr "無法掛載Volume 到虛擬機器 %s"
+msgstr ""
 
 #: nova/virt/baremetal/pxe.py:457 nova/virt/baremetal/tilera.py:332
 #, python-format
@@ -7653,9 +7635,9 @@ msgid "Node associated with another instance while waiting for deploy of %s"
 msgstr ""
 
 #: nova/virt/baremetal/pxe.py:464
-#, fuzzy, python-format
+#, python-format
 msgid "PXE deploy started for instance %s"
-msgstr "無法掛載Volume 到虛擬機器 %s"
+msgstr ""
 
 #: nova/virt/baremetal/pxe.py:469
 #, python-format
@@ -7685,14 +7667,14 @@ msgid ""
 msgstr ""
 
 #: nova/virt/baremetal/tilera.py:338
-#, fuzzy, python-format
+#, python-format
 msgid "Tilera deploy started for instance %s"
-msgstr "無法掛載Volume 到虛擬機器 %s"
+msgstr ""
 
 #: nova/virt/baremetal/tilera.py:344
-#, fuzzy, python-format
+#, python-format
 msgid "Tilera deploy completed for instance %s"
-msgstr "無法掛載Volume 到虛擬機器 %s"
+msgstr ""
 
 #: nova/virt/baremetal/tilera.py:352
 msgid "Node is unknown error state."
@@ -7831,9 +7813,9 @@ msgid "Baremetal interface %s not found"
 msgstr ""
 
 #: nova/virt/baremetal/db/sqlalchemy/api.py:298
-#, fuzzy, python-format
+#, python-format
 msgid "Baremetal interface %s already in use"
-msgstr "建立虛擬介面失敗"
+msgstr ""
 
 #: nova/virt/baremetal/db/sqlalchemy/api.py:311
 #, python-format
@@ -8152,9 +8134,9 @@ msgid "Tearing down appliance"
 msgstr ""
 
 #: nova/virt/disk/vfs/guestfs.py:126
-#, fuzzy, python-format
+#, python-format
 msgid "Failed to close augeas %s"
-msgstr "找不到Volume %s"
+msgstr ""
 
 #: nova/virt/disk/vfs/guestfs.py:134
 #, python-format
@@ -8162,9 +8144,9 @@ msgid "Failed to shutdown appliance %s"
 msgstr ""
 
 #: nova/virt/disk/vfs/guestfs.py:142
-#, fuzzy, python-format
+#, python-format
 msgid "Failed to close guest handle %s"
-msgstr "找不到Volume %s"
+msgstr ""
 
 #: nova/virt/disk/vfs/guestfs.py:154 nova/virt/disk/vfs/localfs.py:102
 #, python-format
@@ -8212,9 +8194,9 @@ msgid "File path %s not valid"
 msgstr ""
 
 #: nova/virt/disk/vfs/localfs.py:82
-#, fuzzy, python-format
+#, python-format
 msgid "Failed to mount image %(ex)s)"
-msgstr "找不到Volume %s"
+msgstr ""
 
 #: nova/virt/disk/vfs/localfs.py:90
 #, python-format
@@ -8222,9 +8204,9 @@ msgid "Failed to unmount %(imgdir)s: %(ex)s"
 msgstr ""
 
 #: nova/virt/disk/vfs/localfs.py:96
-#, fuzzy, python-format
+#, python-format
 msgid "Failed to remove %(imgdir)s: %(ex)s"
-msgstr "找不到Volume %s"
+msgstr ""
 
 #: nova/virt/disk/vfs/localfs.py:139
 #, python-format
@@ -8350,9 +8332,9 @@ msgid "Target live migration host \"%s\" is unreachable"
 msgstr ""
 
 #: nova/virt/hyperv/livemigrationutils.py:49
-#, fuzzy, python-format
+#, python-format
 msgid "Live migration failed: %s"
-msgstr "建立虛擬介面失敗"
+msgstr ""
 
 #: nova/virt/hyperv/livemigrationutils.py:61
 msgid "Live migration is not enabled on this host"
@@ -8459,9 +8441,9 @@ msgid "Merging base disk %(base_vhd_copy_path)s and diff disk %(diff_vhd_path)s"
 msgstr ""
 
 #: nova/virt/hyperv/migrationops.py:189
-#, fuzzy, python-format
+#, python-format
 msgid "Getting info for disk: %s"
-msgstr "無法掛載Volume 到虛擬機器 %s"
+msgstr ""
 
 #: nova/virt/hyperv/migrationops.py:194
 #, python-format
@@ -8514,9 +8496,9 @@ msgid "Removing directory: %s"
 msgstr ""
 
 #: nova/virt/hyperv/snapshotops.py:56
-#, fuzzy, python-format
+#, python-format
 msgid "Creating snapshot for instance %s"
-msgstr "無法掛載Volume 到虛擬機器 %s"
+msgstr ""
 
 #: nova/virt/hyperv/snapshotops.py:65
 #, python-format
@@ -8568,9 +8550,9 @@ msgid "Failed to remove snapshot for VM %s"
 msgstr ""
 
 #: nova/virt/hyperv/vif.py:75
-#, fuzzy, python-format
+#, python-format
 msgid "Creating vswitch port for instance: %s"
-msgstr "無法掛載Volume 到虛擬機器 %s"
+msgstr ""
 
 #: nova/virt/hyperv/vmops.py:91
 #, python-format
@@ -8607,9 +8589,9 @@ msgid "Spawn instance failed"
 msgstr ""
 
 #: nova/virt/hyperv/vmops.py:203
-#, fuzzy, python-format
+#, python-format
 msgid "Creating nic for instance: %s"
-msgstr "無法掛載Volume 到虛擬機器 %s"
+msgstr ""
 
 #: nova/virt/hyperv/vmops.py:211
 #, python-format
@@ -8617,9 +8599,9 @@ msgid "Invalid config_drive_format \"%s\""
 msgstr ""
 
 #: nova/virt/hyperv/vmops.py:214
-#, fuzzy, python-format
+#, python-format
 msgid "Using config drive for instance: %s"
-msgstr "無法掛載Volume 到虛擬機器 %s"
+msgstr ""
 
 #: nova/virt/hyperv/vmops.py:227 nova/virt/libvirt/driver.py:1937
 #, python-format
@@ -8632,9 +8614,9 @@ msgid "Creating config drive failed with error: %s"
 msgstr ""
 
 #: nova/virt/hyperv/vmops.py:271
-#, fuzzy, python-format
+#, python-format
 msgid "Got request to destroy instance: %s"
-msgstr "無法掛載Volume 到虛擬機器 %s"
+msgstr ""
 
 #: nova/virt/hyperv/vmops.py:284
 #, python-format
@@ -8642,14 +8624,13 @@ msgid "Instance not found: %s"
 msgstr ""
 
 #: nova/virt/hyperv/vmops.py:290
-#, fuzzy, python-format
+#, python-format
 msgid "Failed to destroy instance: %s"
-msgstr "無法卸載 Volume %s"
+msgstr ""
 
 #: nova/virt/hyperv/vmops.py:295
-#, fuzzy
 msgid "reboot instance"
-msgstr "無法掛載Volume 到虛擬機器 %s"
+msgstr ""
 
 #: nova/virt/hyperv/vmops.py:301
 msgid "Pause instance"
@@ -8756,19 +8737,19 @@ msgid ""
 msgstr ""
 
 #: nova/virt/hyperv/volumeops.py:115
-#, fuzzy, python-format
+#, python-format
 msgid "Attach_volume: %(connection_info)s to %(instance_name)s"
-msgstr "卸載_Volume: %(instance_name)s, %(mountpoint)s"
+msgstr ""
 
 #: nova/virt/hyperv/volumeops.py:145
-#, fuzzy, python-format
+#, python-format
 msgid "Attach volume failed: %s"
-msgstr "無法卸載 Volume %s"
+msgstr ""
 
 #: nova/virt/hyperv/volumeops.py:147
 #, python-format
 msgid "Unable to attach volume to instance %s"
-msgstr "無法掛載Volume 到虛擬機器 %s"
+msgstr ""
 
 #: nova/virt/hyperv/volumeops.py:160
 #, python-format
@@ -8776,14 +8757,14 @@ msgid "Logging off storage target %(target_iqn)s"
 msgstr ""
 
 #: nova/virt/hyperv/volumeops.py:165
-#, fuzzy, python-format
+#, python-format
 msgid "Detach_volume: %(connection_info)s from %(instance_name)s"
-msgstr "卸載_Volume: %(instance_name)s, %(mountpoint)s"
+msgstr ""
 
 #: nova/virt/hyperv/volumeops.py:176
-#, fuzzy, python-format
+#, python-format
 msgid "Detaching physical disk from instance: %s"
-msgstr "無法掛載Volume 到虛擬機器 %s"
+msgstr ""
 
 #: nova/virt/hyperv/volumeops.py:186 nova/virt/libvirt/driver.py:959
 msgid "Could not determine iscsi initiator name"
@@ -8859,9 +8840,9 @@ msgid "Can not handle authentication request for %d credentials"
 msgstr ""
 
 #: nova/virt/libvirt/driver.py:673
-#, fuzzy, python-format
+#, python-format
 msgid "Connection to libvirt failed: %s"
-msgstr "連接到glance失敗"
+msgstr ""
 
 #: nova/virt/libvirt/driver.py:782
 #, python-format
@@ -8991,9 +8972,8 @@ msgid "Truncated console log returned, %d bytes ignored"
 msgstr ""
 
 #: nova/virt/libvirt/driver.py:1673 nova/virt/xenapi/vmops.py:1442
-#, fuzzy
 msgid "Guest does not have a console available"
-msgstr "使用者並沒有管理者權力"
+msgstr ""
 
 #: nova/virt/libvirt/driver.py:1742
 #, python-format
@@ -9142,9 +9122,9 @@ msgid "libvirt version is too old (does not support getVersion)"
 msgstr ""
 
 #: nova/virt/libvirt/driver.py:2927
-#, fuzzy, python-format
+#, python-format
 msgid "Trying to get stats for the volume %s"
-msgstr "無法卸載 Volume %s"
+msgstr ""
 
 #: nova/virt/libvirt/driver.py:2940
 #, python-format
@@ -9650,9 +9630,9 @@ msgid "Cannot mount Scality SOFS, check syslog for errors"
 msgstr ""
 
 #: nova/virt/powervm/blockdev.py:149
-#, fuzzy, python-format
+#, python-format
 msgid "Removing the logical volume '%s'"
-msgstr "找不到Volume %s"
+msgstr ""
 
 #: nova/virt/powervm/blockdev.py:167
 #, python-format
@@ -9670,9 +9650,9 @@ msgid "Ensuring image '%s' exists on IVM"
 msgstr ""
 
 #: nova/virt/powervm/blockdev.py:186
-#, fuzzy, python-format
+#, python-format
 msgid "Creating logical volume of size %s bytes"
-msgstr "找不到Volume %s"
+msgstr ""
 
 #: nova/virt/powervm/blockdev.py:189
 #, python-format
@@ -9701,9 +9681,8 @@ msgid "Could not create logical volume. No space left on any volume group."
 msgstr ""
 
 #: nova/virt/powervm/blockdev.py:437 nova/virt/powervm/blockdev.py:517
-#, fuzzy
 msgid "Unable to get checksum"
-msgstr "無法卸載 Volume %s"
+msgstr ""
 
 #: nova/virt/powervm/blockdev.py:444 nova/virt/powervm/blockdev.py:533
 msgid "Image checksums do not match"
@@ -9747,9 +9726,8 @@ msgid "ftp GET %(remote_path)s to: %(local_path)s"
 msgstr ""
 
 #: nova/virt/powervm/common.py:174
-#, fuzzy
 msgid "File transfer from PowerVM manager failed"
-msgstr "連接到glance失敗"
+msgstr ""
 
 #: nova/virt/powervm/driver.py:125
 msgid "In get_host_ip_addr"
@@ -9776,9 +9754,8 @@ msgid "Unrecognized root disk information: %s"
 msgstr ""
 
 #: nova/virt/powervm/exception.py:21
-#, fuzzy
 msgid "Connection to PowerVM manager failed"
-msgstr "連接到glance失敗"
+msgstr ""
 
 #: nova/virt/powervm/exception.py:25
 #, python-format
@@ -9845,9 +9822,9 @@ msgid "LPAR instance '%s' not found"
 msgstr ""
 
 #: nova/virt/powervm/operator.py:186
-#, fuzzy, python-format
+#, python-format
 msgid "PowerVM image creation failed: %s"
-msgstr "建立虛擬介面失敗"
+msgstr ""
 
 #: nova/virt/powervm/operator.py:200
 #, python-format
@@ -9855,9 +9832,9 @@ msgid "Creating LPAR instance '%s'"
 msgstr ""
 
 #: nova/virt/powervm/operator.py:202
-#, fuzzy, python-format
+#, python-format
 msgid "LPAR instance '%s' creation failed"
-msgstr "建立虛擬介面失敗"
+msgstr ""
 
 #: nova/virt/powervm/operator.py:208
 #, python-format
@@ -10347,9 +10324,9 @@ msgid "Renaming the VM from %s"
 msgstr ""
 
 #: nova/virt/vmwareapi/vmops.py:976
-#, fuzzy, python-format
+#, python-format
 msgid "Renamed the VM from %s"
-msgstr "找不到Volume %s"
+msgstr ""
 
 #: nova/virt/vmwareapi/vmops.py:1001
 #, python-format
@@ -10497,29 +10474,27 @@ msgid "Attach_volume: %(connection_info)s, %(instance_name)s, %(mountpoint)s"
 msgstr ""
 
 #: nova/virt/vmwareapi/volumeops.py:138 nova/virt/vmwareapi/volumeops.py:177
-#, fuzzy
 msgid "Unable to find iSCSI Target"
-msgstr "找不到Volume %s"
+msgstr ""
 
 #: nova/virt/vmwareapi/volumeops.py:156 nova/virt/xenapi/volumeops.py:60
 #, python-format
 msgid "Mountpoint %(mountpoint)s attached to instance %(instance_name)s"
-msgstr "掛載點 %(mountpoint)s 掛載到虛擬機器 %(instance_name)s"
+msgstr ""
 
 #: nova/virt/vmwareapi/volumeops.py:166 nova/virt/xenapi/volumeops.py:132
 #, python-format
 msgid "Detach_volume: %(instance_name)s, %(mountpoint)s"
-msgstr "卸載_Volume: %(instance_name)s, %(mountpoint)s"
+msgstr ""
 
 #: nova/virt/vmwareapi/volumeops.py:185
-#, fuzzy
 msgid "Unable to find volume"
-msgstr "無法卸載 Volume %s"
+msgstr ""
 
 #: nova/virt/vmwareapi/volumeops.py:187 nova/virt/xenapi/volumeops.py:151
 #, python-format
 msgid "Mountpoint %(mountpoint)s detached from instance %(instance_name)s"
-msgstr "掛載點 %(mountpoint)s 從虛擬機器 %(instance_name)s 卸載"
+msgstr ""
 
 #: nova/virt/xenapi/agent.py:102 nova/virt/xenapi/vmops.py:1640
 #, python-format
@@ -11299,9 +11274,8 @@ msgid "Clean shutdown did not complete successfully, trying hard shutdown."
 msgstr ""
 
 #: nova/virt/xenapi/vmops.py:821
-#, fuzzy
 msgid "Unable to terminate instance."
-msgstr "無法掛載Volume 到虛擬機器 %s"
+msgstr ""
 
 #: nova/virt/xenapi/vmops.py:875
 #, python-format
@@ -11551,19 +11525,4 @@ msgstr ""
 #: nova/volume/cinder.py:235
 msgid "status must be 'available'"
 msgstr ""
-
-#~ msgid "Cannot disassociate auto assigined floating ip"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Flavor access alreay exists for flavor"
-#~ " %(flavor_id)s and project %(project_id)s "
-#~ "combination."
-#~ msgstr ""
-
-#~ msgid "Instance failed network setup"
-#~ msgstr ""
-
-#~ msgid "Failed to schedule_%(method)s: %(ex)s"
-#~ msgstr ""
 
