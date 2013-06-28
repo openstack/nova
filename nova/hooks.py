@@ -34,6 +34,13 @@ class MyHook(object):
     def post(self, rv, *args, **kwargs):
         # do stuff after wrapped callable runs
 
+Example Hook object with function parameters:
+
+class MyHookWithFunction(object):
+    def pre(self, f, *args, **kwargs):
+        # do stuff with wrapped function info
+    def post(self, f, *args, **kwards):
+        # do stuff with wrapped function info
 
 """
 
@@ -54,24 +61,30 @@ class HookManager(stevedore.hook.HookManager):
         # invoke_on_load creates an instance of the Hook class
         super(HookManager, self).__init__(NS, name, invoke_on_load=True)
 
-    def run_pre(self, name, args, kwargs):
+    def run_pre(self, name, args, kwargs, f=None):
         for e in self.extensions:
             obj = e.obj
             pre = getattr(obj, 'pre', None)
             if pre:
                 LOG.debug(_("Running %(name)s pre-hook: %(obj)s") % locals())
-                pre(*args, **kwargs)
+                if f:
+                    pre(f, *args, **kwargs)
+                else:
+                    pre(*args, **kwargs)
 
-    def run_post(self, name, rv, args, kwargs):
+    def run_post(self, name, rv, args, kwargs, f=None):
         for e in reversed(self.extensions):
             obj = e.obj
             post = getattr(obj, 'post', None)
             if post:
                 LOG.debug(_("Running %(name)s post-hook: %(obj)s") % locals())
-                post(rv, *args, **kwargs)
+                if f:
+                    post(f, rv, *args, **kwargs)
+                else:
+                    post(rv, *args, **kwargs)
 
 
-def add_hook(name):
+def add_hook(name, pass_function=False):
     """Execute optional pre and post methods around the decorated
     function.  This is useful for customization around callables.
     """
@@ -81,9 +94,13 @@ def add_hook(name):
         def inner(*args, **kwargs):
             manager = _HOOKS.setdefault(name, HookManager(name))
 
-            manager.run_pre(name, args, kwargs)
+            function = None
+            if pass_function:
+                function = f
+
+            manager.run_pre(name, args, kwargs, f=function)
             rv = f(*args, **kwargs)
-            manager.run_post(name, rv, args, kwargs)
+            manager.run_post(name, rv, args, kwargs, f=function)
 
             return rv
 

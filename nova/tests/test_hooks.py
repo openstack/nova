@@ -42,6 +42,16 @@ class SampleHookB(SampleHookA):
         self._add_called("post", kwargs)
 
 
+class SampleHookC(SampleHookA):
+    name = "c"
+
+    def pre(self, f, *args, **kwargs):
+        self._add_called("pre" + f.__name__, kwargs)
+
+    def post(self, f, rv, *args, **kwargs):
+        self._add_called("post" + f.__name__, kwargs)
+
+
 class MockEntryPoint(object):
 
     def __init__(self, cls):
@@ -85,3 +95,27 @@ class HookTestCase(test.TestCase):
         called_order = []
         self._hooked(42, called=called_order)
         self.assertEqual(['prea', 'preb', 'postb'], called_order)
+
+
+class HookTestCaseWithFunction(HookTestCase):
+    def _mock_load_plugins(self, iload, iargs, ikwargs):
+        return [
+            stevedore.extension.Extension('function_hook',
+                MockEntryPoint(SampleHookC), SampleHookC, SampleHookC()),
+        ]
+
+    @hooks.add_hook('function_hook', pass_function=True)
+    def _hooked(self, a, b=1, c=2, called=None):
+        return 42
+
+    def test_basic(self):
+        self.assertEqual(42, self._hooked(1))
+        mgr = hooks._HOOKS['function_hook']
+
+        self.assertEqual(1, len(mgr.extensions))
+        self.assertEqual(SampleHookC, mgr.extensions[0].plugin)
+
+    def test_order_of_execution(self):
+        called_order = []
+        self._hooked(42, called=called_order)
+        self.assertEqual(['pre_hookedc', 'post_hookedc'], called_order)
