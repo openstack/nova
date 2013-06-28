@@ -330,6 +330,13 @@ class BaseTestCase(test.TestCase):
                   'project_id': self.project_id}
         return db.security_group_create(self.context, values)
 
+    def _stub_migrate_server(self):
+        def _fake_migrate_server(*args, **kwargs):
+            pass
+
+        self.stubs.Set(conductor_manager.ComputeTaskManager,
+                       'migrate_server', _fake_migrate_server)
+
 
 class ComputeVolumeTestCase(BaseTestCase):
 
@@ -6203,6 +6210,7 @@ class ComputeAPITestCase(BaseTestCase):
         instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, instance=instance)
         instance = db.instance_get_by_uuid(self.context, instance['uuid'])
+        self._stub_migrate_server()
         self.compute_api.resize(self.context, instance, '4')
 
         # Do the prep/finish_resize steps (manager does this)
@@ -6272,6 +6280,7 @@ class ComputeAPITestCase(BaseTestCase):
         instance = db.instance_get_by_uuid(self.context, instance['uuid'])
         self.compute.run_instance(self.context, instance=instance)
 
+        self._stub_migrate_server()
         self.compute_api.resize(self.context, instance, '4')
 
         # create a fake migration record (manager does this)
@@ -6377,6 +6386,7 @@ class ComputeAPITestCase(BaseTestCase):
                                  project_id=user_project_id)
         self.mox.ReplayAll()
 
+        self._stub_migrate_server()
         self.compute_api.resize(self.context, instance, flavor_id)
 
         flavors.destroy(name)
@@ -6384,6 +6394,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute.terminate_instance(self.context, instance=instance)
 
     def test_resize_revert_deleted_flavor_fails(self):
+        self._stub_migrate_server()
         orig_name = 'test_resize_revert_orig_flavor'
         orig_flavorid = 11
         flavors.create(orig_name, 128, 1, 0, ephemeral_gb=0,
@@ -6428,6 +6439,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.stubs.Set(self.compute_api.scheduler_rpcapi,
                        'prep_resize', _fake_prep_resize)
 
+        self._stub_migrate_server()
         self.compute_api.resize(self.context, instance, None)
         self.compute.terminate_instance(self.context, instance=instance)
 
@@ -6437,6 +6449,7 @@ class ComputeAPITestCase(BaseTestCase):
         instance = jsonutils.to_primitive(instance)
         self.compute.run_instance(self.context, instance=instance)
         # Migrate simply calls resize() without a flavor_id.
+        self._stub_migrate_server()
         self.compute_api.resize(self.context, instance, None)
         self.compute.terminate_instance(self.context, instance=instance)
 
@@ -6486,6 +6499,7 @@ class ComputeAPITestCase(BaseTestCase):
         # different host
         self.flags(host='host3')
         try:
+            self._stub_migrate_server()
             self.compute_api.resize(self.context, instance, None)
         finally:
             self.compute.terminate_instance(self.context, instance=instance)
@@ -6529,6 +6543,7 @@ class ComputeAPITestCase(BaseTestCase):
                 dict(host='host2', progress=10))
         # different host
         try:
+            self._stub_migrate_server()
             self.compute_api.resize(self.context, instance, None)
         finally:
             self.compute.terminate_instance(self.context, instance=instance)
@@ -8590,6 +8605,7 @@ class DisabledInstanceTypesTestCase(BaseTestCase):
         # FIXME(sirp): for legacy this raises FlavorNotFound instead of
         # InstanceTypeNotFound; we should eventually make it raise
         # InstanceTypeNotFound for consistency.
+        self._stub_migrate_server()
         self.compute_api.resize(self.context, instance, '4')
 
     def test_cannot_resize_to_disabled_instance_type(self):

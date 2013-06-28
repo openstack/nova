@@ -57,7 +57,7 @@ QUOTAS = quota.QUOTAS
 class SchedulerManager(manager.Manager):
     """Chooses a host to run instances on."""
 
-    RPC_API_VERSION = '2.7'
+    RPC_API_VERSION = '2.8'
 
     def __init__(self, scheduler_driver=None, *args, **kwargs):
         if not scheduler_driver:
@@ -163,6 +163,8 @@ class SchedulerManager(manager.Manager):
                                                   'task_state': None},
                                                   context, ex, request_spec)
 
+    # NOTE(timello): This method is deprecated and its functionality has
+    # been moved to conductor. This should be removed in RPC_API_VERSION 3.0.
     def prep_resize(self, context, image, request_spec, filter_properties,
                     instance, instance_type, reservations):
         """Tries to call schedule_prep_resize on the driver.

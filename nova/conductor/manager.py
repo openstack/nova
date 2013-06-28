@@ -588,6 +588,7 @@ class ComputeTaskManager(base.Base):
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.scheduler_rpcapi = scheduler_rpcapi.SchedulerAPI()
         self.image_service = glance.get_default_image_service()
+        self.quotas = quota.QUOTAS
 
     @rpc_common.client_exceptions(exception.NoValidHost,
                                   exception.ComputeServiceUnavailable,
@@ -604,24 +605,70 @@ class ComputeTaskManager(base.Base):
             self.scheduler_rpcapi.live_migration(context, block_migration,
                     disk_over_commit, instance, destination)
         elif not live and not rebuild and flavor:
-            image_ref = instance.get('image_ref')
-            if image_ref:
-                image = self._get_image(context, image_ref)
-            else:
-                image = {}
-            request_spec = scheduler_utils.build_request_spec(
-                context, image, [instance])
-            # NOTE(timello): originally, instance_type in request_spec
+            instance_uuid = instance['uuid']
+            with compute_utils.EventReporter(context, ConductorManager(),
+                                         'cold_migrate', instance_uuid):
+                self._cold_migrate(context, instance, flavor,
+                                   scheduler_hint['filter_properties'],
+                                   reservations)
+        else:
+            raise NotImplementedError()
+
+    def _cold_migrate(self, context, instance, flavor, filter_properties,
+                      reservations):
+        image_ref = instance.get('image_ref')
+        if image_ref:
+            image = self._get_image(context, image_ref)
+        else:
+            image = {}
+
+        request_spec = scheduler_utils.build_request_spec(
+            context, image, [instance])
+
+        try:
+            hosts = self.scheduler_rpcapi.select_destinations(
+                    context, request_spec, filter_properties)
+            host_state = hosts[0]
+        except exception.NoValidHost as ex:
+            updates = {'vm_state': vm_states.ACTIVE, 'task_state': None}
+            self._set_vm_state_and_notify(context, 'migrate_server',
+                                          updates, ex, request_spec)
+            if reservations:
+                self.quotas.rollback(context, reservations)
+
+            LOG.warning(_("No valid host found for cold migrate"))
+            return
+
+        try:
+            scheduler_utils.populate_filter_properties(filter_properties,
+                                                       host_state)
+            # context is not serializable
+            filter_properties.pop('context', None)
+
+            # TODO(timello): originally, instance_type in request_spec
             # on compute.api.resize does not have 'extra_specs', so we
             # remove it for now to keep tests backward compatibility.
             request_spec['instance_type'].pop('extra_specs')
-            self.scheduler_rpcapi.prep_resize(
-                    context, instance=instance, instance_type=flavor,
-                    image=image, request_spec=request_spec,
-                    filter_properties=scheduler_hint['filter_properties'],
-                    reservations=reservations)
-        else:
-            raise NotImplementedError()
+
+            (host, node) = (host_state['host'], host_state['nodename'])
+            self.compute_rpcapi.prep_resize(
+                context, image, instance, flavor, host,
+                reservations, request_spec=request_spec,
+                filter_properties=filter_properties, node=node)
+        except Exception as ex:
+            with excutils.save_and_reraise_exception():
+                updates = {'vm_state': vm_states.ERROR,
+                            'task_state': None}
+                self._set_vm_state_and_notify(context, 'migrate_server',
+                                              updates, ex, request_spec)
+                if reservations:
+                    self.quotas.rollback(context, reservations)
+
+    def _set_vm_state_and_notify(self, context, method, updates, ex,
+                                 request_spec):
+        scheduler_utils.set_vm_state_and_notify(
+                context, 'compute_task', method, updates,
+                ex, request_spec, self.db)
 
     def build_instances(self, context, instances, image, filter_properties,
             admin_password, injected_files, requested_networks,
