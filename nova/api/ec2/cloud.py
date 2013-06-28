@@ -1628,7 +1628,8 @@ class CloudController(object):
         validate_ec2_id(instance_id)
         ec2_instance_id = instance_id
         instance_uuid = ec2utils.ec2_inst_id_to_uuid(context, ec2_instance_id)
-        instance = self.compute_api.get(context, instance_uuid)
+        instance = self.compute_api.get(context, instance_uuid,
+                                        want_objects=True)
 
         bdms = self.compute_api.get_instance_bdms(context, instance)
 
@@ -1652,14 +1653,14 @@ class CloudController(object):
 
             if vm_state == vm_states.ACTIVE:
                 restart_instance = True
-                inst_obj = db_to_inst_obj(context, instance)
-                self.compute_api.stop(context, inst_obj)
+                self.compute_api.stop(context, instance)
 
             # wait instance for really stopped
             start_time = time.time()
             while vm_state != vm_states.STOPPED:
                 time.sleep(1)
-                instance = self.compute_api.get(context, instance_uuid)
+                instance = self.compute_api.get(context, instance_uuid,
+                                                want_objects=True)
                 vm_state = instance['vm_state']
                 # NOTE(yamahata): timeout and error. 1 hour for now for safety.
                 #                 Is it too short/long?
@@ -1695,8 +1696,7 @@ class CloudController(object):
         ec2_id = ec2utils.glance_id_to_ec2_id(context, new_image['id'])
 
         if restart_instance:
-            inst_obj = db_to_inst_obj(context, instance)
-            self.compute_api.start(context, inst_obj)
+            self.compute_api.start(context, instance)
 
         return {'imageId': ec2_id}
 
