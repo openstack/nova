@@ -496,9 +496,13 @@ class API(base.Base):
 
         for (net_id, _i, port_id) in requested_networks:
             if port_id:
-                port = (neutronv2.get_client(context)
-                                 .show_port(port_id)
-                                 .get('port'))
+                try:
+                    port = (neutronv2.get_client(context)
+                                     .show_port(port_id)
+                                     .get('port'))
+                except neutronv2.exceptions.NeutronClientException as e:
+                    if e.status_code == 404:
+                        port = None
                 if not port:
                     raise exception.PortNotFound(port_id=port_id)
                 if port.get('device_id', None):
