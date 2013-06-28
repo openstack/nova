@@ -16,21 +16,27 @@
 
 from oslo.config import cfg
 
+from nova import db
 from nova.openstack.common import log as logging
 from nova.scheduler import filters
 
 LOG = logging.getLogger(__name__)
 
-ram_allocation_ratio_opt = cfg.FloatOpt("ram_allocation_ratio",
+ram_allocation_ratio_opt = cfg.FloatOpt('ram_allocation_ratio',
         default=1.5,
-        help="virtual ram to physical ram allocation ratio")
+        help='Virtual ram to physical ram allocation ratio which affects '
+             'all ram filters. This configuration specifies a global ratio '
+             'for RamFilter. For AggregateRamFilter, it will fall back to '
+             'this configuration value if no per-aggregate setting found.')
 
 CONF = cfg.CONF
 CONF.register_opt(ram_allocation_ratio_opt)
 
 
-class RamFilter(filters.BaseHostFilter):
-    """Ram Filter with over subscription flag."""
+class BaseRamFilter(filters.BaseHostFilter):
+
+    def _get_ram_allocation_ratio(self, host_state, filter_properties):
+        raise NotImplementedError
 
     def host_passes(self, host_state, filter_properties):
         """Only return hosts with sufficient available RAM."""
@@ -39,7 +45,10 @@ class RamFilter(filters.BaseHostFilter):
         free_ram_mb = host_state.free_ram_mb
         total_usable_ram_mb = host_state.total_usable_ram_mb
 
-        memory_mb_limit = total_usable_ram_mb * CONF.ram_allocation_ratio
+        ram_allocation_ratio = self._get_ram_allocation_ratio(host_state,
+                                                          filter_properties)
+
+        memory_mb_limit = total_usable_ram_mb * ram_allocation_ratio
         used_ram_mb = total_usable_ram_mb - free_ram_mb
         usable_ram = memory_mb_limit - used_ram_mb
         if not usable_ram >= requested_ram:
@@ -53,3 +62,44 @@ class RamFilter(filters.BaseHostFilter):
         # save oversubscription limit for compute node to test against:
         host_state.limits['memory_mb'] = memory_mb_limit
         return True
+
+
+class RamFilter(BaseRamFilter):
+    """Ram Filter with over subscription flag."""
+
+    def _get_ram_allocation_ratio(self, host_state, filter_properties):
+        return CONF.ram_allocation_ratio
+
+
+class AggregateRamFilter(BaseRamFilter):
+    """AggregateRamFilter with per-aggregate ram subscription flag.
+
+    Fall back to global ram_allocation_ratio if no per-aggregate setting found.
+    """
+
+    def _get_ram_allocation_ratio(self, host_state, filter_properties):
+        context = filter_properties['context'].elevated()
+        # TODO(uni): DB query in filter is a performance hit, especially for
+        # system with lots of hosts. Will need a general solution here to fix
+        # all filters with aggregate DB call things.
+        metadata = db.aggregate_metadata_get_by_host(
+                     context, host_state.host, key='ram_allocation_ratio')
+        aggregate_vals = metadata.get('ram_allocation_ratio', set())
+        num_values = len(aggregate_vals)
+
+        if num_values == 0:
+            return CONF.ram_allocation_ratio
+
+        if num_values > 1:
+            LOG.warning(_("%(num_values)d ratio values found, "
+                          "of which the minimum value will be used."),
+                         {'num_values': num_values})
+
+        try:
+            ratio = float(min(aggregate_vals))
+        except ValueError as e:
+            LOG.warning(_("Could not decode ram_allocation_ratio: "
+                            "'%(e)s'") % locals())
+            ratio = CONF.ram_allocation_ratio
+
+        return ratio
