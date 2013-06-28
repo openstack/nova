@@ -20,6 +20,7 @@ The VMware API VM utility module to build SOAP object specs.
 """
 
 import copy
+
 from nova import exception
 from nova.virt.vmwareapi import vim_util
 
@@ -524,6 +525,111 @@ def get_vm_ref(session, instance):
     if vm_ref is None:
         raise exception.InstanceNotFound(instance_id=instance['uuid'])
     return vm_ref
+
+
+def get_host_ref_from_id(session, host_id, property_list=None):
+    """Get a host reference object for a host_id string."""
+
+    if property_list is None:
+        property_list = ['name']
+
+    host_refs = session._call_method(
+                    vim_util, "get_objects",
+                    "HostSystem", property_list)
+
+    for ref in host_refs:
+        if ref.obj.value == host_id:
+            return ref
+
+
+def get_host_id_from_vm_ref(session, vm_ref):
+    """
+    This method allows you to find the managed object
+    ID of the host running a VM. Since vMotion can
+    change the value, you should not presume that this
+    is a value that you can cache for very long and
+    should be prepared to allow for it to change.
+
+    :param session: a vSphere API connection
+    :param vm_ref: a reference object to the running VM
+    :return: the host_id running the virtual machine
+    """
+
+    # to prevent typographical errors below
+    property_name = 'runtime.host'
+
+    # a property collector in VMware vSphere Management API
+    # is a set of local representations of remote values.
+    # property_set here, is a local representation of the
+    # properties we are querying for.
+    property_set = session._call_method(
+            vim_util, "get_object_properties",
+            None, vm_ref, vm_ref._type, [property_name])
+
+    prop = property_from_property_set(
+        property_name, property_set)
+
+    if prop is not None:
+        prop = prop.val.value
+    else:
+        # reaching here represents an impossible state
+        raise RuntimeError(
+            "Virtual Machine %s exists without a runtime.host!"
+            % (vm_ref))
+
+    return prop
+
+
+def property_from_property_set(property_name, property_set):
+    '''
+    Use this method to filter property collector results.
+
+    Because network traffic is expensive, multiple
+    VMwareAPI calls will sometimes pile-up properties
+    to be collected. That means results may contain
+    many different values for multiple purposes.
+
+    This helper will filter a list for a single result
+    and filter the properties of that result to find
+    the single value of whatever type resides in that
+    result. This could be a ManagedObjectReference ID
+    or a complex value.
+
+    :param property_name: name of property you want
+    :param property_set: all results from query
+    :return: the value of the property.
+    '''
+
+    for prop in property_set:
+        p = _property_from_propSet(prop.propSet, property_name)
+        if p is not None:
+            return p
+
+
+def _property_from_propSet(propSet, name='name'):
+    for p in propSet:
+        if p.name == name:
+            return p
+
+
+def get_host_ref_for_vm(session, instance, props):
+    """Get the ESXi host running a VM by its name."""
+
+    vm_ref = get_vm_ref(session, instance)
+    host_id = get_host_id_from_vm_ref(session, vm_ref)
+    return get_host_ref_from_id(session, host_id, props)
+
+
+def get_host_name_for_vm(session, instance):
+    """Get the ESXi host running a VM by its name."""
+    host_ref = get_host_ref_for_vm(session, instance, ['name'])
+    return get_host_name_from_host_ref(host_ref)
+
+
+def get_host_name_from_host_ref(host_ref):
+    p = _property_from_propSet(host_ref.propSet)
+    if p is not None:
+        return p.val
 
 
 def get_cluster_ref_from_name(session, cluster_name):

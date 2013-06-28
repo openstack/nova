@@ -21,6 +21,7 @@
 A fake VMware VI API implementation.
 """
 
+import collections
 import pprint
 import uuid
 
@@ -83,28 +84,72 @@ def _get_objects(obj_type):
     return lst_objs
 
 
-class Prop(object):
+class Property(object):
     """Property Object base class."""
 
-    def __init__(self):
-        self.name = None
-        self.val = None
+    def __init__(self, name=None, val=None):
+        self.name = name
+        self.val = val
 
 
-class Obj(object):
-    def __init__(self, name, value):
+class ManagedObjectReference(object):
+    """A managed object reference is a remote identifier."""
+
+    def __init__(self, value="object-123", _type="ManagedObject"):
+        super(ManagedObjectReference, self)
+        # Managed Object Reference value attributes
+        # typically have values like vm-123 or
+        # host-232 and not UUID.
         self.value = value
-        self._type = name
+        # Managed Object Reference _type
+        # attributes hold the name of the type
+        # of the vCenter object the value
+        # attribute is the identifier for
+        self._type = _type
+
+
+class ObjectContent(object):
+    """ObjectContent array holds dynamic properties."""
+
+    # This class is a *fake* of a class sent back to us by
+    # SOAP. It has its own names. These names are decided
+    # for us by the API we are *faking* here.
+    def __init__(self, obj_ref, prop_list=None, missing_list=None):
+        self.obj = obj_ref
+
+        if not isinstance(prop_list, collections.Iterable):
+            prop_list = []
+
+        if not isinstance(missing_list, collections.Iterable):
+            missing_list = []
+
+        # propSet is the name your Python code will need to
+        # use since this is the name that the API will use
+        self.propSet = prop_list
+
+        # missingSet is the name your python code will
+        # need to use since this is the name that the
+        # API we are talking to will use.
+        self.missingSet = missing_list
 
 
 class ManagedObject(object):
-    """Managed Data Object base class."""
+    """Managed Object base class."""
 
     def __init__(self, name="ManagedObject", obj_ref=None, value=None):
         """Sets the obj property which acts as a reference to the object."""
         super(ManagedObject, self).__setattr__('objName', name)
+
+        # A managed object is a local representation of a
+        # remote object that you can reference using the
+        # object reference.
         if obj_ref is None:
-            obj_ref = Obj(name, value)
+            if value is None:
+                value = 'obj-123'
+            obj_ref = ManagedObjectReference(value, name)
+
+        # we use __setattr__ here because below the
+        # default setter has been altered for this class.
         object.__setattr__(self, 'obj', obj_ref)
         object.__setattr__(self, 'propSet', [])
 
@@ -124,16 +169,20 @@ class ManagedObject(object):
         return self.__getattr__(attr)
 
     def __setattr__(self, attr, val):
+        # TODO(hartsocks): this is adds unnecessary complexity to the class
         for prop in self.propSet:
             if prop.name == attr:
                 prop.val = val
                 return
-        elem = Prop()
+        elem = Property()
         elem.name = attr
         elem.val = val
         self.propSet.append(elem)
 
     def __getattr__(self, attr):
+        # TODO(hartsocks): remove this
+        # in a real ManagedObject you have to iterate the propSet
+        # in a real ManagedObject, the propSet is a *set* not a list
         for elem in self.propSet:
             if elem.name == attr:
                 return elem.val
@@ -215,6 +264,8 @@ class VirtualMachine(ManagedObject):
         self.set("summary.config.memorySizeMB", kwargs.get("mem", 1))
         self.set("config.hardware.device", kwargs.get("virtual_device", None))
         self.set("config.extraConfig", kwargs.get("extra_config", None))
+        self.set('runtime.host',
+                 ManagedObjectReference(value='host-123', _type="HostSystem"))
         self.device = kwargs.get("virtual_device")
 
     def reconfig(self, factory, val):
@@ -310,8 +361,8 @@ class HostNetworkSystem(ManagedObject):
 class HostSystem(ManagedObject):
     """Host System class."""
 
-    def __init__(self):
-        super(HostSystem, self).__init__("HostSystem")
+    def __init__(self, obj_ref=None, value='host-123'):
+        super(HostSystem, self).__init__("HostSystem", obj_ref, value)
         self.set("name", "ha-host")
         if _db_content.get("HostNetworkSystem", None) is None:
             create_host_network_system()

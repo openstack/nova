@@ -1089,6 +1089,26 @@ class VMwareVMOps(object):
                 'port': self._get_vnc_port(vm_ref),
                 'internal_access_path': None}
 
+    def get_vnc_console_vcenter(self, instance):
+        """Return connection info for a vnc console using vCenter logic."""
+
+        # vCenter does not run virtual machines and does not run
+        # a VNC proxy. Instead, you need to tell OpenStack to talk
+        # directly to the ESX host running the VM you are attempting
+        # to connect to via VNC.
+
+        vnc_console = self.get_vnc_console(instance)
+        host_name = vm_util.get_host_name_for_vm(
+                        self._session,
+                        instance)
+        vnc_console['host'] = host_name
+
+        # NOTE: VM can move hosts in some situations. Debug for admins.
+        LOG.debug(_("VM %(uuid)s is currently on host %(host_name)s"),
+                {'uuid': instance['name'], 'host_name': host_name})
+
+        return vnc_console
+
     @staticmethod
     def _get_vnc_port(vm_ref):
         """Return VNC port for an VM."""
