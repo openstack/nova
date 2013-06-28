@@ -17,7 +17,7 @@
 
 import re
 
-from migrate.changeset import UniqueConstraint
+from migrate.changeset import UniqueConstraint, ForeignKeyConstraint
 from sqlalchemy import Boolean
 from sqlalchemy import CheckConstraint
 from sqlalchemy import Column
@@ -101,7 +101,8 @@ def _get_unique_constraints_in_sqlite(migrate_engine, table_name):
 
     uniques = set([
         schema.UniqueConstraint(
-            *[getattr(table.c, c.strip()) for c in cols.split(",")], name=name
+            *[getattr(table.c, c.strip(' "'))
+              for c in cols.split(",")], name=name
         )
         for name, cols in re.findall(regexp, sql_data)
     ])
@@ -128,7 +129,8 @@ def _drop_unique_constraint_in_sqlite(migrate_engine, table_name, uc_name,
     table.constraints.update(uniques)
 
     constraints = [constraint for constraint in table.constraints
-                    if not constraint.name == uc_name]
+                    if not constraint.name == uc_name and
+                    not isinstance(constraint, schema.ForeignKeyConstraint)]
 
     new_table = Table(table_name + "__tmp__", meta, *(columns + constraints))
     new_table.create()
@@ -139,12 +141,20 @@ def _drop_unique_constraint_in_sqlite(migrate_engine, table_name, uc_name,
         indexes.append(Index(index["name"],
                              *column_names,
                              unique=index["unique"]))
+    f_keys = []
+    for fk in insp.get_foreign_keys(table_name):
+        refcolumns = [fk['referred_table'] + '.' + col
+                      for col in fk['referred_columns']]
+        f_keys.append(ForeignKeyConstraint(fk['constrained_columns'],
+                      refcolumns, table=new_table, name=fk['name']))
 
     ins = InsertFromSelect(new_table, table.select())
     migrate_engine.execute(ins)
     table.drop()
 
     [index.create(migrate_engine) for index in indexes]
+    for fkey in f_keys:
+        fkey.create()
     new_table.rename(table_name)
 
 
