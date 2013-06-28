@@ -291,7 +291,7 @@ def clean_shutdown_vm(session, instance, vm_ref):
     if is_vm_shutdown(session, vm_ref):
         LOG.warn(_("VM already halted, skipping shutdown..."),
                  instance=instance)
-        return False
+        return True
 
     LOG.debug(_("Shutting down VM (cleanly)"), instance=instance)
     try:
@@ -306,7 +306,7 @@ def hard_shutdown_vm(session, instance, vm_ref):
     if is_vm_shutdown(session, vm_ref):
         LOG.warn(_("VM already halted, skipping shutdown..."),
                  instance=instance)
-        return False
+        return True
 
     LOG.debug(_("Shutting down VM (hard)"), instance=instance)
     try:
