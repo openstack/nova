@@ -62,7 +62,7 @@ class ImagesControllerTest(test.TestCase):
 
         href = "http://localhost/v3/images/124"
         bookmark = "http://localhost/images/124"
-        alternate = "%s/fake/images/124" % glance.generate_glance_url()
+        alternate = "%s/images/124" % glance.generate_glance_url()
         server_uuid = "aa640691-d1a7-4a67-9d3c-d35ee6b3cc74"
         server_href = "http://localhost/v3/servers/" + server_uuid
         server_bookmark = "http://localhost/servers/" + server_uuid
@@ -118,7 +118,7 @@ class ImagesControllerTest(test.TestCase):
         actual_image = self.controller.show(fake_req, '124')
         href = "https://zoo.com:42/v3/images/124"
         bookmark = "https://zoo.com:42/images/124"
-        alternate = "http://circus.com:34/fake/images/124"
+        alternate = "http://circus.com:34/images/124"
         server_uuid = "aa640691-d1a7-4a67-9d3c-d35ee6b3cc74"
         server_href = "https://zoo.com:42/v3/servers/" + server_uuid
         server_bookmark = "https://zoo.com:42/servers/" + server_uuid
@@ -179,7 +179,7 @@ class ImagesControllerTest(test.TestCase):
         server_uuid = "aa640691-d1a7-4a67-9d3c-d35ee6b3cc74"
         server_href = "http://localhost/v3/servers/" + server_uuid
         server_bookmark = "http://localhost/servers/" + server_uuid
-        alternate = "%s/fake/images/%s"
+        alternate = "%s/images/%s"
 
         expected = [{
             'id': '123',
@@ -281,7 +281,7 @@ class ImagesControllerTest(test.TestCase):
             {
                 "rel": "alternate",
                 "type": "application/vnd.openstack.image",
-                "href": "%s/fake/images/125" % glance.generate_glance_url()
+                "href": "%s/images/125" % glance.generate_glance_url()
             }],
         },
         {
@@ -320,7 +320,7 @@ class ImagesControllerTest(test.TestCase):
             {
                 "rel": "alternate",
                 "type": "application/vnd.openstack.image",
-                "href": "%s/fake/images/126" % glance.generate_glance_url()
+                "href": "%s/images/126" % glance.generate_glance_url()
             }],
         },
         {
@@ -359,7 +359,7 @@ class ImagesControllerTest(test.TestCase):
             {
                 "rel": "alternate",
                 "type": "application/vnd.openstack.image",
-                "href": "%s/fake/images/127" % glance.generate_glance_url()
+                "href": "%s/images/127" % glance.generate_glance_url()
             }],
         },
         {
@@ -398,7 +398,7 @@ class ImagesControllerTest(test.TestCase):
             {
                 "rel": "alternate",
                 "type": "application/vnd.openstack.image",
-                "href": "%s/fake/images/128" % glance.generate_glance_url()
+                "href": "%s/images/128" % glance.generate_glance_url()
             }],
         },
         {
@@ -437,7 +437,7 @@ class ImagesControllerTest(test.TestCase):
             {
                 "rel": "alternate",
                 "type": "application/vnd.openstack.image",
-                "href": "%s/fake/images/129" % glance.generate_glance_url()
+                "href": "%s/images/129" % glance.generate_glance_url()
             }],
         },
         {
@@ -462,7 +462,7 @@ class ImagesControllerTest(test.TestCase):
             {
                 "rel": "alternate",
                 "type": "application/vnd.openstack.image",
-                "href": "%s/fake/images/130" % glance.generate_glance_url()
+                "href": "%s/images/130" % glance.generate_glance_url()
             }],
         },
         {
@@ -487,7 +487,7 @@ class ImagesControllerTest(test.TestCase):
             {
                 "rel": "alternate",
                 "type": "application/vnd.openstack.image",
-                "href": "%s/fake/images/131" % glance.generate_glance_url()
+                "href": "%s/images/131" % glance.generate_glance_url()
             }],
         },
         ]
@@ -503,7 +503,7 @@ class ImagesControllerTest(test.TestCase):
         server_uuid = "aa640691-d1a7-4a67-9d3c-d35ee6b3cc74"
         server_href = "http://localhost/v3/servers/" + server_uuid
         server_bookmark = "http://localhost/servers/" + server_uuid
-        alternate = "%s/fake/images/%s"
+        alternate = "%s/images/%s"
 
         expected = [{
             'id': '123',
@@ -628,7 +628,7 @@ class ImagesControllerTest(test.TestCase):
     def test_image_detail_filter_server_uuid(self):
         image_service = self.mox.CreateMockAnything()
         uuid = 'fa95aaf5-ab3b-4cd8-88c0-2be7dd051aaf'
-        url = '/v2/fake/images/detail?server=' + uuid
+        url = '/v3/os-images/detail?server=' + uuid
         filters = {'property-instance_uuid': uuid}
         request = fakes.HTTPRequestV3.blank(url)
         context = request.environ['nova.context']
@@ -692,10 +692,10 @@ class ImagesControllerTest(test.TestCase):
                           request)
 
     def test_generate_alternate_link(self):
-        view = images_view.ViewBuilder()
+        view = images_view.ViewBuilderV3()
         request = fakes.HTTPRequestV3.blank('/v3/os-images/1')
         generated_url = view._get_alternate_link(request, 1)
-        actual_url = "%s/fake/images/1" % glance.generate_glance_url()
+        actual_url = "%s/images/1" % glance.generate_glance_url()
         self.assertEqual(generated_url, actual_url)
 
     def test_delete_image(self):
