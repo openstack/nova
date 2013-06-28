@@ -32,6 +32,7 @@ from nova.openstack.common import jsonutils
 from nova import quota
 from nova import test
 from nova.tests.api.openstack import fakes
+from nova.tests import fake_instance
 from nova.tests import utils
 
 CONF = cfg.CONF
@@ -79,25 +80,28 @@ def security_group_rule_db(rule, id=None):
     return AttrDict(attrs)
 
 
-def return_server(context, server_id):
-    return {'id': int(server_id),
-            'power_state': 0x01,
-            'host': "localhost",
-            'uuid': FAKE_UUID1,
-            'name': 'asdf'}
+def return_server(context, server_id, columns_to_join=None):
+    return fake_instance.fake_db_instance(
+        **{'id': int(server_id),
+           'power_state': 0x01,
+           'host': "localhost",
+           'uuid': FAKE_UUID1,
+           'name': 'asdf'})
 
 
-def return_server_by_uuid(context, server_uuid):
-    return {'id': 1,
-            'power_state': 0x01,
-            'host': "localhost",
-            'uuid': server_uuid,
-            'name': 'asdf'}
+def return_server_by_uuid(context, server_uuid, columns_to_join=None):
+    return fake_instance.fake_db_instance(
+        **{'id': 1,
+           'power_state': 0x01,
+           'host': "localhost",
+           'uuid': server_uuid,
+           'name': 'asdf'})
 
 
-def return_non_running_server(context, server_id):
-    return {'id': server_id, 'power_state': power_state.SHUTDOWN,
-            'uuid': FAKE_UUID1, 'host': "localhost", 'name': 'asdf'}
+def return_non_running_server(context, server_id, columns_to_join=None):
+    return fake_instance.fake_db_instance(
+        **{'id': server_id, 'power_state': power_state.SHUTDOWN,
+           'uuid': FAKE_UUID1, 'host': "localhost", 'name': 'asdf'})
 
 
 def return_security_group_by_name(context, project_id, group_name):
@@ -109,7 +113,7 @@ def return_security_group_without_instances(context, project_id, group_name):
     return {'id': 1, 'name': group_name}
 
 
-def return_server_nonexistent(context, server_id):
+def return_server_nonexistent(context, server_id, columns_to_join=None):
     raise exception.InstanceNotFound(instance_id=server_id)
 
 
@@ -348,7 +352,7 @@ class TestSecurityGroups(test.TestCase):
             groups.append(sg)
         expected = {'security_groups': groups}
 
-        def return_instance(context, server_id):
+        def return_instance(context, server_id, columns_to_join=None):
             self.assertEquals(server_id, FAKE_UUID1)
             return return_server_by_uuid(context, server_id)
 

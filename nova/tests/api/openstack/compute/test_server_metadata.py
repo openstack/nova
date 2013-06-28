@@ -29,6 +29,7 @@ from nova.openstack.common import jsonutils
 from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.api.openstack import fakes
+from nova.tests import fake_instance
 
 
 CONF = cfg.CONF
@@ -73,25 +74,27 @@ def stub_max_server_metadata():
     return metadata
 
 
-def return_server(context, server_id):
-    return {'id': server_id,
-            'uuid': '0cc3346e-9fef-4445-abe6-5d2b2690ec64',
-            'name': 'fake',
-            'locked': False,
-            'launched_at': timeutils.utcnow(),
-            'vm_state': vm_states.ACTIVE}
+def return_server(context, server_id, columns_to_join=None):
+    return fake_instance.fake_db_instance(
+        **{'id': server_id,
+           'uuid': '0cc3346e-9fef-4445-abe6-5d2b2690ec64',
+           'name': 'fake',
+           'locked': False,
+           'launched_at': timeutils.utcnow(),
+           'vm_state': vm_states.ACTIVE})
 
 
-def return_server_by_uuid(context, server_uuid):
-    return {'id': 1,
-            'uuid': '0cc3346e-9fef-4445-abe6-5d2b2690ec64',
-            'name': 'fake',
-            'locked': False,
-            'launched_at': timeutils.utcnow(),
-            'vm_state': vm_states.ACTIVE}
+def return_server_by_uuid(context, server_uuid, columns_to_join=None):
+    return fake_instance.fake_db_instance(
+        **{'id': 1,
+           'uuid': '0cc3346e-9fef-4445-abe6-5d2b2690ec64',
+           'name': 'fake',
+           'locked': False,
+           'launched_at': timeutils.utcnow(),
+           'vm_state': vm_states.ACTIVE})
 
 
-def return_server_nonexistent(context, server_id):
+def return_server_nonexistent(context, server_id, columns_to_join=None):
     raise exception.InstanceNotFound(instance_id=server_id)
 
 
@@ -552,16 +555,20 @@ class BadStateServerMetaDataTest(BaseTest):
         self.assertRaises(webob.exc.HTTPConflict, self.controller.update_all,
                 req, self.uuid, expected)
 
-    def _return_server_in_build(self, context, server_id):
-        return {'id': server_id,
-                'uuid': '0cc3346e-9fef-4445-abe6-5d2b2690ec64',
-                'name': 'fake',
-                'locked': False,
-                'vm_state': vm_states.BUILDING}
+    def _return_server_in_build(self, context, server_id,
+                                columns_to_join=None):
+        return fake_instance.fake_db_instance(
+            **{'id': server_id,
+               'uuid': '0cc3346e-9fef-4445-abe6-5d2b2690ec64',
+               'name': 'fake',
+               'locked': False,
+               'vm_state': vm_states.BUILDING})
 
-    def _return_server_in_build_by_uuid(self, context, server_uuid):
-        return {'id': 1,
-                'uuid': '0cc3346e-9fef-4445-abe6-5d2b2690ec64',
-                'name': 'fake',
-                'locked': False,
-                'vm_state': vm_states.BUILDING}
+    def _return_server_in_build_by_uuid(self, context, server_uuid,
+                                        columns_to_join=None):
+        return fake_instance.fake_db_instance(
+            **{'id': 1,
+               'uuid': '0cc3346e-9fef-4445-abe6-5d2b2690ec64',
+               'name': 'fake',
+               'locked': False,
+               'vm_state': vm_states.BUILDING})

@@ -236,7 +236,7 @@ class ServersControllerTest(test.TestCase):
         """Create two servers with the same host and different
         project_ids and check that the hostId's are unique.
         """
-        def return_instance_with_host(self, *args):
+        def return_instance_with_host(self, *args, **kwargs):
             project_id = str(uuid.uuid4())
             return fakes.stub_instance(id=1, uuid=FAKE_UUID,
                                        project_id=project_id,
