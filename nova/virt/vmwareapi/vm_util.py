@@ -50,6 +50,10 @@ def get_vm_create_spec(client_factory, instance, data_store_name,
     config_spec.name = instance['uuid']
     config_spec.guestId = os_type
 
+    # Allow nested ESX instances to host 64 bit VMs.
+    if os_type == "vmkernel5Guest":
+        config_spec.nestedHVEnabled = "True"
+
     vm_file_info = client_factory.create('ns0:VirtualMachineFileInfo')
     vm_file_info.vmPathName = "[" + data_store_name + "]"
     config_spec.files = vm_file_info
