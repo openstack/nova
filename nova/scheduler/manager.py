@@ -21,8 +21,6 @@
 Scheduler Service
 """
 
-import sys
-
 from oslo.config import cfg
 
 from nova.compute import rpcapi as compute_rpcapi
@@ -34,15 +32,14 @@ from nova.conductor.tasks import live_migrate
 import nova.context
 from nova import exception
 from nova import manager
-from nova import notifications
 from nova.openstack.common import excutils
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
-from nova.openstack.common.notifier import api as notifier
 from nova.openstack.common import periodic_task
 from nova.openstack.common.rpc import common as rpc_common
 from nova import quota
+from nova.scheduler import utils as scheduler_utils
 
 
 LOG = logging.getLogger(__name__)
@@ -203,54 +200,8 @@ class SchedulerManager(manager.Manager):
 
     def _set_vm_state_and_notify(self, method, updates, context, ex,
                                  request_spec):
-        """changes VM state and notifies."""
-        # FIXME(comstud): Re-factor this somehow. Not sure this belongs in the
-        # scheduler manager like this. We should make this easier.
-        # run_instance only sends a request_spec, and an instance may or may
-        # not have been created in the API (or scheduler) already. If it was
-        # created, there's a 'uuid' set in the instance_properties of the
-        # request_spec.
-        # (littleidea): I refactored this a bit, and I agree
-        # it should be easier :)
-        # The refactoring could go further but trying to minimize changes
-        # for essex timeframe
-
-        LOG.warning(_("Failed to schedule_%(method)s: %(ex)s"),
-                    {'method': method, 'ex': ex})
-
-        vm_state = updates['vm_state']
-        properties = request_spec.get('instance_properties', {})
-        # NOTE(vish): We shouldn't get here unless we have a catastrophic
-        #             failure, so just set all instances to error. if uuid
-        #             is not set, instance_uuids will be set to [None], this
-        #             is solely to preserve existing behavior and can
-        #             be removed along with the 'if instance_uuid:' if we can
-        #             verify that uuid is always set.
-        uuids = [properties.get('uuid')]
-        for instance_uuid in request_spec.get('instance_uuids') or uuids:
-            if instance_uuid:
-                state = vm_state.upper()
-                LOG.warning(_('Setting instance to %s state.'), state,
-                            instance_uuid=instance_uuid)
-
-                # update instance state and notify on the transition
-                (old_ref, new_ref) = self.db.instance_update_and_get_original(
-                        context, instance_uuid, updates)
-                notifications.send_update(context, old_ref, new_ref,
-                        service="scheduler")
-                compute_utils.add_instance_fault_from_exc(context,
-                        conductor_api.LocalAPI(),
-                        new_ref, ex, sys.exc_info())
-
-            payload = dict(request_spec=request_spec,
-                           instance_properties=properties,
-                           instance_id=instance_uuid,
-                           state=vm_state,
-                           method=method,
-                           reason=ex)
-
-            notifier.notify(context, notifier.publisher_id("scheduler"),
-                            'scheduler.' + method, notifier.ERROR, payload)
+        scheduler_utils.set_vm_state_and_notify(
+            context, 'scheduler', method, updates, ex, request_spec, self.db)
 
     # NOTE(hanlind): This method can be removed in v3.0 of the RPC API.
     def show_host_resources(self, context, host):
