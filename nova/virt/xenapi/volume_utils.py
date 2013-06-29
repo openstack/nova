@@ -233,8 +233,16 @@ def parse_volume_info(connection_data):
     target_host = _get_target_host(target_portal)
     target_port = _get_target_port(target_portal)
     target_iqn = connection_data['target_iqn']
-    LOG.debug('(vol_id,number,host,port,iqn): (%s,%s,%s,%s)',
-              (volume_id, target_host, target_port, target_iqn))
+
+    log_params = {
+        "vol_id": volume_id,
+        "host": target_host,
+        "port": target_port,
+        "iqn": target_iqn
+    }
+    LOG.debug(_('(vol_id,host,port,iqn): '
+              '(%(vol_id)s,%(host)s,%(port)s,%(iqn)s)'), log_params)
+
     if (volume_id is None or
         target_host is None or
         target_iqn is None):
