@@ -18,7 +18,7 @@ import copy
 from lxml import etree
 from webob import exc
 
-from nova.api.openstack.compute.contrib import cells as cells_ext
+from nova.api.openstack.compute.plugins.v3 import cells as cells_ext
 from nova.api.openstack import extensions
 from nova.api.openstack import xmlutil
 from nova.cells import rpcapi as cells_rpcapi
@@ -88,12 +88,11 @@ class CellsTest(test.TestCase):
         self.stubs.Set(cells_rpcapi.CellsAPI, 'get_cell_info_for_neighbors',
                 fake_cells_api_get_all_cell_info)
 
-        self.ext_mgr = self.mox.CreateMock(extensions.ExtensionManager)
-        self.controller = cells_ext.Controller(self.ext_mgr)
+        self.controller = cells_ext.CellsController()
         self.context = context.get_admin_context()
 
     def _get_request(self, resource):
-        return fakes.HTTPRequest.blank('/v2/fake/' + resource)
+        return fakes.HTTPRequestV3.blank('/' + resource)
 
     def test_index(self):
         req = self._get_request("cells")
@@ -284,7 +283,6 @@ class CellsTest(test.TestCase):
         self.assertEqual(cell_caps['cap2'], 'c;d')
 
     def test_show_capacities(self):
-        self.ext_mgr.is_loaded('os-cell-capacities').AndReturn(True)
         self.mox.StubOutWithMock(self.controller.cells_rpcapi,
                                  'get_capacities')
         response = {"ram_free":
@@ -305,7 +303,6 @@ class CellsTest(test.TestCase):
         self.assertEqual(response, res_dict['cell']['capacities'])
 
     def test_show_capacity_fails_with_non_admin_context(self):
-        self.ext_mgr.is_loaded('os-cell-capacities').AndReturn(True)
         rules = {"compute_extension:cells": "is_admin:true"}
         self.policy.set_rules(rules)
 
@@ -317,7 +314,6 @@ class CellsTest(test.TestCase):
                           self.controller.capacities, req)
 
     def test_show_capacities_for_invalid_cell(self):
-        self.ext_mgr.is_loaded('os-cell-capacities').AndReturn(True)
         self.mox.StubOutWithMock(self.controller.cells_rpcapi,
                                  'get_capacities')
         self.controller.cells_rpcapi. \
@@ -330,7 +326,6 @@ class CellsTest(test.TestCase):
                           self.controller.capacities, req, "invalid_cell")
 
     def test_show_capacities_for_cell(self):
-        self.ext_mgr.is_loaded('os-cell-capacities').AndReturn(True)
         self.mox.StubOutWithMock(self.controller.cells_rpcapi,
                                  'get_capacities')
         response = {"ram_free":
