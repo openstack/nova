@@ -33,12 +33,12 @@ XMLNS_COMMON_V10 = 'http://docs.openstack.org/common/api/v1.0'
 XMLNS_ATOM = 'http://www.w3.org/2005/Atom'
 
 
-def validate_schema(xml, schema_name):
+def validate_schema(xml, schema_name, version='v1.1'):
     if isinstance(xml, str):
         xml = etree.fromstring(xml)
-    base_path = 'nova/api/openstack/compute/schemas/v1.1/'
-    if schema_name in ('atom', 'atom-link'):
-        base_path = 'nova/api/openstack/compute/schemas/'
+    base_path = 'nova/api/openstack/compute/schemas/'
+    if schema_name not in ('atom', 'atom-link'):
+        base_path += '%s/' % version
     schema_path = os.path.join(utils.novadir(),
                                '%s%s.rng' % (base_path, schema_name))
     schema_doc = etree.parse(schema_path)

@@ -34,6 +34,8 @@ def make_flavor(elem, detailed=False):
         elem.set('ram')
         elem.set('disk')
         elem.set('vcpus', xmlutil.EmptyStringSelector('vcpus'))
+        # NOTE(vish): this was originally added without a namespace
+        elem.set('swap', xmlutil.EmptyStringSelector('swap'))
 
     xmlutil.make_links(elem, 'links')
 

@@ -437,30 +437,36 @@ class FlavorsTest(test.TestCase):
 
 
 class FlavorsXMLSerializationTest(test.TestCase):
-
-    def test_xml_declaration(self):
-        serializer = flavors.FlavorTemplate()
-
-        fixture = {
-            "flavor": {
-                "id": "12",
+    def _create_flavor(self):
+        id = 0
+        while True:
+            id += 1
+            yield {
+                "id": str(id),
                 "name": "asdf",
                 "ram": "256",
                 "disk": "10",
                 "vcpus": "",
+                "swap": "512",
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v3/flavors/12",
+                        "href": "http://localhost/v3/flavors/%s" % id,
                     },
                     {
                         "rel": "bookmark",
-                        "href": "http://localhost/flavors/12",
+                        "href": "http://localhost/flavors/%s" % id,
                     },
                 ],
-            },
-        }
+            }
 
+    def setUp(self):
+        super(FlavorsXMLSerializationTest, self).setUp()
+        self.flavors = self._create_flavor()
+
+    def test_xml_declaration(self):
+        serializer = flavors.FlavorTemplate()
+        fixture = {'flavor': next(self.flavors)}
         output = serializer.serialize(fixture)
         has_dec = output.startswith("<?xml version='1.0' encoding='UTF-8'?>")
         self.assertTrue(has_dec)
@@ -468,29 +474,10 @@ class FlavorsXMLSerializationTest(test.TestCase):
     def test_show(self):
         serializer = flavors.FlavorTemplate()
 
-        fixture = {
-            "flavor": {
-                "id": "12",
-                "name": "asdf",
-                "ram": "256",
-                "disk": "10",
-                "vcpus": "",
-                "links": [
-                    {
-                        "rel": "self",
-                        "href": "http://localhost/v3/flavors/12",
-                    },
-                    {
-                        "rel": "bookmark",
-                        "href": "http://localhost/flavors/12",
-                    },
-                ],
-            },
-        }
-
+        fixture = {'flavor': next(self.flavors)}
         output = serializer.serialize(fixture)
         root = etree.XML(output)
-        xmlutil.validate_schema(root, 'flavor')
+        xmlutil.validate_schema(root, 'flavor', version='v3')
         flavor_dict = fixture['flavor']
 
         for key in ['name', 'id', 'ram', 'disk']:
@@ -505,29 +492,10 @@ class FlavorsXMLSerializationTest(test.TestCase):
     def test_show_handles_integers(self):
         serializer = flavors.FlavorTemplate()
 
-        fixture = {
-            "flavor": {
-                "id": 12,
-                "name": "asdf",
-                "ram": 256,
-                "disk": 10,
-                "vcpus": "",
-                "links": [
-                    {
-                        "rel": "self",
-                        "href": "http://localhost/v3/flavors/12",
-                    },
-                    {
-                        "rel": "bookmark",
-                        "href": "http://localhost/flavors/12",
-                    },
-                ],
-            },
-        }
-
+        fixture = {'flavor': next(self.flavors)}
         output = serializer.serialize(fixture)
         root = etree.XML(output)
-        xmlutil.validate_schema(root, 'flavor')
+        xmlutil.validate_schema(root, 'flavor', version='v3')
         flavor_dict = fixture['flavor']
 
         for key in ['name', 'id', 'ram', 'disk']:
@@ -544,46 +512,14 @@ class FlavorsXMLSerializationTest(test.TestCase):
 
         fixture = {
             "flavors": [
-                {
-                    "id": "23",
-                    "name": "flavor 23",
-                    "ram": "512",
-                    "disk": "20",
-                    "vcpus": "",
-                    "links": [
-                        {
-                            "rel": "self",
-                            "href": "http://localhost/v3/flavors/23",
-                        },
-                        {
-                            "rel": "bookmark",
-                            "href": "http://localhost/flavors/23",
-                        },
-                    ],
-                },
-                {
-                    "id": "13",
-                    "name": "flavor 13",
-                    "ram": "256",
-                    "disk": "10",
-                    "vcpus": "",
-                    "links": [
-                        {
-                            "rel": "self",
-                            "href": "http://localhost/v3/flavors/13",
-                        },
-                        {
-                            "rel": "bookmark",
-                            "href": "http://localhost/flavors/13",
-                        },
-                    ],
-                },
+                next(self.flavors),
+                next(self.flavors),
             ],
         }
 
         output = serializer.serialize(fixture)
         root = etree.XML(output)
-        xmlutil.validate_schema(root, 'flavors')
+        xmlutil.validate_schema(root, 'flavors', version='v3')
         flavor_elems = root.findall('{0}flavor'.format(NS))
         self.assertEqual(len(flavor_elems), 2)
         for i, flavor_elem in enumerate(flavor_elems):
@@ -603,40 +539,8 @@ class FlavorsXMLSerializationTest(test.TestCase):
 
         fixture = {
             "flavors": [
-                {
-                    "id": "23",
-                    "name": "flavor 23",
-                    "ram": "512",
-                    "disk": "20",
-                    "vcpus": "",
-                    "links": [
-                        {
-                            "rel": "self",
-                            "href": "http://localhost/v3/flavors/23",
-                        },
-                        {
-                            "rel": "bookmark",
-                            "href": "http://localhost/flavors/23",
-                        },
-                    ],
-                },
-                {
-                    "id": "13",
-                    "name": "flavor 13",
-                    "ram": "256",
-                    "disk": "10",
-                    "vcpus": "",
-                    "links": [
-                        {
-                            "rel": "self",
-                            "href": "http://localhost/v3/flavors/13",
-                        },
-                        {
-                            "rel": "bookmark",
-                            "href": "http://localhost/flavors/13",
-                        },
-                    ],
-                },
+                next(self.flavors),
+                next(self.flavors),
             ],
         }
 
