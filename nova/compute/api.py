@@ -968,6 +968,8 @@ class API(base.Base):
         # Store image properties so we can use them later
         # (for notifications, etc).  Only store what we can.
         instance.setdefault('system_metadata', {})
+        # Make sure we have the dict form that we need for instance_update.
+        instance['system_metadata'] = utils.instance_sys_meta(instance)
         prefix_format = SM_IMAGE_PROP_PREFIX + '%s'
         for key, value in image_properties.iteritems():
             new_value = unicode(value)[:255]
