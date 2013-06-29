@@ -22,13 +22,14 @@ from nova import compute
 from nova import exception
 
 
-authorize = extensions.extension_authorizer('compute', 'consoles')
+ALIAS = "os-remote-consoles"
+authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
 
 
-class ConsolesController(wsgi.Controller):
+class RemoteConsolesController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         self.compute_api = compute.API()
-        super(ConsolesController, self).__init__(*args, **kwargs)
+        super(RemoteConsolesController, self).__init__(*args, **kwargs)
 
     @wsgi.action('os-getVNCConsole')
     def get_vnc_console(self, req, id, body):
@@ -73,23 +74,18 @@ class ConsolesController(wsgi.Controller):
 
         return {'console': {'type': console_type, 'url': output['url']}}
 
-    def get_actions(self):
-        """Return the actions the extension adds, as required by contract."""
-        actions = [extensions.ActionExtension("servers", "os-getVNCConsole",
-                                              self.get_vnc_console),
-                   extensions.ActionExtension("servers", "os-getSPICEConsole",
-                                              self.get_spice_console)]
-        return actions
 
-
-class Consoles(extensions.ExtensionDescriptor):
+class RemoteConsoles(extensions.V3APIExtensionBase):
     """Interactive Console support."""
-    name = "Consoles"
-    alias = "os-consoles"
-    namespace = "http://docs.openstack.org/compute/ext/os-consoles/api/v2"
-    updated = "2011-12-23T00:00:00+00:00"
+    name = "RemoteConsoles"
+    alias = ALIAS
+    namespace = "http://docs.openstack.org/compute/ext/%s/api/v3" % ALIAS
+    version = 1
 
     def get_controller_extensions(self):
-        controller = ConsolesController()
+        controller = RemoteConsolesController()
         extension = extensions.ControllerExtension(self, 'servers', controller)
         return [extension]
+
+    def get_resources(self):
+        return []
