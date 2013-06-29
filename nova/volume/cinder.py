@@ -142,12 +142,9 @@ def _untranslate_volume_summary_view(context, vol):
     d['volume_type_id'] = vol.volume_type
     d['snapshot_id'] = vol.snapshot_id
 
-    d['volume_metadata'] = []
+    d['volume_metadata'] = {}
     for key, value in vol.metadata.items():
-        item = {}
-        item['key'] = key
-        item['value'] = value
-        d['volume_metadata'].append(item)
+        d['volume_metadata'][key] = value
 
     if hasattr(vol, 'volume_image_metadata'):
         d['volume_image_metadata'] = copy.deepcopy(vol.volume_image_metadata)
