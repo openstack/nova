@@ -841,10 +841,13 @@ class ServersActionsJsonTest(ServersSampleBase):
         self._test_server_action(uuid, "changePassword",
                                  {"password": "foo"})
 
-    def test_server_reboot(self):
+    def test_server_reboot_hard(self):
         uuid = self._post_server()
         self._test_server_action(uuid, "reboot",
                                  {"type": "HARD"})
+
+    def test_server_reboot_soft(self):
+        uuid = self._post_server()
         self._test_server_action(uuid, "reboot",
                                  {"type": "SOFT"})
 
