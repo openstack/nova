@@ -39,6 +39,7 @@ A driver for XenServer or Xen Cloud Platform.
 
 import contextlib
 import cPickle as pickle
+import math
 import time
 import urlparse
 import xmlrpclib
@@ -175,6 +176,29 @@ class XenAPIDriver(driver.ComputeDriver):
         efficiency.
         """
         return self._vmops.instance_exists(instance_name)
+
+    def estimate_instance_overhead(self, instance_info):
+        """Get virtualization overhead required to build an instance of the
+        given flavor.
+
+        :param instance_info: Instance/flavor to calculate overhead for.
+        :returns: Overhead memory in MB.
+        """
+
+        # XenServer memory overhead is proportional to the size of the
+        # VM.  Larger flavor VMs become more efficient with respect to
+        # overhead.
+
+        # interpolated formula to predict overhead required per vm.
+        # based on data from:
+        # https://wiki.openstack.org/wiki/XenServer/Overhead
+        base = 3  # MB
+        per_mb = 0.0081  # MB
+
+        memory_mb = instance_info['memory_mb']
+        overhead = memory_mb * per_mb + base
+        overhead = math.ceil(overhead)
+        return {'memory_mb': overhead}
 
     def list_instances(self):
         """List VM instances."""

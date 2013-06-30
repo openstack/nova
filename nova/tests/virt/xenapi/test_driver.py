@@ -15,6 +15,8 @@
 #    under the License.
 
 
+import math
+
 from nova.tests.virt.xenapi import stubs
 from nova.virt import fake
 from nova.virt import xenapi
@@ -53,3 +55,16 @@ class XenAPIDriverTestCase(stubs.XenAPITestBase):
         self.assertEqual('xen', resources['hypervisor_type'])
         self.assertEqual('somename', resources['hypervisor_hostname'])
         self.assertEqual(50, resources['cpu_info'])
+
+    def test_overhead(self):
+        self.flags(xenapi_connection_url='test_url',
+                   xenapi_connection_password='test_pass')
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
+        driver = xenapi.XenAPIDriver(fake.FakeVirtAPI(), False)
+        instance = {'memory_mb': 30720}
+
+        # expected memory overhead per:
+        # https://wiki.openstack.org/wiki/XenServer/Overhead
+        expected = math.ceil(251.832)
+        overhead = driver.estimate_instance_overhead(instance)
+        self.assertEqual(expected, overhead['memory_mb'])
