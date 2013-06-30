@@ -26,6 +26,7 @@ from nova import compute
 from nova.compute import power_state
 import nova.db
 from nova import exception
+from nova.objects import instance as instance_obj
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
@@ -270,14 +271,25 @@ UUID3 = '00000000-0000-0000-0000-000000000003'
 
 
 def fake_compute_get_all(*args, **kwargs):
-    return [
-        fakes.stub_instance(1, uuid=UUID1,
-                            security_groups=[{'name': 'fake-0-0'},
-                                             {'name': 'fake-0-1'}]),
-        fakes.stub_instance(2, uuid=UUID2,
-                            security_groups=[{'name': 'fake-1-0'},
-                                             {'name': 'fake-1-1'}])
+    base = {'id': 1, 'description': 'foo', 'user_id': 'bar',
+            'project_id': 'baz', 'deleted': False, 'deleted_at': None,
+            'updated_at': None, 'created_at': None}
+    db_list = [
+        fakes.stub_instance(
+            1, uuid=UUID1,
+            security_groups=[dict(base, **{'name': 'fake-0-0'}),
+                             dict(base, **{'name': 'fake-0-1'})]),
+        fakes.stub_instance(
+            2, uuid=UUID2,
+            security_groups=[dict(base, **{'name': 'fake-1-0'}),
+                             dict(base, **{'name': 'fake-1-1'})])
     ]
+
+    return instance_obj._make_instance_list(args[1],
+                                            instance_obj.InstanceList(),
+                                            db_list,
+                                            ['metadata', 'system_metadata',
+                                             'security_groups', 'info_cache'])
 
 
 def fake_compute_get(*args, **kwargs):
