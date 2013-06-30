@@ -1018,15 +1018,11 @@ class Controller(wsgi.Controller):
             instance = self.compute_api.get(ctxt, id,
                                             want_objects=True)
             req.cache_db_instance(instance)
-            self.compute_api.update(ctxt, instance, **update_dict)
+            instance.update(update_dict)
+            instance.save()
         except exception.NotFound:
             msg = _("Instance could not be found")
             raise exc.HTTPNotFound(explanation=msg)
-
-        # FIXME(danms): Until compute_api.update() is object-aware,
-        # we need to apply the updates to the instance object so
-        # that views will return the new data
-        instance.update(update_dict)
 
         return self._view_builder.show(req, instance)
 
