@@ -16,7 +16,7 @@
 from lxml import etree
 
 from nova.api.openstack import compute
-from nova.api.openstack.compute.contrib import server_diagnostics
+from nova.api.openstack.compute.plugins.v3 import server_diagnostics
 from nova.api.openstack import wsgi
 from nova.compute import api as compute_api
 from nova.openstack.common import jsonutils
@@ -41,18 +41,15 @@ class ServerDiagnosticsTest(test.TestCase):
 
     def setUp(self):
         super(ServerDiagnosticsTest, self).setUp()
-        self.flags(verbose=True,
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Server_diagnostics'])
         self.stubs.Set(compute_api.API, 'get_diagnostics',
                        fake_get_diagnostics)
         self.stubs.Set(compute_api.API, 'get', fake_instance_get)
 
-        self.router = compute.APIRouter(init_only=('servers', 'diagnostics'))
+        self.router = compute.APIRouterV3(init_only=('servers', 'os-server-diagnostics'))
 
     def test_get_diagnostics(self):
-        req = fakes.HTTPRequest.blank('/fake/servers/%s/diagnostics' % UUID)
+        req = fakes.HTTPRequestV3.blank(
+            '/servers/%s/os-server-diagnostics' % UUID)
         res = req.get_response(self.router)
         output = jsonutils.loads(res.body)
         self.assertEqual(output, {'data': 'Some diagnostic info'})

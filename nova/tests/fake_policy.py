@@ -178,6 +178,7 @@ policy_data = """
     "compute_extension:security_group_default_rules": "",
     "compute_extension:security_groups": "",
     "compute_extension:server_diagnostics": "",
+    "compute_extension:v3:os-server-diagnostics": "",
     "compute_extension:server_password": "",
     "compute_extension:server_usage": "",
     "compute_extension:services": "",

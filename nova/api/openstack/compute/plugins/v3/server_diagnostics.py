@@ -22,7 +22,8 @@ from nova import compute
 from nova import exception
 
 
-authorize = extensions.extension_authorizer('compute', 'server_diagnostics')
+ALIAS = "os-server-diagnostics"
+authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
 sd_nsmap = {None: wsgi.XMLNS_V11}
 
 
@@ -49,19 +50,22 @@ class ServerDiagnosticsController(object):
         return compute_api.get_diagnostics(context, instance)
 
 
-class Server_diagnostics(extensions.ExtensionDescriptor):
+class ServerDiagnostics(extensions.V3APIExtensionBase):
     """Allow Admins to view server diagnostics through server action."""
 
     name = "ServerDiagnostics"
-    alias = "os-server-diagnostics"
+    alias = ALIAS
     namespace = ("http://docs.openstack.org/compute/ext/"
-                 "server-diagnostics/api/v1.1")
-    updated = "2011-12-21T00:00:00+00:00"
+                 "server-diagnostics/api/v3")
+    version = 1
 
     def get_resources(self):
         parent_def = {'member_name': 'server', 'collection_name': 'servers'}
-        #NOTE(bcwaldon): This should be prefixed with 'os-'
-        ext = extensions.ResourceExtension('diagnostics',
-                                           ServerDiagnosticsController(),
-                                           parent=parent_def)
-        return [ext]
+        resources = [
+            extensions.ResourceExtension(ALIAS,
+                                         ServerDiagnosticsController(),
+                                         parent=parent_def)]
+        return resources
+
+    def get_controller_extensions(self):
+        return []
