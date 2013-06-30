@@ -1417,7 +1417,8 @@ class CloudController(object):
 
     def reboot_instances(self, context, instance_id, **kwargs):
         """instance_id is a list of instance ids."""
-        instances = self._ec2_ids_to_instances(context, instance_id)
+        instances = self._ec2_ids_to_instances(context, instance_id,
+                                               objects=True)
         LOG.audit(_("Reboot instance %r"), instance_id, context=context)
         for instance in instances:
             self.compute_api.reboot(context, instance, 'HARD')

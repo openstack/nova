@@ -538,3 +538,15 @@ class CellsAPITestCase(test.TestCase):
         self._check_result(call_info, 'cell_get',
                            expected_args, version='1.13')
         self.assertEqual(result, 'fake_response')
+
+    def test_reboot_instance(self):
+        call_info = self._stub_rpc_method('cast', None)
+
+        self.cells_rpcapi.reboot_instance(
+                self.fake_context, 'fake-instance',
+                block_device_info='ignored', reboot_type='HARD')
+
+        expected_args = {'instance': 'fake-instance',
+                         'reboot_type': 'HARD'}
+        self._check_result(call_info, 'reboot_instance',
+                expected_args, version='1.14')

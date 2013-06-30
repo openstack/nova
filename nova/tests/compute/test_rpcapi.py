@@ -255,7 +255,7 @@ class ComputeRpcAPITestCase(test.TestCase):
                 instance=self.fake_instance,
                 block_device_info={},
                 reboot_type='type',
-                version='2.23')
+                version='2.32')
 
     def test_rebuild_instance(self):
         self._test_compute_api('rebuild_instance', 'cast',

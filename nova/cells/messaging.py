@@ -826,6 +826,11 @@ class _TargetedMessageMethods(_BaseMessageMethods):
         return self._call_compute_api_with_obj(message.ctxt, instance,
                                                'stop', do_cast=do_cast)
 
+    def reboot_instance(self, message, instance, reboot_type):
+        """Reboot an instance via compute_api.reboot()."""
+        self._call_compute_api_with_obj(message.ctxt, instance, 'reboot',
+                                        reboot_type=reboot_type)
+
 
 class _BroadcastMessageMethods(_BaseMessageMethods):
     """These are the methods that can be called as a part of a broadcast
@@ -1526,6 +1531,12 @@ class MessageRunner(object):
         else:
             return self._instance_action(ctxt, instance, 'stop_instance',
                                          need_response=True)
+
+    def reboot_instance(self, ctxt, instance, reboot_type):
+        """Reboot an instance in its cell."""
+        extra_kwargs = dict(reboot_type=reboot_type)
+        self._instance_action(ctxt, instance, 'reboot_instance',
+                              extra_kwargs=extra_kwargs)
 
     @staticmethod
     def get_message_types():

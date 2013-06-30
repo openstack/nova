@@ -183,6 +183,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         2.30 - Adds live_snapshot_instance()
         2.31 - Adds shelve_instance(), shelve_offload_instance, and
                unshelve_instance()
+        2.32 - Make reboot_instance take a new world instance object
     '''
 
     #
@@ -459,13 +460,18 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
 
     def reboot_instance(self, ctxt, instance, block_device_info,
                         reboot_type):
-        instance_p = jsonutils.to_primitive(instance)
+        if not self.can_send_version('2.32'):
+            version = '2.23'
+            instance = jsonutils.to_primitive(
+                objects_base.obj_to_primitive(instance))
+        else:
+            version = '2.32'
         self.cast(ctxt, self.make_msg('reboot_instance',
-                instance=instance_p,
+                instance=instance,
                 block_device_info=block_device_info,
                 reboot_type=reboot_type),
                 topic=_compute_topic(self.topic, ctxt, None, instance),
-                version='2.23')
+                version=version)
 
     def rebuild_instance(self, ctxt, instance, new_pass, injected_files,
             image_ref, orig_image_ref, orig_sys_metadata, bdms,
