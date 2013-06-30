@@ -17,12 +17,16 @@ import webob.exc
 
 from nova.api.openstack import common
 from nova.api.openstack.compute.views import images as views_images
+from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import exception
 import nova.image.glance
 import nova.utils
 
+
+ALIAS = "os-images"
+authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
 
 SUPPORTED_FILTERS = {
     'name': 'name',
@@ -83,7 +87,7 @@ class ImagesTemplate(xmlutil.TemplateBuilder):
         return xmlutil.MasterTemplate(root, 1, nsmap=image_nsmap)
 
 
-class Controller(wsgi.Controller):
+class ImagesController(wsgi.Controller):
     """Base controller for retrieving/displaying images."""
 
     _view_builder_class = views_images.ViewBuilder
@@ -94,7 +98,7 @@ class Controller(wsgi.Controller):
         :param image_service: `nova.image.glance:GlanceImageService`
 
         """
-        super(Controller, self).__init__(**kwargs)
+        super(ImagesController, self).__init__(**kwargs)
         self._image_service = (image_service or
                                nova.image.glance.get_default_image_service())
 
@@ -134,6 +138,7 @@ class Controller(wsgi.Controller):
         :param id: Image identifier
         """
         context = req.environ['nova.context']
+        authorize(context)
 
         try:
             image = self._image_service.show(context, id)
@@ -151,6 +156,8 @@ class Controller(wsgi.Controller):
         :param id: Image identifier (integer)
         """
         context = req.environ['nova.context']
+        authorize(context)
+
         try:
             self._image_service.delete(context, id)
         except exception.ImageNotFound:
@@ -171,6 +178,8 @@ class Controller(wsgi.Controller):
 
         """
         context = req.environ['nova.context']
+        authorize(context)
+
         filters = self._get_filters(req)
         params = req.GET.copy()
         page_params = common.get_pagination_params(req)
@@ -192,6 +201,8 @@ class Controller(wsgi.Controller):
 
         """
         context = req.environ['nova.context']
+        authorize(context)
+
         filters = self._get_filters(req)
         params = req.GET.copy()
         page_params = common.get_pagination_params(req)
@@ -210,5 +221,22 @@ class Controller(wsgi.Controller):
         raise webob.exc.HTTPMethodNotAllowed()
 
 
-def create_resource():
-    return wsgi.Resource(Controller())
+class Images(extensions.V3APIExtensionBase):
+    """Server addresses."""
+
+    name = "Images"
+    alias = ALIAS
+    namespace = "http://docs.openstack.org/compute/ext/images/v3"
+    version = 1
+
+    def get_resources(self):
+        collection_actions = {'detail': 'GET'}
+        resources = [
+            extensions.ResourceExtension(
+                ALIAS, ImagesController(),
+                collection_actions=collection_actions)]
+
+        return resources
+
+    def get_controller_extensions(self):
+        return []
