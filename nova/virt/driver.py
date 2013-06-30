@@ -187,6 +187,18 @@ class ComputeDriver(object):
         """
         return instance_id in self.list_instances()
 
+    def estimate_instance_overhead(self, instance_info):
+        """Estimate the virtualization overhead required to build an instance
+        of the given flavor.
+
+        Defaults to zero, drivers should override if per-instance overhead
+        calculations are desired.
+
+        :param instance_info: Instance/flavor to calculate overhead for.
+        :returns: Dict of estimated overhead values.
+        """
+        return {'memory_mb': 0}
+
     def list_instances(self):
         """
         Return the names of all the instances known to the virtualization

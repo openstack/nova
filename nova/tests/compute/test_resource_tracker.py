@@ -33,6 +33,7 @@ from nova.virt import driver
 
 
 FAKE_VIRT_MEMORY_MB = 5
+FAKE_VIRT_MEMORY_OVERHEAD = 1
 FAKE_VIRT_LOCAL_GB = 6
 FAKE_VIRT_VCPUS = 1
 CONF = cfg.CONF
@@ -83,6 +84,13 @@ class FakeVirtDriver(driver.ComputeDriver):
             'cpu_info': '',
         }
         return d
+
+    def estimate_instance_overhead(self, instance_info):
+        mem = instance_info['memory_mb']  # make sure memory value is present
+        overhead = {
+            'memory_mb': FAKE_VIRT_MEMORY_OVERHEAD
+        }
+        return overhead  # just return a constant value for testing
 
     def legacy_nwinfo(self):
         return True
@@ -407,8 +415,9 @@ class BaseTrackerTestCase(BaseTestCase):
         migration.update(values)
         return migration
 
-    def _limits(self, memory_mb=FAKE_VIRT_MEMORY_MB,
-                disk_gb=FAKE_VIRT_LOCAL_GB, vcpus=FAKE_VIRT_VCPUS):
+    def _limits(self, memory_mb=FAKE_VIRT_MEMORY_MB +
+            FAKE_VIRT_MEMORY_OVERHEAD, disk_gb=FAKE_VIRT_LOCAL_GB,
+            vcpus=FAKE_VIRT_VCPUS):
         """Create limits dictionary used for oversubscribing resources."""
 
         return {
@@ -474,14 +483,14 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
         claim = self.tracker.instance_claim(self.context, instance,
                 self.limits)
         self.assertNotEqual(0, claim.memory_mb)
-        self._assert(3, 'memory_mb_used')
+        self._assert(3 + FAKE_VIRT_MEMORY_OVERHEAD, 'memory_mb_used')
         self._assert(2, 'local_gb_used')
 
         # now update should actually take effect
         instance['task_state'] = task_states.SCHEDULING
         self.tracker.update_usage(self.context, instance)
 
-        self._assert(3, 'memory_mb_used')
+        self._assert(3 + FAKE_VIRT_MEMORY_OVERHEAD, 'memory_mb_used')
         self._assert(2, 'local_gb_used')
         self._assert(1, 'current_workload')
 
@@ -495,8 +504,10 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
                 self.limits)
 
         self.assertEqual(5, self.compute["memory_mb"])
-        self.assertEqual(claim_mem, self.compute["memory_mb_used"])
-        self.assertEqual(5 - claim_mem, self.compute["free_ram_mb"])
+        self.assertEqual(claim_mem + FAKE_VIRT_MEMORY_OVERHEAD,
+                         self.compute["memory_mb_used"])
+        self.assertEqual(5 - claim_mem - FAKE_VIRT_MEMORY_OVERHEAD,
+                         self.compute["free_ram_mb"])
 
         self.assertEqual(6, self.compute["local_gb"])
         self.assertEqual(claim_disk, self.compute["local_gb_used"])
@@ -512,8 +523,10 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
 
         # confirm that resource usage is derived from instance usages,
         # not virt layer:
-        self.assertEqual(claim_mem, self.compute['memory_mb_used'])
-        self.assertEqual(5 - claim_mem, self.compute['free_ram_mb'])
+        self.assertEqual(claim_mem + FAKE_VIRT_MEMORY_OVERHEAD,
+                         self.compute['memory_mb_used'])
+        self.assertEqual(5 - claim_mem - FAKE_VIRT_MEMORY_OVERHEAD,
+                         self.compute['free_ram_mb'])
 
         self.assertEqual(claim_disk, self.compute['local_gb_used'])
         self.assertEqual(6 - claim_disk, self.compute['free_disk_gb'])
@@ -527,8 +540,10 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
                 self.limits)
         self.assertNotEqual(None, claim)
 
-        self.assertEqual(claim_mem, self.compute["memory_mb_used"])
-        self.assertEqual(5 - claim_mem, self.compute["free_ram_mb"])
+        self.assertEqual(claim_mem + FAKE_VIRT_MEMORY_OVERHEAD,
+                         self.compute["memory_mb_used"])
+        self.assertEqual(5 - claim_mem - FAKE_VIRT_MEMORY_OVERHEAD,
+                         self.compute["free_ram_mb"])
 
         self.assertEqual(claim_disk, self.compute["local_gb_used"])
         self.assertEqual(6 - claim_disk, self.compute["free_disk_gb"])
@@ -546,13 +561,14 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
         root_gb = ephemeral_gb = FAKE_VIRT_LOCAL_GB
         vcpus = FAKE_VIRT_VCPUS * 2
 
-        limits = {'memory_mb': memory_mb, 'disk_gb': root_gb * 2,
+        limits = {'memory_mb': memory_mb + FAKE_VIRT_MEMORY_OVERHEAD,
+                  'disk_gb': root_gb * 2,
                   'vcpu': vcpus}
         instance = self._fake_instance(memory_mb=memory_mb,
                 root_gb=root_gb, ephemeral_gb=ephemeral_gb)
 
         self.tracker.instance_claim(self.context, instance, limits)
-        self.assertEqual(memory_mb,
+        self.assertEqual(memory_mb + FAKE_VIRT_MEMORY_OVERHEAD,
                 self.tracker.compute_node['memory_mb_used'])
         self.assertEqual(root_gb * 2,
                 self.tracker.compute_node['local_gb_used'])
@@ -569,7 +585,8 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
         with self.tracker.instance_claim(self.context, instance, self.limits):
             pass
 
-        self.assertEqual(2, self.tracker.compute_node['memory_mb_used'])
+        self.assertEqual(2 + 2 * FAKE_VIRT_MEMORY_OVERHEAD,
+                         self.tracker.compute_node['memory_mb_used'])
         self.assertEqual(4, self.tracker.compute_node['local_gb_used'])
         self.assertEqual(2, self.tracker.compute_node['vcpus_used'])
 
@@ -591,17 +608,21 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
         instance = self._fake_instance(memory_mb=1, root_gb=1, ephemeral_gb=1)
         with self.tracker.instance_claim(self.context, instance):
             # <insert exciting things that utilize resources>
-            self.assertEqual(1, self.tracker.compute_node['memory_mb_used'])
+            self.assertEqual(1 + FAKE_VIRT_MEMORY_OVERHEAD,
+                             self.tracker.compute_node['memory_mb_used'])
             self.assertEqual(2, self.tracker.compute_node['local_gb_used'])
-            self.assertEqual(1, self.compute['memory_mb_used'])
+            self.assertEqual(1 + FAKE_VIRT_MEMORY_OVERHEAD,
+                             self.compute['memory_mb_used'])
             self.assertEqual(2, self.compute['local_gb_used'])
 
         # after exiting claim context, build is marked as finished.  usage
         # totals should be same:
         self.tracker.update_available_resource(self.context)
-        self.assertEqual(1, self.tracker.compute_node['memory_mb_used'])
+        self.assertEqual(1 + FAKE_VIRT_MEMORY_OVERHEAD,
+                         self.tracker.compute_node['memory_mb_used'])
         self.assertEqual(2, self.tracker.compute_node['local_gb_used'])
-        self.assertEqual(1, self.compute['memory_mb_used'])
+        self.assertEqual(1 + FAKE_VIRT_MEMORY_OVERHEAD,
+                         self.compute['memory_mb_used'])
         self.assertEqual(2, self.compute['local_gb_used'])
 
     def test_update_load_stats_for_instance(self):
@@ -692,7 +713,8 @@ class ResizeClaimTestCase(BaseTrackerTestCase):
     def test_claim(self):
         self.tracker.resize_claim(self.context, self.instance,
                 self.instance_type, self.limits)
-        self._assert(FAKE_VIRT_MEMORY_MB, 'memory_mb_used')
+        self._assert(FAKE_VIRT_MEMORY_MB + FAKE_VIRT_MEMORY_OVERHEAD,
+                     'memory_mb_used')
         self._assert(FAKE_VIRT_LOCAL_GB, 'local_gb_used')
         self._assert(FAKE_VIRT_VCPUS, 'vcpus_used')
         self.assertEqual(1, len(self.tracker.tracked_migrations))
@@ -712,7 +734,9 @@ class ResizeClaimTestCase(BaseTrackerTestCase):
 
     def test_additive_claims(self):
 
-        limits = self._limits(FAKE_VIRT_MEMORY_MB * 2, FAKE_VIRT_LOCAL_GB * 2,
+        limits = self._limits(FAKE_VIRT_MEMORY_MB * 2 +
+                                FAKE_VIRT_MEMORY_OVERHEAD * 2,
+                              FAKE_VIRT_LOCAL_GB * 2,
                               FAKE_VIRT_VCPUS * 2)
         self.tracker.resize_claim(self.context, self.instance,
                 self.instance_type, limits)
@@ -720,7 +744,8 @@ class ResizeClaimTestCase(BaseTrackerTestCase):
         self.tracker.resize_claim(self.context, instance2, self.instance_type,
                 limits)
 
-        self._assert(2 * FAKE_VIRT_MEMORY_MB, 'memory_mb_used')
+        self._assert(2 * FAKE_VIRT_MEMORY_MB + 2 * FAKE_VIRT_MEMORY_OVERHEAD,
+                     'memory_mb_used')
         self._assert(2 * FAKE_VIRT_LOCAL_GB, 'local_gb_used')
         self._assert(2 * FAKE_VIRT_VCPUS, 'vcpus_used')
 
@@ -730,7 +755,8 @@ class ResizeClaimTestCase(BaseTrackerTestCase):
 
         self.tracker.update_available_resource(self.context)
 
-        self._assert(FAKE_VIRT_MEMORY_MB, 'memory_mb_used')
+        self._assert(FAKE_VIRT_MEMORY_MB + FAKE_VIRT_MEMORY_OVERHEAD,
+                     'memory_mb_used')
         self._assert(FAKE_VIRT_LOCAL_GB, 'local_gb_used')
         self._assert(FAKE_VIRT_VCPUS, 'vcpus_used')
 
@@ -753,7 +779,7 @@ class ResizeClaimTestCase(BaseTrackerTestCase):
         claim = self.tracker.resize_claim(self.context, instance,
                 dest_type, self.limits)
 
-        self._assert(3, 'memory_mb_used')
+        self._assert(3 + FAKE_VIRT_MEMORY_OVERHEAD * 2, 'memory_mb_used')
         self._assert(4, 'local_gb_used')
         self._assert(3, 'vcpus_used')
 
@@ -761,7 +787,7 @@ class ResizeClaimTestCase(BaseTrackerTestCase):
         claim.abort()
 
         # only the original instance should remain, not the migration:
-        self._assert(1, 'memory_mb_used')
+        self._assert(1 + FAKE_VIRT_MEMORY_OVERHEAD, 'memory_mb_used')
         self._assert(1, 'local_gb_used')
         self._assert(1, 'vcpus_used')
         self.assertEqual(1, len(self.tracker.tracked_instances))
@@ -800,8 +826,8 @@ class ResizeClaimTestCase(BaseTrackerTestCase):
         # attach an instance to the destination host tracker:
         dest_tracker.instance_claim(self.context, self.instance)
 
-        self._assert(FAKE_VIRT_MEMORY_MB, 'memory_mb_used',
-                     tracker=dest_tracker)
+        self._assert(FAKE_VIRT_MEMORY_MB + FAKE_VIRT_MEMORY_OVERHEAD,
+                     'memory_mb_used', tracker=dest_tracker)
         self._assert(FAKE_VIRT_LOCAL_GB, 'local_gb_used',
                      tracker=dest_tracker)
         self._assert(FAKE_VIRT_VCPUS, 'vcpus_used',
@@ -811,8 +837,8 @@ class ResizeClaimTestCase(BaseTrackerTestCase):
         # on dest:
         dest_tracker.update_available_resource(self.context)
 
-        self._assert(FAKE_VIRT_MEMORY_MB, 'memory_mb_used',
-                     tracker=dest_tracker)
+        self._assert(FAKE_VIRT_MEMORY_MB + FAKE_VIRT_MEMORY_OVERHEAD,
+                     'memory_mb_used', tracker=dest_tracker)
         self._assert(FAKE_VIRT_LOCAL_GB, 'local_gb_used',
                      tracker=dest_tracker)
         self._assert(FAKE_VIRT_VCPUS, 'vcpus_used',
@@ -821,7 +847,8 @@ class ResizeClaimTestCase(BaseTrackerTestCase):
         # apply the migration to the source host tracker:
         self.tracker.update_available_resource(self.context)
 
-        self._assert(FAKE_VIRT_MEMORY_MB, 'memory_mb_used')
+        self._assert(FAKE_VIRT_MEMORY_MB + FAKE_VIRT_MEMORY_OVERHEAD,
+                     'memory_mb_used')
         self._assert(FAKE_VIRT_LOCAL_GB, 'local_gb_used')
         self._assert(FAKE_VIRT_VCPUS, 'vcpus_used')
 
@@ -830,7 +857,7 @@ class ResizeClaimTestCase(BaseTrackerTestCase):
         self.instance['task_state'] = task_states.RESIZE_REVERTING
         self.tracker.update_available_resource(self.context)
 
-        self._assert(FAKE_VIRT_MEMORY_MB, 'memory_mb_used')
+        self._assert(FAKE_VIRT_MEMORY_MB + 1, 'memory_mb_used')
         self._assert(FAKE_VIRT_LOCAL_GB, 'local_gb_used')
         self._assert(FAKE_VIRT_VCPUS, 'vcpus_used')
 
@@ -902,8 +929,9 @@ class OrphanTestCase(BaseTrackerTestCase):
         return OrphanVirtDriver()
 
     def test_usage(self):
-        # 2 instances, 4 mb each
-        self.assertEqual(8, self.tracker.compute_node['memory_mb_used'])
+        # 2 instances, 4 mb each, plus overhead
+        self.assertEqual(8 + 2 * FAKE_VIRT_MEMORY_OVERHEAD,
+                self.tracker.compute_node['memory_mb_used'])
 
     def test_find(self):
         # create one legit instance and verify the 2 orphans remain

@@ -98,7 +98,13 @@ class ResourceTracker(object):
                           "until resources have been claimed."),
                           instance=instance_ref)
 
-        claim = claims.Claim(instance_ref, self)
+        # get memory overhead required to build this instance:
+        overhead = self.driver.estimate_instance_overhead(instance_ref)
+        LOG.debug(_("Memory overhead for %(flavor)d MB instance; %(overhead)d "
+                    "MB"), {'flavor': instance_ref['memory_mb'],
+                            'overhead': overhead['memory_mb']})
+
+        claim = claims.Claim(instance_ref, self, overhead=overhead)
 
         if claim.test(self.compute_node, limits):
 
@@ -135,7 +141,14 @@ class ResourceTracker(object):
                     instance_type)
             return claims.NopClaim(migration=migration_ref)
 
-        claim = claims.ResizeClaim(instance_ref, instance_type, self)
+        # get memory overhead required to build this instance:
+        overhead = self.driver.estimate_instance_overhead(instance_type)
+        LOG.debug(_("Memory overhead for %(flavor)d MB instance; %(overhead)d "
+                    "MB"), {'flavor': instance_type['memory_mb'],
+                            'overhead': overhead['memory_mb']})
+
+        claim = claims.ResizeClaim(instance_ref, instance_type, self,
+                                   overhead=overhead)
 
         if claim.test(self.compute_node, limits):
 
@@ -361,7 +374,12 @@ class ResourceTracker(object):
             context, self.compute_node, values, prune_stats)
 
     def _update_usage(self, resources, usage, sign=1):
-        resources['memory_mb_used'] += sign * usage['memory_mb']
+        mem_usage = usage['memory_mb']
+
+        overhead = self.driver.estimate_instance_overhead(usage)
+        mem_usage += overhead['memory_mb']
+
+        resources['memory_mb_used'] += sign * mem_usage
         resources['local_gb_used'] += sign * usage.get('root_gb', 0)
         resources['local_gb_used'] += sign * usage.get('ephemeral_gb', 0)
 

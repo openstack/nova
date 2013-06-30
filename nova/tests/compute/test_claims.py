@@ -41,9 +41,11 @@ class ClaimTestCase(test.TestCase):
         self.resources = self._fake_resources()
         self.tracker = DummyTracker()
 
-    def _claim(self, **kwargs):
+    def _claim(self, overhead=None, **kwargs):
         instance = self._fake_instance(**kwargs)
-        return claims.Claim(instance, self.tracker)
+        if overhead is None:
+            overhead = {'memory_mb': 0}
+        return claims.Claim(instance, self.tracker, overhead=overhead)
 
     def _fake_instance(self, **kwargs):
         instance = {
@@ -104,6 +106,18 @@ class ClaimTestCase(test.TestCase):
         limits = {'vcpu': 16}
         self.assertTrue(claim.test(self.resources, limits))
 
+    def test_memory_with_overhead(self):
+        overhead = {'memory_mb': 8}
+        claim = self._claim(memory_mb=2040, overhead=overhead)
+        limits = {'memory_mb': 2048}
+        self.assertTrue(claim.test(self.resources, limits))
+
+    def test_memory_with_overhead_insufficient(self):
+        overhead = {'memory_mb': 9}
+        claim = self._claim(memory_mb=2040, overhead=overhead)
+        limits = {'memory_mb': 2048}
+        self.assertFalse(claim.test(self.resources, limits))
+
     def test_cpu_insufficient(self):
         claim = self._claim(vcpus=17)
         limits = {'vcpu': 16}
@@ -150,9 +164,12 @@ class ResizeClaimTestCase(ClaimTestCase):
         super(ResizeClaimTestCase, self).setUp()
         self.instance = self._fake_instance()
 
-    def _claim(self, **kwargs):
+    def _claim(self, overhead=None, **kwargs):
         instance_type = self._fake_instance_type(**kwargs)
-        return claims.ResizeClaim(self.instance, instance_type, self.tracker)
+        if overhead is None:
+            overhead = {'memory_mb': 0}
+        return claims.ResizeClaim(self.instance, instance_type, self.tracker,
+                                  overhead=overhead)
 
     def test_abort(self):
         claim = self._abort()
