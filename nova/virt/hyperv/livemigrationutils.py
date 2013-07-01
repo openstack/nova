@@ -155,8 +155,10 @@ class LiveMigrationUtils(object):
 
                 LOG.debug(_("Replacing host resource "
                             "%(old_disk_path)s with "
-                            "%(new_disk_path)s on planned VM %(vm_name)s") %
-                          locals())
+                            "%(new_disk_path)s on planned VM %(vm_name)s"),
+                          {'old_disk_path': old_disk_path,
+                           'new_disk_path': new_disk_path,
+                           'vm_name': vm_name})
                 sasd.HostResource = [new_disk_path]
                 updated_resource_setting_data.append(sasd.GetText_(1))
 

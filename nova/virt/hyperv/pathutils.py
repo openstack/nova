@@ -69,7 +69,7 @@ class PathUtils(object):
         # spawning overhead.
         if subprocess.call(['cmd.exe', '/C', 'copy', '/Y', src, dest]):
             raise IOError(_('The file copy from %(src)s to %(dest)s failed')
-                           % locals())
+                           % {'src': src, 'dest': dest})
 
     def rmtree(self, path):
         shutil.rmtree(path)
@@ -83,7 +83,8 @@ class PathUtils(object):
             else:
                 # Use an administrative share
                 path = local_instance_path.replace(':', '$')
-            return '\\\\%(remote_server)s\\%(path)s' % locals()
+            return ('\\\\%(remote_server)s\\%(path)s' %
+                {'remote_server': remote_server, 'path': path})
         else:
             return local_instance_path
 

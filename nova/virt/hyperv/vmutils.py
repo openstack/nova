@@ -223,8 +223,8 @@ class VMUtils(object):
         drivedflt = self._conn.query("SELECT * FROM "
                                      "Msvm_ResourceAllocationSettingData "
                                      "WHERE ResourceSubType LIKE "
-                                     "'%(res_sub_type)s' AND InstanceID LIKE "
-                                     "'%%Default%%'" % locals())[0]
+                                     "'%s' AND InstanceID LIKE "
+                                     "'%%Default%%'" % res_sub_type)[0]
         drive = self._clone_wmi_obj('Msvm_ResourceAllocationSettingData',
                                     drivedflt)
         #Set the IDE ctrller as parent.
@@ -243,9 +243,9 @@ class VMUtils(object):
         drivedefault = self._conn.query("SELECT * FROM "
                                         "Msvm_ResourceAllocationSettingData "
                                         "WHERE ResourceSubType LIKE "
-                                        "'%(res_sub_type)s' AND "
+                                        "'%s' AND "
                                         "InstanceID LIKE '%%Default%%'"
-                                        % locals())[0]
+                                        % res_sub_type)[0]
 
         #Clone the default and point it to the image file.
         res = self._clone_wmi_obj('Msvm_ResourceAllocationSettingData',
@@ -329,8 +329,9 @@ class VMUtils(object):
         #Invalid state for current operation (32775) typically means that
         #the VM is already in the state requested
         self.check_ret_val(ret_val, job_path, [0, 32775])
-        LOG.debug(_("Successfully changed vm state of %(vm_name)s"
-                    " to %(req_state)s") % locals())
+        LOG.debug(_("Successfully changed vm state of %(vm_name)s "
+                    "to %(req_state)s"),
+                  {'vm_name': vm_name, 'req_state': req_state})
 
     def get_vm_storage_paths(self, vm_name):
         vm = self._lookup_vm_check(vm_name)
@@ -391,23 +392,28 @@ class VMUtils(object):
                 raise HyperVException(_("WMI job failed with status "
                                         "%(job_state)d. Error details: "
                                         "%(err_sum_desc)s - %(err_desc)s - "
-                                        "Error code: %(err_code)d")
-                                      % locals())
+                                        "Error code: %(err_code)d") %
+                                      {'job_state': job_state,
+                                       'err_sum_desc': err_sum_desc,
+                                       'err_desc': err_desc,
+                                       'err_code': err_code})
             else:
                 (error, ret_val) = job.GetError()
                 if not ret_val and error:
                     raise HyperVException(_("WMI job failed with status "
                                             "%(job_state)d. Error details: "
-                                            "%(error)s") % locals())
+                                            "%(error)s") %
+                                          {'job_state': job_state,
+                                           'error': error})
                 else:
                     raise HyperVException(_("WMI job failed with status "
-                                            "%(job_state)d. No error "
-                                            "description available")
-                                          % locals())
+                                            "%d. No error "
+                                            "description available") %
+                                          job_state)
         desc = job.Description
         elap = job.ElapsedTime
-        LOG.debug(_("WMI job succeeded: %(desc)s, Elapsed=%(elap)s")
-                  % locals())
+        LOG.debug(_("WMI job succeeded: %(desc)s, Elapsed=%(elap)s"),
+                  {'desc': desc, 'elap': elap})
 
     def _clone_wmi_obj(self, wmi_class, wmi_obj):
         """Clone a WMI object."""

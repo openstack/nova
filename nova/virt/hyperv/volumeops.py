@@ -97,11 +97,15 @@ class VolumeOps(object):
         if self._volutils.get_device_number_for_target(target_iqn, target_lun):
             LOG.debug(_("Already logged in on storage target. No need to "
                         "login. Portal: %(target_portal)s, "
-                        "IQN: %(target_iqn)s, LUN: %(target_lun)s") % locals())
+                        "IQN: %(target_iqn)s, LUN: %(target_lun)s"),
+                      {'target_portal': target_portal,
+                       'target_iqn': target_iqn, 'target_lun': target_lun})
         else:
             LOG.debug(_("Logging in on storage target. Portal: "
                         "%(target_portal)s, IQN: %(target_iqn)s, "
-                        "LUN: %(target_lun)s") % locals())
+                        "LUN: %(target_lun)s"),
+                      {'target_portal': target_portal,
+                       'target_iqn': target_iqn, 'target_lun': target_lun})
             self._volutils.login_storage_target(target_lun, target_iqn,
                                                 target_portal)
             # Wait for the target to be mounted
@@ -112,8 +116,9 @@ class VolumeOps(object):
         Attach a volume to the SCSI controller or to the IDE controller if
         ebs_root is True
         """
-        LOG.debug(_("Attach_volume: %(connection_info)s to %(instance_name)s")
-                  % locals())
+        LOG.debug(_("Attach_volume: %(connection_info)s to %(instance_name)s"),
+                  {'connection_info': connection_info,
+                   'instance_name': instance_name})
         try:
             self._login_storage_target(connection_info)
 
@@ -157,13 +162,15 @@ class VolumeOps(object):
             self.detach_volume(vol['connection_info'], instance_name)
 
     def logout_storage_target(self, target_iqn):
-        LOG.debug(_("Logging off storage target %(target_iqn)s") % locals())
+        LOG.debug(_("Logging off storage target %s"), target_iqn)
         self._volutils.logout_storage_target(target_iqn)
 
     def detach_volume(self, connection_info, instance_name):
         """Dettach a volume to the SCSI controller."""
         LOG.debug(_("Detach_volume: %(connection_info)s "
-                    "from %(instance_name)s") % locals())
+                    "from %(instance_name)s"),
+                  {'connection_info': connection_info,
+                   'instance_name': instance_name})
 
         data = connection_info['data']
         target_lun = data['target_lun']
@@ -198,7 +205,8 @@ class VolumeOps(object):
             raise exception.NotFound(_('Unable to find a mounted disk for '
                                        'target_iqn: %s') % target_iqn)
         LOG.debug(_('Device number: %(device_number)s, '
-                    'target lun: %(target_lun)s') % locals())
+                    'target lun: %(target_lun)s'),
+                  {'device_number': device_number, 'target_lun': target_lun})
         #Finding Mounted disk drive
         for i in range(0, CONF.hyperv.volume_attach_retry_count):
             mounted_disk_path = self._vmutils.get_mounted_disk_by_drive_number(

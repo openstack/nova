@@ -71,7 +71,8 @@ class SnapshotOps(object):
             dest_vhd_path = os.path.join(export_dir, os.path.basename(
                 src_vhd_path))
             LOG.debug(_('Copying VHD %(src_vhd_path)s to %(dest_vhd_path)s'),
-                      locals())
+                      {'src_vhd_path': src_vhd_path,
+                       'dest_vhd_path': dest_vhd_path})
             self._pathutils.copyfile(src_vhd_path, dest_vhd_path)
 
             image_vhd_path = None
@@ -81,29 +82,37 @@ class SnapshotOps(object):
                 basename = os.path.basename(src_base_disk_path)
                 dest_base_disk_path = os.path.join(export_dir, basename)
                 LOG.debug(_('Copying base disk %(src_vhd_path)s to '
-                            '%(dest_base_disk_path)s'), locals())
+                            '%(dest_base_disk_path)s'),
+                          {'src_vhd_path': src_vhd_path,
+                           'dest_base_disk_path': dest_base_disk_path})
                 self._pathutils.copyfile(src_base_disk_path,
                                          dest_base_disk_path)
 
                 LOG.debug(_("Reconnecting copied base VHD "
                             "%(dest_base_disk_path)s and diff "
-                            "VHD %(dest_vhd_path)s"), locals())
+                            "VHD %(dest_vhd_path)s"),
+                          {'dest_base_disk_path': dest_base_disk_path,
+                           'dest_vhd_path': dest_vhd_path})
                 self._vhdutils.reconnect_parent_vhd(dest_vhd_path,
                                                     dest_base_disk_path)
 
                 LOG.debug(_("Merging base disk %(dest_base_disk_path)s and "
-                            "diff disk %(dest_vhd_path)s"), locals())
+                            "diff disk %(dest_vhd_path)s"),
+                          {'dest_base_disk_path': dest_base_disk_path,
+                           'dest_vhd_path': dest_vhd_path})
                 self._vhdutils.merge_vhd(dest_vhd_path, dest_base_disk_path)
                 image_vhd_path = dest_base_disk_path
 
-            LOG.debug(_("Updating Glance image %(image_id)s with content from "
-                        "merged disk %(image_vhd_path)s"), locals())
+            LOG.debug(_("Updating Glance image %(name)s with content from "
+                        "merged disk %(image_vhd_path)s"),
+                      {'image_id': name, 'image_vhd_path': image_vhd_path})
             update_task_state(task_state=task_states.IMAGE_UPLOADING,
                               expected_state=task_states.IMAGE_PENDING_UPLOAD)
             self._save_glance_image(context, name, image_vhd_path)
 
-            LOG.debug(_("Snapshot image %(image_id)s updated for VM "
-                        "%(instance_name)s"), locals())
+            LOG.debug(_("Snapshot image %(name)s updated for VM "
+                        "%(instance_name)s"),
+                      {'name': name, 'instance_name': instance_name})
         finally:
             try:
                 LOG.debug(_("Removing snapshot %s"), name)
