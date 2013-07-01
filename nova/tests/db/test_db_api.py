@@ -121,36 +121,6 @@ class DbTestCase(test.TestCase):
 
 
 class DbApiTestCase(DbTestCase):
-    def test_create_instance_unique_hostname(self):
-        otherprojectcontext = context.RequestContext(self.user_id,
-                                          "%s2" % self.project_id)
-
-        self.create_instance_with_args(hostname='fake_name')
-
-        # With scope 'global' any duplicate should fail, be it this project:
-        self.flags(osapi_compute_unique_server_name_scope='global')
-        self.assertRaises(exception.InstanceExists,
-                          self.create_instance_with_args,
-                          hostname='fake_name')
-
-        # or another:
-        self.assertRaises(exception.InstanceExists,
-                          self.create_instance_with_args,
-                          context=otherprojectcontext,
-                          hostname='fake_name')
-
-        # With scope 'project' a duplicate in the project should fail:
-        self.flags(osapi_compute_unique_server_name_scope='project')
-        self.assertRaises(exception.InstanceExists,
-                          self.create_instance_with_args,
-                          hostname='fake_name')
-
-        # With scope 'project' a duplicate in a different project should work:
-        self.flags(osapi_compute_unique_server_name_scope='project')
-        self.create_instance_with_args(context=otherprojectcontext,
-                                       hostname='fake_name')
-
-        self.flags(osapi_compute_unique_server_name_scope=None)
 
     def test_ec2_ids_not_found_are_printable(self):
         def check_exc_format(method, value):
@@ -165,171 +135,6 @@ class DbApiTestCase(DbTestCase):
         check_exc_format(db.get_snapshot_uuid_by_ec2_id, 123456)
         check_exc_format(db.get_ec2_instance_id_by_uuid, 'fake')
         check_exc_format(db.get_instance_uuid_by_ec2_id, 123456)
-
-    def test_instance_get_all_with_meta(self):
-        inst = self.create_instance_with_args()
-        fake_meta, fake_sys = self.create_metadata_for_instance(inst['uuid'])
-        result = db.instance_get_all(self.context)
-        for inst in result:
-            meta = utils.metadata_to_dict(inst['metadata'])
-            self.assertEqual(meta, fake_meta)
-            sys_meta = utils.metadata_to_dict(inst['system_metadata'])
-            self.assertEqual(sys_meta, fake_sys)
-
-    def test_instance_get_all_by_filters_with_meta(self):
-        inst = self.create_instance_with_args()
-        fake_meta, fake_sys = self.create_metadata_for_instance(inst['uuid'])
-        result = db.instance_get_all_by_filters(self.context, {})
-        for inst in result:
-            meta = utils.metadata_to_dict(inst['metadata'])
-            self.assertEqual(meta, fake_meta)
-            sys_meta = utils.metadata_to_dict(inst['system_metadata'])
-            self.assertEqual(sys_meta, fake_sys)
-
-    def test_instance_get_all_by_filters_without_meta(self):
-        inst = self.create_instance_with_args()
-        fake_meta, fake_sys = self.create_metadata_for_instance(inst['uuid'])
-        result = db.instance_get_all_by_filters(self.context, {},
-                                                columns_to_join=[])
-        for inst in result:
-            meta = utils.metadata_to_dict(inst['metadata'])
-            self.assertEqual(meta, {})
-            sys_meta = utils.metadata_to_dict(inst['system_metadata'])
-            self.assertEqual(sys_meta, {})
-
-    def test_instance_get_all_by_filters(self):
-        self.create_instance_with_args()
-        self.create_instance_with_args()
-        result = db.instance_get_all_by_filters(self.context, {})
-        self.assertEqual(2, len(result))
-
-    def test_instance_get_all_by_filters_regex(self):
-        self.create_instance_with_args(display_name='test1')
-        self.create_instance_with_args(display_name='teeeest2')
-        self.create_instance_with_args(display_name='diff')
-        result = db.instance_get_all_by_filters(self.context,
-                                                {'display_name': 't.*st.'})
-        self.assertEqual(2, len(result))
-
-    def test_instance_get_all_by_filters_exact_match(self):
-        self.create_instance_with_args(host='host1')
-        self.create_instance_with_args(host='host12')
-        result = db.instance_get_all_by_filters(self.context,
-                                                {'host': 'host1'})
-        self.assertEqual(1, len(result))
-
-    def test_instance_get_all_by_filters_metadata(self):
-        self.create_instance_with_args(metadata={'foo': 'bar'})
-        self.create_instance_with_args()
-        result = db.instance_get_all_by_filters(self.context,
-                                                {'metadata': {'foo': 'bar'}})
-        self.assertEqual(1, len(result))
-
-    def test_instance_get_all_by_filters_unicode_value(self):
-        self.create_instance_with_args(display_name=u'test♥')
-        result = db.instance_get_all_by_filters(self.context,
-                                                {'display_name': u'test'})
-        self.assertEqual(1, len(result))
-
-    def test_instance_get_by_uuid(self):
-        inst = self.create_instance_with_args()
-        fake_meta, fake_sys = self.create_metadata_for_instance(inst['uuid'])
-        result = db.instance_get_by_uuid(self.context, inst['uuid'])
-        meta = utils.metadata_to_dict(result['metadata'])
-        self.assertEqual(meta, fake_meta)
-        sys_meta = utils.metadata_to_dict(result['system_metadata'])
-        self.assertEqual(sys_meta, fake_sys)
-
-    def test_instance_get_by_uuid_join_empty(self):
-        inst = self.create_instance_with_args()
-        fake_meta, fake_sys = self.create_metadata_for_instance(inst['uuid'])
-        result = db.instance_get_by_uuid(self.context, inst['uuid'],
-                columns_to_join=[])
-        meta = utils.metadata_to_dict(result['metadata'])
-        self.assertEqual(meta, {})
-        sys_meta = utils.metadata_to_dict(result['system_metadata'])
-        self.assertEqual(sys_meta, {})
-
-    def test_instance_get_by_uuid_join_meta(self):
-        inst = self.create_instance_with_args()
-        fake_meta, fake_sys = self.create_metadata_for_instance(inst['uuid'])
-        result = db.instance_get_by_uuid(self.context, inst['uuid'],
-                columns_to_join=['metadata'])
-        meta = utils.metadata_to_dict(result['metadata'])
-        self.assertEqual(meta, fake_meta)
-        sys_meta = utils.metadata_to_dict(result['system_metadata'])
-        self.assertEqual(sys_meta, {})
-
-    def test_instance_get_by_uuid_join_sys_meta(self):
-        inst = self.create_instance_with_args()
-        fake_meta, fake_sys = self.create_metadata_for_instance(inst['uuid'])
-        result = db.instance_get_by_uuid(self.context, inst['uuid'],
-                columns_to_join=['system_metadata'])
-        meta = utils.metadata_to_dict(result['metadata'])
-        self.assertEqual(meta, {})
-        sys_meta = utils.metadata_to_dict(result['system_metadata'])
-        self.assertEqual(sys_meta, fake_sys)
-
-    def test_instance_get_all_by_filters_deleted(self):
-        inst1 = self.create_instance_with_args()
-        inst2 = self.create_instance_with_args(reservation_id='b')
-        db.instance_destroy(self.context, inst1['uuid'])
-        result = db.instance_get_all_by_filters(self.context, {})
-        self.assertEqual(2, len(result))
-        self.assertIn(inst1['id'], [result[0]['id'], result[1]['id']])
-        self.assertIn(inst2['id'], [result[0]['id'], result[1]['id']])
-        if inst1['id'] == result[0]['id']:
-            self.assertTrue(result[0]['deleted'])
-        else:
-            self.assertTrue(result[1]['deleted'])
-
-    def test_instance_get_all_by_filters_deleted_and_soft_deleted(self):
-        inst1 = self.create_instance_with_args()
-        inst2 = self.create_instance_with_args(vm_state=vm_states.SOFT_DELETED)
-        self.create_instance_with_args()
-        db.instance_destroy(self.context, inst1['uuid'])
-        result = db.instance_get_all_by_filters(self.context,
-                                                {'deleted': True})
-        self.assertEqual(2, len(result))
-        self.assertIn(inst1['id'], [result[0]['id'], result[1]['id']])
-        self.assertIn(inst2['id'], [result[0]['id'], result[1]['id']])
-
-    def test_instance_get_all_by_filters_deleted_no_soft_deleted(self):
-        inst1 = self.create_instance_with_args()
-        self.create_instance_with_args(vm_state=vm_states.SOFT_DELETED)
-        self.create_instance_with_args()
-        db.instance_destroy(self.context, inst1['uuid'])
-        result = db.instance_get_all_by_filters(self.context,
-                                                {'deleted': True,
-                                                 'soft_deleted': False})
-        self.assertEqual(1, len(result))
-        self.assertEqual(inst1['id'], result[0]['id'])
-
-    def test_instance_get_all_by_filters_alive_and_soft_deleted(self):
-        inst1 = self.create_instance_with_args()
-        inst2 = self.create_instance_with_args(vm_state=vm_states.SOFT_DELETED)
-        inst3 = self.create_instance_with_args()
-        db.instance_destroy(self.context, inst1['uuid'])
-        result = db.instance_get_all_by_filters(self.context,
-                                                {'deleted': False,
-                                                 'soft_deleted': True})
-        self.assertEqual(2, len(result))
-        self.assertIn(inst2['id'], [result[0]['id'], result[1]['id']])
-        self.assertIn(inst3['id'], [result[0]['id'], result[1]['id']])
-
-    def test_instance_get_all_by_host_and_node_no_join(self):
-        # Test that system metadata is not joined.
-        sys_meta = {'foo': 'bar'}
-        expected = self.create_instance_with_args(system_metadata=sys_meta)
-
-        elevated = self.context.elevated()
-        instances = db.instance_get_all_by_host_and_node(elevated, 'host1',
-                                                         'node1')
-        self.assertEqual(1, len(instances))
-        instance = instances[0]
-        self.assertEqual(expected['uuid'], instance['uuid'])
-        sysmeta = dict(instance)['system_metadata']
-        self.assertEqual(len(sysmeta), 0)
 
     def test_migration_get_unconfirmed_by_dest_compute(self):
         ctxt = context.get_admin_context()
@@ -369,206 +174,6 @@ class DbApiTestCase(DbTestCase):
                 "fake_host2")
         self.assertEqual(0, len(results))
         db.migration_update(ctxt, migration['id'], {"status": "CONFIRMED"})
-
-    def test_instance_get_all_hung_in_rebooting(self):
-        ctxt = context.get_admin_context()
-
-        # Ensure no instances are returned.
-        results = db.instance_get_all_hung_in_rebooting(ctxt, 10)
-        self.assertEqual(0, len(results))
-
-        # Ensure one rebooting instance with updated_at older than 10 seconds
-        # is returned.
-        updated_at = datetime.datetime(2000, 1, 1, 12, 0, 0)
-        values = {"task_state": "rebooting", "updated_at": updated_at}
-        instance = db.instance_create(ctxt, values)
-        results = db.instance_get_all_hung_in_rebooting(ctxt, 10)
-        self.assertEqual(1, len(results))
-        db.instance_update(ctxt, instance['uuid'], {"task_state": None})
-
-        # Ensure the newly rebooted instance is not returned.
-        updated_at = timeutils.utcnow()
-        values = {"task_state": "rebooting", "updated_at": updated_at}
-        instance = db.instance_create(ctxt, values)
-        results = db.instance_get_all_hung_in_rebooting(ctxt, 10)
-        self.assertEqual(0, len(results))
-        db.instance_update(ctxt, instance['uuid'], {"task_state": None})
-
-    def test_instance_update_with_expected_vm_state(self):
-        ctxt = context.get_admin_context()
-        uuid = uuidutils.generate_uuid()
-        updates = {'expected_vm_state': 'meow',
-                   'moo': 'cow'}
-
-        class FakeInstance(dict):
-            def save(self, session=None):
-                pass
-
-        fake_instance_values = {'vm_state': 'meow',
-                                'hostname': '',
-                                'metadata': None,
-                                'system_metadata': None}
-        fake_instance = FakeInstance(fake_instance_values)
-
-        self.mox.StubOutWithMock(sqlalchemy_api, '_instance_get_by_uuid')
-        self.mox.StubOutWithMock(fake_instance, 'save')
-
-        sqlalchemy_api._instance_get_by_uuid(ctxt, uuid,
-                session=mox.IgnoreArg()).AndReturn(fake_instance)
-        fake_instance.save(session=mox.IgnoreArg())
-
-        self.mox.ReplayAll()
-
-        result = db.instance_update(ctxt, uuid, updates)
-        expected_instance = dict(fake_instance_values)
-        expected_instance['moo'] = 'cow'
-        self.assertEqual(expected_instance, result)
-
-    def test_instance_update_with_unexpected_vm_state(self):
-        ctxt = context.get_admin_context()
-        uuid = uuidutils.generate_uuid()
-        updates = {'expected_vm_state': 'meow'}
-        fake_instance = {'vm_state': 'nomatch'}
-
-        self.mox.StubOutWithMock(sqlalchemy_api, '_instance_get_by_uuid')
-
-        sqlalchemy_api._instance_get_by_uuid(ctxt, uuid,
-                session=mox.IgnoreArg()).AndReturn(fake_instance)
-
-        self.mox.ReplayAll()
-
-        self.assertRaises(exception.UnexpectedVMStateError,
-                          db.instance_update, ctxt, uuid, updates)
-
-    def test_instance_update_with_instance_uuid(self):
-        # test instance_update() works when an instance UUID is passed.
-        ctxt = context.get_admin_context()
-
-        # Create an instance with some metadata
-        values = {'metadata': {'host': 'foo', 'key1': 'meow'},
-                  'system_metadata': {'original_image_ref': 'blah'}}
-        instance = db.instance_create(ctxt, values)
-
-        # Update the metadata
-        values = {'metadata': {'host': 'bar', 'key2': 'wuff'},
-                  'system_metadata': {'original_image_ref': 'baz'}}
-        db.instance_update(ctxt, instance['uuid'], values)
-
-        # Retrieve the user-provided metadata to ensure it was successfully
-        # updated
-        instance_meta = db.instance_metadata_get(ctxt, instance['uuid'])
-        self.assertEqual('bar', instance_meta['host'])
-        self.assertEqual('wuff', instance_meta['key2'])
-        self.assertNotIn('key1', instance_meta)
-
-        # Retrieve the system metadata to ensure it was successfully updated
-        system_meta = db.instance_system_metadata_get(ctxt, instance['uuid'])
-        self.assertEqual('baz', system_meta['original_image_ref'])
-
-    def test_delete_instance_metadata_on_instance_destroy(self):
-        ctxt = context.get_admin_context()
-
-        # Create an instance with some metadata
-        values = {'metadata': {'host': 'foo', 'key1': 'meow'},
-                  'system_metadata': {'original_image_ref': 'blah'}}
-        instance = db.instance_create(ctxt, values)
-        instance_meta = db.instance_metadata_get(ctxt, instance['uuid'])
-        self.assertEqual('foo', instance_meta['host'])
-        self.assertEqual('meow', instance_meta['key1'])
-        db.instance_destroy(ctxt, instance['uuid'])
-        instance_meta = db.instance_metadata_get(ctxt, instance['uuid'])
-        # Make sure instance metadata is deleted as well
-        self.assertEqual({}, instance_meta)
-
-    def test_instance_update_unique_name(self):
-        otherprojectcontext = context.RequestContext(self.user_id,
-                                          "%s2" % self.project_id)
-
-        inst = self.create_instance_with_args(hostname='fake_name')
-        uuid1p1 = inst['uuid']
-        inst = self.create_instance_with_args(hostname='fake_name2')
-        uuid2p1 = inst['uuid']
-
-        inst = self.create_instance_with_args(context=otherprojectcontext,
-                                               hostname='fake_name3')
-        uuid1p2 = inst['uuid']
-
-        # osapi_compute_unique_server_name_scope is unset so this should work:
-        values = {'hostname': 'fake_name2'}
-        db.instance_update(self.context, uuid1p1, values)
-        values = {'hostname': 'fake_name'}
-        db.instance_update(self.context, uuid1p1, values)
-
-        # With scope 'global' any duplicate should fail.
-        self.flags(osapi_compute_unique_server_name_scope='global')
-        self.assertRaises(exception.InstanceExists,
-                          db.instance_update,
-                          self.context,
-                          uuid2p1,
-                          values)
-
-        self.assertRaises(exception.InstanceExists,
-                          db.instance_update,
-                          otherprojectcontext,
-                          uuid1p2,
-                          values)
-
-        # But we should definitely be able to update our name if we aren't
-        #  really changing it.
-        case_only_values = {'hostname': 'fake_NAME'}
-        db.instance_update(self.context, uuid1p1, case_only_values)
-
-        # With scope 'project' a duplicate in the project should fail:
-        self.flags(osapi_compute_unique_server_name_scope='project')
-        self.assertRaises(exception.InstanceExists,
-                          db.instance_update,
-                          self.context,
-                          uuid2p1,
-                          values)
-
-        # With scope 'project' a duplicate in a different project should work:
-        self.flags(osapi_compute_unique_server_name_scope='project')
-        db.instance_update(otherprojectcontext, uuid1p2, values)
-
-    def test_instance_update_with_and_get_original(self):
-        ctxt = context.get_admin_context()
-
-        # Create an instance with some metadata
-        values = {'vm_state': 'building'}
-        instance = db.instance_create(ctxt, values)
-
-        (old_ref, new_ref) = db.instance_update_and_get_original(ctxt,
-                instance['uuid'], {'vm_state': 'needscoffee'})
-        self.assertEquals("building", old_ref["vm_state"])
-        self.assertEquals("needscoffee", new_ref["vm_state"])
-
-    def _test_instance_update_updates_metadata(self, metadata_type):
-        ctxt = context.get_admin_context()
-
-        instance = db.instance_create(ctxt, {})
-
-        def set_and_check(meta):
-            inst = db.instance_update(ctxt, instance['uuid'],
-                               {metadata_type: dict(meta)})
-            _meta = utils.metadata_to_dict(inst[metadata_type])
-            self.assertEqual(meta, _meta)
-
-        meta = {'speed': '88', 'units': 'MPH'}
-        set_and_check(meta)
-
-        meta['gigawatts'] = '1.21'
-        set_and_check(meta)
-
-        del meta['gigawatts']
-        set_and_check(meta)
-
-    def test_instance_update_updates_system_metadata(self):
-        # Ensure that system_metadata is updated during instance_update
-        self._test_instance_update_updates_metadata('system_metadata')
-
-    def test_instance_update_updates_metadata(self):
-        # Ensure that metadata is updated during instance_update
-        self._test_instance_update_updates_metadata('metadata')
 
     def test_add_key_pair(self, name=None):
         """Check if keypair creation work as expected."""
@@ -642,34 +247,6 @@ class DbApiTestCase(DbTestCase):
 
         db.dnsdomain_unregister(ctxt, domain1)
         db.dnsdomain_unregister(ctxt, domain2)
-
-    def test_instance_floating_address_get_all(self):
-        ctxt = context.get_admin_context()
-
-        instance1 = db.instance_create(ctxt, {'host': 'h1', 'hostname': 'n1'})
-        instance2 = db.instance_create(ctxt, {'host': 'h2', 'hostname': 'n2'})
-
-        fixed_addresses = ['1.1.1.1', '1.1.1.2', '1.1.1.3']
-        float_addresses = ['2.1.1.1', '2.1.1.2', '2.1.1.3']
-        instance_uuids = [instance1['uuid'], instance1['uuid'],
-                          instance2['uuid']]
-
-        for fixed_addr, float_addr, instance_uuid in zip(fixed_addresses,
-                                                         float_addresses,
-                                                         instance_uuids):
-            db.fixed_ip_create(ctxt, {'address': fixed_addr,
-                                      'instance_uuid': instance_uuid})
-            fixed_id = db.fixed_ip_get_by_address(ctxt, fixed_addr)['id']
-            db.floating_ip_create(ctxt,
-                                  {'address': float_addr,
-                                   'fixed_ip_id': fixed_id})
-
-        real_float_addresses = \
-                db.instance_floating_address_get_all(ctxt, instance_uuids[0])
-        self.assertEqual(set(float_addresses[:2]), set(real_float_addresses))
-        real_float_addresses = \
-                db.instance_floating_address_get_all(ctxt, instance_uuids[2])
-        self.assertEqual(set([float_addresses[2]]), set(real_float_addresses))
 
     def test_get_vol_mapping_non_admin(self):
         ref = db.ec2_volume_create(self.context, 'fake-uuid')
@@ -1780,6 +1357,438 @@ class SecurityGroupTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertTrue(db.security_group_exists(self.ctxt,
                                                  self.ctxt.project_id,
                                                  'default'))
+
+
+class InstanceTestCase(DbTestCase):
+
+    """Tests for db.api.instance_* methods."""
+
+    def setUp(self):
+        super(InstanceTestCase, self).setUp()
+
+    def test_create_instance_unique_hostname(self):
+        otherprojectcontext = context.RequestContext(self.user_id,
+                                          "%s2" % self.project_id)
+
+        self.create_instance_with_args(hostname='fake_name')
+
+        # With scope 'global' any duplicate should fail, be it this project:
+        self.flags(osapi_compute_unique_server_name_scope='global')
+        self.assertRaises(exception.InstanceExists,
+                          self.create_instance_with_args,
+                          hostname='fake_name')
+
+        # or another:
+        self.assertRaises(exception.InstanceExists,
+                          self.create_instance_with_args,
+                          context=otherprojectcontext,
+                          hostname='fake_name')
+
+        # With scope 'project' a duplicate in the project should fail:
+        self.flags(osapi_compute_unique_server_name_scope='project')
+        self.assertRaises(exception.InstanceExists,
+                          self.create_instance_with_args,
+                          hostname='fake_name')
+
+        # With scope 'project' a duplicate in a different project should work:
+        self.flags(osapi_compute_unique_server_name_scope='project')
+        self.create_instance_with_args(context=otherprojectcontext,
+                                       hostname='fake_name')
+
+        self.flags(osapi_compute_unique_server_name_scope=None)
+
+    def test_instance_get_all_with_meta(self):
+        inst = self.create_instance_with_args()
+        fake_meta, fake_sys = self.create_metadata_for_instance(inst['uuid'])
+        result = db.instance_get_all(self.context)
+        for inst in result:
+            meta = utils.metadata_to_dict(inst['metadata'])
+            self.assertEqual(meta, fake_meta)
+            sys_meta = utils.metadata_to_dict(inst['system_metadata'])
+            self.assertEqual(sys_meta, fake_sys)
+
+    def test_instance_get_all_by_filters_with_meta(self):
+        inst = self.create_instance_with_args()
+        fake_meta, fake_sys = self.create_metadata_for_instance(inst['uuid'])
+        result = db.instance_get_all_by_filters(self.context, {})
+        for inst in result:
+            meta = utils.metadata_to_dict(inst['metadata'])
+            self.assertEqual(meta, fake_meta)
+            sys_meta = utils.metadata_to_dict(inst['system_metadata'])
+            self.assertEqual(sys_meta, fake_sys)
+
+    def test_instance_get_all_by_filters_without_meta(self):
+        inst = self.create_instance_with_args()
+        fake_meta, fake_sys = self.create_metadata_for_instance(inst['uuid'])
+        result = db.instance_get_all_by_filters(self.context, {},
+                                                columns_to_join=[])
+        for inst in result:
+            meta = utils.metadata_to_dict(inst['metadata'])
+            self.assertEqual(meta, {})
+            sys_meta = utils.metadata_to_dict(inst['system_metadata'])
+            self.assertEqual(sys_meta, {})
+
+    def test_instance_get_all_by_filters(self):
+        self.create_instance_with_args()
+        self.create_instance_with_args()
+        result = db.instance_get_all_by_filters(self.context, {})
+        self.assertEqual(2, len(result))
+
+    def test_instance_get_all_by_filters_regex(self):
+        self.create_instance_with_args(display_name='test1')
+        self.create_instance_with_args(display_name='teeeest2')
+        self.create_instance_with_args(display_name='diff')
+        result = db.instance_get_all_by_filters(self.context,
+                                                {'display_name': 't.*st.'})
+        self.assertEqual(2, len(result))
+
+    def test_instance_get_all_by_filters_exact_match(self):
+        self.create_instance_with_args(host='host1')
+        self.create_instance_with_args(host='host12')
+        result = db.instance_get_all_by_filters(self.context,
+                                                {'host': 'host1'})
+        self.assertEqual(1, len(result))
+
+    def test_instance_get_all_by_filters_metadata(self):
+        self.create_instance_with_args(metadata={'foo': 'bar'})
+        self.create_instance_with_args()
+        result = db.instance_get_all_by_filters(self.context,
+                                                {'metadata': {'foo': 'bar'}})
+        self.assertEqual(1, len(result))
+
+    def test_instance_get_all_by_filters_unicode_value(self):
+        self.create_instance_with_args(display_name=u'test♥')
+        result = db.instance_get_all_by_filters(self.context,
+                                                {'display_name': u'test'})
+        self.assertEqual(1, len(result))
+
+    def test_instance_get_by_uuid(self):
+        inst = self.create_instance_with_args()
+        fake_meta, fake_sys = self.create_metadata_for_instance(inst['uuid'])
+        result = db.instance_get_by_uuid(self.context, inst['uuid'])
+        meta = utils.metadata_to_dict(result['metadata'])
+        self.assertEqual(meta, fake_meta)
+        sys_meta = utils.metadata_to_dict(result['system_metadata'])
+        self.assertEqual(sys_meta, fake_sys)
+
+    def test_instance_get_by_uuid_join_empty(self):
+        inst = self.create_instance_with_args()
+        fake_meta, fake_sys = self.create_metadata_for_instance(inst['uuid'])
+        result = db.instance_get_by_uuid(self.context, inst['uuid'],
+                columns_to_join=[])
+        meta = utils.metadata_to_dict(result['metadata'])
+        self.assertEqual(meta, {})
+        sys_meta = utils.metadata_to_dict(result['system_metadata'])
+        self.assertEqual(sys_meta, {})
+
+    def test_instance_get_by_uuid_join_meta(self):
+        inst = self.create_instance_with_args()
+        fake_meta, fake_sys = self.create_metadata_for_instance(inst['uuid'])
+        result = db.instance_get_by_uuid(self.context, inst['uuid'],
+                columns_to_join=['metadata'])
+        meta = utils.metadata_to_dict(result['metadata'])
+        self.assertEqual(meta, fake_meta)
+        sys_meta = utils.metadata_to_dict(result['system_metadata'])
+        self.assertEqual(sys_meta, {})
+
+    def test_instance_get_by_uuid_join_sys_meta(self):
+        inst = self.create_instance_with_args()
+        fake_meta, fake_sys = self.create_metadata_for_instance(inst['uuid'])
+        result = db.instance_get_by_uuid(self.context, inst['uuid'],
+                columns_to_join=['system_metadata'])
+        meta = utils.metadata_to_dict(result['metadata'])
+        self.assertEqual(meta, {})
+        sys_meta = utils.metadata_to_dict(result['system_metadata'])
+        self.assertEqual(sys_meta, fake_sys)
+
+    def test_instance_get_all_by_filters_deleted(self):
+        inst1 = self.create_instance_with_args()
+        inst2 = self.create_instance_with_args(reservation_id='b')
+        db.instance_destroy(self.context, inst1['uuid'])
+        result = db.instance_get_all_by_filters(self.context, {})
+        self.assertEqual(2, len(result))
+        self.assertIn(inst1['id'], [result[0]['id'], result[1]['id']])
+        self.assertIn(inst2['id'], [result[0]['id'], result[1]['id']])
+        if inst1['id'] == result[0]['id']:
+            self.assertTrue(result[0]['deleted'])
+        else:
+            self.assertTrue(result[1]['deleted'])
+
+    def test_instance_get_all_by_filters_deleted_and_soft_deleted(self):
+        inst1 = self.create_instance_with_args()
+        inst2 = self.create_instance_with_args(vm_state=vm_states.SOFT_DELETED)
+        inst3 = self.create_instance_with_args()
+        db.instance_destroy(self.context, inst1['uuid'])
+        result = db.instance_get_all_by_filters(self.context,
+                                                {'deleted': True})
+        self.assertEqual(2, len(result))
+        self.assertIn(inst1['id'], [result[0]['id'], result[1]['id']])
+        self.assertIn(inst2['id'], [result[0]['id'], result[1]['id']])
+
+    def test_instance_get_all_by_filters_deleted_no_soft_deleted(self):
+        inst1 = self.create_instance_with_args()
+        inst2 = self.create_instance_with_args(vm_state=vm_states.SOFT_DELETED)
+        inst3 = self.create_instance_with_args()
+        db.instance_destroy(self.context, inst1['uuid'])
+        result = db.instance_get_all_by_filters(self.context,
+                                                {'deleted': True,
+                                                 'soft_deleted': False})
+        self.assertEqual(1, len(result))
+        self.assertEqual(inst1['id'], result[0]['id'])
+
+    def test_instance_get_all_by_filters_alive_and_soft_deleted(self):
+        inst1 = self.create_instance_with_args()
+        inst2 = self.create_instance_with_args(vm_state=vm_states.SOFT_DELETED)
+        inst3 = self.create_instance_with_args()
+        db.instance_destroy(self.context, inst1['uuid'])
+        result = db.instance_get_all_by_filters(self.context,
+                                                {'deleted': False,
+                                                 'soft_deleted': True})
+        self.assertEqual(2, len(result))
+        self.assertIn(inst2['id'], [result[0]['id'], result[1]['id']])
+        self.assertIn(inst3['id'], [result[0]['id'], result[1]['id']])
+
+    def test_instance_get_all_by_host_and_node_no_join(self):
+        # Test that system metadata is not joined.
+        sys_meta = {'foo': 'bar'}
+        expected = self.create_instance_with_args(system_metadata=sys_meta)
+
+        elevated = self.context.elevated()
+        instances = db.instance_get_all_by_host_and_node(elevated, 'host1',
+                                                         'node1')
+        self.assertEqual(1, len(instances))
+        instance = instances[0]
+        self.assertEqual(expected['uuid'], instance['uuid'])
+        sysmeta = dict(instance)['system_metadata']
+        self.assertEqual(len(sysmeta), 0)
+
+    def test_instance_get_all_hung_in_rebooting(self):
+        ctxt = context.get_admin_context()
+
+        # Ensure no instances are returned.
+        results = db.instance_get_all_hung_in_rebooting(ctxt, 10)
+        self.assertEqual(0, len(results))
+
+        # Ensure one rebooting instance with updated_at older than 10 seconds
+        # is returned.
+        updated_at = datetime.datetime(2000, 1, 1, 12, 0, 0)
+        values = {"task_state": "rebooting", "updated_at": updated_at}
+        instance = db.instance_create(ctxt, values)
+        results = db.instance_get_all_hung_in_rebooting(ctxt, 10)
+        self.assertEqual(1, len(results))
+        db.instance_update(ctxt, instance['uuid'], {"task_state": None})
+
+        # Ensure the newly rebooted instance is not returned.
+        updated_at = timeutils.utcnow()
+        values = {"task_state": "rebooting", "updated_at": updated_at}
+        instance = db.instance_create(ctxt, values)
+        results = db.instance_get_all_hung_in_rebooting(ctxt, 10)
+        self.assertEqual(0, len(results))
+        db.instance_update(ctxt, instance['uuid'], {"task_state": None})
+
+    def test_instance_update_with_expected_vm_state(self):
+        ctxt = context.get_admin_context()
+        uuid = uuidutils.generate_uuid()
+        updates = {'expected_vm_state': 'meow',
+                   'moo': 'cow'}
+
+        class FakeInstance(dict):
+            def save(self, session=None):
+                pass
+
+        fake_instance_values = {'vm_state': 'meow',
+                                'hostname': '',
+                                'metadata': None,
+                                'system_metadata': None}
+        fake_instance = FakeInstance(fake_instance_values)
+
+        self.mox.StubOutWithMock(sqlalchemy_api, '_instance_get_by_uuid')
+        self.mox.StubOutWithMock(fake_instance, 'save')
+
+        sqlalchemy_api._instance_get_by_uuid(ctxt, uuid,
+                session=mox.IgnoreArg()).AndReturn(fake_instance)
+        fake_instance.save(session=mox.IgnoreArg())
+
+        self.mox.ReplayAll()
+
+        result = db.instance_update(ctxt, uuid, updates)
+        expected_instance = dict(fake_instance_values)
+        expected_instance['moo'] = 'cow'
+        self.assertEqual(expected_instance, result)
+
+    def test_instance_update_with_unexpected_vm_state(self):
+        ctxt = context.get_admin_context()
+        uuid = uuidutils.generate_uuid()
+        updates = {'expected_vm_state': 'meow'}
+        fake_instance = {'vm_state': 'nomatch'}
+
+        self.mox.StubOutWithMock(sqlalchemy_api, '_instance_get_by_uuid')
+
+        sqlalchemy_api._instance_get_by_uuid(ctxt, uuid,
+                session=mox.IgnoreArg()).AndReturn(fake_instance)
+
+        self.mox.ReplayAll()
+
+        self.assertRaises(exception.UnexpectedVMStateError,
+                          db.instance_update, ctxt, uuid, updates)
+
+    def test_instance_update_with_instance_uuid(self):
+        # test instance_update() works when an instance UUID is passed.
+        ctxt = context.get_admin_context()
+
+        # Create an instance with some metadata
+        values = {'metadata': {'host': 'foo', 'key1': 'meow'},
+                  'system_metadata': {'original_image_ref': 'blah'}}
+        instance = db.instance_create(ctxt, values)
+
+        # Update the metadata
+        values = {'metadata': {'host': 'bar', 'key2': 'wuff'},
+                  'system_metadata': {'original_image_ref': 'baz'}}
+        db.instance_update(ctxt, instance['uuid'], values)
+
+        # Retrieve the user-provided metadata to ensure it was successfully
+        # updated
+        instance_meta = db.instance_metadata_get(ctxt, instance['uuid'])
+        self.assertEqual('bar', instance_meta['host'])
+        self.assertEqual('wuff', instance_meta['key2'])
+        self.assertNotIn('key1', instance_meta)
+
+        # Retrieve the system metadata to ensure it was successfully updated
+        system_meta = db.instance_system_metadata_get(ctxt, instance['uuid'])
+        self.assertEqual('baz', system_meta['original_image_ref'])
+
+    def test_delete_instance_metadata_on_instance_destroy(self):
+        ctxt = context.get_admin_context()
+
+        # Create an instance with some metadata
+        values = {'metadata': {'host': 'foo', 'key1': 'meow'},
+                  'system_metadata': {'original_image_ref': 'blah'}}
+        instance = db.instance_create(ctxt, values)
+        instance_meta = db.instance_metadata_get(ctxt, instance['uuid'])
+        self.assertEqual('foo', instance_meta['host'])
+        self.assertEqual('meow', instance_meta['key1'])
+        db.instance_destroy(ctxt, instance['uuid'])
+        instance_meta = db.instance_metadata_get(ctxt, instance['uuid'])
+        # Make sure instance metadata is deleted as well
+        self.assertEqual({}, instance_meta)
+
+    def test_instance_update_unique_name(self):
+        otherprojectcontext = context.RequestContext(self.user_id,
+                                          "%s2" % self.project_id)
+
+        inst = self.create_instance_with_args(hostname='fake_name')
+        uuid1p1 = inst['uuid']
+        inst = self.create_instance_with_args(hostname='fake_name2')
+        uuid2p1 = inst['uuid']
+
+        inst = self.create_instance_with_args(context=otherprojectcontext,
+                                               hostname='fake_name3')
+        uuid1p2 = inst['uuid']
+
+        # osapi_compute_unique_server_name_scope is unset so this should work:
+        values = {'hostname': 'fake_name2'}
+        db.instance_update(self.context, uuid1p1, values)
+        values = {'hostname': 'fake_name'}
+        db.instance_update(self.context, uuid1p1, values)
+
+        # With scope 'global' any duplicate should fail.
+        self.flags(osapi_compute_unique_server_name_scope='global')
+        self.assertRaises(exception.InstanceExists,
+                          db.instance_update,
+                          self.context,
+                          uuid2p1,
+                          values)
+
+        self.assertRaises(exception.InstanceExists,
+                          db.instance_update,
+                          otherprojectcontext,
+                          uuid1p2,
+                          values)
+
+        # But we should definitely be able to update our name if we aren't
+        #  really changing it.
+        case_only_values = {'hostname': 'fake_NAME'}
+        db.instance_update(self.context, uuid1p1, case_only_values)
+
+        # With scope 'project' a duplicate in the project should fail:
+        self.flags(osapi_compute_unique_server_name_scope='project')
+        self.assertRaises(exception.InstanceExists,
+                          db.instance_update,
+                          self.context,
+                          uuid2p1,
+                          values)
+
+        # With scope 'project' a duplicate in a different project should work:
+        self.flags(osapi_compute_unique_server_name_scope='project')
+        db.instance_update(otherprojectcontext, uuid1p2, values)
+
+    def test_instance_update_with_and_get_original(self):
+        ctxt = context.get_admin_context()
+
+        # Create an instance with some metadata
+        values = {'vm_state': 'building'}
+        instance = db.instance_create(ctxt, values)
+
+        (old_ref, new_ref) = db.instance_update_and_get_original(ctxt,
+                instance['uuid'], {'vm_state': 'needscoffee'})
+        self.assertEquals("building", old_ref["vm_state"])
+        self.assertEquals("needscoffee", new_ref["vm_state"])
+
+    def _test_instance_update_updates_metadata(self, metadata_type):
+        ctxt = context.get_admin_context()
+
+        instance = db.instance_create(ctxt, {})
+
+        def set_and_check(meta):
+            inst = db.instance_update(ctxt, instance['uuid'],
+                               {metadata_type: dict(meta)})
+            _meta = utils.metadata_to_dict(inst[metadata_type])
+            self.assertEqual(meta, _meta)
+
+        meta = {'speed': '88', 'units': 'MPH'}
+        set_and_check(meta)
+
+        meta['gigawatts'] = '1.21'
+        set_and_check(meta)
+
+        del meta['gigawatts']
+        set_and_check(meta)
+
+    def test_instance_update_updates_system_metadata(self):
+        # Ensure that system_metadata is updated during instance_update
+        self._test_instance_update_updates_metadata('system_metadata')
+
+    def test_instance_update_updates_metadata(self):
+        # Ensure that metadata is updated during instance_update
+        self._test_instance_update_updates_metadata('metadata')
+
+    def test_instance_floating_address_get_all(self):
+        ctxt = context.get_admin_context()
+
+        instance1 = db.instance_create(ctxt, {'host': 'h1', 'hostname': 'n1'})
+        instance2 = db.instance_create(ctxt, {'host': 'h2', 'hostname': 'n2'})
+
+        fixed_addresses = ['1.1.1.1', '1.1.1.2', '1.1.1.3']
+        float_addresses = ['2.1.1.1', '2.1.1.2', '2.1.1.3']
+        instance_uuids = [instance1['uuid'], instance1['uuid'],
+                          instance2['uuid']]
+
+        for fixed_addr, float_addr, instance_uuid in zip(fixed_addresses,
+                                                         float_addresses,
+                                                         instance_uuids):
+            db.fixed_ip_create(ctxt, {'address': fixed_addr,
+                                      'instance_uuid': instance_uuid})
+            fixed_id = db.fixed_ip_get_by_address(ctxt, fixed_addr)['id']
+            db.floating_ip_create(ctxt,
+                                  {'address': float_addr,
+                                   'fixed_ip_id': fixed_id})
+
+        real_float_addresses = \
+                db.instance_floating_address_get_all(ctxt, instance_uuids[0])
+        self.assertEqual(set(float_addresses[:2]), set(real_float_addresses))
+        real_float_addresses = \
+                db.instance_floating_address_get_all(ctxt, instance_uuids[2])
+        self.assertEqual(set([float_addresses[2]]), set(real_float_addresses))
 
 
 class InstanceMetadataTestCase(test.TestCase):
