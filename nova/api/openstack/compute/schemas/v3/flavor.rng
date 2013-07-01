@@ -6,6 +6,7 @@
   <attribute name="disk">   <text/> </attribute>
   <attribute name="vcpus">   <text/> </attribute>
   <attribute name="swap">   <text/> </attribute>
+  <attribute name="ephemeral">   <text/> </attribute>
   <zeroOrMore>
     <externalRef href="../atom-link.rng"/>
   </zeroOrMore>

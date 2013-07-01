@@ -77,5 +77,6 @@ class V3ViewBuilder(ViewBuilder):
         flavor_dict = super(V3ViewBuilder, self).show(request, flavor)
         flavor_dict['flavor'].update({
             "swap": flavor.get("swap") or "",
+            "ephemeral": flavor.get("ephemeral_gb") or "",
         })
         return flavor_dict
