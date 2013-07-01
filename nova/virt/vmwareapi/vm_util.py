@@ -632,6 +632,13 @@ def get_host_name_from_host_ref(host_ref):
         return p.val
 
 
+def get_vm_state_from_name(session, vm_name):
+    vm_ref = get_vm_ref_from_name(session, vm_name)
+    vm_state = session._call_method(vim_util, "get_dynamic_property",
+                vm_ref, "VirtualMachine", "runtime.powerState")
+    return vm_state
+
+
 def get_cluster_ref_from_name(session, cluster_name):
     """Get reference to the cluster with the name specified."""
     cls = session._call_method(vim_util, "get_objects",

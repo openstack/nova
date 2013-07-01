@@ -365,6 +365,40 @@ class VMwareAPIVMTestCase(test.TestCase):
         self.assertRaises(exception.InstancePowerOffFailure,
                           self.conn.power_off, self.instance)
 
+    def test_resume_state_on_host_boot(self):
+        self._create_vm()
+        self.mox.StubOutWithMock(vm_util, 'get_vm_state_from_name')
+        self.mox.StubOutWithMock(self.conn, "reboot")
+        vm_util.get_vm_state_from_name(mox.IgnoreArg(),
+            self.instance['uuid']).AndReturn("poweredOff")
+        self.conn.reboot(self.context, self.instance, 'network_info',
+            'hard', None)
+        self.mox.ReplayAll()
+        self.conn.resume_state_on_host_boot(self.context, self.instance,
+            'network_info')
+
+    def test_resume_state_on_host_boot_no_reboot_1(self):
+        """Don't call reboot on instance which is poweredon."""
+        self._create_vm()
+        self.mox.StubOutWithMock(vm_util, 'get_vm_state_from_name')
+        self.mox.StubOutWithMock(self.conn, 'reboot')
+        vm_util.get_vm_state_from_name(mox.IgnoreArg(),
+            self.instance['uuid']).AndReturn("poweredOn")
+        self.mox.ReplayAll()
+        self.conn.resume_state_on_host_boot(self.context, self.instance,
+            'network_info')
+
+    def test_resume_state_on_host_boot_no_reboot_2(self):
+        """Don't call reboot on instance which is suspended."""
+        self._create_vm()
+        self.mox.StubOutWithMock(vm_util, 'get_vm_state_from_name')
+        self.mox.StubOutWithMock(self.conn, 'reboot')
+        vm_util.get_vm_state_from_name(mox.IgnoreArg(),
+            self.instance['uuid']).AndReturn("suspended")
+        self.mox.ReplayAll()
+        self.conn.resume_state_on_host_boot(self.context, self.instance,
+            'network_info')
+
     def test_get_info(self):
         self._create_vm()
         info = self.conn.get_info({'uuid': 'fake-uuid'})

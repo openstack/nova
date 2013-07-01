@@ -229,6 +229,28 @@ class VMwareESXDriver(driver.ComputeDriver):
         """Power on the specified instance."""
         self._vmops._power_on(instance)
 
+    def resume_state_on_host_boot(self, context, instance, network_info,
+                                  block_device_info=None):
+        """resume guest state when a host is booted."""
+        # Check if the instance is running already and avoid doing
+        # anything if it is.
+        instances = self.list_instances()
+        if instance['uuid'] not in instances:
+            LOG.warn(_('Instance cannot be found in host, or in an unknown'
+                'state.'), instance=instance)
+        else:
+            state = vm_util.get_vm_state_from_name(self._session,
+                instance['uuid'])
+            ignored_states = ['poweredon', 'suspended']
+
+            if state.lower() in ignored_states:
+                return
+        # Instance is not up and could be in an unknown state.
+        # Be as absolute as possible about getting it back into
+        # a known and running state.
+        self.reboot(context, instance, network_info, 'hard',
+            block_device_info)
+
     def poll_rebooting_instances(self, timeout, instances):
         """Poll for rebooting instances."""
         self._vmops.poll_rebooting_instances(timeout, instances)
