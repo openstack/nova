@@ -25,7 +25,7 @@ import fixtures
 
 from nova.api.ec2 import ec2utils
 from nova import context
-import nova.db.api
+from nova import db
 from nova import exception
 from nova.image import s3
 from nova import test
@@ -89,12 +89,12 @@ class TestS3ImageService(test.TestCase):
         self.useFixture(fixtures.FakeLogger('boto'))
 
         # set up 3 fixtures to test shows, should have id '1', '2', and '3'
-        nova.db.api.s3_image_create(self.context,
-                                    '155d900f-4e14-4e4c-a73d-069cbf4541e6')
-        nova.db.api.s3_image_create(self.context,
-                                    'a2459075-d96c-40d5-893e-577ff92e721c')
-        nova.db.api.s3_image_create(self.context,
-                                    '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6')
+        db.s3_image_create(self.context,
+                           '155d900f-4e14-4e4c-a73d-069cbf4541e6')
+        db.s3_image_create(self.context,
+                           'a2459075-d96c-40d5-893e-577ff92e721c')
+        db.s3_image_create(self.context,
+                           '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6')
 
         fake.stub_out_image_service(self.stubs)
         self.image_service = s3.S3ImageService()
@@ -146,8 +146,7 @@ class TestS3ImageService(test.TestCase):
         # and test that S3ImageService does the correct mapping for
         # us. We can't put fake bad or pending states in the real fake
         # image service as it causes other tests to fail
-        self.stubs.Set(nova.tests.image.fake._FakeImageService, 'show',
-                       my_fake_show)
+        self.stubs.Set(fake._FakeImageService, 'show', my_fake_show)
         ret_image = self.image_service.show(self.context, '1')
         self.assertEqual(ret_image['properties']['image_state'], 'pending')
         ret_image = self.image_service.show(self.context, '2')

@@ -4301,7 +4301,7 @@ class VirtualInterfaceTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
 class NetworkTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
-    """Tests for db/api/network_* methods."""
+    """Tests for db.api.network_* methods."""
 
     def setUp(self):
         super(NetworkTestCase, self).setUp()

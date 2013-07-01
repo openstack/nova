@@ -2139,7 +2139,7 @@ class FloatingIPTestCase(test.TestCase):
         self.network.associate_floating_ip(ctxt, 'fl_ip', 'fix_ip', True)
 
     def test_double_deallocation(self):
-        instance_ref = db.api.instance_create(self.context,
+        instance_ref = db.instance_create(self.context,
                 {"project_id": self.project_id})
         # Run it twice to make it fault if it does not handle
         # instances without fixed networks
@@ -2152,14 +2152,14 @@ class FloatingIPTestCase(test.TestCase):
     def test_deallocation_deleted_instance(self):
         self.stubs.Set(self.network, '_teardown_network_on_host',
                        lambda *args, **kwargs: None)
-        instance = db.api.instance_create(self.context, {
+        instance = db.instance_create(self.context, {
                 'project_id': self.project_id, 'deleted': True})
-        network = db.api.network_create_safe(self.context.elevated(), {
+        network = db.network_create_safe(self.context.elevated(), {
                 'project_id': self.project_id})
         fixed = db.fixed_ip_create(self.context, {'allocated': True,
                 'instance_uuid': instance['uuid'], 'address': '10.1.1.1',
                 'network_id': network['id']})
-        db.api.floating_ip_create(self.context, {
+        db.floating_ip_create(self.context, {
                 'address': '10.10.10.10', 'instance_uuid': instance['uuid'],
                 'fixed_ip_id': fixed['id'],
                 'project_id': self.project_id})
@@ -2169,17 +2169,17 @@ class FloatingIPTestCase(test.TestCase):
     def test_deallocation_duplicate_floating_ip(self):
         self.stubs.Set(self.network, '_teardown_network_on_host',
                        lambda *args, **kwargs: None)
-        instance = db.api.instance_create(self.context, {
+        instance = db.instance_create(self.context, {
                 'project_id': self.project_id})
-        network = db.api.network_create_safe(self.context.elevated(), {
+        network = db.network_create_safe(self.context.elevated(), {
                 'project_id': self.project_id})
         fixed = db.fixed_ip_create(self.context, {'allocated': True,
                 'instance_uuid': instance['uuid'], 'address': '10.1.1.1',
                 'network_id': network['id']})
-        db.api.floating_ip_create(self.context, {
+        db.floating_ip_create(self.context, {
                 'address': '10.10.10.10',
                 'deleted': True})
-        db.api.floating_ip_create(self.context, {
+        db.floating_ip_create(self.context, {
                 'address': '10.10.10.10', 'instance_uuid': instance['uuid'],
                 'fixed_ip_id': fixed['id'],
                 'project_id': self.project_id})
