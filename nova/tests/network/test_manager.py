@@ -191,6 +191,7 @@ class FlatNetworkTestCase(test.TestCase):
                      'ip_v6': '2001:db8:0:1::%x' % nid,
                      'netmask': '255.255.255.0',
                      'netmask_v6': 64,
+                     'physical_network': None,
                       }
 
             network = vif['network']
@@ -229,7 +230,9 @@ class FlatNetworkTestCase(test.TestCase):
                             ip=net_v4['ips'][i]['address'],
                             ip_v6=net_v6['ips'][i]['address'],
                             netmask=str(net_v4.as_netaddr().netmask),
-                            netmask_v6=net_v6.as_netaddr()._prefixlen)
+                            netmask_v6=net_v6.as_netaddr()._prefixlen,
+                            physical_network=
+                                network.get_meta('physical_network', None))
 
             self.assertThat(vif_dict, matchers.DictMatches(check))
 

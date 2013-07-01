@@ -54,6 +54,7 @@ CONF.import_opt('use_ipv6', 'nova.netconf')
 # Since libvirt 0.9.11, <interface type='bridge'>
 # supports OpenVSwitch natively.
 LIBVIRT_OVS_VPORT_VERSION = 9011
+DEV_PREFIX_ETH = 'eth'
 
 
 def is_vif_model_valid_for_virt(virt_type, vif_model):
@@ -93,6 +94,10 @@ class LibvirtBaseVIFDriver(object):
         if 'devname' in vif:
             return vif['devname']
         return ("nic" + vif['id'])[:network_model.NIC_NAME_LEN]
+
+    def get_vif_devname_with_prefix(self, vif, prefix):
+        devname = self.get_vif_devname(vif)
+        return prefix + devname[3:]
 
     def get_config(self, instance, vif, image_meta, inst_type):
         conf = vconfig.LibvirtConfigGuestInterface()
@@ -296,6 +301,17 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
 
         return conf
 
+    def get_config_mlnx_direct(self, instance, vif, image_meta,
+                               inst_type):
+        conf = super(LibvirtGenericVIFDriver,
+                     self).get_config(instance, vif,
+                                      image_meta, inst_type)
+
+        devname = self.get_vif_devname_with_prefix(vif, DEV_PREFIX_ETH)
+        designer.set_vif_host_backend_direct_config(conf, devname)
+
+        return conf
+
     def get_config(self, instance, vif, image_meta, inst_type):
         vif_type = vif['type']
 
@@ -338,6 +354,11 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
                                           vif,
                                           image_meta,
                                           inst_type)
+        elif vif_type == network_model.VIF_TYPE_MLNX_DIRECT:
+            return self.get_config_mlnx_direct(instance,
+                                               vif,
+                                               image_meta,
+                                               inst_type)
         else:
             raise exception.NovaException(
                 _("Unexpected vif_type=%s") % vif_type)
@@ -465,6 +486,23 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
         else:
             self.plug_ivs_ethernet(instance, vif)
 
+    def plug_mlnx_direct(self, instance, vif):
+        super(LibvirtGenericVIFDriver,
+              self).plug(instance, vif)
+
+        network = vif['network']
+        vnic_mac = vif['address']
+        device_id = instance['uuid']
+        fabric = network['meta']['physical_network']
+
+        dev_name = self.get_vif_devname_with_prefix(vif, DEV_PREFIX_ETH)
+        try:
+            utils.execute('ebrctl', 'add-port', vnic_mac, device_id, fabric,
+                          network_model.VIF_TYPE_MLNX_DIRECT, dev_name,
+                          run_as_root=True)
+        except processutils.ProcessExecutionError:
+            LOG.exception(_("Failed while plugging vif"), instance=instance)
+
     def plug_802qbg(self, instance, vif):
         super(LibvirtGenericVIFDriver,
               self).plug(instance, vif)
@@ -521,6 +559,8 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
             self.plug_ivs(instance, vif)
         elif vif_type == network_model.VIF_TYPE_IOVISOR:
             self.plug_iovisor(instance, vif)
+        elif vif_type == network_model.VIF_TYPE_MLNX_DIRECT:
+            self.plug_mlnx_direct(instance, vif)
         else:
             raise exception.NovaException(
                 _("Unexpected vif_type=%s") % vif_type)
@@ -614,6 +654,19 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
         else:
             self.unplug_ivs_ethernet(instance, vif)
 
+    def unplug_mlnx_direct(self, instance, vif):
+        super(LibvirtGenericVIFDriver,
+              self).unplug(instance, vif)
+
+        network = vif['network']
+        vnic_mac = vif['address']
+        fabric = network['meta']['physical_network']
+        try:
+            utils.execute('ebrctl', 'del-port', fabric,
+                          vnic_mac, run_as_root=True)
+        except processutils.ProcessExecutionError:
+            LOG.exception(_("Failed while unplugging vif"), instance=instance)
+
     def unplug_802qbg(self, instance, vif):
         super(LibvirtGenericVIFDriver,
               self).unplug(instance, vif)
@@ -667,6 +720,8 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
             self.unplug_ivs(instance, vif)
         elif vif_type == network_model.VIF_TYPE_IOVISOR:
             self.unplug_iovisor(instance, vif)
+        elif vif_type == network_model.VIF_TYPE_MLNX_DIRECT:
+            self.unplug_mlnx_direct(instance, vif)
         else:
             raise exception.NovaException(
                 _("Unexpected vif_type=%s") % vif_type)

@@ -767,6 +767,22 @@ class LibvirtConfigGuestInterfaceTest(LibvirtConfigBaseTest):
               <virtualport type="802.1Qbh"/>
             </interface>""")
 
+    def test_config_direct(self):
+        obj = config.LibvirtConfigGuestInterface()
+        obj.net_type = "direct"
+        obj.mac_addr = "DE:AD:BE:EF:CA:FE"
+        obj.model = "virtio"
+        obj.source_dev = "eth0"
+        obj.source_mode = "passthrough"
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <interface type="direct">
+              <mac address="DE:AD:BE:EF:CA:FE"/>
+              <model type="virtio"/>
+              <source dev="eth0" mode="passthrough"/>
+            </interface>""")
+
 
 class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
 
