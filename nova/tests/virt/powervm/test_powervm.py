@@ -408,13 +408,13 @@ class PowerVMDriverTestCase(test.TestCase):
             backup_made)
 
         if backup_made:
+            self.powervm_connection._powervm._operator.set_lpar_mac_base_value(
+                    'rsz_foo', 'fa:89:f0:8b:9b:39')
             self.powervm_connection.instance_exists('foo').AndReturn(new_made)
             if new_made:
                 self.powervm_connection._powervm.destroy('foo')
             self.powervm_connection._powervm._operator.rename_lpar('rsz_foo',
                                                                    'foo')
-        self.powervm_connection._powervm._operator.set_lpar_mac_base_value(
-                'foo', 'fa:89:f0:8b:9b:39')
         if power_on:
             self.powervm_connection._powervm.power_on('foo')
 
