@@ -153,18 +153,18 @@ class DbApiTestCase(DbTestCase):
         self.flags(osapi_compute_unique_server_name_scope=None)
 
     def test_ec2_ids_not_found_are_printable(self):
-        def check_exc_format(method):
+        def check_exc_format(method, value):
             try:
-                method(self.context, 'fake')
+                method(self.context, value)
             except exception.NotFound as exc:
-                self.assertTrue('fake' in unicode(exc))
+                self.assertTrue(unicode(value) in unicode(exc))
 
-        check_exc_format(db.get_ec2_volume_id_by_uuid)
-        check_exc_format(db.get_volume_uuid_by_ec2_id)
-        check_exc_format(db.get_ec2_snapshot_id_by_uuid)
-        check_exc_format(db.get_snapshot_uuid_by_ec2_id)
-        check_exc_format(db.get_ec2_instance_id_by_uuid)
-        check_exc_format(db.get_instance_uuid_by_ec2_id)
+        check_exc_format(db.get_ec2_volume_id_by_uuid, 'fake')
+        check_exc_format(db.get_volume_uuid_by_ec2_id, 123456)
+        check_exc_format(db.get_ec2_snapshot_id_by_uuid, 'fake')
+        check_exc_format(db.get_snapshot_uuid_by_ec2_id, 123456)
+        check_exc_format(db.get_ec2_instance_id_by_uuid, 'fake')
+        check_exc_format(db.get_instance_uuid_by_ec2_id, 123456)
 
     def test_instance_get_all_with_meta(self):
         inst = self.create_instance_with_args()
