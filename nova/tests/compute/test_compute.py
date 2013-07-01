@@ -5683,38 +5683,6 @@ class ComputeAPITestCase(BaseTestCase):
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
         self.assertEqual(instance['task_state'], task_states.DELETING)
 
-    def test_suspend(self):
-        # Ensure instance can be suspended.
-        instance = jsonutils.to_primitive(self._create_fake_instance())
-        instance_uuid = instance['uuid']
-        self.compute.run_instance(self.context, instance=instance)
-
-        self.assertEqual(instance['task_state'], None)
-
-        self.compute_api.suspend(self.context, instance)
-
-        instance = db.instance_get_by_uuid(self.context, instance_uuid)
-        self.assertEqual(instance['task_state'], task_states.SUSPENDING)
-
-        db.instance_destroy(self.context, instance['uuid'])
-
-    def test_resume(self):
-        # Ensure instance can be resumed (if suspended).
-        instance = jsonutils.to_primitive(self._create_fake_instance())
-        self.compute.run_instance(self.context, instance=instance)
-        db.instance_update(self.context, instance['uuid'],
-                           {'vm_state': vm_states.SUSPENDED})
-        instance = db.instance_get(self.context, instance['id'])
-
-        self.assertEqual(instance['task_state'], None)
-
-        self.compute_api.resume(self.context, instance)
-
-        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
-        self.assertEqual(instance['task_state'], task_states.RESUMING)
-
-        db.instance_destroy(self.context, instance['uuid'])
-
     def test_pause(self):
         # Ensure instance can be paused.
         instance = jsonutils.to_primitive(self._create_fake_instance())

@@ -831,6 +831,14 @@ class _TargetedMessageMethods(_BaseMessageMethods):
         self._call_compute_api_with_obj(message.ctxt, instance, 'reboot',
                                         reboot_type=reboot_type)
 
+    def suspend_instance(self, message, instance):
+        """Suspend an instance via compute_api.suspend()."""
+        self._call_compute_api_with_obj(message.ctxt, instance, 'suspend')
+
+    def resume_instance(self, message, instance):
+        """Resume an instance via compute_api.suspend()."""
+        self._call_compute_api_with_obj(message.ctxt, instance, 'resume')
+
 
 class _BroadcastMessageMethods(_BaseMessageMethods):
     """These are the methods that can be called as a part of a broadcast
@@ -1537,6 +1545,14 @@ class MessageRunner(object):
         extra_kwargs = dict(reboot_type=reboot_type)
         self._instance_action(ctxt, instance, 'reboot_instance',
                               extra_kwargs=extra_kwargs)
+
+    def suspend_instance(self, ctxt, instance):
+        """Suspend an instance in its cell."""
+        self._instance_action(ctxt, instance, 'suspend_instance')
+
+    def resume_instance(self, ctxt, instance):
+        """Resume an instance in its cell."""
+        self._instance_action(ctxt, instance, 'resume_instance')
 
     @staticmethod
     def get_message_types():

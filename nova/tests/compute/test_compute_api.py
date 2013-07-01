@@ -105,6 +105,61 @@ class _ComputeAPIUnitTestMixIn(object):
         instance.obj_reset_changes()
         return instance
 
+    def test_suspend(self):
+        # Ensure instance can be suspended.
+        instance = self._create_instance_obj()
+        self.assertEqual(instance.vm_state, vm_states.ACTIVE)
+        self.assertEqual(instance.task_state, None)
+
+        self.mox.StubOutWithMock(instance, 'save')
+        self.mox.StubOutWithMock(self.compute_api,
+                '_record_action_start')
+        if self.is_cells:
+            rpcapi = self.compute_api.cells_rpcapi
+        else:
+            rpcapi = self.compute_api.compute_rpcapi
+        self.mox.StubOutWithMock(rpcapi, 'suspend_instance')
+
+        instance.save(expected_task_state=None)
+        self.compute_api._record_action_start(self.context,
+                instance, instance_actions.SUSPEND)
+        rpcapi.suspend_instance(self.context, instance)
+
+        self.mox.ReplayAll()
+
+        self.compute_api.suspend(self.context, instance)
+        self.assertEqual(vm_states.ACTIVE, instance.vm_state)
+        self.assertEqual(task_states.SUSPENDING,
+                         instance.task_state)
+
+    def test_resume(self):
+        # Ensure instance can be resumed (if suspended).
+        instance = self._create_instance_obj(
+                params=dict(vm_state=vm_states.SUSPENDED))
+        self.assertEqual(instance.vm_state, vm_states.SUSPENDED)
+        self.assertEqual(instance.task_state, None)
+
+        self.mox.StubOutWithMock(instance, 'save')
+        self.mox.StubOutWithMock(self.compute_api,
+                '_record_action_start')
+        if self.is_cells:
+            rpcapi = self.compute_api.cells_rpcapi
+        else:
+            rpcapi = self.compute_api.compute_rpcapi
+        self.mox.StubOutWithMock(rpcapi, 'resume_instance')
+
+        instance.save(expected_task_state=None)
+        self.compute_api._record_action_start(self.context,
+                instance, instance_actions.RESUME)
+        rpcapi.resume_instance(self.context, instance)
+
+        self.mox.ReplayAll()
+
+        self.compute_api.resume(self.context, instance)
+        self.assertEqual(vm_states.SUSPENDED, instance.vm_state)
+        self.assertEqual(task_states.RESUMING,
+                         instance.task_state)
+
     def test_start(self):
         params = dict(vm_state=vm_states.STOPPED)
         instance = self._create_instance_obj(params=params)

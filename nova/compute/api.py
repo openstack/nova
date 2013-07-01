@@ -2336,31 +2336,25 @@ class API(base.Base):
 
     @wrap_check_policy
     @check_instance_lock
+    @check_instance_cell
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.RESCUED])
     def suspend(self, context, instance):
         """Suspend the given instance."""
-        self.update(context,
-                    instance,
-                    task_state=task_states.SUSPENDING,
-                    expected_task_state=None)
-
+        instance.task_state = task_states.SUSPENDING
+        instance.save(expected_task_state=None)
         self._record_action_start(context, instance, instance_actions.SUSPEND)
-
-        self.compute_rpcapi.suspend_instance(context, instance=instance)
+        self.compute_rpcapi.suspend_instance(context, instance)
 
     @wrap_check_policy
     @check_instance_lock
+    @check_instance_cell
     @check_instance_state(vm_state=[vm_states.SUSPENDED])
     def resume(self, context, instance):
         """Resume the given instance."""
-        self.update(context,
-                    instance,
-                    task_state=task_states.RESUMING,
-                    expected_task_state=None)
-
+        instance.task_state = task_states.RESUMING
+        instance.save(expected_task_state=None)
         self._record_action_start(context, instance, instance_actions.RESUME)
-
-        self.compute_rpcapi.resume_instance(context, instance=instance)
+        self.compute_rpcapi.resume_instance(context, instance)
 
     @wrap_check_policy
     @check_instance_lock

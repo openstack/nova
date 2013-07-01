@@ -71,6 +71,7 @@ class CellsAPI(rpc_proxy.RpcProxy):
         1.13 - Adds cell_create(), cell_update(), cell_delete(), and
                cell_get()
         1.14 - Adds reboot_instance()
+        1.15 - Adds suspend_instance() and resume_instance()
     '''
     BASE_RPC_API_VERSION = '1.0'
 
@@ -420,3 +421,25 @@ class CellsAPI(rpc_proxy.RpcProxy):
                   self.make_msg('reboot_instance', instance=instance,
                                 reboot_type=reboot_type),
                   version='1.14')
+
+    def suspend_instance(self, ctxt, instance):
+        """Suspend an instance in its cell.
+
+        This method takes a new-world instance object.
+        """
+        if not CONF.cells.enable:
+            return
+        self.cast(ctxt,
+                  self.make_msg('suspend_instance', instance=instance),
+                  version='1.15')
+
+    def resume_instance(self, ctxt, instance):
+        """Resume an instance in its cell.
+
+        This method takes a new-world instance object.
+        """
+        if not CONF.cells.enable:
+            return
+        self.cast(ctxt,
+                  self.make_msg('resume_instance', instance=instance),
+                  version='1.15')

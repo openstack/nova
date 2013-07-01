@@ -672,3 +672,17 @@ class CellsManagerClassTestCase(test.TestCase):
         self.cells_manager.reboot_instance(self.ctxt,
                                            instance='fake-instance',
                                            reboot_type='HARD')
+
+    def test_suspend_instance(self):
+        self.mox.StubOutWithMock(self.msg_runner, 'suspend_instance')
+        self.msg_runner.suspend_instance(self.ctxt, 'fake-instance')
+        self.mox.ReplayAll()
+        self.cells_manager.suspend_instance(self.ctxt,
+                                            instance='fake-instance')
+
+    def test_resume_instance(self):
+        self.mox.StubOutWithMock(self.msg_runner, 'resume_instance')
+        self.msg_runner.resume_instance(self.ctxt, 'fake-instance')
+        self.mox.ReplayAll()
+        self.cells_manager.resume_instance(self.ctxt,
+                                           instance='fake-instance')
