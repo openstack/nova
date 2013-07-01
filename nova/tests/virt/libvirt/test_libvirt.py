@@ -2612,7 +2612,7 @@ class LibvirtConnTestCase(test.TestCase):
             self.mox.StubOutWithMock(imagebackend.Image, 'cache')
             imagebackend.Image.cache(context=mox.IgnoreArg(),
                                      fetch_func=mox.IgnoreArg(),
-                                     filename='otherdisk',
+                                     filename='otherdisk_1234567',
                                      image_id=self.test_instance['image_ref'],
                                      project_id='fake',
                                      size=10737418240L,
