@@ -412,7 +412,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                         'trying to set it to ERROR'),
                       instance_uuid=instance_uuid)
 
-    def _get_instances_on_driver(self, context, filters=None):
+    def _get_instances_on_driver(self, context, filters=None,
+                                 columns_to_join=None):
         """Return a list of instance records for the instances found
         on the hypervisor which satisfy the specified filters. If filters=None
         return a list of instance records for all the instances found on the
@@ -424,7 +425,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             driver_uuids = self.driver.list_instance_uuids()
             filters['uuid'] = driver_uuids
             local_instances = self.conductor_api.instance_get_all_by_filters(
-                    context, filters, columns_to_join=[])
+                    context, filters, columns_to_join=columns_to_join)
             return local_instances
         except NotImplementedError:
             pass
@@ -433,7 +434,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         # to brute force.
         driver_instances = self.driver.list_instances()
         instances = self.conductor_api.instance_get_all_by_filters(
-            context, filters, columns_to_join=[])
+            context, filters, columns_to_join=columns_to_join)
         name_map = dict((instance['name'], instance) for instance in instances)
         local_instances = []
         for driver_instance in driver_instances:

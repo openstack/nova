@@ -5221,7 +5221,8 @@ class ComputeTestCase(BaseTestCase):
 
         self.mox.ReplayAll()
 
-        result = self.compute._get_instances_on_driver(fake_context)
+        result = self.compute._get_instances_on_driver(fake_context,
+                                                       columns_to_join=[])
         self.assertEqual(driver_instances, result)
 
     def test_get_instances_on_driver_fallback(self):
@@ -5252,7 +5253,7 @@ class ComputeTestCase(BaseTestCase):
                 [inst['name'] for inst in driver_instances])
         self.compute.conductor_api.instance_get_all_by_filters(
                 fake_context, filters,
-                columns_to_join=[]).AndReturn(all_instances)
+                columns_to_join=None).AndReturn(all_instances)
 
         self.mox.ReplayAll()
 
