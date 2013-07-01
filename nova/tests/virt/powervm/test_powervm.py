@@ -173,7 +173,8 @@ class FakeBlockAdapter(powervm_blockdev.PowerVMLocalVolumeAdapter):
 
 
 def fake_get_powervm_operator():
-    return FakeIVMOperator(None)
+    return FakeIVMOperator(common.Connection('fake_host', 'fake_user',
+                                             'fake_password'))
 
 
 def create_instance(testcase):
@@ -617,6 +618,25 @@ class PowerVMDriverTestCase(test.TestCase):
         self.assertEquals(host_stats['supported_instances'][0][0], "ppc64")
         self.assertEquals(host_stats['supported_instances'][0][1], "powervm")
         self.assertEquals(host_stats['supported_instances'][0][2], "hvm")
+
+    def test_get_host_uptime(self):
+        """
+        Tests that the get_host_uptime method issues the proper sysstat command
+        and parses the output correctly.
+        """
+        exp_cmd = "ioscli sysstat -short fake_user"
+        output = [("02:54PM  up 24 days,  5:41, 1 user, "
+                   "load average: 0.06, 0.03, 0.02")]
+
+        fake_op = self.powervm_connection._powervm
+        self.mox.StubOutWithMock(fake_op._operator, 'run_vios_command')
+        fake_op._operator.run_vios_command(exp_cmd).AndReturn(output)
+
+        self.mox.ReplayAll()
+
+        # the host parameter isn't used so we just pass None
+        uptime = self.powervm_connection.get_host_uptime(None)
+        self.assertEquals("02:54PM  up 24 days  5:41", uptime)
 
 
 class PowerVMDriverLparTestCase(test.TestCase):

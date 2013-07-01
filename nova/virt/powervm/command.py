@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 IBM Corp.
+# Copyright 2013 IBM Corp.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -68,6 +68,15 @@ class BaseCommand(object):
     def chsyscfg(self, args=''):
         return 'chsyscfg %s' % args
 
+    def sysstat(self, args=''):
+        """
+        Returns a string of the formatted sysstat command to run.
+        Typically this command should be run with the -short option
+        and a User operand should be provided to narrow the results.
+        :returns: string - formatted sysstat command
+        """
+        return 'sysstat %s' % args
+
 
 class IVMCommand(BaseCommand):
 
@@ -97,3 +106,6 @@ class IVMCommand(BaseCommand):
 
     def hostname(self, args=''):
         return 'ioscli ' + BaseCommand.hostname(self, args=args)
+
+    def sysstat(self, args=''):
+        return 'ioscli ' + BaseCommand.sysstat(self, args=args)

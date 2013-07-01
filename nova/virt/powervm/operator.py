@@ -169,6 +169,10 @@ class PowerVMOperator(object):
 
         self._host_stats = data
 
+    def get_host_uptime(self, host):
+        """Returns the result of calling "uptime" on the target host."""
+        return self._operator.get_host_uptime(host)
+
     def spawn(self, context, instance, image_id, network_info):
         def _create_image(context, instance, image_id):
             """Fetch image from glance and copy it to the remote system."""
@@ -625,6 +629,19 @@ class BaseOperator(object):
         total_mem, avail_mem = output[0].split(',')
         return {'total_mem': int(total_mem),
                 'avail_mem': int(avail_mem)}
+
+    def get_host_uptime(self, host):
+        """
+        Get host uptime.
+        :returns: string - amount of time since last system startup
+        """
+        # The output of the command is like this:
+        # "02:54PM  up 24 days,  5:41, 1 user, load average: 0.06, 0.03, 0.02"
+        cmd = self.command.sysstat('-short %s' % self.connection_data.username)
+        output = self.run_vios_command(cmd)
+        # parse the sysstat output so we just return the uptime
+        system_time, uptime = output[0].split(',')[0:2]
+        return system_time + uptime
 
     def get_cpu_info(self):
         """Get CPU info.
