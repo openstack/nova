@@ -1458,8 +1458,7 @@ def instance_create(context, values):
 
     def _get_sec_group_models(session, security_groups):
         models = []
-        default_group = security_group_ensure_default(context,
-            session=session)
+        default_group = security_group_ensure_default(context)
         if 'default' in security_groups:
             models.append(default_group)
             # Generate a new list, so we don't modify the original
@@ -3208,6 +3207,16 @@ def block_device_mapping_destroy_by_instance_and_device(context, instance_uuid,
 
 ###################
 
+def _security_group_create(context, values, session=None):
+    security_group_ref = models.SecurityGroup()
+    # FIXME(devcamcar): Unless I do this, rules fails with lazy load exception
+    # once save() is called.  This will get cleaned up in next orm pass.
+    security_group_ref.rules
+    security_group_ref.update(values)
+    security_group_ref.save(session=session)
+    return security_group_ref
+
+
 def _security_group_get_query(context, session=None, read_deleted=None,
                               project_only=False, join_rules=True):
     query = model_query(context, models.SecurityGroup, session=session,
@@ -3223,7 +3232,7 @@ def _security_group_get_by_names(context, session, project_id, group_names):
     Raise SecurityGroupNotFoundForProject for a name not found.
     """
     query = _security_group_get_query(context, session=session,
-            read_deleted="no", join_rules=False).\
+                                      read_deleted="no", join_rules=False).\
             filter_by(project_id=project_id).\
             filter(models.SecurityGroup.name.in_(group_names))
     sg_models = query.all()
@@ -3244,11 +3253,10 @@ def security_group_get_all(context):
 
 
 @require_context
-def security_group_get(context, security_group_id, columns_to_join=None,
-                       session=None):
-    query = _security_group_get_query(context, session=session,
-                                      project_only=True).\
-                filter_by(id=security_group_id)
+def security_group_get(context, security_group_id, columns_to_join=None):
+    query = _security_group_get_query(context, project_only=True).\
+                    filter_by(id=security_group_id)
+
     if columns_to_join is None:
         columns_to_join = []
     if 'instances' in columns_to_join:
@@ -3264,12 +3272,9 @@ def security_group_get(context, security_group_id, columns_to_join=None,
 
 @require_context
 def security_group_get_by_name(context, project_id, group_name,
-        columns_to_join=None, session=None):
-    if session is None:
-        session = get_session()
-
-    query = _security_group_get_query(context, session=session,
-            read_deleted="no", join_rules=False).\
+                               columns_to_join=None):
+    query = _security_group_get_query(context,
+                                      read_deleted="no", join_rules=False).\
             filter_by(project_id=project_id).\
             filter_by(name=group_name)
 
@@ -3334,70 +3339,77 @@ def security_group_in_use(context, group_id):
 
 
 @require_context
-def security_group_create(context, values, session=None):
-    security_group_ref = models.SecurityGroup()
-    # FIXME(devcamcar): Unless I do this, rules fails with lazy load exception
-    # once save() is called.  This will get cleaned up in next orm pass.
-    security_group_ref.rules
-    security_group_ref.update(values)
-    if session is None:
-        session = get_session()
-    security_group_ref.save(session=session)
-    return security_group_ref
+def security_group_create(context, values):
+    return _security_group_create(context, values)
 
 
 @require_context
-def security_group_update(context, security_group_id, values, session=None):
-    security_group_ref = model_query(context, models.SecurityGroup,
-            session=session).filter_by(id=security_group_id).first()
+def security_group_update(context, security_group_id, values):
+    session = get_session()
+    with session.begin():
+        security_group_ref = model_query(context, models.SecurityGroup,
+                                         session=session).\
+                                filter_by(id=security_group_id).\
+                                first()
 
-    if not security_group_ref:
-        raise exception.SecurityGroupNotFound(
-                security_group_id=security_group_id)
-    security_group_ref.update(values)
-    return security_group_ref
+        if not security_group_ref:
+            raise exception.SecurityGroupNotFound(
+                    security_group_id=security_group_id)
+        security_group_ref.update(values)
+        return security_group_ref
 
 
-def security_group_ensure_default(context, session=None):
+def security_group_ensure_default(context):
     """Ensure default security group exists for a project_id."""
-    try:
-        default_group = security_group_get_by_name(context,
-                context.project_id, 'default',
-                columns_to_join=[], session=session)
-    except exception.NotFound:
-        values = {'name': 'default',
-                  'description': 'default',
-                  'user_id': context.user_id,
-                  'project_id': context.project_id}
-        default_group = security_group_create(context, values,
-                session=session)
-        for default_rule in security_group_default_rule_list(context):
-            # This is suboptimal, it should be programmatic to know
-            # the values of the default_rule
-            rule_values = {'protocol': default_rule.protocol,
-                           'from_port': default_rule.from_port,
-                           'to_port': default_rule.to_port,
-                           'cidr': default_rule.cidr,
-                           'parent_group_id': default_group.id,
-            }
-            security_group_rule_create(context, rule_values)
-    return default_group
+    session = get_session()
+    with session.begin():
+        try:
+            default_group = _security_group_get_by_names(context,
+                                                         session,
+                                                         context.project_id,
+                                                         ['default'])[0]
+        except exception.NotFound:
+            values = {'name': 'default',
+                      'description': 'default',
+                      'user_id': context.user_id,
+                      'project_id': context.project_id}
+            default_group = _security_group_create(context, values,
+                                                   session=session)
+            default_rules = _security_group_rule_get_default_query(context,
+                                session=session).all()
+            for default_rule in default_rules:
+                # This is suboptimal, it should be programmatic to know
+                # the values of the default_rule
+                rule_values = {'protocol': default_rule.protocol,
+                               'from_port': default_rule.from_port,
+                               'to_port': default_rule.to_port,
+                               'cidr': default_rule.cidr,
+                               'parent_group_id': default_group.id,
+                }
+                _security_group_rule_create(context,
+                                            rule_values,
+                                            session=session)
+        return default_group
 
 
 @require_context
 def security_group_destroy(context, security_group_id):
     session = get_session()
     with session.begin():
-        session.query(models.SecurityGroup).\
+        model_query(context, models.SecurityGroup,
+                    session=session).\
                 filter_by(id=security_group_id).\
                 soft_delete()
-        session.query(models.SecurityGroupInstanceAssociation).\
+        model_query(context, models.SecurityGroupInstanceAssociation,
+                    session=session).\
                 filter_by(security_group_id=security_group_id).\
                 soft_delete()
-        session.query(models.SecurityGroupIngressRule).\
+        model_query(context, models.SecurityGroupIngressRule,
+                    session=session).\
                 filter_by(group_id=security_group_id).\
                 soft_delete()
-        session.query(models.SecurityGroupIngressRule).\
+        model_query(context, models.SecurityGroupIngressRule,
+                    session=session).\
                 filter_by(parent_group_id=security_group_id).\
                 soft_delete()
 
@@ -3411,6 +3423,13 @@ def security_group_count_by_project(context, project_id, session=None):
                    count()
 
 ###################
+
+
+def _security_group_rule_create(context, values, session=None):
+    security_group_rule_ref = models.SecurityGroupIngressRule()
+    security_group_rule_ref.update(values)
+    security_group_rule_ref.save(session=session)
+    return security_group_rule_ref
 
 
 def _security_group_rule_get_query(context, session=None):
@@ -3451,10 +3470,7 @@ def security_group_rule_get_by_security_group_grantee(context,
 
 @require_context
 def security_group_rule_create(context, values):
-    security_group_rule_ref = models.SecurityGroupIngressRule()
-    security_group_rule_ref.update(values)
-    security_group_rule_ref.save()
-    return security_group_rule_ref
+    return _security_group_rule_create(context, values)
 
 
 @require_context
