@@ -72,6 +72,17 @@ class ChanceScheduler(driver.Scheduler):
             raise exception.NoValidHost(reason="")
         return hosts
 
+    def select_destinations(self, context, request_spec, filter_properties):
+        """Selects random destinations."""
+        num_instances = request_spec['num_instances']
+        # NOTE(alaski): Returns a list of tuples for compatibility with
+        # filter_scheduler
+        dests = [(self._schedule(context, CONF.compute_topic, request_spec,
+                filter_properties), None) for i in range(num_instances)]
+        if len(dests) < num_instances:
+            raise exception.NoValidHost(reason='')
+        return dests
+
     def schedule_run_instance(self, context, request_spec,
                               admin_password, injected_files,
                               requested_networks, is_first_time,

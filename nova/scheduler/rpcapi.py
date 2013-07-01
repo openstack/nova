@@ -67,6 +67,8 @@ class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         ... Grizzly supports message version 2.6.  So, any changes to existing
         methods in 2.x after that point should be done such that they can
         handle the version_cap being set to 2.6.
+
+        2.7 - Add select_destinations()
     '''
 
     #
@@ -89,6 +91,11 @@ class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         super(SchedulerAPI, self).__init__(topic=CONF.scheduler_topic,
                 default_version=self.BASE_RPC_API_VERSION,
                 version_cap=version_cap)
+
+    def select_destinations(self, ctxt, request_spec, filter_properties):
+        return self.call(ctxt, self.make_msg('select_destinations',
+            request_spec=request_spec, filter_properties=filter_properties),
+            version='2.7')
 
     def run_instance(self, ctxt, request_spec, admin_password,
             injected_files, requested_networks, is_first_time,
