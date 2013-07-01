@@ -1201,9 +1201,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute._deallocate_network(mox.IgnoreArg(), mox.IgnoreArg())
         self.mox.ReplayAll()
 
-        self.assertRaises(exception.InstanceNotFound,
-                          self.compute.run_instance,
-                          self.context, instance=instance)
+        self.compute.run_instance(self.context, instance=instance)
 
     def test_run_instance_bails_on_missing_instance(self):
         # Make sure that run_instance() will quickly ignore a deleted instance
@@ -2054,6 +2052,24 @@ class ComputeTestCase(BaseTestCase):
                           self.compute.snapshot_instance,
                           self.context, "failing_snapshot", instance=instance)
         self._assert_state({'task_state': None})
+        self.compute.terminate_instance(self.context, instance=instance)
+
+    def test_snapshot_handles_cases_when_instance_is_deleted(self):
+        instance = jsonutils.to_primitive(self._create_fake_instance(
+            {'vm_state': 'deleting'}))
+        self.compute.run_instance(self.context, instance=instance)
+        db.instance_update(self.context, instance['uuid'],
+                           {"task_state": task_states.DELETING})
+        self.compute.snapshot_instance(self.context, "failing_snapshot",
+                                       instance=instance)
+        self.compute.terminate_instance(self.context, instance=instance)
+
+    def test_snapshot_handles_cases_when_instance_is_not_found(self):
+        instance = jsonutils.to_primitive(self._create_fake_instance(
+            {'vm_state': 'deleting'}))
+        instance["uuid"] = str(uuid.uuid4())
+        self.compute.snapshot_instance(self.context, "failing_snapshot",
+                                       instance=instance)
         self.compute.terminate_instance(self.context, instance=instance)
 
     def _assert_state(self, state_dict):
