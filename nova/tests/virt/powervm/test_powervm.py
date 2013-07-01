@@ -620,10 +620,8 @@ class PowerVMDriverTestCase(test.TestCase):
         self.assertEquals(host_stats['supported_instances'][0][2], "hvm")
 
     def test_get_host_uptime(self):
-        """
-        Tests that the get_host_uptime method issues the proper sysstat command
-        and parses the output correctly.
-        """
+        # Tests that the get_host_uptime method issues the proper sysstat
+        # command and parses the output correctly.
         exp_cmd = "ioscli sysstat -short fake_user"
         output = [("02:54PM  up 24 days,  5:41, 1 user, "
                    "load average: 0.06, 0.03, 0.02")]
@@ -636,7 +634,7 @@ class PowerVMDriverTestCase(test.TestCase):
 
         # the host parameter isn't used so we just pass None
         uptime = self.powervm_connection.get_host_uptime(None)
-        self.assertEquals("02:54PM  up 24 days  5:41", uptime)
+        self.assertEquals(output[0], uptime)
 
 
 class PowerVMDriverLparTestCase(test.TestCase):

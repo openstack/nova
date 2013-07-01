@@ -638,10 +638,7 @@ class BaseOperator(object):
         # The output of the command is like this:
         # "02:54PM  up 24 days,  5:41, 1 user, load average: 0.06, 0.03, 0.02"
         cmd = self.command.sysstat('-short %s' % self.connection_data.username)
-        output = self.run_vios_command(cmd)
-        # parse the sysstat output so we just return the uptime
-        system_time, uptime = output[0].split(',')[0:2]
-        return system_time + uptime
+        return self.run_vios_command(cmd)[0]
 
     def get_cpu_info(self):
         """Get CPU info.
