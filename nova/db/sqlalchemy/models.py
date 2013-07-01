@@ -760,11 +760,15 @@ class FloatingIp(BASE, NovaBase):
 class DNSDomain(BASE, NovaBase):
     """Represents a DNS domain with availability zone or project info."""
     __tablename__ = 'dns_domains'
+    __table_args__ = (
+        Index('project_id', 'project_id'),
+        Index('dns_domains_domain_deleted_idx', 'domain', 'deleted'),
+    )
     deleted = Column(Boolean, default=False)
-    domain = Column(String(512), primary_key=True)
-    scope = Column(String(255))
-    availability_zone = Column(String(255))
-    project_id = Column(String(255))
+    domain = Column(String(255), primary_key=True)
+    scope = Column(String(255), nullable=True)
+    availability_zone = Column(String(255), nullable=True)
+    project_id = Column(String(255), nullable=True)
 
 
 class ConsolePool(BASE, NovaBase):
@@ -899,6 +903,9 @@ class AggregateHost(BASE, NovaBase):
 class AggregateMetadata(BASE, NovaBase):
     """Represents a metadata key/value pair for an aggregate."""
     __tablename__ = 'aggregate_metadata'
+    __table_args__ = (
+        Index('aggregate_metadata_key_idx', 'key'),
+    )
     id = Column(Integer, primary_key=True)
     key = Column(String(255), nullable=False)
     value = Column(String(255), nullable=False)
@@ -955,15 +962,19 @@ class AgentBuild(BASE, NovaBase):
 class BandwidthUsage(BASE, NovaBase):
     """Cache for instance bandwidth usage data pulled from the hypervisor."""
     __tablename__ = 'bw_usage_cache'
+    __table_args__ = (
+        Index('bw_usage_cache_uuid_start_period_idx', 'uuid',
+              'start_period'),
+    )
     id = Column(Integer, primary_key=True, nullable=False)
-    uuid = Column(String(36), nullable=False)
-    mac = Column(String(255), nullable=False)
+    uuid = Column(String(36), nullable=True)
+    mac = Column(String(255), nullable=True)
     start_period = Column(DateTime, nullable=False)
-    last_refreshed = Column(DateTime)
-    bw_in = Column(BigInteger)
-    bw_out = Column(BigInteger)
-    last_ctr_in = Column(BigInteger)
-    last_ctr_out = Column(BigInteger)
+    last_refreshed = Column(DateTime, nullable=True)
+    bw_in = Column(BigInteger, nullable=True)
+    bw_out = Column(BigInteger, nullable=True)
+    last_ctr_in = Column(BigInteger, nullable=True)
+    last_ctr_out = Column(BigInteger, nullable=True)
 
 
 class VolumeUsage(BASE, NovaBase):
