@@ -31,10 +31,7 @@ class NoFilterMatched(Exception):
 
 
 class FilterMatchNotExecutable(Exception):
-    """
-    This exception is raised when a filter matched but no executable was
-    found.
-    """
+    """Raised when a filter matched but no executable was found."""
     def __init__(self, match=None, **kwargs):
         self.match = match
 
@@ -49,8 +46,10 @@ class RootwrapConfig(object):
         if config.has_option("DEFAULT", "exec_dirs"):
             self.exec_dirs = config.get("DEFAULT", "exec_dirs").split(",")
         else:
+            self.exec_dirs = []
             # Use system PATH if exec_dirs is not specified
-            self.exec_dirs = os.environ["PATH"].split(':')
+            if "PATH" in os.environ:
+                self.exec_dirs = os.environ['PATH'].split(':')
 
         # syslog_log_facility
         if config.has_option("DEFAULT", "syslog_log_facility"):
@@ -93,7 +92,7 @@ def setup_syslog(execname, facility, level):
 
 
 def build_filter(class_name, *args):
-    """Returns a filter object of class class_name"""
+    """Returns a filter object of class class_name."""
     if not hasattr(filters, class_name):
         logging.warning("Skipping unknown filter class (%s) specified "
                         "in filter definitions" % class_name)
@@ -103,7 +102,7 @@ def build_filter(class_name, *args):
 
 
 def load_filters(filters_path):
-    """Load filters from a list of directories"""
+    """Load filters from a list of directories."""
     filterlist = []
     for filterdir in filters_path:
         if not os.path.isdir(filterdir):
@@ -121,18 +120,33 @@ def load_filters(filters_path):
     return filterlist
 
 
-def match_filter(filters, userargs, exec_dirs=[]):
-    """
-    Checks user command and arguments through command filters and
-    returns the first matching filter.
+def match_filter(filter_list, userargs, exec_dirs=[]):
+    """Checks user command and arguments through command filters.
+
+    Returns the first matching filter.
+
     Raises NoFilterMatched if no filter matched.
     Raises FilterMatchNotExecutable if no executable was found for the
     best filter match.
     """
     first_not_executable_filter = None
 
-    for f in filters:
+    for f in filter_list:
         if f.match(userargs):
+            if isinstance(f, filters.ChainingFilter):
+                # This command calls exec verify that remaining args
+                # matches another filter.
+                def non_chain_filter(fltr):
+                    return (fltr.run_as == f.run_as
+                            and not isinstance(fltr, filters.ChainingFilter))
+
+                leaf_filters = [fltr for fltr in filter_list
+                                if non_chain_filter(fltr)]
+                args = f.exec_args(userargs)
+                if (not args or not match_filter(leaf_filters,
+                                                 args, exec_dirs=exec_dirs)):
+                    continue
+
             # Try other filters if executable is absent
             if not f.get_exec(exec_dirs=exec_dirs):
                 if not first_not_executable_filter:

@@ -70,7 +70,7 @@ kill_dnsmasq: KillFilter, root, /usr/sbin/dnsmasq, -9, -HUP
 kill_radvd: KillFilter, root, /usr/sbin/radvd
 
 # nova/network/linux_net.py: dnsmasq call
-dnsmasq: DnsmasqFilter, /usr/sbin/dnsmasq, root
+dnsmasq: EnvFilter, env, root, CONFIG_FILE=, NETWORK_ID=, dnsmasq
 
 # nova/network/linux_net.py: 'radvd', '-C', '%s' % _ra_file(dev, 'conf'..
 radvd: CommandFilter, radvd, root
