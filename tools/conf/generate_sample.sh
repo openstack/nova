@@ -25,5 +25,5 @@ FILES=$(find nova -type f -name "*.py" ! -path "nova/tests/*" \
 export EVENTLET_NO_GREENDNS=yes
 
 MODULEPATH=$(dirname "$0")/../../nova/openstack/common/config/generator.py
-OUTPUTPATH=etc/nova/nova.conf.sample
+OUTPUTPATH=${1:-etc/nova/nova.conf.sample}
 PYTHONPATH=./:${PYTHONPATH} python $MODULEPATH $FILES > $OUTPUTPATH

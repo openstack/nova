@@ -93,7 +93,7 @@
 #pybasedir=/usr/lib/python/site-packages
 
 # Directory where nova binaries are installed (string value)
-#bindir=$pybasedir/bin
+#bindir=/usr/local/bin
 
 # Top-level directory for maintaining nova's state (string
 # value)
@@ -311,7 +311,8 @@
 # Options defined in nova.api.auth
 #
 
-# whether to rate limit the api (boolean value)
+# whether to use per-user rate limiting for the api. (boolean
+# value)
 #api_rate_limit=true
 
 # The strategy to use for auth: noauth or keystone. (string
@@ -443,15 +444,6 @@
 
 
 #
-# Options defined in nova.api.openstack.compute.contrib.hide_server_addresses
-#
-
-# List of instance states that should hide network info (list
-# value)
-#osapi_hide_server_address_states=building
-
-
-#
 # Options defined in nova.api.openstack.compute.contrib.os_tenant_networks
 #
 
@@ -476,6 +468,15 @@
 
 
 #
+# Options defined in nova.api.openstack.compute.plugins.v3.hide_server_addresses
+#
+
+# List of instance states that should hide network info (list
+# value)
+#osapi_hide_server_address_states=building
+
+
+#
 # Options defined in nova.api.openstack.compute.servers
 #
 
@@ -491,6 +492,15 @@
 # the maximum body size per each osapi request(bytes) (integer
 # value)
 #osapi_max_request_body_size=114688
+
+
+#
+# Options defined in nova.cells.opts
+#
+
+# The full class name of the compute API class to use
+# (deprecated) (string value)
+#compute_api_class=nova.compute.api.API
 
 
 #
@@ -589,15 +599,6 @@
 
 
 #
-# Options defined in nova.compute
-#
-
-# The full class name of the compute API class to use
-# (deprecated) (string value)
-#compute_api_class=nova.compute.api.API
-
-
-#
 # Options defined in nova.compute.api
 #
 
@@ -671,6 +672,10 @@
 # rebooted (boolean value)
 #resume_guests_state_on_host_boot=false
 
+# Number of times to retry network allocation on failures
+# (integer value)
+#network_allocate_retries=0
+
 # interval to pull bandwidth usage info (integer value)
 #bandwidth_poll_interval=600
 
@@ -697,6 +702,15 @@
 # Interval in seconds for gathering volume usages (integer
 # value)
 #volume_usage_poll_interval=0
+
+# Interval in seconds for polling shelved instances to offload
+# (integer value)
+#shelved_poll_interval=3600
+
+# Time in seconds before a shelved instance is eligible for
+# removing from a host.  -1 never offload, 0 offload when
+# shelved (integer value)
+#shelved_offload_time=0
 
 # Action to take if a running deleted instance is
 # detected.Valid options are 'noop', 'log' and 'reap'. Set to
@@ -930,6 +944,15 @@
 
 # Backend to use for IPv6 generation (string value)
 #ipv6_backend=rfc2462
+
+
+#
+# Options defined in nova.keymgr
+#
+
+# The full class name of the key manager API class (string
+# value)
+#keymgr_api_class=nova.keymgr.key_mgr.KeyManager
 
 
 #
@@ -1297,7 +1320,7 @@
 
 # The SQLAlchemy connection string used to connect to the
 # database (string value)
-#sql_connection=sqlite:////common/db/$sqlite_db
+#sql_connection=sqlite:////nova/openstack/common/db/$sqlite_db
 
 # the filename to use with sqlite (string value)
 #sqlite_db=nova.sqlite
@@ -1413,9 +1436,9 @@
 # (string value)
 #log_config=<None>
 
-# A logging.Formatter log message format string which may use
-# any of the available logging.LogRecord attributes. This
-# option is deprecated.  Please use
+# DEPRECATED. A logging.Formatter log message format string
+# which may use any of the available logging.LogRecord
+# attributes. This option is deprecated.  Please use
 # logging_context_format_string and
 # logging_default_format_string instead. (string value)
 #log_format=<None>
@@ -1461,7 +1484,7 @@
 
 # Default publisher_id for outgoing notifications (string
 # value)
-#default_publisher_id=$host
+#default_publisher_id=<None>
 
 
 #
@@ -1513,15 +1536,6 @@
 # AMQP exchange to connect to if using RabbitMQ or Qpid
 # (string value)
 #control_exchange=openstack
-
-
-#
-# Options defined in nova.openstack.common.rpc.amqp
-#
-
-# Enable a fast single reply queue if using AMQP based RPC
-# like RabbitMQ or Qpid. (boolean value)
-#amqp_rpc_single_reply_queue=false
 
 
 #
@@ -1656,9 +1670,6 @@
 # Options defined in nova.openstack.common.rpc.matchmaker
 #
 
-# Matchmaker ring file (JSON) (string value)
-#matchmaker_ringfile=/etc/nova/matchmaker_ring.json
-
 # Heartbeat frequency (integer value)
 #matchmaker_heartbeat_freq=300
 
@@ -1695,8 +1706,11 @@
 # Options defined in nova.scheduler.filters.core_filter
 #
 
-# Virtual CPU to Physical CPU allocation ratio (floating point
-# value)
+# Virtual CPU to physical CPU allocation ratio which affects
+# all CPU filters. This configuration specifies a global ratio
+# for CoreFilter. For AggregateCoreFilter, it will fall back
+# to this configuration value if no per-aggregate setting
+# found. (floating point value)
 #cpu_allocation_ratio=16.0
 
 
@@ -1741,8 +1755,11 @@
 # Options defined in nova.scheduler.filters.ram_filter
 #
 
-# virtual ram to physical ram allocation ratio (floating point
-# value)
+# Virtual ram to physical ram allocation ratio which affects
+# all ram filters. This configuration specifies a global ratio
+# for RamFilter. For AggregateRamFilter, it will fall back to
+# this configuration value if no per-aggregate setting found.
+# (floating point value)
 #ram_allocation_ratio=1.5
 
 
@@ -2654,6 +2671,14 @@
 # Type of cell: api or compute (string value)
 #cell_type=<None>
 
+# Number of seconds after which a lack of capability and
+# capacity updates signals the child cell is to be treated as
+# a mute. (integer value)
+#mute_child_interval=300
+
+# Seconds between bandwidth updates for cells. (integer value)
+#bandwidth_update_interval=600
+
 
 #
 # Options defined in nova.cells.rpc_driver
@@ -2696,6 +2721,11 @@
 # value)
 #db_check_interval=60
 
+# Configuration file from which to read cells configuration.
+# If given, overrides reading cells from the database. (string
+# value)
+#cells_config=<None>
+
 
 #
 # Options defined in nova.cells.weights.mute_child
@@ -2708,11 +2738,6 @@
 # Weight value assigned to mute children.  (The value should
 # be positive.) (floating point value)
 #mute_weight_value=1000.0
-
-# Number of seconds after which a lack of capability and
-# capacity updates signals the child cell is to be treated as
-# a mute. (integer value)
-#mute_child_interval=300
 
 
 #
@@ -2843,6 +2868,10 @@
 # value)
 #pxe_deploy_timeout=0
 
+# If set, pass the network configuration details to the
+# initramfs via cmdline. (boolean value)
+#pxe_network_config=false
+
 
 #
 # Options defined in nova.virt.baremetal.tilera_pdu
@@ -2958,6 +2987,108 @@
 #attestation_auth_timeout=60
 
 
+[upgrade_levels]
+
+#
+# Options defined in nova.baserpc
+#
+
+# Set a version cap for messages sent to the base api in any
+# service (string value)
+#baseapi=<None>
+
+
+#
+# Options defined in nova.cells.rpc_driver
+#
+
+# Set a version cap for messages sent between cells services
+# (string value)
+#intercell=<None>
+
+
+#
+# Options defined in nova.cells.rpcapi
+#
+
+# Set a version cap for messages sent to local cells services
+# (string value)
+#cells=<None>
+
+
+#
+# Options defined in nova.cert.rpcapi
+#
+
+# Set a version cap for messages sent to cert services (string
+# value)
+#cert=<None>
+
+
+#
+# Options defined in nova.compute.rpcapi
+#
+
+# Set a version cap for messages sent to compute services
+# (string value)
+#compute=<None>
+
+
+#
+# Options defined in nova.conductor.rpcapi
+#
+
+# Set a version cap for messages sent to conductor services
+# (string value)
+#conductor=<None>
+
+
+#
+# Options defined in nova.console.rpcapi
+#
+
+# Set a version cap for messages sent to console services
+# (string value)
+#console=<None>
+
+
+#
+# Options defined in nova.consoleauth.rpcapi
+#
+
+# Set a version cap for messages sent to consoleauth services
+# (string value)
+#consoleauth=<None>
+
+
+#
+# Options defined in nova.network.rpcapi
+#
+
+# Set a version cap for messages sent to network services
+# (string value)
+#network=<None>
+
+
+#
+# Options defined in nova.scheduler.rpcapi
+#
+
+# Set a version cap for messages sent to scheduler services
+# (string value)
+#scheduler=<None>
+
+
+[matchmaker_ring]
+
+#
+# Options defined in nova.openstack.common.rpc.matchmaker_ring
+#
+
+# Matchmaker ring file (JSON) (string value)
+#ringfile=/etc/oslo/matchmaker_ring.json
+
+
 [vmware]
 
 #
@@ -2996,4 +3127,4 @@
 #keymap=en-us
 
 
-# Total option count: 608
+# Total option count: 624

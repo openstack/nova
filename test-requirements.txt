@@ -12,6 +12,9 @@ mox==0.5.3
 MySQL-python
 psycopg2
 pylint==0.25.2
+# Imported by ldapdns so required to generate
+# the sample configuration file
+python-ldap==2.3.13
 python-subunit
 setuptools_git>=0.4
 sphinx>=1.1.2
