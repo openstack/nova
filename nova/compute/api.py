@@ -2881,7 +2881,7 @@ class AggregateAPI(base.Base):
                                                       aggregate_id, key)
                     metadata.pop(key)
                 except exception.AggregateMetadataNotFound as e:
-                    LOG.warn(e.message)
+                    LOG.warn(e.format_message())
         self.db.aggregate_metadata_add(context, aggregate_id, metadata)
         compute_utils.notify_about_aggregate_update(context,
                                                     "updatemetadata.end",

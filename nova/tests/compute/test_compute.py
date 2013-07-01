@@ -5255,7 +5255,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
 
         expected_message = (
-            exception.ImageNotActive.message % {'image_id':
+            exception.ImageNotActive.msg_fmt % {'image_id':
             self.fake_image['id']})
         with testtools.ExpectedException(exception.ImageNotActive,
                                          expected_message):
@@ -5860,7 +5860,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
 
         expected_message = (
-            exception.ImageNotActive.message % {'image_id':
+            exception.ImageNotActive.msg_fmt % {'image_id':
             self.fake_image['id']})
         with testtools.ExpectedException(exception.ImageNotActive,
                                          expected_message):
