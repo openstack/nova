@@ -395,3 +395,27 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
                                                              reboot_window)
         return _make_instance_list(context, cls(), db_inst_list,
                                    expected_attrs)
+
+    def fill_faults(self):
+        """Batch query the database for our instances' faults.
+
+        :returns: A list of instance uuids for which faults were found.
+        """
+        uuids = [inst.uuid for inst in self]
+        faults = instance_fault.InstanceFaultList.get_by_instance_uuids(
+            self._context, uuids)
+        faults_by_uuid = {}
+        for fault in faults:
+            if fault.instance_uuid not in faults_by_uuid:
+                faults_by_uuid[fault.instance_uuid] = fault
+
+        for instance in self:
+            if instance.uuid in faults_by_uuid:
+                instance.fault = faults_by_uuid[instance.uuid]
+            else:
+                # NOTE(danms): Otherwise the caller will cause a lazy-load
+                # when checking it, and we know there are none
+                instance.fault = None
+            instance.obj_reset_changes(['fault'])
+
+        return faults_by_uuid.keys()

@@ -416,6 +416,46 @@ class _TestInstanceListObject(object):
                          dict(instances[0].fault.iteritems()))
         self.assertEqual(None, instances[1].fault)
 
+    def test_fill_faults(self):
+        ctxt = context.get_admin_context()
+        self.mox.StubOutWithMock(db, 'instance_fault_get_by_instance_uuids')
+
+        inst1 = instance.Instance()
+        inst1.uuid = 'uuid1'
+        inst2 = instance.Instance()
+        inst2.uuid = 'uuid2'
+        insts = [inst1, inst2]
+        for inst in insts:
+            inst.obj_reset_changes()
+        db_faults = {
+            'uuid1': [{'id': 123,
+                       'instance_uuid': 'uuid1',
+                       'code': 456,
+                       'message': 'Fake message',
+                       'details': 'No details',
+                       'host': 'foo',
+                       'deleted': False,
+                       'deleted_at': None,
+                       'updated_at': None,
+                       'created_at': None,
+                       }
+                      ]}
+
+        db.instance_fault_get_by_instance_uuids(ctxt,
+                                                [x.uuid for x in insts],
+                                                ).AndReturn(db_faults)
+        self.mox.ReplayAll()
+        inst_list = instance.InstanceList()
+        inst_list._context = ctxt
+        inst_list.objects = insts
+        faulty = inst_list.fill_faults()
+        self.assertEqual(faulty, ['uuid1'])
+        self.assertEqual(inst_list[0].fault.message,
+                         db_faults['uuid1'][0]['message'])
+        self.assertEqual(inst_list[1].fault, None)
+        for inst in inst_list:
+            self.assertEqual(inst.obj_what_changed(), set())
+
 
 class TestInstanceListObject(test_objects._LocalTest,
                              _TestInstanceListObject):
