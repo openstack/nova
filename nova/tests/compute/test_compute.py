@@ -1587,6 +1587,35 @@ class ComputeTestCase(BaseTestCase):
         self.compute.terminate_instance(self.context,
                 instance=jsonutils.to_primitive(instance))
 
+    def test_rebuild_with_injected_files(self):
+        # Ensure instance can be rebuilt with injected files.
+        injected_files = [
+            ('/a/b/c', base64.b64encode('foobarbaz')),
+        ]
+
+        self.decoded_files = [
+            ('/a/b/c', 'foobarbaz'),
+        ]
+
+        def _spawn(context, instance, image_meta, injected_files,
+                   admin_password, network_info, block_device_info):
+            self.assertEqual(self.decoded_files, injected_files)
+
+        self.stubs.Set(self.compute.driver, 'spawn', _spawn)
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+        image_ref = instance['image_ref']
+        sys_metadata = db.instance_system_metadata_get(self.context,
+                        instance['uuid'])
+        db.instance_update(self.context, instance['uuid'],
+                           {"task_state": task_states.REBUILDING})
+        self.compute.rebuild_instance(self.context, instance,
+                                      image_ref, image_ref,
+                                      injected_files=injected_files,
+                                      new_pass="new_password",
+                                      orig_sys_metadata=sys_metadata,
+                                      bdms=[])
+        self.compute.terminate_instance(self.context, instance=instance)
+
     def _test_reboot(self, soft, legacy_nwinfo_driver,
                      test_delete=False, test_unrescue=False,
                      fail_reboot=False, fail_running=False):

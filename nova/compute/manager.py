@@ -1907,7 +1907,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             block_device_info = self._prep_block_device(
                     context, instance, bdms)
 
-            instance['injected_files'] = injected_files
+            files = self._decode_files(injected_files)
 
             instance = self._instance_update(
                     context, instance['uuid'],
@@ -1916,7 +1916,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                         task_states.REBUILD_BLOCK_DEVICE_MAPPING)
 
             self.driver.spawn(context, instance, image_meta,
-                              [], new_pass,
+                              files, new_pass,
                               network_info=self._legacy_nw_info(network_info),
                               block_device_info=block_device_info)
 
