@@ -365,7 +365,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '2.35'
+    RPC_API_VERSION = '2.36'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -2983,6 +2983,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._notify_about_instance_usage(
             context, instance, "delete_ip.end", network_info=network_info)
 
+    @object_compat
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
     @wrap_instance_event
@@ -2992,15 +2993,13 @@ class ComputeManager(manager.SchedulerDependentManager):
         context = context.elevated()
         LOG.audit(_('Pausing'), context=context, instance=instance)
         self.driver.pause(instance)
-
         current_power_state = self._get_power_state(context, instance)
-        self._instance_update(context,
-                              instance['uuid'],
-                              power_state=current_power_state,
-                              vm_state=vm_states.PAUSED,
-                              task_state=None,
-                              expected_task_state=task_states.PAUSING)
+        instance.power_state = current_power_state
+        instance.vm_state = vm_states.PAUSED
+        instance.task_state = None
+        instance.save(expected_task_state=task_states.PAUSING)
 
+    @object_compat
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
     @wrap_instance_event
@@ -3010,14 +3009,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         context = context.elevated()
         LOG.audit(_('Unpausing'), context=context, instance=instance)
         self.driver.unpause(instance)
-
         current_power_state = self._get_power_state(context, instance)
-        self._instance_update(context,
-                              instance['uuid'],
-                              power_state=current_power_state,
-                              vm_state=vm_states.ACTIVE,
-                              task_state=None,
-                              expected_task_state=task_states.UNPAUSING)
+        instance.power_state = current_power_state
+        instance.vm_state = vm_states.ACTIVE
+        instance.task_state = None
+        instance.save(expected_task_state=task_states.UNPAUSING)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def host_power_action(self, context, host=None, action=None):

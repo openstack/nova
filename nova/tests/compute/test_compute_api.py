@@ -589,6 +589,60 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.ReplayAll()
         self.compute_api.resize(self.context, inst)
 
+    def test_pause(self):
+        # Ensure instance can be paused.
+        instance = self._create_instance_obj()
+        self.assertEqual(instance.vm_state, vm_states.ACTIVE)
+        self.assertEqual(instance.task_state, None)
+
+        self.mox.StubOutWithMock(instance, 'save')
+        self.mox.StubOutWithMock(self.compute_api,
+                '_record_action_start')
+        if self.is_cells:
+            rpcapi = self.compute_api.cells_rpcapi
+        else:
+            rpcapi = self.compute_api.compute_rpcapi
+        self.mox.StubOutWithMock(rpcapi, 'pause_instance')
+
+        instance.save(expected_task_state=None)
+        self.compute_api._record_action_start(self.context,
+                instance, instance_actions.PAUSE)
+        rpcapi.pause_instance(self.context, instance)
+
+        self.mox.ReplayAll()
+
+        self.compute_api.pause(self.context, instance)
+        self.assertEqual(vm_states.ACTIVE, instance.vm_state)
+        self.assertEqual(task_states.PAUSING,
+                         instance.task_state)
+
+    def test_unpause(self):
+        # Ensure instance can be unpaused.
+        params = dict(vm_state=vm_states.PAUSED)
+        instance = self._create_instance_obj(params=params)
+        self.assertEqual(instance.vm_state, vm_states.PAUSED)
+        self.assertEqual(instance.task_state, None)
+
+        self.mox.StubOutWithMock(instance, 'save')
+        self.mox.StubOutWithMock(self.compute_api,
+                '_record_action_start')
+        if self.is_cells:
+            rpcapi = self.compute_api.cells_rpcapi
+        else:
+            rpcapi = self.compute_api.compute_rpcapi
+        self.mox.StubOutWithMock(rpcapi, 'unpause_instance')
+
+        instance.save(expected_task_state=None)
+        self.compute_api._record_action_start(self.context,
+                instance, instance_actions.UNPAUSE)
+        rpcapi.unpause_instance(self.context, instance)
+
+        self.mox.ReplayAll()
+
+        self.compute_api.unpause(self.context, instance)
+        self.assertEqual(vm_states.PAUSED, instance.vm_state)
+        self.assertEqual(task_states.UNPAUSING, instance.task_state)
+
 
 class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
     def setUp(self):

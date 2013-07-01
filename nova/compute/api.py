@@ -2312,31 +2312,25 @@ class API(base.Base):
 
     @wrap_check_policy
     @check_instance_lock
+    @check_instance_cell
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.RESCUED])
     def pause(self, context, instance):
         """Pause the given instance."""
-        self.update(context,
-                    instance,
-                    task_state=task_states.PAUSING,
-                    expected_task_state=None)
-
+        instance.task_state = task_states.PAUSING
+        instance.save(expected_task_state=None)
         self._record_action_start(context, instance, instance_actions.PAUSE)
-
-        self.compute_rpcapi.pause_instance(context, instance=instance)
+        self.compute_rpcapi.pause_instance(context, instance)
 
     @wrap_check_policy
     @check_instance_lock
+    @check_instance_cell
     @check_instance_state(vm_state=[vm_states.PAUSED])
     def unpause(self, context, instance):
         """Unpause the given instance."""
-        self.update(context,
-                    instance,
-                    task_state=task_states.UNPAUSING,
-                    expected_task_state=None)
-
+        instance.task_state = task_states.UNPAUSING
+        instance.save(expected_task_state=None)
         self._record_action_start(context, instance, instance_actions.UNPAUSE)
-
-        self.compute_rpcapi.unpause_instance(context, instance=instance)
+        self.compute_rpcapi.unpause_instance(context, instance)
 
     @wrap_check_policy
     def get_diagnostics(self, context, instance):
