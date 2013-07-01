@@ -24,6 +24,7 @@ from oslo.config import cfg
 from nova.cells import filters
 from nova.cells import weights
 from nova import compute
+from nova.compute import flavors
 from nova.compute import instance_actions
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
@@ -80,6 +81,10 @@ class CellsScheduler(base.Base):
     def _create_instances_here(self, ctxt, instance_uuids, instance_properties,
             instance_type, image, security_groups, block_device_mapping):
         instance_values = copy.copy(instance_properties)
+        sys_metadata = flavors.save_flavor_info(dict(), instance_type)
+        instance_values['system_metadata'] = sys_metadata
+        instance_values.pop('name')
+
         num_instances = len(instance_uuids)
         for i, instance_uuid in enumerate(instance_uuids):
             instance_values['uuid'] = instance_uuid

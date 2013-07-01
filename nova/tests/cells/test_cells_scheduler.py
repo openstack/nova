@@ -94,7 +94,8 @@ class CellsSchedulerTestCase(test.TestCase):
         inst_type = db.instance_type_get(self.ctxt, 1)
         image = {'properties': {}}
         instance_uuids = self.instance_uuids
-        instance_props = {'hostname': 'meow',
+        instance_props = {'name': 'instance-00000001',
+                          'hostname': 'meow',
                           'display_name': 'moo',
                           'image_ref': 'fake_image_ref',
                           'user_id': self.ctxt.user_id,
