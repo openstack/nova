@@ -733,10 +733,9 @@ class ImageXMLSerializationTest(test.TestCase):
     IMAGE_NEXT = 'http://localhost/v3/os-images?limit=%s&marker=%s'
     IMAGE_BOOKMARK = 'http://localhost/os-images/%s'
 
-    def test_xml_declaration(self):
-        serializer = images.ImageTemplate()
-
-        fixture = {
+    def setUp(self):
+        super(ImageXMLSerializationTest, self).setUp()
+        self.fixture = {
             'image': {
                 'id': 1,
                 'name': 'Image1',
@@ -772,487 +771,16 @@ class ImageXMLSerializationTest(test.TestCase):
                 ],
             },
         }
-
-        output = serializer.serialize(fixture)
-        has_dec = output.startswith("<?xml version='1.0' encoding='UTF-8'?>")
-        self.assertTrue(has_dec)
-
-    def test_show(self):
-        serializer = images.ImageTemplate()
-
-        fixture = {
-            'image': {
-                'id': 1,
-                'name': 'Image1',
-                'created': self.TIMESTAMP,
-                'updated': self.TIMESTAMP,
-                'status': 'ACTIVE',
-                'progress': 80,
-                'minRam': 10,
-                'minDisk': 100,
-                'server': {
-                    'id': self.SERVER_UUID,
-                    'links': [
-                        {
-                            'href': self.SERVER_HREF,
-                            'rel': 'self',
-                        },
-                        {
-                            'href': self.SERVER_BOOKMARK,
-                            'rel': 'bookmark',
-                        },
-                    ],
-                },
-                'metadata': {
-                    'key1': 'value1',
-                },
-                'links': [
-                    {
-                        'href': self.IMAGE_HREF % 1,
-                        'rel': 'self',
-                    },
-                    {
-                        'href': self.IMAGE_BOOKMARK % 1,
-                        'rel': 'bookmark',
-                    },
-                ],
-            },
-        }
-
-        output = serializer.serialize(fixture)
-        root = etree.XML(output)
-        xmlutil.validate_schema(root, 'image')
-        image_dict = fixture['image']
-
-        for key in ['name', 'id', 'updated', 'created', 'status', 'progress']:
-            self.assertEqual(root.get(key), str(image_dict[key]))
-
-        link_nodes = root.findall('{0}link'.format(ATOMNS))
-        self.assertEqual(len(link_nodes), 2)
-        for i, link in enumerate(image_dict['links']):
-            for key, value in link.items():
-                self.assertEqual(link_nodes[i].get(key), value)
-
-        metadata_root = root.find('{0}metadata'.format(NS))
-        metadata_elems = metadata_root.findall('{0}meta'.format(NS))
-        self.assertEqual(len(metadata_elems), 1)
-        for i, metadata_elem in enumerate(metadata_elems):
-            (meta_key, meta_value) = image_dict['metadata'].items()[i]
-            self.assertEqual(str(metadata_elem.get('key')), str(meta_key))
-            self.assertEqual(str(metadata_elem.text).strip(), str(meta_value))
-
-        server_root = root.find('{0}server'.format(NS))
-        self.assertEqual(server_root.get('id'), image_dict['server']['id'])
-        link_nodes = server_root.findall('{0}link'.format(ATOMNS))
-        self.assertEqual(len(link_nodes), 2)
-        for i, link in enumerate(image_dict['server']['links']):
-            for key, value in link.items():
-                self.assertEqual(link_nodes[i].get(key), value)
-
-    def test_show_zero_metadata(self):
-        serializer = images.ImageTemplate()
-
-        fixture = {
-            'image': {
-                'id': 1,
-                'name': 'Image1',
-                'created': self.TIMESTAMP,
-                'updated': self.TIMESTAMP,
-                'status': 'ACTIVE',
-                'server': {
-                    'id': self.SERVER_UUID,
-                    'links': [
-                        {
-                            'href': self.SERVER_HREF,
-                            'rel': 'self',
-                        },
-                        {
-                            'href': self.SERVER_BOOKMARK,
-                            'rel': 'bookmark',
-                        },
-                    ],
-                },
-                'metadata': {},
-                'links': [
-                    {
-                        'href': self.IMAGE_HREF % 1,
-                        'rel': 'self',
-                    },
-                    {
-                        'href': self.IMAGE_BOOKMARK % 1,
-                        'rel': 'bookmark',
-                    },
-                ],
-            },
-        }
-
-        output = serializer.serialize(fixture)
-        root = etree.XML(output)
-        xmlutil.validate_schema(root, 'image')
-        image_dict = fixture['image']
-
-        for key in ['name', 'id', 'updated', 'created', 'status']:
-            self.assertEqual(root.get(key), str(image_dict[key]))
-
-        link_nodes = root.findall('{0}link'.format(ATOMNS))
-        self.assertEqual(len(link_nodes), 2)
-        for i, link in enumerate(image_dict['links']):
-            for key, value in link.items():
-                self.assertEqual(link_nodes[i].get(key), value)
-
-        meta_nodes = root.findall('{0}meta'.format(ATOMNS))
-        self.assertEqual(len(meta_nodes), 0)
-
-        server_root = root.find('{0}server'.format(NS))
-        self.assertEqual(server_root.get('id'), image_dict['server']['id'])
-        link_nodes = server_root.findall('{0}link'.format(ATOMNS))
-        self.assertEqual(len(link_nodes), 2)
-        for i, link in enumerate(image_dict['server']['links']):
-            for key, value in link.items():
-                self.assertEqual(link_nodes[i].get(key), value)
-
-    def test_show_image_no_metadata_key(self):
-        serializer = images.ImageTemplate()
-
-        fixture = {
-            'image': {
-                'id': 1,
-                'name': 'Image1',
-                'created': self.TIMESTAMP,
-                'updated': self.TIMESTAMP,
-                'status': 'ACTIVE',
-                'server': {
-                    'id': self.SERVER_UUID,
-                    'links': [
-                        {
-                            'href': self.SERVER_HREF,
-                            'rel': 'self',
-                        },
-                        {
-                            'href': self.SERVER_BOOKMARK,
-                            'rel': 'bookmark',
-                        },
-                    ],
-                },
-                'links': [
-                    {
-                        'href': self.IMAGE_HREF % 1,
-                        'rel': 'self',
-                    },
-                    {
-                        'href': self.IMAGE_BOOKMARK % 1,
-                        'rel': 'bookmark',
-                    },
-                ],
-            },
-        }
-
-        output = serializer.serialize(fixture)
-        root = etree.XML(output)
-        xmlutil.validate_schema(root, 'image')
-        image_dict = fixture['image']
-
-        for key in ['name', 'id', 'updated', 'created', 'status']:
-            self.assertEqual(root.get(key), str(image_dict[key]))
-
-        link_nodes = root.findall('{0}link'.format(ATOMNS))
-        self.assertEqual(len(link_nodes), 2)
-        for i, link in enumerate(image_dict['links']):
-            for key, value in link.items():
-                self.assertEqual(link_nodes[i].get(key), value)
-
-        meta_nodes = root.findall('{0}meta'.format(ATOMNS))
-        self.assertEqual(len(meta_nodes), 0)
-
-        server_root = root.find('{0}server'.format(NS))
-        self.assertEqual(server_root.get('id'), image_dict['server']['id'])
-        link_nodes = server_root.findall('{0}link'.format(ATOMNS))
-        self.assertEqual(len(link_nodes), 2)
-        for i, link in enumerate(image_dict['server']['links']):
-            for key, value in link.items():
-                self.assertEqual(link_nodes[i].get(key), value)
-
-    def test_show_no_server(self):
-        serializer = images.ImageTemplate()
-
-        fixture = {
-            'image': {
-                'id': 1,
-                'name': 'Image1',
-                'created': self.TIMESTAMP,
-                'updated': self.TIMESTAMP,
-                'status': 'ACTIVE',
-                'metadata': {
-                    'key1': 'value1',
-                },
-                'links': [
-                    {
-                        'href': self.IMAGE_HREF % 1,
-                        'rel': 'self',
-                    },
-                    {
-                        'href': self.IMAGE_BOOKMARK % 1,
-                        'rel': 'bookmark',
-                    },
-                ],
-            },
-        }
-
-        output = serializer.serialize(fixture)
-        root = etree.XML(output)
-        xmlutil.validate_schema(root, 'image')
-        image_dict = fixture['image']
-
-        for key in ['name', 'id', 'updated', 'created', 'status']:
-            self.assertEqual(root.get(key), str(image_dict[key]))
-
-        link_nodes = root.findall('{0}link'.format(ATOMNS))
-        self.assertEqual(len(link_nodes), 2)
-        for i, link in enumerate(image_dict['links']):
-            for key, value in link.items():
-                self.assertEqual(link_nodes[i].get(key), value)
-
-        metadata_root = root.find('{0}metadata'.format(NS))
-        metadata_elems = metadata_root.findall('{0}meta'.format(NS))
-        self.assertEqual(len(metadata_elems), 1)
-        for i, metadata_elem in enumerate(metadata_elems):
-            (meta_key, meta_value) = image_dict['metadata'].items()[i]
-            self.assertEqual(str(metadata_elem.get('key')), str(meta_key))
-            self.assertEqual(str(metadata_elem.text).strip(), str(meta_value))
-
-        server_root = root.find('{0}server'.format(NS))
-        self.assertEqual(server_root, None)
-
-    def test_show_with_min_ram(self):
-        serializer = images.ImageTemplate()
-
-        fixture = {
-            'image': {
-                'id': 1,
-                'name': 'Image1',
-                'created': self.TIMESTAMP,
-                'updated': self.TIMESTAMP,
-                'status': 'ACTIVE',
-                'progress': 80,
-                'minRam': 256,
-                'server': {
-                    'id': self.SERVER_UUID,
-                    'links': [
-                        {
-                            'href': self.SERVER_HREF,
-                            'rel': 'self',
-                        },
-                        {
-                            'href': self.SERVER_BOOKMARK,
-                            'rel': 'bookmark',
-                        },
-                    ],
-                },
-                'metadata': {
-                    'key1': 'value1',
-                },
-                'links': [
-                    {
-                        'href': self.IMAGE_HREF % 1,
-                        'rel': 'self',
-                    },
-                    {
-                        'href': self.IMAGE_BOOKMARK % 1,
-                        'rel': 'bookmark',
-                    },
-                ],
-            },
-        }
-
-        output = serializer.serialize(fixture)
-        root = etree.XML(output)
-        xmlutil.validate_schema(root, 'image')
-        image_dict = fixture['image']
-
-        for key in ['name', 'id', 'updated', 'created', 'status', 'progress',
-                    'minRam']:
-            self.assertEqual(root.get(key), str(image_dict[key]))
-
-        link_nodes = root.findall('{0}link'.format(ATOMNS))
-        self.assertEqual(len(link_nodes), 2)
-        for i, link in enumerate(image_dict['links']):
-            for key, value in link.items():
-                self.assertEqual(link_nodes[i].get(key), value)
-
-        metadata_root = root.find('{0}metadata'.format(NS))
-        metadata_elems = metadata_root.findall('{0}meta'.format(NS))
-        self.assertEqual(len(metadata_elems), 1)
-        for i, metadata_elem in enumerate(metadata_elems):
-            (meta_key, meta_value) = image_dict['metadata'].items()[i]
-            self.assertEqual(str(metadata_elem.get('key')), str(meta_key))
-            self.assertEqual(str(metadata_elem.text).strip(), str(meta_value))
-
-        server_root = root.find('{0}server'.format(NS))
-        self.assertEqual(server_root.get('id'), image_dict['server']['id'])
-        link_nodes = server_root.findall('{0}link'.format(ATOMNS))
-        self.assertEqual(len(link_nodes), 2)
-        for i, link in enumerate(image_dict['server']['links']):
-            for key, value in link.items():
-                self.assertEqual(link_nodes[i].get(key), value)
-
-    def test_show_with_min_disk(self):
-        serializer = images.ImageTemplate()
-
-        fixture = {
-            'image': {
-                'id': 1,
-                'name': 'Image1',
-                'created': self.TIMESTAMP,
-                'updated': self.TIMESTAMP,
-                'status': 'ACTIVE',
-                'progress': 80,
-                'minDisk': 5,
-                'server': {
-                    'id': self.SERVER_UUID,
-                    'links': [
-                        {
-                            'href': self.SERVER_HREF,
-                            'rel': 'self',
-                        },
-                        {
-                            'href': self.SERVER_BOOKMARK,
-                            'rel': 'bookmark',
-                        },
-                    ],
-                },
-                'metadata': {
-                    'key1': 'value1',
-                },
-                'links': [
-                    {
-                        'href': self.IMAGE_HREF % 1,
-                        'rel': 'self',
-                    },
-                    {
-                        'href': self.IMAGE_BOOKMARK % 1,
-                        'rel': 'bookmark',
-                    },
-                ],
-            },
-        }
-
-        output = serializer.serialize(fixture)
-        root = etree.XML(output)
-        xmlutil.validate_schema(root, 'image')
-        image_dict = fixture['image']
-
-        for key in ['name', 'id', 'updated', 'created', 'status', 'progress',
-                    'minDisk']:
-            self.assertEqual(root.get(key), str(image_dict[key]))
-
-        link_nodes = root.findall('{0}link'.format(ATOMNS))
-        self.assertEqual(len(link_nodes), 2)
-        for i, link in enumerate(image_dict['links']):
-            for key, value in link.items():
-                self.assertEqual(link_nodes[i].get(key), value)
-
-        metadata_root = root.find('{0}metadata'.format(NS))
-        metadata_elems = metadata_root.findall('{0}meta'.format(NS))
-        self.assertEqual(len(metadata_elems), 1)
-        for i, metadata_elem in enumerate(metadata_elems):
-            (meta_key, meta_value) = image_dict['metadata'].items()[i]
-            self.assertEqual(str(metadata_elem.get('key')), str(meta_key))
-            self.assertEqual(str(metadata_elem.text).strip(), str(meta_value))
-
-        server_root = root.find('{0}server'.format(NS))
-        self.assertEqual(server_root.get('id'), image_dict['server']['id'])
-        link_nodes = server_root.findall('{0}link'.format(ATOMNS))
-        self.assertEqual(len(link_nodes), 2)
-        for i, link in enumerate(image_dict['server']['links']):
-            for key, value in link.items():
-                self.assertEqual(link_nodes[i].get(key), value)
-
-    def test_index(self):
-        serializer = images.MinimalImagesTemplate()
-
-        fixture = {
+        image = self.fixture['image']
+        image['id'] = '2'
+        image['name'] = 'Image2'
+        image['status'] = 'SAVING'
+        image['links'][0]['href'] = self.IMAGE_HREF % 2
+        image['links'][1]['href'] = self.IMAGE_BOOKMARK % 2
+        self.fixture_dict = {
             'images': [
-                {
-                    'id': 1,
-                    'name': 'Image1',
-                    'links': [
-                        {
-                            'href': self.IMAGE_HREF % 1,
-                            'rel': 'self',
-                        },
-                        {
-                            'href': self.IMAGE_BOOKMARK % 1,
-                            'rel': 'bookmark',
-                        },
-                    ],
-                },
-                {
-                    'id': 2,
-                    'name': 'Image2',
-                    'links': [
-                        {
-                            'href': self.IMAGE_HREF % 2,
-                            'rel': 'self',
-                        },
-                        {
-                            'href': self.IMAGE_BOOKMARK % 2,
-                            'rel': 'bookmark',
-                        },
-                    ],
-                },
-            ]
-        }
-
-        output = serializer.serialize(fixture)
-        root = etree.XML(output)
-        xmlutil.validate_schema(root, 'images_index')
-        image_elems = root.findall('{0}image'.format(NS))
-        self.assertEqual(len(image_elems), 2)
-        for i, image_elem in enumerate(image_elems):
-            image_dict = fixture['images'][i]
-
-            for key in ['name', 'id']:
-                self.assertEqual(image_elem.get(key), str(image_dict[key]))
-
-            link_nodes = image_elem.findall('{0}link'.format(ATOMNS))
-            self.assertEqual(len(link_nodes), 2)
-            for i, link in enumerate(image_dict['links']):
-                for key, value in link.items():
-                    self.assertEqual(link_nodes[i].get(key), value)
-
-    def test_index_with_links(self):
-        serializer = images.MinimalImagesTemplate()
-
-        fixture = {
-            'images': [
-                {
-                    'id': 1,
-                    'name': 'Image1',
-                    'links': [
-                        {
-                            'href': self.IMAGE_HREF % 1,
-                            'rel': 'self',
-                        },
-                        {
-                            'href': self.IMAGE_BOOKMARK % 1,
-                            'rel': 'bookmark',
-                        },
-                    ],
-                },
-                {
-                    'id': 2,
-                    'name': 'Image2',
-                    'links': [
-                        {
-                            'href': self.IMAGE_HREF % 2,
-                            'rel': 'self',
-                        },
-                        {
-                            'href': self.IMAGE_BOOKMARK % 2,
-                            'rel': 'bookmark',
-                        },
-                    ],
-                },
+                self.fixture['image'],
+                image,
             ],
             'images_links': [
                 {
@@ -1261,38 +789,127 @@ class ImageXMLSerializationTest(test.TestCase):
                 }
             ],
         }
+        self.serializer = images.ImageTemplate()
 
-        output = serializer.serialize(fixture)
+    def test_xml_declaration(self):
+        output = self.serializer.serialize(self.fixture)
+        has_dec = output.startswith("<?xml version='1.0' encoding='UTF-8'?>")
+        self.assertTrue(has_dec)
+
+    def test_show(self):
+        self.fixture['image']['minRam'] = 10
+        self.fixture['image']['minDisk'] = 100
+        output = self.serializer.serialize(self.fixture)
+        root = etree.XML(output)
+        xmlutil.validate_schema(root, 'image')
+        image_dict = self.fixture['image']
+
+        self._assertElementAndLinksEquals(root, image_dict, ['name', 'id',
+                                          'updated', 'created', 'status',
+                                          'progress'])
+        self._assertMetadataEquals(root, image_dict)
+        self._assertServerIdAndLinksEquals(root, image_dict)
+
+    def test_show_zero_metadata(self):
+        self.fixture['image']['metadata'] = {}
+        output = self.serializer.serialize(self.fixture)
+        root = etree.XML(output)
+        xmlutil.validate_schema(root, 'image')
+        image_dict = self.fixture['image']
+
+        meta_nodes = root.findall('{0}meta'.format(ATOMNS))
+        self.assertEqual(len(meta_nodes), 0)
+        self._assertElementAndLinksEquals(root, image_dict, ['name', 'id',
+                                          'updated', 'created', 'status'])
+        self._assertServerIdAndLinksEquals(root, image_dict)
+
+    def test_show_image_no_metadata_key(self):
+        del self.fixture['image']['metadata']
+        output = self.serializer.serialize(self.fixture)
+        root = etree.XML(output)
+        xmlutil.validate_schema(root, 'image')
+        image_dict = self.fixture['image']
+
+        meta_nodes = root.findall('{0}meta'.format(ATOMNS))
+        self.assertEqual(len(meta_nodes), 0)
+        self._assertElementAndLinksEquals(root, image_dict, ['name', 'id',
+                                          'updated', 'created', 'status'])
+        self._assertServerIdAndLinksEquals(root, image_dict)
+
+    def test_show_no_server(self):
+        del self.fixture['image']['server']
+        output = self.serializer.serialize(self.fixture)
+        root = etree.XML(output)
+        xmlutil.validate_schema(root, 'image')
+        image_dict = self.fixture['image']
+
+        server_root = root.find('{0}server'.format(NS))
+        self.assertIsNone(server_root)
+        self._assertElementAndLinksEquals(root, image_dict, ['name', 'id',
+                                          'updated', 'created', 'status'])
+        self._assertMetadataEquals(root, image_dict)
+
+    def test_show_with_min_ram(self):
+        self.fixture['image']['minRam'] = 256
+        output = self.serializer.serialize(self.fixture)
+        root = etree.XML(output)
+        xmlutil.validate_schema(root, 'image')
+        image_dict = self.fixture['image']
+
+        self._assertElementAndLinksEquals(root, image_dict, ['name', 'id',
+                                          'updated', 'created', 'status',
+                                          'progress', 'minRam'])
+        self._assertMetadataEquals(root, image_dict)
+        self._assertServerIdAndLinksEquals(root, image_dict)
+
+    def test_show_with_min_disk(self):
+        self.fixture['image']['minDisk'] = 5
+        output = self.serializer.serialize(self.fixture)
+        root = etree.XML(output)
+        xmlutil.validate_schema(root, 'image')
+        image_dict = self.fixture['image']
+
+        self._assertElementAndLinksEquals(root, image_dict, ['name', 'id',
+                                          'updated', 'created', 'status',
+                                          'progress', 'minDisk'])
+        self._assertMetadataEquals(root, image_dict)
+        self._assertServerIdAndLinksEquals(root, image_dict)
+
+    def test_index(self):
+        serializer = images.MinimalImagesTemplate()
+        output = serializer.serialize(self.fixture_dict)
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'images_index')
         image_elems = root.findall('{0}image'.format(NS))
         self.assertEqual(len(image_elems), 2)
         for i, image_elem in enumerate(image_elems):
-            image_dict = fixture['images'][i]
+            image_dict = self.fixture_dict['images'][i]
 
-            for key in ['name', 'id']:
-                self.assertEqual(image_elem.get(key), str(image_dict[key]))
+            self._assertElementAndLinksEquals(image_elem, image_dict, ['name',
+                                                                       'id'])
 
-            link_nodes = image_elem.findall('{0}link'.format(ATOMNS))
-            self.assertEqual(len(link_nodes), 2)
-            for i, link in enumerate(image_dict['links']):
-                for key, value in link.items():
-                    self.assertEqual(link_nodes[i].get(key), value)
+    def test_index_with_links(self):
+        serializer = images.MinimalImagesTemplate()
+        output = serializer.serialize(self.fixture_dict)
+        root = etree.XML(output)
+        xmlutil.validate_schema(root, 'images_index')
+        image_elems = root.findall('{0}image'.format(NS))
+        self.assertEqual(len(image_elems), 2)
+        for i, image_elem in enumerate(image_elems):
+            image_dict = self.fixture_dict['images'][i]
 
-            # Check images_links
+            self._assertElementAndLinksEquals(image_elem, image_dict, ['name',
+                                                                       'id'])
+
             images_links = root.findall('{0}link'.format(ATOMNS))
-            for i, link in enumerate(fixture['images_links']):
+            for i, link in enumerate(self.fixture_dict['images_links']):
                 for key, value in link.items():
                     self.assertEqual(images_links[i].get(key), value)
 
     def test_index_zero_images(self):
         serializer = images.MinimalImagesTemplate()
-
-        fixtures = {
-            'images': [],
-        }
-
-        output = serializer.serialize(fixtures)
+        del self.fixture_dict['images']
+        output = serializer.serialize(self.fixture_dict)
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'images_index')
         image_elems = root.findall('{0}image'.format(NS))
@@ -1300,76 +917,40 @@ class ImageXMLSerializationTest(test.TestCase):
 
     def test_detail(self):
         serializer = images.ImagesTemplate()
-
-        fixture = {
-            'images': [
-                {
-                    'id': 1,
-                    'name': 'Image1',
-                    'created': self.TIMESTAMP,
-                    'updated': self.TIMESTAMP,
-                    'status': 'ACTIVE',
-                    'server': {
-                        'id': self.SERVER_UUID,
-                        'links': [
-                            {
-                                'href': self.SERVER_HREF,
-                                'rel': 'self',
-                            },
-                            {
-                                'href': self.SERVER_BOOKMARK,
-                                'rel': 'bookmark',
-                            },
-                        ],
-                    },
-                    'links': [
-                        {
-                            'href': self.IMAGE_HREF % 1,
-                            'rel': 'self',
-                        },
-                        {
-                            'href': self.IMAGE_BOOKMARK % 1,
-                            'rel': 'bookmark',
-                        },
-                    ],
-                },
-                {
-                    'id': '2',
-                    'name': 'Image2',
-                    'created': self.TIMESTAMP,
-                    'updated': self.TIMESTAMP,
-                    'status': 'SAVING',
-                    'progress': 80,
-                    'metadata': {
-                        'key1': 'value1',
-                    },
-                    'links': [
-                        {
-                            'href': self.IMAGE_HREF % 2,
-                            'rel': 'self',
-                        },
-                        {
-                            'href': self.IMAGE_BOOKMARK % 2,
-                            'rel': 'bookmark',
-                        },
-                    ],
-                },
-            ]
-        }
-
-        output = serializer.serialize(fixture)
+        output = serializer.serialize(self.fixture_dict)
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'images')
         image_elems = root.findall('{0}image'.format(NS))
         self.assertEqual(len(image_elems), 2)
         for i, image_elem in enumerate(image_elems):
-            image_dict = fixture['images'][i]
+            image_dict = self.fixture_dict['images'][i]
 
-            for key in ['name', 'id', 'updated', 'created', 'status']:
-                self.assertEqual(image_elem.get(key), str(image_dict[key]))
+            self._assertElementAndLinksEquals(image_elem, image_dict, ['name',
+                                              'id', 'updated', 'created',
+                                              'status'])
 
-            link_nodes = image_elem.findall('{0}link'.format(ATOMNS))
-            self.assertEqual(len(link_nodes), 2)
-            for i, link in enumerate(image_dict['links']):
-                for key, value in link.items():
-                    self.assertEqual(link_nodes[i].get(key), value)
+    def _assertElementAndLinksEquals(self, elem, dict, keys):
+        for key in keys:
+            self.assertEquals(elem.get(key), str(dict[key]))
+        self._assertLinksEquals(elem, dict)
+
+    def _assertLinksEquals(self, root, dict):
+        link_nodes = root.findall('{0}link'.format(ATOMNS))
+        self.assertEqual(len(link_nodes), 2)
+        for i, link in enumerate(dict['links']):
+            for key, value in link.items():
+                self.assertEqual(link_nodes[i].get(key), value)
+
+    def _assertServerIdAndLinksEquals(self, root, dict):
+        server_root = root.find('{0}server'.format(NS))
+        self.assertEqual(server_root.get('id'), dict['server']['id'])
+        self._assertLinksEquals(server_root, dict['server'])
+
+    def _assertMetadataEquals(self, root, dict):
+        metadata_root = root.find('{0}metadata'.format(NS))
+        metadata_elems = metadata_root.findall('{0}meta'.format(NS))
+        self.assertEqual(len(metadata_elems), 1)
+        for i, metadata_elem in enumerate(metadata_elems):
+            (meta_key, meta_value) = dict['metadata'].items()[i]
+            self.assertEqual(str(metadata_elem.get('key')), str(meta_key))
+            self.assertEqual(str(metadata_elem.text).strip(), str(meta_value))
