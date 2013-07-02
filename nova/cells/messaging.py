@@ -684,7 +684,7 @@ class _TargetedMessageMethods(_BaseMessageMethods):
         EXPECTS_OBJECTS = ['start', 'stop']
         if method in EXPECTS_OBJECTS:
             inst_obj = instance_obj.Instance()
-            inst_obj._from_db_object(inst_obj, instance)
+            inst_obj._from_db_object(message.ctxt, inst_obj, instance)
             instance = inst_obj
         args[0] = instance
         return fn(message.ctxt, *args, **method_info['method_kwargs'])

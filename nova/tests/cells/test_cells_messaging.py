@@ -622,15 +622,15 @@ class CellsTargetedMethodsTestCase(test.TestCase):
     def test_run_compute_api_method(self):
 
         instance_uuid = 'fake_instance_uuid'
-        method_info = {'method': 'reboot',
+        method_info = {'method': 'backup',
                        'method_args': (instance_uuid, 2, 3),
                        'method_kwargs': {'arg1': 'val1', 'arg2': 'val2'}}
-        self.mox.StubOutWithMock(self.tgt_compute_api, 'reboot')
+        self.mox.StubOutWithMock(self.tgt_compute_api, 'backup')
         self.mox.StubOutWithMock(self.tgt_db_inst, 'instance_get_by_uuid')
 
         self.tgt_db_inst.instance_get_by_uuid(self.ctxt,
                 instance_uuid).AndReturn('fake_instance')
-        self.tgt_compute_api.reboot(self.ctxt, 'fake_instance', 2, 3,
+        self.tgt_compute_api.backup(self.ctxt, 'fake_instance', 2, 3,
                 arg1='val1', arg2='val2').AndReturn('fake_result')
         self.mox.ReplayAll()
 
@@ -669,7 +669,8 @@ class CellsTargetedMethodsTestCase(test.TestCase):
             # https://code.google.com/p/pymox/issues/detail?id=35
             #
             class FakeInstance(object):
-                def _from_db_object(obj, db_obj):
+                @classmethod
+                def _from_db_object(cls, ctxt, obj, db_obj):
                     pass
 
             instance_mock = FakeInstance()
@@ -683,7 +684,7 @@ class CellsTargetedMethodsTestCase(test.TestCase):
 
         instance = get_instance_mock()
         instance._from_db_object(
-                instance, 'fake_instance').AndReturn(instance)
+                self.ctxt, instance, 'fake_instance').AndReturn(instance)
         self.tgt_compute_api.start(self.ctxt, instance, 2, 3,
                 arg1='val1', arg2='val2').AndReturn('fake_result')
         self.mox.ReplayAll()
