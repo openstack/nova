@@ -137,6 +137,15 @@ interval_opts = [
     cfg.IntOpt('volume_usage_poll_interval',
                default=0,
                help='Interval in seconds for gathering volume usages'),
+    cfg.IntOpt('shelved_poll_interval',
+               default=3600,
+               help='Interval in seconds for polling shelved instances to '
+                    'offload'),
+    cfg.IntOpt('shelved_offload_time',
+               default=0,
+               help='Time in seconds before a shelved instance is eligible '
+                    'for removing from a host.  -1 never offload, 0 offload '
+                    'when shelved'),
 ]
 
 timeout_opts = [
@@ -3083,10 +3092,16 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance.system_metadata = sys_meta
         instance.vm_state = vm_states.SHELVED
         instance.task_state = None
+        if CONF.shelved_offload_time == 0:
+            instance.task_state = task_states.SHELVING_OFFLOADING
         instance.power_state = current_power_state
         instance.save(expected_task_state=[
                 task_states.SHELVING,
                 task_states.SHELVING_IMAGE_UPLOADING])
+
+        if CONF.shelved_offload_time == 0:
+            self.shelve_offload_instance(context, instance)
+
         self._notify_about_instance_usage(context, instance, 'shelve.end')
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
@@ -4064,6 +4079,32 @@ class ComputeManager(manager.SchedulerDependentManager):
             except Exception as e:
                 LOG.error(_("Error auto-confirming resize: %s. "
                             "Will retry later.") % e, instance=instance)
+
+    @periodic_task.periodic_task(spacing=CONF.shelved_poll_interval)
+    def _poll_shelved_instances(self, context):
+        if CONF.shelved_offload_time <= 0:
+            return
+
+        filters = {'vm_state': vm_states.SHELVED,
+                   'host': self.host}
+        shelved_instances = instance_obj.InstanceList.get_by_filters(
+            context, filters=filters, expected_attrs=['system_metadata'])
+
+        to_gc = []
+        for instance in shelved_instances:
+            sys_meta = instance.system_metadata
+            shelved_at = timeutils.parse_strtime(sys_meta['shelved_at'])
+            if timeutils.is_older_than(shelved_at, CONF.shelved_offload_time):
+                to_gc.append(instance)
+
+        for instance in to_gc:
+            try:
+                instance.task_state = task_states.SHELVING_OFFLOADING
+                instance.save()
+                self.shelve_offload_instance(context, instance)
+            except Exception:
+                LOG.exception(_('Periodic task failed to offload instance.'),
+                        instance=instance)
 
     @periodic_task.periodic_task
     def _instance_usage_audit(self, context):
