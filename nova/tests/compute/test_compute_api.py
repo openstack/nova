@@ -21,6 +21,7 @@ from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context
 from nova import exception
+from nova.objects import base as obj_base
 from nova.objects import instance as instance_obj
 from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
@@ -198,6 +199,86 @@ class _ComputeAPIUnitTestMixIn(object):
         self.assertRaises(exception.InstanceNotReady,
                           self.compute_api.stop,
                           self.context, instance)
+
+    def _test_reboot_type(self, vm_state, reboot_type, task_state=None):
+        # Ensure instance can be soft rebooted.
+        inst = self._create_instance_obj()
+        inst.vm_state = vm_state
+        inst.task_state = task_state
+        db_inst = obj_base.obj_to_primitive(inst)
+
+        new_state = (reboot_type == 'HARD' and
+                     task_states.REBOOTING_HARD or task_states.REBOOTING)
+        new_inst = dict(db_inst, task_state=new_state)
+
+        self.mox.StubOutWithMock(self.context, 'elevated')
+        self.mox.StubOutWithMock(self.compute_api, '_get_block_device_info')
+        self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
+        self.mox.StubOutWithMock(self.compute_api, 'update')
+        self.mox.StubOutWithMock(self.compute_api.compute_rpcapi,
+                                 'reboot_instance')
+        self.compute_api.update(self.context, db_inst,
+                                task_state=new_state,
+                                expected_task_state=[None,
+                                                     task_states.REBOOTING]
+                                ).AndReturn(new_inst)
+        self.context.elevated().AndReturn(self.context)
+        self.compute_api._get_block_device_info(self.context, inst.uuid
+                                                ).AndReturn('blkinfo')
+        self.compute_api._record_action_start(self.context, new_inst,
+                                              instance_actions.REBOOT)
+        self.compute_api.compute_rpcapi.reboot_instance(
+            self.context, instance=new_inst, block_device_info='blkinfo',
+            reboot_type=reboot_type)
+        if self.is_cells:
+            self.mox.StubOutWithMock(self.compute_api, '_cast_to_cells')
+            self.compute_api._cast_to_cells(
+                self.context, db_inst, 'reboot', reboot_type)
+        self.mox.ReplayAll()
+
+        self.compute_api.reboot(self.context, db_inst, reboot_type)
+
+    def _test_reboot_type_fails(self, reboot_type, **updates):
+        inst = self._create_instance_obj()
+        inst.update(updates)
+        db_inst = obj_base.obj_to_primitive(inst)
+
+        self.assertRaises(exception.InstanceInvalidState,
+                          self.compute_api.reboot,
+                          self.context, db_inst, reboot_type)
+
+    def test_reboot_hard_active(self):
+        self._test_reboot_type(vm_states.ACTIVE, 'HARD')
+
+    def test_reboot_hard_error(self):
+        self._test_reboot_type(vm_states.ERROR, 'HARD')
+
+    def test_reboot_hard_rebooting(self):
+        self._test_reboot_type(vm_states.ACTIVE, 'HARD',
+                               task_state=task_states.REBOOTING)
+
+    def test_reboot_hard_rescued(self):
+        self._test_reboot_type_fails('HARD', vm_state=vm_states.RESCUED)
+
+    def test_reboot_hard_error_not_launched(self):
+        self._test_reboot_type_fails('HARD', vm_state=vm_states.ERROR,
+                                     launched_at=None)
+
+    def test_reboot_soft(self):
+        self._test_reboot_type(vm_states.ACTIVE, 'SOFT')
+
+    def test_reboot_soft_error(self):
+        self._test_reboot_type(vm_states.ERROR, 'SOFT')
+
+    def test_reboot_soft_rebooting(self):
+        self._test_reboot_type_fails('SOFT', task_state=task_states.REBOOTING)
+
+    def test_reboot_soft_rescued(self):
+        self._test_reboot_type_fails('SOFT', vm_state=vm_states.RESCUED)
+
+    def test_reboot_soft_error_not_launched(self):
+        self._test_reboot_type_fails('SOFT', vm_state=vm_states.ERROR,
+                                     launched_at=None)
 
 
 class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
