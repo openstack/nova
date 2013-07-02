@@ -48,7 +48,7 @@ def stub_out(stubs, funcs):
     for func in funcs:
         func_name = '_'.join(func.__name__.split('_')[1:])
         stubs.Set(db, func_name, func)
-        stubs.Set(db.sqlalchemy.api, func_name, func)
+        stubs.Set(db.api, func_name, func)
 
 
 fixed_ip_fields = {'id': 0,
