@@ -60,6 +60,8 @@
     "compute_extension:v3:extension_info:discoverable": "",
     "compute_extension:extended_volumes": "",
     "compute_extension:v3:os-extended-volumes": "",
+    "compute_extension:v3:os-extended-volumes:attach": "",
+    "compute_extension:v3:os-extended-volumes:detach": "",
     "compute_extension:fixed_ips": "rule:admin_api",
     "compute_extension:v3:os-fixed-ips:discoverable": "",
     "compute_extension:v3:os-fixed-ips": "rule:admin_api",
