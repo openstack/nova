@@ -34,6 +34,7 @@ from nova.network.security_group import openstack_driver
 from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import uuidutils
+from quantumclient.quantum import v2_0 as quantumv20
 
 quantum_opts = [
     cfg.StrOpt('quantum_url',
@@ -70,6 +71,8 @@ quantum_opts = [
                 default=600,
                 help='Number of seconds before querying quantum for'
                      ' extensions'),
+    cfg.StrOpt('quantum_default_private_network',
+               help='Name of Private Network used by this host'),
     ]
 
 CONF = cfg.CONF
@@ -178,6 +181,13 @@ class API(base.Base):
                     fixed_ips[network_id] = fixed_ip
                 if network_id:
                     net_ids.append(network_id)
+
+        private_net_id = quantumv20.find_resourceid_by_name_or_id(
+                    quantum, 'network', CONF.quantum_default_private_network)
+        if not private_net_id:
+            raise Exception(_('Default Private Network ID Not Found'))
+        else:
+            net_ids.append(private_net_id)
 
         nets = self._get_available_networks(context, instance['project_id'],
                                             net_ids)
