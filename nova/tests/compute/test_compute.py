@@ -9118,20 +9118,32 @@ class ComputeAPIClassNameTestCase(test.TestCase):
         super(ComputeAPIClassNameTestCase, self).setUp()
 
     def test_default_compute_api_class_name(self):
-        result = compute.get_compute_api_class_name()
+        result = compute._get_compute_api_class_name()
         self.assertEqual('nova.compute.api.API', result)
 
     def test_cell_compute_api_class_name(self):
         self.flags(enable=True, group='cells')
         self.flags(cell_type='api', group='cells')
-        result = compute.get_compute_api_class_name()
+        result = compute._get_compute_api_class_name()
         self.assertEqual('nova.compute.cells_api.ComputeCellsAPI', result)
         self.flags(cell_type='compute', group='cells')
-        result = compute.get_compute_api_class_name()
+        result = compute._get_compute_api_class_name()
+        self.assertEqual('nova.compute.api.API', result)
+
+    def test_cell_compute_api_class_name_deprecated(self):
+        self.flags(enable=True, group='cells')
+        self.flags(cell_type='', group='cells')
+        api_cls_name = 'nova.compute.cells_api.ComputeCellsAPI'
+        self.flags(compute_api_class=api_cls_name)
+        result = compute._get_compute_api_class_name()
+        self.assertEqual('nova.compute.cells_api.ComputeCellsAPI', result)
+        api_cls_name = 'nova.compute.api.API'
+        self.flags(compute_api_class=api_cls_name)
+        result = compute._get_compute_api_class_name()
         self.assertEqual('nova.compute.api.API', result)
 
     def test_illegal_cell_compute_api_class_name(self):
         self.flags(enable=True, group='cells')
         self.flags(cell_type='fake_cell_type', group='cells')
         self.assertRaises(exception.InvalidInput,
-                          compute.get_compute_api_class_name)
+                          compute._get_compute_api_class_name)
