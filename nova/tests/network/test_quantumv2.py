@@ -598,6 +598,19 @@ class TestQuantumv2(test.TestCase):
         self._allocate_for_instance(net_idx=1,
                                     requested_networks=requested_networks)
 
+    def test_allocate_for_instance_no_networks(self):
+        """verify the exception thrown when there are no networks defined."""
+        api = quantumapi.API()
+        self.moxed_client.list_networks(
+            tenant_id=self.instance['project_id'],
+            shared=False).AndReturn(
+                {'networks': []})
+        self.moxed_client.list_networks(shared=True).AndReturn(
+            {'networks': []})
+        self.mox.ReplayAll()
+        nwinfo = api.allocate_for_instance(self.context, self.instance)
+        self.assertEqual(len(nwinfo), 0)
+
     def test_allocate_for_instance_ex1(self):
         """verify we will delete created ports
         if we fail to allocate all net resources.
