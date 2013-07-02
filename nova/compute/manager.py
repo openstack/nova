@@ -3807,52 +3807,56 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @periodic_task.periodic_task
     def _instance_usage_audit(self, context):
-        if CONF.instance_usage_audit:
-            if not compute_utils.has_audit_been_run(context,
-                                                    self.conductor_api,
-                                                    self.host):
-                begin, end = utils.last_completed_audit_period()
-                capi = self.conductor_api
-                instances = capi.instance_get_active_by_window_joined(
-                    context, begin, end, host=self.host)
-                num_instances = len(instances)
-                errors = 0
-                successes = 0
-                LOG.info(_("Running instance usage audit for"
-                           " host %(host)s from %(begin_time)s to "
-                           "%(end_time)s. %(number_instances)s"
-                           " instances."),
-                         dict(host=self.host,
-                              begin_time=begin,
-                              end_time=end,
-                              number_instances=num_instances))
-                start_time = time.time()
-                compute_utils.start_instance_usage_audit(context,
-                                              self.conductor_api,
-                                              begin, end,
-                                              self.host, num_instances)
-                for instance in instances:
-                    try:
-                        self.conductor_api.notify_usage_exists(
-                            context, instance,
-                            ignore_missing_network_data=False)
-                        successes += 1
-                    except Exception:
-                        LOG.exception(_('Failed to generate usage '
-                                        'audit for instance '
-                                        'on host %s') % self.host,
-                                      instance=instance)
-                        errors += 1
-                compute_utils.finish_instance_usage_audit(context,
-                                              self.conductor_api,
-                                              begin, end,
-                                              self.host, errors,
-                                              "Instance usage audit ran "
-                                              "for host %s, %s instances "
-                                              "in %s seconds." % (
-                                              self.host,
-                                              num_instances,
-                                              time.time() - start_time))
+        if not CONF.instance_usage_audit:
+            return
+
+        if compute_utils.has_audit_been_run(context,
+                                            self.conductor_api,
+                                            self.host):
+            return
+
+        begin, end = utils.last_completed_audit_period()
+        capi = self.conductor_api
+        instances = capi.instance_get_active_by_window_joined(
+            context, begin, end, host=self.host)
+        num_instances = len(instances)
+        errors = 0
+        successes = 0
+        LOG.info(_("Running instance usage audit for"
+                   " host %(host)s from %(begin_time)s to "
+                   "%(end_time)s. %(number_instances)s"
+                   " instances."),
+                 dict(host=self.host,
+                      begin_time=begin,
+                      end_time=end,
+                      number_instances=num_instances))
+        start_time = time.time()
+        compute_utils.start_instance_usage_audit(context,
+                                      self.conductor_api,
+                                      begin, end,
+                                      self.host, num_instances)
+        for instance in instances:
+            try:
+                self.conductor_api.notify_usage_exists(
+                    context, instance,
+                    ignore_missing_network_data=False)
+                successes += 1
+            except Exception:
+                LOG.exception(_('Failed to generate usage '
+                                'audit for instance '
+                                'on host %s') % self.host,
+                              instance=instance)
+                errors += 1
+        compute_utils.finish_instance_usage_audit(context,
+                                      self.conductor_api,
+                                      begin, end,
+                                      self.host, errors,
+                                      "Instance usage audit ran "
+                                      "for host %s, %s instances "
+                                      "in %s seconds." % (
+                                      self.host,
+                                      num_instances,
+                                      time.time() - start_time))
 
     @periodic_task.periodic_task
     def _poll_bandwidth_usage(self, context):
