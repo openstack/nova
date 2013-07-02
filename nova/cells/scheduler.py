@@ -34,6 +34,7 @@ from nova import exception
 from nova.openstack.common import log as logging
 from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova.scheduler import utils as scheduler_utils
+from nova import utils
 
 cell_scheduler_opts = [
         cfg.ListOpt('scheduler_filter_classes',
@@ -81,7 +82,13 @@ class CellsScheduler(base.Base):
     def _create_instances_here(self, ctxt, instance_uuids, instance_properties,
             instance_type, image, security_groups, block_device_mapping):
         instance_values = copy.copy(instance_properties)
-        sys_metadata = flavors.save_flavor_info(dict(), instance_type)
+        # The parent may pass these metadata values as lists, and the
+        # create call expects it to be a dict.
+        instance_values['metadata'] = utils.instance_meta(instance_values)
+        sys_metadata = utils.instance_sys_meta(instance_values)
+        # Make sure the flavor info is set.  It may not have been passed
+        # down.
+        sys_metadata = flavors.save_flavor_info(sys_metadata, instance_type)
         instance_values['system_metadata'] = sys_metadata
         instance_values.pop('name')
 
