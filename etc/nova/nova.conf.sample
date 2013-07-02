@@ -79,12 +79,6 @@
 # task state changes. (string value)
 #notify_on_state_change=<None>
 
-# If set, send compute.instance.update notifications on
-# instance state changes.  Valid values are False for no
-# notifications, True for notifications on any instance
-# changes. (boolean value)
-#notify_on_any_change=false
-
 # If set, send api.fault notifications on caught exceptions in
 # the API service. (boolean value)
 #notify_api_faults=false
@@ -3002,4 +2996,4 @@
 #keymap=en-us
 
 
-# Total option count: 609
+# Total option count: 608
