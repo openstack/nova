@@ -1172,11 +1172,6 @@ def security_group_get_by_instance(context, instance_uuid):
     return IMPL.security_group_get_by_instance(context, instance_uuid)
 
 
-def security_group_exists(context, project_id, group_name):
-    """Indicates if a group name exists in a project."""
-    return IMPL.security_group_exists(context, project_id, group_name)
-
-
 def security_group_in_use(context, group_id):
     """Indicates if a security group is currently in use."""
     return IMPL.security_group_in_use(context, group_id)

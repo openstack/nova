@@ -1117,8 +1117,8 @@ class SecurityGroupRuleTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertEqual(rules[0]['id'], security_group_rule['id'])
 
     def test_security_group_rule_destroy(self):
-        security_group1 = self._create_security_group({})
-        security_group2 = self._create_security_group({})
+        security_group1 = self._create_security_group({'name': 'fake1'})
+        security_group2 = self._create_security_group({'name': 'fake2'})
         security_group_rule1 = self._create_security_group_rule({})
         security_group_rule2 = self._create_security_group_rule({})
         db.security_group_rule_destroy(self.ctxt, security_group_rule1['id'])
@@ -1147,8 +1147,8 @@ class SecurityGroupRuleTestCase(test.TestCase, ModelsObjectComparatorMixin):
                           db.security_group_rule_get, self.ctxt, 100500)
 
     def test_security_group_rule_count_by_group(self):
-        sg1 = self._create_security_group({})
-        sg2 = self._create_security_group({})
+        sg1 = self._create_security_group({'name': 'fake1'})
+        sg2 = self._create_security_group({'name': 'fake2'})
         rules_by_group = {sg1: [], sg2: []}
         for group in rules_by_group:
             rules = rules_by_group[group]
@@ -1299,19 +1299,6 @@ class SecurityGroupTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self._assertEqualListsOfObjects(security_groups, real,
                                         ignored_keys=['instances'])
 
-    def test_security_group_exists(self):
-        security_group = self._create_security_group(
-                {'name': 'fake1', 'project_id': 'fake_proj1'})
-
-        real = (db.security_group_exists(self.ctxt,
-                                         security_group['project_id'],
-                                         security_group['name']),
-                db.security_group_exists(self.ctxt,
-                                         security_group['project_id'],
-                                         'fake_sec_group'))
-
-        self.assertEqual((True, False), real)
-
     def test_security_group_count_by_project(self):
         values = [
             {'name': 'fake1', 'project_id': 'fake_proj1'},
@@ -1331,7 +1318,8 @@ class SecurityGroupTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def test_security_group_in_use(self):
         instance = db.instance_create(self.ctxt, dict(host='foo'))
         values = [
-            {'instances': [instance]},
+            {'instances': [instance],
+             'name': 'fake_in_use'},
             {'instances': []},
         ]
 
@@ -1348,15 +1336,29 @@ class SecurityGroupTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertEquals(expected, real)
 
     def test_security_group_ensure_default(self):
-        self.assertFalse(db.security_group_exists(self.ctxt,
-                                                  self.ctxt.project_id,
-                                                  'default'))
+        self.assertEquals(0, len(db.security_group_get_by_project(
+                                    self.ctxt,
+                                    self.ctxt.project_id)))
 
         db.security_group_ensure_default(self.ctxt)
 
-        self.assertTrue(db.security_group_exists(self.ctxt,
-                                                 self.ctxt.project_id,
-                                                 'default'))
+        security_groups = db.security_group_get_by_project(
+                            self.ctxt,
+                            self.ctxt.project_id)
+
+        self.assertEquals(1, len(security_groups))
+        self.assertEquals("default", security_groups[0]["name"])
+
+    def test_security_group_update_to_duplicate(self):
+        security_group1 = self._create_security_group(
+                {'name': 'fake1', 'project_id': 'fake_proj1'})
+        security_group2 = self._create_security_group(
+                {'name': 'fake1', 'project_id': 'fake_proj2'})
+
+        self.assertRaises(exception.SecurityGroupExists,
+                          db.security_group_update,
+                          self.ctxt, security_group2['id'],
+                          {'project_id': 'fake_proj1'})
 
 
 class InstanceTestCase(DbTestCase):
