@@ -172,9 +172,8 @@ class FilterScheduler(driver.Scheduler):
         if len(selected_hosts) < num_instances:
             raise exception.NoValidHost(reason='')
 
-        dests = []
-        for host in selected_hosts:
-            dests.append((host.obj.host, host.obj.nodename))
+        # Returns HostState objects.
+        dests = [host.obj for host in selected_hosts]
         return dests
 
     def _provision_resource(self, context, weighed_host, request_spec,

@@ -220,10 +220,10 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.mox.ReplayAll()
         dests = self.driver.select_destinations(ctxt, request_spec, {})
         self.assertEquals(2, len(dests))
-        (host, node) = dests[0]
+        (host, node) = (dests[0].host, dests[0].nodename)
         self.assertEquals('host3', host)
         self.assertEquals(None, node)
-        (host, node) = dests[1]
+        (host, node) = (dests[1].host, dests[1].nodename)
         self.assertEquals('host2', host)
         self.assertEquals(None, node)
 

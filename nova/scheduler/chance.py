@@ -28,6 +28,7 @@ from oslo.config import cfg
 from nova.compute import rpcapi as compute_rpcapi
 from nova import exception
 from nova.scheduler import driver
+from nova.scheduler import host_manager
 
 CONF = cfg.CONF
 CONF.import_opt('compute_topic', 'nova.compute.rpcapi')
@@ -75,10 +76,15 @@ class ChanceScheduler(driver.Scheduler):
     def select_destinations(self, context, request_spec, filter_properties):
         """Selects random destinations."""
         num_instances = request_spec['num_instances']
-        # NOTE(alaski): Returns a list of tuples for compatibility with
-        # filter_scheduler
-        dests = [(self._schedule(context, CONF.compute_topic, request_spec,
-                filter_properties), None) for i in range(num_instances)]
+        # NOTE(alaski): Returns a list of HostState objects for compatibility
+        # with filter_scheduler
+        dests = []
+        for i in range(num_instances):
+            host = self._schedule(context, CONF.compute_topic,
+                    request_spec, filter_properties)
+            host_state = host_manager.HostState(host, None)
+            dests.append(host_state)
+
         if len(dests) < num_instances:
             raise exception.NoValidHost(reason='')
         return dests
