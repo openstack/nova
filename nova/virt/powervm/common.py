@@ -165,7 +165,8 @@ def ftp_get_command(connection, remote_path, local_path):
                          passwd=connection.password)
         ftp.cwd(os.path.dirname(remote_path))
         name = os.path.basename(remote_path)
-        LOG.debug(_("ftp GET %(remote_path)s to: %(local_path)s") % locals())
+        LOG.debug(_("ftp GET %(remote_path)s to: %(local_path)s"),
+                  {'remote_path': remote_path, 'local_path': local_path})
         with open(local_path, 'w') as ftpfile:
             ftpcmd = 'RETR %s' % name
             ftp.retrbinary(ftpcmd, ftpfile.write)

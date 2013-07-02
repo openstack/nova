@@ -248,9 +248,9 @@ class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
         # clean up local image file
         try:
             os.remove(snapshot_file_path)
-        except OSError as ose:
-            LOG.warn(_("Failed to clean up snapshot file "
-                       "%(snapshot_file_path)s") % locals())
+        except OSError:
+            LOG.warn(_("Failed to clean up snapshot file %s"),
+                     snapshot_file_path)
 
     def migrate_volume(self, lv_name, src_host, dest, image_path,
             instance_name=None):
@@ -556,9 +556,9 @@ class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
 
         error_text = stderr.strip()
         if error_text:
-            LOG.debug(
-                _("Found error stream for command \"%(cmd)s\": %(error_text)s")
-                % locals())
+            LOG.debug(_("Found error stream for command \"%(cmd)s\": "
+                        "%(error_text)s"),
+                      {'cmd': cmd, 'error_text': error_text})
 
         return stdout.strip().splitlines()
 
@@ -573,8 +573,8 @@ class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
 
         error_text = stderr.read()
         if error_text:
-            LOG.debug(
-                _("Found error stream for command \"%(command)s\":"
-                  " %(error_text)s") % locals())
+            LOG.debug(_("Found error stream for command \"%(command)s\":"
+                        " %(error_text)s"),
+                      {'command': command, 'error_text': error_text})
 
         return stdout.read().splitlines()

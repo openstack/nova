@@ -172,8 +172,8 @@ class PowerVMDriver(driver.ComputeDriver):
 
         snapshot_time = time.time() - snapshot_start
         inst_name = instance['name']
-        LOG.info(_("%(inst_name)s captured in %(snapshot_time)s seconds") %
-                    locals())
+        LOG.info(_("%(inst_name)s captured in %(snapshot_time)s seconds"),
+                 {'inst_name': inst_name, 'snapshot_time': snapshot_time})
 
     def pause(self, instance):
         """Pause the specified instance."""

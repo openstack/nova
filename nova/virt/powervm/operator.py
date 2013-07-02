@@ -364,7 +364,7 @@ class PowerVMOperator(object):
         eth_id = self._operator.get_virtual_eth_adapter_id()
         slot_id = int(mac[-2:], 16)
         virtual_eth_adapters = ('%(slot_id)s/0/%(eth_id)s//0/0' %
-                                locals())
+                                {'slot_id': slot_id, 'eth_id': eth_id})
 
         # LPAR configuration data
         # max_virtual_slots is hardcoded to 64 since we generate a MAC
@@ -690,9 +690,9 @@ class BaseOperator(object):
 
         error_text = stderr.strip()
         if error_text:
-            LOG.debug(
-                _("Found error stream for command \"%(cmd)s\": %(error_text)s")
-                % locals())
+            LOG.debug(_("Found error stream for command \"%(cmd)s\": "
+                        "%(error_text)s"),
+                      {'cmd': cmd, 'error_text': error_text})
 
         return stdout.strip().splitlines()
 
@@ -707,9 +707,9 @@ class BaseOperator(object):
 
         error_text = stderr.read()
         if error_text:
-            LOG.debug(
-                _("Found error stream for command \"%(command)s\":"
-                  " %(error_text)s") % locals())
+            LOG.debug(_("Found error stream for command \"%(command)s\":"
+                        " %(error_text)s"),
+                      {'command': command, 'error_text': error_text})
 
         return stdout.read().splitlines()
 
