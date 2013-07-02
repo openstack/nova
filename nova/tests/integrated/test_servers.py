@@ -15,10 +15,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import datetime
 import time
 import zlib
 
+from nova import context
 from nova.openstack.common import log as logging
+from nova.openstack.common import timeutils
 from nova.tests import fake_network
 from nova.tests.integrated.api import client
 from nova.tests.integrated import integrated_helpers
@@ -140,14 +143,18 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
 
         self._delete_server(created_server_id)
 
+    def _force_reclaim(self):
+        # Make sure that compute manager thinks the instance is
+        # old enough to be expired
+        the_past = datetime.datetime.utcnow() + datetime.timedelta(hours=1)
+        timeutils.set_time_override(override_time=the_past)
+        ctxt = context.get_admin_context()
+        self.compute._reclaim_queued_deletes(ctxt)
+
     def test_deferred_delete(self):
         # Creates, deletes and waits for server to be reclaimed.
         self.flags(reclaim_instance_interval=1)
         fake_network.set_stub_network_methods(self.stubs)
-
-        # enforce periodic tasks run in short time to avoid wait for 60s.
-        self._restart_compute_service(periodic_interval_max=0.3,
-                                      periodic_fuzzy_delay=0)
 
         # Create server
         server = self._build_minimal_create_server_request()
@@ -179,6 +186,8 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         # Wait for queued deletion
         found_server = self._wait_for_state_change(found_server, 'ACTIVE')
         self.assertEqual('DELETED', found_server['status'])
+
+        self._force_reclaim()
 
         # Wait for real deletion
         self._wait_for_deletion(created_server_id)
