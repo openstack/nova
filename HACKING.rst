@@ -9,7 +9,8 @@ Nova Specific Commandments
 ---------------------------
 
 - ``nova.db`` imports are not allowed in ``nova/virt/*``
-
+- [N309] no db session in public API methods (disabled)
+  This enforces a guideline defined in ``nova.openstack.common.db.sqlalchemy.session``
 
 Creating Unit Tests
 -------------------
