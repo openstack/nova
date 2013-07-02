@@ -870,7 +870,9 @@ class VMwareVMOps(object):
         progress = round(float(step) / total_steps * 100)
         instance_uuid = instance['uuid']
         LOG.debug(_("Updating instance '%(instance_uuid)s' progress to"
-                    " %(progress)d") % locals(), instance=instance)
+                    " %(progress)d"),
+                  {'instance_uuid': instance_uuid, 'progress': progress},
+                  instance=instance)
         self._virtapi.instance_update(context, instance_uuid,
                                       {'progress': progress})
 

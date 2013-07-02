@@ -42,9 +42,8 @@ LOG = logging.getLogger(__name__)
 
 def log_db_contents(msg=None):
     """Log DB Contents."""
-    text = msg or ""
-    content = pprint.pformat(_db_content)
-    LOG.debug(_("%(text)s: _db_content => %(content)s") % locals())
+    LOG.debug(_("%(text)s: _db_content => %(content)s"),
+              {'text': msg or "", 'content': pprint.pformat(_db_content)})
 
 
 def reset():

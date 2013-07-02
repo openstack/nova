@@ -153,6 +153,6 @@ def get_vmdk_size_and_properties(context, image, instance):
     (image_service, image_id) = glance.get_remote_image_service(context, image)
     meta_data = image_service.show(context, image_id)
     size, properties = meta_data["size"], meta_data["properties"]
-    LOG.debug(_("Got image size of %(size)s for the image %(image)s") %
-              locals(), instance=instance)
+    LOG.debug(_("Got image size of %(size)s for the image %(image)s"),
+              {'size': size, 'image': image}, instance=instance)
     return size, properties
