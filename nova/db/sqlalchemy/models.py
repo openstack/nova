@@ -969,6 +969,10 @@ class Aggregate(BASE, NovaBase):
 class AgentBuild(BASE, NovaBase):
     """Represents an agent build."""
     __tablename__ = 'agent_builds'
+    __table_args__ = (
+        schema.UniqueConstraint("hypervisor", "os", "architecture", "deleted",
+                name="uniq_agent_builds0hypervisor0os0architecture0deleted"),
+    )
     id = Column(Integer, primary_key=True)
     hypervisor = Column(String(255))
     os = Column(String(255))

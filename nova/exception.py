@@ -465,6 +465,11 @@ class AgentBuildNotFound(NotFound):
     message = _("No agent-build associated with id %(id)s.")
 
 
+class AgentBuildExists(Duplicate):
+    message = _("Agent-build with hypervisor %(hypervisor)s os %(os)s "
+                "architecture %(architecture)s exists.")
+
+
 class VolumeNotFound(NotFound):
     message = _("Volume %(volume_id)s could not be found.")
 
