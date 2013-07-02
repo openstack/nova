@@ -92,3 +92,30 @@ def set_vm_state_and_notify(context, service, method, updates, ex,
         event_type = '%s.%s' % (service, method)
         notifier.notify(context, notifier.publisher_id(service),
                         event_type, notifier.ERROR, payload)
+
+
+def populate_filter_properties(filter_properties, host_state):
+    """Add additional information to the filter properties after a node has
+    been selected by the scheduling process.
+    """
+    # Add a retry entry for the selected compute host and node:
+    _add_retry_host(filter_properties, host_state.host,
+                    host_state.nodename)
+
+    _add_oversubscription_policy(filter_properties, host_state)
+
+
+def _add_retry_host(filter_properties, host, node):
+    """Add a retry entry for the selected compute node. In the event that
+    the request gets re-scheduled, this entry will signal that the given
+    node has already been tried.
+    """
+    retry = filter_properties.get('retry', None)
+    if not retry:
+        return
+    hosts = retry['hosts']
+    hosts.append([host, node])
+
+
+def _add_oversubscription_policy(filter_properties, host_state):
+    filter_properties['limits'] = host_state.limits
