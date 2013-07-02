@@ -109,12 +109,18 @@ compute_opts = [
                     'behavior of every instance having the same name, set '
                     'this option to "%(name)s".  Valid keys for the '
                     'template are: name, uuid, count.'),
-     cfg.IntOpt('max_local_block_devices',
+    cfg.IntOpt('max_local_block_devices',
                 default=3,
                 help='Maximum number of devices that will result '
                      'in a local image being created on the hypervisor node. '
                      'Setting this to 0 means nova will allow only '
                      'boot from volume. A negative number means unlimited.'),
+    cfg.BoolOpt('default_shutdown_on_delete',
+                default=False,
+                help='Control what happens to the Guest OS when an instance '
+                     'is deleted. '
+                     'If set to true instances will be given a chance to '
+                     'shutdown before they are destroyed.'),
 ]
 
 
@@ -1300,7 +1306,8 @@ class API(base.Base):
                                                auto_disk_config,
                                                image_ref)
 
-    def _delete(self, context, instance, delete_type, cb, **instance_attrs):
+    def _delete(self, context, instance, delete_type,
+                cb, clean_shutdown, **instance_attrs):
         if instance['disable_terminate']:
             LOG.info(_('instance termination disabled'),
                      instance=instance)
@@ -1342,7 +1349,9 @@ class API(base.Base):
                 # which will cause a cast to the child cell.  Also,
                 # commit reservations here early until we have a better
                 # way to deal with quotas with cells.
-                cb(context, instance, bdms, reservations=None)
+                cb(context, instance,
+                   clean_shutdown=clean_shutdown,
+                   bdms=bdms, reservations=None)
                 if reservations:
                     QUOTAS.commit(context,
                                   reservations,
@@ -1382,13 +1391,17 @@ class API(base.Base):
                     self._record_action_start(context, instance,
                                               instance_actions.DELETE)
 
-                    cb(context, instance, bdms, reservations=reservations)
+                    cb(context, instance,
+                       clean_shutdown=clean_shutdown,
+                       bdms=bdms, reservations=reservations)
             except exception.ComputeHostNotFound:
                 pass
 
             if not is_up:
                 # If compute node isn't up, just delete from DB
-                self._local_delete(context, instance, bdms, delete_type, cb)
+                self._local_delete(context, instance,
+                                   bdms=bdms, delete_type=delete_type,
+                                   cb=cb, clean_shutdown=clean_shutdown)
                 if reservations:
                     QUOTAS.commit(context,
                                   reservations,
@@ -1498,7 +1511,8 @@ class API(base.Base):
                                       ram=-instance_memory_mb)
         return reservations
 
-    def _local_delete(self, context, instance, bdms, delete_type, cb):
+    def _local_delete(self, context, instance, bdms, delete_type, cb,
+                      clean_shutdown):
         LOG.warning(_("instance's host %s is down, deleting from "
                       "database") % instance['host'], instance=instance)
         instance_uuid = instance['uuid']
@@ -1532,33 +1546,38 @@ class API(base.Base):
                     err_str = _("Ignoring volume cleanup failure due to %s")
                     LOG.warn(err_str % exc, instance=instance)
             self.db.block_device_mapping_destroy(context, bdm['id'])
-        cb(context, instance, bdms, local=True)
+        cb(context, instance, bdms=bdms,
+           clean_shutdown=clean_shutdown, local=True)
         instance.destroy()
         compute_utils.notify_about_instance_usage(
             self.notifier, context, instance, "%s.end" % delete_type,
             system_metadata=system_meta)
 
-    def _do_delete(self, context, instance, bdms, reservations=None,
-                   local=False):
+    def _do_delete(self, context, instance, bdms, clean_shutdown,
+                   reservations=None, local=False):
         if local:
             instance.vm_state = vm_states.DELETED
             instance.task_state = None
             instance.terminated_at = timeutils.utcnow()
             instance.save()
         else:
-            self.compute_rpcapi.terminate_instance(context, instance, bdms,
-                                                   reservations=reservations)
+            self.compute_rpcapi.terminate_instance(
+                                  context, instance, bdms,
+                                  clean_shutdown=clean_shutdown,
+                                  reservations=reservations)
 
-    def _do_soft_delete(self, context, instance, bdms, reservations=None,
-                        local=False):
+    def _do_soft_delete(self, context, instance, bdms, clean_shutdown,
+                        reservations=None, local=False):
         if local:
             instance.vm_state = vm_states.SOFT_DELETED
             instance.task_state = None
             instance.terminated_at = timeutils.utcnow()
             instance.save()
         else:
-            self.compute_rpcapi.soft_delete_instance(context, instance,
-                                                     reservations=reservations)
+            self.compute_rpcapi.soft_delete_instance(
+                                    context, instance,
+                                    reservations=reservations,
+                                    clean_shutdown=clean_shutdown)
 
     # NOTE(maoy): we allow delete to be called no matter what vm_state says.
     @wrap_check_policy
@@ -1566,17 +1585,24 @@ class API(base.Base):
     @check_instance_cell
     @check_instance_state(vm_state=None, task_state=None,
                           must_have_launched=True)
-    def soft_delete(self, context, instance):
+    def soft_delete(self, context, instance,
+                    clean_shutdown=None):
         """Terminate an instance."""
         LOG.debug(_('Going to try to soft delete instance'),
                   instance=instance)
+        if clean_shutdown == None:
+            clean_shutdown = CONF.default_shutdown_on_delete
 
-        self._delete(context, instance, 'soft_delete', self._do_soft_delete,
+        self._delete(context, instance, delete_type='soft_delete',
+                     cb=self._do_soft_delete,
+                     clean_shutdown=clean_shutdown,
                      task_state=task_states.SOFT_DELETING,
                      deleted_at=timeutils.utcnow())
 
-    def _delete_instance(self, context, instance):
-        self._delete(context, instance, 'delete', self._do_delete,
+    def _delete_instance(self, context, instance, clean_shutdown):
+        self._delete(context, instance, delete_type='delete',
+                     cb=self._do_delete,
+                     clean_shutdown=clean_shutdown,
                      task_state=task_states.DELETING)
 
     @wrap_check_policy
@@ -1584,10 +1610,13 @@ class API(base.Base):
     @check_instance_cell
     @check_instance_state(vm_state=None, task_state=None,
                           must_have_launched=False)
-    def delete(self, context, instance):
+    def delete(self, context, instance, clean_shutdown=None):
         """Terminate an instance."""
         LOG.debug(_("Going to try to terminate instance"), instance=instance)
-        self._delete_instance(context, instance)
+        if clean_shutdown == None:
+            clean_shutdown = CONF.default_shutdown_on_delete
+
+        self._delete_instance(context, instance, clean_shutdown)
 
     @wrap_check_policy
     @check_instance_lock
@@ -1625,11 +1654,15 @@ class API(base.Base):
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.SOFT_DELETED],
                           must_have_launched=False)
-    def force_delete(self, context, instance):
+    def force_delete(self, context, instance,
+                     clean_shutdown=None):
         """Force delete a previously deleted (but not reclaimed) instance."""
-        self._delete_instance(context, instance)
+        if clean_shutdown == None:
+            clean_shutdown = CONF.default_shutdown_on_delete
+        self._delete_instance(context, instance, clean_shutdown)
 
-    def force_stop(self, context, instance, do_cast=True):
+    def force_stop(self, context, instance, do_cast=True,
+                   clean_shutdown=True):
         LOG.debug(_("Going to try to stop instance"), instance=instance)
 
         instance.task_state = task_states.POWERING_OFF
@@ -1638,7 +1671,8 @@ class API(base.Base):
 
         self._record_action_start(context, instance, instance_actions.STOP)
 
-        self.compute_rpcapi.stop_instance(context, instance, do_cast=do_cast)
+        self.compute_rpcapi.stop_instance(context, instance, do_cast=do_cast,
+                                          clean_shutdown=clean_shutdown)
 
     @wrap_check_policy
     @check_instance_lock
@@ -1647,9 +1681,9 @@ class API(base.Base):
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.RESCUED,
                                     vm_states.ERROR],
                           task_state=[None])
-    def stop(self, context, instance, do_cast=True):
+    def stop(self, context, instance, do_cast=True, clean_shutdown=True):
         """Stop an instance."""
-        self.force_stop(context, instance, do_cast)
+        self.force_stop(context, instance, do_cast, clean_shutdown)
 
     @wrap_check_policy
     @check_instance_lock
@@ -2369,7 +2403,7 @@ class API(base.Base):
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
                                     vm_states.PAUSED, vm_states.SUSPENDED],
                           task_state=[None])
-    def shelve(self, context, instance):
+    def shelve(self, context, instance, clean_shutdown=True):
         """Shelve an instance.
 
         Shuts down an instance and frees it up to be removed from the
@@ -2387,10 +2421,10 @@ class API(base.Base):
                     'snapshot')
             image_id = image_meta['id']
             self.compute_rpcapi.shelve_instance(context, instance=instance,
-                    image_id=image_id)
+                    image_id=image_id, clean_shutdown=clean_shutdown)
         else:
             self.compute_rpcapi.shelve_offload_instance(context,
-                    instance=instance)
+                    instance=instance, clean_shutdown=clean_shutdown)
 
     @wrap_check_policy
     @check_instance_lock
@@ -2482,7 +2516,8 @@ class API(base.Base):
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
                                     vm_states.ERROR])
-    def rescue(self, context, instance, rescue_password=None):
+    def rescue(self, context, instance, rescue_password=None,
+               clean_shutdown=True):
         """Rescue the given instance."""
 
         bdms = self.get_instance_bdms(context, instance, legacy=False)
@@ -2506,7 +2541,8 @@ class API(base.Base):
         self._record_action_start(context, instance, instance_actions.RESCUE)
 
         self.compute_rpcapi.rescue_instance(context, instance=instance,
-                rescue_password=rescue_password)
+                rescue_password=rescue_password,
+                clean_shutdown=clean_shutdown)
 
     @wrap_check_policy
     @check_instance_lock

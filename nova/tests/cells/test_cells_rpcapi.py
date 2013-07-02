@@ -196,9 +196,10 @@ class CellsAPITestCase(test.NoDBTestCase):
                 'fake-type')
 
         expected_args = {'instance': fake_instance,
-                         'delete_type': 'fake-type'}
+                         'delete_type': 'fake-type',
+                         'clean_shutdown': False}
         self._check_result(call_info, 'instance_delete_everywhere',
-                expected_args)
+                expected_args, version='1.25')
 
     def test_instance_fault_create_at_top(self):
         fake_instance_fault = {'id': 2,
@@ -504,23 +505,27 @@ class CellsAPITestCase(test.NoDBTestCase):
         call_info = self._stub_rpc_method('cast', None)
 
         self.cells_rpcapi.stop_instance(
-                self.fake_context, 'fake-instance', do_cast=True)
+                self.fake_context, 'fake-instance',
+                clean_shutdown=False, do_cast=True)
 
         expected_args = {'instance': 'fake-instance',
+                         'clean_shutdown': False,
                          'do_cast': True}
         self._check_result(call_info, 'stop_instance',
-                expected_args, version='1.12')
+                expected_args, version='1.25')
 
     def test_stop_instance_call(self):
         call_info = self._stub_rpc_method('call', 'fake_response')
 
         result = self.cells_rpcapi.stop_instance(
-                self.fake_context, 'fake-instance', do_cast=False)
+                self.fake_context, 'fake-instance',
+                clean_shutdown=False, do_cast=False)
 
         expected_args = {'instance': 'fake-instance',
+                         'clean_shutdown': False,
                          'do_cast': False}
         self._check_result(call_info, 'stop_instance',
-                expected_args, version='1.12')
+                expected_args, version='1.25')
         self.assertEqual(result, 'fake_response')
 
     def test_cell_create(self):
@@ -624,18 +629,20 @@ class CellsAPITestCase(test.NoDBTestCase):
 
         self.cells_rpcapi.terminate_instance(self.fake_context,
                                              'fake-instance', [])
-        expected_args = {'instance': 'fake-instance'}
+        expected_args = {'instance': 'fake-instance',
+                         'clean_shutdown': False}
         self._check_result(call_info, 'terminate_instance',
-                           expected_args, version='1.18')
+                           expected_args, version='1.25')
 
     def test_soft_delete_instance(self):
         call_info = self._stub_rpc_method('cast', None)
 
         self.cells_rpcapi.soft_delete_instance(self.fake_context,
                                                'fake-instance')
-        expected_args = {'instance': 'fake-instance'}
+        expected_args = {'instance': 'fake-instance',
+                         'clean_shutdown': False}
         self._check_result(call_info, 'soft_delete_instance',
-                           expected_args, version='1.18')
+                           expected_args, version='1.25')
 
     def test_resize_instance(self):
         call_info = self._stub_rpc_method('cast', None)

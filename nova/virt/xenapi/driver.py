@@ -275,8 +275,9 @@ class XenAPIDriver(driver.ComputeDriver):
         self._vmops.change_instance_metadata(instance, diff)
 
     def destroy(self, context, instance, network_info, block_device_info=None,
-                destroy_disks=True):
+                destroy_disks=True, clean_shutdown=False):
         """Destroy VM instance."""
+        # TODO(PhilD): Add support for clean_shutdown
         self._vmops.destroy(instance, network_info, block_device_info,
                             destroy_disks)
 
@@ -307,8 +308,9 @@ class XenAPIDriver(driver.ComputeDriver):
         self._vmops.resume(instance)
 
     def rescue(self, context, instance, network_info, image_meta,
-               rescue_password):
+               rescue_password, clean_shutdown=True):
         """Rescue the specified instance."""
+        # TODO(PhilD): Add support for clean_shutdown
         self._vmops.rescue(context, instance, network_info, image_meta,
                            rescue_password)
 
@@ -320,8 +322,9 @@ class XenAPIDriver(driver.ComputeDriver):
         """Unrescue the specified instance."""
         self._vmops.unrescue(instance)
 
-    def power_off(self, instance):
+    def power_off(self, instance, clean_shutdown=True):
         """Power off the specified instance."""
+        # TODO(PhilD): Add support for clean_shutdown
         self._vmops.power_off(instance)
 
     def power_on(self, context, instance, network_info,
@@ -329,8 +332,9 @@ class XenAPIDriver(driver.ComputeDriver):
         """Power on the specified instance."""
         self._vmops.power_on(instance)
 
-    def soft_delete(self, instance):
+    def soft_delete(self, instance, clean_shutdown=True):
         """Soft delete the specified instance."""
+        # TODO(PhilD): Add support for clean_shutdown
         self._vmops.soft_delete(instance)
 
     def restore(self, instance):

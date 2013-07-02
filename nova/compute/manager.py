@@ -420,7 +420,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '3.3'
+    RPC_API_VERSION = '3.4'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1126,8 +1126,9 @@ class ComputeManager(manager.Manager):
                 capi = self.conductor_api
                 bdms = capi.block_device_mapping_get_all_by_instance(context,
                                                                      instance)
-            self._shutdown_instance(context, instance,
-                                    bdms, requested_networks)
+            # Failed during spawn so little point in trying a clean shutdown
+            self._shutdown_instance(context, instance, bdms,
+                                    requested_networks, clean_shutdown=False)
             self._cleanup_volumes(context, instance['uuid'], bdms)
         except Exception:
             # do not attempt retry if clean up failed:
@@ -1839,7 +1840,8 @@ class ComputeManager(manager.Manager):
                 self._set_instance_error_state(context, instance['uuid'])
 
     def _shutdown_instance(self, context, instance,
-                           bdms, requested_networks=None, notify=True):
+                           bdms, requested_networks=None, notify=True,
+                           clean_shutdown=False):
         """Shutdown an instance on this host."""
         context = context.elevated()
         LOG.audit(_('%(action_str)s instance') % {'action_str': 'Terminating'},
@@ -1864,7 +1866,7 @@ class ComputeManager(manager.Manager):
         #                want to keep ip allocated for certain failures
         try:
             self.driver.destroy(context, instance, network_info,
-                    block_device_info)
+                    block_device_info, clean_shutdown=clean_shutdown)
         except exception.InstancePowerOffFailure:
             # if the instance can't power off, don't release the ip
             with excutils.save_and_reraise_exception():
@@ -1907,7 +1909,7 @@ class ComputeManager(manager.Manager):
             # NOTE(vish): bdms will be deleted on instance destroy
 
     @hooks.add_hook("delete_instance")
-    def _delete_instance(self, context, instance, bdms,
+    def _delete_instance(self, context, instance, bdms, clean_shutdown,
                          reservations=None):
         """Delete an instance on this host.  Commit or rollback quotas
         as necessary.
@@ -1941,7 +1943,8 @@ class ComputeManager(manager.Manager):
             self.conductor_api.instance_info_cache_delete(context, db_inst)
             self._notify_about_instance_usage(context, instance,
                                               "delete.start")
-            self._shutdown_instance(context, db_inst, bdms)
+            self._shutdown_instance(context, db_inst, bdms,
+                                    clean_shutdown=clean_shutdown)
             # NOTE(vish): We have already deleted the instance, so we have
             #             to ignore problems cleaning up the volumes. It
             #             would be nice to let the user know somehow that
@@ -1986,13 +1989,16 @@ class ComputeManager(manager.Manager):
     @reverts_task_state
     @wrap_instance_event
     @wrap_instance_fault
-    def terminate_instance(self, context, instance, bdms, reservations):
+    def terminate_instance(self, context, instance, bdms, reservations,
+                           clean_shutdown=False):
         """Terminate an instance on this host."""
 
         @utils.synchronized(instance['uuid'])
-        def do_terminate_instance(instance, bdms):
+        def do_terminate_instance(instance, bdms, clean_shutdown):
             try:
-                self._delete_instance(context, instance, bdms,
+                self._delete_instance(context, instance,
+                                      bdms=bdms,
+                                      clean_shutdown=clean_shutdown,
                                       reservations=reservations)
             except exception.InstanceTerminationFailure as error:
                 LOG.exception(_('Setting instance vm_state to ERROR'),
@@ -2001,7 +2007,7 @@ class ComputeManager(manager.Manager):
             except exception.InstanceNotFound as e:
                 LOG.warn(e, instance=instance)
 
-        do_terminate_instance(instance, bdms)
+        do_terminate_instance(instance, bdms, clean_shutdown)
 
     # NOTE(johannes): This is probably better named power_off_instance
     # so it matches the driver method, but because of other issues, we
@@ -2010,10 +2016,10 @@ class ComputeManager(manager.Manager):
     @reverts_task_state
     @wrap_instance_event
     @wrap_instance_fault
-    def stop_instance(self, context, instance):
+    def stop_instance(self, context, instance, clean_shutdown=True):
         """Stopping an instance on this host."""
         self._notify_about_instance_usage(context, instance, "power_off.start")
-        self.driver.power_off(instance)
+        self.driver.power_off(instance, clean_shutdown)
         current_power_state = self._get_power_state(context, instance)
         instance.power_state = current_power_state
         instance.vm_state = vm_states.STOPPED
@@ -2051,7 +2057,8 @@ class ComputeManager(manager.Manager):
     @reverts_task_state
     @wrap_instance_event
     @wrap_instance_fault
-    def soft_delete_instance(self, context, instance, reservations):
+    def soft_delete_instance(self, context, instance, reservations,
+                             clean_shutdown=True):
         """Soft delete an instance on this host."""
 
         if context.is_admin and context.project_id != instance['project_id']:
@@ -2068,11 +2075,11 @@ class ComputeManager(manager.Manager):
                                               "soft_delete.start")
             db_inst = obj_base.obj_to_primitive(instance)
             try:
-                self.driver.soft_delete(db_inst)
+                self.driver.soft_delete(db_inst, clean_shutdown)
             except NotImplementedError:
                 # Fallback to just powering off the instance if the
                 # hypervisor doesn't implement the soft_delete method
-                self.driver.power_off(instance)
+                self.driver.power_off(instance, clean_shutdown)
             current_power_state = self._get_power_state(context, db_inst)
             instance.power_state = current_power_state
             instance.vm_state = vm_states.SOFT_DELETED
@@ -2634,7 +2641,8 @@ class ComputeManager(manager.Manager):
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
-    def rescue_instance(self, context, instance, rescue_password):
+    def rescue_instance(self, context, instance, rescue_password,
+                        clean_shutdown=True):
         """
         Rescue an instance on this host.
         :param rescue_password: password to set on rescue instance
@@ -2661,7 +2669,9 @@ class ComputeManager(manager.Manager):
         try:
             self.driver.rescue(context, instance,
                                network_info,
-                               rescue_image_meta, admin_password)
+                               rescue_image_meta,
+                               rescue_password=admin_password,
+                               clean_shutdown=clean_shutdown)
         except Exception as e:
             LOG.exception(_("Error trying to Rescue Instance"),
                           instance=instance)
@@ -3421,7 +3431,8 @@ class ComputeManager(manager.Manager):
     @reverts_task_state
     @wrap_instance_event
     @wrap_instance_fault
-    def shelve_instance(self, context, instance, image_id):
+    def shelve_instance(self, context, instance, image_id,
+                        clean_shutdown=True):
         """Shelve an instance.
 
         This should be used when you want to take a snapshot of the instance.
@@ -3431,6 +3442,7 @@ class ComputeManager(manager.Manager):
         :param context: request context
         :param instance: an Instance object
         :param image_id: an image id to snapshot to.
+        :param clean_shutdown: give guest a chance to stop
         """
         self.conductor_api.notify_usage_exists(
             context, obj_base.obj_to_primitive(instance),
@@ -3449,7 +3461,7 @@ class ComputeManager(manager.Manager):
             instance.task_state = task_state
             instance.save(expected_task_state=expected_state)
 
-        self.driver.power_off(instance)
+        self.driver.power_off(instance, clean_shutdown)
         current_power_state = self._get_power_state(context, instance)
         self.driver.snapshot(context, instance, image_id, update_task_state)
 
@@ -3468,12 +3480,15 @@ class ComputeManager(manager.Manager):
         self._notify_about_instance_usage(context, instance, 'shelve.end')
 
         if CONF.shelved_offload_time == 0:
-            self.shelve_offload_instance(context, instance)
+            # Note:  Have already shutdown the instance
+            self.shelve_offload_instance(context, instance,
+                                         clean_shutdown=False)
 
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_fault
-    def shelve_offload_instance(self, context, instance):
+    def shelve_offload_instance(self, context, instance,
+                                clean_shutdown=True):
         """Remove a shelved instance from the hypervisor.
 
         This frees up those resources for use by other instances, but may lead
@@ -3487,7 +3502,7 @@ class ComputeManager(manager.Manager):
         self._notify_about_instance_usage(context, instance,
                 'shelve_offload.start')
 
-        self.driver.power_off(instance)
+        self.driver.power_off(instance, clean_shutdown)
         current_power_state = self._get_power_state(context, instance)
 
         network_info = self._get_instance_nw_info(context, instance)
@@ -4954,7 +4969,11 @@ class ComputeManager(manager.Manager):
                 # the instance was soft deleted, so there's no need to
                 # pass reservations here.
                 try:
-                    self._delete_instance(context, instance, bdms)
+                    # Note(Phild): Would have performed a clean shudown (if
+                    # requested) at the point of the original soft delete
+                    # so no need to do it here
+                    self._delete_instance(context, instance, bdms,
+                                          clean_shutdown=False)
                 except Exception as e:
                     LOG.warning(_("Periodic reclaim failed to delete "
                                   "instance: %s"),
@@ -5062,8 +5081,12 @@ class ComputeManager(manager.Manager):
                                "DELETED but still present on host."),
                              instance['name'], instance=instance)
                     try:
+                        # Note(phild): Could be that we missed the original
+                        # delete request, so give the instance a chance to
+                        # stop cleanly
                         self._shutdown_instance(context, instance, bdms,
-                                                notify=False)
+                                                notify=False,
+                                                clean_shutdown=True)
                         self._cleanup_volumes(context, instance['uuid'], bdms)
                     except Exception as e:
                         LOG.warning(_("Periodic cleanup failed to delete "

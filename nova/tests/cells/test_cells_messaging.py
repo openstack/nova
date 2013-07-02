@@ -1201,12 +1201,16 @@ class CellsTargetedMethodsTestCase(test.TestCase):
         self._test_instance_action_method('start', (), {}, (), {}, False)
 
     def test_stop_instance_cast(self):
-        self._test_instance_action_method('stop', (), {}, (),
-                                          {'do_cast': True}, False)
+        kwargs = {'clean_shutdown': False}
+        ekwargs = {'clean_shutdown': False, 'do_cast': True}
+        self._test_instance_action_method('stop', (), kwargs, (),
+                                          ekwargs, False)
 
     def test_stop_instance_call(self):
-        self._test_instance_action_method('stop', (), {}, (),
-                                          {'do_cast': False}, True)
+        kwargs = {'clean_shutdown': False}
+        ekwargs = {'clean_shutdown': False, 'do_cast': False}
+        self._test_instance_action_method('stop', (), kwargs, (),
+                                          ekwargs, True)
 
     def test_reboot_instance(self):
         kwargs = dict(reboot_type='HARD')
@@ -1234,12 +1238,14 @@ class CellsTargetedMethodsTestCase(test.TestCase):
         self.assertEqual(host_uptime, expected_host_uptime)
 
     def test_terminate_instance(self):
+        kwargs = {'clean_shutdown': False}
         self._test_instance_action_method('terminate',
-                                          (), {}, (), {}, False)
+                                          (), kwargs, (), kwargs, False)
 
     def test_soft_delete_instance(self):
+        kwargs = {'clean_shutdown': False}
         self._test_instance_action_method('soft_delete',
-                                          (), {}, (), {}, False)
+                                          (), kwargs, (), kwargs, False)
 
     def test_pause_instance(self):
         self._test_instance_action_method('pause', (), {}, (), {}, False)
@@ -1563,7 +1569,7 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
         self.mox.ReplayAll()
 
         self.src_msg_runner.instance_delete_everywhere(self.ctxt,
-                instance, 'hard')
+                instance, 'hard', clean_shutdown=False)
 
     def test_instance_soft_delete_everywhere(self):
         # Reset this, as this is a broadcast down.
@@ -1582,7 +1588,7 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
         self.mox.ReplayAll()
 
         self.src_msg_runner.instance_delete_everywhere(self.ctxt,
-                instance, 'soft')
+                instance, 'soft', clean_shutdown=False)
 
     def test_instance_fault_create_at_top(self):
         fake_instance_fault = {'id': 1,

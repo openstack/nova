@@ -639,6 +639,11 @@
 # number means unlimited. (integer value)
 #max_local_block_devices=3
 
+# Control what happens to the Guest OS when an instance is
+# deleted. If set to true instances will be given a chance to
+# shutdown before they are destroyed. (boolean value)
+#default_shutdown_on_delete=false
+
 
 #
 # Options defined in nova.compute.flavors
@@ -1932,6 +1937,13 @@
 # Whether to use cow images (boolean value)
 #use_cow_images=true
 
+# Number of seconds to wait for instance to shut down after a
+# request is made for clean shutdown.  We continue with the
+# stop if instance does not shutdown within this window. A
+# value of 0 will still signal the instance but not wait for
+# it to shutdown (integer value)
+#wait_shutdown_seconds=120
+
 
 #
 # Options defined in nova.virt.firewall
@@ -2526,12 +2538,6 @@
 # a server, which is dependent on virt_type. (valid options
 # are: sd, xvd, uvd, vd) (string value)
 #disk_prefix=<None>
-
-# Number of seconds to wait for instance to shut down after
-# soft reboot request is made. We fall back to hard reboot if
-# instance does not shutdown within this window. (integer
-# value)
-#wait_soft_reboot_seconds=120
 
 # Set to "host-model" to clone the host CPU feature flags; to
 # "host-passthrough" to use the host CPU model exactly; to

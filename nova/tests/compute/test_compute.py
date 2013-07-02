@@ -1736,7 +1736,7 @@ class ComputeTestCase(BaseTestCase):
                   'unrescued': False}
 
         def fake_rescue(self, context, instance_ref, network_info, image_meta,
-                        rescue_password):
+                        rescue_password, clean_shutdown=True):
             called['rescued'] = True
 
         self.stubs.Set(nova.virt.fake.FakeDriver, 'rescue', fake_rescue)
@@ -1767,7 +1767,7 @@ class ComputeTestCase(BaseTestCase):
     def test_rescue_notifications(self):
         # Ensure notifications on instance rescue.
         def fake_rescue(self, context, instance_ref, network_info, image_meta,
-                        rescue_password):
+                        rescue_password, clean_shutdown=True):
             pass
         self.stubs.Set(nova.virt.fake.FakeDriver, 'rescue', fake_rescue)
 
@@ -1857,7 +1857,8 @@ class ComputeTestCase(BaseTestCase):
         self.compute._get_rescue_image(
             mox.IgnoreArg(), instance).AndReturn({})
         nova.virt.fake.FakeDriver.rescue(
-            mox.IgnoreArg(), instance, [], mox.IgnoreArg(), 'password'
+            mox.IgnoreArg(), instance, [], mox.IgnoreArg(),
+            rescue_password='password', clean_shutdown=False
             ).AndRaise(RuntimeError("Try again later"))
 
         self.mox.ReplayAll()
@@ -1870,7 +1871,8 @@ class ComputeTestCase(BaseTestCase):
                 exception.InstanceNotRescuable, expected_message):
                 self.compute.rescue_instance(
                     self.context, instance=instance,
-                    rescue_password='password')
+                    rescue_password='password',
+                    clean_shutdown=False)
 
         self.assertEqual('some_random_state', instance['vm_state'])
 
@@ -1905,7 +1907,7 @@ class ComputeTestCase(BaseTestCase):
 
         called = {'power_off': False}
 
-        def fake_driver_power_off(self, instance):
+        def fake_driver_power_off(self, instance, clean_shutdown):
             called['power_off'] = True
 
         self.stubs.Set(nova.virt.fake.FakeDriver, 'power_off',
@@ -3137,7 +3139,7 @@ class ComputeTestCase(BaseTestCase):
                        fake_cleanup_volumes)
 
         self.compute._delete_instance(self.context, instance=instance,
-                                      bdms={})
+                                      bdms={}, clean_shutdown=False)
 
     def test_delete_instance_keeps_net_on_power_off_fail(self):
         self.mox.StubOutWithMock(self.compute.driver, 'destroy')
@@ -3146,7 +3148,8 @@ class ComputeTestCase(BaseTestCase):
         self.compute.driver.destroy(mox.IgnoreArg(),
                                     mox.IgnoreArg(),
                                     mox.IgnoreArg(),
-                                    mox.IgnoreArg()).AndRaise(exp)
+                                    mox.IgnoreArg(),
+                                    clean_shutdown=False).AndRaise(exp)
         # mox will detect if _deallocate_network gets called unexpectedly
         self.mox.ReplayAll()
         instance = self._create_fake_instance()
@@ -3154,7 +3157,7 @@ class ComputeTestCase(BaseTestCase):
                           self.compute._delete_instance,
                           self.context,
                           instance=jsonutils.to_primitive(instance),
-                          bdms={})
+                          bdms={}, clean_shutdown=False)
 
     def test_delete_instance_loses_net_on_other_fail(self):
         self.mox.StubOutWithMock(self.compute.driver, 'destroy')
@@ -3163,7 +3166,8 @@ class ComputeTestCase(BaseTestCase):
         self.compute.driver.destroy(mox.IgnoreArg(),
                                     mox.IgnoreArg(),
                                     mox.IgnoreArg(),
-                                    mox.IgnoreArg()).AndRaise(exp)
+                                    mox.IgnoreArg(),
+                                    clean_shutdown=False).AndRaise(exp)
         self.compute._deallocate_network(mox.IgnoreArg(),
                                          mox.IgnoreArg(),
                                          mox.IgnoreArg())
@@ -3173,7 +3177,7 @@ class ComputeTestCase(BaseTestCase):
                           self.compute._delete_instance,
                           self.context,
                           instance=jsonutils.to_primitive(instance),
-                          bdms={})
+                          bdms={}, clean_shutdown=False)
 
     def test_delete_instance_deletes_console_auth_tokens(self):
         instance = self._create_fake_instance_obj()
@@ -3189,7 +3193,7 @@ class ComputeTestCase(BaseTestCase):
                        fake_delete_tokens)
 
         self.compute._delete_instance(self.context, instance=instance,
-                                      bdms={})
+                                      bdms={}, clean_shutdown=False)
 
         self.assertTrue(self.tokens_deleted)
 
@@ -3208,7 +3212,7 @@ class ComputeTestCase(BaseTestCase):
                        fake_delete_tokens)
 
         self.compute._delete_instance(self.context, instance=instance,
-                                      bdms={})
+                                      bdms={}, clean_shutdown=False)
 
         self.assertTrue(self.tokens_deleted)
 
@@ -3219,7 +3223,7 @@ class ComputeTestCase(BaseTestCase):
         instance = self._create_fake_instance_obj()
 
         def fake_delete_instance(context, instance, bdms,
-                                 reservations=None):
+                                 clean_shutdown, reservations=None):
             raise exception.InstanceTerminationFailure(reason='')
 
         self.stubs.Set(self.compute, '_delete_instance',
@@ -5105,9 +5109,11 @@ class ComputeTestCase(BaseTestCase):
 
         self.mox.StubOutWithMock(self.compute, "_shutdown_instance")
         # Simulate an error and make sure cleanup proceeds with next instance.
-        self.compute._shutdown_instance(ctxt, inst1, bdms, notify=False).\
+        self.compute._shutdown_instance(ctxt, inst1, bdms, notify=False,
+                                        clean_shutdown=True).\
                                         AndRaise(test.TestingException)
-        self.compute._shutdown_instance(ctxt, inst2, bdms, notify=False).\
+        self.compute._shutdown_instance(ctxt, inst2, bdms, notify=False,
+                                        clean_shutdown=True).\
                                         AndReturn(None)
 
         self.mox.StubOutWithMock(self.compute, "_cleanup_volumes")
@@ -9129,8 +9135,9 @@ class ComputeRescheduleOrErrorTestCase(BaseTestCase):
                     self.compute.conductor_api,
                     self.instance, exc_info[0], exc_info=exc_info)
             self.compute._shutdown_instance(self.context, self.instance,
-                    mox.IgnoreArg(),
-                    mox.IgnoreArg()).AndRaise(InnerTestingException("Error"))
+                    mox.IgnoreArg(), mox.IgnoreArg(),
+                    clean_shutdown=False).AndRaise(
+                                              InnerTestingException("Error"))
             self.compute._log_original_error(exc_info, instance_uuid)
 
             self.mox.ReplayAll()
@@ -9156,7 +9163,8 @@ class ComputeRescheduleOrErrorTestCase(BaseTestCase):
 
         self.compute._shutdown_instance(self.context, self.instance,
                                         mox.IgnoreArg(),
-                                        mox.IgnoreArg())
+                                        mox.IgnoreArg(),
+                                        clean_shutdown=False)
         self.compute._cleanup_volumes(self.context, instance_uuid,
                                         mox.IgnoreArg())
         self.compute._reschedule(self.context, None, instance_uuid,
@@ -9187,7 +9195,8 @@ class ComputeRescheduleOrErrorTestCase(BaseTestCase):
 
             self.compute._shutdown_instance(self.context, self.instance,
                                             mox.IgnoreArg(),
-                                            mox.IgnoreArg())
+                                            mox.IgnoreArg(),
+                                            clean_shutdown=False)
             self.compute._cleanup_volumes(self.context, instance_uuid,
                                             mox.IgnoreArg())
             self.compute._reschedule(self.context, None, {}, instance_uuid,
@@ -9219,7 +9228,8 @@ class ComputeRescheduleOrErrorTestCase(BaseTestCase):
                     self.instance, exc_info[0], exc_info=exc_info)
             self.compute._shutdown_instance(self.context, self.instance,
                                             mox.IgnoreArg(),
-                                            mox.IgnoreArg())
+                                            mox.IgnoreArg(),
+                                            clean_shutdown=False)
             self.compute._cleanup_volumes(self.context, instance_uuid,
                                           mox.IgnoreArg())
             self.compute._reschedule(self.context, None, {}, instance_uuid,

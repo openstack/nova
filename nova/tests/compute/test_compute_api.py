@@ -281,7 +281,8 @@ class _ComputeAPIUnitTestMixIn(object):
             rpcapi = self.compute_api.compute_rpcapi
 
         self.mox.StubOutWithMock(rpcapi, 'stop_instance')
-        rpcapi.stop_instance(self.context, instance, do_cast=True)
+        rpcapi.stop_instance(self.context, instance, do_cast=True,
+                     clean_shutdown=True)
 
         self.mox.ReplayAll()
 
@@ -541,10 +542,12 @@ class _ComputeAPIUnitTestMixIn(object):
                 cast_reservations = reservations
             if delete_type == 'soft_delete':
                 rpcapi.soft_delete_instance(self.context, inst,
-                                            reservations=cast_reservations)
+                                            reservations=cast_reservations,
+                                            clean_shutdown=False)
             elif delete_type in ['delete', 'force_delete']:
                 rpcapi.terminate_instance(self.context, inst, [],
-                                          reservations=cast_reservations)
+                                          reservations=cast_reservations,
+                                          clean_shutdown=False)
 
         if commit_quotas:
             # Local delete or when we're testing API cell.
@@ -612,6 +615,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
         if self.cell_type == 'api':
             rpcapi.terminate_instance(self.context, inst, [],
+                                      clean_shutdown=False,
                                       reservations=None)
         else:
             compute_utils.notify_about_instance_usage(mox.IgnoreArg(),
@@ -641,7 +645,8 @@ class _ComputeAPIUnitTestMixIn(object):
                  'delete_on_termiantion': False}]
 
         def _fake_do_delete(context, instance, bdms,
-                           rservations=None, local=False):
+                            resrvations=None, local=False,
+                            clean_shutdown=False):
             pass
 
         inst = self._create_instance_obj()
@@ -685,7 +690,8 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.ReplayAll()
         self.compute_api._local_delete(self.context, inst, bdms,
                                        'delete',
-                                       _fake_do_delete)
+                                       _fake_do_delete,
+                                       clean_shutdown=False)
 
     def test_delete_disabled(self):
         inst = self._create_instance_obj()

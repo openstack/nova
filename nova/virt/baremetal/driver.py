@@ -294,7 +294,9 @@ class BareMetalDriver(driver.ComputeDriver):
                 "for instance %r") % instance['uuid'])
         _update_state(ctx, node, instance, state)
 
-    def destroy(self, context, instance, network_info, block_device_info=None):
+    def destroy(self, context, instance, network_info, block_device_info=None,
+                clean_shutdown=False):
+        # TODO(PhilD): Add support for clean_shutdown
         context = nova_context.get_admin_context()
 
         try:
@@ -326,8 +328,9 @@ class BareMetalDriver(driver.ComputeDriver):
                     LOG.error(_("Error while recording destroy failure in "
                                 "baremetal database: %s") % e)
 
-    def power_off(self, instance, node=None):
+    def power_off(self, instance, node=None, clean_shutdown=True):
         """Power off the specified instance."""
+        # TODO(PhilD): Add support for clean_shutdown
         if not node:
             node = _get_baremetal_node_by_instance_uuid(instance['uuid'])
         pm = get_power_manager(node=node, instance=instance)

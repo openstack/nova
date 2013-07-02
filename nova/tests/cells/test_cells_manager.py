@@ -169,11 +169,13 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
                                  'instance_delete_everywhere')
         self.msg_runner.instance_delete_everywhere(self.ctxt,
                                                    'fake-instance',
-                                                   'fake-type')
+                                                   'fake-type',
+                                                   clean_shutdown=False)
         self.mox.ReplayAll()
         self.cells_manager.instance_delete_everywhere(
                 self.ctxt, instance='fake-instance',
-                delete_type='fake-type')
+                delete_type='fake-type',
+                clean_shutdown=False)
 
     def test_instance_fault_create_at_top(self):
         self.mox.StubOutWithMock(self.msg_runner,
@@ -644,10 +646,12 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
     def test_stop_instance(self):
         self.mox.StubOutWithMock(self.msg_runner, 'stop_instance')
         self.msg_runner.stop_instance(self.ctxt, 'fake-instance',
+                                      clean_shutdown=False,
                                       do_cast='meow')
         self.mox.ReplayAll()
         self.cells_manager.stop_instance(self.ctxt,
                                          instance='fake-instance',
+                                         clean_shutdown=False,
                                          do_cast='meow')
 
     def test_cell_create(self):
@@ -721,14 +725,16 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
 
     def test_terminate_instance(self):
         self.mox.StubOutWithMock(self.msg_runner, 'terminate_instance')
-        self.msg_runner.terminate_instance(self.ctxt, 'fake-instance')
+        self.msg_runner.terminate_instance(self.ctxt, 'fake-instance',
+                                           False)
         self.mox.ReplayAll()
         self.cells_manager.terminate_instance(self.ctxt,
                                               instance='fake-instance')
 
     def test_soft_delete_instance(self):
         self.mox.StubOutWithMock(self.msg_runner, 'soft_delete_instance')
-        self.msg_runner.soft_delete_instance(self.ctxt, 'fake-instance')
+        self.msg_runner.soft_delete_instance(self.ctxt, 'fake-instance',
+                                             False)
         self.mox.ReplayAll()
         self.cells_manager.soft_delete_instance(self.ctxt,
                                                 instance='fake-instance')

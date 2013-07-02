@@ -359,6 +359,14 @@ class FakeNodeDevice(object):
         return self.xml
 
 
+class FakeLoopingCall:
+    def start(self, *a, **k):
+        return self
+
+    def wait(self):
+        return None
+
+
 class LibvirtConnTestCase(test.TestCase):
 
     def setUp(self):
@@ -4308,14 +4316,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertTrue(conn.delete_instance_files(inst_obj))
 
     def test_reboot_different_ids(self):
-        class FakeLoopingCall:
-            def start(self, *a, **k):
-                return self
-
-            def wait(self):
-                return None
-
-        self.flags(wait_soft_reboot_seconds=1, group='libvirt')
+        self.flags(wait_shutdown_seconds=1)
         info_tuple = ('fake', 'fake', 'fake', 'also_fake')
         self.reboot_create_called = False
 
@@ -4349,14 +4350,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertTrue(self.reboot_create_called)
 
     def test_reboot_same_ids(self):
-        class FakeLoopingCall:
-            def start(self, *a, **k):
-                return self
-
-            def wait(self):
-                return None
-
-        self.flags(wait_soft_reboot_seconds=1, group='libvirt')
+        self.flags(wait_shutdown_seconds=1)
         info_tuple = ('fake', 'fake', 'fake', 'also_fake')
         self.reboot_hard_reboot_called = False
 
@@ -4643,6 +4637,84 @@ class LibvirtConnTestCase(test.TestCase):
             _attach_pci_devices.assert_has_calls([mock.call('fake_dom',
                                                  'fake_pci_devs')])
 
+    def test_power_off(self):
+        info_tuple = ('fake', 'fake', 'fake', 'also_fake')
+
+        # Mock domain
+        mock_domain = self.mox.CreateMock(libvirt.virDomain)
+        # Called via _shutdown()
+        mock_domain.info().AndReturn(
+            (libvirt_driver.VIR_DOMAIN_RUNNING,) + info_tuple)
+        mock_domain.ID().AndReturn('some_fake_id')
+        mock_domain.shutdown()
+        mock_domain.info().AndReturn(
+            (libvirt_driver.VIR_DOMAIN_SHUTDOWN,) + info_tuple)
+        mock_domain.ID().AndReturn('some_other_fake_id')
+        # Called via _destroy()
+        mock_domain.ID().AndReturn('some_other_fake_id')
+        mock_domain.destroy()
+
+        self.mox.ReplayAll()
+
+        def fake_lookup_by_name(instance_name):
+            return mock_domain
+
+        def fake_create_domain(**kwargs):
+            self.reboot_create_called = True
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = {"name": "instancename", "id": "instanceid",
+                    "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64"}
+        self.stubs.Set(conn, '_lookup_by_name', fake_lookup_by_name)
+        self.stubs.Set(conn, '_create_domain', fake_create_domain)
+        self.stubs.Set(loopingcall, 'FixedIntervalLoopingCall',
+                       lambda *a, **k: FakeLoopingCall())
+        conn.power_off(instance, clean_shutdown=True)
+
+    def test_power_off_shutdown_fails(self):
+        info_tuple = ('fake', 'fake', 'fake', 'also_fake')
+
+        self.flags(wait_shutdown_seconds=3)
+
+        # Mock domain
+        mock_domain = self.mox.CreateMock(libvirt.virDomain)
+        # Called via _shutdown()
+        mock_domain.info().AndReturn(
+            (libvirt_driver.VIR_DOMAIN_RUNNING,) + info_tuple)
+        mock_domain.ID().AndReturn('some_fake_id')
+        mock_domain.shutdown()
+        mock_domain.info().AndReturn(
+            (libvirt_driver.VIR_DOMAIN_RUNNING,) + info_tuple)
+        mock_domain.ID().AndReturn('some_fake_id')
+        #    still running after 1 sec
+        mock_domain.info().AndReturn(
+            (libvirt_driver.VIR_DOMAIN_RUNNING,) + info_tuple)
+        mock_domain.ID().AndReturn('some_fake_id')
+        #    still running after 2 secs
+        mock_domain.info().AndReturn(
+            (libvirt_driver.VIR_DOMAIN_RUNNING,) + info_tuple)
+        mock_domain.ID().AndReturn('some_fake_id')
+        # Called via _destroy()
+        mock_domain.ID().AndReturn('some_fake_id')
+        mock_domain.destroy()
+
+        self.mox.ReplayAll()
+
+        def fake_lookup_by_name(instance_name):
+            return mock_domain
+
+        def fake_create_domain(**kwargs):
+            self.reboot_create_called = True
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = {"name": "instancename", "id": "instanceid",
+                    "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64"}
+        self.stubs.Set(conn, '_lookup_by_name', fake_lookup_by_name)
+        self.stubs.Set(conn, '_create_domain', fake_create_domain)
+        self.stubs.Set(loopingcall, 'FixedIntervalLoopingCall',
+                       lambda *a, **k: FakeLoopingCall())
+        conn.power_off(instance, clean_shutdown=True)
+
     def test_destroy_undefines(self):
         mock = self.mox.CreateMock(libvirt.virDomain)
         mock.ID()
@@ -4704,6 +4776,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.mox.VerifyAll()
 
     def test_destroy_undefines_no_undefine_flags(self):
+        info_tuple = ('fake', 'fake', 'fake', 'also_fake')
         mock = self.mox.CreateMock(libvirt.virDomain)
         mock.ID()
         mock.destroy()
@@ -4807,6 +4880,45 @@ class LibvirtConnTestCase(test.TestCase):
                     "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64"}
         self.assertRaises(exception.InstancePowerOffFailure,
                 conn.destroy, self.context, instance, [])
+
+    def test_destroy_with_shutdown(self):
+        info_tuple = ('fake', 'fake', 'fake', 'also_fake')
+
+        # Mock domain
+        mock_domain = self.mox.CreateMock(libvirt.virDomain)
+        # Called via _shutdown()
+        mock_domain.info().AndReturn(
+            (libvirt_driver.VIR_DOMAIN_RUNNING,) + info_tuple)
+        mock_domain.ID().AndReturn('some_fake_id')
+        mock_domain.shutdown()
+        mock_domain.info().AndReturn(
+            (libvirt_driver.VIR_DOMAIN_SHUTDOWN,) + info_tuple)
+        mock_domain.ID().AndReturn('some_other_fake_id')
+        # Called via _destroy()
+        mock_domain.ID().AndReturn('some_other_fake_id')
+        mock_domain.destroy()
+
+        self.mox.ReplayAll()
+
+        def fake_lookup_by_name(instance_name):
+            return mock_domain
+
+        def fake_create_domain(**kwargs):
+            self.reboot_create_called = True
+
+        def fake_cleanup(instance, network_info, block_device_info,
+                         destroy_discs, context):
+            pass
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = {"name": "instancename", "id": "instanceid",
+                    "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64"}
+        self.stubs.Set(conn, '_lookup_by_name', fake_lookup_by_name)
+        self.stubs.Set(conn, '_create_domain', fake_create_domain)
+        self.stubs.Set(conn, '_cleanup', fake_cleanup)
+        self.stubs.Set(loopingcall, 'FixedIntervalLoopingCall',
+                       lambda *a, **k: FakeLoopingCall())
+        conn.destroy(self.context, instance, [], clean_shutdown=True)
 
     def test_private_destroy_not_found(self):
         mock = self.mox.CreateMock(libvirt.virDomain)
@@ -7084,6 +7196,9 @@ class LibvirtDriverTestCase(test.TestCase):
                                         block_device_info=None):
             return disk_info_text
 
+        def fake_shutdown(instance):
+            pass
+
         def fake_destroy(instance):
             pass
 
@@ -7095,6 +7210,8 @@ class LibvirtDriverTestCase(test.TestCase):
 
         self.stubs.Set(self.libvirtconnection, 'get_instance_disk_info',
                        fake_get_instance_disk_info)
+        self.stubs.Set(self.libvirtconnection, '_shutdown',
+                       fake_shutdown)
         self.stubs.Set(self.libvirtconnection, '_destroy', fake_destroy)
         self.stubs.Set(self.libvirtconnection, 'get_host_ip_addr',
                        fake_get_host_ip_addr)
