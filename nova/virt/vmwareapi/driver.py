@@ -614,12 +614,15 @@ class VMwareAPISession(object):
                 return
             elif task_info.state == 'success':
                 LOG.debug(_("Task [%(task_name)s] %(task_ref)s "
-                            "status: success") % locals())
+                            "status: success"),
+                          {'task_name': task_name, 'task_ref': task_ref})
                 done.send("success")
             else:
                 error_info = str(task_info.error.localizedMessage)
                 LOG.warn(_("Task [%(task_name)s] %(task_ref)s "
-                          "status: error %(error_info)s") % locals())
+                          "status: error %(error_info)s"),
+                         {'task_name': task_name, 'task_ref': task_ref,
+                          'error_info': error_info})
                 done.send_exception(exception.NovaException(error_info))
         except Exception as excep:
             LOG.warn(_("In vmwareapi:_poll_task, Got this error %s") % excep)

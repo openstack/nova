@@ -37,7 +37,7 @@ class Host(object):
         """Reboots or shuts down the host."""
         host_mor = self._session._call_method(vim_util, "get_objects",
                                               "HostSystem")[0].obj
-        LOG.debug(_("%(action)s %(host)s") % locals())
+        LOG.debug(_("%(action)s %(host)s"), {'action': action, 'host': host})
         if action == "reboot":
             host_task = self._session._call_method(
                                     self._session._get_vim(),
@@ -61,7 +61,8 @@ class Host(object):
         """
         host_mor = self._session._call_method(vim_util, "get_objects",
                                               "HostSystem")[0].obj
-        LOG.debug(_("Set maintenance mod on %(host)s to %(mode)s") % locals())
+        LOG.debug(_("Set maintenance mod on %(host)s to %(mode)s"),
+                  {'host': host, 'mode': mode})
         if mode:
             host_task = self._session._call_method(
                                     self._session._get_vim(),
