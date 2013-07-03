@@ -3681,6 +3681,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                        instance,
                                        block_device_info,
                                        self._legacy_nw_info(network_info),
+                                       disk,
                                        migrate_data)
 
         # NOTE(tr3buchet): setup networks on destination host
@@ -3695,10 +3696,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         # onto destination host.
         self.driver.ensure_filtering_rules_for_instance(instance,
                                             self._legacy_nw_info(network_info))
-
-        # Preparation for block migration
-        if block_migration:
-            self.driver.pre_block_migration(context, instance, disk)
 
         self._notify_about_instance_usage(
                      context, instance, "live_migration.pre.end",
