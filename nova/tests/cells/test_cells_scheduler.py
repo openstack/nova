@@ -29,6 +29,7 @@ from nova.openstack.common import uuidutils
 from nova.scheduler import utils as scheduler_utils
 from nova import test
 from nova.tests.cells import fakes
+from nova import utils
 
 CONF = cfg.CONF
 CONF.import_opt('scheduler_retries', 'nova.cells.scheduler', group='cells')
@@ -99,6 +100,9 @@ class CellsSchedulerTestCase(test.TestCase):
                           'display_name': 'moo',
                           'image_ref': 'fake_image_ref',
                           'user_id': self.ctxt.user_id,
+                          # Test these as lists
+                          'metadata': [{'key': 'moo', 'value': 'cow'}],
+                          'system_metadata': [{'key': 'meow', 'value': 'cat'}],
                           'project_id': self.ctxt.project_id}
 
         call_info = {'uuids': []}
@@ -115,6 +119,10 @@ class CellsSchedulerTestCase(test.TestCase):
 
         for instance_uuid in instance_uuids:
             instance = db.instance_get_by_uuid(self.ctxt, instance_uuid)
+            meta = utils.instance_meta(instance)
+            self.assertEqual('cow', meta['moo'])
+            sys_meta = utils.instance_sys_meta(instance)
+            self.assertEqual('cat', sys_meta['meow'])
             self.assertEqual('meow', instance['hostname'])
             self.assertEqual('moo-%s' % instance['uuid'],
                              instance['display_name'])
