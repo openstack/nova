@@ -20,6 +20,7 @@ Tests of the new image services, both as a service layer,
 and as a WSGI layer
 """
 
+import copy
 import urlparse
 
 from lxml import etree
@@ -55,113 +56,116 @@ class ImagesControllerTest(test.TestCase):
         fakes.stub_out_glance(self.stubs)
 
         self.controller = images.Controller()
+        self.uuid = 'fa95aaf5-ab3b-4cd8-88c0-2be7dd051aaf'
+        self.url = '/v2/fake/images/detail?server=' + self.uuid
+        self.server_uuid = "aa640691-d1a7-4a67-9d3c-d35ee6b3cc74"
+        self.server_href = (
+            "http://localhost/v2/fake/servers/" + self.server_uuid)
+        self.server_bookmark = (
+            "http://localhost/fake/servers/" + self.server_uuid)
+        self.alternate = "%s/fake/images/%s"
+        self.fake_req = fakes.HTTPRequest.blank('/v2/fake/images/123')
+        self.actual_image = self.controller.show(self.fake_req, '124')
 
-    def test_get_image(self):
-        fake_req = fakes.HTTPRequest.blank('/v2/fake/images/123')
-        actual_image = self.controller.show(fake_req, '124')
-
-        href = "http://localhost/v2/fake/images/124"
-        bookmark = "http://localhost/fake/images/124"
-        alternate = "%s/fake/images/124" % glance.generate_glance_url()
-        server_uuid = "aa640691-d1a7-4a67-9d3c-d35ee6b3cc74"
-        server_href = "http://localhost/v2/fake/servers/" + server_uuid
-        server_bookmark = "http://localhost/fake/servers/" + server_uuid
-
-        expected_image = {
-            "image": {
-                "id": "124",
-                "name": "queued snapshot",
-                "updated": NOW_API_FORMAT,
-                "created": NOW_API_FORMAT,
-                "status": "SAVING",
-                "progress": 25,
-                "minDisk": 0,
-                "minRam": 0,
-                'server': {
-                    'id': server_uuid,
-                    "links": [{
-                        "rel": "self",
-                        "href": server_href,
-                    },
-                    {
-                        "rel": "bookmark",
-                        "href": server_bookmark,
-                    }],
-                },
-                "metadata": {
-                    "instance_uuid": server_uuid,
-                    "user_id": "fake",
-                },
-                "links": [{
-                    "rel": "self",
-                    "href": href,
-                },
-                {
-                    "rel": "bookmark",
-                    "href": bookmark,
-                },
-                {
-                    "rel": "alternate",
-                    "type": "application/vnd.openstack.image",
-                    "href": alternate
-                }],
+        self.expected_image_123 = {
+            "image": {'id': '123',
+                      'name': 'public image',
+                      'metadata': {'key1': 'value1'},
+                      'updated': NOW_API_FORMAT,
+                      'created': NOW_API_FORMAT,
+                      'status': 'ACTIVE',
+                      'minDisk': 10,
+                      'progress': 100,
+                      'minRam': 128,
+                      "links": [{
+                                    "rel": "self",
+                                    "href":
+                                        "http://localhost/v2/fake/images/123",
+                                },
+                                {
+                                    "rel": "bookmark",
+                                    "href":
+                                        "http://localhost/fake/images/123",
+                                },
+                                {
+                                    "rel": "alternate",
+                                    "type": "application/vnd.openstack.image",
+                                    "href": self.alternate %
+                                            (glance.generate_glance_url(),
+                                             123),
+                                }],
             },
         }
 
-        self.assertThat(actual_image, matchers.DictMatches(expected_image))
+        self.expected_image_124 = {
+            "image": {'id': '124',
+                      'name': 'queued snapshot',
+                      'metadata': {
+                          u'instance_uuid': self.server_uuid,
+                          u'user_id': u'fake',
+                      },
+                      'updated': NOW_API_FORMAT,
+                      'created': NOW_API_FORMAT,
+                      'status': 'SAVING',
+                      'progress': 25,
+                      'minDisk': 0,
+                      'minRam': 0,
+                      'server': {
+                          'id': self.server_uuid,
+                          "links": [{
+                                        "rel": "self",
+                                        "href": self.server_href,
+                                    },
+                                    {
+                                        "rel": "bookmark",
+                                        "href": self.server_bookmark,
+                                    }],
+                      },
+                      "links": [{
+                                    "rel": "self",
+                                    "href":
+                                        "http://localhost/v2/fake/images/124",
+                                },
+                                {
+                                    "rel": "bookmark",
+                                    "href":
+                                        "http://localhost/fake/images/124",
+                                },
+                                {
+                                    "rel": "alternate",
+                                    "type":
+                                        "application/vnd.openstack.image",
+                                    "href": self.alternate %
+                                            (glance.generate_glance_url(),
+                                             124),
+                                }],
+            },
+        }
+
+        self.image_service = self.mox.CreateMockAnything()
+
+    def test_get_image(self):
+        self.assertThat(self.actual_image,
+                        matchers.DictMatches(self.expected_image_124))
 
     def test_get_image_with_custom_prefix(self):
         self.flags(osapi_compute_link_prefix='https://zoo.com:42',
                    osapi_glance_link_prefix='http://circus.com:34')
         fake_req = fakes.HTTPRequest.blank('/v2/fake/images/123')
         actual_image = self.controller.show(fake_req, '124')
-        href = "https://zoo.com:42/v2/fake/images/124"
-        bookmark = "https://zoo.com:42/fake/images/124"
-        alternate = "http://circus.com:34/fake/images/124"
-        server_uuid = "aa640691-d1a7-4a67-9d3c-d35ee6b3cc74"
-        server_href = "https://zoo.com:42/v2/fake/servers/" + server_uuid
-        server_bookmark = "https://zoo.com:42/fake/servers/" + server_uuid
 
-        expected_image = {
-            "image": {
-                "id": "124",
-                "name": "queued snapshot",
-                "updated": NOW_API_FORMAT,
-                "created": NOW_API_FORMAT,
-                "status": "SAVING",
-                "progress": 25,
-                "minDisk": 0,
-                "minRam": 0,
-                'server': {
-                    'id': server_uuid,
-                    "links": [{
-                        "rel": "self",
-                        "href": server_href,
-                    },
-                    {
-                        "rel": "bookmark",
-                        "href": server_bookmark,
-                    }],
-                },
-                "metadata": {
-                    "instance_uuid": server_uuid,
-                    "user_id": "fake",
-                },
-                "links": [{
-                    "rel": "self",
-                    "href": href,
-                },
-                {
-                    "rel": "bookmark",
-                    "href": bookmark,
-                },
-                {
-                    "rel": "alternate",
-                    "type": "application/vnd.openstack.image",
-                    "href": alternate
-                }],
-            },
-        }
+        expected_image = self.expected_image_124
+        expected_image["image"]["links"][0]["href"] = (
+            "https://zoo.com:42/v2/fake/images/124")
+        expected_image["image"]["links"][1]["href"] = (
+            "https://zoo.com:42/fake/images/124")
+        expected_image["image"]["links"][2]["href"] = (
+            "http://circus.com:34/fake/images/124")
+        expected_image["image"]["server"]["links"][0]["href"] = (
+            "https://zoo.com:42/v2/fake/servers/" + self.server_uuid)
+        expected_image["image"]["server"]["links"][1]["href"] = (
+            "https://zoo.com:42/fake/servers/" + self.server_uuid)
+
         self.assertThat(actual_image, matchers.DictMatches(expected_image))
 
     def test_get_image_404(self):
@@ -174,312 +178,82 @@ class ImagesControllerTest(test.TestCase):
         response = self.controller.detail(request)
         response_list = response["images"]
 
-        server_uuid = "aa640691-d1a7-4a67-9d3c-d35ee6b3cc74"
-        server_href = "http://localhost/v2/fake/servers/" + server_uuid
-        server_bookmark = "http://localhost/fake/servers/" + server_uuid
-        alternate = "%s/fake/images/%s"
+        image_125 = copy.deepcopy(self.expected_image_124["image"])
+        image_125['id'] = '125'
+        image_125['name'] = 'saving snapshot'
+        image_125['progress'] = 50
+        image_125["links"][0]["href"] = "http://localhost/v2/fake/images/125"
+        image_125["links"][1]["href"] = "http://localhost/fake/images/125"
+        image_125["links"][2]["href"] = (
+            "%s/fake/images/125" % glance.generate_glance_url())
 
-        expected = [{
-            'id': '123',
-            'name': 'public image',
-            'metadata': {'key1': 'value1'},
-            'updated': NOW_API_FORMAT,
-            'created': NOW_API_FORMAT,
-            'status': 'ACTIVE',
-            'progress': 100,
-            'minDisk': 10,
-            'minRam': 128,
-            "links": [{
-                "rel": "self",
-                "href": "http://localhost/v2/fake/images/123",
-            },
-            {
-                "rel": "bookmark",
-                "href": "http://localhost/fake/images/123",
-            },
-            {
-                "rel": "alternate",
-                "type": "application/vnd.openstack.image",
-                "href": alternate % (glance.generate_glance_url(), 123),
-            }],
-        },
-        {
-            'id': '124',
-            'name': 'queued snapshot',
-            'metadata': {
-                u'instance_uuid': server_uuid,
-                u'user_id': u'fake',
-            },
-            'updated': NOW_API_FORMAT,
-            'created': NOW_API_FORMAT,
-            'status': 'SAVING',
-            'progress': 25,
-            'minDisk': 0,
-            'minRam': 0,
-            'server': {
-                'id': server_uuid,
-                "links": [{
-                    "rel": "self",
-                    "href": server_href,
-                },
-                {
-                    "rel": "bookmark",
-                    "href": server_bookmark,
-                }],
-            },
-            "links": [{
-                "rel": "self",
-                "href": "http://localhost/v2/fake/images/124",
-            },
-            {
-                "rel": "bookmark",
-                "href": "http://localhost/fake/images/124",
-            },
-            {
-                "rel": "alternate",
-                "type": "application/vnd.openstack.image",
-                "href": alternate % (glance.generate_glance_url(), 124),
-            }],
-        },
-        {
-            'id': '125',
-            'name': 'saving snapshot',
-            'metadata': {
-                u'instance_uuid': server_uuid,
-                u'user_id': u'fake',
-            },
-            'updated': NOW_API_FORMAT,
-            'created': NOW_API_FORMAT,
-            'status': 'SAVING',
-            'progress': 50,
-            'minDisk': 0,
-            'minRam': 0,
-            'server': {
-                'id': server_uuid,
-                "links": [{
-                    "rel": "self",
-                    "href": server_href,
-                },
-                {
-                    "rel": "bookmark",
-                    "href": server_bookmark,
-                }],
-            },
-            "links": [{
-                "rel": "self",
-                "href": "http://localhost/v2/fake/images/125",
-            },
-            {
-                "rel": "bookmark",
-                "href": "http://localhost/fake/images/125",
-            },
-            {
-                "rel": "alternate",
-                "type": "application/vnd.openstack.image",
-                "href": "%s/fake/images/125" % glance.generate_glance_url()
-            }],
-        },
-        {
-            'id': '126',
-            'name': 'active snapshot',
-            'metadata': {
-                u'instance_uuid': server_uuid,
-                u'user_id': u'fake',
-            },
-            'updated': NOW_API_FORMAT,
-            'created': NOW_API_FORMAT,
-            'status': 'ACTIVE',
-            'progress': 100,
-            'minDisk': 0,
-            'minRam': 0,
-            'server': {
-                'id': server_uuid,
-                "links": [{
-                    "rel": "self",
-                    "href": server_href,
-                },
-                {
-                    "rel": "bookmark",
-                    "href": server_bookmark,
-                }],
-            },
-            "links": [{
-                "rel": "self",
-                "href": "http://localhost/v2/fake/images/126",
-            },
-            {
-                "rel": "bookmark",
-                "href": "http://localhost/fake/images/126",
-            },
-            {
-                "rel": "alternate",
-                "type": "application/vnd.openstack.image",
-                "href": "%s/fake/images/126" % glance.generate_glance_url()
-            }],
-        },
-        {
-            'id': '127',
-            'name': 'killed snapshot',
-            'metadata': {
-                u'instance_uuid': server_uuid,
-                u'user_id': u'fake',
-            },
-            'updated': NOW_API_FORMAT,
-            'created': NOW_API_FORMAT,
-            'status': 'ERROR',
-            'progress': 0,
-            'minDisk': 0,
-            'minRam': 0,
-            'server': {
-                'id': server_uuid,
-                "links": [{
-                    "rel": "self",
-                    "href": server_href,
-                },
-                {
-                    "rel": "bookmark",
-                    "href": server_bookmark,
-                }],
-            },
-            "links": [{
-                "rel": "self",
-                "href": "http://localhost/v2/fake/images/127",
-            },
-            {
-                "rel": "bookmark",
-                "href": "http://localhost/fake/images/127",
-            },
-            {
-                "rel": "alternate",
-                "type": "application/vnd.openstack.image",
-                "href": "%s/fake/images/127" % glance.generate_glance_url()
-            }],
-        },
-        {
-            'id': '128',
-            'name': 'deleted snapshot',
-            'metadata': {
-                u'instance_uuid': server_uuid,
-                u'user_id': u'fake',
-            },
-            'updated': NOW_API_FORMAT,
-            'created': NOW_API_FORMAT,
-            'status': 'DELETED',
-            'progress': 0,
-            'minDisk': 0,
-            'minRam': 0,
-            'server': {
-                'id': server_uuid,
-                "links": [{
-                    "rel": "self",
-                    "href": server_href,
-                },
-                {
-                    "rel": "bookmark",
-                    "href": server_bookmark,
-                }],
-            },
-            "links": [{
-                "rel": "self",
-                "href": "http://localhost/v2/fake/images/128",
-            },
-            {
-                "rel": "bookmark",
-                "href": "http://localhost/fake/images/128",
-            },
-            {
-                "rel": "alternate",
-                "type": "application/vnd.openstack.image",
-                "href": "%s/fake/images/128" % glance.generate_glance_url()
-            }],
-        },
-        {
-            'id': '129',
-            'name': 'pending_delete snapshot',
-            'metadata': {
-                u'instance_uuid': server_uuid,
-                u'user_id': u'fake',
-            },
-            'updated': NOW_API_FORMAT,
-            'created': NOW_API_FORMAT,
-            'status': 'DELETED',
-            'progress': 0,
-            'minDisk': 0,
-            'minRam': 0,
-            'server': {
-                'id': server_uuid,
-                "links": [{
-                    "rel": "self",
-                    "href": server_href,
-                },
-                {
-                    "rel": "bookmark",
-                    "href": server_bookmark,
-                }],
-            },
-            "links": [{
-                "rel": "self",
-                "href": "http://localhost/v2/fake/images/129",
-            },
-            {
-                "rel": "bookmark",
-                "href": "http://localhost/fake/images/129",
-            },
-            {
-                "rel": "alternate",
-                "type": "application/vnd.openstack.image",
-                "href": "%s/fake/images/129" % glance.generate_glance_url()
-            }],
-        },
-        {
-            'id': '130',
-            'name': None,
-            'metadata': {},
-            'updated': NOW_API_FORMAT,
-            'created': NOW_API_FORMAT,
-            'status': 'ACTIVE',
-            'progress': 100,
-            'minDisk': 0,
-            'minRam': 0,
-            "links": [{
-                "rel": "self",
-                "href": "http://localhost/v2/fake/images/130",
-            },
-            {
-                "rel": "bookmark",
-                "href": "http://localhost/fake/images/130",
-            },
-            {
-                "rel": "alternate",
-                "type": "application/vnd.openstack.image",
-                "href": "%s/fake/images/130" % glance.generate_glance_url()
-            }],
-        },
-        {
-            'id': '131',
-            'name': None,
-            'metadata': {},
-            'updated': NOW_API_FORMAT,
-            'created': NOW_API_FORMAT,
-            'status': 'ACTIVE',
-            'progress': 100,
-            'minDisk': 0,
-            'minRam': 0,
-            "links": [{
-                "rel": "self",
-                "href": "http://localhost/v2/fake/images/131",
-            },
-            {
-                "rel": "bookmark",
-                "href": "http://localhost/fake/images/131",
-            },
-            {
-                "rel": "alternate",
-                "type": "application/vnd.openstack.image",
-                "href": "%s/fake/images/131" % glance.generate_glance_url()
-            }],
-        },
-        ]
+        image_126 = copy.deepcopy(self.expected_image_124["image"])
+        image_126['id'] = '126'
+        image_126['name'] = 'active snapshot'
+        image_126['status'] = 'ACTIVE'
+        image_126['progress'] = 100
+        image_126["links"][0]["href"] = "http://localhost/v2/fake/images/126"
+        image_126["links"][1]["href"] = "http://localhost/fake/images/126"
+        image_126["links"][2]["href"] = (
+            "%s/fake/images/126" % glance.generate_glance_url())
+
+        image_127 = copy.deepcopy(self.expected_image_124["image"])
+        image_127['id'] = '127'
+        image_127['name'] = 'killed snapshot'
+        image_127['status'] = 'ERROR'
+        image_127['progress'] = 0
+        image_127["links"][0]["href"] = "http://localhost/v2/fake/images/127"
+        image_127["links"][1]["href"] = "http://localhost/fake/images/127"
+        image_127["links"][2]["href"] = (
+            "%s/fake/images/127" % glance.generate_glance_url())
+
+        image_128 = copy.deepcopy(self.expected_image_124["image"])
+        image_128['id'] = '128'
+        image_128['name'] = 'deleted snapshot'
+        image_128['status'] = 'DELETED'
+        image_128['progress'] = 0
+        image_128["links"][0]["href"] = "http://localhost/v2/fake/images/128"
+        image_128["links"][1]["href"] = "http://localhost/fake/images/128"
+        image_128["links"][2]["href"] = (
+            "%s/fake/images/128" % glance.generate_glance_url())
+
+        image_129 = copy.deepcopy(self.expected_image_124["image"])
+        image_129['id'] = '129'
+        image_129['name'] = 'pending_delete snapshot'
+        image_129['status'] = 'DELETED'
+        image_129['progress'] = 0
+        image_129["links"][0]["href"] = "http://localhost/v2/fake/images/129"
+        image_129["links"][1]["href"] = "http://localhost/fake/images/129"
+        image_129["links"][2]["href"] = (
+            "%s/fake/images/129" % glance.generate_glance_url())
+
+        image_130 = copy.deepcopy(self.expected_image_123["image"])
+        image_130['id'] = '130'
+        image_130['name'] = None
+        image_130['metadata'] = {}
+        image_130['minDisk'] = 0
+        image_130['minRam'] = 0
+        image_130["links"][0]["href"] = "http://localhost/v2/fake/images/130"
+        image_130["links"][1]["href"] = "http://localhost/fake/images/130"
+        image_130["links"][2]["href"] = (
+            "%s/fake/images/130" % glance.generate_glance_url())
+
+        image_131 = copy.deepcopy(self.expected_image_123["image"])
+        image_131['id'] = '131'
+        image_131['name'] = None
+        image_131['metadata'] = {}
+        image_131['minDisk'] = 0
+        image_131['minRam'] = 0
+        image_131["links"][0]["href"] = "http://localhost/v2/fake/images/131"
+        image_131["links"][1]["href"] = "http://localhost/fake/images/131"
+        image_131["links"][2]["href"] = (
+            "%s/fake/images/131" % glance.generate_glance_url())
+
+        expected = [self.expected_image_123["image"],
+                    self.expected_image_124["image"],
+                    image_125, image_126, image_127,
+                    image_128, image_129, image_130,
+                    image_131]
 
         self.assertThat(expected, matchers.DictListMatches(response_list))
 
@@ -489,73 +263,8 @@ class ImagesControllerTest(test.TestCase):
         response_list = response["images"]
         response_links = response["images_links"]
 
-        server_uuid = "aa640691-d1a7-4a67-9d3c-d35ee6b3cc74"
-        server_href = "http://localhost/v2/fake/servers/" + server_uuid
-        server_bookmark = "http://localhost/fake/servers/" + server_uuid
-        alternate = "%s/fake/images/%s"
-
-        expected = [{
-            'id': '123',
-            'name': 'public image',
-            'metadata': {'key1': 'value1'},
-            'updated': NOW_API_FORMAT,
-            'created': NOW_API_FORMAT,
-            'status': 'ACTIVE',
-            'minDisk': 10,
-            'progress': 100,
-            'minRam': 128,
-            "links": [{
-                "rel": "self",
-                "href": "http://localhost/v2/fake/images/123",
-            },
-            {
-                "rel": "bookmark",
-                "href": "http://localhost/fake/images/123",
-            },
-            {
-                "rel": "alternate",
-                "type": "application/vnd.openstack.image",
-                "href": alternate % (glance.generate_glance_url(), 123),
-            }],
-        },
-        {
-            'id': '124',
-            'name': 'queued snapshot',
-            'metadata': {
-                u'instance_uuid': server_uuid,
-                u'user_id': u'fake',
-            },
-            'updated': NOW_API_FORMAT,
-            'created': NOW_API_FORMAT,
-            'status': 'SAVING',
-            'minDisk': 0,
-            'progress': 25,
-            'minRam': 0,
-            'server': {
-                'id': server_uuid,
-                "links": [{
-                    "rel": "self",
-                    "href": server_href,
-                },
-                {
-                    "rel": "bookmark",
-                    "href": server_bookmark,
-                }],
-            },
-            "links": [{
-                "rel": "self",
-                "href": "http://localhost/v2/fake/images/124",
-            },
-            {
-                "rel": "bookmark",
-                "href": "http://localhost/fake/images/124",
-            },
-            {
-                "rel": "alternate",
-                "type": "application/vnd.openstack.image",
-                "href": alternate % (glance.generate_glance_url(), 124),
-            }],
-        }]
+        expected = [self.expected_image_123["image"],
+                    self.expected_image_124["image"]]
 
         self.assertThat(expected, matchers.DictListMatches(response_list))
 
@@ -566,109 +275,66 @@ class ImagesControllerTest(test.TestCase):
         self.assertThat({'limit': ['2'], 'marker': ['124']},
                         matchers.DictMatches(params))
 
+    def _detail_request(self, filters, request):
+        context = request.environ['nova.context']
+        self.image_service.detail(context, filters=filters).AndReturn([])
+        self.mox.ReplayAll()
+        controller = images.Controller(image_service=self.image_service)
+        controller.detail(request)
+
     def test_image_detail_filter_with_name(self):
-        image_service = self.mox.CreateMockAnything()
         filters = {'name': 'testname'}
         request = fakes.HTTPRequest.blank('/v2/fake/images/detail'
                                           '?name=testname')
-        context = request.environ['nova.context']
-        image_service.detail(context, filters=filters).AndReturn([])
-        self.mox.ReplayAll()
-        controller = images.Controller(image_service=image_service)
-        controller.detail(request)
+        self._detail_request(filters, request)
 
     def test_image_detail_filter_with_status(self):
-        image_service = self.mox.CreateMockAnything()
         filters = {'status': 'active'}
         request = fakes.HTTPRequest.blank('/v2/fake/images/detail'
                                           '?status=ACTIVE')
-        context = request.environ['nova.context']
-        image_service.detail(context, filters=filters).AndReturn([])
-        self.mox.ReplayAll()
-        controller = images.Controller(image_service=image_service)
-        controller.detail(request)
+        self._detail_request(filters, request)
 
     def test_image_detail_filter_with_property(self):
-        image_service = self.mox.CreateMockAnything()
         filters = {'property-test': '3'}
         request = fakes.HTTPRequest.blank('/v2/fake/images/detail'
                                           '?property-test=3')
-        context = request.environ['nova.context']
-        image_service.detail(context, filters=filters).AndReturn([])
-        self.mox.ReplayAll()
-        controller = images.Controller(image_service=image_service)
-        controller.detail(request)
+        self._detail_request(filters, request)
 
     def test_image_detail_filter_server_href(self):
-        image_service = self.mox.CreateMockAnything()
-        uuid = 'fa95aaf5-ab3b-4cd8-88c0-2be7dd051aaf'
-        ref = 'http://localhost:8774/servers/' + uuid
-        url = '/v2/fake/images/detail?server=' + ref
-        filters = {'property-instance_uuid': uuid}
-        request = fakes.HTTPRequest.blank(url)
-        context = request.environ['nova.context']
-        image_service.detail(context, filters=filters).AndReturn([])
-        self.mox.ReplayAll()
-        controller = images.Controller(image_service=image_service)
-        controller.detail(request)
+        ref = 'http://localhost:8774/servers/' + self.uuid
+        filters = {'property-instance_uuid': self.uuid}
+        request = fakes.HTTPRequest.blank(self.url)
+        self._detail_request(filters, request)
 
     def test_image_detail_filter_server_uuid(self):
-        image_service = self.mox.CreateMockAnything()
-        uuid = 'fa95aaf5-ab3b-4cd8-88c0-2be7dd051aaf'
-        url = '/v2/fake/images/detail?server=' + uuid
-        filters = {'property-instance_uuid': uuid}
-        request = fakes.HTTPRequest.blank(url)
-        context = request.environ['nova.context']
-        image_service.detail(context, filters=filters).AndReturn([])
-        self.mox.ReplayAll()
-        controller = images.Controller(image_service=image_service)
-        controller.detail(request)
+        filters = {'property-instance_uuid': self.uuid}
+        request = fakes.HTTPRequest.blank(self.url)
+        self._detail_request(filters, request)
 
     def test_image_detail_filter_changes_since(self):
-        image_service = self.mox.CreateMockAnything()
         filters = {'changes-since': '2011-01-24T17:08Z'}
         request = fakes.HTTPRequest.blank('/v2/fake/images/detail'
                                           '?changes-since=2011-01-24T17:08Z')
-        context = request.environ['nova.context']
-        image_service.detail(context, filters=filters).AndReturn([])
-        self.mox.ReplayAll()
-        controller = images.Controller(image_service=image_service)
-        controller.detail(request)
+        self._detail_request(filters, request)
 
     def test_image_detail_filter_with_type(self):
-        image_service = self.mox.CreateMockAnything()
         filters = {'property-image_type': 'BASE'}
         request = fakes.HTTPRequest.blank('/v2/fake/images/detail?type=BASE')
-        context = request.environ['nova.context']
-        image_service.detail(context, filters=filters).AndReturn([])
-        self.mox.ReplayAll()
-        controller = images.Controller(image_service=image_service)
-        controller.detail(request)
+        self._detail_request(filters, request)
 
     def test_image_detail_filter_not_supported(self):
-        image_service = self.mox.CreateMockAnything()
         filters = {'status': 'active'}
         request = fakes.HTTPRequest.blank('/v2/fake/images/detail?status='
                                           'ACTIVE&UNSUPPORTEDFILTER=testname')
-        context = request.environ['nova.context']
-        image_service.detail(context, filters=filters).AndReturn([])
-        self.mox.ReplayAll()
-        controller = images.Controller(image_service=image_service)
-        controller.detail(request)
+        self._detail_request(filters, request)
 
     def test_image_detail_no_filters(self):
-        image_service = self.mox.CreateMockAnything()
         filters = {}
         request = fakes.HTTPRequest.blank('/v2/fake/images/detail')
-        context = request.environ['nova.context']
-        image_service.detail(context, filters=filters).AndReturn([])
-        self.mox.ReplayAll()
-        controller = images.Controller(image_service=image_service)
-        controller.detail(request)
+        self._detail_request(filters, request)
 
     def test_image_detail_invalid_marker(self):
         class InvalidImageService(object):
-
             def detail(self, *args, **kwargs):
                 raise exception.Invalid('meow')
 
