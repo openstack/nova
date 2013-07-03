@@ -606,6 +606,13 @@ class _BaseTestCase(object):
         self.mox.ReplayAll()
         self.conductor.compute_unrescue(self.context, 'instance')
 
+    def test_compute_reboot(self):
+        self.mox.StubOutWithMock(self.conductor_manager.compute_api, 'reboot')
+        self.conductor_manager.compute_api.reboot(self.context, 'instance',
+                                                  'fake-type')
+        self.mox.ReplayAll()
+        self.conductor.compute_reboot(self.context, 'instance', 'fake-type')
+
 
 class ConductorTestCase(_BaseTestCase, test.TestCase):
     """Conductor Manager Tests."""

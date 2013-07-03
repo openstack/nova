@@ -23,6 +23,7 @@ import functools
 import os
 import re
 
+import mox
 from oslo.config import cfg
 
 from nova.compute import api as compute_api
@@ -30,6 +31,7 @@ from nova.compute import flavors
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import vm_states
+from nova.conductor import api as conductor_api
 from nova import context
 from nova import crypto
 from nova import db
@@ -1173,6 +1175,18 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         instance = self._create_instance()
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         conn.reboot(self.context, instance, None, "HARD")
+
+    def test_poll_rebooting_instances(self):
+        self.mox.StubOutWithMock(compute_api.API, 'reboot')
+        self.mox.StubOutWithMock(conductor_api.API, 'compute_reboot')
+        conductor_api.API.compute_reboot(mox.IgnoreArg(), mox.IgnoreArg(),
+                                         mox.IgnoreArg())
+        # mox will detect if compute_api.API.reboot is called unexpectedly
+        self.mox.ReplayAll()
+        instance = self._create_instance()
+        instances = [instance]
+        conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
+        conn.poll_rebooting_instances(60, instances)
 
     def test_reboot_soft(self):
         instance = self._create_instance()
