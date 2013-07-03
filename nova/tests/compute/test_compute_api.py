@@ -531,6 +531,34 @@ class _ComputeAPIUnitTestMixIn(object):
         self.assertRaises(Exception,
                           self.compute_api.soft_delete, self.context, db_inst)
 
+    def test_is_volume_backed_being_true_if_root_is_block_device(self):
+        bdms = [{'device_name': '/dev/xvda1', 'volume_id': 'volume_id',
+            'snapshot_id': 'snapshot_id'}]
+        params = {'image_ref': 'some-image-ref', 'root_device_name':
+                '/dev/xvda1'}
+        instance = self._create_instance_obj(params=params)
+        self.assertTrue(self.compute_api.is_volume_backed_instance(
+                                                        self.context,
+                                                        instance, bdms))
+
+    def test_is_volume_backed_being_false_if_root_is_not_block_device(self):
+        bdms = [{'device_name': '/dev/xvda1', 'volume_id': 'volume_id',
+            'snapshot_id': 'snapshot_id'}]
+        params = {'image_ref': 'some-image-ref', 'root_device_name':
+                '/dev/xvdd1'}
+        instance = self._create_instance_obj(params=params)
+        self.assertFalse(self.compute_api.is_volume_backed_instance(
+                                                        self.context,
+                                                        instance, bdms))
+
+    def test_is_volume_backed_being_false_if_root_device_is_not_set(self):
+        bdms = [{'device_name': None}]
+        params = {'image_ref': 'some-image-ref', 'root_device_name': None}
+        instance = self._create_instance_obj(params=params)
+        self.assertFalse(self.compute_api.is_volume_backed_instance(
+                                                        self.context,
+                                                        instance, bdms))
+
 
 class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
     def setUp(self):
