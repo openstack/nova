@@ -77,6 +77,7 @@ class RpcProxy(object):
         return topic if topic else self.topic
 
     def can_send_version(self, version):
+        """Check to see if a version is compatible with the version cap."""
         return (not self.version_cap or
                 rpc_common.version_is_compatible(self.version_cap, version))
 

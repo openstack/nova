@@ -18,7 +18,7 @@ import abc
 
 
 class Serializer(object):
-    """Generic (de-)serialization definition base class"""
+    """Generic (de-)serialization definition base class."""
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
@@ -43,7 +43,7 @@ class Serializer(object):
 
 
 class NoOpSerializer(Serializer):
-    """A serializer that does nothing"""
+    """A serializer that does nothing."""
 
     def serialize_entity(self, context, entity):
         return entity
