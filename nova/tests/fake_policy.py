@@ -117,6 +117,7 @@ policy_data = """
     "compute_extension:cloudpipe": "",
     "compute_extension:cloudpipe_update": "",
     "compute_extension:config_drive": "",
+    "compute_extension:v3:os-config-drive": "",
     "compute_extension:console_output": "",
     "compute_extension:consoles": "",
     "compute_extension:coverage_ext": "is_admin:True",

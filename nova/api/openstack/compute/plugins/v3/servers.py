@@ -46,6 +46,8 @@ CONF.import_opt('enable_instance_password',
                 'nova.api.openstack.compute.servers')
 CONF.import_opt('network_api_class', 'nova.network')
 CONF.import_opt('reclaim_instance_interval', 'nova.compute.manager')
+CONF.import_opt('extensions_blacklist', 'nova.api.openstack', group='osapi_v3')
+CONF.import_opt('extensions_whitelist', 'nova.api.openstack', group='osapi_v3')
 
 LOG = logging.getLogger(__name__)
 
@@ -153,6 +155,10 @@ class CommonDeserializer(wsgi.MetadataXMLDeserializer):
     """
 
     metadata_deserializer = common.MetadataXMLDeserializer()
+    want_controller = True
+
+    def __init__(self, controller):
+        self.controller = controller
 
     def _extract_personality(self, server_node):
         """Marshal the personality attribute of a parsed request."""
@@ -233,12 +239,8 @@ class CommonDeserializer(wsgi.MetadataXMLDeserializer):
         #if auto_disk_config:
         #    server['OS-DCF:diskConfig'] = auto_disk_config
 
-        # TODO(cyeoh): bp v3-api-core-as-extensions
-        # Replace with an extension point when the disk_config
-        # extension is ported
-        #config_drive = server_node.getAttribute('config_drive')
-        #if config_drive:
-        #    server['config_drive'] = config_drive
+        if self.controller:
+            self.controller.server_create_xml_deserialize(server_node, server)
 
         return server
 
@@ -457,6 +459,8 @@ class ServersController(wsgi.Controller):
     """The Server API base controller class for the OpenStack API."""
 
     EXTENSION_CREATE_NAMESPACE = 'nova.api.v3.extensions.server.create'
+    EXTENSION_DESERIALIZE_EXTRACT_SERVER_NAMESPACE = (
+        'nova.api.v3.extensions.server.create.deserialize')
     _view_builder_class = views_servers.ViewBuilder
 
     @staticmethod
@@ -474,23 +478,50 @@ class ServersController(wsgi.Controller):
         return robj
 
     def __init__(self, **kwargs):
-        def _check_load_extension(ext):
-            if isinstance(ext.obj, extensions.V3APIExtensionBase):
-                # Filter out for the existence of server_create here
-                # rather than on every request. We don't have a new
-                # abstract base class to reduce duplication in the
-                # extensions as they may want to implement multiple
-                # server (and other) entry points
-                if hasattr(ext.obj, 'server_create'):
-                    LOG.debug(_('server create extension %s detected'),
-                              ext.obj.alias)
-                    return True
+        def _create_check_load_extension(required_function):
+
+            def check_whiteblack_lists(ext):
+                # Check whitelist is either empty or if not then the extension
+                # is in the whitelist
+                if (not CONF.osapi_v3.extensions_whitelist or
+                    ext.obj.alias in CONF.osapi_v3.extensions_whitelist):
+
+                    # Check the extension is not in the blacklist
+                    if ext.obj.alias not in CONF.osapi_v3.extensions_blacklist:
+                        return True
+                    else:
+                        LOG.warning(_("Not loading %s because it is "
+                                      "in the blacklist"), ext.obj.alias)
+                        return False
                 else:
-                    LOG.debug(
-                        _('extension %s is missing server_create'), ext.obj)
+                    LOG.warning(
+                        _("Not loading %s because it is not in the whitelist"),
+                        ext.obj.alias)
                     return False
-            else:
-                return False
+
+            def check_load_extension(ext):
+                if isinstance(ext.obj, extensions.V3APIExtensionBase):
+                    # Filter out for the existence of the required
+                    # function here rather than on every request. We
+                    # don't have a new abstract base class to reduce
+                    # duplication in the extensions as they may want
+                    # to implement multiple server (and other) entry
+                    # points if hasattr(ext.obj, 'server_create'):
+                    if hasattr(ext.obj, required_function):
+                        LOG.debug(_('extension %(ext_alias)s detected by '
+                                    'servers extension for function %(func)s'),
+                                    {'ext_alias': ext.obj.alias,
+                                     'func': required_function})
+                        return check_whiteblack_lists(ext)
+                    else:
+                        LOG.debug(
+                            _('extension %(ext_alias)s is missing %(func)s'),
+                            {'ext_alias': ext.obj.alias,
+                            'func': required_function})
+                        return False
+                else:
+                    return False
+            return check_load_extension
 
         self.extension_info = kwargs.pop('extension_info')
         super(ServersController, self).__init__(**kwargs)
@@ -501,11 +532,24 @@ class ServersController(wsgi.Controller):
         self.create_extension_manager = \
           stevedore.enabled.EnabledExtensionManager(
               namespace=self.EXTENSION_CREATE_NAMESPACE,
-              check_func=_check_load_extension,
+              check_func=_create_check_load_extension('server_create'),
               invoke_on_load=True,
               invoke_kwds={"extension_info": self.extension_info})
         if not list(self.create_extension_manager):
             LOG.debug(_("Did not find any server create extensions"))
+
+        # Look for implmentation of extension point of server create
+        # XML deserialization
+        self.create_xml_deserialize_manager = \
+          stevedore.enabled.EnabledExtensionManager(
+              namespace=self.EXTENSION_DESERIALIZE_EXTRACT_SERVER_NAMESPACE,
+              check_func=_create_check_load_extension(
+                  'server_xml_extract_server_deserialize'),
+              invoke_on_load=True,
+              invoke_kwds={"extension_info": self.extension_info})
+        if not list(self.create_xml_deserialize_manager):
+            LOG.debug(_("Did not find any server create xml deserializer"
+                        " extensions"))
 
     @wsgi.serializers(xml=MinimalServersTemplate)
     def index(self, req):
@@ -822,12 +866,6 @@ class ServersController(wsgi.Controller):
                                               server_dict, create_kwargs)
 
         personality = server_dict.get('personality')
-        config_drive = None
-        # TODO(cyeoh): bp v3-api-core-as-extensions
-        # Replace with an extension point when the config_drive
-        # extension is ported
-        # if self.ext_mgr.is_loaded('os-config-drive'):
-        #    config_drive = server_dict.get('config_drive')
 
         injected_files = []
         if personality:
@@ -974,7 +1012,6 @@ class ServersController(wsgi.Controller):
                             security_group=sg_names,
                             user_data=user_data,
                             availability_zone=availability_zone,
-                            config_drive=config_drive,
                             block_device_mapping=block_device_mapping,
                             auto_disk_config=auto_disk_config,
                             scheduler_hints=scheduler_hints,
@@ -994,6 +1031,9 @@ class ServersController(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=msg)
         except exception.KeypairNotFound as error:
             msg = _("Invalid key_name provided.")
+            raise exc.HTTPBadRequest(explanation=msg)
+        except exception.ConfigDriveInvalidValue:
+            msg = _("Invalid config_drive provided.")
             raise exc.HTTPBadRequest(explanation=msg)
         except rpc_common.RemoteError as err:
             msg = "%(err_type)s: %(err_msg)s" % {'err_type': err.exc_type,
@@ -1485,6 +1525,17 @@ class ServersController(wsgi.Controller):
         """Return server search options allowed by non-admin."""
         return ('reservation_id', 'name', 'status', 'image', 'flavor',
                 'ip', 'changes-since', 'all_tenants')
+
+    def _server_create_xml_deserialize_extension_point(self, ext, server_node,
+                                                       server_dict):
+        handler = ext.obj
+        LOG.debug(_("Running create xml deserialize ep for %s"), handler.alias)
+        handler.server_xml_extract_server_deserialize(server_node, server_dict)
+
+    def server_create_xml_deserialize(self, server_node, server):
+        self.create_xml_deserialize_manager.map(
+            self._server_create_xml_deserialize_extension_point,
+            server_node, server)
 
 
 def remove_invalid_options(context, search_options, allowed_search_options):

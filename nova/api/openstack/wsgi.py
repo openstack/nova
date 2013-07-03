@@ -817,7 +817,11 @@ class Resource(wsgi.Application):
         except (KeyError, TypeError):
             raise exception.InvalidContentType(content_type=content_type)
 
-        return deserializer().deserialize(body)
+        if (hasattr(deserializer, 'want_controller')
+                and deserializer.want_controller):
+            return deserializer(self.controller).deserialize(body)
+        else:
+            return deserializer().deserialize(body)
 
     def pre_process_extensions(self, extensions, request, action_args):
         # List of callables for post-processing extensions

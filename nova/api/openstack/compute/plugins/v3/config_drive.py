@@ -17,12 +17,13 @@
 
 """Config Drive extension."""
 
-from nova.api.openstack.compute import servers
+from nova.api.openstack.compute.plugins.v3 import servers
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 
-authorize = extensions.soft_extension_authorizer('compute', 'config_drive')
+ALIAS = "os-config-drive"
+authorize = extensions.soft_extension_authorizer('compute', 'v3:' + ALIAS)
 
 
 class ServerConfigDriveTemplate(xmlutil.TemplateBuilder):
@@ -40,7 +41,7 @@ class ServersConfigDriveTemplate(xmlutil.TemplateBuilder):
         return xmlutil.SlaveTemplate(root, 1)
 
 
-class Controller(servers.Controller):
+class ConfigDriveController(servers.ServersController):
 
     def _add_config_drive(self, req, servers):
         for server in servers:
@@ -70,15 +71,26 @@ class Controller(servers.Controller):
             self._add_config_drive(req, servers)
 
 
-class Config_drive(extensions.ExtensionDescriptor):
+class ConfigDrive(extensions.V3APIExtensionBase):
     """Config Drive Extension."""
 
     name = "ConfigDrive"
-    alias = "os-config-drive"
-    namespace = "http://docs.openstack.org/compute/ext/config_drive/api/v1.1"
-    updated = "2012-07-16T00:00:00+00:00"
+    alias = ALIAS
+    namespace = "http://docs.openstack.org/compute/ext/config_drive/api/v3"
+    version = 1
 
     def get_controller_extensions(self):
-        controller = Controller(self.ext_mgr)
+        controller = ConfigDriveController(extension_info=self.extension_info)
         extension = extensions.ControllerExtension(self, 'servers', controller)
         return [extension]
+
+    def get_resources(self):
+        return []
+
+    def server_create(self, server_dict, create_kwargs):
+        create_kwargs['config_drive'] = server_dict.get('config_drive')
+
+    def server_xml_extract_server_deserialize(self, server_node, server_dict):
+        config_drive = server_node.getAttribute('config_drive')
+        if config_drive:
+            server_dict['config_drive'] = config_drive
