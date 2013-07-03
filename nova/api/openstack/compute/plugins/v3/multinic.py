@@ -38,46 +38,43 @@ class MultinicController(wsgi.Controller):
     def _get_instance(self, context, instance_id):
         try:
             return self.compute_api.get(context, instance_id)
-        except exception.InstanceNotFound:
-            msg = _("Server not found")
-            raise exc.HTTPNotFound(msg)
+        except exception.InstanceNotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
 
-    @wsgi.action('addFixedIp')
+    @wsgi.action('add_fixed_ip')
     def _add_fixed_ip(self, req, id, body):
         """Adds an IP on a given network to an instance."""
         context = req.environ['nova.context']
         authorize(context)
 
         # Validate the input entity
-        if 'networkId' not in body['addFixedIp']:
-            msg = _("Missing 'networkId' argument for addFixedIp")
-            raise exc.HTTPUnprocessableEntity(explanation=msg)
+        if 'network_id' not in body['add_fixed_ip']:
+            msg = _("Missing 'network_id' argument for add_fixed_ip")
+            raise exc.HTTPBadRequest(explanation=msg)
 
         instance = self._get_instance(context, id)
-        network_id = body['addFixedIp']['networkId']
+        network_id = body['add_fixed_ip']['network_id']
         self.compute_api.add_fixed_ip(context, instance, network_id)
         return webob.Response(status_int=202)
 
-    @wsgi.action('removeFixedIp')
+    @wsgi.action('remove_fixed_ip')
     def _remove_fixed_ip(self, req, id, body):
         """Removes an IP from an instance."""
         context = req.environ['nova.context']
         authorize(context)
 
         # Validate the input entity
-        if 'address' not in body['removeFixedIp']:
-            msg = _("Missing 'address' argument for removeFixedIp")
-            raise exc.HTTPUnprocessableEntity(explanation=msg)
+        if 'address' not in body['remove_fixed_ip']:
+            msg = _("Missing 'address' argument for remove_fixed_ip")
+            raise exc.HTTPBadRequest(explanation=msg)
 
         instance = self._get_instance(context, id)
-        address = body['removeFixedIp']['address']
+        address = body['remove_fixed_ip']['address']
 
         try:
             self.compute_api.remove_fixed_ip(context, instance, address)
-        except exception.FixedIpNotFoundForSpecificInstance:
-            LOG.exception(_("Unable to find address %r") % address,
-                          instance=instance)
-            raise exc.HTTPBadRequest()
+        except exception.FixedIpNotFoundForSpecificInstance as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
 
         return webob.Response(status_int=202)
 

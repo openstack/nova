@@ -58,7 +58,7 @@ class FixedIpTest(test.TestCase):
         global last_add_fixed_ip
         last_add_fixed_ip = (None, None)
 
-        body = dict(addFixedIp=dict(networkId='test_net'))
+        body = dict(add_fixed_ip=dict(network_id='test_net'))
         req = webob.Request.blank('/v3/servers/%s/action' % UUID)
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
@@ -72,21 +72,21 @@ class FixedIpTest(test.TestCase):
         global last_add_fixed_ip
         last_add_fixed_ip = (None, None)
 
-        body = dict(addFixedIp=dict())
+        body = dict(add_fixed_ip=dict())
         req = webob.Request.blank('/v3/servers/%s/action' % UUID)
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers['content-type'] = 'application/json'
 
         resp = req.get_response(self.app)
-        self.assertEqual(resp.status_int, 422)
+        self.assertEqual(resp.status_int, 400)
         self.assertEqual(last_add_fixed_ip, (None, None))
 
     def test_remove_fixed_ip(self):
         global last_remove_fixed_ip
         last_remove_fixed_ip = (None, None)
 
-        body = dict(removeFixedIp=dict(address='10.10.10.1'))
+        body = dict(remove_fixed_ip=dict(address='10.10.10.1'))
         req = webob.Request.blank('/v3/servers/%s/action' % UUID)
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
@@ -100,12 +100,12 @@ class FixedIpTest(test.TestCase):
         global last_remove_fixed_ip
         last_remove_fixed_ip = (None, None)
 
-        body = dict(removeFixedIp=dict())
+        body = dict(remove_fixed_ip=dict())
         req = webob.Request.blank('/v3/servers/%s/action' % UUID)
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers['content-type'] = 'application/json'
 
         resp = req.get_response(self.app)
-        self.assertEqual(resp.status_int, 422)
+        self.assertEqual(resp.status_int, 400)
         self.assertEqual(last_remove_fixed_ip, (None, None))
