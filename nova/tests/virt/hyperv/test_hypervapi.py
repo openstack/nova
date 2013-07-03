@@ -90,7 +90,7 @@ class HyperVAPITestCase(test.TestCase):
         self._setup_stubs()
 
         self.flags(instances_path=r'C:\Hyper-V\test\instances',
-                   network_api_class='nova.network.quantumv2.api.API')
+                   network_api_class='nova.network.neutronv2.api.API')
 
         self._conn = driver_hyperv.HyperVDriver(None)
 

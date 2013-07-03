@@ -358,11 +358,11 @@ def fake_get_instance_nw_info(stubs, num_networks=1, ips_per_vif=2,
     stubs.Set(db, 'network_get', network_get_fake)
     stubs.Set(db, 'instance_info_cache_update', update_cache_fake)
 
-    stubs.Set(nova_ipam_lib.QuantumNovaIPAMLib, 'get_subnets_by_net_id',
+    stubs.Set(nova_ipam_lib.NeutronNovaIPAMLib, 'get_subnets_by_net_id',
               get_subnets_by_net_id)
-    stubs.Set(nova_ipam_lib.QuantumNovaIPAMLib, 'get_v4_ips_by_interface',
+    stubs.Set(nova_ipam_lib.NeutronNovaIPAMLib, 'get_v4_ips_by_interface',
                     get_v4_fake)
-    stubs.Set(nova_ipam_lib.QuantumNovaIPAMLib, 'get_v6_ips_by_interface',
+    stubs.Set(nova_ipam_lib.NeutronNovaIPAMLib, 'get_v6_ips_by_interface',
                     get_v6_fake)
 
     class FakeContext(nova.context.RequestContext):

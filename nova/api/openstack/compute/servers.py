@@ -463,7 +463,7 @@ class Controller(wsgi.Controller):
         super(Controller, self).__init__(**kwargs)
         self.compute_api = compute.API()
         self.ext_mgr = ext_mgr
-        self.quantum_attempted = False
+        self.neutron_attempted = False
 
     @wsgi.serializers(xml=MinimalServersTemplate)
     def index(self, req):
@@ -612,21 +612,26 @@ class Controller(wsgi.Controller):
             injected_files.append((path, contents))
         return injected_files
 
-    def _is_quantum_v2(self):
-        # NOTE(dprince): quantumclient is not a requirement
-        if self.quantum_attempted:
-            return self.have_quantum
+    def _is_neutron_v2(self):
+        # NOTE(dprince): neutronclient is not a requirement
+        if self.neutron_attempted:
+            return self.have_neutron
 
         try:
-            self.quantum_attempted = True
-            from nova.network.quantumv2 import api as quantum_api
-            self.have_quantum = issubclass(
-                importutils.import_class(CONF.network_api_class),
-                quantum_api.API)
-        except ImportError:
-            self.have_quantum = False
+            # compatibility with Folsom/Grizzly configs
+            cls_name = CONF.network_api_class
+            if cls_name == 'nova.network.quantumv2.api.API':
+                cls_name = 'nova.network.neutronv2.api.API'
+            self.neutron_attempted = True
 
-        return self.have_quantum
+            from nova.network.neutronv2 import api as neutron_api
+            self.have_neutron = issubclass(
+                importutils.import_class(cls_name),
+                neutron_api.API)
+        except ImportError:
+            self.have_neutron = False
+
+        return self.have_neutron
 
     def _get_requested_networks(self, requested_networks):
         """Create a list of requested networks from the networks attribute."""
@@ -636,8 +641,8 @@ class Controller(wsgi.Controller):
                 port_id = network.get('port', None)
                 if port_id:
                     network_uuid = None
-                    if not self._is_quantum_v2():
-                        # port parameter is only for quantum v2.0
+                    if not self._is_neutron_v2():
+                        # port parameter is only for neutron v2.0
                         msg = _("Unknown argment : port")
                         raise exc.HTTPBadRequest(explanation=msg)
                     if not uuidutils.is_uuid_like(port_id):
@@ -664,9 +669,9 @@ class Controller(wsgi.Controller):
                     msg = _("Invalid fixed IP address (%s)") % address
                     raise exc.HTTPBadRequest(explanation=msg)
 
-                # For quantumv2, requestd_networks
+                # For neutronv2, requestd_networks
                 # should be tuple of (network_uuid, fixed_ip, port_id)
-                if self._is_quantum_v2():
+                if self._is_neutron_v2():
                     networks.append((network_uuid, address, port_id))
                 else:
                     # check if the network id is already present in the list,
@@ -779,7 +784,7 @@ class Controller(wsgi.Controller):
 
         requested_networks = None
         if (self.ext_mgr.is_loaded('os-networks')
-                or self._is_quantum_v2()):
+                or self._is_neutron_v2()):
             requested_networks = server_dict.get('networks')
 
         if requested_networks is not None:

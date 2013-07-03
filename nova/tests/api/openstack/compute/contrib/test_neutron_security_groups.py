@@ -20,6 +20,7 @@
 import uuid
 
 from lxml import etree
+from neutronclient.common import exceptions as q_exc
 from oslo.config import cfg
 import webob
 
@@ -29,32 +30,31 @@ from nova import compute
 from nova import context
 import nova.db
 from nova import exception
-from nova.network import quantumv2
-from nova.network.quantumv2 import api as quantum_api
-from nova.network.security_group import quantum_driver
+from nova.network import neutronv2
+from nova.network.neutronv2 import api as neutron_api
+from nova.network.security_group import neutron_driver
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack.compute.contrib import test_security_groups
 from nova.tests.api.openstack import fakes
-from quantumclient.common import exceptions as q_exc
 
 
-class TestQuantumSecurityGroupsTestCase(test.TestCase):
+class TestNeutronSecurityGroupsTestCase(test.TestCase):
     def setUp(self):
-        super(TestQuantumSecurityGroupsTestCase, self).setUp()
-        cfg.CONF.set_override('security_group_api', 'quantum')
-        self.original_client = quantumv2.get_client
-        quantumv2.get_client = get_client
+        super(TestNeutronSecurityGroupsTestCase, self).setUp()
+        cfg.CONF.set_override('security_group_api', 'neutron')
+        self.original_client = neutronv2.get_client
+        neutronv2.get_client = get_client
 
     def tearDown(self):
-        quantumv2.get_client = self.original_client
+        neutronv2.get_client = self.original_client
         get_client()._reset()
-        super(TestQuantumSecurityGroupsTestCase, self).tearDown()
+        super(TestNeutronSecurityGroupsTestCase, self).tearDown()
 
 
-class TestQuantumSecurityGroups(
+class TestNeutronSecurityGroups(
         test_security_groups.TestSecurityGroups,
-        TestQuantumSecurityGroupsTestCase):
+        TestNeutronSecurityGroupsTestCase):
 
     def _create_sg_template(self, **kwargs):
         sg = test_security_groups.security_group_template(**kwargs)
@@ -63,11 +63,11 @@ class TestQuantumSecurityGroups(
 
     def _create_network(self):
         body = {'network': {'name': 'net1'}}
-        quantum = get_client()
-        net = quantum.create_network(body)
+        neutron = get_client()
+        net = neutron.create_network(body)
         body = {'subnet': {'network_id': net['network']['id'],
                            'cidr': '10.0.0.0/24'}}
-        quantum.create_subnet(body)
+        neutron.create_subnet(body)
         return net
 
     def _create_port(self, **kwargs):
@@ -77,47 +77,47 @@ class TestQuantumSecurityGroups(
         for field in fields:
             if field in kwargs:
                 body['port'][field] = kwargs[field]
-        quantum = get_client()
-        return quantum.create_port(body)
+        neutron = get_client()
+        return neutron.create_port(body)
 
     def test_create_security_group_with_no_description(self):
-        # Quantum's security group descirption field is optional.
+        # Neutron's security group descirption field is optional.
         pass
 
     def test_create_security_group_with_blank_name(self):
-        # Quantum's security group name field is optional.
+        # Neutron's security group name field is optional.
         pass
 
     def test_create_security_group_with_whitespace_name(self):
-        # Quantum allows security group name to be whitespace.
+        # Neutron allows security group name to be whitespace.
         pass
 
     def test_create_security_group_with_blank_description(self):
-        # Quantum's security group descirption field is optional.
+        # Neutron's security group descirption field is optional.
         pass
 
     def test_create_security_group_with_whitespace_description(self):
-        # Quantum allows description to be whitespace.
+        # Neutron allows description to be whitespace.
         pass
 
     def test_create_security_group_with_duplicate_name(self):
-        # Quantum allows duplicate names for security groups.
+        # Neutron allows duplicate names for security groups.
         pass
 
     def test_create_security_group_non_string_name(self):
-        # Quantum allows security group name to be non string.
+        # Neutron allows security group name to be non string.
         pass
 
     def test_create_security_group_non_string_description(self):
-        # Quantum allows non string description.
+        # Neutron allows non string description.
         pass
 
     def test_create_security_group_quota_limit(self):
-        # Enforced by Quantum server.
+        # Enforced by Neutron server.
         pass
 
     def test_update_security_group(self):
-        # Enforced by Quantum server.
+        # Enforced by Neutron server.
         pass
 
     def test_get_security_group_list(self):
@@ -167,8 +167,8 @@ class TestQuantumSecurityGroups(
                          'security_groups': [],
                          'uuid': str(uuid.uuid4()),
                          'display_name': 'test_instance'}
-        quantum = quantum_api.API()
-        quantum.allocate_for_instance(context.get_admin_context(),
+        neutron = neutron_api.API()
+        neutron.allocate_for_instance(context.get_admin_context(),
                                       fake_instance,
                                       security_groups=[sg['id']])
 
@@ -178,13 +178,13 @@ class TestQuantumSecurityGroups(
                           req, sg['id'])
 
     def test_associate_non_running_instance(self):
-        # Quantum does not care if the instance is running or not. When the
-        # instances is detected by quantum it will push down the security
+        # Neutron does not care if the instance is running or not. When the
+        # instances is detected by nuetron it will push down the security
         # group policy to it.
         pass
 
     def test_associate_already_associated_security_group_to_instance(self):
-        # Quantum security groups does not raise an error if you update a
+        # Neutron security groups does not raise an error if you update a
         # port adding a security group to it that was already associated
         # to the port. This is because PUT semantics are used.
         pass
@@ -244,13 +244,13 @@ class TestQuantumSecurityGroups(
                           self.manager._removeSecurityGroup, req, '1', body)
 
     def test_disassociate_non_running_instance(self):
-        # Quantum does not care if the instance is running or not. When the
-        # instances is detected by quantum it will push down the security
+        # Neutron does not care if the instance is running or not. When the
+        # instances is detected by neutron it will push down the security
         # group policy to it.
         pass
 
     def test_disassociate_already_associated_security_group_to_instance(self):
-        # Quantum security groups does not raise an error if you update a
+        # Neutron security groups does not raise an error if you update a
         # port adding a security group to it that was already associated
         # to the port. This is because PUT semantics are used.
         pass
@@ -335,9 +335,9 @@ class TestQuantumSecurityGroups(
                            device_id=test_security_groups.FAKE_UUID1)
 
 
-class TestQuantumSecurityGroupRulesTestCase(TestQuantumSecurityGroupsTestCase):
+class TestNeutronSecurityGroupRulesTestCase(TestNeutronSecurityGroupsTestCase):
     def setUp(self):
-        super(TestQuantumSecurityGroupRulesTestCase, self).setUp()
+        super(TestNeutronSecurityGroupRulesTestCase, self).setUp()
         id1 = '11111111-1111-1111-1111-111111111111'
         sg_template1 = test_security_groups.security_group_template(
             security_group_rules=[], id=id1)
@@ -345,19 +345,19 @@ class TestQuantumSecurityGroupRulesTestCase(TestQuantumSecurityGroupsTestCase):
         sg_template2 = test_security_groups.security_group_template(
             security_group_rules=[], id=id2)
         self.controller_sg = security_groups.SecurityGroupController()
-        quantum = get_client()
-        quantum._fake_security_groups[id1] = sg_template1
-        quantum._fake_security_groups[id2] = sg_template2
+        neutron = get_client()
+        neutron._fake_security_groups[id1] = sg_template1
+        neutron._fake_security_groups[id2] = sg_template2
 
     def tearDown(self):
-        quantumv2.get_client = self.original_client
+        neutronv2.get_client = self.original_client
         get_client()._reset()
-        super(TestQuantumSecurityGroupsTestCase, self).tearDown()
+        super(TestNeutronSecurityGroupsTestCase, self).tearDown()
 
 
-class TestQuantumSecurityGroupRules(
+class TestNeutronSecurityGroupRules(
         test_security_groups.TestSecurityGroupRules,
-        TestQuantumSecurityGroupRulesTestCase):
+        TestNeutronSecurityGroupRulesTestCase):
 
     def test_create_add_existing_rules_by_cidr(self):
         sg = test_security_groups.security_group_template()
@@ -393,27 +393,27 @@ class TestQuantumSecurityGroupRules(
         self.controller.delete(req, security_group_rule['id'])
 
     def test_create_rule_quota_limit(self):
-        # Enforced by quantum
+        # Enforced by neutron
         pass
 
 
-class TestQuantumSecurityGroupsXMLDeserializer(
+class TestNeutronSecurityGroupsXMLDeserializer(
         test_security_groups.TestSecurityGroupXMLDeserializer,
-        TestQuantumSecurityGroupsTestCase):
+        TestNeutronSecurityGroupsTestCase):
     pass
 
 
-class TestQuantumSecurityGroupsXMLSerializer(
+class TestNeutronSecurityGroupsXMLSerializer(
         test_security_groups.TestSecurityGroupXMLSerializer,
-        TestQuantumSecurityGroupsTestCase):
+        TestNeutronSecurityGroupsTestCase):
     pass
 
 
-class TestQuantumSecurityGroupsOutputTest(TestQuantumSecurityGroupsTestCase):
+class TestNeutronSecurityGroupsOutputTest(TestNeutronSecurityGroupsTestCase):
     content_type = 'application/json'
 
     def setUp(self):
-        super(TestQuantumSecurityGroupsOutputTest, self).setUp()
+        super(TestNeutronSecurityGroupsOutputTest, self).setUp()
         fakes.stub_out_nw_api(self.stubs)
         self.controller = security_groups.SecurityGroupController()
         self.stubs.Set(compute.api.API, 'get',
@@ -422,7 +422,7 @@ class TestQuantumSecurityGroupsOutputTest(TestQuantumSecurityGroupsTestCase):
                        test_security_groups.fake_compute_get_all)
         self.stubs.Set(compute.api.API, 'create',
                        test_security_groups.fake_compute_create)
-        self.stubs.Set(quantum_driver.SecurityGroupAPI,
+        self.stubs.Set(neutron_driver.SecurityGroupAPI,
                        'get_instances_security_groups_bindings',
                        (test_security_groups.
                        fake_get_instances_security_groups_bindings))
@@ -486,7 +486,7 @@ class TestQuantumSecurityGroupsOutputTest(TestQuantumSecurityGroupsTestCase):
         def fake_get_instance_security_groups(inst, context, id):
             return [{'name': 'fake-2-0'}, {'name': 'fake-2-1'}]
 
-        self.stubs.Set(quantum_driver.SecurityGroupAPI,
+        self.stubs.Set(neutron_driver.SecurityGroupAPI,
                        'get_instance_security_groups',
                        fake_get_instance_security_groups)
 
@@ -540,8 +540,8 @@ class TestQuantumSecurityGroupsOutputTest(TestQuantumSecurityGroupsTestCase):
         self.assertEqual(res.status_int, 404)
 
 
-class TestQuantumSecurityGroupsOutputXMLTest(
-        TestQuantumSecurityGroupsOutputTest):
+class TestNeutronSecurityGroupsOutputXMLTest(
+        TestNeutronSecurityGroupsOutputTest):
 
     content_type = 'application/xml'
 
@@ -610,7 +610,7 @@ class MockClient(object):
         s = body.get('security_group')
         if len(s.get('name')) > 255 or len(s.get('description')) > 255:
             msg = 'Security Group name great than 255'
-            raise q_exc.QuantumClientException(message=msg, status_code=401)
+            raise q_exc.NeutronClientException(message=msg, status_code=401)
         ret = {'name': s.get('name'), 'description': s.get('description'),
                'tenant_id': 'fake_tenant', 'security_group_rules': [],
                'id': str(uuid.uuid4())}
@@ -635,7 +635,7 @@ class MockClient(object):
             net = self._fake_networks[s.get('network_id')]
         except KeyError:
             msg = 'Network %s not found' % s.get('network_id')
-            raise q_exc.QuantumClientException(message=msg, status_code=404)
+            raise q_exc.NeutronClientException(message=msg, status_code=404)
         ret = {'name': s.get('name'), 'network_id': s.get('network_id'),
                'tenant_id': 'fake_tenant', 'cidr': s.get('cidr'),
                'id': str(uuid.uuid4()), 'gateway_ip': '10.0.0.1'}
@@ -694,7 +694,7 @@ class MockClient(object):
             sg = self._fake_security_groups[security_group]
         except KeyError:
             msg = 'Security Group %s not found' % security_group
-            raise q_exc.QuantumClientException(message=msg, status_code=404)
+            raise q_exc.NeutronClientException(message=msg, status_code=404)
         for security_group_rule in self._fake_security_group_rules.values():
             if security_group_rule['security_group_id'] == sg['id']:
                 sg['security_group_rules'].append(security_group_rule)
@@ -707,7 +707,7 @@ class MockClient(object):
                     self._fake_security_group_rules[security_group_rule]}
         except KeyError:
             msg = 'Security Group rule %s not found' % security_group_rule
-            raise q_exc.QuantumClientException(message=msg, status_code=404)
+            raise q_exc.NeutronClientException(message=msg, status_code=404)
 
     def show_network(self, network, **_params):
         try:
@@ -715,7 +715,7 @@ class MockClient(object):
                     self._fake_networks[network]}
         except KeyError:
             msg = 'Network %s not found' % network
-            raise q_exc.QuantumClientException(message=msg, status_code=404)
+            raise q_exc.NeutronClientException(message=msg, status_code=404)
 
     def show_port(self, port, **_params):
         try:
@@ -723,7 +723,7 @@ class MockClient(object):
                     self._fake_ports[port]}
         except KeyError:
             msg = 'Port %s not found' % port
-            raise q_exc.QuantumClientException(message=msg, status_code=404)
+            raise q_exc.NeutronClientException(message=msg, status_code=404)
 
     def show_subnet(self, subnet, **_params):
         try:
@@ -731,7 +731,7 @@ class MockClient(object):
                     self._fake_subnets[subnet]}
         except KeyError:
             msg = 'Port %s not found' % subnet
-            raise q_exc.QuantumClientException(message=msg, status_code=404)
+            raise q_exc.NeutronClientException(message=msg, status_code=404)
 
     def list_security_groups(self, **_params):
         ret = []
@@ -784,7 +784,7 @@ class MockClient(object):
                 if sg_port == security_group:
                     msg = ('Unable to delete Security group %s in use'
                            % security_group)
-                    raise q_exc.QuantumClientException(message=msg,
+                    raise q_exc.NeutronClientException(message=msg,
                                                        status_code=409)
         del self._fake_security_groups[security_group]
 
@@ -824,4 +824,4 @@ class MockClient(object):
                 msg = ('Unable to complete operation on network %s. There is '
                        'one or more ports still in use on the network'
                        % network)
-            raise q_exc.QuantumClientException(message=msg, status_code=409)
+            raise q_exc.NeutronClientException(message=msg, status_code=409)

@@ -28,8 +28,8 @@ from nova.api.openstack import xmlutil
 from nova import compute
 from nova.compute import api as compute_api
 from nova import exception
+from nova.network.security_group import neutron_driver
 from nova.network.security_group import openstack_driver
-from nova.network.security_group import quantum_driver
 
 
 ALIAS = 'os-security-groups'
@@ -129,7 +129,7 @@ class SecurityGroupsOutputController(wsgi.Controller):
             return
         key = "security_groups"
         context = _authorize_context(req)
-        if not openstack_driver.is_quantum_security_groups():
+        if not openstack_driver.is_neutron_security_groups():
             for server in servers:
                 instance = req.get_db_instance(server['id'])
                 groups = instance.get(key)
@@ -138,8 +138,8 @@ class SecurityGroupsOutputController(wsgi.Controller):
         else:
             # If method is a POST we get the security groups intended for an
             # instance from the request. The reason for this is if using
-            # quantum security groups the requested security groups for the
-            # instance are not in the db and have not been sent to quantum yet.
+            # neutron security groups the requested security groups for the
+            # instance are not in the db and have not been sent to neutron yet.
             if req.method != 'POST':
                 if len(servers) == 1:
                     group = (self.security_group_api
@@ -280,6 +280,6 @@ class NativeNovaSecurityGroupAPI(NativeSecurityGroupExceptions,
     pass
 
 
-class NativeQuantumSecurityGroupAPI(NativeSecurityGroupExceptions,
-                                    quantum_driver.SecurityGroupAPI):
+class NativeNeutronSecurityGroupAPI(NativeSecurityGroupExceptions,
+                                    neutron_driver.SecurityGroupAPI):
     pass

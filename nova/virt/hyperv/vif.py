@@ -48,15 +48,15 @@ class HyperVBaseVIFDriver(object):
         pass
 
 
-class HyperVQuantumVIFDriver(HyperVBaseVIFDriver):
-    """Quantum VIF driver."""
+class HyperVNeutronVIFDriver(HyperVBaseVIFDriver):
+    """Neutron VIF driver."""
 
     def plug(self, instance, vif):
-        # Quantum takes care of plugging the port
+        # Neutron takes care of plugging the port
         pass
 
     def unplug(self, instance, vif):
-        # Quantum takes care of unplugging the port
+        # Neutron takes care of unplugging the port
         pass
 
 

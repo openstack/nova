@@ -20,11 +20,11 @@ from nova import ipv6
 
 
 def get_ipam_lib(net_man):
-    return QuantumNovaIPAMLib(net_man)
+    return NeutronNovaIPAMLib(net_man)
 
 
-class QuantumNovaIPAMLib(object):
-    """Implements Quantum IP Address Management (IPAM) interface
+class NeutronNovaIPAMLib(object):
+    """Implements Neutron IP Address Management (IPAM) interface
        using the local Nova database.  This implementation is inline
        with how IPAM is used by other NetworkManagers.
     """
@@ -38,7 +38,7 @@ class QuantumNovaIPAMLib(object):
 
     def get_subnets_by_net_id(self, context, tenant_id, net_id, _vif_id=None):
         """Returns information about the IPv4 and IPv6 subnets
-           associated with a Quantum Network UUID.
+           associated with a Neutron Network UUID.
         """
         n = db.network_get_by_uuid(context.elevated(), net_id)
         subnet_v4 = {

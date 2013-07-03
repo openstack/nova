@@ -395,13 +395,13 @@
 # Options defined in nova.api.metadata.handler
 #
 
-# Set flag to indicate Quantum will proxy metadata requests
+# Set flag to indicate Neutron will proxy metadata requests
 # and resolve instance ids. (boolean value)
-#service_quantum_metadata_proxy=false
+#service_neutron_metadata_proxy=false
 
-# Shared secret to validate proxies Quantum metadata requests
+# Shared secret to validate proxies Neutron metadata requests
 # (string value)
-#quantum_metadata_proxy_shared_secret=
+#neutron_metadata_proxy_shared_secret=
 
 
 #
@@ -466,11 +466,11 @@
 #enable_network_quota=false
 
 # Control for checking for default networks (string value)
-#use_quantum_default_nets=False
+#use_neutron_default_nets=False
 
-# Default tenant id when creating quantum networks (string
+# Default tenant id when creating neutron networks (string
 # value)
-#quantum_default_tenant_id=default
+#neutron_default_tenant_id=default
 
 
 #
@@ -1204,50 +1204,50 @@
 
 
 #
-# Options defined in nova.network.quantumv2.api
+# Options defined in nova.network.neutronv2.api
 #
 
-# URL for connecting to quantum (string value)
-#quantum_url=http://127.0.0.1:9696
+# URL for connecting to neutron (string value)
+#neutron_url=http://127.0.0.1:9696
 
-# timeout value for connecting to quantum in seconds (integer
+# timeout value for connecting to neutron in seconds (integer
 # value)
-#quantum_url_timeout=30
+#neutron_url_timeout=30
 
-# username for connecting to quantum in admin context (string
+# username for connecting to neutron in admin context (string
 # value)
-#quantum_admin_username=<None>
+#neutron_admin_username=<None>
 
-# password for connecting to quantum in admin context (string
+# password for connecting to neutron in admin context (string
 # value)
-#quantum_admin_password=<None>
+#neutron_admin_password=<None>
 
-# tenant name for connecting to quantum in admin context
+# tenant name for connecting to neutron in admin context
 # (string value)
-#quantum_admin_tenant_name=<None>
+#neutron_admin_tenant_name=<None>
 
-# region name for connecting to quantum in admin context
+# region name for connecting to neutron in admin context
 # (string value)
-#quantum_region_name=<None>
+#neutron_region_name=<None>
 
-# auth url for connecting to quantum in admin context (string
+# auth url for connecting to neutron in admin context (string
 # value)
-#quantum_admin_auth_url=http://localhost:5000/v2.0
+#neutron_admin_auth_url=http://localhost:5000/v2.0
 
 # if set, ignore any SSL validation issues (boolean value)
-#quantum_api_insecure=false
+#neutron_api_insecure=false
 
-# auth strategy for connecting to quantum in admin context
+# auth strategy for connecting to neutron in admin context
 # (string value)
-#quantum_auth_strategy=keystone
+#neutron_auth_strategy=keystone
 
 # Name of Integration Bridge used by Open vSwitch (string
 # value)
-#quantum_ovs_bridge=br-int
+#neutron_ovs_bridge=br-int
 
-# Number of seconds before querying quantum for extensions
+# Number of seconds before querying neutron for extensions
 # (integer value)
-#quantum_extension_sync_interval=600
+#neutron_extension_sync_interval=600
 
 
 #

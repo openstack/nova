@@ -362,8 +362,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.compute_api = compute.API()
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.conductor_api = conductor.API()
-        self.is_quantum_security_groups = (
-            openstack_driver.is_quantum_security_groups())
+        self.is_neutron_security_groups = (
+            openstack_driver.is_neutron_security_groups())
         self.consoleauth_rpcapi = consoleauth.rpcapi.ConsoleAuthAPI()
         self.cells_rpcapi = cells_rpcapi.CellsAPI()
         self._resource_tracker_dict = {}
@@ -959,9 +959,9 @@ class ComputeManager(manager.SchedulerDependentManager):
             node, instance, image_meta):
         context = context.elevated()
 
-        # If quantum security groups pass requested security
+        # If neutron security groups pass requested security
         # groups to allocate_for_instance()
-        if request_spec and self.is_quantum_security_groups:
+        if request_spec and self.is_neutron_security_groups:
             security_groups = request_spec.get('security_group')
         else:
             security_groups = []

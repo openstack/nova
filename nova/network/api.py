@@ -118,7 +118,7 @@ class API(base.Base):
     """API for doing networking via the nova-network network manager.
 
     This is a pluggable module - other implementations do networking via
-    other services (such as Quantum).
+    other services (such as Neutron).
     """
     _sentinel = object()
 
@@ -305,22 +305,22 @@ class API(base.Base):
         args['host'] = instance['host']
         self.network_rpcapi.deallocate_for_instance(context, **args)
 
-    # NOTE(danms): Here for quantum compatibility
+    # NOTE(danms): Here for neutron compatibility
     def allocate_port_for_instance(self, context, instance, port_id,
                                    network_id=None, requested_ip=None,
                                    conductor_api=None):
         raise NotImplementedError()
 
-    # NOTE(danms): Here for quantum compatibility
+    # NOTE(danms): Here for neutron compatibility
     def deallocate_port_for_instance(self, context, instance, port_id,
                                      conductor_api=None):
         raise NotImplementedError()
 
-    # NOTE(danms): Here for quantum compatibility
+    # NOTE(danms): Here for neutron compatibility
     def list_ports(self, *args, **kwargs):
         raise NotImplementedError()
 
-    # NOTE(danms): Here for quantum compatibility
+    # NOTE(danms): Here for neutron compatibility
     def show_port(self, *args, **kwargs):
         raise NotImplementedError()
 

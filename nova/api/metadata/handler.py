@@ -39,14 +39,16 @@ CONF.import_opt('use_forwarded_for', 'nova.api.auth')
 
 metadata_proxy_opts = [
     cfg.BoolOpt(
-        'service_quantum_metadata_proxy',
+        'service_neutron_metadata_proxy',
         default=False,
-        help='Set flag to indicate Quantum will proxy metadata requests and '
+        deprecated_name='service_quantum_metadata_proxy',
+        help='Set flag to indicate Neutron will proxy metadata requests and '
              'resolve instance ids.'),
      cfg.StrOpt(
-         'quantum_metadata_proxy_shared_secret',
+         'neutron_metadata_proxy_shared_secret',
          default='',
-         help='Shared secret to validate proxies Quantum metadata requests')
+         deprecated_name='quantum_metadata_proxy_shared_secret',
+         help='Shared secret to validate proxies Neutron metadata requests')
 ]
 
 CONF.register_opts(metadata_proxy_opts)
@@ -100,13 +102,13 @@ class MetadataRequestHandler(wsgi.Application):
         if os.path.normpath("/" + req.path_info) == "/":
             return(base.ec2_md_print(base.VERSIONS + ["latest"]))
 
-        if CONF.service_quantum_metadata_proxy:
+        if CONF.service_neutron_metadata_proxy:
             meta_data = self._handle_instance_id_request(req)
         else:
             if req.headers.get('X-Instance-ID'):
                 LOG.warn(
                     _("X-Instance-ID present in request headers. The "
-                      "'service_quantum_metadata_proxy' option must be enabled"
+                      "'service_neutron_metadata_proxy' option must be enabled"
                       " to process this header."))
             meta_data = self._handle_remote_ip_request(req)
 
@@ -160,7 +162,7 @@ class MetadataRequestHandler(wsgi.Application):
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
         expected_signature = hmac.new(
-            CONF.quantum_metadata_proxy_shared_secret,
+            CONF.neutron_metadata_proxy_shared_secret,
             instance_id,
             hashlib.sha256).hexdigest()
 

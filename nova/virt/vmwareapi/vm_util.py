@@ -79,7 +79,7 @@ def get_vm_create_spec(client_factory, instance, data_store_name,
 
     config_spec.deviceChange = device_config_spec
 
-    # add vm-uuid and iface-id.x values for Quantum
+    # add vm-uuid and iface-id.x values for Neutron
     extra_config = []
     opt = client_factory.create('ns0:OptionValue')
     opt.key = "nvp.vm-uuid"
