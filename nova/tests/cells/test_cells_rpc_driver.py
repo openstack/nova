@@ -101,7 +101,7 @@ class CellsRPCDriverTestCase(test.TestCase):
         msg_runner = fakes.get_message_runner('api-cell')
         cell_state = fakes.get_cell_state('api-cell', 'child-cell2')
         message = messaging._TargetedMessage(msg_runner,
-                self.ctxt, 'fake', 'fake', 'down', cell_state, fanout=False)
+                self.ctxt, 'fake', {}, 'down', cell_state, fanout=False)
 
         call_info = {}
 
@@ -139,7 +139,7 @@ class CellsRPCDriverTestCase(test.TestCase):
         msg_runner = fakes.get_message_runner('api-cell')
         cell_state = fakes.get_cell_state('api-cell', 'child-cell2')
         message = messaging._TargetedMessage(msg_runner,
-                self.ctxt, 'fake', 'fake', 'down', cell_state, fanout=True)
+                self.ctxt, 'fake', {}, 'down', cell_state, fanout=True)
 
         call_info = {}
 
@@ -179,7 +179,7 @@ class CellsRPCDriverTestCase(test.TestCase):
         msg_runner = fakes.get_message_runner('api-cell')
         cell_state = fakes.get_cell_state('api-cell', 'child-cell2')
         message = messaging._BroadcastMessage(msg_runner,
-                self.ctxt, 'fake', 'fake', 'down', fanout=True)
+                self.ctxt, 'fake', {}, 'down', fanout=True)
         message.message_type = 'fake-message-type'
 
         call_info = {}
@@ -198,7 +198,7 @@ class CellsRPCDriverTestCase(test.TestCase):
         msg_runner = fakes.get_message_runner('api-cell')
         dispatcher = rpc_driver.InterCellRPCDispatcher(msg_runner)
         message = messaging._BroadcastMessage(msg_runner,
-                self.ctxt, 'fake', 'fake', 'down', fanout=True)
+                self.ctxt, 'fake', {}, 'down', fanout=True)
 
         call_info = {}
 

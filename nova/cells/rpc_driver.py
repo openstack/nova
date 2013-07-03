@@ -82,6 +82,9 @@ class CellsRPCDriver(driver.BaseCellsDriver):
         """
         topic_base = CONF.cells.rpc_driver_queue_base
         proxy_manager = InterCellRPCDispatcher(msg_runner)
+        # NOTE(comstud): We do not need to use the object serializer
+        # on this because object serialization is taken care for us in
+        # the messaging module.
         dispatcher = rpc_dispatcher.RpcDispatcher([proxy_manager])
         for msg_type in msg_runner.get_message_types():
             topic = '%s.%s' % (topic_base, msg_type)

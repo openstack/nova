@@ -36,6 +36,7 @@ from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import context
 from nova.db import base
 from nova import exception
+from nova.objects import base as objects_base
 from nova.objects import instance as instance_obj
 from nova.openstack.common import excutils
 from nova.openstack.common import importutils
@@ -163,6 +164,7 @@ class _BaseMessage(object):
         # Each sub-class should set this when the message is inited
         self.next_hops = []
         self.resp_queue = None
+        self.serializer = objects_base.NovaObjectSerializer()
 
     def __repr__(self):
         _dict = self._to_dict()
@@ -305,6 +307,11 @@ class _BaseMessage(object):
         _dict = self._to_dict()
         # Convert context to dict.
         _dict['ctxt'] = _dict['ctxt'].to_dict()
+        # NOTE(comstud): 'method_kwargs' needs special serialization
+        # because it may contain objects.
+        method_kwargs = _dict['method_kwargs']
+        for k, v in method_kwargs.items():
+            method_kwargs[k] = self.serializer.serialize_entity(self.ctxt, v)
         return jsonutils.dumps(_dict)
 
     def source_is_us(self):
@@ -1065,6 +1072,7 @@ class MessageRunner(object):
         self.our_name = CONF.cells.name
         for msg_type, cls in _CELL_MESSAGE_TYPE_TO_METHODS_CLS.iteritems():
             self.methods_by_type[msg_type] = cls(self)
+        self.serializer = objects_base.NovaObjectSerializer()
 
     def _process_message_locally(self, message):
         """Message processing will call this when its determined that
@@ -1124,10 +1132,16 @@ class MessageRunner(object):
         another cell.
         """
         message_dict = jsonutils.loads(json_message)
-        message_type = message_dict.pop('message_type')
         # Need to convert context back.
         ctxt = message_dict['ctxt']
         message_dict['ctxt'] = context.RequestContext.from_dict(ctxt)
+        # NOTE(comstud): We also need to re-serialize any objects that
+        # exist in 'method_kwargs'.
+        method_kwargs = message_dict['method_kwargs']
+        for k, v in method_kwargs.items():
+            method_kwargs[k] = self.serializer.deserialize_entity(
+                    message_dict['ctxt'], v)
+        message_type = message_dict.pop('message_type')
         message_cls = _CELL_MESSAGE_TYPE_TO_MESSAGE_CLS[message_type]
         return message_cls(self, **message_dict)
 
