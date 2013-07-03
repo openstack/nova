@@ -33,6 +33,7 @@ from nova.compute import power_state
 from nova.compute import task_states
 from nova import context
 from nova import db
+from nova import exception
 from nova.image import glance
 from nova import test
 from nova.tests import fake_network
@@ -326,6 +327,19 @@ class HyperVAPITestCase(test.TestCase):
         self._mox.VerifyAll()
 
         self.assertEquals(info["state"], power_state.RUNNING)
+
+    def test_get_info_instance_not_found(self):
+        # Tests that InstanceNotFound is raised if the instance isn't found
+        # from the vmutils.vm_exists method.
+        self._instance_data = self._get_instance_data()
+
+        m = vmutils.VMUtils.vm_exists(mox.Func(self._check_instance_name))
+        m.AndReturn(False)
+
+        self._mox.ReplayAll()
+        self.assertRaises(exception.InstanceNotFound, self._conn.get_info,
+                          self._instance_data)
+        self._mox.VerifyAll()
 
     def test_spawn_cow_image(self):
         self._test_spawn_instance(True)
