@@ -2593,13 +2593,13 @@ class CloudTestCase(test.TestCase):
 
         # Resource ID
         tags = self.cloud.describe_tags(self.context,
-                filter=[{'name': 'resource_id',
+                filter=[{'name': 'resource-id',
                          'value': [ec2_id1]}])['tagSet']
         self.assertEqual(tags, [inst1_key_foo, inst1_key_bax])
 
         # Resource Type
         tags = self.cloud.describe_tags(self.context,
-                filter=[{'name': 'resource_type',
+                filter=[{'name': 'resource-type',
                          'value': ['instance']}])['tagSet']
         self.assertEqual(tags, [inst1_key_foo, inst2_key_foo,
                                 inst2_key_baz, inst1_key_bax])
@@ -2659,7 +2659,7 @@ class CloudTestCase(test.TestCase):
         self.assertRaises(exception.EC2APIError,
                           self.cloud.describe_tags,
                           self.context,
-                          filter=[{'name': 'resource_type',
+                          filter=[{'name': 'resource-type',
                                    'value': ['instance', 'volume']}])
 
     def test_resource_type_from_id(self):
