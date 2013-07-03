@@ -2108,6 +2108,12 @@ def _instance_update(context, instance_uuid, values, copy_old_instance=False):
                                                values.pop('system_metadata'),
                                                session)
 
+        # NOTE(danms): Make sure IP addresses are passed as strings to
+        # the database engine
+        for key in ('access_ip_v4', 'access_ip_v6'):
+            if key in values and values[key] is not None:
+                values[key] = str(values[key])
+
         instance_ref.update(values)
         instance_ref.save(session=session)
 
