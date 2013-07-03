@@ -82,6 +82,7 @@ def stub_out_db_instance_api(stubs):
             'mac_addresses': [{'address': values['mac_address']}],
             'root_gb': type_data['root_gb'],
             'node': values['node'],
+            'metadata': []
             }
 
         return base_options

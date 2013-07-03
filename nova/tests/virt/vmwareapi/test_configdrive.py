@@ -75,7 +75,8 @@ class ConfigDriveTestCase(test.TestCase):
                               'reservation_id': 'r-3t8muvr0',
                               'id': 1,
                               'uuid': 'fake-uuid',
-                              'node': self.node_name}
+                              'node': self.node_name,
+                              'metadata': []}
 
         class FakeInstanceMetadata(object):
             def __init__(self, instance, content=None, extra_md=None):

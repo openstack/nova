@@ -18,6 +18,7 @@
 """
 Exception classes and SOAP response error checking module.
 """
+from nova import exception
 
 from nova.openstack.common.gettextutils import _
 
@@ -96,3 +97,25 @@ class FaultCheckers(object):
             raise VimFaultException(fault_list, Exception(_("Error(s) %s "
                     "occurred in the call to RetrievePropertiesEx") %
                     exc_msg_list))
+
+
+class VMwareDriverException(exception.NovaException):
+    """Base class for all exceptions raised by the VMware Driver.
+
+    All exceptions raised by the VMwareAPI drivers should raise
+    an exception descended from this class as a root. This will
+    allow the driver to potentially trap problems related to its
+    own internal configuration before halting the nova-compute
+    node.
+    """
+    msg_fmt = _("VMware Driver fault.")
+
+
+class VMwareDriverConfigurationException(VMwareDriverException):
+    """Base class for all configuration exceptions.
+    """
+    msg_fmt = _("VMware Driver configuration fault.")
+
+
+class UseLinkedCloneConfigurationFault(VMwareDriverConfigurationException):
+    msg_fmt = _("No default value for use_linked_clone found.")

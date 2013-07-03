@@ -76,3 +76,30 @@ class VMwareVMOpsTestCase(test.TestCase):
         self.flags(network_api_class='nova.network.quantumv2.api.API')
         ops = vmops.VMwareVMOps(None, None, None)
         self.assertTrue(ops._is_neutron)
+
+    def test_use_linked_clone_override_nf(self):
+        value = vmops.VMwareVMOps.decide_linked_clone(None, False)
+        self.assertFalse(value, "No overrides present but still overridden!")
+
+    def test_use_linked_clone_override_nt(self):
+        value = vmops.VMwareVMOps.decide_linked_clone(None, True)
+        self.assertTrue(value, "No overrides present but still overridden!")
+
+    def test_use_linked_clone_override_ny(self):
+        value = vmops.VMwareVMOps.decide_linked_clone(None, "yes")
+        self.assertTrue(value, "No overrides present but still overridden!")
+
+    def test_use_linked_clone_override_ft(self):
+        value = vmops.VMwareVMOps.decide_linked_clone(False, True)
+        self.assertFalse(value,
+                        "image level metadata failed to override global")
+
+    def test_use_linked_clone_override_nt(self):
+        value = vmops.VMwareVMOps.decide_linked_clone("no", True)
+        self.assertFalse(value,
+                        "image level metadata failed to override global")
+
+    def test_use_linked_clone_override_yf(self):
+        value = vmops.VMwareVMOps.decide_linked_clone("yes", False)
+        self.assertTrue(value,
+                        "image level metadata failed to override global")
