@@ -24,7 +24,8 @@ from nova import compute
 from nova import exception
 
 
-authorize = extensions.extension_authorizer('compute', 'hypervisors')
+ALIAS = "os-hypervisors"
+authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
 
 
 def make_hypervisor(elem, detail):
@@ -243,16 +244,16 @@ class HypervisorsController(object):
         return dict(hypervisor_statistics=stats)
 
 
-class Hypervisors(extensions.ExtensionDescriptor):
+class Hypervisors(extensions.V3APIExtensionBase):
     """Admin-only hypervisor administration."""
 
     name = "Hypervisors"
-    alias = "os-hypervisors"
-    namespace = "http://docs.openstack.org/compute/ext/hypervisors/api/v1.1"
-    updated = "2012-06-21T00:00:00+00:00"
+    alias = ALIAS
+    namespace = "http://docs.openstack.org/compute/ext/hypervisors/api/v3"
+    version = 1
 
     def get_resources(self):
-        resources = [extensions.ResourceExtension('os-hypervisors',
+        resources = [extensions.ResourceExtension(ALIAS,
                 HypervisorsController(),
                 collection_actions={'detail': 'GET',
                                     'statistics': 'GET'},
@@ -261,3 +262,6 @@ class Hypervisors(extensions.ExtensionDescriptor):
                                 'servers': 'GET'})]
 
         return resources
+
+    def get_controller_extensions(self):
+        return []

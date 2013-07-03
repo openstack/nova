@@ -16,7 +16,7 @@
 from lxml import etree
 from webob import exc
 
-from nova.api.openstack.compute.contrib import hypervisors
+from nova.api.openstack.compute.plugins.v3 import hypervisors
 from nova import context
 from nova import db
 from nova.db.sqlalchemy import api as db_api
@@ -133,7 +133,6 @@ def fake_instance_get_all_by_host(context, host):
 class HypervisorsTest(test.TestCase):
     def setUp(self):
         super(HypervisorsTest, self).setUp()
-        self.context = context.get_admin_context()
         self.controller = hypervisors.HypervisorsController()
 
         self.stubs.Set(db, 'compute_node_get_all', fake_compute_node_get_all)
@@ -187,17 +186,22 @@ class HypervisorsTest(test.TestCase):
                     dict(name="inst4", uuid="uuid4")]))
 
     def test_index(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/os-hypervisors',
-                                      use_admin_context=True)
+        req = fakes.HTTPRequestV3.blank('/os-hypervisors',
+                                        use_admin_context=True)
         result = self.controller.index(req)
 
         self.assertEqual(result, dict(hypervisors=[
                     dict(id=1, hypervisor_hostname="hyper1"),
                     dict(id=2, hypervisor_hostname="hyper2")]))
 
+    def test_index_non_admin(self):
+        req = fakes.HTTPRequestV3.blank('/os-hypervisors')
+        self.assertRaises(exception.PolicyNotAuthorized,
+                          self.controller.index, req)
+
     def test_detail(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/os-hypervisors/detail',
-                                      use_admin_context=True)
+        req = fakes.HTTPRequestV3.blank('/os-hypervisors/detail',
+                                        use_admin_context=True)
         result = self.controller.detail(req)
 
         self.assertEqual(result, dict(hypervisors=[
@@ -236,12 +240,24 @@ class HypervisorsTest(test.TestCase):
                          cpu_info='cpu_info',
                          disk_available_least=100)]))
 
+    def test_detail_non_admin(self):
+        req = fakes.HTTPRequestV3.blank('/os-hypervisors/detail')
+        self.assertRaises(exception.PolicyNotAuthorized,
+                          self.controller.detail, req)
+
     def test_show_noid(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/os-hypervisors/3')
+        req = fakes.HTTPRequestV3.blank('/os-hypervisors/3',
+                                        use_admin_context=True)
         self.assertRaises(exc.HTTPNotFound, self.controller.show, req, '3')
 
+    def test_show_non_integer_id(self):
+        req = fakes.HTTPRequestV3.blank('/os-hypervisors/abc',
+                                        use_admin_context=True)
+        self.assertRaises(exc.HTTPNotFound, self.controller.show, req, 'abc')
+
     def test_show_withid(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/os-hypervisors/1')
+        req = fakes.HTTPRequestV3.blank('/os-hypervisors/1',
+                                        use_admin_context=True)
         result = self.controller.show(req, '1')
 
         self.assertEqual(result, dict(hypervisor=dict(
@@ -263,8 +279,14 @@ class HypervisorsTest(test.TestCase):
                     cpu_info='cpu_info',
                     disk_available_least=100)))
 
+    def test_show_non_admin(self):
+        req = fakes.HTTPRequestV3.blank('/os-hypervisors/1')
+        self.assertRaises(exception.PolicyNotAuthorized,
+                          self.controller.show, req, '1')
+
     def test_uptime_noid(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/os-hypervisors/3')
+        req = fakes.HTTPRequestV3.blank('/os-hypervisors/3',
+                                        use_admin_context=True)
         self.assertRaises(exc.HTTPNotFound, self.controller.show, req, '3')
 
     def test_uptime_notimplemented(self):
@@ -274,7 +296,8 @@ class HypervisorsTest(test.TestCase):
         self.stubs.Set(self.controller.host_api, 'get_host_uptime',
                        fake_get_host_uptime)
 
-        req = fakes.HTTPRequest.blank('/v2/fake/os-hypervisors/1')
+        req = fakes.HTTPRequestV3.blank('/os-hypervisors/1',
+                                        use_admin_context=True)
         self.assertRaises(exc.HTTPNotImplemented,
                           self.controller.uptime, req, '1')
 
@@ -285,7 +308,8 @@ class HypervisorsTest(test.TestCase):
         self.stubs.Set(self.controller.host_api, 'get_host_uptime',
                        fake_get_host_uptime)
 
-        req = fakes.HTTPRequest.blank('/v2/fake/os-hypervisors/1')
+        req = fakes.HTTPRequestV3.blank('/os-hypervisors/1',
+                                        use_admin_context=True)
         result = self.controller.uptime(req, '1')
 
         self.assertEqual(result, dict(hypervisor=dict(
@@ -293,8 +317,19 @@ class HypervisorsTest(test.TestCase):
                     hypervisor_hostname="hyper1",
                     uptime="fake uptime")))
 
+    def test_uptime_non_integer_id(self):
+        req = fakes.HTTPRequestV3.blank('/os-hypervisors/abc/uptime',
+                                        use_admin_context=True)
+        self.assertRaises(exc.HTTPNotFound, self.controller.uptime, req, 'abc')
+
+    def test_uptime_non_admin(self):
+        req = fakes.HTTPRequestV3.blank('/os-hypervisors/1/uptime')
+        self.assertRaises(exception.PolicyNotAuthorized, self.controller.uptime,
+                          req, '1')
+
     def test_search(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/os-hypervisors/hyper/search')
+        req = fakes.HTTPRequestV3.blank('/os-hypervisors/hyper/search',
+                                        use_admin_context=True)
         result = self.controller.search(req, 'hyper')
 
         self.assertEqual(result, dict(hypervisors=[
@@ -302,7 +337,8 @@ class HypervisorsTest(test.TestCase):
                     dict(id=2, hypervisor_hostname="hyper2")]))
 
     def test_servers(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/os-hypervisors/hyper/servers')
+        req = fakes.HTTPRequestV3.blank('/os-hypervisors/hyper/servers',
+                                        use_admin_context=True)
         result = self.controller.servers(req, 'hyper')
 
         self.assertEqual(result, dict(hypervisors=[
@@ -317,8 +353,14 @@ class HypervisorsTest(test.TestCase):
                             dict(name="inst2", uuid="uuid2"),
                             dict(name="inst4", uuid="uuid4")])]))
 
+    def test_servers_non_admin(self):
+        req = fakes.HTTPRequestV3.blank('/os-hypervisors/hyper/servers')
+        self.assertRaises(exception.PolicyNotAuthorized,
+                          self.controller.servers, req, 'hyper')
+
     def test_statistics(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/os-hypervisors/statistics')
+        req = fakes.HTTPRequestV3.blank('/os-hypervisors/statistics',
+                                        use_admin_context=True)
         result = self.controller.statistics(req)
 
         self.assertEqual(result, dict(hypervisor_statistics=dict(
@@ -334,6 +376,11 @@ class HypervisorsTest(test.TestCase):
                     current_workload=4,
                     running_vms=4,
                     disk_available_least=200)))
+
+    def test_statistics_non_admin(self):
+        req = fakes.HTTPRequestV3.blank('/os-hypervisors/statistics')
+        self.assertRaises(exception.PolicyNotAuthorized,
+                          self.controller.statistics, req)
 
 
 class HypervisorsSerializersTest(test.TestCase):
