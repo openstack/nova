@@ -23,6 +23,7 @@ their attributes like VDIs, VIFs, as well as their lookup functions.
 
 import contextlib
 import os
+import pkg_resources
 import re
 import time
 import urllib
@@ -1138,7 +1139,9 @@ def _fetch_vhd_image(context, session, instance, image_id):
               'uuid_stack': _make_uuid_stack(),
               'sr_path': get_sr_path(session)}
 
-    if _image_uses_bittorrent(context, instance):
+    if (_image_uses_bittorrent(context, instance) and
+            _add_torrent_url(instance, image_id, params)):
+
         plugin_name = 'bittorrent'
         callback = None
         _add_bittorrent_params(image_id, params)
@@ -1179,9 +1182,65 @@ def _generate_glance_callback(context):
     return pick_glance
 
 
+_TORRENT_URL_FN = None  # driver function to determine torrent URL to use
+
+
+def _lookup_torrent_url_fn():
+    """Load a "fetcher" func to get the right torrent URL via entrypoints."""
+    namespace = "nova.virt.xenapi.vm_utils"
+    name = "torrent_url"
+
+    eps = pkg_resources.iter_entry_points(namespace)
+    eps = [ep for ep in eps if ep.name == name]
+
+    x = len(eps)
+
+    if x == 0:
+        LOG.debug(_("No torrent URL fetcher extension found."))
+        return None
+    elif x > 1:
+        raise RuntimeError(_("Multiple torrent URL fetcher extension found.  "
+                             "Failing."))
+
+    ep = eps[0]
+    LOG.debug(_("Loading torrent URL fetcher from entry points %(ep)s"),
+              {'ep': ep})
+    fn = ep.load()
+    return fn
+
+
+def _add_torrent_url(instance, image_id, params):
+    """Add the torrent URL associated with the given image.
+
+    :param instance: instance ref
+    :param image_id: unique id of image
+    :param params: BT params dict
+    :returns: True if the URL could be obtained
+    """
+    global _TORRENT_URL_FN
+    if not _TORRENT_URL_FN:
+        fn = _lookup_torrent_url_fn()
+        if fn is None:
+            LOG.debug(_("No torrent URL fetcher installed."))
+            _TORRENT_URL_FN = get_torrent_url  # default
+        else:
+            _TORRENT_URL_FN = fn
+
+    try:
+        url = _TORRENT_URL_FN(instance, image_id)
+        params['torrent_url'] = url
+        return True
+    except Exception:
+        LOG.exception(_("Failed to get torrent URL for image %s") % image_id)
+        return False  # fall back to using glance
+
+
+def get_torrent_url(instance, image_id):
+    return urlparse.urljoin(CONF.xenapi_torrent_base_url,
+                            "%s.torrent" % image_id)
+
+
 def _add_bittorrent_params(image_id, params):
-    params['torrent_url'] = urlparse.urljoin(CONF.xenapi_torrent_base_url,
-                                             "%s.torrent" % image_id)
     params['torrent_seed_duration'] = CONF.xenapi_torrent_seed_duration
     params['torrent_seed_chance'] = CONF.xenapi_torrent_seed_chance
     params['torrent_max_last_accessed'] = CONF.xenapi_torrent_max_last_accessed
