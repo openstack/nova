@@ -71,7 +71,7 @@ class CoreFilter(BaseCoreFilter):
 
 
 class AggregateCoreFilter(BaseCoreFilter):
-    """AggregateRamFilter with per-aggregate CPU subscription flag.
+    """AggregateCoreFilter with per-aggregate CPU subscription flag.
 
     Fall back to global cpu_allocation_ratio if no per-aggregate setting found.
     """
