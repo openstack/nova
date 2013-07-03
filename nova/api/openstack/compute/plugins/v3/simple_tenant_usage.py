@@ -28,10 +28,11 @@ from nova.compute import flavors
 from nova import exception
 from nova.openstack.common import timeutils
 
+ALIAS = 'os-simple-tenant-usage'
 authorize_show = extensions.extension_authorizer('compute',
-                                                 'simple_tenant_usage:show')
+                                                 'v3:' + ALIAS + ':show')
 authorize_list = extensions.extension_authorizer('compute',
-                                                 'simple_tenant_usage:list')
+                                                 'v3:' + ALIAS + ':list')
 
 
 def make_usage(elem):
@@ -272,20 +273,21 @@ class SimpleTenantUsageController(object):
         return {'tenant_usage': usage}
 
 
-class Simple_tenant_usage(extensions.ExtensionDescriptor):
+class SimpleTenantUsage(extensions.V3APIExtensionBase):
     """Simple tenant usage extension."""
 
     name = "SimpleTenantUsage"
-    alias = "os-simple-tenant-usage"
+    alias = ALIAS
     namespace = ("http://docs.openstack.org/compute/ext/"
-                 "os-simple-tenant-usage/api/v1.1")
-    updated = "2011-08-19T00:00:00+00:00"
+                 "os-simple-tenant-usage/api/v3")
+    version = 1
 
     def get_resources(self):
-        resources = []
+        res = [extensions.ResourceExtension('os-simple-tenant-usage',
+                                           SimpleTenantUsageController())]
+        return res
 
-        res = extensions.ResourceExtension('os-simple-tenant-usage',
-                                           SimpleTenantUsageController())
-        resources.append(res)
-
-        return resources
+    def get_controller_extensions(self):
+        """It's an abstract function V3APIExtensionBase and the extension
+        will not be loaded without it."""
+        return []
