@@ -1917,8 +1917,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                 LOG.warning(_('Reboot failed but instance is running'),
                             context=context, instance=instance)
             else:
-                LOG.error(_('Cannot reboot instance: %(error)s'),
-                          locals(), context=context, instance=instance)
+                LOG.error(_('Cannot reboot instance: %s'), error,
+                          context=context, instance=instance)
                 self._set_instance_error_state(context, instance['uuid'])
                 raise type_, value, tb
 

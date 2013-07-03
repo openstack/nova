@@ -313,11 +313,10 @@ class API(base.Base):
             used = quotas[resource] - headroom[resource]
             total_allowed = used + headroom[resource]
             overs = ','.join(overs)
-
-            pid = context.project_id
             LOG.warn(_("%(overs)s quota exceeded for %(pid)s,"
                        " tried to run %(min_count)s instances. %(msg)s"),
-                     locals())
+                     {'overs': overs, 'pid': context.project_id,
+                      'min_count': min_count, 'msg': msg})
             requested = dict(instances=min_count, cores=req_cores, ram=req_ram)
             raise exception.TooManyInstances(overs=overs,
                                              req=requested[resource],
@@ -334,9 +333,10 @@ class API(base.Base):
         try:
             QUOTAS.limit_check(context, metadata_items=num_metadata)
         except exception.OverQuota as exc:
-            pid = context.project_id
             LOG.warn(_("Quota exceeded for %(pid)s, tried to set "
-                       "%(num_metadata)s metadata properties") % locals())
+                       "%(num_metadata)s metadata properties"),
+                     {'pid': context.project_id,
+                      'num_metadata': num_metadata})
             quota_metadata = exc.kwargs['quotas']['metadata_items']
             raise exception.MetadataLimitExceeded(allowed=quota_metadata)
 
@@ -1255,8 +1255,8 @@ class API(base.Base):
                 try:
                     old_inst_type = flavors.get_flavor(old_inst_type_id)
                 except exception.InstanceTypeNotFound:
-                    LOG.warning(_("instance type %(old_inst_type_id)d "
-                                  "not found") % locals())
+                    LOG.warning(_("instance type %d not found"),
+                                old_inst_type_id)
                     pass
                 else:
                     instance_vcpus = old_inst_type['vcpus']
@@ -2065,7 +2065,9 @@ class API(base.Base):
         new_instance_type_name = new_instance_type['name']
         LOG.debug(_("Old instance type %(current_instance_type_name)s, "
                     " new instance type %(new_instance_type_name)s"),
-                  locals(), instance=instance)
+                  {'current_instance_type_name': current_instance_type_name,
+                   'new_instance_type_name': new_instance_type_name},
+                  instance=instance)
 
         # FIXME(sirp): both of these should raise InstanceTypeNotFound instead
         if not new_instance_type:
@@ -2109,10 +2111,9 @@ class API(base.Base):
             used = quotas[resource] - headroom[resource]
             total_allowed = used + headroom[resource]
             overs = ','.join(overs)
-
-            pid = context.project_id
             LOG.warn(_("%(overs)s quota exceeded for %(pid)s,"
-                       " tried to resize instance."), locals())
+                       " tried to resize instance."),
+                     {'overs': overs, 'pid': context.project_id})
             raise exception.TooManyInstances(overs=overs,
                                              req=deltas[resource],
                                              used=used, allowed=total_allowed,
@@ -2578,9 +2579,8 @@ class API(base.Base):
         inst_host = instance['host']
         service = self.db.service_get_by_compute_host(context, inst_host)
         if self.servicegroup_api.service_is_up(service):
-            msg = (_('Instance compute service state on %(inst_host)s '
-                     'expected to be down, but it was up.'
-                     ) % locals())
+            msg = (_('Instance compute service state on %s '
+                     'expected to be down, but it was up.') % inst_host)
             LOG.error(msg)
             raise exception.ComputeServiceUnavailable(msg)
 

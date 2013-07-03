@@ -536,14 +536,14 @@ class ResourceTracker(object):
     def _update_usage_from_orphans(self, resources, orphans):
         """Include orphaned instances in usage."""
         for orphan in orphans:
-            uuid = orphan['uuid']
             memory_mb = orphan['memory_mb']
 
             LOG.warn(_("Detected running orphan instance: %(uuid)s (consuming "
-                       "%(memory_mb)s MB memory") % locals())
+                       "%(memory_mb)s MB memory)"),
+                     {'uuid': orphan['uuid'], 'memory_mb': memory_mb})
 
             # just record memory usage for the orphan
-            usage = {'memory_mb': orphan['memory_mb']}
+            usage = {'memory_mb': memory_mb}
             self._update_usage(resources, usage)
 
     def _verify_resources(self, resources):
