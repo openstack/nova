@@ -2297,7 +2297,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             # on the instance and set the vm_state appropriately. We default
             # to ACTIVE because if the power state is not SHUTDOWN, we
             # assume _sync_instance_power_state will clean it up.
-            p_state = self._get_power_state(context, instance)
+            p_state = instance['power_state']
             vm_state = None
             if p_state == power_state.SHUTDOWN:
                 vm_state = vm_states.STOPPED
