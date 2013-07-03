@@ -468,12 +468,6 @@ class XenAPIDriver(driver.ComputeDriver):
         checks to do this for us."""
         pass
 
-    def pre_block_migration(self, ctxt, instance_ref, disk_info_json):
-        """Used by libvirt for live migration. We rely on xenapi
-        checks to do this for us. May be used in the future to
-        populate the vdi/vif maps"""
-        pass
-
     def live_migration(self, ctxt, instance_ref, dest,
                        post_method, recover_method, block_migration=False,
                        migrate_data=None):
@@ -497,7 +491,7 @@ class XenAPIDriver(driver.ComputeDriver):
                                  recover_method, block_migration, migrate_data)
 
     def pre_live_migration(self, context, instance_ref, block_device_info,
-                           network_info, migrate_data=None):
+                           network_info, data, migrate_data=None):
         """Preparation live migration.
 
         :params block_device_info:

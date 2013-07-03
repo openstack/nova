@@ -672,7 +672,7 @@ class HyperVAPITestCase(test.TestCase):
 
         self._mox.ReplayAll()
         self._conn.pre_live_migration(self._context, instance,
-                                      block_device_info, network_info)
+                                      block_device_info, None, network_info)
         self._mox.VerifyAll()
 
         if cow:

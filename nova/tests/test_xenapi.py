@@ -2684,7 +2684,7 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBase):
         # ensure method is present
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         self.conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
-        self.conn.pre_live_migration(None, None, None, None)
+        self.conn.pre_live_migration(None, None, None, None, None)
 
     def test_post_live_migration_at_destination(self):
         # ensure method is present

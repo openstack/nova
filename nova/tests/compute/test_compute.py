@@ -3155,6 +3155,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.driver.pre_live_migration(mox.IsA(c), mox.IsA(instance),
                                                {'block_device_mapping': []},
                                                mox.IgnoreArg(),
+                                               mox.IgnoreArg(),
                                                mox.IgnoreArg())
         self.mox.StubOutWithMock(self.compute.driver,
                                  'ensure_filtering_rules_for_instance')
