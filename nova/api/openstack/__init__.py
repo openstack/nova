@@ -314,7 +314,7 @@ class APIRouterV3(base_wsgi.Router):
 
         missing_core_extensions = self.get_missing_core_extensions(
             self.loaded_extension_info.get_extensions().keys())
-        if missing_core_extensions:
+        if not self.init_only and missing_core_extensions:
             LOG.critical(_("Missing core API extensions: %s"),
                          missing_core_extensions)
             raise exception.CoreAPIMissing(
