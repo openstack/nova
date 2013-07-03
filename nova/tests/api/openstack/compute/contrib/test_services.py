@@ -320,10 +320,15 @@ class ServicesTest(test.TestCase):
         self.assertEqual(res_dict, response)
 
     def test_services_enable(self):
+        def _service_update(context, service_id, values):
+            self.assertEqual(values['disabled_reason'], None)
+
+        self.stubs.Set(db, "service_update", _service_update)
+
         body = {'host': 'host1', 'binary': 'nova-compute'}
         req = fakes.HTTPRequest.blank('/v2/fake/os-services/enable')
-        res_dict = self.controller.update(req, "enable", body)
 
+        res_dict = self.controller.update(req, "enable", body)
         self.assertEqual(res_dict['service']['status'], 'enabled')
         self.assertFalse('disabled_reason' in res_dict['service'])
 
