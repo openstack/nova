@@ -18,6 +18,7 @@ from oslo.config import cfg
 
 from nova.objects import base as objects_base
 from nova.openstack.common import jsonutils
+from nova.openstack.common.rpc import common as rpc_common
 import nova.openstack.common.rpc.proxy
 
 CONF = cfg.CONF
@@ -260,9 +261,22 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     def block_device_mapping_get_all_by_instance(self, context, instance,
                                                  legacy=True):
         instance_p = jsonutils.to_primitive(instance)
-        msg = self.make_msg('block_device_mapping_get_all_by_instance',
-                            instance=instance_p, legacy=legacy)
-        return self.call(context, msg, version='1.51')
+        if self.can_send_version('1.51'):
+            version = '1.51'
+            msg = self.make_msg('block_device_mapping_get_all_by_instance',
+                                instance=instance_p, legacy=legacy)
+        elif legacy:
+            # If the remote side is >= 1.51, it defaults to legacy=True.
+            # If it's older, it only understands the legacy format.
+            version = '1.13'
+            msg = self.make_msg('block_device_mapping_get_all_by_instance',
+                                instance=instance_p)
+        else:
+            # If we require new style data, but can't ask for it, then we must
+            # fail here.
+            raise rpc_common.RpcVersionCapError(version_cap=self.version_cap)
+
+        return self.call(context, msg, version=version)
 
     def block_device_mapping_destroy(self, context, bdms=None,
                                      instance=None, volume_id=None,
