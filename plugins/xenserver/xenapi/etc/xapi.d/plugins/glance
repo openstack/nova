@@ -132,77 +132,81 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port,
             conn = httplib.HTTPSConnection(glance_host, glance_port)
         else:
             conn = httplib.HTTPConnection(glance_host, glance_port)
-
-        # NOTE(sirp): httplib under python2.4 won't accept a file-like object
-        # to request
-        conn.putrequest('PUT', '/v1/images/%s' % image_id)
     except Exception, error:
         raise RetryableError(error)
 
-    # NOTE(sirp): There is some confusion around OVF. Here's a summary of
-    # where we currently stand:
-    #   1. OVF as a container format is misnamed. We really should be using
-    #      OVA since that is the name for the container format; OVF is the
-    #      standard applied to the manifest file contained within.
-    #   2. We're currently uploading a vanilla tarball. In order to be OVF/OVA
-    #      compliant, we'll need to embed a minimal OVF manifest as the first
-    #      file.
-
-    # NOTE(dprince): In order to preserve existing Glance properties
-    # we set X-Glance-Registry-Purge-Props on this request.
-    headers = {
-        'content-type': 'application/octet-stream',
-        'transfer-encoding': 'chunked',
-        'x-image-meta-is-public': 'False',
-        'x-image-meta-status': 'queued',
-        'x-image-meta-disk-format': 'vhd',
-        'x-image-meta-container-format': 'ovf',
-        'x-glance-registry-purge-props': 'False'}
-
-    # If we have an auth_token, set an x-auth-token header
-    if auth_token:
-        headers['x-auth-token'] = auth_token
-
-    for key, value in properties.iteritems():
-        header_key = "x-image-meta-property-%s" % key.replace('_', '-')
-        headers[header_key] = str(value)
-
-    for header, value in headers.iteritems():
-        conn.putheader(header, value)
-    conn.endheaders()
-
-    callback_data = {'bytes_written': 0}
-
-    def send_chunked_transfer_encoded(chunk):
-        chunk_len = len(chunk)
-        callback_data['bytes_written'] += chunk_len
+    try:
         try:
-            conn.send("%x\r\n%s\r\n" % (chunk_len, chunk))
+            # NOTE(sirp): httplib under python2.4 won't accept
+            # a file-like object to request
+            conn.putrequest('PUT', '/v1/images/%s' % image_id)
         except Exception, error:
             raise RetryableError(error)
 
-    utils.create_tarball(
-            None, staging_path, callback=send_chunked_transfer_encoded)
+        # NOTE(sirp): There is some confusion around OVF. Here's a summary of
+        # where we currently stand:
+        #   1. OVF as a container format is misnamed. We really should be using
+        #      OVA since that is the name for the container format; OVF is the
+        #      standard applied to the manifest file contained within.
+        #   2. We're currently uploading a vanilla tarball. In order to be
+        #      OVF/OVA compliant, we'll need to embed a minimal OVF manifest
+        #      as the first file.
 
-    try:
-        conn.send("0\r\n\r\n")  # Chunked-Transfer terminator
-    except Exception, error:
-        raise RetryableError(error)
+        # NOTE(dprince): In order to preserve existing Glance properties
+        # we set X-Glance-Registry-Purge-Props on this request.
+        headers = {
+            'content-type': 'application/octet-stream',
+            'transfer-encoding': 'chunked',
+            'x-image-meta-is-public': 'False',
+            'x-image-meta-status': 'queued',
+            'x-image-meta-disk-format': 'vhd',
+            'x-image-meta-container-format': 'ovf',
+            'x-glance-registry-purge-props': 'False'}
 
-    bytes_written = callback_data['bytes_written']
-    logging.info("Wrote %d bytes to %s" % (bytes_written, url))
+        # If we have an auth_token, set an x-auth-token header
+        if auth_token:
+            headers['x-auth-token'] = auth_token
 
-    resp = conn.getresponse()
-    if resp.status != httplib.OK:
-        logging.error("Unexpected response while writing image data to %s: "
-                      "Response Status: %i, Response body: %s"
-                      % (url, resp.status, resp.read()))
-        raise RetryableError("Unexpected response [%i] while uploading "
-                        "image [%s] "
-                        "to glance host [%s:%s]"
-                        % (resp.status, image_id, glance_host, glance_port))
+        for key, value in properties.iteritems():
+            header_key = "x-image-meta-property-%s" % key.replace('_', '-')
+            headers[header_key] = str(value)
 
-    conn.close()
+        for header, value in headers.iteritems():
+            conn.putheader(header, value)
+        conn.endheaders()
+
+        callback_data = {'bytes_written': 0}
+
+        def send_chunked_transfer_encoded(chunk):
+            chunk_len = len(chunk)
+            callback_data['bytes_written'] += chunk_len
+            try:
+                conn.send("%x\r\n%s\r\n" % (chunk_len, chunk))
+            except Exception, error:
+                raise RetryableError(error)
+
+        utils.create_tarball(
+                None, staging_path, callback=send_chunked_transfer_encoded)
+
+        try:
+            conn.send("0\r\n\r\n")  # Chunked-Transfer terminator
+        except Exception, error:
+            raise RetryableError(error)
+
+        bytes_written = callback_data['bytes_written']
+        logging.info("Wrote %d bytes to %s" % (bytes_written, url))
+
+        resp = conn.getresponse()
+        if resp.status != httplib.OK:
+            logging.error("Unexpected response while writing image data to %s: "
+                          "Response Status: %i, Response body: %s"
+                          % (url, resp.status, resp.read()))
+            raise RetryableError("Unexpected response [%i] while uploading "
+                            "image [%s] "
+                            "to glance host [%s:%s]"
+                            % (resp.status, image_id, glance_host, glance_port))
+    finally:
+        conn.close()
 
 
 def download_vhd(session, image_id, glance_host, glance_port, glance_use_ssl,
