@@ -40,8 +40,10 @@ fake_extensions = {
                            'ext3 namespace', 1)
 }
 
+
 def fake_policy_enforce(context, action, target, do_raise=True):
     return True
+
 
 def fake_policy_enforce_selective(context, action, target, do_raise=True):
     if action == 'compute_extension:v3:ext1-alias:discoverable':

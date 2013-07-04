@@ -19,7 +19,6 @@ from lxml import etree
 from webob import exc
 
 from nova.api.openstack.compute.plugins.v3 import cells as cells_ext
-from nova.api.openstack import extensions
 from nova.api.openstack import xmlutil
 from nova.cells import rpcapi as cells_rpcapi
 from nova import context

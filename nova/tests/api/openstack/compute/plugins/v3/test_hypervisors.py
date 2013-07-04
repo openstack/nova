@@ -17,7 +17,6 @@ from lxml import etree
 from webob import exc
 
 from nova.api.openstack.compute.plugins.v3 import hypervisors
-from nova import context
 from nova import db
 from nova.db.sqlalchemy import api as db_api
 from nova import exception
@@ -324,8 +323,8 @@ class HypervisorsTest(test.TestCase):
 
     def test_uptime_non_admin(self):
         req = fakes.HTTPRequestV3.blank('/os-hypervisors/1/uptime')
-        self.assertRaises(exception.PolicyNotAuthorized, self.controller.uptime,
-                          req, '1')
+        self.assertRaises(exception.PolicyNotAuthorized,
+                          self.controller.uptime, req, '1')
 
     def test_search(self):
         req = fakes.HTTPRequestV3.blank('/os-hypervisors/hyper/search',

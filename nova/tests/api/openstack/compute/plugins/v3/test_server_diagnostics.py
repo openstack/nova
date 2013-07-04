@@ -45,7 +45,8 @@ class ServerDiagnosticsTest(test.TestCase):
                        fake_get_diagnostics)
         self.stubs.Set(compute_api.API, 'get', fake_instance_get)
 
-        self.router = compute.APIRouterV3(init_only=('servers', 'os-server-diagnostics'))
+        self.router = compute.APIRouterV3(init_only=('servers',
+                                                     'os-server-diagnostics'))
 
     def test_get_diagnostics(self):
         req = fakes.HTTPRequestV3.blank(

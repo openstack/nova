@@ -18,8 +18,8 @@ import datetime
 from lxml import etree
 from webob import exc
 
-from nova.api.openstack.compute.plugins.v3 import flavor_access
 from nova.api.openstack.compute import flavors as flavors_api
+from nova.api.openstack.compute.plugins.v3 import flavor_access
 from nova.compute import flavors
 from nova import context
 from nova import exception

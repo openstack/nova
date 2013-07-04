@@ -69,7 +69,7 @@ class ExtensionInfoController(object):
         return ext_data
 
     def _get_extensions(self, context):
-        """Filter extensions list based on policy"""
+        """Filter extensions list based on policy."""
 
         discoverable_extensions = dict()
         for alias, ext in self.extension_info.get_extensions().iteritems():
@@ -78,7 +78,8 @@ class ExtensionInfoController(object):
             if authorize(context, action='discoverable'):
                 discoverable_extensions[alias] = ext
             else:
-                LOG.debug(_("Filter out extension %s from discover list"), alias)
+                LOG.debug(_("Filter out extension %s from discover list"),
+                          alias)
         return discoverable_extensions
 
     @wsgi.serializers(xml=ExtensionsTemplate)

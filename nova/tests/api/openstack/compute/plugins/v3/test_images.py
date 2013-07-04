@@ -649,8 +649,10 @@ class ImagesControllerTest(test.TestCase):
                 raise exception.Invalid('meow')
 
         request = fakes.HTTPRequestV3.blank('/v3/os-images?marker=invalid')
-        controller = images.ImagesController(image_service=InvalidImageService())
-        self.assertRaises(webob.exc.HTTPBadRequest, controller.detail, request)
+        controller = images.ImagesController(
+                                image_service=InvalidImageService())
+        self.assertRaises(webob.exc.HTTPBadRequest, controller.detail,
+                          request)
 
     def test_generate_alternate_link(self):
         view = images_view.ViewBuilder()

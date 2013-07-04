@@ -289,5 +289,6 @@ class SimpleTenantUsage(extensions.V3APIExtensionBase):
 
     def get_controller_extensions(self):
         """It's an abstract function V3APIExtensionBase and the extension
-        will not be loaded without it."""
+        will not be loaded without it.
+        """
         return []

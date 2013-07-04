@@ -146,7 +146,7 @@ class FlavorsController(wsgi.Controller):
 
 
 class Flavors(extensions.V3APIExtensionBase):
-    """ Flavors Extension. """
+    """Flavors Extension."""
     name = "flavors"
     alias = "flavors"
     namespace = "http://docs.openstack.org/compute/core/flavors/v3"
