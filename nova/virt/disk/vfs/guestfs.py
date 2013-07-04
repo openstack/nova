@@ -151,27 +151,27 @@ class VFSGuestFS(vfs.VFS):
         return path
 
     def make_path(self, path):
-        LOG.debug(_("Make directory path=%(path)s") % locals())
+        LOG.debug(_("Make directory path=%s"), path)
         path = self._canonicalize_path(path)
         self.handle.mkdir_p(path)
 
     def append_file(self, path, content):
-        LOG.debug(_("Append file path=%(path)s") % locals())
+        LOG.debug(_("Append file path=%s"), path)
         path = self._canonicalize_path(path)
         self.handle.write_append(path, content)
 
     def replace_file(self, path, content):
-        LOG.debug(_("Replace file path=%(path)s") % locals())
+        LOG.debug(_("Replace file path=%s"), path)
         path = self._canonicalize_path(path)
         self.handle.write(path, content)
 
     def read_file(self, path):
-        LOG.debug(_("Read file path=%(path)s") % locals())
+        LOG.debug(_("Read file path=%s"), path)
         path = self._canonicalize_path(path)
         return self.handle.read_file(path)
 
     def has_file(self, path):
-        LOG.debug(_("Has file path=%(path)s") % locals())
+        LOG.debug(_("Has file path=%s"), path)
         path = self._canonicalize_path(path)
         try:
             self.handle.stat(path)
@@ -180,13 +180,15 @@ class VFSGuestFS(vfs.VFS):
             return False
 
     def set_permissions(self, path, mode):
-        LOG.debug(_("Set permissions path=%(path)s mode=%(mode)s") % locals())
+        LOG.debug(_("Set permissions path=%(path)s mode=%(mode)s"),
+                  {'path': path, 'mode': mode})
         path = self._canonicalize_path(path)
         self.handle.chmod(mode, path)
 
     def set_ownership(self, path, user, group):
         LOG.debug(_("Set ownership path=%(path)s "
-                    "user=%(user)s group=%(group)s") % locals())
+                    "user=%(user)s group=%(group)s"),
+                  {'path': path, 'user': user, 'group': group})
         path = self._canonicalize_path(path)
         uid = -1
         gid = -1
@@ -198,5 +200,6 @@ class VFSGuestFS(vfs.VFS):
             gid = int(self.handle.aug_get(
                     "/files/etc/group/" + group + "/gid"))
 
-        LOG.debug(_("chown uid=%(uid)d gid=%(gid)s") % locals())
+        LOG.debug(_("chown uid=%(uid)d gid=%(gid)s"),
+                  {'uid': uid, 'gid': gid})
         self.handle.chown(uid, gid, path)

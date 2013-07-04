@@ -206,7 +206,8 @@ def fetch_to_raw(context, image_href, path, user_id, project_id):
         backing_file = data.backing_file
         if backing_file is not None:
             raise exception.ImageUnacceptable(image_id=image_href,
-                reason=_("fmt=%(fmt)s backed by: %(backing_file)s") % locals())
+                reason=(_("fmt=%(fmt)s backed by: %(backing_file)s") %
+                        {'fmt': fmt, 'backing_file': backing_file}))
 
         if fmt != "raw" and CONF.force_raw_images:
             staged = "%s.converted" % path

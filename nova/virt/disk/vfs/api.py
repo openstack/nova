@@ -25,8 +25,9 @@ class VFS(object):
     @staticmethod
     def instance_for_image(imgfile, imgfmt, partition):
         LOG.debug(_("Instance for image imgfile=%(imgfile)s "
-                    "imgfmt=%(imgfmt)s partition=%(partition)s")
-                  % locals())
+                    "imgfmt=%(imgfmt)s partition=%(partition)s"),
+                  {'imgfile': imgfile, 'imgfmt': imgfmt,
+                   'partition': partition})
         hasGuestfs = False
         try:
             LOG.debug(_("Trying to import guestfs"))

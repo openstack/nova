@@ -93,7 +93,7 @@ for s in CONF.virt_mkfs:
 
 def mkfs(os_type, fs_label, target):
     mkfs_command = (_MKFS_COMMAND.get(os_type, _DEFAULT_MKFS_COMMAND) or
-                    '') % locals()
+                    '') % {'fs_label': fs_label, 'target': target}
     if mkfs_command:
         utils.execute(*mkfs_command.split(), run_as_root=True)
 
