@@ -168,29 +168,8 @@ class ComputeCellsAPI(compute_api.API):
         """
         return super(ComputeCellsAPI, self).create(*args, **kwargs)
 
-    def update_state(self, context, instance, new_state):
-        """Updates the state of a compute instance.
-        For example to 'active' or 'error'.
-        Also sets 'task_state' to None.
-        Used by admin_actions api
-
-        :param context: The security context
-        :param instance: The instance to update
-        :param new_state: A member of vm_state to change
-                          the instance's state to,
-                          eg. 'active'
-        """
-        self.update(context, instance,
-                    pass_on_state_change=True,
-                    vm_state=new_state,
-                    task_state=None)
-
-    def update(self, context, instance, pass_on_state_change=False, **kwargs):
-        """
-        Update an instance.
-        :param pass_on_state_change: if true, the state change will be passed
-                                     on to child cells
-        """
+    def update(self, context, instance, **kwargs):
+        """Update an instance."""
         cell_name = instance['cell_name']
         if cell_name and self._cell_read_only(cell_name):
             raise exception.InstanceInvalidState(
@@ -201,12 +180,12 @@ class ComputeCellsAPI(compute_api.API):
         rv = super(ComputeCellsAPI, self).update(context,
                 instance, **kwargs)
         kwargs_copy = kwargs.copy()
-        if not pass_on_state_change:
-            # We need to skip vm_state/task_state updates... those will
-            # happen via a _cast_to_cells when running a different
-            # compute api method
-            kwargs_copy.pop('vm_state', None)
-            kwargs_copy.pop('task_state', None)
+        # We need to skip vm_state/task_state updates as the child
+        # cell is authoritative for these.  The admin API does
+        # support resetting state, but it has been converted to use
+        # Instance.save() with an appropriate kwarg.
+        kwargs_copy.pop('vm_state', None)
+        kwargs_copy.pop('task_state', None)
         if kwargs_copy:
             try:
                 self._cast_to_cells(context, instance, 'update',

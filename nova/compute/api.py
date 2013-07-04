@@ -1123,20 +1123,6 @@ class API(base.Base):
             host_name = service['host']
             self.compute_rpcapi.refresh_provider_fw_rules(context, host_name)
 
-    def update_state(self, context, instance, new_state):
-        """Updates the state of a compute instance.
-        For example to 'active' or 'error'.
-        Also sets 'task_state' to None.
-        Used by admin_actions api
-
-        :param context: The security context
-        :param instance: The instance to update
-        :param new_state: A member of vm_state, eg. 'active'
-        """
-        self.update(context, instance,
-                    vm_state=new_state,
-                    task_state=None)
-
     @wrap_check_policy
     def update(self, context, instance, **kwargs):
         """Updates the instance in the datastore.
