@@ -75,8 +75,7 @@ def _translate_volume_summary_view(context, vol):
     LOG.audit(_("vol=%s"), vol, context=context)
 
     if vol.get('volume_metadata'):
-        metadata = vol.get('volume_metadata')
-        d['metadata'] = dict((item['key'], item['value']) for item in metadata)
+        d['metadata'] = vol.get('volume_metadata')
     else:
         d['metadata'] = {}
 
