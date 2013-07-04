@@ -5108,6 +5108,101 @@ class CertificateTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self._assertEqualObjects(self.created[1], cert[0])
 
 
+class ConsoleTestCase(test.TestCase, ModelsObjectComparatorMixin):
+
+    def setUp(self):
+        super(ConsoleTestCase, self).setUp()
+        self.ctxt = context.get_admin_context()
+        pools_data = [
+            {'address': '192.168.10.10',
+             'username': 'user1',
+             'password': 'passwd1',
+             'console_type': 'type1',
+             'public_hostname': 'public_host1',
+             'host': 'host1',
+             'compute_host': 'compute_host1',
+            },
+            {'address': '192.168.10.11',
+             'username': 'user2',
+             'password': 'passwd2',
+             'console_type': 'type2',
+             'public_hostname': 'public_host2',
+             'host': 'host2',
+             'compute_host': 'compute_host2',
+            },
+        ]
+        console_pools = [db.console_pool_create(self.ctxt, val)
+                         for val in pools_data]
+        instance_uuid = uuidutils.generate_uuid()
+        self.console_data = [dict([('instance_name', 'name' + str(x)),
+                                  ('instance_uuid', instance_uuid),
+                                  ('password', 'pass' + str(x)),
+                                  ('port', 7878 + x),
+                                  ('pool_id', console_pools[x]['id'])])
+                             for x in xrange(len(pools_data))]
+        self.consoles = [db.console_create(self.ctxt, val)
+                         for val in self.console_data]
+
+    def test_console_create(self):
+        ignored_keys = ['id', 'deleted', 'deleted_at', 'created_at',
+                        'updated_at']
+        for console in self.consoles:
+            self.assertIsNotNone(console['id'])
+        self._assertEqualListsOfObjects(self.console_data, self.consoles,
+                                        ignored_keys=ignored_keys)
+
+    def test_console_get_by_id(self):
+        console = self.consoles[0]
+        console_get = db.console_get(self.ctxt, console['id'])
+        self._assertEqualObjects(console, console_get,
+                                 ignored_keys=['pool'])
+
+    def test_console_get_by_id_uuid(self):
+        console = self.consoles[0]
+        console_get = db.console_get(self.ctxt, console['id'],
+                                     console['instance_uuid'])
+        self._assertEqualObjects(console, console_get,
+                                 ignored_keys=['pool'])
+
+    def test_console_get_by_pool_instance(self):
+        console = self.consoles[0]
+        console_get = db.console_get_by_pool_instance(self.ctxt,
+                            console['pool_id'], console['instance_uuid'])
+        self._assertEqualObjects(console, console_get,
+                                 ignored_keys=['pool'])
+
+    def test_console_get_all_by_instance(self):
+        instance_uuid = self.consoles[0]['instance_uuid']
+        consoles_get = db.console_get_all_by_instance(self.ctxt, instance_uuid)
+        self._assertEqualListsOfObjects(self.consoles, consoles_get)
+
+    def test_console_get_all_by_instance_empty(self):
+        consoles_get = db.console_get_all_by_instance(self.ctxt,
+                                                uuidutils.generate_uuid())
+        self.assertEqual(consoles_get, [])
+
+    def test_console_delete(self):
+        console_id = self.consoles[0]['id']
+        db.console_delete(self.ctxt, console_id)
+        self.assertRaises(exception.ConsoleNotFound, db.console_get,
+                          self.ctxt, console_id)
+
+    def test_console_get_by_pool_instance_not_found(self):
+        self.assertRaises(exception.ConsoleNotFoundInPoolForInstance,
+                          db.console_get_by_pool_instance, self.ctxt,
+                          self.consoles[0]['pool_id'],
+                          uuidutils.generate_uuid())
+
+    def test_console_get_not_found(self):
+        self.assertRaises(exception.ConsoleNotFound, db.console_get,
+                          self.ctxt, 100500)
+
+    def test_console_get_not_found_instance(self):
+        self.assertRaises(exception.ConsoleNotFoundForInstance, db.console_get,
+                          self.ctxt, self.consoles[0]['id'],
+                          uuidutils.generate_uuid())
+
+
 class CellTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     _ignored_keys = ['id', 'deleted', 'deleted_at', 'created_at', 'updated_at']
