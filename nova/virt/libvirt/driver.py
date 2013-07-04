@@ -3493,8 +3493,6 @@ class LibvirtDriver(driver.ComputeDriver):
             else:
                 # Creating backing file follows same way as spawning instances.
                 cache_name = os.path.basename(info['backing_file'])
-                # Remove any size tags which the cache manages
-                cache_name = cache_name.split('_')[0]
 
                 image = self.image_backend.image(instance,
                                                  instance_disk,
