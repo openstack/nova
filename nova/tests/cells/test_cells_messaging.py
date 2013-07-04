@@ -23,6 +23,7 @@ from nova.compute import vm_states
 from nova import context
 from nova import db
 from nova import exception
+from nova.objects import base as objects_base
 from nova.objects import instance as instance_obj
 from nova.openstack.common import rpc
 from nova.openstack.common import timeutils
@@ -259,6 +260,49 @@ class CellsMessageClassesTestCase(test.TestCase):
         self.assertEqual(self.ctxt, call_info['context'])
         self.assertEqual(method_kwargs, call_info['kwargs'])
         self.assertEqual(target_cell, call_info['routing_path'])
+
+    def test_child_targeted_message_with_object(self):
+        target_cell = 'api-cell!child-cell1'
+        method = 'our_fake_method'
+        direction = 'down'
+
+        call_info = {}
+
+        class CellsMsgingTestObject(objects_base.NovaObject):
+            """Test object.  We just need 1 field in order to test
+            that this gets serialized properly.
+            """
+            fields = {'test': str}
+
+        test_obj = CellsMsgingTestObject()
+        test_obj.test = 'meow'
+
+        method_kwargs = dict(obj=test_obj, arg1=1, arg2=2)
+
+        def our_fake_method(message, **kwargs):
+            call_info['context'] = message.ctxt
+            call_info['routing_path'] = message.routing_path
+            call_info['kwargs'] = kwargs
+
+        fakes.stub_tgt_method(self, 'child-cell1', 'our_fake_method',
+                our_fake_method)
+
+        tgt_message = messaging._TargetedMessage(self.msg_runner,
+                                                  self.ctxt, method,
+                                                  method_kwargs, direction,
+                                                  target_cell)
+        tgt_message.process()
+
+        self.assertEqual(self.ctxt, call_info['context'])
+        self.assertEqual(target_cell, call_info['routing_path'])
+        self.assertEqual(3, len(call_info['kwargs']))
+        self.assertEqual(1, call_info['kwargs']['arg1'])
+        self.assertEqual(2, call_info['kwargs']['arg2'])
+        # Verify we get a new object with what we expect.
+        obj = call_info['kwargs']['obj']
+        self.assertTrue(isinstance(obj, CellsMsgingTestObject))
+        self.assertNotEqual(id(test_obj), id(obj))
+        self.assertEqual(test_obj.test, obj.test)
 
     def test_grandchild_targeted_message(self):
         target_cell = 'api-cell!child-cell2!grandchild-cell1'

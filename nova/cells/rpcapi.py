@@ -25,6 +25,7 @@ messging module.
 from oslo.config import cfg
 
 from nova import exception
+from nova.objects import base as objects_base
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.rpc import proxy as rpc_proxy
@@ -77,6 +78,7 @@ class CellsAPI(rpc_proxy.RpcProxy):
                                                CONF.upgrade_levels.cells)
         super(CellsAPI, self).__init__(topic=CONF.cells.topic,
                 default_version=self.BASE_RPC_API_VERSION,
+                serializer=objects_base.NovaObjectSerializer(),
                 version_cap=version_cap)
 
     def cast_compute_api_method(self, ctxt, cell_name, method,
