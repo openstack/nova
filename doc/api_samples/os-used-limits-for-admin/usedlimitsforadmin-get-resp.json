@@ -23,23 +23,23 @@
                 "limit": [
                     {
                         "next-available": "2012-11-27T17:24:52Z",
-                        "remaining": 10,
+                        "remaining": 120,
                         "unit": "MINUTE",
-                        "value": 10,
+                        "value": 120,
                         "verb": "POST"
                     },
                     {
                         "next-available": "2012-11-27T17:24:52Z",
-                        "remaining": 10,
+                        "remaining": 120,
                         "unit": "MINUTE",
-                        "value": 10,
+                        "value": 120,
                         "verb": "PUT"
                     },
                     {
                         "next-available": "2012-11-27T17:24:52Z",
-                        "remaining": 100,
+                        "remaining": 120,
                         "unit": "MINUTE",
-                        "value": 100,
+                        "value": 120,
                         "verb": "DELETE"
                     }
                 ],
@@ -50,9 +50,9 @@
                 "limit": [
                     {
                         "next-available": "2012-11-27T17:24:52Z",
-                        "remaining": 50,
-                        "unit": "DAY",
-                        "value": 50,
+                        "remaining": 120,
+                        "unit": "MINUTE",
+                        "value": 120,
                         "verb": "POST"
                     }
                 ],
@@ -63,9 +63,9 @@
                 "limit": [
                     {
                         "next-available": "2012-11-27T17:24:52Z",
-                        "remaining": 3,
+                        "remaining": 120,
                         "unit": "MINUTE",
-                        "value": 3,
+                        "value": 120,
                         "verb": "GET"
                     }
                 ],
@@ -77,7 +77,7 @@
                     {
                         "next-available": "2012-11-27T17:24:52Z",
                         "remaining": 12,
-                        "unit": "HOUR",
+                        "unit": "MINUTE",
                         "value": 12,
                         "verb": "GET"
                     }
