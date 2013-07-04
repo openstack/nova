@@ -49,7 +49,8 @@ class Instance(base.NovaObject):
     # Version 1.3: Added expected_vm_state and admin_state_reset to
     #              save()
     # Version 1.4: Added locked_by and deprecated locked
-    VERSION = '1.4'
+    # Version 1.5: Added cleaned
+    VERSION = '1.5'
 
     fields = {
         'id': int,
@@ -132,6 +133,8 @@ class Instance(base.NovaObject):
 
         'fault': obj_utils.nested_object_or_none(
             instance_fault.InstanceFault),
+
+        'cleaned': bool,
 
         }
 
@@ -221,6 +224,8 @@ class Instance(base.NovaObject):
                 continue
             elif field == 'deleted':
                 instance.deleted = db_inst['deleted'] == db_inst['id']
+            elif field == 'cleaned':
+                instance.cleaned = db_inst['cleaned'] == 1
             else:
                 instance[field] = db_inst[field]
 
@@ -348,6 +353,13 @@ class Instance(base.NovaObject):
             if stale_instance:
                 _handle_cell_update_from_api()
             return
+
+        # Cleaned needs to be turned back into an int here
+        if 'cleaned' in updates:
+            if updates['cleaned']:
+                updates['cleaned'] = 1
+            else:
+                updates['cleaned'] = 0
 
         if expected_task_state is not None:
             updates['expected_task_state'] = expected_task_state

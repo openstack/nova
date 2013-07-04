@@ -148,6 +148,10 @@ interval_opts = [
                help='Time in seconds before a shelved instance is eligible '
                     'for removing from a host.  -1 never offload, 0 offload '
                     'when shelved'),
+    cfg.IntOpt('instance_delete_interval',
+               default=300,
+               help=('Interval in seconds for retrying failed instance file '
+                     'deletes'))
 ]
 
 timeout_opts = [
@@ -187,11 +191,19 @@ running_deleted_opts = [
                     "instance should be considered eligible for cleanup."),
 ]
 
+instance_cleaning_opts = [
+    cfg.IntOpt('maximum_instance_delete_attempts',
+               default=5,
+               help=('The number of times to attempt to reap an instance\'s '
+                     'files.')),
+]
+
 CONF = cfg.CONF
 CONF.register_opts(compute_opts)
 CONF.register_opts(interval_opts)
 CONF.register_opts(timeout_opts)
 CONF.register_opts(running_deleted_opts)
+CONF.register_opts(instance_cleaning_opts)
 CONF.import_opt('allow_resize_to_same_host', 'nova.compute.api')
 CONF.import_opt('console_topic', 'nova.console.rpcapi')
 CONF.import_opt('host', 'nova.netconf')
@@ -4799,3 +4811,35 @@ class ComputeManager(manager.SchedulerDependentManager):
             context, filters, columns_to_join=[])
 
         self.driver.manage_image_cache(context, filtered_instances)
+
+    @periodic_task.periodic_task(spacing=CONF.instance_delete_interval)
+    def _run_pending_deletes(self, context):
+        """Retry any pending instance file deletes."""
+        if CONF.instance_delete_interval == 0:
+            return
+
+        LOG.debug(_('Cleaning up deleted instances'))
+        filters = {'deleted': True,
+                   'host': CONF.host,
+                   'cleaned': False}
+        attrs = ['info_cache', 'security_groups', 'system_metadata']
+        with utils.temporary_mutation(context, read_deleted='yes'):
+            instances = instance_obj.InstanceList.get_by_filters(
+                context, filters, expected_attrs=attrs)
+        LOG.debug(_('There are %d instances to clean'), len(instances))
+
+        for instance in instances:
+            attempts = int(instance.system_metadata.get('clean_attempts', '0'))
+            LOG.debug(_('Instance has had %(attempts)s of %(max)s '
+                        'cleanup attempts'),
+                        {'attempts': attempts,
+                         'max': CONF.maximum_instance_delete_attempts},
+                         instance=instance)
+            if attempts < CONF.maximum_instance_delete_attempts:
+                success = self.driver.delete_instance_files(instance)
+
+                instance.system_metadata['clean_attempts'] = str(attempts + 1)
+                if success:
+                    instance.cleaned = True
+                with utils.temporary_mutation(context, read_deleted='yes'):
+                    instance.save(context)

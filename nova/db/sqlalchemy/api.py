@@ -1777,6 +1777,12 @@ def instance_get_all_by_filters(context, filters, sort_key, sort_dir,
                 query_prefix = query_prefix.\
                     filter(models.Instance.vm_state != vm_states.SOFT_DELETED)
 
+    if 'cleaned' in filters:
+        if filters.pop('cleaned'):
+            query_prefix = query_prefix.filter(models.Instance.cleaned == 1)
+        else:
+            query_prefix = query_prefix.filter(models.Instance.cleaned == 0)
+
     if not context.is_admin:
         # If we're not admin context, add appropriate filter..
         if context.project_id:

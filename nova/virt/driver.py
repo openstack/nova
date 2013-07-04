@@ -974,6 +974,13 @@ class ComputeDriver(object):
             LOG.error(_("Exception dispatching event %(event)s: %(ex)s"),
                       {'event': event, 'ex': ex})
 
+    def delete_instance_files(self, instance):
+        """Delete any lingering instance files for an instance.
+
+        :returns: True if the instance was deleted from disk, False otherwise.
+        """
+        return True
+
 
 def load_compute_driver(virtapi, compute_driver=None):
     """Load a compute driver module.

@@ -1535,6 +1535,21 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
                                                  'soft_deleted': True})
         self._assertEqualListsOfInstances([inst2, inst3], result)
 
+    def test_instance_get_all_by_filters_cleaned(self):
+        inst1 = self.create_instance_with_args()
+        inst2 = self.create_instance_with_args(reservation_id='b')
+        db.instance_update(self.ctxt, inst1['uuid'], {'cleaned': 1})
+        result = db.instance_get_all_by_filters(self.ctxt, {})
+        self.assertEqual(2, len(result))
+        self.assertIn(inst1['uuid'], [result[0]['uuid'], result[1]['uuid']])
+        self.assertIn(inst2['uuid'], [result[0]['uuid'], result[1]['uuid']])
+        if inst1['uuid'] == result[0]['uuid']:
+            self.assertTrue(result[0]['cleaned'])
+            self.assertFalse(result[1]['cleaned'])
+        else:
+            self.assertTrue(result[1]['cleaned'])
+            self.assertFalse(result[0]['cleaned'])
+
     def test_instance_get_all_by_host_and_node_no_join(self):
         instance = self.create_instance_with_args()
         result = db.instance_get_all_by_host_and_node(self.ctxt, 'h1', 'n1')

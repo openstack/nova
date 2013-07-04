@@ -110,12 +110,19 @@ class _FakeDriverBackendTestCase(object):
                                         block_device_info=None):
             return '[]'
 
+        def fake_delete_instance_files(_self, _instance):
+            pass
+
         self.stubs.Set(nova.virt.libvirt.driver.LibvirtDriver,
                        'get_instance_disk_info',
                        fake_get_instance_disk_info)
 
         self.stubs.Set(nova.virt.libvirt.driver.disk,
                        'extend', fake_extend)
+
+        self.stubs.Set(nova.virt.libvirt.driver.LibvirtDriver,
+                       '_delete_instance_files',
+                       fake_delete_instance_files)
 
         # Like the existing fakelibvirt.migrateToURI, do nothing,
         # but don't fail for these tests.

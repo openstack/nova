@@ -522,3 +522,51 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             for ps in (power_state.NOSTATE, power_state.SHUTDOWN):
                 self._test_sync_to_stop(power_state.RUNNING, vs, ps,
                                         stop=False)
+
+    def test_run_pending_deletes(self):
+        self.flags(instance_delete_interval=10)
+
+        class FakeInstance(object):
+            def __init__(self, uuid, name, smd):
+                self.uuid = uuid
+                self.name = name
+                self.system_metadata = smd
+                self.cleaned = False
+
+            def __getitem__(self, name):
+                return getattr(self, name)
+
+            def save(self, context):
+                pass
+
+        class FakeInstanceList(object):
+            def get_by_filters(self, *args, **kwargs):
+                return []
+
+        a = FakeInstance('123', 'apple', {'clean_attempts': '100'})
+        b = FakeInstance('456', 'orange', {'clean_attempts': '3'})
+        c = FakeInstance('789', 'banana', {})
+
+        self.mox.StubOutWithMock(instance_obj.InstanceList,
+                                 'get_by_filters')
+        instance_obj.InstanceList.get_by_filters(
+            {'read_deleted': 'yes'},
+            {'deleted': True, 'host': 'fake-mini', 'cleaned': False},
+            expected_attrs=['info_cache', 'security_groups',
+                            'system_metadata']).AndReturn([a, b, c])
+
+        self.mox.StubOutWithMock(self.compute.driver, 'delete_instance_files')
+        self.compute.driver.delete_instance_files(
+            mox.IgnoreArg()).AndReturn(True)
+        self.compute.driver.delete_instance_files(
+            mox.IgnoreArg()).AndReturn(False)
+
+        self.mox.ReplayAll()
+
+        self.compute._run_pending_deletes({})
+        self.assertFalse(a.cleaned)
+        self.assertEqual('100', a.system_metadata['clean_attempts'])
+        self.assertTrue(b.cleaned)
+        self.assertEqual('4', b.system_metadata['clean_attempts'])
+        self.assertFalse(c.cleaned)
+        self.assertEqual('1', c.system_metadata['clean_attempts'])

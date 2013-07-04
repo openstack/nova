@@ -292,6 +292,30 @@ class _TestInstanceObject(object):
         # NOTE(danms): Make sure it's actually a bool
         self.assertEqual(inst.deleted, True)
 
+    def test_get_not_cleaned(self):
+        ctxt = context.get_admin_context()
+        fake_inst = dict(self.fake_instance, id=123, cleaned=None)
+        fake_uuid = fake_inst['uuid']
+        self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
+        db.instance_get_by_uuid(ctxt, fake_uuid, columns_to_join=[]
+                                ).AndReturn(fake_inst)
+        self.mox.ReplayAll()
+        inst = instance.Instance.get_by_uuid(ctxt, fake_uuid)
+        # NOTE(mikal): Make sure it's actually a bool
+        self.assertEqual(inst.cleaned, False)
+
+    def test_get_cleaned(self):
+        ctxt = context.get_admin_context()
+        fake_inst = dict(self.fake_instance, id=123, cleaned=1)
+        fake_uuid = fake_inst['uuid']
+        self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
+        db.instance_get_by_uuid(ctxt, fake_uuid, columns_to_join=[]
+                                ).AndReturn(fake_inst)
+        self.mox.ReplayAll()
+        inst = instance.Instance.get_by_uuid(ctxt, fake_uuid)
+        # NOTE(mikal): Make sure it's actually a bool
+        self.assertEqual(inst.cleaned, True)
+
     def test_with_info_cache(self):
         ctxt = context.get_admin_context()
         fake_inst = dict(self.fake_instance)
@@ -442,6 +466,28 @@ class _TestInstanceListObject(object):
             self.assertTrue(isinstance(inst_list.objects[i],
                                        instance.Instance))
             self.assertEqual(inst_list.objects[i].uuid, fakes[i]['uuid'])
+        self.assertRemotes()
+
+    def test_get_all_by_filters_works_for_cleaned(self):
+        fakes = [self.fake_instance(1),
+                 self.fake_instance(2, updates={'deleted': 2,
+                                                'cleaned': None})]
+        ctxt = context.get_admin_context()
+        ctxt.read_deleted = 'yes'
+        self.mox.StubOutWithMock(db, 'instance_get_all_by_filters')
+        db.instance_get_all_by_filters(ctxt,
+                                       {'deleted': True, 'cleaned': False},
+                                       'uuid', 'asc', limit=None, marker=None,
+                                       columns_to_join=['metadata']).AndReturn(
+                                           [fakes[1]])
+        self.mox.ReplayAll()
+        inst_list = instance.InstanceList.get_by_filters(
+            ctxt, {'deleted': True, 'cleaned': False}, 'uuid', 'asc',
+            expected_attrs=['metadata'])
+
+        self.assertEqual(1, len(inst_list))
+        self.assertTrue(isinstance(inst_list.objects[0], instance.Instance))
+        self.assertEqual(inst_list.objects[0].uuid, fakes[1]['uuid'])
         self.assertRemotes()
 
     def test_get_by_host(self):

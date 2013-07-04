@@ -71,6 +71,7 @@ from nova.compute import vm_mode
 from nova import context as nova_context
 from nova import exception
 from nova.image import glance
+from nova.objects import instance as instance_obj
 from nova.openstack.common import excutils
 from nova.openstack.common import fileutils
 from nova.openstack.common.gettextutils import _
@@ -912,18 +913,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                       disk_dev)
 
         if destroy_disks:
-            target = libvirt_utils.get_instance_path(instance)
-            LOG.info(_('Deleting instance files %s'), target,
-                     instance=instance)
-            if os.path.exists(target):
-                # If we fail to get rid of the directory
-                # tree, this shouldn't block deletion of
-                # the instance as whole.
-                try:
-                    shutil.rmtree(target)
-                except OSError as e:
-                    LOG.error(_('Failed to cleanup directory %(target)s: '
-                                '%(e)s'), {'target': target, 'e': e})
+            self._delete_instance_files(instance)
 
             #NOTE(bfilippov): destroy all LVM disks for this instance
             self._cleanup_lvm(instance)
@@ -4064,6 +4054,42 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def inject_network_info(self, instance, nw_info):
         self.firewall_driver.setup_basic_filtering(instance, nw_info)
+
+    def _delete_instance_files(self, instance):
+        # NOTE(mikal): a shim to handle this file not using instance objects
+        # everywhere. Remove this when that conversion happens.
+        context = nova_context.get_admin_context()
+        inst_obj = instance_obj.Instance.get_by_uuid(context, instance['uuid'])
+
+        # NOTE(mikal): this code should be pushed up a layer when this shim is
+        # removed.
+        attempts = int(inst_obj.system_metadata.get('clean_attempts', '0'))
+        success = self.delete_instance_files(inst_obj)
+        inst_obj.system_metadata['clean_attempts'] = str(attempts + 1)
+        if success:
+            inst_obj.cleaned = True
+        inst_obj.save(context)
+
+    def delete_instance_files(self, instance):
+        target = libvirt_utils.get_instance_path(instance)
+        if os.path.exists(target):
+            LOG.info(_('Deleting instance files %s'), target,
+                     instance=instance)
+            try:
+                shutil.rmtree(target)
+            except OSError as e:
+                LOG.error(_('Failed to cleanup directory %(target)s: '
+                            '%(e)s'), {'target': target, 'e': e},
+                            instance=instance)
+
+        # It is possible that the delete failed, if so don't mark the instance
+        # as cleaned.
+        if os.path.exists(target):
+            LOG.info(_('Deletion of %s failed'), target, instance=instance)
+            return False
+
+        LOG.info(_('Deletion of %s complete'), target, instance=instance)
+        return True
 
 
 class HostState(object):
