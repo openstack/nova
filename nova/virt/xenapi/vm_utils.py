@@ -1847,7 +1847,7 @@ def _wait_for_vhd_coalesce(session, instance, sr_ref, vdi_ref,
     for i in xrange(max_attempts):
         _scan_sr(session, sr_ref)
         parent_uuid = _get_vhd_parent_uuid(session, vdi_ref)
-        if original_parent_uuid and (parent_uuid != original_parent_uuid):
+        if parent_uuid and (parent_uuid != original_parent_uuid):
             LOG.debug(_("Parent %(parent_uuid)s doesn't match original parent"
                         " %(original_parent_uuid)s, waiting for coalesce..."),
                       {'parent_uuid': parent_uuid,
