@@ -118,6 +118,10 @@ def create_lvm_image(vg, lv, size, sparse=False):
     pass
 
 
+def import_rbd_image(path, *args):
+    pass
+
+
 def volume_group_free_space(vg):
     pass
 
@@ -204,3 +208,13 @@ def get_instance_path(instance, forceold=False, relative=False):
 
 def pick_disk_driver_name(hypervisor_version, is_block_dev=False):
     return "qemu"
+
+
+def list_rbd_volumes(pool):
+    fake_volumes = ['fakeinstancename.local', 'fakeinstancename.swap',
+                    'fakeinstancename', 'wronginstancename']
+    return fake_volumes
+
+
+def remove_rbd_volumes(pool, *names):
+    pass

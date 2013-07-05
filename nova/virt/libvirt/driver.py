@@ -909,8 +909,23 @@ class LibvirtDriver(driver.ComputeDriver):
         if destroy_disks:
             self._delete_instance_files(instance)
 
-            #NOTE(bfilippov): destroy all LVM disks for this instance
             self._cleanup_lvm(instance)
+            #NOTE(haomai): destory volumes if needed
+            if CONF.libvirt_images_type == 'rbd':
+                self._cleanup_rbd(instance)
+
+    def _cleanup_rbd(self, instance):
+        pool = CONF.libvirt_images_rbd_pool
+        volumes = libvirt_utils.list_rbd_volumes(pool)
+        pattern = instance['name']
+
+        def belongs_to_instance(disk):
+            return disk.startswith(pattern)
+
+        volumes = filter(belongs_to_instance, volumes)
+
+        if volumes:
+            libvirt_utils.remove_rbd_volumes(pool, *volumes)
 
     def _cleanup_lvm(self, instance):
         """Delete all LVM disks for given instance object."""
@@ -1248,8 +1263,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
         image_format = CONF.snapshot_image_format or source_format
 
-        # NOTE(bfilippov): save lvm as raw
-        if image_format == 'lvm':
+        # NOTE(bfilippov): save lvm and rbd as raw
+        if image_format == 'lvm' or image_format == 'rbd':
             image_format = 'raw'
 
         # NOTE(vish): glance forces ami disk format to be ami
@@ -1271,7 +1286,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if self.has_min_version(MIN_LIBVIRT_LIVESNAPSHOT_VERSION,
                                 MIN_QEMU_LIVESNAPSHOT_VERSION,
                                 REQ_HYPERVISOR_LIVESNAPSHOT) \
-                and not source_format == "lvm":
+                and not source_format == "lvm" and not source_format == 'rbd':
             live_snapshot = True
             # Abort is an idempotent operation, so make sure any block
             # jobs which may have failed are ended. This operation also

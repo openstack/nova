@@ -496,6 +496,130 @@ class LvmTestCase(_ImageTestCase, test.TestCase):
         self.assertEqual(fake_processutils.fake_execute_get_log(), [])
 
 
+class RbdTestCase(_ImageTestCase, test.TestCase):
+    POOL = "FakePool"
+    USER = "FakeUser"
+    CONF = "FakeConf"
+    SIZE = 1024
+
+    def setUp(self):
+        self.image_class = imagebackend.Rbd
+        super(RbdTestCase, self).setUp()
+        self.flags(libvirt_images_rbd_pool=self.POOL)
+        self.flags(rbd_user=self.USER)
+        self.flags(libvirt_images_rbd_ceph_conf=self.CONF)
+        self.libvirt_utils = imagebackend.libvirt_utils
+        self.utils = imagebackend.utils
+        self.rbd = self.mox.CreateMockAnything()
+
+    def prepare_mocks(self):
+        fn = self.mox.CreateMockAnything()
+        self.mox.StubOutWithMock(imagebackend, 'rbd')
+        return fn
+
+    def test_cache(self):
+        image = self.image_class(self.INSTANCE, self.NAME)
+
+        self.mox.StubOutWithMock(os.path, 'exists')
+        self.mox.StubOutWithMock(image, 'check_image_exists')
+        os.path.exists(self.TEMPLATE_DIR).AndReturn(False)
+        image.check_image_exists().AndReturn(False)
+        os.path.exists(self.TEMPLATE_PATH).AndReturn(False)
+        fn = self.mox.CreateMockAnything()
+        fn(target=self.TEMPLATE_PATH)
+        self.mox.StubOutWithMock(imagebackend.fileutils, 'ensure_tree')
+        imagebackend.fileutils.ensure_tree(self.TEMPLATE_DIR)
+        self.mox.ReplayAll()
+
+        self.mock_create_image(image)
+        image.cache(fn, self.TEMPLATE)
+
+        self.mox.VerifyAll()
+
+    def test_cache_base_dir_exists(self):
+        image = self.image_class(self.INSTANCE, self.NAME)
+
+        self.mox.StubOutWithMock(os.path, 'exists')
+        self.mox.StubOutWithMock(image, 'check_image_exists')
+        os.path.exists(self.TEMPLATE_DIR).AndReturn(True)
+        image.check_image_exists().AndReturn(False)
+        os.path.exists(self.TEMPLATE_PATH).AndReturn(False)
+        fn = self.mox.CreateMockAnything()
+        fn(target=self.TEMPLATE_PATH)
+        self.mox.StubOutWithMock(imagebackend.fileutils, 'ensure_tree')
+        self.mox.ReplayAll()
+
+        self.mock_create_image(image)
+        image.cache(fn, self.TEMPLATE)
+
+        self.mox.VerifyAll()
+
+    def test_cache_image_exists(self):
+        image = self.image_class(self.INSTANCE, self.NAME)
+
+        self.mox.StubOutWithMock(os.path, 'exists')
+        self.mox.StubOutWithMock(image, 'check_image_exists')
+        os.path.exists(self.TEMPLATE_DIR).AndReturn(True)
+        image.check_image_exists().AndReturn(True)
+        os.path.exists(self.TEMPLATE_PATH).AndReturn(True)
+        self.mox.ReplayAll()
+
+        image.cache(None, self.TEMPLATE)
+
+        self.mox.VerifyAll()
+
+    def test_cache_template_exists(self):
+        image = self.image_class(self.INSTANCE, self.NAME)
+
+        self.mox.StubOutWithMock(os.path, 'exists')
+        self.mox.StubOutWithMock(image, 'check_image_exists')
+        os.path.exists(self.TEMPLATE_DIR).AndReturn(True)
+        image.check_image_exists().AndReturn(False)
+        os.path.exists(self.TEMPLATE_PATH).AndReturn(True)
+        fn = self.mox.CreateMockAnything()
+        self.mox.ReplayAll()
+
+        self.mock_create_image(image)
+        image.cache(fn, self.TEMPLATE)
+
+        self.mox.VerifyAll()
+
+    def test_create_image(self):
+        fn = self.prepare_mocks()
+        fn(rbd=self.rbd, target=self.TEMPLATE_PATH)
+
+        self.rbd.RBD_FEATURE_LAYERING = 1
+
+        rbd_name = "%s/%s" % (self.INSTANCE['name'], self.NAME)
+        cmd = ('--pool', self.POOL, self.TEMPLATE_PATH,
+               rbd_name, '--new-format', '--id', self.USER,
+               '--conf', self.CONF)
+        self.libvirt_utils.import_rbd_image(self.TEMPLATE_PATH, *cmd)
+        self.mox.ReplayAll()
+
+        image = self.image_class(self.INSTANCE, self.NAME)
+        image.create_image(fn, self.TEMPLATE_PATH, None, rbd=self.rbd)
+
+        self.mox.VerifyAll()
+
+    def test_prealloc_image(self):
+        CONF.set_override('preallocate_images', 'space')
+
+        fake_processutils.fake_execute_clear_log()
+        fake_processutils.stub_out_processutils_execute(self.stubs)
+        self.mox.StubOutWithMock(imagebackend, 'rbd')
+        image = self.image_class(self.INSTANCE, self.NAME)
+
+        def fake_fetch(target, *args, **kwargs):
+            return
+
+        self.stubs.Set(os.path, 'exists', lambda _: True)
+
+        image.cache(fake_fetch, self.TEMPLATE_PATH, self.SIZE)
+
+        self.assertEqual(fake_processutils.fake_execute_get_log(), [])
+
+
 class BackendTestCase(test.TestCase):
     INSTANCE = {'name': 'fake-instance',
                 'uuid': uuidutils.generate_uuid()}
@@ -528,6 +652,13 @@ class BackendTestCase(test.TestCase):
     def test_image_lvm(self):
         self.flags(libvirt_images_volume_group='FakeVG')
         self._test_image('lvm', imagebackend.Lvm, imagebackend.Lvm)
+
+    def test_image_rbd(self):
+        conf = "FakeConf"
+        pool = "FakePool"
+        self.flags(libvirt_images_rbd_pool=pool)
+        self.flags(libvirt_images_rbd_ceph_conf=conf)
+        self._test_image('rbd', imagebackend.Rbd, imagebackend.Rbd)
 
     def test_image_default(self):
         self._test_image('default', imagebackend.Raw, imagebackend.Qcow2)

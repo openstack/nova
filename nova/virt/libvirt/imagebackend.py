@@ -25,6 +25,7 @@ from nova import exception
 from nova.openstack.common import excutils
 from nova.openstack.common import fileutils
 from nova.openstack.common.gettextutils import _
+from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt.disk import api as disk
@@ -32,11 +33,18 @@ from nova.virt import images
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import utils as libvirt_utils
 
+
+try:
+    import rbd
+except ImportError:
+    rbd = None
+
+
 __imagebackend_opts = [
     cfg.StrOpt('libvirt_images_type',
             default='default',
             help='VM Images format. Acceptable values are: raw, qcow2, lvm,'
-                 ' default. If default is specified,'
+                 'rbd, default. If default is specified,'
                  ' then use_cow_images flag is used instead of this one.'),
     cfg.StrOpt('libvirt_images_volume_group',
             help='LVM Volume Group that is used for VM images, when you'
@@ -46,9 +54,15 @@ __imagebackend_opts = [
             help='Create sparse logical volumes (with virtualsize)'
                  ' if this flag is set to True.'),
     cfg.IntOpt('libvirt_lvm_snapshot_size',
-               default=1000,
-               help='The amount of storage (in megabytes) to allocate for LVM'
+            default=1000,
+            help='The amount of storage (in megabytes) to allocate for LVM'
                     ' snapshot copy-on-write blocks.'),
+    cfg.StrOpt('libvirt_images_rbd_pool',
+            default='rbd',
+            help='the RADOS pool in which rbd volumes are stored'),
+    cfg.StrOpt('libvirt_images_rbd_ceph_conf',
+            default='',  # default determined by librados
+            help='path to the ceph configuration file to use'),
         ]
 
 CONF = cfg.CONF
@@ -127,6 +141,9 @@ class Image(object):
                         setattr(info, scope[1], value)
         return info
 
+    def check_image_exists(self):
+        return os.path.exists(self.path)
+
     def cache(self, fetch_func, filename, size=None, *args, **kwargs):
         """Creates image from template.
 
@@ -152,7 +169,7 @@ class Image(object):
             fileutils.ensure_tree(base_dir)
         base = os.path.join(base_dir, filename)
 
-        if not os.path.exists(self.path) or not os.path.exists(base):
+        if not self.check_image_exists() or not os.path.exists(base):
             self.create_image(call_if_not_exists, base, size,
                               *args, **kwargs)
 
@@ -392,12 +409,136 @@ class Lvm(Image):
         libvirt_utils.execute(*cmd, run_as_root=True, attempts=3)
 
 
+class Rbd(Image):
+    def __init__(self, instance=None, disk_name=None, path=None,
+                 snapshot_name=None, **kwargs):
+        super(Rbd, self).__init__("block", "rbd", is_block_dev=True)
+        if path:
+            try:
+                self.rbd_name = path.split('/')[1]
+            except IndexError:
+                raise exception.InvalidDevicePath(path=path)
+        else:
+            self.rbd_name = '%s_%s' % (instance['name'], disk_name)
+        self.snapshot_name = snapshot_name
+        if not CONF.libvirt_images_rbd_pool:
+            raise RuntimeError(_('You should specify'
+                                 ' libvirt_images_rbd_pool'
+                                 ' flag to use rbd images.'))
+        self.pool = CONF.libvirt_images_rbd_pool
+        self.ceph_conf = CONF.libvirt_images_rbd_ceph_conf
+        self.rbd = kwargs.get('rbd', rbd)
+
+    def _supports_layering(self):
+        return hasattr(self.rbd, 'RBD_FEATURE_LAYERING')
+
+    def _ceph_args(self):
+        args = []
+        args.extend(['--id', CONF.rbd_user])
+        args.extend(['--conf', self.ceph_conf])
+        return args
+
+    def _get_mon_addrs(self):
+        args = ['ceph', 'mon', 'dump', '--format=json'] + self._ceph_args()
+        out, _ = utils.execute(*args)
+        lines = out.split('\n')
+        if lines[0].startswith('dumped monmap epoch'):
+            lines = lines[1:]
+        monmap = jsonutils.loads('\n'.join(lines))
+        addrs = [mon['addr'] for mon in monmap['mons']]
+        hosts = []
+        ports = []
+        for addr in addrs:
+            host_port = addr[:addr.rindex('/')]
+            host, port = host_port.rsplit(':', 1)
+            hosts.append(host.strip('[]'))
+            ports.append(port)
+        return hosts, ports
+
+    def libvirt_info(self, disk_bus, disk_dev, device_type, cache_mode,
+            extra_specs):
+        """Get `LibvirtConfigGuestDisk` filled for this image.
+
+        :disk_dev: Disk bus device name
+        :disk_bus: Disk bus type
+        :device_type: Device type for this image.
+        :cache_mode: Caching mode for this image
+        :extra_specs: Instance type extra specs dict.
+        """
+        info = vconfig.LibvirtConfigGuestDisk()
+
+        hosts, ports = self._get_mon_addrs()
+        info.device_type = device_type
+        info.driver_format = 'raw'
+        info.driver_cache = cache_mode
+        info.target_bus = disk_bus
+        info.target_dev = disk_dev
+        info.source_type = 'network'
+        info.source_protocol = 'rbd'
+        info.source_name = '%s/%s' % (self.pool, self.rbd_name)
+        info.source_hosts = hosts
+        info.source_ports = ports
+        auth_enabled = (CONF.rbd_user is not None)
+        if CONF.rbd_secret_uuid:
+            info.auth_secret_uuid = CONF.rbd_secret_uuid
+            auth_enabled = True  # Force authentication locally
+            if CONF.rbd_user:
+                info.auth_username = CONF.rbd_user
+        if auth_enabled:
+            info.auth_secret_type = 'ceph'
+            info.auth_secret_uuid = CONF.rbd_secret_uuid
+        return info
+
+    def _can_fallocate(self):
+        return False
+
+    def check_image_exists(self):
+        rbd_volumes = libvirt_utils.list_rbd_volumes(self.pool)
+        for vol in rbd_volumes:
+            if vol.startswith(self.rbd_name):
+                return True
+
+        return False
+
+    def create_image(self, prepare_template, base, size, *args, **kwargs):
+        if self.rbd is None:
+            raise RuntimeError(_('rbd python libraries not found'))
+
+        old_format = True
+        features = 0
+        if self._supports_layering():
+            old_format = False
+            features = self.rbd.RBD_FEATURE_LAYERING
+
+        if not os.path.exists(base):
+            prepare_template(target=base, *args, **kwargs)
+
+        # keep using the command line import instead of librbd since it
+        # detects zeroes to preserve sparseness in the image
+        args = ['--pool', self.pool, base, self.rbd_name]
+        if self._supports_layering():
+            args += ['--new-format']
+        args += self._ceph_args()
+        libvirt_utils.import_rbd_image(*args)
+
+    def snapshot_create(self):
+        pass
+
+    def snapshot_extract(self, target, out_format):
+        snap = 'rbd:%s/%s' % (self.pool, self.rbd_name)
+        images.convert_image(snap, target, out_format)
+
+    def snapshot_delete(self):
+        pass
+
+
 class Backend(object):
     def __init__(self, use_cow):
         self.BACKEND = {
             'raw': Raw,
             'qcow2': Qcow2,
             'lvm': Lvm,
+            'rbd': Rbd,
             'default': Qcow2 if use_cow else Raw
         }
 

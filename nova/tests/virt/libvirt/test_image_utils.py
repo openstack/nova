@@ -30,6 +30,11 @@ class ImageUtilsTestCase(test.TestCase):
         for p in ['/dev/b', '/dev/blah/blah']:
             d_type = libvirt_utils.get_disk_type(p)
             self.assertEquals('lvm', d_type)
+
+        # Try rbd detection
+        d_type = libvirt_utils.get_disk_type('rbd:pool/instance')
+        self.assertEquals('rbd', d_type)
+
         # Try the other types
         template_output = """image: %(path)s
 file format: %(format)s
