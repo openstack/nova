@@ -2260,13 +2260,14 @@
 #max_kernel_ramdisk_size=16777216
 
 # Filter for finding the SR to be used to install guest
-# instances on. The default value is the Local Storage in
-# default XenServer/XCP installations. To select an SR with a
-# different matching criteria, you could set it to other-
+# instances on. To use the Local Storage in default
+# XenServer/XCP installations set this flag to other-config
+# :i18n-key=local-storage. To select an SR with a different
+# matching criteria, you could set it to other-
 # config:my_favorite_sr=true. On the other hand, to fall back
 # on the Default SR, as displayed by XenCenter, set this flag
 # to: default-sr:true (string value)
-#sr_matching_filter=other-config:i18n-key=local-storage
+#sr_matching_filter=default-sr:true
 
 # Whether to use sparse_copy for copying data on a resize down
 # (False will use standard dd). This speeds up resizes down

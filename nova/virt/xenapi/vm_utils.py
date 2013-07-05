@@ -75,10 +75,11 @@ xenapi_vm_utils_opts = [
                default=16 * 1024 * 1024,
                help='Maximum size in bytes of kernel or ramdisk images'),
     cfg.StrOpt('sr_matching_filter',
-               default='other-config:i18n-key=local-storage',
+               default='default-sr:true',
                help='Filter for finding the SR to be used to install guest '
-                    'instances on. The default value is the Local Storage in '
-                    'default XenServer/XCP installations. To select an SR '
+                    'instances on. To use the Local Storage in default '
+                    'XenServer/XCP installations set this flag to '
+                    'other-config:i18n-key=local-storage. To select an SR '
                     'with a different matching criteria, you could set it to '
                     'other-config:my_favorite_sr=true. On the other hand, to '
                     'fall back on the Default SR, as displayed by XenCenter, '
@@ -1697,12 +1698,14 @@ def _find_sr(session):
                     return sr_ref
     elif filter_criteria == 'default-sr' and filter_pattern == 'true':
         pool_ref = session.call_xenapi('pool.get_all')[0]
-        return session.call_xenapi('pool.get_default_SR', pool_ref)
+        sr_ref = session.call_xenapi('pool.get_default_SR', pool_ref)
+        if sr_ref:
+            return sr_ref
     # No SR found!
-    LOG.warning(_("XenAPI is unable to find a Storage Repository to "
-                  "install guest instances on. Please check your "
-                  "configuration and/or configure the flag "
-                  "'sr_matching_filter'"))
+    LOG.error(_("XenAPI is unable to find a Storage Repository to "
+                "install guest instances on. Please check your "
+                "configuration (e.g. set a default SR for the pool) "
+                "and/or configure the flag 'sr_matching_filter'."))
     return None
 
 
