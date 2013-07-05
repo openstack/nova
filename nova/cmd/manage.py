@@ -234,9 +234,9 @@ class ProjectCommands(object):
                 if value.lower() == 'unlimited':
                     value = -1
                 try:
-                    db.quota_update(ctxt, project_id, key, value)
-                except exception.ProjectQuotaNotFound:
                     db.quota_create(ctxt, project_id, key, value)
+                except exception.QuotaExists:
+                    db.quota_update(ctxt, project_id, key, value)
             else:
                 print _('%(key)s is not a valid quota key. Valid options are: '
                         '%(options)s.') % {'key': key,

@@ -2592,7 +2592,10 @@ def quota_create(context, project_id, resource, limit):
     quota_ref.project_id = project_id
     quota_ref.resource = resource
     quota_ref.hard_limit = limit
-    quota_ref.save()
+    try:
+        quota_ref.save()
+    except db_exc.DBDuplicateEntry:
+        raise exception.QuotaExists(project_id=project_id, resource=resource)
     return quota_ref
 
 
