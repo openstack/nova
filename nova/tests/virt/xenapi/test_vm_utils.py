@@ -16,6 +16,7 @@
 #    under the License.
 
 import contextlib
+import pkg_resources
 import urlparse
 
 import fixtures
@@ -818,6 +819,17 @@ def bad_fetcher(instance, image_id):
     raise test.TestingException("just plain bad.")
 
 
+def another_fetcher(instance, image_id):
+    return "http://www.foobar.com/%s" % image_id
+
+
+class MockEntryPoint(object):
+    name = "torrent_url"
+
+    def load(self):
+        return another_fetcher
+
+
 class BitTorrentMiscTestCase(test.TestCase):
 
     def tearDown(self):
@@ -825,6 +837,10 @@ class BitTorrentMiscTestCase(test.TestCase):
         super(BitTorrentMiscTestCase, self).tearDown()
 
     def test_default_fetch_url(self):
+        def mock_iter_none(namespace):
+            return []
+        self.stubs.Set(pkg_resources, 'iter_entry_points', mock_iter_none)
+
         image_id = "1-2-3-4-5"
         params = {}
         self.assertTrue(vm_utils._add_torrent_url({}, image_id, params))
@@ -834,9 +850,26 @@ class BitTorrentMiscTestCase(test.TestCase):
         self.assertEqual(vm_utils.get_torrent_url,
                          vm_utils._TORRENT_URL_FN)
 
-        # call it again now that the fetcher fn is cached:
+    def test_with_extension(self):
+        def mock_iter_single(namespace):
+            return [MockEntryPoint()]
+        self.stubs.Set(pkg_resources, 'iter_entry_points', mock_iter_single)
+
+        image_id = "1-2-3-4-5"
         params = {}
         self.assertTrue(vm_utils._add_torrent_url({}, image_id, params))
+        expected = "http://www.foobar.com/%s" % image_id
+        self.assertEqual(expected, params['torrent_url'])
+        self.assertEqual(another_fetcher, vm_utils._TORRENT_URL_FN)
+
+    def test_more_than_one_extension(self):
+        def mock_iter_multiple(namespace):
+            return [MockEntryPoint(), MockEntryPoint()]
+        self.stubs.Set(pkg_resources, 'iter_entry_points', mock_iter_multiple)
+        image_id = "1-2-3-4-5"
+        params = {}
+        self.assertRaises(RuntimeError, vm_utils._add_torrent_url, {},
+                          image_id, params)
 
     def test_fetch_url_failure(self):
         # fetcher function fails:
