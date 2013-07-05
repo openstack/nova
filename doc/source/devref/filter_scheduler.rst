@@ -103,6 +103,8 @@ There are some standard filter classes to use (:mod:`nova.scheduler.filters`):
 * |AggregateTypeAffinityFilter| - limits instance_type by aggregate.
 * |GroupAntiAffinityFilter| - ensures that each instance in group is on a
   different host.
+* |GroupAffinityFilter| - ensures that each instance in group is on a same
+  host with one of the instance host in a group.
 * |AggregateMultiTenancyIsolation| - isolate tenants in specific aggregates.
 
 Now we can focus on these standard filter classes in details. I will pass the
@@ -178,6 +180,10 @@ defined in the request.
 
 |GroupAntiAffinityFilter| its method `host_passes` returns `True` if host to
 place the instance on is not in a group of hosts. The group of hosts is
+maintained by a group name. The scheduler hint contains the group name.
+
+|GroupAffinityFilter| its method `host_passes` returns `True` if host to
+place the instance on is in a group of hosts. The group of hosts is
 maintained by a group name. The scheduler hint contains the group name.
 
 |JsonFilter| - this filter provides the opportunity to write complicated
@@ -299,6 +305,7 @@ in :mod:`nova.tests.scheduler`.
 .. |AggregateRamFilter| replace:: :class:`AggregateRamFilter <nova.scheduler.filters.ram_filter.AggregateRamFilter>`
 .. |SimpleCIDRAffinityFilter| replace:: :class:`SimpleCIDRAffinityFilter <nova.scheduler.filters.affinity_filter.SimpleCIDRAffinityFilter>`
 .. |GroupAntiAffinityFilter| replace:: :class:`GroupAntiAffinityFilter <nova.scheduler.filters.affinity_filter.GroupAntiAffinityFilter>`
+.. |GroupAffinityFilter| replace:: :class:`GroupAffinityFilter <nova.scheduler.filters.affinity_filter.GroupAffinityFilter>`
 .. |DifferentHostFilter| replace:: :class:`DifferentHostFilter <nova.scheduler.filters.affinity_filter.DifferentHostFilter>`
 .. |SameHostFilter| replace:: :class:`SameHostFilter <nova.scheduler.filters.affinity_filter.SameHostFilter>`
 .. |RetryFilter| replace:: :class:`RetryFilter <nova.scheduler.filters.retry_filter.RetryFilter>`

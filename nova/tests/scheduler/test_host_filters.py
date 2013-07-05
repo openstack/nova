@@ -1515,6 +1515,18 @@ class HostFiltersTestCase(test.NoDBTestCase):
         filter_properties = {'group_hosts': ['host1']}
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
 
+    def test_group_affinity_filter_passes(self):
+        filt_cls = self.class_map['GroupAffinityFilter']()
+        host = fakes.FakeHostState('host1', 'node1', {})
+        filter_properties = {'group_hosts': ['host1']}
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+
+    def test_group_affinity_filter_fails(self):
+        filt_cls = self.class_map['GroupAffinityFilter']()
+        host = fakes.FakeHostState('host1', 'node1', {})
+        filter_properties = {'group_hosts': ['host2']}
+        self.assertFalse(filt_cls.host_passes(host, filter_properties))
+
     def test_aggregate_multi_tenancy_isolation_with_meta_passes(self):
         self._stub_service_is_up(True)
         filt_cls = self.class_map['AggregateMultiTenancyIsolation']()
