@@ -39,6 +39,8 @@ class ConfigDriveTest(test.TestCase):
     def test_show(self):
         self.stubs.Set(db, 'instance_get',
                         fakes.fake_instance_get())
+        self.stubs.Set(db, 'instance_get_by_uuid',
+                        fakes.fake_instance_get())
         req = webob.Request.blank('/v2/fake/servers/1')
         req.headers['Content-Type'] = 'application/json'
         response = req.get_response(fakes.wsgi_app(init_only=('servers',)))

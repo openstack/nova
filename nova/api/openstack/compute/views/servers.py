@@ -23,6 +23,7 @@ from nova.api.openstack.compute.views import addresses as views_addresses
 from nova.api.openstack.compute.views import flavors as views_flavors
 from nova.api.openstack.compute.views import images as views_images
 from nova.compute import flavors
+from nova.objects import instance as instance_obj
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import utils
@@ -80,6 +81,8 @@ class ViewBuilder(common.ViewBuilder):
 
     def show(self, request, instance):
         """Detailed view of a single instance."""
+        ip_v4 = instance.get('access_ip_v4')
+        ip_v6 = instance.get('access_ip_v6')
         server = {
             "server": {
                 "id": instance["uuid"],
@@ -94,8 +97,8 @@ class ViewBuilder(common.ViewBuilder):
                 "created": timeutils.isotime(instance["created_at"]),
                 "updated": timeutils.isotime(instance["updated_at"]),
                 "addresses": self._get_addresses(request, instance),
-                "accessIPv4": instance.get("access_ip_v4") or "",
-                "accessIPv6": instance.get("access_ip_v6") or "",
+                "accessIPv4": str(ip_v4) if ip_v4 is not None else '',
+                "accessIPv6": str(ip_v6) if ip_v6 is not None else '',
                 "links": self._get_links(request,
                                          instance["uuid"],
                                          self._collection_name),
@@ -133,7 +136,12 @@ class ViewBuilder(common.ViewBuilder):
 
     @staticmethod
     def _get_metadata(instance):
-        return utils.instance_meta(instance)
+        # FIXME(danms): Transitional support for objects
+        metadata = instance.get('metadata')
+        if isinstance(instance, instance_obj.Instance):
+            return metadata or {}
+        else:
+            return utils.instance_meta(instance)
 
     @staticmethod
     def _get_vm_state(instance):

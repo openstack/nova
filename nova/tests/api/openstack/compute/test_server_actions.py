@@ -30,6 +30,7 @@ from nova.image import glance
 from nova.openstack.common import importutils
 from nova import test
 from nova.tests.api.openstack import fakes
+from nova.tests import fake_instance
 from nova.tests.image import fake
 from nova.tests import matchers
 from nova.tests import utils
@@ -994,9 +995,9 @@ class ServerActionsControllerTest(test.TestCase):
 
     def test_locked(self):
         def fake_locked(context, instance_uuid):
-            return {"name": "foo",
-                    "uuid": FAKE_UUID,
-                    "locked": True}
+            return fake_instance.fake_db_instance(name="foo",
+                                                  uuid=FAKE_UUID,
+                                                  locked=True)
         self.stubs.Set(db, 'instance_get_by_uuid', fake_locked)
         body = dict(reboot=dict(type="HARD"))
         req = fakes.HTTPRequest.blank(self.url)

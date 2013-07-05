@@ -404,7 +404,6 @@ def create_info_cache(nw_cache):
                                       'ips': [_ip(ip) for ip in pub0]},
                                       {'cidr': 'b33f::/64',
                                        'ips': [_ip(ip) for ip in pub1]}]}}]
-        return {"info_cache": {"network_info": nw_cache}}
 
     if not isinstance(nw_cache, basestring):
         nw_cache = jsonutils.dumps(nw_cache)

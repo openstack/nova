@@ -22,6 +22,7 @@ from nova.api.openstack import wsgi
 from nova import compute
 from nova.compute import vm_states
 from nova import exception
+from nova.objects import instance as instance_obj
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
@@ -106,7 +107,9 @@ class HideServerAddressesTest(test.TestCase):
         instances = [instance_0, instance_1]
 
         def get_all(*args, **kwargs):
-            return instances
+            fields = instance_obj.INSTANCE_DEFAULT_FIELDS
+            return instance_obj._make_instance_list(
+                args[1], instance_obj.InstanceList(), instances, fields)
 
         self.stubs.Set(compute.api.API, 'get_all', get_all)
         res = self._make_request('/v2/fake/servers/detail')

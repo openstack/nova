@@ -21,6 +21,7 @@ import webob
 from nova.api.openstack.compute.contrib import extended_ips_mac
 from nova.api.openstack import xmlutil
 from nova import compute
+from nova.objects import instance as instance_obj
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
@@ -98,10 +99,14 @@ def fake_compute_get(*args, **kwargs):
 
 
 def fake_compute_get_all(*args, **kwargs):
-    return [
+    db_list = [
         fakes.stub_instance(1, uuid=UUID1, nw_cache=NW_CACHE),
         fakes.stub_instance(2, uuid=UUID2, nw_cache=NW_CACHE),
     ]
+    fields = instance_obj.INSTANCE_DEFAULT_FIELDS
+    return instance_obj._make_instance_list(args[1],
+                                            instance_obj.InstanceList(),
+                                            db_list, fields)
 
 
 class ExtendedIpsMacTest(test.TestCase):
