@@ -40,6 +40,19 @@ CONF.import_opt('compute_manager', 'nova.service')
 CONF.import_opt('host', 'nova.netconf')
 
 
+@contextlib.contextmanager
+def intercept_log_messages():
+    try:
+        mylog = logging.getLogger('nova')
+        stream = cStringIO.StringIO()
+        handler = logging.logging.StreamHandler(stream)
+        handler.setFormatter(logging.ContextFormatter())
+        mylog.logger.addHandler(handler)
+        yield stream
+    finally:
+        mylog.logger.removeHandler(handler)
+
+
 class ImageCacheManagerTestCase(test.TestCase):
 
     def setUp(self):
@@ -344,171 +357,6 @@ class ImageCacheManagerTestCase(test.TestCase):
                                 (base_file3, False, True)])
 
     @contextlib.contextmanager
-    def _intercept_log_messages(self):
-        try:
-            mylog = logging.getLogger('nova')
-            stream = cStringIO.StringIO()
-            handler = logging.logging.StreamHandler(stream)
-            handler.setFormatter(logging.ContextFormatter())
-            mylog.logger.addHandler(handler)
-            yield stream
-        finally:
-            mylog.logger.removeHandler(handler)
-
-    def _make_checksum(self, tmpdir):
-        testdata = ('OpenStack Software delivers a massively scalable cloud '
-                    'operating system.')
-
-        fname = os.path.join(tmpdir, 'aaa')
-        info_fname = imagecache.get_info_filename(fname)
-
-        with open(fname, 'w') as f:
-            f.write(testdata)
-
-        return fname, info_fname, testdata
-
-    def test_verify_checksum(self):
-        img = {'container_format': 'ami', 'id': '42'}
-
-        self.flags(checksum_base_images=True)
-
-        with self._intercept_log_messages() as stream:
-            with utils.tempdir() as tmpdir:
-                self.flags(instances_path=tmpdir)
-                self.flags(image_info_filename_pattern=('$instances_path/'
-                                                        '%(image)s.info'))
-                fname, info_fname, testdata = self._make_checksum(tmpdir)
-
-                # Checksum is valid
-                f = open(info_fname, 'w')
-                csum = hashlib.sha1()
-                csum.update(testdata)
-                f.write('{"sha1": "%s"}\n' % csum.hexdigest())
-                f.close()
-
-                image_cache_manager = imagecache.ImageCacheManager()
-                res = image_cache_manager._verify_checksum(img, fname)
-                self.assertTrue(res)
-
-    def test_verify_checksum_disabled(self):
-        img = {'container_format': 'ami', 'id': '42'}
-
-        self.flags(checksum_base_images=False)
-
-        with self._intercept_log_messages() as stream:
-            with utils.tempdir() as tmpdir:
-                self.flags(instances_path=tmpdir)
-                self.flags(image_info_filename_pattern=('$instances_path/'
-                                                        '%(image)s.info'))
-                fname, info_fname, testdata = self._make_checksum(tmpdir)
-
-                # Checksum is valid
-                f = open(info_fname, 'w')
-                csum = hashlib.sha1()
-                csum.update(testdata)
-                f.write('{"sha1": "%s"}\n' % csum.hexdigest())
-                f.close()
-
-                image_cache_manager = imagecache.ImageCacheManager()
-                res = image_cache_manager._verify_checksum(img, fname)
-                self.assertTrue(res is None)
-
-    def test_verify_checksum_invalid_json(self):
-        img = {'container_format': 'ami', 'id': '42'}
-
-        self.flags(checksum_base_images=True)
-
-        with self._intercept_log_messages() as stream:
-            with utils.tempdir() as tmpdir:
-                self.flags(instances_path=tmpdir)
-                self.flags(image_info_filename_pattern=('$instances_path/'
-                                                        '%(image)s.info'))
-
-                fname, info_fname, testdata = self._make_checksum(tmpdir)
-
-                # Checksum is invalid, and not json
-                f = open(info_fname, 'w')
-                f.write('banana')
-                f.close()
-
-                image_cache_manager = imagecache.ImageCacheManager()
-                res = image_cache_manager._verify_checksum(
-                    img, fname, create_if_missing=False)
-                self.assertFalse(res)
-                log = stream.getvalue()
-
-                # NOTE(mikal): this is a skip not a fail because the file is
-                # present, but is not in valid json format and therefore is
-                # skipped.
-                self.assertNotEqual(log.find('image verification skipped'), -1)
-
-    def test_verify_checksum_invalid_repaired(self):
-        img = {'container_format': 'ami', 'id': '42'}
-
-        self.flags(checksum_base_images=True)
-
-        with utils.tempdir() as tmpdir:
-            self.flags(instances_path=tmpdir)
-            self.flags(image_info_filename_pattern=('$instances_path/'
-                                                    '%(image)s.info'))
-
-            fname, info_fname, testdata = self._make_checksum(tmpdir)
-
-            # Checksum is invalid, and not json
-            f = open(info_fname, 'w')
-            f.write('banana')
-            f.close()
-
-            image_cache_manager = imagecache.ImageCacheManager()
-            res = image_cache_manager._verify_checksum(
-                img, fname, create_if_missing=True)
-            self.assertTrue(res is None)
-
-    def test_verify_checksum_invalid(self):
-        img = {'container_format': 'ami', 'id': '42'}
-
-        self.flags(checksum_base_images=True)
-
-        with self._intercept_log_messages() as stream:
-            with utils.tempdir() as tmpdir:
-                self.flags(instances_path=tmpdir)
-                self.flags(image_info_filename_pattern=('$instances_path/'
-                                                        '%(image)s.info'))
-
-                fname, info_fname, testdata = self._make_checksum(tmpdir)
-
-                # Checksum is invalid, but is in valid json
-                f = open(info_fname, 'w')
-                f.write('{"sha1": "banana"}')
-                f.close()
-
-                image_cache_manager = imagecache.ImageCacheManager()
-                res = image_cache_manager._verify_checksum(img, fname)
-                self.assertFalse(res)
-                log = stream.getvalue()
-
-                self.assertNotEqual(log.find('image verification failed'), -1)
-
-    def test_verify_checksum_file_missing(self):
-        self.flags(checksum_base_images=True)
-
-        with utils.tempdir() as tmpdir:
-            self.flags(instances_path=tmpdir)
-            self.flags(image_info_filename_pattern=('$instances_path/'
-                                                    '%(image)s.info'))
-
-            fname, info_fname, testdata = self._make_checksum(tmpdir)
-
-            # Checksum file missing
-            image_cache_manager = imagecache.ImageCacheManager()
-            res = image_cache_manager._verify_checksum('aaa', fname)
-            self.assertEquals(res, None)
-
-            # Checksum requests for a file with no checksum now have the
-            # side effect of creating the checksum
-            self.assertTrue(os.path.exists(info_fname))
-
-    @contextlib.contextmanager
     def _make_base_file(self, checksum=True):
         """Make a base file for testing."""
 
@@ -584,7 +432,7 @@ class ImageCacheManagerTestCase(test.TestCase):
             image_cache_manager._remove_base_file(fname)
 
     def test_remove_base_file_oserror(self):
-        with self._intercept_log_messages() as stream:
+        with intercept_log_messages() as stream:
             with utils.tempdir() as tmpdir:
                 self.flags(instances_path=tmpdir)
                 self.flags(image_info_filename_pattern=('$instances_path/'
@@ -653,7 +501,7 @@ class ImageCacheManagerTestCase(test.TestCase):
     def test_handle_base_image_absent(self):
         img = '123'
 
-        with self._intercept_log_messages() as stream:
+        with intercept_log_messages() as stream:
             image_cache_manager = imagecache.ImageCacheManager()
             image_cache_manager.used_images = {'123': (1, 0, ['banana-42'])}
             image_cache_manager._handle_base_image(img, None)
@@ -970,3 +818,162 @@ class ImageCacheManagerTestCase(test.TestCase):
             compute.conductor_api = conductor.API()
             compute._run_image_cache_manager_pass(None)
             self.assertTrue(was['called'])
+
+
+class VerifyChecksumTestCase(test.TestCase):
+
+    def setUp(self):
+        super(VerifyChecksumTestCase, self).setUp()
+
+    def _make_checksum(self, tmpdir):
+        testdata = ('OpenStack Software delivers a massively scalable cloud '
+                    'operating system.')
+
+        fname = os.path.join(tmpdir, 'aaa')
+        info_fname = imagecache.get_info_filename(fname)
+
+        with open(fname, 'w') as f:
+            f.write(testdata)
+
+        return fname, info_fname, testdata
+
+    def test_verify_checksum(self):
+        img = {'container_format': 'ami', 'id': '42'}
+
+        self.flags(checksum_base_images=True)
+
+        with intercept_log_messages() as stream:
+            with utils.tempdir() as tmpdir:
+                self.flags(instances_path=tmpdir)
+                self.flags(image_info_filename_pattern=('$instances_path/'
+                                                        '%(image)s.info'))
+                fname, info_fname, testdata = self._make_checksum(tmpdir)
+
+                # Checksum is valid
+                f = open(info_fname, 'w')
+                csum = hashlib.sha1()
+                csum.update(testdata)
+                f.write('{"sha1": "%s"}\n' % csum.hexdigest())
+                f.close()
+
+                image_cache_manager = imagecache.ImageCacheManager()
+                res = image_cache_manager._verify_checksum(img, fname)
+                self.assertTrue(res)
+
+    def test_verify_checksum_disabled(self):
+        img = {'container_format': 'ami', 'id': '42'}
+
+        self.flags(checksum_base_images=False)
+
+        with intercept_log_messages() as stream:
+            with utils.tempdir() as tmpdir:
+                self.flags(instances_path=tmpdir)
+                self.flags(image_info_filename_pattern=('$instances_path/'
+                                                        '%(image)s.info'))
+                fname, info_fname, testdata = self._make_checksum(tmpdir)
+
+                # Checksum is valid
+                f = open(info_fname, 'w')
+                csum = hashlib.sha1()
+                csum.update(testdata)
+                f.write('{"sha1": "%s"}\n' % csum.hexdigest())
+                f.close()
+
+                image_cache_manager = imagecache.ImageCacheManager()
+                res = image_cache_manager._verify_checksum(img, fname)
+                self.assertTrue(res is None)
+
+    def test_verify_checksum_invalid_json(self):
+        img = {'container_format': 'ami', 'id': '42'}
+
+        self.flags(checksum_base_images=True)
+
+        with intercept_log_messages() as stream:
+            with utils.tempdir() as tmpdir:
+                self.flags(instances_path=tmpdir)
+                self.flags(image_info_filename_pattern=('$instances_path/'
+                                                        '%(image)s.info'))
+
+                fname, info_fname, testdata = self._make_checksum(tmpdir)
+
+                # Checksum is invalid, and not json
+                f = open(info_fname, 'w')
+                f.write('banana')
+                f.close()
+
+                image_cache_manager = imagecache.ImageCacheManager()
+                res = image_cache_manager._verify_checksum(
+                    img, fname, create_if_missing=False)
+                self.assertFalse(res)
+                log = stream.getvalue()
+
+                # NOTE(mikal): this is a skip not a fail because the file is
+                # present, but is not in valid json format and therefore is
+                # skipped.
+                self.assertNotEqual(log.find('image verification skipped'), -1)
+
+    def test_verify_checksum_invalid_repaired(self):
+        img = {'container_format': 'ami', 'id': '42'}
+
+        self.flags(checksum_base_images=True)
+
+        with utils.tempdir() as tmpdir:
+            self.flags(instances_path=tmpdir)
+            self.flags(image_info_filename_pattern=('$instances_path/'
+                                                    '%(image)s.info'))
+
+            fname, info_fname, testdata = self._make_checksum(tmpdir)
+
+            # Checksum is invalid, and not json
+            f = open(info_fname, 'w')
+            f.write('banana')
+            f.close()
+
+            image_cache_manager = imagecache.ImageCacheManager()
+            res = image_cache_manager._verify_checksum(
+                img, fname, create_if_missing=True)
+            self.assertTrue(res is None)
+
+    def test_verify_checksum_invalid(self):
+        img = {'container_format': 'ami', 'id': '42'}
+
+        self.flags(checksum_base_images=True)
+
+        with intercept_log_messages() as stream:
+            with utils.tempdir() as tmpdir:
+                self.flags(instances_path=tmpdir)
+                self.flags(image_info_filename_pattern=('$instances_path/'
+                                                        '%(image)s.info'))
+
+                fname, info_fname, testdata = self._make_checksum(tmpdir)
+
+                # Checksum is invalid, but is in valid json
+                f = open(info_fname, 'w')
+                f.write('{"sha1": "banana"}')
+                f.close()
+
+                image_cache_manager = imagecache.ImageCacheManager()
+                res = image_cache_manager._verify_checksum(img, fname)
+                self.assertFalse(res)
+                log = stream.getvalue()
+
+                self.assertNotEqual(log.find('image verification failed'), -1)
+
+    def test_verify_checksum_file_missing(self):
+        self.flags(checksum_base_images=True)
+
+        with utils.tempdir() as tmpdir:
+            self.flags(instances_path=tmpdir)
+            self.flags(image_info_filename_pattern=('$instances_path/'
+                                                    '%(image)s.info'))
+
+            fname, info_fname, testdata = self._make_checksum(tmpdir)
+
+            # Checksum file missing
+            image_cache_manager = imagecache.ImageCacheManager()
+            res = image_cache_manager._verify_checksum('aaa', fname)
+            self.assertEquals(res, None)
+
+            # Checksum requests for a file with no checksum now have the
+            # side effect of creating the checksum
+            self.assertTrue(os.path.exists(info_fname))
