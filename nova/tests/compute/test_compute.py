@@ -8777,7 +8777,8 @@ class EvacuateHostTestCase(BaseTestCase):
     def setUp(self):
         super(EvacuateHostTestCase, self).setUp()
         self.inst_ref = jsonutils.to_primitive(self._create_fake_instance
-                                          ({'host': 'fake_host_2'}))
+                                          ({'host': 'fake_host_2',
+                                            'node': 'fakenode2'}))
         db.instance_update(self.context, self.inst_ref['uuid'],
                            {"task_state": task_states.REBUILDING})
 
@@ -8795,8 +8796,16 @@ class EvacuateHostTestCase(BaseTestCase):
                 on_shared_storage=on_shared_storage)
 
     def test_rebuild_on_host_updated_target(self):
-        """Confirm evacuate scenario updates host."""
+        """Confirm evacuate scenario updates host and node."""
         self.stubs.Set(self.compute.driver, 'instance_on_disk', lambda x: True)
+
+        def fake_get_compute_info(context, host):
+            self.assertTrue(context.is_admin)
+            self.assertEquals('fake-mini', host)
+            return {'hypervisor_hostname': self.rt.nodename}
+
+        self.stubs.Set(self.compute, '_get_compute_info',
+                       fake_get_compute_info)
         self.mox.ReplayAll()
 
         self._rebuild()
@@ -8804,6 +8813,25 @@ class EvacuateHostTestCase(BaseTestCase):
         # Should be on destination host
         instance = db.instance_get(self.context, self.inst_ref['id'])
         self.assertEqual(instance['host'], self.compute.host)
+        self.assertEqual(NODENAME, instance['node'])
+
+    def test_rebuild_on_host_updated_target_node_not_found(self):
+        """Confirm evacuate scenario where compute_node isn't found."""
+        self.stubs.Set(self.compute.driver, 'instance_on_disk', lambda x: True)
+
+        def fake_get_compute_info(context, host):
+            raise exception.NotFound(_("Host %s not found") % host)
+
+        self.stubs.Set(self.compute, '_get_compute_info',
+                       fake_get_compute_info)
+        self.mox.ReplayAll()
+
+        self._rebuild()
+
+        # Should be on destination host
+        instance = db.instance_get(self.context, self.inst_ref['id'])
+        self.assertEqual(instance['host'], self.compute.host)
+        self.assertIsNone(instance['node'])
 
     def test_rebuild_with_instance_in_stopped_state(self):
         """Confirm evacuate scenario updates vm_state to stopped
