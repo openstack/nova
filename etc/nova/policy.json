@@ -71,6 +71,7 @@
     "compute_extension:flavor_disabled": "",
     "compute_extension:v3:os-flavor-disabled": "",
     "compute_extension:flavor_rxtx": "",
+    "compute_extension:v3:os-flavor-rxtx": "",
     "compute_extension:flavor_swap": "",
     "compute_extension:flavorextradata": "",
     "compute_extension:flavorextraspecs:index": "",
