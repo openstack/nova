@@ -23,6 +23,7 @@ Tests for Consoleauth Code.
 import mox
 from nova.consoleauth import manager
 from nova import context
+from nova import db
 from nova.openstack.common import timeutils
 from nova import test
 
@@ -34,6 +35,7 @@ class ConsoleauthTestCase(test.TestCase):
         super(ConsoleauthTestCase, self).setUp()
         self.manager = manager.ConsoleAuthManager()
         self.context = context.get_admin_context()
+        self.instance = db.instance_create(self.context, {})
 
     def test_tokens_expire(self):
         # Test that tokens expire correctly.
@@ -45,7 +47,7 @@ class ConsoleauthTestCase(test.TestCase):
 
         self.manager.authorize_console(self.context, token, 'novnc',
                                          '127.0.0.1', '8080', 'host',
-                                         'instance')
+                                         self.instance['uuid'])
         self.assertTrue(self.manager.check_token(self.context, token))
         timeutils.advance_time_seconds(1)
         self.assertFalse(self.manager.check_token(self.context, token))
@@ -60,27 +62,27 @@ class ConsoleauthTestCase(test.TestCase):
 
     def test_multiple_tokens_for_instance(self):
         tokens = [u"token" + str(i) for i in xrange(10)]
-        instance = u"12345"
 
         self._stub_validate_console_port(True)
 
         for token in tokens:
             self.manager.authorize_console(self.context, token, 'novnc',
                                           '127.0.0.1', '8080', 'host',
-                                          instance)
+                                          self.instance['uuid'])
 
         for token in tokens:
             self.assertTrue(self.manager.check_token(self.context, token))
 
     def test_delete_tokens_for_instance(self):
-        instance = u"12345"
         tokens = [u"token" + str(i) for i in xrange(10)]
         for token in tokens:
             self.manager.authorize_console(self.context, token, 'novnc',
                                           '127.0.0.1', '8080', 'host',
-                                          instance)
-        self.manager.delete_tokens_for_instance(self.context, instance)
-        stored_tokens = self.manager._get_tokens_for_instance(instance)
+                                          self.instance['uuid'])
+        self.manager.delete_tokens_for_instance(self.context,
+                self.instance['uuid'])
+        stored_tokens = self.manager._get_tokens_for_instance(
+                self.instance['uuid'])
 
         self.assertEqual(len(stored_tokens), 0)
 
@@ -94,7 +96,7 @@ class ConsoleauthTestCase(test.TestCase):
 
         self.manager.authorize_console(self.context, token, 'novnc',
                                         '127.0.0.1', '8080', 'host',
-                                        instance_uuid=u'instance')
+                                        instance_uuid=self.instance['uuid'])
         self.assertFalse(self.manager.check_token(self.context, token))
 
     def test_console_no_instance_uuid(self):
