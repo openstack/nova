@@ -158,6 +158,27 @@ class LibvirtVifTestCase(test.TestCase):
             instanceid="ddd-eee-fff")
     }
 
+    net_iovisor = {
+             'cidr': '101.168.1.0/24',
+             'cidr_v6': '101:1db9::/64',
+             'gateway_v6': '101:1db9::1',
+             'netmask_v6': '64',
+             'netmask': '255.255.255.0',
+             'interface': 'eth0',
+             'vlan': 99,
+             'gateway': '101.168.1.1',
+             'broadcast': '101.168.1.255',
+             'dns1': '8.8.8.8',
+             'id': 'network-id-xxx-yyy-zzz'
+    }
+
+    mapping_iovisor = {
+        'mac': 'ca:fe:de:ad:be:ef',
+        'vif_uuid': 'vif-xxx-yyy-zzz',
+        'vif_devname': 'tap-xxx-yyy-zzz',
+        'vif_type': network_model.VIF_TYPE_IOVISOR,
+    }
+
     mapping_none = {
         'mac': 'ca:fe:de:ad:be:ef',
         'gateway_v6': net_bridge['gateway_v6'],
@@ -673,6 +694,27 @@ class LibvirtVifTestCase(test.TestCase):
                 profile_id_found = True
 
         self.assertTrue(profile_id_found)
+
+    def test_generic_iovisor_driver(self):
+        def get_connection():
+            return fakelibvirt.Connection("qemu:///session",
+                                          False)
+        d = vif.LibvirtGenericVIFDriver(get_connection)
+        self.flags(firewall_driver="nova.virt.firewall.NoopFirewallDriver")
+        xml = self._get_instance_xml(d,
+                                     self.net_iovisor,
+                                     self.mapping_iovisor)
+        doc = etree.fromstring(xml)
+        ret = doc.findall('./devices/interface')
+        self.assertEqual(len(ret), 1)
+        node = ret[0]
+        ret = node.findall("filterref")
+        self.assertEqual(len(ret), 0)
+        self.assertEqual(node.get("type"), "ethernet")
+        tap_name = node.find("target").get("dev")
+        self.assertEqual(tap_name, self.mapping_iovisor['vif_devname'])
+        mac = node.find("mac").get("address")
+        self.assertEqual(mac, self.mapping_iovisor['mac'])
 
     def test_generic_8021qbg_driver(self):
         def get_connection():

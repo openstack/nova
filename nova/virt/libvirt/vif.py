@@ -306,6 +306,19 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
 
         return conf
 
+    def get_config_iovisor(self, instance, network, mapping, image_meta,
+                             inst_type):
+        conf = super(LibvirtGenericVIFDriver,
+                     self).get_config(instance,
+                                      network,
+                                      mapping,
+                                      image_meta, inst_type)
+
+        dev = self.get_vif_devname(mapping)
+        designer.set_vif_host_backend_ethernet_config(conf, dev)
+
+        return conf
+
     def get_config(self, instance, network, mapping, image_meta, inst_type):
         vif_type = mapping.get('vif_type')
 
@@ -342,6 +355,11 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
             return self.get_config_ivs(instance,
                                        network, mapping,
                                        image_meta,
+                                       inst_type)
+        elif vif_type == network_model.VIF_TYPE_IOVISOR:
+            return self.get_config_iovisor(instance,
+                                          network, mapping,
+                                          image_meta,
                                        inst_type)
         else:
             raise exception.NovaException(
@@ -480,6 +498,30 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
         super(LibvirtGenericVIFDriver,
               self).plug(instance, vif)
 
+    def plug_iovisor(self, instance, vif):
+        """Plug using PLUMgrid IO Visor Driver
+
+        Connect a network device to their respective
+        Virtual Domain in PLUMgrid Platform.
+        """
+        super(LibvirtGenericVIFDriver,
+              self).plug(instance, vif)
+        network, mapping = vif
+        dev = self.get_vif_devname(mapping)
+        iface_id = mapping['vif_uuid']
+        linux_net.create_tap_dev(dev)
+        net_id = network['id']
+        tenant_id = instance["project_id"]
+        try:
+            utils.execute('ifc_ctl', 'gateway', 'add_port', dev,
+                          run_as_root=True)
+            utils.execute('ifc_ctl', 'gateway', 'ifup', dev,
+                          'access_vm', mapping['label'] + "_" + iface_id,
+                          mapping['mac'], 'pgtag2=%s' % net_id,
+                          'pgtag1=%s' % tenant_id, run_as_root=True)
+        except exception.ProcessExecutionError:
+            LOG.exception(_("Failed while plugging vif"), instance=instance)
+
     def plug(self, instance, vif):
         network, mapping = vif
         vif_type = mapping.get('vif_type')
@@ -503,6 +545,8 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
             self.plug_802qbh(instance, vif)
         elif vif_type == network_model.VIF_TYPE_IVS:
             self.plug_ivs(instance, vif)
+        elif vif_type == network_model.VIF_TYPE_IOVISOR:
+            self.plug_iovisor(instance, vif)
         else:
             raise exception.NovaException(
                 _("Unexpected vif_type=%s") % vif_type)
@@ -608,6 +652,27 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
         super(LibvirtGenericVIFDriver,
               self).unplug(instance, vif)
 
+    def unplug_iovisor(self, instance, vif):
+        """Unplug using PLUMgrid IO Visor Driver
+
+        Delete network device and to their respective
+        connection to the Virtual Domain in PLUMgrid Platform.
+        """
+        super(LibvirtGenericVIFDriver,
+              self).unplug(instance, vif)
+        network, mapping = vif
+        iface_id = mapping['vif_uuid']
+        dev = self.get_vif_devname(mapping)
+        try:
+            utils.execute('ifc_ctl', 'gateway', 'ifdown',
+                          dev, 'access_vm', mapping['label'] + "_" + iface_id,
+                          mapping['mac'], run_as_root=True)
+            utils.execute('ifc_ctl', 'gateway', 'del_port', dev,
+                          run_as_root=True)
+            linux_net.delete_net_dev(dev)
+        except exception.ProcessExecutionError:
+            LOG.exception(_("Failed while unplugging vif"), instance=instance)
+
     def unplug(self, instance, vif):
         network, mapping = vif
         vif_type = mapping.get('vif_type')
@@ -631,6 +696,8 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
             self.unplug_802qbh(instance, vif)
         elif vif_type == network_model.VIF_TYPE_IVS:
             self.unplug_ivs(instance, vif)
+        elif vif_type == network_model.VIF_TYPE_IOVISOR:
+            self.unplug_iovisor(instance, vif)
         else:
             raise exception.NovaException(
                 _("Unexpected vif_type=%s") % vif_type)
