@@ -698,13 +698,13 @@ class VirtualInterface(BASE, NovaBase):
     """Represents a virtual interface on an instance."""
     __tablename__ = 'virtual_interfaces'
     __table_args__ = (
-        schema.UniqueConstraint("address",
-                                name="uniq_virtual_interfaces0address"),
+        schema.UniqueConstraint("address", "deleted",
+                        name="uniq_virtual_interfaces0address0deleted"),
         Index('network_id', 'network_id'),
         Index('virtual_interfaces_instance_uuid_fkey', 'instance_uuid'),
     )
     id = Column(Integer, primary_key=True, nullable=False)
-    address = Column(String(255), unique=True, nullable=True)
+    address = Column(String(255), nullable=True)
     network_id = Column(Integer, nullable=True)
     instance_uuid = Column(String(36), ForeignKey('instances.uuid'),
                            nullable=True)

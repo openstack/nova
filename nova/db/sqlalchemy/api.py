@@ -1303,7 +1303,7 @@ def virtual_interface_create(context, values):
 @require_context
 def _virtual_interface_query(context, session=None):
     return model_query(context, models.VirtualInterface, session=session,
-                       read_deleted="yes")
+                       read_deleted="no")
 
 
 @require_context
@@ -1380,7 +1380,7 @@ def virtual_interface_delete_by_instance(context, instance_uuid):
     """
     _virtual_interface_query(context).\
            filter_by(instance_uuid=instance_uuid).\
-           delete()
+           soft_delete()
 
 
 @require_context
