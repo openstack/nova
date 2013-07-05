@@ -68,7 +68,7 @@ def fake_get_flavor_access_by_flavor_id(flavorid):
     return res
 
 
-def fake_get_flavor_by_flavor_id(flavorid):
+def fake_get_flavor_by_flavor_id(flavorid, ctxt=None):
     return INSTANCE_TYPES[flavorid]
 
 
