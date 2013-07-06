@@ -8,7 +8,7 @@ Named hooks are added to nova code via a decorator that will lazily load
 plugin code matching the name.  The loading works via setuptools
 `entry points`_.
 
-.. _`entry points`: http://packages.python.org/distribute/pkg_resources.html#entry-points
+.. _`entry points`: http://pythonhosted.org/setuptools/pkg_resources.html#entry-points
 
 What are hooks good for?
 ------------------------
