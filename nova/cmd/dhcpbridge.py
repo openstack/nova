@@ -105,13 +105,8 @@ CONF.register_cli_opt(
 
 def main():
     """Parse environment and arguments and call the appropriate action."""
-    try:
-        config_file = os.environ['CONFIG_FILE']
-    except KeyError:
-        config_file = os.environ['FLAGFILE']
-
     config.parse_args(sys.argv,
-        default_config_files=jsonutils.loads(config_file))
+        default_config_files=jsonutils.loads(os.environ['CONFIG_FILE']))
 
     logging.setup("nova")
     global LOG

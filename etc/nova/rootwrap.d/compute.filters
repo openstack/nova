@@ -136,7 +136,6 @@ kill_radvd: KillFilter, root, /usr/sbin/radvd
 
 # nova/network/linux_net.py: dnsmasq call
 dnsmasq: DnsmasqFilter, /usr/sbin/dnsmasq, root
-dnsmasq_deprecated: DeprecatedDnsmasqFilter, /usr/sbin/dnsmasq, root
 
 # nova/network/linux_net.py: 'radvd', '-C', '%s' % _ra_file(dev, 'conf'..
 radvd: CommandFilter, radvd, root
