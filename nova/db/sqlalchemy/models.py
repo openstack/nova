@@ -715,6 +715,11 @@ class VirtualInterface(BASE, NovaBase):
 class FixedIp(BASE, NovaBase):
     """Represents a fixed ip for an instance."""
     __tablename__ = 'fixed_ips'
+    __table_args__ = (
+        schema.UniqueConstraint(
+            "address", "deleted", name="uniq_fixed_ips0address0deleted"
+        ),
+    )
     id = Column(Integer, primary_key=True)
     address = Column(types.IPAddress())
     network_id = Column(Integer, nullable=True)

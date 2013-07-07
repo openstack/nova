@@ -1049,7 +1049,10 @@ def fixed_ip_associate_pool(context, network_id, instance_uuid=None,
 def fixed_ip_create(context, values):
     fixed_ip_ref = models.FixedIp()
     fixed_ip_ref.update(values)
-    fixed_ip_ref.save()
+    try:
+        fixed_ip_ref.save()
+    except db_exc.DBDuplicateEntry:
+        raise exception.FixedIpExists(address=values['address'])
     return fixed_ip_ref
 
 
@@ -1060,7 +1063,14 @@ def fixed_ip_bulk_create(context, ips):
         for ip in ips:
             model = models.FixedIp()
             model.update(ip)
-            session.add(model)
+            try:
+                # NOTE (vsergeyev): To get existing address we have to do each
+                #                   time session.flush().
+                #                   See related note at line 697.
+                session.add(model)
+                session.flush()
+            except db_exc.DBDuplicateEntry:
+                raise exception.FixedIpExists(address=ip['address'])
 
 
 @require_context

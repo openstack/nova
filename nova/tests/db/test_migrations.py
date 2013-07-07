@@ -1859,6 +1859,36 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
                 else:
                     self.assertIn((name, columns), index_data)
 
+    def _pre_upgrade_195(self, engine):
+        fixed_ips = db_utils.get_table(engine, 'fixed_ips')
+        data = [
+            {'address': '128.128.128.128', 'deleted': 0},
+            {'address': '128.128.128.128', 'deleted': 0},
+            {'address': '128.128.128.129', 'deleted': 0},
+        ]
+
+        for item in data:
+            fixed_ips.insert().values(item).execute()
+        return data
+
+    def _check_195(self, engine, data):
+        fixed_ips = db_utils.get_table(engine, 'fixed_ips')
+
+        def get_(address, deleted):
+            deleted_value = 0 if not deleted else fixed_ips.c.id
+            return fixed_ips.select()\
+                            .where(fixed_ips.c.address == address)\
+                            .where(fixed_ips.c.deleted == deleted_value)\
+                            .execute()\
+                            .fetchall()
+
+        self.assertEqual(1, len(get_('128.128.128.128', False)))
+        self.assertEqual(1, len(get_('128.128.128.128', True)))
+        self.assertEqual(1, len(get_('128.128.128.129', False)))
+        self.assertRaises(sqlalchemy.exc.IntegrityError,
+                          fixed_ips.insert().execute,
+                          dict(address='128.128.128.129', deleted=0))
+
 
 class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""
