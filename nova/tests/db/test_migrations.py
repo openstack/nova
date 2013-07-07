@@ -1752,6 +1752,46 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
                           virtual_if.insert().execute,
                           values)
 
+    def _check_193(self, engine, data):
+        tables = set(engine.table_names())
+        dropped_tables = set([
+            'sm_volume',
+            'sm_backend_config',
+            'sm_flavors',
+            'virtual_storage_arrays',
+            'volume_metadata',
+            'volume_type_extra_specs',
+            'volume_types',
+            'shadow_sm_volume',
+            'shadow_sm_backend_config',
+            'shadow_sm_flavors',
+            'shadow_virtual_storage_arrays',
+            'shadow_volume_metadata',
+            'shadow_volume_type_extra_specs',
+            'shadow_volume_types'])
+        check = bool(tables & dropped_tables)
+        self.assertFalse(check)
+
+    def _post_downgrade_193(self, engine):
+        tables = set(engine.table_names())
+        dropped_tables = set([
+            'sm_volume',
+            'sm_backend_config',
+            'sm_flavors',
+            'virtual_storage_arrays',
+            'volume_metadata',
+            'volume_type_extra_specs',
+            'volume_types',
+            'shadow_sm_volume',
+            'shadow_sm_backend_config',
+            'shadow_sm_flavors',
+            'shadow_virtual_storage_arrays',
+            'shadow_volume_metadata',
+            'shadow_volume_type_extra_specs',
+            'shadow_volume_types'])
+        check = tables & dropped_tables
+        self.assertEqual(check, dropped_tables)
+
 
 class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""
