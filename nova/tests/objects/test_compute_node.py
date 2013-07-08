@@ -41,6 +41,7 @@ fake_compute_node = {
     'running_vms': 2013,
     'cpu_info': 'Schmintel i786',
     'disk_available_least': 256,
+    'metrics': '',
 }
 
 
