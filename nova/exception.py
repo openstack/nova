@@ -683,6 +683,14 @@ class ServiceNotFound(NotFound):
     message = _("Service %(service_id)s could not be found.")
 
 
+class ServiceBinaryExists(Duplicate):
+    message = _("Service with host %(host)s binary %(binary)s exists.")
+
+
+class ServiceTopicExists(Duplicate):
+    message = _("Service with host %(host)s topic %(topic)s exists.")
+
+
 class HostNotFound(NotFound):
     message = _("Host %(host)s could not be found.")
 

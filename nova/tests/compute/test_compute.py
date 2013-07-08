@@ -230,7 +230,8 @@ class BaseTestCase(test.TestCase):
 
         self.stubs.Set(rpc_common, 'catch_client_exception', passthru)
 
-    def _create_fake_instance(self, params=None, type_name='m1.tiny'):
+    def _create_fake_instance(self, params=None, type_name='m1.tiny',
+                              services=False):
         """Create a test instance."""
         if not params:
             params = {}
@@ -267,8 +268,9 @@ class BaseTestCase(test.TestCase):
         inst['launched_at'] = timeutils.utcnow()
         inst['security_groups'] = []
         inst.update(params)
-        _create_service_entries(self.context.elevated(),
-                {'fake_zone': [inst['host']]})
+        if services:
+            _create_service_entries(self.context.elevated(),
+                    {'fake_zone': [inst['host']]})
         return db.instance_create(self.context, inst)
 
     def _create_instance(self, params=None, type_name='m1.tiny'):
@@ -4996,7 +4998,8 @@ class ComputeAPITestCase(BaseTestCase):
         self.fake_show = fake_show
 
     def _run_instance(self, params=None):
-        instance = jsonutils.to_primitive(self._create_fake_instance(params))
+        instance = jsonutils.to_primitive(self._create_fake_instance(params,
+                                          services=True))
         instance_uuid = instance['uuid']
         self.compute.run_instance(self.context, instance=instance)
 
@@ -5475,7 +5478,7 @@ class ComputeAPITestCase(BaseTestCase):
     def test_force_delete(self):
         # Ensure instance can be deleted after a soft delete.
         instance = jsonutils.to_primitive(self._create_fake_instance(params={
-                'host': CONF.host}))
+                'host': CONF.host}, services=True))
         instance_uuid = instance['uuid']
         self.compute.run_instance(self.context, instance=instance)
 
@@ -7889,7 +7892,8 @@ class ComputeAPITestCase(BaseTestCase):
         db.instance_destroy(self.context, instance['uuid'])
 
     def test_evacuate(self):
-        instance = jsonutils.to_primitive(self._create_fake_instance())
+        instance = jsonutils.to_primitive(self._create_fake_instance(
+                                          services=True))
         instance_uuid = instance['uuid']
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
         self.assertEqual(instance['task_state'], None)
@@ -7951,7 +7955,8 @@ class ComputeAPITestCase(BaseTestCase):
         db.instance_destroy(self.context, instance['uuid'])
 
     def test_fail_evacuate_from_running_host(self):
-        instance = jsonutils.to_primitive(self._create_fake_instance())
+        instance = jsonutils.to_primitive(self._create_fake_instance(
+                                          services=True))
         instance_uuid = instance['uuid']
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
         self.assertEqual(instance['task_state'], None)

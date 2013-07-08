@@ -45,7 +45,12 @@ class Service(BASE, NovaBase):
     """Represents a running service on a host."""
 
     __tablename__ = 'services'
-    __table_args__ = ()
+    __table_args__ = (
+        schema.UniqueConstraint("host", "topic", "deleted",
+                                name="uniq_services0host0topic0deleted"),
+        schema.UniqueConstraint("host", "binary", "deleted",
+                                name="uniq_services0host0binary0deleted")
+        )
 
     id = Column(Integer, primary_key=True)
     host = Column(String(255), nullable=True)  # , ForeignKey('hosts.id'))

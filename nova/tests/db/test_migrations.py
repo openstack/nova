@@ -1889,6 +1889,46 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
                           fixed_ips.insert().execute,
                           dict(address='128.128.128.129', deleted=0))
 
+    def _pre_upgrade_196(self, engine):
+        services = db_utils.get_table(engine, 'services')
+        data = [
+            {'id': 6, 'host': 'host1', 'binary': 'binary1', 'topic': 'topic3',
+             'report_count': 5, 'deleted': 0},
+            {'id': 7, 'host': 'host1', 'binary': 'binary1', 'topic': 'topic4',
+             'report_count': 5, 'deleted': 0},
+            {'id': 8, 'host': 'host2', 'binary': 'binary7', 'topic': 'topic2',
+             'report_count': 5, 'deleted': 0},
+            {'id': 9, 'host': 'host2', 'binary': 'binary8', 'topic': 'topic2',
+             'report_count': 5, 'deleted': 0},
+        ]
+        for item in data:
+            services.insert().values(item).execute()
+        return data
+
+    def _check_196(self, engine, data):
+        services = db_utils.get_table(engine, 'services')
+
+        def get_(host, deleted):
+            deleted_value = 0 if not deleted else services.c.id
+            return services.select().\
+                   where(services.c.host == host).\
+                   where(services.c.deleted == deleted_value).\
+                   execute().\
+                   fetchall()
+
+        self.assertEqual(1, len(get_('host1', False)))
+        self.assertEqual(1, len(get_('host1', True)))
+        self.assertEqual(1, len(get_('host2', False)))
+        self.assertEqual(1, len(get_('host2', True)))
+        self.assertRaises(sqlalchemy.exc.IntegrityError,
+                          services.insert().execute,
+                          {'id': 10, 'host': 'host1', 'binary': 'binary1',
+                           'report_count': 5, 'topic': 'topic0', 'deleted': 0})
+        self.assertRaises(sqlalchemy.exc.IntegrityError,
+                          services.insert().execute,
+                          {'id': 11, 'host': 'host2', 'binary': 'binary0',
+                           'report_count': 5, 'topic': 'topic2', 'deleted': 0})
+
 
 class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""
