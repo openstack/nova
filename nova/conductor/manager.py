@@ -21,6 +21,7 @@ from nova import block_device
 from nova.cells import rpcapi as cells_rpcapi
 from nova.compute import api as compute_api
 from nova.compute import utils as compute_utils
+from nova.db import base
 from nova import exception
 from nova import manager
 from nova import network
@@ -545,7 +546,7 @@ class ConductorManager(manager.Manager):
         self.compute_api.reboot(context, instance, reboot_type)
 
 
-class ComputeTaskManager(object):
+class ComputeTaskManager(base.Base):
     """Namespace for compute methods.
 
     This class presents an rpc API for nova-conductor under the 'compute_task'
@@ -558,6 +559,7 @@ class ComputeTaskManager(object):
     RPC_API_VERSION = '1.2'
 
     def __init__(self):
+        super(ComputeTaskManager, self).__init__()
         self.scheduler_rpcapi = scheduler_rpcapi.SchedulerAPI()
 
     @rpc_common.client_exceptions(exception.NoValidHost,
