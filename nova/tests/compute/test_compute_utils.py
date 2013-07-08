@@ -405,3 +405,37 @@ class UsageInfoTestCase(test.TestCase):
         image_ref_url = "%s/images/1" % glance.generate_glance_url()
         self.assertEquals(payload['image_ref_url'], image_ref_url)
         self.compute.terminate_instance(self.context, instance)
+
+    def test_notify_about_aggregate_update_with_id(self):
+        # Set aggregate payload
+        aggregate_payload = {'aggregate_id': 1}
+        compute_utils.notify_about_aggregate_update(self.context,
+                                                    "create.end",
+                                                    aggregate_payload)
+        self.assertEquals(len(test_notifier.NOTIFICATIONS), 1)
+        msg = test_notifier.NOTIFICATIONS[0]
+        self.assertEquals(msg['priority'], 'INFO')
+        self.assertEquals(msg['event_type'], 'aggregate.create.end')
+        payload = msg['payload']
+        self.assertEquals(payload['aggregate_id'], 1)
+
+    def test_notify_about_aggregate_update_with_name(self):
+        # Set aggregate payload
+        aggregate_payload = {'name': 'fakegroup'}
+        compute_utils.notify_about_aggregate_update(self.context,
+                                                    "create.start",
+                                                    aggregate_payload)
+        self.assertEquals(len(test_notifier.NOTIFICATIONS), 1)
+        msg = test_notifier.NOTIFICATIONS[0]
+        self.assertEquals(msg['priority'], 'INFO')
+        self.assertEquals(msg['event_type'], 'aggregate.create.start')
+        payload = msg['payload']
+        self.assertEquals(payload['name'], 'fakegroup')
+
+    def test_notify_about_aggregate_update_without_name_id(self):
+        # Set empty aggregate payload
+        aggregate_payload = {}
+        compute_utils.notify_about_aggregate_update(self.context,
+                                                    "create.start",
+                                                    aggregate_payload)
+        self.assertEquals(len(test_notifier.NOTIFICATIONS), 0)

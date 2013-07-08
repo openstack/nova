@@ -54,6 +54,7 @@ from nova.objects import instance as instance_obj
 from nova.openstack.common import excutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
+from nova.openstack.common.notifier import api as notifier
 from nova.openstack.common import strutils
 from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
@@ -65,6 +66,11 @@ from nova import utils
 from nova import volume
 
 LOG = logging.getLogger(__name__)
+
+
+def publisher_id(aggregate_identify=None):
+    return notifier.publisher_id("aggregate", aggregate_identify)
+
 
 compute_opts = [
     cfg.BoolOpt('allow_resize_to_same_host',
@@ -2738,19 +2744,30 @@ class AggregateAPI(base.Base):
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         super(AggregateAPI, self).__init__(**kwargs)
 
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def create_aggregate(self, context, aggregate_name, availability_zone):
         """Creates the model for the aggregate."""
 
+        aggregate_payload = {}
         values = {"name": aggregate_name}
+        aggregate_payload.update(values)
         metadata = None
         if availability_zone:
             metadata = {'availability_zone': availability_zone}
+            aggregate_payload.update({'meta_data': metadata})
+        compute_utils.notify_about_aggregate_update(context,
+                                                    "create.start",
+                                                    aggregate_payload)
         aggregate = self.db.aggregate_create(context, values,
                 metadata=metadata)
         aggregate = self._get_aggregate_info(context, aggregate)
         # To maintain the same API result as before.
         del aggregate['hosts']
         del aggregate['metadata']
+        aggregate_payload.update({'aggregate_id': aggregate['id']})
+        compute_utils.notify_about_aggregate_update(context,
+                                                    "create.end",
+                                                    aggregate_payload)
         return aggregate
 
     def get_aggregate(self, context, aggregate_id):
@@ -2763,16 +2780,29 @@ class AggregateAPI(base.Base):
         aggregates = self.db.aggregate_get_all(context)
         return [self._get_aggregate_info(context, a) for a in aggregates]
 
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def update_aggregate(self, context, aggregate_id, values):
         """Update the properties of an aggregate."""
+        aggregate_payload = {'aggregate_id': aggregate_id}
+        aggregate_payload.update({'meta_data': values})
+        compute_utils.notify_about_aggregate_update(context,
+                                                    "updateprop.start",
+                                                    aggregate_payload)
         aggregate = self.db.aggregate_update(context, aggregate_id, values)
+        compute_utils.notify_about_aggregate_update(context,
+                                                    "updateprop.end",
+                                                    aggregate_payload)
         return self._get_aggregate_info(context, aggregate)
 
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def update_aggregate_metadata(self, context, aggregate_id, metadata):
-        """Updates the aggregate metadata.
-
-        If a key is set to None, it gets removed from the aggregate metadata.
-        """
+        """Updates the aggregate metadata."""
+        aggregate_payload = {'aggregate_id': aggregate_id}
+        aggregate_payload.update({'meta_data': metadata})
+        compute_utils.notify_about_aggregate_update(context,
+                                                    "updatemetadata.start",
+                                                    aggregate_payload)
+        # If a key is set to None, it gets removed from the aggregate metadata.
         for key in metadata.keys():
             if not metadata[key]:
                 try:
@@ -2782,19 +2812,36 @@ class AggregateAPI(base.Base):
                 except exception.AggregateMetadataNotFound as e:
                     LOG.warn(e.message)
         self.db.aggregate_metadata_add(context, aggregate_id, metadata)
+        compute_utils.notify_about_aggregate_update(context,
+                                                    "updatemetadata.end",
+                                                    aggregate_payload)
         return self.get_aggregate(context, aggregate_id)
 
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def delete_aggregate(self, context, aggregate_id):
         """Deletes the aggregate."""
+        aggregate_payload = {'aggregate_id': aggregate_id}
+        compute_utils.notify_about_aggregate_update(context,
+                                                    "delete.start",
+                                                    aggregate_payload)
         hosts = self.db.aggregate_host_get_all(context, aggregate_id)
         if len(hosts) > 0:
             raise exception.InvalidAggregateAction(action='delete',
                                                    aggregate_id=aggregate_id,
                                                    reason='not empty')
         self.db.aggregate_delete(context, aggregate_id)
+        compute_utils.notify_about_aggregate_update(context,
+                                                    "delete.end",
+                                                    aggregate_payload)
 
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def add_host_to_aggregate(self, context, aggregate_id, host_name):
         """Adds the host to an aggregate."""
+        aggregate_payload = {'aggregate_id': aggregate_id,
+                             'host_name': host_name}
+        compute_utils.notify_about_aggregate_update(context,
+                                                    "addhost.start",
+                                                    aggregate_payload)
         # validates the host; ComputeHostNotFound is raised if invalid
         self.db.service_get_by_compute_host(context, host_name)
         aggregate = self.db.aggregate_get(context, aggregate_id)
@@ -2802,16 +2849,29 @@ class AggregateAPI(base.Base):
         #NOTE(jogo): Send message to host to support resource pools
         self.compute_rpcapi.add_aggregate_host(context,
                 aggregate=aggregate, host_param=host_name, host=host_name)
+        aggregate_payload.update({'name': aggregate['name']})
+        compute_utils.notify_about_aggregate_update(context,
+                                                    "addhost.end",
+                                                    aggregate_payload)
         return self.get_aggregate(context, aggregate_id)
 
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def remove_host_from_aggregate(self, context, aggregate_id, host_name):
         """Removes host from the aggregate."""
+        aggregate_payload = {'aggregate_id': aggregate_id,
+                             'host_name': host_name}
+        compute_utils.notify_about_aggregate_update(context,
+                                                    "removehost.start",
+                                                    aggregate_payload)
         # validates the host; ComputeHostNotFound is raised if invalid
         self.db.service_get_by_compute_host(context, host_name)
         aggregate = self.db.aggregate_get(context, aggregate_id)
         self.db.aggregate_host_delete(context, aggregate_id, host_name)
         self.compute_rpcapi.remove_aggregate_host(context,
                 aggregate=aggregate, host_param=host_name, host=host_name)
+        compute_utils.notify_about_aggregate_update(context,
+                                                    "removehost.end",
+                                                    aggregate_payload)
         return self.get_aggregate(context, aggregate_id)
 
     def _get_aggregate_info(self, context, aggregate):

@@ -255,6 +255,26 @@ def notify_about_instance_usage(context, instance, event_suffix,
                         usage_info)
 
 
+def notify_about_aggregate_update(context, event_suffix, aggregate_payload):
+    """
+    Send a notification about aggregate update.
+
+    :param event_suffix: Event type like "create.start" or "create.end"
+    :param aggregate_payload: payload for aggregate update
+    """
+    aggregate_identifier = aggregate_payload.get('aggregate_id', None)
+    if not aggregate_identifier:
+        aggregate_identifier = aggregate_payload.get('name', None)
+        if not aggregate_identifier:
+            LOG.debug(_("No aggregate id or name specified for this "
+                        "notification and it will be ignored"))
+            return
+
+    notifier_api.notify(context, 'aggregate.%s' % aggregate_identifier,
+                        'aggregate.%s' % event_suffix, notifier_api.INFO,
+                        aggregate_payload)
+
+
 def get_nw_info_for_instance(instance):
     info_cache = instance['info_cache'] or {}
     cached_nwinfo = info_cache.get('network_info') or []
