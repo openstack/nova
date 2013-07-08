@@ -191,13 +191,6 @@ class CommonDeserializer(wsgi.MetadataXMLDeserializer):
         if res_id:
             server['return_reservation_id'] = strutils.bool_from_string(res_id)
 
-        # TODO(cyeoh): bp v3-api-core-as-extensions
-        # Replace with an entry point when the OS-SCH-HNT extension is
-        # ported
-        #scheduler_hints = self._extract_scheduler_hints(server_node)
-        #if scheduler_hints:
-        #    server['OS-SCH-HNT:scheduler_hints'] = scheduler_hints
-
         metadata_node = self.find_first_child_named(server_node, "metadata")
         if metadata_node is not None:
             server["metadata"] = self.extract_metadata(metadata_node)
@@ -266,21 +259,6 @@ class CommonDeserializer(wsgi.MetadataXMLDeserializer):
                         mapping[attr] = strutils.bool_from_string(value)
                 block_device_mapping.append(mapping)
             return block_device_mapping
-        else:
-            return None
-
-    def _extract_scheduler_hints(self, server_node):
-        """Marshal the scheduler hints attribute of a parsed request."""
-        node = self.find_first_child_named_in_namespace(server_node,
-            "http://docs.openstack.org/compute/ext/scheduler-hints/api/v2",
-            "scheduler_hints")
-        if node:
-            scheduler_hints = {}
-            for child in self.extract_elements(node):
-                scheduler_hints.setdefault(child.nodeName, [])
-                value = self.extract_text(child).strip()
-                scheduler_hints[child.nodeName].append(value)
-            return scheduler_hints
         else:
             return None
 
@@ -985,13 +963,6 @@ class ServersController(wsgi.Controller):
         #if self.ext_mgr.is_loaded('OS-DCF'):
         #    auto_disk_config = server_dict.get('auto_disk_config')
 
-        scheduler_hints = {}
-        # TODO(cyeoh): bp v3-api-core-as-extensions
-        # Replace with an extension point when the scheduler hints
-        # extension is ported
-        #if self.ext_mgr.is_loaded('OS-SCH-HNT'):
-        #    scheduler_hints = server_dict.get('scheduler_hints', {})
-
         try:
             inst_type = flavors.get_flavor_by_flavor_id(
                     flavor_id, read_deleted="no")
@@ -1014,7 +985,6 @@ class ServersController(wsgi.Controller):
                             availability_zone=availability_zone,
                             block_device_mapping=block_device_mapping,
                             auto_disk_config=auto_disk_config,
-                            scheduler_hints=scheduler_hints,
                             **create_kwargs)
         except exception.QuotaError as error:
             raise exc.HTTPRequestEntityTooLarge(

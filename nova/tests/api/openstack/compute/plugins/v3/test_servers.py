@@ -2411,33 +2411,6 @@ class ServersControllerCreateTest(test.TestCase):
         self._test_create_extra(params)
 
     # TODO(cyeoh): bp-v3-api-unittests
-    # This needs to be ported to the OS-SCH-HNT extension tests
-    # def test_create_instance_with_scheduler_hints_enabled(self):
-    #     self.ext_mgr.extensions = {'OS-SCH-HNT': 'fake'}
-    #     hints = {'a': 'b'}
-    #     params = {'scheduler_hints': hints}
-    #     old_create = compute_api.API.create
-
-    #     def create(*args, **kwargs):
-    #         self.assertEqual(kwargs['scheduler_hints'], hints)
-    #         return old_create(*args, **kwargs)
-
-    #     self.stubs.Set(compute_api.API, 'create', create)
-    #     self._test_create_extra(params)
-
-    def test_create_instance_with_scheduler_hints_disabled(self):
-        hints = {'a': 'b'}
-        params = {'scheduler_hints': hints}
-        old_create = compute_api.API.create
-
-        def create(*args, **kwargs):
-            self.assertEqual(kwargs['scheduler_hints'], {})
-            return old_create(*args, **kwargs)
-
-        self.stubs.Set(compute_api.API, 'create', create)
-        self._test_create_extra(params)
-
-    # TODO(cyeoh): bp-v3-api-unittests
     # This needs to be ported to the os-volumes extension tests
     # def test_create_instance_with_volumes_enabled(self):
     #     self.ext_mgr.extensions = {'os-volumes': 'fake'}
@@ -3422,39 +3395,6 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
                 },
             }
         self.assertEquals(request['body'], expected)
-
-    # TODO(cyeoh): bp-v3-api-unittests
-    # This needs to be ported to the scheduler hints extension tests
-#   def test_request_with_scheduler_hints_and_alternate_namespace_prefix(self):
-#         serial_request = """
-# <ns2:server xmlns:ns2="http://docs.openstack.org/compute/api/v2"
-#      name="new-server-test"
-#      imageRef="1"
-#      flavorRef="2">
-#      <ns2:metadata><ns2:meta key="hello">world</ns2:meta></ns2:metadata>
-#      <os:scheduler_hints
-#      xmlns:os="http://docs.openstack.org/compute/ext/scheduler-hints/api/v2">
-#              <hypervisor>xen</hypervisor>
-#              <near>eb999657-dd6b-464e-8713-95c532ac3b18</near>
-#      </os:scheduler_hints>
-#      </ns2:server>
-#         """
-#         request = self.deserializer.deserialize(serial_request)
-#         expected = {
-#             "server": {
-#                 'OS-SCH-HNT:scheduler_hints': {
-#                     'hypervisor': ['xen'],
-#                     'near': ['eb999657-dd6b-464e-8713-95c532ac3b18']
-#                 },
-#                 "name": "new-server-test",
-#                 "imageRef": "1",
-#                 "flavorRef": "2",
-#                 "metadata": {
-#                     "hello": "world"
-#                 }
-#             }
-#         }
-#         self.assertEquals(request['body'], expected)
 
     def test_access_ipv4(self):
         serial_request = """
