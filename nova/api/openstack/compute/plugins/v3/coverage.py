@@ -17,6 +17,7 @@
 # See: http://wiki.openstack.org/Nova/CoverageExtension for more information
 # and usage explanation for this API extension
 
+import imp
 import os
 import re
 import socket
@@ -33,10 +34,27 @@ from nova import db
 from nova.openstack.common import log as logging
 from nova.openstack.common.rpc import common as rpc_common
 
-
 LOG = logging.getLogger(__name__)
-authorize = extensions.extension_authorizer('compute', 'coverage_ext')
+ALIAS = "os-coverage"
+authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
 CONF = cfg.CONF
+
+def _import_coverage():
+    """ This function ensure loading coverage module from python-coverage.
+    """
+    try:
+        path = sys.path[:]
+        if os.getcwd() in path:
+            # To avoid importing this module itself, it need to remove current
+            # directory from search path.
+            path.remove(os.getcwd())
+        coverage_mod = imp.find_module('coverage', path)
+        return imp.load_module('coverage', *coverage_mod)
+    except ImportError as e:
+        LOG.warning(_("Can't load coverage module: %s"), e)
+        return None
+
+coverage = _import_coverage()
 
 
 class CoverageController(object):
@@ -52,14 +70,10 @@ class CoverageController(object):
     @property
     def coverInst(self):
         if not self._cover_inst:
-            try:
-                import coverage
-                if self.data_path is None:
-                    self.data_path = tempfile.mkdtemp(prefix='nova-coverage_')
-                data_out = os.path.join(self.data_path, '.nova-coverage.api')
-                self._cover_inst = coverage.coverage(data_file=data_out)
-            except ImportError:
-                pass
+            if self.data_path is None:
+                self.data_path = tempfile.mkdtemp(prefix='nova-coverage_')
+            data_out = os.path.join(self.data_path, '.nova-coverage.api')
+            self._cover_inst = coverage.coverage(data_file=data_out)
         return self._cover_inst
 
     def _find_services(self, req):
@@ -284,19 +298,22 @@ class CoverageController(object):
         raise exc.HTTPBadRequest(explanation=_("Invalid request body"))
 
 
-class Coverage_ext(extensions.ExtensionDescriptor):
+class Coverage(extensions.V3APIExtensionBase):
     """Enable Nova Coverage."""
 
     name = "Coverage"
-    alias = "os-coverage"
+    alias = ALIAS
     namespace = ("http://docs.openstack.org/compute/ext/"
-                  "coverage/api/v2")
-    updated = "2012-10-15T00:00:00+00:00"
+                  "coverage/api/v3")
+    version = 1
 
     def get_resources(self):
         resources = []
-        res = extensions.ResourceExtension('os-coverage',
+        res = extensions.ResourceExtension(ALIAS,
                                         controller=CoverageController(),
                                         collection_actions={"action": "POST"})
         resources.append(res)
         return resources
+
+    def get_controller_extensions(self):
+        return []

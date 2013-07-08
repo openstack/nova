@@ -42,6 +42,7 @@
     "compute_extension:v3:consoles:discoverable": "",
     "compute_extension:consoles": "",
     "compute_extension:coverage_ext": "rule:admin_api",
+    "compute_extension:v3:os-coverage": "rule:admin_api",
     "compute_extension:createserverext": "",
     "compute_extension:deferred_delete": "",
     "compute_extension:disk_config": "",

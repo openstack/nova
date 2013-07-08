@@ -19,7 +19,7 @@ import telnetlib
 import coverage
 import webob
 
-from nova.api.openstack.compute.contrib import coverage_ext
+from nova.api.openstack.compute.plugins.v3 import coverage as coverage_ext
 from nova import context
 from nova.openstack.common import jsonutils
 from nova import test
@@ -74,36 +74,36 @@ class CoverageExtensionTest(test.TestCase):
                                                    'fake',
                                                     is_admin=False)
 
-    def test_not_admin(self):
-        body = {'start': {}}
-        req = webob.Request.blank('/v2/fake/os-coverage/action')
+    def _make_request(self, url, body, admin=True):
+        req = webob.Request.blank('/v3/os-coverage/action')
         req.method = "POST"
         req.body = jsonutils.dumps(body)
+        context = self.admin_context
+        if not admin:
+            context = self.user_context
         req.headers["content-type"] = "application/json"
-        res = req.get_response(fakes.wsgi_app(
-                               fake_auth_context=self.user_context))
+        return req.get_response(fakes.wsgi_app_v3(
+                                fake_auth_context=context,
+                                init_only=('servers', 'os-coverage')))
+
+    def test_not_admin(self):
+        body = {'start': {}}
+        url = '/v3/os-coverage/action'
+        res = self._make_request(url, body, False)
         self.assertEqual(res.status_int, 403)
 
     def test_start_coverage_action(self):
         body = {'start': {}}
-        req = webob.Request.blank('/v2/fake/os-coverage/action')
-        req.method = "POST"
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-        res = req.get_response(fakes.wsgi_app(
-                               fake_auth_context=self.admin_context))
+        url = '/v3/os-coverage/action'
+        res = self._make_request(url, body)
         self.assertEqual(res.status_int, 200)
 
     def test_stop_coverage_action(self):
         self.stubs.Set(coverage_ext.CoverageController,
                       '_check_coverage', fake_check_coverage)
         body = {'stop': {}}
-        req = webob.Request.blank('/v2/fake/os-coverage/action')
-        req.method = "POST"
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-        res = req.get_response(fakes.wsgi_app(
-                               fake_auth_context=self.admin_context))
+        url = '/v3/os-coverage/action'
+        res = self._make_request(url, body)
         self.assertEqual(res.status_int, 200)
         resp_dict = jsonutils.loads(res.body)
         self.assertTrue('path' in resp_dict)
@@ -117,12 +117,8 @@ class CoverageExtensionTest(test.TestCase):
                 'file': 'coverage-unit-test.report',
             },
         }
-        req = webob.Request.blank('/v2/fake/os-coverage/action')
-        req.method = "POST"
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-        res = req.get_response(fakes.wsgi_app(
-                               fake_auth_context=self.admin_context))
+        url = '/v3/os-coverage/action'
+        res = self._make_request(url, body)
         self.assertEqual(res.status_int, 200)
         resp_dict = jsonutils.loads(res.body)
         self.assertTrue('path' in resp_dict)
@@ -137,12 +133,8 @@ class CoverageExtensionTest(test.TestCase):
                 'xml': 'True',
             },
         }
-        req = webob.Request.blank('/v2/fake/os-coverage/action')
-        req.method = "POST"
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-        res = req.get_response(fakes.wsgi_app(
-                               fake_auth_context=self.admin_context))
+        url = '/v3/os-coverage/action'
+        res = self._make_request(url, body)
         self.assertEqual(res.status_int, 200)
         resp_dict = jsonutils.loads(res.body)
         self.assertTrue('path' in resp_dict)
@@ -152,22 +144,14 @@ class CoverageExtensionTest(test.TestCase):
         self.stubs.Set(coverage_ext.CoverageController,
                       '_check_coverage', fake_check_coverage)
         body = {'report': {}}
-        req = webob.Request.blank('/v2/fake/os-coverage/action')
-        req.method = "POST"
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-        res = req.get_response(fakes.wsgi_app(
-                               fake_auth_context=self.admin_context))
+        url = '/v3/os-coverage/action'
+        res = self._make_request(url, body)
         self.assertEqual(res.status_int, 400)
 
     def test_coverage_bad_body(self):
         body = {}
-        req = webob.Request.blank('/v2/fake/os-coverage/action')
-        req.method = "POST"
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-        res = req.get_response(fakes.wsgi_app(
-                               fake_auth_context=self.admin_context))
+        url = '/v3/os-coverage/action'
+        res = self._make_request(url, body)
         self.assertEqual(res.status_int, 400)
 
     def test_coverage_report_bad_path(self):
@@ -178,52 +162,36 @@ class CoverageExtensionTest(test.TestCase):
                 'file': '/tmp/coverage-xml-unit-test.report',
             }
         }
-        req = webob.Request.blank('/v2/fake/os-coverage/action')
-        req.method = "POST"
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-        res = req.get_response(fakes.wsgi_app(
-                               fake_auth_context=self.admin_context))
+        url = '/v3/os-coverage/action'
+        res = self._make_request(url, body)
         self.assertEqual(res.status_int, 400)
 
     def test_stop_coverage_action_nostart(self):
         body = {'stop': {}}
-        req = webob.Request.blank('/v2/fake/os-coverage/action')
+        req = webob.Request.blank('/v3/os-coverage/action')
         req.method = "POST"
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
-        res = req.get_response(fakes.wsgi_app(
+        res = req.get_response(fakes.wsgi_app_v3(
                                fake_auth_context=self.admin_context))
         self.assertEqual(res.status_int, 404)
 
     def test_report_coverage_action_nostart(self):
         body = {'report': {}}
-        req = webob.Request.blank('/v2/fake/os-coverage/action')
-        req.method = "POST"
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-        res = req.get_response(fakes.wsgi_app(
-                               fake_auth_context=self.admin_context))
+        url = '/v3/os-coverage/action'
+        res = self._make_request(url, body)
         self.assertEqual(res.status_int, 404)
 
     def test_reset_coverage_action_while_coverage_running(self):
         self.stubs.Set(coverage_ext.CoverageController,
                       '_check_coverage', fake_check_coverage)
         body = {'reset': {}}
-        req = webob.Request.blank('/v2/fake/os-coverage/action')
-        req.method = "POST"
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-        res = req.get_response(fakes.wsgi_app(
-                               fake_auth_context=self.admin_context))
+        url = '/v3/os-coverage/action'
+        res = self._make_request(url, body)
         self.assertEqual(res.status_int, 200)
 
     def test_reset_coverage_action_while_coverage_stopped(self):
         body = {'reset': {}}
-        req = webob.Request.blank('/v2/fake/os-coverage/action')
-        req.method = "POST"
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-        res = req.get_response(fakes.wsgi_app(
-                               fake_auth_context=self.admin_context))
+        url = '/v3/os-coverage/action'
+        res = self._make_request(url, body)
         self.assertEqual(res.status_int, 200)
