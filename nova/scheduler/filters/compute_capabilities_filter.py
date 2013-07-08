@@ -34,10 +34,11 @@ class ComputeCapabilitiesFilter(filters.BaseHostFilter):
         for key, req in instance_type['extra_specs'].iteritems():
             # Either not scope format, or in capabilities scope
             scope = key.split(':')
-            if len(scope) > 1 and scope[0] != "capabilities":
-                continue
-            elif scope[0] == "capabilities":
-                del scope[0]
+            if len(scope) > 1:
+                if scope[0] != "capabilities":
+                    continue
+                else:
+                    del scope[0]
             cap = capabilities
             for index in range(0, len(scope)):
                 try:

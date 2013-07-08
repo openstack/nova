@@ -795,6 +795,13 @@ class HostFiltersTestCase(test.NoDBTestCase):
                     'trust:trusted_host': 'true'},
             passes=True)
 
+    def test_compute_filter_pass_extra_specs_same_as_scope(self):
+        # Make sure this still works even if the key is the same as the scope
+        self._do_test_compute_filter_extra_specs(
+            ecaps={'capabilities': 1},
+            especs={'capabilities': '1'},
+            passes=True)
+
     def test_compute_filter_extra_specs_simple_with_wrong_scope(self):
         self._do_test_compute_filter_extra_specs(
             ecaps={'opt1': 1, 'opt2': 2},
