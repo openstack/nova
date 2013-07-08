@@ -226,6 +226,7 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
 
         self.mox.StubOutWithMock(fake.FakePowerManager, 'activate_node')
         self.mox.StubOutWithMock(fake.FakePowerManager, 'deactivate_node')
+        fake.FakePowerManager.deactivate_node().AndReturn(None)
         fake.FakePowerManager.activate_node().AndRaise(test.TestingException)
         fake.FakePowerManager.deactivate_node().AndRaise(test.TestingException)
         self.mox.ReplayAll()
@@ -250,6 +251,7 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
         node = self._create_node()
 
         self.mox.StubOutWithMock(fake.FakePowerManager, 'deactivate_node')
+        fake.FakePowerManager.deactivate_node().AndReturn(None)
         fake.FakePowerManager.deactivate_node().AndRaise(test.TestingException)
         self.mox.ReplayAll()
 
