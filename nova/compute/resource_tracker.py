@@ -395,7 +395,7 @@ class ResourceTracker(object):
             # same node resize. record usage for whichever instance type the
             # instance is *not* in:
             if (instance['instance_type_id'] ==
-                migration['old_instance_type_id']):
+                    migration['old_instance_type_id']):
                 itype = self._get_instance_type(context, instance, 'new_',
                         migration['new_instance_type_id'])
             else:

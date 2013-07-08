@@ -245,7 +245,7 @@ def parse_volume_info(connection_data):
 
     if (volume_id is None or
         target_host is None or
-        target_iqn is None):
+            target_iqn is None):
         raise StorageError(_('Unable to obtain target information'
                              ' %s') % connection_data)
     volume_info = {}
@@ -254,7 +254,7 @@ def parse_volume_info(connection_data):
     volume_info['port'] = target_port
     volume_info['targetIQN'] = target_iqn
     if ('auth_method' in connection_data and
-        connection_data['auth_method'] == 'CHAP'):
+            connection_data['auth_method'] == 'CHAP'):
         volume_info['chapuser'] = connection_data['auth_username']
         volume_info['chappassword'] = connection_data['auth_password']
 

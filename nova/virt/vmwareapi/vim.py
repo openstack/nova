@@ -177,7 +177,7 @@ class Vim:
                 # Socket errors which need special handling for they
                 # might be caused by ESX API call overload
                 if (str(excep).find(ADDRESS_IN_USE_ERROR) != -1 or
-                    str(excep).find(CONN_ABORT_ERROR)) != -1:
+                        str(excep).find(CONN_ABORT_ERROR)) != -1:
                     raise error_util.SessionOverLoadException(_("Socket "
                                 "error in %s: ") % (attr_name), excep)
                 # Type error that needs special handling for it might be

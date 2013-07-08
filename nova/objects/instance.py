@@ -265,7 +265,7 @@ class Instance(base.NovaObject):
         changes = self.obj_what_changed()
         for field in self.fields:
             if (hasattr(self, base.get_attrname(field)) and
-                isinstance(self[field], base.NovaObject)):
+                    isinstance(self[field], base.NovaObject)):
                 getattr(self, '_save_%s' % field)(context)
             elif field in changes:
                 updates[field] = self[field]
@@ -296,7 +296,7 @@ class Instance(base.NovaObject):
                                              expected_attrs=extra)
         for field in self.fields:
             if (hasattr(self, base.get_attrname(field)) and
-                self[field] != current[field]):
+                    self[field] != current[field]):
                 self[field] = current[field]
         self.obj_reset_changes()
 

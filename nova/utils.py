@@ -353,7 +353,7 @@ def get_my_ipv4_address():
         for match in re.finditer(route, out[0]):
             subnet = netaddr.IPNetwork(match.group(1) + "/" + match.group(2))
             if (match.group(3) == iface and
-                netaddr.IPAddress(gateway) in subnet):
+                    netaddr.IPAddress(gateway) in subnet):
                 try:
                     return _get_ipv4_address_for_interface(iface)
                 except exception.NovaException:
@@ -681,7 +681,7 @@ def is_valid_cidr(address):
     ip_segment = address.split('/')
 
     if (len(ip_segment) <= 1 or
-        ip_segment[1] == ''):
+            ip_segment[1] == ''):
         return False
 
     return True

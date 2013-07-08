@@ -93,7 +93,7 @@ def send_update(context, old_instance, new_instance, service=None, host=None):
         update_with_state_change = True
     elif CONF.notify_on_state_change:
         if (CONF.notify_on_state_change.lower() == "vm_and_task_state" and
-            old_task_state != new_task_state):
+                old_task_state != new_task_state):
             # yes, the task state is changing:
             update_with_state_change = True
 
@@ -141,7 +141,7 @@ def send_update_with_states(context, instance, old_vm_state, new_vm_state,
             fire_update = True
         elif CONF.notify_on_state_change:
             if (CONF.notify_on_state_change.lower() == "vm_and_task_state" and
-                old_task_state != new_task_state):
+                    old_task_state != new_task_state):
                 # yes, the task state is changing:
                 fire_update = True
 
@@ -227,7 +227,7 @@ def bandwidth_usage(instance_ref, audit_start,
     admin_context = nova.context.get_admin_context(read_deleted='yes')
 
     if (instance_ref.get('info_cache') and
-        instance_ref['info_cache'].get('network_info') is not None):
+            instance_ref['info_cache'].get('network_info') is not None):
 
         cached_info = instance_ref['info_cache']['network_info']
         nw_info = network_model.NetworkInfo.hydrate(cached_info)

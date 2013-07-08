@@ -149,7 +149,7 @@ class Pdu(base.PowerManager):
     def activate_node(self):
         """Turns the power to node ON."""
         if (self._is_power(CONF.baremetal.tile_pdu_on)
-            and self.state == baremetal_states.ACTIVE):
+                and self.state == baremetal_states.ACTIVE):
             LOG.warning(_("Activate node called, but node %s "
                           "is already active") % self.address)
         self._power_on()

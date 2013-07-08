@@ -81,7 +81,7 @@ def check_connection(ssh, connection):
     # if the ssh client is not set or the transport is dead, re-connect
     if (ssh is None or
         ssh.get_transport() is None or
-        not ssh.get_transport().is_active()):
+            not ssh.get_transport().is_active()):
             LOG.debug("Connection to host %s will be established." %
                       connection.host)
             ssh = ssh_connect(connection)

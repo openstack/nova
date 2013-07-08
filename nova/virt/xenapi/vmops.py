@@ -675,7 +675,7 @@ class VMOps(object):
                          instance=instance)
 
             if (version and agent_build and
-                cmp_version(version, agent_build['version']) < 0):
+                    cmp_version(version, agent_build['version']) < 0):
                 agent.agent_update(agent_build)
 
             # if the guest agent is not available, configure the

@@ -515,7 +515,7 @@ def get_vdis_for_instance(context, session, instance, name_label, image,
 
         for bdm in block_device_info['block_device_mapping']:
             if (block_device.strip_prefix(bdm['mount_device']) ==
-                block_device.strip_prefix(root_device_name)):
+                    block_device.strip_prefix(root_device_name)):
                 # If we're a root-device, record that fact so we don't download
                 # a root image via Glance
                 type_ = 'root'
@@ -1481,7 +1481,7 @@ def set_vm_name_label(session, vm_ref, name_label):
 def list_vms(session):
     for vm_ref, vm_rec in session.get_all_refs_and_recs('VM'):
         if (vm_rec["resident_on"] != session.get_xenapi_host() or
-            vm_rec["is_a_template"] or vm_rec["is_control_domain"]):
+                vm_rec["is_a_template"] or vm_rec["is_control_domain"]):
             continue
         else:
             yield vm_ref, vm_rec

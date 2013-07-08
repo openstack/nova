@@ -256,7 +256,7 @@ class CloudController(object):
     def describe_availability_zones(self, context, **kwargs):
         if ('zone_name' in kwargs and
             'verbose' in kwargs['zone_name'] and
-            context.is_admin):
+                context.is_admin):
             return self._describe_availability_zones_verbose(context,
                                                              **kwargs)
         else:
@@ -629,7 +629,7 @@ class CloudController(object):
     def _validate_security_group_protocol(self, values):
         validprotocols = ['tcp', 'udp', 'icmp', '6', '17', '1']
         if 'ip_protocol' in values and \
-            values['ip_protocol'] not in validprotocols:
+                values['ip_protocol'] not in validprotocols:
             err = _('Invalid IP protocol %s.') % values['ip_protocol']
             raise exception.EC2APIError(message=err, code="400")
 
@@ -1074,7 +1074,7 @@ class CloudController(object):
                 continue
 
             if (bdm['device_name'] == root_device_name and
-                (bdm['snapshot_id'] or bdm['volume_id'])):
+                    (bdm['snapshot_id'] or bdm['volume_id'])):
                 assert not bdm['virtual_name']
                 root_device_type = 'ebs'
 
@@ -1464,7 +1464,7 @@ class CloudController(object):
             if (block_device.strip_dev(bdm.get('device_name')) ==
                 block_device.strip_dev(root_device_name) and
                 ('snapshot_id' in bdm or 'volume_id' in bdm) and
-                not bdm.get('no_device')):
+                    not bdm.get('no_device')):
                 root_device_type = 'ebs'
         i['rootDeviceName'] = (root_device_name or
                                block_device.DEFAULT_ROOT_DEV_NAME)

@@ -135,7 +135,7 @@ def check_instance_state(vm_state=None, task_state=(None,),
                     state=instance['vm_state'],
                     method=f.__name__)
             if (task_state is not None and
-                instance['task_state'] not in task_state):
+                    instance['task_state'] not in task_state):
                 raise exception.InstanceInvalidState(
                     attr='task_state',
                     instance_uuid=instance['uuid'],
@@ -851,7 +851,7 @@ class API(base.Base):
 
             virtual_name = bdm.get('virtual_name')
             if (virtual_name is not None and
-                block_device.is_swap_or_ephemeral(virtual_name)):
+                    block_device.is_swap_or_ephemeral(virtual_name)):
                 size = self._volume_size(instance_type, virtual_name)
                 if size == 0:
                     continue
@@ -925,7 +925,7 @@ class API(base.Base):
         image_properties = image.get('properties', {})
         if (block_device_mapping or
             image_properties.get('mappings') or
-            image_properties.get('block_device_mapping')):
+                image_properties.get('block_device_mapping')):
             instance['shutdown_terminate'] = False
 
     def _populate_instance_names(self, instance, num_instances):

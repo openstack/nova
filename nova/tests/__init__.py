@@ -33,7 +33,7 @@ import sys
 # implementation which doesn't work for IPv6. What we're checking here is
 # that the magic environment variable was set when the import happened.
 if ('eventlet' in sys.modules and
-    os.environ.get('EVENTLET_NO_GREENDNS', '').lower() != 'yes'):
+        os.environ.get('EVENTLET_NO_GREENDNS', '').lower() != 'yes'):
     raise ImportError('eventlet imported before nova/cmd/__init__ '
                       '(env var set to %s)'
                       % os.environ.get('EVENTLET_NO_GREENDNS'))

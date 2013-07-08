@@ -87,7 +87,7 @@ def return_non_existing_address(*args, **kwarg):
 
 
 def fake_InstanceMetadata(stubs, inst_data, address=None,
-    sgroups=None, content=[], extra_md={}):
+                          sgroups=None, content=[], extra_md={}):
 
     if sgroups is None:
         sgroups = [{'name': 'default'}]

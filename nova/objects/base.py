@@ -334,7 +334,7 @@ class NovaObject(object):
         """
         for name in self.fields.keys() + self.obj_extra_fields:
             if (hasattr(self, get_attrname(name)) or
-                name in self.obj_extra_fields):
+                    name in self.obj_extra_fields):
                 yield name, getattr(self, name)
 
     items = lambda self: list(self.iteritems())

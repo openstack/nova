@@ -410,7 +410,7 @@ class XMLMatches(object):
             if len(expected) == 0 and len(actual) == 0:
                 # No children, compare text values
                 if ('DONTCARE' not in (expected.text, actual.text) and
-                    expected.text != actual.text):
+                        expected.text != actual.text):
                     return XMLTextValueMismatch(state, expected.text,
                                                 actual.text)
             else:
@@ -423,7 +423,7 @@ class XMLMatches(object):
                     # allow for, say, arbitrary ordering of some
                     # elements
                     if (expected[expected_idx].tag in
-                        (etree.Comment, etree.ProcessingInstruction)):
+                            (etree.Comment, etree.ProcessingInstruction)):
                         expected_idx += 1
                         continue
 
@@ -447,7 +447,7 @@ class XMLMatches(object):
                 if expected_idx < len(expected):
                     for node in expected[expected_idx:]:
                         if (node.tag in
-                            (etree.Comment, etree.ProcessingInstruction)):
+                                (etree.Comment, etree.ProcessingInstruction)):
                             continue
 
                         return XMLExpectedChild(state, node.tag, actual_idx)

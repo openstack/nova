@@ -97,7 +97,7 @@ class SchedulerOptions(object):
 
         last_modified = self._get_file_timestamp(filename)
         if (not last_modified or not self.last_modified or
-            last_modified > self.last_modified):
+                last_modified > self.last_modified):
             self.data = self._load_file(self._get_file_handle(filename))
             self.last_modified = last_modified
         if not self.data:
