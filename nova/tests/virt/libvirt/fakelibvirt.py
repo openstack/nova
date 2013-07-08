@@ -111,6 +111,8 @@ VIR_CRED_EXTERNAL = 9
 VIR_MIGRATE_PEER2PEER = 2
 VIR_MIGRATE_UNDEFINE_SOURCE = 16
 
+VIR_NODE_CPU_STATS_ALL_CPUS = -1
+
 # libvirtError enums
 # (Intentionally different from what's in libvirt. We do this to check,
 #  that consumers of the library are using the symbolic names rather than
@@ -884,6 +886,15 @@ class Connection(object):
         # and I don't think it adds much value to replicate it here.
 
         return VIR_CPU_COMPARE_IDENTICAL
+
+    def getCPUStats(self, cpuNum, flag):
+        if cpuNum < 2:
+            return {'kernel': 5664160000000L,
+                    'idle': 1592705190000000L,
+                    'user': 26728850000000L,
+                    'iowait': 6121490000000L}
+        else:
+            raise libvirtError("invalid argument: Invalid cpu number")
 
     def nwfilterLookupByName(self, name):
         try:

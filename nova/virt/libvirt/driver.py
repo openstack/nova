@@ -4464,6 +4464,15 @@ class LibvirtDriver(driver.ComputeDriver):
         """
         return self.host_state.get_host_stats(refresh=refresh)
 
+    def get_host_cpu_stats(self):
+        """Return the current CPU state of the host."""
+        # Extract node's CPU statistics.
+        stats = self._conn.getCPUStats(libvirt.VIR_NODE_CPU_STATS_ALL_CPUS, 0)
+        # getInfo() returns various information about the host node
+        # No. 3 is the expected CPU frequency.
+        stats["frequency"] = self._conn.getInfo()[3]
+        return stats
+
     def get_host_uptime(self, host):
         """Returns the result of calling "uptime"."""
         #NOTE(dprince): host seems to be ignored for this call and in
