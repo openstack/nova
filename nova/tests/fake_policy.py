@@ -108,6 +108,7 @@ policy_data = """
     "compute_extension:admin_actions:migrate": "",
     "compute_extension:aggregates": "",
     "compute_extension:agents": "",
+    "compute_extension:v3:os-agents": "",
     "compute_extension:attach_interfaces": "",
     "compute_extension:baremetal_nodes": "",
     "compute_extension:cells": "",
