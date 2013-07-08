@@ -120,7 +120,6 @@ class ConsoleOutputExtensionTest(test.TestCase):
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
         res = req.get_response(self.app)
-        output = jsonutils.loads(res.body)
         self.assertEqual(res.status_int, 400)
 
     def test_get_text_console_no_instance(self):
@@ -168,3 +167,12 @@ class ConsoleOutputExtensionTest(test.TestCase):
 
         res = req.get_response(self.app)
         self.assertEqual(res.status_int, 409)
+
+    def test_get_console_output_with_length_as_float(self):
+        body = {'os-getConsoleOutput': {'length': 2.5}}
+        req = webob.Request.blank('/v2/fake/servers/1/action')
+        req.method = "POST"
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+        res = req.get_response(self.app)
+        self.assertEqual(res.status_int, 400)
