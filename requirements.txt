@@ -30,3 +30,4 @@ six
 stevedore>=0.9
 websockify<0.4
 oslo.config>=1.1.0
+pyparsing>=1.5.7,<2.0 # order-dependent python-quantumclient req, bug 1191866
