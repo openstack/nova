@@ -28,6 +28,7 @@ from nova import exception
 from nova.scheduler import driver
 from nova.scheduler import filter_scheduler
 from nova.scheduler import host_manager
+from nova.scheduler import utils as scheduler_utils
 from nova.scheduler import weights
 from nova.tests.scheduler import fakes
 from nova.tests.scheduler import test_scheduler
@@ -321,8 +322,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         host = "fakehost"
         node = "fakenode"
 
-        sched = fakes.FakeFilterScheduler()
-        sched._add_retry_host(filter_properties, host, node)
+        scheduler_utils._add_retry_host(filter_properties, host, node)
 
         hosts = filter_properties['retry']['hosts']
         self.assertEqual(1, len(hosts))
@@ -332,11 +332,10 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         # Test addition of certain filter props after a node is selected.
         retry = {'hosts': [], 'num_attempts': 1}
         filter_properties = {'retry': retry}
-        sched = fakes.FakeFilterScheduler()
 
         host_state = host_manager.HostState('host', 'node')
         host_state.limits['vcpus'] = 5
-        sched._post_select_populate_filter_properties(filter_properties,
+        scheduler_utils.populate_filter_properties(filter_properties,
                 host_state)
 
         self.assertEqual(['host', 'node'],
