@@ -2,7 +2,7 @@ default deploy
 
 label deploy
 kernel ${pxe_options.deployment_aki_path}
-append initrd=${pxe_options.deployment_ari_path} selinux=0 disk=cciss/c0d0,sda,hda,vda iscsi_target_iqn=${pxe_options.deployment_iscsi_iqn} deployment_id=${pxe_options.deployment_id} deployment_key=${pxe_options.deployment_key} ${pxe_options.pxe_append_params}
+append initrd=${pxe_options.deployment_ari_path} selinux=0 disk=cciss/c0d0,sda,hda,vda iscsi_target_iqn=${pxe_options.deployment_iscsi_iqn} deployment_id=${pxe_options.deployment_id} deployment_key=${pxe_options.deployment_key} troubleshoot=0 ${pxe_options.pxe_append_params}
 ipappend 3
 
 
