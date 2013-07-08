@@ -87,6 +87,7 @@
     "compute_extension:instance_actions": "",
     "compute_extension:instance_actions:events": "rule:admin_api",
     "compute_extension:instance_usage_audit_log": "rule:admin_api",
+    "compute_extension:v3:os-instance-usage-audit-log": "rule:admin_api",
     "compute_extension:v3:ips:discoverable": "",
     "compute_extension:keypairs": "",
     "compute_extension:v3:os-keypairs:discoverable": "",

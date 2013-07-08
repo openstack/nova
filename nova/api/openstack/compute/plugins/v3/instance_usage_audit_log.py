@@ -28,9 +28,9 @@ from nova import utils
 CONF = cfg.CONF
 CONF.import_opt('compute_topic', 'nova.compute.rpcapi')
 
-
+ALIAS = "os-instance-usage-audit-log"
 authorize = extensions.extension_authorizer('compute',
-                           'instance_usage_audit_log')
+                                            'v3:' + ALIAS)
 
 
 class InstanceUsageAuditLogController(object):
@@ -41,7 +41,7 @@ class InstanceUsageAuditLogController(object):
         context = req.environ['nova.context']
         authorize(context)
         task_log = self._get_audit_task_logs(context)
-        return {'instance_usage_audit_logs': task_log}
+        return {'instance_usage_audit_log': task_log}
 
     def show(self, req, id):
         context = req.environ['nova.context']
@@ -124,14 +124,19 @@ class InstanceUsageAuditLogController(object):
                     log=log)
 
 
-class Instance_usage_audit_log(extensions.ExtensionDescriptor):
+class InstanceUsageAuditLog(extensions.V3APIExtensionBase):
     """Admin-only Task Log Monitoring."""
-    name = "OSInstanceUsageAuditLog"
-    alias = "os-instance_usage_audit_log"
-    namespace = "http://docs.openstack.org/ext/services/api/v1.1"
-    updated = "2012-07-06T01:00:00+00:00"
+    name = "InstanceUsageAuditLog"
+    alias = ALIAS
+    namespace = "http://docs.openstack.org/ext/services/api/v3"
+    version = 1
 
     def get_resources(self):
-        ext = extensions.ResourceExtension('os-instance_usage_audit_log',
+        ext = extensions.ResourceExtension(ALIAS,
                                            InstanceUsageAuditLogController())
         return [ext]
+
+    def get_controller_extensions(self):
+        """It's an abstract function V3APIExtensionBase and the extension
+        will not be loaded without it."""
+        return []
