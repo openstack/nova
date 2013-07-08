@@ -689,18 +689,17 @@ class DisabledFlavorsWithRealDBTest(test.TestCase):
         self.admin_context = context.get_admin_context()
 
         self.disabled_type = self._create_disabled_instance_type()
-        self.inst_types = db.api.instance_type_get_all(
+        self.inst_types = db.instance_type_get_all(
                 self.admin_context)
 
     def tearDown(self):
-        db.api.instance_type_destroy(
+        db.instance_type_destroy(
                 self.admin_context, self.disabled_type['name'])
 
         super(DisabledFlavorsWithRealDBTest, self).tearDown()
 
     def _create_disabled_instance_type(self):
-        inst_types = db.api.instance_type_get_all(
-                self.admin_context)
+        inst_types = db.instance_type_get_all(self.admin_context)
 
         inst_type = inst_types[0]
 
@@ -710,7 +709,7 @@ class DisabledFlavorsWithRealDBTest(test.TestCase):
                 [int(flavor['flavorid']) for flavor in inst_types]) + 1)
         inst_type['disabled'] = True
 
-        disabled_type = db.api.instance_type_create(
+        disabled_type = db.instance_type_create(
                 self.admin_context, inst_type)
 
         return disabled_type

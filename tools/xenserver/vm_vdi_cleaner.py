@@ -73,7 +73,7 @@ def find_orphaned_instances(xenapi):
     for vm_ref, vm_rec in _get_applicable_vm_recs(xenapi):
         try:
             uuid = vm_rec['other_config']['nova_uuid']
-            instance = db.api.instance_get_by_uuid(ctxt, uuid)
+            instance = db.instance_get_by_uuid(ctxt, uuid)
         except (KeyError, exception.InstanceNotFound):
             # NOTE(jk0): Err on the side of caution here. If we don't know
             # anything about the particular instance, ignore it.

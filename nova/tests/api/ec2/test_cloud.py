@@ -169,9 +169,9 @@ class CloudTestCase(test.TestCase):
         self.stubs.Set(rpc, 'cast', rpc.call)
 
         # make sure we can map ami-00000001/2 to a uuid in FakeImageService
-        db.api.s3_image_create(self.context,
+        db.s3_image_create(self.context,
                                'cedef40a-ed67-4d10-800e-17455edce175')
-        db.api.s3_image_create(self.context,
+        db.s3_image_create(self.context,
                                '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6')
 
     def tearDown(self):
@@ -2426,7 +2426,7 @@ class CloudTestCase(test.TestCase):
         # NOTE(yamahata): create ami-3 ... ami-6
         # ami-1 and ami-2 is already created by setUp()
         for i in range(3, 7):
-            db.api.s3_image_create(self.context, 'ami-%d' % i)
+            db.s3_image_create(self.context, 'ami-%d' % i)
 
         self.stubs.Set(fake._FakeImageService, 'show', fake_show)
 
