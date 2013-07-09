@@ -644,6 +644,31 @@ class BittorrentTestCase(stubs.XenAPITestBase):
         self._test_create_image('none')
 
 
+class ShutdownTestCase(test.TestCase):
+
+    def test_hardshutdown_should_return_true_when_vm_is_shutdown(self):
+        self.mock = mox.Mox()
+        session = FakeSession()
+        instance = "instance"
+        vm_ref = "vm-ref"
+        self.mock.StubOutWithMock(vm_utils, 'is_vm_shutdown')
+        vm_utils.is_vm_shutdown(session, vm_ref).AndReturn(True)
+        self.mock.StubOutWithMock(vm_utils, 'LOG')
+        self.assertTrue(vm_utils.hard_shutdown_vm(
+            session, instance, vm_ref))
+
+    def test_cleanshutdown_should_return_true_when_vm_is_shutdown(self):
+        self.mock = mox.Mox()
+        session = FakeSession()
+        instance = "instance"
+        vm_ref = "vm-ref"
+        self.mock.StubOutWithMock(vm_utils, 'is_vm_shutdown')
+        vm_utils.is_vm_shutdown(session, vm_ref).AndReturn(True)
+        self.mock.StubOutWithMock(vm_utils, 'LOG')
+        self.assertTrue(vm_utils.clean_shutdown_vm(
+            session, instance, vm_ref))
+
+
 class CreateVBDTestCase(test.TestCase):
     def setUp(self):
         super(CreateVBDTestCase, self).setUp()
