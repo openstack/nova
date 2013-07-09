@@ -2616,6 +2616,10 @@ class API(base.Base):
                                         on_shared_storage=on_shared_storage,
                                         host=host)
 
+    def get_migrations(self, context, filters):
+        """Get all migrations for the given filters."""
+        return self.db.migration_get_all_by_filters(context, filters)
+
 
 class HostAPI(base.Base):
     """Sub-set of the Compute Manager API for managing host operations."""

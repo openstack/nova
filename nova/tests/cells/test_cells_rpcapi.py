@@ -451,3 +451,13 @@ class CellsAPITestCase(test.TestCase):
                          'volume_id': 'fake-vol'}
         self._check_result(call_info, 'bdm_destroy_at_top',
                 expected_args, version='1.10')
+
+    def test_get_migrations(self):
+        call_info = self._stub_rpc_method('call', None)
+        filters = {'cell_name': 'ChildCell', 'status': 'confirmed'}
+
+        self.cells_rpcapi.get_migrations(self.fake_context, filters)
+
+        expected_args = {'filters': filters}
+        self._check_result(call_info, 'get_migrations', expected_args,
+                           version="1.11")

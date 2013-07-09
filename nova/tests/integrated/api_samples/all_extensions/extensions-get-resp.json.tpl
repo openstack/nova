@@ -559,6 +559,14 @@
             "name": "InstanceActions",
             "namespace": "http://docs.openstack.org/compute/ext/instance-actions/api/v1.1",
             "updated": "%(timestamp)s"
+        },
+        {
+            "alias": "os-migrations",
+            "description": "%(text)s",
+            "links": [],
+            "name": "Migrations",
+            "namespace": "http://docs.openstack.org/compute/ext/migrations/api/v2.0",
+            "updated": "%(timestamp)s"
         }
     ]
 }

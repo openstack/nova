@@ -870,6 +870,23 @@ class MigrationTestCase(test.TestCase):
             instance = migration['instance']
             self.assertEqual(migration['instance_uuid'], instance['uuid'])
 
+    def test_get_migrations_by_filters(self):
+        filters = {"status": "migrating", "host": "host3"}
+        migrations = db.migration_get_all_by_filters(self.ctxt, filters)
+        self.assertEqual(2, len(migrations))
+        for migration in migrations:
+            self.assertEqual(filters["status"], migration['status'])
+            hosts = [migration['source_compute'], migration['dest_compute']]
+            self.assertIn(filters["host"], hosts)
+
+    def test_only_admin_can_get_all_migrations_by_filters(self):
+        user_ctxt = context.RequestContext(user_id=None, project_id=None,
+                                   is_admin=False, read_deleted="no",
+                                   overwrite=False)
+
+        self.assertRaises(exception.AdminRequired,
+                          db.migration_get_all_by_filters, user_ctxt, {})
+
 
 class ModelsObjectComparatorMixin(object):
     def _dict_from_object(self, obj, ignored_keys):

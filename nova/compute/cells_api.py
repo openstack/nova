@@ -579,6 +579,9 @@ class ComputeCellsAPI(compute_api.API):
         self._cast_to_cells(context, instance, 'live_migrate',
                             block_migration, disk_over_commit, host_name)
 
+    def get_migrations(self, context, filters):
+        return self.cells_rpcapi.get_migrations(context, filters)
+
 
 class HostAPI(compute_api.HostAPI):
     """HostAPI() class for cells.

@@ -572,3 +572,33 @@ class CellsManagerClassTestCase(test.TestCase):
                                               'fake_instance_uuid',
                                               device_name='fake_device_name',
                                               volume_id='fake_volume_id')
+
+    def test_get_migrations(self):
+        filters = {'status': 'confirmed'}
+        cell1_migrations = [{'id': 123}]
+        cell2_migrations = [{'id': 456}]
+        fake_responses = [self._get_fake_response(cell1_migrations),
+                          self._get_fake_response(cell2_migrations)]
+        self.mox.StubOutWithMock(self.msg_runner,
+                                 'get_migrations')
+        self.msg_runner.get_migrations(self.ctxt, None, False, filters).\
+            AndReturn(fake_responses)
+        self.mox.ReplayAll()
+
+        response = self.cells_manager.get_migrations(self.ctxt, filters)
+
+        self.assertEqual([cell1_migrations[0], cell2_migrations[0]], response)
+
+    def test_get_migrations_for_a_given_cell(self):
+        filters = {'status': 'confirmed', 'cell_name': 'ChildCell1'}
+        target_cell = '%s%s%s' % (CONF.cells.name, '!', filters['cell_name'])
+        migrations = [{'id': 123}]
+        fake_responses = [self._get_fake_response(migrations)]
+        self.mox.StubOutWithMock(self.msg_runner,
+                                 'get_migrations')
+        self.msg_runner.get_migrations(self.ctxt, target_cell, False,
+                                           filters).AndReturn(fake_responses)
+        self.mox.ReplayAll()
+
+        response = self.cells_manager.get_migrations(self.ctxt, filters)
+        self.assertEqual(migrations, response)

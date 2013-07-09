@@ -130,6 +130,7 @@
     "compute_extension:availability_zone:list": "",
     "compute_extension:availability_zone:detail": "rule:admin_api",
     "compute_extension:used_limits_for_admin": "rule:admin_api",
+    "compute_extension:migrations:index": "rule:admin_api",
 
 
     "volume:create": "",

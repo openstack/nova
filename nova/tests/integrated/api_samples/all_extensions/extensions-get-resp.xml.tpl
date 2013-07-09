@@ -210,4 +210,7 @@
   <extension alias="os-instance-actions" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/instance-actions/api/v1.1" name="InstanceActions">
     <description>%(text)s</description>
   </extension>
+  <extension alias="os-migrations" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/migrations/api/v2.0" name="Migrations">
+    <description>%(text)s</description>
+  </extension>
 </extensions>
