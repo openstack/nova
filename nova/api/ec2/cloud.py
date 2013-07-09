@@ -1181,8 +1181,8 @@ class CloudController(object):
             i['dnsName'] = i['publicDnsName'] or i['privateDnsName']
             i['keyName'] = instance['key_name']
             i['tagSet'] = []
-            for k, v in self.compute_api.get_instance_metadata(
-                    context, instance).iteritems():
+
+            for k, v in utils.instance_meta(instance).iteritems():
                 i['tagSet'].append({'key': k, 'value': v})
 
             if context.is_admin:
