@@ -27,7 +27,7 @@ import greenlet
 from oslo.config import cfg
 
 from nova.openstack.common import excutils
-from nova.openstack.common.gettextutils import _
+from nova.openstack.common.gettextutils import _  # noqa
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common.rpc import common as rpc_common

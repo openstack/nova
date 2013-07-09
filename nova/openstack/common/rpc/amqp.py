@@ -36,7 +36,7 @@ from eventlet import queue
 from eventlet import semaphore
 
 from nova.openstack.common import excutils
-from nova.openstack.common.gettextutils import _
+from nova.openstack.common.gettextutils import _  # noqa
 from nova.openstack.common import local
 from nova.openstack.common import log as logging
 from nova.openstack.common.rpc import common as rpc_common
@@ -221,12 +221,7 @@ def msg_reply(conf, msg_id, reply_q, connection_pool, reply=None,
             failure = rpc_common.serialize_remote_exception(failure,
                                                             log_failure)
 
-        try:
-            msg = {'result': reply, 'failure': failure}
-        except TypeError:
-            msg = {'result': dict((k, repr(v))
-                   for k, v in reply.__dict__.iteritems()),
-                   'failure': failure}
+        msg = {'result': reply, 'failure': failure}
         if ending:
             msg['ending'] = True
         _add_unique_id(msg)
