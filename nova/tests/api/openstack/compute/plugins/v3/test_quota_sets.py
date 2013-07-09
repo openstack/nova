@@ -20,7 +20,6 @@ from lxml import etree
 import webob
 
 from nova.api.openstack.compute.plugins.v3 import quota_sets as quotas
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import context as context_maker
 from nova import quota

@@ -21,6 +21,7 @@ from nova.api.openstack import wsgi
 
 ALIAS = "os-scheduler-hints"
 
+
 class SchedulerHintsController(wsgi.Controller):
 
     @staticmethod

@@ -39,9 +39,9 @@ ALIAS = "os-coverage"
 authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
 CONF = cfg.CONF
 
+
 def _import_coverage():
-    """ This function ensure loading coverage module from python-coverage.
-    """
+    """This function ensure loading coverage module from python-coverage."""
     try:
         path = sys.path[:]
         if os.getcwd() in path:

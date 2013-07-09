@@ -19,8 +19,8 @@ import uuid
 from oslo.config import cfg
 import webob
 
-from nova.api.openstack.compute.plugins.v3 import config_drive
 from nova.api.openstack.compute import plugins
+from nova.api.openstack.compute.plugins.v3 import config_drive
 from nova.api.openstack.compute.plugins.v3 import servers
 from nova.compute import api as compute_api
 from nova.compute import flavors
@@ -62,7 +62,7 @@ class ConfigDriveTest(test.TestCase):
         req = webob.Request.blank('/v3/servers/1')
         req.headers['Content-Type'] = 'application/json'
         response = req.get_response(fakes.wsgi_app_v3(
-            init_only=('servers','os-config-drive')))
+            init_only=('servers', 'os-config-drive')))
         self.assertEquals(response.status_int, 200)
         res_dict = jsonutils.loads(response.body)
         self.assertTrue('config_drive' in res_dict['server'])
@@ -141,7 +141,7 @@ class ServersControllerCreateTest(test.TestCase):
         def rpc_call_wrapper(context, topic, msg, timeout=None):
             """Stub out the scheduler creating the instance entry."""
             if (topic == CONF.scheduler_topic and
-                msg['method'] == 'run_instance'):
+                    msg['method'] == 'run_instance'):
                 request_spec = msg['args']['request_spec']
                 num_instances = request_spec.get('num_instances', 1)
                 instances = []
@@ -213,8 +213,8 @@ class ServersControllerCreateTest(test.TestCase):
             return old_create(*args, **kwargs)
 
         self.stubs.Set(compute_api.API, 'create', create)
-        self._test_create_extra(params, override_controller
-                                =self.no_config_drive_controller)
+        self._test_create_extra(params,
+            override_controller=self.no_config_drive_controller)
 
     def test_create_instance_with_config_drive(self):
         def create(*args, **kwargs):
@@ -324,4 +324,3 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
             },
         }
         self.assertEquals(request['body'], expected)
-
