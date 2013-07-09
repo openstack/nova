@@ -112,7 +112,7 @@ class BaseTestCase(test.TestCase):
                        'instance_update_and_get_original',
                        self._fake_instance_update_and_get_original)
         self.stubs.Set(self.conductor.db,
-                       'instance_type_get', self._fake_flavor_get)
+                       'flavor_get', self._fake_flavor_get)
 
         self.host = 'fakehost'
 

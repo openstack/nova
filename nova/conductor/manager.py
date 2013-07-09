@@ -361,7 +361,7 @@ class ConductorManager(manager.Manager):
                                            values)
 
     def instance_type_get(self, context, instance_type_id):
-        result = self.db.instance_type_get(context, instance_type_id)
+        result = self.db.flavor_get(context, instance_type_id)
         return jsonutils.to_primitive(result)
 
     def instance_fault_create(self, context, values):

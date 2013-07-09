@@ -964,7 +964,7 @@ class InstanceTypeCommands(object):
 
             ctxt = context.get_admin_context()
             ext_spec = {key: value}
-            db.instance_type_extra_specs_update_or_create(
+            db.flavor_extra_specs_update_or_create(
                             ctxt,
                             inst_type["flavorid"],
                             ext_spec)
@@ -985,7 +985,7 @@ class InstanceTypeCommands(object):
                 return(2)
 
             ctxt = context.get_admin_context()
-            db.instance_type_extra_specs_delete(
+            db.flavor_extra_specs_delete(
                         ctxt,
                         inst_type["flavorid"],
                         key)

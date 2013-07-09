@@ -1088,7 +1088,7 @@ class HyperVAPITestCase(test.TestCase):
         else:
             flavor = 'm1.small'
 
-        instance_type = db.instance_type_get_by_name(self._context, flavor)
+        instance_type = db.flavor_get_by_name(self._context, flavor)
 
         if not size_exception:
             fake_root_vhd_path = 'C:\\FakePath\\root.vhd'

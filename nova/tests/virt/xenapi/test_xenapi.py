@@ -182,7 +182,7 @@ def stub_vm_utils_with_vdi_attached_here(function, should_return=True):
 
 
 def create_instance_with_system_metadata(context, instance_values):
-    instance_type = db.instance_type_get(context,
+    instance_type = db.flavor_get(context,
                                          instance_values['instance_type_id'])
     sys_meta = flavors.save_flavor_info({},
                                                       instance_type)
@@ -586,7 +586,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
 
     def check_vm_record(self, conn, check_injection=False):
         # Check that m1.large above turned into the right thing.
-        instance_type = db.instance_type_get_by_name(conn, 'm1.large')
+        instance_type = db.flavor_get_by_name(conn, 'm1.large')
         mem_kib = long(instance_type['memory_mb']) << 10
         mem_bytes = str(mem_kib << 10)
         vcpus = instance_type['vcpus']
@@ -1511,7 +1511,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
     def test_migrate_disk_and_power_off(self):
         instance = db.instance_create(self.context, self.instance_values)
         xenapi_fake.create_vm(instance['name'], 'Running')
-        instance_type = db.instance_type_get_by_name(self.context, 'm1.large')
+        instance_type = db.flavor_get_by_name(self.context, 'm1.large')
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         conn.migrate_disk_and_power_off(self.context, instance,
                                         '127.0.0.1', instance_type, None)
@@ -1519,7 +1519,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
     def test_migrate_disk_and_power_off_passes_exceptions(self):
         instance = db.instance_create(self.context, self.instance_values)
         xenapi_fake.create_vm(instance['name'], 'Running')
-        instance_type = db.instance_type_get_by_name(self.context, 'm1.large')
+        instance_type = db.flavor_get_by_name(self.context, 'm1.large')
 
         def fake_raise(*args, **kwargs):
             raise exception.MigrationError(reason='test failure')
@@ -1661,7 +1661,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         instance_values['root_gb'] = 40
         instance = db.instance_create(self.context, instance_values)
         xenapi_fake.create_vm(instance['name'], 'Running')
-        instance_type = db.instance_type_get_by_name(self.context, 'm1.small')
+        instance_type = db.flavor_get_by_name(self.context, 'm1.small')
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
 
         def fake_get_partitions(partition):
@@ -1680,7 +1680,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         instance_values['root_gb'] = 40
         instance = db.instance_create(self.context, instance_values)
         xenapi_fake.create_vm(instance['name'], 'Running')
-        instance_type = db.instance_type_get_by_name(self.context, 'm1.small')
+        instance_type = db.flavor_get_by_name(self.context, 'm1.small')
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
 
         def fake_get_partitions(partition):

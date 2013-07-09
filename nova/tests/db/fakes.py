@@ -228,7 +228,7 @@ def stub_out_db_network_api(stubs):
                         continue
                     fixed_ip_fields['virtual_interface'] = FakeModel(vif[0])
 
-    def fake_instance_type_get(context, id):
+    def fake_flavor_get(context, id):
         if flavor_fields['id'] == id:
             return FakeModel(flavor_fields)
 
@@ -314,7 +314,7 @@ def stub_out_db_network_api(stubs):
              fake_fixed_ip_get_by_instance,
              fake_fixed_ip_get_by_address,
              fake_fixed_ip_update,
-             fake_instance_type_get,
+             fake_flavor_get,
              fake_virtual_interface_create,
              fake_virtual_interface_delete_by_instance,
              fake_virtual_interface_get_by_instance,
@@ -418,13 +418,13 @@ def stub_out_db_instance_api(stubs, injected=True):
                        'address_v6': 'fe80::a00:3',
                        'network_id': 'fake_flat'}
 
-    def fake_instance_type_get_all(context, inactive=0, filters=None):
+    def fake_flavor_get_all(context, inactive=0, filters=None):
         return INSTANCE_TYPES.values()
 
-    def fake_instance_type_get_by_name(context, name):
+    def fake_flavor_get_by_name(context, name):
         return INSTANCE_TYPES[name]
 
-    def fake_instance_type_get(context, id):
+    def fake_flavor_get(context, id):
         for name, inst_type in INSTANCE_TYPES.iteritems():
             if str(inst_type['id']) == str(id):
                 return inst_type
@@ -433,8 +433,8 @@ def stub_out_db_instance_api(stubs, injected=True):
     def fake_fixed_ip_get_by_instance(context, instance_id):
         return [FakeModel(fixed_ip_fields)]
 
-    funcs = [fake_instance_type_get_all,
-             fake_instance_type_get_by_name,
-             fake_instance_type_get,
+    funcs = [fake_flavor_get_all,
+             fake_flavor_get_by_name,
+             fake_flavor_get,
              fake_fixed_ip_get_by_instance]
     stub_out(stubs, funcs)

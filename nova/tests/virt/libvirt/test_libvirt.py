@@ -331,7 +331,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.stubs.Set(libvirt_driver.LibvirtDriver, '_connect',
                        lambda *a, **k: self.conn)
 
-        instance_type = db.instance_type_get(self.context, 5)
+        instance_type = db.flavor_get(self.context, 5)
         sys_meta = flavors.save_flavor_info({}, instance_type)
 
         nova.tests.image.fake.stub_out_image_service(self.stubs)
@@ -2802,7 +2802,7 @@ class LibvirtConnTestCase(test.TestCase):
 
         instance_ref = self.test_instance
         instance_ref['image_ref'] = 123456  # we send an int to test sha1 call
-        instance_type = db.instance_type_get(self.context,
+        instance_type = db.flavor_get(self.context,
                                              instance_ref['instance_type_id'])
         sys_meta = flavors.save_flavor_info({}, instance_type)
         instance_ref['system_metadata'] = sys_meta
@@ -4726,7 +4726,7 @@ class NWFilterTestCase(test.TestCase):
         inst['swap'] = '2048'
         inst['rxtx_factor'] = 1
         inst.update(params)
-        return db.instance_type_create(context, inst)['id']
+        return db.flavor_create(context, inst)['id']
 
     def test_creates_base_rule_first(self):
         # These come pre-defined by libvirt

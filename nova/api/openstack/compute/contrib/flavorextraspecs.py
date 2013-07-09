@@ -47,7 +47,7 @@ class FlavorExtraSpecsController(object):
     """The flavor extra specs API controller for the OpenStack API."""
 
     def _get_extra_specs(self, context, flavor_id):
-        extra_specs = db.instance_type_extra_specs_get(context, flavor_id)
+        extra_specs = db.flavor_extra_specs_get(context, flavor_id)
         return dict(extra_specs=extra_specs)
 
     def _check_body(self, body):
@@ -69,7 +69,7 @@ class FlavorExtraSpecsController(object):
         self._check_body(body)
         specs = body.get('extra_specs')
         try:
-            db.instance_type_extra_specs_update_or_create(context,
+            db.flavor_extra_specs_update_or_create(context,
                                                               flavor_id,
                                                               specs)
         except exception.MetadataLimitExceeded as error:
@@ -88,7 +88,7 @@ class FlavorExtraSpecsController(object):
             expl = _('Request body contains too many items')
             raise exc.HTTPBadRequest(explanation=expl)
         try:
-            db.instance_type_extra_specs_update_or_create(context,
+            db.flavor_extra_specs_update_or_create(context,
                                                                flavor_id,
                                                                body)
         except exception.MetadataLimitExceeded as error:
@@ -101,7 +101,7 @@ class FlavorExtraSpecsController(object):
         context = req.environ['nova.context']
         authorize(context, action='show')
         try:
-            extra_spec = db.instance_type_extra_specs_get_item(context,
+            extra_spec = db.flavor_extra_specs_get_item(context,
                                                                flavor_id, id)
             return extra_spec
         except exception.InstanceTypeExtraSpecsNotFound:
@@ -111,7 +111,7 @@ class FlavorExtraSpecsController(object):
         """Deletes an existing extra spec."""
         context = req.environ['nova.context']
         authorize(context, action='delete')
-        db.instance_type_extra_specs_delete(context, flavor_id, id)
+        db.flavor_extra_specs_delete(context, flavor_id, id)
 
 
 class Flavorextraspecs(extensions.ExtensionDescriptor):

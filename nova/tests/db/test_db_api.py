@@ -2023,7 +2023,7 @@ class BaseInstanceTypeTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def _create_inst_type(self, values):
         v = self._get_base_values()
         v.update(values)
-        return db.instance_type_create(self.ctxt, v)
+        return db.flavor_create(self.ctxt, v)
 
 
 class InstanceActionTestCase(test.TestCase, ModelsObjectComparatorMixin):
@@ -2352,7 +2352,7 @@ class InstanceFaultTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
 class InstanceTypeTestCase(BaseInstanceTypeTestCase):
 
-    def test_instance_type_create(self):
+    def test_flavor_create(self):
         inst_type = self._create_inst_type({})
         ignored_keys = ['id', 'deleted', 'deleted_at', 'updated_at',
                         'created_at', 'extra_specs']
@@ -2369,34 +2369,34 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
         inst_type2 = self._create_inst_type({'name': 'name2', 'flavorid': 'a2',
                                              'extra_specs': specs2})
 
-        db.instance_type_destroy(self.ctxt, 'name1')
+        db.flavor_destroy(self.ctxt, 'name1')
 
         self.assertRaises(exception.InstanceTypeNotFound,
-                          db.instance_type_get, self.ctxt, inst_type1['id'])
-        real_specs1 = db.instance_type_extra_specs_get(self.ctxt,
+                          db.flavor_get, self.ctxt, inst_type1['id'])
+        real_specs1 = db.flavor_extra_specs_get(self.ctxt,
                                                        inst_type1['flavorid'])
         self._assertEqualObjects(real_specs1, {})
 
-        r_inst_type2 = db.instance_type_get(self.ctxt, inst_type2['id'])
+        r_inst_type2 = db.flavor_get(self.ctxt, inst_type2['id'])
         self._assertEqualObjects(inst_type2, r_inst_type2, 'extra_specs')
 
     def test_instance_type_destroy_not_found(self):
         self.assertRaises(exception.InstanceTypeNotFound,
-                          db.instance_type_destroy, self.ctxt, 'nonexists')
+                          db.flavor_destroy, self.ctxt, 'nonexists')
 
-    def test_instance_type_create_duplicate_name(self):
+    def test_flavor_create_duplicate_name(self):
         self._create_inst_type({})
         self.assertRaises(exception.InstanceTypeExists,
                           self._create_inst_type,
                           {'flavorid': 'some_random_flavor'})
 
-    def test_instance_type_create_duplicate_flavorid(self):
+    def test_flavor_create_duplicate_flavorid(self):
         self._create_inst_type({})
         self.assertRaises(exception.InstanceTypeIdExists,
                           self._create_inst_type,
                           {'name': 'some_random_name'})
 
-    def test_instance_type_create_with_extra_specs(self):
+    def test_flavor_create_with_extra_specs(self):
         extra_specs = dict(a='abc', b='def', c='ghi')
         inst_type = self._create_inst_type({'extra_specs': extra_specs})
         ignored_keys = ['id', 'deleted', 'deleted_at', 'updated_at',
@@ -2408,8 +2408,8 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
 
     def test_instance_type_get_all(self):
         # NOTE(boris-42): Remove base instance types
-        for it in db.instance_type_get_all(self.ctxt):
-            db.instance_type_destroy(self.ctxt, it['name'])
+        for it in db.flavor_get_all(self.ctxt):
+            db.flavor_destroy(self.ctxt, it['name'])
 
         instance_types = [
             {'root_gb': 600, 'memory_mb': 100, 'disabled': True,
@@ -2448,7 +2448,7 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
                 filt = lambda it: lambda_filters[name](it, value)
                 expected_it = filter(filt, expected_it)
 
-            real_it = db.instance_type_get_all(self.ctxt, filters=filters)
+            real_it = db.flavor_get_all(self.ctxt, filters=filters)
             self._assertEqualListsOfObjects(expected_it, real_it)
 
         #no filter
@@ -2481,7 +2481,7 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
         inst_types = [self._create_inst_type(t) for t in inst_types]
 
         for inst_type in inst_types:
-            inst_type_by_id = db.instance_type_get(self.ctxt, inst_type['id'])
+            inst_type_by_id = db.flavor_get(self.ctxt, inst_type['id'])
             self._assertEqualObjects(inst_type, inst_type_by_id)
 
     def test_instance_type_get_non_public(self):
@@ -2489,17 +2489,17 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
                                             'is_public': False})
 
         # Admin can see it
-        inst_type_by_id = db.instance_type_get(self.ctxt, inst_type['id'])
+        inst_type_by_id = db.flavor_get(self.ctxt, inst_type['id'])
         self._assertEqualObjects(inst_type, inst_type_by_id)
 
         # Regular user can not
-        self.assertRaises(exception.InstanceTypeNotFound, db.instance_type_get,
+        self.assertRaises(exception.InstanceTypeNotFound, db.flavor_get,
                 self.user_ctxt, inst_type['id'])
 
         # Regular user can see it after being granted access
-        db.instance_type_access_add(self.ctxt, inst_type['flavorid'],
+        db.flavor_access_add(self.ctxt, inst_type['flavorid'],
                 self.user_ctxt.project_id)
-        inst_type_by_id = db.instance_type_get(self.user_ctxt, inst_type['id'])
+        inst_type_by_id = db.flavor_get(self.user_ctxt, inst_type['id'])
         self._assertEqualObjects(inst_type, inst_type_by_id)
 
     def test_instance_type_get_by_name(self):
@@ -2509,33 +2509,33 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
         inst_types = [self._create_inst_type(t) for t in inst_types]
 
         for inst_type in inst_types:
-            inst_type_by_name = db.instance_type_get_by_name(self.ctxt,
+            inst_type_by_name = db.flavor_get_by_name(self.ctxt,
                                                              inst_type['name'])
             self._assertEqualObjects(inst_type, inst_type_by_name)
 
     def test_instance_type_get_by_name_not_found(self):
         self._create_inst_type({})
         self.assertRaises(exception.InstanceTypeNotFoundByName,
-                          db.instance_type_get_by_name, self.ctxt, 'nonexists')
+                          db.flavor_get_by_name, self.ctxt, 'nonexists')
 
     def test_instance_type_get_by_name_non_public(self):
         inst_type = self._create_inst_type({'name': 'abc', 'flavorid': '123',
                                             'is_public': False})
 
         # Admin can see it
-        inst_type_by_name = db.instance_type_get_by_name(self.ctxt,
+        inst_type_by_name = db.flavor_get_by_name(self.ctxt,
                                                          inst_type['name'])
         self._assertEqualObjects(inst_type, inst_type_by_name)
 
         # Regular user can not
         self.assertRaises(exception.InstanceTypeNotFoundByName,
-                db.instance_type_get_by_name, self.user_ctxt,
+                db.flavor_get_by_name, self.user_ctxt,
                 inst_type['name'])
 
         # Regular user can see it after being granted access
-        db.instance_type_access_add(self.ctxt, inst_type['flavorid'],
+        db.flavor_access_add(self.ctxt, inst_type['flavorid'],
                 self.user_ctxt.project_id)
-        inst_type_by_name = db.instance_type_get_by_name(self.user_ctxt,
+        inst_type_by_name = db.flavor_get_by_name(self.user_ctxt,
                                                          inst_type['name'])
         self._assertEqualObjects(inst_type, inst_type_by_name)
 
@@ -2547,13 +2547,13 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
 
         for inst_type in inst_types:
             params = (self.ctxt, inst_type['flavorid'])
-            inst_type_by_flavorid = db.instance_type_get_by_flavor_id(*params)
+            inst_type_by_flavorid = db.flavor_get_by_flavor_id(*params)
             self._assertEqualObjects(inst_type, inst_type_by_flavorid)
 
     def test_instance_type_get_by_flavor_not_found(self):
         self._create_inst_type({})
         self.assertRaises(exception.FlavorNotFound,
-                          db.instance_type_get_by_flavor_id,
+                          db.flavor_get_by_flavor_id,
                           self.ctxt, 'nonexists')
 
     def test_instance_type_get_by_flavor_id_non_public(self):
@@ -2561,28 +2561,28 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
                                             'is_public': False})
 
         # Admin can see it
-        inst_type_by_fid = db.instance_type_get_by_flavor_id(self.ctxt,
+        inst_type_by_fid = db.flavor_get_by_flavor_id(self.ctxt,
                 inst_type['flavorid'])
         self._assertEqualObjects(inst_type, inst_type_by_fid)
 
         # Regular user can not
         self.assertRaises(exception.FlavorNotFound,
-                db.instance_type_get_by_flavor_id, self.user_ctxt,
+                db.flavor_get_by_flavor_id, self.user_ctxt,
                 inst_type['flavorid'])
 
         # Regular user can see it after being granted access
-        db.instance_type_access_add(self.ctxt, inst_type['flavorid'],
+        db.flavor_access_add(self.ctxt, inst_type['flavorid'],
                 self.user_ctxt.project_id)
-        inst_type_by_fid = db.instance_type_get_by_flavor_id(self.user_ctxt,
+        inst_type_by_fid = db.flavor_get_by_flavor_id(self.user_ctxt,
                 inst_type['flavorid'])
         self._assertEqualObjects(inst_type, inst_type_by_fid)
 
     def test_instance_type_get_by_flavor_id_deleted(self):
         inst_type = self._create_inst_type({'name': 'abc', 'flavorid': '123'})
 
-        db.instance_type_destroy(self.ctxt, 'abc')
+        db.flavor_destroy(self.ctxt, 'abc')
 
-        inst_type_by_fid = db.instance_type_get_by_flavor_id(self.ctxt,
+        inst_type_by_fid = db.flavor_get_by_flavor_id(self.ctxt,
                 inst_type['flavorid'], read_deleted='yes')
         self.assertEqual(inst_type['id'], inst_type_by_fid['id'])
 
@@ -2596,13 +2596,13 @@ class InstanceTypeExtraSpecsTestCase(BaseInstanceTypeTestCase):
                   {'name': 'n2', 'flavorid': 'f2',
                    'extra_specs': dict(d='d', e='e', f='f')})
 
-        # NOTE(boris-42): We have already tested instance_type_create method
+        # NOTE(boris-42): We have already tested flavor_create method
         #                 with extra_specs in InstanceTypeTestCase.
         self.inst_types = [self._create_inst_type(v) for v in values]
 
     def test_instance_type_extra_specs_get(self):
         for it in self.inst_types:
-            real_specs = db.instance_type_extra_specs_get(self.ctxt,
+            real_specs = db.flavor_extra_specs_get(self.ctxt,
                                                           it['flavorid'])
             self._assertEqualObjects(it['extra_specs'], real_specs)
 
@@ -2612,7 +2612,7 @@ class InstanceTypeExtraSpecsTestCase(BaseInstanceTypeTestCase):
 
         for flavor, specs in expected.iteritems():
             for key, val in specs.iteritems():
-                spec = db.instance_type_extra_specs_get_item(self.ctxt, flavor,
+                spec = db.flavor_extra_specs_get_item(self.ctxt, flavor,
                                                              key)
                 self.assertEqual(spec[key], val)
 
@@ -2621,8 +2621,8 @@ class InstanceTypeExtraSpecsTestCase(BaseInstanceTypeTestCase):
             specs = it['extra_specs']
             key = specs.keys()[0]
             del specs[key]
-            db.instance_type_extra_specs_delete(self.ctxt, it['flavorid'], key)
-            real_specs = db.instance_type_extra_specs_get(self.ctxt,
+            db.flavor_extra_specs_delete(self.ctxt, it['flavorid'], key)
+            real_specs = db.flavor_extra_specs_get(self.ctxt,
                                                           it['flavorid'])
             self._assertEqualObjects(it['extra_specs'], real_specs)
 
@@ -2631,21 +2631,21 @@ class InstanceTypeExtraSpecsTestCase(BaseInstanceTypeTestCase):
             current_specs = it['extra_specs']
             current_specs.update(dict(b='b1', c='c1', d='d1', e='e1'))
             params = (self.ctxt, it['flavorid'], current_specs)
-            db.instance_type_extra_specs_update_or_create(*params)
-            real_specs = db.instance_type_extra_specs_get(self.ctxt,
+            db.flavor_extra_specs_update_or_create(*params)
+            real_specs = db.flavor_extra_specs_get(self.ctxt,
                                                           it['flavorid'])
             self._assertEqualObjects(current_specs, real_specs)
 
     def test_instance_type_extra_specs_update_or_create_flavor_not_found(self):
         self.assertRaises(exception.FlavorNotFound,
-                          db.instance_type_extra_specs_update_or_create,
+                          db.flavor_extra_specs_update_or_create,
                           self.ctxt, 'nonexists', {})
 
 
 class InstanceTypeAccessTestCase(BaseInstanceTypeTestCase):
 
     def _create_inst_type_access(self, instance_type_id, project_id):
-        return db.instance_type_access_add(self.ctxt, instance_type_id,
+        return db.flavor_access_add(self.ctxt, instance_type_id,
                                            project_id)
 
     def test_instance_type_access_get_by_flavor_id(self):
@@ -2660,12 +2660,12 @@ class InstanceTypeAccessTestCase(BaseInstanceTypeTestCase):
 
         for it, access_it in zip((it1, it2), (access_it1, access_it2)):
             params = (self.ctxt, it['flavorid'])
-            real_access_it = db.instance_type_access_get_by_flavor_id(*params)
+            real_access_it = db.flavor_access_get_by_flavor_id(*params)
             self._assertEqualListsOfObjects(access_it, real_access_it)
 
     def test_instance_type_access_get_by_flavor_id_flavor_not_found(self):
         self.assertRaises(exception.FlavorNotFound,
-                          db.instance_type_get_by_flavor_id,
+                          db.flavor_get_by_flavor_id,
                           self.ctxt, 'nonexists')
 
     def test_instance_type_access_add(self):
@@ -2704,17 +2704,17 @@ class InstanceTypeAccessTestCase(BaseInstanceTypeTestCase):
 
         access_it2 = [self._create_inst_type_access(it2['flavorid'], 'pr1')]
 
-        db.instance_type_access_remove(self.ctxt, it1['flavorid'],
+        db.flavor_access_remove(self.ctxt, it1['flavorid'],
                                        access_it1[1]['project_id'])
 
         for it, access_it in zip((it1, it2), (access_it1[:1], access_it2)):
             params = (self.ctxt, it['flavorid'])
-            real_access_it = db.instance_type_access_get_by_flavor_id(*params)
+            real_access_it = db.flavor_access_get_by_flavor_id(*params)
             self._assertEqualListsOfObjects(access_it, real_access_it)
 
     def test_instance_type_access_remove_flavor_not_found(self):
         self.assertRaises(exception.FlavorNotFound,
-                          db.instance_type_access_remove,
+                          db.flavor_access_remove,
                           self.ctxt, 'nonexists', 'does_not_matter')
 
     def test_instance_type_access_remove_access_not_found(self):
@@ -2722,7 +2722,7 @@ class InstanceTypeAccessTestCase(BaseInstanceTypeTestCase):
         params = (inst_type['flavorid'], 'p1')
         self._create_inst_type_access(*params)
         self.assertRaises(exception.FlavorAccessNotFound,
-                          db.instance_type_access_remove,
+                          db.flavor_access_remove,
                           self.ctxt, inst_type['flavorid'], 'p2')
 
     def test_instance_type_access_removed_after_instance_type_destroy(self):
@@ -2736,14 +2736,14 @@ class InstanceTypeAccessTestCase(BaseInstanceTypeTestCase):
         for v in values:
             self._create_inst_type_access(*v)
 
-        db.instance_type_destroy(self.ctxt, inst_type1['name'])
+        db.flavor_destroy(self.ctxt, inst_type1['name'])
 
         p = (self.ctxt, inst_type1['flavorid'])
-        self.assertEqual(0, len(db.instance_type_access_get_by_flavor_id(*p)))
+        self.assertEqual(0, len(db.flavor_access_get_by_flavor_id(*p)))
         p = (self.ctxt, inst_type2['flavorid'])
-        self.assertEqual(1, len(db.instance_type_access_get_by_flavor_id(*p)))
-        db.instance_type_destroy(self.ctxt, inst_type2['name'])
-        self.assertEqual(0, len(db.instance_type_access_get_by_flavor_id(*p)))
+        self.assertEqual(1, len(db.flavor_access_get_by_flavor_id(*p)))
+        db.flavor_destroy(self.ctxt, inst_type2['name'])
+        self.assertEqual(0, len(db.flavor_access_get_by_flavor_id(*p)))
 
 
 class FixedIPTestCase(BaseInstanceTypeTestCase):

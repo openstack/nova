@@ -132,7 +132,7 @@ def create(name, memory, vcpus, root_gb, ephemeral_gb=0, flavorid=None,
         raise exception.InvalidInput(reason=_("is_public must be a boolean"))
 
     try:
-        return db.instance_type_create(context.get_admin_context(), kwargs)
+        return db.flavor_create(context.get_admin_context(), kwargs)
     except db_exc.DBError as e:
         LOG.exception(_('DB error: %s') % e)
         raise exception.InstanceTypeCreateFailed()
@@ -142,7 +142,7 @@ def destroy(name):
     """Marks flavor as deleted."""
     try:
         assert name is not None
-        db.instance_type_destroy(context.get_admin_context(), name)
+        db.flavor_destroy(context.get_admin_context(), name)
     except (AssertionError, exception.NotFound):
         LOG.exception(_('Instance type %s not found for deletion') % name)
         raise exception.InstanceTypeNotFoundByName(instance_type_name=name)
@@ -156,7 +156,7 @@ def get_all_flavors(ctxt=None, inactive=False, filters=None):
     if ctxt is None:
         ctxt = context.get_admin_context()
 
-    inst_types = db.instance_type_get_all(
+    inst_types = db.flavor_get_all(
             ctxt, inactive=inactive, filters=filters)
 
     inst_type_dict = {}
@@ -182,7 +182,7 @@ def get_flavor(instance_type_id, ctxt=None, inactive=False):
     if inactive:
         ctxt = ctxt.elevated(read_deleted="yes")
 
-    return db.instance_type_get(ctxt, instance_type_id)
+    return db.flavor_get(ctxt, instance_type_id)
 
 
 def get_flavor_by_name(name, ctxt=None):
@@ -193,7 +193,7 @@ def get_flavor_by_name(name, ctxt=None):
     if ctxt is None:
         ctxt = context.get_admin_context()
 
-    return db.instance_type_get_by_name(ctxt, name)
+    return db.flavor_get_by_name(ctxt, name)
 
 
 # TODO(termie): flavor-specific code should probably be in the API that uses
@@ -206,7 +206,7 @@ def get_flavor_by_flavor_id(flavorid, ctxt=None, read_deleted="yes"):
     if ctxt is None:
         ctxt = context.get_admin_context(read_deleted=read_deleted)
 
-    return db.instance_type_get_by_flavor_id(ctxt, flavorid, read_deleted)
+    return db.flavor_get_by_flavor_id(ctxt, flavorid, read_deleted)
 
 
 def get_flavor_access_by_flavor_id(flavorid, ctxt=None):
@@ -214,7 +214,7 @@ def get_flavor_access_by_flavor_id(flavorid, ctxt=None):
     if ctxt is None:
         ctxt = context.get_admin_context()
 
-    return db.instance_type_access_get_by_flavor_id(ctxt, flavorid)
+    return db.flavor_access_get_by_flavor_id(ctxt, flavorid)
 
 
 def add_flavor_access(flavorid, projectid, ctxt=None):
@@ -222,7 +222,7 @@ def add_flavor_access(flavorid, projectid, ctxt=None):
     if ctxt is None:
         ctxt = context.get_admin_context()
 
-    return db.instance_type_access_add(ctxt, flavorid, projectid)
+    return db.flavor_access_add(ctxt, flavorid, projectid)
 
 
 def remove_flavor_access(flavorid, projectid, ctxt=None):
@@ -230,7 +230,7 @@ def remove_flavor_access(flavorid, projectid, ctxt=None):
     if ctxt is None:
         ctxt = context.get_admin_context()
 
-    return db.instance_type_access_remove(ctxt, flavorid, projectid)
+    return db.flavor_access_remove(ctxt, flavorid, projectid)
 
 
 def extract_flavor(instance, prefix=''):

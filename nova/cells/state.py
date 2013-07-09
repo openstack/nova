@@ -293,7 +293,7 @@ class CellStateManager(base.Base):
             ram_mb_free_units[str(memory_mb)] += ram_free_units
             disk_mb_free_units[str(disk_mb)] += disk_free_units
 
-        instance_types = self.db.instance_type_get_all(ctxt)
+        instance_types = self.db.flavor_get_all(ctxt)
 
         for compute_values in compute_hosts.values():
             total_ram_mb_free += compute_values['free_ram_mb']

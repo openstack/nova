@@ -357,8 +357,8 @@ class _BaseTestCase(object):
                                                   fake_values)
 
     def test_flavor_get(self):
-        self.mox.StubOutWithMock(db, 'instance_type_get')
-        db.instance_type_get(self.context, 'fake-id').AndReturn('fake-type')
+        self.mox.StubOutWithMock(db, 'flavor_get')
+        db.flavor_get(self.context, 'fake-id').AndReturn('fake-type')
         self.mox.ReplayAll()
         result = self.conductor.instance_type_get(self.context, 'fake-id')
         self.assertEqual(result, 'fake-type')
@@ -1243,11 +1243,11 @@ class _BaseTaskTestCase(object):
                 {'system_metadata': system_metadata})
         expected_instance_type['extra_specs'] = 'fake-specs'
 
-        self.mox.StubOutWithMock(db, 'instance_type_extra_specs_get')
+        self.mox.StubOutWithMock(db, 'flavor_extra_specs_get')
         self.mox.StubOutWithMock(self.conductor_manager.scheduler_rpcapi,
                                  'run_instance')
 
-        db.instance_type_extra_specs_get(
+        db.flavor_extra_specs_get(
                 self.context,
                 instance_type['flavorid']).AndReturn('fake-specs')
         self.conductor_manager.scheduler_rpcapi.run_instance(self.context,

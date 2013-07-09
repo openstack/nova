@@ -58,10 +58,10 @@ def get_test_instance_type(context=None):
                           'ephemeral_gb': 80,
                           'swap': 1024}
     try:
-        instance_type_ref = nova.db.instance_type_create(context,
+        instance_type_ref = nova.db.flavor_create(context,
                                                          test_instance_type)
     except (exception.InstanceTypeExists, exception.InstanceTypeIdExists):
-        instance_type_ref = nova.db.instance_type_get_by_name(context,
+        instance_type_ref = nova.db.flavor_get_by_name(context,
                                                               'kinda.big')
     return instance_type_ref
 
