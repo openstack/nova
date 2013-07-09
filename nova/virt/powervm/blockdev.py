@@ -17,6 +17,7 @@
 import hashlib
 import os
 import re
+import time
 
 from oslo.config import cfg
 
@@ -397,6 +398,8 @@ class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
             while len(buf) > 0:
                 hasher.update(buf)
                 buf = img_file.read(block_size)
+                # this can take awhile so yield so other threads get some time
+                time.sleep(0)
             source_cksum = hasher.hexdigest()
         return source_cksum
 
