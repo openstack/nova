@@ -33,14 +33,14 @@ class InstanceTypeExtraSpecsTestCase(test.TestCase):
                       root_gb=1690,
                       ephemeral_gb=2000,
                       flavorid=105)
-        specs = dict(cpu_arch="x86_64",
-                        cpu_model="Nehalem",
-                        xpu_arch="fermi",
-                        xpus=2,
-                        xpu_model="Tesla 2050")
-        values['extra_specs'] = specs
+        self.specs = dict(cpu_arch="x86_64",
+                          cpu_model="Nehalem",
+                          xpu_arch="fermi",
+                          xpus="2",
+                          xpu_model="Tesla 2050")
+        values['extra_specs'] = self.specs
         ref = db.flavor_create(self.context,
-                                          values)
+                               values)
         self.instance_type_id = ref["id"]
         self.flavorid = ref["flavorid"]
 
@@ -50,35 +50,23 @@ class InstanceTypeExtraSpecsTestCase(test.TestCase):
         super(InstanceTypeExtraSpecsTestCase, self).tearDown()
 
     def test_instance_type_specs_get(self):
-        expected_specs = dict(cpu_arch="x86_64",
-                                 cpu_model="Nehalem",
-                                 xpu_arch="fermi",
-                                 xpus="2",
-                                 xpu_model="Tesla 2050")
         actual_specs = db.flavor_extra_specs_get(
                               self.context,
                               self.flavorid)
-        self.assertEquals(expected_specs, actual_specs)
+        self.assertEquals(self.specs, actual_specs)
 
     def test_instance_type_extra_specs_delete(self):
-        expected_specs = dict(cpu_arch="x86_64",
-                                 cpu_model="Nehalem",
-                                 xpu_arch="fermi",
-                                 xpus="2")
+        del self.specs["xpu_model"]
         db.flavor_extra_specs_delete(self.context,
-                                      self.flavorid,
-                                      "xpu_model")
+                                     self.flavorid,
+                                     "xpu_model")
         actual_specs = db.flavor_extra_specs_get(
                               self.context,
                               self.flavorid)
-        self.assertEquals(expected_specs, actual_specs)
+        self.assertEquals(self.specs, actual_specs)
 
     def test_instance_type_extra_specs_update(self):
-        expected_specs = dict(cpu_arch="x86_64",
-                                 cpu_model="Sandy Bridge",
-                                 xpu_arch="fermi",
-                                 xpus="2",
-                                 xpu_model="Tesla 2050")
+        self.specs["cpu_model"] = "Sandy Bridge"
         db.flavor_extra_specs_update_or_create(
                               self.context,
                               self.flavorid,
@@ -86,7 +74,7 @@ class InstanceTypeExtraSpecsTestCase(test.TestCase):
         actual_specs = db.flavor_extra_specs_get(
                               self.context,
                               self.flavorid)
-        self.assertEquals(expected_specs, actual_specs)
+        self.assertEquals(self.specs, actual_specs)
 
     def test_instance_type_extra_specs_update_with_nonexisting_flavor(self):
         extra_specs = dict(cpu_arch="x86_64")
@@ -96,33 +84,26 @@ class InstanceTypeExtraSpecsTestCase(test.TestCase):
                           self.context, nonexisting_flavorid, extra_specs)
 
     def test_instance_type_extra_specs_create(self):
-        expected_specs = dict(cpu_arch="x86_64",
-                                 cpu_model="Nehalem",
-                                 xpu_arch="fermi",
-                                 xpus="2",
-                                 xpu_model="Tesla 2050",
-                                 net_arch="ethernet",
-                                 net_mbps="10000")
+        net_attrs = {
+            "net_arch": "ethernet",
+            "net_mbps": "10000"
+        }
+        self.specs.update(net_attrs)
         db.flavor_extra_specs_update_or_create(
                               self.context,
                               self.flavorid,
-                              dict(net_arch="ethernet",
-                                   net_mbps=10000))
+                              net_attrs)
         actual_specs = db.flavor_extra_specs_get(
                               self.context,
                               self.flavorid)
-        self.assertEquals(expected_specs, actual_specs)
+        self.assertEquals(self.specs, actual_specs)
 
     def test_instance_type_get_with_extra_specs(self):
         instance_type = db.flavor_get(
                             self.context,
                             self.instance_type_id)
         self.assertEquals(instance_type['extra_specs'],
-                          dict(cpu_arch="x86_64",
-                               cpu_model="Nehalem",
-                               xpu_arch="fermi",
-                               xpus="2",
-                               xpu_model="Tesla 2050"))
+                          self.specs)
         instance_type = db.flavor_get(
                             self.context,
                             5)
@@ -133,12 +114,7 @@ class InstanceTypeExtraSpecsTestCase(test.TestCase):
                             self.context,
                             "cg1.4xlarge")
         self.assertEquals(instance_type['extra_specs'],
-                          dict(cpu_arch="x86_64",
-                               cpu_model="Nehalem",
-                               xpu_arch="fermi",
-                               xpus="2",
-                               xpu_model="Tesla 2050"))
-
+                          self.specs)
         instance_type = db.flavor_get_by_name(
                             self.context,
                             "m1.small")
@@ -149,24 +125,13 @@ class InstanceTypeExtraSpecsTestCase(test.TestCase):
                             self.context,
                             105)
         self.assertEquals(instance_type['extra_specs'],
-                          dict(cpu_arch="x86_64",
-                               cpu_model="Nehalem",
-                               xpu_arch="fermi",
-                               xpus="2",
-                               xpu_model="Tesla 2050"))
-
+                          self.specs)
         instance_type = db.flavor_get_by_flavor_id(
                             self.context,
                             2)
         self.assertEquals(instance_type['extra_specs'], {})
 
     def test_instance_type_get_all(self):
-        specs = dict(cpu_arch="x86_64",
-                        cpu_model="Nehalem",
-                        xpu_arch="fermi",
-                        xpus='2',
-                        xpu_model="Tesla 2050")
-
         types = db.flavor_get_all(self.context)
 
         name2specs = {}
@@ -174,5 +139,5 @@ class InstanceTypeExtraSpecsTestCase(test.TestCase):
             name = instance_type['name']
             name2specs[name] = instance_type['extra_specs']
 
-        self.assertEquals(name2specs['cg1.4xlarge'], specs)
+        self.assertEquals(name2specs['cg1.4xlarge'], self.specs)
         self.assertEquals(name2specs['m1.small'], {})
