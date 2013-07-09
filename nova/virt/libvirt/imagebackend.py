@@ -262,13 +262,14 @@ class Qcow2(Image):
         # backing file it expects to be using.
         if os.path.exists(self.path):
             backing_path = libvirt_utils.get_disk_backing_file(self.path)
-            backing_file = os.path.basename(backing_path)
-            backing_parts = backing_file.rpartition('_')
-            if backing_file != backing_parts[-1] and \
-                    backing_parts[-1].isdigit():
-                legacy_backing_size = int(backing_parts[-1])
-                legacy_base += '_%d' % legacy_backing_size
-                legacy_backing_size *= 1024 * 1024 * 1024
+            if backing_path is not None:
+                backing_file = os.path.basename(backing_path)
+                backing_parts = backing_file.rpartition('_')
+                if backing_file != backing_parts[-1] and \
+                        backing_parts[-1].isdigit():
+                    legacy_backing_size = int(backing_parts[-1])
+                    legacy_base += '_%d' % legacy_backing_size
+                    legacy_backing_size *= 1024 * 1024 * 1024
 
         # Create the legacy backing file if necessary.
         if legacy_backing_size:

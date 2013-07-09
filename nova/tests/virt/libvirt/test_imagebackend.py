@@ -319,6 +319,30 @@ class Qcow2TestCase(_ImageTestCase, test.TestCase):
 
         self.mox.VerifyAll()
 
+    def test_qcow2_exists_and_has_no_backing_file(self):
+        fn = self.prepare_mocks()
+        fn(target=self.TEMPLATE_PATH)
+        self.mox.StubOutWithMock(os.path, 'exists')
+        self.mox.StubOutWithMock(imagebackend.disk, 'get_disk_size')
+        self.mox.StubOutWithMock(imagebackend.libvirt_utils,
+                                 'get_disk_backing_file')
+        if self.OLD_STYLE_INSTANCE_PATH:
+            os.path.exists(self.OLD_STYLE_INSTANCE_PATH).AndReturn(False)
+        os.path.exists(self.TEMPLATE_PATH).AndReturn(False)
+        os.path.exists(self.PATH).AndReturn(True)
+
+        imagebackend.libvirt_utils.get_disk_backing_file(self.PATH)\
+            .AndReturn(None)
+        imagebackend.disk.get_disk_size(self.TEMPLATE_PATH
+                                       ).AndReturn(self.SIZE)
+        os.path.exists(self.PATH).AndReturn(True)
+        self.mox.ReplayAll()
+
+        image = self.image_class(self.INSTANCE, self.NAME)
+        image.create_image(fn, self.TEMPLATE_PATH, self.SIZE)
+
+        self.mox.VerifyAll()
+
 
 class LvmTestCase(_ImageTestCase, test.TestCase):
     VG = 'FakeVG'
