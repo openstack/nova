@@ -26,7 +26,7 @@ LOG = logging.getLogger(__name__)
 
 
 def _thread_done(gt, *args, **kwargs):
-    """ Callback function to be passed to GreenThread.link() when we spawn()
+    """Callback function to be passed to GreenThread.link() when we spawn()
     Calls the :class:`ThreadGroup` to notify if.
 
     """
@@ -34,7 +34,7 @@ def _thread_done(gt, *args, **kwargs):
 
 
 class Thread(object):
-    """ Wrapper around a greenthread, that holds a reference to the
+    """Wrapper around a greenthread, that holds a reference to the
     :class:`ThreadGroup`. The Thread will notify the :class:`ThreadGroup` when
     it has done so it can be removed from the threads list.
     """
@@ -50,7 +50,7 @@ class Thread(object):
 
 
 class ThreadGroup(object):
-    """ The point of the ThreadGroup classis to:
+    """The point of the ThreadGroup classis to:
 
     * keep track of timers and greenthreads (making it easier to stop them
       when need be).

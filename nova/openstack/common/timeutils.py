@@ -23,6 +23,7 @@ import calendar
 import datetime
 
 import iso8601
+import six
 
 
 # ISO 8601 extended time format with microseconds
@@ -32,7 +33,7 @@ PERFECT_TIME_FORMAT = _ISO8601_TIME_FORMAT_SUBSECOND
 
 
 def isotime(at=None, subsecond=False):
-    """Stringify time in ISO 8601 format"""
+    """Stringify time in ISO 8601 format."""
     if not at:
         at = utcnow()
     st = at.strftime(_ISO8601_TIME_FORMAT
@@ -44,7 +45,7 @@ def isotime(at=None, subsecond=False):
 
 
 def parse_isotime(timestr):
-    """Parse time from ISO 8601 format"""
+    """Parse time from ISO 8601 format."""
     try:
         return iso8601.parse_date(timestr)
     except iso8601.ParseError as e:
@@ -66,7 +67,7 @@ def parse_strtime(timestr, fmt=PERFECT_TIME_FORMAT):
 
 
 def normalize_time(timestamp):
-    """Normalize time in arbitrary timezone to UTC naive object"""
+    """Normalize time in arbitrary timezone to UTC naive object."""
     offset = timestamp.utcoffset()
     if offset is None:
         return timestamp
@@ -75,14 +76,14 @@ def normalize_time(timestamp):
 
 def is_older_than(before, seconds):
     """Return True if before is older than seconds."""
-    if isinstance(before, basestring):
+    if isinstance(before, six.string_types):
         before = parse_strtime(before).replace(tzinfo=None)
     return utcnow() - before > datetime.timedelta(seconds=seconds)
 
 
 def is_newer_than(after, seconds):
     """Return True if after is newer than seconds."""
-    if isinstance(after, basestring):
+    if isinstance(after, six.string_types):
         after = parse_strtime(after).replace(tzinfo=None)
     return after - utcnow() > datetime.timedelta(seconds=seconds)
 
@@ -103,7 +104,7 @@ def utcnow():
 
 
 def iso8601_from_timestamp(timestamp):
-    """Returns a iso8601 formated date from timestamp"""
+    """Returns a iso8601 formated date from timestamp."""
     return isotime(datetime.datetime.utcfromtimestamp(timestamp))
 
 
@@ -111,9 +112,9 @@ utcnow.override_time = None
 
 
 def set_time_override(override_time=datetime.datetime.utcnow()):
-    """
-    Override utils.utcnow to return a constant time or a list thereof,
-    one at a time.
+    """Overrides utils.utcnow.
+
+    Make it return a constant time or a list thereof, one at a time.
     """
     utcnow.override_time = override_time
 
@@ -141,7 +142,8 @@ def clear_time_override():
 def marshall_now(now=None):
     """Make an rpc-safe datetime with microseconds.
 
-    Note: tzinfo is stripped, but not required for relative times."""
+    Note: tzinfo is stripped, but not required for relative times.
+    """
     if not now:
         now = utcnow()
     return dict(day=now.day, month=now.month, year=now.year, hour=now.hour,
@@ -161,7 +163,8 @@ def unmarshall_time(tyme):
 
 
 def delta_seconds(before, after):
-    """
+    """Return the difference between two timing objects.
+
     Compute the difference in seconds between two date, time, or
     datetime objects (as a float, to microsecond resolution).
     """
@@ -174,8 +177,7 @@ def delta_seconds(before, after):
 
 
 def is_soon(dt, window):
-    """
-    Determines if time is going to happen in the next window seconds.
+    """Determines if time is going to happen in the next window seconds.
 
     :params dt: the time
     :params window: minimum seconds to remain to consider the time not soon

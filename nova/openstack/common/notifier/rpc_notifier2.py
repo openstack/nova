@@ -37,7 +37,7 @@ CONF.register_opt(notification_topic_opt, opt_group)
 
 
 def notify(context, message):
-    """Sends a notification via RPC"""
+    """Sends a notification via RPC."""
     if not context:
         context = req_context.get_admin_context()
     priority = message.get('priority',

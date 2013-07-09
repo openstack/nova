@@ -15,5 +15,5 @@
 
 
 def notify(_context, message):
-    """Notifies the recipient of the desired event given the model"""
+    """Notifies the recipient of the desired event given the model."""
     pass
