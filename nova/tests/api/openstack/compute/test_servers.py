@@ -2478,7 +2478,7 @@ class ServersControllerCreateTest(test.TestCase):
         """
         self.ext_mgr.extensions = {'os-volumes': 'fake'}
         self.mox.StubOutWithMock(compute_api.API, '_validate_bdm')
-        self.mox.StubOutWithMock(compute_api.API, '_get_volume')
+        self.mox.StubOutWithMock(compute_api.API, '_get_volume_image_metadata')
         bdm = [{
             'id': 1,
             'no_device': None,
@@ -2494,7 +2494,7 @@ class ServersControllerCreateTest(test.TestCase):
         volume = bdm[0]
         compute_api.API._validate_bdm(mox.IgnoreArg(),
                 mox.IgnoreArg()).AndReturn(True)
-        compute_api.API._get_volume(mox.IgnoreArg(),
+        compute_api.API._get_volume_image_metadata(mox.IgnoreArg(),
                 bdm).AndReturn(volume)
         params = {'block_device_mapping': bdm}
         old_create = compute_api.API.create
