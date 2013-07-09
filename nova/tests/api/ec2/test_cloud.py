@@ -857,7 +857,7 @@ class CloudTestCase(test.TestCase):
         result = self.cloud.describe_instances(self.context, **filters)
         self.assertEqual(result, {'reservationSet': []})
 
-    def test_describe_instances_with_tag_filters(self):
+    def test_describe_instances_with_filters_tags(self):
         # Makes sure describe_instances works and filters tag results.
 
         # We need to stub network calls
@@ -1043,6 +1043,24 @@ class CloudTestCase(test.TestCase):
                                'value': ['bar']}]}
         result = self.cloud.describe_instances(self.context, **filters)
         self.assertEqual(result, {'reservationSet': [inst1_ret, inst2_ret]})
+
+        # Confirm deletion of tags
+        # Check for format 'tag:'
+        self.cloud.delete_tags(self.context, resource_id=[ec2_id1], tag=[md])
+        filters = {'filter': [{'name': 'tag:foo',
+                              'value': ['bar']}]}
+        result = self.cloud.describe_instances(self.context, **filters)
+        self.assertEqual(result, {'reservationSet': [inst2_ret]})
+
+        # Check for format 'tag-'
+        filters = {'filter': [{'name': 'tag-key',
+                              'value': ['foo']}]}
+        result = self.cloud.describe_instances(self.context, **filters)
+        self.assertEqual(result, {'reservationSet': [inst2_ret]})
+        filters = {'filter': [{'name': 'tag-value',
+                              'value': ['bar']}]}
+        result = self.cloud.describe_instances(self.context, **filters)
+        self.assertEqual(result, {'reservationSet': [inst2_ret]})
 
         # destroy the test instances
         db.instance_destroy(self.context, inst1['uuid'])
