@@ -4286,29 +4286,34 @@ class ComputeTestCase(BaseTestCase):
         admin_context = context.get_admin_context()
         deleted_at = (timeutils.utcnow() -
                       datetime.timedelta(hours=1, minutes=5))
-        instance = self._create_fake_instance({"deleted_at": deleted_at,
-                                               "deleted": True})
-
-        self.compute.host = instance['host']
+        instance1 = self._create_fake_instance({"deleted_at": deleted_at,
+                                                "deleted": True})
+        instance2 = self._create_fake_instance({"deleted_at": deleted_at,
+                                                "deleted": True})
 
         self.mox.StubOutWithMock(self.compute, '_get_instances_on_driver')
         self.compute._get_instances_on_driver(
             admin_context, {'deleted': True,
                             'soft_deleted': False,
-                            'host': self.compute.host}).AndReturn([instance])
+                            'host': self.compute.host}).AndReturn([instance1,
+                                                                   instance2])
         self.flags(running_deleted_instance_timeout=3600,
                    running_deleted_instance_action='reap')
 
         bdms = []
 
         self.mox.StubOutWithMock(self.compute, "_shutdown_instance")
+        # Simulate an error and make sure cleanup proceeds with next instance.
         self.compute._shutdown_instance(admin_context,
-                                        instance,
+                                        instance1,
+                                        bdms).AndRaise(test.TestingException)
+        self.compute._shutdown_instance(admin_context,
+                                        instance2,
                                         bdms).AndReturn(None)
 
         self.mox.StubOutWithMock(self.compute, "_cleanup_volumes")
         self.compute._cleanup_volumes(admin_context,
-                                      instance['uuid'],
+                                      instance1['uuid'],
                                       bdms).AndReturn(None)
 
         self.mox.ReplayAll()
