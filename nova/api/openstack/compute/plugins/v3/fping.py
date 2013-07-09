@@ -32,14 +32,9 @@ ALIAS = "os-fping"
 authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
 authorize_all_tenants = extensions.extension_authorizer(
     'compute', 'v3:' + ALIAS + ':all_tenants')
-fping_opts = [
-    cfg.StrOpt("fping_path",
-               default="/usr/sbin/fping",
-               help="Full path to fping."),
-]
 
 CONF = cfg.CONF
-CONF.register_opts(fping_opts)
+CONF.import_opt('fping_path', 'nova.api.openstack.compute.contrib.fping')
 
 
 class FpingController(object):
