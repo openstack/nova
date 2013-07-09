@@ -350,13 +350,18 @@ class API(base.Base):
                   instance['display_name'])
         search_opts = {'device_id': instance['uuid']}
         data = neutronv2.get_client(context).list_ports(**search_opts)
-        ports = data.get('ports', [])
+        ports = [port['id'] for port in data.get('ports', [])]
+
+        requested_networks = kwargs.get('requested_networks') or {}
+        ports_to_skip = [port_id for nets, fips, port_id in requested_networks]
+        ports = set(ports) - set(ports_to_skip)
+
         for port in ports:
             try:
-                neutronv2.get_client(context).delete_port(port['id'])
+                neutronv2.get_client(context).delete_port(port)
             except Exception:
                 LOG.exception(_("Failed to delete neutron port %(portid)s")
-                              % {'portid': port['id']})
+                              % {'portid': port})
 
     @refresh_cache
     def allocate_port_for_instance(self, context, instance, port_id,

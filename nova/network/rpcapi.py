@@ -59,6 +59,7 @@ class NetworkAPI(rpc_proxy.RpcProxy):
         1.8 - Adds macs to allocate_for_instance
         1.9 - Adds rxtx_factor to [add|remove]_fixed_ip, removes instance_uuid
               from allocate_for_instance and instance_get_nw_info
+        1.10- Adds (optional) requested_networks to deallocate_for_instance
 
         ... Grizzly supports message version 1.9.  So, any changes to existing
         methods in 2.x after that point should be done such that they can
@@ -181,13 +182,15 @@ class NetworkAPI(rpc_proxy.RpcProxy):
                 macs=jsonutils.to_primitive(macs)),
                 topic=topic, version='1.9')
 
-    def deallocate_for_instance(self, ctxt, instance_id, project_id, host):
+    def deallocate_for_instance(self, ctxt, instance_id, project_id,
+                                host, requested_networks=None):
         if CONF.multi_host:
             topic = rpc.queue_get_for(ctxt, self.topic, host)
         else:
             topic = None
         return self.call(ctxt, self.make_msg('deallocate_for_instance',
-                instance_id=instance_id, project_id=project_id, host=host),
+                instance_id=instance_id, project_id=project_id,
+                host=host, requested_networks=requested_networks),
                 topic=topic)
 
     def add_fixed_ip_to_instance(self, ctxt, instance_id, rxtx_factor,

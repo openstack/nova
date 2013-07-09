@@ -293,7 +293,8 @@ class API(base.Base):
         return network_model.NetworkInfo.hydrate(nw_info)
 
     @wrap_check_policy
-    def deallocate_for_instance(self, context, instance):
+    def deallocate_for_instance(self, context, instance,
+                                requested_networks=None):
         """Deallocates all network structures related to instance."""
         # NOTE(vish): We can't do the floating ip deallocation here because
         #             this is called from compute.manager which shouldn't
@@ -303,6 +304,7 @@ class API(base.Base):
         args['instance_id'] = instance['uuid']
         args['project_id'] = instance['project_id']
         args['host'] = instance['host']
+        args['requested_networks'] = requested_networks
         self.network_rpcapi.deallocate_for_instance(context, **args)
 
     # NOTE(danms): Here for neutron compatibility
