@@ -31,6 +31,7 @@ from nova.network import neutronv2
 from nova.network.neutronv2 import constants
 from nova.network.security_group import openstack_driver
 from nova.openstack.common import excutils
+from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import uuidutils
 
@@ -894,12 +895,18 @@ class API(base.Base):
         data = client.list_ports(**search_opts)
         ports = data.get('ports', [])
         if networks is None:
+            # retrieve networks from info_cache to get correct nic order
+            network_cache = self.conductor_api.instance_get_by_uuid(
+                context, instance['uuid'])['info_cache']['network_info']
+            network_cache = jsonutils.loads(network_cache)
+            net_ids = [iface['network']['id'] for iface in network_cache]
             networks = self._get_available_networks(context,
                                                     instance['project_id'])
 
         # ensure ports are in preferred network order, and filter out
         # those not attached to one of the provided list of networks
-        net_ids = [n['id'] for n in networks]
+        else:
+            net_ids = [n['id'] for n in networks]
         ports = [port for port in ports if port['network_id'] in net_ids]
         _ensure_requested_network_ordering(lambda x: x['network_id'],
                                            ports, net_ids)
