@@ -920,11 +920,27 @@ class NetworkManager(manager.Manager):
                     LOG.error(msg % address)
                     return
 
+                # NOTE(cfb): Call teardown before release_dhcp to ensure
+                #            that the IP can't be re-leased after a release
+                #            packet is sent.
+                self._teardown_network_on_host(context, network)
                 # NOTE(vish): This forces a packet so that the release_fixed_ip
                 #             callback will get called by nova-dhcpbridge.
                 self.driver.release_dhcp(dev, address, vif['address'])
 
-            self._teardown_network_on_host(context, network)
+                # NOTE(yufang521247): This is probably a failed dhcp fixed ip.
+                # DHCPRELEASE packet sent to dnsmasq would not trigger
+                # dhcp-bridge to run. Thus it is better to disassociate such
+                # fixed ip here.
+                fixed_ip_ref = self.db.fixed_ip_get_by_address(context,
+                                                               address)
+                if (instance_uuid == fixed_ip_ref['instance_uuid'] and
+                        not fixed_ip_ref.get('leased')):
+                    self.db.fixed_ip_disassociate(context, address)
+
+            else:
+                # We can't try to free the IP address so just call teardown
+                self._teardown_network_on_host(context, network)
 
         # Commit the reservations
         if reservations:
