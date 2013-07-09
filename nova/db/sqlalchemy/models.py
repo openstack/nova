@@ -22,6 +22,7 @@ SQLAlchemy models for nova data.
 """
 
 from sqlalchemy import Column, Index, Integer, BigInteger, String, schema
+from sqlalchemy.dialects.mysql import MEDIUMTEXT
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import ForeignKey, DateTime, Boolean, Text, Float
 from sqlalchemy.orm import relationship, backref, object_mapper
@@ -33,6 +34,10 @@ from nova.openstack.common import timeutils
 
 CONF = cfg.CONF
 BASE = declarative_base()
+
+
+def MediumText():
+    return Text().with_variant(MEDIUMTEXT(), 'mysql')
 
 
 class NovaBase(models.SoftDeleteMixin,
@@ -431,16 +436,19 @@ class Reservation(BASE, NovaBase):
     """Represents a resource reservation for quotas."""
 
     __tablename__ = 'reservations'
-    id = Column(Integer, primary_key=True)
+    __table_args__ = (
+        Index('ix_reservations_project_id', 'project_id'),
+    )
+    id = Column(Integer, primary_key=True, nullable=False)
     uuid = Column(String(36), nullable=False)
 
     usage_id = Column(Integer, ForeignKey('quota_usages.id'), nullable=False)
 
-    project_id = Column(String(255), index=True)
+    project_id = Column(String(255))
     resource = Column(String(255))
 
-    delta = Column(Integer)
-    expire = Column(DateTime, nullable=False)
+    delta = Column(Integer, nullable=False)
+    expire = Column(DateTime, nullable=True)
 
     usage = relationship(
         "QuotaUsage",
@@ -480,10 +488,23 @@ class Snapshot(BASE, NovaBase):
 class BlockDeviceMapping(BASE, NovaBase):
     """Represents block device mapping that is defined by EC2."""
     __tablename__ = "block_device_mapping"
+    __table_args__ = (
+        Index('snapshot_id', 'snapshot_id'),
+        Index('volume_id', 'volume_id'),
+        Index('block_device_mapping_instance_uuid_device_name_idx',
+              'instance_uuid', 'device_name'),
+        Index('block_device_mapping_instance_uuid_volume_id_idx',
+              'instance_uuid', 'volume_id'),
+        Index('block_device_mapping_instance_uuid_idx', 'instance_uuid'),
+        #TODO(sshturm) Should be dropped. `virtual_name` was dropped
+        #in 186 migration,
+        #Duplicates `block_device_mapping_instance_uuid_device_name_idx` index.
+        Index("block_device_mapping_instance_uuid_virtual_name"
+              "_device_name_idx", 'instance_uuid', 'device_name'),
+    )
     id = Column(Integer, primary_key=True, autoincrement=True)
 
-    instance_uuid = Column(Integer, ForeignKey('instances.uuid'),
-                           nullable=False)
+    instance_uuid = Column(String(36), ForeignKey('instances.uuid'))
     instance = relationship(Instance,
                             backref=backref('block_device_mapping'),
                             foreign_keys=instance_uuid,
@@ -507,6 +528,7 @@ class BlockDeviceMapping(BASE, NovaBase):
     # With EC2 API,
     # default True for ami specified device.
     # default False for created with other timing.
+    #TODO(sshturm) add default in db
     delete_on_termination = Column(Boolean, default=False)
 
     snapshot_id = Column(String(36))
@@ -519,14 +541,19 @@ class BlockDeviceMapping(BASE, NovaBase):
     # for no device to suppress devices.
     no_device = Column(Boolean, nullable=True)
 
-    connection_info = Column(Text, nullable=True)
+    connection_info = Column(MediumText())
 
 
 class IscsiTarget(BASE, NovaBase):
     """Represents an iscsi target for a given host."""
     __tablename__ = 'iscsi_targets'
-    __table_args__ = (schema.UniqueConstraint("target_num", "host"), )
-    id = Column(Integer, primary_key=True)
+    __table_args__ = (
+        Index('iscsi_targets_volume_id_fkey', 'volume_id'),
+        Index('iscsi_targets_host_idx', 'host'),
+        Index('iscsi_targets_host_volume_id_deleted_idx', 'host', 'volume_id',
+              'deleted')
+    )
+    id = Column(Integer, primary_key=True, nullable=False)
     target_num = Column(Integer)
     host = Column(String(255))
     volume_id = Column(String(36), ForeignKey('volumes.id'), nullable=True)
@@ -609,7 +636,8 @@ class SecurityGroupIngressDefaultRule(BASE, NovaBase):
 class ProviderFirewallRule(BASE, NovaBase):
     """Represents a rule in a security group."""
     __tablename__ = 'provider_fw_rules'
-    id = Column(Integer, primary_key=True)
+    __table_args__ = ()
+    id = Column(Integer, primary_key=True, nullable=False)
 
     protocol = Column(String(5))  # "tcp", "udp", or "icmp"
     from_port = Column(Integer)
@@ -624,19 +652,26 @@ class KeyPair(BASE, NovaBase):
         schema.UniqueConstraint("name", "user_id", "deleted",
                                 name="uniq_key_pairs0user_id0name0deleted"),
     )
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, nullable=False)
 
     name = Column(String(255))
 
     user_id = Column(String(255))
 
     fingerprint = Column(String(255))
-    public_key = Column(Text)
+    public_key = Column(MediumText())
 
 
 class Migration(BASE, NovaBase):
     """Represents a running host-to-host migration."""
     __tablename__ = 'migrations'
+    __table_args__ = (
+        Index('migrations_instance_uuid_and_status_idx', 'instance_uuid',
+              'status'),
+        Index('migrations_by_host_nodes_and_status_idx', 'deleted',
+              'source_compute', 'dest_compute', 'source_node', 'dest_node',
+              'status'),
+    )
     id = Column(Integer, primary_key=True, nullable=False)
     # NOTE(tr3buchet): the ____compute variables are instance['host']
     source_compute = Column(String(255))
@@ -665,14 +700,21 @@ class Network(BASE, NovaBase):
     __table_args__ = (
         schema.UniqueConstraint("vlan", "deleted",
                                 name="uniq_networks0vlan0deleted"),
+       Index('networks_bridge_deleted_idx', 'bridge', 'deleted'),
+       Index('networks_host_idx', 'host'),
+       Index('networks_project_id_deleted_idx', 'project_id', 'deleted'),
+       Index('networks_uuid_project_id_deleted_idx', 'uuid',
+             'project_id', 'deleted'),
+       Index('networks_vlan_deleted_idx', 'vlan', 'deleted'),
+       Index('networks_cidr_v6_idx', 'cidr_v6')
     )
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, nullable=False)
     label = Column(String(255))
 
     injected = Column(Boolean, default=False)
-    cidr = Column(types.CIDR(), unique=True)
-    cidr_v6 = Column(types.CIDR(), unique=True)
+    cidr = Column(types.CIDR())
+    cidr_v6 = Column(types.CIDR())
     multi_host = Column(Boolean, default=False)
 
     gateway_v6 = Column(types.IPAddress())
@@ -722,19 +764,33 @@ class FixedIp(BASE, NovaBase):
     __tablename__ = 'fixed_ips'
     __table_args__ = (
         schema.UniqueConstraint(
-            "address", "deleted", name="uniq_fixed_ips0address0deleted"
-        ),
+            "address", "deleted", name="uniq_fixed_ips0address0deleted"),
+        Index('fixed_ips_virtual_interface_id_fkey', 'virtual_interface_id'),
+        Index('network_id', 'network_id'),
+        Index('address', 'address'),
+        Index('fixed_ips_instance_uuid_fkey', 'instance_uuid'),
+        Index('fixed_ips_host_idx', 'host'),
+        Index('fixed_ips_network_id_host_deleted_idx', 'network_id', 'host',
+              'deleted'),
+        Index('fixed_ips_address_reserved_network_id_deleted_idx',
+              'address', 'reserved', 'network_id', 'deleted'),
+        Index('fixed_ips_deleted_allocated_idx', 'address', 'deleted',
+              'allocated')
     )
     id = Column(Integer, primary_key=True)
     address = Column(types.IPAddress())
     network_id = Column(Integer, nullable=True)
     virtual_interface_id = Column(Integer, nullable=True)
-    instance_uuid = Column(String(36), nullable=True)
+    instance_uuid = Column(String(36), ForeignKey('instances.uuid'),
+                           nullable=True)
     # associated means that a fixed_ip has its instance_id column set
     # allocated means that a fixed_ip has its virtual_interface_id column set
+    #TODO(sshturm) add default in db
     allocated = Column(Boolean, default=False)
     # leased means dhcp bridge has leased the ip
+    #TODO(sshturm) add default in db
     leased = Column(Boolean, default=False)
+    #TODO(sshturm) add default in db
     reserved = Column(Boolean, default=False)
     host = Column(String(255))
     network = relationship(Network,
@@ -758,13 +814,19 @@ class FloatingIp(BASE, NovaBase):
     __table_args__ = (
         schema.UniqueConstraint("address", "deleted",
                                 name="uniq_floating_ips0address0deleted"),
+        Index('fixed_ip_id', 'fixed_ip_id'),
+        Index('floating_ips_host_idx', 'host'),
+        Index('floating_ips_project_id_idx', 'project_id'),
+        Index('floating_ips_pool_deleted_fixed_ip_id_project_id_idx',
+              'pool', 'deleted', 'fixed_ip_id', 'project_id')
     )
     id = Column(Integer, primary_key=True)
     address = Column(types.IPAddress())
     fixed_ip_id = Column(Integer, nullable=True)
     project_id = Column(String(255))
     host = Column(String(255))  # , ForeignKey('hosts.id'))
-    auto_assigned = Column(Boolean, default=False, nullable=False)
+    auto_assigned = Column(Boolean, default=False, nullable=True)
+    #TODO(sshturm) add default in db
     pool = Column(String(255))
     interface = Column(String(255))
     fixed_ip = relationship(FixedIp,
@@ -1020,6 +1082,7 @@ class VolumeUsage(BASE, NovaBase):
 class S3Image(BASE, NovaBase):
     """Compatibility layer for the S3 image service talking to Glance."""
     __tablename__ = 's3_images'
+    __table_args__ = ()
     id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
     uuid = Column(String(36), nullable=False)
 
