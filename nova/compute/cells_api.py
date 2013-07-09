@@ -41,7 +41,8 @@ class ComputeRPCAPIRedirect(object):
     # swap out the compute_rpcapi class with the cells_rpcapi class.
     cells_compatible = ['start_instance', 'stop_instance',
                         'reboot_instance', 'suspend_instance',
-                        'resume_instance']
+                        'resume_instance', 'terminate_instance',
+                        'soft_delete_instance']
 
     def __init__(self, cells_rpcapi):
         self.cells_rpcapi = cells_rpcapi
@@ -194,49 +195,47 @@ class ComputeCellsAPI(compute_api.API):
                 pass
         return rv
 
-    def _local_delete(self, context, instance, bdms, delete_type, cb):
-        # This will get called for every delete in the API cell
-        # because _delete() in compute/api.py will not find a
-        # service when checking if it's up.
-        # We need to only take action if there's no cell_name.  Our
-        # overrides of delete() and soft_delete() will take care of
-        # the rest.
-        cell_name = instance['cell_name']
-        if not cell_name:
-            return super(ComputeCellsAPI, self)._local_delete(context,
-                    instance, bdms, delete_type, cb)
-
     def soft_delete(self, context, instance):
-        self._handle_cell_delete(context, instance,
-                super(ComputeCellsAPI, self).soft_delete, 'soft_delete')
+        self._handle_cell_delete(context, instance, 'soft_delete')
+
+    def _do_soft_delete(self, context, instance, bdms, reservations=None,
+                        local=False):
+        super(ComputeCellsAPI, self)._do_soft_delete(context, instance, bdms,
+                                                     reservations=reservations,
+                                                     local=local)
+        if local:
+            self.compute_rpcapi.soft_delete_instance(context, instance,
+                                                     reservations=reservations)
 
     def delete(self, context, instance):
-        self._handle_cell_delete(context, instance,
-                super(ComputeCellsAPI, self).delete, 'delete')
+        self._handle_cell_delete(context, instance, 'delete')
 
-    def _handle_cell_delete(self, context, instance, method, method_name):
-        """Terminate an instance."""
-        # We can't use the decorator because we have special logic in the
-        # case we don't know the cell_name...
-        cell_name = instance['cell_name']
-        if cell_name and self._cell_read_only(cell_name):
-            raise exception.InstanceInvalidState(
-                    attr="vm_state",
-                    instance_uuid=instance['uuid'],
-                    state="temporary_readonly",
-                    method=method_name)
-        method(context, instance)
-        try:
-            self._cast_to_cells(context, instance, method_name)
-        except exception.InstanceUnknownCell:
-            # If there's no cell, there's also no host... which means
-            # the instance was destroyed from the DB here.  Let's just
-            # broadcast a message down to all cells and hope this ends
-            # up resolving itself...  Worse case.. the instance will
-            # show back up again here.
+    def _do_delete(self, context, instance, bdms, reservations=None,
+                   local=False):
+        super(ComputeCellsAPI, self)._do_delete(context, instance, bdms,
+                                                reservations=reservations,
+                                                local=local)
+        if local:
+            self.compute_rpcapi.terminate_instance(context, instance, bdms,
+                                                   reservations=reservations)
+
+    def _handle_cell_delete(self, context, instance, method_name):
+        if not instance['cell_name']:
             delete_type = method_name == 'soft_delete' and 'soft' or 'hard'
             self.cells_rpcapi.instance_delete_everywhere(context,
                     instance, delete_type)
+            bdms = block_device.legacy_mapping(
+                self.db.block_device_mapping_get_all_by_instance(
+                    context, instance['uuid']))
+            # NOTE(danms): If we try to delete an instance with no cell,
+            # there isn't anything to salvage, so we can hard-delete here.
+            super(ComputeCellsAPI, self)._local_delete(context, instance, bdms,
+                                                       method_name,
+                                                       self._do_delete)
+            return
+
+        method = getattr(super(ComputeCellsAPI, self), method_name)
+        method(context, instance)
 
     @check_instance_cell
     def restore(self, context, instance):

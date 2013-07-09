@@ -1189,20 +1189,18 @@ class API(base.Base):
 
         try:
             # NOTE(maoy): no expected_task_state needs to be set
-            attrs = {'progress': 0}
-            attrs.update(instance_attrs)
-            old, updated = self._update(context,
-                                        instance,
-                                        **attrs)
+            instance.update(instance_attrs)
+            instance.progress = 0
+            instance.save()
+            new_type_id = instance.instance_type_id
 
             # NOTE(comstud): If we delete the instance locally, we'll
             # commit the reservations here.  Otherwise, the manager side
             # will commit or rollback the reservations based on success.
             reservations = self._create_reservations(context,
-                                                     old,
-                                                     updated,
-                                                     project_id,
-                                                     user_id)
+                                                     instance,
+                                                     new_type_id,
+                                                     project_id, user_id)
 
             if not host:
                 # Just update database, nothing else we can do
@@ -1218,7 +1216,8 @@ class API(base.Base):
                     return
                 except exception.ConstraintNotMet:
                     # Refresh to get new host information
-                    instance = self.get(context, instance['uuid'])
+                    instance = self.get(context, instance['uuid'],
+                                        want_objects=True)
 
             if instance['vm_state'] == vm_states.RESIZED:
                 # If in the middle of a resize, use confirm_resize to
@@ -1290,9 +1289,8 @@ class API(base.Base):
                                     project_id=project_id,
                                     user_id=user_id)
 
-    def _create_reservations(self, context, old_instance, new_instance,
-                                                            project_id,
-                                                            user_id):
+    def _create_reservations(self, context, old_instance, new_instance_type_id,
+                             project_id, user_id):
         instance_vcpus = old_instance['vcpus']
         instance_memory_mb = old_instance['memory_mb']
         # NOTE(wangpan): if the instance is resizing, and the resources
@@ -1308,7 +1306,7 @@ class API(base.Base):
             except exception.MigrationNotFoundByStatus:
                 migration_ref = None
             if (migration_ref and
-                    new_instance['instance_type_id'] ==
+                    new_instance_type_id ==
                         migration_ref['new_instance_type_id']):
                 old_inst_type_id = migration_ref['old_instance_type_id']
                 try:
@@ -1359,7 +1357,7 @@ class API(base.Base):
                 if bdm['delete_on_termination']:
                     self.volume_api.delete(context, bdm['volume_id'])
             self.db.block_device_mapping_destroy(context, bdm['id'])
-        instance = cb(context, instance, bdms, local=True)
+        cb(context, instance, bdms, local=True)
         self.db.instance_destroy(context, instance_uuid)
         compute_utils.notify_about_instance_usage(
             context, instance, "%s.end" % delete_type,
@@ -1368,10 +1366,10 @@ class API(base.Base):
     def _do_delete(self, context, instance, bdms, reservations=None,
                    local=False):
         if local:
-            return self.update(context, instance,
-                               vm_state=vm_states.DELETED,
-                               task_state=None,
-                               terminated_at=timeutils.utcnow())
+            instance.vm_state = vm_states.DELETED
+            instance.task_state = None
+            instance.terminated_at = timeutils.utcnow()
+            instance.save()
         else:
             self.compute_rpcapi.terminate_instance(context, instance, bdms,
                                                    reservations=reservations)
@@ -1379,10 +1377,10 @@ class API(base.Base):
     def _do_soft_delete(self, context, instance, bdms, reservations=None,
                         local=False):
         if local:
-            return self.update(context, instance,
-                               vm_state=vm_states.SOFT_DELETED,
-                               task_state=None,
-                               terminated_at=timeutils.utcnow())
+            instance.vm_state = vm_states.SOFT_DELETED
+            instance.task_state = None
+            instance.terminated_at = timeutils.utcnow()
+            instance.save()
         else:
             self.compute_rpcapi.soft_delete_instance(context, instance,
                                                      reservations=reservations)
@@ -1390,6 +1388,7 @@ class API(base.Base):
     # NOTE(maoy): we allow delete to be called no matter what vm_state says.
     @wrap_check_policy
     @check_instance_lock
+    @check_instance_cell
     @check_instance_state(vm_state=None, task_state=None,
                           must_have_launched=True)
     def soft_delete(self, context, instance):
@@ -1407,6 +1406,7 @@ class API(base.Base):
 
     @wrap_check_policy
     @check_instance_lock
+    @check_instance_cell
     @check_instance_state(vm_state=None, task_state=None,
                           must_have_launched=False)
     def delete(self, context, instance):

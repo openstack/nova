@@ -856,6 +856,12 @@ class _TargetedMessageMethods(_BaseMessageMethods):
     def get_host_uptime(self, message, host_name):
         return self.host_api.get_host_uptime(message.ctxt, host_name)
 
+    def terminate_instance(self, message, instance):
+        self._call_compute_api_with_obj(message.ctxt, instance, 'delete')
+
+    def soft_delete_instance(self, message, instance):
+        self._call_compute_api_with_obj(message.ctxt, instance, 'soft_delete')
+
 
 class _BroadcastMessageMethods(_BaseMessageMethods):
     """These are the methods that can be called as a part of a broadcast
@@ -1596,6 +1602,12 @@ class MessageRunner(object):
     def resume_instance(self, ctxt, instance):
         """Resume an instance in its cell."""
         self._instance_action(ctxt, instance, 'resume_instance')
+
+    def terminate_instance(self, ctxt, instance):
+        self._instance_action(ctxt, instance, 'terminate_instance')
+
+    def soft_delete_instance(self, ctxt, instance):
+        self._instance_action(ctxt, instance, 'soft_delete_instance')
 
     @staticmethod
     def get_message_types():

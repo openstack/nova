@@ -1170,8 +1170,13 @@ class CellsTargetedMethodsTestCase(test.TestCase):
         meth_cls = self.tgt_methods_cls
         self.mox.StubOutWithMock(meth_cls, '_call_compute_api_with_obj')
 
+        method_corrections = {
+            'terminate': 'delete',
+            }
+        api_method = method_corrections.get(method, method)
+
         meth_cls._call_compute_api_with_obj(
-                self.ctxt, 'fake-instance', method,
+                self.ctxt, 'fake-instance', api_method,
                 *expected_args, **expected_kwargs).AndReturn('meow')
 
         self.mox.ReplayAll()
@@ -1216,6 +1221,14 @@ class CellsTargetedMethodsTestCase(test.TestCase):
                                                        host_name)
         expected_host_uptime = response.value_or_raise()
         self.assertEqual(host_uptime, expected_host_uptime)
+
+    def test_terminate_instance(self):
+        self._test_instance_action_method('terminate',
+                                          (), {}, (), {}, False)
+
+    def test_soft_delete_instance(self):
+        self._test_instance_action_method('soft_delete',
+                                          (), {}, (), {}, False)
 
 
 class CellsBroadcastMethodsTestCase(test.TestCase):

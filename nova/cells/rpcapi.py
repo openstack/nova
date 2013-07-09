@@ -75,6 +75,7 @@ class CellsAPI(rpc_proxy.RpcProxy):
         1.15 - Adds suspend_instance() and resume_instance()
         1.16 - Adds instance_update_from_api()
         1.17 - Adds get_host_uptime()
+        1.18 - Adds terminate_instance() and soft_delete_instance()
     '''
     BASE_RPC_API_VERSION = '1.0'
 
@@ -470,3 +471,25 @@ class CellsAPI(rpc_proxy.RpcProxy):
         self.cast(ctxt,
                   self.make_msg('resume_instance', instance=instance),
                   version='1.15')
+
+    def terminate_instance(self, ctxt, instance, bdms, reservations=None):
+        """Delete an instance in its cell.
+
+        This method takes a new-world instance object.
+        """
+        if not CONF.cells.enable:
+            return
+        self.cast(ctxt,
+                  self.make_msg('terminate_instance', instance=instance),
+                  version='1.18')
+
+    def soft_delete_instance(self, ctxt, instance, reservations=None):
+        """Soft-delete an instance in its cell.
+
+        This method takes a new-world instance object.
+        """
+        if not CONF.cells.enable:
+            return
+        self.cast(ctxt,
+                  self.make_msg('soft_delete_instance', instance=instance),
+                  version='1.18')

@@ -54,7 +54,7 @@ class DeferredDeleteController(wsgi.Controller):
         """Force delete of instance before deferred cleanup."""
         context = req.environ["nova.context"]
         authorize(context)
-        instance = self.compute_api.get(context, id)
+        instance = self.compute_api.get(context, id, want_objects=True)
         try:
             self.compute_api.force_delete(context, instance)
         except exception.InstanceInvalidState as state_error:

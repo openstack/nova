@@ -1419,7 +1419,8 @@ class CloudController(object):
         """Terminate each instance in instance_id, which is a list of ec2 ids.
         instance_id is a kwarg so its name cannot be modified.
         """
-        previous_states = self._ec2_ids_to_instances(context, instance_id)
+        previous_states = self._ec2_ids_to_instances(context, instance_id,
+                                                     objects=True)
         self._remove_client_token(context, instance_id)
         LOG.debug(_("Going to start terminating instances"))
         for instance in previous_states:

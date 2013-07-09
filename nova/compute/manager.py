@@ -365,7 +365,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '2.34'
+    RPC_API_VERSION = '2.35'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -581,7 +581,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             # Do not convert to legacy here - we want them all
             leftover_bdm = \
                 self.conductor_api.block_device_mapping_get_all_by_instance(
-                    context, instance)
+                    context, obj_base.obj_to_primitive(instance))
             self.conductor_api.block_device_mapping_destroy(context,
                                                             leftover_bdm)
 
@@ -1569,10 +1569,11 @@ class ComputeManager(manager.SchedulerDependentManager):
             reservations = None
 
         try:
-            self.conductor_api.instance_info_cache_delete(context, instance)
+            db_inst = obj_base.obj_to_primitive(instance)
+            self.conductor_api.instance_info_cache_delete(context, db_inst)
             self._notify_about_instance_usage(context, instance,
                                               "delete.start")
-            self._shutdown_instance(context, instance, bdms)
+            self._shutdown_instance(context, db_inst, bdms)
             # NOTE(vish): We have already deleted the instance, so we have
             #             to ignore problems cleaning up the volumes. It
             #             would be nice to let the user know somehow that
@@ -1589,13 +1590,12 @@ class ComputeManager(manager.SchedulerDependentManager):
                 LOG.warn(err_str % exc, instance=instance)
             # if a delete task succeed, always update vm state and task
             # state without expecting task state to be DELETING
-            instance = self._instance_update(context,
-                                             instance_uuid,
-                                             vm_state=vm_states.DELETED,
-                                             task_state=None,
-                                             terminated_at=timeutils.utcnow())
+            instance.vm_state = vm_states.DELETED
+            instance.task_state = None
+            instance.terminated_at = timeutils.utcnow()
             system_meta = utils.instance_sys_meta(instance)
-            self.conductor_api.instance_destroy(context, instance)
+            self.conductor_api.instance_destroy(
+                context, obj_base.obj_to_primitive(instance))
         except Exception:
             with excutils.save_and_reraise_exception():
                 self._quota_rollback(context, reservations,
@@ -1610,6 +1610,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                 system_meta,
                                 user_id=user_id)
 
+    @object_compat
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @wrap_instance_event
     @wrap_instance_fault
@@ -1688,6 +1689,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                            task_states.STARTING))
         self._notify_about_instance_usage(context, instance, "power_on.end")
 
+    @object_compat
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
     @wrap_instance_event
@@ -1707,18 +1709,18 @@ class ComputeManager(manager.SchedulerDependentManager):
         try:
             self._notify_about_instance_usage(context, instance,
                                               "soft_delete.start")
+            db_inst = obj_base.obj_to_primitive(instance)
             try:
-                self.driver.soft_delete(instance)
+                self.driver.soft_delete(db_inst)
             except NotImplementedError:
                 # Fallback to just powering off the instance if the
                 # hypervisor doesn't implement the soft_delete method
                 self.driver.power_off(instance)
-            current_power_state = self._get_power_state(context, instance)
-            instance = self._instance_update(context, instance['uuid'],
-                    power_state=current_power_state,
-                    vm_state=vm_states.SOFT_DELETED,
-                    expected_task_state=task_states.SOFT_DELETING,
-                    task_state=None)
+            current_power_state = self._get_power_state(context, db_inst)
+            instance.power_state = current_power_state
+            instance.vm_state = vm_states.SOFT_DELETED
+            instance.task_state = None
+            instance.save(expected_task_state=[task_states.SOFT_DELETING])
         except Exception:
             with excutils.save_and_reraise_exception():
                 self._quota_rollback(context, reservations,
@@ -4589,8 +4591,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         filters = {'vm_state': vm_states.SOFT_DELETED,
                    'task_state': None,
                    'host': self.host}
-        instances = self.conductor_api.instance_get_all_by_filters(context,
-                                                                   filters)
+        instances = instance_obj.InstanceList.get_by_filters(
+            context, filters,
+            expected_attrs=instance_obj.INSTANCE_DEFAULT_FIELDS)
         for instance in instances:
             if self._deleted_old_enough(instance, interval):
                 capi = self.conductor_api
@@ -4713,8 +4716,10 @@ class ComputeManager(manager.SchedulerDependentManager):
         return [i for i in instances if self._deleted_old_enough(i, timeout)]
 
     def _deleted_old_enough(self, instance, timeout):
-        return (not instance['deleted_at'] or
-                timeutils.is_older_than(instance['deleted_at'], timeout))
+        deleted_at = instance['deleted_at']
+        if isinstance(instance, obj_base.NovaObject) and deleted_at:
+            deleted_at = deleted_at.replace(tzinfo=None)
+        return (not deleted_at or timeutils.is_older_than(deleted_at, timeout))
 
     @contextlib.contextmanager
     def _error_out_instance_on_exception(self, context, instance_uuid,

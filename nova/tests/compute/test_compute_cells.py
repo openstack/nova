@@ -188,12 +188,8 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
         cells_rpcapi = self.compute_api.cells_rpcapi
         self.mox.StubOutWithMock(cells_rpcapi,
                                  'instance_delete_everywhere')
-        self.mox.StubOutWithMock(self.compute_api,
-                                 '_cast_to_cells')
-        inst = self._create_fake_instance()
+        inst = self._create_fake_instance_obj()
         exc = exception.InstanceUnknownCell(instance_uuid=inst['uuid'])
-        self.compute_api._cast_to_cells(self.context, inst,
-                                        'delete').AndRaise(exc)
         cells_rpcapi.instance_delete_everywhere(self.context,
                 inst, 'hard')
         self.mox.ReplayAll()
@@ -203,12 +199,8 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
         cells_rpcapi = self.compute_api.cells_rpcapi
         self.mox.StubOutWithMock(cells_rpcapi,
                                  'instance_delete_everywhere')
-        self.mox.StubOutWithMock(self.compute_api,
-                                 '_cast_to_cells')
-        inst = self._create_fake_instance()
+        inst = self._create_fake_instance_obj()
         exc = exception.InstanceUnknownCell(instance_uuid=inst['uuid'])
-        self.compute_api._cast_to_cells(self.context, inst,
-                                        'soft_delete').AndRaise(exc)
         cells_rpcapi.instance_delete_everywhere(self.context,
                 inst, 'soft')
         self.mox.ReplayAll()

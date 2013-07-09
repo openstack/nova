@@ -14,6 +14,7 @@
 """Unit tests for compute API."""
 
 import datetime
+import iso8601
 import mox
 
 from nova.compute import api as compute_api
@@ -330,26 +331,28 @@ class _ComputeAPIUnitTestMixIn(object):
         self._test_reboot_type_fails('SOFT', vm_state=vm_states.ERROR,
                                      launched_at=None)
 
-    def _test_delete_resized_part(self, db_inst):
+    def _test_delete_resized_part(self, inst):
         migration = {'source_compute': 'foo'}
         self.context.elevated().AndReturn(self.context)
         db.migration_get_by_instance_and_status(
-            self.context, db_inst['uuid'], 'finished').AndReturn(migration)
-        self.compute_api._downsize_quota_delta(self.context, db_inst
+            self.context, inst.uuid, 'finished').AndReturn(migration)
+        self.compute_api._downsize_quota_delta(self.context, inst
                                                ).AndReturn('deltas')
         self.compute_api._reserve_quota_delta(self.context, 'deltas'
                                               ).AndReturn('rsvs')
         self.compute_api._record_action_start(
-            self.context, db_inst, instance_actions.CONFIRM_RESIZE)
+            self.context, inst, instance_actions.CONFIRM_RESIZE)
         self.compute_api.compute_rpcapi.confirm_resize(
-            self.context, db_inst, migration,
+            self.context, inst, migration,
             host=migration['source_compute'],
             cast=False, reservations='rsvs')
 
     def _test_delete(self, delete_type, **attrs):
         inst = self._create_instance_obj()
         inst.update(attrs)
-        delete_time = datetime.datetime(1955, 11, 5, 9, 30)
+        inst._context = self.context
+        delete_time = datetime.datetime(1955, 11, 5, 9, 30,
+                                        tzinfo=iso8601.iso8601.Utc())
         timeutils.set_time_override(delete_time)
         task_state = (delete_type == 'soft_delete' and
                       task_states.SOFT_DELETING or task_states.DELETING)
@@ -357,7 +360,7 @@ class _ComputeAPIUnitTestMixIn(object):
         updates = {'progress': 0, 'task_state': task_state}
         if delete_type == 'soft_delete':
             updates['deleted_at'] = delete_time
-        new_inst = dict(db_inst, **updates)
+        self.mox.StubOutWithMock(inst, 'save')
         self.mox.StubOutWithMock(db,
                                  'block_device_mapping_get_all_by_instance')
         self.mox.StubOutWithMock(self.compute_api, '_create_reservations')
@@ -378,21 +381,16 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(compute_utils,
                                  'notify_about_instance_usage')
         self.mox.StubOutWithMock(quota.QUOTAS, 'commit')
-        self.mox.StubOutWithMock(self.compute_api.compute_rpcapi,
-                                 'terminate_instance')
-        self.mox.StubOutWithMock(self.compute_api.compute_rpcapi,
-                                 'soft_delete_instance')
 
         db.block_device_mapping_get_all_by_instance(
             self.context, inst.uuid).AndReturn([])
-        db.instance_update_and_get_original(
-            self.context, inst.uuid, updates).AndReturn((db_inst, new_inst))
+        inst.save()
         self.compute_api._create_reservations(
-            self.context, db_inst, new_inst, inst.project_id, inst.user_id
-            ).AndReturn('fake-resv')
+            self.context, inst, inst.instance_type_id, inst.project_id,
+            inst.user_id).AndReturn('fake-resv')
 
         if inst.vm_state == vm_states.RESIZED:
-            self._test_delete_resized_part(db_inst)
+            self._test_delete_resized_part(inst)
 
         self.context.elevated().MultipleTimes().AndReturn(self.context)
         db.service_get_by_compute_host(self.context, inst.host).AndReturn(
@@ -400,49 +398,61 @@ class _ComputeAPIUnitTestMixIn(object):
         self.compute_api.servicegroup_api.service_is_up(
             'fake-service').AndReturn(inst.host != 'down-host')
 
-        if inst.host == 'down-host' and (
-                not self.is_cells or not inst.cell_name):
+        if self.is_cells:
+            rpcapi = self.compute_api.cells_rpcapi
+        else:
+            rpcapi = self.compute_api.compute_rpcapi
+
+        self.mox.StubOutWithMock(rpcapi, 'terminate_instance')
+        self.mox.StubOutWithMock(rpcapi, 'soft_delete_instance')
+
+        if inst.host == 'down-host':
             db.instance_info_cache_delete(self.context, inst.uuid)
             compute_utils.notify_about_instance_usage(self.context,
-                                                      db_inst, 'delete.start')
+                                                      inst,
+                                                      '%s.start' % delete_type)
             self.compute_api.network_api.deallocate_for_instance(
-                self.context, db_inst)
+                self.context, inst)
             db.instance_system_metadata_get(self.context, inst.uuid
                                             ).AndReturn('sys-meta')
-            updates = {'vm_state': vm_states.DELETED,
-                       'task_state': None,
-                       'terminated_at': delete_time}
-            del_inst = dict(new_inst, **updates)
-            db.instance_update_and_get_original(
-                self.context, inst.uuid, updates
-                ).AndReturn((db_inst, del_inst))
+            state = ('soft' in delete_type and vm_states.SOFT_DELETED or
+                     vm_states.DELETED)
+            updates.update({'vm_state': state,
+                            'task_state': None,
+                            'terminated_at': delete_time})
+            inst.save()
+            if self.is_cells:
+                if delete_type == 'soft_delete':
+                    rpcapi.soft_delete_instance(self.context, inst,
+                                                reservations=None)
+                else:
+                    rpcapi.terminate_instance(self.context, inst, [],
+                                              reservations=None)
             db.instance_destroy(self.context, inst.uuid)
             compute_utils.notify_about_instance_usage(
-                self.context, del_inst, 'delete.end',
+                self.context, inst, '%s.end' % delete_type,
                 system_metadata='sys-meta')
+
         if inst.host == 'down-host':
             quota.QUOTAS.commit(self.context, 'fake-resv',
                                 project_id=inst.project_id,
                                 user_id=inst.user_id)
         elif delete_type == 'soft_delete':
-            self.compute_api._record_action_start(self.context, db_inst,
+            self.compute_api._record_action_start(self.context, inst,
                                                   instance_actions.DELETE)
-            self.compute_api.compute_rpcapi.soft_delete_instance(
-                self.context, db_inst, reservations='fake-resv')
+            rpcapi.soft_delete_instance(self.context, inst,
+                                        reservations='fake-resv')
         elif delete_type in ['delete', 'force_delete']:
-            self.compute_api._record_action_start(self.context, db_inst,
+            self.compute_api._record_action_start(self.context, inst,
                                                   instance_actions.DELETE)
-            self.compute_api.compute_rpcapi.terminate_instance(
-                self.context, db_inst, [], reservations='fake-resv')
-
-        if self.is_cells:
-            self.mox.StubOutWithMock(self.compute_api, '_cast_to_cells')
-            self.compute_api._cast_to_cells(
-                self.context, db_inst, delete_type)
+            rpcapi.terminate_instance(self.context, inst, [],
+                                      reservations='fake-resv')
 
         self.mox.ReplayAll()
 
-        getattr(self.compute_api, delete_type)(self.context, db_inst)
+        getattr(self.compute_api, delete_type)(self.context, inst)
+        for k, v in updates.items():
+            self.assertEqual(inst[k], v)
 
     def test_delete(self):
         self._test_delete('delete')
@@ -459,6 +469,9 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_delete_with_down_host(self):
         self._test_delete('delete', host='down-host')
 
+    def test_delete_soft_with_down_host(self):
+        self._test_delete('soft_delete', host='down-host')
+
     def test_delete_soft(self):
         self._test_delete('soft_delete')
 
@@ -468,70 +481,56 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_delete_fast_if_host_not_set(self):
         inst = self._create_instance_obj()
         inst.host = ''
-        db_inst = obj_base.obj_to_primitive(inst)
         updates = {'progress': 0, 'task_state': task_states.DELETING}
-        new_inst = dict(db_inst, **updates)
 
+        self.mox.StubOutWithMock(inst, 'save')
         self.mox.StubOutWithMock(db,
                                  'block_device_mapping_get_all_by_instance')
-        self.mox.StubOutWithMock(db,
-                                 'instance_update_and_get_original')
+
         self.mox.StubOutWithMock(db, 'constraint')
         self.mox.StubOutWithMock(db, 'instance_destroy')
         self.mox.StubOutWithMock(self.compute_api, '_create_reservations')
 
         db.block_device_mapping_get_all_by_instance(self.context,
                                                     inst.uuid).AndReturn([])
-        db.instance_update_and_get_original(
-            self.context, inst.uuid, updates).AndReturn((db_inst, new_inst))
+        inst.save()
         self.compute_api._create_reservations(self.context,
-                                              db_inst, new_inst,
-                                              inst.project_id,
-                                              inst.user_id).AndReturn(None)
+                                              inst, inst.instance_type_id,
+                                              inst.project_id, inst.user_id
+                                              ).AndReturn(None)
         db.constraint(host=mox.IgnoreArg()).AndReturn('constraint')
         db.instance_destroy(self.context, inst.uuid, 'constraint')
 
-        if self.is_cells:
-            self.mox.StubOutWithMock(self.compute_api, '_cast_to_cells')
-            self.compute_api._cast_to_cells(
-                self.context, db_inst, 'delete')
-
         self.mox.ReplayAll()
 
-        self.compute_api.delete(self.context, db_inst)
+        self.compute_api.delete(self.context, inst)
+        for k, v in updates.items():
+            self.assertEqual(inst[k], v)
 
     def test_delete_disabled(self):
         inst = self._create_instance_obj()
         inst.disable_terminate = True
-        db_inst = obj_base.obj_to_primitive(inst)
         self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
         self.mox.ReplayAll()
-        self.compute_api.delete(self.context, db_inst)
+        self.compute_api.delete(self.context, inst)
 
     def test_delete_soft_rollback(self):
         inst = self._create_instance_obj()
-        db_inst = obj_base.obj_to_primitive(inst)
         self.mox.StubOutWithMock(db,
                                  'block_device_mapping_get_all_by_instance')
-        self.mox.StubOutWithMock(db,
-                                 'instance_update_and_get_original')
+        self.mox.StubOutWithMock(inst, 'save')
 
         delete_time = datetime.datetime(1955, 11, 5)
         timeutils.set_time_override(delete_time)
 
         db.block_device_mapping_get_all_by_instance(
             self.context, inst.uuid).AndReturn([])
-        db.instance_update_and_get_original(
-            self.context, inst.uuid,
-            {'progress': 0,
-             'deleted_at': delete_time,
-             'task_state': task_states.SOFT_DELETING,
-             }).AndRaise(test.TestingException)
+        inst.save().AndRaise(Exception)
 
         self.mox.ReplayAll()
 
-        self.assertRaises(test.TestingException,
-                          self.compute_api.soft_delete, self.context, db_inst)
+        self.assertRaises(Exception,
+                          self.compute_api.soft_delete, self.context, inst)
 
     def test_is_volume_backed_being_true_if_root_is_block_device(self):
         bdms = [{'device_name': '/dev/xvda1', 'volume_id': 'volume_id',

@@ -227,7 +227,7 @@ class ComputeRpcAPITestCase(test.TestCase):
         self._test_compute_api('soft_delete_instance', 'cast',
                 instance=self.fake_instance,
                 reservations=['uuid1', 'uuid2'],
-                version='2.27')
+                version='2.35')
 
     def test_swap_volume(self):
         self._test_compute_api('swap_volume', 'cast',
@@ -387,7 +387,7 @@ class ComputeRpcAPITestCase(test.TestCase):
         self._test_compute_api('terminate_instance', 'cast',
                 instance=self.fake_instance, bdms=[],
                 reservations=['uuid1', 'uuid2'],
-                version='2.27')
+                version='2.35')
 
     def test_unpause_instance(self):
         self._test_compute_api('unpause_instance', 'cast',
