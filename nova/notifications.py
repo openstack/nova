@@ -19,6 +19,8 @@
 the system.
 """
 
+import datetime
+
 from oslo.config import cfg
 
 from nova.compute import flavors
@@ -291,6 +293,12 @@ def info_from_instance(context, instance_ref, network_info,
     def null_safe_str(s):
         return str(s) if s else ''
 
+    def null_safe_isotime(s):
+        if isinstance(s, datetime.datetime):
+            return timeutils.strtime(s)
+        else:
+            return str(s) if s else ''
+
     image_ref_url = glance.generate_image_url(instance_ref['image_ref'])
 
     instance_type = flavors.extract_flavor(instance_ref)
@@ -335,8 +343,8 @@ def info_from_instance(context, instance_ref, network_info,
         # Nova's deleted vs terminated instance terminology is confusing,
         # this should be when the instance was deleted (i.e. terminated_at),
         # not when the db record was deleted. (mdragon)
-        deleted_at=null_safe_str(instance_ref.get('terminated_at')),
-        launched_at=null_safe_str(instance_ref.get('launched_at')),
+        deleted_at=null_safe_isotime(instance_ref.get('terminated_at')),
+        launched_at=null_safe_isotime(instance_ref.get('launched_at')),
 
         # Image properties
         image_ref_url=image_ref_url,
