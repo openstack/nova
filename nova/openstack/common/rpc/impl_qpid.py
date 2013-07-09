@@ -69,6 +69,8 @@ qpid_opts = [
 
 cfg.CONF.register_opts(qpid_opts)
 
+JSON_CONTENT_TYPE = 'application/json; charset=utf8'
+
 
 class ConsumerBase(object):
     """Consumer base class."""
@@ -123,10 +125,27 @@ class ConsumerBase(object):
         self.receiver = session.receiver(self.address)
         self.receiver.capacity = 1
 
+    def _unpack_json_msg(self, msg):
+        """Load the JSON data in msg if msg.content_type indicates that it
+           is necessary.  Put the loaded data back into msg.content and
+           update msg.content_type appropriately.
+
+        A Qpid Message containing a dict will have a content_type of
+        'amqp/map', whereas one containing a string that needs to be converted
+        back from JSON will have a content_type of JSON_CONTENT_TYPE.
+
+        :param msg: a Qpid Message object
+        :returns: None
+        """
+        if msg.content_type == JSON_CONTENT_TYPE:
+            msg.content = jsonutils.loads(msg.content)
+            msg.content_type = 'amqp/map'
+
     def consume(self):
         """Fetch the message and pass it to the callback object"""
         message = self.receiver.fetch()
         try:
+            self._unpack_json_msg(message)
             msg = rpc_common.deserialize_msg(message.content)
             self.callback(msg)
         except Exception:
@@ -331,15 +350,16 @@ class Connection(object):
 
     def reconnect(self):
         """Handles reconnecting and re-establishing sessions and queues"""
-        if self.connection.opened():
-            try:
-                self.connection.close()
-            except qpid_exceptions.ConnectionError:
-                pass
-
         attempt = 0
         delay = 1
         while True:
+            # Close the session if necessary
+            if self.connection.opened():
+                try:
+                    self.connection.close()
+                except qpid_exceptions.ConnectionError:
+                    pass
+
             broker = self.brokers[attempt % len(self.brokers)]
             attempt += 1
 
