@@ -1,0 +1,379 @@
+# Copyright 2012 IBM Corp.
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
+
+import datetime
+import webob.exc
+
+from nova.api.openstack.compute.contrib import services
+from nova.api.openstack import extensions
+from nova import availability_zones
+from nova import context
+from nova import db
+from nova import exception
+from nova.openstack.common import timeutils
+from nova.servicegroup.drivers import db as db_driver
+from nova import test
+from nova.tests.api.openstack import fakes
+
+
+fake_services_list = [
+        {'binary': 'nova-scheduler',
+         'host': 'host1',
+         'id': 1,
+         'disabled': True,
+         'topic': 'scheduler',
+         'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 2),
+         'created_at': datetime.datetime(2012, 9, 18, 2, 46, 27),
+         'disabled_reason': 'test1'},
+        {'binary': 'nova-compute',
+         'host': 'host1',
+         'id': 2,
+         'disabled': True,
+         'topic': 'compute',
+         'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 5),
+         'created_at': datetime.datetime(2012, 9, 18, 2, 46, 27),
+         'disabled_reason': 'test2'},
+        {'binary': 'nova-scheduler',
+         'host': 'host2',
+         'id': 3,
+         'disabled': False,
+         'topic': 'scheduler',
+         'updated_at': datetime.datetime(2012, 9, 19, 6, 55, 34),
+         'created_at': datetime.datetime(2012, 9, 18, 2, 46, 28),
+         'disabled_reason': ''},
+        {'binary': 'nova-compute',
+         'host': 'host2',
+         'id': 4,
+         'disabled': True,
+         'topic': 'compute',
+         'updated_at': datetime.datetime(2012, 9, 18, 8, 3, 38),
+         'created_at': datetime.datetime(2012, 9, 18, 2, 46, 28),
+         'disabled_reason': 'test4'},
+        ]
+
+
+class FakeRequest(object):
+        environ = {"nova.context": context.get_admin_context()}
+        GET = {}
+
+
+class FakeRequestWithService(object):
+        environ = {"nova.context": context.get_admin_context()}
+        GET = {"binary": "nova-compute"}
+
+
+class FakeRequestWithHost(object):
+        environ = {"nova.context": context.get_admin_context()}
+        GET = {"host": "host1"}
+
+
+class FakeRequestWithHostService(object):
+        environ = {"nova.context": context.get_admin_context()}
+        GET = {"host": "host1", "binary": "nova-compute"}
+
+
+def fake_host_api_service_get_all(context, filters=None, set_zones=False):
+    if set_zones or 'availability_zone' in filters:
+        return availability_zones.set_availability_zones(context,
+                                                         fake_services_list)
+
+
+def fake_db_api_service_get_all(context, disabled=None):
+    return fake_services_list
+
+
+def fake_service_get_by_host_binary(context, host, binary):
+    for service in fake_services_list:
+        if service['host'] == host and service['binary'] == binary:
+            return service
+    return None
+
+
+def fake_service_get_by_id(value):
+    for service in fake_services_list:
+        if service['id'] == value:
+            return service
+    return None
+
+
+def fake_service_update(context, service_id, values):
+    service = fake_service_get_by_id(service_id)
+    if service is None:
+        raise exception.ServiceNotFound(service_id=service_id)
+
+
+def fake_utcnow():
+    return datetime.datetime(2012, 10, 29, 13, 42, 11)
+
+
+class ServicesTest(test.TestCase):
+
+    def setUp(self):
+        super(ServicesTest, self).setUp()
+
+        self.context = context.get_admin_context()
+        self.ext_mgr = extensions.ExtensionManager()
+        self.ext_mgr.extensions = {}
+        self.controller = services.ServiceController(self.ext_mgr)
+        self.stubs.Set(self.controller.host_api, "service_get_all",
+                       fake_host_api_service_get_all)
+        self.stubs.Set(timeutils, "utcnow", fake_utcnow)
+        self.stubs.Set(db, "service_get_by_args",
+                       fake_service_get_by_host_binary)
+        self.stubs.Set(db, "service_update", fake_service_update)
+
+    def test_services_list(self):
+        req = FakeRequest()
+        res_dict = self.controller.index(req)
+
+        response = {'services': [
+                    {'binary': 'nova-scheduler',
+                    'host': 'host1',
+                    'zone': 'internal',
+                    'status': 'disabled',
+                    'state': 'up',
+                    'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 2)},
+                    {'binary': 'nova-compute',
+                     'host': 'host1',
+                     'zone': 'nova',
+                     'status': 'disabled',
+                     'state': 'up',
+                     'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 5)},
+                    {'binary': 'nova-scheduler',
+                     'host': 'host2',
+                     'zone': 'internal',
+                     'status': 'enabled',
+                     'state': 'down',
+                     'updated_at': datetime.datetime(2012, 9, 19, 6, 55, 34)},
+                    {'binary': 'nova-compute',
+                     'host': 'host2',
+                     'zone': 'nova',
+                     'status': 'disabled',
+                     'state': 'down',
+                     'updated_at': datetime.datetime(2012, 9, 18, 8, 3, 38)}]}
+        self.assertEqual(res_dict, response)
+
+    def test_services_list_with_host(self):
+        req = FakeRequestWithHost()
+        res_dict = self.controller.index(req)
+
+        response = {'services': [
+                    {'binary': 'nova-scheduler',
+                    'host': 'host1',
+                    'zone': 'internal',
+                    'status': 'disabled',
+                    'state': 'up',
+                    'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 2)},
+                   {'binary': 'nova-compute',
+                    'host': 'host1',
+                    'zone': 'nova',
+                    'status': 'disabled',
+                    'state': 'up',
+                    'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 5)}]}
+        self.assertEqual(res_dict, response)
+
+    def test_services_list_with_service(self):
+        req = FakeRequestWithService()
+        res_dict = self.controller.index(req)
+
+        response = {'services': [
+                    {'binary': 'nova-compute',
+                    'host': 'host1',
+                    'zone': 'nova',
+                    'status': 'disabled',
+                    'state': 'up',
+                    'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 5)},
+                    {'binary': 'nova-compute',
+                     'host': 'host2',
+                     'zone': 'nova',
+                     'status': 'disabled',
+                     'state': 'down',
+                     'updated_at': datetime.datetime(2012, 9, 18, 8, 3, 38)}]}
+        self.assertEqual(res_dict, response)
+
+    def test_services_list_with_host_service(self):
+        req = FakeRequestWithHostService()
+        res_dict = self.controller.index(req)
+
+        response = {'services': [
+                    {'binary': 'nova-compute',
+                    'host': 'host1',
+                    'zone': 'nova',
+                    'status': 'disabled',
+                    'state': 'up',
+                    'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 5)}]}
+        self.assertEqual(res_dict, response)
+
+    def test_services_detail(self):
+        self.ext_mgr.extensions['os-extended-services'] = True
+        self.controller = services.ServiceController(self.ext_mgr)
+        self.stubs.Set(self.controller.host_api, "service_get_all",
+                       fake_host_api_service_get_all)
+        req = FakeRequest()
+        res_dict = self.controller.index(req)
+        response = {'services': [
+                    {'binary': 'nova-scheduler',
+                    'host': 'host1',
+                    'zone': 'internal',
+                    'status': 'disabled',
+                    'state': 'up',
+                    'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 2),
+                    'disabled_reason': 'test1'},
+                    {'binary': 'nova-compute',
+                     'host': 'host1',
+                     'zone': 'nova',
+                     'status': 'disabled',
+                     'state': 'up',
+                     'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 5),
+                     'disabled_reason': 'test2'},
+                    {'binary': 'nova-scheduler',
+                     'host': 'host2',
+                     'zone': 'internal',
+                     'status': 'enabled',
+                     'state': 'down',
+                     'updated_at': datetime.datetime(2012, 9, 19, 6, 55, 34),
+                     'disabled_reason': ''},
+                    {'binary': 'nova-compute',
+                     'host': 'host2',
+                     'zone': 'nova',
+                     'status': 'disabled',
+                     'state': 'down',
+                     'updated_at': datetime.datetime(2012, 9, 18, 8, 3, 38),
+                     'disabled_reason': 'test4'}]}
+        self.assertEqual(res_dict, response)
+
+    def test_service_detail_with_host(self):
+        self.ext_mgr.extensions['os-extended-services'] = True
+        self.controller = services.ServiceController(self.ext_mgr)
+        self.stubs.Set(self.controller.host_api, "service_get_all",
+                       fake_host_api_service_get_all)
+        req = FakeRequestWithHost()
+        res_dict = self.controller.index(req)
+        response = {'services': [
+                    {'binary': 'nova-scheduler',
+                    'host': 'host1',
+                    'zone': 'internal',
+                    'status': 'disabled',
+                    'state': 'up',
+                    'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 2),
+                    'disabled_reason': 'test1'},
+                   {'binary': 'nova-compute',
+                    'host': 'host1',
+                    'zone': 'nova',
+                    'status': 'disabled',
+                    'state': 'up',
+                    'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 5),
+                    'disabled_reason': 'test2'}]}
+        self.assertEqual(res_dict, response)
+
+    def test_service_detail_with_service(self):
+        self.ext_mgr.extensions['os-extended-services'] = True
+        self.controller = services.ServiceController(self.ext_mgr)
+        self.stubs.Set(self.controller.host_api, "service_get_all",
+                       fake_host_api_service_get_all)
+        req = FakeRequestWithService()
+        res_dict = self.controller.index(req)
+        response = {'services': [
+                    {'binary': 'nova-compute',
+                    'host': 'host1',
+                    'zone': 'nova',
+                    'status': 'disabled',
+                    'state': 'up',
+                    'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 5),
+                    'disabled_reason': 'test2'},
+                    {'binary': 'nova-compute',
+                     'host': 'host2',
+                     'zone': 'nova',
+                     'status': 'disabled',
+                     'state': 'down',
+                     'updated_at': datetime.datetime(2012, 9, 18, 8, 3, 38),
+                     'disabled_reason': 'test4'}]}
+        self.assertEqual(res_dict, response)
+
+    def test_service_detail_with_host_service(self):
+        self.ext_mgr.extensions['os-extended-services'] = True
+        self.controller = services.ServiceController(self.ext_mgr)
+        self.stubs.Set(self.controller.host_api, "service_get_all",
+                       fake_host_api_service_get_all)
+        req = FakeRequestWithHostService()
+        res_dict = self.controller.index(req)
+        response = {'services': [
+                    {'binary': 'nova-compute',
+                    'host': 'host1',
+                    'zone': 'nova',
+                    'status': 'disabled',
+                    'state': 'up',
+                    'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 5),
+                    'disabled_reason': 'test2'}]}
+        self.assertEqual(res_dict, response)
+
+    def test_services_enable(self):
+        body = {'host': 'host1', 'binary': 'nova-compute'}
+        req = fakes.HTTPRequest.blank('/v2/fake/os-services/enable')
+        res_dict = self.controller.update(req, "enable", body)
+
+        self.assertEqual(res_dict['service']['status'], 'enabled')
+        self.assertFalse('disabled_reason' in res_dict['service'])
+
+    # This test is just to verify that the servicegroup API gets used when
+    # calling this API.
+    def test_services_with_exception(self):
+        def dummy_is_up(self, dummy):
+            raise KeyError()
+
+        self.stubs.Set(db_driver.DbDriver, 'is_up', dummy_is_up)
+        req = FakeRequestWithHostService()
+        self.assertRaises(KeyError, self.controller.index, req)
+
+    def test_services_disable(self):
+        req = fakes.HTTPRequest.blank('/v2/fake/os-services/disable')
+        body = {'host': 'host1', 'binary': 'nova-compute'}
+        res_dict = self.controller.update(req, "disable", body)
+
+        self.assertEqual(res_dict['service']['status'], 'disabled')
+        self.assertFalse('disabled_reason' in res_dict['service'])
+
+    def test_services_disable_log_reason(self):
+        self.ext_mgr.extensions['os-extended-services'] = True
+        self.controller = services.ServiceController(self.ext_mgr)
+        req = \
+            fakes.HTTPRequest.blank('v2/fakes/os-services/disable-log-reason')
+        body = {'host': 'host1',
+                'binary': 'nova-compute',
+                'disabled_reason': 'test-reason',
+                }
+        res_dict = self.controller.update(req, "disable-log-reason", body)
+
+        self.assertEqual(res_dict['service']['status'], 'disabled')
+        self.assertEqual(res_dict['service']['disabled_reason'], 'test-reason')
+
+    def test_mandatory_reason_field(self):
+        self.ext_mgr.extensions['os-extended-services'] = True
+        self.controller = services.ServiceController(self.ext_mgr)
+        req = \
+            fakes.HTTPRequest.blank('v2/fakes/os-services/disable-log-reason')
+        body = {'host': 'host1',
+                'binary': 'nova-compute',
+               }
+        self.assertRaises(webob.exc.HTTPUnprocessableEntity,
+                self.controller.update, req, "disable-log-reason", body)
+
+    def test_invalid_reason_field(self):
+        reason = ' '
+        self.assertFalse(self.controller._is_valid_as_reason(reason))
+        reason = 'a' * 256
+        self.assertFalse(self.controller._is_valid_as_reason(reason))
+        reason = 'it\'s a valid reason.'
+        self.assertTrue(self.controller._is_valid_as_reason(reason))
