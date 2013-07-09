@@ -280,15 +280,21 @@ def object_compat(function):
     """
 
     @functools.wraps(function)
-    def decorated_function(self, context, **kwargs):
+    def decorated_function(self, context, *args, **kwargs):
         metas = ['metadata', 'system_metadata']
-        instance = kwargs['instance']
+        try:
+            instance = kwargs['instance']
+        except KeyError:
+            instance = args[0]
+            args = args[1:]
         if isinstance(instance, dict):
-            kwargs['instance'] = instance_obj.Instance._from_db_object(
+            instance = instance_obj.Instance._from_db_object(
                 context, instance_obj.Instance(), instance,
                 expected_attrs=metas)
-            kwargs['instance']._context = context
-        return function(self, context, **kwargs)
+            instance._context = context
+        kwargs['instance'] = instance
+
+        return function(self, context, *args, **kwargs)
 
     return decorated_function
 
