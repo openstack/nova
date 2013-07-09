@@ -18,7 +18,6 @@ import cPickle as pickle
 import errno
 import logging
 import os
-import shlex
 import shutil
 import subprocess
 import tempfile
@@ -56,37 +55,54 @@ def _rename(src, dst):
 
 
 def make_subprocess(cmdline, stdout=False, stderr=False, stdin=False,
-                    universal_newlines=False):
+                    universal_newlines=False, close_fds=True):
     """Make a subprocess according to the given command-line string
     """
-    # NOTE(dprince): shlex python 2.4 doesn't like unicode so we
-    # explicitly convert to ascii
-    cmdline = cmdline.encode('ascii')
-    LOG.info("Running cmd '%s'" % cmdline)
+    LOG.info("Running cmd '%s'" % " ".join(cmdline))
     kwargs = {}
     kwargs['stdout'] = stdout and subprocess.PIPE or None
     kwargs['stderr'] = stderr and subprocess.PIPE or None
     kwargs['stdin'] = stdin and subprocess.PIPE or None
     kwargs['universal_newlines'] = universal_newlines
-    args = shlex.split(cmdline)
-    LOG.info("Running args '%s'" % args)
-    proc = subprocess.Popen(args, **kwargs)
+    kwargs['close_fds'] = close_fds
+    proc = subprocess.Popen(cmdline, **kwargs)
     return proc
 
 
-def finish_subprocess(proc, cmdline, ok_exit_codes=None):
+class SubprocessException(Exception):
+    def __init__(self, cmdline, ret, out, err):
+        Exception.__init__(self, "'%s' returned non-zero exit code: "
+                           "retcode=%i, out='%s', stderr='%s'"
+                           % (cmdline, ret, out, err))
+        self.cmdline = cmdline
+        self.ret = ret
+        self.out = out
+        self.err = err
+
+
+def finish_subprocess(proc, cmdline, cmd_input=None, ok_exit_codes=None):
     """Ensure that the process returned a zero exit code indicating success
     """
     if ok_exit_codes is None:
         ok_exit_codes = [0]
+    out, err = proc.communicate(cmd_input)
 
-    out, err = proc.communicate()
     ret = proc.returncode
     if ret not in ok_exit_codes:
-        raise Exception("'%(cmdline)s' returned non-zero exit code: "
-                        "retcode=%(ret)i, out='%(out)s', stderr='%(err)s'"
-                        % locals())
-    return out, err
+        raise SubprocessException(' '.join(cmdline), ret, out, err)
+    return out
+
+def run_command(cmd, cmd_input=None, ok_exit_codes=None):
+    """Abstracts out the basics of issuing system commands. If the command
+    returns anything in stderr, an exception is raised with that information.
+    Otherwise, the output from stdout is returned.
+
+    cmd_input is passed to the process on standard input.
+    """
+    proc = make_subprocess(cmd, stdout=True, stderr=True, stdin=True,
+                           close_fds=True)
+    return finish_subprocess(proc, cmd, cmd_input=cmd_input,
+                             ok_exit_codes=ok_exit_codes)
 
 
 def make_staging_area(sr_path):
@@ -165,9 +181,8 @@ def _assert_vhd_not_hidden(path):
     If this flag is incorrectly set, then when we move the VHD into the SR, it
     will be deleted out from under us.
     """
-    query_cmd = "vhd-util query -n %(path)s -f" % locals()
-    query_proc = make_subprocess(query_cmd, stdout=True, stderr=True)
-    out, err = finish_subprocess(query_proc, query_cmd)
+    query_cmd = ["vhd-util", "query", "-n", path, "-f"]
+    out = run_command(query_cmd)
 
     for line in out.splitlines():
         if line.lower().startswith('hidden'):
@@ -190,10 +205,8 @@ def _validate_vhd(vdi_path):
     Dom0's are out-of-sync. This would corrupt the SR if it were imported, so
     generate an exception to bail.
     """
-    check_cmd = "vhd-util check -n %(vdi_path)s -p" % locals()
-    check_proc = make_subprocess(check_cmd, stdout=True, stderr=True)
-    out, err = finish_subprocess(
-            check_proc, check_cmd, ok_exit_codes=[0, 22])
+    check_cmd = ["vhd-util", "check", "-n", vdi_path, "-p"]
+    out = run_command(check_cmd, ok_exit_codes=[0, 22])
     first_line = out.splitlines()[0].strip()
 
     if 'invalid' in first_line:
@@ -230,10 +243,8 @@ def _validate_vdi_chain(vdi_path):
     failures.
     """
     def get_parent_path(path):
-        query_cmd = "vhd-util query -n %(path)s -p" % locals()
-        query_proc = make_subprocess(query_cmd, stdout=True, stderr=True)
-        out, err = finish_subprocess(
-                query_proc, query_cmd, ok_exit_codes=[0, 22])
+        query_cmd = ["vhd-util", "query", "-n", path, "-p"]
+        out = run_command(query_cmd, ok_exit_codes=[0, 22])
         first_line = out.splitlines()[0].strip()
 
         if first_line.endswith(".vhd"):
@@ -316,10 +327,9 @@ def import_vhds(sr_path, staging_path, uuid_stack):
     for vhd_path in reversed(files_to_move):
         if parent_path:
             # Link to parent
-            modify_cmd = ("vhd-util modify -n %(vhd_path)s"
-                          " -p %(parent_path)s" % locals())
-            modify_proc = make_subprocess(modify_cmd, stderr=True)
-            finish_subprocess(modify_proc, modify_cmd)
+            modify_cmd = ["vhd-util", "modify", "-n", vhd_path,
+                          "-p", parent_path]
+            run_command(modify_cmd)
 
         parent_path = vhd_path
 
@@ -353,7 +363,7 @@ def create_tarball(fileobj, path, callback=None):
     :param path: path to create tarball from
     :param callback: optional callback to call on each chunk written
     """
-    tar_cmd = "tar -zc --directory=%(path)s ." % locals()
+    tar_cmd = ["tar", "-zc", "--directory=%s" % path, "."]
     tar_proc = make_subprocess(tar_cmd, stdout=True, stderr=True)
 
     while True:
@@ -377,7 +387,7 @@ def extract_tarball(fileobj, path, callback=None):
     :param path: path to extract tarball into
     :param callback: optional callback to call on each chunk read
     """
-    tar_cmd = "tar -zx --directory=%(path)s" % locals()
+    tar_cmd = ["tar", "-zx", "--directory=%s" % path]
     tar_proc = make_subprocess(tar_cmd, stderr=True, stdin=True)
 
     while True:

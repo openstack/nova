@@ -169,12 +169,10 @@ def _seed(torrent_path, seed_cache_path, torrent_seed_duration,
           torrent_listen_port_start, torrent_listen_port_end):
     plugin_path = os.path.dirname(inspect.getabsfile(inspect.currentframe()))
     seeder_path = os.path.join(plugin_path, SEEDER_PROCESS)
-    seed_cmd = "%s %s %s %d %d %d" % (
-        seeder_path, torrent_path, seed_cache_path, torrent_seed_duration,
-        torrent_listen_port_start, torrent_listen_port_end)
-
-    seed_proc = utils.make_subprocess(seed_cmd)
-    utils.finish_subprocess(seed_proc, seed_cmd)
+    seed_cmd = [seeder_path, torrent_path, seed_cache_path,
+                torrent_seed_duration, torrent_listen_port_start,
+                torrent_listen_port_end]
+    utils.run_command(seed_cmd)
 
 
 def _seed_if_needed(seed_cache_path, tarball_path, torrent_path,

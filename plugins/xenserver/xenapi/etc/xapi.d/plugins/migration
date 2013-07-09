@@ -33,15 +33,15 @@ def move_vhds_into_sr(session, instance_uuid, sr_path, uuid_stack):
 
 
 def _rsync_vhds(instance_uuid, host, staging_path, user="root"):
-    ssh_cmd = '\"ssh -o StrictHostKeyChecking=no\"'
+    ssh_cmd = 'ssh -o StrictHostKeyChecking=no'
 
     if not staging_path.endswith('/'):
         staging_path += '/'
 
     dest_path = '%s@%s:/images/instance%s/' % (user, host, instance_uuid)
 
-    rsync_cmd = "/usr/bin/rsync -av --progress -e %(ssh_cmd)s "\
-        "%(staging_path)s %(dest_path)s" % locals()
+    rsync_cmd = ["/usr/bin/rsync", "-av", "--progress", "-e", ssh_cmd,
+                 staging_path, dest_path]
 
     # NOTE(hillad): rsync's progress is carriage returned, requiring
     # universal_newlines for real-time output.

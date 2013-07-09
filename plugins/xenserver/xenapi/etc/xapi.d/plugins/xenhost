@@ -26,12 +26,10 @@ try:
 except ImportError:
     import simplejson as json
 import logging
-import os
-import random
 import re
-import subprocess
-import tempfile
 import time
+
+import utils
 
 import pluginlib_nova as pluginlib
 import XenAPI
@@ -56,48 +54,13 @@ class TimeoutError(StandardError):
     pass
 
 
-def _run_command(cmd):
-    """Abstracts out the basics of issuing system commands. If the command
-    returns anything in stderr, a PluginError is raised with that information.
-    Otherwise, the output from stdout is returned.
+def _run_command(cmd, cmd_input=None):
+    """Wrap utils.run_command to raise PluginError on failure
     """
-    pipe = subprocess.PIPE
-    proc = subprocess.Popen([cmd], shell=True, stdin=pipe, stdout=pipe,
-            stderr=pipe, close_fds=True)
-    proc.wait()
-    err = proc.stderr.read()
-    if err:
-        raise pluginlib.PluginError(err)
-    return proc.stdout.read()
-
-
-# NOTE (salvatore-orlando):
-# Instead of updating run_command a new method has been implemented,
-# in order to avoid risking breaking existing functions calling _run_command
-def _run_command_with_input(cmd, process_input):
-    """Abstracts out the basics of issuing system commands. If the command
-    returns anything in stderr, a PluginError is raised with that information.
-    Otherwise, the output from stdout is returned.
-
-    process_input specificies a variable to use as the process' standard input.
-    """
-    pipe = subprocess.PIPE
-    # cmd can be either a single string with command and arguments,
-    # or a sequence of string
-    if not hasattr(cmd, '__iter__'):
-        cmd = [cmd]  # make it iterable
-
-    #Note(salvatore-orlando): the shell argument has been set to False
-    proc = subprocess.Popen(cmd, shell=False, stdin=pipe, stdout=pipe,
-            stderr=pipe, close_fds=True)
-    if process_input is not None:
-        (output, err) = proc.communicate(process_input)
-    else:
-        (output, err) = proc.communicate()
-    if err:
-        raise pluginlib.PluginError(err)
-    # This is tantamount to proc.stdout.read()
-    return output
+    try:
+        return utils.run_command(cmd, cmd_input=cmd_input)
+    except utils.SubprocessException, e:
+        raise pluginlib.PluginError(e.err)
 
 
 def _resume_compute(session, compute_ref, compute_uuid):
@@ -111,7 +74,7 @@ def _resume_compute(session, compute_ref, compute_uuid):
         # join has been successful, wait for xapi to become alive again
         for c in xrange(0, DEFAULT_TRIES):
             try:
-                _run_command("xe vm-start uuid=%s" % compute_uuid)
+                _run_command(["xe", "vm-start", "uuid=%s" % compute_uuid])
                 return
             except pluginlib.PluginError, e:
                 logging.exception('Waited %d seconds for the slave to '
@@ -134,19 +97,17 @@ def set_host_enabled(self, arg_dict):
 
     host_uuid = arg_dict['host_uuid']
     if enabled == "true":
-        result = _run_command("xe host-enable uuid=%s" % host_uuid)
+        result = _run_command(["xe", "host-enable", "uuid=%s" % host_uuid])
     elif enabled == "false":
-        result = _run_command("xe host-disable uuid=%s" % host_uuid)
+        result = _run_command(["xe", "host-disable", "uuid=%s" % host_uuid])
     else:
         raise pluginlib.PluginError(_("Illegal enabled status: %s") % enabled)
     # Should be empty string
     if result:
         raise pluginlib.PluginError(result)
     # Return the current enabled status
-    cmd = "xe host-param-list uuid=%s | grep enabled" % host_uuid
-    resp = _run_command(cmd)
-    # Response should be in the format: "enabled ( RO): true"
-    host_enabled = resp.strip().split()[-1]
+    cmd = ["xe", "host-param-get", "uuid=%s" % host_uuid, "param-name=enabled"]
+    host_enabled = _run_command(cmd)
     if host_enabled == "true":
         status = "enabled"
     else:
@@ -231,7 +192,7 @@ def iptables_config(session, args):
                                    'iptables-restore',
                                    'ip6tables-save',
                                    'ip6tables-restore'):
-        result = _run_command_with_input(cmd, process_input)
+        result = _run_command(cmd, process_input)
         ret_str = json.dumps(dict(out=result,
                                   err=''))
         logging.debug("iptables_config:exit")
@@ -244,18 +205,18 @@ def iptables_config(session, args):
 def _power_action(action, arg_dict):
     # Host must be disabled first
     host_uuid = arg_dict['host_uuid']
-    result = _run_command("xe host-disable uuid=%s" % host_uuid)
+    result = _run_command(["xe", "host-disable", "uuid=%s" % host_uuid])
     if result:
         raise pluginlib.PluginError(result)
     # All running VMs must be shutdown
-    result = _run_command("xe vm-shutdown --multiple "
-                          "resident-on=%s" % host_uuid)
+    result = _run_command(["xe", "vm-shutdown", "--multiple",
+                          "resident-on=%s" % host_uuid])
     if result:
         raise pluginlib.PluginError(result)
-    cmds = {"reboot": "xe host-reboot uuid=%s",
-            "startup": "xe host-power-on uuid=%s",
-            "shutdown": "xe host-shutdown uuid=%s"}
-    result = _run_command(cmds[action] % host_uuid)
+    cmds = {"reboot":   "host-reboot",
+            "startup":  "host-power-on",
+            "shutdown": "host-shutdown",}
+    result = _run_command(["xe", cmds[action], "uuid=%s" % host_uuid])
     # Should be empty string
     if result:
         raise pluginlib.PluginError(result)
@@ -316,7 +277,7 @@ def host_data(self, arg_dict):
     information.
     """
     host_uuid = arg_dict['host_uuid']
-    resp = _run_command("xe host-param-list uuid=%s" % host_uuid)
+    resp = _run_command(["xe", "host-param-list", "uuid=%s" % host_uuid])
     parsed_data = parse_response(resp)
     # We have the raw dict of values. Extract those that we need,
     # and convert the data types as needed.
@@ -345,7 +306,7 @@ def parse_response(resp):
 @jsonify
 def host_uptime(self, arg_dict):
     """Returns the result of the uptime command on the xenhost."""
-    return {"uptime": _run_command('uptime')}
+    return {"uptime": _run_command(['uptime'])}
 
 
 def cleanup(dct):
