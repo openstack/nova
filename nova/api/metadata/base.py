@@ -88,7 +88,7 @@ class InstanceMetadata():
     """Instance metadata."""
 
     def __init__(self, instance, address=None, content=None, extra_md=None,
-                 conductor_api=None):
+                 conductor_api=None, network_info=None):
         """Creation of this object should basically cover all time consuming
         collection.  Methods after that should not cause time delays due to
         network operations or lengthy cpu operations.
@@ -139,7 +139,8 @@ class InstanceMetadata():
         self.files = []
 
         # get network info, and the rendered network template
-        network_info = network.API().get_instance_nw_info(ctxt, instance,
+        if network_info is None:
+            network_info = network.API().get_instance_nw_info(ctxt, instance,
                                                           conductor_api=capi)
 
         self.network_config = None

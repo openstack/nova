@@ -30,6 +30,7 @@ try:
 except ImportError:
     import pickle
 
+import mox
 from oslo.config import cfg
 import webob
 
@@ -46,6 +47,7 @@ from nova.network import api as network_api
 from nova import test
 from nova.tests import fake_network
 from nova import utils
+from nova.virt import netutils
 
 CONF = cfg.CONF
 
@@ -271,6 +273,34 @@ class MetadataTestCase(test.TestCase):
         self.assertTrue(md._check_version('2008-09-01', '2009-04-04'))
 
         self.assertTrue(md._check_version('2009-04-04', '2009-04-04'))
+
+    def test_InstanceMetadata_uses_passed_network_info(self):
+        network_info = {"a": "b"}
+
+        self.mox.StubOutWithMock(netutils, "get_injected_network_template")
+        netutils.get_injected_network_template(network_info).AndReturn(False)
+        self.mox.ReplayAll()
+
+        base.InstanceMetadata(INSTANCES[0], network_info=network_info)
+
+    def test_InstanceMetadata_queries_network_API_when_needed(self):
+        network_info_from_api = {"c": "d"}
+
+        self.mox.StubOutWithMock(network_api.API, "get_instance_nw_info")
+
+        network_api.API.get_instance_nw_info(
+            mox.IgnoreArg(),
+            mox.IgnoreArg(),
+            conductor_api=mox.IgnoreArg()).AndReturn(network_info_from_api)
+
+        self.mox.StubOutWithMock(netutils, "get_injected_network_template")
+
+        netutils.get_injected_network_template(
+            network_info_from_api).AndReturn(False)
+
+        self.mox.ReplayAll()
+
+        base.InstanceMetadata(INSTANCES[0])
 
 
 class OpenStackMetadataTestCase(test.TestCase):

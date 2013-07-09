@@ -1936,7 +1936,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 extra_md['admin_pass'] = admin_pass
 
             inst_md = instance_metadata.InstanceMetadata(instance,
-                content=files, extra_md=extra_md)
+                content=files, extra_md=extra_md, network_info=network_info)
             with configdrive.ConfigDriveBuilder(instance_md=inst_md) as cdb:
                 configdrive_path = basepath(fname='disk.config')
                 LOG.info(_('Creating config drive at %(path)s'),
