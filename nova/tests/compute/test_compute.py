@@ -6838,6 +6838,35 @@ class ComputeAPITestCase(BaseTestCase):
         db.instance_destroy(c, instance3['uuid'])
         db.instance_destroy(c, instance4['uuid'])
 
+    def test_all_instance_metadata(self):
+        instance1 = self._create_fake_instance({'metadata': {'key1': 'value1'},
+                                               'user_id': 'user1',
+                                               'project_id': 'project1'})
+
+        instance2 = self._create_fake_instance({'metadata': {'key2': 'value2'},
+                                               'user_id': 'user2',
+                                               'project_id': 'project2'})
+
+        _context = self.context
+        _context.user_id = 'user1'
+        _context.project_id = 'project1'
+        metadata = self.compute_api.get_all_instance_metadata(_context,
+                                                              search_filts=[])
+        self.assertTrue(len(metadata) == 1)
+        self.assertEqual(metadata[0]['key'], 'key1')
+
+        _context.user_id = 'user2'
+        _context.project_id = 'project2'
+        metadata = self.compute_api.get_all_instance_metadata(_context,
+                                                              search_filts=[])
+        self.assertTrue(len(metadata) == 1)
+        self.assertEqual(metadata[0]['key'], 'key2')
+
+        _context = context.get_admin_context()
+        metadata = self.compute_api.get_all_instance_metadata(_context,
+                                                              search_filts=[])
+        self.assertTrue(len(metadata) == 2)
+
     def test_instance_metadata(self):
         meta_changes = [None]
         self.flags(notify_on_any_change=True)

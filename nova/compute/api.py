@@ -2479,10 +2479,52 @@ class API(base.Base):
         rv = self.db.instance_metadata_get(context, instance['uuid'])
         return dict(rv.iteritems())
 
-    @wrap_check_policy
     def get_all_instance_metadata(self, context, search_filts):
         """Get all metadata."""
-        return self.db.instance_metadata_get_all(context, search_filts)
+
+        def _filter_metadata(instance, search_filt, input_metadata):
+            uuids = search_filt.get('resource_id', [])
+            keys_filter = search_filt.get('key', [])
+            values_filter = search_filt.get('value', [])
+            output_metadata = {}
+
+            if uuids and instance.get('uuid') not in uuids:
+                return {}
+
+            for (k, v) in input_metadata.iteritems():
+                # Both keys and value defined -- AND
+                if ((keys_filter and values_filter) and
+                   (k not in keys_filter) and (v not in values_filter)):
+                    continue
+                # Only keys or value is defined
+                elif ((keys_filter and k not in keys_filter) or
+                     (values_filter and v not in values_filter)):
+                    continue
+                output_metadata[k] = v
+            return output_metadata
+
+        formatted_metadata_list = []
+        instances = self._get_instances_by_filters(context, filters={},
+                                                   sort_key='created_at',
+                                                   sort_dir='desc')
+        for instance in instances:
+            try:
+                check_policy(context, 'get_all_instance_metadata', instance)
+                metadata = instance.get('metadata', {})
+                for filt in search_filts:
+                    # By chaining the input to the output, the filters are
+                    # ANDed together
+                    metadata = _filter_metadata(instance, filt, metadata)
+
+                for (k, v) in metadata.iteritems():
+                    formatted_metadata_list.append({'key': k, 'value': v,
+                                     'instance_id': instance.get('uuid')})
+            except exception.PolicyNotAuthorized:
+                # failed policy check - not allowed to
+                # read this metadata
+                continue
+
+        return formatted_metadata_list
 
     @wrap_check_policy
     @check_instance_lock

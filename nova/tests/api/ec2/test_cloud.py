@@ -2649,13 +2649,21 @@ class CloudTestCase(test.TestCase):
                          'value': ['baz', 'bax']}])['tagSet']
         self.assertEqualSorted(tags, [inst2_key_baz, inst1_key_bax])
 
-        # Multiple filters
+        # Multiple filters (AND): no match
         tags = self.cloud.describe_tags(self.context,
                 filter=[{'name': 'key',
                          'value': ['baz']},
                         {'name': 'value',
                          'value': ['wibble']}])['tagSet']
-        self.assertEqualSorted(tags, [inst2_key_baz, inst1_key_bax])
+        self.assertEqual(tags, [])
+
+        # Multiple filters (AND): match
+        tags = self.cloud.describe_tags(self.context,
+                filter=[{'name': 'key',
+                         'value': ['baz']},
+                        {'name': 'value',
+                         'value': ['quux']}])['tagSet']
+        self.assertEqualSorted(tags, [inst2_key_baz])
 
         # And we should fail on supported resource types
         self.assertRaises(exception.EC2APIError,
