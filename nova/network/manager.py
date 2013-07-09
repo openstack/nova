@@ -562,7 +562,6 @@ class NetworkManager(manager.Manager):
             instance_id = instance_uuid
         instance_uuid = instance_id
 
-        host = kwargs.get('host')
         vifs = self.db.virtual_interface_get_by_instance(context,
                                                          instance_uuid)
         networks = {}
