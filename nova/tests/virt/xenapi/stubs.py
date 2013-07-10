@@ -83,12 +83,6 @@ def stubout_stream_disk(stubs):
     stubs.Set(vm_utils, '_stream_disk', fake_stream_disk)
 
 
-def stubout_is_vdi_pv(stubs):
-    def f(_1):
-        return False
-    stubs.Set(vm_utils, '_is_vdi_pv', f)
-
-
 def stubout_determine_is_pv_objectstore(stubs):
     """Assumes VMs stu have PV kernels."""
 

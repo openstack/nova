@@ -147,7 +147,7 @@ def get_fake_device_info():
     return fake
 
 
-def stub_vm_utils_with_vdi_attached_here(function, should_return=True):
+def stub_vm_utils_with_vdi_attached_here(function):
     """
     vm_utils.with_vdi_attached_here needs to be stubbed out because it
     calls down to the filesystem to attach a vdi. This provides a
@@ -163,19 +163,13 @@ def stub_vm_utils_with_vdi_attached_here(function, should_return=True):
         def fake_image_download(*args, **kwargs):
             pass
 
-        def fake_is_vdi_pv(*args, **kwargs):
-            return should_return
-
         orig_vdi_attached_here = vm_utils.vdi_attached_here
         orig_image_download = fake_image._FakeImageService.download
-        orig_is_vdi_pv = vm_utils._is_vdi_pv
         try:
             vm_utils.vdi_attached_here = fake_vdi_attached_here
             fake_image._FakeImageService.download = fake_image_download
-            vm_utils._is_vdi_pv = fake_is_vdi_pv
             return function(self, *args, **kwargs)
         finally:
-            vm_utils._is_vdi_pv = orig_is_vdi_pv
             fake_image._FakeImageService.download = orig_image_download
             vm_utils.vdi_attached_here = orig_vdi_attached_here
 
@@ -328,7 +322,6 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         xenapi_fake.create_network('fake', CONF.flat_network_bridge)
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         stubs.stubout_get_this_vm_uuid(self.stubs)
-        stubs.stubout_is_vdi_pv(self.stubs)
         stubs.stub_out_vm_methods(self.stubs)
         fake_processutils.stub_out_processutils_execute(self.stubs)
         self.user_id = 'fake'
@@ -810,10 +803,9 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         # No additional VMs should be found.
         self.assertEqual(start_vms, end_vms)
 
-    @stub_vm_utils_with_vdi_attached_here
     def test_spawn_raw_glance(self):
         self._test_spawn(IMAGE_RAW, None, None)
-        self.check_vm_params_for_linux()
+        self.check_vm_params_for_windows()
 
     def test_spawn_vhd_glance_linux(self):
         self._test_spawn(IMAGE_VHD, None, None,
@@ -1886,9 +1878,8 @@ class XenAPIDetermineIsPVTestCase(test.TestCase):
     def test_linux_vhd(self):
         self.assert_pv_status(vm_utils.ImageType.DISK_VHD, 'linux', True)
 
-    @stub_vm_utils_with_vdi_attached_here
     def test_raw(self):
-        self.assert_pv_status(vm_utils.ImageType.DISK_RAW, 'linux', True)
+        self.assert_pv_status(vm_utils.ImageType.DISK_RAW, 'linux', False)
 
     def test_disk(self):
         self.assert_pv_status(vm_utils.ImageType.DISK, None, True)
@@ -1896,9 +1887,8 @@ class XenAPIDetermineIsPVTestCase(test.TestCase):
     def test_iso(self):
         self.assert_pv_status(vm_utils.ImageType.DISK_ISO, None, False)
 
-    @stub_vm_utils_with_vdi_attached_here
     def test_none(self):
-        self.assert_pv_status(None, None, True)
+        self.assert_pv_status(None, None, False)
 
 
 class CompareVersionTestCase(test.TestCase):
