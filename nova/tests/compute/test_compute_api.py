@@ -113,21 +113,18 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(instance, 'save')
         self.mox.StubOutWithMock(self.compute_api,
                 '_record_action_start')
-        self.mox.StubOutWithMock(
-                self.compute_api.compute_rpcapi,
-                'start_instance')
 
         instance.save(expected_task_state=None)
         self.compute_api._record_action_start(self.context,
                 instance, instance_actions.START)
-        self.compute_api.compute_rpcapi.start_instance(
-                self.context, instance)
 
         if self.is_cells:
-            self.mox.StubOutWithMock(self.compute_api.cells_rpcapi,
-                                     'start_instance')
-            self.compute_api.cells_rpcapi.start_instance(
-                    self.context, instance)
+            rpcapi = self.compute_api.cells_rpcapi
+        else:
+            rpcapi = self.compute_api.compute_rpcapi
+
+        self.mox.StubOutWithMock(rpcapi, 'start_instance')
+        rpcapi.start_instance(self.context, instance)
 
         self.mox.ReplayAll()
 
@@ -157,21 +154,18 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(instance, 'save')
         self.mox.StubOutWithMock(self.compute_api,
                 '_record_action_start')
-        self.mox.StubOutWithMock(
-                self.compute_api.compute_rpcapi,
-                'stop_instance')
 
         instance.save(expected_task_state=None)
         self.compute_api._record_action_start(self.context,
                 instance, instance_actions.STOP)
-        self.compute_api.compute_rpcapi.stop_instance(
-                self.context, instance, cast=True)
 
         if self.is_cells:
-            self.mox.StubOutWithMock(self.compute_api.cells_rpcapi,
-                                     'stop_instance')
-            self.compute_api.cells_rpcapi.stop_instance(
-                    self.context, instance, do_cast=True)
+            rpcapi = self.compute_api.cells_rpcapi
+        else:
+            rpcapi = self.compute_api.compute_rpcapi
+
+        self.mox.StubOutWithMock(rpcapi, 'stop_instance')
+        rpcapi.stop_instance(self.context, instance, do_cast=True)
 
         self.mox.ReplayAll()
 

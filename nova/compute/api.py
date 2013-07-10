@@ -31,6 +31,7 @@ from oslo.config import cfg
 
 from nova import availability_zones
 from nova import block_device
+from nova.cells import opts as cells_opts
 from nova.compute import flavors
 from nova.compute import instance_actions
 from nova.compute import power_state
@@ -198,6 +199,14 @@ def check_policy(context, action, target, scope='compute'):
     nova.policy.enforce(context, _action, target)
 
 
+def check_instance_cell(fn):
+    def _wrapped(self, context, instance, *args, **kwargs):
+        self._validate_cell(instance, fn.__name__)
+        return fn(self, context, instance, *args, **kwargs)
+    _wrapped.__name__ = fn.__name__
+    return _wrapped
+
+
 class API(base.Base):
     """API for interacting with the compute manager."""
 
@@ -226,6 +235,33 @@ class API(base.Base):
             from nova import conductor
             self._compute_task_api = conductor.ComputeTaskAPI()
         return self._compute_task_api
+
+    @property
+    def cell_type(self):
+        try:
+            return getattr(self, '_cell_type')
+        except AttributeError:
+            self._cell_type = cells_opts.get_cell_type()
+            return self._cell_type
+
+    def _cell_read_only(self, cell_name):
+        """Is the target cell in a read-only mode?"""
+        # FIXME(comstud): Add support for this.
+        return False
+
+    def _validate_cell(self, instance, method):
+        if self.cell_type != 'api':
+            return
+        cell_name = instance['cell_name']
+        if not cell_name:
+            raise exception.InstanceUnknownCell(
+                    instance_uuid=instance['uuid'])
+        if self._cell_read_only(cell_name):
+            raise exception.InstanceInvalidState(
+                    attr="vm_state",
+                    instance_uuid=instance['uuid'],
+                    state="temporary_readonly",
+                    method=method)
 
     def _instance_update(self, context, instance_uuid, **kwargs):
         """Update an instance in the database using kwargs as value."""
@@ -1393,6 +1429,7 @@ class API(base.Base):
     @wrap_check_policy
     @check_instance_lock
     @check_instance_host
+    @check_instance_cell
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.RESCUED,
                                     vm_states.ERROR],
                           task_state=[None])
@@ -1406,11 +1443,12 @@ class API(base.Base):
 
         self._record_action_start(context, instance, instance_actions.STOP)
 
-        self.compute_rpcapi.stop_instance(context, instance, cast=do_cast)
+        self.compute_rpcapi.stop_instance(context, instance, do_cast=do_cast)
 
     @wrap_check_policy
     @check_instance_lock
     @check_instance_host
+    @check_instance_cell
     @check_instance_state(vm_state=[vm_states.STOPPED])
     def start(self, context, instance):
         """Start an instance."""

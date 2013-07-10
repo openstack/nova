@@ -617,8 +617,8 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 topic=_compute_topic(self.topic, ctxt, None, instance),
                 version='2.29')
 
-    def stop_instance(self, ctxt, instance, cast=True):
-        rpc_method = self.cast if cast else self.call
+    def stop_instance(self, ctxt, instance, do_cast=True):
+        rpc_method = self.cast if do_cast else self.call
         return rpc_method(ctxt, self.make_msg('stop_instance',
                 instance=instance),
                 topic=_compute_topic(self.topic, ctxt, None, instance),

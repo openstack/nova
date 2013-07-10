@@ -31,18 +31,23 @@ check_instance_state = compute_api.check_instance_state
 wrap_check_policy = compute_api.wrap_check_policy
 check_policy = compute_api.check_policy
 check_instance_lock = compute_api.check_instance_lock
+check_instance_cell = compute_api.check_instance_cell
 
 
-def validate_cell(fn):
-    def _wrapped(self, context, instance, *args, **kwargs):
-        self._validate_cell(instance, fn.__name__)
-        return fn(self, context, instance, *args, **kwargs)
-    _wrapped.__name__ = fn.__name__
-    return _wrapped
+class ComputeRPCAPIRedirect(object):
+    # NOTE(comstud): These are a list of methods where the cells_rpcapi
+    # and the compute_rpcapi methods have the same signatures.  This
+    # is for transitioning to a common interface where we can just
+    # swap out the compute_rpcapi class with the cells_rpcapi class.
+    cells_compatible = ['start_instance', 'stop_instance']
 
+    def __init__(self, cells_rpcapi):
+        self.cells_rpcapi = cells_rpcapi
 
-class ComputeRPCAPINoOp(object):
     def __getattr__(self, key):
+        if key in self.cells_compatible:
+            return getattr(self.cells_rpcapi, key)
+
         def _noop_rpc_wrapper(*args, **kwargs):
             return None
         return _noop_rpc_wrapper
@@ -97,28 +102,12 @@ class ComputeCellsAPI(compute_api.API):
         super(ComputeCellsAPI, self).__init__(*args, **kwargs)
         self.cells_rpcapi = cells_rpcapi.CellsAPI()
         # Avoid casts/calls directly to compute
-        self.compute_rpcapi = ComputeRPCAPINoOp()
+        self.compute_rpcapi = ComputeRPCAPIRedirect(self.cells_rpcapi)
         # Redirect scheduler run_instance to cells.
         self.scheduler_rpcapi = SchedulerRPCAPIRedirect(self.cells_rpcapi)
         # Redirect conductor build_instances to cells
         self._compute_task_api = ConductorTaskRPCAPIRedirect(self.cells_rpcapi)
-
-    def _cell_read_only(self, cell_name):
-        """Is the target cell in a read-only mode?"""
-        # FIXME(comstud): Add support for this.
-        return False
-
-    def _validate_cell(self, instance, method):
-        cell_name = instance['cell_name']
-        if not cell_name:
-            raise exception.InstanceUnknownCell(
-                    instance_uuid=instance['uuid'])
-        if self._cell_read_only(cell_name):
-            raise exception.InstanceInvalidState(
-                    attr="vm_state",
-                    instance_uuid=instance['uuid'],
-                    state="temporary_readonly",
-                    method=method)
+        self._cell_type = 'api'
 
     def _cast_to_cells(self, context, instance, method, *args, **kwargs):
         instance_uuid = instance['uuid']
@@ -268,32 +257,18 @@ class ComputeCellsAPI(compute_api.API):
             self.cells_rpcapi.instance_delete_everywhere(context,
                     instance, delete_type)
 
-    @validate_cell
+    @check_instance_cell
     def restore(self, context, instance):
         """Restore a previously deleted (but not reclaimed) instance."""
         super(ComputeCellsAPI, self).restore(context, instance)
         self._cast_to_cells(context, instance, 'restore')
 
-    @validate_cell
+    @check_instance_cell
     def force_delete(self, context, instance):
         """Force delete a previously deleted (but not reclaimed) instance."""
         super(ComputeCellsAPI, self).force_delete(context, instance)
         self._cast_to_cells(context, instance, 'force_delete')
 
-    @validate_cell
-    def stop(self, context, instance, do_cast=True):
-        """Stop an instance."""
-        super(ComputeCellsAPI, self).stop(context, instance)
-        return self.cells_rpcapi.stop_instance(context, instance,
-                                               do_cast=do_cast)
-
-    @validate_cell
-    def start(self, context, instance):
-        """Start an instance."""
-        super(ComputeCellsAPI, self).start(context, instance)
-        self.cells_rpcapi.start_instance(context, instance)
-
-    @validate_cell
     def reboot(self, context, instance, *args, **kwargs):
         """Reboot the given instance."""
         super(ComputeCellsAPI, self).reboot(context, instance,
@@ -301,14 +276,14 @@ class ComputeCellsAPI(compute_api.API):
         self._cast_to_cells(context, instance, 'reboot', *args,
                 **kwargs)
 
-    @validate_cell
+    @check_instance_cell
     def rebuild(self, context, instance, *args, **kwargs):
         """Rebuild the given instance with the provided attributes."""
         super(ComputeCellsAPI, self).rebuild(context, instance, *args,
                 **kwargs)
         self._cast_to_cells(context, instance, 'rebuild', *args, **kwargs)
 
-    @validate_cell
+    @check_instance_cell
     def evacuate(self, context, instance, *args, **kwargs):
         """Evacuate the given instance with the provided attributes."""
         super(ComputeCellsAPI, self).evacuate(context, instance, *args,
@@ -316,14 +291,14 @@ class ComputeCellsAPI(compute_api.API):
         self._cast_to_cells(context, instance, 'evacuate', *args, **kwargs)
 
     @check_instance_state(vm_state=[vm_states.RESIZED])
-    @validate_cell
+    @check_instance_cell
     def revert_resize(self, context, instance):
         """Reverts a resize, deleting the 'new' instance in the process."""
         super(ComputeCellsAPI, self).revert_resize(context, instance)
         self._cast_to_cells(context, instance, 'revert_resize')
 
     @check_instance_state(vm_state=[vm_states.RESIZED])
-    @validate_cell
+    @check_instance_cell
     def confirm_resize(self, context, instance):
         """Confirms a migration/resize and deletes the 'old' instance."""
         super(ComputeCellsAPI, self).confirm_resize(context, instance)
@@ -331,7 +306,7 @@ class ComputeCellsAPI(compute_api.API):
 
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED],
                           task_state=[None])
-    @validate_cell
+    @check_instance_cell
     def resize(self, context, instance, flavor_id=None, *args, **kwargs):
         """Resize (ie, migrate) a running instance.
 
@@ -372,7 +347,7 @@ class ComputeCellsAPI(compute_api.API):
         self._cast_to_cells(context, instance, 'resize', flavor_id=flavor_id,
                             *args, **kwargs)
 
-    @validate_cell
+    @check_instance_cell
     def add_fixed_ip(self, context, instance, *args, **kwargs):
         """Add fixed_ip from specified network to given instance."""
         super(ComputeCellsAPI, self).add_fixed_ip(context, instance,
@@ -380,7 +355,7 @@ class ComputeCellsAPI(compute_api.API):
         self._cast_to_cells(context, instance, 'add_fixed_ip',
                 *args, **kwargs)
 
-    @validate_cell
+    @check_instance_cell
     def remove_fixed_ip(self, context, instance, *args, **kwargs):
         """Remove fixed_ip from specified network to given instance."""
         super(ComputeCellsAPI, self).remove_fixed_ip(context, instance,
@@ -388,13 +363,13 @@ class ComputeCellsAPI(compute_api.API):
         self._cast_to_cells(context, instance, 'remove_fixed_ip',
                 *args, **kwargs)
 
-    @validate_cell
+    @check_instance_cell
     def pause(self, context, instance):
         """Pause the given instance."""
         super(ComputeCellsAPI, self).pause(context, instance)
         self._cast_to_cells(context, instance, 'pause')
 
-    @validate_cell
+    @check_instance_cell
     def unpause(self, context, instance):
         """Unpause the given instance."""
         super(ComputeCellsAPI, self).unpause(context, instance)
@@ -407,19 +382,19 @@ class ComputeCellsAPI(compute_api.API):
         super(ComputeCellsAPI, self).get_diagnostics(context, instance)
         return self._call_to_cells(context, instance, 'get_diagnostics')
 
-    @validate_cell
+    @check_instance_cell
     def suspend(self, context, instance):
         """Suspend the given instance."""
         super(ComputeCellsAPI, self).suspend(context, instance)
         self._cast_to_cells(context, instance, 'suspend')
 
-    @validate_cell
+    @check_instance_cell
     def resume(self, context, instance):
         """Resume the given instance."""
         super(ComputeCellsAPI, self).resume(context, instance)
         self._cast_to_cells(context, instance, 'resume')
 
-    @validate_cell
+    @check_instance_cell
     def rescue(self, context, instance, rescue_password=None):
         """Rescue the given instance."""
         super(ComputeCellsAPI, self).rescue(context, instance,
@@ -427,13 +402,13 @@ class ComputeCellsAPI(compute_api.API):
         self._cast_to_cells(context, instance, 'rescue',
                 rescue_password=rescue_password)
 
-    @validate_cell
+    @check_instance_cell
     def unrescue(self, context, instance):
         """Unrescue the given instance."""
         super(ComputeCellsAPI, self).unrescue(context, instance)
         self._cast_to_cells(context, instance, 'unrescue')
 
-    @validate_cell
+    @check_instance_cell
     def set_admin_password(self, context, instance, password=None):
         """Set the root/admin password for the given instance."""
         super(ComputeCellsAPI, self).set_admin_password(context, instance,
@@ -441,7 +416,7 @@ class ComputeCellsAPI(compute_api.API):
         self._cast_to_cells(context, instance, 'set_admin_password',
                 password=password)
 
-    @validate_cell
+    @check_instance_cell
     def inject_file(self, context, instance, *args, **kwargs):
         """Write a file to the given instance."""
         super(ComputeCellsAPI, self).inject_file(context, instance, *args,
@@ -449,7 +424,7 @@ class ComputeCellsAPI(compute_api.API):
         self._cast_to_cells(context, instance, 'inject_file', *args, **kwargs)
 
     @wrap_check_policy
-    @validate_cell
+    @check_instance_cell
     def get_vnc_console(self, context, instance, console_type):
         """Get a url to a VNC Console."""
         if not instance['host']:
@@ -465,7 +440,7 @@ class ComputeCellsAPI(compute_api.API):
         return {'url': connect_info['access_url']}
 
     @wrap_check_policy
-    @validate_cell
+    @check_instance_cell
     def get_spice_console(self, context, instance, console_type):
         """Get a url to a SPICE Console."""
         if not instance['host']:
@@ -480,7 +455,7 @@ class ComputeCellsAPI(compute_api.API):
                 instance_uuid=instance['uuid'])
         return {'url': connect_info['access_url']}
 
-    @validate_cell
+    @check_instance_cell
     def get_console_output(self, context, instance, *args, **kwargs):
         """Get console output for an an instance."""
         # NOTE(comstud): Calling super() just to get policy check
@@ -499,20 +474,20 @@ class ComputeCellsAPI(compute_api.API):
         super(ComputeCellsAPI, self).lock(context, instance)
         self._cast_to_cells(context, instance, 'unlock')
 
-    @validate_cell
+    @check_instance_cell
     def reset_network(self, context, instance):
         """Reset networking on the instance."""
         super(ComputeCellsAPI, self).reset_network(context, instance)
         self._cast_to_cells(context, instance, 'reset_network')
 
-    @validate_cell
+    @check_instance_cell
     def inject_network_info(self, context, instance):
         """Inject network info for the instance."""
         super(ComputeCellsAPI, self).inject_network_info(context, instance)
         self._cast_to_cells(context, instance, 'inject_network_info')
 
     @wrap_check_policy
-    @validate_cell
+    @check_instance_cell
     def attach_volume(self, context, instance, volume_id, device=None):
         """Attach an existing volume to an existing instance."""
         if device and not block_device.match_device(device):
@@ -527,7 +502,7 @@ class ComputeCellsAPI(compute_api.API):
         return self._call_to_cells(context, instance, 'attach_volume',
                 volume_id, device)
 
-    @validate_cell
+    @check_instance_cell
     def _detach_volume(self, context, instance, volume):
         """Detach a volume from an instance."""
         self.volume_api.check_detach(context, volume)
@@ -535,7 +510,7 @@ class ComputeCellsAPI(compute_api.API):
                 volume)
 
     @wrap_check_policy
-    @validate_cell
+    @check_instance_cell
     def associate_floating_ip(self, context, instance, address):
         """Makes calls to network_api to associate_floating_ip.
 
@@ -544,7 +519,7 @@ class ComputeCellsAPI(compute_api.API):
         self._cast_to_cells(context, instance, 'associate_floating_ip',
                 address)
 
-    @validate_cell
+    @check_instance_cell
     def delete_instance_metadata(self, context, instance, key):
         """Delete the given metadata item from an instance."""
         super(ComputeCellsAPI, self).delete_instance_metadata(context,
@@ -553,7 +528,7 @@ class ComputeCellsAPI(compute_api.API):
                 key)
 
     @wrap_check_policy
-    @validate_cell
+    @check_instance_cell
     def update_instance_metadata(self, context, instance,
                                  metadata, delete=False):
         rv = super(ComputeCellsAPI, self).update_instance_metadata(context,
@@ -566,7 +541,7 @@ class ComputeCellsAPI(compute_api.API):
             pass
         return rv
 
-    @validate_cell
+    @check_instance_cell
     def live_migrate(self, context, instance, block_migration,
                      disk_over_commit, host_name):
         """Migrate a server lively to a new host."""

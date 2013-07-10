@@ -67,7 +67,10 @@ class ComputeRpcAPITestCase(test.TestCase):
 
         cast_and_call = ['confirm_resize', 'stop_instance']
         if rpc_method == 'call' and method in cast_and_call:
-            kwargs['cast'] = False
+            if method == 'confirm_resize':
+                kwargs['cast'] = False
+            else:
+                kwargs['do_cast'] = False
         if 'host' in kwargs:
             host = kwargs['host']
         elif 'destination' in kwargs:
