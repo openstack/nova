@@ -14,7 +14,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.api.openstack.compute.contrib import fping
+from nova.api.openstack.compute.plugins.v3 import fping
 from nova.api.openstack import extensions
 from nova import exception
 from nova import test
@@ -49,7 +49,7 @@ class FpingTest(test.TestCase):
         self.controller = fping.FpingController(self.ext_mgr)
 
     def test_fping_index(self):
-        req = fakes.HTTPRequest.blank("/v2/1234/os-fping")
+        req = fakes.HTTPRequestV3.blank("/os-fping")
         res_dict = self.controller.index(req)
         self.assertTrue("servers" in res_dict)
         for srv in res_dict["servers"]:
@@ -57,34 +57,34 @@ class FpingTest(test.TestCase):
                 self.assertTrue(key in srv)
 
     def test_fping_index_policy(self):
-        req = fakes.HTTPRequest.blank("/v2/1234/os-fping?all_tenants=1")
+        req = fakes.HTTPRequestV3.blank("/os-fping?all_tenants=1")
         self.assertRaises(exception.NotAuthorized, self.controller.index, req)
-        req = fakes.HTTPRequest.blank("/v2/1234/os-fping?all_tenants=1")
+        req = fakes.HTTPRequestV3.blank("/v2/1234/os-fping?all_tenants=1")
         req.environ["nova.context"].is_admin = True
         res_dict = self.controller.index(req)
         self.assertTrue("servers" in res_dict)
 
     def test_fping_index_include(self):
-        req = fakes.HTTPRequest.blank("/v2/1234/os-fping")
+        req = fakes.HTTPRequestV3.blank("/os-fping")
         res_dict = self.controller.index(req)
         ids = [srv["id"] for srv in res_dict["servers"]]
-        req = fakes.HTTPRequest.blank("/v2/1234/os-fping?include=%s" % ids[0])
+        req = fakes.HTTPRequestV3.blank("/os-fping?include=%s" % ids[0])
         res_dict = self.controller.index(req)
         self.assertEqual(len(res_dict["servers"]), 1)
         self.assertEqual(res_dict["servers"][0]["id"], ids[0])
 
     def test_fping_index_exclude(self):
-        req = fakes.HTTPRequest.blank("/v2/1234/os-fping")
+        req = fakes.HTTPRequestV3.blank("/os-fping")
         res_dict = self.controller.index(req)
         ids = [srv["id"] for srv in res_dict["servers"]]
-        req = fakes.HTTPRequest.blank("/v2/1234/os-fping?exclude=%s" %
+        req = fakes.HTTPRequestV3.blank("/os-fping?exclude=%s" %
                                       ",".join(ids[1:]))
         res_dict = self.controller.index(req)
         self.assertEqual(len(res_dict["servers"]), 1)
         self.assertEqual(res_dict["servers"][0]["id"], ids[0])
 
     def test_fping_show(self):
-        req = fakes.HTTPRequest.blank("/v2/1234/os-fping/%s" % FAKE_UUID)
+        req = fakes.HTTPRequestV3.blank("/os-fping/%s" % FAKE_UUID)
         res_dict = self.controller.show(req, FAKE_UUID)
         self.assertTrue("server" in res_dict)
         srv = res_dict["server"]
