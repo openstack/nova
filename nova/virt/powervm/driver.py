@@ -23,6 +23,7 @@ from nova.compute import flavors
 from nova.image import glance
 from nova.openstack.common import log as logging
 from nova.virt import driver
+from nova.virt.powervm import exception
 from nova.virt.powervm import operator
 
 LOG = logging.getLogger(__name__)
@@ -304,9 +305,7 @@ class PowerVMDriver(driver.ComputeDriver):
         else:
             # this shouldn't get hit unless someone forgot to handle
             # a certain migration type
-            raise Exception(
-                    _('Unrecognized root disk information: %s') %
-                    disk_info)
+            raise exception.PowerVMUnrecognizedRootDevice(disk_info=disk_info)
 
     def confirm_migration(self, migration, instance, network_info):
         """Confirms a resize, destroying the source VM."""

@@ -195,6 +195,24 @@ def create_instance(testcase):
 class PowerVMDriverTestCase(test.TestCase):
     """Unit tests for PowerVM connection calls."""
 
+    fake_network_info = 'fake_network_info'
+    fake_create_lpar_instance_called = False
+
+    def fake_create_lpar_instance(self, instance, network_info,
+                                  host_stats=None):
+        """Stub for the _create_lpar_instance method.
+
+        This stub assumes that 'instance' is the one created in the test case
+        setUp method and 'network_info' is equal to self.fake_network_info.
+        @return: fake LPAR based on instance parameter where the name of the
+        LPAR is the uuid of the instance
+        """
+        self.fake_create_lpar_instance_called = True
+        self.assertEquals(self.instance, instance)
+        self.assertEquals(self.fake_network_info, network_info)
+        return self.powervm_connection._powervm._operator.get_lpar(
+                                                            instance['uuid'])
+
     def setUp(self):
         super(PowerVMDriverTestCase, self).setUp()
         self.stubs.Set(powervm_operator, 'get_powervm_operator',
@@ -595,6 +613,124 @@ class PowerVMDriverTestCase(test.TestCase):
         expected_name = 'rsz__really_long_instance_name_00000001'
         result = self.powervm_connection._get_resize_name(inst_name)
         self.assertEqual(expected_name, result)
+
+    def test_finish_migration_raises_exception(self):
+        # Tests that the finish_migration method will raise an exception
+        # if the 'root_disk_file' key is not found in the disk_info parameter.
+        self.stubs.Set(self.powervm_connection._powervm,
+                       '_create_lpar_instance', self.fake_create_lpar_instance)
+
+        self.assertRaises(exception.PowerVMUnrecognizedRootDevice,
+                          self.powervm_connection.finish_migration,
+                          context.get_admin_context(), None,
+                          self.instance, {'old_lv_size': '20'},
+                          self.fake_network_info, None, True)
+        self.assertTrue(self.fake_create_lpar_instance_called)
+
+    def test_finish_migration_successful(self):
+        # Tests a successful migration (resize) flow and asserts various
+        # methods called along the way with expected argument values.
+        fake_file_path = 'some/file/path.py'
+        disk_info = {'root_disk_file': fake_file_path,
+                     'old_lv_size': '10'}
+        fake_flavor = {'root_gb': 20}
+        fake_extract_flavor = lambda *args, **kwargs: fake_flavor
+        self.fake_deploy_from_migrated_file_called = False
+
+        def fake_deploy_from_migrated_file(lpar, file_path, size,
+                                           power_on=True):
+            self.fake_deploy_from_migrated_file_called = True
+            # assert the lpar is the one created for this test
+            self.assertEquals(self.instance['uuid'], lpar['name'])
+            self.assertEquals(fake_file_path, file_path)
+            # this tests that the 20GB fake_flavor was used
+            self.assertEqual(fake_flavor['root_gb'] * pow(1024, 3), size)
+            self.assertTrue(power_on)
+
+        self.stubs.Set(self.powervm_connection._powervm,
+                            '_create_lpar_instance',
+                            self.fake_create_lpar_instance)
+        self.stubs.Set(flavors, 'extract_flavor', fake_extract_flavor)
+        self.stubs.Set(self.powervm_connection._powervm,
+                       'deploy_from_migrated_file',
+                       fake_deploy_from_migrated_file)
+
+        self.powervm_connection.finish_migration(context.get_admin_context(),
+                                                 None, self.instance,
+                                                 disk_info,
+                                                 self.fake_network_info,
+                                                 None, True)
+        self.assertTrue(self.fake_create_lpar_instance_called)
+        self.assertTrue(self.fake_deploy_from_migrated_file_called)
+
+    def test_check_host_resources_insufficient_memory(self):
+        # Tests that the _check_host_resources method will raise an exception
+        # when the host has insufficient memory for the request.
+        host_stats = {'host_memory_free': 512,
+                      'vcpus': 12,
+                      'vcpus_used': 1}
+
+        self.assertRaises(exception.PowerVMInsufficientFreeMemory,
+                self.powervm_connection._powervm._check_host_resources,
+                self.instance, vcpus=2, mem=4096, host_stats=host_stats)
+
+    def test_check_host_resources_insufficient_vcpus(self):
+        # Tests that the _check_host_resources method will raise an exception
+        # when the host has insufficient CPU for the request.
+        host_stats = {'host_memory_free': 4096,
+                      'vcpus': 2,
+                      'vcpus_used': 1}
+
+        self.assertRaises(exception.PowerVMInsufficientCPU,
+                self.powervm_connection._powervm._check_host_resources,
+                self.instance, vcpus=12, mem=512, host_stats=host_stats)
+
+    def test_create_lpar_instance_raise_insufficient_memory(self):
+        # This test will raise an exception because we use the instance
+        # created for this test case which requires 1024 MB of memory
+        # but the host only has 512 free.
+        host_stats = {'host_memory_free': 512,
+                      'vcpus': 12,
+                      'vcpus_used': 1}
+
+        self.assertRaises(exception.PowerVMInsufficientFreeMemory,
+                self.powervm_connection._powervm._create_lpar_instance,
+                self.instance, self.fake_network_info, host_stats)
+
+    def test_create_lpar_instance_raise_insufficient_vcpus(self):
+        # This test will raise an exception because we use the instance
+        # created for this test case which requires 2 CPUs but the host only
+        # has 1 CPU free.
+        host_stats = {'host_memory_free': 4096,
+                      'vcpus': 1,
+                      'vcpus_used': 1}
+
+        self.assertRaises(exception.PowerVMInsufficientCPU,
+                self.powervm_connection._powervm._create_lpar_instance,
+                self.instance, self.fake_network_info, host_stats)
+
+    def test_confirm_migration_old_instance_destroyed(self):
+        # Tests that the source instance is destroyed when a migration
+        # is confirmed.
+        resize_name = 'rsz_instance'
+        self.fake_destroy_called = False
+
+        def fake_get_resize_name(instance_name):
+            self.assertEquals(self.instance['name'], instance_name)
+            return resize_name
+
+        def fake_destroy(instance_name, destroy_disks=True):
+            self.fake_destroy_called = True
+            self.assertEquals(resize_name, instance_name)
+            self.assertTrue(destroy_disks)
+
+        self.stubs.Set(self.powervm_connection, '_get_resize_name',
+                       fake_get_resize_name)
+        self.stubs.Set(self.powervm_connection._powervm, 'destroy',
+                       fake_destroy)
+        self.powervm_connection.confirm_migration(True, self.instance,
+                                                  self.fake_network_info)
+        self.assertTrue(self.fake_destroy_called)
 
     def test_get_host_stats(self):
         host_stats = self.powervm_connection.get_host_stats(True)

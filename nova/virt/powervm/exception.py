@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 IBM Corp.
+# Copyright 2013 IBM Corp.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -66,3 +66,7 @@ class PowerVMInsufficientCPU(exception.NovaException):
 
 class PowerVMLPARInstanceCleanupFailed(exception.NovaException):
     message = _("PowerVM LPAR instance '%(instance_name)s' cleanup failed")
+
+
+class PowerVMUnrecognizedRootDevice(exception.NovaException):
+    message = _("Unrecognized root disk information: '%(disk_info)s'")
