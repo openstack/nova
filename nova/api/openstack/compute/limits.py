@@ -26,6 +26,9 @@ high enough as to not rate-limit any intentional actions.
 To find good rate-limit values, check how long requests are taking (see logs)
 in your environment to assess your capabilities and multiply out to get
 figures.
+
+NOTE: As the rate-limiting here is done in memory, this only works per
+process (each process will have its own rate limiting counter).
 """
 
 import collections
