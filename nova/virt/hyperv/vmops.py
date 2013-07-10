@@ -101,7 +101,7 @@ class VMOps(object):
 
         instance_name = instance['name']
         if not self._vmutils.vm_exists(instance_name):
-            raise exception.InstanceNotFound(instance=instance)
+            raise exception.InstanceNotFound(instance_id=instance['uuid'])
 
         info = self._vmutils.get_vm_summary_info(instance_name)
 
