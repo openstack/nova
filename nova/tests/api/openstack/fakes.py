@@ -678,3 +678,7 @@ def stub_snapshot_get_all(self, context):
     return [stub_snapshot(100, project_id='fake'),
             stub_snapshot(101, project_id='superfake'),
             stub_snapshot(102, project_id='superduperfake')]
+
+
+def stub_bdm_get_all_by_instance(context, instance_uuid):
+    return [{'volume_id': 'volume_id1'}, {'volume_id': 'volume_id2'}]

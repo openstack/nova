@@ -65,6 +65,14 @@
             "updated": "2011-11-03T00:00:00+00:00"
         },
         {
+            "alias": "os-extended-volumes",
+            "description": "Extended Volumes support.",
+            "links": [],
+            "name": "ExtendedVolumes",
+            "namespace": "http://docs.openstack.org/compute/ext/extended_volumes/api/v1.1",
+            "updated": "2013-06-07T00:00:00+00:00"
+        },
+        {
             "alias": "OS-EXT-VIF-NET",
             "description": "Adds network id parameter to the virtual interface list.",
             "links": [],

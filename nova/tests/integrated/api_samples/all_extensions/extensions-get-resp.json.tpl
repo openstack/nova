@@ -65,6 +65,14 @@
             "updated": "%(timestamp)s"
         },
         {
+            "alias": "os-extended-volumes",
+            "description": "%(text)s",
+            "links": [],
+            "name": "ExtendedVolumes",
+            "namespace": "http://docs.openstack.org/compute/ext/extended_volumes/api/v1.1",
+            "updated": "%(timestamp)s"
+        },
+        {
             "alias": "OS-EXT-VIF-NET",
             "description": "%(text)s",
             "links": [],
