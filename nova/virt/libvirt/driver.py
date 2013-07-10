@@ -2488,6 +2488,27 @@ class LibvirtDriver(driver.ComputeDriver):
             graphics.listen = CONF.spice.server_listen
             guest.add_device(graphics)
 
+        # Qemu guest agent only support 'qemu' and 'kvm' hypervisor
+        if CONF.libvirt_type in ('qemu', 'kvm'):
+            qga_enabled = False
+            # Enable qga only if the 'hw_qemu_guest_agent' property is set
+            if (image_meta is not None and image_meta.get('properties') and
+                    image_meta['properties'].get('hw_qemu_guest_agent')
+                    is not None):
+                hw_qga = image_meta['properties']['hw_qemu_guest_agent']
+                if hw_qga.lower() == 'yes':
+                    LOG.debug(_("Qemu guest agent is enabled through image "
+                                "metadata"), instance=instance)
+                    qga_enabled = True
+
+            if qga_enabled:
+                qga = vconfig.LibvirtConfigGuestChannel()
+                qga.type = "unix"
+                qga.target_name = "org.qemu.guest_agent.0"
+                qga.source_path = ("/var/lib/libvirt/qemu/%s.%s.sock" %
+                                ("org.qemu.guest_agent.0", instance['name']))
+                guest.add_device(qga)
+
         return guest
 
     def to_xml(self, instance, network_info, disk_info,
