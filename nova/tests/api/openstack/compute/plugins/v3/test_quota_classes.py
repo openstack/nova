@@ -16,7 +16,7 @@
 from lxml import etree
 import webob
 
-from nova.api.openstack.compute.contrib import quota_classes
+from nova.api.openstack.compute.plugins.v3 import quota_classes
 from nova.api.openstack import wsgi
 from nova import test
 from nova.tests.api.openstack import fakes
@@ -74,16 +74,14 @@ class QuotaClassSetsTest(test.TestCase):
         self.assertEqual(qs['key_pairs'], 100)
 
     def test_quotas_show_as_admin(self):
-        req = fakes.HTTPRequest.blank(
-            '/v2/fake4/os-quota-class-sets/test_class',
-            use_admin_context=True)
+        req = fakes.HTTPRequestV3.blank('/os-quota-class-sets/test_class',
+                                        use_admin_context=True)
         res_dict = self.controller.show(req, 'test_class')
 
         self.assertEqual(res_dict, quota_set('test_class'))
 
     def test_quotas_show_as_unauthorized_user(self):
-        req = fakes.HTTPRequest.blank(
-            '/v2/fake4/os-quota-class-sets/test_class')
+        req = fakes.HTTPRequestV3.blank('/os-quota-class-sets/test_class')
         self.assertRaises(webob.exc.HTTPForbidden, self.controller.show,
                           req, 'test_class')
 
@@ -91,16 +89,15 @@ class QuotaClassSetsTest(test.TestCase):
         body = {'quota_class_set': {'instances': 50, 'cores': 50,
                                     'ram': 51200, 'floating_ips': 10,
                                     'fixed_ips': -1, 'metadata_items': 128,
-                                    'injected_files': 5,
+                                    'injected_files': 5, 'id': 'test_class',
                                     'injected_file_content_bytes': 10240,
                                     'injected_file_path_bytes': 255,
                                     'security_groups': 10,
                                     'security_group_rules': 20,
                                     'key_pairs': 100}}
 
-        req = fakes.HTTPRequest.blank(
-            '/v2/fake4/os-quota-class-sets/test_class',
-            use_admin_context=True)
+        req = fakes.HTTPRequestV3.blank('/os-quota-class-sets/test_class',
+                                        use_admin_context=True)
         res_dict = self.controller.update(req, 'test_class', body)
 
         self.assertEqual(res_dict, body)
@@ -116,8 +113,7 @@ class QuotaClassSetsTest(test.TestCase):
                                     'key_pairs': 100,
                                     }}
 
-        req = fakes.HTTPRequest.blank(
-            '/v2/fake4/os-quota-class-sets/test_class')
+        req = fakes.HTTPRequestV3.blank('/os-quota-class-sets/test_class')
         self.assertRaises(webob.exc.HTTPForbidden, self.controller.update,
                           req, 'test_class', body)
 

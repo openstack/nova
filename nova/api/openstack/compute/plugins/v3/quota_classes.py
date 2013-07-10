@@ -26,8 +26,8 @@ from nova import quota
 
 QUOTAS = quota.QUOTAS
 
-
-authorize = extensions.extension_authorizer('compute', 'quota_classes')
+ALIAS = "os-quota-class-sets"
+authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
 
 
 class QuotaClassTemplate(xmlutil.TemplateBuilder):
@@ -80,24 +80,24 @@ class QuotaClassSetsController(object):
                     db.quota_class_create(context, quota_class, key, value)
                 except exception.AdminRequired:
                     raise webob.exc.HTTPForbidden()
-        return {'quota_class_set': QUOTAS.get_class_quotas(context,
-                                                           quota_class)}
+        return self._format_quota_set(
+            quota_class,
+            QUOTAS.get_class_quotas(context, quota_class))
 
 
-class Quota_classes(extensions.ExtensionDescriptor):
+class QuotaClasses(extensions.V3APIExtensionBase):
     """Quota classes management support."""
 
     name = "QuotaClasses"
-    alias = "os-quota-class-sets"
+    alias = ALIAS
     namespace = ("http://docs.openstack.org/compute/ext/"
-                 "quota-classes-sets/api/v1.1")
-    updated = "2012-03-12T00:00:00+00:00"
+                 "quota-class-sets/api/v3")
+    version = 1
 
     def get_resources(self):
-        resources = []
-
-        res = extensions.ResourceExtension('os-quota-class-sets',
-                                           QuotaClassSetsController())
-        resources.append(res)
-
+        resources = [
+            extensions.ResourceExtension(ALIAS, QuotaClassSetsController())]
         return resources
+
+    def get_controller_extensions(self):
+        return []
