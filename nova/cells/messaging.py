@@ -797,8 +797,34 @@ class _TargetedMessageMethods(_BaseMessageMethods):
                 instance, console_port, console_type)
 
     def get_migrations(self, message, filters):
-        context = message.ctxt
-        return self.compute_api.get_migrations(context, filters)
+        return self.compute_api.get_migrations(message.ctxt, filters)
+
+    def _call_compute_api_with_obj(self, ctxt, instance, method, *args,
+                                   **kwargs):
+        try:
+            # NOTE(comstud): We need to refresh the instance from this
+            # cell's view in the DB.
+            instance.refresh(ctxt)
+        except exception.InstanceNotFound:
+            with excutils.save_and_reraise_exception():
+                # Must be a race condition.  Let's try to resolve it by
+                # telling the top level cells that this instance doesn't
+                # exist.
+                instance = {'uuid': instance.uuid}
+                self.msg_runner.instance_destroy_at_top(ctxt,
+                                                        instance)
+        fn = getattr(self.compute_api, method, None)
+        return fn(ctxt, instance, *args, **kwargs)
+
+    def start_instance(self, message, instance):
+        """Start an instance via compute_api.start()."""
+        self._call_compute_api_with_obj(message.ctxt, instance, 'start')
+
+    def stop_instance(self, message, instance):
+        """Stop an instance via compute_api.stop()."""
+        do_cast = not message.need_response
+        return self._call_compute_api_with_obj(message.ctxt, instance,
+                                               'stop', do_cast=do_cast)
 
 
 class _BroadcastMessageMethods(_BaseMessageMethods):
@@ -1472,6 +1498,34 @@ class MessageRunner(object):
                                     run_locally=run_locally,
                                     need_response=True)
         return message.process()
+
+    def _instance_action(self, ctxt, instance, method, extra_kwargs=None,
+                         need_response=False):
+        """Call instance_<method> in correct cell for instance."""
+        cell_name = instance.cell_name
+        if not cell_name:
+            LOG.warn(_("No cell_name for %(method)s() from API"),
+                     dict(method=method), instance=instance)
+            return
+        method_kwargs = {'instance': instance}
+        if extra_kwargs:
+            method_kwargs.update(extra_kwargs)
+        message = _TargetedMessage(self, ctxt, method, method_kwargs,
+                                   'down', cell_name,
+                                   need_response=need_response)
+        return message.process()
+
+    def start_instance(self, ctxt, instance):
+        """Start an instance in its cell."""
+        self._instance_action(ctxt, instance, 'start_instance')
+
+    def stop_instance(self, ctxt, instance, do_cast=True):
+        """Stop an instance in its cell."""
+        if do_cast:
+            self._instance_action(ctxt, instance, 'stop_instance')
+        else:
+            return self._instance_action(ctxt, instance, 'stop_instance',
+                                         need_response=True)
 
     @staticmethod
     def get_message_types():

@@ -602,3 +602,18 @@ class CellsManagerClassTestCase(test.TestCase):
 
         response = self.cells_manager.get_migrations(self.ctxt, filters)
         self.assertEqual(migrations, response)
+
+    def test_start_instance(self):
+        self.mox.StubOutWithMock(self.msg_runner, 'start_instance')
+        self.msg_runner.start_instance(self.ctxt, 'fake-instance')
+        self.mox.ReplayAll()
+        self.cells_manager.start_instance(self.ctxt, instance='fake-instance')
+
+    def test_stop_instance(self):
+        self.mox.StubOutWithMock(self.msg_runner, 'stop_instance')
+        self.msg_runner.stop_instance(self.ctxt, 'fake-instance',
+                                      do_cast='meow')
+        self.mox.ReplayAll()
+        self.cells_manager.stop_instance(self.ctxt,
+                                         instance='fake-instance',
+                                         do_cast='meow')

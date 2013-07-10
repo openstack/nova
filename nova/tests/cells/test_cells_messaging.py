@@ -27,6 +27,7 @@ from nova.objects import base as objects_base
 from nova.objects import instance as instance_obj
 from nova.openstack.common import rpc
 from nova.openstack.common import timeutils
+from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests.cells import fakes
 from nova.tests import fake_instance_actions
@@ -1068,6 +1069,79 @@ class CellsTargetedMethodsTestCase(test.TestCase):
                 'api_cell!invalid_cell', False, filters)
 
         self.assertEqual(0, len(responses))
+
+    def test_call_compute_api_with_obj(self):
+        instance = instance_obj.Instance()
+        instance.uuid = uuidutils.generate_uuid()
+        self.mox.StubOutWithMock(instance, 'refresh')
+        # Using 'snapshot' for this test, because it
+        # takes args and kwargs.
+        self.mox.StubOutWithMock(self.tgt_compute_api, 'snapshot')
+        instance.refresh(self.ctxt)
+        self.tgt_compute_api.snapshot(
+                self.ctxt, instance, 'name',
+                extra_properties='props').AndReturn('foo')
+
+        self.mox.ReplayAll()
+        result = self.tgt_methods_cls._call_compute_api_with_obj(
+                self.ctxt, instance, 'snapshot', 'name',
+                extra_properties='props')
+        self.assertEqual('foo', result)
+
+    def test_call_compute_with_obj_unknown_instance(self):
+        instance = instance_obj.Instance()
+        instance.uuid = uuidutils.generate_uuid()
+        instance.vm_state = vm_states.ACTIVE
+        instance.task_state = None
+        self.mox.StubOutWithMock(instance, 'refresh')
+        self.mox.StubOutWithMock(self.tgt_msg_runner,
+                                 'instance_destroy_at_top')
+
+        instance.refresh(self.ctxt).AndRaise(
+                exception.InstanceNotFound(instance_id=instance.uuid))
+
+        self.tgt_msg_runner.instance_destroy_at_top(self.ctxt,
+                                                    {'uuid': instance.uuid})
+
+        self.mox.ReplayAll()
+        self.assertRaises(exception.InstanceNotFound,
+                          self.tgt_methods_cls._call_compute_api_with_obj,
+                          self.ctxt, instance, 'snapshot', 'name')
+
+    def _test_instance_action_method(self, method, args, kwargs,
+                                     expected_args, expected_kwargs,
+                                     expect_result):
+        class FakeMessage(object):
+            pass
+
+        message = FakeMessage()
+        message.ctxt = self.ctxt
+        message.need_response = expect_result
+
+        meth_cls = self.tgt_methods_cls
+        self.mox.StubOutWithMock(meth_cls, '_call_compute_api_with_obj')
+
+        meth_cls._call_compute_api_with_obj(
+                self.ctxt, 'fake-instance', method,
+                *expected_args, **expected_kwargs).AndReturn('meow')
+
+        self.mox.ReplayAll()
+
+        result = getattr(meth_cls, '%s_instance' % method)(
+                message, 'fake-instance', *args, **kwargs)
+        if expect_result:
+            self.assertEqual('meow', result)
+
+    def test_start_instance(self):
+        self._test_instance_action_method('start', (), {}, (), {}, False)
+
+    def test_stop_instance_cast(self):
+        self._test_instance_action_method('stop', (), {}, (),
+                                          {'do_cast': True}, False)
+
+    def test_stop_instance_call(self):
+        self._test_instance_action_method('stop', (), {}, (),
+                                          {'do_cast': False}, True)
 
 
 class CellsBroadcastMethodsTestCase(test.TestCase):
