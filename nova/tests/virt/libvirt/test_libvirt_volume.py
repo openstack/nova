@@ -45,8 +45,12 @@ class LibvirtVolumeTestCase(test.TestCase):
         self.stubs.Set(utils, 'execute', fake_execute)
 
         class FakeLibvirtDriver(object):
-            def __init__(self, hyperv="QEMU"):
+            def __init__(self, hyperv="QEMU", version=1005001):
                 self.hyperv = hyperv
+                self.version = version
+
+            def get_hypervisor_version(self):
+                return self.version
 
             def get_hypervisor_type(self):
                 return self.hyperv

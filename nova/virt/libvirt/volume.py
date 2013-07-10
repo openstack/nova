@@ -88,7 +88,10 @@ class LibvirtBaseVolumeDriver(object):
         """Connect the volume. Returns xml for libvirt."""
 
         conf = vconfig.LibvirtConfigGuestDisk()
-        conf.driver_name = virtutils.pick_disk_driver_name(self.is_block_dev)
+        conf.driver_name = virtutils.pick_disk_driver_name(
+            self.connection.get_hypervisor_version(),
+            self.is_block_dev
+        )
         conf.device_type = disk_info['type']
         conf.driver_format = "raw"
         conf.driver_cache = "none"

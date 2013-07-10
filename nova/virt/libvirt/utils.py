@@ -366,7 +366,7 @@ def remove_logical_volumes(*paths):
         execute(*lvremove, attempts=3, run_as_root=True)
 
 
-def pick_disk_driver_name(is_block_dev=False):
+def pick_disk_driver_name(hypervisor_version, is_block_dev=False):
     """Pick the libvirt primary backend driver name
 
     If the hypervisor supports multiple backend drivers, then the name
@@ -383,7 +383,12 @@ def pick_disk_driver_name(is_block_dev=False):
         if is_block_dev:
             return "phy"
         else:
-            return "tap"
+            # 4000000 == 4.0.0
+            if hypervisor_version == 4000000:
+                return "tap"
+            else:
+                return "tap2"
+
     elif CONF.libvirt_type in ('kvm', 'qemu'):
         return "qemu"
     else:
