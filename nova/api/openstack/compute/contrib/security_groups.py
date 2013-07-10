@@ -330,7 +330,7 @@ class SecurityGroupRulesController(SecurityGroupControllerBase):
 
         if 'cidr' in new_rule:
             net, prefixlen = netutils.get_net_and_prefixlen(new_rule['cidr'])
-            if net != '0.0.0.0' and prefixlen == '0':
+            if net not in ('0.0.0.0', '::') and prefixlen == '0':
                 msg = _("Bad prefix for network in cidr %s") % new_rule['cidr']
                 raise exc.HTTPBadRequest(explanation=msg)
 

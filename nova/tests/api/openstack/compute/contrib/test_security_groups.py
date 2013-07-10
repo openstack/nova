@@ -1110,6 +1110,20 @@ class TestSecurityGroupRules(test.TestCase):
         self.assertEquals(security_group_rule['ip_range']['cidr'],
                           "0.0.0.0/0")
 
+    def test_create_rule_cidr_ipv6_allow_all(self):
+        rule = security_group_rule_template(cidr='::/0',
+                                            parent_group_id=self.sg2['id'])
+
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
+        res_dict = self.controller.create(req, {'security_group_rule': rule})
+
+        security_group_rule = res_dict['security_group_rule']
+        self.assertNotEquals(security_group_rule['id'], 0)
+        self.assertEquals(security_group_rule['parent_group_id'],
+                          self.parent_security_group['id'])
+        self.assertEquals(security_group_rule['ip_range']['cidr'],
+                          "::/0")
+
     def test_create_rule_cidr_allow_some(self):
         rule = security_group_rule_template(cidr='15.0.0.0/8',
                                             parent_group_id=self.sg2['id'])
