@@ -327,13 +327,28 @@ class HypervisorsTest(test.TestCase):
                           self.controller.uptime, req, '1')
 
     def test_search(self):
-        req = fakes.HTTPRequestV3.blank('/os-hypervisors/hyper/search',
+        req = fakes.HTTPRequestV3.blank('/os-hypervisors/search?query=hyper',
                                         use_admin_context=True)
-        result = self.controller.search(req, 'hyper')
-
+        result = self.controller.search(req)
         self.assertEqual(result, dict(hypervisors=[
                     dict(id=1, hypervisor_hostname="hyper1"),
                     dict(id=2, hypervisor_hostname="hyper2")]))
+
+    def test_search_non_exist(self):
+        def fake_compute_node_search_by_hypervisor_return_empty(context,
+                                                                hypervisor_re):
+            return []
+        self.stubs.Set(db, 'compute_node_search_by_hypervisor',
+                       fake_compute_node_search_by_hypervisor_return_empty)
+        req = fakes.HTTPRequestV3.blank('/os-hypervisors/search?query=a',
+                                        use_admin_context=True)
+        result = self.controller.search(req)
+        self.assertEqual(result, dict(hypervisors=[]))
+
+    def test_search_without_query(self):
+        req = fakes.HTTPRequestV3.blank('/os-hypervisors/search',
+                                        use_admin_context=True)
+        self.assertRaises(exc.HTTPBadRequest, self.controller.search, req)
 
     def test_servers(self):
         req = fakes.HTTPRequestV3.blank('/os-hypervisors/hyper/servers',

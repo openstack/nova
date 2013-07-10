@@ -207,17 +207,18 @@ class HypervisorsController(object):
                                                      uptime=uptime))
 
     @wsgi.serializers(xml=HypervisorIndexTemplate)
-    def search(self, req, id):
+    def search(self, req):
         context = req.environ['nova.context']
         authorize(context)
+        query = req.GET.get('query', None)
+        if not query:
+            msg = _("Need parameter 'query' to specify "
+                    "which hypervisor to filter on")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
         hypervisors = self.host_api.compute_node_search_by_hypervisor(
-                context, id)
-        if hypervisors:
-            return dict(hypervisors=[self._view_hypervisor(hyp, False)
-                                     for hyp in hypervisors])
-        else:
-            msg = _("No hypervisor matching '%s' could be found.") % id
-            raise webob.exc.HTTPNotFound(explanation=msg)
+            context, query)
+        return dict(hypervisors=[self._view_hypervisor(hyp, False)
+                                 for hyp in hypervisors])
 
     @wsgi.serializers(xml=HypervisorServersTemplate)
     def servers(self, req, id):
@@ -256,9 +257,9 @@ class Hypervisors(extensions.V3APIExtensionBase):
         resources = [extensions.ResourceExtension(ALIAS,
                 HypervisorsController(),
                 collection_actions={'detail': 'GET',
+                                    'search': 'GET',
                                     'statistics': 'GET'},
                 member_actions={'uptime': 'GET',
-                                'search': 'GET',
                                 'servers': 'GET'})]
 
         return resources
