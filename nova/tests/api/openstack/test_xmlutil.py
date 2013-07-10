@@ -37,10 +37,18 @@ class SelectorTest(test.TestCase):
             },
         }
 
-    def test_empty_selector(self):
+    def test_repr(self):
         sel = xmlutil.Selector()
+        self.assertEqual(repr(sel), "Selector()")
+
+    def test_empty_selector(self):
+        sel = xmlutil.EmptyStringSelector()
         self.assertEqual(len(sel.chain), 0)
         self.assertEqual(sel(self.obj_for_test), self.obj_for_test)
+        self.assertEqual(
+            repr(self.obj_for_test),
+            "{'test': {'values': [1, 2, 3], 'name': 'test', 'attrs': "
+            "{'baz': 3, 'foo': 1, 'bar': 2}}}")
 
     def test_dict_selector(self):
         sel = xmlutil.Selector('test')
@@ -80,6 +88,7 @@ class SelectorTest(test.TestCase):
         sel = xmlutil.ConstantSelector('Foobar')
         self.assertEqual(sel.value, 'Foobar')
         self.assertEqual(sel(self.obj_for_test), 'Foobar')
+        self.assertEqual(repr(sel), "'Foobar'")
 
 
 class TemplateElementTest(test.TestCase):
@@ -92,6 +101,7 @@ class TemplateElementTest(test.TestCase):
         expected = dict(a=1, b=2, c=4, d=5, e=6)
         for k, v in expected.items():
             self.assertEqual(elem.attrib[k].chain[0], v)
+        self.assertTrue(repr(elem))
 
     def test_element_get_attributes(self):
         expected = dict(a=1, b=2, c=3)
@@ -441,6 +451,16 @@ class TemplateElementTest(test.TestCase):
             self.assertEqual(elems[idx][0].text, obj[idx])
             self.assertEqual(elems[idx][1], obj[idx])
 
+        # Check with a subselector
+        tmpl_elem = xmlutil.TemplateElement(
+            'test',
+            subselector=xmlutil.ConstantSelector('foo'))
+        parent = etree.Element('parent')
+
+        # Try a render with no object
+        elems = tmpl_elem.render(parent, obj)
+        self.assertEqual(len(elems), 4)
+
     def test_subelement(self):
         # Try the SubTemplateElement constructor
         parent = xmlutil.SubTemplateElement(None, 'parent')
@@ -474,8 +494,36 @@ class TemplateElementTest(test.TestCase):
         for idx in range(len(obj)):
             self.assertEqual(elems[idx][0].tag, obj[idx])
 
+    def test_tree(self):
+        # Create a template element
+        elem = xmlutil.TemplateElement('test', attr3='attr3')
+        elem.text = 'test'
+        self.assertEqual(elem.tree(),
+                         "<test !selector=Selector() "
+                         "!text=Selector('test',) "
+                          "attr3=Selector('attr3',)"
+                         "/>")
+
+        # Create a template element
+        elem = xmlutil.TemplateElement('test2')
+
+        # Create a child element
+        child = xmlutil.TemplateElement('child')
+
+        # Append the child to the parent
+        elem.append(child)
+
+        self.assertEqual(elem.tree(),
+                         "<test2 !selector=Selector()>"
+                         "<child !selector=Selector()/></test2>")
+
 
 class TemplateTest(test.TestCase):
+    def test_tree(self):
+        elem = xmlutil.TemplateElement('test')
+        tmpl = xmlutil.Template(elem)
+        self.assertTrue(tmpl.tree())
+
     def test_wrap(self):
         # These are strange methods, but they make things easier
         elem = xmlutil.TemplateElement('test')
@@ -512,6 +560,7 @@ class TemplateTest(test.TestCase):
         # Make sure it has a root but no slaves
         self.assertEqual(tmpl.root, elem)
         self.assertEqual(len(tmpl.slaves), 0)
+        self.assertTrue(repr(tmpl))
 
         # Try to attach an invalid slave
         bad_elem = xmlutil.TemplateElement('test2')
@@ -565,6 +614,7 @@ class TemplateTest(test.TestCase):
         # Construct a slave template with applicable minimum version
         slave = xmlutil.SlaveTemplate(elem, 2)
         self.assertEqual(slave.apply(master), True)
+        self.assertTrue(repr(slave))
 
         # Construct a slave template with equal minimum version
         slave = xmlutil.SlaveTemplate(elem, 3)
@@ -655,6 +705,9 @@ class TemplateTest(test.TestCase):
                          str(obj['test']['image']['id']))
         self.assertEqual(result[idx].text, obj['test']['image']['name'])
 
+        templ = xmlutil.Template(None)
+        self.assertEqual(templ.serialize(None), '')
+
 
 class MasterTemplateBuilder(xmlutil.TemplateBuilder):
     def construct(self):
@@ -716,10 +769,33 @@ class TemplateBuilderTest(test.TestCase):
 
 
 class MiscellaneousXMLUtilTests(test.TestCase):
+    def test_validate_schema(self):
+        xml = '''<?xml version='1.0' encoding='UTF-8'?>
+<metadata xmlns="http://docs.openstack.org/compute/api/v1.1">
+<meta key="key6">value6</meta><meta key="key4">value4</meta>
+</metadata>
+'''
+        xmlutil.validate_schema(xml, 'metadata')
+        # No way to test the return value of validate_schema.
+        # It just raises an exception when something is wrong.
+        self.assertTrue(True)
+
+    def test_make_links(self):
+        elem = xmlutil.TemplateElement('image', selector='image')
+        self.assertTrue(repr(xmlutil.make_links(elem, 'links')))
+
     def test_make_flat_dict(self):
         expected_xml = ("<?xml version='1.0' encoding='UTF-8'?>\n"
                         '<wrapper><a>foo</a><b>bar</b></wrapper>')
         root = xmlutil.make_flat_dict('wrapper')
+        tmpl = xmlutil.MasterTemplate(root, 1)
+        result = tmpl.serialize(dict(wrapper=dict(a='foo', b='bar')))
+        self.assertEqual(result, expected_xml)
+
+        expected_xml = ("<?xml version='1.0' encoding='UTF-8'?>\n"
+'<ns0:wrapper xmlns:ns0="ns"><ns0:a>foo</ns0:a><ns0:b>bar</ns0:b>'
+"</ns0:wrapper>")
+        root = xmlutil.make_flat_dict('wrapper', ns='ns')
         tmpl = xmlutil.MasterTemplate(root, 1)
         result = tmpl.serialize(dict(wrapper=dict(a='foo', b='bar')))
         self.assertEqual(result, expected_xml)
