@@ -412,6 +412,15 @@ class ComputeManager(manager.SchedulerDependentManager):
                         'trying to set it to ERROR'),
                       instance_uuid=instance_uuid)
 
+    def _set_instance_obj_error_state(self, context, instance):
+        try:
+            instance.vm_state = vm_states.ERROR
+            instance.save()
+        except exception.InstanceNotFound:
+            LOG.debug(_('Instance has been destroyed from under us while '
+                        'trying to set it to ERROR'),
+                      instance_uuid=instance.uuid)
+
     def _get_instances_on_driver(self, context, filters=None,
                                  columns_to_join=None):
         """Return a list of instance records for the instances found
