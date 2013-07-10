@@ -891,3 +891,49 @@ class LinuxNetworkTestCase(test.TestCase):
         self.mox.ReplayAll()
         manager.defer_apply_off()
         self.assertFalse(manager.iptables_apply_deferred)
+
+    def _test_add_metadata_accept_rule(self, expected):
+        def verify_add_rule(chain, rule):
+            self.assertEqual(chain, 'INPUT')
+            self.assertEqual(expected, rule)
+
+        self.stubs.Set(linux_net.iptables_manager.ipv4['filter'],
+                       'add_rule', verify_add_rule)
+        linux_net.metadata_accept()
+
+    def test_metadata_accept(self):
+        self.flags(metadata_port='8775')
+        self.flags(metadata_host='10.10.10.1')
+        expected = ('-s 0.0.0.0/0 -p tcp -m tcp --dport 8775 '
+                    '-d 10.10.10.1 -j ACCEPT')
+        self._test_add_metadata_accept_rule(expected)
+
+    def test_metadata_accept_localhost(self):
+        self.flags(metadata_port='8775')
+        self.flags(metadata_host='127.0.0.1')
+        expected = ('-s 0.0.0.0/0 -p tcp -m tcp --dport 8775 '
+                    '-m addrtype --dst-type LOCAL -j ACCEPT')
+        self._test_add_metadata_accept_rule(expected)
+
+    def _test_add_metadata_forward_rule(self, expected):
+        def verify_add_rule(chain, rule):
+            self.assertEqual(chain, 'PREROUTING')
+            self.assertEqual(expected, rule)
+
+        self.stubs.Set(linux_net.iptables_manager.ipv4['nat'],
+                       'add_rule', verify_add_rule)
+        linux_net.metadata_forward()
+
+    def test_metadata_forward(self):
+        self.flags(metadata_port='8775')
+        self.flags(metadata_host='10.10.10.1')
+        expected = ('-s 0.0.0.0/0 -d 169.254.169.254/32 -p tcp -m tcp '
+                    '--dport 80 -j DNAT --to-destination 10.10.10.1:8775')
+        self._test_add_metadata_forward_rule(expected)
+
+    def test_metadata_forward_localhost(self):
+        self.flags(metadata_port='8775')
+        self.flags(metadata_host='127.0.0.1')
+        expected = ('-s 0.0.0.0/0 -d 169.254.169.254/32 -p tcp -m tcp '
+                    '--dport 80 -j REDIRECT --to-ports 8775')
+        self._test_add_metadata_forward_rule(expected)
