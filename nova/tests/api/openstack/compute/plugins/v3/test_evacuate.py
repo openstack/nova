@@ -62,8 +62,8 @@ class EvacuateTest(test.TestCase):
         req.method = 'POST'
         req.body = jsonutils.dumps({
             'evacuate': {
-                'onSharedStorage': 'False',
-                'adminPass': 'MyNewPass'
+                'on_shared_storage': 'False',
+                'admin_password': 'MyNewPass'
             }
         })
         req.content_type = 'application/json'
@@ -82,8 +82,8 @@ class EvacuateTest(test.TestCase):
         req.body = jsonutils.dumps({
             'evacuate': {
                 'host': 'my_host',
-                'onSharedStorage': 'false',
-                'adminPass': 'MyNewPass'
+                'on_shared_storage': 'false',
+                'admin_password': 'MyNewPass'
             }
         })
         req.content_type = 'application/json'
@@ -97,7 +97,7 @@ class EvacuateTest(test.TestCase):
         resp = req.get_response(app)
         self.assertEqual(resp.status_int, 200)
         resp_json = jsonutils.loads(resp.body)
-        self.assertEqual("MyNewPass", resp_json['adminPass'])
+        self.assertEqual("MyNewPass", resp_json['admin_password'])
 
     def test_evacuate_shared_and_pass(self):
         ctxt = context.get_admin_context()
@@ -111,8 +111,8 @@ class EvacuateTest(test.TestCase):
         req.body = jsonutils.dumps({
             'evacuate': {
                 'host': 'my_host',
-                'onSharedStorage': 'True',
-                'adminPass': 'MyNewPass'
+                'on_shared_storage': 'True',
+                'admin_password': 'MyNewPass'
             }
         })
         req.content_type = 'application/json'
@@ -138,7 +138,7 @@ class EvacuateTest(test.TestCase):
         req.body = jsonutils.dumps({
             'evacuate': {
                 'host': 'my_host',
-                'onSharedStorage': 'False',
+                'on_shared_storage': 'False',
             }
         })
 
@@ -153,7 +153,8 @@ class EvacuateTest(test.TestCase):
         resp = req.get_response(app)
         self.assertEqual(resp.status_int, 200)
         resp_json = jsonutils.loads(resp.body)
-        self.assertEqual(CONF.password_length, len(resp_json['adminPass']))
+        self.assertEqual(CONF.password_length,
+                         len(resp_json['admin_password']))
 
     def test_evacuate_shared(self):
         ctxt = context.get_admin_context()
@@ -167,7 +168,7 @@ class EvacuateTest(test.TestCase):
         req.body = jsonutils.dumps({
             'evacuate': {
                 'host': 'my_host',
-                'onSharedStorage': 'True',
+                'on_shared_storage': 'True',
             }
         })
         req.content_type = 'application/json'
@@ -180,6 +181,8 @@ class EvacuateTest(test.TestCase):
 
         res = req.get_response(app)
         self.assertEqual(res.status_int, 200)
+        resp_json = jsonutils.loads(res.body)
+        self.assertEqual(resp_json['admin_password'], None)
 
     def test_not_admin(self):
         ctxt = context.RequestContext('fake', 'fake', is_admin=False)
@@ -190,7 +193,7 @@ class EvacuateTest(test.TestCase):
         req.body = jsonutils.dumps({
             'evacuate': {
                 'host': 'my_host',
-                'onSharedStorage': 'True',
+                'on_shared_storage': 'True',
             }
         })
         req.content_type = 'application/json'
