@@ -221,7 +221,7 @@ class Instance(BASE, NovaBase):
     # This equals to ComputeNode.hypervisor_hostname.
     node = Column(String(255), nullable=True)
 
-    # *not* flavor_id
+    # *not* flavorid, this is the internal primary_key
     instance_type_id = Column(Integer, nullable=True)
 
     user_data = Column(Text, nullable=True)
@@ -299,7 +299,11 @@ class InstanceInfoCache(BASE, NovaBase):
 
 
 class InstanceTypes(BASE, NovaBase):
-    """Represent possible instance_types or flavor of VM offered."""
+    """Represents possible flavors for instances.
+
+    Note: instance_type and flavor are synonyms and the term instance_type is
+    deprecated and in the process of being removed.
+    """
     __tablename__ = "instance_types"
 
     __table_args__ = (
@@ -309,12 +313,14 @@ class InstanceTypes(BASE, NovaBase):
                                 name="uniq_instance_types0name0deleted")
     )
 
+    # Internal only primary key/id
     id = Column(Integer, primary_key=True)
     name = Column(String(255))
     memory_mb = Column(Integer)
     vcpus = Column(Integer)
     root_gb = Column(Integer)
     ephemeral_gb = Column(Integer)
+    # Public facing id will be renamed public_id
     flavorid = Column(String(255))
     swap = Column(Integer, nullable=False, default=0)
     rxtx_factor = Column(Float, nullable=False, default=1)
