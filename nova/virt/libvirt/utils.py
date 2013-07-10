@@ -593,7 +593,7 @@ def fetch_image(context, target, image_id, user_id, project_id):
     images.fetch_to_raw(context, image_id, target, user_id, project_id)
 
 
-def get_instance_path(instance, forceold=False):
+def get_instance_path(instance, forceold=False, relative=False):
     """Determine the correct path for instance storage.
 
     This method determines the directory name for instance storage, while
@@ -602,10 +602,16 @@ def get_instance_path(instance, forceold=False):
 
     :param instance: the instance we want a path for
     :param forceold: force the use of the pre-grizzly format
+    :param relative: if True, just the relative path is returned
 
     :returns: a path to store information about that instance
     """
     pre_grizzly_name = os.path.join(CONF.instances_path, instance['name'])
     if forceold or os.path.exists(pre_grizzly_name):
+        if relative:
+            return instance['name']
         return pre_grizzly_name
+
+    if relative:
+        return instance['uuid']
     return os.path.join(CONF.instances_path, instance['uuid'])
