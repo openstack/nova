@@ -342,8 +342,9 @@ class ComputeVolumeTestCase(BaseTestCase):
 
     def test_attach_volume_serial(self):
 
+        instance = self._create_fake_instance()
         self.compute.attach_volume(self.context, self.volume_id,
-                                   '/dev/vdb', self.instance)
+                                   '/dev/vdb', instance)
         self.assertEqual(self.cinfo.get('serial'), self.volume_id)
 
     def test_await_block_device_created_to_slow(self):
@@ -519,15 +520,18 @@ class ComputeVolumeTestCase(BaseTestCase):
         # total fields in the volume usage cache.
         CONF.volume_usage_poll_interval = 10
         self.compute._poll_volume_usage(self.context)
-        # Check that a volume.usage notification was sent
-        self.assertEqual(1, len(test_notifier.NOTIFICATIONS))
+        # Check that a volume.usage and volume.attach notification was sent
+        self.assertEqual(2, len(test_notifier.NOTIFICATIONS))
         msg = test_notifier.NOTIFICATIONS[0]
 
         self.compute.detach_volume(self.context, 1, instance)
 
-        # Check that a volume.usage notification was sent
-        self.assertEquals(2, len(test_notifier.NOTIFICATIONS))
-        msg = test_notifier.NOTIFICATIONS[1]
+        # Check that volume.attach, 2 volume.usage, and volume.detach
+        # notifications were sent
+        self.assertEquals(4, len(test_notifier.NOTIFICATIONS))
+        msg = test_notifier.NOTIFICATIONS[0]
+        self.assertEquals('compute.instance.volume.attach', msg['event_type'])
+        msg = test_notifier.NOTIFICATIONS[2]
         self.assertEquals('volume.usage', msg['event_type'])
         payload = msg['payload']
         self.assertEquals(instance['uuid'], payload['instance_id'])
@@ -538,6 +542,8 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.assertEquals(1, payload['writes'])
         self.assertEquals(20, payload['write_bytes'])
         self.assertEquals(None, payload['availability_zone'])
+        msg = test_notifier.NOTIFICATIONS[3]
+        self.assertEquals('compute.instance.volume.detach', msg['event_type'])
 
         # Check the database for the
         volume_usages = db.vol_get_usage_by_time(self.context, 0)
