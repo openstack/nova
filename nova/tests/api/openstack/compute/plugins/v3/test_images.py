@@ -75,6 +75,7 @@ class ImagesControllerTest(test.TestCase):
                 "created": NOW_API_FORMAT,
                 "status": "SAVING",
                 "progress": 25,
+                "size": 25165824,
                 "minDisk": 0,
                 "minRam": 0,
                 'server': {
@@ -130,6 +131,7 @@ class ImagesControllerTest(test.TestCase):
                 "created": NOW_API_FORMAT,
                 "status": "SAVING",
                 "progress": 25,
+                "size": 25165824,
                 "minDisk": 0,
                 "minRam": 0,
                 'server': {
@@ -187,6 +189,7 @@ class ImagesControllerTest(test.TestCase):
             'created': NOW_API_FORMAT,
             'status': 'ACTIVE',
             'progress': 100,
+            "size": 25165824,
             'minDisk': 10,
             'minRam': 128,
             "links": [{
@@ -214,6 +217,7 @@ class ImagesControllerTest(test.TestCase):
             'created': NOW_API_FORMAT,
             'status': 'SAVING',
             'progress': 25,
+            "size": 25165824,
             'minDisk': 0,
             'minRam': 0,
             'server': {
@@ -252,6 +256,7 @@ class ImagesControllerTest(test.TestCase):
             'created': NOW_API_FORMAT,
             'status': 'SAVING',
             'progress': 50,
+            "size": 25165824,
             'minDisk': 0,
             'minRam': 0,
             'server': {
@@ -290,6 +295,7 @@ class ImagesControllerTest(test.TestCase):
             'created': NOW_API_FORMAT,
             'status': 'ACTIVE',
             'progress': 100,
+            "size": 25165824,
             'minDisk': 0,
             'minRam': 0,
             'server': {
@@ -328,6 +334,7 @@ class ImagesControllerTest(test.TestCase):
             'created': NOW_API_FORMAT,
             'status': 'ERROR',
             'progress': 0,
+            "size": 25165824,
             'minDisk': 0,
             'minRam': 0,
             'server': {
@@ -366,6 +373,7 @@ class ImagesControllerTest(test.TestCase):
             'created': NOW_API_FORMAT,
             'status': 'DELETED',
             'progress': 0,
+            "size": 25165824,
             'minDisk': 0,
             'minRam': 0,
             'server': {
@@ -404,6 +412,7 @@ class ImagesControllerTest(test.TestCase):
             'created': NOW_API_FORMAT,
             'status': 'DELETED',
             'progress': 0,
+            "size": 25165824,
             'minDisk': 0,
             'minRam': 0,
             'server': {
@@ -439,6 +448,7 @@ class ImagesControllerTest(test.TestCase):
             'created': NOW_API_FORMAT,
             'status': 'ACTIVE',
             'progress': 100,
+            "size": 0,
             'minDisk': 0,
             'minRam': 0,
             "links": [{
@@ -477,6 +487,7 @@ class ImagesControllerTest(test.TestCase):
             'updated': NOW_API_FORMAT,
             'created': NOW_API_FORMAT,
             'status': 'ACTIVE',
+            "size": 25165824,
             'minDisk': 10,
             'progress': 100,
             'minRam': 128,
@@ -504,6 +515,7 @@ class ImagesControllerTest(test.TestCase):
             'updated': NOW_API_FORMAT,
             'created': NOW_API_FORMAT,
             'status': 'SAVING',
+            "size": 25165824,
             'minDisk': 0,
             'progress': 25,
             'minRam': 0,

@@ -42,6 +42,7 @@ SUPPORTED_FILTERS = {
 def make_image(elem, detailed=False):
     elem.set('name')
     elem.set('id')
+    elem.set('size')
 
     if detailed:
         elem.set('updated')
@@ -90,7 +91,7 @@ class ImagesTemplate(xmlutil.TemplateBuilder):
 class ImagesController(wsgi.Controller):
     """Base controller for retrieving/displaying images."""
 
-    _view_builder_class = views_images.ViewBuilder
+    _view_builder_class = views_images.ViewBuilderV3
 
     def __init__(self, image_service=None, **kwargs):
         """Initialize new `ImageController`.
