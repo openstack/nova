@@ -498,23 +498,64 @@ def search_datastore_spec(client_factory, file_name):
     return search_spec
 
 
+def _get_token(results):
+    """Get the token from the property results."""
+    return getattr(results, 'token', None)
+
+
+def _get_reference_for_value(results, value):
+    for object in results.objects:
+        if object.obj.value == value:
+            return object
+
+
+def _get_object_for_value(results, value):
+    for object in results.objects:
+        if object.propSet[0].val == value:
+            return object.obj
+
+
+def _get_object_from_results(session, results, value, func):
+    while results:
+        token = _get_token(results)
+        object = func(results, value)
+        if object:
+            if token:
+                session._call_method(vim_util,
+                                     "cancel_retrieve",
+                                     token)
+            return object
+
+        if token:
+            results = session._call_method(vim_util,
+                                           "continue_to_get_objects",
+                                           token)
+        else:
+            return None
+
+
+def _cancel_retrieve_if_necessary(session, results):
+    token = _get_token(results)
+    if token:
+        results = session._call_method(vim_util,
+                                       "cancel_retrieve",
+                                       token)
+
+
 def get_vm_ref_from_name(session, vm_name):
     """Get reference to the VM with the name specified."""
     vms = session._call_method(vim_util, "get_objects",
                 "VirtualMachine", ["name"])
-    for vm in vms:
-        if vm.propSet[0].val == vm_name:
-            return vm.obj
-    return None
+    return _get_object_from_results(session, vms, vm_name,
+                                    _get_object_for_value)
 
 
 def get_vm_ref_from_uuid(session, instance_uuid):
     """Get reference to the VM with the uuid specified."""
     vms = session._call_method(vim_util, "get_objects",
                 "VirtualMachine", ["name"])
-    for vm in vms:
-        if vm.propSet[0].val == instance_uuid:
-            return vm.obj
+    return _get_object_from_results(session, vms, instance_uuid,
+                                    _get_object_for_value)
 
 
 def get_vm_ref(session, instance):
@@ -536,10 +577,8 @@ def get_host_ref_from_id(session, host_id, property_list=None):
     host_refs = session._call_method(
                     vim_util, "get_objects",
                     "HostSystem", property_list)
-
-    for ref in host_refs:
-        if ref.obj.value == host_id:
-            return ref
+    return _get_object_from_results(session, host_refs, host_id,
+                                    _get_reference_for_value)
 
 
 def get_host_id_from_vm_ref(session, vm_ref):
@@ -600,7 +639,7 @@ def property_from_property_set(property_name, property_set):
     :return: the value of the property.
     '''
 
-    for prop in property_set:
+    for prop in property_set.objects:
         p = _property_from_propSet(prop.propSet, property_name)
         if p is not None:
             return p
@@ -643,17 +682,17 @@ def get_cluster_ref_from_name(session, cluster_name):
     """Get reference to the cluster with the name specified."""
     cls = session._call_method(vim_util, "get_objects",
                                "ClusterComputeResource", ["name"])
-    for cluster in cls:
-        if cluster.propSet[0].val == cluster_name:
-            return cluster.obj
-    return None
+    return _get_object_from_results(session, cls, cluster_name,
+                                    _get_object_for_value)
 
 
 def get_host_ref(session, cluster=None):
     """Get reference to a host within the cluster specified."""
     if cluster is None:
-        host_mor = session._call_method(vim_util, "get_objects",
-                                        "HostSystem")[0].obj
+        results = session._call_method(vim_util, "get_objects",
+                                       "HostSystem")
+        _cancel_retrieve_if_necessary(session, results)
+        host_mor = results.objects[0].obj
     else:
         host_ret = session._call_method(vim_util, "get_dynamic_property",
                                         cluster, "ClusterComputeResource",
@@ -665,6 +704,26 @@ def get_host_ref(session, cluster=None):
         host_mor = host_ret.ManagedObjectReference[0]
 
     return host_mor
+
+
+def _get_datastore_ref_and_name(data_stores):
+    for elem in data_stores.objects:
+        ds_name = None
+        ds_type = None
+        ds_cap = None
+        ds_free = None
+        for prop in elem.propSet:
+            if prop.name == "summary.type":
+                ds_type = prop.val
+            elif prop.name == "summary.name":
+                ds_name = prop.val
+            elif prop.name == "summary.capacity":
+                ds_cap = prop.val
+            elif prop.name == "summary.freeSpace":
+                ds_free = prop.val
+        # Local storage identifier
+        if ds_type == "VMFS" or ds_type == "NFS":
+            return elem.obj, ds_name, ds_cap, ds_free
 
 
 def get_datastore_ref_and_name(session, cluster=None, host=None):
@@ -693,22 +752,20 @@ def get_datastore_ref_and_name(session, cluster=None, host=None):
                                 "Datastore", data_store_mors,
                                 ["summary.type", "summary.name",
                                  "summary.capacity", "summary.freeSpace"])
-    for elem in data_stores:
-        ds_name = None
-        ds_type = None
-        ds_cap = None
-        ds_free = None
-        for prop in elem.propSet:
-            if prop.name == "summary.type":
-                ds_type = prop.val
-            elif prop.name == "summary.name":
-                ds_name = prop.val
-            elif prop.name == "summary.capacity":
-                ds_cap = prop.val
-            elif prop.name == "summary.freeSpace":
-                ds_free = prop.val
-        # Local storage identifier
-        if ds_type == "VMFS" or ds_type == "NFS":
-            return elem.obj, ds_name, ds_cap, ds_free
 
-        raise exception.DatastoreNotFound()
+    while data_stores:
+        token = _get_token(data_stores)
+        results = _get_datastore_ref_and_name(data_stores)
+        if results:
+            if token:
+                session._call_method(vim_util,
+                                     "cancel_retrieve",
+                                     token)
+            return results
+        if token:
+            data_stores = session._call_method(vim_util,
+                                               "continue_to_get_objects",
+                                               token)
+        else:
+            raise exception.DatastoreNotFound()
+    raise exception.DatastoreNotFound()

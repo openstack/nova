@@ -175,7 +175,7 @@ class VMwareAPIVMTestCase(test.TestCase):
 
         # Get record for VM
         vms = vmwareapi_fake._get_objects("VirtualMachine")
-        vm = vms[0]
+        vm = vms.objects[0]
 
         # Check that m1.large above turned into the right thing.
         mem_kib = long(self.type_data['memory_mb']) << 10
@@ -521,10 +521,10 @@ class VMwareAPIVMTestCase(test.TestCase):
 
         def fake_get_vm_ref_from_name(session, vm_name):
             self.assertEquals(self.vm_name, vm_name)
-            return vmwareapi_fake._get_objects("VirtualMachine")[0]
+            return vmwareapi_fake._get_objects("VirtualMachine").objects[0]
 
         def fake_get_vm_ref_from_uuid(session, vm_uuid):
-            return vmwareapi_fake._get_objects("VirtualMachine")[0]
+            return vmwareapi_fake._get_objects("VirtualMachine").objects[0]
 
         def fake_call_method(*args, **kwargs):
             pass
