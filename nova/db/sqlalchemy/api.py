@@ -2191,7 +2191,14 @@ def instance_info_cache_update(context, instance_uuid, values):
             #                  cache entry, re-create it.
             info_cache = models.InstanceInfoCache()
             values['instance_uuid'] = instance_uuid
-        info_cache.update(values)
+
+        try:
+            info_cache.update(values)
+        except db_exc.DBDuplicateEntry:
+            # NOTE(sirp): Possible race if two greenthreads attempt to
+            # recreate the instance cache entry at the same time. First one
+            # wins.
+            pass
 
     return info_cache
 
@@ -4447,7 +4454,12 @@ def bw_usage_update(context, uuid, mac, start_period, bw_in, bw_out,
         bwusage.bw_out = bw_out
         bwusage.last_ctr_in = last_ctr_in
         bwusage.last_ctr_out = last_ctr_out
-        bwusage.save(session=session)
+        try:
+            bwusage.save(session=session)
+        except db_exc.DBDuplicateEntry:
+            # NOTE(sirp): Possible race if two greenthreads attempt to create
+            # the usage entry at the same time. First one wins.
+            pass
 
 
 ####################
