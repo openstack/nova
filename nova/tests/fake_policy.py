@@ -185,6 +185,7 @@ policy_data = """
     "compute_extension:v3:os-rescue": "",
     "compute_extension:security_group_default_rules": "",
     "compute_extension:security_groups": "",
+    "compute_extension:v3:os-security-groups": "",
     "compute_extension:server_diagnostics": "",
     "compute_extension:v3:os-server-diagnostics": "",
     "compute_extension:server_password": "",
