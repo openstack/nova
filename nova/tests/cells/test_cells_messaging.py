@@ -1108,6 +1108,54 @@ class CellsTargetedMethodsTestCase(test.TestCase):
                           self.tgt_methods_cls._call_compute_api_with_obj,
                           self.ctxt, instance, 'snapshot', 'name')
 
+    def _instance_update_helper(self, admin_state_reset):
+        class FakeMessage(object):
+            pass
+
+        message = FakeMessage()
+        message.ctxt = self.ctxt
+
+        instance = instance_obj.Instance()
+        instance.cell_name = self.tgt_cell_name
+        instance.obj_reset_changes()
+        instance.task_state = 'meow'
+        instance.vm_state = 'wuff'
+        instance.user_data = 'foo'
+        self.assertEqual(set(['user_data', 'vm_state', 'task_state']),
+                         instance.obj_what_changed())
+
+        self.mox.StubOutWithMock(instance, 'save')
+
+        def _check_object(*args, **kwargs):
+            # task_state and vm_state changes should have been cleared
+            # before calling save()
+            if admin_state_reset:
+                self.assertEqual(
+                        set(['user_data', 'vm_state', 'task_state']),
+                        instance.obj_what_changed())
+            else:
+                self.assertEqual(set(['user_data']),
+                                 instance.obj_what_changed())
+
+        instance.save(self.ctxt, expected_task_state='exp_task',
+                      expected_vm_state='exp_vm').WithSideEffects(
+                              _check_object)
+
+        self.mox.ReplayAll()
+
+        self.tgt_methods_cls.instance_update_from_api(
+                message,
+                instance,
+                expected_vm_state='exp_vm',
+                expected_task_state='exp_task',
+                admin_state_reset=admin_state_reset)
+
+    def test_instance_update_from_api(self):
+        self._instance_update_helper(False)
+
+    def test_instance_update_from_api_admin_state_reset(self):
+        self._instance_update_helper(True)
+
     def _test_instance_action_method(self, method, args, kwargs,
                                      expected_args, expected_kwargs,
                                      expect_result):

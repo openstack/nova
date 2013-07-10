@@ -12,6 +12,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
+
+from nova.cells import opts as cells_opts
+from nova.cells import rpcapi as cells_rpcapi
 from nova import db
 from nova import notifications
 from nova.objects import base
@@ -41,7 +45,9 @@ class Instance(base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Added info_cache
     # Version 1.2: Added security_groups
-    VERSION = '1.2'
+    # Version 1.3: Added expected_vm_state and admin_state_reset to
+    #              save()
+    VERSION = '1.3'
 
     fields = {
         'id': int,
@@ -263,7 +269,8 @@ class Instance(base.NovaObject):
         pass
 
     @base.remotable
-    def save(self, context, expected_task_state=None):
+    def save(self, context, expected_vm_state=None,
+             expected_task_state=None, admin_state_reset=False):
         """Save updates to this instance
 
         Column-wise updates will be made based on the result of
@@ -273,7 +280,34 @@ class Instance(base.NovaObject):
         :param context: Security context
         :param expected_task_state: Optional tuple of valid task states
                                     for the instance to be in.
+        :param expected_vm_state: Optional tuple of valid vm states
+                                  for the instance to be in.
+        :param admin_state_reset: True if admin API is forcing setting
+                                  of task_state/vm_state.
         """
+
+        cell_type = cells_opts.get_cell_type()
+        if cell_type == 'api' and self.cell_name:
+            # NOTE(comstud): We need to stash a copy of ourselves
+            # before any updates are applied.  When we call the save
+            # methods on nested objects, we will lose any changes to
+            # them.  But we need to make sure child cells can tell
+            # what is changed.
+            #
+            # We also need to nuke any updates to vm_state and task_state
+            # unless admin_state_reset is True.  compute cells are
+            # authoritative for their view of vm_state and task_state.
+            stale_instance = copy.deepcopy(self)
+
+            def _handle_cell_update_from_api():
+                cells_api = cells_rpcapi.CellsAPI()
+                cells_api.instance_update_from_api(context, stale_instance,
+                        expected_vm_state,
+                        expected_task_state,
+                        admin_state_reset)
+        else:
+            stale_instance = None
+
         updates = {}
         changes = self.obj_what_changed()
         for field in self.fields:
@@ -282,21 +316,33 @@ class Instance(base.NovaObject):
                 getattr(self, '_save_%s' % field)(context)
             elif field in changes:
                 updates[field] = self[field]
+
+        if not updates:
+            if stale_instance:
+                _handle_cell_update_from_api()
+            return
+
         if expected_task_state is not None:
             updates['expected_task_state'] = expected_task_state
+        if expected_vm_state is not None:
+            updates['expected_vm_state'] = expected_vm_state
 
-        if updates:
-            old_ref, inst_ref = db.instance_update_and_get_original(context,
-                                                                    self.uuid,
-                                                                    updates)
-            expected_attrs = []
-            for attr in INSTANCE_OPTIONAL_FIELDS:
-                if hasattr(self, base.get_attrname(attr)):
-                    expected_attrs.append(attr)
-            Instance._from_db_object(context, self, inst_ref, expected_attrs)
-            if 'vm_state' in changes or 'task_state' in changes:
-                notifications.send_update(context, old_ref, inst_ref)
+        old_ref, inst_ref = db.instance_update_and_get_original(
+                context, self.uuid, updates, update_cells=False)
 
+        if stale_instance:
+            _handle_cell_update_from_api()
+        elif cell_type == 'compute':
+            cells_api = cells_rpcapi.CellsAPI()
+            cells_api.instance_update_at_top(context, inst_ref)
+
+        expected_attrs = []
+        for attr in INSTANCE_OPTIONAL_FIELDS:
+            if hasattr(self, base.get_attrname(attr)):
+                expected_attrs.append(attr)
+        Instance._from_db_object(context, self, inst_ref, expected_attrs)
+        if 'vm_state' in changes or 'task_state' in changes:
+            notifications.send_update(context, old_ref, inst_ref)
         self.obj_reset_changes()
 
     @base.remotable

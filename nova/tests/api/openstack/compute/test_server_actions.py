@@ -45,7 +45,7 @@ def return_server_not_found(*arg, **kwarg):
     raise exception.NotFound()
 
 
-def instance_update(context, instance_uuid, kwargs):
+def instance_update(context, instance_uuid, kwargs, update_cells=True):
     inst = fakes.stub_instance(INSTANCE_IDS[instance_uuid], host='fake_host')
     return (inst, inst)
 

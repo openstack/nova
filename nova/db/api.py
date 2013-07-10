@@ -664,7 +664,11 @@ def instance_update(context, instance_uuid, values, update_cells=True):
     return rv
 
 
-def instance_update_and_get_original(context, instance_uuid, values):
+# FIXME(comstud): 'update_cells' is temporary as we transition to using
+# objects.  When everything is using Instance.save(), we can remove the
+# argument and the RPC to nova-cells.
+def instance_update_and_get_original(context, instance_uuid, values,
+                                     update_cells=True):
     """Set the given properties on an instance and update it. Return
     a shallow copy of the original instance reference, as well as the
     updated one.
@@ -678,10 +682,11 @@ def instance_update_and_get_original(context, instance_uuid, values):
     Raises NotFound if instance does not exist.
     """
     rv = IMPL.instance_update_and_get_original(context, instance_uuid, values)
-    try:
-        cells_rpcapi.CellsAPI().instance_update_at_top(context, rv[1])
-    except Exception:
-        LOG.exception(_("Failed to notify cells of instance update"))
+    if update_cells:
+        try:
+            cells_rpcapi.CellsAPI().instance_update_at_top(context, rv[1])
+        except Exception:
+            LOG.exception(_("Failed to notify cells of instance update"))
     return rv
 
 
