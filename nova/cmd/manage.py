@@ -997,6 +997,14 @@ class InstanceTypeCommands(object):
 class AgentBuildCommands(object):
     """Class for managing agent builds."""
 
+    @args('--os', metavar='<os>', help='os')
+    @args('--architecture', dest='architecture',
+            metavar='<architecture>', help='architecture')
+    @args('--version', metavar='<version>', help='version')
+    @args('--url', metavar='<url>', help='url')
+    @args('--md5hash', metavar='<md5hash>', help='md5hash')
+    @args('--hypervisor', metavar='<hypervisor>',
+            help='hypervisor(default: xen)')
     def create(self, os, architecture, version, url, md5hash,
                 hypervisor='xen'):
         """Creates a new agent build."""
@@ -1008,6 +1016,11 @@ class AgentBuildCommands(object):
                                      'url': url,
                                      'md5hash': md5hash})
 
+    @args('--os', metavar='<os>', help='os')
+    @args('--architecture', dest='architecture',
+            metavar='<architecture>', help='architecture')
+    @args('--hypervisor', metavar='<hypervisor>',
+            help='hypervisor(default: xen)')
     def delete(self, os, architecture, hypervisor='xen'):
         """Deletes an existing agent build."""
         ctxt = context.get_admin_context()
@@ -1015,6 +1028,8 @@ class AgentBuildCommands(object):
                                   hypervisor, os, architecture)
         db.agent_build_destroy(ctxt, agent_build_ref['id'])
 
+    @args('--hypervisor', metavar='<hypervisor>',
+            help='hypervisor(default: None)')
     def list(self, hypervisor=None):
         """Lists all agent builds.
 
@@ -1043,6 +1058,14 @@ class AgentBuildCommands(object):
 
             print
 
+    @args('--os', metavar='<os>', help='os')
+    @args('--architecture', dest='architecture',
+            metavar='<architecture>', help='architecture')
+    @args('--version', metavar='<version>', help='version')
+    @args('--url', metavar='<url>', help='url')
+    @args('--md5hash', metavar='<md5hash>', help='md5hash')
+    @args('--hypervisor', metavar='<hypervisor>',
+            help='hypervisor(default: xen)')
     def modify(self, os, architecture, version, url, md5hash,
                hypervisor='xen'):
         """Update an existing agent build."""
@@ -1079,6 +1102,8 @@ class GetLogCommands(object):
         if error_found == 0:
             print _('No errors in logfiles!')
 
+    @args('--num_entries', metavar='<number of entries>',
+            help='number of entries(default: 10)')
     def syslog(self, num_entries=10):
         """Get <num_entries> of the nova syslog events."""
         entries = int(num_entries)
