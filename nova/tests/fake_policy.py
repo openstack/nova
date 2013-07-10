@@ -121,6 +121,7 @@ policy_data = """
     "compute_extension:v3:os-config-drive": "",
     "compute_extension:console_output": "",
     "compute_extension:consoles": "",
+    "compute_extension:v3:os-remote-consoles": "",
     "compute_extension:coverage_ext": "is_admin:True",
     "compute_extension:v3:os-coverage": "is_admin:True",
     "compute_extension:createserverext": "",
