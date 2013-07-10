@@ -1929,6 +1929,39 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
                           {'id': 11, 'host': 'host2', 'binary': 'binary0',
                            'report_count': 5, 'topic': 'topic2', 'deleted': 0})
 
+    def _pre_upgrade_197(self, engine):
+        abuilds = db_utils.get_table(engine, 'agent_builds')
+        data = [
+            {'hypervisor': 'hyper1', 'os': 'os1', 'architecture': 'arch1',
+             'deleted': 0},
+            {'hypervisor': 'hyper1', 'os': 'os1', 'architecture': 'arch1',
+             'deleted': 0},
+            {'hypervisor': 'hyper2', 'os': 'os1', 'architecture': 'arch1',
+             'deleted': 0},
+        ]
+        for item in data:
+            abuilds.insert().values(item).execute()
+        return data
+
+    def _check_197(self, engine, data):
+        abuilds = db_utils.get_table(engine, 'agent_builds')
+
+        def get_(hypervisor, deleted):
+            deleted_value = 0 if not deleted else abuilds.c.id
+            return abuilds.select().\
+                   where(abuilds.c.hypervisor == hypervisor).\
+                   where(abuilds.c.deleted == deleted_value).\
+                   execute().\
+                   fetchall()
+
+        self.assertEqual(1, len(get_('hyper1', False)))
+        self.assertEqual(1, len(get_('hyper1', True)))
+        self.assertEqual(1, len(get_('hyper2', False)))
+        self.assertRaises(sqlalchemy.exc.IntegrityError,
+                          abuilds.insert().execute,
+                          {'hypervisor': 'hyper2', 'os': 'os1',
+                           'architecture': 'arch1', 'deleted': 0})
+
 
 class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""

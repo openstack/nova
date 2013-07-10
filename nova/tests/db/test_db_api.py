@@ -4328,6 +4328,13 @@ class AgentBuildTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertRaises(exception.AgentBuildNotFound,
             db.agent_build_update, self.ctxt, agent_build.id, {'os': 'OS/2'})
 
+    def test_agent_build_exists(self):
+        values = {'hypervisor': 'kvm', 'os': 'FreeBSD',
+                  'architecture': 'x86_64'}
+        db.agent_build_create(self.ctxt, values)
+        self.assertRaises(exception.AgentBuildExists, db.agent_build_create,
+                          self.ctxt, values)
+
 
 class VirtualInterfaceTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def setUp(self):

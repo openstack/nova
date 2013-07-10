@@ -4354,7 +4354,11 @@ def instance_system_metadata_update(context, instance_uuid, metadata, delete,
 def agent_build_create(context, values):
     agent_build_ref = models.AgentBuild()
     agent_build_ref.update(values)
-    agent_build_ref.save()
+    try:
+        agent_build_ref.save()
+    except db_exc.DBDuplicateEntry:
+        raise exception.AgentBuildExists(hypervisor=values['hypervisor'],
+                        os=values['os'], architecture=values['architecture'])
     return agent_build_ref
 
 
