@@ -18,17 +18,18 @@
 from webob import exc
 
 from nova.api.openstack import common
+from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
 from nova import exception
 
 
-class Controller(object):
+class ServerMetadataController(object):
     """The server metadata API controller for the OpenStack API."""
 
     def __init__(self):
         self.compute_api = compute.API()
-        super(Controller, self).__init__()
+        super(ServerMetadataController, self).__init__()
 
     def _get_metadata(self, context, server_id):
         try:
@@ -178,5 +179,29 @@ class Controller(object):
                     'delete metadata')
 
 
-def create_resource():
-    return wsgi.Resource(Controller())
+class ServerMetadata(extensions.V3APIExtensionBase):
+    """Server Metadata API."""
+    name = "Server Metadata"
+    alias = "server-metadata"
+    namespace = "http://docs.openstack.org/compute/core/server_metadata/v3"
+    version = 1
+
+    def get_resources(self):
+        parent = {'member_name': 'server',
+                  'collection_name': 'servers'}
+        resources = [extensions.ResourceExtension('metadata',
+                                                  ServerMetadataController(),
+                                                  member_name='server_meta',
+                                                  parent=parent,
+                                                  custom_routes_fn=
+                                                  self.server_metadata_map
+                                                  )]
+        return resources
+
+    def get_controller_extensions(self):
+        return []
+
+    def server_metadata_map(self, mapper, wsgi_resource):
+        mapper.connect("metadata", "/servers/{server_id}/metadata",
+                       controller=wsgi_resource,
+                       action='update_all', conditions={"method": ['PUT']})
