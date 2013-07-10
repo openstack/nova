@@ -26,7 +26,8 @@ from nova.openstack.common import log as logging
 
 
 LOG = logging.getLogger(__name__)
-authorize = extensions.extension_authorizer('compute', 'multinic')
+ALIAS = "os-multinic"
+authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
 
 
 class MultinicController(wsgi.Controller):
@@ -83,15 +84,18 @@ class MultinicController(wsgi.Controller):
 
 # Note: The class name is as it has to be for this to be loaded as an
 # extension--only first character capitalized.
-class Multinic(extensions.ExtensionDescriptor):
+class Multinic(extensions.V3APIExtensionBase):
     """Multiple network support."""
 
     name = "Multinic"
-    alias = "NMN"
-    namespace = "http://docs.openstack.org/compute/ext/multinic/api/v1.1"
-    updated = "2011-06-09T00:00:00+00:00"
+    alias = ALIAS
+    namespace = "http://docs.openstack.org/compute/ext/multinic/api/v3"
+    version = 1
 
     def get_controller_extensions(self):
         controller = MultinicController()
         extension = extensions.ControllerExtension(self, 'servers', controller)
         return [extension]
+
+    def get_resources(self):
+        return []

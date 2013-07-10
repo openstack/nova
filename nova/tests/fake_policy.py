@@ -174,6 +174,7 @@ policy_data = """
     "compute_extension:keypairs": "",
     "compute_extension:v3:os-keypairs": "",
     "compute_extension:multinic": "",
+    "compute_extension:v3:os-multinic": "",
     "compute_extension:networks": "",
     "compute_extension:networks:view": "",
     "compute_extension:networks_associate": "",
