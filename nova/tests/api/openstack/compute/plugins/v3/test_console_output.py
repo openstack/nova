@@ -12,6 +12,10 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+
+import string
+import webob
+
 from nova.compute import api as compute_api
 from nova import exception
 from nova.openstack.common import jsonutils
@@ -34,6 +38,10 @@ def fake_get_console_output(self, _context, _instance, tail_length):
 
 def fake_get_console_output_not_ready(self, _context, _instance, tail_length):
     raise exception.InstanceNotReady(instance_id=_instance["uuid"])
+
+
+def fake_get_console_output_all_characters(self, _ctx, _instance, _tail_len):
+    return string.printable
 
 
 def fake_get(self, context, instance_uuid):
@@ -83,6 +91,20 @@ class ConsoleOutputExtensionTest(test.TestCase):
         output = jsonutils.loads(res.body)
         self.assertEqual(res.status_int, 200)
         self.assertEqual(output, {'output': '2\n3\n4'})
+
+    def test_get_console_output_filtered_characters(self):
+        self.stubs.Set(compute_api.API, 'get_console_output',
+                       fake_get_console_output_all_characters)
+        body = {'get_console_output': {}}
+        req = webob.Request.blank('/v3/servers/1/action')
+        req.method = "POST"
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+        res = req.get_response(self.app)
+        output = jsonutils.loads(res.body)
+        self.assertEqual(res.status_int, 200)
+        expect = string.digits + string.letters + string.punctuation + ' \t\n'
+        self.assertEqual(output, {'output': expect})
 
     def test_get_console_output_with_non_integer_length(self):
         req = self._create_request(length_dict={'length': 'NaN'})
