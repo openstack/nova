@@ -21,13 +21,13 @@
 import functools
 import inspect
 
-from nova.cells import rpcapi as cells_rpcapi
 from nova.compute import flavors
 from nova.db import base
 from nova import exception
 from nova.network import floating_ips
 from nova.network import model as network_model
 from nova.network import rpcapi as network_rpcapi
+from nova.objects import instance_info_cache as info_cache_obj
 from nova.openstack.common import log as logging
 from nova import policy
 from nova import utils
@@ -57,38 +57,27 @@ def refresh_cache(f):
             raise Exception(msg)
 
         update_instance_cache_with_nw_info(self, context, instance,
-                nw_info=res, conductor_api=kwargs.get('conductor_api'))
+                                           nw_info=res)
 
         # return the original function's return value
         return res
     return wrapper
 
 
-def update_instance_cache_with_nw_info(api, context, instance,
-                                       nw_info=None, conductor_api=None,
+def update_instance_cache_with_nw_info(api, context, instance, nw_info=None,
                                        update_cells=True):
     try:
         if not isinstance(nw_info, network_model.NetworkInfo):
             nw_info = None
         if not nw_info:
             nw_info = api._get_instance_nw_info(context, instance)
-        # update cache
-        cache = {'network_info': nw_info.json()}
-        if conductor_api:
-            rv = conductor_api.instance_info_cache_update(context,
-                                                          instance,
-                                                          cache)
-        else:
-            rv = api.db.instance_info_cache_update(context,
-                                                   instance['uuid'],
-                                                   cache)
-        if update_cells:
-            cells_api = cells_rpcapi.CellsAPI()
-            try:
-                cells_api.instance_info_cache_update_at_top(context, rv)
-            except Exception:
-                LOG.exception(_("Failed to notify cells of instance info "
-                                "cache update"))
+        # NOTE(comstud): The save() method actually handles updating or
+        # creating the instance.  We don't need to retrieve the object
+        # from the DB first.
+        ic = info_cache_obj.InstanceInfoCache.new(context,
+                                                  instance['uuid'])
+        ic.network_info = nw_info
+        ic.save(update_cells=update_cells)
     except Exception:
         LOG.exception(_('Failed storing info cache'), instance=instance)
 
@@ -378,7 +367,7 @@ class API(base.Base):
                 self.db.network_associate(context, project, network_id, True)
 
     @wrap_check_policy
-    def get_instance_nw_info(self, context, instance, conductor_api=None):
+    def get_instance_nw_info(self, context, instance):
         """Returns all network info related to an instance."""
         result = self._get_instance_nw_info(context, instance)
         # NOTE(comstud): Don't update API cell with new info_cache every
@@ -386,8 +375,7 @@ class API(base.Base):
         # of info_cache causes too many cells messages.  Healing the API
         # will happen separately.
         update_instance_cache_with_nw_info(self, context, instance,
-                                           result, conductor_api,
-                                           update_cells=False)
+                                           result, update_cells=False)
         return result
 
     def _get_instance_nw_info(self, context, instance):

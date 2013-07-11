@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova.cells import opts as cells_opts
+from nova.cells import rpcapi as cells_rpcapi
 from nova import context
 from nova import db
 from nova import exception
@@ -44,18 +46,49 @@ class _TestInstanceInfoCacheObject(object):
                 instance_info_cache.InstanceInfoCache.get_by_instance_uuid,
                 ctxt, 'fake-uuid')
 
-    def test_save(self):
+    def test_new(self):
+        ctxt = context.get_admin_context()
+        obj = instance_info_cache.InstanceInfoCache.new(ctxt,
+                                                        'fake-uuid')
+        self.assertEqual(set(['instance_uuid', 'network_info']),
+                         obj.obj_what_changed())
+        self.assertEqual('fake-uuid', obj.instance_uuid)
+        self.assertEqual(None, obj.network_info)
+
+    def _save_helper(self, cell_type, update_cells):
+        obj = instance_info_cache.InstanceInfoCache()
+        cells_api = cells_rpcapi.CellsAPI()
+
         ctxt = context.get_admin_context()
         self.mox.StubOutWithMock(db, 'instance_info_cache_update')
+        self.mox.StubOutWithMock(cells_opts, 'get_cell_type')
+        self.mox.StubOutWithMock(cells_rpcapi, 'CellsAPI',
+                                 use_mock_anything=True)
+        self.mox.StubOutWithMock(cells_api,
+                                 'instance_info_cache_update_at_top')
         nwinfo = network_model.NetworkInfo.hydrate([{'address': 'foo'}])
-        db.instance_info_cache_update(ctxt, 'fake-uuid',
-                                      {'network_info': nwinfo.json()})
+        db.instance_info_cache_update(
+                ctxt, 'fake-uuid',
+                {'network_info': nwinfo.json()}).AndReturn('foo')
+        if update_cells:
+            cells_opts.get_cell_type().AndReturn(cell_type)
+            if cell_type == 'compute':
+                cells_rpcapi.CellsAPI().AndReturn(cells_api)
+                cells_api.instance_info_cache_update_at_top(ctxt, 'foo')
         self.mox.ReplayAll()
-        obj = instance_info_cache.InstanceInfoCache()
         obj._context = ctxt
         obj.instance_uuid = 'fake-uuid'
         obj.network_info = nwinfo
-        obj.save()
+        obj.save(update_cells=update_cells)
+
+    def test_save_with_update_cells_and_compute_cell(self):
+        self._save_helper('compute', True)
+
+    def test_save_with_update_cells_and_non_compute_cell(self):
+        self._save_helper(None, True)
+
+    def test_save_without_update_cells(self):
+        self._save_helper(None, False)
 
 
 class TestInstanceInfoCacheObject(test_objects._LocalTest,

@@ -4415,8 +4415,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.conductor_api.instance_get_by_uuid(
             self.context, fake_instance['uuid']).AndReturn(fake_instance)
         self.compute.network_api.get_instance_nw_info(self.context,
-                fake_instance, conductor_api=self.compute.conductor_api
-                ).AndReturn(fake_nw_info)
+                fake_instance).AndReturn(fake_nw_info)
 
         self.mox.ReplayAll()
 
@@ -7699,7 +7698,7 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_detach_interface(self):
         nwinfo, port_id = self.test_attach_interface()
-        self.stubs.Set(self.compute.network_api, 'get_instance_nw_info',
+        self.stubs.Set(self.compute, '_get_instance_nw_info',
                        lambda *a, **k: nwinfo)
         self.stubs.Set(self.compute.network_api,
                        'deallocate_port_for_instance',

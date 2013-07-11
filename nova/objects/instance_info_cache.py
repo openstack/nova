@@ -12,16 +12,22 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova.cells import opts as cells_opts
+from nova.cells import rpcapi as cells_rpcapi
 from nova import db
 from nova import exception
 from nova.objects import base
 from nova.objects import utils
+from nova.openstack.common import log as logging
+
+LOG = logging.getLogger(__name__)
 
 
 class InstanceInfoCache(base.NovaObject):
-    VERSION = '1.1'
+    VERSION = '1.2'
     # Version 1.0: Initial version
     # Version 1.1: Converted network_info to store the model.
+    # Version 1.2: Added new() and update_cells kwarg to save().
 
     fields = {
         'instance_uuid': str,
@@ -41,6 +47,21 @@ class InstanceInfoCache(base.NovaObject):
         info_cache._context = context
         return info_cache
 
+    @classmethod
+    def new(cls, context, instance_uuid):
+        """Create an InfoCache object that can be used to create the DB
+        entry for the first time.
+
+        When save()ing this object, the info_cache_update() DB call
+        will properly handle creating it if it doesn't exist already.
+        """
+        info_cache = cls()
+        info_cache.instance_uuid = instance_uuid
+        info_cache.network_info = None
+        info_cache._context = context
+        # Leave the fields dirty
+        return info_cache
+
     @base.remotable_classmethod
     def get_by_instance_uuid(cls, context, instance_uuid):
         db_obj = db.instance_info_cache_get(context, instance_uuid)
@@ -49,10 +70,24 @@ class InstanceInfoCache(base.NovaObject):
                     instance_uuid=instance_uuid)
         return InstanceInfoCache._from_db_object(context, cls(), db_obj)
 
+    @staticmethod
+    def _info_cache_cells_update(ctxt, info_cache):
+        cell_type = cells_opts.get_cell_type()
+        if cell_type != 'compute':
+            return
+        cells_api = cells_rpcapi.CellsAPI()
+        try:
+            cells_api.instance_info_cache_update_at_top(ctxt, info_cache)
+        except Exception:
+            LOG.exception(_("Failed to notify cells of instance info "
+                            "cache update"))
+
     @base.remotable
-    def save(self, context):
+    def save(self, context, update_cells=True):
         if 'network_info' in self.obj_what_changed():
             nw_info_json = self._attr_network_info_to_primitive()
-            db.instance_info_cache_update(context, self.instance_uuid,
-                                          {'network_info': nw_info_json})
-            self.obj_reset_changes()
+            rv = db.instance_info_cache_update(context, self.instance_uuid,
+                                               {'network_info': nw_info_json})
+            if update_cells and rv:
+                self._info_cache_cells_update(context, rv)
+        self.obj_reset_changes()

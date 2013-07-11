@@ -290,8 +290,7 @@ class MetadataTestCase(test.TestCase):
 
         network_api.API.get_instance_nw_info(
             mox.IgnoreArg(),
-            mox.IgnoreArg(),
-            conductor_api=mox.IgnoreArg()).AndReturn(network_info_from_api)
+            mox.IgnoreArg()).AndReturn(network_info_from_api)
 
         self.mox.StubOutWithMock(netutils, "get_injected_network_template")
 
