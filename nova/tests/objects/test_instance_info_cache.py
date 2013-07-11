@@ -14,6 +14,8 @@
 
 from nova import context
 from nova import db
+from nova import exception
+from nova.network import model as network_model
 from nova.objects import instance_info_cache
 from nova.tests.objects import test_objects
 
@@ -21,26 +23,38 @@ from nova.tests.objects import test_objects
 class _TestInstanceInfoCacheObject(object):
     def test_get_by_instance_uuid(self):
         ctxt = context.get_admin_context()
+        nwinfo = network_model.NetworkInfo.hydrate([{'address': 'foo'}])
         self.mox.StubOutWithMock(db, 'instance_info_cache_get')
         db.instance_info_cache_get(ctxt, 'fake-uuid').AndReturn(
-            {'instance_uuid': 'fake-uuid', 'network_info': 'foo'})
+            {'instance_uuid': 'fake-uuid', 'network_info': nwinfo.json()})
         self.mox.ReplayAll()
         obj = instance_info_cache.InstanceInfoCache.get_by_instance_uuid(
             ctxt, 'fake-uuid')
         self.assertEqual(obj.instance_uuid, 'fake-uuid')
-        self.assertEqual(obj.network_info, 'foo')
+        self.assertEqual(obj.network_info, nwinfo)
         self.assertRemotes()
+
+    def test_get_by_instance_uuid_no_entries(self):
+        ctxt = context.get_admin_context()
+        self.mox.StubOutWithMock(db, 'instance_info_cache_get')
+        db.instance_info_cache_get(ctxt, 'fake-uuid').AndReturn(None)
+        self.mox.ReplayAll()
+        self.assertRaises(
+                exception.InstanceInfoCacheNotFound,
+                instance_info_cache.InstanceInfoCache.get_by_instance_uuid,
+                ctxt, 'fake-uuid')
 
     def test_save(self):
         ctxt = context.get_admin_context()
         self.mox.StubOutWithMock(db, 'instance_info_cache_update')
+        nwinfo = network_model.NetworkInfo.hydrate([{'address': 'foo'}])
         db.instance_info_cache_update(ctxt, 'fake-uuid',
-                                      {'network_info': 'foo'})
+                                      {'network_info': nwinfo.json()})
         self.mox.ReplayAll()
         obj = instance_info_cache.InstanceInfoCache()
         obj._context = ctxt
         obj.instance_uuid = 'fake-uuid'
-        obj.network_info = 'foo'
+        obj.network_info = nwinfo
         obj.save()
 
 

@@ -18,6 +18,7 @@ import datetime
 import iso8601
 import netaddr
 
+from nova.network import model as network_model
 from nova.openstack.common import timeutils
 
 
@@ -76,6 +77,15 @@ def nested_object_or_none(objclass):
             return val
         raise ValueError('An object of class %s is required here' % objclass)
     return validator
+
+
+def network_model_or_none(val):
+    """Validate/Convert to a network_model.NetworkInfo, or None."""
+    if val is None:
+        return val
+    if isinstance(val, network_model.NetworkInfo):
+        return val
+    return network_model.NetworkInfo.hydrate(val)
 
 
 def dt_serializer(name):

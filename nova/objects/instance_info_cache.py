@@ -13,15 +13,25 @@
 #    under the License.
 
 from nova import db
+from nova import exception
 from nova.objects import base
 from nova.objects import utils
 
 
 class InstanceInfoCache(base.NovaObject):
+    VERSION = '1.1'
+    # Version 1.0: Initial version
+    # Version 1.1: Converted network_info to store the model.
+
     fields = {
         'instance_uuid': str,
-        'network_info': utils.str_or_none,
+        'network_info': utils.network_model_or_none,
         }
+
+    def _attr_network_info_to_primitive(self):
+        if self.network_info is None:
+            return None
+        return self.network_info.json()
 
     @staticmethod
     def _from_db_object(context, info_cache, db_obj):
@@ -34,11 +44,15 @@ class InstanceInfoCache(base.NovaObject):
     @base.remotable_classmethod
     def get_by_instance_uuid(cls, context, instance_uuid):
         db_obj = db.instance_info_cache_get(context, instance_uuid)
+        if not db_obj:
+            raise exception.InstanceInfoCacheNotFound(
+                    instance_uuid=instance_uuid)
         return InstanceInfoCache._from_db_object(context, cls(), db_obj)
 
     @base.remotable
     def save(self, context):
         if 'network_info' in self.obj_what_changed():
+            nw_info_json = self._attr_network_info_to_primitive()
             db.instance_info_cache_update(context, self.instance_uuid,
-                                          {'network_info': self.network_info})
+                                          {'network_info': nw_info_json})
             self.obj_reset_changes()

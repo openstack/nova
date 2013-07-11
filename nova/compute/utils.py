@@ -27,6 +27,7 @@ from nova.compute import flavors
 from nova import exception
 from nova.network import model as network_model
 from nova import notifications
+from nova.objects import instance as instance_obj
 from nova.openstack.common import log
 from nova.openstack.common.notifier import api as notifier_api
 from nova.openstack.common import timeutils
@@ -276,9 +277,14 @@ def notify_about_aggregate_update(context, event_suffix, aggregate_payload):
 
 
 def get_nw_info_for_instance(instance):
+    if isinstance(instance, instance_obj.Instance):
+        return instance.info_cache.network_info
+    # FIXME(comstud): Transitional while we convert to objects.
     info_cache = instance['info_cache'] or {}
-    cached_nwinfo = info_cache.get('network_info') or []
-    return network_model.NetworkInfo.hydrate(cached_nwinfo)
+    nw_info = info_cache.get('network_info') or []
+    if not isinstance(nw_info, network_model.NetworkInfo):
+        nw_info = network_model.NetworkInfo.hydrate(nw_info)
+    return nw_info
 
 
 def has_audit_been_run(context, conductor, host, timestamp=None):
