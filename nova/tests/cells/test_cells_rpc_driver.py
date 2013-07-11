@@ -123,7 +123,7 @@ class CellsRPCDriverTestCase(test.TestCase):
         self.driver.send_message_to_cell(cell_state, message)
         expected_server_params = {'hostname': 'rpc_host2',
                                   'password': 'password2',
-                                  'port': 'rpc_port2',
+                                  'port': 3092,
                                   'username': 'username2',
                                   'virtual_host': 'rpc_vhost2'}
         expected_cast_args = (self.ctxt, expected_server_params,
@@ -162,7 +162,7 @@ class CellsRPCDriverTestCase(test.TestCase):
         self.driver.send_message_to_cell(cell_state, message)
         expected_server_params = {'hostname': 'rpc_host2',
                                   'password': 'password2',
-                                  'port': 'rpc_port2',
+                                  'port': 3092,
                                   'username': 'username2',
                                   'virtual_host': 'rpc_vhost2'}
         expected_cast_args = (self.ctxt, expected_server_params,
@@ -217,3 +217,145 @@ class CellsRPCDriverTestCase(test.TestCase):
         dispatcher.process_message(self.ctxt, message.to_json())
         self.assertEqual(message.to_json(), call_info['json_message'])
         self.assertTrue(call_info['process_called'])
+
+
+class ParseTransportURLTestCase(test.TestCase):
+    def test_bad_scheme(self):
+        url = "bad:///"
+        self.assertRaises(ValueError, rpc_driver.parse_transport_url, url)
+
+    def test_query_string(self):
+        url = "rabbit://u:p@h:10/virtual?ssl=1"
+        self.assertRaises(ValueError, rpc_driver.parse_transport_url, url)
+
+    def test_empty(self):
+        url = "rabbit:"
+
+        result = rpc_driver.parse_transport_url(url)
+
+        self.assertEqual(result, {
+            'username': None,
+            'password': None,
+            'hostname': None,
+            'port': None,
+            'virtual_host': None,
+        })
+
+    def test_normal_parsing(self):
+        url = "rabbit://us%65r:p%61ss@host.example.com:10/virtual%5fhost"
+
+        result = rpc_driver.parse_transport_url(url)
+
+        self.assertEqual(result, {
+            'username': 'user',
+            'password': 'pass',
+            'hostname': 'host.example.com',
+            'port': 10,
+            'virtual_host': 'virtual_host',
+        })
+
+    def test_normal_ipv6_parsing(self):
+        url = "rabbit://us%65r:p%61ss@[ffff::1]:10/virtual%5fhost"
+
+        result = rpc_driver.parse_transport_url(url)
+
+        self.assertEqual(result, {
+            'username': 'user',
+            'password': 'pass',
+            'hostname': 'ffff::1',
+            'port': 10,
+            'virtual_host': 'virtual_host',
+        })
+
+    def test_normal_parsing_no_port(self):
+        url = "rabbit://us%65r:p%61ss@host.example.com/virtual%5fhost"
+
+        result = rpc_driver.parse_transport_url(url)
+
+        self.assertEqual(result, {
+            'username': 'user',
+            'password': 'pass',
+            'hostname': 'host.example.com',
+            'port': None,
+            'virtual_host': 'virtual_host',
+        })
+
+    def test_normal_ipv6_parsing_no_port(self):
+        url = "rabbit://us%65r:p%61ss@[ffff::1]/virtual%5fhost"
+
+        result = rpc_driver.parse_transport_url(url)
+
+        self.assertEqual(result, {
+            'username': 'user',
+            'password': 'pass',
+            'hostname': 'ffff::1',
+            'port': None,
+            'virtual_host': 'virtual_host',
+        })
+
+    def test_invalid_ipv6_parsing(self):
+        url = "rabbit://user:pass@[ffff::1/virtual_host"
+        self.assertRaises(ValueError, rpc_driver.parse_transport_url, url)
+
+
+class UnparseTransportURLTestCase(test.TestCase):
+    def test_empty(self):
+        result = rpc_driver.unparse_transport_url({})
+
+        self.assertEqual(result, "rabbit:///")
+
+    def test_username_only(self):
+        result = rpc_driver.unparse_transport_url({'username': 'user/'})
+
+        self.assertEqual(result, "rabbit://user%2F@/")
+
+    def test_password_only(self):
+        result = rpc_driver.unparse_transport_url({'password': 'pass/'})
+
+        self.assertEqual(result, "rabbit://:pass%2F@/")
+
+    def test_hostname_only(self):
+        result = rpc_driver.unparse_transport_url({'hostname': 'example.com'})
+
+        self.assertEqual(result, "rabbit://example.com/")
+
+    def test_hostname_v6_only(self):
+        result = rpc_driver.unparse_transport_url({'hostname': 'ffff::1'})
+
+        self.assertEqual(result, "rabbit://[ffff::1]/")
+
+    def test_port_only(self):
+        result = rpc_driver.unparse_transport_url({'port': 2345})
+
+        self.assertEqual(result, "rabbit://:2345/")
+
+    def test_virtual_host_only(self):
+        result = rpc_driver.unparse_transport_url({'virtual_host': 'virtual/'})
+
+        self.assertEqual(result, "rabbit:///virtual%2F")
+
+    def test_complete_secure(self):
+        transport = {
+            'username': 'user',
+            'password': 'pass',
+            'hostname': 'example.com',
+            'port': 2345,
+            'virtual_host': 'virtual',
+        }
+
+        result = rpc_driver.unparse_transport_url(transport)
+
+        self.assertEqual(result, "rabbit://user:pass@example.com:2345/virtual")
+
+    def test_complete_insecure(self):
+        transport = {
+            'username': 'user',
+            'password': 'pass',
+            'hostname': 'example.com',
+            'port': 2345,
+            'virtual_host': 'virtual',
+        }
+
+        result = rpc_driver.unparse_transport_url(transport, False)
+
+        self.assertEqual(result, "rabbit://user@example.com:2345/virtual")

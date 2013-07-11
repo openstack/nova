@@ -2045,6 +2045,102 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
                           {'host': 'host2', 'aggregate_id': 6,
                            'deleted': 0})
 
+    def _pre_upgrade_200(self, engine):
+        cells = db_utils.get_table(engine, 'cells')
+        shadow_cells = db_utils.get_table(engine, 'shadow_cells')
+        cells.delete().execute()
+        shadow_cells.delete().execute()
+        data = [
+            {
+                'name': 'cell_transport_123',
+                'deleted': 0,
+                'username': 'user_123',
+                'password': 'pass_123',
+                'rpc_host': 'host_123',
+                'rpc_port': 123,
+                'rpc_virtual_host': 'virtual_123',
+            },
+            {
+                'name': 'cell_transport_456',
+                'deleted': 0,
+                'username': 'user_456',
+                'password': 'pass_456',
+                'rpc_host': 'ffff::456',
+                'rpc_port': 456,
+                'rpc_virtual_host': 'virtual_456',
+            },
+        ]
+        for item in data:
+            cells.insert().values(item).execute()
+            shadow_cells.insert().values(item).execute()
+        return data
+
+    def _check_200(self, engine, data):
+        cells = db_utils.get_table(engine, 'cells')
+        shadow_cells = db_utils.get_table(engine, 'shadow_cells')
+
+        def get_(table, name):
+            return table.select().\
+                where(cells.c.name == name).\
+                execute().\
+                first()
+
+        for table in (cells, shadow_cells):
+            cell_123 = get_(cells, 'cell_transport_123')
+            self.assertNotIn('username', cell_123)
+            self.assertNotIn('password', cell_123)
+            self.assertNotIn('rpc_host', cell_123)
+            self.assertNotIn('rpc_port', cell_123)
+            self.assertNotIn('rpc_virtual_host', cell_123)
+            self.assertEqual('rabbit://user_123:pass_123@host_123:123/'
+                             'virtual_123', cell_123['transport_url'])
+
+            cell_456 = get_(cells, 'cell_transport_456')
+            self.assertNotIn('username', cell_456)
+            self.assertNotIn('password', cell_456)
+            self.assertNotIn('rpc_host', cell_456)
+            self.assertNotIn('rpc_port', cell_456)
+            self.assertNotIn('rpc_virtual_host', cell_456)
+            self.assertEqual('rabbit://user_456:pass_456@[ffff::456]:456/'
+                             'virtual_456', cell_456['transport_url'])
+
+        # Verify that the unique constraint still exists
+        self.assertRaises(sqlalchemy.exc.IntegrityError,
+                          cells.insert().execute,
+                          {'name': 'cell_transport_123', 'deleted': 0})
+
+    def _post_downgrade_200(self, engine):
+        cells = db_utils.get_table(engine, 'cells')
+        shadow_cells = db_utils.get_table(engine, 'shadow_cells')
+
+        def get_(table, name):
+            return table.select().\
+                where(cells.c.name == name).\
+                execute().\
+                first()
+
+        for table in (cells, shadow_cells):
+            cell_123 = get_(cells, 'cell_transport_123')
+            self.assertNotIn('transport_url', cell_123)
+            self.assertEqual('user_123', cell_123['username'])
+            self.assertEqual('pass_123', cell_123['password'])
+            self.assertEqual('host_123', cell_123['rpc_host'])
+            self.assertEqual(123, cell_123['rpc_port'])
+            self.assertEqual('virtual_123', cell_123['rpc_virtual_host'])
+
+            cell_456 = get_(cells, 'cell_transport_456')
+            self.assertNotIn('transport_url', cell_456)
+            self.assertEqual('user_456', cell_456['username'])
+            self.assertEqual('pass_456', cell_456['password'])
+            self.assertEqual('ffff::456', cell_456['rpc_host'])
+            self.assertEqual(456, cell_456['rpc_port'])
+            self.assertEqual('virtual_456', cell_456['rpc_virtual_host'])
+
+        # Verify that the unique constraint still exists
+        self.assertRaises(sqlalchemy.exc.IntegrityError,
+                          cells.insert().execute,
+                          {'name': 'cell_transport_123', 'deleted': 0})
+
 
 class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""
