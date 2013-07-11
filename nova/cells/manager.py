@@ -65,7 +65,7 @@ class CellsManager(manager.Manager):
 
     Scheduling requests get passed to the scheduler class.
     """
-    RPC_API_VERSION = '1.10'
+    RPC_API_VERSION = '1.11'
 
     def __init__(self, *args, **kwargs):
         # Mostly for tests.
