@@ -49,6 +49,7 @@ from nova.image import glance
 from nova.network import api as network_api
 from nova.network import model as network_model
 from nova.network.security_group import openstack_driver
+from nova.objects import base as obj_base
 from nova.objects import instance as instance_obj
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
@@ -103,6 +104,23 @@ def get_primitive_instance_by_uuid(context, instance_uuid):
     """
     instance = db.instance_get_by_uuid(context, instance_uuid)
     return jsonutils.to_primitive(instance)
+
+
+def unify_instance(instance):
+    """Return a dict-like instance for both object-initiated and
+    model-initiated sources that can reasonably be compared.
+    """
+    newdict = dict()
+    for k, v in instance.iteritems():
+        if isinstance(v, datetime.datetime):
+            # NOTE(danms): DB models and Instance objects have different
+            # timezone expectations
+            v = v.replace(tzinfo=None)
+        elif k == 'fault':
+            # NOTE(danms): DB models don't have 'fault'
+            continue
+        newdict[k] = v
+    return newdict
 
 
 class FakeSchedulerAPI(object):
@@ -6538,8 +6556,12 @@ class ComputeAPITestCase(BaseTestCase):
     def test_get(self):
         # Test get instance.
         exp_instance = self._create_fake_instance()
-        expected = dict(exp_instance.iteritems())
-        expected['name'] = exp_instance['name']
+        # NOTE(danms): Transform the db object in a similar way as
+        # the API method will do.
+        expected = obj_base.obj_to_primitive(
+            instance_obj.Instance._from_db_object(
+                self.context, instance_obj.Instance(), exp_instance,
+                instance_obj.INSTANCE_DEFAULT_FIELDS + ['fault']))
 
         def fake_db_get(_context, _instance_uuid, columns_to_join=None):
             return exp_instance
@@ -6547,14 +6569,19 @@ class ComputeAPITestCase(BaseTestCase):
         self.stubs.Set(db, 'instance_get_by_uuid', fake_db_get)
 
         instance = self.compute_api.get(self.context, exp_instance['uuid'])
-        self.assertEquals(expected, instance)
+        self.assertEquals(unify_instance(expected),
+                          unify_instance(instance))
 
     def test_get_with_admin_context(self):
         # Test get instance.
         c = context.get_admin_context()
         exp_instance = self._create_fake_instance()
-        expected = dict(exp_instance.iteritems())
-        expected['name'] = exp_instance['name']
+        # NOTE(danms): Transform the db object in a similar way as
+        # the API method will do.
+        expected = obj_base.obj_to_primitive(
+            instance_obj.Instance._from_db_object(
+                c, instance_obj.Instance(), exp_instance,
+                instance_obj.INSTANCE_DEFAULT_FIELDS + ['fault']))
 
         def fake_db_get(context, instance_uuid, columns_to_join=None):
             return exp_instance
@@ -6562,13 +6589,18 @@ class ComputeAPITestCase(BaseTestCase):
         self.stubs.Set(db, 'instance_get_by_uuid', fake_db_get)
 
         instance = self.compute_api.get(c, exp_instance['uuid'])
-        self.assertEquals(expected, instance)
+        self.assertEquals(unify_instance(expected),
+                          unify_instance(instance))
 
     def test_get_with_integer_id(self):
         # Test get instance with an integer id.
         exp_instance = self._create_fake_instance()
-        expected = dict(exp_instance.iteritems())
-        expected['name'] = exp_instance['name']
+        # NOTE(danms): Transform the db object in a similar way as
+        # the API method will do.
+        expected = obj_base.obj_to_primitive(
+            instance_obj.Instance._from_db_object(
+                self.context, instance_obj.Instance(), exp_instance,
+                instance_obj.INSTANCE_DEFAULT_FIELDS + ['fields']))
 
         def fake_db_get(_context, _instance_id, columns_to_join=None):
             return exp_instance
@@ -6576,7 +6608,8 @@ class ComputeAPITestCase(BaseTestCase):
         self.stubs.Set(db, 'instance_get', fake_db_get)
 
         instance = self.compute_api.get(self.context, exp_instance['id'])
-        self.assertEquals(expected, instance)
+        self.assertEquals(unify_instance(expected),
+                          unify_instance(instance))
 
     def test_get_all_by_name_regexp(self):
         # Test searching instances by name (display_name).

@@ -1443,11 +1443,15 @@ class API(base.Base):
     def get(self, context, instance_id, want_objects=False):
         """Get a single instance with the given instance_id."""
         # NOTE(ameade): we still need to support integer ids for ec2
+        expected_attrs = ['metadata', 'system_metadata',
+                          'security_groups', 'info_cache']
         try:
             if uuidutils.is_uuid_like(instance_id):
-                instance = self.db.instance_get_by_uuid(context, instance_id)
+                instance = instance_obj.Instance.get_by_uuid(
+                    context, instance_id, expected_attrs=expected_attrs)
             elif utils.is_int_like(instance_id):
-                instance = self.db.instance_get(context, instance_id)
+                instance = instance_obj.Instance.get_by_id(
+                    context, instance_id, expected_attrs=expected_attrs)
             else:
                 raise exception.InstanceNotFound(instance_id=instance_id)
         except exception.InvalidID:
@@ -1455,16 +1459,9 @@ class API(base.Base):
 
         check_policy(context, 'get', instance)
 
-        if want_objects:
-            inst = instance_obj.Instance._from_db_object(
-                context, instance_obj.Instance(), instance,
-                expected_attrs=['metadata', 'system_metadata',
-                                'security_groups', 'info_cache'])
-        else:
-            inst = dict(instance.iteritems())
-            # NOTE(comstud): Doesn't get returned with iteritems
-            inst['name'] = instance['name']
-        return inst
+        if not want_objects:
+            instance = obj_base.obj_to_primitive(instance)
+        return instance
 
     def get_all(self, context, search_opts=None, sort_key='created_at',
                 sort_dir='desc', limit=None, marker=None, want_objects=False):

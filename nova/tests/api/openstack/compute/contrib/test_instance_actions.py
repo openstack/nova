@@ -27,6 +27,7 @@ from nova import exception
 from nova.openstack.common import policy
 from nova import test
 from nova.tests.api.openstack import fakes
+from nova.tests import fake_instance
 from nova.tests import fake_instance_actions
 
 FAKE_UUID = fake_instance_actions.FAKE_UUID
@@ -60,9 +61,11 @@ class InstanceActionsPolicyTest(test.TestCase):
                                policy.parse_rule('project_id:%(project_id)s')})
         policy.set_rules(rules)
 
-        def fake_instance_get_by_uuid(context, instance_id):
-            return {'name': 'fake', 'project_id': '%s_unequal' %
-                                                            context.project_id}
+        def fake_instance_get_by_uuid(context, instance_id,
+                                      columns_to_join=None):
+            return fake_instance.fake_db_instance(
+                **{'name': 'fake', 'project_id': '%s_unequal' %
+                       context.project_id})
 
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
         req = fakes.HTTPRequest.blank('/v2/123/servers/12/os-instance-actions')
@@ -75,9 +78,11 @@ class InstanceActionsPolicyTest(test.TestCase):
                                policy.parse_rule('project_id:%(project_id)s')})
         policy.set_rules(rules)
 
-        def fake_instance_get_by_uuid(context, instance_id):
-            return {'name': 'fake', 'project_id': '%s_unequal' %
-                                                            context.project_id}
+        def fake_instance_get_by_uuid(context, instance_id,
+                                      columns_to_join=None):
+            return fake_instance.fake_db_instance(
+                **{'name': 'fake', 'project_id': '%s_unequal' %
+                       context.project_id})
 
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
         req = fakes.HTTPRequest.blank(
