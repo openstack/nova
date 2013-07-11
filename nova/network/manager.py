@@ -148,7 +148,7 @@ network_opts = [
                      'deleted in VLAN network mode with multi hosted '
                      'networks'),
     cfg.BoolOpt('force_dhcp_release',
-                default=False,
+                default=True,
                 help='If True, send a dhcp release on instance termination'),
     cfg.BoolOpt('share_dhcp_address',
                 default=False,
