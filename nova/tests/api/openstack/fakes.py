@@ -469,8 +469,8 @@ def stub_instance(id, user_id=None, project_id=None, host=None,
                   power_state=None, nw_cache=None, metadata=None,
                   security_groups=None, root_device_name=None,
                   limit=None, marker=None,
-                  launched_at=datetime.datetime.utcnow(),
-                  terminated_at=datetime.datetime.utcnow(),
+                  launched_at=timeutils.utcnow(),
+                  terminated_at=timeutils.utcnow(),
                   availability_zone=''):
 
     if user_id is None:

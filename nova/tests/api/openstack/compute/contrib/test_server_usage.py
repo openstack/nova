@@ -94,7 +94,7 @@ class ServerUsageTest(test.TestCase):
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 200)
-        now = datetime.datetime.utcnow()
+        now = timeutils.utcnow()
         timeutils.set_time_override(now)
         self.assertServerUsage(self._get_server(res.body),
                                launched_at=DATE1,

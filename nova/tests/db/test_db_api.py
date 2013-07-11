@@ -88,7 +88,7 @@ def _quota_reserve(context, project_id):
         sqlalchemy_api.QUOTA_SYNC_FUNCTIONS[sync_name] = getattr(
             sqlalchemy_api, sync_name)
     return db.quota_reserve(context, resources, quotas, deltas,
-                    datetime.datetime.utcnow(), datetime.datetime.utcnow(),
+                    timeutils.utcnow(), timeutils.utcnow(),
                     datetime.timedelta(days=1), project_id)
 
 
@@ -835,8 +835,7 @@ class ReservationTestCase(test.TestCase, ModelsObjectComparatorMixin):
                 'project_id': 'project1',
                 'resource': 'resource',
                 'delta': 42,
-                'expire': datetime.datetime.utcnow() +
-                                        datetime.timedelta(days=1),
+                'expire': timeutils.utcnow() + datetime.timedelta(days=1),
                 'usage': {'id': 1}}
 
     def test_reservation_create(self):
@@ -896,8 +895,8 @@ class ReservationTestCase(test.TestCase, ModelsObjectComparatorMixin):
                                             self.ctxt, 'project1'))
 
     def test_reservation_expire(self):
-        self.values['expire'] = datetime.datetime.utcnow() + datetime.\
-                        timedelta(days=1)
+        self.values['expire'] = timeutils.utcnow() + datetime.timedelta(days=1)
+
         _quota_reserve(self.ctxt, 'project1')
         db.reservation_expire(self.ctxt)
 

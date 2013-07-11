@@ -1145,7 +1145,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
 
     # migration 173, add unique constraint to keypairs
     def _pre_upgrade_173(self, engine):
-        created_at = [datetime.datetime.now() for x in range(0, 7)]
+        created_at = [timeutils.utcnow() for x in range(0, 7)]
         fake_keypairs = [dict(name='key1', user_id='1a',
                               created_at=created_at[0],
                               deleted=0),
@@ -1167,7 +1167,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         # is applied to the key_pairs table or not.
         insert = keypairs.insert()
         duplicate_keypair = dict(name='key4', user_id='4a',
-                        created_at=datetime.datetime.now(),
+                        created_at=timeutils.utcnow(),
                         deleted=0)
         insert.execute(duplicate_keypair)
         # Insert again
@@ -1228,12 +1228,12 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         volume_usage_cache = db_utils.get_table(engine, 'volume_usage_cache')
         fake_usage = {'volume_id': 'fake_volume_id',
                       'instance_id': 10,
-                      'tot_last_refreshed': datetime.datetime.now(),
+                      'tot_last_refreshed': timeutils.utcnow(),
                       'tot_reads': 2,
                       'tot_read_bytes': 3,
                       'tot_writes': 4,
                       'tot_write_bytes': 5,
-                      'curr_last_refreshed': datetime.datetime.now(),
+                      'curr_last_refreshed': timeutils.utcnow(),
                       'curr_reads': 6,
                       'curr_read_bytes': 7,
                       'curr_writes': 8,

@@ -422,7 +422,7 @@ class SimpleTenantUsageControllerTest(test.TestCase):
         self.compute_api = FakeComputeAPI()
         self.context = None
 
-        now = datetime.datetime.now()
+        now = timeutils.utcnow()
         self.baseinst = dict(display_name='foo',
                              launched_at=now - datetime.timedelta(1),
                              terminated_at=now,

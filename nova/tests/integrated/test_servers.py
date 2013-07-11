@@ -146,7 +146,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
     def _force_reclaim(self):
         # Make sure that compute manager thinks the instance is
         # old enough to be expired
-        the_past = datetime.datetime.utcnow() + datetime.timedelta(hours=1)
+        the_past = timeutils.utcnow() + datetime.timedelta(hours=1)
         timeutils.set_time_override(override_time=the_past)
         ctxt = context.get_admin_context()
         self.compute._reclaim_queued_deletes(ctxt)

@@ -119,7 +119,7 @@ class TestMetaclass(test.TestCase):
 
 class TestUtils(test.TestCase):
     def test_datetime_or_none(self):
-        naive_dt = datetime.datetime.now()
+        naive_dt = timeutils.utcnow()
         dt = timeutils.parse_isotime(timeutils.isotime(naive_dt))
         self.assertEqual(utils.datetime_or_none(dt), dt)
         self.assertEqual(utils.datetime_or_none(dt),

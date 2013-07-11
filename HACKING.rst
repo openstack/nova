@@ -11,6 +11,8 @@ Nova Specific Commandments
 - ``nova.db`` imports are not allowed in ``nova/virt/*``
 - [N309] no db session in public API methods (disabled)
   This enforces a guideline defined in ``nova.openstack.common.db.sqlalchemy.session``
+- [N310] timeutils.utcnow() wrapper must be used instead of direct calls to
+  datetime.datetime.utcnow() to make it easy to override its return value in tests
 
 Creating Unit Tests
 -------------------
