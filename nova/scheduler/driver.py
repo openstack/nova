@@ -258,15 +258,13 @@ class Scheduler(object):
         # If dest is not specified, have scheduler pick one.
         if dest is None:
             instance_type = instance_types.extract_instance_type(instance_ref)
-            if not instance_ref['image_ref']:
-                image = None
-            else:
-                image = self.image_service.show(context,
-                                                instance_ref['image_ref'])
             request_spec = {'instance_properties': instance_ref,
                             'instance_type': instance_type,
-                            'instance_uuids': [instance_ref['uuid']],
-                            'image': image}
+                            'instance_uuids': [instance_ref['uuid']]}
+            if instance_ref['image_ref']:
+                image = self.image_service.show(context,
+                                                instance_ref['image_ref'])
+                request_spec['image'] = image
             filter_properties = {'ignore_hosts': ignore_hosts}
             return self.select_hosts(context, request_spec,
                                      filter_properties)[0]
