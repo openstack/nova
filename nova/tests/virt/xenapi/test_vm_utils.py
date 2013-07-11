@@ -915,7 +915,6 @@ class GenerateDiskTestCase(stubs.XenAPITestBase):
         stubs.stubout_session(self.stubs, fake.SessionBase)
         driver = xenapi_conn.XenAPIDriver(False)
         self.session = driver._session
-        fake.create_local_srs()
         self.vm_ref = fake.create_vm("foo", "Running")
 
     def tearDown(self):

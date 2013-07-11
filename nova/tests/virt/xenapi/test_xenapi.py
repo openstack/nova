@@ -320,8 +320,6 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
                                    'Dom0IptablesFirewallDriver',
                    xenapi_connection_url='test_url',
                    xenapi_connection_password='test_pass',)
-        xenapi_fake.create_local_srs()
-        xenapi_fake.create_local_pifs()
         db_fakes.stub_out_db_instance_api(self.stubs)
         xenapi_fake.create_network('fake', CONF.flat_network_bridge)
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
@@ -1425,7 +1423,6 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         db_fakes.stub_out_db_instance_api(self.stubs)
         xenapi_fake.create_network('fake', CONF.flat_network_bridge)
-        xenapi_fake.create_local_srs()
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id, self.project_id)
@@ -1916,7 +1913,6 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
         self.flags(xenapi_connection_url='test_url',
                    xenapi_connection_password='test_pass')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
-        xenapi_fake.create_local_srs()
         self.conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
 
     def test_host_state(self):
@@ -2355,8 +2351,6 @@ class XenAPIDom0IptablesFirewallTestCase(stubs.XenAPITestBase):
                    instance_name_template='%d',
                    firewall_driver='nova.virt.xenapi.firewall.'
                                    'Dom0IptablesFirewallDriver')
-        xenapi_fake.create_local_srs()
-        xenapi_fake.create_local_pifs()
         self.user_id = 'mappin'
         self.project_id = 'fake'
         stubs.stubout_session(self.stubs, stubs.FakeSessionForFirewallTests,
@@ -2629,14 +2623,17 @@ class XenAPISRSelectionTestCase(stubs.XenAPITestBase):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass',
                                             fake.FakeVirtAPI())
+        # This test is only guaranteed if there is one host in the pool
+        self.assertEqual(len(xenapi_fake.get_all('host')), 1)
         host_ref = xenapi_fake.get_all('host')[0]
-        local_sr = xenapi_fake.create_sr(
-                              name_label='Fake Storage',
-                              type='lvm',
-                              other_config={'i18n-original-value-name_label':
-                                            'Local storage',
-                                            'i18n-key': 'local-storage'},
-                              host_ref=host_ref)
+        pbd_refs = xenapi_fake.get_all('PBD')
+        for pbd_ref in pbd_refs:
+            pbd_rec = xenapi_fake.get_record('PBD', pbd_ref)
+            if pbd_rec['host'] != host_ref:
+                continue
+            sr_rec = xenapi_fake.get_record('SR', pbd_rec['SR'])
+            if sr_rec['other_config']['i18n-key'] == 'local-storage':
+                local_sr = pbd_rec['SR']
         expected = vm_utils.safe_find_sr(session)
         self.assertEqual(local_sr, expected)
 
@@ -2660,7 +2657,7 @@ class XenAPISRSelectionTestCase(stubs.XenAPITestBase):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass',
                                             fake.FakeVirtAPI())
-        pool_ref = xenapi_fake.create_pool('')
+        pool_ref = session.call_xenapi('pool.get_all')[0]
         expected = vm_utils.safe_find_sr(session)
         self.assertEqual(session.call_xenapi('pool.get_default_SR', pool_ref),
                          expected)
@@ -3064,7 +3061,6 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBase):
                    host='host')
         db_fakes.stub_out_db_instance_api(self.stubs)
         self.context = context.get_admin_context()
-        xenapi_fake.create_local_pifs()
 
     def test_live_migration_calls_vmops(self):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
