@@ -4522,7 +4522,7 @@ class ComputeTestCase(BaseTestCase):
                                'status': None})
 
         def fake_instance_get_by_uuid(context, instance_uuid,
-                cols_to_join=None):
+                columns_to_join=None):
             # raise InstanceNotFound exception for uuid 'noexist'
             if instance_uuid == 'noexist':
                 raise exception.InstanceNotFound(instance_id=instance_uuid)
@@ -6541,7 +6541,7 @@ class ComputeAPITestCase(BaseTestCase):
         expected = dict(exp_instance.iteritems())
         expected['name'] = exp_instance['name']
 
-        def fake_db_get(_context, _instance_uuid):
+        def fake_db_get(_context, _instance_uuid, columns_to_join=None):
             return exp_instance
 
         self.stubs.Set(db, 'instance_get_by_uuid', fake_db_get)
@@ -6556,7 +6556,7 @@ class ComputeAPITestCase(BaseTestCase):
         expected = dict(exp_instance.iteritems())
         expected['name'] = exp_instance['name']
 
-        def fake_db_get(context, instance_uuid):
+        def fake_db_get(context, instance_uuid, columns_to_join=None):
             return exp_instance
 
         self.stubs.Set(db, 'instance_get_by_uuid', fake_db_get)
@@ -6570,7 +6570,7 @@ class ComputeAPITestCase(BaseTestCase):
         expected = dict(exp_instance.iteritems())
         expected['name'] = exp_instance['name']
 
-        def fake_db_get(_context, _instance_id):
+        def fake_db_get(_context, _instance_id, columns_to_join=None):
             return exp_instance
 
         self.stubs.Set(db, 'instance_get', fake_db_get)

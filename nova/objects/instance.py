@@ -218,23 +218,36 @@ class Instance(base.NovaObject):
         instance.obj_reset_changes()
         return instance
 
-    @base.remotable_classmethod
-    def get_by_uuid(cls, context, uuid, expected_attrs=None):
-        if expected_attrs is None:
-            expected_attrs = []
-
-        # Construct DB-specific columns from generic expected_attrs
+    @staticmethod
+    def _attrs_to_columns(attrs):
+        """Translate instance attributes into columns needing joining."""
         columns_to_join = []
-        if 'metadata' in expected_attrs:
+        if 'metadata' in attrs:
             columns_to_join.append('metadata')
-        if 'system_metadata' in expected_attrs:
+        if 'system_metadata' in attrs:
             columns_to_join.append('system_metadata')
         # NOTE(danms): The DB API currently always joins info_cache and
         # security_groups for get operations, so don't add them to the
         # list of columns
+        return columns_to_join
 
+    @base.remotable_classmethod
+    def get_by_uuid(cls, context, uuid, expected_attrs=None):
+        if expected_attrs is None:
+            expected_attrs = []
+        columns_to_join = cls._attrs_to_columns(expected_attrs)
         db_inst = db.instance_get_by_uuid(context, uuid,
-                                          columns_to_join)
+                                          columns_to_join=columns_to_join)
+        return Instance._from_db_object(context, cls(), db_inst,
+                                        expected_attrs)
+
+    @base.remotable_classmethod
+    def get_by_id(cls, context, inst_id, expected_attrs=None):
+        if expected_attrs is None:
+            expected_attrs = []
+        columns_to_join = cls._attrs_to_columns(expected_attrs)
+        db_inst = db.instance_get(context, inst_id,
+                                  columns_to_join=columns_to_join)
         return Instance._from_db_object(context, cls(), db_inst,
                                         expected_attrs)
 

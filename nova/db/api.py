@@ -603,9 +603,10 @@ def instance_get_by_uuid(context, uuid, columns_to_join=None):
     return IMPL.instance_get_by_uuid(context, uuid, columns_to_join)
 
 
-def instance_get(context, instance_id):
+def instance_get(context, instance_id, columns_to_join=None):
     """Get an instance or raise if it does not exist."""
-    return IMPL.instance_get(context, instance_id)
+    return IMPL.instance_get(context, instance_id,
+                             columns_to_join=columns_to_join)
 
 
 def instance_get_all(context, columns_to_join=None):
