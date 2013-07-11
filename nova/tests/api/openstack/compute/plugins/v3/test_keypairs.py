@@ -315,6 +315,8 @@ class KeypairsTest(test.TestCase):
     def test_show_server(self):
         self.stubs.Set(db, 'instance_get',
                         fakes.fake_instance_get())
+        self.stubs.Set(db, 'instance_get_by_uuid',
+                        fakes.fake_instance_get())
         req = webob.Request.blank('/v3/servers/1')
         req.headers['Content-Type'] = 'application/json'
         response = req.get_response(self.app)
@@ -326,6 +328,7 @@ class KeypairsTest(test.TestCase):
     def test_detail_servers(self):
         self.stubs.Set(db, 'instance_get_all_by_filters',
                         fakes.fake_instance_get_all_by_filters())
+        self.stubs.Set(db, 'instance_get_by_uuid', fakes.fake_instance_get())
         req = fakes.HTTPRequest.blank('/v3/servers/detail')
         res = req.get_response(self.app)
         server_dicts = jsonutils.loads(res.body)['servers']

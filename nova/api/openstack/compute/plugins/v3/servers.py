@@ -547,18 +547,6 @@ class ServersController(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=err.format_message())
         return servers
 
-    def _add_instance_faults(self, ctxt, instances):
-        faults = self.compute_api.get_instance_faults(ctxt, instances)
-        if faults is not None:
-            for instance in instances:
-                faults_list = faults.get(instance['uuid'], [])
-                try:
-                    instance['fault'] = faults_list[0]
-                except IndexError:
-                    pass
-
-        return instances
-
     def _get_servers(self, req, is_detail):
         """Returns a list of servers, based on any search options specified."""
 
@@ -615,7 +603,8 @@ class ServersController(wsgi.Controller):
             instance_list = self.compute_api.get_all(context,
                                                      search_opts=search_opts,
                                                      limit=limit,
-                                                     marker=marker)
+                                                     marker=marker,
+                                                     want_objects=True)
         except exception.MarkerNotFound as e:
             msg = _('marker [%s] not found') % marker
             raise exc.HTTPBadRequest(explanation=msg)
@@ -625,7 +614,7 @@ class ServersController(wsgi.Controller):
             instance_list = []
 
         if is_detail:
-            self._add_instance_faults(context, instance_list)
+            instance_list.fill_faults()
             response = self._view_builder.detail(req, instance_list)
         else:
             response = self._view_builder.index(req, instance_list)
@@ -635,7 +624,8 @@ class ServersController(wsgi.Controller):
     def _get_server(self, context, req, instance_uuid):
         """Utility function for looking up an instance by uuid."""
         try:
-            instance = self.compute_api.get(context, instance_uuid)
+            instance = self.compute_api.get(context, instance_uuid,
+                                            want_objects=True)
         except exception.NotFound:
             msg = _("Instance could not be found")
             raise exc.HTTPNotFound(explanation=msg)
@@ -799,9 +789,8 @@ class ServersController(wsgi.Controller):
         """Returns server details by server id."""
         try:
             context = req.environ['nova.context']
-            instance = self.compute_api.get(context, id)
+            instance = self.compute_api.get(context, id, want_objects=True)
             req.cache_db_instance(instance)
-            self._add_instance_faults(context, [instance])
             return self._view_builder.show(req, instance)
         except exception.NotFound:
             msg = _("Instance could not be found")
@@ -1065,19 +1054,17 @@ class ServersController(wsgi.Controller):
 
         if 'accessIPv4' in body['server']:
             access_ipv4 = body['server']['accessIPv4']
-            if access_ipv4 is None:
-                access_ipv4 = ''
             if access_ipv4:
                 self._validate_access_ipv4(access_ipv4)
-            update_dict['access_ip_v4'] = access_ipv4.strip()
+            update_dict['access_ip_v4'] = (
+                access_ipv4 and access_ipv4.strip() or None)
 
         if 'accessIPv6' in body['server']:
             access_ipv6 = body['server']['accessIPv6']
-            if access_ipv6 is None:
-                access_ipv6 = ''
             if access_ipv6:
                 self._validate_access_ipv6(access_ipv6)
-            update_dict['access_ip_v6'] = access_ipv6.strip()
+            update_dict['access_ip_v6'] = (
+                access_ipv6 and access_ipv6.strip() or None)
 
         if 'auto_disk_config' in body['server']:
             auto_disk_config = strutils.bool_from_string(
@@ -1093,16 +1080,14 @@ class ServersController(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=msg)
 
         try:
-            instance = self.compute_api.get(ctxt, id)
+            instance = self.compute_api.get(ctxt, id, want_objects=True)
             req.cache_db_instance(instance)
-            self.compute_api.update(ctxt, instance, **update_dict)
+            instance.update(update_dict)
+            instance.save()
         except exception.NotFound:
             msg = _("Instance could not be found")
             raise exc.HTTPNotFound(explanation=msg)
 
-        instance.update(update_dict)
-
-        self._add_instance_faults(ctxt, [instance])
         return self._view_builder.show(req, instance)
 
     @wsgi.response(202)
@@ -1400,7 +1385,6 @@ class ServersController(wsgi.Controller):
 
         instance = self._get_server(context, req, id)
 
-        self._add_instance_faults(context, [instance])
         view = self._view_builder.show(req, instance)
 
         # Add on the adminPass attribute since the view doesn't do it

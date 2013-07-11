@@ -20,6 +20,7 @@ import webob
 
 from nova.api.openstack.compute.plugins.v3 import extended_volumes
 from nova import compute
+from nova.objects import instance as instance_obj
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
@@ -34,7 +35,11 @@ def fake_compute_get(*args, **kwargs):
 
 
 def fake_compute_get_all(*args, **kwargs):
-    return [fakes.stub_instance(1), fakes.stub_instance(2)]
+    db_list = [fakes.stub_instance(1), fakes.stub_instance(2)]
+    fields = instance_obj.INSTANCE_DEFAULT_FIELDS
+    return instance_obj._make_instance_list(args[1],
+                                            instance_obj.InstanceList(),
+                                            db_list, fields)
 
 
 def fake_compute_get_instance_bdms(*args, **kwargs):

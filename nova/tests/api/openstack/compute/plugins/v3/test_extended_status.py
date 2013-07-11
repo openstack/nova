@@ -18,6 +18,7 @@ import webob
 
 from nova.api.openstack.compute.contrib import extended_status
 from nova import compute
+from nova import db
 from nova import exception
 from nova.objects import instance as instance_obj
 from nova.openstack.common import jsonutils
@@ -56,6 +57,7 @@ class ExtendedStatusTest(test.TestCase):
         fakes.stub_out_nw_api(self.stubs)
         self.stubs.Set(compute.api.API, 'get', fake_compute_get)
         self.stubs.Set(compute.api.API, 'get_all', fake_compute_get_all)
+        self.stubs.Set(db, 'instance_get_by_uuid', fake_compute_get)
         self.flags(
             osapi_compute_extension=[
                 'nova.api.openstack.compute.contrib.select_extensions'],
