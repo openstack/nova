@@ -24,7 +24,6 @@ import eventlet
 import greenlet
 from oslo.config import cfg
 
-from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
@@ -119,17 +118,10 @@ class ConsumerBase(object):
 
         self.address = "%s ; %s" % (node_name, jsonutils.dumps(addr_opts))
 
-        self.connect(session)
-
-    def connect(self, session):
-        """Declare the reciever on connect."""
-        self._declare_receiver(session)
+        self.reconnect(session)
 
     def reconnect(self, session):
         """Re-declare the receiver after a qpid reconnect."""
-        self._declare_receiver(session)
-
-    def _declare_receiver(self, session):
         self.session = session
         self.receiver = session.receiver(self.address)
         self.receiver.capacity = 1
@@ -165,9 +157,6 @@ class ConsumerBase(object):
 
     def get_receiver(self):
         return self.receiver
-
-    def get_node_name(self):
-        return self.address.split(';')[0]
 
 
 class DirectConsumer(ConsumerBase):
@@ -218,7 +207,6 @@ class FanoutConsumer(ConsumerBase):
         'topic' is the topic to listen on
         'callback' is the callback to call when messages are received
         """
-        self.conf = conf
 
         super(FanoutConsumer, self).__init__(
             session, callback,
@@ -226,18 +214,6 @@ class FanoutConsumer(ConsumerBase):
             {"durable": False, "type": "fanout"},
             "%s_fanout_%s" % (topic, uuid.uuid4().hex),
             {"exclusive": True})
-
-    def reconnect(self, session):
-        topic = self.get_node_name()
-        params = {
-            'session': session,
-            'topic': topic,
-            'callback': self.callback,
-        }
-
-        self.__init__(conf=self.conf, **params)
-
-        super(FanoutConsumer, self).reconnect(session)
 
 
 class Publisher(object):
@@ -600,7 +576,6 @@ class Connection(object):
 
     def consume_in_thread(self):
         """Consumer from all queues/consumers in a greenthread."""
-        @excutils.forever_retry_uncaught_exceptions
         def _consumer_thread():
             try:
                 self.consume()
