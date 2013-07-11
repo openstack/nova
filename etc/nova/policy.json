@@ -108,8 +108,6 @@
     "compute_extension:floating_ips_bulk": "rule:admin_api",
     "compute_extension:fping": "",
     "compute_extension:fping:all_tenants": "rule:admin_api",
-    "compute_extension:v3:os-fping": "",
-    "compute_extension:v3:os-fping:all_tenants": "rule:admin_api",
     "compute_extension:hide_server_addresses": "is_admin:False",
     "compute_extension:v3:os-hide-server-addresses": "is_admin:False",
     "compute_extension:hosts": "rule:admin_api",

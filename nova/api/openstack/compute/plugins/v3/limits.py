@@ -214,7 +214,6 @@ DEFAULT_LIMITS = [
     Limit("GET", "*changes-since*", ".*changes-since.*", 3,
           utils.TIME_UNITS['MINUTE']),
     Limit("DELETE", "*", ".*", 100, utils.TIME_UNITS['MINUTE']),
-    Limit("GET", "*/os-fping", "^/os-fping", 12, utils.TIME_UNITS['HOUR']),
 ]
 
 
