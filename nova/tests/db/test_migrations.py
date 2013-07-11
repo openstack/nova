@@ -1962,6 +1962,47 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
                           {'hypervisor': 'hyper2', 'os': 'os1',
                            'architecture': 'arch1', 'deleted': 0})
 
+    def _pre_upgrade_198(self, engine):
+        table = db_utils.get_table(engine, 'console_pools')
+        data = [
+            {'host': 'localhost', 'console_type': 'type_1',
+             'compute_host': '192.168.122.8', 'deleted': 0},
+            {'host': 'localhost', 'console_type': 'type_1',
+             'compute_host': '192.168.122.8', 'deleted': 0},
+            {'host': 'localhost', 'console_type': 'type_2',
+             'compute_host': '192.168.122.8', 'deleted': 0},
+        ]
+
+        for item in data:
+            table.insert().values(item).execute()
+        return data
+
+    def _check_198(self, engine, data):
+        table = db_utils.get_table(engine, 'console_pools')
+
+        def get_(host, console_type, compute_host, deleted):
+            deleted_value = 0 if not deleted else table.c.id
+            return table.select()\
+                        .where(table.c.host == host)\
+                        .where(table.c.console_type == console_type)\
+                        .where(table.c.compute_host == compute_host)\
+                        .where(table.c.deleted == deleted_value)\
+                        .execute()\
+                        .fetchall()
+
+        self.assertEqual(
+            1, len(get_('localhost', 'type_1', '192.168.122.8', False)))
+        self.assertEqual(
+            1, len(get_('localhost', 'type_1', '192.168.122.8', True)))
+        self.assertEqual(
+            1, len(get_('localhost', 'type_2', '192.168.122.8', False)))
+        self.assertRaises(
+            sqlalchemy.exc.IntegrityError,
+            table.insert().execute,
+            {'host': 'localhost', 'console_type': 'type_2',
+             'compute_host': '192.168.122.8', 'deleted': 0},
+        )
+
 
 class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""

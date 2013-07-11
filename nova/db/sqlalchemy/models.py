@@ -793,7 +793,11 @@ class DNSDomain(BASE, NovaBase):
 class ConsolePool(BASE, NovaBase):
     """Represents pool of consoles on the same physical node."""
     __tablename__ = 'console_pools'
-    __table_args__ = ()
+    __table_args__ = (
+        schema.UniqueConstraint(
+            "host", "console_type", "compute_host", "deleted",
+            name="uniq_console_pools0host0console_type0compute_host0deleted"),
+    )
     id = Column(Integer, primary_key=True)
     address = Column(types.IPAddress(), nullable=True)
     username = Column(String(255), nullable=True)

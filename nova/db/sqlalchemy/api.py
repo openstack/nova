@@ -3719,7 +3719,14 @@ def migration_get_all_by_filters(context, filters):
 def console_pool_create(context, values):
     pool = models.ConsolePool()
     pool.update(values)
-    pool.save()
+    try:
+        pool.save()
+    except db_exc.DBDuplicateEntry:
+        raise exception.ConsolePoolExists(
+            host=values["host"],
+            console_type=values["console_type"],
+            compute_host=values["compute_host"],
+        )
     return pool
 
 

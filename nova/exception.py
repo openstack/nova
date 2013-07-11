@@ -805,6 +805,12 @@ class ConsolePoolNotFound(NotFound):
     message = _("Console pool %(pool_id)s could not be found.")
 
 
+class ConsolePoolExists(Duplicate):
+    message = _("Console pool with host %(host)s, console_type "
+                "%(console_type)s and compute_host %(compute_host)s "
+                "already exists.")
+
+
 class ConsolePoolNotFoundForHostType(NotFound):
     message = _("Console pool of type %(console_type)s "
                 "for compute host %(compute_host)s "
