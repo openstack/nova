@@ -8156,6 +8156,23 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                          'aggregate.addhost.end')
         self.assertEqual(len(aggr['hosts']), 1)
 
+    def test_add_host_to_multi_az(self):
+        # Ensure we can't add a host to different availability zone
+        values = _create_service_entries(self.context)
+        fake_zone = values.keys()[0]
+        fake_host = values[fake_zone][0]
+        aggr = self.api.create_aggregate(self.context,
+                                         'fake_aggregate', fake_zone)
+        aggr = self.api.add_host_to_aggregate(self.context,
+                                              aggr['id'], fake_host)
+        self.assertEqual(len(aggr['hosts']), 1)
+        fake_zone2 = "another_zone"
+        aggr2 = self.api.create_aggregate(self.context,
+                                         'fake_aggregate2', fake_zone2)
+        self.assertRaises(exception.InvalidAggregateAction,
+                          self.api.add_host_to_aggregate,
+                          self.context, aggr2['id'], fake_host)
+
     def test_add_host_to_aggregate_multiple(self):
         # Ensure we can add multiple hosts to an aggregate.
         values = _create_service_entries(self.context)

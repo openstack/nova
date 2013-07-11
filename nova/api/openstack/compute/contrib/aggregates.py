@@ -159,10 +159,10 @@ class AggregateController(object):
                      {'host': host, 'id': id})
             raise exc.HTTPNotFound()
         except (exception.AggregateHostExists,
-                exception.InvalidAggregateAction):
+                exception.InvalidAggregateAction) as e:
             LOG.info(_('Cannot add host %(host)s in aggregate %(id)s'),
                      {'host': host, 'id': id})
-            raise exc.HTTPConflict()
+            raise exc.HTTPConflict(explanation=e.format_message())
         return self._marshall_aggregate(aggregate)
 
     @get_host_from_body
