@@ -18,12 +18,16 @@
 from webob import exc
 
 from nova.api.openstack import common
+from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import exception
 from nova.image import glance
 
+ALIAS = "os-image-metadata"
+authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
 
-class Controller(object):
+
+class ImageMetadataController(object):
     """The image metadata API controller for the OpenStack API."""
 
     def __init__(self):
@@ -40,12 +44,16 @@ class Controller(object):
     def index(self, req, image_id):
         """Returns the list of metadata for a given instance."""
         context = req.environ['nova.context']
+        authorize(context)
+
         metadata = self._get_image(context, image_id)['properties']
         return dict(metadata=metadata)
 
     @wsgi.serializers(xml=common.MetaItemTemplate)
     def show(self, req, image_id, id):
         context = req.environ['nova.context']
+        authorize(context)
+
         metadata = self._get_image(context, image_id)['properties']
         if id in metadata:
             return {'meta': {id: metadata[id]}}
@@ -56,6 +64,8 @@ class Controller(object):
     @wsgi.deserializers(xml=common.MetadataDeserializer)
     def create(self, req, image_id, body):
         context = req.environ['nova.context']
+        authorize(context)
+
         image = self._get_image(context, image_id)
         if 'metadata' in body:
             for key, value in body['metadata'].iteritems():
@@ -69,6 +79,7 @@ class Controller(object):
     @wsgi.deserializers(xml=common.MetaItemDeserializer)
     def update(self, req, image_id, id, body):
         context = req.environ['nova.context']
+        authorize(context)
 
         try:
             meta = body['meta']
@@ -94,6 +105,8 @@ class Controller(object):
     @wsgi.deserializers(xml=common.MetadataDeserializer)
     def update_all(self, req, image_id, body):
         context = req.environ['nova.context']
+        authorize(context)
+
         image = self._get_image(context, image_id)
         metadata = body.get('metadata', {})
         common.check_img_metadata_properties_quota(context, metadata)
@@ -104,6 +117,8 @@ class Controller(object):
     @wsgi.response(204)
     def delete(self, req, image_id, id):
         context = req.environ['nova.context']
+        authorize(context)
+
         image = self._get_image(context, image_id)
         if id not in image['properties']:
             msg = _("Invalid metadata key")
@@ -112,5 +127,36 @@ class Controller(object):
         self.image_service.update(context, image_id, image, None)
 
 
-def create_resource():
-    return wsgi.Resource(Controller())
+class ImageMetadata(extensions.V3APIExtensionBase):
+    """Image Metadata."""
+
+    name = "Image Metadata"
+    alias = ALIAS
+    namespace = "http://docs.openstack.org/compute/ext/image_metadata/v3"
+    version = 1
+
+    def __init__(self, extension_info):
+        super(ImageMetadata, self).__init__(extension_info)
+        self.image_metadata_controller = ImageMetadataController()
+
+    def get_resources(self):
+        parent = {'member_name': 'os-images',
+                  'collection_name': 'os-images'}
+        resources = [
+            extensions.ResourceExtension(
+                ALIAS,
+                self.image_metadata_controller,
+                parent=parent,
+                custom_routes_fn=self.image_metadata_map)]
+
+        return resources
+
+    def get_controller_extensions(self):
+        return []
+
+    def image_metadata_map(self, mapper, wsgi_resource):
+            mapper.connect("metadata",
+                           "/os-images/{image_id}/os-image-metadata",
+                           controller=self.image_metadata_controller,
+                           action='update_all',
+                           conditions={"method": ['PUT']})
