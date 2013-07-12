@@ -20,7 +20,7 @@ import mox
 
 from nova import context
 from nova import test
-from nova.virt.xenapi.imageupload import glance
+from nova.virt.xenapi.image import glance
 from nova.virt.xenapi import vm_utils
 
 

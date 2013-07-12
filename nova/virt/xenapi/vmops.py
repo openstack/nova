@@ -66,7 +66,7 @@ xenapi_vmops_opts = [
                default='nova.virt.xenapi.vif.XenAPIBridgeDriver',
                help='The XenAPI VIF driver using XenServer Network APIs.'),
     cfg.StrOpt('xenapi_image_upload_handler',
-                default='nova.virt.xenapi.imageupload.glance.GlanceStore',
+                default='nova.virt.xenapi.image.glance.GlanceStore',
                 help='Object Store Driver used to handle image uploads.'),
     ]
 
