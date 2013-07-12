@@ -162,11 +162,12 @@ class LocalAPI(object):
 
     def bw_usage_update(self, context, uuid, mac, start_period,
                         bw_in, bw_out, last_ctr_in, last_ctr_out,
-                        last_refreshed=None):
+                        last_refreshed=None, update_cells=True):
         return self._manager.bw_usage_update(context, uuid, mac, start_period,
                                              bw_in, bw_out,
                                              last_ctr_in, last_ctr_out,
-                                             last_refreshed)
+                                             last_refreshed,
+                                             update_cells=update_cells)
 
     def security_group_get_by_instance(self, context, instance):
         return self._manager.security_group_get_by_instance(context, instance)

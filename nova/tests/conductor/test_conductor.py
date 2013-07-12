@@ -265,7 +265,7 @@ class _BaseTestCase(object):
         update_args = (self.context, 'uuid', 'mac', 0, 10, 20, 5, 10, 20)
         get_args = (self.context, 'uuid', 0, 'mac')
 
-        db.bw_usage_update(*update_args)
+        db.bw_usage_update(*update_args, update_cells=True)
         db.bw_usage_get(*get_args).AndReturn('foo')
 
         self.mox.ReplayAll()

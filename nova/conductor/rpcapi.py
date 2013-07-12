@@ -105,6 +105,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
            block_device_mapping_get_all_by_instance
     1.52 - Pass instance objects for compute_confirm_resize
     1.53 - Added compute_reboot
+    1.54 - Added 'update_cells' argument to bw_usage_update
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -222,13 +223,20 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     def bw_usage_update(self, context, uuid, mac, start_period,
                         bw_in=None, bw_out=None,
                         last_ctr_in=None, last_ctr_out=None,
-                        last_refreshed=None):
-        msg = self.make_msg('bw_usage_update',
-                            uuid=uuid, mac=mac, start_period=start_period,
-                            bw_in=bw_in, bw_out=bw_out,
-                            last_ctr_in=last_ctr_in, last_ctr_out=last_ctr_out,
-                            last_refreshed=last_refreshed)
-        return self.call(context, msg, version='1.5')
+                        last_refreshed=None, update_cells=True):
+        msg_kwargs = dict(uuid=uuid, mac=mac, start_period=start_period,
+                          bw_in=bw_in, bw_out=bw_out, last_ctr_in=last_ctr_in,
+                          last_ctr_out=last_ctr_out,
+                          last_refreshed=last_refreshed)
+
+        if self.can_send_version('1.54'):
+            version = '1.54'
+            msg_kwargs['update_cells'] = update_cells
+        else:
+            version = '1.5'
+
+        msg = self.make_msg('bw_usage_update', **msg_kwargs)
+        return self.call(context, msg, version=version)
 
     def security_group_get_by_instance(self, context, instance):
         instance_p = jsonutils.to_primitive(instance)
