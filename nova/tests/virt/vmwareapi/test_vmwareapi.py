@@ -590,11 +590,13 @@ class VMwareAPIVMTestCase(test.TestCase):
                           self.instance)
 
     def test_get_vnc_console(self):
-        self._create_instance_in_the_db()
         self._create_vm()
+        fake_vm = vmwareapi_fake._get_objects("VirtualMachine").objects[0]
+        fake_vm_id = int(fake_vm.obj.value.replace('vm-', ''))
         vnc_dict = self.conn.get_vnc_console(self.instance)
         self.assertEquals(vnc_dict['host'], "ha-host")
-        self.assertEquals(vnc_dict['port'], 5910)
+        self.assertEquals(vnc_dict['port'], cfg.CONF.vmware.vnc_port +
+                          fake_vm_id % cfg.CONF.vmware.vnc_port_total)
 
     def test_host_ip_addr(self):
         self.assertEquals(self.conn.get_host_ip_addr(), "test_url")
