@@ -79,12 +79,21 @@ class CellState(object):
 
     def get_cell_info(self):
         """Return subset of cell information for OS API use."""
-        db_fields_to_return = ['is_parent', 'weight_scale', 'weight_offset',
-                               'username', 'rpc_host', 'rpc_port']
+        db_fields_to_return = ['is_parent', 'weight_scale', 'weight_offset']
+        url_fields_to_return = {
+            'username': 'username',
+            'hostname': 'rpc_host',
+            'port': 'rpc_port',
+        }
         cell_info = dict(name=self.name, capabilities=self.capabilities)
         if self.db_info:
             for field in db_fields_to_return:
                 cell_info[field] = self.db_info[field]
+
+            url_info = rpc_driver.parse_transport_url(
+                self.db_info['transport_url'])
+            for field, canonical in url_fields_to_return.items():
+                cell_info[canonical] = url_info[field]
         return cell_info
 
     def send_message(self, message):

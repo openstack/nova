@@ -61,6 +61,7 @@ from oslo.config import cfg
 
 from nova.api.ec2 import ec2utils
 from nova import availability_zones
+from nova.cells import rpc_driver
 from nova.compute import flavors
 from nova import config
 from nova import context
@@ -1156,14 +1157,20 @@ class CellCommands(object):
             print "Error: cell type must be 'parent' or 'child'"
             return(2)
 
+        # Set up the transport URL
+        transport = {
+            'username': username,
+            'password': password,
+            'hostname': hostname,
+            'port': int(port),
+            'virtual_host': virtual_host,
+        }
+        transport_url = rpc_driver.unparse_transport_url(transport)
+
         is_parent = cell_type == 'parent'
         values = {'name': name,
                   'is_parent': is_parent,
-                  'username': username,
-                  'password': password,
-                  'rpc_host': hostname,
-                  'rpc_port': int(port),
-                  'rpc_virtual_host': virtual_host,
+                  'transport_url': transport_url,
                   'weight_offset': float(woffset),
                   'weight_scale': float(wscale)}
         ctxt = context.get_admin_context()
@@ -1184,10 +1191,11 @@ class CellCommands(object):
         print fmt % ('-' * 3, '-' * 10, '-' * 6, '-' * 10, '-' * 15,
                 '-' * 5, '-' * 10)
         for cell in cells:
+            transport = rpc_driver.parse_transport_url(cell.transport_url)
             print fmt % (cell.id, cell.name,
                     'parent' if cell.is_parent else 'child',
-                    cell.username, cell.rpc_host,
-                    cell.rpc_port, cell.rpc_virtual_host)
+                    transport['username'], transport['hostname'],
+                    transport['port'], transport['virtual_host'])
         print fmt % ('-' * 3, '-' * 10, '-' * 6, '-' * 10, '-' * 15,
                 '-' * 5, '-' * 10)
 

@@ -5266,14 +5266,10 @@ class CellTestCase(test.TestCase, ModelsObjectComparatorMixin):
         return {
             'name': 'myname',
             'api_url': 'apiurl',
-            'username': 'user',
-            'password': 'passwd',
+            'transport_url': 'transporturl',
             'weight_offset': 0.5,
             'weight_scale': 1.5,
             'is_parent': True,
-            'rpc_host': 'rpchost',
-            'rpc_port': 9999,
-            'rpc_virtual_host': 'virthost'
         }
 
     def _cell_value_modify(self, value, step):
@@ -5305,14 +5301,10 @@ class CellTestCase(test.TestCase, ModelsObjectComparatorMixin):
         db.cell_create(self.ctxt, self._get_cell_base_values())
         new_values = {
             'api_url': 'apiurl1',
-            'username': 'user1',
-            'password': 'passwd1',
+            'transport_url': 'transporturl1',
             'weight_offset': 0.6,
             'weight_scale': 1.6,
             'is_parent': False,
-            'rpc_host': 'rpchost1',
-            'rpc_port': 10000,
-            'rpc_virtual_host': 'virthost1'
         }
         test_cellname = self._get_cell_base_values()['name']
         db.cell_update(self.ctxt, test_cellname, new_values)

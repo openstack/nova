@@ -907,18 +907,12 @@ class Cell(BASE, NovaBase):
     # Name here is the 'short name' of a cell.  For instance: 'child1'
     name = Column(String(255))
     api_url = Column(String(255))
-    # FIXME(comstud): username and password refer to the credentials
-    # used for talking with the AMQP server within a particular cell.
-    # This table needs cleanup to support more generic cells
-    # communication (including via 0mq, for instance)
-    username = Column(String(255))
-    password = Column(String(255))
+
+    transport_url = Column(String(255), nullable=False)
+
     weight_offset = Column(Float(), default=0.0)
     weight_scale = Column(Float(), default=1.0)
     is_parent = Column(Boolean())
-    rpc_host = Column(String(255))
-    rpc_port = Column(Integer())
-    rpc_virtual_host = Column(String(255))
 
 
 class AggregateHost(BASE, NovaBase):

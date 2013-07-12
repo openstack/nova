@@ -20,6 +20,7 @@ from webob import exc
 
 from nova.api.openstack.compute.plugins.v3 import cells as cells_ext
 from nova.api.openstack import xmlutil
+from nova.cells import rpc_driver
 from nova.cells import rpcapi as cells_rpcapi
 from nova import context
 from nova import db
@@ -31,12 +32,12 @@ from nova.tests import utils
 
 
 FAKE_CELLS = [
-        dict(id=1, name='cell1', username='bob', is_parent=True,
+        dict(id=1, name='cell1', is_parent=True,
                 weight_scale=1.0, weight_offset=0.0,
-                rpc_host='r1.example.org', password='xxxx'),
-        dict(id=2, name='cell2', username='alice', is_parent=False,
+                transport_url='rabbit://bob:xxxx@r1.example.org/'),
+        dict(id=2, name='cell2', is_parent=False,
                 weight_scale=1.0, weight_offset=0.0,
-                rpc_host='r2.example.org', password='qwerty')]
+                transport_url='rabbit://alice:qwerty@r2.example.org/')]
 
 
 FAKE_CAPABILITIES = [
@@ -64,10 +65,17 @@ def fake_db_cell_update(context, cell_id, values):
     return cell
 
 
+def insecure_transport_url(url):
+    transport = rpc_driver.parse_transport_url(url)
+    return rpc_driver.unparse_transport_url(transport, False)
+
+
 def fake_cells_api_get_all_cell_info(*args):
     cells = copy.deepcopy(FAKE_CELLS)
-    del cells[0]['password']
-    del cells[1]['password']
+    cells[0]['transport_url'] = insecure_transport_url(
+        cells[0]['transport_url'])
+    cells[1]['transport_url'] = insecure_transport_url(
+        cells[1]['transport_url'])
     for i, cell in enumerate(cells):
         cell['capabilities'] = FAKE_CAPABILITIES[i]
     return cells
@@ -246,7 +254,7 @@ class CellsTest(test.TestCase):
         cell = res_dict['cell']
 
         self.assertEqual(cell['name'], 'cell1')
-        self.assertEqual(cell['rpc_host'], FAKE_CELLS[0]['rpc_host'])
+        self.assertEqual(cell['rpc_host'], 'r1.example.org')
         self.assertEqual(cell['username'], 'zeb')
         self.assertNotIn('password', cell)
 

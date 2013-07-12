@@ -2890,7 +2890,7 @@ class CellsSampleJsonTest(ApiSampleTestBase):
             self.cells_next_id += 1
             cell.update({'id': our_id,
                          'name': 'cell%s' % our_id,
-                         'username': 'username%s' % our_id,
+                         'transport_url': 'rabbit://username%s@/' % our_id,
                          'is_parent': our_id % 2 == 0})
             self.cells.append(cell)
 
