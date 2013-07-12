@@ -2132,6 +2132,13 @@ def _instance_update(context, instance_uuid, values, copy_old_instance=False):
             if key in values and values[key] is not None:
                 values[key] = str(values[key])
 
+        # NOTE(danms): Strip UTC timezones from datetimes, since they're
+        # stored that way in the database
+        for key in ('created_at', 'deleted_at', 'updated_at',
+                    'launched_at', 'terminated_at', 'scheduled_at'):
+            if key in values and values[key]:
+                values[key] = values[key].replace(tzinfo=None)
+
         instance_ref.update(values)
         instance_ref.save(session=session)
 
