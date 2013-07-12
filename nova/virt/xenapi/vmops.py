@@ -87,6 +87,10 @@ DEVICE_CONFIGDRIVE = '3'
 # Note(johngarbutt) HVM guests only support four devices
 # until the PV tools activate, when others before available
 # As such, ephemeral disk only available once PV tools load
+# Note(johngarbutt) When very large ephemeral storage is required,
+# multiple disks may be added. In this case the device id below
+# is the used for the first disk. The second disk will be given
+# next device id, i.e. 5, and so on, until enough space is added.
 DEVICE_EPHEMERAL = '4'
 # Note(johngarbutt) Currently don't support ISO boot during rescue
 # and we must have the ISO visible before the PV drivers start
