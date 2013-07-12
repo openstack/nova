@@ -98,11 +98,20 @@ def populate_filter_properties(filter_properties, host_state):
     """Add additional information to the filter properties after a node has
     been selected by the scheduling process.
     """
-    # Add a retry entry for the selected compute host and node:
-    _add_retry_host(filter_properties, host_state.host,
-                    host_state.nodename)
+    if isinstance(host_state, dict):
+        host = host_state['host']
+        nodename = host_state['nodename']
+        limits = host_state['limits']
+    else:
+        host = host_state.host
+        nodename = host_state.nodename
+        limits = host_state.limits
 
-    _add_oversubscription_policy(filter_properties, host_state)
+    # Adds a retry entry for the selected compute host and node:
+    _add_retry_host(filter_properties, host, nodename)
+
+    # Adds oversubscription policy
+    filter_properties['limits'] = limits
 
 
 def _add_retry_host(filter_properties, host, node):
@@ -115,7 +124,3 @@ def _add_retry_host(filter_properties, host, node):
         return
     hosts = retry['hosts']
     hosts.append([host, node])
-
-
-def _add_oversubscription_policy(filter_properties, host_state):
-    filter_properties['limits'] = host_state.limits

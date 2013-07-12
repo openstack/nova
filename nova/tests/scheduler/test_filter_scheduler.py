@@ -650,7 +650,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                         'num_instances': 1}
         self.mox.ReplayAll()
         dests = sched.select_destinations(fake_context, request_spec, {})
-        (host, node) = (dests[0].host, dests[0].nodename)
+        (host, node) = (dests[0]['host'], dests[0]['nodename'])
         self.assertEquals(host, selected_hosts[0])
         self.assertEquals(node, selected_nodes[0])
 
