@@ -1,10 +1,10 @@
-==========
+==============
 nova-conductor
-==========
+==============
 
---------------------------------
+-----------------------------
 Server for the Nova Conductor
---------------------------------
+-----------------------------
 
 :Author: openstack@lists.launchpad.net
 :Date:   2012-11-16
@@ -29,7 +29,7 @@ OPTIONS
  **General options**
 
 FILES
-========
+=====
 
 * /etc/nova/nova.conf
 
