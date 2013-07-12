@@ -21,6 +21,7 @@ from __future__ import absolute_import
 
 import copy
 import itertools
+import json
 import random
 import shutil
 import sys
@@ -111,8 +112,21 @@ def _create_glance_client(context, host, port, use_ssl, version=1):
         params['ssl_compression'] = False
     else:
         scheme = 'http'
+
     if CONF.auth_strategy == 'keystone':
+        # NOTE(isethi): Glanceclient <= 0.9.0.49 accepts only
+        # keyword 'token', but later versions accept both the
+        # header 'X-Auth-Token' and 'token'
         params['token'] = context.auth_token
+        identity_headers = {
+            'X-Auth-Token': context.auth_token,
+            'X-User-Id': context.user,
+            'X-Tenant-Id': context.tenant,
+            'X-Roles': ','.join(context.roles),
+            'X-Identity-Status': 'Confirmed',
+            'X-Service-Catalog': json.dumps(context.service_catalog),
+        }
+        params['identity_headers'] = identity_headers
     endpoint = '%s://%s:%s' % (scheme, host, port)
     return glanceclient.Client(str(version), endpoint, **params)
 
