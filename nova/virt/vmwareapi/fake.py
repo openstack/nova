@@ -309,7 +309,13 @@ class HostSystem(ManagedObject):
         config.product = product
         summary.config = config
 
+        pnic_do = DataObject()
+        pnic_do.device = "vmnic0"
+        net_info_pnic = DataObject()
+        net_info_pnic.PhysicalNic = [pnic_do]
+
         self.set("summary", summary)
+        self.set("config.network.pnic", net_info_pnic)
 
         if _db_content.get("Network", None) is None:
             create_network()

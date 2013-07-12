@@ -38,7 +38,6 @@ from nova import exception
 from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
 from nova.virt import driver
-from nova.virt.vmwareapi import network_util
 from nova.virt.vmwareapi import vif as vmwarevif
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
@@ -170,13 +169,6 @@ class VMwareVMOps(object):
         vm_folder_ref = self._get_vmfolder_ref()
         res_pool_ref = self._get_res_pool_ref()
 
-        def _check_if_network_bridge_exists(network_name):
-            network_ref = network_util.get_network_with_the_name(
-                          self._session, network_name, self._cluster)
-            if network_ref is None:
-                raise exception.NetworkNotFoundForBridge(bridge=network_name)
-            return network_ref
-
         def _get_vif_infos():
             vif_infos = []
             if network_info is None:
@@ -190,7 +182,9 @@ class VMwareVMOps(object):
                                                         self._session, vif,
                                                         self._cluster)
                 else:
-                    network_ref = _check_if_network_bridge_exists(network_name)
+                    # FlatDHCP network without vlan.
+                    network_ref = vmwarevif.ensure_vlan_bridge(
+                        self._session, vif, self._cluster, create_vlan=False)
                 vif_infos.append({'network_name': network_name,
                                   'mac_address': mac_address,
                                   'network_ref': network_ref,
