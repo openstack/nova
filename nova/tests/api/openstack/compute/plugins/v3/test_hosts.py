@@ -17,7 +17,7 @@ from lxml import etree
 import testtools
 import webob.exc
 
-from nova.api.openstack.compute.contrib import hosts as os_hosts
+from nova.api.openstack.compute.plugins.v3 import hosts as os_hosts
 from nova.compute import power_state
 from nova.compute import vm_states
 from nova import context as context_maker
@@ -25,7 +25,6 @@ from nova import db
 from nova import exception
 from nova import test
 from nova.tests import fake_hosts
-from nova.tests import utils
 
 
 def stub_service_get_all(context, disabled=None):
@@ -153,9 +152,9 @@ class HostTestCase(test.TestCase):
                        stub_host_power_action)
 
     def _test_host_update(self, host, key, val, expected_value):
-        body = {key: val}
+        body = {'updates': {key: val}}
         result = self.controller.update(self.req, host, body)
-        self.assertEqual(result[key], expected_value)
+        self.assertEqual(result['host'][key], expected_value)
 
     def test_list_hosts(self):
         """Verify that the compute hosts are returned."""
@@ -192,7 +191,7 @@ class HostTestCase(test.TestCase):
                      'availability_zone': None}]
         self.stubs.Set(db, 'service_get_all',
                        stub_service_get_all_notimpl)
-        body = {key: val}
+        body = {"updates": {key: val}}
         self.assertRaises(webob.exc.HTTPNotImplemented,
                           self.controller.update,
                           self.req, 'notimplemented', body=body)
@@ -205,15 +204,15 @@ class HostTestCase(test.TestCase):
 
     def test_host_startup(self):
         result = self.controller.startup(self.req, "host_c1")
-        self.assertEqual(result["power_action"], "startup")
+        self.assertEqual(result['host']["power_action"], "startup")
 
     def test_host_shutdown(self):
         result = self.controller.shutdown(self.req, "host_c1")
-        self.assertEqual(result["power_action"], "shutdown")
+        self.assertEqual(result['host']["power_action"], "shutdown")
 
     def test_host_reboot(self):
         result = self.controller.reboot(self.req, "host_c1")
-        self.assertEqual(result["power_action"], "reboot")
+        self.assertEqual(result['host']["power_action"], "reboot")
 
     def _test_host_power_action_notimpl(self, method):
         self.assertRaises(webob.exc.HTTPNotImplemented,
@@ -234,7 +233,8 @@ class HostTestCase(test.TestCase):
         dest = 'dummydest'
         with testtools.ExpectedException(webob.exc.HTTPNotFound,
                                          ".*%s.*" % dest):
-            self.controller.update(self.req, dest, body={'status': 'enable'})
+            self.controller.update(self.req, dest,
+                                   body={"updates": {'status': 'enable'}})
 
     def test_host_maintenance_bad_host(self):
         # A host given as an argument does not exist.
@@ -243,7 +243,8 @@ class HostTestCase(test.TestCase):
         with testtools.ExpectedException(webob.exc.HTTPNotFound,
                                          ".*%s.*" % dest):
             self.controller.update(self.req, dest,
-                                   body={'maintenance_mode': 'enable'})
+                                   body={"updates": {
+                                         'maintenance_mode': 'enable'}})
 
     def test_host_power_action_bad_host(self):
         # A host given as an argument does not exist.
@@ -254,29 +255,32 @@ class HostTestCase(test.TestCase):
             self.controller.reboot(self.req, dest)
 
     def test_bad_status_value(self):
-        bad_body = {"status": "bad"}
+        bad_body = {"updates": {"status": "bad"}}
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                self.req, "host_c1", bad_body)
-        bad_body2 = {"status": "disablabc"}
+                          self.req, "host_c1", bad_body)
+        bad_body2 = {"updates": {"status": "disablabc"}}
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                self.req, "host_c1", bad_body2)
+                          self.req, "host_c1", bad_body2)
 
     def test_bad_update_key(self):
-        bad_body = {"crazy": "bad"}
+        bad_body = {"updates": {"crazy": "bad"}}
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                self.req, "host_c1", bad_body)
+                          self.req, "host_c1", bad_body)
 
     def test_bad_update_key_and_correct_update_key(self):
-        bad_body = {"status": "disable", "crazy": "bad"}
+        bad_body = {"updates": {"status": "disable",
+                                "crazy": "bad"}}
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                self.req, "host_c1", bad_body)
+                          self.req, "host_c1", bad_body)
 
     def test_good_update_keys(self):
-        body = {"status": "disable", "maintenance_mode": "enable"}
+        body = {"updates": {"status": "disable",
+                            "maintenance_mode": "enable"}}
         result = self.controller.update(self.req, 'host_c1', body)
-        self.assertEqual(result["host"], "host_c1")
-        self.assertEqual(result["status"], "disabled")
-        self.assertEqual(result["maintenance_mode"], "on_maintenance")
+        self.assertEqual(result["host"]["host"], "host_c1")
+        self.assertEqual(result["host"]["status"], "disabled")
+        self.assertEqual(result["host"]["maintenance_mode"],
+                         "on_maintenance")
 
     def test_show_forbidden(self):
         self.req.environ["nova.context"].is_admin = False
@@ -332,7 +336,7 @@ class HostTestCase(test.TestCase):
         s_ref = self._create_compute_service()
         i_ref1 = _create_instance(project_id='p-01', host=s_ref['host'])
         i_ref2 = _create_instance(project_id='p-02', vcpus=3,
-                                       host=s_ref['host'])
+                                  host=s_ref['host'])
 
         result = self.controller.show(self.req, s_ref['host'])
 
@@ -351,7 +355,6 @@ class HostTestCase(test.TestCase):
 class HostSerializerTest(test.TestCase):
     def setUp(self):
         super(HostSerializerTest, self).setUp()
-        self.deserializer = os_hosts.HostUpdateDeserializer()
 
     def test_index_serializer(self):
         serializer = os_hosts.HostIndexTemplate()
@@ -369,66 +372,3 @@ class HostSerializerTest(test.TestCase):
                              tree[i].get('service'))
             self.assertEqual(fake_hosts.HOST_LIST[i]['zone'],
                              tree[i].get('zone'))
-
-    def test_update_serializer_with_status(self):
-        exemplar = dict(host='host_c1', status='enabled')
-        serializer = os_hosts.HostUpdateTemplate()
-        text = serializer.serialize(exemplar)
-
-        tree = etree.fromstring(text)
-
-        self.assertEqual('host', tree.tag)
-        for key, value in exemplar.items():
-            self.assertEqual(value, tree.get(key))
-
-    def test_update_serializer_with_maintainance_mode(self):
-        exemplar = dict(host='host_c1', maintenance_mode='enabled')
-        serializer = os_hosts.HostUpdateTemplate()
-        text = serializer.serialize(exemplar)
-
-        tree = etree.fromstring(text)
-
-        self.assertEqual('host', tree.tag)
-        for key, value in exemplar.items():
-            self.assertEqual(value, tree.get(key))
-
-    def test_update_serializer_with_maintainance_mode_and_status(self):
-        exemplar = dict(host='host_c1',
-                        maintenance_mode='enabled',
-                        status='enabled')
-        serializer = os_hosts.HostUpdateTemplate()
-        text = serializer.serialize(exemplar)
-
-        tree = etree.fromstring(text)
-
-        self.assertEqual('host', tree.tag)
-        for key, value in exemplar.items():
-            self.assertEqual(value, tree.get(key))
-
-    def test_action_serializer(self):
-        exemplar = dict(host='host_c1', power_action='reboot')
-        serializer = os_hosts.HostActionTemplate()
-        text = serializer.serialize(exemplar)
-
-        tree = etree.fromstring(text)
-
-        self.assertEqual('host', tree.tag)
-        for key, value in exemplar.items():
-            self.assertEqual(value, tree.get(key))
-
-    def test_update_deserializer(self):
-        exemplar = dict(status='enabled', maintenance_mode='disable')
-        intext = """<?xml version='1.0' encoding='UTF-8'?>
-    <updates>
-        <status>enabled</status>
-        <maintenance_mode>disable</maintenance_mode>
-    </updates>"""
-        result = self.deserializer.deserialize(intext)
-
-        self.assertEqual(dict(body=exemplar), result)
-
-    def test_corrupt_xml(self):
-        self.assertRaises(
-                exception.MalformedRequestBody,
-                self.deserializer.deserialize,
-                utils.killer_xml_body())

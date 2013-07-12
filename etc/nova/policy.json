@@ -86,6 +86,7 @@
     "compute_extension:v3:os-fping:all_tenants": "rule:admin_api",
     "compute_extension:hide_server_addresses": "is_admin:False",
     "compute_extension:hosts": "rule:admin_api",
+    "compute_extension:v3:os-hosts": "rule:admin_api",
     "compute_extension:hypervisors": "rule:admin_api",
     "compute_extension:v3:os-hypervisors": "rule:admin_api",
     "compute_extension:image_size": "",
