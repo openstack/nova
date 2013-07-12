@@ -178,11 +178,13 @@ class PowerVMDriver(driver.ComputeDriver):
 
     def pause(self, instance):
         """Pause the specified instance."""
-        pass
+        msg = _("pause is not supported for PowerVM")
+        raise NotImplementedError(msg)
 
     def unpause(self, instance):
         """Unpause paused VM instance."""
-        pass
+        msg = _("unpause is not supported for PowerVM")
+        raise NotImplementedError(msg)
 
     def suspend(self, instance):
         """suspend the specified instance."""
