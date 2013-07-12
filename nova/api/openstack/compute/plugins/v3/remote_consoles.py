@@ -31,42 +31,47 @@ class RemoteConsolesController(wsgi.Controller):
         self.compute_api = compute.API()
         super(RemoteConsolesController, self).__init__(*args, **kwargs)
 
-    @wsgi.action('os-getVNCConsole')
+    @extensions.expected_errors((400, 404, 409))
+    @wsgi.action('get_vnc_console')
     def get_vnc_console(self, req, id, body):
         """Get text console output."""
         context = req.environ['nova.context']
         authorize(context)
 
         # If type is not supplied or unknown, get_vnc_console below will cope
-        console_type = body['os-getVNCConsole'].get('type')
+        console_type = body['get_vnc_console'].get('type')
 
         try:
             instance = self.compute_api.get(context, id)
             output = self.compute_api.get_vnc_console(context,
                                                       instance,
                                                       console_type)
+        except exception.ConsoleTypeInvalid as e:
+            raise webob.exc.HTTPBadRequest(explanation=e.format_message())
         except exception.InstanceNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceNotReady as e:
-            raise webob.exc.HTTPConflict(
-                    explanation=_('Instance not yet ready'))
+            raise webob.exc.HTTPConflict(explanation=e.format_message())
 
         return {'console': {'type': console_type, 'url': output['url']}}
 
-    @wsgi.action('os-getSPICEConsole')
+    @extensions.expected_errors((400, 404, 409))
+    @wsgi.action('get_spice_console')
     def get_spice_console(self, req, id, body):
         """Get text console output."""
         context = req.environ['nova.context']
         authorize(context)
 
         # If type is not supplied or unknown, get_spice_console below will cope
-        console_type = body['os-getSPICEConsole'].get('type')
+        console_type = body['get_spice_console'].get('type')
 
         try:
             instance = self.compute_api.get(context, id)
             output = self.compute_api.get_spice_console(context,
-                                                      instance,
-                                                      console_type)
+                                                        instance,
+                                                        console_type)
+        except exception.ConsoleTypeInvalid as e:
+            raise webob.exc.HTTPBadRequest(explanation=e.format_message())
         except exception.InstanceNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceNotReady as e:
