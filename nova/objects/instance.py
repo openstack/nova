@@ -371,8 +371,8 @@ def expected_cols(expected_attrs):
 class InstanceList(base.ObjectListBase, base.NovaObject):
     @base.remotable_classmethod
     def get_by_filters(cls, context, filters,
-                       sort_key=None, sort_dir=None, limit=None, marker=None,
-                       expected_attrs=None):
+                       sort_key='created_at', sort_dir='desc', limit=None,
+                       marker=None, expected_attrs=None):
         db_inst_list = db.instance_get_all_by_filters(
             context, filters, sort_key, sort_dir, limit=limit, marker=marker,
             columns_to_join=expected_cols(expected_attrs))
