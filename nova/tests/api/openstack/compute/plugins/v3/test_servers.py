@@ -1221,12 +1221,6 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
                 'metadata': {
                     'open': 'stack',
                 },
-                'personality': [
-                    {
-                        "path": "/etc/banner.txt",
-                        "contents": "MQ==",
-                    },
-                ],
             },
         }
         self.req = fakes.HTTPRequest.blank('/fake/servers/a/action')
@@ -1520,16 +1514,6 @@ class ServersControllerUpdateTest(ControllerTest):
         self.assertEqual(res_dict['server']['id'], FAKE_UUID)
         self.assertEqual(res_dict['server']['access_ip_v6'], '')
 
-    def test_update_server_personality(self):
-        body = {
-            'server': {
-                'personality': []
-            }
-        }
-        req = self._get_request(body)
-        self.assertRaises(webob.exc.HTTPBadRequest,
-            self.controller.update, req, FAKE_UUID, body)
-
     def test_update_server_adminPass_ignored(self):
         inst_dict = dict(name='server_test', adminPass='bacon')
         body = dict(server=inst_dict)
@@ -1796,12 +1780,6 @@ class ServersControllerCreateTest(test.TestCase):
                     'hello': 'world',
                     'open': 'stack',
                     },
-                'personality': [
-                    {
-                        "path": "/etc/banner.txt",
-                        "contents": "MQ==",
-                        },
-                    ],
                 },
             }
         self.bdm = [{'delete_on_termination': 1,
@@ -2632,13 +2610,6 @@ class ServersControllerCreateTest(test.TestCase):
                     'hello': 'world',
                     'open': 'stack',
                 },
-                'personality': [
-                    {
-                        "path": "/etc/banner.txt",
-                        "contents": "MQ==",
-                    },
-
-                ],
             },
         }
 
@@ -2782,28 +2753,6 @@ class ServersControllerCreateTest(test.TestCase):
 
         # The fact that the action doesn't raise is enough validation
         self.controller.create(self.req, self.body)
-
-    def test_create_instance_invalid_personality(self):
-
-        def fake_create(*args, **kwargs):
-            codec = 'utf8'
-            content = 'b25zLiINCg0KLVJpY2hhcmQgQ$$%QQmFjaA=='
-            start_position = 19
-            end_position = 20
-            msg = 'invalid start byte'
-            raise UnicodeDecodeError(codec, content, start_position,
-                                     end_position, msg)
-
-        self.stubs.Set(compute_api.API,
-                       'create',
-                       fake_create)
-
-        self.body['server']['personality'][0]["contents"] = \
-            "b25zLiINCg0KLVJpY2hhcmQgQ$$%QQmFjaA=="
-
-        self.req.body = jsonutils.dumps(self.body)
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create, self.req, self.body)
 
     def test_create_location(self):
         selfhref = 'http://localhost/v2/fake/servers/%s' % FAKE_UUID
@@ -3007,27 +2956,6 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
         }
         self.assertEquals(request['body'], expected)
 
-    def test_empty_metadata_personality(self):
-        serial_request = """
-<server xmlns="http://docs.openstack.org/compute/api/v2"
-        name="new-server-test"
-        image_ref="1"
-        flavor_ref="2">
-    <metadata/>
-    <personality/>
-</server>"""
-        request = self.deserializer.deserialize(serial_request)
-        expected = {
-            "server": {
-                "name": "new-server-test",
-                "image_ref": "1",
-                "flavor_ref": "2",
-                "metadata": {},
-                "personality": [],
-            },
-        }
-        self.assertEquals(request['body'], expected)
-
     def test_multiple_metadata_items(self):
         serial_request = """
 <server xmlns="http://docs.openstack.org/compute/api/v2"
@@ -3050,31 +2978,6 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
         }
         self.assertEquals(request['body'], expected)
 
-    def test_multiple_personality_files(self):
-        serial_request = """
-<server xmlns="http://docs.openstack.org/compute/api/v2"
-        name="new-server-test"
-        image_ref="1"
-        flavor_ref="2">
-    <personality>
-        <file path="/etc/banner.txt">MQ==</file>
-        <file path="/etc/hosts">Mg==</file>
-    </personality>
-</server>"""
-        request = self.deserializer.deserialize(serial_request)
-        expected = {
-            "server": {
-                "name": "new-server-test",
-                "image_ref": "1",
-                "flavor_ref": "2",
-                "personality": [
-                    {"path": "/etc/banner.txt", "contents": "MQ=="},
-                    {"path": "/etc/hosts", "contents": "Mg=="},
-                ],
-            },
-        }
-        self.assertThat(request['body'], matchers.DictMatches(expected))
-
     def test_spec_request(self):
         image_bookmark_link = ("http://servers.api.openstack.org/1234/"
                                "images/52415800-8b69-11e0-9b19-734f6f006e54")
@@ -3086,9 +2989,6 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
   <metadata>
     <meta key="My Server Name">Apache1</meta>
   </metadata>
-  <personality>
-    <file path="/etc/banner.txt">Mg==</file>
-  </personality>
 </server>""" % (image_bookmark_link)
         request = self.deserializer.deserialize(serial_request)
         expected = {
@@ -3098,12 +2998,6 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
                              "images/52415800-8b69-11e0-9b19-734f6f006e54"),
                 "flavor_ref": "52415800-8b69-11e0-9b19-734f1195ff37",
                 "metadata": {"My Server Name": "Apache1"},
-                "personality": [
-                    {
-                        "path": "/etc/banner.txt",
-                        "contents": "Mg==",
-                    },
-                ],
             },
         }
         self.assertEquals(request['body'], expected)

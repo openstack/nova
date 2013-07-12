@@ -162,21 +162,6 @@ class CommonDeserializer(wsgi.MetadataXMLDeserializer):
     def __init__(self, controller):
         self.controller = controller
 
-    def _extract_personality(self, server_node):
-        """Marshal the personality attribute of a parsed request."""
-        node = self.find_first_child_named(server_node, "personality")
-        if node is not None:
-            personality = []
-            for file_node in self.find_children_named(node, "file"):
-                item = {}
-                if file_node.hasAttribute("path"):
-                    item["path"] = file_node.getAttribute("path")
-                item["contents"] = self.extract_text(file_node)
-                personality.append(item)
-            return personality
-        else:
-            return None
-
     def _extract_server(self, node):
         """Marshal the server attribute of a parsed request."""
         server = {}
@@ -196,10 +181,6 @@ class CommonDeserializer(wsgi.MetadataXMLDeserializer):
         metadata_node = self.find_first_child_named(server_node, "metadata")
         if metadata_node is not None:
             server["metadata"] = self.extract_metadata(metadata_node)
-
-        personality = self._extract_personality(server_node)
-        if personality is not None:
-            server["personality"] = personality
 
         networks = self._extract_networks(server_node)
         if networks is not None:
@@ -324,10 +305,6 @@ class ActionDeserializer(CommonDeserializer):
         metadata_node = self.find_first_child_named(node, "metadata")
         if metadata_node is not None:
             rebuild["metadata"] = self.extract_metadata(metadata_node)
-
-        personality = self._extract_personality(node)
-        if personality is not None:
-            rebuild["personality"] = personality
 
         if not node.hasAttribute("image_ref"):
             raise AttributeError("No image_ref was specified in request")
@@ -677,31 +654,6 @@ class ServersController(wsgi.Controller):
             msg = _("Device name cannot include spaces.")
             raise exc.HTTPBadRequest(explanation=msg)
 
-    def _get_injected_files(self, personality):
-        """Create a list of injected files from the personality attribute.
-
-        At this time, injected_files must be formatted as a list of
-        (file_path, file_content) pairs for compatibility with the
-        underlying compute service.
-        """
-        injected_files = []
-
-        for item in personality:
-            try:
-                path = item['path']
-                contents = item['contents']
-            except KeyError as key:
-                expl = _('Bad personality format: missing %s') % key
-                raise exc.HTTPBadRequest(explanation=expl)
-            except TypeError:
-                expl = _('Bad personality format')
-                raise exc.HTTPBadRequest(explanation=expl)
-            if self._decode_base64(contents) is None:
-                expl = _('Personality content for %s cannot be decoded') % path
-                raise exc.HTTPBadRequest(explanation=expl)
-            injected_files.append((path, contents))
-        return injected_files
-
     def _is_neutron_v2(self):
         # NOTE(dprince): neutron is not a requirement
         if self.neutron_attempted:
@@ -862,13 +814,6 @@ class ServersController(wsgi.Controller):
         if list(self.create_extension_manager):
             self.create_extension_manager.map(self._create_extension_point,
                                               server_dict, create_kwargs)
-
-        personality = server_dict.get('personality')
-
-        injected_files = []
-        if personality:
-            injected_files = self._get_injected_files(personality)
-
         # TODO(cyeoh): bp v3-api-core-as-extensions
         # Replace with an extension point when the security groups
         # extension is ported
@@ -973,7 +918,6 @@ class ServersController(wsgi.Controller):
                             metadata=server_dict.get('metadata', {}),
                             access_ip_v4=access_ip_v4,
                             access_ip_v6=access_ip_v6,
-                            injected_files=injected_files,
                             admin_password=password,
                             min_count=min_count,
                             max_count=max_count,
@@ -1093,10 +1037,6 @@ class ServersController(wsgi.Controller):
 
         if 'host_id' in body['server']:
             msg = _("host_id cannot be updated.")
-            raise exc.HTTPBadRequest(explanation=msg)
-
-        if 'personality' in body['server']:
-            msg = _("Personality cannot be updated.")
             raise exc.HTTPBadRequest(explanation=msg)
 
         if list(self.update_extension_manager):
@@ -1333,7 +1273,6 @@ class ServersController(wsgi.Controller):
         instance = self._get_server(context, req, id)
 
         attr_map = {
-            'personality': 'files_to_inject',
             'name': 'display_name',
             'access_ip_v4': 'access_ip_v4',
             'access_ip_v6': 'access_ip_v6',
@@ -1347,7 +1286,6 @@ class ServersController(wsgi.Controller):
             self._validate_access_ipv6(rebuild_dict['access_ip_v6'])
 
         rebuild_kwargs = {}
-
         if list(self.rebuild_extension_manager):
             self.rebuild_extension_manager.map(self._rebuild_extension_point,
                                                rebuild_dict, rebuild_kwargs)
@@ -1360,11 +1298,6 @@ class ServersController(wsgi.Controller):
                 pass
 
         self._validate_metadata(rebuild_kwargs.get('metadata', {}))
-
-        if 'files_to_inject' in rebuild_kwargs:
-            personality = rebuild_kwargs['files_to_inject']
-            rebuild_kwargs['files_to_inject'] = self._get_injected_files(
-                personality)
 
         try:
             self.compute_api.rebuild(context,
