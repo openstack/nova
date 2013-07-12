@@ -123,7 +123,7 @@ class SampleNetworks(fixtures.Fixture):
         bridge_interface = CONF.flat_interface or CONF.vlan_interface
         network.create_networks(ctxt,
                                 label='test',
-                                cidr=CONF.fixed_range,
+                                cidr='10.0.0.0/8',
                                 multi_host=CONF.multi_host,
                                 num_networks=CONF.num_networks,
                                 network_size=CONF.network_size,

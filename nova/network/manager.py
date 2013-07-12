@@ -110,12 +110,6 @@ network_opts = [
     cfg.IntOpt('network_size',
                default=256,
                help='Number of addresses in each private subnet'),
-    # TODO(mathrock): Deprecate in Grizzly, remove in Havana
-    cfg.StrOpt('fixed_range',
-               default='10.0.0.0/8',
-               help='DEPRECATED - Fixed IP address block.'
-                    'If set to an empty string, the subnet range(s) will be '
-                    'automatically determined and configured.'),
     cfg.StrOpt('fixed_range_v6',
                default='fd00::/48',
                help='Fixed IPv6 address block'),
@@ -1602,12 +1596,9 @@ class FlatDHCPManager(RPCAllocateFixedIP, floating_ips.FloatingIP,
         """Do any initialization that needs to be run if this is a
         standalone service.
         """
-        if not CONF.fixed_range:
-            ctxt = context.get_admin_context()
-            networks = self.db.network_get_all_by_host(ctxt, self.host)
-            self.l3driver.initialize(fixed_range=False, networks=networks)
-        else:
-            self.l3driver.initialize(fixed_range=CONF.fixed_range)
+        ctxt = context.get_admin_context()
+        networks = self.db.network_get_all_by_host(ctxt, self.host)
+        self.l3driver.initialize(fixed_range=False, networks=networks)
         super(FlatDHCPManager, self).init_host()
         self.init_host_floating_ips()
 
@@ -1615,8 +1606,7 @@ class FlatDHCPManager(RPCAllocateFixedIP, floating_ips.FloatingIP,
         """Sets up network on this host."""
         network['dhcp_server'] = self._get_dhcp_ip(context, network)
 
-        if not CONF.fixed_range:
-            self.l3driver.initialize_network(network.get('cidr'))
+        self.l3driver.initialize_network(network.get('cidr'))
         self.l3driver.initialize_gateway(network)
 
         if not CONF.fake_network:
@@ -1680,12 +1670,9 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
         standalone service.
         """
 
-        if not CONF.fixed_range:
-            ctxt = context.get_admin_context()
-            networks = self.db.network_get_all_by_host(ctxt, self.host)
-            self.l3driver.initialize(fixed_range=False, networks=networks)
-        else:
-            self.l3driver.initialize(fixed_range=CONF.fixed_range)
+        ctxt = context.get_admin_context()
+        networks = self.db.network_get_all_by_host(ctxt, self.host)
+        self.l3driver.initialize(fixed_range=False, networks=networks)
         NetworkManager.init_host(self)
         self.init_host_floating_ips()
 
@@ -1830,8 +1817,7 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
             address = network['vpn_public_address']
         network['dhcp_server'] = self._get_dhcp_ip(context, network)
 
-        if not CONF.fixed_range:
-            self.l3driver.initialize_network(network.get('cidr'))
+        self.l3driver.initialize_network(network.get('cidr'))
         self.l3driver.initialize_gateway(network)
 
         # NOTE(vish): only ensure this forward if the address hasn't been set

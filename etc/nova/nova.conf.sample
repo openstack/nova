@@ -1166,11 +1166,6 @@
 # Number of addresses in each private subnet (integer value)
 #network_size=256
 
-# DEPRECATED - Fixed IP address block.If set to an empty
-# string, the subnet range(s) will be automatically determined
-# and configured. (string value)
-#fixed_range=10.0.0.0/8
-
 # Fixed IPv6 address block (string value)
 #fixed_range_v6=fd00::/48
 

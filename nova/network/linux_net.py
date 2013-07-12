@@ -664,12 +664,10 @@ def add_snat_rule(ip_range):
         iptables_manager.apply()
 
 
-def init_host(ip_range=None):
+def init_host(ip_range):
     """Basic networking setup goes here."""
     # NOTE(devcamcar): Cloud public SNAT entries and the default
     # SNAT rule for outbound traffic.
-    if not ip_range:
-        ip_range = CONF.fixed_range
 
     add_snat_rule(ip_range)
 
