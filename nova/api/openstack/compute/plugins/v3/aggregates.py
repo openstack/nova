@@ -136,6 +136,8 @@ class AggregateController(wsgi.Controller):
             aggregate = self.api.update_aggregate(context, id, updates)
         except exception.AggregateNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
+        except exception.InvalidAggregateAction as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
 
         return self._marshall_aggregate(aggregate)
 
@@ -206,6 +208,8 @@ class AggregateController(wsgi.Controller):
                                                            id, metadata)
         except exception.AggregateNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
+        except exception.InvalidAggregateAction as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
 
         return self._marshall_aggregate(aggregate)
 

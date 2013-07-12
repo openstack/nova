@@ -132,6 +132,8 @@ class AggregateController(object):
         except exception.AggregateNotFound:
             LOG.info(_('Cannot update aggregate: %s'), id)
             raise exc.HTTPNotFound()
+        except exception.InvalidAggregateAction as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
 
         return self._marshall_aggregate(aggregate)
 
@@ -213,6 +215,8 @@ class AggregateController(object):
             LOG.info(_('Cannot set metadata %(metadata)s in aggregate %(id)s'),
                      {'metadata': metadata, 'id': id})
             raise exc.HTTPNotFound()
+        except exception.InvalidAggregateAction as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
 
         return self._marshall_aggregate(aggregate)
 
