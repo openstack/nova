@@ -180,6 +180,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         2.28 - Adds check_instance_shared_storage()
         2.29 - Made start_instance() and stop_instance() take new-world
                instance objects
+        2.30 - Adds live_snapshot_instance()
     '''
 
     #
@@ -593,6 +594,13 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 instance=instance_p, device=device, volume_id=volume_id),
                 topic=_compute_topic(self.topic, ctxt, None, instance),
                 version='2.3')
+
+    def live_snapshot_instance(self, ctxt, instance, image_id):
+        instance_p = jsonutils.to_primitive(instance)
+        self.cast(ctxt, self.make_msg('live_snapshot_instance',
+                instance=instance_p, image_id=image_id),
+                topic=_compute_topic(self.topic, ctxt, None, instance),
+                version='2.30')
 
     def snapshot_instance(self, ctxt, instance, image_id, image_type,
             backup_type=None, rotation=None):
