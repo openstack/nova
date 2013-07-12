@@ -1327,3 +1327,7 @@ class InstanceGroupMemberNotFound(NotFound):
 
 class InstanceGroupPolicyNotFound(NotFound):
     msg_fmt = _("Instance group %(group_uuid)s has no policy %(policy)s.")
+
+
+class PluginRetriesExceeded(NovaException):
+    msg_fmt = _("Number of retries to plugin (%(num_retries)d) exceeded.")
