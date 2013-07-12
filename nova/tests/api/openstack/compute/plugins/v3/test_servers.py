@@ -30,7 +30,9 @@ import webob
 
 from nova.api.openstack import compute
 from nova.api.openstack.compute import plugins
+from nova.api.openstack.compute.plugins.v3 import availability_zone
 from nova.api.openstack.compute.plugins.v3 import ips
+from nova.api.openstack.compute.plugins.v3 import keypairs
 from nova.api.openstack.compute.plugins.v3 import servers
 from nova.api.openstack.compute import views
 from nova.api.openstack import xmlutil
@@ -2836,6 +2838,42 @@ class ServersControllerCreateTest(test.TestCase):
         self._check_admin_pass_len(server)
         self.assertEqual(FAKE_UUID, server['id'])
 
+    def test_create_instance_extension_create_exception(self):
+        def fake_keypair_server_create(self, server_dict,
+                                       create_kwargs):
+            raise KeyError
+
+        self.stubs.Set(keypairs.Keypairs, 'server_create',
+                       fake_keypair_server_create)
+        # proper local hrefs must start with 'http://localhost/v3/'
+        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        image_href = 'http://localhost/v3/images/%s' % image_uuid
+        flavor_ref = 'http://localhost/123/flavors/3'
+        body = {
+            'server': {
+                'name': 'server_test',
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+                'metadata': {
+                    'hello': 'world',
+                    'open': 'stack',
+                },
+                'personality': [
+                    {
+                        "path": "/etc/banner.txt",
+                        "contents": "MQ==",
+                    },
+
+                ],
+            },
+        }
+
+        req = fakes.HTTPRequestV3.blank('/servers')
+        req.method = 'POST'
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+        self.assertRaises(KeyError, self.controller.create, req, body)
+
     def test_create_instance_pass_disabled(self):
         self.flags(enable_instance_password=False)
         # proper local hrefs must start with 'http://localhost/v3/'
@@ -3246,7 +3284,9 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
 
     def setUp(self):
         super(TestServerCreateRequestXMLDeserializer, self).setUp()
-        self.deserializer = servers.CreateDeserializer(None)
+        ext_info = plugins.LoadedExtensionInfo()
+        servers_controller = servers.ServersController(extension_info=ext_info)
+        self.deserializer = servers.CreateDeserializer(servers_controller)
 
     def test_minimal_request(self):
         serial_request = """
@@ -3263,6 +3303,23 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
             },
         }
         self.assertEquals(request['body'], expected)
+
+    def test_xml_create_exception(self):
+        def fake_availablity_extract_xml_deserialize(self,
+                                                     server_node,
+                                                     server_dict):
+            raise KeyError
+
+        self.stubs.Set(availability_zone.AvailabilityZone,
+                       'server_xml_extract_server_deserialize',
+                       fake_availablity_extract_xml_deserialize)
+        serial_request = """
+<server xmlns="http://docs.openstack.org/compute/api/v2"
+        name="new-server-test"
+        imageRef="1"
+        flavorRef="2"/>"""
+        self.assertRaises(KeyError, self.deserializer.deserialize,
+                          serial_request)
 
     def test_request_with_alternate_namespace_prefix(self):
         serial_request = """

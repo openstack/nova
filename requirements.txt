@@ -27,7 +27,7 @@ python-neutronclient>=2.2.3,<3.0.0
 python-glanceclient>=0.9.0
 python-keystoneclient>=0.2.0
 six
-stevedore>=0.9
+stevedore>=0.10
 websockify<0.4
 pyparsing>=1.5.7,<2.0 # order-dependent python-quantumclient req, bug 1191866
 
