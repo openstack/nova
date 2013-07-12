@@ -471,6 +471,16 @@ class MetadataHandlerTestCase(test.TestCase):
         response = fake_request(self.stubs, self.mdinst, "/foo/../")
         self.assertEqual(response.body, expected)
 
+    def test_root_metadata_proxy_enabled(self):
+        CONF.set_override("service_neutron_metadata_proxy", True)
+
+        expected = "\n".join(base.VERSIONS) + "\nlatest"
+        response = fake_request(self.stubs, self.mdinst, "/")
+        self.assertEqual(response.body, expected)
+
+        response = fake_request(self.stubs, self.mdinst, "/foo/../")
+        self.assertEqual(response.body, expected)
+
     def test_version_root(self):
         response = fake_request(self.stubs, self.mdinst, "/2009-04-04")
         self.assertEqual(response.body, 'meta-data/\nuser-data')
