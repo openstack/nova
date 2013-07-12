@@ -644,6 +644,16 @@ class AggregateDBApiTestCase(test.TestCase):
         expected = db.aggregate_metadata_get(ctxt, result['id'])
         self.assertThat(values['metadata'], matchers.DictMatches(expected))
 
+    def test_aggregate_update_zone_with_existing_metadata(self):
+        ctxt = context.get_admin_context()
+        result = _create_aggregate(context=ctxt)
+        new_zone = {'availability_zone': 'fake_avail_zone_2'}
+        metadata = _get_fake_aggr_metadata()
+        metadata.update(new_zone)
+        db.aggregate_update(ctxt, result['id'], new_zone)
+        expected = db.aggregate_metadata_get(ctxt, result['id'])
+        self.assertThat(metadata, matchers.DictMatches(expected))
+
     def test_aggregate_update_raise_not_found(self):
         ctxt = context.get_admin_context()
         # this does not exist!
