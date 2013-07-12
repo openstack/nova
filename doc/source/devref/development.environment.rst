@@ -124,7 +124,7 @@ You can manually install the virtual environment instead of having
 
 This will install all of the Python packages listed in the
 ``requirements.txt`` file into your virtualenv. There will also be some
-additional packages (pip, distribute, greenlet) that are installed
+additional packages (pip, setuptools, greenlet) that are installed
 by the ``tools/install_venv.py`` file into the virutalenv.
 
 If all goes well, you should get a message something like this::
