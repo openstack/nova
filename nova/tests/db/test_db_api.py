@@ -518,6 +518,25 @@ class AggregateDBApiTestCase(test.TestCase):
         expected = db.aggregate_metadata_get(ctxt, result['id'])
         self.assertThat(metadata, matchers.DictMatches(expected))
 
+    def test_aggregate_metadata_add_retry(self):
+        ctxt = context.get_admin_context()
+        result = _create_aggregate(context=ctxt, metadata=None)
+
+        def counted():
+            def get_query(context, id, session, read_deleted):
+                get_query.counter += 1
+                raise db_exc.DBDuplicateEntry
+            get_query.counter = 0
+            return get_query
+
+        get_query = counted()
+        self.stubs.Set(sqlalchemy_api,
+                       '_aggregate_metadata_get_query', get_query)
+        self.assertRaises(db_exc.DBDuplicateEntry, sqlalchemy_api.
+                          aggregate_metadata_add, ctxt, result['id'], {},
+                          max_retries=5)
+        self.assertEqual(get_query.counter, 5)
+
     def test_aggregate_metadata_update(self):
         ctxt = context.get_admin_context()
         result = _create_aggregate(context=ctxt)
