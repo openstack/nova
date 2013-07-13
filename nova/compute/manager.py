@@ -1585,6 +1585,14 @@ class ComputeManager(manager.SchedulerDependentManager):
                                            task_states.STOPPING))
         self._notify_about_instance_usage(context, instance, "power_off.end")
 
+    def _power_on(self, context, instance):
+        network_info = self._get_instance_nw_info(context, instance)
+        block_device_info = self._get_instance_volume_block_device_info(
+                                context, instance)
+        self.driver.power_on(context, instance,
+                             self._legacy_nw_info(network_info),
+                             block_device_info)
+
     # NOTE(johannes): This is probably better named power_on_instance
     # so it matches the driver method, but because of other issues, we
     # can't use that name in grizzly.
@@ -1596,14 +1604,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     def start_instance(self, context, instance):
         """Starting an instance on this host."""
         self._notify_about_instance_usage(context, instance, "power_on.start")
-
-        network_info = self._get_instance_nw_info(context, instance)
-        block_device_info = self._get_instance_volume_block_device_info(
-                                context, instance)
-        self.driver.power_on(context, instance,
-                             self._legacy_nw_info(network_info),
-                             block_device_info)
-
+        self._power_on(context, instance)
         current_power_state = self._get_power_state(context, instance)
         instance.power_state = current_power_state
         instance.vm_state = vm_states.ACTIVE
@@ -1658,12 +1659,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         except NotImplementedError:
             # Fallback to just powering on the instance if the hypervisor
             # doesn't implement the restore method
-            network_info = self._get_instance_nw_info(context, instance)
-            block_device_info = self._get_instance_volume_block_device_info(
-                                context, instance)
-            self.driver.power_on(context, instance,
-                                 self._legacy_nw_info(network_info),
-                                 block_device_info)
+            self._power_on(context, instance)
         current_power_state = self._get_power_state(context, instance)
         instance = self._instance_update(context, instance['uuid'],
                 power_state=current_power_state,
