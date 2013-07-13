@@ -165,6 +165,7 @@ policy_data = """
     "compute_extension:v3:os-fping": "",
     "compute_extension:v3:os-fping:all_tenants": "is_admin:True",
     "compute_extension:hide_server_addresses": "",
+    "compute_extension:v3:os-hide-server-addresses": "",
     "compute_extension:hosts": "",
     "compute_extension:v3:os-hosts": "",
     "compute_extension:hypervisors": "",

@@ -31,8 +31,8 @@ opts = [
 CONF = cfg.CONF
 CONF.register_opts(opts)
 
-authorize = extensions.soft_extension_authorizer('compute',
-                                                 'hide_server_addresses')
+ALIAS = 'os-hide-server-addresses'
+authorize = extensions.soft_extension_authorizer('compute', 'v3:' + ALIAS)
 
 
 class Controller(wsgi.Controller):
@@ -74,14 +74,17 @@ class Controller(wsgi.Controller):
                 self._perhaps_hide_addresses(instance, server)
 
 
-class Hide_server_addresses(extensions.ExtensionDescriptor):
+class HideServerAddresses(extensions.V3APIExtensionBase):
     """Support hiding server addresses in certain states."""
 
     name = 'HideServerAddresses'
-    alias = 'os-hide-server-addresses'
+    alias = ALIAS
     namespace = ('http://docs.openstack.org/compute/ext/'
-                 'hide_server_addresses/api/v1.1')
-    updated = '2012-12-11T00:00:00+00:00'
+                 'hide_server_addresses/api/v3')
+    version = 1
 
     def get_controller_extensions(self):
         return [extensions.ControllerExtension(self, 'servers', Controller())]
+
+    def get_resources(self):
+        return []
