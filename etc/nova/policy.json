@@ -41,6 +41,7 @@
     "compute_extension:cloudpipe_update": "rule:admin_api",
     "compute_extension:console_output": "",
     "compute_extension:v3:consoles:discoverable": "",
+    "compute_extension:v3:os-console-output": "",
     "compute_extension:consoles": "",
     "compute_extension:v3:os-remote-consoles": "",
     "compute_extension:coverage_ext": "rule:admin_api",
