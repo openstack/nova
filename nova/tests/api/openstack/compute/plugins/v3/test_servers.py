@@ -18,6 +18,7 @@
 
 import base64
 import datetime
+import mox
 import testtools
 import urlparse
 import uuid
@@ -93,6 +94,14 @@ def instance_update(context, instance_uuid, values):
 
 def fake_compute_api(cls, req, id):
     return True
+
+
+def fake_start_stop_not_ready(self, context, instance):
+    raise exception.InstanceNotReady(instance_id=instance["uuid"])
+
+
+def fake_instance_get_by_uuid_not_found(context, uuid, columns_to_join):
+    raise exception.InstanceNotFound(instance_id=uuid)
 
 
 class MockSetAdminPassword(object):
@@ -1687,6 +1696,54 @@ class ServersControllerTest(test.TestCase):
         # Delete shoud be allowed in any case, even during resizing,
         # because it may get stuck.
         self.assertEqual(self.server_delete_called, True)
+
+    def test_start(self):
+        self.mox.StubOutWithMock(compute_api.API, 'start')
+        compute_api.API.start(mox.IgnoreArg(), mox.IgnoreArg())
+        self.mox.ReplayAll()
+
+        req = fakes.HTTPRequestV3.blank('/servers/%s/action' % FAKE_UUID)
+        body = dict(start="")
+        self.controller._start_server(req, FAKE_UUID, body)
+
+    def test_start_not_ready(self):
+        self.stubs.Set(compute_api.API, 'start', fake_start_stop_not_ready)
+        req = fakes.HTTPRequestV3.blank('/servers/%s/action' % FAKE_UUID)
+        body = dict(start="")
+        self.assertRaises(webob.exc.HTTPConflict,
+            self.controller._start_server, req, FAKE_UUID, body)
+
+    def test_stop(self):
+        self.mox.StubOutWithMock(compute_api.API, 'stop')
+        compute_api.API.stop(mox.IgnoreArg(), mox.IgnoreArg())
+        self.mox.ReplayAll()
+
+        req = fakes.HTTPRequestV3.blank('/servers/%s/action' % FAKE_UUID)
+        body = dict(stop="")
+        self.controller._stop_server(req, FAKE_UUID, body)
+
+    def test_stop_not_ready(self):
+        self.stubs.Set(compute_api.API, 'stop', fake_start_stop_not_ready)
+        req = fakes.HTTPRequestV3.blank('/servers/%s/action' % FAKE_UUID)
+        body = dict(start="")
+        self.assertRaises(webob.exc.HTTPConflict,
+            self.controller._stop_server, req, FAKE_UUID, body)
+
+    def test_start_with_bogus_id(self):
+        self.stubs.Set(db, 'instance_get_by_uuid',
+                       fake_instance_get_by_uuid_not_found)
+        req = fakes.HTTPRequestV3.blank('/servers/test_inst/action')
+        body = dict(start="")
+        self.assertRaises(webob.exc.HTTPNotFound,
+            self.controller._start_server, req, 'test_inst', body)
+
+    def test_stop_with_bogus_id(self):
+        self.stubs.Set(db, 'instance_get_by_uuid',
+                       fake_instance_get_by_uuid_not_found)
+        req = fakes.HTTPRequestV3.blank('/servers/test_inst/action')
+        body = dict(start="")
+        self.assertRaises(webob.exc.HTTPNotFound,
+            self.controller._stop_server, req, 'test_inst', body)
 
 
 class ServerStatusTest(test.TestCase):

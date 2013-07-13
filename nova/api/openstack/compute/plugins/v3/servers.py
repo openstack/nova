@@ -32,6 +32,7 @@ from nova.api.openstack import xmlutil
 from nova import compute
 from nova.compute import flavors
 from nova import exception
+from nova.objects import instance as instance_obj
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.rpc import common as rpc_common
@@ -1495,6 +1496,40 @@ class ServersController(wsgi.Controller):
         self.create_xml_deserialize_manager.map(
             self._server_create_xml_deserialize_extension_point,
             server_node, server)
+
+    def _get_instance(self, context, instance_uuid):
+        try:
+            attrs = ['system_metadata', 'metadata']
+            return instance_obj.Instance.get_by_uuid(context, instance_uuid,
+                                                     expected_attrs=attrs)
+        except exception.InstanceNotFound as e:
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
+
+    @extensions.expected_errors((404, 409))
+    @wsgi.action('start')
+    def _start_server(self, req, id, body):
+        """Start an instance."""
+        context = req.environ['nova.context']
+        instance = self._get_instance(context, id)
+        LOG.debug(_('start instance'), instance=instance)
+        try:
+            self.compute_api.start(context, instance)
+        except exception.InstanceNotReady as e:
+            raise webob.exc.HTTPConflict(explanation=e.format_message())
+        return webob.Response(status_int=202)
+
+    @extensions.expected_errors((404, 409))
+    @wsgi.action('stop')
+    def _stop_server(self, req, id, body):
+        """Stop an instance."""
+        context = req.environ['nova.context']
+        instance = self._get_instance(context, id)
+        LOG.debug(_('stop instance'), instance=instance)
+        try:
+            self.compute_api.stop(context, instance)
+        except exception.InstanceNotReady as e:
+            raise webob.exc.HTTPConflict(explanation=e.format_message())
+        return webob.Response(status_int=202)
 
 
 def remove_invalid_options(context, search_options, allowed_search_options):
