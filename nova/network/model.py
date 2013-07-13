@@ -453,7 +453,7 @@ class NetworkInfoAsyncWrapper(NetworkInfo):
     As an example:
 
     def allocate_net_info(arg1, arg2)
-        return call_quantum_to_allocate(arg1, arg2)
+        return call_neutron_to_allocate(arg1, arg2)
 
     network_info = NetworkInfoAsyncWrapper(allocate_net_info, arg1, arg2)
     [do a long running operation -- real network_info will be retrieved

@@ -1719,8 +1719,8 @@ class LinuxOVSInterfaceDriver(LinuxNetInterfaceDriver):
         return dev
 
 
-# plugs interfaces using Linux Bridge when using QuantumManager
-class QuantumLinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
+# plugs interfaces using Linux Bridge when using NeutronManager
+class NeutronLinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
 
     BRIDGE_NAME_PREFIX = 'brq'
     GATEWAY_INTERFACE_PREFIX = 'gw-'
@@ -1778,5 +1778,8 @@ class QuantumLinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
     def get_bridge(self, network):
         bridge = self.BRIDGE_NAME_PREFIX + str(network['uuid'][0:11])
         return bridge
+
+# provide compatibility with existing configs
+QuantumLinuxBridgeInterfaceDriver = NeutronLinuxBridgeInterfaceDriver
 
 iptables_manager = IptablesManager()

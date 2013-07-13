@@ -46,7 +46,7 @@ class LibvirtVifTestCase(test.TestCase):
              'id': 'network-id-xxx-yyy-zzz'
     }
 
-    net_bridge_quantum = {
+    net_bridge_neutron = {
              'cidr': '101.168.1.0/24',
              'cidr_v6': '101:1db9::/64',
              'gateway_v6': '101:1db9::1',
@@ -70,7 +70,7 @@ class LibvirtVifTestCase(test.TestCase):
         'vif_type': network_model.VIF_TYPE_BRIDGE,
     }
 
-    mapping_bridge_quantum = {
+    mapping_bridge_neutron = {
         'mac': 'ca:fe:de:ad:be:ef',
         'gateway_v6': net_bridge['gateway_v6'],
         'ips': [{'ip': '101.168.1.9'}],
@@ -430,16 +430,16 @@ class LibvirtVifTestCase(test.TestCase):
                                   self.mapping_bridge,
                                   self.net_bridge['bridge'])
 
-    def test_quantum_bridge_driver(self):
+    def test_neutron_bridge_driver(self):
         def get_connection():
             return fakelibvirt.Connection("qemu:///session",
                                           False)
-        d = vif.QuantumLinuxBridgeVIFDriver(get_connection)
-        br_want = 'brq' + self.net_bridge_quantum['id']
+        d = vif.NeutronLinuxBridgeVIFDriver(get_connection)
+        br_want = 'brq' + self.net_bridge_neutron['id']
         br_want = br_want[:network_model.NIC_NAME_LEN]
         self._check_bridge_driver(d,
-                                  self.net_bridge_quantum,
-                                  self.mapping_bridge_quantum,
+                                  self.net_bridge_neutron,
+                                  self.mapping_bridge_neutron,
                                   br_want)
 
     def _check_ivs_ethernet_driver(self, d, net, mapping, dev_prefix):
@@ -590,7 +590,7 @@ class LibvirtVifTestCase(test.TestCase):
                                            self.mapping_ivs,
                                            want_iface_id)
 
-    def _check_quantum_hybrid_driver(self, d, net, mapping, br_want):
+    def _check_neutron_hybrid_driver(self, d, net, mapping, br_want):
         self.flags(firewall_driver="nova.virt.firewall.IptablesFirewallDriver")
         xml = self._get_instance_xml(d, net, mapping)
 
@@ -606,14 +606,14 @@ class LibvirtVifTestCase(test.TestCase):
         mac = node.find("mac").get("address")
         self.assertEqual(mac, mapping['mac'])
 
-    def test_quantum_hybrid_driver(self):
+    def test_neutron_hybrid_driver(self):
         def get_connection():
             return fakelibvirt.Connection("qemu:///session",
                                           False)
         br_want = "qbr" + self.mapping_ovs['vif_uuid']
         br_want = br_want[:network_model.NIC_NAME_LEN]
         d = vif.LibvirtHybridOVSBridgeDriver(get_connection)
-        self._check_quantum_hybrid_driver(d,
+        self._check_neutron_hybrid_driver(d,
                                           self.net_ovs,
                                           self.mapping_ovs_legacy,
                                           br_want)
@@ -625,7 +625,7 @@ class LibvirtVifTestCase(test.TestCase):
         d = vif.LibvirtGenericVIFDriver(get_connection)
         br_want = "qbr" + self.mapping_ovs['vif_uuid']
         br_want = br_want[:network_model.NIC_NAME_LEN]
-        self._check_quantum_hybrid_driver(d,
+        self._check_neutron_hybrid_driver(d,
                                           self.net_ovs,
                                           self.mapping_ovs,
                                           br_want)
@@ -637,7 +637,7 @@ class LibvirtVifTestCase(test.TestCase):
         d = vif.LibvirtGenericVIFDriver(get_connection)
         br_want = "qbr" + self.mapping_ivs['vif_uuid']
         br_want = br_want[:network_model.NIC_NAME_LEN]
-        self._check_quantum_hybrid_driver(d,
+        self._check_neutron_hybrid_driver(d,
                                           self.net_ovs,
                                           self.mapping_ivs,
                                           br_want)

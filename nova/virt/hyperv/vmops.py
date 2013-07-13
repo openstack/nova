@@ -67,8 +67,8 @@ CONF.import_opt('network_api_class', 'nova.network')
 
 class VMOps(object):
     _vif_driver_class_map = {
-        'nova.network.quantumv2.api.API':
-        'nova.virt.hyperv.vif.HyperVQuantumVIFDriver',
+        'nova.network.neutronv2.api.API':
+        'nova.virt.hyperv.vif.HyperVNeutronVIFDriver',
         'nova.network.api.API':
         'nova.virt.hyperv.vif.HyperVNovaNetworkVIFDriver',
     }

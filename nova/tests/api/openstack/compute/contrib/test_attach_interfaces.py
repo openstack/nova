@@ -135,9 +135,9 @@ def fake_get_instance(self, context, intance_id):
 class InterfaceAttachTests(test.TestCase):
     def setUp(self):
         super(InterfaceAttachTests, self).setUp()
-        self.flags(quantum_auth_strategy=None)
-        self.flags(quantum_url='http://anyhost/')
-        self.flags(quantum_url_timeout=30)
+        self.flags(neutron_auth_strategy=None)
+        self.flags(neutron_url='http://anyhost/')
+        self.flags(neutron_url_timeout=30)
         self.stubs.Set(network_api.API, 'show_port', fake_show_port)
         self.stubs.Set(network_api.API, 'list_ports', fake_list_ports)
         self.stubs.Set(compute_api.API, 'get', fake_get_instance)

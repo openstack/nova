@@ -42,7 +42,7 @@ from nova import db
 from nova import exception
 from nova.image import s3
 from nova import network
-from nova.network.security_group import quantum_driver
+from nova.network.security_group import neutron_driver
 from nova.objects import instance as instance_obj
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
@@ -518,7 +518,7 @@ class CloudController(object):
                                      'userId': source_group['project_id']}]
                 else:
                     # rule is not always joined with grantee_group
-                    # for example when using quantum driver.
+                    # for example when using neutron driver.
                     source_group = self.security_group_api.get(
                         context, id=rule['group_id'])
                     r['groups'] += [{'groupName': source_group.get('name'),
@@ -1866,15 +1866,15 @@ class CloudSecurityGroupNovaAPI(EC2SecurityGroupExceptions,
     pass
 
 
-class CloudSecurityGroupQuantumAPI(EC2SecurityGroupExceptions,
-                                   quantum_driver.SecurityGroupAPI):
+class CloudSecurityGroupNeutronAPI(EC2SecurityGroupExceptions,
+                                   neutron_driver.SecurityGroupAPI):
     pass
 
 
 def get_cloud_security_group_api():
     if cfg.CONF.security_group_api.lower() == 'nova':
         return CloudSecurityGroupNovaAPI()
-    elif cfg.CONF.security_group_api.lower() == 'quantum':
-        return CloudSecurityGroupQuantumAPI()
+    elif cfg.CONF.security_group_api.lower() in ('neutron', 'quantum'):
+        return CloudSecurityGroupNeutronAPI()
     else:
         raise NotImplementedError()

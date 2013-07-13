@@ -44,13 +44,13 @@ from nova import db
 from nova import exception
 from nova.image import s3
 from nova.network import api as network_api
-from nova.network import quantumv2
+from nova.network import neutronv2
 from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
 from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.api.openstack.compute.contrib import (
-    test_quantum_security_groups as test_quantum)
+    test_neutron_security_groups as test_neutron)
 from nova.tests import fake_network
 from nova.tests import fake_utils
 from nova.tests.image import fake
@@ -2688,23 +2688,23 @@ class CloudTestCase(test.TestCase):
                 None)
 
 
-class CloudTestCaseQuantumProxy(test.TestCase):
+class CloudTestCaseNeutronProxy(test.TestCase):
     def setUp(self):
-        cfg.CONF.set_override('security_group_api', 'quantum')
+        cfg.CONF.set_override('security_group_api', 'neutron')
         self.cloud = cloud.CloudController()
-        self.original_client = quantumv2.get_client
-        quantumv2.get_client = test_quantum.get_client
+        self.original_client = neutronv2.get_client
+        neutronv2.get_client = test_neutron.get_client
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id,
                                               self.project_id,
                                               is_admin=True)
-        super(CloudTestCaseQuantumProxy, self).setUp()
+        super(CloudTestCaseNeutronProxy, self).setUp()
 
     def tearDown(self):
-        quantumv2.get_client = self.original_client
-        test_quantum.get_client()._reset()
-        super(CloudTestCaseQuantumProxy, self).tearDown()
+        neutronv2.get_client = self.original_client
+        test_neutron.get_client()._reset()
+        super(CloudTestCaseNeutronProxy, self).tearDown()
 
     def test_describe_security_groups(self):
         # Makes sure describe_security_groups works and filters results.
@@ -2727,11 +2727,11 @@ class CloudTestCaseQuantumProxy(test.TestCase):
         description = 'test'
         self.cloud.create_security_group(self.context, group_name,
                                          description)
-        quantum = test_quantum.get_client()
-        # Get id from quantum since cloud.create_security_group
+        neutron = test_neutron.get_client()
+        # Get id from neutron since cloud.create_security_group
         # does not expose it.
         search_opts = {'name': group_name}
-        groups = quantum.list_security_groups(
+        groups = neutron.list_security_groups(
             **search_opts)['security_groups']
         result = self.cloud.describe_security_groups(self.context,
                       group_id=[groups[0]['id']])

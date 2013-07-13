@@ -35,7 +35,7 @@ from nova.virt.libvirt import designer
 LOG = logging.getLogger(__name__)
 
 libvirt_vif_opts = [
-    # quantum_ovs_bridge is used, if Quantum provides Nova
+    # neutron_ovs_bridge is used, if Neutron provides Nova
     # the 'vif_type' portbinding field
     cfg.StrOpt('libvirt_ovs_bridge',
                default='br-int',
@@ -154,7 +154,7 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
 
     def get_firewall_required(self):
         # TODO(berrange): Extend this to use information from VIF model
-        # which can indicate whether the network provider (eg Quantum)
+        # which can indicate whether the network provider (eg Neutron)
         # has already applied firewall filtering itself.
         if CONF.firewall_driver != "nova.virt.firewall.NoopFirewallDriver":
             return True
@@ -637,7 +637,7 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
 
 
 class LibvirtBridgeDriver(LibvirtGenericVIFDriver):
-    """Retained in Grizzly for compatibility with Quantum
+    """Retained in Grizzly for compatibility with Neutron
        drivers which do not yet report 'vif_type' port binding.
        Will be deprecated in Havana, and removed in Ixxxx.
     """
@@ -659,7 +659,7 @@ class LibvirtBridgeDriver(LibvirtGenericVIFDriver):
 
 
 class LibvirtOpenVswitchDriver(LibvirtGenericVIFDriver):
-    """Retained in Grizzly for compatibility with Quantum
+    """Retained in Grizzly for compatibility with Neutron
        drivers which do not yet report 'vif_type' port binding.
        Will be deprecated in Havana, and removed in Ixxxx.
     """
@@ -688,7 +688,7 @@ class LibvirtOpenVswitchDriver(LibvirtGenericVIFDriver):
 
 
 class LibvirtHybridOVSBridgeDriver(LibvirtGenericVIFDriver):
-    """Retained in Grizzly for compatibility with Quantum
+    """Retained in Grizzly for compatibility with Neutron
        drivers which do not yet report 'vif_type' port binding.
        Will be deprecated in Havana, and removed in Ixxxx.
     """
@@ -718,7 +718,7 @@ class LibvirtHybridOVSBridgeDriver(LibvirtGenericVIFDriver):
 
 
 class LibvirtOpenVswitchVirtualPortDriver(LibvirtGenericVIFDriver):
-    """Retained in Grizzly for compatibility with Quantum
+    """Retained in Grizzly for compatibility with Neutron
        drivers which do not yet report 'vif_type' port binding.
        Will be deprecated in Havana, and removed in Ixxxx.
     """
@@ -747,8 +747,8 @@ class LibvirtOpenVswitchVirtualPortDriver(LibvirtGenericVIFDriver):
         return self.unplug_ovs_bridge(instance, vif)
 
 
-class QuantumLinuxBridgeVIFDriver(LibvirtGenericVIFDriver):
-    """Retained in Grizzly for compatibility with Quantum
+class NeutronLinuxBridgeVIFDriver(LibvirtGenericVIFDriver):
+    """Retained in Grizzly for compatibility with Nuetron
        drivers which do not yet report 'vif_type' port binding.
        Will be deprecated in Havana, and removed in Ixxxx.
     """
@@ -758,7 +758,7 @@ class QuantumLinuxBridgeVIFDriver(LibvirtGenericVIFDriver):
         return network.get('bridge') or def_bridge
 
     def get_config(self, instance, network, mapping, image_meta, inst_type):
-        LOG.deprecated(_("The QuantumLinuxBridgeVIFDriver VIF driver is now "
+        LOG.deprecated(_("The NeutronLinuxBridgeVIFDriver VIF driver is now "
                          "deprecated and will be removed in the next release. "
                          "Please use the LibvirtGenericVIFDriver VIF driver, "
                          "together with a network plugin that reports the "
@@ -775,3 +775,6 @@ class QuantumLinuxBridgeVIFDriver(LibvirtGenericVIFDriver):
 
     def unplug(self, instance, vif):
         self.unplug_bridge(instance, vif)
+
+# For compatibility with exsiting Nova deployments
+QuantumLinuxBridgeVIFDriver = NeutronLinuxBridgeVIFDriver

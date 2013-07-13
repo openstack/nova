@@ -44,7 +44,7 @@ from nova.db.sqlalchemy import models
 from nova import exception
 from nova.image import glance
 from nova.network import manager
-from nova.network.quantumv2 import api as quantum_api
+from nova.network.neutronv2 import api as neutron_api
 from nova.objects import instance as instance_obj
 from nova.openstack.common import jsonutils
 from nova.openstack.common import policy as common_policy
@@ -143,7 +143,7 @@ class Base64ValidationTest(test.TestCase):
         self.assertEqual(result, None)
 
 
-class QuantumV2Subclass(quantum_api.API):
+class NeutronV2Subclass(neutron_api.API):
     """Used to ensure that API handles subclasses properly."""
     pass
 
@@ -187,29 +187,29 @@ class ServersControllerTest(test.TestCase):
         res = self.controller._get_requested_networks(requested_networks)
         self.assertTrue((uuid, None) in res)
 
-    def test_requested_networks_quantumv2_enabled_with_port(self):
-        self.flags(network_api_class='nova.network.quantumv2.api.API')
+    def test_requested_networks_neutronv2_enabled_with_port(self):
+        self.flags(network_api_class='nova.network.neutronv2.api.API')
         port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
         requested_networks = [{'port': port}]
         res = self.controller._get_requested_networks(requested_networks)
         self.assertEquals(res, [(None, None, port)])
 
-    def test_requested_networks_quantumv2_enabled_with_network(self):
-        self.flags(network_api_class='nova.network.quantumv2.api.API')
+    def test_requested_networks_neutronv2_enabled_with_network(self):
+        self.flags(network_api_class='nova.network.neutronv2.api.API')
         network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         requested_networks = [{'uuid': network}]
         res = self.controller._get_requested_networks(requested_networks)
         self.assertEquals(res, [(network, None, None)])
 
-    def test_requested_networks_quantumv2_enabled_with_network_and_port(self):
-        self.flags(network_api_class='nova.network.quantumv2.api.API')
+    def test_requested_networks_neutronv2_enabled_with_network_and_port(self):
+        self.flags(network_api_class='nova.network.neutronv2.api.API')
         network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
         requested_networks = [{'uuid': network, 'port': port}]
         res = self.controller._get_requested_networks(requested_networks)
         self.assertEquals(res, [(None, None, port)])
 
-    def test_requested_networks_quantumv2_disabled_with_port(self):
+    def test_requested_networks_neutronv2_disabled_with_port(self):
         port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
         requested_networks = [{'port': port}]
         self.assertRaises(
@@ -218,15 +218,15 @@ class ServersControllerTest(test.TestCase):
             requested_networks)
 
     def test_requested_networks_api_enabled_with_v2_subclass(self):
-        self.flags(network_api_class='nova.network.quantumv2.api.API')
+        self.flags(network_api_class='nova.network.neutronv2.api.API')
         network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
         requested_networks = [{'uuid': network, 'port': port}]
         res = self.controller._get_requested_networks(requested_networks)
         self.assertEquals(res, [(None, None, port)])
 
-    def test_requested_networks_quantumv2_subclass_with_port(self):
-        cls = 'nova.tests.api.openstack.compute.test_servers.QuantumV2Subclass'
+    def test_requested_networks_neutronv2_subclass_with_port(self):
+        cls = 'nova.tests.api.openstack.compute.test_servers.NeutronV2Subclass'
         self.flags(network_api_class=cls)
         port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
         requested_networks = [{'port': port}]
@@ -2764,8 +2764,8 @@ class ServersControllerCreateTest(test.TestCase):
         self.stubs.Set(compute_api.API, 'create', create)
         self._test_create_extra(params)
 
-    def test_create_instance_with_networks_disabled_quantumv2(self):
-        self.flags(network_api_class='nova.network.quantumv2.api.API')
+    def test_create_instance_with_networks_disabled_neutronv2(self):
+        self.flags(network_api_class='nova.network.neutronv2.api.API')
         net_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
         requested_networks = [{'uuid': net_uuid}]
         params = {'networks': requested_networks}

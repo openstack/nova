@@ -15,10 +15,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from neutronclient import client
+from neutronclient.common import exceptions
+from neutronclient.v2_0 import client as clientv20
 from oslo.config import cfg
-from quantumclient import client
-from quantumclient.common import exceptions
-from quantumclient.v2_0 import client as clientv20
 
 from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
@@ -30,28 +30,28 @@ LOG = logging.getLogger(__name__)
 def _get_auth_token():
     try:
         httpclient = client.HTTPClient(
-            username=CONF.quantum_admin_username,
-            tenant_name=CONF.quantum_admin_tenant_name,
-            region_name=CONF.quantum_region_name,
-            password=CONF.quantum_admin_password,
-            auth_url=CONF.quantum_admin_auth_url,
-            timeout=CONF.quantum_url_timeout,
-            auth_strategy=CONF.quantum_auth_strategy,
-            insecure=CONF.quantum_api_insecure)
+            username=CONF.neutron_admin_username,
+            tenant_name=CONF.neutron_admin_tenant_name,
+            region_name=CONF.neutron_region_name,
+            password=CONF.neutron_admin_password,
+            auth_url=CONF.neutron_admin_auth_url,
+            timeout=CONF.neutron_url_timeout,
+            auth_strategy=CONF.neutron_auth_strategy,
+            insecure=CONF.neutron_api_insecure)
         httpclient.authenticate()
         return httpclient.auth_token
-    except exceptions.QuantumClientException as e:
+    except exceptions.NeutronClientException as e:
         with excutils.save_and_reraise_exception():
-            LOG.error(_('Quantum client authentication failed: %s'), e)
+            LOG.error(_('Neutron client authentication failed: %s'), e)
 
 
 def _get_client(token=None):
-    if not token and CONF.quantum_auth_strategy:
+    if not token and CONF.neutron_auth_strategy:
         token = _get_auth_token()
     params = {
-        'endpoint_url': CONF.quantum_url,
-        'timeout': CONF.quantum_url_timeout,
-        'insecure': CONF.quantum_api_insecure,
+        'endpoint_url': CONF.neutron_url,
+        'timeout': CONF.neutron_url_timeout,
+        'insecure': CONF.neutron_api_insecure,
     }
     if token:
         params['token'] = token

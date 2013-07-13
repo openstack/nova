@@ -16,20 +16,20 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 import mox
-from quantumclient.v2_0 import client
+from neutronclient.v2_0 import client
 
 from nova import context
-from nova.network import quantumv2
-from nova.network.security_group import quantum_driver
+from nova.network import neutronv2
+from nova.network.security_group import neutron_driver
 from nova import test
 
 
-class TestQuantumDriver(test.TestCase):
+class TestNeutronDriver(test.TestCase):
     def setUp(self):
-        super(TestQuantumDriver, self).setUp()
-        self.mox.StubOutWithMock(quantumv2, 'get_client')
+        super(TestNeutronDriver, self).setUp()
+        self.mox.StubOutWithMock(neutronv2, 'get_client')
         self.moxed_client = self.mox.CreateMock(client.Client)
-        quantumv2.get_client(mox.IgnoreArg()).MultipleTimes().AndReturn(
+        neutronv2.get_client(mox.IgnoreArg()).MultipleTimes().AndReturn(
             self.moxed_client)
         self.context = context.RequestContext('userid', 'my_tenantid')
         setattr(self.context,
@@ -43,5 +43,5 @@ class TestQuantumDriver(test.TestCase):
             security_groups_list)
         self.mox.ReplayAll()
 
-        sg_api = quantum_driver.SecurityGroupAPI()
+        sg_api = neutron_driver.SecurityGroupAPI()
         sg_api.list(self.context, project=project_id)

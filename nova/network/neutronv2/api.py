@@ -27,52 +27,63 @@ from nova.db import base
 from nova import exception
 from nova.network import api as network_api
 from nova.network import model as network_model
-from nova.network import quantumv2
-from nova.network.quantumv2 import constants
+from nova.network import neutronv2
+from nova.network.neutronv2 import constants
 from nova.network.security_group import openstack_driver
 from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import uuidutils
 
-quantum_opts = [
-    cfg.StrOpt('quantum_url',
+neutron_opts = [
+    cfg.StrOpt('neutron_url',
                default='http://127.0.0.1:9696',
-               help='URL for connecting to quantum'),
-    cfg.IntOpt('quantum_url_timeout',
+               deprecated_name='quantum_url',
+               help='URL for connecting to neutron'),
+    cfg.IntOpt('neutron_url_timeout',
                default=30,
-               help='timeout value for connecting to quantum in seconds'),
-    cfg.StrOpt('quantum_admin_username',
-               help='username for connecting to quantum in admin context'),
-    cfg.StrOpt('quantum_admin_password',
-               help='password for connecting to quantum in admin context',
+               deprecated_name='quantum_url_timeout',
+               help='timeout value for connecting to neutron in seconds'),
+    cfg.StrOpt('neutron_admin_username',
+               deprecated_name='quantum_admin_username',
+               help='username for connecting to neutron in admin context'),
+    cfg.StrOpt('neutron_admin_password',
+               deprecated_name='quantum_admin_password',
+               help='password for connecting to neutron in admin context',
                secret=True),
-    cfg.StrOpt('quantum_admin_tenant_name',
-               help='tenant name for connecting to quantum in admin context'),
-    cfg.StrOpt('quantum_region_name',
-               help='region name for connecting to quantum in admin context'),
-    cfg.StrOpt('quantum_admin_auth_url',
+    cfg.StrOpt('neutron_admin_tenant_name',
+               deprecated_name='quantum_admin_tenant_name',
+               help='tenant name for connecting to neutron in admin context'),
+    cfg.StrOpt('neutron_region_name',
+               deprecated_name='quantum_region_name',
+               help='region name for connecting to neutron in admin context'),
+    cfg.StrOpt('neutron_admin_auth_url',
+               deprecated_name='quantum_admin_auth_url',
                default='http://localhost:5000/v2.0',
-               help='auth url for connecting to quantum in admin context'),
-    cfg.BoolOpt('quantum_api_insecure',
+               help='auth url for connecting to neutron in admin context'),
+    cfg.BoolOpt('neutron_api_insecure',
                 default=False,
+                deprecated_name='quantum_api_insecure',
                 help='if set, ignore any SSL validation issues'),
-    cfg.StrOpt('quantum_auth_strategy',
+    cfg.StrOpt('neutron_auth_strategy',
                default='keystone',
+               deprecated_name='quantum_auth_strategy',
                help='auth strategy for connecting to '
-                    'quantum in admin context'),
-    # TODO(berrange) temporary hack until Quantum can pass over the
+                    'neutron in admin context'),
+    # TODO(berrange) temporary hack until Neutron can pass over the
     # name of the OVS bridge it is configured with
-    cfg.StrOpt('quantum_ovs_bridge',
+    cfg.StrOpt('neutron_ovs_bridge',
                default='br-int',
+               deprecated_name='quantum_ovs_bridge',
                help='Name of Integration Bridge used by Open vSwitch'),
-    cfg.IntOpt('quantum_extension_sync_interval',
+    cfg.IntOpt('neutron_extension_sync_interval',
                 default=600,
-                help='Number of seconds before querying quantum for'
+                deprecated_name='quantum_extension_sync_interval',
+                help='Number of seconds before querying neutron for'
                      ' extensions'),
     ]
 
 CONF = cfg.CONF
-CONF.register_opts(quantum_opts)
+CONF.register_opts(neutron_opts)
 CONF.import_opt('default_floating_pool', 'nova.network.floating_ips')
 CONF.import_opt('flat_injected', 'nova.network.manager')
 LOG = logging.getLogger(__name__)
@@ -82,14 +93,14 @@ update_instance_info_cache = network_api.update_instance_cache_with_nw_info
 
 
 class API(base.Base):
-    """API for interacting with the quantum 2.x API."""
+    """API for interacting with the neutron 2.x API."""
 
     conductor_api = conductor.API()
     security_group_api = openstack_driver.get_openstack_security_group_driver()
 
     def __init__(self):
         super(API, self).__init__()
-        self.last_quantum_extension_sync = None
+        self.last_neutron_extension_sync = None
         self.extensions = {}
 
     def setup_networks_on_host(self, context, instance, host=None,
@@ -102,7 +113,7 @@ class API(base.Base):
         The list contains networks owned by the tenant and public networks.
         If net_ids specified, it searches networks with requested IDs only.
         """
-        quantum = quantumv2.get_client(context)
+        neutron = neutronv2.get_client(context)
 
         # If user has specified to attach instance only to specific
         # networks, add them to **search_opts
@@ -110,12 +121,12 @@ class API(base.Base):
         search_opts = {"tenant_id": project_id, 'shared': False}
         if net_ids:
             search_opts['id'] = net_ids
-        nets = quantum.list_networks(**search_opts).get('networks', [])
+        nets = neutron.list_networks(**search_opts).get('networks', [])
         # (2) Retrieve public network list.
         search_opts = {'shared': True}
         if net_ids:
             search_opts['id'] = net_ids
-        nets += quantum.list_networks(**search_opts).get('networks', [])
+        nets += neutron.list_networks(**search_opts).get('networks', [])
 
         _ensure_requested_network_ordering(
             lambda x: x['id'],
@@ -134,7 +145,7 @@ class API(base.Base):
         :param macs: None or a set of MAC addresses that the instance
             should use. macs is supplied by the hypervisor driver (contrast
             with requested_networks which is user supplied).
-            NB: QuantumV2 currently assigns hypervisor supplied MAC addresses
+            NB: NeutronV2 currently assigns hypervisor supplied MAC addresses
             to arbitrary networks, which requires openflow switches to
             function correctly if more than one network is being used with
             the bare metal hypervisor (which is the only one known to limit
@@ -147,7 +158,7 @@ class API(base.Base):
             # to create a port on a network. If we find a mac with a
             # pre-allocated port we also remove it from this set.
             available_macs = set(hypervisor_macs)
-        quantum = quantumv2.get_client(context)
+        neutron = neutronv2.get_client(context)
         LOG.debug(_('allocate_for_instance() for %s'),
                   instance['display_name'])
         if not instance['project_id']:
@@ -161,7 +172,7 @@ class API(base.Base):
         if requested_networks:
             for network_id, fixed_ip, port_id in requested_networks:
                 if port_id:
-                    port = quantum.show_port(port_id)['port']
+                    port = neutron.show_port(port_id)['port']
                     if hypervisor_macs is not None:
                         if port['mac_address'] not in hypervisor_macs:
                             raise exception.PortNotUsable(port_id=port_id,
@@ -193,7 +204,7 @@ class API(base.Base):
         # group if len(security_groups) == 1
         if len(security_groups):
             search_opts = {'tenant_id': instance['project_id']}
-            user_security_groups = quantum.list_security_groups(
+            user_security_groups = neutron.list_security_groups(
                 **search_opts).get('security_groups')
 
         for security_group in security_groups:
@@ -241,12 +252,12 @@ class API(base.Base):
                                       'device_owner': zone}}
             try:
                 port = ports.get(network_id)
-                self._populate_quantum_extension_values(instance,
+                self._populate_neutron_extension_values(instance,
                                                         port_req_body)
                 # Requires admin creds to set port bindings
-                port_client = (quantum if not
+                port_client = (neutron if not
                                self._has_port_binding_extension() else
-                               quantumv2.get_client(context, admin=True))
+                               neutronv2.get_client(context, admin=True))
                 if port:
                     port_client.update_port(port['id'], port_req_body)
                     touched_port_ids.append(port['id'])
@@ -277,10 +288,10 @@ class API(base.Base):
                             # Requires admin creds to set port bindings
                             if self._has_port_binding_extension():
                                 port_req_body['port']['binding:host_id'] = None
-                                port_client = quantumv2.get_client(
+                                port_client = neutronv2.get_client(
                                     context, admin=True)
                             else:
-                                port_client = quantum
+                                port_client = neutron
                             port_client.update_port(port_id, port_req_body)
                         except Exception:
                             msg = _("Failed to update port %s")
@@ -288,7 +299,7 @@ class API(base.Base):
 
                     for port_id in created_port_ids:
                         try:
-                            quantum.delete_port(port_id)
+                            neutron.delete_port(port_id)
                         except Exception:
                             msg = _("Failed to delete port %s")
                             LOG.exception(msg, port_id)
@@ -303,29 +314,29 @@ class API(base.Base):
                                           if port['id'] in created_port_ids +
                                                            touched_port_ids])
 
-    def _refresh_quantum_extensions_cache(self):
-        """Refresh the quantum extensions cache when necessary."""
-        if (not self.last_quantum_extension_sync or
-            ((time.time() - self.last_quantum_extension_sync)
-             >= CONF.quantum_extension_sync_interval)):
-            quantum = quantumv2.get_client(context.get_admin_context())
-            extensions_list = quantum.list_extensions()['extensions']
-            self.last_quantum_extension_sync = time.time()
+    def _refresh_neutron_extensions_cache(self):
+        """Refresh the neutron extensions cache when necessary."""
+        if (not self.last_neutron_extension_sync or
+            ((time.time() - self.last_neutron_extension_sync)
+             >= CONF.neutron_extension_sync_interval)):
+            neutron = neutronv2.get_client(context.get_admin_context())
+            extensions_list = neutron.list_extensions()['extensions']
+            self.last_neutron_extension_sync = time.time()
             self.extensions.clear()
             self.extensions = dict((ext['name'], ext)
                                    for ext in extensions_list)
 
     def _has_port_binding_extension(self, refresh_cache=False):
         if refresh_cache:
-            self._refresh_quantum_extensions_cache()
+            self._refresh_neutron_extensions_cache()
         return constants.PORTBINDING_EXT in self.extensions
 
-    def _populate_quantum_extension_values(self, instance, port_req_body):
-        """Populate quantum extension values for the instance.
+    def _populate_neutron_extension_values(self, instance, port_req_body):
+        """Populate neutron extension values for the instance.
 
         If the extension contains nvp-qos then get the rxtx_factor.
         """
-        self._refresh_quantum_extensions_cache()
+        self._refresh_neutron_extensions_cache()
         if 'nvp-qos' in self.extensions:
             instance_type = flavors.extract_flavor(instance)
             rxtx_factor = instance_type.get('rxtx_factor')
@@ -338,13 +349,13 @@ class API(base.Base):
         LOG.debug(_('deallocate_for_instance() for %s'),
                   instance['display_name'])
         search_opts = {'device_id': instance['uuid']}
-        data = quantumv2.get_client(context).list_ports(**search_opts)
+        data = neutronv2.get_client(context).list_ports(**search_opts)
         ports = data.get('ports', [])
         for port in ports:
             try:
-                quantumv2.get_client(context).delete_port(port['id'])
+                neutronv2.get_client(context).delete_port(port['id'])
             except Exception:
-                LOG.exception(_("Failed to delete quantum port %(portid)s")
+                LOG.exception(_("Failed to delete neutron port %(portid)s")
                               % {'portid': port['id']})
 
     @refresh_cache
@@ -364,20 +375,20 @@ class API(base.Base):
         Return network information for the instance
         """
         try:
-            quantumv2.get_client(context).delete_port(port_id)
+            neutronv2.get_client(context).delete_port(port_id)
         except Exception as ex:
-            LOG.exception(_("Failed to delete quantum port %(port_id)s ") %
+            LOG.exception(_("Failed to delete neutron port %(port_id)s ") %
                           locals())
 
         return self._get_instance_nw_info(context, instance)
 
     def list_ports(self, context, **search_opts):
         """List ports for the client based on search options."""
-        return quantumv2.get_client(context).list_ports(**search_opts)
+        return neutronv2.get_client(context).list_ports(**search_opts)
 
     def show_port(self, context, port_id):
         """Return the port for the client given the port id."""
-        return quantumv2.get_client(context).show_port(port_id)
+        return neutronv2.get_client(context).show_port(port_id)
 
     def get_instance_nw_info(self, context, instance, conductor_api=None,
                              networks=None):
@@ -400,7 +411,7 @@ class API(base.Base):
                                  conductor_api=None):
         """Add a fixed ip to the instance from specified network."""
         search_opts = {'network_id': network_id}
-        data = quantumv2.get_client(context).list_subnets(**search_opts)
+        data = neutronv2.get_client(context).list_subnets(**search_opts)
         ipam_subnets = data.get('subnets', [])
         if not ipam_subnets:
             raise exception.NetworkNotFoundForInstance(
@@ -410,7 +421,7 @@ class API(base.Base):
         search_opts = {'device_id': instance['uuid'],
                        'device_owner': zone,
                        'network_id': network_id}
-        data = quantumv2.get_client(context).list_ports(**search_opts)
+        data = neutronv2.get_client(context).list_ports(**search_opts)
         ports = data['ports']
         for p in ports:
             for subnet in ipam_subnets:
@@ -418,7 +429,7 @@ class API(base.Base):
                 fixed_ips.append({'subnet_id': subnet['id']})
                 port_req_body = {'port': {'fixed_ips': fixed_ips}}
                 try:
-                    quantumv2.get_client(context).update_port(p['id'],
+                    neutronv2.get_client(context).update_port(p['id'],
                                                               port_req_body)
                     return
                 except Exception as ex:
@@ -439,7 +450,7 @@ class API(base.Base):
         search_opts = {'device_id': instance['uuid'],
                        'device_owner': zone,
                        'fixed_ips': 'ip_address=%s' % address}
-        data = quantumv2.get_client(context).list_ports(**search_opts)
+        data = neutronv2.get_client(context).list_ports(**search_opts)
         ports = data['ports']
         for p in ports:
             fixed_ips = p['fixed_ips']
@@ -449,7 +460,7 @@ class API(base.Base):
                     new_fixed_ips.append(fixed_ip)
             port_req_body = {'port': {'fixed_ips': new_fixed_ips}}
             try:
-                quantumv2.get_client(context).update_port(p['id'],
+                neutronv2.get_client(context).update_port(p['id'],
                                                           port_req_body)
             except Exception as ex:
                 msg = _("Unable to update port %(portid)s with"
@@ -470,7 +481,7 @@ class API(base.Base):
 
         for (net_id, _i, port_id) in requested_networks:
             if port_id:
-                port = (quantumv2.get_client(context)
+                port = (neutronv2.get_client(context)
                                  .show_port(port_id)
                                  .get('port'))
                 if not port:
@@ -500,7 +511,7 @@ class API(base.Base):
                   e.g. [{'instance_uuid': uuid}, ...]
         """
         search_opts = {"fixed_ips": 'ip_address=%s' % address}
-        data = quantumv2.get_client(context).list_ports(**search_opts)
+        data = neutronv2.get_client(context).list_ports(**search_opts)
         ports = data.get('ports', [])
         return [{'instance_uuid': port['device_id']} for port in ports
                 if port['device_id']]
@@ -547,7 +558,7 @@ class API(base.Base):
         # since it is not used anywhere in nova code and I could
         # find why this parameter exists.
 
-        client = quantumv2.get_client(context)
+        client = neutronv2.get_client(context)
         port_id = self._get_port_id_by_fixed_address(client, instance,
                                                      fixed_address)
         fip = self._get_floating_ip_by_address(client, floating_address)
@@ -557,7 +568,7 @@ class API(base.Base):
 
     def get_all(self, context):
         """Get all networks for client."""
-        client = quantumv2.get_client(context)
+        client = neutronv2.get_client(context)
         networks = client.list_networks().get('networks')
         for network in networks:
             network['label'] = network['name']
@@ -565,7 +576,7 @@ class API(base.Base):
 
     def get(self, context, network_uuid):
         """Get specific network for client."""
-        client = quantumv2.get_client(context)
+        client = neutronv2.get_client(context)
         network = client.show_network(network_uuid).get('network') or {}
         network['label'] = network['name']
         return network
@@ -616,7 +627,7 @@ class API(base.Base):
 
     def get_floating_ip(self, context, id):
         """Return floating ip object given the floating ip id."""
-        client = quantumv2.get_client(context)
+        client = neutronv2.get_client(context)
         fip = client.show_floatingip(id)['floatingip']
         pool_dict = self._setup_net_dict(client,
                                          fip['floating_network_id'])
@@ -632,7 +643,7 @@ class API(base.Base):
 
     def get_floating_ip_pools(self, context):
         """Return floating ip pools."""
-        client = quantumv2.get_client(context)
+        client = neutronv2.get_client(context)
         pools = self._get_floating_ip_pools(client)
         return [{'name': n['name'] or n['id']} for n in pools]
 
@@ -642,10 +653,10 @@ class API(base.Base):
                   'address': fip['floating_ip_address'],
                   'pool': pool['name'] or pool['id'],
                   'project_id': fip['tenant_id'],
-                  # In Quantum v2, an exact fixed_ip_id does not exist.
+                  # In Neutron v2, an exact fixed_ip_id does not exist.
                   'fixed_ip_id': fip['port_id'],
                   }
-        # In Quantum v2 API fixed_ip_address and instance uuid
+        # In Neutron v2 API fixed_ip_address and instance uuid
         # (= device_id) are known here, so pass it as a result.
         result['fixed_ip'] = {'address': fip['fixed_ip_address']}
         if fip['port_id']:
@@ -657,7 +668,7 @@ class API(base.Base):
 
     def get_floating_ip_by_address(self, context, address):
         """Return a floating ip given an address."""
-        client = quantumv2.get_client(context)
+        client = neutronv2.get_client(context)
         fip = self._get_floating_ip_by_address(client, address)
         pool_dict = self._setup_net_dict(client,
                                          fip['floating_network_id'])
@@ -665,7 +676,7 @@ class API(base.Base):
         return self._format_floating_ip_model(fip, pool_dict, port_dict)
 
     def get_floating_ips_by_project(self, context):
-        client = quantumv2.get_client(context)
+        client = neutronv2.get_client(context)
         project_id = context.project_id
         fips = client.list_floatingips(tenant_id=project_id)['floatingips']
         pool_dict = self._setup_pools_dict(client)
@@ -678,7 +689,7 @@ class API(base.Base):
 
     def get_instance_id_by_floating_address(self, context, address):
         """Return the instance id a floating ip's fixed ip is allocated to."""
-        client = quantumv2.get_client(context)
+        client = neutronv2.get_client(context)
         fip = self._get_floating_ip_by_address(client, address)
         if not fip['port_id']:
             return None
@@ -711,7 +722,7 @@ class API(base.Base):
 
     def allocate_floating_ip(self, context, pool=None):
         """Add a floating ip to a project from a pool."""
-        client = quantumv2.get_client(context)
+        client = neutronv2.get_client(context)
         pool = pool or CONF.default_floating_pool
         pool_id = self._get_floating_ip_pool_id_by_name_or_id(client, pool)
 
@@ -739,9 +750,9 @@ class API(base.Base):
         try:
             data = client.list_floatingips(fixed_ip_address=fixed_ip,
                                            port_id=port)
-        # If a quantum plugin does not implement the L3 API a 404 from
+        # If a neutron plugin does not implement the L3 API a 404 from
         # list_floatingips will be raised.
-        except quantumv2.exceptions.QuantumClientException as e:
+        except neutronv2.exceptions.NeutronClientException as e:
             if e.status_code == 404:
                 return []
             raise
@@ -760,7 +771,7 @@ class API(base.Base):
         # since it is not used anywhere in nova code and I could
         # find why this parameter exists.
 
-        client = quantumv2.get_client(context)
+        client = neutronv2.get_client(context)
         fip = self._get_floating_ip_by_address(client, address)
         if fip['port_id']:
             raise exception.FloatingIpAssociated(address=address)
@@ -775,7 +786,7 @@ class API(base.Base):
         # since it is not used anywhere in nova code and I could
         # find why this parameter exists.
 
-        client = quantumv2.get_client(context)
+        client = neutronv2.get_client(context)
         fip = self._get_floating_ip_by_address(client, address)
         client.update_floatingip(fip['id'], {'floatingip': {'port_id': None}})
 
@@ -789,15 +800,15 @@ class API(base.Base):
         """Finish migrating the network of an instance."""
         if not self._has_port_binding_extension(refresh_cache=True):
             return
-        quantum = quantumv2.get_client(context, admin=True)
+        neutron = neutronv2.get_client(context, admin=True)
         search_opts = {'device_id': instance['uuid'],
                        'tenant_id': instance['project_id']}
-        data = quantum.list_ports(**search_opts)
+        data = neutron.list_ports(**search_opts)
         ports = data['ports']
         for p in ports:
             port_req_body = {'port': {'binding:host_id': instance.get('host')}}
             try:
-                quantum.update_port(p['id'], port_req_body)
+                neutron.update_port(p['id'], port_req_body)
             except Exception as ex:
                 with excutils.save_and_reraise_exception():
                     msg = _("Unable to update host of port %s")
@@ -840,10 +851,10 @@ class API(base.Base):
         # Network model metadata
         should_create_bridge = None
         vif_type = port.get('binding:vif_type')
-        # TODO(berrange) Quantum should pass the bridge name
+        # TODO(berrange) Neutron should pass the bridge name
         # in another binding metadata field
         if vif_type == network_model.VIF_TYPE_OVS:
-            bridge = CONF.quantum_ovs_bridge
+            bridge = CONF.neutron_ovs_bridge
             ovs_interfaceid = port['id']
         elif vif_type == network_model.VIF_TYPE_BRIDGE:
             bridge = "brq" + port['network_id']
@@ -867,7 +878,7 @@ class API(base.Base):
     def _build_network_info_model(self, context, instance, networks=None):
         search_opts = {'tenant_id': instance['project_id'],
                        'device_id': instance['uuid'], }
-        client = quantumv2.get_client(context, admin=True)
+        client = neutronv2.get_client(context, admin=True)
         data = client.list_ports(**search_opts)
         ports = data.get('ports', [])
         if networks is None:
@@ -914,7 +925,7 @@ class API(base.Base):
         if not fixed_ips:
             return []
         search_opts = {'id': [ip['subnet_id'] for ip in fixed_ips]}
-        data = quantumv2.get_client(context).list_subnets(**search_opts)
+        data = neutronv2.get_client(context).list_subnets(**search_opts)
         ipam_subnets = data.get('subnets', [])
         subnets = []
 
@@ -928,7 +939,7 @@ class API(base.Base):
             # attempt to populate DHCP server field
             search_opts = {'network_id': subnet['network_id'],
                            'device_owner': 'network:dhcp'}
-            data = quantumv2.get_client(context).list_ports(**search_opts)
+            data = neutronv2.get_client(context).list_ports(**search_opts)
             dhcp_ports = data.get('ports', [])
             for p in dhcp_ports:
                 for ip_pair in p['fixed_ips']:

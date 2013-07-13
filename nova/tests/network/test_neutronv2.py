@@ -18,27 +18,27 @@
 import uuid
 
 import mox
+from neutronclient.common import exceptions
+from neutronclient.v2_0 import client
 from oslo.config import cfg
-from quantumclient.common import exceptions
-from quantumclient.v2_0 import client
 
 from nova.compute import flavors
 from nova import context
 from nova import exception
 from nova.network import model
-from nova.network import quantumv2
-from nova.network.quantumv2 import api as quantumapi
-from nova.network.quantumv2 import constants
+from nova.network import neutronv2
+from nova.network.neutronv2 import api as neutronapi
+from nova.network.neutronv2 import constants
 from nova import test
 from nova import utils
 
 CONF = cfg.CONF
 
-#NOTE: Quantum client raises Exception which is discouraged by HACKING.
+#NOTE: Neutron client raises Exception which is discouraged by HACKING.
 #      We set this variable here and use it for assertions below to avoid
-#      the hacking checks until we can make quantum client throw a custom
+#      the hacking checks until we can make neutron client throw a custom
 #      exception class instead.
-QUANTUM_CLIENT_EXCEPTION = Exception
+NEUTRON_CLIENT_EXCEPTION = Exception
 
 
 class MyComparator(mox.Comparator):
@@ -88,49 +88,49 @@ class MyComparator(mox.Comparator):
         return str(self.lhs)
 
 
-class TestQuantumClient(test.TestCase):
+class TestNeutronClient(test.TestCase):
     def test_withtoken(self):
-        self.flags(quantum_url='http://anyhost/')
-        self.flags(quantum_url_timeout=30)
+        self.flags(neutron_url='http://anyhost/')
+        self.flags(neutron_url_timeout=30)
         my_context = context.RequestContext('userid',
                                             'my_tenantid',
                                             auth_token='token')
         self.mox.StubOutWithMock(client.Client, "__init__")
         client.Client.__init__(
-            endpoint_url=CONF.quantum_url,
+            endpoint_url=CONF.neutron_url,
             token=my_context.auth_token,
-            timeout=CONF.quantum_url_timeout,
+            timeout=CONF.neutron_url_timeout,
             insecure=False).AndReturn(None)
         self.mox.ReplayAll()
-        quantumv2.get_client(my_context)
+        neutronv2.get_client(my_context)
 
     def test_withouttoken_keystone_connection_error(self):
-        self.flags(quantum_auth_strategy='keystone')
-        self.flags(quantum_url='http://anyhost/')
+        self.flags(neutron_auth_strategy='keystone')
+        self.flags(neutron_url='http://anyhost/')
         my_context = context.RequestContext('userid', 'my_tenantid')
-        self.assertRaises(QUANTUM_CLIENT_EXCEPTION,
-                          quantumv2.get_client,
+        self.assertRaises(NEUTRON_CLIENT_EXCEPTION,
+                          neutronv2.get_client,
                           my_context)
 
     def test_withouttoken_keystone_not_auth(self):
-        self.flags(quantum_auth_strategy=None)
-        self.flags(quantum_url='http://anyhost/')
-        self.flags(quantum_url_timeout=30)
+        self.flags(neutron_auth_strategy=None)
+        self.flags(neutron_url='http://anyhost/')
+        self.flags(neutron_url_timeout=30)
         my_context = context.RequestContext('userid', 'my_tenantid')
         self.mox.StubOutWithMock(client.Client, "__init__")
         client.Client.__init__(
-            endpoint_url=CONF.quantum_url,
+            endpoint_url=CONF.neutron_url,
             auth_strategy=None,
-            timeout=CONF.quantum_url_timeout,
+            timeout=CONF.neutron_url_timeout,
             insecure=False).AndReturn(None)
         self.mox.ReplayAll()
-        quantumv2.get_client(my_context)
+        neutronv2.get_client(my_context)
 
 
-class TestQuantumv2Base(test.TestCase):
+class TestNeutronv2Base(test.TestCase):
 
     def setUp(self):
-        super(TestQuantumv2Base, self).setUp()
+        super(TestNeutronv2Base, self).setUp()
         self.context = context.RequestContext('userid', 'my_tenantid')
         setattr(self.context,
                 'auth_token',
@@ -237,7 +237,7 @@ class TestQuantumv2Base(test.TestCase):
                                'fixed_ip_address': fixed_ip_address,
                                'router_id': 'router_id1'}
         self._returned_nw_info = []
-        self.mox.StubOutWithMock(quantumv2, 'get_client')
+        self.mox.StubOutWithMock(neutronv2, 'get_client')
         self.moxed_client = self.mox.CreateMock(client.Client)
         self.addCleanup(CONF.reset)
         self.addCleanup(self.mox.VerifyAll)
@@ -245,21 +245,21 @@ class TestQuantumv2Base(test.TestCase):
         self.addCleanup(self.stubs.UnsetAll)
 
     def _stub_allocate_for_instance(self, net_idx=1, **kwargs):
-        api = quantumapi.API()
+        api = neutronapi.API()
         self.mox.StubOutWithMock(api, '_get_instance_nw_info')
         has_portbinding = False
         if kwargs.get('portbinding'):
             has_portbinding = True
             api.extensions[constants.PORTBINDING_EXT] = 1
-            self.mox.StubOutWithMock(api, '_refresh_quantum_extensions_cache')
-            quantumv2.get_client(mox.IgnoreArg()).MultipleTimes().AndReturn(
+            self.mox.StubOutWithMock(api, '_refresh_neutron_extensions_cache')
+            neutronv2.get_client(mox.IgnoreArg()).MultipleTimes().AndReturn(
                 self.moxed_client)
-            quantumv2.get_client(
+            neutronv2.get_client(
                 mox.IgnoreArg(), admin=True).MultipleTimes().AndReturn(
                 self.moxed_client)
-            api._refresh_quantum_extensions_cache()
+            api._refresh_neutron_extensions_cache()
         else:
-            self.mox.StubOutWithMock(api, '_populate_quantum_extension_values')
+            self.mox.StubOutWithMock(api, '_populate_neutron_extension_values')
         self.mox.StubOutWithMock(api, '_has_port_binding_extension')
         # Net idx is 1-based for compatibility with existing unit tests
         nets = self.nets[net_idx - 1]
@@ -315,10 +315,10 @@ class TestQuantumv2Base(test.TestCase):
                     self.instance.get('host'))
             port = ports.get(net_id, None)
             if not has_portbinding:
-                api._populate_quantum_extension_values(
+                api._populate_neutron_extension_values(
                     self.instance, mox.IgnoreArg()).AndReturn(None)
             else:
-                # since _populate_quantum_extension_values() will call
+                # since _populate_neutron_extension_values() will call
                 # _has_port_binding_extension()
                 api._has_port_binding_extension().AndReturn(has_portbinding)
             api._has_port_binding_extension().AndReturn(has_portbinding)
@@ -372,7 +372,7 @@ class TestQuantumv2Base(test.TestCase):
                         nw_inf[index]['network']['subnets'][0]['dns'])
 
     def _get_instance_nw_info(self, number):
-        api = quantumapi.API()
+        api = neutronapi.API()
         self.mox.StubOutWithMock(api.db, 'instance_info_cache_update')
         api.db.instance_info_cache_update(mox.IgnoreArg(),
                                           self.instance['uuid'],
@@ -415,30 +415,30 @@ class TestQuantumv2Base(test.TestCase):
         return api.allocate_for_instance(self.context, self.instance, **kwargs)
 
 
-class TestQuantumv2(TestQuantumv2Base):
+class TestNeutronv2(TestNeutronv2Base):
 
     def setUp(self):
-        super(TestQuantumv2, self).setUp()
-        quantumv2.get_client(mox.IgnoreArg()).MultipleTimes().AndReturn(
+        super(TestNeutronv2, self).setUp()
+        neutronv2.get_client(mox.IgnoreArg()).MultipleTimes().AndReturn(
             self.moxed_client)
 
     def test_get_instance_nw_info_1(self):
         # Test to get one port in one network and subnet.
-        quantumv2.get_client(mox.IgnoreArg(),
+        neutronv2.get_client(mox.IgnoreArg(),
                              admin=True).MultipleTimes().AndReturn(
             self.moxed_client)
         self._get_instance_nw_info(1)
 
     def test_get_instance_nw_info_2(self):
         # Test to get one port in each of two networks and subnets.
-        quantumv2.get_client(mox.IgnoreArg(),
+        neutronv2.get_client(mox.IgnoreArg(),
                              admin=True).MultipleTimes().AndReturn(
             self.moxed_client)
         self._get_instance_nw_info(2)
 
     def test_get_instance_nw_info_with_nets(self):
         # Test get instance_nw_info with networks passed in.
-        api = quantumapi.API()
+        api = neutronapi.API()
         self.mox.StubOutWithMock(api.db, 'instance_info_cache_update')
         api.db.instance_info_cache_update(
             mox.IgnoreArg(),
@@ -460,7 +460,7 @@ class TestQuantumv2(TestQuantumv2Base):
             network_id='my_netid1',
             device_owner='network:dhcp').AndReturn(
                 {'ports': self.dhcp_port_data1})
-        quantumv2.get_client(mox.IgnoreArg(),
+        neutronv2.get_client(mox.IgnoreArg(),
                              admin=True).MultipleTimes().AndReturn(
             self.moxed_client)
         self.mox.ReplayAll()
@@ -471,7 +471,7 @@ class TestQuantumv2(TestQuantumv2Base):
 
     def test_get_instance_nw_info_without_subnet(self):
         # Test get instance_nw_info for a port without subnet.
-        api = quantumapi.API()
+        api = neutronapi.API()
         self.mox.StubOutWithMock(api.db, 'instance_info_cache_update')
         api.db.instance_info_cache_update(
             mox.IgnoreArg(),
@@ -486,7 +486,7 @@ class TestQuantumv2(TestQuantumv2Base):
                 {'networks': self.nets1})
         self.moxed_client.list_networks(
             shared=True).AndReturn({'networks': []})
-        quantumv2.get_client(mox.IgnoreArg(),
+        neutronv2.get_client(mox.IgnoreArg(),
                              admin=True).MultipleTimes().AndReturn(
             self.moxed_client)
         self.mox.ReplayAll()
@@ -501,16 +501,16 @@ class TestQuantumv2(TestQuantumv2Base):
         self.assertEquals('my_mac%s' % id_suffix, nw_inf[0]['address'])
         self.assertEquals(0, len(nw_inf[0]['network']['subnets']))
 
-    def test_refresh_quantum_extensions_cache(self):
-        api = quantumapi.API()
+    def test_refresh_neutron_extensions_cache(self):
+        api = neutronapi.API()
         self.moxed_client.list_extensions().AndReturn(
             {'extensions': [{'name': 'nvp-qos'}]})
         self.mox.ReplayAll()
-        api._refresh_quantum_extensions_cache()
+        api._refresh_neutron_extensions_cache()
         self.assertEquals({'nvp-qos': {'name': 'nvp-qos'}}, api.extensions)
 
-    def test_populate_quantum_extension_values_rxtx_factor(self):
-        api = quantumapi.API()
+    def test_populate_neutron_extension_values_rxtx_factor(self):
+        api = neutronapi.API()
         self.moxed_client.list_extensions().AndReturn(
             {'extensions': [{'name': 'nvp-qos'}]})
         self.mox.ReplayAll()
@@ -520,7 +520,7 @@ class TestQuantumv2(TestQuantumv2Base):
             flavors.save_flavor_info({}, instance_type))
         instance = {'system_metadata': sys_meta}
         port_req_body = {'port': {}}
-        api._populate_quantum_extension_values(instance, port_req_body)
+        api._populate_neutron_extension_values(instance, port_req_body)
         self.assertEquals(port_req_body['port']['rxtx_factor'], 1)
 
     def test_allocate_for_instance_1(self):
@@ -626,7 +626,7 @@ class TestQuantumv2(TestQuantumv2Base):
 
     def test_allocate_for_instance_no_networks(self):
         """verify the exception thrown when there are no networks defined."""
-        api = quantumapi.API()
+        api = neutronapi.API()
         self.moxed_client.list_networks(
             tenant_id=self.instance['project_id'],
             shared=False).AndReturn(
@@ -644,8 +644,8 @@ class TestQuantumv2(TestQuantumv2Base):
         Mox to raise exception when creating a second port.
         In this case, the code should delete the first created port.
         """
-        api = quantumapi.API()
-        self.mox.StubOutWithMock(api, '_populate_quantum_extension_values')
+        api = neutronapi.API()
+        self.mox.StubOutWithMock(api, '_populate_neutron_extension_values')
         self.mox.StubOutWithMock(api, '_has_port_binding_extension')
         api._has_port_binding_extension().MultipleTimes().AndReturn(False)
         self.moxed_client.list_networks(
@@ -672,7 +672,7 @@ class TestQuantumv2(TestQuantumv2Base):
             port_req_body['port'].update(binding_port_req_body['port'])
             port = {'id': 'portid_' + network['id']}
 
-            api._populate_quantum_extension_values(
+            api._populate_neutron_extension_values(
                 self.instance, binding_port_req_body).AndReturn(None)
             if index == 0:
                 self.moxed_client.create_port(
@@ -684,7 +684,7 @@ class TestQuantumv2(TestQuantumv2Base):
             index += 1
         self.moxed_client.delete_port('portid_' + self.nets2[0]['id'])
         self.mox.ReplayAll()
-        self.assertRaises(QUANTUM_CLIENT_EXCEPTION, api.allocate_for_instance,
+        self.assertRaises(NEUTRON_CLIENT_EXCEPTION, api.allocate_for_instance,
                           self.context, self.instance)
 
     def test_allocate_for_instance_ex2(self):
@@ -694,7 +694,7 @@ class TestQuantumv2(TestQuantumv2Base):
         Mox to raise exception when creating the first port.
         In this case, the code should not delete any ports.
         """
-        api = quantumapi.API()
+        api = neutronapi.API()
         self.moxed_client.list_networks(
             tenant_id=self.instance['project_id'],
             shared=False).AndReturn(
@@ -713,13 +713,13 @@ class TestQuantumv2(TestQuantumv2Base):
             MyComparator(port_req_body)).AndRaise(
                 Exception("fail to create port"))
         self.mox.ReplayAll()
-        self.assertRaises(QUANTUM_CLIENT_EXCEPTION, api.allocate_for_instance,
+        self.assertRaises(NEUTRON_CLIENT_EXCEPTION, api.allocate_for_instance,
                           self.context, self.instance)
 
     def test_allocate_for_instance_no_port_or_network(self):
         class BailOutEarly(Exception):
             pass
-        api = quantumapi.API()
+        api = neutronapi.API()
         self.mox.StubOutWithMock(api, '_get_available_networks')
         # Make sure we get an empty list and then bail out of the rest
         # of the function
@@ -749,7 +749,7 @@ class TestQuantumv2(TestQuantumv2Base):
 
         self.mox.ReplayAll()
 
-        api = quantumapi.API()
+        api = neutronapi.API()
         api.deallocate_for_instance(self.context, self.instance)
 
     def test_deallocate_for_instance_1(self):
@@ -764,13 +764,13 @@ class TestQuantumv2(TestQuantumv2Base):
         port_data = number == 1 and self.port_data1 or self.port_data2
         self.moxed_client.delete_port(port_data[0]['id'])
 
-        quantumv2.get_client(mox.IgnoreArg(), admin=True).AndReturn(
+        neutronv2.get_client(mox.IgnoreArg(), admin=True).AndReturn(
             self.moxed_client)
         self.moxed_client.list_ports(
             tenant_id=self.instance['project_id'],
             device_id=self.instance['uuid']).AndReturn(
                 {'ports': port_data[1:]})
-        quantumv2.get_client(mox.IgnoreArg()).MultipleTimes().AndReturn(
+        neutronv2.get_client(mox.IgnoreArg()).MultipleTimes().AndReturn(
             self.moxed_client)
         self.moxed_client.list_networks(
             tenant_id=self.instance['project_id'],
@@ -790,7 +790,7 @@ class TestQuantumv2(TestQuantumv2Base):
 
         self.mox.ReplayAll()
 
-        api = quantumapi.API()
+        api = neutronapi.API()
         nwinfo = api.deallocate_port_for_instance(self.context, self.instance,
                                                   port_data[0]['id'])
         self.assertEqual(len(nwinfo), len(port_data[1:]))
@@ -809,12 +809,12 @@ class TestQuantumv2(TestQuantumv2Base):
         search_opts = {'parm': 'value'}
         self.moxed_client.list_ports(**search_opts)
         self.mox.ReplayAll()
-        quantumapi.API().list_ports(self.context, **search_opts)
+        neutronapi.API().list_ports(self.context, **search_opts)
 
     def test_show_port(self):
         self.moxed_client.show_port('foo')
         self.mox.ReplayAll()
-        quantumapi.API().show_port(self.context, 'foo')
+        neutronapi.API().show_port(self.context, 'foo')
 
     def test_validate_networks(self):
         requested_networks = [('my_netid1', 'test', None),
@@ -829,7 +829,7 @@ class TestQuantumv2(TestQuantumv2Base):
             shared=True).AndReturn(
                 {'networks': []})
         self.mox.ReplayAll()
-        api = quantumapi.API()
+        api = neutronapi.API()
         api.validate_networks(self.context, requested_networks)
 
     def test_validate_networks_ex_1(self):
@@ -845,7 +845,7 @@ class TestQuantumv2(TestQuantumv2Base):
             shared=True).AndReturn(
                 {'networks': []})
         self.mox.ReplayAll()
-        api = quantumapi.API()
+        api = neutronapi.API()
         try:
             api.validate_networks(self.context, requested_networks)
         except exception.NetworkNotFound as ex:
@@ -865,7 +865,7 @@ class TestQuantumv2(TestQuantumv2Base):
             shared=True).AndReturn(
                 {'networks': []})
         self.mox.ReplayAll()
-        api = quantumapi.API()
+        api = neutronapi.API()
         try:
             api.validate_networks(self.context, requested_networks)
         except exception.NetworkNotFound as ex:
@@ -879,8 +879,8 @@ class TestQuantumv2(TestQuantumv2Base):
                               ('my_netid1', None, None)]
         self.mox.ReplayAll()
         # Expected call from setUp.
-        quantumv2.get_client(None)
-        api = quantumapi.API()
+        neutronv2.get_client(None)
+        api = neutronapi.API()
         self.assertRaises(exception.NetworkDuplicated,
                           api.validate_networks,
                           self.context, requested_networks)
@@ -898,33 +898,33 @@ class TestQuantumv2(TestQuantumv2Base):
     def test_get_instance_uuids_by_ip_filter(self):
         self._mock_list_ports()
         filters = {'ip': '^10\\.0\\.1\\.2$'}
-        api = quantumapi.API()
+        api = neutronapi.API()
         result = api.get_instance_uuids_by_ip_filter(self.context, filters)
         self.assertEquals('device_id1', result[0]['instance_uuid'])
         self.assertEquals('device_id2', result[1]['instance_uuid'])
 
     def test_get_fixed_ip_by_address_fails_for_no_ports(self):
         address = self._mock_list_ports(port_data=[])
-        api = quantumapi.API()
+        api = neutronapi.API()
         self.assertRaises(exception.FixedIpNotFoundForAddress,
                           api.get_fixed_ip_by_address,
                           self.context, address)
 
     def test_get_fixed_ip_by_address_succeeds_for_1_port(self):
         address = self._mock_list_ports(port_data=self.port_data1)
-        api = quantumapi.API()
+        api = neutronapi.API()
         result = api.get_fixed_ip_by_address(self.context, address)
         self.assertEquals('device_id1', result['instance_uuid'])
 
     def test_get_fixed_ip_by_address_fails_for_more_than_1_port(self):
         address = self._mock_list_ports()
-        api = quantumapi.API()
+        api = neutronapi.API()
         self.assertRaises(exception.FixedIpAssociatedWithMultipleInstances,
                           api.get_fixed_ip_by_address,
                           self.context, address)
 
     def _get_available_networks(self, prv_nets, pub_nets, req_ids=None):
-        api = quantumapi.API()
+        api = neutronapi.API()
         nets = prv_nets + pub_nets
         mox_list_network_params = dict(tenant_id=self.instance['project_id'],
                                        shared=False)
@@ -961,7 +961,7 @@ class TestQuantumv2(TestQuantumv2Base):
         self._get_available_networks(prv_nets, pub_nets, req_ids)
 
     def test_get_floating_ip_pools(self):
-        api = quantumapi.API()
+        api = neutronapi.API()
         search_opts = {'router:external': True}
         self.moxed_client.list_networks(**search_opts).\
             AndReturn({'networks': [self.fip_pool, self.fip_pool_nova]})
@@ -985,7 +985,7 @@ class TestQuantumv2(TestQuantumv2Base):
         return expected
 
     def _test_get_floating_ip(self, fip_data, idx=0, by_address=False):
-        api = quantumapi.API()
+        api = neutronapi.API()
         fip_id = fip_data['id']
         net_id = fip_data['floating_network_id']
         address = fip_data['floating_ip_address']
@@ -1025,7 +1025,7 @@ class TestQuantumv2(TestQuantumv2Base):
                                    by_address=True)
 
     def test_get_floating_ip_by_address_not_found(self):
-        api = quantumapi.API()
+        api = neutronapi.API()
         address = self.fip_unassociated['floating_ip_address']
         self.moxed_client.list_floatingips(floating_ip_address=address).\
             AndReturn({'floatingips': []})
@@ -1035,7 +1035,7 @@ class TestQuantumv2(TestQuantumv2Base):
                           self.context, address)
 
     def test_get_floating_ip_by_address_multiple_found(self):
-        api = quantumapi.API()
+        api = neutronapi.API()
         address = self.fip_unassociated['floating_ip_address']
         self.moxed_client.list_floatingips(floating_ip_address=address).\
             AndReturn({'floatingips': [self.fip_unassociated] * 2})
@@ -1045,7 +1045,7 @@ class TestQuantumv2(TestQuantumv2Base):
                           self.context, address)
 
     def test_get_floating_ips_by_project(self):
-        api = quantumapi.API()
+        api = neutronapi.API()
         project_id = self.context.project_id
         self.moxed_client.list_floatingips(tenant_id=project_id).\
             AndReturn({'floatingips': [self.fip_unassociated,
@@ -1064,7 +1064,7 @@ class TestQuantumv2(TestQuantumv2Base):
 
     def _test_get_instance_id_by_floating_address(self, fip_data,
                                                   associated=False):
-        api = quantumapi.API()
+        api = neutronapi.API()
         address = fip_data['floating_ip_address']
         self.moxed_client.list_floatingips(floating_ip_address=address).\
                 AndReturn({'floatingips': [fip_data]})
@@ -1088,7 +1088,7 @@ class TestQuantumv2(TestQuantumv2Base):
                                                        associated=True)
 
     def test_allocate_floating_ip(self):
-        api = quantumapi.API()
+        api = neutronapi.API()
         pool_name = self.fip_pool['name']
         pool_id = self.fip_pool['id']
         search_opts = {'router:external': True,
@@ -1104,7 +1104,7 @@ class TestQuantumv2(TestQuantumv2Base):
         self.assertEqual(fip, self.fip_unassociated['floating_ip_address'])
 
     def test_allocate_floating_ip_with_pool_id(self):
-        api = quantumapi.API()
+        api = neutronapi.API()
         pool_id = self.fip_pool['id']
         search_opts = {'router:external': True,
                        'fields': 'id',
@@ -1119,7 +1119,7 @@ class TestQuantumv2(TestQuantumv2Base):
         self.assertEqual(fip, self.fip_unassociated['floating_ip_address'])
 
     def test_allocate_floating_ip_with_default_pool(self):
-        api = quantumapi.API()
+        api = neutronapi.API()
         pool_name = self.fip_pool_nova['name']
         pool_id = self.fip_pool_nova['id']
         search_opts = {'router:external': True,
@@ -1135,7 +1135,7 @@ class TestQuantumv2(TestQuantumv2Base):
         self.assertEqual(fip, self.fip_unassociated['floating_ip_address'])
 
     def test_release_floating_ip(self):
-        api = quantumapi.API()
+        api = neutronapi.API()
         address = self.fip_unassociated['floating_ip_address']
         fip_id = self.fip_unassociated['id']
 
@@ -1146,7 +1146,7 @@ class TestQuantumv2(TestQuantumv2Base):
         api.release_floating_ip(self.context, address)
 
     def test_release_floating_ip_associated(self):
-        api = quantumapi.API()
+        api = neutronapi.API()
         address = self.fip_associated['floating_ip_address']
 
         self.moxed_client.list_floatingips(floating_ip_address=address).\
@@ -1167,7 +1167,7 @@ class TestQuantumv2(TestQuantumv2Base):
                                           mox.IgnoreArg())
 
     def test_associate_floating_ip(self):
-        api = quantumapi.API()
+        api = neutronapi.API()
         address = self.fip_associated['floating_ip_address']
         fixed_address = self.fip_associated['fixed_ip_address']
         fip_id = self.fip_associated['id']
@@ -1188,7 +1188,7 @@ class TestQuantumv2(TestQuantumv2Base):
                                   address, fixed_address)
 
     def test_associate_floating_ip_not_found_fixed_ip(self):
-        api = quantumapi.API()
+        api = neutronapi.API()
         address = self.fip_associated['floating_ip_address']
         fixed_address = self.fip_associated['fixed_ip_address']
 
@@ -1203,7 +1203,7 @@ class TestQuantumv2(TestQuantumv2Base):
                           self.instance, address, fixed_address)
 
     def test_disassociate_floating_ip(self):
-        api = quantumapi.API()
+        api = neutronapi.API()
         address = self.fip_associated['floating_ip_address']
         fip_id = self.fip_associated['id']
 
@@ -1217,7 +1217,7 @@ class TestQuantumv2(TestQuantumv2Base):
         api.disassociate_floating_ip(self.context, self.instance, address)
 
     def test_add_fixed_ip_to_instance(self):
-        api = quantumapi.API()
+        api = neutronapi.API()
         self._setup_mock_for_refresh_cache(api)
         network_id = 'my_netid1'
         search_opts = {'network_id': network_id}
@@ -1244,7 +1244,7 @@ class TestQuantumv2(TestQuantumv2Base):
         api.add_fixed_ip_to_instance(self.context, self.instance, network_id)
 
     def test_remove_fixed_ip_from_instance(self):
-        api = quantumapi.API()
+        api = neutronapi.API()
         self._setup_mock_for_refresh_cache(api)
         address = '10.0.0.3'
         zone = 'compute:%s' % self.instance['availability_zone']
@@ -1267,13 +1267,13 @@ class TestQuantumv2(TestQuantumv2Base):
         api.remove_fixed_ip_from_instance(self.context, self.instance, address)
 
     def test_list_floating_ips_without_l3_support(self):
-        api = quantumapi.API()
-        QuantumNotFound = exceptions.QuantumClientException(
+        api = neutronapi.API()
+        NeutronNotFound = exceptions.NeutronClientException(
             status_code=404)
         self.moxed_client.list_floatingips(
-            fixed_ip_address='1.1.1.1', port_id=1).AndRaise(QuantumNotFound)
+            fixed_ip_address='1.1.1.1', port_id=1).AndRaise(NeutronNotFound)
         self.mox.ReplayAll()
-        quantumv2.get_client('fake')
+        neutronv2.get_client('fake')
         floatingips = api._get_floating_ips_by_fixed_and_port(
             self.moxed_client, '1.1.1.1', 1)
         self.assertEqual(floatingips, [])
@@ -1284,13 +1284,13 @@ class TestQuantumv2(TestQuantumv2Base):
                 {'ip_address': '1.1.1.1'}],
             'id': 'port-id',
             }
-        api = quantumapi.API()
+        api = neutronapi.API()
         self.mox.StubOutWithMock(api, '_get_floating_ips_by_fixed_and_port')
         api._get_floating_ips_by_fixed_and_port(
             self.moxed_client, '1.1.1.1', 'port-id').AndReturn(
                 [{'floating_ip_address': '10.0.0.1'}])
         self.mox.ReplayAll()
-        quantumv2.get_client('fake')
+        neutronv2.get_client('fake')
         result = api._nw_info_get_ips(self.moxed_client, fake_port)
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]['address'], '1.1.1.1')
@@ -1305,12 +1305,12 @@ class TestQuantumv2(TestQuantumv2Base):
             }
         fake_subnet = model.Subnet(cidr='1.0.0.0/8')
         fake_ips = [model.IP(x['ip_address']) for x in fake_port['fixed_ips']]
-        api = quantumapi.API()
+        api = neutronapi.API()
         self.mox.StubOutWithMock(api, '_get_subnets_from_port')
         api._get_subnets_from_port(self.context, fake_port).AndReturn(
             [fake_subnet])
         self.mox.ReplayAll()
-        quantumv2.get_client('fake')
+        neutronv2.get_client('fake')
         subnets = api._nw_info_get_subnets(self.context, fake_port, fake_ips)
         self.assertEqual(len(subnets), 1)
         self.assertEqual(len(subnets[0]['ips']), 1)
@@ -1325,9 +1325,9 @@ class TestQuantumv2(TestQuantumv2Base):
             }
         fake_subnets = [model.Subnet(cidr='1.0.0.0/8')]
         fake_nets = [{'id': 'net-id', 'name': 'foo', 'tenant_id': 'tenant'}]
-        api = quantumapi.API()
+        api = neutronapi.API()
         self.mox.ReplayAll()
-        quantumv2.get_client('fake')
+        neutronv2.get_client('fake')
         net, iid = api._nw_info_build_network(fake_port, fake_nets,
                                               fake_subnets)
         self.assertEqual(net['subnets'], fake_subnets)
@@ -1339,7 +1339,7 @@ class TestQuantumv2(TestQuantumv2Base):
 
     def test_nw_info_build_network_ovs(self):
         net, iid = self._test_nw_info_build_network(model.VIF_TYPE_OVS)
-        self.assertEqual(net['bridge'], CONF.quantum_ovs_bridge)
+        self.assertEqual(net['bridge'], CONF.neutron_ovs_bridge)
         self.assertFalse('should_create_bridge' in net)
         self.assertEqual(iid, 'port-id')
 
@@ -1356,7 +1356,7 @@ class TestQuantumv2(TestQuantumv2Base):
         self.assertEqual(iid, None)
 
     def test_build_network_info_model(self):
-        api = quantumapi.API()
+        api = neutronapi.API()
         fake_inst = {'project_id': 'fake', 'uuid': 'uuid'}
         fake_ports = [
             {'id': 'port0',
@@ -1378,7 +1378,7 @@ class TestQuantumv2(TestQuantumv2Base):
              'tenant_id': 'fake',
              }
             ]
-        quantumv2.get_client(mox.IgnoreArg(), admin=True).MultipleTimes(
+        neutronv2.get_client(mox.IgnoreArg(), admin=True).MultipleTimes(
             ).AndReturn(self.moxed_client)
         self.moxed_client.list_ports(
             tenant_id='fake', device_id='uuid').AndReturn(
@@ -1391,7 +1391,7 @@ class TestQuantumv2(TestQuantumv2Base):
         api._get_subnets_from_port(self.context, fake_ports[0]).AndReturn(
             fake_subnets)
         self.mox.ReplayAll()
-        quantumv2.get_client('fake')
+        neutronv2.get_client('fake')
         nw_info = api._build_network_info_model(self.context, fake_inst,
                                                 fake_nets)
         self.assertEqual(len(nw_info), 1)
@@ -1403,18 +1403,18 @@ class TestQuantumv2(TestQuantumv2Base):
         self.assertEqual(nw_info[0]['network']['bridge'], 'brqnet-id')
 
     def test_get_all_empty_list_networks(self):
-        api = quantumapi.API()
+        api = neutronapi.API()
         self.moxed_client.list_networks().AndReturn({'networks': []})
         self.mox.ReplayAll()
         networks = api.get_all(self.context)
         self.assertEqual(networks, [])
 
 
-class TestQuantumv2ModuleMethods(test.TestCase):
+class TestNeutronv2ModuleMethods(test.TestCase):
     def test_ensure_requested_network_ordering_no_preference_ids(self):
         l = [1, 2, 3]
 
-        quantumapi._ensure_requested_network_ordering(
+        neutronapi._ensure_requested_network_ordering(
             lambda x: x,
             l,
             None)
@@ -1422,7 +1422,7 @@ class TestQuantumv2ModuleMethods(test.TestCase):
     def test_ensure_requested_network_ordering_no_preference_hashes(self):
         l = [{'id': 3}, {'id': 1}, {'id': 2}]
 
-        quantumapi._ensure_requested_network_ordering(
+        neutronapi._ensure_requested_network_ordering(
             lambda x: x['id'],
             l,
             None)
@@ -1432,7 +1432,7 @@ class TestQuantumv2ModuleMethods(test.TestCase):
     def test_ensure_requested_network_ordering_with_preference(self):
         l = [{'id': 3}, {'id': 1}, {'id': 2}]
 
-        quantumapi._ensure_requested_network_ordering(
+        neutronapi._ensure_requested_network_ordering(
             lambda x: x['id'],
             l,
             [1, 2, 3])
@@ -1440,14 +1440,14 @@ class TestQuantumv2ModuleMethods(test.TestCase):
         self.assertEqual(l, [{'id': 1}, {'id': 2}, {'id': 3}])
 
 
-class TestQuantumv2Portbinding(TestQuantumv2Base):
+class TestNeutronv2Portbinding(TestNeutronv2Base):
 
     def test_allocate_for_instance_portbinding(self):
         self._allocate_for_instance(1, portbinding=True)
 
-    def test_populate_quantum_extension_values_binding(self):
-        api = quantumapi.API()
-        quantumv2.get_client(mox.IgnoreArg()).AndReturn(
+    def test_populate_neutron_extension_values_binding(self):
+        api = neutronapi.API()
+        neutronv2.get_client(mox.IgnoreArg()).AndReturn(
                 self.moxed_client)
         self.moxed_client.list_extensions().AndReturn(
             {'extensions': [{'name': constants.PORTBINDING_EXT}]})
@@ -1455,21 +1455,21 @@ class TestQuantumv2Portbinding(TestQuantumv2Base):
         host_id = 'my_host_id'
         instance = {'host': host_id}
         port_req_body = {'port': {}}
-        api._populate_quantum_extension_values(instance, port_req_body)
+        api._populate_neutron_extension_values(instance, port_req_body)
         self.assertEquals(port_req_body['port']['binding:host_id'], host_id)
 
     def test_migrate_instance_finish_binding_false(self):
-        api = quantumapi.API()
+        api = neutronapi.API()
         self.mox.StubOutWithMock(api, '_has_port_binding_extension')
         api._has_port_binding_extension(refresh_cache=True).AndReturn(False)
         self.mox.ReplayAll()
         api.migrate_instance_finish(self.context, None, None)
 
     def test_migrate_instance_finish_binding_true(self):
-        api = quantumapi.API()
+        api = neutronapi.API()
         self.mox.StubOutWithMock(api, '_has_port_binding_extension')
         api._has_port_binding_extension(refresh_cache=True).AndReturn(True)
-        quantumv2.get_client(mox.IgnoreArg(), admin=True).AndReturn(
+        neutronv2.get_client(mox.IgnoreArg(), admin=True).AndReturn(
             self.moxed_client)
         search_opts = {'device_id': self.instance['uuid'],
                        'tenant_id': self.instance['project_id']}
@@ -1483,10 +1483,10 @@ class TestQuantumv2Portbinding(TestQuantumv2Base):
         api.migrate_instance_finish(self.context, self.instance, None)
 
     def test_migrate_instance_finish_binding_true_exception(self):
-        api = quantumapi.API()
+        api = neutronapi.API()
         self.mox.StubOutWithMock(api, '_has_port_binding_extension')
         api._has_port_binding_extension(refresh_cache=True).AndReturn(True)
-        quantumv2.get_client(mox.IgnoreArg(), admin=True).AndReturn(
+        neutronv2.get_client(mox.IgnoreArg(), admin=True).AndReturn(
             self.moxed_client)
         search_opts = {'device_id': self.instance['uuid'],
                        'tenant_id': self.instance['project_id']}
@@ -1498,6 +1498,6 @@ class TestQuantumv2Portbinding(TestQuantumv2Base):
                                       port_req_body).AndRaise(
             Exception("fail to update port"))
         self.mox.ReplayAll()
-        self.assertRaises(QUANTUM_CLIENT_EXCEPTION,
+        self.assertRaises(NEUTRON_CLIENT_EXCEPTION,
                           api.migrate_instance_finish,
                           self.context, self.instance, None)

@@ -36,12 +36,14 @@ try:
         cfg.BoolOpt("enable_network_quota",
                     default=False,
                     help="Enables or disables quotaing of tenant networks"),
-        cfg.StrOpt('use_quantum_default_nets',
+        cfg.StrOpt('use_neutron_default_nets',
                          default="False",
+                         deprecated_name='use_quantum_default_nets',
                          help=('Control for checking for default networks')),
-        cfg.StrOpt('quantum_default_tenant_id',
+        cfg.StrOpt('neutron_default_tenant_id',
                          default="default",
-                         help=('Default tenant id when creating quantum '
+                         deprecated_name='quantum_default_tenant_id',
+                         help=('Default tenant id when creating neutron '
                                'networks'))
     ]
     CONF.register_opts(os_network_opts)
@@ -76,14 +78,14 @@ class NetworkController(object):
 
     def _refresh_default_networks(self):
         self._default_networks = []
-        if CONF.use_quantum_default_nets == "True":
+        if CONF.use_neutron_default_nets == "True":
             try:
                 self._default_networks = self._get_default_networks()
             except Exception:
                 LOG.exception("Failed to get default networks")
 
     def _get_default_networks(self):
-        project_id = CONF.quantum_default_tenant_id
+        project_id = CONF.neutron_default_tenant_id
         ctx = nova_context.RequestContext(user_id=None,
                                           project_id=project_id)
         networks = {}
