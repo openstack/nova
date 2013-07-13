@@ -3823,7 +3823,7 @@ def console_get(context, console_id, instance_uuid=None):
 
 
 @require_admin_context
-def instance_type_create(context, values):
+def flavor_create(context, values):
     """Create a new instance type. In order to pass in extra specs,
     the values dict should contain a 'extra_specs' key/value pair:
 
@@ -3888,7 +3888,7 @@ def _instance_type_get_query(context, session=None, read_deleted=None):
 
 
 @require_context
-def instance_type_get_all(context, inactive=False, filters=None):
+def flavor_get_all(context, inactive=False, filters=None):
     """
     Returns all instance types.
     """
@@ -3950,7 +3950,7 @@ def _instance_type_get_id_from_flavor(context, flavor_id, session=None):
 
 
 @require_context
-def instance_type_get(context, id):
+def flavor_get(context, id):
     """Returns a dict describing specific instance_type."""
     result = _instance_type_get_query(context).\
                         filter_by(id=id).\
@@ -3961,7 +3961,7 @@ def instance_type_get(context, id):
 
 
 @require_context
-def instance_type_get_by_name(context, name):
+def flavor_get_by_name(context, name):
     """Returns a dict describing specific instance_type."""
     result = _instance_type_get_query(context).\
                         filter_by(name=name).\
@@ -3972,7 +3972,7 @@ def instance_type_get_by_name(context, name):
 
 
 @require_context
-def instance_type_get_by_flavor_id(context, flavor_id, read_deleted):
+def flavor_get_by_flavor_id(context, flavor_id, read_deleted):
     """Returns a dict describing specific flavor_id."""
     result = _instance_type_get_query(context, read_deleted=read_deleted).\
                         filter_by(flavorid=flavor_id).\
@@ -3983,7 +3983,7 @@ def instance_type_get_by_flavor_id(context, flavor_id, read_deleted):
 
 
 @require_admin_context
-def instance_type_destroy(context, name):
+def flavor_destroy(context, name):
     """Marks specific instance_type as deleted."""
     session = get_session()
     with session.begin():
@@ -4012,7 +4012,7 @@ def _instance_type_access_query(context, session=None):
 
 
 @require_admin_context
-def instance_type_access_get_by_flavor_id(context, flavor_id):
+def flavor_access_get_by_flavor_id(context, flavor_id):
     """Get flavor access list by flavor id."""
     instance_type_id_subq = \
             _instance_type_get_id_from_flavor_query(context, flavor_id)
@@ -4023,7 +4023,7 @@ def instance_type_access_get_by_flavor_id(context, flavor_id):
 
 
 @require_admin_context
-def instance_type_access_add(context, flavor_id, project_id):
+def flavor_access_add(context, flavor_id, project_id):
     """Add given tenant to the flavor access list."""
     instance_type_id = _instance_type_get_id_from_flavor(context, flavor_id)
 
@@ -4039,7 +4039,7 @@ def instance_type_access_add(context, flavor_id, project_id):
 
 
 @require_admin_context
-def instance_type_access_remove(context, flavor_id, project_id):
+def flavor_access_remove(context, flavor_id, project_id):
     """Remove given tenant from the flavor access list."""
     instance_type_id = _instance_type_get_id_from_flavor(context, flavor_id)
 
@@ -4062,13 +4062,13 @@ def _instance_type_extra_specs_get_query(context, flavor_id, session=None):
 
 
 @require_context
-def instance_type_extra_specs_get(context, flavor_id):
+def flavor_extra_specs_get(context, flavor_id):
     rows = _instance_type_extra_specs_get_query(context, flavor_id).all()
     return dict([(row['key'], row['value']) for row in rows])
 
 
 @require_context
-def instance_type_extra_specs_get_item(context, flavor_id, key):
+def flavor_extra_specs_get_item(context, flavor_id, key):
     result = _instance_type_extra_specs_get_query(context, flavor_id).\
                 filter(models.InstanceTypeExtraSpecs.key == key).\
                 first()
@@ -4080,14 +4080,14 @@ def instance_type_extra_specs_get_item(context, flavor_id, key):
 
 
 @require_context
-def instance_type_extra_specs_delete(context, flavor_id, key):
+def flavor_extra_specs_delete(context, flavor_id, key):
     _instance_type_extra_specs_get_query(context, flavor_id).\
             filter(models.InstanceTypeExtraSpecs.key == key).\
             soft_delete(synchronize_session=False)
 
 
 @require_context
-def instance_type_extra_specs_update_or_create(context, flavor_id, specs):
+def flavor_extra_specs_update_or_create(context, flavor_id, specs):
     # NOTE(boris-42): There is a race condition in this method. We should add
     #                 UniqueConstraint on (instance_type_id, key, deleted) to
     #                 avoid duplicated instance_type_extra_specs. This will be
