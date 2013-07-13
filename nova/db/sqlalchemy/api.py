@@ -4707,8 +4707,9 @@ def aggregate_get_by_host(context, host, key=None):
     :param key Matches metadata key, if not None.
     """
     query = model_query(context, models.Aggregate)
-    query = query.options(joinedload('_hosts', innerjoin=True))
+    query = query.options(joinedload('_hosts'))
     query = query.options(joinedload('_metadata'))
+    query = query.join('_hosts')
     query = query.filter(models.AggregateHost.host == host)
 
     if key:
