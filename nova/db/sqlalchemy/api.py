@@ -4346,8 +4346,16 @@ def aggregate_get(context, aggregate_id):
 
 @require_admin_context
 def aggregate_get_by_host(context, host, key=None):
-    query = _aggregate_get_query(context, models.Aggregate,
-            models.AggregateHost.host, host)
+    """Return rows that match host (mandatory) and metadata key (optional).
+
+    :param host matches host, and is required.
+    :param key Matches metadata key, if not None.
+    """
+    query = model_query(context, models.Aggregate)
+    query = query.options(joinedload('_hosts'))
+    query = query.options(joinedload('_metadata'))
+    query = query.join('_hosts')
+    query = query.filter(models.AggregateHost.host == host)
 
     if key:
         query = query.join("_metadata").filter(
