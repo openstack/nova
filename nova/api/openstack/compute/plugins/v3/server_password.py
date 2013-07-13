@@ -28,7 +28,8 @@ from nova import db
 from nova import exception
 
 
-authorize = extensions.extension_authorizer('compute', 'server_password')
+ALIAS = 'os-server-password'
+authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
 
 
 class ServerPasswordTemplate(xmlutil.TemplateBuilder):
@@ -59,7 +60,14 @@ class ServerPasswordController(object):
         return {'password': passw or ''}
 
     @wsgi.response(204)
-    def delete(self, req, server_id):
+    def clear(self, req, server_id):
+        """
+        Removes the encrypted server password from the metadata server
+
+        Note that this does not actually change the instance server
+        password.
+        """
+
         context = req.environ['nova.context']
         authorize(context)
         instance = self._get_instance(context, server_id)
@@ -68,23 +76,21 @@ class ServerPasswordController(object):
                                            meta, False)
 
 
-class Server_password(extensions.ExtensionDescriptor):
+class ServerPassword(extensions.V3APIExtensionBase):
     """Server password support."""
 
     name = "ServerPassword"
-    alias = "os-server-password"
-    namespace = ("http://docs.openstack.org/compute/ext/"
-                 "server-password/api/v2")
-    updated = "2012-11-29T00:00:00+00:00"
+    alias = ALIAS
+    namespace = ("http://docs.openstack.org/compute/ext/" + ALIAS + "/api/v3")
+    version = 1
 
     def get_resources(self):
-        resources = []
-
-        res = extensions.ResourceExtension(
-            'os-server-password',
-            controller=ServerPasswordController(),
-            collection_actions={'delete': 'DELETE'},
-            parent=dict(member_name='server', collection_name='servers'))
-        resources.append(res)
-
+        resources = [
+            extensions.ResourceExtension(
+                ALIAS, ServerPasswordController(),
+                collection_actions={'clear': 'DELETE'},
+                parent=dict(member_name='server', collection_name='servers'))]
         return resources
+
+    def get_controller_extensions(self):
+        return []

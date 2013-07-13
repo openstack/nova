@@ -25,7 +25,6 @@ from nova.tests.api.openstack import fakes
 
 
 CONF = cfg.CONF
-CONF.import_opt('osapi_compute_ext_list', 'nova.api.openstack.compute.contrib')
 
 
 class ServerPasswordTest(test.TestCase):
@@ -46,31 +45,27 @@ class ServerPasswordTest(test.TestCase):
 
         self.stubs.Set(password, 'extract_password', fake_extract_password)
         self.stubs.Set(password, 'convert_password', fake_convert_password)
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Server_password'])
 
     def _make_request(self, url, method='GET'):
         req = webob.Request.blank(url)
         req.headers['Accept'] = self.content_type
         req.method = method
         res = req.get_response(
-                fakes.wsgi_app(init_only=('servers', 'os-server-password')))
+                fakes.wsgi_app_v3(init_only=('servers', 'os-server-password')))
         return res
 
     def _get_pass(self, body):
         return jsonutils.loads(body).get('password')
 
     def test_get_password(self):
-        url = '/v2/fake/servers/fake/os-server-password'
+        url = '/v3/servers/fake/os-server-password'
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 200)
         self.assertEqual(self._get_pass(res.body), 'fakepass')
 
     def test_reset_password(self):
-        url = '/v2/fake/servers/fake/os-server-password'
+        url = '/v3/servers/fake/os-server-password'
         res = self._make_request(url, 'DELETE')
         self.assertEqual(res.status_int, 204)
 
