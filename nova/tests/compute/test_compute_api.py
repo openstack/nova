@@ -124,9 +124,10 @@ class _ComputeAPIUnitTestMixIn(object):
                 self.context, instance)
 
         if self.is_cells:
-            self.mox.StubOutWithMock(self.compute_api, '_cast_to_cells')
-            self.compute_api._cast_to_cells(
-                    self.context, instance, 'start')
+            self.mox.StubOutWithMock(self.compute_api.cells_rpcapi,
+                                     'start_instance')
+            self.compute_api.cells_rpcapi.start_instance(
+                    self.context, instance)
 
         self.mox.ReplayAll()
 
@@ -167,9 +168,10 @@ class _ComputeAPIUnitTestMixIn(object):
                 self.context, instance, cast=True)
 
         if self.is_cells:
-            self.mox.StubOutWithMock(self.compute_api, '_cast_to_cells')
-            self.compute_api._cast_to_cells(
-                    self.context, instance, 'stop', do_cast=True)
+            self.mox.StubOutWithMock(self.compute_api.cells_rpcapi,
+                                     'stop_instance')
+            self.compute_api.cells_rpcapi.stop_instance(
+                    self.context, instance, do_cast=True)
 
         self.mox.ReplayAll()
 

@@ -284,17 +284,14 @@ class ComputeCellsAPI(compute_api.API):
     def stop(self, context, instance, do_cast=True):
         """Stop an instance."""
         super(ComputeCellsAPI, self).stop(context, instance)
-        if do_cast:
-            self._cast_to_cells(context, instance, 'stop', do_cast=True)
-        else:
-            return self._call_to_cells(context, instance, 'stop',
-                    do_cast=False)
+        return self.cells_rpcapi.stop_instance(context, instance,
+                                               do_cast=do_cast)
 
     @validate_cell
     def start(self, context, instance):
         """Start an instance."""
         super(ComputeCellsAPI, self).start(context, instance)
-        self._cast_to_cells(context, instance, 'start')
+        self.cells_rpcapi.start_instance(context, instance)
 
     @validate_cell
     def reboot(self, context, instance, *args, **kwargs):

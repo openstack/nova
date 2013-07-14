@@ -67,6 +67,7 @@ class CellsAPI(rpc_proxy.RpcProxy):
         1.9 - Adds get_capacities()
         1.10 - Adds bdm_update_or_create_at_top(), and bdm_destroy_at_top()
         1.11 - Adds get_migrations()
+        1.12 - Adds instance_start() and instance_stop()
     '''
     BASE_RPC_API_VERSION = '1.0'
 
@@ -357,3 +358,27 @@ class CellsAPI(rpc_proxy.RpcProxy):
         """Get all migrations applying the filters."""
         return self.call(ctxt, self.make_msg('get_migrations',
                                              filters=filters), version='1.11')
+
+    def start_instance(self, ctxt, instance):
+        """Start an instance in its cell.
+
+        This method takes a new-world instance object.
+        """
+        if not CONF.cells.enable:
+            return
+        self.cast(ctxt,
+                  self.make_msg('start_instance', instance=instance),
+                  version='1.12')
+
+    def stop_instance(self, ctxt, instance, do_cast=True):
+        """Stop an instance in its cell.
+
+        This method takes a new-world instance object.
+        """
+        if not CONF.cells.enable:
+            return
+        method = do_cast and self.cast or self.call
+        return method(ctxt,
+                      self.make_msg('stop_instance', instance=instance,
+                                    do_cast=do_cast),
+                      version='1.12')
