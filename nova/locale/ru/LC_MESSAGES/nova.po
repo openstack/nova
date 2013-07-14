@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  nova\n"
 "Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
-"POT-Creation-Date: 2013-07-12 19:38+0000\n"
+"POT-Creation-Date: 2013-07-13 19:37+0000\n"
 "PO-Revision-Date: 2012-03-25 09:34+0000\n"
 "Last-Translator: Eugene Marshal <Unknown>\n"
 "Language-Team: Russian <ru@li.org>\n"
@@ -201,10 +201,10 @@ msgstr ""
 msgid "Invalid volume"
 msgstr "Недопустимый том"
 
-#: nova/exception.py:269 nova/api/openstack/compute/servers.py:1331
+#: nova/exception.py:269 nova/api/openstack/compute/servers.py:1336
 #: nova/api/openstack/compute/contrib/admin_actions.py:242
 #: nova/api/openstack/compute/plugins/v3/admin_actions.py:242
-#: nova/api/openstack/compute/plugins/v3/servers.py:1420
+#: nova/api/openstack/compute/plugins/v3/servers.py:1426
 msgid "Invalid metadata"
 msgstr "Недопустимые метаданные"
 
@@ -1465,11 +1465,11 @@ msgstr ""
 msgid "Notifying Schedulers of capabilities ..."
 msgstr ""
 
-#: nova/notifications.py:116 nova/notifications.py:156
+#: nova/notifications.py:118 nova/notifications.py:158
 msgid "Failed to send state update notification"
 msgstr ""
 
-#: nova/notifications.py:241
+#: nova/notifications.py:243
 #, fuzzy
 msgid "Failed to get nw_info"
 msgstr "Ошибка получения метаданных для ip: %s"
@@ -1811,8 +1811,8 @@ msgstr ""
 msgid "Environment: %s"
 msgstr ""
 
-#: nova/api/ec2/__init__.py:557 nova/api/metadata/handler.py:136
-#: nova/api/metadata/handler.py:187
+#: nova/api/ec2/__init__.py:557 nova/api/metadata/handler.py:138
+#: nova/api/metadata/handler.py:189
 msgid "An unknown error has occurred. Please try your request again."
 msgstr ""
 "Произошла неизвестная ошибка. Пожалуйста, попытайтесь повторить ваш "
@@ -2097,27 +2097,27 @@ msgstr ""
 msgid "Timestamp is invalid."
 msgstr "Недопустимый запрос."
 
-#: nova/api/metadata/handler.py:108
+#: nova/api/metadata/handler.py:110
 msgid ""
 "X-Instance-ID present in request headers. The "
-"'service_quantum_metadata_proxy' option must be enabled to process this "
+"'service_neutron_metadata_proxy' option must be enabled to process this "
 "header."
 msgstr ""
 
-#: nova/api/metadata/handler.py:134 nova/api/metadata/handler.py:141
+#: nova/api/metadata/handler.py:136 nova/api/metadata/handler.py:143
 #, python-format
 msgid "Failed to get metadata for ip: %s"
 msgstr "Ошибка получения метаданных для ip: %s"
 
-#: nova/api/metadata/handler.py:153
+#: nova/api/metadata/handler.py:155
 msgid "X-Instance-ID header is missing from request."
 msgstr ""
 
-#: nova/api/metadata/handler.py:155
+#: nova/api/metadata/handler.py:157
 msgid "Multiple X-Instance-ID headers found within request."
 msgstr ""
 
-#: nova/api/metadata/handler.py:169
+#: nova/api/metadata/handler.py:171
 #, python-format
 msgid ""
 "X-Instance-ID-Signature: %(signature)s does not match the expected value:"
@@ -2125,12 +2125,12 @@ msgid ""
 "%(remote_address)s"
 msgstr ""
 
-#: nova/api/metadata/handler.py:178
+#: nova/api/metadata/handler.py:180
 #, fuzzy
 msgid "Invalid proxy request signature."
 msgstr "Недопустимый запрос: %s"
 
-#: nova/api/metadata/handler.py:185 nova/api/metadata/handler.py:192
+#: nova/api/metadata/handler.py:187 nova/api/metadata/handler.py:194
 #, fuzzy, python-format
 msgid "Failed to get metadata for instance id: %s"
 msgstr "Ошибка получения метаданных для ip: %s"
@@ -2169,13 +2169,13 @@ msgid "Extension %(ext_name)s extending resource: %(collection)s"
 msgstr "Расширение %(ext_name)s расширение ресурса: %(collection)s"
 
 #: nova/api/openstack/__init__.py:269
-#: nova/api/openstack/compute/plugins/v3/servers.py:471
+#: nova/api/openstack/compute/plugins/v3/servers.py:472
 #, python-format
 msgid "Not loading %s because it is in the blacklist"
 msgstr ""
 
 #: nova/api/openstack/__init__.py:274
-#: nova/api/openstack/compute/plugins/v3/servers.py:476
+#: nova/api/openstack/compute/plugins/v3/servers.py:477
 #, python-format
 msgid "Not loading %s because it is not in the whitelist"
 msgstr ""
@@ -2234,7 +2234,7 @@ msgid "offset param must be positive"
 msgstr ""
 
 #: nova/api/openstack/common.py:231 nova/api/openstack/compute/servers.py:545
-#: nova/api/openstack/compute/plugins/v3/servers.py:609
+#: nova/api/openstack/compute/plugins/v3/servers.py:610
 #, python-format
 msgid "marker [%s] not found"
 msgstr "маркер [%s] не найден"
@@ -2482,33 +2482,33 @@ msgstr ""
 #: nova/api/openstack/compute/image_metadata.py:36
 #: nova/api/openstack/compute/images.py:141
 #: nova/api/openstack/compute/images.py:157
-#: nova/api/openstack/compute/plugins/v3/image_metadata.py:36
+#: nova/api/openstack/compute/plugins/v3/image_metadata.py:40
 #: nova/api/openstack/compute/plugins/v3/images.py:147
 #: nova/api/openstack/compute/plugins/v3/images.py:165
 msgid "Image not found."
 msgstr "образ не найден."
 
 #: nova/api/openstack/compute/image_metadata.py:76
-#: nova/api/openstack/compute/plugins/v3/image_metadata.py:76
+#: nova/api/openstack/compute/plugins/v3/image_metadata.py:87
 msgid "Incorrect request body format"
 msgstr "Неправильный формат тела запроса"
 
 #: nova/api/openstack/compute/image_metadata.py:80
 #: nova/api/openstack/compute/server_metadata.py:80
 #: nova/api/openstack/compute/contrib/flavorextraspecs.py:85
-#: nova/api/openstack/compute/plugins/v3/image_metadata.py:80
+#: nova/api/openstack/compute/plugins/v3/image_metadata.py:91
 msgid "Request body and URI mismatch"
 msgstr "Тело запроса и URI не совпадают"
 
 #: nova/api/openstack/compute/image_metadata.py:83
 #: nova/api/openstack/compute/server_metadata.py:84
 #: nova/api/openstack/compute/contrib/flavorextraspecs.py:88
-#: nova/api/openstack/compute/plugins/v3/image_metadata.py:83
+#: nova/api/openstack/compute/plugins/v3/image_metadata.py:94
 msgid "Request body contains too many items"
 msgstr "Тело запроса содержит избыточное количество объектов"
 
 #: nova/api/openstack/compute/image_metadata.py:109
-#: nova/api/openstack/compute/plugins/v3/image_metadata.py:109
+#: nova/api/openstack/compute/plugins/v3/image_metadata.py:124
 msgid "Invalid metadata key"
 msgstr "Неправильный ключ метаданных"
 
@@ -2552,306 +2552,306 @@ msgid "Metadata item was not found"
 msgstr "Элемент метаданных не найден"
 
 #: nova/api/openstack/compute/servers.py:509
-#: nova/api/openstack/compute/contrib/cells.py:317
-#: nova/api/openstack/compute/plugins/v3/cells.py:314
-#: nova/api/openstack/compute/plugins/v3/servers.py:573
+#: nova/api/openstack/compute/contrib/cells.py:393
+#: nova/api/openstack/compute/plugins/v3/cells.py:390
+#: nova/api/openstack/compute/plugins/v3/servers.py:574
 msgid "Invalid changes-since value"
 msgstr ""
 
 #: nova/api/openstack/compute/servers.py:528
-#: nova/api/openstack/compute/plugins/v3/servers.py:592
+#: nova/api/openstack/compute/plugins/v3/servers.py:593
 #, fuzzy
 msgid "Only administrators may list deleted instances"
 msgstr "Выполнение запуска копий"
 
 #: nova/api/openstack/compute/servers.py:548
-#: nova/api/openstack/compute/plugins/v3/servers.py:612
+#: nova/api/openstack/compute/plugins/v3/servers.py:613
 #, fuzzy, python-format
 msgid "Flavor '%s' could not be found "
 msgstr "Узел %(host)s не найден."
 
 #: nova/api/openstack/compute/servers.py:566
-#: nova/api/openstack/compute/servers.py:735
-#: nova/api/openstack/compute/servers.py:1000
-#: nova/api/openstack/compute/servers.py:1110
-#: nova/api/openstack/compute/servers.py:1283
-#: nova/api/openstack/compute/plugins/v3/servers.py:630
-#: nova/api/openstack/compute/plugins/v3/servers.py:796
-#: nova/api/openstack/compute/plugins/v3/servers.py:1088
-#: nova/api/openstack/compute/plugins/v3/servers.py:1193
-#: nova/api/openstack/compute/plugins/v3/servers.py:1372
+#: nova/api/openstack/compute/servers.py:740
+#: nova/api/openstack/compute/servers.py:1005
+#: nova/api/openstack/compute/servers.py:1115
+#: nova/api/openstack/compute/servers.py:1288
+#: nova/api/openstack/compute/plugins/v3/servers.py:631
+#: nova/api/openstack/compute/plugins/v3/servers.py:802
+#: nova/api/openstack/compute/plugins/v3/servers.py:1094
+#: nova/api/openstack/compute/plugins/v3/servers.py:1199
+#: nova/api/openstack/compute/plugins/v3/servers.py:1378
 msgid "Instance could not be found"
 msgstr "Копия не найдена"
 
 #: nova/api/openstack/compute/servers.py:587
-#: nova/api/openstack/compute/plugins/v3/servers.py:649
+#: nova/api/openstack/compute/plugins/v3/servers.py:650
 msgid "Device name cannot include spaces."
 msgstr ""
 
 #: nova/api/openstack/compute/servers.py:604
-#: nova/api/openstack/compute/plugins/v3/servers.py:666
+#: nova/api/openstack/compute/plugins/v3/servers.py:667
 #, python-format
 msgid "Bad personality format: missing %s"
 msgstr ""
 
 #: nova/api/openstack/compute/servers.py:607
-#: nova/api/openstack/compute/plugins/v3/servers.py:669
+#: nova/api/openstack/compute/plugins/v3/servers.py:670
 msgid "Bad personality format"
 msgstr ""
 
 #: nova/api/openstack/compute/servers.py:610
-#: nova/api/openstack/compute/plugins/v3/servers.py:672
+#: nova/api/openstack/compute/plugins/v3/servers.py:673
 #, python-format
 msgid "Personality content for %s cannot be decoded"
 msgstr ""
 
-#: nova/api/openstack/compute/servers.py:641
-#: nova/api/openstack/compute/plugins/v3/servers.py:703
+#: nova/api/openstack/compute/servers.py:646
+#: nova/api/openstack/compute/plugins/v3/servers.py:709
 #, fuzzy
 msgid "Unknown argment : port"
 msgstr "Неизвестная цепочка: %r"
 
-#: nova/api/openstack/compute/servers.py:644
-#: nova/api/openstack/compute/plugins/v3/servers.py:706
+#: nova/api/openstack/compute/servers.py:649
+#: nova/api/openstack/compute/plugins/v3/servers.py:712
 #, fuzzy, python-format
 msgid "Bad port format: port uuid is not in proper format (%s)"
 msgstr "Недопустимый сетевой формат: сетевой uuid имеет неправильный формат (%s)"
 
-#: nova/api/openstack/compute/servers.py:654
-#: nova/api/openstack/compute/plugins/v3/servers.py:716
+#: nova/api/openstack/compute/servers.py:659
+#: nova/api/openstack/compute/plugins/v3/servers.py:722
 #, python-format
 msgid "Bad networks format: network uuid is not in proper format (%s)"
 msgstr "Недопустимый сетевой формат: сетевой uuid имеет неправильный формат (%s)"
 
-#: nova/api/openstack/compute/servers.py:664
-#: nova/api/openstack/compute/plugins/v3/servers.py:726
+#: nova/api/openstack/compute/servers.py:669
+#: nova/api/openstack/compute/plugins/v3/servers.py:732
 #, python-format
 msgid "Invalid fixed IP address (%s)"
 msgstr "Недопустимый фиксированный IP-адрес (%s)"
 
-#: nova/api/openstack/compute/servers.py:677
-#: nova/api/openstack/compute/plugins/v3/servers.py:739
+#: nova/api/openstack/compute/servers.py:682
+#: nova/api/openstack/compute/plugins/v3/servers.py:745
 #, python-format
 msgid "Duplicate networks (%s) are not allowed"
 msgstr "Дубликаты сетей (%s) не разрешены"
 
-#: nova/api/openstack/compute/servers.py:683
-#: nova/api/openstack/compute/plugins/v3/servers.py:745
+#: nova/api/openstack/compute/servers.py:688
+#: nova/api/openstack/compute/plugins/v3/servers.py:751
 #, python-format
 msgid "Bad network format: missing %s"
 msgstr "Недопустимый сетевой формат: отсутствует %s"
 
-#: nova/api/openstack/compute/servers.py:686
-#: nova/api/openstack/compute/servers.py:787
-#: nova/api/openstack/compute/plugins/v3/servers.py:748
+#: nova/api/openstack/compute/servers.py:691
+#: nova/api/openstack/compute/servers.py:792
+#: nova/api/openstack/compute/plugins/v3/servers.py:754
 msgid "Bad networks format"
 msgstr "Недопустимый сетевой формат"
 
-#: nova/api/openstack/compute/servers.py:712
-#: nova/api/openstack/compute/plugins/v3/servers.py:774
+#: nova/api/openstack/compute/servers.py:717
+#: nova/api/openstack/compute/plugins/v3/servers.py:780
 msgid "Userdata content cannot be decoded"
 msgstr "Содержимое данных пользователя не может быть дешифровано"
 
-#: nova/api/openstack/compute/servers.py:717
-#: nova/api/openstack/compute/plugins/v3/servers.py:779
+#: nova/api/openstack/compute/servers.py:722
+#: nova/api/openstack/compute/plugins/v3/servers.py:785
 msgid "accessIPv4 is not proper IPv4 format"
 msgstr ""
 
-#: nova/api/openstack/compute/servers.py:722
-#: nova/api/openstack/compute/plugins/v3/servers.py:784
+#: nova/api/openstack/compute/servers.py:727
+#: nova/api/openstack/compute/plugins/v3/servers.py:790
 msgid "accessIPv6 is not proper IPv6 format"
 msgstr ""
 
-#: nova/api/openstack/compute/servers.py:751
-#: nova/api/openstack/compute/plugins/v3/servers.py:812
+#: nova/api/openstack/compute/servers.py:756
+#: nova/api/openstack/compute/plugins/v3/servers.py:818
 msgid "Server name is not defined"
 msgstr "Имя сервера не задано"
 
-#: nova/api/openstack/compute/servers.py:803
-#: nova/api/openstack/compute/servers.py:907
-#: nova/api/openstack/compute/plugins/v3/servers.py:881
-#: nova/api/openstack/compute/plugins/v3/servers.py:989
+#: nova/api/openstack/compute/servers.py:808
+#: nova/api/openstack/compute/servers.py:912
+#: nova/api/openstack/compute/plugins/v3/servers.py:887
+#: nova/api/openstack/compute/plugins/v3/servers.py:995
 msgid "Invalid flavorRef provided."
 msgstr "Предоставлен недопустимый flavorRef."
 
-#: nova/api/openstack/compute/servers.py:844
-#: nova/api/openstack/compute/plugins/v3/servers.py:929
+#: nova/api/openstack/compute/servers.py:849
+#: nova/api/openstack/compute/plugins/v3/servers.py:935
 msgid "min_count must be an integer value"
 msgstr ""
 
-#: nova/api/openstack/compute/servers.py:847
-#: nova/api/openstack/compute/plugins/v3/servers.py:932
+#: nova/api/openstack/compute/servers.py:852
+#: nova/api/openstack/compute/plugins/v3/servers.py:938
 msgid "min_count must be > 0"
 msgstr ""
 
-#: nova/api/openstack/compute/servers.py:853
-#: nova/api/openstack/compute/plugins/v3/servers.py:938
+#: nova/api/openstack/compute/servers.py:858
+#: nova/api/openstack/compute/plugins/v3/servers.py:944
 msgid "max_count must be an integer value"
 msgstr ""
 
-#: nova/api/openstack/compute/servers.py:856
-#: nova/api/openstack/compute/plugins/v3/servers.py:941
+#: nova/api/openstack/compute/servers.py:861
+#: nova/api/openstack/compute/plugins/v3/servers.py:947
 msgid "max_count must be > 0"
 msgstr ""
 
-#: nova/api/openstack/compute/servers.py:860
-#: nova/api/openstack/compute/plugins/v3/servers.py:945
+#: nova/api/openstack/compute/servers.py:865
+#: nova/api/openstack/compute/plugins/v3/servers.py:951
 msgid "min_count must be <= max_count"
 msgstr ""
 
-#: nova/api/openstack/compute/servers.py:904
-#: nova/api/openstack/compute/plugins/v3/servers.py:986
+#: nova/api/openstack/compute/servers.py:909
+#: nova/api/openstack/compute/plugins/v3/servers.py:992
 msgid "Can not find requested image"
 msgstr "Невозможно найти запрошенный образ"
 
-#: nova/api/openstack/compute/servers.py:910
-#: nova/api/openstack/compute/plugins/v3/servers.py:992
+#: nova/api/openstack/compute/servers.py:915
+#: nova/api/openstack/compute/plugins/v3/servers.py:998
 msgid "Invalid key_name provided."
 msgstr "Предоставлен недопустимый key_name."
 
-#: nova/api/openstack/compute/servers.py:913
-#: nova/api/openstack/compute/plugins/v3/servers.py:995
+#: nova/api/openstack/compute/servers.py:918
+#: nova/api/openstack/compute/plugins/v3/servers.py:1001
 msgid "Invalid config_drive provided."
 msgstr ""
 
-#: nova/api/openstack/compute/servers.py:987
-#: nova/api/openstack/compute/plugins/v3/servers.py:1075
+#: nova/api/openstack/compute/servers.py:992
+#: nova/api/openstack/compute/plugins/v3/servers.py:1081
 #, fuzzy
 msgid "HostId cannot be updated."
 msgstr "Точка подключения не может быть переведена: %s"
 
-#: nova/api/openstack/compute/servers.py:991
-#: nova/api/openstack/compute/plugins/v3/servers.py:1079
+#: nova/api/openstack/compute/servers.py:996
+#: nova/api/openstack/compute/plugins/v3/servers.py:1085
 #, fuzzy
 msgid "Personality cannot be updated."
 msgstr "Точка подключения не может быть переведена: %s"
 
-#: nova/api/openstack/compute/servers.py:1020
-#: nova/api/openstack/compute/servers.py:1037
-#: nova/api/openstack/compute/plugins/v3/servers.py:1103
-#: nova/api/openstack/compute/plugins/v3/servers.py:1120
+#: nova/api/openstack/compute/servers.py:1025
+#: nova/api/openstack/compute/servers.py:1042
+#: nova/api/openstack/compute/plugins/v3/servers.py:1109
+#: nova/api/openstack/compute/plugins/v3/servers.py:1126
 msgid "Instance has not been resized."
 msgstr "С копией не производилось изменение размера."
 
-#: nova/api/openstack/compute/servers.py:1040
-#: nova/api/openstack/compute/plugins/v3/servers.py:1123
+#: nova/api/openstack/compute/servers.py:1045
+#: nova/api/openstack/compute/plugins/v3/servers.py:1129
 #, fuzzy
 msgid "Flavor used by the instance could not be found."
 msgstr "Копия %(instance_id)s не найдена."
 
-#: nova/api/openstack/compute/servers.py:1056
-#: nova/api/openstack/compute/plugins/v3/servers.py:1139
+#: nova/api/openstack/compute/servers.py:1061
+#: nova/api/openstack/compute/plugins/v3/servers.py:1145
 msgid "Argument 'type' for reboot is not HARD or SOFT"
 msgstr ""
 
-#: nova/api/openstack/compute/servers.py:1060
-#: nova/api/openstack/compute/plugins/v3/servers.py:1143
+#: nova/api/openstack/compute/servers.py:1065
+#: nova/api/openstack/compute/plugins/v3/servers.py:1149
 msgid "Missing argument 'type' for reboot"
 msgstr "Отсутствует аргумент типа 'type' для перезагрузки"
 
-#: nova/api/openstack/compute/servers.py:1082
-#: nova/api/openstack/compute/plugins/v3/servers.py:1165
+#: nova/api/openstack/compute/servers.py:1087
+#: nova/api/openstack/compute/plugins/v3/servers.py:1171
 msgid "Unable to locate requested flavor."
 msgstr ""
 
-#: nova/api/openstack/compute/servers.py:1085
-#: nova/api/openstack/compute/plugins/v3/servers.py:1168
+#: nova/api/openstack/compute/servers.py:1090
+#: nova/api/openstack/compute/plugins/v3/servers.py:1174
 #, fuzzy
 msgid "Resize requires a flavor change."
 msgstr "Изменение размера требует изменения объёма."
 
-#: nova/api/openstack/compute/servers.py:1091
-#: nova/api/openstack/compute/plugins/v3/servers.py:1174
+#: nova/api/openstack/compute/servers.py:1096
+#: nova/api/openstack/compute/plugins/v3/servers.py:1180
 msgid "You are not authorized to access the image the instance was started with."
 msgstr ""
 
-#: nova/api/openstack/compute/servers.py:1095
-#: nova/api/openstack/compute/plugins/v3/servers.py:1178
+#: nova/api/openstack/compute/servers.py:1100
+#: nova/api/openstack/compute/plugins/v3/servers.py:1184
 #, fuzzy
 msgid "Image that the instance was started with could not be found."
 msgstr "Копия %(instance_id)s не найдена."
 
-#: nova/api/openstack/compute/servers.py:1099
-#: nova/api/openstack/compute/plugins/v3/servers.py:1182
+#: nova/api/openstack/compute/servers.py:1104
+#: nova/api/openstack/compute/plugins/v3/servers.py:1188
 #, fuzzy
 msgid "Invalid instance image."
 msgstr "Недопустимый запрос тела"
 
-#: nova/api/openstack/compute/servers.py:1120
-#: nova/api/openstack/compute/plugins/v3/servers.py:1203
+#: nova/api/openstack/compute/servers.py:1125
+#: nova/api/openstack/compute/plugins/v3/servers.py:1209
 msgid "Missing imageRef attribute"
 msgstr "Отсутствует атрибут imageRef"
 
-#: nova/api/openstack/compute/servers.py:1129
-#: nova/api/openstack/compute/plugins/v3/servers.py:1212
+#: nova/api/openstack/compute/servers.py:1134
+#: nova/api/openstack/compute/plugins/v3/servers.py:1218
 msgid "Invalid imageRef provided."
 msgstr ""
 
-#: nova/api/openstack/compute/servers.py:1156
-#: nova/api/openstack/compute/plugins/v3/servers.py:1245
+#: nova/api/openstack/compute/servers.py:1161
+#: nova/api/openstack/compute/plugins/v3/servers.py:1251
 msgid "Missing flavorRef attribute"
 msgstr "Отсутствует атрибут flavorRef"
 
-#: nova/api/openstack/compute/servers.py:1169
-#: nova/api/openstack/compute/plugins/v3/servers.py:1258
+#: nova/api/openstack/compute/servers.py:1174
+#: nova/api/openstack/compute/plugins/v3/servers.py:1264
 msgid "No adminPass was specified"
 msgstr "adminPass не был задан"
 
-#: nova/api/openstack/compute/servers.py:1173
-#: nova/api/openstack/compute/servers.py:1381
-#: nova/api/openstack/compute/plugins/v3/servers.py:1262
-#: nova/api/openstack/compute/plugins/v3/servers.py:1470
+#: nova/api/openstack/compute/servers.py:1178
+#: nova/api/openstack/compute/servers.py:1386
+#: nova/api/openstack/compute/plugins/v3/servers.py:1268
+#: nova/api/openstack/compute/plugins/v3/servers.py:1476
 msgid "Invalid adminPass"
 msgstr "Недопустимый adminPass"
 
-#: nova/api/openstack/compute/servers.py:1179
-#: nova/api/openstack/compute/plugins/v3/servers.py:1268
+#: nova/api/openstack/compute/servers.py:1184
+#: nova/api/openstack/compute/plugins/v3/servers.py:1274
 #, fuzzy
 msgid "Unable to set password on instance"
 msgstr "Ошибка перезагрузки копии"
 
-#: nova/api/openstack/compute/servers.py:1188
-#: nova/api/openstack/compute/plugins/v3/servers.py:1277
+#: nova/api/openstack/compute/servers.py:1193
+#: nova/api/openstack/compute/plugins/v3/servers.py:1283
 msgid "Unable to parse metadata key/value pairs."
 msgstr ""
 
-#: nova/api/openstack/compute/servers.py:1201
-#: nova/api/openstack/compute/plugins/v3/servers.py:1290
+#: nova/api/openstack/compute/servers.py:1206
+#: nova/api/openstack/compute/plugins/v3/servers.py:1296
 msgid "Resize request has invalid 'flavorRef' attribute."
 msgstr "Запрос изменения размера имеет недопустимый атрибут 'flavorRef'."
 
-#: nova/api/openstack/compute/servers.py:1204
-#: nova/api/openstack/compute/plugins/v3/servers.py:1293
+#: nova/api/openstack/compute/servers.py:1209
+#: nova/api/openstack/compute/plugins/v3/servers.py:1299
 msgid "Resize requests require 'flavorRef' attribute."
 msgstr "Запросы изменение размера требуют атрибут 'flavorRef'."
 
-#: nova/api/openstack/compute/servers.py:1222
+#: nova/api/openstack/compute/servers.py:1227
 #: nova/api/openstack/compute/contrib/aggregates.py:143
 #: nova/api/openstack/compute/contrib/coverage_ext.py:285
 #: nova/api/openstack/compute/contrib/keypairs.py:78
 #: nova/api/openstack/compute/plugins/v3/coverage.py:298
 #: nova/api/openstack/compute/plugins/v3/keypairs.py:80
-#: nova/api/openstack/compute/plugins/v3/servers.py:1311
+#: nova/api/openstack/compute/plugins/v3/servers.py:1317
 msgid "Invalid request body"
 msgstr "Недопустимый запрос тела"
 
-#: nova/api/openstack/compute/servers.py:1228
-#: nova/api/openstack/compute/plugins/v3/servers.py:1317
+#: nova/api/openstack/compute/servers.py:1233
+#: nova/api/openstack/compute/plugins/v3/servers.py:1323
 msgid "Could not parse imageRef from request."
 msgstr ""
 
-#: nova/api/openstack/compute/servers.py:1289
-#: nova/api/openstack/compute/plugins/v3/servers.py:1378
+#: nova/api/openstack/compute/servers.py:1294
+#: nova/api/openstack/compute/plugins/v3/servers.py:1384
 msgid "Cannot find image for rebuild"
 msgstr ""
 
-#: nova/api/openstack/compute/servers.py:1322
-#: nova/api/openstack/compute/plugins/v3/servers.py:1411
+#: nova/api/openstack/compute/servers.py:1327
+#: nova/api/openstack/compute/plugins/v3/servers.py:1417
 msgid "createImage entity requires name attribute"
 msgstr ""
 
-#: nova/api/openstack/compute/servers.py:1407
-#: nova/api/openstack/compute/plugins/v3/servers.py:1503
+#: nova/api/openstack/compute/servers.py:1412
+#: nova/api/openstack/compute/plugins/v3/servers.py:1543
 #, fuzzy, python-format
 msgid "Removing options '%s' from query"
 msgstr "Удаление параметров '%(unk_opt_str)s' из запроса"
@@ -2950,7 +2950,7 @@ msgstr ""
 #: nova/api/openstack/compute/contrib/server_diagnostics.py:47
 #: nova/api/openstack/compute/contrib/server_start_stop.py:41
 #: nova/api/openstack/compute/plugins/v3/admin_actions.py:248
-#: nova/api/openstack/compute/plugins/v3/console_output.py:45
+#: nova/api/openstack/compute/plugins/v3/console_output.py:46
 #: nova/api/openstack/compute/plugins/v3/server_diagnostics.py:48
 msgid "Instance not found"
 msgstr "Копия не найдена"
@@ -3061,43 +3061,43 @@ msgstr "Запуск интерфейса VLAN %s"
 msgid "Must specify id or address"
 msgstr ""
 
-#: nova/api/openstack/compute/contrib/cells.py:210
-#: nova/api/openstack/compute/plugins/v3/cells.py:207
+#: nova/api/openstack/compute/contrib/cells.py:243
+#: nova/api/openstack/compute/plugins/v3/cells.py:240
 #, fuzzy, python-format
 msgid "Cell %(id)s not found."
 msgstr "Правило (%s) не найдено"
 
-#: nova/api/openstack/compute/contrib/cells.py:238
-#: nova/api/openstack/compute/plugins/v3/cells.py:235
+#: nova/api/openstack/compute/contrib/cells.py:271
+#: nova/api/openstack/compute/plugins/v3/cells.py:268
 #, fuzzy
 msgid "Cell name cannot be empty"
 msgstr "Наименование группы безопасности не может отсутствовать"
 
-#: nova/api/openstack/compute/contrib/cells.py:242
-#: nova/api/openstack/compute/plugins/v3/cells.py:239
+#: nova/api/openstack/compute/contrib/cells.py:275
+#: nova/api/openstack/compute/plugins/v3/cells.py:272
 msgid "Cell name cannot contain '!' or '.'"
 msgstr ""
 
-#: nova/api/openstack/compute/contrib/cells.py:249
-#: nova/api/openstack/compute/plugins/v3/cells.py:246
+#: nova/api/openstack/compute/contrib/cells.py:282
+#: nova/api/openstack/compute/plugins/v3/cells.py:279
 msgid "Cell type must be 'parent' or 'child'"
 msgstr ""
 
-#: nova/api/openstack/compute/contrib/cells.py:269
-#: nova/api/openstack/compute/contrib/cells.py:289
-#: nova/api/openstack/compute/plugins/v3/cells.py:266
-#: nova/api/openstack/compute/plugins/v3/cells.py:286
+#: nova/api/openstack/compute/contrib/cells.py:335
+#: nova/api/openstack/compute/contrib/cells.py:355
+#: nova/api/openstack/compute/plugins/v3/cells.py:332
+#: nova/api/openstack/compute/plugins/v3/cells.py:352
 #, fuzzy
 msgid "No cell information in request"
 msgstr "block_device_mapping %s"
 
-#: nova/api/openstack/compute/contrib/cells.py:274
-#: nova/api/openstack/compute/plugins/v3/cells.py:271
+#: nova/api/openstack/compute/contrib/cells.py:340
+#: nova/api/openstack/compute/plugins/v3/cells.py:337
 msgid "No cell name in request"
 msgstr ""
 
-#: nova/api/openstack/compute/contrib/cells.py:311
-#: nova/api/openstack/compute/plugins/v3/cells.py:308
+#: nova/api/openstack/compute/contrib/cells.py:387
+#: nova/api/openstack/compute/plugins/v3/cells.py:384
 msgid "Only 'updated_since' and 'project_id' are understood."
 msgstr ""
 
@@ -3118,17 +3118,16 @@ msgid "Unknown action %s"
 msgstr "Неизвестная цепочка: %r"
 
 #: nova/api/openstack/compute/contrib/console_output.py:50
-#: nova/api/openstack/compute/plugins/v3/console_output.py:50
 msgid "os-getConsoleOutput malformed or missing from request body"
 msgstr ""
 
 #: nova/api/openstack/compute/contrib/console_output.py:61
-#: nova/api/openstack/compute/plugins/v3/console_output.py:61
+#: nova/api/openstack/compute/plugins/v3/console_output.py:62
 msgid "Length in request body must be an integer value"
 msgstr ""
 
 #: nova/api/openstack/compute/contrib/console_output.py:69
-#: nova/api/openstack/compute/plugins/v3/console_output.py:69
+#: nova/api/openstack/compute/plugins/v3/console_output.py:70
 #, fuzzy
 msgid "Unable to get console"
 msgstr "Невозможно использовать глобальные полномочия %(role_id)s"
@@ -3323,7 +3322,7 @@ msgstr ""
 "%(instance_id)s"
 
 #: nova/api/openstack/compute/contrib/floating_ips_bulk.py:146
-#: nova/cmd/manage.py:385
+#: nova/cmd/manage.py:386
 #, python-format
 msgid "/%s should be specified as single address(es) not in cidr format"
 msgstr ""
@@ -3445,8 +3444,8 @@ msgstr "Исключение сети с идентификатором %s"
 #: nova/api/openstack/compute/contrib/os_networks.py:79
 #: nova/api/openstack/compute/contrib/os_networks.py:89
 #: nova/api/openstack/compute/contrib/os_networks.py:99
-#: nova/api/openstack/compute/contrib/os_tenant_networks.py:110
-#: nova/api/openstack/compute/contrib/os_tenant_networks.py:132
+#: nova/api/openstack/compute/contrib/os_tenant_networks.py:112
+#: nova/api/openstack/compute/contrib/os_tenant_networks.py:134
 msgid "Network not found"
 msgstr "Сеть не найдена"
 
@@ -3461,13 +3460,13 @@ msgid "Disassociating network with id %s"
 msgstr "Исключение сети с идентификатором %s"
 
 #: nova/api/openstack/compute/contrib/os_networks.py:85
-#: nova/api/openstack/compute/contrib/os_tenant_networks.py:106
+#: nova/api/openstack/compute/contrib/os_tenant_networks.py:108
 #, python-format
 msgid "Showing network with id %s"
 msgstr "Отображение сети с идентификатором %s"
 
 #: nova/api/openstack/compute/contrib/os_networks.py:95
-#: nova/api/openstack/compute/contrib/os_tenant_networks.py:124
+#: nova/api/openstack/compute/contrib/os_tenant_networks.py:126
 #, python-format
 msgid "Deleting network with id %s"
 msgstr "Удаление сети с идентификатором %s"
@@ -3504,35 +3503,35 @@ msgstr ""
 msgid "Cannot associate network %(network)s with project %(project)s: %(message)s"
 msgstr ""
 
-#: nova/api/openstack/compute/contrib/os_tenant_networks.py:121
+#: nova/api/openstack/compute/contrib/os_tenant_networks.py:123
 #, fuzzy
 msgid "Failed to update usages deallocating network."
 msgstr "Ошибка обновления тома в базе данных"
 
-#: nova/api/openstack/compute/contrib/os_tenant_networks.py:151
+#: nova/api/openstack/compute/contrib/os_tenant_networks.py:153
 #, fuzzy
 msgid "No CIDR requested"
 msgstr "Невозможно найти запрошенный образ"
 
-#: nova/api/openstack/compute/contrib/os_tenant_networks.py:157
+#: nova/api/openstack/compute/contrib/os_tenant_networks.py:159
 msgid "Requested network does not contain enough (2+) usable hosts"
 msgstr ""
 
-#: nova/api/openstack/compute/contrib/os_tenant_networks.py:161
+#: nova/api/openstack/compute/contrib/os_tenant_networks.py:163
 msgid "CIDR is malformed."
 msgstr ""
 
-#: nova/api/openstack/compute/contrib/os_tenant_networks.py:164
+#: nova/api/openstack/compute/contrib/os_tenant_networks.py:166
 #, fuzzy
 msgid "Address could not be converted."
 msgstr "Ресурс не может быть найден."
 
-#: nova/api/openstack/compute/contrib/os_tenant_networks.py:172
+#: nova/api/openstack/compute/contrib/os_tenant_networks.py:174
 #, fuzzy
 msgid "Quota exceeded, too many networks."
 msgstr "Добавление правила группы безопасности: %r"
 
-#: nova/api/openstack/compute/contrib/os_tenant_networks.py:183
+#: nova/api/openstack/compute/contrib/os_tenant_networks.py:185
 #, fuzzy
 msgid "Create networks failed"
 msgstr "Ошибка создания"
@@ -3615,11 +3614,13 @@ msgid "Security group name cannot be empty"
 msgstr "Наименование группы безопасности не может отсутствовать"
 
 #: nova/api/openstack/compute/contrib/server_start_stop.py:49
+#: nova/api/openstack/compute/plugins/v3/servers.py:1514
 #, fuzzy
 msgid "start instance"
 msgstr "Запуск копии %s"
 
 #: nova/api/openstack/compute/contrib/server_start_stop.py:61
+#: nova/api/openstack/compute/plugins/v3/servers.py:1527
 #, fuzzy
 msgid "stop instance"
 msgstr "Выполнение остановки копий"
@@ -3701,6 +3702,10 @@ msgstr "Загруженное расширение: %s"
 msgid "Ext version: %i"
 msgstr "Версия агента копии: %s"
 
+#: nova/api/openstack/compute/plugins/v3/console_output.py:51
+msgid "get_console_output malformed or missing from request body"
+msgstr ""
+
 #: nova/api/openstack/compute/plugins/v3/coverage.py:54
 #, python-format
 msgid "Can't load coverage module: %s"
@@ -3737,32 +3742,32 @@ msgstr ""
 msgid "Missing 'address' argument for remove_fixed_ip"
 msgstr ""
 
-#: nova/api/openstack/compute/plugins/v3/servers.py:489
+#: nova/api/openstack/compute/plugins/v3/servers.py:490
 #, python-format
 msgid ""
 "extension %(ext_alias)s detected by servers extension for function "
 "%(func)s"
 msgstr ""
 
-#: nova/api/openstack/compute/plugins/v3/servers.py:496
+#: nova/api/openstack/compute/plugins/v3/servers.py:497
 #, python-format
 msgid "extension %(ext_alias)s is missing %(func)s"
 msgstr ""
 
-#: nova/api/openstack/compute/plugins/v3/servers.py:517
+#: nova/api/openstack/compute/plugins/v3/servers.py:518
 msgid "Did not find any server create extensions"
 msgstr ""
 
-#: nova/api/openstack/compute/plugins/v3/servers.py:529
+#: nova/api/openstack/compute/plugins/v3/servers.py:530
 msgid "Did not find any server create xml deserializer extensions"
 msgstr ""
 
-#: nova/api/openstack/compute/plugins/v3/servers.py:1030
+#: nova/api/openstack/compute/plugins/v3/servers.py:1036
 #, python-format
 msgid "Running _create_extension_point for %s"
 msgstr ""
 
-#: nova/api/openstack/compute/plugins/v3/servers.py:1486
+#: nova/api/openstack/compute/plugins/v3/servers.py:1492
 #, python-format
 msgid "Running create xml deserialize ep for %s"
 msgstr ""
@@ -3878,6 +3883,15 @@ msgid ""
 "release. Please set the cell_type option to 'api' or 'compute'"
 msgstr ""
 
+#: nova/cells/rpc_driver.py:205
+#, python-format
+msgid "Unable to handle transport URL scheme %s"
+msgstr ""
+
+#: nova/cells/rpc_driver.py:212
+msgid "Cannot comply with query string in transport URL"
+msgstr ""
+
 #: nova/cells/rpcapi.py:338
 msgid "Failed to notify cells of BDM update/create."
 msgstr ""
@@ -3922,16 +3936,16 @@ msgstr ""
 msgid "Error scheduling instances %(instance_uuids)s"
 msgstr "Не найден том для копии %(instance_id)s."
 
-#: nova/cells/state.py:272
+#: nova/cells/state.py:281
 msgid "Updating cell cache from db."
 msgstr ""
 
-#: nova/cells/state.py:317
+#: nova/cells/state.py:326
 #, python-format
 msgid "Unknown cell '%(cell_name)s' when trying to update capabilities"
 msgstr ""
 
-#: nova/cells/state.py:333
+#: nova/cells/state.py:342
 #, python-format
 msgid "Unknown cell '%(cell_name)s' when trying to update capacities"
 msgstr ""
@@ -4040,20 +4054,20 @@ msgstr ""
 msgid "request is queued: node %(node_id)s, params %(params)s"
 msgstr ""
 
-#: nova/cmd/baremetal_manage.py:158 nova/cmd/manage.py:1280
+#: nova/cmd/baremetal_manage.py:158 nova/cmd/manage.py:1288
 #, python-format
 msgid "Could not read %s. Re-running with sudo"
 msgstr ""
 
-#: nova/cmd/baremetal_manage.py:162 nova/cmd/manage.py:1284
+#: nova/cmd/baremetal_manage.py:162 nova/cmd/manage.py:1292
 msgid "sudo failed, continuing as if nothing happened"
 msgstr ""
 
-#: nova/cmd/baremetal_manage.py:164 nova/cmd/manage.py:1286
+#: nova/cmd/baremetal_manage.py:164 nova/cmd/manage.py:1294
 msgid "Please re-run nova-manage as root."
 msgstr ""
 
-#: nova/cmd/baremetal_manage.py:204 nova/cmd/manage.py:1331
+#: nova/cmd/baremetal_manage.py:204 nova/cmd/manage.py:1339
 msgid "Command failed, please check log for more info"
 msgstr ""
 
@@ -4076,323 +4090,322 @@ msgstr ""
 msgid "Environment variable 'NETWORK_ID' must be set."
 msgstr ""
 
-#: nova/cmd/manage.py:206
+#: nova/cmd/manage.py:207
 msgid ""
 "The above error may show that the database has not been created.\n"
 "Please create a database using 'nova-manage db sync' before running this "
 "command."
 msgstr ""
 
-#: nova/cmd/manage.py:241
+#: nova/cmd/manage.py:242
 #, python-format
 msgid "%(key)s is not a valid quota key. Valid options are: %(options)s."
 msgstr ""
 
-#: nova/cmd/manage.py:247
+#: nova/cmd/manage.py:248
 msgid "Quota"
 msgstr ""
 
-#: nova/cmd/manage.py:248
+#: nova/cmd/manage.py:249
 msgid "Limit"
 msgstr ""
 
-#: nova/cmd/manage.py:249
+#: nova/cmd/manage.py:250
 msgid "In Use"
 msgstr ""
 
-#: nova/cmd/manage.py:250
+#: nova/cmd/manage.py:251
 #, fuzzy
 msgid "Reserved"
 msgstr "получено %s"
 
-#: nova/cmd/manage.py:290 nova/cmd/manage.py:365 nova/cmd/manage.py:690
-#: nova/cmd/manage.py:703
+#: nova/cmd/manage.py:291 nova/cmd/manage.py:366 nova/cmd/manage.py:691
+#: nova/cmd/manage.py:704
 #, fuzzy, python-format
 msgid "error: %s"
 msgstr "Ошибка БД: %s"
 
-#: nova/cmd/manage.py:298
+#: nova/cmd/manage.py:299
 #, fuzzy
 msgid "network"
 msgstr "Восстановление сети"
 
-#: nova/cmd/manage.py:299
+#: nova/cmd/manage.py:300
 #, fuzzy
 msgid "IP address"
 msgstr "Выделить адрес"
 
-#: nova/cmd/manage.py:300
+#: nova/cmd/manage.py:301
 msgid "hostname"
 msgstr ""
 
-#: nova/cmd/manage.py:301 nova/cmd/manage.py:824
+#: nova/cmd/manage.py:302 nova/cmd/manage.py:825
 msgid "host"
 msgstr ""
 
-#: nova/cmd/manage.py:313 nova/cmd/manage.py:337
+#: nova/cmd/manage.py:314 nova/cmd/manage.py:338
 msgid "No fixed IP found."
 msgstr ""
 
-#: nova/cmd/manage.py:329
+#: nova/cmd/manage.py:330
 #, python-format
 msgid "WARNING: fixed ip %s allocated to missing instance"
 msgstr ""
 
-#: nova/cmd/manage.py:392
+#: nova/cmd/manage.py:393
 #, python-format
 msgid ""
 "Too many IP addresses will be generated.  Please increase /%s to reduce "
 "the number generated."
 msgstr ""
 
-#: nova/cmd/manage.py:443
+#: nova/cmd/manage.py:444
 #, fuzzy
 msgid "No floating IP addresses have been defined."
 msgstr "Тип тома %(name)s уже существует."
 
-#: nova/cmd/manage.py:505 nova/tests/test_nova_manage.py:212
+#: nova/cmd/manage.py:506 nova/tests/test_nova_manage.py:212
 msgid "id"
 msgstr ""
 
-#: nova/cmd/manage.py:506 nova/tests/test_nova_manage.py:213
+#: nova/cmd/manage.py:507 nova/tests/test_nova_manage.py:213
 msgid "IPv4"
 msgstr "IPv4"
 
-#: nova/cmd/manage.py:507 nova/tests/test_nova_manage.py:214
+#: nova/cmd/manage.py:508 nova/tests/test_nova_manage.py:214
 msgid "IPv6"
 msgstr "IPv6"
 
-#: nova/cmd/manage.py:508 nova/tests/test_nova_manage.py:215
+#: nova/cmd/manage.py:509 nova/tests/test_nova_manage.py:215
 msgid "start address"
 msgstr ""
 
-#: nova/cmd/manage.py:509 nova/tests/test_nova_manage.py:216
+#: nova/cmd/manage.py:510 nova/tests/test_nova_manage.py:216
 msgid "DNS1"
 msgstr ""
 
-#: nova/cmd/manage.py:510 nova/tests/test_nova_manage.py:217
+#: nova/cmd/manage.py:511 nova/tests/test_nova_manage.py:217
 msgid "DNS2"
 msgstr ""
 
-#: nova/cmd/manage.py:511 nova/tests/test_nova_manage.py:218
+#: nova/cmd/manage.py:512 nova/tests/test_nova_manage.py:218
 msgid "VlanID"
 msgstr ""
 
-#: nova/cmd/manage.py:512 nova/cmd/manage.py:618
+#: nova/cmd/manage.py:513 nova/cmd/manage.py:619
 #: nova/tests/test_nova_manage.py:219
 msgid "project"
 msgstr "проект"
 
-#: nova/cmd/manage.py:513 nova/tests/test_nova_manage.py:220
+#: nova/cmd/manage.py:514 nova/tests/test_nova_manage.py:220
 msgid "uuid"
 msgstr ""
 
-#: nova/cmd/manage.py:520
+#: nova/cmd/manage.py:521
 #, fuzzy
 msgid "No networks found"
 msgstr "Сеть не найдена"
 
-#: nova/cmd/manage.py:539
+#: nova/cmd/manage.py:540
 msgid "Please specify either fixed_range or uuid"
 msgstr ""
 
-#: nova/cmd/manage.py:544
-#, fuzzy
-msgid "UUID is required to delete Quantum Networks"
-msgstr "%(req)s необходимо для создания сети."
-
-#: nova/cmd/manage.py:547
-msgid "Deleting by fixed_range is not supported with the QuantumManager"
+#: nova/cmd/manage.py:545
+msgid "UUID is required to delete Neutron Networks"
 msgstr ""
 
-#: nova/cmd/manage.py:610
+#: nova/cmd/manage.py:548
+msgid "Deleting by fixed_range is not supported with the NeutronManager"
+msgstr ""
+
+#: nova/cmd/manage.py:611
 #, fuzzy
 msgid "instance"
 msgstr "Выполнение остановки копий"
 
-#: nova/cmd/manage.py:611
+#: nova/cmd/manage.py:612
 msgid "node"
 msgstr ""
 
-#: nova/cmd/manage.py:612
+#: nova/cmd/manage.py:613
 msgid "type"
 msgstr ""
 
-#: nova/cmd/manage.py:613
+#: nova/cmd/manage.py:614
 msgid "state"
 msgstr ""
 
-#: nova/cmd/manage.py:614
+#: nova/cmd/manage.py:615
 msgid "launched"
 msgstr ""
 
-#: nova/cmd/manage.py:615
+#: nova/cmd/manage.py:616
 msgid "image"
 msgstr ""
 
-#: nova/cmd/manage.py:616
+#: nova/cmd/manage.py:617
 msgid "kernel"
 msgstr ""
 
-#: nova/cmd/manage.py:617
+#: nova/cmd/manage.py:618
 msgid "ramdisk"
 msgstr ""
 
-#: nova/cmd/manage.py:619
+#: nova/cmd/manage.py:620
 msgid "user"
 msgstr ""
 
-#: nova/cmd/manage.py:620 nova/cmd/manage.py:825
+#: nova/cmd/manage.py:621 nova/cmd/manage.py:826
 msgid "zone"
 msgstr ""
 
-#: nova/cmd/manage.py:621
+#: nova/cmd/manage.py:622
 msgid "index"
 msgstr ""
 
-#: nova/cmd/manage.py:665
+#: nova/cmd/manage.py:666
 msgid "Binary"
 msgstr ""
 
-#: nova/cmd/manage.py:666
+#: nova/cmd/manage.py:667
 msgid "Host"
 msgstr ""
 
-#: nova/cmd/manage.py:667
+#: nova/cmd/manage.py:668
 msgid "Zone"
 msgstr ""
 
-#: nova/cmd/manage.py:668
+#: nova/cmd/manage.py:669
 msgid "Status"
 msgstr ""
 
-#: nova/cmd/manage.py:669
+#: nova/cmd/manage.py:670
 msgid "State"
 msgstr ""
 
-#: nova/cmd/manage.py:670
+#: nova/cmd/manage.py:671
 msgid "Updated_At"
 msgstr ""
 
-#: nova/cmd/manage.py:692
+#: nova/cmd/manage.py:693
 #, fuzzy, python-format
 msgid "Service %(service)s on host %(host)s enabled."
 msgstr "Служба %(service_id)s не найдена."
 
-#: nova/cmd/manage.py:705
+#: nova/cmd/manage.py:706
 #, fuzzy, python-format
 msgid "Service %(service)s on host %(host)s disabled."
 msgstr "Служба %(service_id)s не найдена."
 
-#: nova/cmd/manage.py:772
+#: nova/cmd/manage.py:773
 #, fuzzy
 msgid "An unexpected error has occurred."
 msgstr "Непредвиденная ошибка: %s"
 
-#: nova/cmd/manage.py:773
+#: nova/cmd/manage.py:774
 msgid "[Result]"
 msgstr ""
 
-#: nova/cmd/manage.py:777
+#: nova/cmd/manage.py:778
 msgid "HOST"
 msgstr ""
 
-#: nova/cmd/manage.py:778
+#: nova/cmd/manage.py:779
 #, fuzzy
 msgid "PROJECT"
 msgstr "проект"
 
-#: nova/cmd/manage.py:779
+#: nova/cmd/manage.py:780
 msgid "cpu"
 msgstr ""
 
-#: nova/cmd/manage.py:780
+#: nova/cmd/manage.py:781
 msgid "mem(mb)"
 msgstr ""
 
-#: nova/cmd/manage.py:781
+#: nova/cmd/manage.py:782
 msgid "hdd"
 msgstr ""
 
-#: nova/cmd/manage.py:864
+#: nova/cmd/manage.py:865
 msgid "Must supply a positive value for max_rows"
 msgstr ""
 
-#: nova/cmd/manage.py:903
+#: nova/cmd/manage.py:904
 msgid "Must supply valid parameters to create instance_type"
 msgstr ""
 
-#: nova/cmd/manage.py:907
+#: nova/cmd/manage.py:908
 #, fuzzy
 msgid "Instance Type exists."
 msgstr "копия - %s не представлена"
 
-#: nova/cmd/manage.py:908
+#: nova/cmd/manage.py:909
 msgid "Please ensure instance_type name and flavorid are unique."
 msgstr ""
 
-#: nova/cmd/manage.py:910
+#: nova/cmd/manage.py:911
 msgid "Currently defined instance_type names and flavorids:"
 msgstr ""
 
-#: nova/cmd/manage.py:915
+#: nova/cmd/manage.py:916
 #, fuzzy
 msgid "Unknown error"
 msgstr "Ошибка аутентификации"
 
-#: nova/cmd/manage.py:918
+#: nova/cmd/manage.py:919
 #, fuzzy, python-format
 msgid "%s created"
 msgstr "Таблица |%s| не создана!"
 
-#: nova/cmd/manage.py:926
+#: nova/cmd/manage.py:927
 msgid "Valid instance type name is required"
 msgstr ""
 
-#: nova/cmd/manage.py:929
+#: nova/cmd/manage.py:930
 #, fuzzy, python-format
 msgid "DB Error: %s"
 msgstr "Ошибка БД: %s"
 
-#: nova/cmd/manage.py:934
+#: nova/cmd/manage.py:935
 #, python-format
 msgid "%s deleted"
 msgstr ""
 
-#: nova/cmd/manage.py:970
+#: nova/cmd/manage.py:971
 #, python-format
 msgid "Key %(key)s set to %(value)s on instance type %(name)s"
 msgstr ""
 
-#: nova/cmd/manage.py:992
+#: nova/cmd/manage.py:993
 #, python-format
 msgid "Key %(key)s on instance type %(name)s unset"
 msgstr ""
 
-#: nova/cmd/manage.py:1052
+#: nova/cmd/manage.py:1053
 #, fuzzy, python-format
 msgid "Hypervisor: %s"
 msgstr "тип = %s"
 
-#: nova/cmd/manage.py:1101
+#: nova/cmd/manage.py:1102
 #, python-format
 msgid "Line %(linenum)d : %(line)s"
 msgstr ""
 
-#: nova/cmd/manage.py:1103
+#: nova/cmd/manage.py:1104
 msgid "No errors in logfiles!"
 msgstr ""
 
-#: nova/cmd/manage.py:1117
+#: nova/cmd/manage.py:1118
 msgid "Unable to find system log file!"
 msgstr ""
 
-#: nova/cmd/manage.py:1121
+#: nova/cmd/manage.py:1122
 #, python-format
 msgid "Last %s nova syslog entries:-"
 msgstr ""
 
-#: nova/cmd/manage.py:1130
+#: nova/cmd/manage.py:1131
 msgid "No nova entries in syslog!"
 msgstr ""
 
@@ -4744,280 +4757,280 @@ msgstr "Копия типа %s не найдена для выполнения �
 msgid "Possibly task preempted."
 msgstr ""
 
-#: nova/compute/manager.py:384
+#: nova/compute/manager.py:390
 #, python-format
 msgid "%s is not a valid node managed by this compute host."
 msgstr ""
 
-#: nova/compute/manager.py:412 nova/compute/manager.py:421
+#: nova/compute/manager.py:418 nova/compute/manager.py:427
 msgid "Instance has been destroyed from under us while trying to set it to ERROR"
 msgstr ""
 
-#: nova/compute/manager.py:471
+#: nova/compute/manager.py:477
 #, fuzzy, python-format
 msgid ""
 "Deleting instance as its host (%(instance_host)s) is not equal to our "
 "host (%(our_host)s)."
 msgstr "Невозможно переместить копию (%(instance_id)s) на текущий узел (%(host)s)."
 
-#: nova/compute/manager.py:487
+#: nova/compute/manager.py:493
 msgid "Instance has been marked deleted already, removing it from the hypervisor."
 msgstr ""
 
-#: nova/compute/manager.py:508
+#: nova/compute/manager.py:514
 msgid ""
 "Hypervisor driver does not support instance shared storage check, "
 "assuming it's not on shared storage"
 msgstr ""
 
-#: nova/compute/manager.py:514
+#: nova/compute/manager.py:520
 #, fuzzy
 msgid "Failed to check if instance shared"
 msgstr "Ошибка перезагрузки копии"
 
-#: nova/compute/manager.py:556
+#: nova/compute/manager.py:562
 #, python-format
 msgid ""
 "Error raised getting network info for instance %(instance_uuid)s. "
 "Retrying in %(retry_time)s seconds."
 msgstr ""
 
-#: nova/compute/manager.py:582
+#: nova/compute/manager.py:588
 msgid "Failed to revert crashed migration"
 msgstr ""
 
-#: nova/compute/manager.py:585
+#: nova/compute/manager.py:591
 msgid "Instance found in migrating state during startup. Resetting task_state"
 msgstr ""
 
-#: nova/compute/manager.py:596
+#: nova/compute/manager.py:602
 #, python-format
 msgid "Current state is %(drv_state)s, state in DB is %(db_state)s."
 msgstr ""
 
-#: nova/compute/manager.py:602
+#: nova/compute/manager.py:608
 msgid "Rebooting instance after nova-compute restart."
 msgstr ""
 
-#: nova/compute/manager.py:616
+#: nova/compute/manager.py:622
 #, fuzzy
 msgid "Hypervisor driver does not support resume guests"
 msgstr "Драйвер гипервизора не поддерживает правила брандмауэра"
 
-#: nova/compute/manager.py:621
+#: nova/compute/manager.py:627
 #, fuzzy
 msgid "Failed to resume instance"
 msgstr "Ошибка приостановления копии"
 
-#: nova/compute/manager.py:631
+#: nova/compute/manager.py:637
 msgid "Hypervisor driver does not support firewall rules"
 msgstr "Драйвер гипервизора не поддерживает правила брандмауэра"
 
-#: nova/compute/manager.py:635
+#: nova/compute/manager.py:641
 #, python-format
 msgid "Lifecycle event %(state)d on VM %(uuid)s"
 msgstr ""
 
-#: nova/compute/manager.py:651
+#: nova/compute/manager.py:657
 #, fuzzy, python-format
 msgid "Unexpected power state %d"
 msgstr "Непредвиденный код состояния"
 
-#: nova/compute/manager.py:664
+#: nova/compute/manager.py:670
 #, python-format
 msgid ""
 "Event %s arrived for non-existent instance. The instance was probably "
 "deleted."
 msgstr ""
 
-#: nova/compute/manager.py:667
+#: nova/compute/manager.py:673
 #, python-format
 msgid "Ignoring event %s"
 msgstr ""
 
-#: nova/compute/manager.py:705
+#: nova/compute/manager.py:711
 msgid "Checking state"
 msgstr ""
 
-#: nova/compute/manager.py:803
+#: nova/compute/manager.py:809
 #, python-format
 msgid "Volume id: %s finished being created but was not set as 'available'"
 msgstr ""
 
-#: nova/compute/manager.py:820
+#: nova/compute/manager.py:826
 #, python-format
 msgid "Setting up bdm %s"
 msgstr ""
 
-#: nova/compute/manager.py:921
+#: nova/compute/manager.py:927
 msgid "Success"
 msgstr ""
 
-#: nova/compute/manager.py:944
+#: nova/compute/manager.py:950
 msgid "Instance disappeared before we could start it"
 msgstr ""
 
-#: nova/compute/manager.py:971 nova/compute/manager.py:2596
+#: nova/compute/manager.py:977 nova/compute/manager.py:2602
 #, python-format
 msgid "No node specified, defaulting to %s"
 msgstr ""
 
-#: nova/compute/manager.py:1009
+#: nova/compute/manager.py:1015
 msgid "Instance disappeared during build"
 msgstr ""
 
-#: nova/compute/manager.py:1015
+#: nova/compute/manager.py:1021
 #, fuzzy
 msgid "Failed to dealloc network for deleted instance"
 msgstr "Выполнение запуска копий"
 
-#: nova/compute/manager.py:1028
+#: nova/compute/manager.py:1034
 msgid "Instance was deleted during spawn."
 msgstr ""
 
-#: nova/compute/manager.py:1059
+#: nova/compute/manager.py:1065
 #, fuzzy, python-format
 msgid "Error: %s"
 msgstr "Ошибка БД: %s"
 
-#: nova/compute/manager.py:1076
+#: nova/compute/manager.py:1082
 msgid "Clean up resource before rescheduling."
 msgstr ""
 
-#: nova/compute/manager.py:1101 nova/compute/manager.py:2649
+#: nova/compute/manager.py:1107 nova/compute/manager.py:2655
 msgid "Error trying to reschedule"
 msgstr ""
 
-#: nova/compute/manager.py:1114
+#: nova/compute/manager.py:1120
 msgid "Retry info not present, will not reschedule"
 msgstr ""
 
-#: nova/compute/manager.py:1119
+#: nova/compute/manager.py:1125
 msgid "No request spec, will not reschedule"
 msgstr ""
 
-#: nova/compute/manager.py:1125
+#: nova/compute/manager.py:1131
 #, python-format
 msgid "Re-scheduling %(method)s: attempt %(num)d"
 msgstr ""
 
-#: nova/compute/manager.py:1154
+#: nova/compute/manager.py:1160
 msgid "Instance build timed out. Set to error state."
 msgstr ""
 
-#: nova/compute/manager.py:1164
+#: nova/compute/manager.py:1170
 msgid "Starting instance..."
 msgstr ""
 
-#: nova/compute/manager.py:1178
+#: nova/compute/manager.py:1184
 #, fuzzy
 msgid "Allocating IP information in the background."
 msgstr "установка сетевого узла"
 
-#: nova/compute/manager.py:1182
+#: nova/compute/manager.py:1188
 #, python-format
 msgid ""
 "Treating negative config value (%(retries)s) for "
 "'network_allocate_retries' as 0."
 msgstr ""
 
-#: nova/compute/manager.py:1195
+#: nova/compute/manager.py:1201
 #, python-format
 msgid "Instance network_info: |%s|"
 msgstr ""
 
-#: nova/compute/manager.py:1203
+#: nova/compute/manager.py:1209
 #, python-format
 msgid "Instance failed network setup after %(attempts)d attempt(s)"
 msgstr ""
 
-#: nova/compute/manager.py:1207
+#: nova/compute/manager.py:1213
 #, python-format
 msgid "Instance failed network setup (attempt %(attempt)d of %(attempts)d)"
 msgstr ""
 
-#: nova/compute/manager.py:1240
+#: nova/compute/manager.py:1246
 msgid "Instance failed block device setup"
 msgstr ""
 
-#: nova/compute/manager.py:1259
+#: nova/compute/manager.py:1265
 msgid "Instance failed to spawn"
 msgstr ""
 
-#: nova/compute/manager.py:1310
+#: nova/compute/manager.py:1316
 msgid "Deallocating network for instance"
 msgstr ""
 
-#: nova/compute/manager.py:1384
+#: nova/compute/manager.py:1390
 #, fuzzy
 msgid "Failed to deallocate network for instance."
 msgstr "Выполнение запуска копий"
 
-#: nova/compute/manager.py:1391
+#: nova/compute/manager.py:1397
 #, python-format
 msgid "%(action_str)s instance"
 msgstr ""
 
-#: nova/compute/manager.py:1434
+#: nova/compute/manager.py:1440
 #, python-format
 msgid "Ignoring DiskNotFound: %s"
 msgstr "Пропуск DiskNotFound: %s"
 
-#: nova/compute/manager.py:1437
+#: nova/compute/manager.py:1443
 #, fuzzy, python-format
 msgid "Ignoring VolumeNotFound: %s"
 msgstr "Пропуск DiskNotFound: %s"
 
-#: nova/compute/manager.py:1444
+#: nova/compute/manager.py:1450
 #, python-format
 msgid "terminating bdm %s"
 msgstr "завершение работы bdm %s"
 
-#: nova/compute/manager.py:1492
+#: nova/compute/manager.py:1498
 #, python-format
 msgid "Ignoring volume cleanup failure due to %s"
 msgstr ""
 
-#: nova/compute/manager.py:1554 nova/compute/manager.py:2831
-#: nova/compute/manager.py:4385
+#: nova/compute/manager.py:1560 nova/compute/manager.py:2837
+#: nova/compute/manager.py:4391
 #, python-format
 msgid "%s. Setting instance vm_state to ERROR"
 msgstr "%s. Установка состояния копии vm_state на ERROR"
 
-#: nova/compute/manager.py:1718
+#: nova/compute/manager.py:1724
 #, fuzzy
 msgid "Rebuilding instance"
 msgstr "Обновление сборки %s"
 
-#: nova/compute/manager.py:1731
+#: nova/compute/manager.py:1737
 msgid "Invalid state of instance files on shared storage"
 msgstr ""
 
-#: nova/compute/manager.py:1735
+#: nova/compute/manager.py:1741
 msgid "disk on shared storage, recreating using existing disk"
 msgstr ""
 
-#: nova/compute/manager.py:1739
+#: nova/compute/manager.py:1745
 #, fuzzy, python-format
 msgid "disk not on shared storagerebuilding from: '%s'"
 msgstr "%(path)s располагается на общедоступном накопителе: %(reason)s"
 
-#: nova/compute/manager.py:1822
+#: nova/compute/manager.py:1828
 #, python-format
 msgid "bringing vm to original state: '%s'"
 msgstr ""
 
-#: nova/compute/manager.py:1854
+#: nova/compute/manager.py:1860
 #, fuzzy, python-format
 msgid "Detaching from volume api: %s"
 msgstr "Создать снимок из тома %s"
 
-#: nova/compute/manager.py:1872
+#: nova/compute/manager.py:1878
 #, fuzzy
 msgid "Rebooting instance"
 msgstr "Перезагрузка копии %s"
 
-#: nova/compute/manager.py:1891
+#: nova/compute/manager.py:1897
 #, fuzzy, python-format
 msgid ""
 "trying to reboot a non-running instance: (state: %(state)s expected: "
@@ -5026,25 +5039,25 @@ msgstr ""
 "попытка перезагрузки не выполняемой копии: %(instance_uuid)s (состояние: "
 "%(state)s ожидалось: %(running)s)"
 
-#: nova/compute/manager.py:1927
+#: nova/compute/manager.py:1933
 msgid "Reboot failed but instance is running"
 msgstr ""
 
-#: nova/compute/manager.py:1930
+#: nova/compute/manager.py:1936
 #, python-format
 msgid "Cannot reboot instance: %s"
 msgstr ""
 
-#: nova/compute/manager.py:1943
+#: nova/compute/manager.py:1949
 #, fuzzy
 msgid "Instance disappeared during reboot"
 msgstr "копия не включена"
 
-#: nova/compute/manager.py:1964
+#: nova/compute/manager.py:1970
 msgid "instance live snapshotting"
 msgstr ""
 
-#: nova/compute/manager.py:1970 nova/compute/manager.py:2026
+#: nova/compute/manager.py:1976 nova/compute/manager.py:2032
 #, fuzzy, python-format
 msgid ""
 "trying to snapshot a non-running instance: (state: %(state)s expected: "
@@ -5053,242 +5066,242 @@ msgstr ""
 "попытка создания снимка не выполняемой копии: %(instance_uuid)s "
 "(состояние: %(state)s ожидалось: %(running)s)"
 
-#: nova/compute/manager.py:2020
+#: nova/compute/manager.py:2026
 #, fuzzy
 msgid "instance snapshotting"
 msgstr "копия %s: выполнение снимка"
 
-#: nova/compute/manager.py:2072
+#: nova/compute/manager.py:2078
 msgid "Instance disappeared during snapshot"
 msgstr ""
 
-#: nova/compute/manager.py:2077
+#: nova/compute/manager.py:2083
 msgid "Instance was deleted during snapshot."
 msgstr ""
 
-#: nova/compute/manager.py:2104
+#: nova/compute/manager.py:2110
 #, python-format
 msgid "Found %(num_images)d images (rotation: %(rotation)d)"
 msgstr "Найдено %(num_images)d образов (ротация: %(rotation)d)"
 
-#: nova/compute/manager.py:2112
+#: nova/compute/manager.py:2118
 #, python-format
 msgid "Rotating out %d backups"
 msgstr ""
 
-#: nova/compute/manager.py:2117
+#: nova/compute/manager.py:2123
 #, python-format
 msgid "Deleting image %s"
 msgstr "Удаление образа %s"
 
-#: nova/compute/manager.py:2145
+#: nova/compute/manager.py:2151
 #, python-format
 msgid "Failed to set admin password. Instance %s is not running"
 msgstr "Невозможно назначить пароль администратора. Копия %s не выполняется"
 
-#: nova/compute/manager.py:2152
+#: nova/compute/manager.py:2158
 #, fuzzy
 msgid "Root password set"
 msgstr "Копия %s: Назначение административного пароля"
 
-#: nova/compute/manager.py:2159
+#: nova/compute/manager.py:2165
 #, fuzzy
 msgid "set_admin_password is not implemented by this driver or guest instance."
 msgstr "set_admin_password не реализован в этой драйвере."
 
-#: nova/compute/manager.py:2174
+#: nova/compute/manager.py:2180
 #, fuzzy, python-format
 msgid "set_admin_password failed: %s"
 msgstr "set_admin_password не реализован в этой драйвере."
 
-#: nova/compute/manager.py:2181
+#: nova/compute/manager.py:2187
 #, fuzzy
 msgid "error setting admin password"
 msgstr "Ошибка назначения пароля администратора"
 
-#: nova/compute/manager.py:2194
+#: nova/compute/manager.py:2200
 #, python-format
 msgid ""
 "trying to inject a file into a non-running (state: %(current_state)s "
 "expected: %(expected_state)s)"
 msgstr ""
 
-#: nova/compute/manager.py:2199
+#: nova/compute/manager.py:2205
 #, python-format
 msgid "injecting file to %s"
 msgstr ""
 
-#: nova/compute/manager.py:2219
+#: nova/compute/manager.py:2225
 msgid ""
 "Unable to find a different image to use for rescue VM, using instance's "
 "current image"
 msgstr ""
 
-#: nova/compute/manager.py:2232
+#: nova/compute/manager.py:2238
 msgid "Rescuing"
 msgstr ""
 
-#: nova/compute/manager.py:2251
+#: nova/compute/manager.py:2257
 #, fuzzy
 msgid "Error trying to Rescue Instance"
 msgstr "Ошибка приостановления копии"
 
-#: nova/compute/manager.py:2255
+#: nova/compute/manager.py:2261
 #, fuzzy, python-format
 msgid "Driver Error: %s"
 msgstr "Ошибка БД: %s"
 
-#: nova/compute/manager.py:2273
+#: nova/compute/manager.py:2279
 msgid "Unrescuing"
 msgstr ""
 
-#: nova/compute/manager.py:2294
+#: nova/compute/manager.py:2300
 #, python-format
 msgid "Changing instance metadata according to %r"
 msgstr ""
 
-#: nova/compute/manager.py:2516
+#: nova/compute/manager.py:2522
 #, fuzzy, python-format
 msgid "Updating instance to original state: '%s'"
 msgstr "%s. Установка состояния копии vm_state на ERROR"
 
-#: nova/compute/manager.py:2550
+#: nova/compute/manager.py:2556
 #, fuzzy
 msgid "Instance has no source host"
 msgstr "Копия не существует"
 
-#: nova/compute/manager.py:2556
+#: nova/compute/manager.py:2562
 msgid "destination same as source!"
 msgstr "назначение совпадает с источником!"
 
-#: nova/compute/manager.py:2577
+#: nova/compute/manager.py:2583
 msgid "Migrating"
 msgstr ""
 
-#: nova/compute/manager.py:2828
+#: nova/compute/manager.py:2834
 #, python-format
 msgid "Failed to rollback quota for failed finish_resize: %s"
 msgstr ""
 
-#: nova/compute/manager.py:2891
+#: nova/compute/manager.py:2897
 msgid "Pausing"
 msgstr ""
 
-#: nova/compute/manager.py:2909
+#: nova/compute/manager.py:2915
 msgid "Unpausing"
 msgstr ""
 
-#: nova/compute/manager.py:2948
+#: nova/compute/manager.py:2954
 #, fuzzy
 msgid "Retrieving diagnostics"
 msgstr "копия %s: принятие диагностики"
 
-#: nova/compute/manager.py:2979
+#: nova/compute/manager.py:2985
 msgid "Resuming"
 msgstr ""
 
-#: nova/compute/manager.py:2999
+#: nova/compute/manager.py:3005
 #, fuzzy
 msgid "Reset network"
 msgstr "Восстановление сети"
 
-#: nova/compute/manager.py:3004
+#: nova/compute/manager.py:3010
 #, fuzzy
 msgid "Inject network info"
 msgstr "установка сетевого узла"
 
-#: nova/compute/manager.py:3007
+#: nova/compute/manager.py:3013
 #, python-format
 msgid "network_info to inject: |%s|"
 msgstr ""
 
-#: nova/compute/manager.py:3024
+#: nova/compute/manager.py:3030
 #, fuzzy
 msgid "Get console output"
 msgstr "Получить консольный вывод для копии %s"
 
-#: nova/compute/manager.py:3051
+#: nova/compute/manager.py:3057
 #, fuzzy
 msgid "Getting vnc console"
 msgstr "копия %s: получение консоли vnc"
 
-#: nova/compute/manager.py:3086
+#: nova/compute/manager.py:3092
 #, fuzzy
 msgid "Getting spice console"
 msgstr "копия %s: получение консоли vnc"
 
-#: nova/compute/manager.py:3134
+#: nova/compute/manager.py:3140
 #, python-format
 msgid "Booting with volume %(volume_id)s at %(mountpoint)s"
 msgstr ""
 
-#: nova/compute/manager.py:3185
+#: nova/compute/manager.py:3191
 #, python-format
 msgid "Attaching volume %(volume_id)s to %(mountpoint)s"
 msgstr ""
 
-#: nova/compute/manager.py:3195
+#: nova/compute/manager.py:3201
 #, python-format
 msgid ""
 "Failed to connect to volume %(volume_id)s while attaching at "
 "%(mountpoint)s"
 msgstr ""
 
-#: nova/compute/manager.py:3211
+#: nova/compute/manager.py:3217
 #, python-format
 msgid "Failed to attach volume %(volume_id)s at %(mountpoint)s"
 msgstr ""
 
-#: nova/compute/manager.py:3245
+#: nova/compute/manager.py:3251
 #, python-format
 msgid "Detach volume %(volume_id)s from mountpoint %(mp)s"
 msgstr ""
 
-#: nova/compute/manager.py:3256
+#: nova/compute/manager.py:3262
 #, fuzzy
 msgid "Detaching volume from unknown instance"
 msgstr "Отсоединение тома от неизвестной копии %s"
 
-#: nova/compute/manager.py:3263
+#: nova/compute/manager.py:3269
 #, fuzzy, python-format
 msgid "Failed to detach volume %(volume_id)s from %(mp)s"
 msgstr "Попытка удаления несуществующей консоли %(console_id)s."
 
-#: nova/compute/manager.py:3287
+#: nova/compute/manager.py:3293
 msgid "Updating volume usage cache with totals"
 msgstr ""
 
-#: nova/compute/manager.py:3326
+#: nova/compute/manager.py:3332
 #, fuzzy, python-format
 msgid "allocate_port_for_instance returned %(ports)s ports"
 msgstr "сетевые распределения для копии %s"
 
-#: nova/compute/manager.py:3346
+#: nova/compute/manager.py:3352
 #, python-format
 msgid "Port %s is not attached"
 msgstr ""
 
-#: nova/compute/manager.py:3360
+#: nova/compute/manager.py:3366
 #, python-format
 msgid "Host %s not found"
 msgstr ""
 
-#: nova/compute/manager.py:3513
+#: nova/compute/manager.py:3519
 #, python-format
 msgid "Pre live migration failed at %s"
 msgstr ""
 
-#: nova/compute/manager.py:3541
+#: nova/compute/manager.py:3547
 #, fuzzy
 msgid "_post_live_migration() is started.."
 msgstr "Запущено post_live_migration().."
 
-#: nova/compute/manager.py:3596
+#: nova/compute/manager.py:3602
 #, python-format
 msgid "Migrating instance to %s finished successfully."
 msgstr ""
 
-#: nova/compute/manager.py:3598
+#: nova/compute/manager.py:3604
 msgid ""
 "You may see the error \"libvirt: QEMU error: Domain not found: no domain "
 "with matching name.\" This error can be safely ignored."
@@ -5297,21 +5310,21 @@ msgstr ""
 "отсутствует домен с соответствующим именем.\" Эта ошибка может быть "
 "безопасно пропущена."
 
-#: nova/compute/manager.py:3613
+#: nova/compute/manager.py:3619
 #, fuzzy
 msgid "Post operation of migration started"
 msgstr "Запущено post_live_migration().."
 
-#: nova/compute/manager.py:3645
+#: nova/compute/manager.py:3651
 #, fuzzy, python-format
 msgid "Failed to get compute_info for %s"
 msgstr "Ошибка получения метаданных для ip: %s"
 
-#: nova/compute/manager.py:3774
+#: nova/compute/manager.py:3780
 msgid "Updated the info_cache for instance"
 msgstr ""
 
-#: nova/compute/manager.py:3826
+#: nova/compute/manager.py:3832
 #, python-format
 msgid ""
 "Found %(migration_count)d unconfirmed migrations older than "
@@ -5320,64 +5333,64 @@ msgstr ""
 "Найдены %(migration_count)d неподтверждённых перемещений, старше "
 "%(confirm_window)d секунд"
 
-#: nova/compute/manager.py:3831
+#: nova/compute/manager.py:3837
 #, python-format
 msgid "Setting migration %(migration_id)s to error: %(reason)s"
 msgstr ""
 
-#: nova/compute/manager.py:3840
+#: nova/compute/manager.py:3846
 #, fuzzy, python-format
 msgid ""
 "Automatically confirming migration %(migration_id)s for instance "
 "%(instance_uuid)s"
 msgstr "Завершение работы ВМ для копии %(instance_uuid)s"
 
-#: nova/compute/manager.py:3848
+#: nova/compute/manager.py:3854
 #, python-format
 msgid "Instance %s not found"
 msgstr ""
 
-#: nova/compute/manager.py:3853
+#: nova/compute/manager.py:3859
 #, fuzzy
 msgid "In ERROR state"
 msgstr "Ошибка БД: %s"
 
-#: nova/compute/manager.py:3860
+#: nova/compute/manager.py:3866
 #, python-format
 msgid "In states %(vm_state)s/%(task_state)s, not RESIZED/None"
 msgstr ""
 
-#: nova/compute/manager.py:3871
+#: nova/compute/manager.py:3877
 #, python-format
 msgid "Error auto-confirming resize: %s. Will retry later."
 msgstr ""
 
-#: nova/compute/manager.py:3891
+#: nova/compute/manager.py:3897
 #, python-format
 msgid ""
 "Running instance usage audit for host %(host)s from %(begin_time)s to "
 "%(end_time)s. %(number_instances)s instances."
 msgstr ""
 
-#: nova/compute/manager.py:3911
+#: nova/compute/manager.py:3917
 #, python-format
 msgid "Failed to generate usage audit for instance on host %s"
 msgstr ""
 
-#: nova/compute/manager.py:3935
+#: nova/compute/manager.py:3941
 msgid "Updating bandwidth usage cache"
 msgstr "Обновление временных данных использования полосы пропускания"
 
-#: nova/compute/manager.py:4047
+#: nova/compute/manager.py:4053
 #, fuzzy
 msgid "Updating volume usage cache"
 msgstr "Обновление временных данных использования полосы пропускания"
 
-#: nova/compute/manager.py:4061
+#: nova/compute/manager.py:4067
 msgid "Updating host status"
 msgstr "Обновление состояния узла"
 
-#: nova/compute/manager.py:4088
+#: nova/compute/manager.py:4094
 #, python-format
 msgid ""
 "Found %(num_db_instances)s in the database and %(num_vm_instances)s on "
@@ -5386,96 +5399,96 @@ msgstr ""
 "Найдено %(num_db_instances)s в базе данных и %(num_vm_instances)s в "
 "гипервизоре."
 
-#: nova/compute/manager.py:4095 nova/compute/manager.py:4144
+#: nova/compute/manager.py:4101 nova/compute/manager.py:4150
 msgid "During sync_power_state the instance has a pending task. Skip."
 msgstr ""
 
-#: nova/compute/manager.py:4131
+#: nova/compute/manager.py:4137
 #, python-format
 msgid ""
 "During the sync_power process the instance has moved from host %(src)s to"
 " host %(dst)s"
 msgstr ""
 
-#: nova/compute/manager.py:4168
+#: nova/compute/manager.py:4174
 msgid "Instance shutdown by itself. Calling the stop API."
 msgstr ""
 
-#: nova/compute/manager.py:4180 nova/compute/manager.py:4189
-#: nova/compute/manager.py:4219
+#: nova/compute/manager.py:4186 nova/compute/manager.py:4195
+#: nova/compute/manager.py:4225
 msgid "error during stop() in sync_power_state."
 msgstr ""
 
-#: nova/compute/manager.py:4184
+#: nova/compute/manager.py:4190
 msgid "Instance is suspended unexpectedly. Calling the stop API."
 msgstr ""
 
-#: nova/compute/manager.py:4200
+#: nova/compute/manager.py:4206
 msgid "Instance is paused unexpectedly. Ignore."
 msgstr ""
 
-#: nova/compute/manager.py:4206
+#: nova/compute/manager.py:4212
 msgid "Instance is unexpectedly not found. Ignore."
 msgstr ""
 
-#: nova/compute/manager.py:4212
+#: nova/compute/manager.py:4218
 msgid "Instance is not stopped. Calling the stop API."
 msgstr ""
 
-#: nova/compute/manager.py:4228
+#: nova/compute/manager.py:4234
 #, fuzzy
 msgid "Instance is not (soft-)deleted."
 msgstr "копия не включена"
 
-#: nova/compute/manager.py:4236
+#: nova/compute/manager.py:4242
 #, fuzzy
 msgid "CONF.reclaim_instance_interval <= 0, skipping..."
 msgstr "FLAGS.reclaim_instance_interval <= 0, пропуск..."
 
-#: nova/compute/manager.py:4249
+#: nova/compute/manager.py:4255
 msgid "Reclaiming deleted instance"
 msgstr ""
 
-#: nova/compute/manager.py:4256
+#: nova/compute/manager.py:4262
 #, python-format
 msgid "Periodic reclaim failed to delete instance: %s"
 msgstr ""
 
-#: nova/compute/manager.py:4281
+#: nova/compute/manager.py:4287
 #, fuzzy, python-format
 msgid "Deleting orphan compute node %s"
 msgstr "LoggingVolumeDriver: %s"
 
-#: nova/compute/manager.py:4291 nova/compute/resource_tracker.py:321
+#: nova/compute/manager.py:4297 nova/compute/resource_tracker.py:321
 #, fuzzy, python-format
 msgid "No service record for host %s"
 msgstr "Нет службы для compute ID %s"
 
-#: nova/compute/manager.py:4331
+#: nova/compute/manager.py:4337
 #, python-format
 msgid ""
 "Detected instance with name label '%s' which is marked as DELETED but "
 "still present on host."
 msgstr ""
 
-#: nova/compute/manager.py:4337
+#: nova/compute/manager.py:4343
 #, python-format
 msgid ""
 "Destroying instance with name label '%s' which is marked as DELETED but "
 "still present on host."
 msgstr ""
 
-#: nova/compute/manager.py:4345
+#: nova/compute/manager.py:4351
 #, python-format
 msgid "Periodic cleanup failed to delete instance: %s"
 msgstr ""
 
-#: nova/compute/manager.py:4349
+#: nova/compute/manager.py:4355
 #, python-format
 msgid "Unrecognized value '%s' for CONF.running_deleted_instance_action"
 msgstr ""
 
-#: nova/compute/manager.py:4376
+#: nova/compute/manager.py:4382
 #, fuzzy, python-format
 msgid "Setting instance back to ACTIVE after: %s"
 msgstr "%s. Установка состояния копии vm_state на ERROR"
@@ -5713,11 +5726,11 @@ msgstr ""
 msgid "Failed to notify cells of instance update"
 msgstr "Ошибка перезагрузки копии"
 
-#: nova/db/api.py:1552
+#: nova/db/api.py:1580
 msgid "Failed to notify cells of bw_usage update"
 msgstr ""
 
-#: nova/db/api.py:1691
+#: nova/db/api.py:1719
 #, fuzzy
 msgid "Failed to notify cells of instance fault"
 msgstr "Ошибка перезагрузки копии"
@@ -5768,12 +5781,12 @@ msgstr ""
 msgid "Invalid instance id %s in request"
 msgstr "Недопустимый запрос тела"
 
-#: nova/db/sqlalchemy/api.py:2948
+#: nova/db/sqlalchemy/api.py:2955
 #, python-format
 msgid "Change will make usage less than 0 for the following resources: %(unders)s"
 msgstr ""
 
-#: nova/db/sqlalchemy/api.py:4540
+#: nova/db/sqlalchemy/api.py:4547
 #, python-format
 msgid ""
 "Volume(%s) has lower stats then what is in the database. Instance must "
@@ -5858,6 +5871,11 @@ msgstr ""
 #, fuzzy, python-format
 msgid "table '%s' not dropped"
 msgstr "Таблица |%s| не создана!"
+
+#: nova/db/sqlalchemy/migrate_repo/versions/200_add_transport_url_to_cell.py:140
+#, python-format
+msgid "Failed to downgrade cell %(name)s: %(error)s"
+msgstr ""
 
 #: nova/image/glance.py:187
 #, python-format
@@ -6333,163 +6351,161 @@ msgstr ""
 msgid "v4 subnets are required for legacy nw_info"
 msgstr ""
 
-#: nova/network/quantumv2/__init__.py:45
+#: nova/network/neutronv2/__init__.py:45
 #, python-format
-msgid "Quantum client authentication failed: %s"
+msgid "Neutron client authentication failed: %s"
 msgstr ""
 
-#: nova/network/quantumv2/api.py:151
+#: nova/network/neutronv2/api.py:162
 #, fuzzy, python-format
 msgid "allocate_for_instance() for %s"
 msgstr "сетевые распределения для копии %s"
 
-#: nova/network/quantumv2/api.py:154
+#: nova/network/neutronv2/api.py:165
 #, fuzzy, python-format
 msgid "empty project id for instance %s"
 msgstr "сетевые распределения для копии %s"
 
-#: nova/network/quantumv2/api.py:186
+#: nova/network/neutronv2/api.py:197
 msgid "No network configured!"
 msgstr ""
 
-#: nova/network/quantumv2/api.py:205
+#: nova/network/neutronv2/api.py:216
 #, python-format
 msgid ""
 "Multiple security groups found matching '%s'. Use an ID to be more "
 "specific."
 msgstr ""
 
-#: nova/network/quantumv2/api.py:286
+#: nova/network/neutronv2/api.py:297
 #, python-format
 msgid "Failed to update port %s"
 msgstr ""
 
-#: nova/network/quantumv2/api.py:293
+#: nova/network/neutronv2/api.py:304
 #, python-format
 msgid "Failed to delete port %s"
 msgstr ""
 
-#: nova/network/quantumv2/api.py:338
+#: nova/network/neutronv2/api.py:349
 #, fuzzy, python-format
 msgid "deallocate_for_instance() for %s"
 msgstr "исключение сетевых распределений для копии |%s|"
 
-#: nova/network/quantumv2/api.py:347
+#: nova/network/neutronv2/api.py:358
 #, python-format
-msgid "Failed to delete quantum port %(portid)s"
+msgid "Failed to delete neutron port %(portid)s"
 msgstr ""
 
-#: nova/network/quantumv2/api.py:369
-#, fuzzy, python-format
-msgid "Failed to delete quantum port %(port_id)s "
-msgstr "Ошибка удаления тома в базе данных"
+#: nova/network/neutronv2/api.py:380
+#, python-format
+msgid "Failed to delete neutron port %(port_id)s "
+msgstr ""
 
-#: nova/network/quantumv2/api.py:393
+#: nova/network/neutronv2/api.py:404
 #, python-format
 msgid "get_instance_nw_info() for %s"
 msgstr ""
 
-#: nova/network/quantumv2/api.py:425
+#: nova/network/neutronv2/api.py:436
 #, python-format
 msgid ""
 "Unable to update port %(portid)s on subnet %(subnet_id)s with failure: "
 "%(exception)s"
 msgstr ""
 
-#: nova/network/quantumv2/api.py:455
+#: nova/network/neutronv2/api.py:466
 #, python-format
 msgid "Unable to update port %(portid)s with failure: %(exception)s"
 msgstr ""
 
-#: nova/network/quantumv2/api.py:465
+#: nova/network/neutronv2/api.py:476
 #, fuzzy, python-format
 msgid "validate_networks() for %s"
 msgstr "Недопустимый сетевой формат"
 
-#: nova/network/quantumv2/api.py:708
+#: nova/network/neutronv2/api.py:719
 #, fuzzy, python-format
 msgid "Multiple floating IP pools matches found for name '%s'"
 msgstr "установка сетевого узла"
 
-#: nova/network/quantumv2/api.py:803
+#: nova/network/neutronv2/api.py:814
 #, python-format
 msgid "Unable to update host of port %s"
 msgstr ""
 
-#: nova/network/security_group/quantum_driver.py:56
-#, fuzzy, python-format
-msgid "Quantum Error creating security group %s"
-msgstr "Удалить группу безопасности %s"
+#: nova/network/security_group/neutron_driver.py:56
+#, python-format
+msgid "Neutron Error creating security group %s"
+msgstr ""
 
-#: nova/network/security_group/quantum_driver.py:75
-#, fuzzy, python-format
-msgid "Quantum Error updating security group %s"
-msgstr "Удалить группу безопасности %s"
+#: nova/network/security_group/neutron_driver.py:75
+#, python-format
+msgid "Neutron Error updating security group %s"
+msgstr ""
 
-#: nova/network/security_group/quantum_driver.py:129
-#, fuzzy, python-format
-msgid "Quantum security group %s not found"
-msgstr "Удалить группу безопасности %s"
+#: nova/network/security_group/neutron_driver.py:129
+#, python-format
+msgid "Neutron security group %s not found"
+msgstr ""
 
-#: nova/network/security_group/quantum_driver.py:132
-#: nova/network/security_group/quantum_driver.py:179
-#: nova/network/security_group/quantum_driver.py:270
-#, fuzzy, python-format
-msgid "Quantum Error: %s"
-msgstr "Обнаружена ошибка: %s"
+#: nova/network/security_group/neutron_driver.py:132
+#: nova/network/security_group/neutron_driver.py:179
+#: nova/network/security_group/neutron_driver.py:270
+#, python-format
+msgid "Neutron Error: %s"
+msgstr ""
 
-#: nova/network/security_group/quantum_driver.py:153
-#, fuzzy
-msgid "Quantum Error getting security groups"
-msgstr "Удалить группу безопасности %s"
+#: nova/network/security_group/neutron_driver.py:153
+msgid "Neutron Error getting security groups"
+msgstr ""
 
-#: nova/network/security_group/quantum_driver.py:162
+#: nova/network/security_group/neutron_driver.py:162
 #, fuzzy
 msgid "Security group id should be uuid"
 msgstr "Группа безопасности (%s) не найдена"
 
-#: nova/network/security_group/quantum_driver.py:199
-#, fuzzy, python-format
-msgid "Quantum Error getting security group %s"
-msgstr "Удалить группу безопасности %s"
-
-#: nova/network/security_group/quantum_driver.py:203
-#: nova/network/security_group/quantum_driver.py:366
-#: nova/network/security_group/quantum_driver.py:373
-#: nova/network/security_group/quantum_driver.py:399
-#: nova/network/security_group/quantum_driver.py:415
-#: nova/network/security_group/quantum_driver.py:422
-#: nova/network/security_group/quantum_driver.py:451
-#, fuzzy
-msgid "Quantum Error:"
-msgstr "Обнаружена ошибка: %s"
-
-#: nova/network/security_group/quantum_driver.py:257
+#: nova/network/security_group/neutron_driver.py:199
 #, python-format
-msgid "Quantum Error unable to delete %s"
+msgid "Neutron Error getting security group %s"
 msgstr ""
 
-#: nova/network/security_group/quantum_driver.py:267
-#, fuzzy, python-format
-msgid "Quantum security group rule %s not found"
-msgstr "Группа безопасности с правилом %(rule_id)s не найдена."
+#: nova/network/security_group/neutron_driver.py:203
+#: nova/network/security_group/neutron_driver.py:366
+#: nova/network/security_group/neutron_driver.py:373
+#: nova/network/security_group/neutron_driver.py:399
+#: nova/network/security_group/neutron_driver.py:415
+#: nova/network/security_group/neutron_driver.py:422
+#: nova/network/security_group/neutron_driver.py:451
+msgid "Neutron Error:"
+msgstr ""
 
-#: nova/network/security_group/quantum_driver.py:382
+#: nova/network/security_group/neutron_driver.py:257
+#, python-format
+msgid "Neutron Error unable to delete %s"
+msgstr ""
+
+#: nova/network/security_group/neutron_driver.py:267
+#, python-format
+msgid "Neutron security group rule %s not found"
+msgstr ""
+
+#: nova/network/security_group/neutron_driver.py:382
 #, python-format
 msgid ""
 "Cannot add security group %(name)s to %(instance)s since the port "
 "%(port_id)s does not meet security requirements"
 msgstr ""
 
-#: nova/network/security_group/quantum_driver.py:392
-#: nova/network/security_group/quantum_driver.py:443
+#: nova/network/security_group/neutron_driver.py:392
+#: nova/network/security_group/neutron_driver.py:443
 #, fuzzy, python-format
 msgid "Adding security group %(security_group_id)s to port %(port_id)s"
 msgstr ""
 "Группа безопасности %(security_group_id)s не найдена для проекта "
 "%(project_id)s."
 
-#: nova/network/security_group/quantum_driver.py:453
+#: nova/network/security_group/neutron_driver.py:453
 #, fuzzy, python-format
 msgid ""
 "Security group %(security_group_name)s not assocaited with the instance "
@@ -7668,7 +7684,7 @@ msgid "unexpected role header"
 msgstr ""
 
 #: nova/tests/api/openstack/compute/test_servers.py:3520
-#: nova/tests/api/openstack/compute/plugins/v3/test_servers.py:3368
+#: nova/tests/api/openstack/compute/plugins/v3/test_servers.py:3425
 #, fuzzy
 msgid ""
 "Quota exceeded for instances: Requested 1, but already used 10 of 10 "
@@ -7676,12 +7692,12 @@ msgid ""
 msgstr "Превышена квота для %(pid)s, попытка выполнить %(min_count)s копий"
 
 #: nova/tests/api/openstack/compute/test_servers.py:3525
-#: nova/tests/api/openstack/compute/plugins/v3/test_servers.py:3373
+#: nova/tests/api/openstack/compute/plugins/v3/test_servers.py:3430
 msgid "Quota exceeded for ram: Requested 4096, but already used 8192 of 10240 ram"
 msgstr ""
 
 #: nova/tests/api/openstack/compute/test_servers.py:3530
-#: nova/tests/api/openstack/compute/plugins/v3/test_servers.py:3378
+#: nova/tests/api/openstack/compute/plugins/v3/test_servers.py:3435
 msgid "Quota exceeded for cores: Requested 2, but already used 9 of 10 cores"
 msgstr ""
 
@@ -7723,7 +7739,7 @@ msgstr ""
 msgid "spawn error"
 msgstr "Ошибка аутентификации"
 
-#: nova/tests/db/test_migrations.py:2181
+#: nova/tests/db/test_migrations.py:2277
 #, python-format
 msgid ""
 "The following migrations are missing a downgrade:\n"
@@ -10021,7 +10037,7 @@ msgstr ""
 
 #: nova/virt/libvirt/vif.py:761
 msgid ""
-"The QuantumLinuxBridgeVIFDriver VIF driver is now deprecated and will be "
+"The NeutronLinuxBridgeVIFDriver VIF driver is now deprecated and will be "
 "removed in the next release. Please use the LibvirtGenericVIFDriver VIF "
 "driver, together with a network plugin that reports the 'vif_type' "
 "attribute"
@@ -12134,6 +12150,61 @@ msgstr "Образ должен быть доступен"
 msgid "status must be 'available'"
 msgstr "Образ должен быть доступен"
 
-#~ msgid "Unrecognized root disk information: %s"
+#~ msgid ""
+#~ "X-Instance-ID present in request "
+#~ "headers. The 'service_quantum_metadata_proxy' option"
+#~ " must be enabled to process this "
+#~ "header."
+#~ msgstr ""
+
+#~ msgid "UUID is required to delete Quantum Networks"
+#~ msgstr "%(req)s необходимо для создания сети."
+
+#~ msgid "Deleting by fixed_range is not supported with the QuantumManager"
+#~ msgstr ""
+
+#~ msgid "Quantum client authentication failed: %s"
+#~ msgstr ""
+
+#~ msgid "Failed to delete quantum port %(portid)s"
+#~ msgstr ""
+
+#~ msgid "Failed to delete quantum port %(port_id)s "
+#~ msgstr "Ошибка удаления тома в базе данных"
+
+#~ msgid "Quantum Error creating security group %s"
+#~ msgstr "Удалить группу безопасности %s"
+
+#~ msgid "Quantum Error updating security group %s"
+#~ msgstr "Удалить группу безопасности %s"
+
+#~ msgid "Quantum security group %s not found"
+#~ msgstr "Удалить группу безопасности %s"
+
+#~ msgid "Quantum Error: %s"
+#~ msgstr "Обнаружена ошибка: %s"
+
+#~ msgid "Quantum Error getting security groups"
+#~ msgstr "Удалить группу безопасности %s"
+
+#~ msgid "Quantum Error getting security group %s"
+#~ msgstr "Удалить группу безопасности %s"
+
+#~ msgid "Quantum Error:"
+#~ msgstr "Обнаружена ошибка: %s"
+
+#~ msgid "Quantum Error unable to delete %s"
+#~ msgstr ""
+
+#~ msgid "Quantum security group rule %s not found"
+#~ msgstr "Группа безопасности с правилом %(rule_id)s не найдена."
+
+#~ msgid ""
+#~ "The QuantumLinuxBridgeVIFDriver VIF driver is"
+#~ " now deprecated and will be removed"
+#~ " in the next release. Please use "
+#~ "the LibvirtGenericVIFDriver VIF driver, "
+#~ "together with a network plugin that "
+#~ "reports the 'vif_type' attribute"
 #~ msgstr ""
 
