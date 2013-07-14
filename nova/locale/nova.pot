@@ -6,9 +6,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: nova jenkins.nova.propose.translation.update.306\n"
+"Project-Id-Version: nova jenkins.nova.propose.translation.update.307\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2013-07-13 19:37+0000\n"
+"POT-Creation-Date: 2013-07-14 19:36+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -2470,14 +2470,14 @@ msgstr ""
 msgid "Instance is not a member of specified network"
 msgstr ""
 
-#: nova/api/openstack/compute/limits.py:159
+#: nova/api/openstack/compute/limits.py:162
 #, python-format
 msgid ""
 "Only %(value)s %(verb)s request(s) can be made to %(uri)s every "
 "%(unit_string)s."
 msgstr ""
 
-#: nova/api/openstack/compute/limits.py:287
+#: nova/api/openstack/compute/limits.py:290
 msgid "This request was rate-limited."
 msgstr ""
 
@@ -3530,22 +3530,22 @@ msgstr ""
 msgid "stop instance"
 msgstr ""
 
-#: nova/api/openstack/compute/contrib/services.py:173
+#: nova/api/openstack/compute/contrib/services.py:176
 #: nova/api/openstack/compute/plugins/v3/services.py:173
 msgid "Disabled reason contains invalid characters or is too long"
 msgstr ""
 
-#: nova/api/openstack/compute/contrib/services.py:180
+#: nova/api/openstack/compute/contrib/services.py:183
 #: nova/api/openstack/compute/plugins/v3/services.py:180
 msgid "Invalid attribute in the request"
 msgstr ""
 
-#: nova/api/openstack/compute/contrib/services.py:182
+#: nova/api/openstack/compute/contrib/services.py:185
 #: nova/api/openstack/compute/plugins/v3/services.py:182
 msgid "Missing disabled reason field"
 msgstr ""
 
-#: nova/api/openstack/compute/contrib/services.py:188
+#: nova/api/openstack/compute/contrib/services.py:191
 #: nova/api/openstack/compute/plugins/v3/services.py:188
 msgid "Unknown service"
 msgstr ""
@@ -3735,45 +3735,50 @@ msgstr ""
 msgid "Received capacities from child cell %(cell_name)s: %(capacities)s"
 msgstr ""
 
-#: nova/cells/messaging.py:840
+#: nova/cells/messaging.py:866
 #, python-format
 msgid "Got update for instance: %(instance)s"
 msgstr ""
 
-#: nova/cells/messaging.py:884
+#: nova/cells/messaging.py:910
 msgid "Got update to delete instance"
 msgstr ""
 
-#: nova/cells/messaging.py:899
+#: nova/cells/messaging.py:925
 #, python-format
 msgid "Got broadcast to %(delete_type)s delete instance"
 msgstr ""
 
-#: nova/cells/messaging.py:913
+#: nova/cells/messaging.py:939
 #, python-format
 msgid "Got message to create instance fault: %(instance_fault)s"
 msgstr ""
 
-#: nova/cells/messaging.py:934
+#: nova/cells/messaging.py:960
 #, python-format
 msgid ""
 "Forcing a sync of instances, project_id=%(projid_str)s, "
 "updated_since=%(since_str)s"
 msgstr ""
 
-#: nova/cells/messaging.py:1013
+#: nova/cells/messaging.py:1039
 #, python-format
 msgid "No match when trying to update BDM: %(bdm)s"
 msgstr ""
 
-#: nova/cells/messaging.py:1197
+#: nova/cells/messaging.py:1223
 #, python-format
 msgid "Updating parents with our capabilities: %(capabs)s"
 msgstr ""
 
-#: nova/cells/messaging.py:1217
+#: nova/cells/messaging.py:1243
 #, python-format
 msgid "Updating parents with our capacities: %(capacities)s"
+msgstr ""
+
+#: nova/cells/messaging.py:1507
+#, python-format
+msgid "No cell_name for %(method)s() from API"
 msgstr ""
 
 #: nova/cells/opts.py:93
@@ -3795,11 +3800,11 @@ msgstr ""
 msgid "Cannot comply with query string in transport URL"
 msgstr ""
 
-#: nova/cells/rpcapi.py:338
+#: nova/cells/rpcapi.py:339
 msgid "Failed to notify cells of BDM update/create."
 msgstr ""
 
-#: nova/cells/rpcapi.py:354
+#: nova/cells/rpcapi.py:355
 msgid "Failed to notify cells of BDM destroy."
 msgstr ""
 
