@@ -1239,6 +1239,16 @@ class ComputeManager(manager.SchedulerDependentManager):
                     admin_password, is_first_time, node, instance)
         do_run_instance()
 
+    def _try_deallocate_network(self, context, instance):
+        try:
+            # tear down allocated network structure
+            self._deallocate_network(context, instance)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                LOG.error(_('Failed to deallocate network for instance.'),
+                          instance=instance)
+                self._set_instance_error_state(context, instance['uuid'])
+
     def _shutdown_instance(self, context, instance, bdms):
         """Shutdown an instance on this host."""
         context = context.elevated()
@@ -1253,21 +1263,28 @@ class ComputeManager(manager.SchedulerDependentManager):
         except exception.NetworkNotFound:
             network_info = network_model.NetworkInfo()
 
-        try:
-            # tear down allocated network structure
-            self._deallocate_network(context, instance)
-        except Exception:
-            with excutils.save_and_reraise_exception():
-                LOG.error(_('Failed to deallocate network for instance.'),
-                          instance=instance)
-                self._set_instance_error_state(context, instance['uuid'])
-
         # NOTE(vish) get bdms before destroying the instance
         vol_bdms = self._get_volume_bdms(bdms)
         block_device_info = self._get_instance_volume_block_device_info(
             context, instance, bdms=bdms)
-        self.driver.destroy(instance, self._legacy_nw_info(network_info),
-                            block_device_info)
+
+        # NOTE(melwitt): attempt driver destroy before releasing ip, may
+        #                want to keep ip allocated for certain failures
+        try:
+            self.driver.destroy(instance, self._legacy_nw_info(network_info),
+                                block_device_info)
+        except exception.InstancePowerOffFailure:
+            # if the instance can't power off, don't release the ip
+            with excutils.save_and_reraise_exception():
+                pass
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                # deallocate ip and fail without proceeding to
+                # volume api calls, preserving current behavior
+                self._try_deallocate_network(context, instance)
+
+        self._try_deallocate_network(context, instance)
+
         for bdm in vol_bdms:
             try:
                 # NOTE(vish): actual driver detach done in driver.destroy, so
