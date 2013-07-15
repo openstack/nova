@@ -2650,14 +2650,16 @@ class HostAPI(base.Base):
 
     def __init__(self, rpcapi=None):
         self.rpcapi = rpcapi or compute_rpcapi.ComputeAPI()
+        self.servicegroup_api = servicegroup.API()
         super(HostAPI, self).__init__()
 
-    def _assert_host_exists(self, context, host_name):
+    def _assert_host_exists(self, context, host_name, must_be_up=False):
         """Raise HostNotFound if compute host doesn't exist."""
-        service = self.db.service_get_by_host_and_topic(context, host_name,
-                CONF.compute_topic)
+        service = self.db.service_get_by_compute_host(context, host_name)
         if not service:
             raise exception.HostNotFound(host=host_name)
+        if must_be_up and not self.servicegroup_api.service_is_up(service):
+            raise exception.ComputeServiceUnavailable(host=host_name)
         return service['host']
 
     def set_host_enabled(self, context, host_name, enabled):
@@ -2668,7 +2670,8 @@ class HostAPI(base.Base):
 
     def get_host_uptime(self, context, host_name):
         """Returns the result of calling "uptime" on the target host."""
-        host_name = self._assert_host_exists(context, host_name)
+        host_name = self._assert_host_exists(context, host_name,
+                         must_be_up=True)
         return self.rpcapi.get_host_uptime(context, host=host_name)
 
     def host_power_action(self, context, host_name, action):

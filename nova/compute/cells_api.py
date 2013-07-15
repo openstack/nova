@@ -595,7 +595,7 @@ class HostAPI(compute_api.HostAPI):
         super(HostAPI, self).__init__(rpcapi=ComputeRPCProxyAPI())
         self.cells_rpcapi = cells_rpcapi.CellsAPI()
 
-    def _assert_host_exists(self, context, host_name):
+    def _assert_host_exists(self, context, host_name, must_be_up=False):
         """Cannot check this in API cell.  This will be checked in the
         target child cell.
         """
