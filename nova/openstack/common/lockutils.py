@@ -158,17 +158,18 @@ def synchronized(name, lock_file_prefix, external=False, lock_path=None):
 
     This way only one of either foo or bar can be executing at a time.
 
-    The lock_file_prefix argument is used to provide lock files on disk with a
-    meaningful prefix. The prefix should end with a hyphen ('-') if specified.
+    :param lock_file_prefix: The lock_file_prefix argument is used to provide
+    lock files on disk with a meaningful prefix. The prefix should end with a
+    hyphen ('-') if specified.
 
-    The external keyword argument denotes whether this lock should work across
-    multiple processes. This means that if two different workers both run a
-    a method decorated with @synchronized('mylock', external=True), only one
-    of them will execute at a time.
+    :param external: The external keyword argument denotes whether this lock
+    should work across multiple processes. This means that if two different
+    workers both run a a method decorated with @synchronized('mylock',
+    external=True), only one of them will execute at a time.
 
-    The lock_path keyword argument is used to specify a special location for
-    external lock files to live. If nothing is set, then CONF.lock_path is
-    used as a default.
+    :param lock_path: The lock_path keyword argument is used to specify a
+    special location for external lock files to live. If nothing is set, then
+    CONF.lock_path is used as a default.
     """
 
     def wrap(f):

@@ -17,7 +17,13 @@
 import os
 import sys
 
-import install_venv_common as install_venv
+import install_venv_common as install_venv  # noqa
+
+
+def first_file(file_list):
+    for candidate in file_list:
+        if os.path.exists(candidate):
+            return candidate
 
 
 def main(argv):
@@ -25,8 +31,14 @@ def main(argv):
 
     venv = os.environ['VIRTUAL_ENV']
 
-    pip_requires = os.path.join(root, 'requirements.txt')
-    test_requires = os.path.join(root, 'test-requirements.txt')
+    pip_requires = first_file([
+        os.path.join(root, 'requirements.txt'),
+        os.path.join(root, 'tools', 'pip-requires'),
+    ])
+    test_requires = first_file([
+        os.path.join(root, 'test-requirements.txt'),
+        os.path.join(root, 'tools', 'test-requires'),
+    ])
     py_version = "python%s.%s" % (sys.version_info[0], sys.version_info[1])
     project = 'nova'
     install = install_venv.InstallVenv(root, venv, pip_requires, test_requires,
