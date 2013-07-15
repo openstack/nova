@@ -234,6 +234,9 @@ def stub_out_nw_api(stubs, cls=None, private=None, publics=None):
         def get_floating_ips_by_fixed_address(*args, **kwargs):
             return publics
 
+        def validate_networks(*args, **kwargs):
+            pass
+
     if cls is None:
         cls = Fake
     stubs.Set(network_api, 'API', cls)

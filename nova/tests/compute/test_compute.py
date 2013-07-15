@@ -8495,7 +8495,8 @@ class ComputePolicyTestCase(BaseTestCase):
 
     def test_force_host_fail(self):
         rules = {"compute:create": [],
-                 "compute:create:forced_host": [["role:fake"]]}
+                 "compute:create:forced_host": [["role:fake"]],
+                 "network:validate_networks": []}
         self.policy.set_rules(rules)
 
         self.assertRaises(exception.PolicyNotAuthorized,
@@ -8504,7 +8505,8 @@ class ComputePolicyTestCase(BaseTestCase):
 
     def test_force_host_pass(self):
         rules = {"compute:create": [],
-                 "compute:create:forced_host": []}
+                 "compute:create:forced_host": [],
+                 "network:validate_networks": []}
         self.policy.set_rules(rules)
 
         self.compute_api.create(self.context, None, '1',

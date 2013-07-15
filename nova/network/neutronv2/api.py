@@ -475,8 +475,18 @@ class API(base.Base):
         """Validate that the tenant can use the requested networks."""
         LOG.debug(_('validate_networks() for %s'),
                   requested_networks)
+
         if not requested_networks:
+            nets = self._get_available_networks(context, context.project_id)
+            if len(nets) > 1:
+                # Attaching to more than one network by default doesn't
+                # make sense, as the order will be arbitrary and the guest OS
+                # won't know which to configure
+                msg = _("Multiple possible networks found, use a Network "
+                         "ID to be more specific.")
+                raise exception.NetworkAmbiguous(msg)
             return
+
         net_ids = []
 
         for (net_id, _i, port_id) in requested_networks:
@@ -493,8 +503,10 @@ class API(base.Base):
                 raise exception.NetworkDuplicated(network_id=net_id)
             net_ids.append(net_id)
 
-        nets = self._get_available_networks(context, context.project_id,
-                                            net_ids)
+        # Now check to see if all requested networks exist
+        nets = self._get_available_networks(context,
+                                context.project_id, net_ids)
+
         if len(nets) != len(net_ids):
             requsted_netid_set = set(net_ids)
             returned_netid_set = set([net['id'] for net in nets])
