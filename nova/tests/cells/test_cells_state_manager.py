@@ -166,3 +166,43 @@ class TestCellsGetCapacity(TestCellsStateManager):
         self.assertRaises(exception.CellNotFound,
                           self.state_manager.get_capacities,
                           cell_name="invalid_cell_name")
+
+
+class FakeCellStateManager(object):
+    def __init__(self):
+        self.called = []
+
+    def _cell_data_sync(self, force=False):
+        self.called.append(('_cell_data_sync', force))
+
+
+class TestSyncDecorators(test.TestCase):
+    def test_sync_before(self):
+        manager = FakeCellStateManager()
+
+        def test(inst, *args, **kwargs):
+            self.assertEqual(inst, manager)
+            self.assertEqual(args, (1, 2, 3))
+            self.assertEqual(kwargs, dict(a=4, b=5, c=6))
+            return 'result'
+        wrapper = state.sync_before(test)
+
+        result = wrapper(manager, 1, 2, 3, a=4, b=5, c=6)
+
+        self.assertEqual(result, 'result')
+        self.assertEqual(manager.called, [('_cell_data_sync', False)])
+
+    def test_sync_after(self):
+        manager = FakeCellStateManager()
+
+        def test(inst, *args, **kwargs):
+            self.assertEqual(inst, manager)
+            self.assertEqual(args, (1, 2, 3))
+            self.assertEqual(kwargs, dict(a=4, b=5, c=6))
+            return 'result'
+        wrapper = state.sync_after(test)
+
+        result = wrapper(manager, 1, 2, 3, a=4, b=5, c=6)
+
+        self.assertEqual(result, 'result')
+        self.assertEqual(manager.called, [('_cell_data_sync', True)])

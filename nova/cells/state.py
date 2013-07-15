@@ -26,6 +26,8 @@ from nova.cells import rpc_driver
 from nova import context
 from nova.db import base
 from nova import exception
+from nova.openstack.common import fileutils
+from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import utils
@@ -34,6 +36,11 @@ cell_state_manager_opts = [
         cfg.IntOpt('db_check_interval',
                 default=60,
                 help='Seconds between getting fresh cell info from db.'),
+        cfg.StrOpt('cells_config',
+                   default=None,
+                   help='Configuration file from which to read cells '
+                   'configuration.  If given, overrides reading cells '
+                   'from the database.'),
 ]
 
 
@@ -107,19 +114,48 @@ class CellState(object):
         return "Cell '%s' (%s)" % (self.name, me)
 
 
-def sync_from_db(f):
+def sync_before(f):
     """Use as a decorator to wrap methods that use cell information to
     make sure they sync the latest information from the DB periodically.
     """
     @functools.wraps(f)
     def wrapper(self, *args, **kwargs):
-        if self._time_to_sync():
-            self._cell_db_sync()
+        self._cell_data_sync()
         return f(self, *args, **kwargs)
     return wrapper
 
 
+def sync_after(f):
+    """Use as a decorator to wrap methods that update cell information
+    in the database to make sure the data is synchronized immediately.
+    """
+    @functools.wraps(f)
+    def wrapper(self, *args, **kwargs):
+        result = f(self, *args, **kwargs)
+        self._cell_data_sync(force=True)
+        return result
+    return wrapper
+
+
+_unset = object()
+
+
 class CellStateManager(base.Base):
+    def __new__(cls, cell_state_cls=None, cells_config=_unset):
+        if cls is not CellStateManager:
+            return super(CellStateManager, cls).__new__(cls)
+
+        if cells_config is _unset:
+            cells_config = CONF.cells.cells_config
+
+        if cells_config:
+            config_path = CONF.find_file(cells_config)
+            if not config_path:
+                raise cfg.ConfigFilesNotFoundError(path=config_path)
+            return CellStateManagerFile(cell_state_cls, config_path)
+
+        return CellStateManagerDB(cell_state_cls)
+
     def __init__(self, cell_state_cls=None):
         super(CellStateManager, self).__init__()
         if not cell_state_cls:
@@ -129,7 +165,9 @@ class CellStateManager(base.Base):
         self.parent_cells = {}
         self.child_cells = {}
         self.last_cell_db_check = datetime.datetime.min
-        self._cell_db_sync()
+
+        self._cell_data_sync(force=True)
+
         my_cell_capabs = {}
         for cap in CONF.cells.capabilities:
             name, value = cap.split('=', 1)
@@ -140,11 +178,8 @@ class CellStateManager(base.Base):
             my_cell_capabs[name] = values
         self.my_cell_state.update_capabilities(my_cell_capabs)
 
-    def _refresh_cells_from_db(self, ctxt):
+    def _refresh_cells_from_dict(self, db_cells_dict):
         """Make our cell info map match the db."""
-        # Add/update existing cells ...
-        db_cells = self.db.cell_get_all(ctxt)
-        db_cells_dict = dict([(cell['name'], cell) for cell in db_cells])
 
         # Update current cells.  Delete ones that disappeared
         for cells_dict in (self.parent_cells, self.child_cells):
@@ -171,7 +206,7 @@ class CellStateManager(base.Base):
         diff = timeutils.utcnow() - self.last_cell_db_check
         return diff.seconds >= CONF.cells.db_check_interval
 
-    def _update_our_capacity(self, context):
+    def _update_our_capacity(self, ctxt=None):
         """Update our capacity in the self.my_cell_state CellState.
 
         This will add/update 2 entries in our CellState.capacities,
@@ -208,11 +243,14 @@ class CellStateManager(base.Base):
         available per instance_type.
         """
 
+        if not ctxt:
+            ctxt = context.get_admin_context()
+
         reserve_level = CONF.cells.reserve_percent / 100.0
         compute_hosts = {}
 
         def _get_compute_hosts():
-            compute_nodes = self.db.compute_node_get_all(context)
+            compute_nodes = self.db.compute_node_get_all(ctxt)
             for compute in compute_nodes:
                 service = compute['service']
                 if not service or service['disabled']:
@@ -255,7 +293,7 @@ class CellStateManager(base.Base):
             ram_mb_free_units[str(memory_mb)] += ram_free_units
             disk_mb_free_units[str(disk_mb)] += disk_free_units
 
-        instance_types = self.db.instance_type_get_all(context)
+        instance_types = self.db.instance_type_get_all(ctxt)
 
         for compute_values in compute_hosts.values():
             total_ram_mb_free += compute_values['free_ram_mb']
@@ -269,22 +307,7 @@ class CellStateManager(base.Base):
                                     'units_by_mb': disk_mb_free_units}}
         self.my_cell_state.update_capacities(capacities)
 
-    @utils.synchronized('cell-db-sync')
-    def _cell_db_sync(self):
-        """Update status for all cells if it's time.  Most calls to
-        this are from the check_for_update() decorator that checks
-        the time, but it checks outside of a lock.  The duplicate
-        check here is to prevent multiple threads from pulling the
-        information simultaneously.
-        """
-        if self._time_to_sync():
-            LOG.debug(_("Updating cell cache from db."))
-            self.last_cell_db_check = timeutils.utcnow()
-            ctxt = context.get_admin_context()
-            self._refresh_cells_from_db(ctxt)
-            self._update_our_capacity(ctxt)
-
-    @sync_from_db
+    @sync_before
     def get_cell_info_for_neighbors(self):
         """Return cell information for all neighbor cells."""
         cell_list = [cell.get_cell_info()
@@ -293,30 +316,30 @@ class CellStateManager(base.Base):
                 for cell in self.parent_cells.itervalues()])
         return cell_list
 
-    @sync_from_db
+    @sync_before
     def get_my_state(self):
         """Return information for my (this) cell."""
         return self.my_cell_state
 
-    @sync_from_db
+    @sync_before
     def get_child_cells(self):
         """Return list of child cell_infos."""
         return self.child_cells.values()
 
-    @sync_from_db
+    @sync_before
     def get_parent_cells(self):
         """Return list of parent cell_infos."""
         return self.parent_cells.values()
 
-    @sync_from_db
+    @sync_before
     def get_parent_cell(self, cell_name):
         return self.parent_cells.get(cell_name)
 
-    @sync_from_db
+    @sync_before
     def get_child_cell(self, cell_name):
         return self.child_cells.get(cell_name)
 
-    @sync_from_db
+    @sync_before
     def update_cell_capabilities(self, cell_name, capabilities):
         """Update capabilities for a cell."""
         cell = self.child_cells.get(cell_name)
@@ -332,7 +355,7 @@ class CellStateManager(base.Base):
             capabilities[capab_name] = set(values)
         cell.update_capabilities(capabilities)
 
-    @sync_from_db
+    @sync_before
     def update_cell_capacities(self, cell_name, capacities):
         """Update capacities for a cell."""
         cell = self.child_cells.get(cell_name)
@@ -345,7 +368,7 @@ class CellStateManager(base.Base):
             return
         cell.update_capacities(capacities)
 
-    @sync_from_db
+    @sync_before
     def get_our_capabilities(self, include_children=True):
         capabs = copy.deepcopy(self.my_cell_state.capabilities)
         if include_children:
@@ -368,7 +391,7 @@ class CellStateManager(base.Base):
             target.setdefault(key, 0)
             target[key] += value
 
-    @sync_from_db
+    @sync_before
     def get_our_capacities(self, include_children=True):
         capacities = copy.deepcopy(self.my_cell_state.capacities)
         if include_children:
@@ -376,10 +399,85 @@ class CellStateManager(base.Base):
                 self._add_to_dict(capacities, cell.capacities)
         return capacities
 
-    @sync_from_db
+    @sync_before
     def get_capacities(self, cell_name=None):
         if not cell_name or cell_name == self.my_cell_state.name:
             return self.get_our_capacities()
         if cell_name in self.child_cells:
             return self.child_cells[cell_name].capacities
         raise exception.CellNotFound(cell_name=cell_name)
+
+    @sync_before
+    def cell_get(self, ctxt, cell_name):
+        for cells_dict in (self.parent_cells, self.child_cells):
+            if cell_name in cells_dict:
+                return cells_dict[cell_name]
+
+        raise exception.CellNotFound(cell_name=cell_name)
+
+
+class CellStateManagerDB(CellStateManager):
+    @utils.synchronized('cell-db-sync')
+    def _cell_data_sync(self, force=False):
+        """
+        Update cell status for all cells from the backing data store
+        when necessary.
+
+        :param force: If True, cell status will be updated regardless
+                      of whether it's time to do so.
+        """
+        if force or self._time_to_sync():
+            LOG.debug(_("Updating cell cache from db."))
+            self.last_cell_db_check = timeutils.utcnow()
+            ctxt = context.get_admin_context()
+            db_cells = self.db.cell_get_all(ctxt)
+            db_cells_dict = dict((cell['name'], cell) for cell in db_cells)
+            self._refresh_cells_from_dict(db_cells_dict)
+            self._update_our_capacity(ctxt)
+
+    @sync_after
+    def cell_create(self, ctxt, values):
+        return self.db.cell_create(ctxt, values)
+
+    @sync_after
+    def cell_update(self, ctxt, cell_name, values):
+        return self.db.cell_update(ctxt, cell_name, values)
+
+    @sync_after
+    def cell_delete(self, ctxt, cell_name):
+        return self.db.cell_delete(ctxt, cell_name)
+
+
+class CellStateManagerFile(CellStateManager):
+    def __init__(self, cell_state_cls, cells_config_path):
+        self.cells_config_path = cells_config_path
+        super(CellStateManagerFile, self).__init__(cell_state_cls)
+
+    def _cell_data_sync(self, force=False):
+        """
+        Update cell status for all cells from the backing data store
+        when necessary.
+
+        :param force: If True, cell status will be updated regardless
+                      of whether it's time to do so.
+        """
+        reloaded, data = fileutils.read_cached_file(self.cells_config_path,
+                                                    force_reload=force)
+
+        if reloaded:
+            LOG.debug(_("Updating cell cache from config file."))
+            self.cells_config_data = jsonutils.loads(data)
+            self._refresh_cells_from_dict(self.cells_config_data)
+
+        if force or self._time_to_sync():
+            self.last_cell_db_check = timeutils.utcnow()
+            self._update_our_capacity()
+
+    def cell_create(self, ctxt, values):
+        raise exception.CellsUpdateProhibited()
+
+    def cell_update(self, ctxt, cell_name, values):
+        raise exception.CellsUpdateProhibited()
+
+    def cell_delete(self, ctxt, cell_name):
+        raise exception.CellsUpdateProhibited()

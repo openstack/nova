@@ -33,6 +33,7 @@ from nova.api.openstack.compute.contrib import coverage_ext
 from nova.api.openstack.compute.contrib import fping
 from nova.api.openstack.compute.extensions import ExtensionManager as ext_mgr
 # Import extensions to pull in osapi_compute_extension CONF option used below.
+from nova.cells import rpcapi as cells_rpcapi
 from nova.cells import state
 from nova.cloudpipe import pipelib
 from nova.compute import api as compute_api
@@ -2878,7 +2879,7 @@ class CellsSampleJsonTest(ApiSampleTestBase):
         def _fake_cell_get_all(context):
             return self.cells
 
-        def _fake_cell_get(context, cell_name):
+        def _fake_cell_get(inst, context, cell_name):
             for cell in self.cells:
                 if cell['name'] == cell_name:
                     return cell
@@ -2895,7 +2896,7 @@ class CellsSampleJsonTest(ApiSampleTestBase):
             self.cells.append(cell)
 
         self.stubs.Set(db, 'cell_get_all', _fake_cell_get_all)
-        self.stubs.Set(db, 'cell_get', _fake_cell_get)
+        self.stubs.Set(cells_rpcapi.CellsAPI, 'cell_get', _fake_cell_get)
 
     def test_cells_empty_list(self):
         # Override this

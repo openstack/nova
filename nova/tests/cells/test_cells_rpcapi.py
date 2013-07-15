@@ -494,3 +494,58 @@ class CellsAPITestCase(test.TestCase):
         self._check_result(call_info, 'stop_instance',
                 expected_args, version='1.12')
         self.assertEqual(result, 'fake_response')
+
+    def test_cell_create(self):
+        call_info = self._stub_rpc_method('call', 'fake_response')
+
+        result = self.cells_rpcapi.cell_create(self.fake_context, 'values')
+
+        expected_args = {'values': 'values'}
+        self._check_result(call_info, 'cell_create',
+                           expected_args, version='1.13')
+        self.assertEqual(result, 'fake_response')
+
+    def test_cell_update(self):
+        call_info = self._stub_rpc_method('call', 'fake_response')
+
+        result = self.cells_rpcapi.cell_update(self.fake_context,
+                                               'cell_name', 'values')
+
+        expected_args = {'cell_name': 'cell_name',
+                         'values': 'values'}
+        self._check_result(call_info, 'cell_update',
+                           expected_args, version='1.13')
+        self.assertEqual(result, 'fake_response')
+
+    def test_cell_delete(self):
+        call_info = self._stub_rpc_method('call', 'fake_response')
+
+        result = self.cells_rpcapi.cell_delete(self.fake_context,
+                                               'cell_name')
+
+        expected_args = {'cell_name': 'cell_name'}
+        self._check_result(call_info, 'cell_delete',
+                           expected_args, version='1.13')
+        self.assertEqual(result, 'fake_response')
+
+    def test_cell_delete(self):
+        call_info = self._stub_rpc_method('call', 'fake_response')
+
+        result = self.cells_rpcapi.cell_delete(self.fake_context,
+                                               'cell_name')
+
+        expected_args = {'cell_name': 'cell_name'}
+        self._check_result(call_info, 'cell_delete',
+                           expected_args, version='1.13')
+        self.assertEqual(result, 'fake_response')
+
+    def test_cell_get(self):
+        call_info = self._stub_rpc_method('call', 'fake_response')
+
+        result = self.cells_rpcapi.cell_get(self.fake_context,
+                                            'cell_name')
+
+        expected_args = {'cell_name': 'cell_name'}
+        self._check_result(call_info, 'cell_get',
+                           expected_args, version='1.13')
+        self.assertEqual(result, 'fake_response')

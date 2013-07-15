@@ -68,6 +68,8 @@ class CellsAPI(rpc_proxy.RpcProxy):
         1.10 - Adds bdm_update_or_create_at_top(), and bdm_destroy_at_top()
         1.11 - Adds get_migrations()
         1.12 - Adds instance_start() and instance_stop()
+        1.13 - Adds cell_create(), cell_update(), cell_delete(), and
+               cell_get()
     '''
     BASE_RPC_API_VERSION = '1.0'
 
@@ -382,3 +384,25 @@ class CellsAPI(rpc_proxy.RpcProxy):
                       self.make_msg('stop_instance', instance=instance,
                                     do_cast=do_cast),
                       version='1.12')
+
+    def cell_create(self, ctxt, values):
+        return self.call(ctxt,
+                         self.make_msg('cell_create', values=values),
+                         version='1.13')
+
+    def cell_update(self, ctxt, cell_name, values):
+        return self.call(ctxt,
+                         self.make_msg('cell_update',
+                                       cell_name=cell_name,
+                                       values=values),
+                         version='1.13')
+
+    def cell_delete(self, ctxt, cell_name):
+        return self.call(ctxt,
+                         self.make_msg('cell_delete', cell_name=cell_name),
+                         version='1.13')
+
+    def cell_get(self, ctxt, cell_name):
+        return self.call(ctxt,
+                         self.make_msg('cell_get', cell_name=cell_name),
+                         version='1.13')

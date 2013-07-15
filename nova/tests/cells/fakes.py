@@ -83,7 +83,7 @@ class FakeCellState(cells_state.CellState):
         message.process()
 
 
-class FakeCellStateManager(cells_state.CellStateManager):
+class FakeCellStateManager(cells_state.CellStateManagerDB):
     def __init__(self, *args, **kwargs):
         super(FakeCellStateManager, self).__init__(*args,
                 cell_state_cls=FakeCellState, **kwargs)
