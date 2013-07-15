@@ -2568,15 +2568,15 @@ class ServersControllerCreateTest(test.TestCase):
     #             'volume_id': '11111111-1111-1111-1111-111111111111'}]
     #     params = {'block_device_mapping': bdm}
     #     old_create = compute_api.API.create
-
+    #
     #     def create(*args, **kwargs):
     #         self.assertEqual(kwargs['block_device_mapping'], bdm)
     #         return old_create(*args, **kwargs)
-
+    #
     #     self.stubs.Set(compute_api.API, 'create', create)
     #     self.assertRaises(webob.exc.HTTPBadRequest,
     #                       self._test_create_extra, params)
-
+    #
     # TODO(cyeoh): bp-v3-api-unittests
     # This needs to be ported to the os-volumes extension tests
     # def test_create_instance_with_device_name_empty(self):
@@ -2587,15 +2587,15 @@ class ServersControllerCreateTest(test.TestCase):
     #             'volume_id': '11111111-1111-1111-1111-111111111111'}]
     #     params = {'block_device_mapping': bdm}
     #     old_create = compute_api.API.create
-
+    #
     #     def create(*args, **kwargs):
     #         self.assertEqual(kwargs['block_device_mapping'], bdm)
     #         return old_create(*args, **kwargs)
-
+    #
     #     self.stubs.Set(compute_api.API, 'create', create)
     #     self.assertRaises(webob.exc.HTTPBadRequest,
     #                       self._test_create_extra, params)
-
+    #
     # TODO(cyeoh): bp-v3-api-unittests
     # This needs to be ported to the os-volumes extension tests
     # def test_create_instance_with_device_name_too_long(self):
@@ -2606,15 +2606,15 @@ class ServersControllerCreateTest(test.TestCase):
     #             'volume_id': '11111111-1111-1111-1111-111111111111'}]
     #     params = {'block_device_mapping': bdm}
     #     old_create = compute_api.API.create
-
+    #
     #     def create(*args, **kwargs):
     #         self.assertEqual(kwargs['block_device_mapping'], bdm)
     #         return old_create(*args, **kwargs)
-
+    #
     #     self.stubs.Set(compute_api.API, 'create', create)
     #     self.assertRaises(webob.exc.HTTPBadRequest,
     #                       self._test_create_extra, params)
-
+    #
     # TODO(cyeoh): bp-v3-api-unittests
     # This needs to be ported to the os-volumes extension tests
     # def test_create_instance_with_space_in_device_name(self):
@@ -2625,15 +2625,15 @@ class ServersControllerCreateTest(test.TestCase):
     #             'volume_id': '11111111-1111-1111-1111-111111111111'}]
     #     params = {'block_device_mapping': bdm}
     #     old_create = compute_api.API.create
-
+    #
     #     def create(*args, **kwargs):
     #         self.assertEqual(kwargs['block_device_mapping'], bdm)
     #         return old_create(*args, **kwargs)
-
+    #
     #     self.stubs.Set(compute_api.API, 'create', create)
     #     self.assertRaises(webob.exc.HTTPBadRequest,
     #                       self._test_create_extra, params)
-
+    #
     # TODO(cyeoh): bp-v3-api-unittests
     # This needs to be ported to the os-volumes extension tests
     # def test_create_instance_with_bdm_delete_on_termination(self):
@@ -2651,65 +2651,40 @@ class ServersControllerCreateTest(test.TestCase):
     #         {'device_name': 'foo5', 'delete_on_termination': False}]
     #     params = {'block_device_mapping': bdm}
     #     old_create = compute_api.API.create
-
+    #
     #     def create(*args, **kwargs):
     #         self.assertEqual(kwargs['block_device_mapping'], expected_dbm)
     #         return old_create(*args, **kwargs)
-
+    #
     #     self.stubs.Set(compute_api.API, 'create', create)
     #     self._test_create_extra(params)
-
-    # TODO(cyeoh): bp-v3-api-unittests
-    # This needs to be ported to the os-user-data extension tests
-    # def test_create_instance_with_user_data_enabled(self):
-    #     self.ext_mgr.extensions = {'os-user-data': 'fake'}
-    #     user_data = 'fake'
-    #     params = {'user_data': user_data}
-    #     old_create = compute_api.API.create
-
-    #     def create(*args, **kwargs):
-    #         self.assertEqual(kwargs['user_data'], user_data)
-    #         return old_create(*args, **kwargs)
-
-    #     self.stubs.Set(compute_api.API, 'create', create)
-    #     self._test_create_extra(params)
-
-    def test_create_instance_with_user_data_disabled(self):
-        user_data = 'fake'
-        params = {'user_data': user_data}
-        old_create = compute_api.API.create
-
-        def create(*args, **kwargs):
-            self.assertEqual(kwargs['user_data'], None)
-            return old_create(*args, **kwargs)
-
-        self.stubs.Set(compute_api.API, 'create', create)
-        self._test_create_extra(params)
-
+    #
+    #
+    #
     # TODO(cyeoh): bp-v3-api-unittests
     # This needs to be ported to the os-keypairs extension tests
     # def test_create_instance_with_keypairs_enabled(self):
     #     self.ext_mgr.extensions = {'os-keypairs': 'fake'}
     #     key_name = 'green'
-
+    #
     #     params = {'key_name': key_name}
     #     old_create = compute_api.API.create
-
+    #
     #     # NOTE(sdague): key pair goes back to the database,
     #     # so we need to stub it out for tests
     #     def key_pair_get(context, user_id, name):
     #         return {'public_key': 'FAKE_KEY',
     #                 'fingerprint': 'FAKE_FINGERPRINT',
     #                 'name': name}
-
+    #
     #     def create(*args, **kwargs):
     #         self.assertEqual(kwargs['key_name'], key_name)
     #         return old_create(*args, **kwargs)
-
+    #
     #     self.stubs.Set(db, 'key_pair_get', key_pair_get)
     #     self.stubs.Set(compute_api.API, 'create', create)
     #     self._test_create_extra(params)
-
+    #
     # TODO(cyeoh): bp-v3-api-unittests
     # This needs to be ported to the os-multi-create extension tests
     # def test_create_instance_with_multiple_create_enabled(self):
