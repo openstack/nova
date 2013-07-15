@@ -147,7 +147,7 @@ class Scheduler(object):
     def schedule_run_instance(self, context, request_spec,
                               admin_password, injected_files,
                               requested_networks, is_first_time,
-                              filter_properties):
+                              filter_properties, legacy_bdm_in_spec):
         """Must override schedule_run_instance method for scheduler to work."""
         msg = _("Driver must implement schedule_run_instance")
         raise NotImplementedError(msg)

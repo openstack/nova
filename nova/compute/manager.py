@@ -376,7 +376,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '2.36'
+    RPC_API_VERSION = '2.37'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -987,7 +987,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     def _run_instance(self, context, request_spec,
                       filter_properties, requested_networks, injected_files,
-                      admin_password, is_first_time, node, instance):
+                      admin_password, is_first_time, node, instance,
+                      legacy_bdm_in_spec):
         """Launch a new instance with specified options."""
 
         extra_usage_info = {}
@@ -1012,7 +1013,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             instance, network_info = self._build_instance(context,
                     request_spec, filter_properties, requested_networks,
                     injected_files, admin_password, is_first_time, node,
-                    instance, image_meta)
+                    instance, image_meta, legacy_bdm_in_spec)
             notify("end", msg=_("Success"), network_info=network_info)
 
         except exception.RescheduledException as e:
@@ -1051,7 +1052,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     def _build_instance(self, context, request_spec, filter_properties,
             requested_networks, injected_files, admin_password, is_first_time,
-            node, instance, image_meta):
+            node, instance, image_meta, legacy_bdm_in_spec):
         context = context.elevated()
 
         # If neutron security groups pass requested security
@@ -1135,7 +1136,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             rescheduled = self._reschedule_or_error(context, instance,
                     exc_info, requested_networks, admin_password,
                     injected_files_orig, is_first_time, request_spec,
-                    filter_properties, bdms)
+                    filter_properties, bdms, legacy_bdm_in_spec)
             if rescheduled:
                 # log the original build error
                 self._log_original_error(exc_info, instance['uuid'])
@@ -1157,7 +1158,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     def _reschedule_or_error(self, context, instance, exc_info,
             requested_networks, admin_password, injected_files, is_first_time,
-            request_spec, filter_properties, bdms=None):
+            request_spec, filter_properties, bdms=None,
+            legacy_bdm_in_spec=True):
         """Try to re-schedule the build or re-raise the original build error to
         error out the instance.
         """
@@ -1184,7 +1186,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         try:
             method_args = (request_spec, admin_password, injected_files,
-                    requested_networks, is_first_time, filter_properties)
+                    requested_networks, is_first_time, filter_properties,
+                    legacy_bdm_in_spec)
             task_state = task_states.SCHEDULING
 
             rescheduled = self._reschedule(context, request_spec,
@@ -1461,7 +1464,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     def run_instance(self, context, instance, request_spec=None,
                      filter_properties=None, requested_networks=None,
                      injected_files=None, admin_password=None,
-                     is_first_time=False, node=None):
+                     is_first_time=False, node=None, legacy_bdm_in_spec=True):
 
         if filter_properties is None:
             filter_properties = {}
@@ -1470,7 +1473,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         def do_run_instance():
             self._run_instance(context, request_spec,
                     filter_properties, requested_networks, injected_files,
-                    admin_password, is_first_time, node, instance)
+                    admin_password, is_first_time, node, instance,
+                    legacy_bdm_in_spec)
         do_run_instance()
 
     def _try_deallocate_network(self, context, instance,

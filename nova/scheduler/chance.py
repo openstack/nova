@@ -92,7 +92,7 @@ class ChanceScheduler(driver.Scheduler):
     def schedule_run_instance(self, context, request_spec,
                               admin_password, injected_files,
                               requested_networks, is_first_time,
-                              filter_properties):
+                              filter_properties, legacy_bdm_in_spec):
         """Create and run an instance or instances."""
         instance_uuids = request_spec.get('instance_uuids')
         for num, instance_uuid in enumerate(instance_uuids):
@@ -109,7 +109,8 @@ class ChanceScheduler(driver.Scheduler):
                         admin_password=admin_password,
                         is_first_time=is_first_time,
                         request_spec=request_spec,
-                        filter_properties=filter_properties)
+                        filter_properties=filter_properties,
+                        legacy_bdm_in_spec=legacy_bdm_in_spec)
             except Exception as ex:
                 # NOTE(vish): we don't reraise the exception here to make sure
                 #             that all instances in the request get set to

@@ -192,7 +192,7 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
                         'instance_uuids': [fake_instance_uuid]}
 
         self.manager.driver.schedule_run_instance(self.context,
-                request_spec, None, None, None, None, {}).AndRaise(
+                request_spec, None, None, None, None, {}, False).AndRaise(
                         exception.NoValidHost(reason=""))
         old, new_ref = db.instance_update_and_get_original(self.context,
                 fake_instance_uuid,
@@ -204,7 +204,7 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
 
         self.mox.ReplayAll()
         self.manager.run_instance(self.context, request_spec,
-                None, None, None, None, {})
+                None, None, None, None, {}, False)
 
     def test_live_migration_schedule_novalidhost(self):
         inst = {"uuid": "fake-instance-id",
@@ -586,7 +586,7 @@ class SchedulerDriverBaseTestCase(SchedulerTestCase):
         self.assertRaises(NotImplementedError,
                          self.driver.schedule_run_instance,
                          self.context, fake_request_spec, None, None, None,
-                         None, None)
+                         None, None, False)
 
     def test_unimplemented_select_hosts(self):
         self.assertRaises(NotImplementedError,

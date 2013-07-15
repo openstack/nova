@@ -64,7 +64,7 @@ class FilterScheduler(driver.Scheduler):
     def schedule_run_instance(self, context, request_spec,
                               admin_password, injected_files,
                               requested_networks, is_first_time,
-                              filter_properties):
+                              filter_properties, legacy_bdm_in_spec):
         """This method is called from nova.compute.api to provision
         an instance.  We first create a build plan (a list of WeightedHosts)
         and then provision.
@@ -113,7 +113,8 @@ class FilterScheduler(driver.Scheduler):
                                          requested_networks,
                                          injected_files, admin_password,
                                          is_first_time,
-                                         instance_uuid=instance_uuid)
+                                         instance_uuid=instance_uuid,
+                                         legacy_bdm_in_spec=legacy_bdm_in_spec)
             except Exception as ex:
                 # NOTE(vish): we don't reraise the exception here to make sure
                 #             that all instances in the request get set to
@@ -154,7 +155,8 @@ class FilterScheduler(driver.Scheduler):
 
     def _provision_resource(self, context, weighed_host, request_spec,
             filter_properties, requested_networks, injected_files,
-            admin_password, is_first_time, instance_uuid=None):
+            admin_password, is_first_time, instance_uuid=None,
+            legacy_bdm_in_spec=True):
         """Create the requested resource in this Zone."""
         # NOTE(vish): add our current instance back into the request spec
         request_spec['instance_uuids'] = [instance_uuid]
@@ -194,7 +196,8 @@ class FilterScheduler(driver.Scheduler):
                     requested_networks=requested_networks,
                     injected_files=injected_files,
                     admin_password=admin_password, is_first_time=is_first_time,
-                    node=weighed_host.obj.nodename)
+                    node=weighed_host.obj.nodename,
+                    legacy_bdm_in_spec=legacy_bdm_in_spec)
 
     def _get_configuration_options(self):
         """Fetch options dictionary. Broken out for testing."""

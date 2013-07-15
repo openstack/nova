@@ -518,6 +518,7 @@ class ComputeTaskAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.2 - Added build_instances
     1.3 - Added unshelve_instance
     1.4 - Added reservations to migrate_server.
+    1.5 - Added the leagacy_bdm parameter to build_instances
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -542,7 +543,7 @@ class ComputeTaskAPI(nova.openstack.common.rpc.proxy.RpcProxy):
 
     def build_instances(self, context, instances, image, filter_properties,
             admin_password, injected_files, requested_networks,
-            security_groups, block_device_mapping):
+            security_groups, block_device_mapping, legacy_bdm=True):
         instances_p = [jsonutils.to_primitive(inst) for inst in instances]
         image_p = jsonutils.to_primitive(image)
         msg = self.make_msg('build_instances', instances=instances_p,
@@ -550,8 +551,9 @@ class ComputeTaskAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 admin_password=admin_password, injected_files=injected_files,
                 requested_networks=requested_networks,
                 security_groups=security_groups,
-                block_device_mapping=block_device_mapping)
-        self.cast(context, msg, version='1.2')
+                block_device_mapping=block_device_mapping,
+                legacy_bdm=legacy_bdm)
+        self.cast(context, msg, version='1.5')
 
     def unshelve_instance(self, context, instance):
         msg = self.make_msg('unshelve_instance', instance=instance)
