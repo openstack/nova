@@ -137,6 +137,12 @@ class FakeVirtDomain(object):
     def UUIDString(self):
         return self.uuidstr
 
+    def attachDeviceFlags(self, xml, flags):
+        pass
+
+    def detachDeviceFlags(self, xml, flags):
+        pass
+
 
 class CacheConcurrencyTestCase(test.TestCase):
     def setUp(self):
@@ -3842,6 +3848,64 @@ class LibvirtConnTestCase(test.TestCase):
         conn.get_host_ip_addr().AndReturn('foo')
         self.mox.ReplayAll()
         self.assertTrue(conn._is_storage_shared_with('foo', '/path'))
+
+    def _test_attach_detach_interface_get_config(self, method_name):
+        """
+        Tests that the get_config() method is properly called in
+        attach_interface() and detach_interface().
+
+        method_name: either \"attach_interface\" or \"detach_interface\"
+                     depending on the method to test.
+        """
+        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
+        libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
+
+        test_instance = copy.deepcopy(self.test_instance)
+        test_instance['name'] = "test"
+        network_info = _fake_network_info(self.stubs, 1)
+        network, mapping = network_info[0]
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        if method_name == "attach_interface":
+            fake_image_meta = {'id': test_instance['image_ref']}
+        elif method_name == "detach_interface":
+            fake_image_meta = None
+        else:
+            raise ValueError("Unhandled method %" % method_name)
+
+        virtapi = fake.FakeVirtAPI()
+        fake_inst_type_id = test_instance['instance_type_id']
+        fake_inst_type = virtapi.instance_type_get(self.context,
+                                                   fake_inst_type_id)
+        expected = conn.vif_driver.get_config(test_instance, network, mapping,
+                                              fake_image_meta, fake_inst_type)
+        self.mox.StubOutWithMock(conn.vif_driver, 'get_config')
+        conn.vif_driver.get_config(test_instance, network, mapping,
+                                   fake_image_meta, fake_inst_type).\
+                                   AndReturn(expected)
+
+        self.mox.ReplayAll()
+
+        if method_name == "attach_interface":
+            conn.attach_interface(test_instance, fake_image_meta, network_info)
+        elif method_name == "detach_interface":
+            conn.detach_interface(test_instance, network_info)
+        else:
+            raise ValueError("Unhandled method %" % method_name)
+
+    def test_attach_interface_get_config(self):
+        """
+        Tests that the get_config() method is properly called in
+        attach_interface().
+        """
+        self._test_attach_detach_interface_get_config("attach_interface")
+
+    def test_detach_interface_get_config(self):
+        """
+        Tests that the get_config() method is properly called in
+        detach_interface().
+        """
+        self._test_attach_detach_interface_get_config("detach_interface")
 
 
 class HostStateTestCase(test.TestCase):
