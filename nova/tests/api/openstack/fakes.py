@@ -685,4 +685,5 @@ def stub_snapshot_get_all(self, context):
 
 
 def stub_bdm_get_all_by_instance(context, instance_uuid):
-    return [{'volume_id': 'volume_id1'}, {'volume_id': 'volume_id2'}]
+    return [{'source_type': 'volume', 'volume_id': 'volume_id1'},
+            {'source_type': 'volume', 'volume_id': 'volume_id2'}]

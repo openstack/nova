@@ -1743,8 +1743,7 @@ class API(base.Base):
             properties['root_device_name'] = instance['root_device_name']
         properties.update(extra_properties or {})
 
-        bdms = block_device.legacy_mapping(
-            self.get_instance_bdms(context, instance))
+        bdms = self.get_instance_bdms(context, instance)
 
         mapping = []
         for bdm in bdms:
@@ -2283,8 +2282,7 @@ class API(base.Base):
     def rescue(self, context, instance, rescue_password=None):
         """Rescue the given instance."""
 
-        bdms = block_device.legacy_mapping(
-            self.get_instance_bdms(context, instance))
+        bdms = self.get_instance_bdms(context, instance)
         for bdm in bdms:
             if bdm['volume_id']:
                 volume = self.volume_api.get(context, bdm['volume_id'])
@@ -2568,18 +2566,20 @@ class API(base.Base):
         uuids = [instance['uuid'] for instance in instances]
         return self.db.instance_fault_get_by_instance_uuids(context, uuids)
 
-    def get_instance_bdms(self, context, instance):
+    def get_instance_bdms(self, context, instance, legacy=True):
         """Get all bdm tables for specified instance."""
-        return self.db.block_device_mapping_get_all_by_instance(context,
+        bdms = self.db.block_device_mapping_get_all_by_instance(context,
                 instance['uuid'])
+        if legacy:
+            return block_device.legacy_mapping(bdms)
+        return bdms
 
     def is_volume_backed_instance(self, context, instance, bdms):
         if not instance['image_ref']:
             return True
 
         if bdms is None:
-            bdms = block_device.legacy_mapping(
-                self.get_instance_bdms(context, instance))
+            bdms = self.get_instance_bdms(context, instance)
 
         for bdm in bdms:
             if ((block_device.strip_dev(bdm['device_name']) ==
