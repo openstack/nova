@@ -25,18 +25,18 @@ from nova import db
 from nova import servicegroup
 
 CONF = cfg.CONF
-
+ALIAS = "os-availability-zone"
 authorize_list = extensions.extension_authorizer('compute',
-                                                 'availability_zone:list')
+                                                 'v3:' + ALIAS + ':list')
 authorize_detail = extensions.extension_authorizer('compute',
-                                                   'availability_zone:detail')
+                                                   'v3:' + ALIAS + ':detail')
 
 
 def make_availability_zone(elem):
-    elem.set('name', 'zoneName')
+    elem.set('name', 'zone_name')
 
-    zoneStateElem = xmlutil.SubTemplateElement(elem, 'zoneState',
-                                               selector='zoneState')
+    zoneStateElem = xmlutil.SubTemplateElement(elem, 'zone_state',
+                                               selector='zone_state')
     zoneStateElem.set('available')
 
     hostsElem = xmlutil.SubTemplateElement(elem, 'hosts', selector='hosts')
@@ -49,7 +49,7 @@ def make_availability_zone(elem):
                                          selector=xmlutil.get_items)
     svcElem.set('name', 0)
 
-    svcStateElem = xmlutil.SubTemplateElement(svcElem, 'serviceState',
+    svcStateElem = xmlutil.SubTemplateElement(svcElem, 'service_state',
                                               selector=1)
     svcStateElem.set('available')
     svcStateElem.set('active')
@@ -61,12 +61,12 @@ def make_availability_zone(elem):
 
 class AvailabilityZonesTemplate(xmlutil.TemplateBuilder):
     def construct(self):
-        root = xmlutil.TemplateElement('availabilityZones')
-        zoneElem = xmlutil.SubTemplateElement(root, 'availabilityZone',
-                                              selector='availabilityZoneInfo')
+        root = xmlutil.TemplateElement('availability_zones')
+        zoneElem = xmlutil.SubTemplateElement(root, 'availability_zone',
+            selector='availability_zone_info')
         make_availability_zone(zoneElem)
         return xmlutil.MasterTemplate(root, 1, nsmap={
-            Availability_zone.alias: Availability_zone.namespace})
+            AvailabilityZone.alias: AvailabilityZone.namespace})
 
 
 class AvailabilityZoneController(wsgi.Controller):
@@ -82,8 +82,8 @@ class AvailabilityZoneController(wsgi.Controller):
             # Hide internal_service_availability_zone
             if zone == CONF.internal_service_availability_zone:
                 continue
-            result.append({'zoneName': zone,
-                           'zoneState': {'available': is_available},
+            result.append({'zone_name': zone,
+                           'zone_state': {'available': is_available},
                            "hosts": None})
         return result
 
@@ -96,7 +96,7 @@ class AvailabilityZoneController(wsgi.Controller):
             self._get_filtered_availability_zones(available_zones, True)
         filtered_not_available_zones = \
             self._get_filtered_availability_zones(not_available_zones, False)
-        return {'availabilityZoneInfo': filtered_available_zones +
+        return {'availability_zone_info': filtered_available_zones +
                                         filtered_not_available_zones}
 
     def _describe_availability_zones_verbose(self, context, **kwargs):
@@ -131,15 +131,15 @@ class AvailabilityZoneController(wsgi.Controller):
                     hosts[host][service['binary']] = {'available': alive,
                                       'active': True != service['disabled'],
                                       'updated_at': service['updated_at']}
-            result.append({'zoneName': zone,
-                           'zoneState': {'available': True},
+            result.append({'zone_name': zone,
+                           'zone_state': {'available': True},
                            "hosts": hosts})
 
         for zone in not_available_zones:
-            result.append({'zoneName': zone,
-                           'zoneState': {'available': False},
+            result.append({'zone_name': zone,
+                           'zone_state': {'available': False},
                            "hosts": None})
-        return {'availabilityZoneInfo': result}
+        return {'availability_zone_info': result}
 
     @wsgi.serializers(xml=AvailabilityZonesTemplate)
     def index(self, req):
@@ -158,23 +158,34 @@ class AvailabilityZoneController(wsgi.Controller):
         return self._describe_availability_zones_verbose(context)
 
 
-class Availability_zone(extensions.ExtensionDescriptor):
-    """1. Add availability_zone to the Create Server v1.1 API.
+class AvailabilityZone(extensions.V3APIExtensionBase):
+    """1. Add availability_zone to the Create Server API.
        2. Add availability zones describing.
     """
 
     name = "AvailabilityZone"
-    alias = "os-availability-zone"
+    alias = ALIAS
     namespace = ("http://docs.openstack.org/compute/ext/"
-                 "availabilityzone/api/v1.1")
-    updated = "2012-12-21T00:00:00+00:00"
+                 "availabilityzone/api/v3")
+    version = 1
 
     def get_resources(self):
-        resources = []
+        resource = [extensions.ResourceExtension(ALIAS,
+            AvailabilityZoneController(),
+            collection_actions={'detail': 'GET'})]
+        return resource
 
-        res = extensions.ResourceExtension('os-availability-zone',
-                                       AvailabilityZoneController(),
-                                       collection_actions={'detail': 'GET'})
-        resources.append(res)
+    def get_controller_extensions(self):
+        """It's an abstract function V3APIExtensionBase and the extension
+        will not be loaded without it.
+        """
+        return []
 
-        return resources
+    def server_create(self, server_dict, create_kwargs):
+        create_kwargs['availability_zone'] = server_dict.get(
+            'availability_zone')
+
+    def server_xml_extract_server_deserialize(self, server_node, server_dict):
+        availability_zone = server_node.getAttribute('availability_zone')
+        if availability_zone:
+            server_dict['availability_zone'] = availability_zone
