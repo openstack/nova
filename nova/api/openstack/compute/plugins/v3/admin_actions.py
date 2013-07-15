@@ -27,13 +27,14 @@ from nova import exception
 from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
+ALIAS = "os-admin-actions"
 
 # States usable in resetState action
 state_map = dict(active=vm_states.ACTIVE, error=vm_states.ERROR)
 
 
 def authorize(context, action_name):
-    action = 'admin_actions:%s' % action_name
+    action = 'v3:%s:%s' % (ALIAS, action_name)
     extensions.extension_authorizer('compute', action)(context)
 
 
@@ -41,8 +42,6 @@ class AdminActionsController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         super(AdminActionsController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
-
-    # TODO(bcwaldon): These action names should be prefixed with 'os-'
 
     @wsgi.action('pause')
     def _pause(self, req, id, body):
@@ -327,7 +326,7 @@ class AdminActionsController(wsgi.Controller):
         return webob.Response(status_int=202)
 
 
-class Admin_actions(extensions.ExtensionDescriptor):
+class AdminActions(extensions.V3APIExtensionBase):
     """Enable admin-only server actions
 
     Actions include: pause, unpause, suspend, resume, migrate,
@@ -335,11 +334,14 @@ class Admin_actions(extensions.ExtensionDescriptor):
     """
 
     name = "AdminActions"
-    alias = "os-admin-actions"
-    namespace = "http://docs.openstack.org/compute/ext/admin-actions/api/v1.1"
-    updated = "2011-09-20T00:00:00+00:00"
+    alias = ALIAS
+    namespace = "http://docs.openstack.org/compute/ext/%s/api/v3" % ALIAS
+    version = 1
 
     def get_controller_extensions(self):
         controller = AdminActionsController()
         extension = extensions.ControllerExtension(self, 'servers', controller)
         return [extension]
+
+    def get_resources(self):
+        return []
