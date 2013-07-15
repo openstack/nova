@@ -1131,3 +1131,7 @@ def is_none_string(val):
         return False
 
     return val.lower() == 'none'
+
+
+def convert_version_to_int(version):
+    return version[0] * 1000000 + version[1] * 1000 + version[2]
