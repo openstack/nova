@@ -44,3 +44,7 @@ SOFT_DELETED = 'soft-delete'  # VM is marked as deleted but the disk images are
 DELETED = 'deleted'  # VM is permanently deleted.
 
 ERROR = 'error'
+
+SHELVED = 'shelved'  # VM is powered off, resources still on hypervisor
+SHELVED_OFFLOADED = 'shelved_offloaded'  # VM and associated resources are
+# not on hypervisor

@@ -175,7 +175,7 @@ class FilterScheduler(driver.Scheduler):
             raise exception.NoValidHost(reason='')
 
         dests = [dict(host=host.obj.host, nodename=host.obj.nodename,
-                      limists=host.obj.limits) for host in selected_hosts]
+                      limits=host.obj.limits) for host in selected_hosts]
         return dests
 
     def _provision_resource(self, context, weighed_host, request_spec,

@@ -408,6 +408,26 @@ class ComputeCellsAPI(compute_api.API):
         super(ComputeCellsAPI, self).unrescue(context, instance)
         self._cast_to_cells(context, instance, 'unrescue')
 
+    @wrap_check_policy
+    @check_instance_cell
+    def shelve(self, context, instance):
+        """Shelve the given instance."""
+        self._cast_to_cells(context, instance, 'shelve')
+
+    @wrap_check_policy
+    @check_instance_cell
+    def shelve_offload(self, context, instance):
+        """Offload the shelved instance."""
+        super(ComputeCellsAPI, self).shelve_offload(context, instance)
+        self._cast_to_cells(context, instance, 'shelve_offload')
+
+    @wrap_check_policy
+    @check_instance_cell
+    def unshelve(self, context, instance):
+        """Unshelve the given instance."""
+        super(ComputeCellsAPI, self).unshelve(context, instance)
+        self._cast_to_cells(context, instance, 'unshelve')
+
     @check_instance_cell
     def set_admin_password(self, context, instance, password=None):
         """Set the root/admin password for the given instance."""

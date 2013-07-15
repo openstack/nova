@@ -2239,6 +2239,58 @@ class API(base.Base):
 
     @wrap_check_policy
     @check_instance_lock
+    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
+                                    vm_states.PAUSED, vm_states.SUSPENDED],
+                          task_state=[None])
+    def shelve(self, context, instance):
+        """Shelve an instance.
+
+        Shuts down an instance and frees it up to be removed from the
+        hypervisor.
+        """
+        instance.task_state = task_states.SHELVING
+        instance.save(expected_task_state=None)
+
+        self._record_action_start(context, instance, instance_actions.SHELVE)
+
+        image_id = None
+        bdms = self.get_instance_bdms(context, instance)
+        if not self.is_volume_backed_instance(context, instance, bdms):
+            name = '%s-shelved' % instance['name']
+            image_meta = self._create_image(context, instance, name,
+                    'snapshot')
+            image_id = image_meta['id']
+            self.compute_rpcapi.shelve_instance(context, instance=instance,
+                    image_id=image_id)
+        else:
+            self.compute_rpcapi.shelve_offload_instance(context,
+                    instance=instance)
+
+    @wrap_check_policy
+    @check_instance_lock
+    @check_instance_state(vm_state=[vm_states.SHELVED], task_state=[None])
+    def shelve_offload(self, context, instance):
+        """Remove a shelved instance from the hypervisor."""
+        instance.task_state = task_states.SHELVING_OFFLOADING
+        instance.save(expected_task_state=None)
+
+        self.compute_rpcapi.shelve_offload_instance(context, instance=instance)
+
+    @wrap_check_policy
+    @check_instance_lock
+    @check_instance_state(vm_state=[vm_states.SHELVED,
+        vm_states.SHELVED_OFFLOADED], task_state=[None])
+    def unshelve(self, context, instance):
+        """Restore a shelved instance."""
+        instance.task_state = task_states.UNSHELVING
+        instance.save(expected_task_state=None)
+
+        self._record_action_start(context, instance, instance_actions.UNSHELVE)
+
+        self.compute_task_api.unshelve_instance(context, instance)
+
+    @wrap_check_policy
+    @check_instance_lock
     def add_fixed_ip(self, context, instance, network_id):
         """Add fixed_ip from specified network to given instance."""
         self.compute_rpcapi.add_fixed_ip_to_instance(context,

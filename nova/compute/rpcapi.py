@@ -181,6 +181,8 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         2.29 - Made start_instance() and stop_instance() take new-world
                instance objects
         2.30 - Adds live_snapshot_instance()
+        2.31 - Adds shelve_instance(), shelve_offload_instance, and
+               unshelve_instance()
     '''
 
     #
@@ -666,6 +668,24 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         self.cast(ctxt, self.make_msg('restore_instance',
                 instance=instance_p),
                 topic=_compute_topic(self.topic, ctxt, None, instance))
+
+    def shelve_instance(self, ctxt, instance, image_id=None):
+        self.cast(ctxt, self.make_msg('shelve_instance',
+            instance=instance, image_id=image_id),
+            topic=_compute_topic(self.topic, ctxt, None, instance),
+            version='2.31')
+
+    def shelve_offload_instance(self, ctxt, instance):
+        self.cast(ctxt, self.make_msg('shelve_offload_instance',
+            instance=instance),
+            topic=_compute_topic(self.topic, ctxt, None, instance),
+            version='2.31')
+
+    def unshelve_instance(self, ctxt, instance, host, image=None):
+        self.cast(ctxt, self.make_msg('unshelve_instance',
+            instance=instance, image=image),
+            topic=_compute_topic(self.topic, ctxt, host, None),
+            version='2.31')
 
 
 class SecurityGroupAPI(nova.openstack.common.rpc.proxy.RpcProxy):

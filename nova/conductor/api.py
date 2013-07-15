@@ -366,6 +366,10 @@ class LocalComputeTaskAPI(object):
                 security_groups=security_groups,
                 block_device_mapping=block_device_mapping)
 
+    def unshelve_instance(self, context, instance):
+        utils.spawn_n(self._manager.unshelve_instance, context,
+                instance=instance)
+
 
 class API(LocalAPI):
     """Conductor API that does updates via RPC to the ConductorManager."""
@@ -432,3 +436,7 @@ class ComputeTaskAPI(object):
                 requested_networks=requested_networks,
                 security_groups=security_groups,
                 block_device_mapping=block_device_mapping)
+
+    def unshelve_instance(self, context, instance):
+        self.conductor_compute_rpcapi.unshelve_instance(context,
+                instance=instance)
