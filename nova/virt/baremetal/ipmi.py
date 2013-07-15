@@ -133,7 +133,7 @@ class IPMI(base.PowerManager):
             args.extend(command.split(" "))
             out, err = utils.execute(*args, attempts=3)
             LOG.debug(_("ipmitool stdout: '%(out)s', stderr: '%(err)s'"),
-                      locals())
+                      {'out': out, 'err': err})
             return out, err
         finally:
             bm_utils.unlink_without_raise(pwfile)
