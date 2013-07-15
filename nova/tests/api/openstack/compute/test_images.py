@@ -455,6 +455,30 @@ class ImagesControllerTest(test.TestCase):
                 "href": "%s/fake/images/130" % glance.generate_glance_url()
             }],
         },
+        {
+            'id': '131',
+            'name': None,
+            'metadata': {},
+            'updated': NOW_API_FORMAT,
+            'created': NOW_API_FORMAT,
+            'status': 'ACTIVE',
+            'progress': 100,
+            'minDisk': 0,
+            'minRam': 0,
+            "links": [{
+                "rel": "self",
+                "href": "http://localhost/v2/fake/images/131",
+            },
+            {
+                "rel": "bookmark",
+                "href": "http://localhost/fake/images/131",
+            },
+            {
+                "rel": "alternate",
+                "type": "application/vnd.openstack.image",
+                "href": "%s/fake/images/131" % glance.generate_glance_url()
+            }],
+        },
         ]
 
         self.assertThat(expected, matchers.DictListMatches(response_list))

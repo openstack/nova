@@ -87,7 +87,10 @@ class Controller(object):
         image['properties'][id] = meta[id]
         common.check_img_metadata_properties_quota(context,
                                                    image['properties'])
-        self.image_service.update(context, image_id, image, None)
+        try:
+            self.image_service.update(context, image_id, image, None)
+        except exception.ImageNotAuthorized as e:
+            raise exc.HTTPForbidden(explanation=str(e))
         return dict(meta=meta)
 
     @wsgi.serializers(xml=common.MetadataTemplate)
