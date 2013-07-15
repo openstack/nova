@@ -213,6 +213,7 @@ policy_data = """
     "compute_extension:v3:os-server-password": "",
     "compute_extension:server_usage": "",
     "compute_extension:services": "",
+    "compute_extension:v3:os-services": "",
     "compute_extension:simple_tenant_usage:show": "",
     "compute_extension:v3:os-simple-tenant-usage:show": "",
     "compute_extension:simple_tenant_usage:list": "",

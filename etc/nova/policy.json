@@ -136,6 +136,7 @@
     "compute_extension:v3:os-server-password": "",
     "compute_extension:server_usage": "",
     "compute_extension:services": "rule:admin_api",
+    "compute_extension:v3:os-services": "rule:admin_api",
     "compute_extension:v3:servers:discoverable": "",
     "compute_extension:simple_tenant_usage:show": "rule:admin_or_owner",
     "compute_extension:v3:os-simple-tenant-usage:show": "rule:admin_or_owner",
