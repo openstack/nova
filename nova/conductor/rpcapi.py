@@ -484,9 +484,15 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
 
     def compute_confirm_resize(self, context, instance, migration_ref):
         migration_p = jsonutils.to_primitive(migration_ref)
+        if not self.can_send_version('1.52'):
+            instance = jsonutils.to_primitive(
+                objects_base.obj_to_primitive(instance))
+            version = '1.46'
+        else:
+            version = '1.52'
         msg = self.make_msg('compute_confirm_resize', instance=instance,
                             migration_ref=migration_p)
-        return self.call(context, msg, version='1.52')
+        return self.call(context, msg, version=version)
 
     def compute_unrescue(self, context, instance):
         instance_p = jsonutils.to_primitive(instance)
