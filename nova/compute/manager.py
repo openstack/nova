@@ -71,6 +71,7 @@ from nova.openstack.common import rpc
 from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import timeutils
 from nova import paths
+from nova import quota
 from nova import safe_utils
 from nova import utils
 from nova.virt import driver
@@ -525,15 +526,74 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                                   data)
         return shared_storage
 
+    def _complete_partial_deletion(self, context, instance):
+        """
+        Complete deletion for instances in DELETED status but not marked as
+        deleted in the DB
+        """
+        self.conductor_api.instance_destroy(context, instance)
+        project_id = instance['project_id']
+        system_meta = utils.metadata_to_dict(instance['system_metadata'])
+        bdms = self._get_instance_volume_bdms(context, instance)
+        instance_vcpus = instance['vcpus']
+        instance_memory_mb = instance['memory_mb']
+        reservations = quota.QUOTAS.reserve(context,
+                                            project_id=project_id,
+                                            instances=-1,
+                                            cores=-instance_vcpus,
+                                            ram=-instance_memory_mb)
+        self._complete_deletion(context,
+                                instance,
+                                bdms,
+                                reservations,
+                                project_id,
+                                system_meta)
+
+    def _complete_deletion(self, context, instance, bdms,
+                           reservations, prj_id, system_meta):
+
+        self._quota_commit(context, reservations, project_id=prj_id)
+        # ensure block device mappings are not leaked
+        self.conductor_api.block_device_mapping_destroy(context, bdms)
+
+        # NOTE(ndipanov): Delete the dummy image BDM as well. This will not
+        #                 be needed once the manager code is using the image
+        if instance['image_ref']:
+            # Do not convert to legacy here - we want them all
+            leftover_bdm = \
+                self.conductor_api.block_device_mapping_get_all_by_instance(
+                    context, instance)
+            self.conductor_api.block_device_mapping_destroy(context,
+                                                            leftover_bdm)
+
+        self._notify_about_instance_usage(context, instance, "delete.end",
+                system_metadata=system_meta)
+
+        if CONF.vnc_enabled or CONF.spice.enabled:
+            if CONF.cells.enable:
+                self.cells_rpcapi.consoleauth_delete_tokens(context,
+                        instance['uuid'])
+            else:
+                self.consoleauth_rpcapi.delete_tokens_for_instance(context,
+                        instance['uuid'])
+
     def _init_instance(self, context, instance):
         '''Initialize this instance during service init.'''
-        closing_vm_states = (vm_states.DELETED,
-                             vm_states.SOFT_DELETED)
 
         # instance was supposed to shut down - don't attempt
         # recovery in any case
-        if instance['vm_state'] in closing_vm_states:
+        if instance['vm_state'] == vm_states.SOFT_DELETED:
             return
+
+        if instance['vm_state'] == vm_states.DELETED:
+            try:
+                self._complete_partial_deletion(context, instance)
+            except Exception:
+                # we don't want that an exception blocks the init_host
+                msg = _('Failed to complete a deletion')
+                LOG.exception(msg, instance=instance)
+            finally:
+                return
 
         net_info = compute_utils.get_nw_info_for_instance(instance)
 
@@ -1511,29 +1571,12 @@ class ComputeManager(manager.SchedulerDependentManager):
                 self._quota_rollback(context, reservations,
                                      project_id=project_id)
 
-        self._quota_commit(context, reservations, project_id=project_id)
-        # ensure block device mappings are not leaked
-        self.conductor_api.block_device_mapping_destroy(context, bdms)
-        # NOTE(ndipanov): Delete the dummy image BDM as well. This will not
-        #                 be needed once the manager code is using the image
-        if image:
-            # Do not convert to legacy here - we want them all
-            leftover_bdm = \
-                self.conductor_api.block_device_mapping_get_all_by_instance(
-                    context, instance)
-            self.conductor_api.block_device_mapping_destroy(context,
-                                                            leftover_bdm)
-
-        self._notify_about_instance_usage(context, instance, "delete.end",
-                system_metadata=system_meta)
-
-        if CONF.vnc_enabled or CONF.spice.enabled:
-            if CONF.cells.enable:
-                self.cells_rpcapi.consoleauth_delete_tokens(context,
-                        instance['uuid'])
-            else:
-                self.consoleauth_rpcapi.delete_tokens_for_instance(context,
-                        instance['uuid'])
+        self._complete_deletion(context,
+                                instance,
+                                bdms,
+                                reservations,
+                                project_id,
+                                system_meta)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @wrap_instance_event

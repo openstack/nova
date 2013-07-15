@@ -4892,6 +4892,70 @@ class ComputeTestCase(BaseTestCase):
         self.mox.ReplayAll()
         self.compute._destroy_evacuated_instances(fake_context)
 
+    def test_complete_partial_deletion(self):
+        admin_context = context.get_admin_context()
+        instance = {
+            'id': '1',
+            'vm_state': vm_states.DELETED,
+            'task_state': None,
+            'system_metadata': [{'key': 'fake_key', 'value': 'fake_value'}],
+            'vcpus': 1,
+            'memory_mb': 1,
+            'project_id': 'fake-prj',
+            'deleted': 0
+            }
+
+        def fake_conductor(context, instance):
+            instance['deleted'] = instance['id']
+
+        self.stubs.Set(self.compute.conductor_api,
+                       'instance_destroy',
+                        fake_conductor)
+
+        self.stubs.Set(self.compute,
+                       '_get_instance_volume_bdms',
+                       lambda *a, **k: None)
+
+        self.stubs.Set(self.compute,
+                       '_complete_deletion',
+                       lambda *a, **k: None)
+
+        self.stubs.Set(nova.quota.QUOTAS, 'reserve', lambda *a, **k: None)
+
+        self.compute._complete_partial_deletion(admin_context, instance)
+
+        self.assertFalse(instance['deleted'] == 0)
+
+    def test_init_instance_for_partial_deletion(self):
+        admin_context = context.get_admin_context()
+        instance = {'id': '1',
+                    'vm_state': vm_states.DELETED,
+                    'deleted': 0
+                    }
+
+        def fake_partial_deletion(context, instance):
+            instance['deleted'] = instance['id']
+
+        self.stubs.Set(self.compute,
+                       '_complete_partial_deletion',
+                       fake_partial_deletion)
+        self.compute._init_instance(context, instance)
+
+        self.assertFalse(instance['deleted'] == 0)
+
+    def test_partial_deletion_raise_exception(self):
+        admin_context = context.get_admin_context()
+        instance = {'id': '1',
+                    'vm_state': vm_states.DELETED,
+                    'deleted': 0
+                    }
+        self.mox.StubOutWithMock(self.compute, '_complete_partial_deletion')
+        self.compute._complete_partial_deletion(
+                                 admin_context, instance).AndRaise(ValueError)
+        self.mox.ReplayAll()
+
+        self.compute._init_instance(admin_context, instance)
+
     def test_add_remove_fixed_ip_updates_instance_updated_at(self):
         def _noop(*args, **kwargs):
             pass
