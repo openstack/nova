@@ -116,7 +116,6 @@ class NotificationsTestCase(test.TestCase):
 
         # test config disable of the notifcations
         self.flags(notify_on_state_change=None)
-        self.flags(notify_on_any_change=False)
 
         old = copy.copy(self.instance)
         self.instance["vm_state"] = vm_states.ACTIVE

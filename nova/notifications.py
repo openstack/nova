@@ -44,10 +44,6 @@ notify_opts = [
              '"vm_state" for notifications on VM state changes, or '
              '"vm_and_task_state" for notifications on VM and task state '
              'changes.'),
-    cfg.BoolOpt('notify_on_any_change', default=False,
-        help='If set, send compute.instance.update notifications on instance '
-             'state changes.  Valid values are False for no notifications, '
-             'True for notifications on any instance changes.'),
     cfg.BoolOpt('notify_api_faults', default=False,
         help='If set, send api.fault notifications on caught exceptions '
              'in the API service.'),
@@ -77,7 +73,7 @@ def send_update(context, old_instance, new_instance, service=None, host=None):
     in that instance
     """
 
-    if not CONF.notify_on_any_change and not CONF.notify_on_state_change:
+    if not CONF.notify_on_state_change:
         # skip all this if updates are disabled
         return
 
