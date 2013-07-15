@@ -25,7 +25,14 @@ from nova import utils
 
 class IPAddress(types.TypeDecorator):
     """An SQLAlchemy type representing an IP-address."""
-    impl = types.String(39).with_variant(postgresql.INET(), 'postgresql')
+
+    impl = types.String
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == 'postgresql':
+            return dialect.type_descriptor(postgresql.INET())
+        else:
+            return dialect.type_descriptor(types.String(39))
 
     def process_bind_param(self, value, dialect):
         """Process/Formats the value before insert it into the db."""
@@ -40,7 +47,14 @@ class IPAddress(types.TypeDecorator):
 
 class CIDR(types.TypeDecorator):
     """An SQLAlchemy type representing a CIDR definition."""
-    impl = types.String(43).with_variant(postgresql.INET(), 'postgresql')
+
+    impl = types.String
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == 'postgresql':
+            return dialect.type_descriptor(postgresql.INET())
+        else:
+            return dialect.type_descriptor(types.String(43))
 
     def process_bind_param(self, value, dialect):
         """Process/Formats the value before insert it into the db."""
