@@ -66,7 +66,7 @@ LOG = logging.getLogger(__name__)
 
 # Separator used between cell names for the 'full cell name' and routing
 # path.
-_PATH_CELL_SEP = cells_utils._PATH_CELL_SEP
+_PATH_CELL_SEP = cells_utils.PATH_CELL_SEP
 
 
 def _reverse_path(path):

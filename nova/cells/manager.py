@@ -407,7 +407,7 @@ class CellsManager(manager.Manager):
         """Fetch migrations applying the filters."""
         target_cell = None
         if "cell_name" in filters:
-            _path_cell_sep = cells_utils._PATH_CELL_SEP
+            _path_cell_sep = cells_utils.PATH_CELL_SEP
             target_cell = '%s%s%s' % (CONF.cells.name, _path_cell_sep,
                                       filters['cell_name'])
 

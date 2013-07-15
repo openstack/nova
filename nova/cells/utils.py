@@ -22,7 +22,7 @@ from nova import db
 
 # Separator used between cell names for the 'full cell name' and routing
 # path
-_PATH_CELL_SEP = '!'
+PATH_CELL_SEP = '!'
 # Separator used between cell name and item
 _CELL_ITEM_SEP = '@'
 

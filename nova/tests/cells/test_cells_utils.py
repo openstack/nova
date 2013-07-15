@@ -83,7 +83,7 @@ class CellsUtilsTestCase(test.TestCase):
 
     def test_split_cell_and_item(self):
         path = 'australia', 'queensland', 'gold_coast'
-        cell = cells_utils._PATH_CELL_SEP.join(path)
+        cell = cells_utils.PATH_CELL_SEP.join(path)
         item = 'host_5'
         together = cells_utils.cell_with_item(cell, item)
         self.assertEqual(cells_utils._CELL_ITEM_SEP.join([cell, item]),
