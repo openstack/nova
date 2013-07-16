@@ -1145,7 +1145,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                 capi = self.conductor_api
                 bdms = capi.block_device_mapping_get_all_by_instance(context,
                                                                      instance)
-            self._shutdown_instance(context, instance, bdms)
+            self._shutdown_instance(context, instance,
+                                    bdms, requested_networks)
             self._cleanup_volumes(context, instance['uuid'], bdms)
         except Exception:
             # do not attempt retry if clean up failed:
@@ -1372,9 +1373,11 @@ class ComputeManager(manager.SchedulerDependentManager):
                 system_metadata=system_metadata,
                 extra_usage_info=extra_usage_info, host=self.host)
 
-    def _deallocate_network(self, context, instance):
+    def _deallocate_network(self, context, instance,
+                            requested_networks=None):
         LOG.debug(_('Deallocating network for instance'), instance=instance)
-        self.network_api.deallocate_for_instance(context, instance)
+        self.network_api.deallocate_for_instance(
+            context, instance, requested_networks=requested_networks)
 
     def _get_volume_bdms(self, bdms):
         """Return only bdms that have a volume_id."""
@@ -1441,17 +1444,19 @@ class ComputeManager(manager.SchedulerDependentManager):
                     admin_password, is_first_time, node, instance)
         do_run_instance()
 
-    def _try_deallocate_network(self, context, instance):
+    def _try_deallocate_network(self, context, instance,
+                                requested_networks=None):
         try:
             # tear down allocated network structure
-            self._deallocate_network(context, instance)
+            self._deallocate_network(context, instance, requested_networks)
         except Exception:
             with excutils.save_and_reraise_exception():
                 LOG.error(_('Failed to deallocate network for instance.'),
                           instance=instance)
                 self._set_instance_error_state(context, instance['uuid'])
 
-    def _shutdown_instance(self, context, instance, bdms):
+    def _shutdown_instance(self, context, instance,
+                           bdms, requested_networks=None):
         """Shutdown an instance on this host."""
         context = context.elevated()
         LOG.audit(_('%(action_str)s instance') % {'action_str': 'Terminating'},
@@ -1483,9 +1488,10 @@ class ComputeManager(manager.SchedulerDependentManager):
             with excutils.save_and_reraise_exception():
                 # deallocate ip and fail without proceeding to
                 # volume api calls, preserving current behavior
-                self._try_deallocate_network(context, instance)
+                self._try_deallocate_network(context, instance,
+                                             requested_networks)
 
-        self._try_deallocate_network(context, instance)
+        self._try_deallocate_network(context, instance, requested_networks)
 
         for bdm in vol_bdms:
             try:

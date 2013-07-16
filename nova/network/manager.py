@@ -272,7 +272,7 @@ class NetworkManager(manager.Manager):
         The one at a time part is to flatten the layout to help scale
     """
 
-    RPC_API_VERSION = '1.9'
+    RPC_API_VERSION = '1.10'
 
     # If True, this manager requires VIF to create a bridge.
     SHOULD_CREATE_BRIDGE = False

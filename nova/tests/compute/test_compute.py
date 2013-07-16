@@ -2543,7 +2543,9 @@ class ComputeTestCase(BaseTestCase):
         exp = test.TestingException()
         self.compute.driver.destroy(mox.IgnoreArg(), mox.IgnoreArg(),
                                     mox.IgnoreArg()).AndRaise(exp)
-        self.compute._deallocate_network(mox.IgnoreArg(), mox.IgnoreArg())
+        self.compute._deallocate_network(mox.IgnoreArg(),
+                                         mox.IgnoreArg(),
+                                         mox.IgnoreArg())
         self.mox.ReplayAll()
         instance = self._create_fake_instance()
         self.assertRaises(test.TestingException,
@@ -8802,6 +8804,7 @@ class ComputeRescheduleOrErrorTestCase(BaseTestCase):
                     self.compute.conductor_api,
                     self.instance, exc_info[0], exc_info=exc_info)
             self.compute._shutdown_instance(self.context, self.instance,
+                    mox.IgnoreArg(),
                     mox.IgnoreArg()).AndRaise(InnerTestingException("Error"))
             self.compute._log_original_error(exc_info, instance_uuid)
 
@@ -8827,6 +8830,7 @@ class ComputeRescheduleOrErrorTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute, '_reschedule')
 
         self.compute._shutdown_instance(self.context, self.instance,
+                                        mox.IgnoreArg(),
                                         mox.IgnoreArg())
         self.compute._cleanup_volumes(self.context, instance_uuid,
                                         mox.IgnoreArg())
@@ -8857,6 +8861,7 @@ class ComputeRescheduleOrErrorTestCase(BaseTestCase):
                     self.instance, exc_info[0], exc_info=exc_info)
 
             self.compute._shutdown_instance(self.context, self.instance,
+                                            mox.IgnoreArg(),
                                             mox.IgnoreArg())
             self.compute._cleanup_volumes(self.context, instance_uuid,
                                             mox.IgnoreArg())
@@ -8888,6 +8893,7 @@ class ComputeRescheduleOrErrorTestCase(BaseTestCase):
                     self.compute.conductor_api,
                     self.instance, exc_info[0], exc_info=exc_info)
             self.compute._shutdown_instance(self.context, self.instance,
+                                            mox.IgnoreArg(),
                                             mox.IgnoreArg())
             self.compute._cleanup_volumes(self.context, instance_uuid,
                                           mox.IgnoreArg())
