@@ -1847,10 +1847,12 @@ def _wait_for_vhd_coalesce(session, instance, sr_ref, vdi_ref,
         * parent_vhd
             snapshot
     """
-    def _another_child_vhd():
-        if not original_parent_uuid:
-            return False
+    # NOTE(sirp): If we don't have an original_parent_uuid, then the snapshot
+    # doesn't have a grandparent to coalesce into, so we can skip waiting
+    if not original_parent_uuid:
+        return
 
+    def _another_child_vhd():
         # Search for any other vdi which parents to original parent and is not
         # in the active vm/instance vdi chain.
         vdi_uuid = session.call_xenapi('VDI.get_record', vdi_ref)['uuid']
