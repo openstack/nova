@@ -4192,27 +4192,23 @@ class TestAddressesXMLSerialization(test.TestCase):
     index_serializer = ips.AddressesTemplate()
     show_serializer = ips.NetworkTemplate()
 
-    def test_xml_declaration(self):
-        fixture = {
+    def _serializer_test_data(self):
+        return {
             'network_2': [
                 {'addr': '192.168.0.1', 'version': 4},
                 {'addr': 'fe80::beef', 'version': 6},
             ],
         }
-        output = self.show_serializer.serialize(fixture)
+
+    def test_xml_declaration(self):
+        output = self.show_serializer.serialize(self._serializer_test_data())
         has_dec = output.startswith("<?xml version='1.0' encoding='UTF-8'?>")
         self.assertTrue(has_dec)
 
     def test_show(self):
-        fixture = {
-            'network_2': [
-                {'addr': '192.168.0.1', 'version': 4},
-                {'addr': 'fe80::beef', 'version': 6},
-            ],
-        }
-        output = self.show_serializer.serialize(fixture)
+        output = self.show_serializer.serialize(self._serializer_test_data())
         root = etree.XML(output)
-        network = fixture['network_2']
+        network = self._serializer_test_data()['network_2']
         self.assertEqual(str(root.get('id')), 'network_2')
         ip_elems = root.findall('{0}ip'.format(NS))
         for z, ip_elem in enumerate(ip_elems):
