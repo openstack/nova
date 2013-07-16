@@ -3397,11 +3397,14 @@ class ComputeTestCase(BaseTestCase):
             self.assertEqual(sys_meta['instance_type_flavorid'], '3')
 
         old_vm_state = None
+        p_state = None
         if power_on:
             old_vm_state = vm_states.ACTIVE
+            p_state = power_state.RUNNING
         else:
             old_vm_state = vm_states.STOPPED
-        params = {'vm_state': old_vm_state}
+            p_state = power_state.SHUTDOWN
+        params = {'vm_state': old_vm_state, 'power_state': p_state}
         instance = jsonutils.to_primitive(self._create_fake_instance(params))
 
         self.flags(allow_resize_to_same_host=True)
@@ -3422,7 +3425,8 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(instance_type_ref['flavorid'], '1')
 
         new_inst_ref = db.instance_update(self.context, instance_uuid,
-                                          {'vm_state': old_vm_state})
+                                          {'vm_state': old_vm_state,
+                                           'power_state': p_state})
 
         new_instance_type_ref = db.flavor_get_by_flavor_id(
                 self.context, 3)
@@ -3471,14 +3475,6 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(network_api.API, 'setup_networks_on_host',
                        fake_setup_networks_on_host)
 
-        def fake_get_power_state(context, instance):
-            if power_on:
-                return power_state.RUNNING
-            else:
-                return power_state.SHUTDOWN
-
-        self.stubs.Set(self.compute, '_get_power_state', fake_get_power_state)
-
         rpcinst = db.instance_get_by_uuid(self.context, rpcinst['uuid'])
         self.compute.confirm_resize(self.context, rpcinst, reservations,
                                     migration_ref)
@@ -3491,6 +3487,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(instance_type_ref['flavorid'], '3')
         self.assertEqual('fake-mini', migration_ref['source_compute'])
         self.assertEqual(old_vm_state, instance['vm_state'])
+        self.assertEqual(p_state, instance['power_state'])
         self.compute.terminate_instance(self.context, instance=instance)
 
     def test_confirm_resize_from_active(self):
