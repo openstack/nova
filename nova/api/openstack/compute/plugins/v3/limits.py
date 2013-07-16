@@ -28,6 +28,7 @@ import webob.dec
 import webob.exc
 
 from nova.api.openstack.compute.views import limits as limits_views
+from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova.openstack.common import importutils
@@ -68,7 +69,7 @@ class LimitsTemplate(xmlutil.TemplateBuilder):
         return xmlutil.MasterTemplate(root, 1, nsmap=limits_nsmap)
 
 
-class LimitsController(object):
+class LimitsController(wsgi.Controller):
     """Controller for accessing limits in the OpenStack API."""
 
     @wsgi.serializers(xml=LimitsTemplate)
@@ -105,10 +106,6 @@ class LimitsController(object):
 
     def _get_view_builder(self, req):
         return limits_views.ViewBuilder()
-
-
-def create_resource():
-    return wsgi.Resource(LimitsController())
 
 
 class Limit(object):
@@ -485,4 +482,21 @@ class WsgiLimiterProxy(object):
         @return: Empty list.
         """
 
+        return []
+
+
+class Limits(extensions.V3APIExtensionBase):
+    """Limits rate core API."""
+    name = "Limits"
+    alias = "limits"
+    namespace = "http://docs.openstack.org/compute/core/limits/v3"
+    version = 1
+
+    def get_resources(self):
+        resources = [extensions.ResourceExtension(self.alias,
+                                        LimitsController(),
+                                        member_name='limit')]
+        return resources
+
+    def get_controller_extensions(self):
         return []

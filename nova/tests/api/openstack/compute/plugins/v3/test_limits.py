@@ -24,7 +24,7 @@ from xml.dom import minidom
 from lxml import etree
 import webob
 
-from nova.api.openstack.compute import limits
+from nova.api.openstack.compute.plugins.v3 import limits
 from nova.api.openstack.compute import views
 from nova.api.openstack import xmlutil
 import nova.context
@@ -80,8 +80,7 @@ class LimitsControllerTest(BaseLimitTestSuite):
     def setUp(self):
         """Run before each test."""
         super(LimitsControllerTest, self).setUp()
-        self.controller = limits.create_resource()
-        self.ctrler = limits.LimitsController()
+        self.controller = limits.LimitsController()
 
     def _get_index_request(self, accept_header="application/json"):
         """Helper to set routing arguments."""
@@ -109,14 +108,13 @@ class LimitsControllerTest(BaseLimitTestSuite):
     def test_empty_index_json(self):
         # Test getting empty limit details in JSON.
         request = self._get_index_request()
-        response = request.get_response(self.controller)
+        body = self.controller.index(request)
         expected = {
             "limits": {
                 "rate": [],
                 "absolute": {},
             },
         }
-        body = jsonutils.loads(response.body)
         self.assertEqual(expected, body)
 
     def test_index_json(self):
@@ -132,7 +130,7 @@ class LimitsControllerTest(BaseLimitTestSuite):
             'security_groups': 10,
             'security_group_rules': 20,
         }
-        response = request.get_response(self.controller)
+        body = self.controller.index(request)
         expected = {
             "limits": {
                 "rate": [
@@ -182,7 +180,6 @@ class LimitsControllerTest(BaseLimitTestSuite):
                     },
             },
         }
-        body = jsonutils.loads(response.body)
         self.assertEqual(expected, body)
 
     def _populate_limits_diff_regex(self, request):
@@ -198,7 +195,7 @@ class LimitsControllerTest(BaseLimitTestSuite):
         # Test getting limit details in JSON.
         request = self._get_index_request()
         request = self._populate_limits_diff_regex(request)
-        response = request.get_response(self.controller)
+        body = self.controller.index(request)
         expected = {
             "limits": {
                 "rate": [
@@ -233,13 +230,11 @@ class LimitsControllerTest(BaseLimitTestSuite):
                 "absolute": {},
             },
         }
-        body = jsonutils.loads(response.body)
         self.assertEqual(expected, body)
 
     def _test_index_absolute_limits_json(self, expected):
         request = self._get_index_request()
-        response = request.get_response(self.controller)
-        body = jsonutils.loads(response.body)
+        body = self.controller.index(request)
         self.assertEqual(expected, body['limits']['absolute'])
 
     def test_index_ignores_extra_absolute_limits_json(self):
@@ -291,28 +286,28 @@ class LimitsControllerTest(BaseLimitTestSuite):
         self._test_index_absolute_limits_json(expected)
 
     def test_limit_create(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/limits')
-        self.assertRaises(webob.exc.HTTPNotImplemented, self.ctrler.create,
+        req = fakes.HTTPRequestV3.blank('/limits')
+        self.assertRaises(webob.exc.HTTPNotImplemented, self.controller.create,
                           req, {})
 
     def test_limit_delete(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/limits')
-        self.assertRaises(webob.exc.HTTPNotImplemented, self.ctrler.delete,
+        req = fakes.HTTPRequestV3.blank('/limits')
+        self.assertRaises(webob.exc.HTTPNotImplemented, self.controller.delete,
                           req, 1)
 
     def test_limit_detail(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/limits')
-        self.assertRaises(webob.exc.HTTPNotImplemented, self.ctrler.detail,
+        req = fakes.HTTPRequestV3.blank('/limits')
+        self.assertRaises(webob.exc.HTTPNotImplemented, self.controller.detail,
                           req)
 
     def test_limit_show(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/limits')
-        self.assertRaises(webob.exc.HTTPNotImplemented, self.ctrler.show,
+        req = fakes.HTTPRequestV3.blank('/limits')
+        self.assertRaises(webob.exc.HTTPNotImplemented, self.controller.show,
                           req, 1)
 
     def test_limit_update(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/limits')
-        self.assertRaises(webob.exc.HTTPNotImplemented, self.ctrler.update,
+        req = fakes.HTTPRequestV3.blank('/limits')
+        self.assertRaises(webob.exc.HTTPNotImplemented, self.controller.update,
                           req, 1, {})
 
 
@@ -674,7 +669,6 @@ class WsgiLimiterTest(BaseLimitTestSuite):
 
     def test_invalid_methods(self):
         # Only POSTs should work.
-        requests = []
         for method in ["GET", "PUT", "DELETE", "HEAD", "OPTIONS"]:
             request = webob.Request.blank("/", method=method)
             response = request.get_response(self.app)
