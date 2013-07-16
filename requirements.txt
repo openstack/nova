@@ -29,5 +29,7 @@ python-keystoneclient>=0.2.0
 six
 stevedore>=0.9
 websockify<0.4
-oslo.config>=1.1.0
 pyparsing>=1.5.7,<2.0 # order-dependent python-quantumclient req, bug 1191866
+
+-f http://tarballs.openstack.org/oslo.config/oslo.config-1.2.0a3.tar.gz#egg=oslo.config-1.2.0a3
+oslo.config>=1.2.0a3
