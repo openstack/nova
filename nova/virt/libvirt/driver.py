@@ -391,18 +391,15 @@ class LibvirtDriver(driver.ComputeDriver):
         conf.driver_cache = cache_mode
 
     def has_min_version(self, lv_ver=None, hv_ver=None, hv_type=None):
-        def _munge_version(ver):
-            return ver[0] * 1000000 + ver[1] * 1000 + ver[2]
-
         try:
             if lv_ver is not None:
                 libvirt_version = self._conn.getLibVersion()
-                if libvirt_version < _munge_version(lv_ver):
+                if libvirt_version < utils.convert_version_to_int(lv_ver):
                     return False
 
             if hv_ver is not None:
                 hypervisor_version = self._conn.getVersion()
-                if hypervisor_version < _munge_version(hv_ver):
+                if hypervisor_version < utils.convert_version_to_int(hv_ver):
                     return False
 
             if hv_type is not None:
