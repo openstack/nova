@@ -46,6 +46,7 @@ import commands
 import ConfigParser
 import datetime
 import glob
+import operator
 import os
 import urlparse
 import uuid
@@ -64,6 +65,7 @@ from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
 from nova import test
+from nova.tests import matchers
 from nova import utils
 import nova.virt.baremetal.db.sqlalchemy.migrate_repo
 
@@ -1466,7 +1468,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         self._unique_constraint_check_migrate_185(engine)
 
     def _pre_upgrade_186(self, engine):
-        fake_instances = [
+        self.mig186_fake_instances = [
             dict(uuid='mig186_uuid-1', image_ref='fake_image_1',
                  root_device_name='/dev/vda'),
             dict(uuid='mig186_uuid-2', image_ref='',
@@ -1475,7 +1477,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
                  root_device_name='/dev/vda'),
         ]
 
-        fake_bdms = [
+        self.mig186_fake_bdms = [
             # Instance 1 - image, volume and swap
             dict(instance_uuid='mig186_uuid-1', device_name='/dev/vdc',
                  volume_id='fake_volume_1'),
@@ -1497,11 +1499,11 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
 
         instances = db_utils.get_table(engine, 'instances')
         block_device = db_utils.get_table(engine, 'block_device_mapping')
-        engine.execute(instances.insert(), fake_instances)
-        for fake_bdm in fake_bdms:
+        engine.execute(instances.insert(), self.mig186_fake_instances)
+        for fake_bdm in self.mig186_fake_bdms:
             engine.execute(block_device.insert(), fake_bdm)
 
-        return fake_instances, fake_bdms
+        return self.mig186_fake_instances, self.mig186_fake_bdms
 
     def _check_186(self, engine, data):
         block_device = db_utils.get_table(engine, 'block_device_mapping')
@@ -1586,6 +1588,24 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         self.assertEqual(bdm_3s[3].device_type, 'disk')
         self.assertEqual(bdm_3s[3].image_id, 'fake_image_2')
         self.assertEqual(bdm_3s[3].boot_index, 0)
+
+    def _post_downgrade_186(self, engine):
+        block_device = db_utils.get_table(engine, 'block_device_mapping')
+
+        q = block_device.select().where(
+            sqlalchemy.or_(
+                block_device.c.instance_uuid == 'mig186_uuid-1',
+                block_device.c.instance_uuid == 'mig186_uuid-2',
+                block_device.c.instance_uuid == 'mig186_uuid-3'))\
+            .order_by(block_device.c.device_name.asc())
+
+        expected_bdms = sorted(self.mig186_fake_bdms,
+                               key=operator.itemgetter('device_name'))
+        got_bdms = [bdm for bdm in q.execute()]
+
+        self.assertEquals(len(expected_bdms), len(got_bdms))
+        for expected, got in zip(expected_bdms, got_bdms):
+            self.assertThat(expected, matchers.IsSubDictOf(dict(got)))
 
     # addition of the vm instance groups
     def _check_no_group_instance_tables(self, engine):
