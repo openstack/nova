@@ -106,11 +106,11 @@ class NovaException(Exception):
     """Base Nova Exception
 
     To correctly use this class, inherit from it and define
-    a 'message' property. That message will get printf'd
+    a 'msg_fmt' property. That msg_fmt will get printf'd
     with the keyword arguments provided to the constructor.
 
     """
-    message = _("An unknown exception occurred.")
+    msg_fmt = _("An unknown exception occurred.")
     code = 500
     headers = {}
     safe = False
@@ -126,7 +126,7 @@ class NovaException(Exception):
 
         if not message:
             try:
-                message = self.message % kwargs
+                message = self.msg_fmt % kwargs
 
             except Exception:
                 exc_info = sys.exc_info()
@@ -140,7 +140,7 @@ class NovaException(Exception):
                     raise exc_info[0], exc_info[1], exc_info[2]
                 else:
                     # at least get the core message out if something happened
-                    message = self.message
+                    message = self.msg_fmt
 
         super(NovaException, self).__init__(message)
 
@@ -152,7 +152,7 @@ class NovaException(Exception):
 
 
 class EC2APIError(NovaException):
-    message = _("Unknown")
+    msg_fmt = _("Unknown")
 
     def __init__(self, message=None, code=None):
         self.msg = message
@@ -167,726 +167,726 @@ class Duplicate(NovaException):
 
 
 class EncryptionFailure(NovaException):
-    message = _("Failed to encrypt text: %(reason)s")
+    msg_fmt = _("Failed to encrypt text: %(reason)s")
 
 
 class DecryptionFailure(NovaException):
-    message = _("Failed to decrypt text: %(reason)s")
+    msg_fmt = _("Failed to decrypt text: %(reason)s")
 
 
 class VirtualInterfaceCreateException(NovaException):
-    message = _("Virtual Interface creation failed")
+    msg_fmt = _("Virtual Interface creation failed")
 
 
 class VirtualInterfaceMacAddressException(NovaException):
-    message = _("5 attempts to create virtual interface"
+    msg_fmt = _("5 attempts to create virtual interface"
                 "with unique mac address failed")
 
 
 class GlanceConnectionFailed(NovaException):
-    message = _("Connection to glance host %(host)s:%(port)s failed: "
+    msg_fmt = _("Connection to glance host %(host)s:%(port)s failed: "
         "%(reason)s")
 
 
 class NotAuthorized(NovaException):
-    message = _("Not authorized.")
+    msg_fmt = _("Not authorized.")
     code = 403
 
 
 class AdminRequired(NotAuthorized):
-    message = _("User does not have admin privileges")
+    msg_fmt = _("User does not have admin privileges")
 
 
 class PolicyNotAuthorized(NotAuthorized):
-    message = _("Policy doesn't allow %(action)s to be performed.")
+    msg_fmt = _("Policy doesn't allow %(action)s to be performed.")
 
 
 class ImageNotActive(NovaException):
-    message = _("Image %(image_id)s is not active.")
+    msg_fmt = _("Image %(image_id)s is not active.")
 
 
 class ImageNotAuthorized(NovaException):
-    message = _("Not authorized for image %(image_id)s.")
+    msg_fmt = _("Not authorized for image %(image_id)s.")
 
 
 class Invalid(NovaException):
-    message = _("Unacceptable parameters.")
+    msg_fmt = _("Unacceptable parameters.")
     code = 400
 
 
 class InvalidBDM(Invalid):
-    message = _("Block Device Mapping is Invalid.")
+    msg_fmt = _("Block Device Mapping is Invalid.")
 
 
 class InvalidBDMSnapshot(InvalidBDM):
-    message = _("Block Device Mapping is Invalid: "
+    msg_fmt = _("Block Device Mapping is Invalid: "
                 "failed to get snapshot %(id)s.")
 
 
 class InvalidBDMVolume(InvalidBDM):
-    message = _("Block Device Mapping is Invalid: "
+    msg_fmt = _("Block Device Mapping is Invalid: "
                 "failed to get volume %(id)s.")
 
 
 class InvalidBDMFormat(InvalidBDM):
-    message = _("Block Device Mapping is Invalid: "
+    msg_fmt = _("Block Device Mapping is Invalid: "
                 "some fields are not recognized, "
                 "or have invalid values.")
 
 
 class InvalidBDMForLegacy(InvalidBDM):
-    message = _("Block Device Mapping cannot "
+    msg_fmt = _("Block Device Mapping cannot "
                 "be converted to legacy format. ")
 
 
 class VolumeUnattached(Invalid):
-    message = _("Volume %(volume_id)s is not attached to anything")
+    msg_fmt = _("Volume %(volume_id)s is not attached to anything")
 
 
 class VolumeNotCreated(NovaException):
-    message = _("Volume %(volume_id)s did not finish being created"
+    msg_fmt = _("Volume %(volume_id)s did not finish being created"
                 " even after we waited %(seconds)s seconds or %(attempts)s"
                 " attempts.")
 
 
 class InvalidKeypair(Invalid):
-    message = _("Keypair data is invalid")
+    msg_fmt = _("Keypair data is invalid")
 
 
 class InvalidRequest(Invalid):
-    message = _("The request is invalid.")
+    msg_fmt = _("The request is invalid.")
 
 
 class InvalidInput(Invalid):
-    message = _("Invalid input received") + ": %(reason)s"
+    msg_fmt = _("Invalid input received") + ": %(reason)s"
 
 
 class InvalidVolume(Invalid):
-    message = _("Invalid volume") + ": %(reason)s"
+    msg_fmt = _("Invalid volume") + ": %(reason)s"
 
 
 class InvalidMetadata(Invalid):
-    message = _("Invalid metadata") + ": %(reason)s"
+    msg_fmt = _("Invalid metadata") + ": %(reason)s"
 
 
 class InvalidMetadataSize(Invalid):
-    message = _("Invalid metadata size") + ": %(reason)s"
+    msg_fmt = _("Invalid metadata size") + ": %(reason)s"
 
 
 class InvalidPortRange(Invalid):
-    message = _("Invalid port range %(from_port)s:%(to_port)s. %(msg)s")
+    msg_fmt = _("Invalid port range %(from_port)s:%(to_port)s. %(msg)s")
 
 
 class InvalidIpProtocol(Invalid):
-    message = _("Invalid IP protocol %(protocol)s.")
+    msg_fmt = _("Invalid IP protocol %(protocol)s.")
 
 
 class InvalidContentType(Invalid):
-    message = _("Invalid content type %(content_type)s.")
+    msg_fmt = _("Invalid content type %(content_type)s.")
 
 
 class InvalidCidr(Invalid):
-    message = _("Invalid cidr %(cidr)s.")
+    msg_fmt = _("Invalid cidr %(cidr)s.")
 
 
 class InvalidUnicodeParameter(Invalid):
-    message = _("Invalid Parameter: "
+    msg_fmt = _("Invalid Parameter: "
                 "Unicode is not supported by the current database.")
 
 
 # Cannot be templated as the error syntax varies.
 # msg needs to be constructed when raised.
 class InvalidParameterValue(Invalid):
-    message = _("%(err)s")
+    msg_fmt = _("%(err)s")
 
 
 class InvalidAggregateAction(Invalid):
-    message = _("Cannot perform action '%(action)s' on aggregate "
+    msg_fmt = _("Cannot perform action '%(action)s' on aggregate "
                 "%(aggregate_id)s. Reason: %(reason)s.")
 
 
 class InvalidGroup(Invalid):
-    message = _("Group not valid. Reason: %(reason)s")
+    msg_fmt = _("Group not valid. Reason: %(reason)s")
 
 
 class InvalidSortKey(Invalid):
-    message = _("Sort key supplied was not valid.")
+    msg_fmt = _("Sort key supplied was not valid.")
 
 
 class InstanceInvalidState(Invalid):
-    message = _("Instance %(instance_uuid)s in %(attr)s %(state)s. Cannot "
+    msg_fmt = _("Instance %(instance_uuid)s in %(attr)s %(state)s. Cannot "
                 "%(method)s while the instance is in this state.")
 
 
 class InstanceNotRunning(Invalid):
-    message = _("Instance %(instance_id)s is not running.")
+    msg_fmt = _("Instance %(instance_id)s is not running.")
 
 
 class InstanceNotInRescueMode(Invalid):
-    message = _("Instance %(instance_id)s is not in rescue mode")
+    msg_fmt = _("Instance %(instance_id)s is not in rescue mode")
 
 
 class InstanceNotRescuable(Invalid):
-    message = _("Instance %(instance_id)s cannot be rescued: %(reason)s")
+    msg_fmt = _("Instance %(instance_id)s cannot be rescued: %(reason)s")
 
 
 class InstanceNotReady(Invalid):
-    message = _("Instance %(instance_id)s is not ready")
+    msg_fmt = _("Instance %(instance_id)s is not ready")
 
 
 class InstanceSuspendFailure(Invalid):
-    message = _("Failed to suspend instance") + ": %(reason)s"
+    msg_fmt = _("Failed to suspend instance") + ": %(reason)s"
 
 
 class InstanceResumeFailure(Invalid):
-    message = _("Failed to resume instance: %(reason)s.")
+    msg_fmt = _("Failed to resume instance: %(reason)s.")
 
 
 class InstancePowerOnFailure(Invalid):
-    message = _("Failed to power on instance: %(reason)s.")
+    msg_fmt = _("Failed to power on instance: %(reason)s.")
 
 
 class InstancePowerOffFailure(Invalid):
-    message = _("Failed to power off instance: %(reason)s.")
+    msg_fmt = _("Failed to power off instance: %(reason)s.")
 
 
 class InstanceRebootFailure(Invalid):
-    message = _("Failed to reboot instance") + ": %(reason)s"
+    msg_fmt = _("Failed to reboot instance") + ": %(reason)s"
 
 
 class InstanceTerminationFailure(Invalid):
-    message = _("Failed to terminate instance") + ": %(reason)s"
+    msg_fmt = _("Failed to terminate instance") + ": %(reason)s"
 
 
 class InstanceDeployFailure(Invalid):
-    message = _("Failed to deploy instance") + ": %(reason)s"
+    msg_fmt = _("Failed to deploy instance") + ": %(reason)s"
 
 
 class ServiceUnavailable(Invalid):
-    message = _("Service is unavailable at this time.")
+    msg_fmt = _("Service is unavailable at this time.")
 
 
 class ComputeResourcesUnavailable(ServiceUnavailable):
-    message = _("Insufficient compute resources.")
+    msg_fmt = _("Insufficient compute resources.")
 
 
 class ComputeServiceUnavailable(ServiceUnavailable):
-    message = _("Compute service of %(host)s is unavailable at this time.")
+    msg_fmt = _("Compute service of %(host)s is unavailable at this time.")
 
 
 class UnableToMigrateToSelf(Invalid):
-    message = _("Unable to migrate instance (%(instance_id)s) "
+    msg_fmt = _("Unable to migrate instance (%(instance_id)s) "
                 "to current host (%(host)s).")
 
 
 class InvalidHypervisorType(Invalid):
-    message = _("The supplied hypervisor type of is invalid.")
+    msg_fmt = _("The supplied hypervisor type of is invalid.")
 
 
 class DestinationHypervisorTooOld(Invalid):
-    message = _("The instance requires a newer hypervisor version than "
+    msg_fmt = _("The instance requires a newer hypervisor version than "
                 "has been provided.")
 
 
 class DestinationDiskExists(Invalid):
-    message = _("The supplied disk path (%(path)s) already exists, "
+    msg_fmt = _("The supplied disk path (%(path)s) already exists, "
                 "it is expected not to exist.")
 
 
 class InvalidDevicePath(Invalid):
-    message = _("The supplied device path (%(path)s) is invalid.")
+    msg_fmt = _("The supplied device path (%(path)s) is invalid.")
 
 
 class DevicePathInUse(Invalid):
-    message = _("The supplied device path (%(path)s) is in use.")
+    msg_fmt = _("The supplied device path (%(path)s) is in use.")
     code = 409
 
 
 class DeviceIsBusy(Invalid):
-    message = _("The supplied device (%(device)s) is busy.")
+    msg_fmt = _("The supplied device (%(device)s) is busy.")
 
 
 class InvalidCPUInfo(Invalid):
-    message = _("Unacceptable CPU info") + ": %(reason)s"
+    msg_fmt = _("Unacceptable CPU info") + ": %(reason)s"
 
 
 class InvalidIpAddressError(Invalid):
-    message = _("%(address)s is not a valid IP v4/6 address.")
+    msg_fmt = _("%(address)s is not a valid IP v4/6 address.")
 
 
 class InvalidVLANTag(Invalid):
-    message = _("VLAN tag is not appropriate for the port group "
+    msg_fmt = _("VLAN tag is not appropriate for the port group "
                 "%(bridge)s. Expected VLAN tag is %(tag)s, "
                 "but the one associated with the port group is %(pgroup)s.")
 
 
 class InvalidVLANPortGroup(Invalid):
-    message = _("vSwitch which contains the port group %(bridge)s is "
+    msg_fmt = _("vSwitch which contains the port group %(bridge)s is "
                 "not associated with the desired physical adapter. "
                 "Expected vSwitch is %(expected)s, but the one associated "
                 "is %(actual)s.")
 
 
 class InvalidDiskFormat(Invalid):
-    message = _("Disk format %(disk_format)s is not acceptable")
+    msg_fmt = _("Disk format %(disk_format)s is not acceptable")
 
 
 class ImageUnacceptable(Invalid):
-    message = _("Image %(image_id)s is unacceptable: %(reason)s")
+    msg_fmt = _("Image %(image_id)s is unacceptable: %(reason)s")
 
 
 class InstanceUnacceptable(Invalid):
-    message = _("Instance %(instance_id)s is unacceptable: %(reason)s")
+    msg_fmt = _("Instance %(instance_id)s is unacceptable: %(reason)s")
 
 
 class InvalidEc2Id(Invalid):
-    message = _("Ec2 id %(ec2_id)s is unacceptable.")
+    msg_fmt = _("Ec2 id %(ec2_id)s is unacceptable.")
 
 
 class InvalidUUID(Invalid):
-    message = _("Expected a uuid but received %(uuid)s.")
+    msg_fmt = _("Expected a uuid but received %(uuid)s.")
 
 
 class InvalidID(Invalid):
-    message = _("Invalid ID received %(id)s.")
+    msg_fmt = _("Invalid ID received %(id)s.")
 
 
 class ConstraintNotMet(NovaException):
-    message = _("Constraint not met.")
+    msg_fmt = _("Constraint not met.")
     code = 412
 
 
 class NotFound(NovaException):
-    message = _("Resource could not be found.")
+    msg_fmt = _("Resource could not be found.")
     code = 404
 
 
 class AgentBuildNotFound(NotFound):
-    message = _("No agent-build associated with id %(id)s.")
+    msg_fmt = _("No agent-build associated with id %(id)s.")
 
 
 class AgentBuildExists(Duplicate):
-    message = _("Agent-build with hypervisor %(hypervisor)s os %(os)s "
+    msg_fmt = _("Agent-build with hypervisor %(hypervisor)s os %(os)s "
                 "architecture %(architecture)s exists.")
 
 
 class VolumeNotFound(NotFound):
-    message = _("Volume %(volume_id)s could not be found.")
+    msg_fmt = _("Volume %(volume_id)s could not be found.")
 
 
 class SnapshotNotFound(NotFound):
-    message = _("Snapshot %(snapshot_id)s could not be found.")
+    msg_fmt = _("Snapshot %(snapshot_id)s could not be found.")
 
 
 class ISCSITargetNotFoundForVolume(NotFound):
-    message = _("No target id found for volume %(volume_id)s.")
+    msg_fmt = _("No target id found for volume %(volume_id)s.")
 
 
 class DiskNotFound(NotFound):
-    message = _("No disk at %(location)s")
+    msg_fmt = _("No disk at %(location)s")
 
 
 class VolumeDriverNotFound(NotFound):
-    message = _("Could not find a handler for %(driver_type)s volume.")
+    msg_fmt = _("Could not find a handler for %(driver_type)s volume.")
 
 
 class InvalidImageRef(Invalid):
-    message = _("Invalid image href %(image_href)s.")
+    msg_fmt = _("Invalid image href %(image_href)s.")
 
 
 class ImageNotFound(NotFound):
-    message = _("Image %(image_id)s could not be found.")
+    msg_fmt = _("Image %(image_id)s could not be found.")
 
 
 class ImageNotFoundEC2(ImageNotFound):
-    message = _("Image %(image_id)s could not be found. The nova EC2 API "
+    msg_fmt = _("Image %(image_id)s could not be found. The nova EC2 API "
                 "assigns image ids dynamically when they are listed for the "
                 "first time. Have you listed image ids since adding this "
                 "image?")
 
 
 class ProjectNotFound(NotFound):
-    message = _("Project %(project_id)s could not be found.")
+    msg_fmt = _("Project %(project_id)s could not be found.")
 
 
 class StorageRepositoryNotFound(NotFound):
-    message = _("Cannot find SR to read/write VDI.")
+    msg_fmt = _("Cannot find SR to read/write VDI.")
 
 
 class NetworkDuplicated(Invalid):
-    message = _("Network %(network_id)s is duplicated.")
+    msg_fmt = _("Network %(network_id)s is duplicated.")
 
 
 class NetworkInUse(NovaException):
-    message = _("Network %(network_id)s is still in use.")
+    msg_fmt = _("Network %(network_id)s is still in use.")
 
 
 class NetworkNotCreated(NovaException):
-    message = _("%(req)s is required to create a network.")
+    msg_fmt = _("%(req)s is required to create a network.")
 
 
 class NetworkNotFound(NotFound):
-    message = _("Network %(network_id)s could not be found.")
+    msg_fmt = _("Network %(network_id)s could not be found.")
 
 
 class PortNotFound(NotFound):
-    message = _("Port id %(port_id)s could not be found.")
+    msg_fmt = _("Port id %(port_id)s could not be found.")
 
 
 class NetworkNotFoundForBridge(NetworkNotFound):
-    message = _("Network could not be found for bridge %(bridge)s")
+    msg_fmt = _("Network could not be found for bridge %(bridge)s")
 
 
 class NetworkNotFoundForUUID(NetworkNotFound):
-    message = _("Network could not be found for uuid %(uuid)s")
+    msg_fmt = _("Network could not be found for uuid %(uuid)s")
 
 
 class NetworkNotFoundForCidr(NetworkNotFound):
-    message = _("Network could not be found with cidr %(cidr)s.")
+    msg_fmt = _("Network could not be found with cidr %(cidr)s.")
 
 
 class NetworkNotFoundForInstance(NetworkNotFound):
-    message = _("Network could not be found for instance %(instance_id)s.")
+    msg_fmt = _("Network could not be found for instance %(instance_id)s.")
 
 
 class NoNetworksFound(NotFound):
-    message = _("No networks defined.")
+    msg_fmt = _("No networks defined.")
 
 
 class NetworkNotFoundForProject(NotFound):
-    message = _("Either Network uuid %(network_uuid)s is not present or "
+    msg_fmt = _("Either Network uuid %(network_uuid)s is not present or "
                 "is not assigned to the project %(project_id)s.")
 
 
 class NetworkAmbiguous(Invalid):
-    message = _("More than one possible network found. Specify "
+    msg_fmt = _("More than one possible network found. Specify "
                 "network ID(s) to select which one(s) to connect to,")
 
 
 class DatastoreNotFound(NotFound):
-    message = _("Could not find the datastore reference(s) which the VM uses.")
+    msg_fmt = _("Could not find the datastore reference(s) which the VM uses.")
 
 
 class PortInUse(Invalid):
-    message = _("Port %(port_id)s is still in use.")
+    msg_fmt = _("Port %(port_id)s is still in use.")
 
 
 class PortNotUsable(Invalid):
-    message = _("Port %(port_id)s not usable for instance %(instance)s.")
+    msg_fmt = _("Port %(port_id)s not usable for instance %(instance)s.")
 
 
 class PortNotFree(Invalid):
-    message = _("No free port available for instance %(instance)s.")
+    msg_fmt = _("No free port available for instance %(instance)s.")
 
 
 class FixedIpExists(Duplicate):
-    message = _("Fixed ip %(address)s already exists.")
+    msg_fmt = _("Fixed ip %(address)s already exists.")
 
 
 class FixedIpNotFound(NotFound):
-    message = _("No fixed IP associated with id %(id)s.")
+    msg_fmt = _("No fixed IP associated with id %(id)s.")
 
 
 class FixedIpNotFoundForAddress(FixedIpNotFound):
-    message = _("Fixed ip not found for address %(address)s.")
+    msg_fmt = _("Fixed ip not found for address %(address)s.")
 
 
 class FixedIpNotFoundForInstance(FixedIpNotFound):
-    message = _("Instance %(instance_uuid)s has zero fixed ips.")
+    msg_fmt = _("Instance %(instance_uuid)s has zero fixed ips.")
 
 
 class FixedIpNotFoundForNetworkHost(FixedIpNotFound):
-    message = _("Network host %(host)s has zero fixed ips "
+    msg_fmt = _("Network host %(host)s has zero fixed ips "
                 "in network %(network_id)s.")
 
 
 class FixedIpNotFoundForSpecificInstance(FixedIpNotFound):
-    message = _("Instance %(instance_uuid)s doesn't have fixed ip '%(ip)s'.")
+    msg_fmt = _("Instance %(instance_uuid)s doesn't have fixed ip '%(ip)s'.")
 
 
 class FixedIpNotFoundForNetwork(FixedIpNotFound):
-    message = _("Fixed IP address (%(address)s) does not exist in "
+    msg_fmt = _("Fixed IP address (%(address)s) does not exist in "
                 "network (%(network_uuid)s).")
 
 
 class FixedIpAlreadyInUse(NovaException):
-    message = _("Fixed IP address %(address)s is already in use on instance "
+    msg_fmt = _("Fixed IP address %(address)s is already in use on instance "
                 "%(instance_uuid)s.")
 
 
 class FixedIpAssociatedWithMultipleInstances(NovaException):
-    message = _("More than one instance is associated with fixed ip address "
+    msg_fmt = _("More than one instance is associated with fixed ip address "
                 "'%(address)s'.")
 
 
 class FixedIpInvalid(Invalid):
-    message = _("Fixed IP address %(address)s is invalid.")
+    msg_fmt = _("Fixed IP address %(address)s is invalid.")
 
 
 class NoMoreFixedIps(NovaException):
-    message = _("Zero fixed ips available.")
+    msg_fmt = _("Zero fixed ips available.")
 
 
 class NoFixedIpsDefined(NotFound):
-    message = _("Zero fixed ips could be found.")
+    msg_fmt = _("Zero fixed ips could be found.")
 
 
 class FloatingIpExists(Duplicate):
-    message = _("Floating ip %(address)s already exists.")
+    msg_fmt = _("Floating ip %(address)s already exists.")
 
 
 class FloatingIpNotFound(NotFound):
-    message = _("Floating ip not found for id %(id)s.")
+    msg_fmt = _("Floating ip not found for id %(id)s.")
 
 
 class FloatingIpDNSExists(Invalid):
-    message = _("The DNS entry %(name)s already exists in domain %(domain)s.")
+    msg_fmt = _("The DNS entry %(name)s already exists in domain %(domain)s.")
 
 
 class FloatingIpNotFoundForAddress(FloatingIpNotFound):
-    message = _("Floating ip not found for address %(address)s.")
+    msg_fmt = _("Floating ip not found for address %(address)s.")
 
 
 class FloatingIpNotFoundForHost(FloatingIpNotFound):
-    message = _("Floating ip not found for host %(host)s.")
+    msg_fmt = _("Floating ip not found for host %(host)s.")
 
 
 class FloatingIpMultipleFoundForAddress(NovaException):
-    message = _("Multiple floating ips are found for address %(address)s.")
+    msg_fmt = _("Multiple floating ips are found for address %(address)s.")
 
 
 class FloatingIpPoolNotFound(NotFound):
-    message = _("Floating ip pool not found.")
+    msg_fmt = _("Floating ip pool not found.")
     safe = True
 
 
 class NoMoreFloatingIps(FloatingIpNotFound):
-    message = _("Zero floating ips available.")
+    msg_fmt = _("Zero floating ips available.")
     safe = True
 
 
 class FloatingIpAssociated(NovaException):
-    message = _("Floating ip %(address)s is associated.")
+    msg_fmt = _("Floating ip %(address)s is associated.")
 
 
 class FloatingIpNotAssociated(NovaException):
-    message = _("Floating ip %(address)s is not associated.")
+    msg_fmt = _("Floating ip %(address)s is not associated.")
 
 
 class NoFloatingIpsDefined(NotFound):
-    message = _("Zero floating ips exist.")
+    msg_fmt = _("Zero floating ips exist.")
 
 
 class NoFloatingIpInterface(NotFound):
-    message = _("Interface %(interface)s not found.")
+    msg_fmt = _("Interface %(interface)s not found.")
 
 
 class CannotDisassociateAutoAssignedFloatingIP(NovaException):
-    message = _("Cannot disassociate auto assigned floating ip")
+    msg_fmt = _("Cannot disassociate auto assigned floating ip")
 
 
 class KeypairNotFound(NotFound):
-    message = _("Keypair %(name)s not found for user %(user_id)s")
+    msg_fmt = _("Keypair %(name)s not found for user %(user_id)s")
 
 
 class ServiceNotFound(NotFound):
-    message = _("Service %(service_id)s could not be found.")
+    msg_fmt = _("Service %(service_id)s could not be found.")
 
 
 class ServiceBinaryExists(Duplicate):
-    message = _("Service with host %(host)s binary %(binary)s exists.")
+    msg_fmt = _("Service with host %(host)s binary %(binary)s exists.")
 
 
 class ServiceTopicExists(Duplicate):
-    message = _("Service with host %(host)s topic %(topic)s exists.")
+    msg_fmt = _("Service with host %(host)s topic %(topic)s exists.")
 
 
 class HostNotFound(NotFound):
-    message = _("Host %(host)s could not be found.")
+    msg_fmt = _("Host %(host)s could not be found.")
 
 
 class ComputeHostNotFound(HostNotFound):
-    message = _("Compute host %(host)s could not be found.")
+    msg_fmt = _("Compute host %(host)s could not be found.")
 
 
 class HostBinaryNotFound(NotFound):
-    message = _("Could not find binary %(binary)s on host %(host)s.")
+    msg_fmt = _("Could not find binary %(binary)s on host %(host)s.")
 
 
 class InvalidReservationExpiration(Invalid):
-    message = _("Invalid reservation expiration %(expire)s.")
+    msg_fmt = _("Invalid reservation expiration %(expire)s.")
 
 
 class InvalidQuotaValue(Invalid):
-    message = _("Change would make usage less than 0 for the following "
+    msg_fmt = _("Change would make usage less than 0 for the following "
                 "resources: %(unders)s")
 
 
 class QuotaNotFound(NotFound):
-    message = _("Quota could not be found")
+    msg_fmt = _("Quota could not be found")
 
 
 class QuotaExists(Duplicate):
-    message = _("Quota exists for project %(project_id)s, "
+    msg_fmt = _("Quota exists for project %(project_id)s, "
                 "resource %(resource)s")
 
 
 class QuotaResourceUnknown(QuotaNotFound):
-    message = _("Unknown quota resources %(unknown)s.")
+    msg_fmt = _("Unknown quota resources %(unknown)s.")
 
 
 class ProjectQuotaNotFound(QuotaNotFound):
-    message = _("Quota for project %(project_id)s could not be found.")
+    msg_fmt = _("Quota for project %(project_id)s could not be found.")
 
 
 class QuotaClassNotFound(QuotaNotFound):
-    message = _("Quota class %(class_name)s could not be found.")
+    msg_fmt = _("Quota class %(class_name)s could not be found.")
 
 
 class QuotaUsageNotFound(QuotaNotFound):
-    message = _("Quota usage for project %(project_id)s could not be found.")
+    msg_fmt = _("Quota usage for project %(project_id)s could not be found.")
 
 
 class ReservationNotFound(QuotaNotFound):
-    message = _("Quota reservation %(uuid)s could not be found.")
+    msg_fmt = _("Quota reservation %(uuid)s could not be found.")
 
 
 class OverQuota(NovaException):
-    message = _("Quota exceeded for resources: %(overs)s")
+    msg_fmt = _("Quota exceeded for resources: %(overs)s")
 
 
 class SecurityGroupNotFound(NotFound):
-    message = _("Security group %(security_group_id)s not found.")
+    msg_fmt = _("Security group %(security_group_id)s not found.")
 
 
 class SecurityGroupNotFoundForProject(SecurityGroupNotFound):
-    message = _("Security group %(security_group_id)s not found "
+    msg_fmt = _("Security group %(security_group_id)s not found "
                 "for project %(project_id)s.")
 
 
 class SecurityGroupNotFoundForRule(SecurityGroupNotFound):
-    message = _("Security group with rule %(rule_id)s not found.")
+    msg_fmt = _("Security group with rule %(rule_id)s not found.")
 
 
 class SecurityGroupExists(Invalid):
-    message = _("Security group %(security_group_name)s already exists "
+    msg_fmt = _("Security group %(security_group_name)s already exists "
                 "for project %(project_id)s.")
 
 
 class SecurityGroupExistsForInstance(Invalid):
-    message = _("Security group %(security_group_id)s is already associated"
+    msg_fmt = _("Security group %(security_group_id)s is already associated"
                 " with the instance %(instance_id)s")
 
 
 class SecurityGroupNotExistsForInstance(Invalid):
-    message = _("Security group %(security_group_id)s is not associated with"
+    msg_fmt = _("Security group %(security_group_id)s is not associated with"
                 " the instance %(instance_id)s")
 
 
 class SecurityGroupDefaultRuleNotFound(Invalid):
-    message = _("Security group default rule (%rule_id)s not found.")
+    msg_fmt = _("Security group default rule (%rule_id)s not found.")
 
 
 class SecurityGroupCannotBeApplied(Invalid):
-    message = _("Network requires port_security_enabled and subnet associated"
+    msg_fmt = _("Network requires port_security_enabled and subnet associated"
                 " in order to apply security groups.")
 
 
 class NoUniqueMatch(NovaException):
-    message = _("No Unique Match Found.")
+    msg_fmt = _("No Unique Match Found.")
     code = 409
 
 
 class MigrationNotFound(NotFound):
-    message = _("Migration %(migration_id)s could not be found.")
+    msg_fmt = _("Migration %(migration_id)s could not be found.")
 
 
 class MigrationNotFoundByStatus(MigrationNotFound):
-    message = _("Migration not found for instance %(instance_id)s "
+    msg_fmt = _("Migration not found for instance %(instance_id)s "
                 "with status %(status)s.")
 
 
 class ConsolePoolNotFound(NotFound):
-    message = _("Console pool %(pool_id)s could not be found.")
+    msg_fmt = _("Console pool %(pool_id)s could not be found.")
 
 
 class ConsolePoolExists(Duplicate):
-    message = _("Console pool with host %(host)s, console_type "
+    msg_fmt = _("Console pool with host %(host)s, console_type "
                 "%(console_type)s and compute_host %(compute_host)s "
                 "already exists.")
 
 
 class ConsolePoolNotFoundForHostType(NotFound):
-    message = _("Console pool of type %(console_type)s "
+    msg_fmt = _("Console pool of type %(console_type)s "
                 "for compute host %(compute_host)s "
                 "on proxy host %(host)s not found.")
 
 
 class ConsoleNotFound(NotFound):
-    message = _("Console %(console_id)s could not be found.")
+    msg_fmt = _("Console %(console_id)s could not be found.")
 
 
 class ConsoleNotFoundForInstance(ConsoleNotFound):
-    message = _("Console for instance %(instance_uuid)s could not be found.")
+    msg_fmt = _("Console for instance %(instance_uuid)s could not be found.")
 
 
 class ConsoleNotFoundInPoolForInstance(ConsoleNotFound):
-    message = _("Console for instance %(instance_uuid)s "
+    msg_fmt = _("Console for instance %(instance_uuid)s "
                 "in pool %(pool_id)s could not be found.")
 
 
 class ConsoleTypeInvalid(Invalid):
-    message = _("Invalid console type %(console_type)s")
+    msg_fmt = _("Invalid console type %(console_type)s")
 
 
 class InstanceTypeNotFound(NotFound):
-    message = _("Instance type %(instance_type_id)s could not be found.")
+    msg_fmt = _("Instance type %(instance_type_id)s could not be found.")
 
 
 class InstanceTypeNotFoundByName(InstanceTypeNotFound):
-    message = _("Instance type with name %(instance_type_name)s "
+    msg_fmt = _("Instance type with name %(instance_type_name)s "
                 "could not be found.")
 
 
 class FlavorNotFound(NotFound):
-    message = _("Flavor %(flavor_id)s could not be found.")
+    msg_fmt = _("Flavor %(flavor_id)s could not be found.")
 
 
 class FlavorAccessNotFound(NotFound):
-    message = _("Flavor access not found for %(flavor_id)s / "
+    msg_fmt = _("Flavor access not found for %(flavor_id)s / "
                 "%(project_id)s combination.")
 
 
 class CellNotFound(NotFound):
-    message = _("Cell %(cell_name)s doesn't exist.")
+    msg_fmt = _("Cell %(cell_name)s doesn't exist.")
 
 
 class CellExists(Duplicate):
-    message = _("Cell with name %(name)s already exists.")
+    msg_fmt = _("Cell with name %(name)s already exists.")
 
 
 class CellRoutingInconsistency(NovaException):
-    message = _("Inconsistency in cell routing: %(reason)s")
+    msg_fmt = _("Inconsistency in cell routing: %(reason)s")
 
 
 class CellServiceAPIMethodNotFound(NotFound):
-    message = _("Service API method not found: %(detail)s")
+    msg_fmt = _("Service API method not found: %(detail)s")
 
 
 class CellTimeout(NotFound):
-    message = _("Timeout waiting for response from cell")
+    msg_fmt = _("Timeout waiting for response from cell")
 
 
 class CellMaxHopCountReached(NovaException):
-    message = _("Cell message has reached maximum hop count: %(hop_count)s")
+    msg_fmt = _("Cell message has reached maximum hop count: %(hop_count)s")
 
 
 class NoCellsAvailable(NovaException):
-    message = _("No cells available matching scheduling criteria.")
+    msg_fmt = _("No cells available matching scheduling criteria.")
 
 
 class CellError(NovaException):
-    message = _("Exception received during cell processing: %(exc_name)s.")
+    msg_fmt = _("Exception received during cell processing: %(exc_name)s.")
 
 
 class CellsUpdateUnsupported(NovaException):
@@ -894,372 +894,372 @@ class CellsUpdateUnsupported(NovaException):
 
 
 class InstanceUnknownCell(NotFound):
-    message = _("Cell is not known for instance %(instance_uuid)s")
+    msg_fmt = _("Cell is not known for instance %(instance_uuid)s")
 
 
 class SchedulerHostFilterNotFound(NotFound):
-    message = _("Scheduler Host Filter %(filter_name)s could not be found.")
+    msg_fmt = _("Scheduler Host Filter %(filter_name)s could not be found.")
 
 
 class InstanceMetadataNotFound(NotFound):
-    message = _("Instance %(instance_uuid)s has no metadata with "
+    msg_fmt = _("Instance %(instance_uuid)s has no metadata with "
                 "key %(metadata_key)s.")
 
 
 class InstanceSystemMetadataNotFound(NotFound):
-    message = _("Instance %(instance_uuid)s has no system metadata with "
+    msg_fmt = _("Instance %(instance_uuid)s has no system metadata with "
                 "key %(metadata_key)s.")
 
 
 class InstanceTypeExtraSpecsNotFound(NotFound):
-    message = _("Instance Type %(instance_type_id)s has no extra specs with "
+    msg_fmt = _("Instance Type %(instance_type_id)s has no extra specs with "
                 "key %(extra_specs_key)s.")
 
 
 class FileNotFound(NotFound):
-    message = _("File %(file_path)s could not be found.")
+    msg_fmt = _("File %(file_path)s could not be found.")
 
 
 class NoFilesFound(NotFound):
-    message = _("Zero files could be found.")
+    msg_fmt = _("Zero files could be found.")
 
 
 class SwitchNotFoundForNetworkAdapter(NotFound):
-    message = _("Virtual switch associated with the "
+    msg_fmt = _("Virtual switch associated with the "
                 "network adapter %(adapter)s not found.")
 
 
 class NetworkAdapterNotFound(NotFound):
-    message = _("Network adapter %(adapter)s could not be found.")
+    msg_fmt = _("Network adapter %(adapter)s could not be found.")
 
 
 class ClassNotFound(NotFound):
-    message = _("Class %(class_name)s could not be found: %(exception)s")
+    msg_fmt = _("Class %(class_name)s could not be found: %(exception)s")
 
 
 class NotAllowed(NovaException):
-    message = _("Action not allowed.")
+    msg_fmt = _("Action not allowed.")
 
 
 class ImageRotationNotAllowed(NovaException):
-    message = _("Rotation is not allowed for snapshots")
+    msg_fmt = _("Rotation is not allowed for snapshots")
 
 
 class RotationRequiredForBackup(NovaException):
-    message = _("Rotation param is required for backup image_type")
+    msg_fmt = _("Rotation param is required for backup image_type")
 
 
 class KeyPairExists(Duplicate):
-    message = _("Key pair '%(key_name)s' already exists.")
+    msg_fmt = _("Key pair '%(key_name)s' already exists.")
 
 
 class InstanceExists(Duplicate):
-    message = _("Instance %(name)s already exists.")
+    msg_fmt = _("Instance %(name)s already exists.")
 
 
 class InstanceTypeExists(Duplicate):
-    message = _("Instance Type with name %(name)s already exists.")
+    msg_fmt = _("Instance Type with name %(name)s already exists.")
 
 
 class InstanceTypeIdExists(Duplicate):
-    message = _("Instance Type with ID %(flavor_id)s already exists.")
+    msg_fmt = _("Instance Type with ID %(flavor_id)s already exists.")
 
 
 class FlavorAccessExists(Duplicate):
-    message = _("Flavor access already exists for flavor %(flavor_id)s "
+    msg_fmt = _("Flavor access already exists for flavor %(flavor_id)s "
                 "and project %(project_id)s combination.")
 
 
 class InvalidSharedStorage(NovaException):
-    message = _("%(path)s is not on shared storage: %(reason)s")
+    msg_fmt = _("%(path)s is not on shared storage: %(reason)s")
 
 
 class InvalidLocalStorage(NovaException):
-    message = _("%(path)s is not on local storage: %(reason)s")
+    msg_fmt = _("%(path)s is not on local storage: %(reason)s")
 
 
 class MigrationError(NovaException):
-    message = _("Migration error") + ": %(reason)s"
+    msg_fmt = _("Migration error") + ": %(reason)s"
 
 
 class MigrationPreCheckError(MigrationError):
-    message = _("Migration pre-check error") + ": %(reason)s"
+    msg_fmt = _("Migration pre-check error") + ": %(reason)s"
 
 
 class MalformedRequestBody(NovaException):
-    message = _("Malformed message body: %(reason)s")
+    msg_fmt = _("Malformed message body: %(reason)s")
 
 
 # NOTE(johannes): NotFound should only be used when a 404 error is
 # appropriate to be returned
 class ConfigNotFound(NovaException):
-    message = _("Could not find config at %(path)s")
+    msg_fmt = _("Could not find config at %(path)s")
 
 
 class PasteAppNotFound(NovaException):
-    message = _("Could not load paste app '%(name)s' from %(path)s")
+    msg_fmt = _("Could not load paste app '%(name)s' from %(path)s")
 
 
 class CannotResizeToSameFlavor(NovaException):
-    message = _("When resizing, instances must change flavor!")
+    msg_fmt = _("When resizing, instances must change flavor!")
 
 
 class ResizeError(NovaException):
-    message = _("Resize error: %(reason)s")
+    msg_fmt = _("Resize error: %(reason)s")
 
 
 class CannotResizeDisk(NovaException):
-    message = _("Server disk was unable to be resized because: %(reason)s")
+    msg_fmt = _("Server disk was unable to be resized because: %(reason)s")
 
 
 class InstanceTypeMemoryTooSmall(NovaException):
-    message = _("Instance type's memory is too small for requested image.")
+    msg_fmt = _("Instance type's memory is too small for requested image.")
 
 
 class InstanceTypeDiskTooSmall(NovaException):
-    message = _("Instance type's disk is too small for requested image.")
+    msg_fmt = _("Instance type's disk is too small for requested image.")
 
 
 class InsufficientFreeMemory(NovaException):
-    message = _("Insufficient free memory on compute node to start %(uuid)s.")
+    msg_fmt = _("Insufficient free memory on compute node to start %(uuid)s.")
 
 
 class NoValidHost(NovaException):
-    message = _("No valid host was found. %(reason)s")
+    msg_fmt = _("No valid host was found. %(reason)s")
 
 
 class QuotaError(NovaException):
-    message = _("Quota exceeded") + ": code=%(code)s"
+    msg_fmt = _("Quota exceeded") + ": code=%(code)s"
     code = 413
     headers = {'Retry-After': 0}
     safe = True
 
 
 class TooManyInstances(QuotaError):
-    message = _("Quota exceeded for %(overs)s: Requested %(req)s,"
+    msg_fmt = _("Quota exceeded for %(overs)s: Requested %(req)s,"
                 " but already used %(used)d of %(allowed)d %(resource)s")
 
 
 class FloatingIpLimitExceeded(QuotaError):
-    message = _("Maximum number of floating ips exceeded")
+    msg_fmt = _("Maximum number of floating ips exceeded")
 
 
 class FixedIpLimitExceeded(QuotaError):
-    message = _("Maximum number of fixed ips exceeded")
+    msg_fmt = _("Maximum number of fixed ips exceeded")
 
 
 class MetadataLimitExceeded(QuotaError):
-    message = _("Maximum number of metadata items exceeds %(allowed)d")
+    msg_fmt = _("Maximum number of metadata items exceeds %(allowed)d")
 
 
 class OnsetFileLimitExceeded(QuotaError):
-    message = _("Personality file limit exceeded")
+    msg_fmt = _("Personality file limit exceeded")
 
 
 class OnsetFilePathLimitExceeded(QuotaError):
-    message = _("Personality file path too long")
+    msg_fmt = _("Personality file path too long")
 
 
 class OnsetFileContentLimitExceeded(QuotaError):
-    message = _("Personality file content too long")
+    msg_fmt = _("Personality file content too long")
 
 
 class KeypairLimitExceeded(QuotaError):
-    message = _("Maximum number of key pairs exceeded")
+    msg_fmt = _("Maximum number of key pairs exceeded")
 
 
 class SecurityGroupLimitExceeded(QuotaError):
-    message = _("Maximum number of security groups or rules exceeded")
+    msg_fmt = _("Maximum number of security groups or rules exceeded")
 
 
 class AggregateError(NovaException):
-    message = _("Aggregate %(aggregate_id)s: action '%(action)s' "
+    msg_fmt = _("Aggregate %(aggregate_id)s: action '%(action)s' "
                 "caused an error: %(reason)s.")
 
 
 class AggregateNotFound(NotFound):
-    message = _("Aggregate %(aggregate_id)s could not be found.")
+    msg_fmt = _("Aggregate %(aggregate_id)s could not be found.")
 
 
 class AggregateNameExists(Duplicate):
-    message = _("Aggregate %(aggregate_name)s already exists.")
+    msg_fmt = _("Aggregate %(aggregate_name)s already exists.")
 
 
 class AggregateHostNotFound(NotFound):
-    message = _("Aggregate %(aggregate_id)s has no host %(host)s.")
+    msg_fmt = _("Aggregate %(aggregate_id)s has no host %(host)s.")
 
 
 class AggregateMetadataNotFound(NotFound):
-    message = _("Aggregate %(aggregate_id)s has no metadata with "
+    msg_fmt = _("Aggregate %(aggregate_id)s has no metadata with "
                 "key %(metadata_key)s.")
 
 
 class AggregateHostExists(Duplicate):
-    message = _("Aggregate %(aggregate_id)s already has host %(host)s.")
+    msg_fmt = _("Aggregate %(aggregate_id)s already has host %(host)s.")
 
 
 class InstanceTypeCreateFailed(NovaException):
-    message = _("Unable to create instance type")
+    msg_fmt = _("Unable to create instance type")
 
 
 class InstancePasswordSetFailed(NovaException):
-    message = _("Failed to set admin password on %(instance)s "
+    msg_fmt = _("Failed to set admin password on %(instance)s "
                 "because %(reason)s")
     safe = True
 
 
 class DuplicateVlan(Duplicate):
-    message = _("Detected existing vlan with id %(vlan)d")
+    msg_fmt = _("Detected existing vlan with id %(vlan)d")
 
 
 class CidrConflict(NovaException):
-    message = _("There was a conflict when trying to complete your request.")
+    msg_fmt = _("There was a conflict when trying to complete your request.")
     code = 409
 
 
 class InstanceNotFound(NotFound):
-    message = _("Instance %(instance_id)s could not be found.")
+    msg_fmt = _("Instance %(instance_id)s could not be found.")
 
 
 class InstanceInfoCacheNotFound(NotFound):
-    message = _("Info cache for instance %(instance_uuid)s could not be "
+    msg_fmt = _("Info cache for instance %(instance_uuid)s could not be "
                 "found.")
 
 
 class NodeNotFound(NotFound):
-    message = _("Node %(node_id)s could not be found.")
+    msg_fmt = _("Node %(node_id)s could not be found.")
 
 
 class NodeNotFoundByUUID(NotFound):
-    message = _("Node with UUID %(node_uuid)s could not be found.")
+    msg_fmt = _("Node with UUID %(node_uuid)s could not be found.")
 
 
 class MarkerNotFound(NotFound):
-    message = _("Marker %(marker)s could not be found.")
+    msg_fmt = _("Marker %(marker)s could not be found.")
 
 
 class InvalidInstanceIDMalformed(Invalid):
-    message = _("Invalid id: %(val)s (expecting \"i-...\").")
+    msg_fmt = _("Invalid id: %(val)s (expecting \"i-...\").")
 
 
 class CouldNotFetchImage(NovaException):
-    message = _("Could not fetch image %(image_id)s")
+    msg_fmt = _("Could not fetch image %(image_id)s")
 
 
 class CouldNotUploadImage(NovaException):
-    message = _("Could not upload image %(image_id)s")
+    msg_fmt = _("Could not upload image %(image_id)s")
 
 
 class TaskAlreadyRunning(NovaException):
-    message = _("Task %(task_name)s is already running on host %(host)s")
+    msg_fmt = _("Task %(task_name)s is already running on host %(host)s")
 
 
 class TaskNotRunning(NovaException):
-    message = _("Task %(task_name)s is not running on host %(host)s")
+    msg_fmt = _("Task %(task_name)s is not running on host %(host)s")
 
 
 class InstanceIsLocked(InstanceInvalidState):
-    message = _("Instance %(instance_uuid)s is locked")
+    msg_fmt = _("Instance %(instance_uuid)s is locked")
 
 
 class ConfigDriveInvalidValue(Invalid):
-    message = _("Invalid value for Config Drive option: %(option)s")
+    msg_fmt = _("Invalid value for Config Drive option: %(option)s")
 
 
 class ConfigDriveMountFailed(NovaException):
-    message = _("Could not mount vfat config drive. %(operation)s failed. "
+    msg_fmt = _("Could not mount vfat config drive. %(operation)s failed. "
                 "Error: %(error)s")
 
 
 class ConfigDriveUnknownFormat(NovaException):
-    message = _("Unknown config drive format %(format)s. Select one of "
+    msg_fmt = _("Unknown config drive format %(format)s. Select one of "
                 "iso9660 or vfat.")
 
 
 class InterfaceAttachFailed(Invalid):
-    message = _("Failed to attach network adapter device to %(instance)s")
+    msg_fmt = _("Failed to attach network adapter device to %(instance)s")
 
 
 class InterfaceDetachFailed(Invalid):
-    message = _("Failed to detach network adapter device from  %(instance)s")
+    msg_fmt = _("Failed to detach network adapter device from  %(instance)s")
 
 
 class InstanceUserDataTooLarge(NovaException):
-    message = _("User data too large. User data must be no larger than "
+    msg_fmt = _("User data too large. User data must be no larger than "
                 "%(maxsize)s bytes once base64 encoded. Your data is "
                 "%(length)d bytes")
 
 
 class InstanceUserDataMalformed(NovaException):
-    message = _("User data needs to be valid base 64.")
+    msg_fmt = _("User data needs to be valid base 64.")
 
 
 class UnexpectedTaskStateError(NovaException):
-    message = _("unexpected task state: expecting %(expected)s but "
+    msg_fmt = _("unexpected task state: expecting %(expected)s but "
                 "the actual state is %(actual)s")
 
 
 class InstanceActionNotFound(NovaException):
-    message = _("Action for request_id %(request_id)s on instance"
+    msg_fmt = _("Action for request_id %(request_id)s on instance"
                 " %(instance_uuid)s not found")
 
 
 class InstanceActionEventNotFound(NovaException):
-    message = _("Event %(event)s not found for action id %(action_id)s")
+    msg_fmt = _("Event %(event)s not found for action id %(action_id)s")
 
 
 class UnexpectedVMStateError(NovaException):
-    message = _("unexpected VM state: expecting %(expected)s but "
+    msg_fmt = _("unexpected VM state: expecting %(expected)s but "
                 "the actual state is %(actual)s")
 
 
 class CryptoCAFileNotFound(FileNotFound):
-    message = _("The CA file for %(project)s could not be found")
+    msg_fmt = _("The CA file for %(project)s could not be found")
 
 
 class CryptoCRLFileNotFound(FileNotFound):
-    message = _("The CRL file for %(project)s could not be found")
+    msg_fmt = _("The CRL file for %(project)s could not be found")
 
 
 class InstanceRecreateNotSupported(Invalid):
-    message = _('Instance recreate is not implemented by this virt driver.')
+    msg_fmt = _('Instance recreate is not implemented by this virt driver.')
 
 
 class ServiceGroupUnavailable(NovaException):
-    message = _("The service from servicegroup driver %(driver)s is "
+    msg_fmt = _("The service from servicegroup driver %(driver)s is "
                 "temporarily unavailable.")
 
 
 class DBNotAllowed(NovaException):
-    message = _('%(binary)s attempted direct database access which is '
+    msg_fmt = _('%(binary)s attempted direct database access which is '
                 'not allowed by policy')
 
 
 class UnsupportedVirtType(Invalid):
-    message = _("Virtualization type '%(virt)s' is not supported by "
+    msg_fmt = _("Virtualization type '%(virt)s' is not supported by "
                 "this compute driver")
 
 
 class UnsupportedHardware(Invalid):
-    message = _("Requested hardware '%(model)s' is not supported by "
+    msg_fmt = _("Requested hardware '%(model)s' is not supported by "
                 "the '%(virt)s' virt driver")
 
 
 class Base64Exception(NovaException):
-    message = _("Invalid Base 64 data for file %(path)s")
+    msg_fmt = _("Invalid Base 64 data for file %(path)s")
 
 
 class BuildAbortException(NovaException):
-    message = _("Build of instance %(instance_uuid)s aborted: %(reason)s")
+    msg_fmt = _("Build of instance %(instance_uuid)s aborted: %(reason)s")
 
 
 class RescheduledException(NovaException):
-    message = _("Build of instance %(instance_uuid)s was re-scheduled: "
+    msg_fmt = _("Build of instance %(instance_uuid)s was re-scheduled: "
                 "%(reason)s")
 
 
 class ShadowTableExists(NovaException):
-    message = _("Shadow table with name %(name)s already exists.")
+    msg_fmt = _("Shadow table with name %(name)s already exists.")
 
 
 class InstanceFaultRollback(NovaException):
@@ -1270,51 +1270,51 @@ class InstanceFaultRollback(NovaException):
 
 
 class UnsupportedObjectError(NovaException):
-    message = _('Unsupported object type %(objtype)s')
+    msg_fmt = _('Unsupported object type %(objtype)s')
 
 
 class OrphanedObjectError(NovaException):
-    message = _('Cannot call %(method)s on orphaned %(objtype)s object')
+    msg_fmt = _('Cannot call %(method)s on orphaned %(objtype)s object')
 
 
 class IncompatibleObjectVersion(NovaException):
-    message = _('Version %(objver)s of %(objname)s is not supported')
+    msg_fmt = _('Version %(objver)s of %(objname)s is not supported')
 
 
 class CoreAPIMissing(NovaException):
-    message = _("Core API extensions are missing: %(missing_apis)s")
+    msg_fmt = _("Core API extensions are missing: %(missing_apis)s")
 
 
 class AgentError(NovaException):
-    message = _('Error during following call to agent: %(method)s')
+    msg_fmt = _('Error during following call to agent: %(method)s')
 
 
 class AgentTimeout(AgentError):
-    message = _('Unable to contact guest agent. '
+    msg_fmt = _('Unable to contact guest agent. '
                 'The following call timed out: %(method)s')
 
 
 class AgentNotImplemented(AgentError):
-    message = _('Agent does not support the call: %(method)s')
+    msg_fmt = _('Agent does not support the call: %(method)s')
 
 
 class InstanceGroupNotFound(NotFound):
-    message = _("Instance group %(group_uuid)s could not be found.")
+    msg_fmt = _("Instance group %(group_uuid)s could not be found.")
 
 
 class InstanceGroupIdExists(Duplicate):
-    message = _("Instance group %(group_uuid)s already exists.")
+    msg_fmt = _("Instance group %(group_uuid)s already exists.")
 
 
 class InstanceGroupMetadataNotFound(NotFound):
-    message = _("Instance group %(group_uuid)s has no metadata with "
+    msg_fmt = _("Instance group %(group_uuid)s has no metadata with "
                 "key %(metadata_key)s.")
 
 
 class InstanceGroupMemberNotFound(NotFound):
-    message = _("Instance group %(group_uuid)s has no member with "
+    msg_fmt = _("Instance group %(group_uuid)s has no member with "
                 "id %(instance_id)s.")
 
 
 class InstanceGroupPolicyNotFound(NotFound):
-    message = _("Instance group %(group_uuid)s has no policy %(policy)s.")
+    msg_fmt = _("Instance group %(group_uuid)s has no policy %(policy)s.")

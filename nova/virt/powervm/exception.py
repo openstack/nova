@@ -18,27 +18,27 @@ from nova import exception
 
 
 class PowerVMConnectionFailed(exception.NovaException):
-    message = _('Connection to PowerVM manager failed')
+    msg_fmt = _('Connection to PowerVM manager failed')
 
 
 class PowerVMFileTransferFailed(exception.NovaException):
-    message = _("File '%(file_path)s' transfer to PowerVM manager failed")
+    msg_fmt = _("File '%(file_path)s' transfer to PowerVM manager failed")
 
 
 class PowerVMFTPTransferFailed(PowerVMFileTransferFailed):
-    message = _("FTP %(ftp_cmd)s from %(source_path)s to %(dest_path)s failed")
+    msg_fmt = _("FTP %(ftp_cmd)s from %(source_path)s to %(dest_path)s failed")
 
 
 class PowerVMLPARInstanceNotFound(exception.InstanceNotFound):
-    message = _("LPAR instance '%(instance_name)s' could not be found")
+    msg_fmt = _("LPAR instance '%(instance_name)s' could not be found")
 
 
 class PowerVMLPARCreationFailed(exception.NovaException):
-    message = _("LPAR instance '%(instance_name)s' creation failed")
+    msg_fmt = _("LPAR instance '%(instance_name)s' creation failed")
 
 
 class PowerVMNoSpaceLeftOnVolumeGroup(exception.NovaException):
-    message = _("No space left on any volume group")
+    msg_fmt = _("No space left on any volume group")
 
 
 class PowerVMLPARAttributeNotFound(exception.NovaException):
@@ -46,27 +46,27 @@ class PowerVMLPARAttributeNotFound(exception.NovaException):
 
 
 class PowerVMLPAROperationTimeout(exception.NovaException):
-    message = _("Operation '%(operation)s' on "
+    msg_fmt = _("Operation '%(operation)s' on "
                 "LPAR '%(instance_name)s' timed out")
 
 
 class PowerVMImageCreationFailed(exception.NovaException):
-    message = _("Image creation failed on PowerVM")
+    msg_fmt = _("Image creation failed on PowerVM")
 
 
 class PowerVMInsufficientFreeMemory(exception.NovaException):
-    message = _("Insufficient free memory on PowerVM system to spawn instance "
+    msg_fmt = _("Insufficient free memory on PowerVM system to spawn instance "
                 "'%(instance_name)s'")
 
 
 class PowerVMInsufficientCPU(exception.NovaException):
-    message = _("Insufficient available CPUs on PowerVM system to spawn "
+    msg_fmt = _("Insufficient available CPUs on PowerVM system to spawn "
                 "instance '%(instance_name)s'")
 
 
 class PowerVMLPARInstanceCleanupFailed(exception.NovaException):
-    message = _("PowerVM LPAR instance '%(instance_name)s' cleanup failed")
+    msg_fmt = _("PowerVM LPAR instance '%(instance_name)s' cleanup failed")
 
 
 class PowerVMUnrecognizedRootDevice(exception.NovaException):
-    message = _("Unrecognized root disk information: '%(disk_info)s'")
+    msg_fmt = _("Unrecognized root disk information: '%(disk_info)s'")
