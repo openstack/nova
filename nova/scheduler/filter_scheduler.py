@@ -343,7 +343,7 @@ class FilterScheduler(driver.Scheduler):
         for num in xrange(num_instances):
             # Filter local hosts based on requirements ...
             hosts = self.host_manager.get_filtered_hosts(hosts,
-                    filter_properties)
+                    filter_properties, index=num)
             if not hosts:
                 # Can't get any more locally.
                 break

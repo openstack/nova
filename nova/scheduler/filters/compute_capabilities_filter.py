@@ -24,6 +24,9 @@ LOG = logging.getLogger(__name__)
 class ComputeCapabilitiesFilter(filters.BaseHostFilter):
     """HostFilter hard-coded to work with InstanceType records."""
 
+    # Instance type and host capabilities do not change within a request
+    run_filter_once_per_request = True
+
     def _satisfies_extra_specs(self, capabilities, instance_type):
         """Check that the capabilities provided by the compute service
         satisfy the extra specs associated with the instance type.

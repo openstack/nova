@@ -23,6 +23,9 @@ LOG = logging.getLogger(__name__)
 class AggregateMultiTenancyIsolation(filters.BaseHostFilter):
     """Isolate tenants in specific aggregates."""
 
+   # Aggreagte data and tenant do not change within a request
+    run_filter_once_per_request = True
+
     def host_passes(self, host_state, filter_properties):
         """If a host is in an aggregate that has the metadata key
         "filter_tenant_id" it can only create instances from that tenant(s).

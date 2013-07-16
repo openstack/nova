@@ -31,6 +31,10 @@ class ImagePropertiesFilter(filters.BaseHostFilter):
     contained in the image dictionary in the request_spec.
     """
 
+    # Image Properites and Compute Capabilites do not change within
+    # a request
+    run_filter_once_per_request = True
+
     def _instance_supported(self, capabilities, image_props):
         img_arch = image_props.get('architecture', None)
         img_h_type = image_props.get('hypervisor_type', None)

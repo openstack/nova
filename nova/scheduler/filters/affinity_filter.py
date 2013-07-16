@@ -32,6 +32,9 @@ class AffinityFilter(filters.BaseHostFilter):
 class DifferentHostFilter(AffinityFilter):
     '''Schedule the instance on a different host from a set of instances.'''
 
+    # The hosts the instances are running on doesn't change within a request
+    run_filter_once_per_request = True
+
     def host_passes(self, host_state, filter_properties):
         context = filter_properties['context']
         scheduler_hints = filter_properties.get('scheduler_hints') or {}
@@ -53,6 +56,9 @@ class SameHostFilter(AffinityFilter):
     of instances.
     '''
 
+    # The hosts the instances are running on doesn't change within a request
+    run_filter_once_per_request = True
+
     def host_passes(self, host_state, filter_properties):
         context = filter_properties['context']
         scheduler_hints = filter_properties.get('scheduler_hints') or {}
@@ -69,6 +75,12 @@ class SameHostFilter(AffinityFilter):
 
 
 class SimpleCIDRAffinityFilter(AffinityFilter):
+    '''Schedule the instance on a host with a particular cidr
+    '''
+
+    # The address of a host doesn't change within a request
+    run_filter_once_per_request = True
+
     def host_passes(self, host_state, filter_properties):
         scheduler_hints = filter_properties.get('scheduler_hints') or {}
 
@@ -89,6 +101,10 @@ class GroupAntiAffinityFilter(AffinityFilter):
     """Schedule the instance on a different host from a set of group
     hosts.
     """
+
+    # The hosts the instances in the group are running on doesn't change
+    # within a request
+    run_filter_once_per_request = True
 
     def host_passes(self, host_state, filter_properties):
         group_hosts = filter_properties.get('group_hosts') or []
