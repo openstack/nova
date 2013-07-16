@@ -123,20 +123,6 @@ class DbTestCase(test.TestCase):
 
 class DbApiTestCase(DbTestCase):
 
-    def test_ec2_ids_not_found_are_printable(self):
-        def check_exc_format(method, value):
-            try:
-                method(self.context, value)
-            except exception.NotFound as exc:
-                self.assertTrue(unicode(value) in unicode(exc))
-
-        check_exc_format(db.get_ec2_volume_id_by_uuid, 'fake')
-        check_exc_format(db.get_volume_uuid_by_ec2_id, 123456)
-        check_exc_format(db.get_ec2_snapshot_id_by_uuid, 'fake')
-        check_exc_format(db.get_snapshot_uuid_by_ec2_id, 123456)
-        check_exc_format(db.get_ec2_instance_id_by_uuid, 'fake')
-        check_exc_format(db.get_instance_uuid_by_ec2_id, 123456)
-
     def test_migration_get_unconfirmed_by_dest_compute(self):
         ctxt = context.get_admin_context()
 
@@ -175,16 +161,6 @@ class DbApiTestCase(DbTestCase):
                 "fake_host2")
         self.assertEqual(0, len(results))
         db.migration_update(ctxt, migration['id'], {"status": "CONFIRMED"})
-
-    def test_get_vol_mapping_non_admin(self):
-        ref = db.ec2_volume_create(self.context, 'fake-uuid')
-        ec2_id = db.get_ec2_volume_id_by_uuid(self.context, 'fake-uuid')
-        self.assertEqual(ref['id'], ec2_id)
-
-    def test_get_snap_mapping_non_admin(self):
-        ref = db.ec2_snapshot_create(self.context, 'fake-uuid')
-        ec2_id = db.get_ec2_snapshot_id_by_uuid(self.context, 'fake-uuid')
-        self.assertEqual(ref['id'], ec2_id)
 
     def _test_decorator_wraps_helper(self, decorator):
         def test_func():
@@ -5448,6 +5424,102 @@ class BwUsageTestCase(test.TestCase, ModelsObjectComparatorMixin):
                                    'fake_mac1')
         self._assertEqualObjects(bw_usage, expected_bw_usage,
                                  ignored_keys=self._ignored_keys)
+
+
+class Ec2TestCase(test.TestCase):
+
+    def setUp(self):
+        super(Ec2TestCase, self).setUp()
+        self.ctxt = context.RequestContext('fake_user', 'fake_project')
+
+    def test_ec2_ids_not_found_are_printable(self):
+        def check_exc_format(method, value):
+            try:
+                method(self.ctxt, value)
+            except exception.NotFound as exc:
+                self.assertTrue(unicode(value) in unicode(exc))
+
+        check_exc_format(db.get_ec2_volume_id_by_uuid, 'fake')
+        check_exc_format(db.get_volume_uuid_by_ec2_id, 123456)
+        check_exc_format(db.get_ec2_snapshot_id_by_uuid, 'fake')
+        check_exc_format(db.get_snapshot_uuid_by_ec2_id, 123456)
+        check_exc_format(db.get_ec2_instance_id_by_uuid, 'fake')
+        check_exc_format(db.get_instance_uuid_by_ec2_id, 123456)
+
+    def test_ec2_volume_create(self):
+        vol = db.ec2_volume_create(self.ctxt, 'fake-uuid')
+        self.assertIsNotNone(vol['id'])
+        self.assertEqual(vol['uuid'], 'fake-uuid')
+
+    def test_get_ec2_volume_id_by_uuid(self):
+        vol = db.ec2_volume_create(self.ctxt, 'fake-uuid')
+        vol_id = db.get_ec2_volume_id_by_uuid(self.ctxt, 'fake-uuid')
+        self.assertEqual(vol['id'], vol_id)
+
+    def test_get_volume_uuid_by_ec2_id(self):
+        vol = db.ec2_volume_create(self.ctxt, 'fake-uuid')
+        vol_uuid = db.get_volume_uuid_by_ec2_id(self.ctxt, vol['id'])
+        self.assertEqual(vol_uuid, 'fake-uuid')
+
+    def test_get_ec2_volume_id_by_uuid_not_found(self):
+        self.assertRaises(exception.VolumeNotFound,
+                          db.get_ec2_volume_id_by_uuid,
+                          self.ctxt, 'uuid-not-present')
+
+    def test_get_volume_uuid_by_ec2_id_not_found(self):
+        self.assertRaises(exception.VolumeNotFound,
+                          db.get_volume_uuid_by_ec2_id,
+                          self.ctxt, 100500)
+
+    def test_ec2_snapshot_create(self):
+        snap = db.ec2_snapshot_create(self.ctxt, 'fake-uuid')
+        self.assertIsNotNone(snap['id'])
+        self.assertEqual(snap['uuid'], 'fake-uuid')
+
+    def test_get_ec2_snapshot_id_by_uuid(self):
+        snap = db.ec2_snapshot_create(self.ctxt, 'fake-uuid')
+        snap_id = db.get_ec2_snapshot_id_by_uuid(self.ctxt, 'fake-uuid')
+        self.assertEqual(snap['id'], snap_id)
+
+    def test_get_snapshot_uuid_by_ec2_id(self):
+        snap = db.ec2_snapshot_create(self.ctxt, 'fake-uuid')
+        snap_uuid = db.get_snapshot_uuid_by_ec2_id(self.ctxt, snap['id'])
+        self.assertEqual(snap_uuid, 'fake-uuid')
+
+    def test_get_ec2_snapshot_id_by_uuid_not_found(self):
+        self.assertRaises(exception.SnapshotNotFound,
+                          db.get_ec2_snapshot_id_by_uuid,
+                          self.ctxt, 'uuid-not-present')
+
+    def test_get_snapshot_uuid_by_ec2_id_not_found(self):
+        self.assertRaises(exception.SnapshotNotFound,
+                          db.get_snapshot_uuid_by_ec2_id,
+                          self.ctxt, 100500)
+
+    def test_ec2_instance_create(self):
+        inst = db.ec2_instance_create(self.ctxt, 'fake-uuid')
+        self.assertIsNotNone(inst['id'])
+        self.assertEqual(inst['uuid'], 'fake-uuid')
+
+    def test_get_ec2_instance_id_by_uuid(self):
+        inst = db.ec2_instance_create(self.ctxt, 'fake-uuid')
+        inst_id = db.get_ec2_instance_id_by_uuid(self.ctxt, 'fake-uuid')
+        self.assertEqual(inst['id'], inst_id)
+
+    def test_get_instance_uuid_by_ec2_id(self):
+        inst = db.ec2_instance_create(self.ctxt, 'fake-uuid')
+        inst_uuid = db.get_instance_uuid_by_ec2_id(self.ctxt, inst['id'])
+        self.assertEqual(inst_uuid, 'fake-uuid')
+
+    def test_get_ec2_instance_id_by_uuid_not_found(self):
+        self.assertRaises(exception.InstanceNotFound,
+                          db.get_ec2_instance_id_by_uuid,
+                          self.ctxt, 'uuid-not-present')
+
+    def test_get_instance_uuid_by_ec2_id_not_found(self):
+        self.assertRaises(exception.InstanceNotFound,
+                          db.get_instance_uuid_by_ec2_id,
+                          self.ctxt, 100500)
 
 
 class ArchiveTestCase(test.TestCase):
