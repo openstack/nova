@@ -186,19 +186,6 @@ class DbApiTestCase(DbTestCase):
         ec2_id = db.get_ec2_snapshot_id_by_uuid(self.context, 'fake-uuid')
         self.assertEqual(ref['id'], ec2_id)
 
-    def test_security_group_update(self):
-        ctxt = context.get_admin_context()
-        values = {'security_group': {'tenant_id': '123',
-                  'name': 'test', 'description': 'test-description'}}
-        sg = db.security_group_create(ctxt, values)
-
-        values['security_group']['name'] = 'test_name'
-        values['security_group']['description'] = 'test_desc'
-        sg = db.security_group_update(ctxt, sg['id'], values)
-        self.assertNotEqual(None, sg)
-        self.assertEqual(sg['security_group']['name'], 'test_name')
-        self.assertEqual(sg['security_group']['description'], 'test_desc')
-
     def _test_decorator_wraps_helper(self, decorator):
         def test_func():
             """Test docstring."""
@@ -1239,6 +1226,20 @@ class SecurityGroupTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
         self.assertEquals(1, len(security_groups))
         self.assertEquals("default", security_groups[0]["name"])
+
+    def test_security_group_update(self):
+        security_group = self._create_security_group({})
+        new_values = {
+                    'name': 'sec_group1',
+                    'description': 'sec_group_descr1',
+                    'user_id': 'fake_user1',
+                    'project_id': 'fake_proj1',
+        }
+        updated_group = db.security_group_update(self.ctxt,
+                                                 security_group['id'],
+                                                 new_values)
+        for key, value in new_values.iteritems():
+            self.assertEqual(updated_group[key], value)
 
     def test_security_group_update_to_duplicate(self):
         security_group1 = self._create_security_group(
