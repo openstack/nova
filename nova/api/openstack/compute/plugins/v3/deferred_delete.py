@@ -23,8 +23,9 @@ from nova.api.openstack import wsgi
 from nova import compute
 from nova import exception
 
-
-authorize = extensions.extension_authorizer('compute', 'deferred_delete')
+ALIAS = 'os-deferred-delete'
+authorize = extensions.extension_authorizer('compute',
+                                            'v3:' + ALIAS)
 
 
 class DeferredDeleteController(wsgi.Controller):
@@ -37,7 +38,10 @@ class DeferredDeleteController(wsgi.Controller):
         """Restore a previously deleted instance."""
         context = req.environ["nova.context"]
         authorize(context)
-        instance = self.compute_api.get(context, id)
+        try:
+            instance = self.compute_api.get(context, id)
+        except exception.InstanceNotFound as e:
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
         try:
             self.compute_api.restore(context, instance)
         except exception.QuotaError as error:
@@ -49,30 +53,36 @@ class DeferredDeleteController(wsgi.Controller):
                     'restore')
         return webob.Response(status_int=202)
 
-    @wsgi.action('forceDelete')
+    @wsgi.action('force_delete')
     def _force_delete(self, req, id, body):
         """Force delete of instance before deferred cleanup."""
         context = req.environ["nova.context"]
         authorize(context)
-        instance = self.compute_api.get(context, id)
+        try:
+            instance = self.compute_api.get(context, id)
+        except exception.InstanceNotFound as e:
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
         try:
             self.compute_api.force_delete(context, instance)
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                    'forceDelete')
+                    'force_delete')
         return webob.Response(status_int=202)
 
 
-class Deferred_delete(extensions.ExtensionDescriptor):
+class DeferredDelete(extensions.V3APIExtensionBase):
     """Instance deferred delete."""
 
     name = "DeferredDelete"
     alias = "os-deferred-delete"
     namespace = ("http://docs.openstack.org/compute/ext/"
-                 "deferred-delete/api/v1.1")
-    updated = "2011-09-01T00:00:00+00:00"
+                 "deferred-delete/api/v3")
+    version = 1
 
     def get_controller_extensions(self):
         controller = DeferredDeleteController()
         extension = extensions.ControllerExtension(self, 'servers', controller)
         return [extension]
+
+    def get_resources(self):
+        return []

@@ -17,7 +17,7 @@
 
 import webob
 
-from nova.api.openstack.compute.contrib import deferred_delete
+from nova.api.openstack.compute.plugins.v3 import deferred_delete
 from nova.compute import api as compute_api
 from nova import context
 from nova import exception
@@ -52,6 +52,19 @@ class DeferredDeleteExtensionTest(test.TestCase):
         res = self.extension._force_delete(self.fake_req, self.fake_uuid,
                                            self.fake_input_dict)
         self.assertEqual(res.status_int, 202)
+
+    def test_force_delete_instance_not_found(self):
+        self.mox.StubOutWithMock(compute_api.API, 'get')
+
+        compute_api.API.get(self.fake_context, self.fake_uuid).AndRaise(
+            exception.InstanceNotFound(instance_id='instance-0000'))
+
+        self.mox.ReplayAll()
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          self.extension._force_delete,
+                          self.fake_req,
+                          self.fake_uuid,
+                          self.fake_input_dict)
 
     def test_force_delete_raises_conflict_on_invalid_state(self):
         self.mox.StubOutWithMock(compute_api.API, 'get')
@@ -88,6 +101,17 @@ class DeferredDeleteExtensionTest(test.TestCase):
         res = self.extension._restore(self.fake_req, self.fake_uuid,
                                       self.fake_input_dict)
         self.assertEqual(res.status_int, 202)
+
+    def test_restore_instance_not_found(self):
+        self.mox.StubOutWithMock(compute_api.API, 'get')
+
+        compute_api.API.get(self.fake_context, self.fake_uuid).AndRaise(
+            exception.InstanceNotFound(instance_id='instance-0000'))
+
+        self.mox.ReplayAll()
+        self.assertRaises(webob.exc.HTTPNotFound, self.extension._restore,
+                          self.fake_req, self.fake_uuid,
+                          self.fake_input_dict)
 
     def test_restore_raises_conflict_on_invalid_state(self):
         self.mox.StubOutWithMock(compute_api.API, 'get')

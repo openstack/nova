@@ -141,6 +141,7 @@ policy_data = """
     "compute_extension:v3:os-coverage": "is_admin:True",
     "compute_extension:createserverext": "",
     "compute_extension:deferred_delete": "",
+    "compute_extension:v3:os-deferred-delete": "",
     "compute_extension:disk_config": "",
     "compute_extension:evacuate": "is_admin:True",
     "compute_extension:v3:os-evacuate": "is_admin:True",
