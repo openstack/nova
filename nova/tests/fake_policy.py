@@ -84,6 +84,10 @@ policy_data = """
     "compute:snapshot": "",
     "compute:backup": "",
 
+    "compute:shelve": "",
+    "compute:shelve_offload": "",
+    "compute:unshelve": "",
+
     "compute:security_groups:add_to_instance": "",
     "compute:security_groups:remove_from_instance": "",
 

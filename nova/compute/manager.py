@@ -354,7 +354,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '2.30'
+    RPC_API_VERSION = '2.31'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -3046,6 +3046,151 @@ class ComputeManager(manager.SchedulerDependentManager):
                 vm_state=vm_states.ACTIVE, task_state=None)
 
         self._notify_about_instance_usage(context, instance, 'resume')
+
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @reverts_task_state
+    @wrap_instance_event
+    @wrap_instance_fault
+    def shelve_instance(self, context, instance, image_id):
+        """Shelve an instance.
+
+        This should be used when you want to take a snapshot of the instance.
+        It also adds system_metadata that can be used by a periodic task to
+        offload the shelved instance after a period of time.
+
+        :param context: request context
+        :param instance: an Instance object
+        :param image_id: an image id to snapshot to.
+        """
+        self.conductor_api.notify_usage_exists(context, instance,
+                current_period=True)
+        self._notify_about_instance_usage(context, instance, 'shelve.start')
+
+        def update_task_state(task_state, expected_state=task_states.SHELVING):
+            shelving_state_map = {
+                    task_states.IMAGE_PENDING_UPLOAD:
+                        task_states.SHELVING_IMAGE_PENDING_UPLOAD,
+                    task_states.IMAGE_UPLOADING:
+                        task_states.SHELVING_IMAGE_UPLOADING,
+                    task_states.SHELVING: task_states.SHELVING}
+            task_state = shelving_state_map[task_state]
+            expected_state = shelving_state_map[expected_state]
+            instance.task_state = task_state
+            instance.save(expected_task_state=expected_state)
+
+        self.driver.power_off(instance)
+        current_power_state = self._get_power_state(context, instance)
+        self.driver.snapshot(context, instance, image_id, update_task_state)
+
+        sys_meta = instance.system_metadata
+        sys_meta['shelved_at'] = timeutils.strtime()
+        sys_meta['shelved_image_id'] = image_id
+        sys_meta['shelved_host'] = self.host
+        instance.system_metadata = sys_meta
+        instance.vm_state = vm_states.SHELVED
+        instance.task_state = None
+        instance.power_state = current_power_state
+        instance.save(expected_task_state=[
+                task_states.SHELVING,
+                task_states.SHELVING_IMAGE_UPLOADING])
+        self._notify_about_instance_usage(context, instance, 'shelve.end')
+
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @reverts_task_state
+    @wrap_instance_fault
+    def shelve_offload_instance(self, context, instance):
+        """Remove a shelved instance from the hypervisor.
+
+        This frees up those resources for use by other instances, but may lead
+        to slower unshelve times for this instance.  This method is used by
+        volume backed instances since restoring them doesn't involve the
+        potentially large download of an image.
+
+        :param context: request context
+        :param instance: an Instance dict
+        """
+        self._notify_about_instance_usage(context, instance,
+                'shelve_offload.start')
+
+        self.driver.power_off(instance)
+        current_power_state = self._get_power_state(context, instance)
+
+        network_info = self._get_instance_nw_info(context, instance)
+        block_device_info = self._get_instance_volume_block_device_info(
+                context, instance)
+        self.driver.destroy(instance, self._legacy_nw_info(network_info),
+                block_device_info)
+
+        instance.power_state = current_power_state
+        instance.host = None
+        instance.node = None
+        instance.vm_state = vm_states.SHELVED_OFFLOADED
+        instance.task_state = None
+        instance.save(expected_task_state=[task_states.SHELVING,
+                                           task_states.SHELVING_OFFLOADING])
+        self._notify_about_instance_usage(context, instance,
+                'shelve_offload.end')
+
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @reverts_task_state
+    @wrap_instance_event
+    @wrap_instance_fault
+    def unshelve_instance(self, context, instance, image=None):
+        """Unshelve the instance.
+
+        :param context: request context
+        :param instance: an Instance dict
+        :param image: an image to build from.  If None we assume a
+            volume backed instance.
+        """
+        @utils.synchronized(instance['uuid'])
+        def do_unshelve_instance():
+            self._unshelve_instance(context, instance, image)
+        do_unshelve_instance()
+
+    def _unshelve_instance_key_scrub(self, instance):
+        """Remove data from the instance that may cause side effects."""
+        cleaned_keys = dict(
+                key_data=instance.key_data,
+                auto_disk_config=instance.auto_disk_config)
+        instance.key_data = None
+        instance.auto_disk_config = False
+        return cleaned_keys
+
+    def _unshelve_instance_key_restore(self, instance, keys):
+        """Restore previously scrubbed keys before saving the instance."""
+        instance.update(keys)
+
+    def _unshelve_instance(self, context, instance, image):
+        self._notify_about_instance_usage(context, instance, 'unshelve.start')
+        instance.task_state = task_states.SPAWNING
+        instance.save()
+
+        network_info = self._get_instance_nw_info(context, instance)
+        bdms = self.conductor_api.block_device_mapping_get_all_by_instance(
+                context, instance)
+        block_device_info = self._prep_block_device(context, instance, bdms)
+        scrubbed_keys = self._unshelve_instance_key_scrub(instance)
+        try:
+            self.driver.spawn(context, instance, image, injected_files=[],
+                    admin_password=None,
+                    network_info=self._legacy_nw_info(network_info),
+                    block_device_info=block_device_info)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                LOG.exception(_('Instance failed to spawn'), instance=instance)
+
+        if image:
+            image_service = glance.get_default_image_service()
+            image_service.delete(context, image['id'])
+
+        self._unshelve_instance_key_restore(instance, scrubbed_keys)
+        instance.power_state = self._get_power_state(context, instance)
+        instance.vm_state = vm_states.ACTIVE
+        instance.task_state = None
+        instance.launched_at = timeutils.utcnow()
+        instance.save(expected_task_state=task_states.SPAWNING)
+        self._notify_about_instance_usage(context, instance, 'unshelve.end')
 
     @reverts_task_state
     @wrap_instance_fault

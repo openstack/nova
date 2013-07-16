@@ -18,6 +18,7 @@ import mox
 
 from nova.api.ec2 import ec2utils
 from nova.compute import flavors
+from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova import conductor
@@ -29,6 +30,7 @@ from nova import db
 from nova.db.sqlalchemy import models
 from nova import exception as exc
 from nova import notifications
+from nova.objects import instance as instance_obj
 from nova.openstack.common import jsonutils
 from nova.openstack.common.notifier import api as notifier_api
 from nova.openstack.common.notifier import test_notifier
@@ -36,6 +38,8 @@ from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import timeutils
 from nova import quota
 from nova import test
+from nova.tests.compute import test_compute
+from nova.tests import fake_instance_actions
 
 
 FAKE_IMAGE_REF = 'fake-image-ref'
@@ -1208,6 +1212,7 @@ class _BaseTaskTestCase(object):
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = FakeContext(self.user_id, self.project_id)
+        fake_instance_actions.stub_out_action_events(self.stubs)
 
     def test_migrate_server(self):
         self.mox.StubOutWithMock(self.conductor_manager.scheduler_rpcapi,
@@ -1277,8 +1282,88 @@ class _BaseTaskTestCase(object):
                 security_groups='security_groups',
                 block_device_mapping='block_device_mapping')
 
+    def test_unshelve_instance_on_host(self):
+        db_instance = jsonutils.to_primitive(self._create_fake_instance())
+        instance = instance_obj.Instance.get_by_uuid(self.context,
+                db_instance['uuid'], expected_attrs=['system_metadata'])
+        instance.vm_state = vm_states.SHELVED
+        instance.task_state = task_states.UNSHELVING
+        instance.save()
+        system_metadata = instance.system_metadata
 
-class ConductorTaskTestCase(_BaseTaskTestCase, test.TestCase):
+        self.mox.StubOutWithMock(self.conductor_manager.compute_rpcapi,
+                'start_instance')
+        self.mox.StubOutWithMock(self.conductor_manager, '_delete_image')
+        self.mox.StubOutWithMock(self.conductor_manager.compute_rpcapi,
+                'unshelve_instance')
+
+        self.conductor_manager.compute_rpcapi.start_instance(self.context,
+                instance)
+        self.conductor_manager._delete_image(self.context,
+                'fake_image_id')
+        self.mox.ReplayAll()
+
+        system_metadata['shelved_at'] = timeutils.utcnow()
+        system_metadata['shelved_image_id'] = 'fake_image_id'
+        system_metadata['shelved_host'] = 'fake-mini'
+        self.conductor_manager.unshelve_instance(self.context, instance)
+
+    def test_unshelve_instance_schedule_and_rebuild(self):
+        db_instance = jsonutils.to_primitive(self._create_fake_instance())
+        instance = instance_obj.Instance.get_by_uuid(self.context,
+                db_instance['uuid'], expected_attrs=['system_metadata'])
+        instance.vm_state = vm_states.SHELVED_OFFLOADED
+        instance.save()
+        system_metadata = instance.system_metadata
+
+        self.mox.StubOutWithMock(self.conductor_manager, '_get_image')
+        self.mox.StubOutWithMock(self.conductor_manager, '_schedule_instances')
+        self.mox.StubOutWithMock(self.conductor_manager.compute_rpcapi,
+                'unshelve_instance')
+
+        self.conductor_manager._get_image(self.context,
+                'fake_image_id').AndReturn('fake_image')
+        self.conductor_manager._schedule_instances(self.context,
+                'fake_image', [], instance).AndReturn(
+                        [{'host': 'fake_host'}])
+        self.conductor_manager.compute_rpcapi.unshelve_instance(self.context,
+                instance, 'fake_host', 'fake_image')
+        self.mox.ReplayAll()
+
+        system_metadata['shelved_at'] = timeutils.utcnow()
+        system_metadata['shelved_image_id'] = 'fake_image_id'
+        system_metadata['shelved_host'] = 'fake-mini'
+        self.conductor_manager.unshelve_instance(self.context, instance)
+
+    def test_unshelve_instance_schedule_and_rebuild_volume_backed(self):
+        db_instance = jsonutils.to_primitive(self._create_fake_instance())
+        instance = instance_obj.Instance.get_by_uuid(self.context,
+                db_instance['uuid'], expected_attrs=['system_metadata'])
+        instance.vm_state = vm_states.SHELVED_OFFLOADED
+        instance.save()
+        system_metadata = instance.system_metadata
+
+        self.mox.StubOutWithMock(self.conductor_manager, '_get_image')
+        self.mox.StubOutWithMock(self.conductor_manager, '_schedule_instances')
+        self.mox.StubOutWithMock(self.conductor_manager.compute_rpcapi,
+                'unshelve_instance')
+
+        self.conductor_manager._get_image(self.context,
+                'fake_image_id').AndReturn(None)
+        self.conductor_manager._schedule_instances(self.context,
+                None, [], instance).AndReturn(
+                        [{'host': 'fake_host'}])
+        self.conductor_manager.compute_rpcapi.unshelve_instance(self.context,
+                instance, 'fake_host', None)
+        self.mox.ReplayAll()
+
+        system_metadata['shelved_at'] = timeutils.utcnow()
+        system_metadata['shelved_image_id'] = 'fake_image_id'
+        system_metadata['shelved_host'] = 'fake-mini'
+        self.conductor_manager.unshelve_instance(self.context, instance)
+
+
+class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
     """ComputeTaskManager Tests."""
     def setUp(self):
         super(ConductorTaskTestCase, self).setUp()
@@ -1286,7 +1371,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test.TestCase):
         self.conductor_manager = self.conductor
 
 
-class ConductorTaskRPCAPITestCase(_BaseTaskTestCase, test.TestCase):
+class ConductorTaskRPCAPITestCase(_BaseTaskTestCase,
+        test_compute.BaseTestCase):
     """Conductor compute_task RPC namespace Tests."""
     def setUp(self):
         super(ConductorTaskRPCAPITestCase, self).setUp()
@@ -1297,7 +1383,7 @@ class ConductorTaskRPCAPITestCase(_BaseTaskTestCase, test.TestCase):
         self.conductor_manager = service_manager.compute_task_mgr
 
 
-class ConductorTaskAPITestCase(_BaseTaskTestCase, test.TestCase):
+class ConductorTaskAPITestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
     """Compute task API Tests."""
     def setUp(self):
         super(ConductorTaskAPITestCase, self).setUp()

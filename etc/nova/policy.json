@@ -12,6 +12,9 @@
     "compute:get_all": "",
     "compute:get_all_tenants": "",
 
+    "compute:shelve": "",
+    "compute:shelve_offload": "",
+    "compute:unshelve": "",
 
     "admin_api": "is_admin:True",
     "compute_extension:accounts": "rule:admin_api",
