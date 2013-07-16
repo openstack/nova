@@ -18,8 +18,8 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 
-
-authorize = extensions.soft_extension_authorizer('compute', 'flavor_rxtx')
+ALIAS = 'os-flavor-rxtx'
+authorize = extensions.soft_extension_authorizer('compute', 'v3:' + ALIAS)
 
 
 class FlavorRxtxController(wsgi.Controller):
@@ -52,19 +52,21 @@ class FlavorRxtxController(wsgi.Controller):
         self._extend_flavors(req, list(resp_obj.obj['flavors']))
 
 
-class Flavor_rxtx(extensions.ExtensionDescriptor):
+class FlavorRxtx(extensions.V3APIExtensionBase):
     """Support to show the rxtx status of a flavor."""
 
     name = "FlavorRxtx"
-    alias = "os-flavor-rxtx"
-    namespace = ("http://docs.openstack.org/compute/ext/"
-                 "flavor_rxtx/api/v1.1")
-    updated = "2012-08-29T00:00:00+00:00"
+    alias = ALIAS
+    namespace = "http://docs.openstack.org/compute/ext/%s/api/v3" % ALIAS
+    version = 1
 
     def get_controller_extensions(self):
         controller = FlavorRxtxController()
         extension = extensions.ControllerExtension(self, 'flavors', controller)
         return [extension]
+
+    def get_resources(self):
+        return []
 
 
 def make_flavor(elem):

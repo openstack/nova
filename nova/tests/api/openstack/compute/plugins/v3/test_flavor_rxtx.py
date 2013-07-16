@@ -52,9 +52,6 @@ class FlavorRxtxTest(test.TestCase):
 
     def setUp(self):
         super(FlavorRxtxTest, self).setUp()
-        ext = ('nova.api.openstack.compute.contrib'
-              '.flavor_rxtx.Flavor_rxtx')
-        self.flags(osapi_compute_extension=[ext])
         fakes.stub_out_nw_api(self.stubs)
         self.stubs.Set(flavors, "get_all_flavors",
                        fake_flavor_get_all)
@@ -65,7 +62,9 @@ class FlavorRxtxTest(test.TestCase):
     def _make_request(self, url):
         req = webob.Request.blank(url)
         req.headers['Accept'] = self.content_type
-        res = req.get_response(fakes.wsgi_app())
+        app = fakes.wsgi_app_v3(init_only=('servers', 'flavors',
+                                           'os-flavor-rxtx'))
+        res = req.get_response(app)
         return res
 
     def _get_flavor(self, body):
@@ -75,17 +74,17 @@ class FlavorRxtxTest(test.TestCase):
         return jsonutils.loads(body).get('flavors')
 
     def assertFlavorRxtx(self, flavor, rxtx):
-        self.assertEqual(str(flavor.get('%srxtx_factor' % self.prefix)), rxtx)
+        self.assertEqual(str(flavor.get('rxtx_factor')), rxtx)
 
     def test_show(self):
-        url = '/v2/fake/flavors/1'
+        url = '/v3/flavors/1'
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 200)
         self.assertFlavorRxtx(self._get_flavor(res.body), '1.0')
 
     def test_detail(self):
-        url = '/v2/fake/flavors/detail'
+        url = '/v3/flavors/detail'
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 200)
