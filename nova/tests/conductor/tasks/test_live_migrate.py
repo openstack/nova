@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mox
+
 from nova.compute import flavors
 from nova.compute import power_state
 from nova.conductor.tasks import live_migrate
@@ -237,6 +239,29 @@ class LiveMigrationTaskTestCase(test.TestCase):
         self.task.image_service.show(self.context,
                                      self.instance_image).AndReturn("image")
         flavors.extract_flavor(self.instance).AndReturn("inst_type")
+        self.task._check_compatible_with_source_hypervisor("host1")
+        self.task._call_livem_checks_on_host("host1")
+
+        self.mox.ReplayAll()
+        self.assertEqual("host1", self.task._find_destination())
+
+    def test_find_destination_no_image_works(self):
+        self.instance['image_ref'] = ''
+
+        self.mox.StubOutWithMock(flavors, 'extract_flavor')
+        self.mox.StubOutWithMock(self.task, 'select_hosts_callback')
+        self.mox.StubOutWithMock(self.task,
+                '_check_compatible_with_source_hypervisor')
+        self.mox.StubOutWithMock(self.task, '_call_livem_checks_on_host')
+
+        flavors.extract_flavor(self.instance).AndReturn("inst_type")
+        # request_spec with no image set
+        request_spec = {'instance_properties': self.instance,
+                        'instance_type': "inst_type",
+                        'instance_uuids': [self.instance['uuid']]}
+        self.task.select_hosts_callback(self.context,
+            request_spec, mox.IgnoreArg()).AndReturn(["host1"])
+
         self.task._check_compatible_with_source_hypervisor("host1")
         self.task._call_livem_checks_on_host("host1")
 
