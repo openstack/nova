@@ -4119,60 +4119,47 @@ class TestServerActionRequestXMLDeserializer(test.TestCase):
         super(TestServerActionRequestXMLDeserializer, self).setUp()
         self.deserializer = servers.ActionDeserializer()
 
-    def test_rebuild_request(self):
-        serial_request = """
-<rebuild xmlns="http://docs.openstack.org/compute/api/v1.1"
+    def _generate_request(self, action, disk_cfg, ref):
+        return """
+<%(action)s xmlns="http://docs.openstack.org/compute/api/v1.1"
    xmlns:OS-DCF="http://docs.openstack.org/compute/ext/disk_config/api/v1.1"
-   OS-DCF:diskConfig="MANUAL" imageRef="1"/>"""
-        request = self.deserializer.deserialize(serial_request)
-        expected = {
-            "rebuild": {
-                "imageRef": "1",
+   %(disk_config)s="MANUAL" %(ref)s="1"/>""" % (
+               {'action': action, 'disk_config': disk_cfg, 'ref': ref})
+
+    def _generate_expected(self, action, ref):
+        return {
+            "%s" % action: {
+                "%s" % ref: "1",
                 "OS-DCF:diskConfig": "MANUAL",
-                },
-            }
+            },
+        }
+
+    def test_rebuild_request(self):
+        serial_request = self._generate_request("rebuild", "OS-DCF:diskConfig",
+                                                "imageRef")
+        request = self.deserializer.deserialize(serial_request)
+        expected = self._generate_expected("rebuild", "imageRef")
         self.assertEquals(request['body'], expected)
 
     def test_rebuild_request_auto_disk_config_compat(self):
-        serial_request = """
-<rebuild xmlns="http://docs.openstack.org/compute/api/v1.1"
-   xmlns:OS-DCF="http://docs.openstack.org/compute/ext/disk_config/api/v1.1"
-   auto_disk_config="MANUAL" imageRef="1"/>"""
+        serial_request = self._generate_request("rebuild", "auto_disk_config",
+                                                "imageRef")
         request = self.deserializer.deserialize(serial_request)
-        expected = {
-            "rebuild": {
-                "imageRef": "1",
-                "OS-DCF:diskConfig": "MANUAL",
-                },
-            }
+        expected = self._generate_expected("rebuild", "imageRef")
         self.assertEquals(request['body'], expected)
 
     def test_resize_request(self):
-        serial_request = """
-<resize xmlns="http://docs.openstack.org/compute/api/v1.1"
-   xmlns:OS-DCF="http://docs.openstack.org/compute/ext/disk_config/api/v1.1"
-   OS-DCF:diskConfig="MANUAL" flavorRef="1"/>"""
+        serial_request = self._generate_request("resize", "OS-DCF:diskConfig",
+                                                "flavorRef")
         request = self.deserializer.deserialize(serial_request)
-        expected = {
-            "resize": {
-                "flavorRef": "1",
-                "OS-DCF:diskConfig": "MANUAL",
-                },
-            }
+        expected = self._generate_expected("resize", "flavorRef")
         self.assertEquals(request['body'], expected)
 
     def test_resize_request_auto_disk_config_compat(self):
-        serial_request = """
-<resize xmlns="http://docs.openstack.org/compute/api/v1.1"
-   xmlns:OS-DCF="http://docs.openstack.org/compute/ext/disk_config/api/v1.1"
-   auto_disk_config="MANUAL" flavorRef="1"/>"""
+        serial_request = self._generate_request("resize", "auto_disk_config",
+                                                "flavorRef")
         request = self.deserializer.deserialize(serial_request)
-        expected = {
-            "resize": {
-                "flavorRef": "1",
-                "OS-DCF:diskConfig": "MANUAL",
-                },
-            }
+        expected = self._generate_expected("resize", "flavorRef")
         self.assertEquals(request['body'], expected)
 
 
