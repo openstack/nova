@@ -59,7 +59,8 @@ CONF.register_opts(api_opts, api_opts_group)
 # List of v3 API extensions which are considered to form
 # the core API and so must be present
 # TODO(cyeoh): Expand this list as the core APIs are ported to V3
-API_V3_CORE_EXTENSIONS = set(['servers'])
+API_V3_CORE_EXTENSIONS = set(['consoles', 'extensions', 'flavors', 'ips',
+                              'limits', 'servers', 'server-metadata'])
 
 
 class FaultWrapper(base_wsgi.Middleware):
