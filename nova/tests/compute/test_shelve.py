@@ -12,6 +12,7 @@
 
 import iso8601
 import mox
+from oslo.config import cfg
 
 from nova.compute import task_states
 from nova.compute import vm_states
@@ -23,9 +24,12 @@ from nova.tests.compute import test_compute
 from nova.tests.image import fake as fake_image
 from nova import utils
 
+CONF = cfg.CONF
+
 
 class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
     def test_shelve(self):
+        CONF.shelved_offload_time = -1
         db_instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, instance=db_instance)
         instance = instance_obj.Instance.get_by_uuid(
@@ -246,6 +250,53 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         self.mox.UnsetStubs()
 
         self.compute.terminate_instance(self.context, instance=instance)
+
+    def test_shelved_poll_none_exist(self):
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+        self.compute.run_instance(self.context, instance=instance)
+        self.mox.StubOutWithMock(self.compute.driver, 'destroy')
+        self.mox.StubOutWithMock(timeutils, 'is_older_than')
+        self.mox.ReplayAll()
+        self.compute._poll_shelved_instances(self.context)
+
+    def test_shelved_poll_not_timedout(self):
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+        self.compute.run_instance(self.context, instance=instance)
+        sys_meta = utils.metadata_to_dict(instance['system_metadata'])
+        shelved_time = timeutils.utcnow()
+        timeutils.set_time_override(shelved_time)
+        timeutils.advance_time_seconds(CONF.shelved_offload_time - 1)
+        sys_meta['shelved_at'] = timeutils.strtime(at=shelved_time)
+        db.instance_update_and_get_original(self.context, instance['uuid'],
+                {'vm_state': vm_states.SHELVED, 'system_metadata': sys_meta})
+
+        self.mox.StubOutWithMock(self.compute.driver, 'destroy')
+        self.mox.ReplayAll()
+        self.compute._poll_shelved_instances(self.context)
+
+    def test_shelved_poll_timedout(self):
+        active_instance = jsonutils.to_primitive(self._create_fake_instance())
+        self.compute.run_instance(self.context, instance=active_instance)
+
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+        self.compute.run_instance(self.context, instance=instance)
+        sys_meta = utils.metadata_to_dict(instance['system_metadata'])
+        shelved_time = timeutils.utcnow()
+        timeutils.set_time_override(shelved_time)
+        timeutils.advance_time_seconds(CONF.shelved_offload_time + 1)
+        sys_meta['shelved_at'] = timeutils.strtime(at=shelved_time)
+        (old, instance) = db.instance_update_and_get_original(self.context,
+                instance['uuid'], {'vm_state': vm_states.SHELVED,
+                                   'system_metadata': sys_meta})
+
+        def fake_destroy(inst, nw_info, bdm):
+            # NOTE(alaski) There are too many differences between an instance
+            # as returned by instance_update_and_get_original and
+            # instance_get_all_by_filters so just compare the uuid.
+            self.assertEqual(instance['uuid'], inst['uuid'])
+
+        self.stubs.Set(self.compute.driver, 'destroy', fake_destroy)
+        self.compute._poll_shelved_instances(self.context)
 
 
 class ShelveComputeAPITestCase(test_compute.BaseTestCase):
