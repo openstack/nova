@@ -65,7 +65,7 @@ class CellsManager(manager.Manager):
 
     Scheduling requests get passed to the scheduler class.
     """
-    RPC_API_VERSION = '1.12'
+    RPC_API_VERSION = '1.13'
 
     def __init__(self, *args, **kwargs):
         # Mostly for tests.
@@ -428,3 +428,15 @@ class CellsManager(manager.Manager):
                                                  do_cast=do_cast)
         if not do_cast:
             return response.value_or_raise()
+
+    def cell_create(self, ctxt, values):
+        return self.state_manager.cell_create(ctxt, values)
+
+    def cell_update(self, ctxt, cell_name, values):
+        return self.state_manager.cell_update(ctxt, cell_name, values)
+
+    def cell_delete(self, ctxt, cell_name):
+        return self.state_manager.cell_delete(ctxt, cell_name)
+
+    def cell_get(self, ctxt, cell_name):
+        return self.state_manager.cell_get(ctxt, cell_name)

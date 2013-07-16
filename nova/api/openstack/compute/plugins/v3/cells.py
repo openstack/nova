@@ -27,7 +27,6 @@ from nova.api.openstack import xmlutil
 from nova.cells import rpc_driver
 from nova.cells import rpcapi as cells_rpcapi
 from nova.compute import api as compute
-from nova import db
 from nova import exception
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
@@ -248,7 +247,7 @@ class CellsController(object):
         context = req.environ['nova.context']
         authorize(context)
         try:
-            cell = db.cell_get(context, id)
+            cell = self.cells_rpcapi.cell_get(context, id)
         except exception.CellNotFound:
             raise exc.HTTPNotFound()
         return dict(cell=_scrub_cell(cell))
@@ -257,7 +256,10 @@ class CellsController(object):
         """Delete a child or parent cell entry.  'id' is a cell name."""
         context = req.environ['nova.context']
         authorize(context)
-        num_deleted = db.cell_delete(context, id)
+        try:
+            num_deleted = self.cells_rpcapi.cell_delete(context, id)
+        except exception.CellsUpdateUnsupported as e:
+            raise exc.HTTPForbidden(explanation=e.format_message())
         if num_deleted == 0:
             raise exc.HTTPNotFound()
         return {}
@@ -339,7 +341,10 @@ class CellsController(object):
             raise exc.HTTPBadRequest(explanation=msg)
         self._validate_cell_name(cell['name'])
         self._normalize_cell(cell)
-        cell = db.cell_create(context, cell)
+        try:
+            cell = self.cells_rpcapi.cell_create(context, cell)
+        except exception.CellsUpdateUnsupported as e:
+            raise exc.HTTPForbidden(explanation=e.format_message())
         return dict(cell=_scrub_cell(cell))
 
     @wsgi.serializers(xml=CellTemplate)
@@ -363,14 +368,16 @@ class CellsController(object):
             #            operation is administrative in nature, and
             #            will be going away in the future, I don't see
             #            it as much of a problem...
-            existing = db.cell_get(context, id)
+            existing = self.cells_rpcapi.cell_get(context, id)
         except exception.CellNotFound:
             raise exc.HTTPNotFound()
         self._normalize_cell(cell, existing)
         try:
-            cell = db.cell_update(context, id, cell)
+            cell = self.cells_rpcapi.cell_update(context, id, cell)
         except exception.CellNotFound:
             raise exc.HTTPNotFound()
+        except exception.CellsUpdateUnsupported as e:
+            raise exc.HTTPForbidden(explanation=e.format_message())
         return dict(cell=_scrub_cell(cell))
 
     def sync_instances(self, req, body):

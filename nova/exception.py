@@ -889,6 +889,10 @@ class CellError(NovaException):
     message = _("Exception received during cell processing: %(exc_name)s.")
 
 
+class CellsUpdateUnsupported(NovaException):
+    message = _("Cannot update cells configuration file.")
+
+
 class InstanceUnknownCell(NotFound):
     message = _("Cell is not known for instance %(instance_uuid)s")
 

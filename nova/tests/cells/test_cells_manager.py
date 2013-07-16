@@ -617,3 +617,49 @@ class CellsManagerClassTestCase(test.TestCase):
         self.cells_manager.stop_instance(self.ctxt,
                                          instance='fake-instance',
                                          do_cast='meow')
+
+    def test_cell_create(self):
+        values = 'values'
+        response = 'created_cell'
+        self.mox.StubOutWithMock(self.state_manager,
+                                 'cell_create')
+        self.state_manager.cell_create(self.ctxt, values).\
+            AndReturn(response)
+        self.mox.ReplayAll()
+        self.assertEqual(response,
+                         self.cells_manager.cell_create(self.ctxt, values))
+
+    def test_cell_update(self):
+        cell_name = 'cell_name'
+        values = 'values'
+        response = 'updated_cell'
+        self.mox.StubOutWithMock(self.state_manager,
+                                 'cell_update')
+        self.state_manager.cell_update(self.ctxt, cell_name, values).\
+            AndReturn(response)
+        self.mox.ReplayAll()
+        self.assertEqual(response,
+                         self.cells_manager.cell_update(self.ctxt, cell_name,
+                                                        values))
+
+    def test_cell_delete(self):
+        cell_name = 'cell_name'
+        response = 1
+        self.mox.StubOutWithMock(self.state_manager,
+                                 'cell_delete')
+        self.state_manager.cell_delete(self.ctxt, cell_name).\
+            AndReturn(response)
+        self.mox.ReplayAll()
+        self.assertEqual(response,
+                         self.cells_manager.cell_delete(self.ctxt, cell_name))
+
+    def test_cell_get(self):
+        cell_name = 'cell_name'
+        response = 'cell_info'
+        self.mox.StubOutWithMock(self.state_manager,
+                                 'cell_get')
+        self.state_manager.cell_get(self.ctxt, cell_name).\
+            AndReturn(response)
+        self.mox.ReplayAll()
+        self.assertEqual(response,
+                         self.cells_manager.cell_get(self.ctxt, cell_name))

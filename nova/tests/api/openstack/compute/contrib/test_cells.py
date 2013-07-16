@@ -24,7 +24,6 @@ from nova.api.openstack import xmlutil
 from nova.cells import rpc_driver
 from nova.cells import rpcapi as cells_rpcapi
 from nova import context
-from nova import db
 from nova import exception
 from nova.openstack.common import timeutils
 from nova import test
@@ -46,7 +45,7 @@ FAKE_CAPABILITIES = [
         {'cap3': '4,5', 'cap4': '5,6'}]
 
 
-def fake_db_cell_get(context, cell_name):
+def fake_cell_get(self, context, cell_name):
     for cell in FAKE_CELLS:
         if cell_name == cell['name']:
             return cell
@@ -54,14 +53,14 @@ def fake_db_cell_get(context, cell_name):
         raise exception.CellNotFound(cell_name=cell_name)
 
 
-def fake_db_cell_create(context, values):
+def fake_cell_create(self, context, values):
     cell = dict(id=1)
     cell.update(values)
     return cell
 
 
-def fake_db_cell_update(context, cell_id, values):
-    cell = fake_db_cell_get(context, cell_id)
+def fake_cell_update(self, context, cell_id, values):
+    cell = fake_cell_get(self, context, cell_id)
     cell.update(values)
     return cell
 
@@ -82,17 +81,12 @@ def fake_cells_api_get_all_cell_info(*args):
     return cells
 
 
-def fake_db_cell_get_all(context):
-    return FAKE_CELLS
-
-
 class CellsTest(test.TestCase):
     def setUp(self):
         super(CellsTest, self).setUp()
-        self.stubs.Set(db, 'cell_get', fake_db_cell_get)
-        self.stubs.Set(db, 'cell_get_all', fake_db_cell_get_all)
-        self.stubs.Set(db, 'cell_update', fake_db_cell_update)
-        self.stubs.Set(db, 'cell_create', fake_db_cell_create)
+        self.stubs.Set(cells_rpcapi.CellsAPI, 'cell_get', fake_cell_get)
+        self.stubs.Set(cells_rpcapi.CellsAPI, 'cell_update', fake_cell_update)
+        self.stubs.Set(cells_rpcapi.CellsAPI, 'cell_create', fake_cell_create)
         self.stubs.Set(cells_rpcapi.CellsAPI, 'get_cell_info_for_neighbors',
                 fake_cells_api_get_all_cell_info)
 
@@ -139,17 +133,22 @@ class CellsTest(test.TestCase):
     def test_cell_delete(self):
         call_info = {'delete_called': 0}
 
-        def fake_db_cell_delete(context, cell_name):
+        def fake_cell_delete(inst, context, cell_name):
             self.assertEqual(cell_name, 'cell999')
             call_info['delete_called'] += 1
 
-        self.stubs.Set(db, 'cell_delete', fake_db_cell_delete)
+        self.stubs.Set(cells_rpcapi.CellsAPI, 'cell_delete', fake_cell_delete)
 
         req = self._get_request("cells/cell999")
         self.controller.delete(req, 'cell999')
         self.assertEqual(call_info['delete_called'], 1)
 
     def test_delete_bogus_cell_raises(self):
+        def fake_cell_delete(inst, context, cell_name):
+            return 0
+
+        self.stubs.Set(cells_rpcapi.CellsAPI, 'cell_delete', fake_cell_delete)
+
         req = self._get_request("cells/cell999")
         req.environ['nova.context'] = self.context
         self.assertRaises(exc.HTTPNotFound, self.controller.delete, req,
