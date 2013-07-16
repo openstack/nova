@@ -153,6 +153,8 @@ policy_data = """
     "compute_extension:extended_vif_net": "",
     "compute_extension:extended_volumes": "",
     "compute_extension:v3:os-extended-volumes": "",
+    "compute_extension:v3:os-extended-volumes:attach": "",
+    "compute_extension:v3:os-extended-volumes:detach": "",
     "compute_extension:fixed_ips": "",
     "compute_extension:v3:os-fixed-ips": "",
     "compute_extension:flavor_access": "",

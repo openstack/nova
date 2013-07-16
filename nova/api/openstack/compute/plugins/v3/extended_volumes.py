@@ -15,21 +15,32 @@
 #   under the License.
 
 """The Extended Volumes API extension."""
+from webob import exc
 
-from nova.api.openstack.compute import servers
+from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import compute
+from nova import exception
+from nova.openstack.common import log as logging
+from nova.openstack.common import uuidutils
+from nova import volume
 
 ALIAS = "os-extended-volumes"
+LOG = logging.getLogger(__name__)
 authorize = extensions.soft_extension_authorizer('compute', 'v3:' + ALIAS)
+authorize_attach = extensions.soft_extension_authorizer('compute',
+                                                        'v3:%s:attach' % ALIAS)
+authorize_detach = extensions.soft_extension_authorizer('compute',
+                                                        'v3:%s:detach' % ALIAS)
 
 
-class ExtendedVolumesController(servers.Controller):
+class ExtendedVolumesController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         super(ExtendedVolumesController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
+        self.volume_api = volume.API()
 
     def _extend_server(self, context, server, instance):
         bdms = self.compute_api.get_instance_bdms(context, instance)
@@ -61,6 +72,100 @@ class ExtendedVolumesController(servers.Controller):
                 # server['id'] is guaranteed to be in the cache due to
                 # the core API adding it in its 'detail' method.
                 self._extend_server(context, server, db_instance)
+
+    def _validate_volume_id(self, volume_id):
+        if not uuidutils.is_uuid_like(volume_id):
+            msg = _("Bad volumeId format: volumeId is "
+                    "not in proper format (%s)") % volume_id
+            raise exc.HTTPBadRequest(explanation=msg)
+
+    @wsgi.response(202)
+    @wsgi.action('attach')
+    def attach(self, req, id, body):
+        server_id = id
+        context = req.environ['nova.context']
+        authorize_attach(context)
+
+        if not self.is_valid_body(body, 'attach'):
+            raise exc.HTTPBadRequest(_("The request body invalid"))
+
+        volume_id = body['attach']['volume_id']
+        device = body['attach'].get('device')
+
+        self._validate_volume_id(volume_id)
+
+        LOG.audit(_("Attach volume %(volume_id)s to instance %(server_id)s "
+                    "at %(device)s"),
+                  {'volume_id': volume_id,
+                   'device': device,
+                   'server_id': server_id},
+                  context=context)
+
+        try:
+            instance = self.compute_api.get(context, server_id)
+            self.compute_api.attach_volume(context, instance,
+                                           volume_id, device)
+        except (exception.InstanceNotFound, exception.VolumeNotFound) as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
+        except exception.InstanceInvalidState as state_error:
+            common.raise_http_conflict_for_instance_invalid_state(
+                state_error, 'attach_volume')
+        except exception.InvalidVolume as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
+        except exception.InvalidDevicePath as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
+
+    @wsgi.response(202)
+    @wsgi.action('detach')
+    def detach(self, req, id, body):
+        server_id = id
+        context = req.environ['nova.context']
+        authorize_detach(context)
+
+        volume_id = body['detach']['volume_id']
+        LOG.audit(_("Detach volume %(volume_id)s from "
+                    "instance %(server_id)s"),
+                  {"volume_id": volume_id,
+                   "server_id": id,
+                   "context": context})
+        try:
+            instance = self.compute_api.get(context, server_id)
+        except exception.InstanceNotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
+
+        try:
+            volume = self.volume_api.get(context, volume_id)
+        except exception.VolumeNotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
+
+        bdms = self.compute_api.get_instance_bdms(context, instance)
+        if not bdms:
+            msg = _("Volume %(volume_id)s is not attached to the "
+                    "instance %(server_id)s") % {'server_id': server_id,
+                                                 'volume_id': volume_id}
+            LOG.debug(msg)
+            raise exc.HTTPNotFound(explanation=msg)
+
+        for bdm in bdms:
+            if bdm['volume_id'] != volume_id:
+                continue
+            try:
+                self.compute_api.detach_volume(context, instance, volume)
+                break
+            except exception.VolumeUnattached:
+                # The volume is not attached.  Treat it as NotFound
+                # by falling through.
+                pass
+            except exception.InvalidVolume as e:
+                raise exc.HTTPBadRequest(explanation=e.format_message())
+            except exception.InstanceInvalidState as state_error:
+                common.raise_http_conflict_for_instance_invalid_state(
+                    state_error, 'detach_volume')
+        else:
+            msg = _("Volume %(volume_id)s is not attached to the "
+                    "instance %(server_id)s") % {'server_id': server_id,
+                                                 'volume_id': volume_id}
+            raise exc.HTTPNotFound(explanation=msg)
 
 
 class ExtendedVolumes(extensions.V3APIExtensionBase):
