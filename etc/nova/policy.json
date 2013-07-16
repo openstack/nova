@@ -42,6 +42,7 @@
     "compute_extension:v3:os-admin-actions:resetState": "rule:admin_api",
     "compute_extension:v3:os-admin-actions:migrate": "rule:admin_api",
     "compute_extension:aggregates": "rule:admin_api",
+    "compute_extension:v3:os-aggregates": "rule:admin_api",
     "compute_extension:agents": "rule:admin_api",
     "compute_extension:v3:os-agents": "rule:admin_api",
     "compute_extension:attach_interfaces": "",

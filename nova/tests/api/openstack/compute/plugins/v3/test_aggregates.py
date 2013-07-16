@@ -17,7 +17,7 @@
 
 from webob import exc
 
-from nova.api.openstack.compute.contrib import aggregates
+from nova.api.openstack.compute.plugins.v3 import aggregates
 from nova import context
 from nova import exception
 from nova import test
@@ -94,7 +94,7 @@ class AggregateTestCase(test.TestCase):
         self.stubs.Set(self.controller.api, "create_aggregate",
                        stub_create_aggregate)
 
-        self.assertRaises(exception.InvalidAggregateAction,
+        self.assertRaises(exc.HTTPBadRequest,
                           self.controller.create,
                           self.req, {"aggregate":
                                      {"name": "test",
@@ -220,7 +220,7 @@ class AggregateTestCase(test.TestCase):
         self.stubs.Set(self.controller.api, "add_host_to_aggregate",
                        stub_add_host_to_aggregate)
 
-        aggregate = self.controller.action(self.req, "1",
+        aggregate = self.controller._add_host(self.req, "1",
                                            body={"add_host": {"host":
                                                               "host1"}})
 
@@ -233,7 +233,7 @@ class AggregateTestCase(test.TestCase):
         self.stubs.Set(self.controller.api, "add_host_to_aggregate",
                        stub_add_host_to_aggregate)
 
-        self.assertRaises(exc.HTTPConflict, self.controller.action,
+        self.assertRaises(exc.HTTPConflict, self.controller._add_host,
                           self.req, "1",
                           body={"add_host": {"host": "host1"}})
 
@@ -243,7 +243,7 @@ class AggregateTestCase(test.TestCase):
         self.stubs.Set(self.controller.api, "add_host_to_aggregate",
                        stub_add_host_to_aggregate)
 
-        self.assertRaises(exc.HTTPNotFound, self.controller.action,
+        self.assertRaises(exc.HTTPNotFound, self.controller._add_host,
                           self.req, "bogus_aggregate",
                           body={"add_host": {"host": "host1"}})
 
@@ -253,12 +253,12 @@ class AggregateTestCase(test.TestCase):
         self.stubs.Set(self.controller.api, "add_host_to_aggregate",
                        stub_add_host_to_aggregate)
 
-        self.assertRaises(exc.HTTPNotFound, self.controller.action,
+        self.assertRaises(exc.HTTPNotFound, self.controller._add_host,
                           self.req, "1",
                           body={"add_host": {"host": "bogus_host"}})
 
     def test_add_host_with_missing_host(self):
-        self.assertRaises(exc.HTTPBadRequest, self.controller.action,
+        self.assertRaises(exc.HTTPBadRequest, self.controller._add_host,
                 self.req, "1", body={"add_host": {"asdf": "asdf"}})
 
     def test_remove_host(self):
@@ -270,7 +270,7 @@ class AggregateTestCase(test.TestCase):
         self.stubs.Set(self.controller.api,
                        "remove_host_from_aggregate",
                        stub_remove_host_from_aggregate)
-        self.controller.action(self.req, "1",
+        self.controller._remove_host(self.req, "1",
                                body={"remove_host": {"host": "host1"}})
 
         self.assertTrue(stub_remove_host_from_aggregate.called)
@@ -282,7 +282,7 @@ class AggregateTestCase(test.TestCase):
                        "remove_host_from_aggregate",
                        stub_remove_host_from_aggregate)
 
-        self.assertRaises(exc.HTTPNotFound, self.controller.action,
+        self.assertRaises(exc.HTTPNotFound, self.controller._remove_host,
                           self.req, "bogus_aggregate",
                           body={"remove_host": {"host": "host1"}})
 
@@ -294,7 +294,7 @@ class AggregateTestCase(test.TestCase):
                        "remove_host_from_aggregate",
                        stub_remove_host_from_aggregate)
 
-        self.assertRaises(exc.HTTPNotFound, self.controller.action,
+        self.assertRaises(exc.HTTPNotFound, self.controller._remove_host,
                           self.req, "1",
                           body={"remove_host": {"host": "host1"}})
 
@@ -305,15 +305,11 @@ class AggregateTestCase(test.TestCase):
                        "remove_host_from_aggregate",
                        stub_remove_host_from_aggregate)
 
-        self.assertRaises(exc.HTTPNotFound, self.controller.action,
+        self.assertRaises(exc.HTTPNotFound, self.controller._remove_host,
                 self.req, "1", body={"remove_host": {"host": "bogushost"}})
 
-    def test_remove_host_with_missing_host(self):
-        self.assertRaises(exc.HTTPBadRequest, self.controller.action,
-                self.req, "1", body={"asdf": "asdf"})
-
     def test_remove_host_with_extra_param(self):
-        self.assertRaises(exc.HTTPBadRequest, self.controller.action,
+        self.assertRaises(exc.HTTPBadRequest, self.controller._remove_host,
                 self.req, "1", body={"remove_host": {"asdf": "asdf",
                                                      "host": "asdf"}})
 
@@ -330,7 +326,7 @@ class AggregateTestCase(test.TestCase):
                        "update_aggregate_metadata",
                        stub_update_aggregate)
 
-        result = self.controller.action(self.req, "1", body=body)
+        result = self.controller._set_metadata(self.req, "1", body=body)
 
         self.assertEqual(AGGREGATE, result["aggregate"])
 
@@ -343,17 +339,17 @@ class AggregateTestCase(test.TestCase):
                        "update_aggregate_metadata",
                        stub_update_aggregate)
 
-        self.assertRaises(exc.HTTPNotFound, self.controller.action,
+        self.assertRaises(exc.HTTPNotFound, self.controller._set_metadata,
                 self.req, "bad_aggregate", body=body)
 
     def test_set_metadata_with_missing_metadata(self):
         body = {"asdf": {"foo": "bar"}}
-        self.assertRaises(exc.HTTPBadRequest, self.controller.action,
+        self.assertRaises(exc.HTTPBadRequest, self.controller._set_metadata,
                           self.req, "1", body=body)
 
     def test_set_metadata_with_extra_params(self):
         body = {"metadata": {"foo": "bar"}, "asdf": {"foo": "bar"}}
-        self.assertRaises(exc.HTTPBadRequest, self.controller.action,
+        self.assertRaises(exc.HTTPBadRequest, self.controller._set_metadata,
                           self.req, "1", body=body)
 
     def test_delete_aggregate(self):
