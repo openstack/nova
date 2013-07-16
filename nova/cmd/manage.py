@@ -690,7 +690,8 @@ class ServiceCommands(object):
         except exception.NotFound as ex:
             print _("error: %s") % ex
             return(2)
-        print _("Service %(service)s on host %(host)s enabled.") % locals()
+        print (_("Service %(service)s on host %(host)s enabled.") %
+               {'service': service, 'host': host})
 
     @args('--host', metavar='<host>', help='Host')
     @args('--service', metavar='<service>', help='Nova service')
@@ -703,7 +704,8 @@ class ServiceCommands(object):
         except exception.NotFound as ex:
             print _("error: %s") % ex
             return(2)
-        print _("Service %(service)s on host %(host)s disabled.") % locals()
+        print (_("Service %(service)s on host %(host)s disabled.") %
+               {'service': service, 'host': host})
 
     def _show_host_resources(self, context, host):
         """Shows the physical/usage resource given by hosts.
@@ -968,8 +970,9 @@ class InstanceTypeCommands(object):
                             ctxt,
                             inst_type["flavorid"],
                             ext_spec)
-            print _("Key %(key)s set to %(value)s on instance"
-                    " type %(name)s") % locals()
+            print (_("Key %(key)s set to %(value)s on instance "
+                     "type %(name)s") %
+                   {'key': key, 'value': value, 'name': name})
         except db_exc.DBError as e:
             _db_error(e)
 
@@ -990,7 +993,8 @@ class InstanceTypeCommands(object):
                         inst_type["flavorid"],
                         key)
 
-            print _("Key %(key)s on instance type %(name)s unset") % locals()
+            print (_("Key %(key)s on instance type %(name)s unset") %
+                   {'key': key, 'name': name})
         except db_exc.DBError as e:
             _db_error(e)
 
@@ -1099,7 +1103,8 @@ class GetLogCommands(object):
                             print log_file + ":-"
                             print_name = 1
                         linenum = len(lines) - index
-                        print _('Line %(linenum)d : %(line)s') % locals()
+                        print (_('Line %(linenum)d : %(line)s') %
+                               {'linenum': linenum, 'line': line})
         if error_found == 0:
             print _('No errors in logfiles!')
 

@@ -66,7 +66,8 @@ class HookManager(stevedore.hook.HookManager):
             obj = e.obj
             pre = getattr(obj, 'pre', None)
             if pre:
-                LOG.debug(_("Running %(name)s pre-hook: %(obj)s") % locals())
+                LOG.debug(_("Running %(name)s pre-hook: %(obj)s"),
+                          {'name': name, 'obj': obj})
                 if f:
                     pre(f, *args, **kwargs)
                 else:
@@ -77,7 +78,8 @@ class HookManager(stevedore.hook.HookManager):
             obj = e.obj
             post = getattr(obj, 'post', None)
             if post:
-                LOG.debug(_("Running %(name)s post-hook: %(obj)s") % locals())
+                LOG.debug(_("Running %(name)s post-hook: %(obj)s"),
+                          {'name': name, 'obj': obj})
                 if f:
                     post(f, rv, *args, **kwargs)
                 else:

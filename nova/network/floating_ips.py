@@ -85,7 +85,7 @@ class FloatingIP(object):
                                                     fixed_ip_id,
                                                     get_network=True)
                 except exception.FixedIpNotFound:
-                    msg = _('Fixed ip %(fixed_ip_id)s not found') % locals()
+                    msg = _('Fixed ip %s not found') % fixed_ip_id
                     LOG.debug(msg)
                     continue
                 interface = CONF.public_interface or floating_ip['interface']
@@ -95,7 +95,7 @@ class FloatingIP(object):
                                                   interface,
                                                   fixed_ip['network'])
                 except processutils.ProcessExecutionError:
-                    LOG.debug(_('Interface %(interface)s not found'), locals())
+                    LOG.debug(_('Interface %s not found'), interface)
                     raise exception.NoFloatingIpInterface(interface=interface)
 
     def allocate_for_instance(self, context, **kwargs):
@@ -120,7 +120,7 @@ class FloatingIP(object):
             floating_address = self.allocate_floating_ip(context, project_id,
                 True)
             LOG.debug(_("floating IP allocation for instance "
-                        "|%(floating_address)s|") % locals(),
+                        "|%s|"), floating_address,
                         instance_uuid=instance_uuid, context=context)
             # set auto_assigned column to true for the floating ip
             self.db.floating_ip_set_auto_assigned(context, floating_address)
@@ -217,9 +217,8 @@ class FloatingIP(object):
             if use_quota:
                 reservations = QUOTAS.reserve(context, floating_ips=1)
         except exception.OverQuota:
-            pid = context.project_id
-            LOG.warn(_("Quota exceeded for %(pid)s, tried to allocate "
-                       "floating IP") % locals())
+            LOG.warn(_("Quota exceeded for %s, tried to allocate "
+                       "floating IP"), context.project_id)
             raise exception.FloatingIpLimitExceeded()
 
         try:
@@ -371,7 +370,7 @@ class FloatingIP(object):
             except processutils.ProcessExecutionError as e:
                 self.db.floating_ip_disassociate(context, floating_address)
                 if "Cannot find device" in str(e):
-                    LOG.error(_('Interface %(interface)s not found'), locals())
+                    LOG.error(_('Interface %s not found'), interface)
                     raise exception.NoFloatingIpInterface(interface=interface)
                 raise
 
@@ -529,16 +528,17 @@ class FloatingIP(object):
         if not floating_addresses or (source and source == dest):
             return
 
-        LOG.info(_("Starting migration network for instance"
-                   " %(instance_uuid)s"), locals())
+        LOG.info(_("Starting migration network for instance %s"),
+                 instance_uuid)
         for address in floating_addresses:
             floating_ip = self.db.floating_ip_get_by_address(context,
                                                              address)
 
             if self._is_stale_floating_ip_address(context, floating_ip):
                 LOG.warn(_("Floating ip address |%(address)s| no longer "
-                           "belongs to instance %(instance_uuid)s. Will not"
-                           "migrate it "), locals())
+                           "belongs to instance %(instance_uuid)s. Will not "
+                           "migrate it "),
+                         {'address': address, 'instance_uuid': instance_uuid})
                 continue
 
             interface = CONF.public_interface or floating_ip['interface']
@@ -571,8 +571,8 @@ class FloatingIP(object):
         if not floating_addresses or (source and source == dest):
             return
 
-        LOG.info(_("Finishing migration network for instance"
-                   " %(instance_uuid)s"), locals())
+        LOG.info(_("Finishing migration network for instance %s"),
+                 instance_uuid)
 
         for address in floating_addresses:
             floating_ip = self.db.floating_ip_get_by_address(context,
@@ -581,7 +581,8 @@ class FloatingIP(object):
             if self._is_stale_floating_ip_address(context, floating_ip):
                 LOG.warn(_("Floating ip address |%(address)s| no longer "
                            "belongs to instance %(instance_uuid)s. Will not"
-                           "setup it."), locals())
+                           "setup it."),
+                         {'address': address, 'instance_uuid': instance_uuid})
                 continue
 
             self.db.floating_ip_update(context,

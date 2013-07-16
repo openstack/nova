@@ -969,7 +969,7 @@ class QuotaEngine(object):
                                             expire=expire,
                                             project_id=project_id)
 
-        LOG.debug(_("Created reservations %(reservations)s") % locals())
+        LOG.debug(_("Created reservations %s"), reservations)
 
         return reservations
 
@@ -991,10 +991,9 @@ class QuotaEngine(object):
             # usage resynchronization and the reservation expiration
             # mechanisms will resolve the issue.  The exception is
             # logged, however, because this is less than optimal.
-            LOG.exception(_("Failed to commit reservations "
-                            "%(reservations)s") % locals())
+            LOG.exception(_("Failed to commit reservations %s"), reservations)
             return
-        LOG.debug(_("Committed reservations %(reservations)s") % locals())
+        LOG.debug(_("Committed reservations %s"), reservations)
 
     def rollback(self, context, reservations, project_id=None):
         """Roll back reservations.
@@ -1014,10 +1013,10 @@ class QuotaEngine(object):
             # usage resynchronization and the reservation expiration
             # mechanisms will resolve the issue.  The exception is
             # logged, however, because this is less than optimal.
-            LOG.exception(_("Failed to roll back reservations "
-                            "%(reservations)s") % locals())
+            LOG.exception(_("Failed to roll back reservations %s"),
+                          reservations)
             return
-        LOG.debug(_("Rolled back reservations %(reservations)s") % locals())
+        LOG.debug(_("Rolled back reservations %s"), reservations)
 
     def usage_reset(self, context, resources):
         """

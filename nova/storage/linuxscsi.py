@@ -119,11 +119,10 @@ def find_multipath_device(device):
                 mdev_id = mdev_id.replace(')', '')
 
             if mdev is None:
-                LOG.warn(_("Couldn't find multipath device %(line)s")
-                         % locals())
+                LOG.warn(_("Couldn't find multipath device %s"), line)
                 return None
 
-            LOG.debug(_("Found multipath device = %(mdev)s") % locals())
+            LOG.debug(_("Found multipath device = %s"), mdev)
             device_lines = lines[3:]
             for dev_line in device_lines:
                 if dev_line.find("policy") != -1:
