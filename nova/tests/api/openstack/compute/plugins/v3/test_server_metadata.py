@@ -20,7 +20,7 @@ import uuid
 from oslo.config import cfg
 import webob
 
-from nova.api.openstack.compute import server_metadata
+from nova.api.openstack.compute.plugins.v3 import server_metadata
 from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import vm_states
 import nova.db
@@ -116,7 +116,7 @@ class BaseTest(test.TestCase):
         self.stubs.Set(compute_rpcapi.ComputeAPI, 'change_instance_metadata',
                        fake_change_instance_metadata)
 
-        self.controller = server_metadata.Controller()
+        self.controller = server_metadata.ServerMetadataController()
         self.uuid = str(uuid.uuid4())
         self.url = '/v1.1/fake/servers/%s/metadata' % self.uuid
 
