@@ -440,8 +440,9 @@ class VMOps(object):
                     rescue)
 
         @step
-        def inject_metadata_step(undo_mgr, vm_ref):
+        def inject_instance_data_step(undo_mgr, vm_ref):
             self.inject_instance_metadata(instance, vm_ref)
+            self.inject_auto_disk_config(instance, vm_ref)
 
         @step
         def prepare_security_group_filters_step(undo_mgr):
@@ -490,7 +491,7 @@ class VMOps(object):
                     kernel_file, ramdisk_file)
             attach_disks_step(undo_mgr, vm_ref, vdis, disk_image_type)
             setup_network_step(undo_mgr, vm_ref, vdis)
-            inject_metadata_step(undo_mgr, vm_ref)
+            inject_instance_data_step(undo_mgr, vm_ref)
             prepare_security_group_filters_step(undo_mgr)
 
             if rescue:
@@ -1108,6 +1109,16 @@ class VMOps(object):
 
         # Store user metadata
         store_meta('vm-data/user-metadata', instance['metadata'])
+
+    def inject_auto_disk_config(self, instance, vm_ref):
+        """Inject instance's auto_disk_config attribute into xenstore."""
+        @utils.synchronized('xenstore-' + instance['uuid'])
+        def store_auto_disk_config(key, value):
+            value = value and True or False
+            self._add_to_param_xenstore(vm_ref, key, str(value))
+
+        store_auto_disk_config('vm-data/auto-disk-config',
+                               instance['auto_disk_config'])
 
     def change_instance_metadata(self, instance, diff):
         """Apply changes to instance metadata to xenstore."""

@@ -20,6 +20,7 @@ import ast
 import base64
 import contextlib
 import functools
+import mox
 import os
 import re
 
@@ -931,6 +932,14 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         # tee must not run in this case, where an injection-capable
         # guest agent is detected
         self.assertFalse(self._tee_executed)
+
+    def test_spawn_injects_auto_disk_config_to_xenstore(self):
+        instance = self._create_instance(spawn=False)
+        self.mox.StubOutWithMock(self.conn._vmops, 'inject_auto_disk_config')
+        self.conn._vmops.inject_auto_disk_config(instance, mox.IgnoreArg())
+        self.mox.ReplayAll()
+        self.conn.spawn(self.context, instance,
+                        IMAGE_FIXTURES['1']["image_meta"], [], 'herp', '')
 
     def test_spawn_vlanmanager(self):
         self.flags(network_manager='nova.network.manager.VlanManager',
