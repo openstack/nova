@@ -1805,14 +1805,14 @@ class CloudController(object):
                         val = (val,)
                 if key_name:
                     search_block = {}
-                    if key_name == 'resource_id':
+                    if key_name in ('resource_id', 'resource-id'):
                         search_block['resource_id'] = []
                         for res_id in val:
                             search_block['resource_id'].append(
                                 ec2utils.ec2_inst_id_to_uuid(context, res_id))
                     elif key_name in ['key', 'value']:
                         search_block[key_name] = val
-                    elif key_name == 'resource_type':
+                    elif key_name in ('resource_type', 'resource-type'):
                         for res_type in val:
                             if res_type != 'instance':
                                 raise exception.EC2APIError(_
