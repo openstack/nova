@@ -221,14 +221,15 @@ class Instance(base.NovaObject):
             instance['fault'] = (
                 instance_fault.InstanceFault.get_latest_for_instance(
                     context, instance.uuid))
-        # NOTE(danms): info_cache and security_groups are almost always joined
-        # in the DB layer right now, so check to see if they're filled instead
-        # of looking at expected_attrs
-        if db_inst['info_cache']:
+        # NOTE(danms): info_cache and security_groups are almost
+        # always joined in the DB layer right now, so check to see if
+        # they are asked for and are present in the resulting object
+        if 'info_cache' in expected_attrs and db_inst.get('info_cache'):
             instance['info_cache'] = instance_info_cache.InstanceInfoCache()
             instance_info_cache.InstanceInfoCache._from_db_object(
                     context, instance['info_cache'], db_inst['info_cache'])
-        if db_inst['security_groups']:
+        if ('security_groups' in expected_attrs and
+                db_inst.get('security_groups')):
             instance['security_groups'] = security_group.SecurityGroupList()
             security_group._make_secgroup_list(context,
                                                instance['security_groups'],
@@ -254,7 +255,7 @@ class Instance(base.NovaObject):
     @base.remotable_classmethod
     def get_by_uuid(cls, context, uuid, expected_attrs=None):
         if expected_attrs is None:
-            expected_attrs = []
+            expected_attrs = ['info_cache', 'security_groups']
         columns_to_join = cls._attrs_to_columns(expected_attrs)
         db_inst = db.instance_get_by_uuid(context, uuid,
                                           columns_to_join=columns_to_join)
@@ -264,7 +265,7 @@ class Instance(base.NovaObject):
     @base.remotable_classmethod
     def get_by_id(cls, context, inst_id, expected_attrs=None):
         if expected_attrs is None:
-            expected_attrs = []
+            expected_attrs = ['info_cache', 'security_groups']
         columns_to_join = cls._attrs_to_columns(expected_attrs)
         db_inst = db.instance_get(context, inst_id,
                                   columns_to_join=columns_to_join)
@@ -322,7 +323,7 @@ class Instance(base.NovaObject):
     @base.remotable
     def refresh(self, context):
         extra = []
-        for field in INSTANCE_OPTIONAL_FIELDS:
+        for field in INSTANCE_DEFAULT_FIELDS:
             if hasattr(self, base.get_attrname(field)):
                 extra.append(field)
         current = self.__class__.get_by_uuid(context, uuid=self.uuid,
@@ -353,7 +354,12 @@ class Instance(base.NovaObject):
         instance = self.__class__.get_by_uuid(self._context,
                                               uuid=self.uuid,
                                               expected_attrs=extra)
-        self[attrname] = instance[attrname]
+
+        # NOTE(danms): Never allow us to recursively-load
+        if hasattr(instance, base.get_attrname(attrname)):
+            self[attrname] = instance[attrname]
+        else:
+            raise Exception('Cannot load "%s" from instance' % attrname)
 
 
 def _make_instance_list(context, inst_list, db_inst_list, expected_attrs):
