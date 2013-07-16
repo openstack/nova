@@ -16,6 +16,7 @@
 #    under the License.
 
 import contextlib
+import copy
 import pkg_resources
 import urlparse
 
@@ -219,6 +220,7 @@ class FetchVhdImageTestCase(test.TestCase):
         self.mox.StubOutWithMock(vm_utils, '_make_uuid_stack')
         self.mox.StubOutWithMock(vm_utils, 'get_sr_path')
         self.mox.StubOutWithMock(vm_utils, '_image_uses_bittorrent')
+        self.mox.StubOutWithMock(vm_utils, '_add_torrent_url')
         self.mox.StubOutWithMock(vm_utils, '_add_bittorrent_params')
         self.mox.StubOutWithMock(vm_utils, '_generate_glance_callback')
         self.mox.StubOutWithMock(vm_utils,
@@ -237,14 +239,20 @@ class FetchVhdImageTestCase(test.TestCase):
         self.sr_path = "sr_path"
         self.params = {'image_id': self.image_id,
             'uuid_stack': self.uuid_stack, 'sr_path': self.sr_path}
-        if uses_bittorrent:
-            self.params['torrent_url'] = "%s.torrent" % self.image_id
+        self.bt_params = copy.copy(self.params)
+        self.bt_params['torrent_url'] = "%s.torrent" % self.image_id
         self.vdis = {'root': {'uuid': 'vdi'}}
 
         vm_utils._make_uuid_stack().AndReturn(self.uuid_stack)
         vm_utils.get_sr_path(self.session).AndReturn(self.sr_path)
         vm_utils._image_uses_bittorrent(self.context,
             self.instance).AndReturn(uses_bittorrent)
+        if uses_bittorrent:
+            def set_url(instance, image_id, params):
+                params['torrent_url'] = "%s.torrent" % image_id
+
+            vm_utils._add_torrent_url(self.instance, self.image_id,
+                    self.params).WithSideEffects(set_url).AndReturn(True)
 
     def test_fetch_vhd_image_works_with_glance(self):
         self._apply_stubouts()
@@ -272,10 +280,10 @@ class FetchVhdImageTestCase(test.TestCase):
         self._apply_stubouts()
         self._common_params_setup(True)
 
-        vm_utils._add_bittorrent_params(self.image_id, self.params)
+        vm_utils._add_bittorrent_params(self.image_id, self.bt_params)
 
         vm_utils._fetch_using_dom0_plugin_with_retry(self.context,
-            self.session, self.image_id, "bittorrent", self.params,
+            self.session, self.image_id, "bittorrent", self.bt_params,
             callback=None).AndReturn(self.vdis)
 
         vm_utils.safe_find_sr(self.session).AndReturn("sr")
@@ -295,10 +303,10 @@ class FetchVhdImageTestCase(test.TestCase):
         self._common_params_setup(True)
         self.mox.StubOutWithMock(self.session, 'call_xenapi')
 
-        vm_utils._add_bittorrent_params(self.image_id, self.params)
+        vm_utils._add_bittorrent_params(self.image_id, self.bt_params)
 
         vm_utils._fetch_using_dom0_plugin_with_retry(self.context,
-            self.session, self.image_id, "bittorrent", self.params,
+            self.session, self.image_id, "bittorrent", self.bt_params,
             callback=None).AndReturn(self.vdis)
 
         vm_utils.safe_find_sr(self.session).AndReturn("sr")
