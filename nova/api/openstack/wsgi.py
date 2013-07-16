@@ -1165,6 +1165,7 @@ class Fault(webob.exc.HTTPException):
             409: "conflictingRequest",
             413: "overLimit",
             415: "badMediaType",
+            429: "overLimit",
             501: "notImplemented",
             503: "serviceUnavailable"}
 
@@ -1189,7 +1190,7 @@ class Fault(webob.exc.HTTPException):
             fault_name: {
                 'code': code,
                 'message': explanation}}
-        if code == 413:
+        if code == 413 or code == 429:
             retry = self.wrapped_exc.headers.get('Retry-After', None)
             if retry:
                 fault_data[fault_name]['retryAfter'] = retry
@@ -1215,17 +1216,17 @@ class Fault(webob.exc.HTTPException):
         return self.wrapped_exc.__str__()
 
 
-class OverLimitFault(webob.exc.HTTPException):
+class RateLimitFault(webob.exc.HTTPException):
     """
     Rate-limited request response.
     """
 
     def __init__(self, message, details, retry_time):
         """
-        Initialize new `OverLimitFault` with relevant information.
+        Initialize new `RateLimitFault` with relevant information.
         """
-        hdrs = OverLimitFault._retry_after(retry_time)
-        self.wrapped_exc = webob.exc.HTTPRequestEntityTooLarge(headers=hdrs)
+        hdrs = RateLimitFault._retry_after(retry_time)
+        self.wrapped_exc = webob.exc.HTTPTooManyRequests(headers=hdrs)
         self.content = {
             "overLimit": {
                 "code": self.wrapped_exc.status_int,

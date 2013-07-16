@@ -349,14 +349,14 @@ class LimitMiddlewareTest(BaseLimitTestSuite):
         self.assertEqual(200, response.status_int)
 
     def test_limited_request_json(self):
-        # Test a rate-limited (413) GET request through middleware.
+        # Test a rate-limited (429) GET request through middleware.
         request = webob.Request.blank("/")
         response = request.get_response(self.app)
         self.assertEqual(200, response.status_int)
 
         request = webob.Request.blank("/")
         response = request.get_response(self.app)
-        self.assertEqual(response.status_int, 413)
+        self.assertEqual(response.status_int, 429)
 
         self.assertTrue('Retry-After' in response.headers)
         retry_after = int(response.headers['Retry-After'])
@@ -372,7 +372,7 @@ class LimitMiddlewareTest(BaseLimitTestSuite):
         self.assertEqual(retryAfter, "60")
 
     def test_limited_request_xml(self):
-        # Test a rate-limited (413) response as XML.
+        # Test a rate-limited (429) response as XML.
         request = webob.Request.blank("/")
         response = request.get_response(self.app)
         self.assertEqual(200, response.status_int)
@@ -380,7 +380,7 @@ class LimitMiddlewareTest(BaseLimitTestSuite):
         request = webob.Request.blank("/")
         request.accept = "application/xml"
         response = request.get_response(self.app)
-        self.assertEqual(response.status_int, 413)
+        self.assertEqual(response.status_int, 429)
 
         root = minidom.parseString(response.body).childNodes[0]
         expected = "Only 1 GET request(s) can be made to * every minute."

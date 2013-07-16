@@ -86,6 +86,33 @@ class TestFaults(test.TestCase):
             self.assertEqual(response.content_type, "application/json")
             self.assertEqual(expected, actual)
 
+    def test_429_fault_json(self):
+        # Test fault serialized to JSON via file-extension and/or header.
+        requests = [
+            webob.Request.blank('/.json'),
+            webob.Request.blank('/', headers={"Accept": "application/json"}),
+        ]
+
+        for request in requests:
+            exc = webob.exc.HTTPTooManyRequests
+            # NOTE(aloga): we intentionally pass an integer for the
+            # 'Retry-After' header. It should be then converted to a str
+            fault = wsgi.Fault(exc(explanation='sorry',
+                        headers={'Retry-After': 4}))
+            response = request.get_response(fault)
+
+            expected = {
+                "overLimit": {
+                    "message": "sorry",
+                    "code": 429,
+                    "retryAfter": "4",
+                },
+            }
+            actual = jsonutils.loads(response.body)
+
+            self.assertEqual(response.content_type, "application/json")
+            self.assertEqual(expected, actual)
+
     def test_raise(self):
         # Ensure the ability to raise :class:`Fault` in WSGI-ified methods.
         @webob.dec.wsgify
@@ -179,6 +206,31 @@ class FaultsXMLSerializationTestV11(test.TestCase):
 
         expected = minidom.parseString(self._prepare_xml("""
                 <overLimit code="413" xmlns="%s">
+                    <message>sorry</message>
+                    <retryAfter>4</retryAfter>
+                </overLimit>
+            """) % common.XML_NS_V11)
+
+        self.assertEqual(expected.toxml(), actual.toxml())
+
+    def test_429_fault(self):
+        metadata = {'attributes': {"overLimit": 'code'}}
+        serializer = wsgi.XMLDictSerializer(metadata=metadata,
+                                            xmlns=common.XML_NS_V11)
+
+        fixture = {
+            "overLimit": {
+                "message": "sorry",
+                "code": 429,
+                "retryAfter": 4,
+            },
+        }
+
+        output = serializer.serialize(fixture)
+        actual = minidom.parseString(self._prepare_xml(output))
+
+        expected = minidom.parseString(self._prepare_xml("""
+                <overLimit code="429" xmlns="%s">
                     <message>sorry</message>
                     <retryAfter>4</retryAfter>
                 </overLimit>
