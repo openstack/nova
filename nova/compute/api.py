@@ -2921,9 +2921,9 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
             # TODO(Daviey): LP: #813685 extend beyond group_name checking, and
             #  probably create a param validator that can be used elsewhere.
             msg = (_("Value (%(value)s) for parameter Group%(property)s is "
-                     "invalid. Content limited to '%(allowed)'.") %
-                   dict(value=value, allowed=allowed,
-                        property=property.capitalize()))
+                     "invalid. Content limited to '%(allowed)s'.") %
+                   {'value': value, 'allowed': allowed,
+                    'property': property.capitalize()})
             self.raise_invalid_property(msg)
         if len(val) > 255:
             msg = _("Security group %s should not be greater "
