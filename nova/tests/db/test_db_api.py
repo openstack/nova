@@ -178,18 +178,6 @@ class DbApiTestCase(DbTestCase):
     def test_require_admin_context_decorator_wraps_functions_properly(self):
         self._test_decorator_wraps_helper(sqlalchemy_api.require_admin_context)
 
-    def test_stringified_ips(self):
-        instance = self.create_instance_with_args()
-        instance = db.instance_update(
-            self.context, instance['uuid'],
-            {'access_ip_v4': netaddr.IPAddress('1.2.3.4'),
-             'access_ip_v6': netaddr.IPAddress('::1')})
-        self.assertTrue(isinstance(instance['access_ip_v4'], basestring))
-        self.assertTrue(isinstance(instance['access_ip_v6'], basestring))
-        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
-        self.assertTrue(isinstance(instance['access_ip_v4'], basestring))
-        self.assertTrue(isinstance(instance['access_ip_v6'], basestring))
-
 
 def _get_fake_aggr_values():
     return {'name': 'fake_aggregate'}
@@ -1666,6 +1654,18 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         real_float_addresses = \
                 db.instance_floating_address_get_all(ctxt, instance_uuids[2])
         self.assertEqual(set([float_addresses[2]]), set(real_float_addresses))
+
+    def test_instance_stringified_ips(self):
+        instance = self.create_instance_with_args()
+        instance = db.instance_update(
+            self.ctxt, instance['uuid'],
+            {'access_ip_v4': netaddr.IPAddress('1.2.3.4'),
+             'access_ip_v6': netaddr.IPAddress('::1')})
+        self.assertTrue(isinstance(instance['access_ip_v4'], basestring))
+        self.assertTrue(isinstance(instance['access_ip_v6'], basestring))
+        instance = db.instance_get_by_uuid(self.ctxt, instance['uuid'])
+        self.assertTrue(isinstance(instance['access_ip_v4'], basestring))
+        self.assertTrue(isinstance(instance['access_ip_v6'], basestring))
 
 
 class InstanceMetadataTestCase(test.TestCase):
