@@ -176,34 +176,6 @@ class DbApiTestCase(DbTestCase):
         self.assertEqual(0, len(results))
         db.migration_update(ctxt, migration['id'], {"status": "CONFIRMED"})
 
-    def test_dns_registration(self):
-        domain1 = 'test.domain.one'
-        domain2 = 'test.domain.two'
-        testzone = 'testzone'
-        ctxt = context.get_admin_context()
-
-        db.dnsdomain_register_for_zone(ctxt, domain1, testzone)
-        domain_ref = db.dnsdomain_get(ctxt, domain1)
-        zone = domain_ref['availability_zone']
-        scope = domain_ref['scope']
-        self.assertEqual(scope, 'private')
-        self.assertEqual(zone, testzone)
-
-        db.dnsdomain_register_for_project(ctxt, domain2,
-                                           self.project_id)
-        domain_ref = db.dnsdomain_get(ctxt, domain2)
-        project = domain_ref['project_id']
-        scope = domain_ref['scope']
-        self.assertEqual(project, self.project_id)
-        self.assertEqual(scope, 'public')
-
-        expected = [domain1, domain2]
-        domains = db.dnsdomain_list(ctxt)
-        self.assertEqual(expected, domains)
-
-        db.dnsdomain_unregister(ctxt, domain1)
-        db.dnsdomain_unregister(ctxt, domain2)
-
     def test_get_vol_mapping_non_admin(self):
         ref = db.ec2_volume_create(self.context, 'fake-uuid')
         ec2_id = db.get_ec2_volume_id_by_uuid(self.context, 'fake-uuid')
@@ -5409,6 +5381,43 @@ class ConsolePoolTestCase(test.TestCase, ModelsObjectComparatorMixin):
         res = db.console_pool_get_all_by_host_type(
             self.ctxt, 'cp_host', 'cp_console_type')
         self.assertEqual([], res)
+
+
+class DnsdomainTestCase(test.TestCase):
+
+    def setUp(self):
+        super(DnsdomainTestCase, self).setUp()
+        self.ctxt = context.get_admin_context()
+        self.domain = 'test.domain'
+        self.testzone = 'testzone'
+        self.project = 'fake'
+
+    def test_dnsdomain_register_for_zone(self):
+        db.dnsdomain_register_for_zone(self.ctxt, self.domain, self.testzone)
+        domain = db.dnsdomain_get(self.ctxt, self.domain)
+        self.assertEqual(domain['domain'], self.domain)
+        self.assertEqual(domain['availability_zone'], self.testzone)
+        self.assertEqual(domain['scope'], 'private')
+
+    def test_dnsdomain_register_for_project(self):
+        db.dnsdomain_register_for_project(self.ctxt, self.domain, self.project)
+        domain = db.dnsdomain_get(self.ctxt, self.domain)
+        self.assertEqual(domain['domain'], self.domain)
+        self.assertEqual(domain['project_id'], self.project)
+        self.assertEqual(domain['scope'], 'public')
+
+    def test_dnsdomain_list(self):
+        d_list = ['test.domain.one', 'test.domain.two']
+        db.dnsdomain_register_for_zone(self.ctxt, d_list[0], self.testzone)
+        db.dnsdomain_register_for_project(self.ctxt, d_list[1], self.project)
+        db_list = db.dnsdomain_list(self.ctxt)
+        self.assertEqual(sorted(d_list), sorted(db_list))
+
+    def test_dnsdomain_unregister(self):
+        db.dnsdomain_register_for_zone(self.ctxt, self.domain, self.testzone)
+        db.dnsdomain_unregister(self.ctxt, self.domain)
+        domain = db.dnsdomain_get(self.ctxt, self.domain)
+        self.assertIsNone(domain)
 
 
 class ArchiveTestCase(test.TestCase):
