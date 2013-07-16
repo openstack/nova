@@ -154,7 +154,7 @@ class VMwareAPIVMTestCase(test.TestCase):
     def _create_vm(self):
         """Create and spawn the VM."""
         self._create_instance_in_the_db()
-        self.type_data = db.instance_type_get_by_name(None, 'm1.large')
+        self.type_data = db.flavor_get_by_name(None, 'm1.large')
         self.conn.spawn(self.context, self.instance, self.image,
                         injected_files=[], admin_password=None,
                         network_info=self.network_info,

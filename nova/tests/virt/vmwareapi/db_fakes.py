@@ -79,12 +79,12 @@ def stub_out_db_instance_api(stubs):
             }
         return FakeModel(base_options)
 
-    def fake_instance_type_get_all(context, inactive=0, filters=None):
+    def fake_flavor_get_all(context, inactive=0, filters=None):
         return INSTANCE_TYPES.values()
 
-    def fake_instance_type_get_by_name(context, name):
+    def fake_flavor_get_by_name(context, name):
         return INSTANCE_TYPES[name]
 
     stubs.Set(db, 'instance_create', fake_instance_create)
-    stubs.Set(db, 'instance_type_get_all', fake_instance_type_get_all)
-    stubs.Set(db, 'instance_type_get_by_name', fake_instance_type_get_by_name)
+    stubs.Set(db, 'flavor_get_all', fake_flavor_get_all)
+    stubs.Set(db, 'flavor_get_by_name', fake_flavor_get_by_name)

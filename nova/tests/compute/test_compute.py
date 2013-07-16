@@ -311,7 +311,7 @@ class BaseTestCase(test.TestCase):
         inst['swap'] = 2048
         inst['rxtx_factor'] = 1
         inst.update(params)
-        return db.instance_type_create(context, inst)['id']
+        return db.flavor_create(context, inst)['id']
 
     def _create_group(self):
         values = {'name': 'testgroup',
@@ -3417,14 +3417,14 @@ class ComputeTestCase(BaseTestCase):
 
         # Confirm the instance size before the resize starts
         inst_ref = db.instance_get_by_uuid(self.context, instance_uuid)
-        instance_type_ref = db.instance_type_get(self.context,
+        instance_type_ref = db.flavor_get(self.context,
                 inst_ref['instance_type_id'])
         self.assertEqual(instance_type_ref['flavorid'], '1')
 
         new_inst_ref = db.instance_update(self.context, instance_uuid,
                                           {'vm_state': old_vm_state})
 
-        new_instance_type_ref = db.instance_type_get_by_flavor_id(
+        new_instance_type_ref = db.flavor_get_by_flavor_id(
                 self.context, 3)
         new_instance_type_p = jsonutils.to_primitive(new_instance_type_ref)
         self.compute.prep_resize(self.context,
@@ -3453,7 +3453,7 @@ class ComputeTestCase(BaseTestCase):
 
         # Prove that the instance size is now the new size
         rpcinst = get_primitive_instance_by_uuid(self.context, instance_uuid)
-        instance_type_ref = db.instance_type_get(self.context,
+        instance_type_ref = db.flavor_get(self.context,
                 rpcinst['instance_type_id'])
         self.assertEqual(instance_type_ref['flavorid'], '3')
 
@@ -3486,7 +3486,7 @@ class ComputeTestCase(BaseTestCase):
         instance = get_primitive_instance_by_uuid(self.context, instance_uuid)
         self.assertEqual(instance['task_state'], None)
 
-        instance_type_ref = db.instance_type_get(self.context,
+        instance_type_ref = db.flavor_get(self.context,
                 instance['instance_type_id'])
         self.assertEqual(instance_type_ref['flavorid'], '3')
         self.assertEqual('fake-mini', migration_ref['source_compute'])
@@ -3539,7 +3539,7 @@ class ComputeTestCase(BaseTestCase):
 
         # Confirm the instance size before the resize starts
         inst_ref = db.instance_get_by_uuid(self.context, instance_uuid)
-        instance_type_ref = db.instance_type_get(self.context,
+        instance_type_ref = db.flavor_get(self.context,
                 inst_ref['instance_type_id'])
         self.assertEqual(instance_type_ref['flavorid'], '1')
 
@@ -3548,7 +3548,7 @@ class ComputeTestCase(BaseTestCase):
                                           {'host': 'foo',
                                            'vm_state': old_vm_state})
 
-        new_instance_type_ref = db.instance_type_get_by_flavor_id(
+        new_instance_type_ref = db.flavor_get_by_flavor_id(
                 self.context, 3)
         new_instance_type_p = jsonutils.to_primitive(new_instance_type_ref)
         self.compute.prep_resize(self.context,
@@ -3577,7 +3577,7 @@ class ComputeTestCase(BaseTestCase):
 
         # Prove that the instance size is now the new size
         rpcinst = get_primitive_instance_by_uuid(self.context, instance_uuid)
-        instance_type_ref = db.instance_type_get(self.context,
+        instance_type_ref = db.flavor_get(self.context,
                 rpcinst['instance_type_id'])
         self.assertEqual(instance_type_ref['flavorid'], '3')
 
@@ -3614,7 +3614,7 @@ class ComputeTestCase(BaseTestCase):
         instance = get_primitive_instance_by_uuid(self.context, instance_uuid)
         self.assertEqual(instance['task_state'], None)
 
-        instance_type_ref = db.instance_type_get(self.context,
+        instance_type_ref = db.flavor_get(self.context,
                 instance['instance_type_id'])
         self.assertEqual(instance_type_ref['flavorid'], '1')
         self.assertEqual(instance['host'], migration_ref['source_compute'])

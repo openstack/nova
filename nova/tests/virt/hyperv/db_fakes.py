@@ -162,7 +162,7 @@ def stub_out_db_instance_api(stubs):
         return {}
 
     stubs.Set(db, 'instance_create', fake_instance_create)
-    stubs.Set(db, 'instance_type_get_all', fake_instance_type_get_all)
-    stubs.Set(db, 'instance_type_get_by_name', fake_instance_type_get_by_name)
+    stubs.Set(db, 'flavor_get_all', fake_instance_type_get_all)
+    stubs.Set(db, 'flavor_get_by_name', fake_instance_type_get_by_name)
     stubs.Set(db, 'block_device_mapping_get_all_by_instance',
               fake_block_device_mapping_get_all_by_instance)

@@ -63,7 +63,7 @@ class TestCellsStateManager(test.TestCase):
         super(TestCellsStateManager, self).setUp()
 
         self.stubs.Set(db, 'compute_node_get_all', _fake_compute_node_get_all)
-        self.stubs.Set(db, 'instance_type_get_all', _fake_instance_type_all)
+        self.stubs.Set(db, 'flavor_get_all', _fake_instance_type_all)
 
     def test_capacity_no_reserve(self):
         # utilize entire cell

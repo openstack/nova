@@ -290,7 +290,7 @@ class InstanceTypeCommandsTestCase(test.TestCase):
                       root_gb=16,
                       ephemeral_gb=32,
                       flavorid=105)
-        ref = db.instance_type_create(context.get_admin_context(),
+        ref = db.flavor_create(context.get_admin_context(),
                                       values)
         self.instance_type_name = ref["name"]
         self.instance_type_id = ref["id"]
@@ -299,13 +299,13 @@ class InstanceTypeCommandsTestCase(test.TestCase):
         self.unset_key = manage.InstanceTypeCommands().unset_key
 
     def tearDown(self):
-        db.instance_type_destroy(context.get_admin_context(),
+        db.flavor_destroy(context.get_admin_context(),
                                  "test.small")
         super(InstanceTypeCommandsTestCase, self).tearDown()
 
     def _test_extra_specs_empty(self):
         empty_specs = {}
-        actual_specs = db.instance_type_extra_specs_get(
+        actual_specs = db.flavor_extra_specs_get(
                               context.get_admin_context(),
                               self.instance_type_id)
         self.assertEquals(empty_specs, actual_specs)
@@ -316,7 +316,7 @@ class InstanceTypeCommandsTestCase(test.TestCase):
         self._test_extra_specs_empty()
 
         self.set_key(self.instance_type_name, "k1", "v1")
-        actual_specs = db.instance_type_extra_specs_get(
+        actual_specs = db.flavor_extra_specs_get(
                               context.get_admin_context(),
                               self.instance_type_flavorid)
         self.assertEquals(expected_specs, actual_specs)
@@ -331,13 +331,13 @@ class InstanceTypeCommandsTestCase(test.TestCase):
         self._test_extra_specs_empty()
 
         self.set_key(self.instance_type_name, "k1", "v1")
-        actual_specs = db.instance_type_extra_specs_get(
+        actual_specs = db.flavor_extra_specs_get(
                               context.get_admin_context(),
                               self.instance_type_flavorid)
         self.assertEquals(expected_specs, actual_specs)
 
         self.set_key(self.instance_type_name, "k1", "v2")
-        actual_specs = db.instance_type_extra_specs_get(
+        actual_specs = db.flavor_extra_specs_get(
                               context.get_admin_context(),
                               self.instance_type_flavorid)
         self.assertEquals(updated_specs, actual_specs)
@@ -352,7 +352,7 @@ class InstanceTypeCommandsTestCase(test.TestCase):
 
         self.set_key(self.instance_type_name, "k1", "v1")
         self.set_key(self.instance_type_name, "k3", "v3")
-        actual_specs = db.instance_type_extra_specs_get(
+        actual_specs = db.flavor_extra_specs_get(
                               context.get_admin_context(),
                               self.instance_type_flavorid)
         self.assertEquals(two_items_extra_specs, actual_specs)

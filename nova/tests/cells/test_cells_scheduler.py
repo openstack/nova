@@ -92,7 +92,7 @@ class CellsSchedulerTestCase(test.TestCase):
 
     def test_create_instances_here(self):
         # Just grab the first instance type
-        inst_type = db.instance_type_get(self.ctxt, 1)
+        inst_type = db.flavor_get(self.ctxt, 1)
         image = {'properties': {}}
         instance_uuids = self.instance_uuids
         instance_props = {'name': 'instance-00000001',
