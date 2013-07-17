@@ -3099,11 +3099,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         current_power_state = self._get_power_state(context, instance)
         self.driver.snapshot(context, instance, image_id, update_task_state)
 
-        sys_meta = instance.system_metadata
-        sys_meta['shelved_at'] = timeutils.strtime()
-        sys_meta['shelved_image_id'] = image_id
-        sys_meta['shelved_host'] = self.host
-        instance.system_metadata = sys_meta
+        instance.system_metadata['shelved_at'] = timeutils.strtime()
+        instance.system_metadata['shelved_image_id'] = image_id
+        instance.system_metadata['shelved_host'] = self.host
         instance.vm_state = vm_states.SHELVED
         instance.task_state = None
         if CONF.shelved_offload_time == 0:
