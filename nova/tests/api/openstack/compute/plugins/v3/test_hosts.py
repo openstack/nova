@@ -55,6 +55,8 @@ def stub_set_host_enabled(context, host_name, enabled):
     elif host_name == "host_c2":
         # Simulate a failure
         return results[not enabled]
+    elif host_name == "serviceunavailable":
+        raise exception.ComputeServiceUnavailable(host=host_name)
     else:
         # Do the right thing
         return results[enabled]
@@ -74,6 +76,8 @@ def stub_set_host_maintenance(context, host_name, mode):
     elif host_name == "host_c2":
         # Simulate a failure
         return results[not mode]
+    elif host_name == "serviceunavailable":
+        raise exception.ComputeServiceUnavailable(host=host_name)
     else:
         # Do the right thing
         return results[mode]
@@ -85,6 +89,8 @@ def stub_host_power_action(context, host_name, action):
     elif host_name == "dummydest":
         # The host does not exist
         raise exception.ComputeHostNotFound(host=host_name)
+    elif host_name == "serviceunavailable":
+        raise exception.ComputeServiceUnavailable(host=host_name)
     return action
 
 
@@ -152,7 +158,7 @@ class HostTestCase(test.TestCase):
                        stub_host_power_action)
 
     def _test_host_update(self, host, key, val, expected_value):
-        body = {'updates': {key: val}}
+        body = {'host': {key: val}}
         result = self.controller.update(self.req, host, body)
         self.assertEqual(result['host'][key], expected_value)
 
@@ -185,13 +191,26 @@ class HostTestCase(test.TestCase):
         self._test_host_update('host_c1', 'maintenance_mode',
                                'disable', 'off_maintenance')
 
+    def _test_host_update_service_unavailable(self, key, val):
+        body = {'host': {key: val}}
+        host = "serviceunavailable"
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
+                          self.req, host, body)
+
+    def test_enable_host_service_unavailable(self):
+        self._test_host_update_service_unavailable('status', 'enable')
+
+    def test_enable_maintenance_service_unavaliable(self):
+        self._test_host_update_service_unavailable('maintenance_mode',
+                                                   'enable')
+
     def _test_host_update_notimpl(self, key, val):
         def stub_service_get_all_notimpl(self, req):
             return [{'host': 'notimplemented', 'topic': None,
                      'availability_zone': None}]
         self.stubs.Set(db, 'service_get_all',
                        stub_service_get_all_notimpl)
-        body = {"updates": {key: val}}
+        body = {"host": {key: val}}
         self.assertRaises(webob.exc.HTTPNotImplemented,
                           self.controller.update,
                           self.req, 'notimplemented', body=body)
@@ -214,6 +233,26 @@ class HostTestCase(test.TestCase):
         result = self.controller.reboot(self.req, "host_c1")
         self.assertEqual(result['host']["power_action"], "reboot")
 
+    def _test_host_power_action_service_unavailable(self, method):
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          method, self.req, "serviceunavailable")
+
+    def test_host_startup_service_unavailable(self):
+        self._test_host_power_action_service_unavailable(
+            self.controller.startup)
+
+    def test_host_shutdown_service_unavailable(self):
+        self._test_host_power_action_service_unavailable(
+            self.controller.shutdown)
+
+    def test_host_reboot_service_unavailable(self):
+        self._test_host_power_action_service_unavailable(
+            self.controller.reboot)
+
+    def test_host_startup_service_unavailable(self):
+        self._test_host_power_action_service_unavailable(
+            self.controller.startup)
+
     def _test_host_power_action_notimpl(self, method):
         self.assertRaises(webob.exc.HTTPNotImplemented,
                           method, self.req, "notimplemented")
@@ -234,7 +273,7 @@ class HostTestCase(test.TestCase):
         with testtools.ExpectedException(webob.exc.HTTPNotFound,
                                          ".*%s.*" % dest):
             self.controller.update(self.req, dest,
-                                   body={"updates": {'status': 'enable'}})
+                                   body={"host": {'status': 'enable'}})
 
     def test_host_maintenance_bad_host(self):
         # A host given as an argument does not exist.
@@ -243,7 +282,7 @@ class HostTestCase(test.TestCase):
         with testtools.ExpectedException(webob.exc.HTTPNotFound,
                                          ".*%s.*" % dest):
             self.controller.update(self.req, dest,
-                                   body={"updates": {
+                                   body={"host": {
                                          'maintenance_mode': 'enable'}})
 
     def test_host_power_action_bad_host(self):
@@ -255,27 +294,40 @@ class HostTestCase(test.TestCase):
             self.controller.reboot(self.req, dest)
 
     def test_bad_status_value(self):
-        bad_body = {"updates": {"status": "bad"}}
+        bad_body = {"host": {"status": "bad"}}
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
                           self.req, "host_c1", bad_body)
-        bad_body2 = {"updates": {"status": "disablabc"}}
+        bad_body2 = {"host": {"status": "disablabc"}}
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
                           self.req, "host_c1", bad_body2)
 
     def test_bad_update_key(self):
-        bad_body = {"updates": {"crazy": "bad"}}
+        bad_body = {"host": {"crazy": "bad"}}
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
+                          self.req, "host_c1", bad_body)
+
+    def test_bad_update_key_type(self):
+        bad_body = {"host": "abc"}
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
+                          self.req, "host_c1", bad_body)
+        bad_body = {"host": None}
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
+                          self.req, "host_c1", bad_body)
+
+    def test_bad_update_empty(self):
+        bad_body = {}
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
                           self.req, "host_c1", bad_body)
 
     def test_bad_update_key_and_correct_update_key(self):
-        bad_body = {"updates": {"status": "disable",
-                                "crazy": "bad"}}
+        bad_body = {"host": {"status": "disable",
+                             "crazy": "bad"}}
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
                           self.req, "host_c1", bad_body)
 
     def test_good_update_keys(self):
-        body = {"updates": {"status": "disable",
-                            "maintenance_mode": "enable"}}
+        body = {"host": {"status": "disable",
+                         "maintenance_mode": "enable"}}
         result = self.controller.update(self.req, 'host_c1', body)
         self.assertEqual(result["host"]["host"], "host_c1")
         self.assertEqual(result["host"]["status"], "disabled")
@@ -285,7 +337,7 @@ class HostTestCase(test.TestCase):
     def test_show_forbidden(self):
         self.req.environ["nova.context"].is_admin = False
         dest = 'dummydest'
-        self.assertRaises(webob.exc.HTTPForbidden,
+        self.assertRaises(exception.PolicyNotAuthorized,
                           self.controller.show,
                           self.req, dest)
         self.req.environ["nova.context"].is_admin = True

@@ -189,7 +189,7 @@ policy_data = """
     "compute_extension:hide_server_addresses": "",
     "compute_extension:v3:os-hide-server-addresses": "",
     "compute_extension:hosts": "",
-    "compute_extension:v3:os-hosts": "",
+    "compute_extension:v3:os-hosts": "rule:admin_api",
     "compute_extension:hypervisors": "",
     "compute_extension:v3:os-hypervisors": "rule:admin_api",
     "compute_extension:image_size": "",
