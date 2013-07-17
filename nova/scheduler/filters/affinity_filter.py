@@ -116,3 +116,19 @@ class GroupAntiAffinityFilter(AffinityFilter):
 
         # No groups configured
         return True
+
+
+class GroupAffinityFilter(AffinityFilter):
+    """Schedule the instance on to host from a set of group hosts.
+    """
+
+    def host_passes(self, host_state, filter_properties):
+        group_hosts = filter_properties.get('group_hosts', [])
+        LOG.debug(_("Group affinity: check if %(host)s in "
+                    "%(configured)s"), {'host': host_state.host,
+                                        'configured': group_hosts})
+        if group_hosts:
+            return host_state.host in group_hosts
+
+        # No groups configured
+        return True
