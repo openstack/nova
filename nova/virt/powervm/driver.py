@@ -322,14 +322,17 @@ class PowerVMDriver(driver.ComputeDriver):
         # NOTE(ldbragst) In the case of a resize_revert on the same host
         # we reassign the original mac address, replacing the temp mac
         # on the old instance that will be started
-        if (self._powervm.instance_exists(new_name) and
-                self._powervm.instance_exists(instance['name'])):
+        # NOTE(guochbo) We can't judge if a resize_revert on the same host
+        # due to the instance on destination host has been destoryed.
+        # Original mac address is always kept in network_info, we can
+        # reassign the original mac address here without negative effects
+        # even the old instance kept the original mac address
+        if self.instance_exists(new_name):
             original_mac = network_info[0]['address']
-            self._powervm._operator.set_lpar_mac_base_value(instance['name'],
+            self._powervm._operator.set_lpar_mac_base_value(new_name,
                                                             original_mac)
         # Make sure we don't have a failed same-host migration still
         # hanging around
-        if self.instance_exists(new_name):
             if self.instance_exists(instance['name']):
                 self._powervm.destroy(instance['name'])
             # undo instance rename and start
