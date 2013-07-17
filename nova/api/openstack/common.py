@@ -103,6 +103,12 @@ _STATE_MAP = {
     vm_states.SOFT_DELETED: {
         'default': 'DELETED',
     },
+    vm_states.SHELVED: {
+        'default': 'SHELVED',
+    },
+    vm_states.SHELVED_OFFLOADED: {
+        'default': 'SHELVED_OFFLOADED',
+    },
 }
 
 
