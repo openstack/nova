@@ -118,9 +118,20 @@ class VolumeAttachTestCase(test.TestCase):
             connection_info,
             'instance_1', 'mountpoint', hotplug=False)
 
-    def test_connect_volume_no_hotplug(self):
+    def _test_connect_volume(self, hotplug, vm_running, plugged):
         session = stubs.FakeSessionForVolumeTests('fake_uri')
         ops = volumeops.VolumeOps(session)
+
+        self.mox.StubOutWithMock(volumeops.volume_utils, 'parse_sr_info')
+        self.mox.StubOutWithMock(
+            volumeops.volume_utils, 'find_sr_by_uuid')
+        self.mox.StubOutWithMock(
+            volumeops.volume_utils, 'introduce_sr')
+        self.mox.StubOutWithMock(volumeops.volume_utils, 'introduce_vdi')
+        self.mox.StubOutWithMock(volumeops.vm_utils, 'create_vbd')
+        self.mox.StubOutWithMock(volumeops.vm_utils, 'is_vm_shutdown')
+        self.mox.StubOutWithMock(ops._session, 'call_xenapi')
+
         instance_name = 'instance_1'
         sr_uuid = '1'
         sr_label = 'Disk-for:%s' % instance_name
@@ -135,43 +146,46 @@ class VolumeAttachTestCase(test.TestCase):
         vm_ref = 'vm_ref'
         dev_number = 1
 
-        called = collections.defaultdict(bool)
-
-        def fake_call_xenapi(self, method, *args, **kwargs):
-            called[method] = True
-
-        self.stubs.Set(ops._session, 'call_xenapi', fake_call_xenapi)
-
-        self.mox.StubOutWithMock(volumeops.volume_utils, 'parse_sr_info')
         volumeops.volume_utils.parse_sr_info(
             connection_data, sr_label).AndReturn(
                 tuple([sr_uuid, sr_label, sr_params]))
-
-        self.mox.StubOutWithMock(
-            volumeops.volume_utils, 'find_sr_by_uuid')
         volumeops.volume_utils.find_sr_by_uuid(session, sr_uuid).AndReturn(
                 None)
-
-        self.mox.StubOutWithMock(
-            volumeops.volume_utils, 'introduce_sr')
         volumeops.volume_utils.introduce_sr(
             session, sr_uuid, sr_label, sr_params).AndReturn(sr_ref)
-
-        self.mox.StubOutWithMock(volumeops.volume_utils, 'introduce_vdi')
         volumeops.volume_utils.introduce_vdi(
             session, sr_ref, vdi_uuid=vdi_uuid).AndReturn(vdi_ref)
-
-        self.mox.StubOutWithMock(volumeops.vm_utils, 'create_vbd')
         volumeops.vm_utils.create_vbd(
             session, vm_ref, vdi_ref, dev_number,
             bootable=False, osvol=True).AndReturn(vbd_ref)
+        volumeops.vm_utils.is_vm_shutdown(session,
+            vm_ref).AndReturn(not vm_running)
+        if plugged:
+            ops._session.call_xenapi("VBD.plug", vbd_ref)
+        ops._session.call_xenapi("VDI.get_uuid",
+            vdi_ref).AndReturn(vdi_uuid)
 
         self.mox.ReplayAll()
 
-        ops._connect_volume(connection_info, dev_number, instance_name,
-                            vm_ref, hotplug=False)
+        result = ops._connect_volume(connection_info, dev_number,
+            instance_name, vm_ref, hotplug=hotplug)
+        self.assertEqual((sr_uuid, vdi_uuid), result)
 
-        self.assertEquals(False, called['VBD.plug'])
+    def test_connect_volume_no_hotplug_vm_running(self):
+        self._test_connect_volume(hotplug=False, vm_running=True,
+                                   plugged=False)
+
+    def test_connect_volume_no_hotplug_vm_not_running(self):
+        self._test_connect_volume(hotplug=False, vm_running=False,
+                                   plugged=False)
+
+    def test_connect_volume_hotplug_vm_stopped(self):
+        self._test_connect_volume(hotplug=True, vm_running=False,
+                                   plugged=False)
+
+    def test_connect_volume_hotplug_vm_running(self):
+        self._test_connect_volume(hotplug=True, vm_running=True,
+                                   plugged=True)
 
     def test_connect_volume(self):
         session = stubs.FakeSessionForVolumeTests('fake_uri')

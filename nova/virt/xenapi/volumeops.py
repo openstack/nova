@@ -115,7 +115,8 @@ class VolumeOps(object):
                                               dev_number, bootable=False,
                                               osvol=True)
 
-                if hotplug:
+                running = not vm_utils.is_vm_shutdown(self._session, vm_ref)
+                if hotplug and running:
                     self._session.call_xenapi("VBD.plug", vbd_ref)
 
             vdi_uuid = self._session.call_xenapi("VDI.get_uuid", vdi_ref)
