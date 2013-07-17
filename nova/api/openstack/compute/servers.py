@@ -999,7 +999,13 @@ class Controller(wsgi.Controller):
     def _delete(self, context, req, instance_uuid):
         instance = self._get_server(context, req, instance_uuid)
         if CONF.reclaim_instance_interval:
-            self.compute_api.soft_delete(context, instance)
+            try:
+                self.compute_api.soft_delete(context, instance)
+            except exception.InstanceInvalidState:
+                # Note(yufang521247): instance which has never been active
+                # is not allowed to be soft_deleted. Thus we have to call
+                # delete() to clean up the instance.
+                self.compute_api.delete(context, instance)
         else:
             self.compute_api.delete(context, instance)
 
