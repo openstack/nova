@@ -99,7 +99,7 @@ class MetadataRequestHandler(wsgi.Application):
 
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
-        if os.path.normpath("/" + req.path_info) == "/":
+        if os.path.normpath(req.path_info) == "/":
             return(base.ec2_md_print(base.VERSIONS + ["latest"]))
 
         if CONF.service_neutron_metadata_proxy:
