@@ -79,6 +79,7 @@ class ExtendedVolumesController(wsgi.Controller):
                     "not in proper format (%s)") % volume_id
             raise exc.HTTPBadRequest(explanation=msg)
 
+    @extensions.expected_errors((400, 404, 409))
     @wsgi.response(202)
     @wsgi.action('attach')
     def attach(self, req, id, body):
@@ -89,7 +90,12 @@ class ExtendedVolumesController(wsgi.Controller):
         if not self.is_valid_body(body, 'attach'):
             raise exc.HTTPBadRequest(_("The request body invalid"))
 
-        volume_id = body['attach']['volume_id']
+        try:
+            volume_id = body['attach']['volume_id']
+        except KeyError:
+            raise exc.HTTPBadRequest(_("Could not find volume_id from request"
+                                       "parameter"))
+
         device = body['attach'].get('device')
 
         self._validate_volume_id(volume_id)
@@ -115,6 +121,7 @@ class ExtendedVolumesController(wsgi.Controller):
         except exception.InvalidDevicePath as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
 
+    @extensions.expected_errors((400, 404, 409))
     @wsgi.response(202)
     @wsgi.action('detach')
     def detach(self, req, id, body):
@@ -122,7 +129,14 @@ class ExtendedVolumesController(wsgi.Controller):
         context = req.environ['nova.context']
         authorize_detach(context)
 
-        volume_id = body['detach']['volume_id']
+        if not self.is_valid_body(body, 'detach'):
+            raise exc.HTTPBadRequest(_("The request body invalid"))
+        try:
+            volume_id = body['detach']['volume_id']
+        except KeyError:
+            raise exc.HTTPBadRequest(_("Could not find volume_id from request"
+                                       "parameter"))
+        self._validate_volume_id(volume_id)
         LOG.audit(_("Detach volume %(volume_id)s from "
                     "instance %(server_id)s"),
                   {"volume_id": volume_id,
