@@ -860,11 +860,26 @@ class HostFiltersTestCase(test.NoDBTestCase):
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
 
     def test_aggregate_filter_passes_extra_specs_simple(self):
+        especs = {
+            # Un-scoped extra spec
+            'opt1': '1',
+            # Scoped extra spec that applies to this filter
+            'aggregate_instance_extra_specs:opt2': '2',
+            # Scoped extra spec that does not apply to this filter
+            'trust:trusted_host': 'true',
+        }
         self._do_test_aggregate_filter_extra_specs(
-            emeta={'opt1': '1', 'opt2': '2'},
-            especs={'opt1': '1', 'opt2': '2',
-                    'trust:trusted_host': 'true'},
-            passes=True)
+                emeta={'opt1': '1', 'opt2': '2'}, especs=especs, passes=True)
+
+    def test_aggregate_filter_passes_with_key_same_as_scope(self):
+        especs = {
+                # Un-scoped extra spec, make sure we don't blow up if it
+                # happens to match our scope.
+                'aggregate_instance_extra_specs': '1',
+        }
+        self._do_test_aggregate_filter_extra_specs(
+                emeta={'aggregate_instance_extra_specs': '1'},
+                especs=especs, passes=True)
 
     def test_aggregate_filter_fails_extra_specs_simple(self):
         self._do_test_aggregate_filter_extra_specs(

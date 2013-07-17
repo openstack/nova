@@ -67,7 +67,8 @@ There are some standard filter classes to use (:mod:`nova.scheduler.filters`):
 
 * |AggregateInstanceExtraSpecsFilter| - checks that the aggregate metadata
   satisfies any extra specifications associated with the instance type (that
-  have no scope).  It passes hosts that can create the specified instance type.
+  have no scope or are scoped with 'aggregate_instance_extra_specs').
+  It passes hosts that can create the specified instance type.
   The extra specifications can have the same operators as
   |ComputeCapabilitiesFilter|.
 * |ComputeFilter| - passes all hosts that are operational and enabled.
