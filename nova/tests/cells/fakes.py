@@ -20,8 +20,8 @@ from oslo.config import cfg
 
 from nova.cells import driver
 from nova.cells import manager as cells_manager
-from nova.cells import messaging
 from nova.cells import state as cells_state
+from nova.cells import utils as cells_utils
 import nova.db
 from nova.db import base
 from nova import exception
@@ -127,7 +127,7 @@ def _build_cell_transport_url(cur_db_id):
 def _build_cell_stub_info(test_case, our_name, parent_path, children):
     cell_db_entries = []
     cur_db_id = 1
-    sep_char = messaging._PATH_CELL_SEP
+    sep_char = cells_utils.PATH_CELL_SEP
     if parent_path:
         cell_db_entries.append(
                 dict(id=cur_db_id,
