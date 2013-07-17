@@ -4754,11 +4754,13 @@ def aggregate_update(context, aggregate_id, values):
                                      aggregate_id,
                                      session=session).first())
 
+    set_delete = True
     if aggregate:
         if "availability_zone" in values:
             az = values.pop('availability_zone')
             if 'metadata' not in values:
                 values['metadata'] = {'availability_zone': az}
+                set_delete = False
             else:
                 values['metadata']['availability_zone'] = az
         metadata = values.get('metadata')
@@ -4766,7 +4768,7 @@ def aggregate_update(context, aggregate_id, values):
             aggregate_metadata_add(context,
                                    aggregate_id,
                                    values.pop('metadata'),
-                                   set_delete=True)
+                                   set_delete=set_delete)
         with session.begin():
             aggregate.update(values)
             aggregate.save(session=session)
