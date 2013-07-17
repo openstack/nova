@@ -121,47 +121,7 @@ class DbTestCase(test.TestCase):
         return meta, sys_meta
 
 
-class DbApiTestCase(DbTestCase):
-
-    def test_migration_get_unconfirmed_by_dest_compute(self):
-        ctxt = context.get_admin_context()
-
-        # Ensure no migrations are returned.
-        results = db.migration_get_unconfirmed_by_dest_compute(ctxt, 10,
-                'fake_host')
-        self.assertEqual(0, len(results))
-
-        # Ensure no migrations are returned.
-        results = db.migration_get_unconfirmed_by_dest_compute(ctxt, 10,
-                'fake_host2')
-        self.assertEqual(0, len(results))
-
-        updated_at = datetime.datetime(2000, 1, 1, 12, 0, 0)
-        values = {"status": "finished", "updated_at": updated_at,
-                "dest_compute": "fake_host2"}
-        migration = db.migration_create(ctxt, values)
-
-        # Ensure different host is not returned
-        results = db.migration_get_unconfirmed_by_dest_compute(ctxt, 10,
-                'fake_host')
-        self.assertEqual(0, len(results))
-
-        # Ensure one migration older than 10 seconds is returned.
-        results = db.migration_get_unconfirmed_by_dest_compute(ctxt, 10,
-                'fake_host2')
-        self.assertEqual(1, len(results))
-        db.migration_update(ctxt, migration['id'], {"status": "CONFIRMED"})
-
-        # Ensure the new migration is not returned.
-        updated_at = timeutils.utcnow()
-        values = {"status": "finished", "updated_at": updated_at,
-                "dest_compute": "fake_host2"}
-        migration = db.migration_create(ctxt, values)
-        results = db.migration_get_unconfirmed_by_dest_compute(ctxt, 10,
-                "fake_host2")
-        self.assertEqual(0, len(results))
-        db.migration_update(ctxt, migration['id'], {"status": "CONFIRMED"})
-
+class DecoratorTestCase(test.TestCase):
     def _test_decorator_wraps_helper(self, decorator):
         def test_func():
             """Test docstring."""
@@ -698,6 +658,45 @@ class MigrationTestCase(test.TestCase):
 
         self.assertRaises(exception.AdminRequired,
                           db.migration_get_all_by_filters, user_ctxt, {})
+
+    def test_migration_get_unconfirmed_by_dest_compute(self):
+        # Ensure no migrations are returned.
+        results = db.migration_get_unconfirmed_by_dest_compute(self.ctxt, 10,
+                'fake_host')
+        self.assertEqual(0, len(results))
+
+        # Ensure no migrations are returned.
+        results = db.migration_get_unconfirmed_by_dest_compute(self.ctxt, 10,
+                'fake_host2')
+        self.assertEqual(0, len(results))
+
+        updated_at = datetime.datetime(2000, 1, 1, 12, 0, 0)
+        values = {"status": "finished", "updated_at": updated_at,
+                "dest_compute": "fake_host2"}
+        migration = db.migration_create(self.ctxt, values)
+
+        # Ensure different host is not returned
+        results = db.migration_get_unconfirmed_by_dest_compute(self.ctxt, 10,
+                'fake_host')
+        self.assertEqual(0, len(results))
+
+        # Ensure one migration older than 10 seconds is returned.
+        results = db.migration_get_unconfirmed_by_dest_compute(self.ctxt, 10,
+                'fake_host2')
+        self.assertEqual(1, len(results))
+        db.migration_update(self.ctxt, migration['id'],
+                            {"status": "CONFIRMED"})
+
+        # Ensure the new migration is not returned.
+        updated_at = timeutils.utcnow()
+        values = {"status": "finished", "updated_at": updated_at,
+                "dest_compute": "fake_host2"}
+        migration = db.migration_create(self.ctxt, values)
+        results = db.migration_get_unconfirmed_by_dest_compute(self.ctxt, 10,
+                "fake_host2")
+        self.assertEqual(0, len(results))
+        db.migration_update(self.ctxt, migration['id'],
+                            {"status": "CONFIRMED"})
 
 
 class ModelsObjectComparatorMixin(object):
