@@ -41,7 +41,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         timeutils.set_time_override(cur_time)
         instance.task_state = task_states.SHELVING
         instance.save()
-        sys_meta = instance.system_metadata
+        sys_meta = dict(instance.system_metadata)
         sys_meta['shelved_at'] = timeutils.strtime(at=cur_time)
         sys_meta['shelved_image_id'] = image_id
         sys_meta['shelved_host'] = host
@@ -92,7 +92,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         host = 'fake-mini'
         cur_time = timeutils.utcnow()
         timeutils.set_time_override(cur_time)
-        sys_meta = instance.system_metadata
+        sys_meta = dict(instance.system_metadata)
         sys_meta['shelved_at'] = timeutils.strtime(at=cur_time)
         sys_meta['shelved_image_id'] = None
         sys_meta['shelved_host'] = host
@@ -139,7 +139,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         cur_time = timeutils.utcnow()
         cur_time_tz = cur_time.replace(tzinfo=iso8601.iso8601.Utc())
         timeutils.set_time_override(cur_time)
-        sys_meta = instance.system_metadata
+        sys_meta = dict(instance.system_metadata)
         sys_meta['shelved_at'] = timeutils.strtime(at=cur_time)
         sys_meta['shelved_image_id'] = image['id']
         sys_meta['shelved_host'] = host
@@ -206,7 +206,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
             expected_attrs=['metadata', 'system_metadata'])
         instance.task_state = task_states.UNSHELVING
         instance.save()
-        sys_meta = instance.system_metadata
+        sys_meta = dict(instance.system_metadata)
         sys_meta['shelved_at'] = timeutils.strtime(at=cur_time)
         sys_meta['shelved_image_id'] = None
         sys_meta['shelved_host'] = host

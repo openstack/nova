@@ -125,6 +125,26 @@ class Instance(base.NovaObject):
 
     obj_extra_fields = ['name']
 
+    def __init__(self, *args, **kwargs):
+        super(Instance, self).__init__(*args, **kwargs)
+        self.obj_reset_changes()
+
+    def obj_reset_changes(self, fields=None):
+        super(Instance, self).obj_reset_changes(fields)
+        self._orig_system_metadata = (dict(self.system_metadata) if
+                                      'system_metadata' in self else {})
+        self._orig_metadata = (dict(self.metadata) if
+                               'metadata' in self else {})
+
+    def obj_what_changed(self):
+        changes = super(Instance, self).obj_what_changed()
+        if 'metadata' in self and self.metadata != self._orig_metadata:
+            changes.add('metadata')
+        if 'system_metadata' in self and (self.system_metadata !=
+                                          self._orig_system_metadata):
+            changes.add('system_metadata')
+        return changes
+
     @property
     def name(self):
         try:

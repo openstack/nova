@@ -298,6 +298,22 @@ class _TestInstanceObject(object):
                           'name': 'foo',
                           }.items())
 
+    def _test_metadata_change_tracking(self, which):
+        inst = instance.Instance()
+        inst.uuid = 'fake-uuid'
+        setattr(inst, which, {})
+        inst.obj_reset_changes()
+        getattr(inst, which)['foo'] = 'bar'
+        self.assertEqual(set([which]), inst.obj_what_changed())
+        inst.obj_reset_changes()
+        self.assertEqual(set(), inst.obj_what_changed())
+
+    def test_metadata_change_tracking(self):
+        self._test_metadata_change_tracking('metadata')
+
+    def test_system_metadata_change_tracking(self):
+        self._test_metadata_change_tracking('system_metadata')
+
 
 class TestInstanceObject(test_objects._LocalTest,
                          _TestInstanceObject):
