@@ -123,9 +123,9 @@ class VMwareVolumeOps(object):
         """Return volume connector information."""
         iqn = volume_util.get_host_iqn(self._session, self._cluster)
         return {
-            'ip': CONF.vmwareapi_host_ip,
+            'ip': CONF.vmware.host_ip,
             'initiator': iqn,
-            'host': CONF.vmwareapi_host_ip
+            'host': CONF.vmware.host_ip
         }
 
     def attach_volume(self, connection_info, instance, mountpoint):

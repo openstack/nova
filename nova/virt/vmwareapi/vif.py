@@ -26,19 +26,21 @@ from nova.virt.vmwareapi import network_util
 CONF = cfg.CONF
 
 vmwareapi_vif_opts = [
-    cfg.StrOpt('vmwareapi_vlan_interface',
+    cfg.StrOpt('vlan_interface',
                default='vmnic0',
+               deprecated_name='vmwareapi_vlan_interface',
+               deprecated_group='DEFAULT',
                help='Physical ethernet adapter name for vlan networking'),
 ]
 
-CONF.register_opts(vmwareapi_vif_opts)
+CONF.register_opts(vmwareapi_vif_opts, 'vmware')
 
 
 def ensure_vlan_bridge(session, vif, cluster=None, create_vlan=True):
     """Create a vlan and bridge unless they already exist."""
     vlan_num = vif['network'].get_meta('vlan')
     bridge = vif['network']['bridge']
-    vlan_interface = CONF.vmwareapi_vlan_interface
+    vlan_interface = CONF.vmware.vlan_interface
 
     network_ref = network_util.get_network_with_the_name(session, bridge,
                                                          cluster)

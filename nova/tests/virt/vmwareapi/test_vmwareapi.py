@@ -72,7 +72,7 @@ class VMwareAPIConfTestCase(test.TestCase):
         # Test the default configuration behavior. By default,
         # use the WSDL sitting on the host we are talking to in
         # order to bind the SOAP client.
-        wsdl_loc = cfg.CONF.vmwareapi_wsdl_loc
+        wsdl_loc = cfg.CONF.vmware.wsdl_location
         self.assertIsNone(wsdl_loc)
         wsdl_url = vim.Vim.get_wsdl_url("https", "www.example.com")
         url = vim.Vim.get_soap_url("https", "www.example.com")
@@ -91,8 +91,8 @@ class VMwareAPIConfTestCase(test.TestCase):
         # The wsdl_url should point to a different host than the one we
         # are actually going to send commands to.
         fake_wsdl = "https://www.test.com/sdk/foo.wsdl"
-        self.flags(vmwareapi_wsdl_loc=fake_wsdl)
-        wsdl_loc = cfg.CONF.vmwareapi_wsdl_loc
+        self.flags(wsdl_location=fake_wsdl, group='vmware')
+        wsdl_loc = cfg.CONF.vmware.wsdl_location
         self.assertIsNotNone(wsdl_loc)
         self.assertEqual(fake_wsdl, wsdl_loc)
         wsdl_url = vim.Vim.get_wsdl_url("https", "www.example.com")
@@ -107,11 +107,11 @@ class VMwareAPIVMTestCase(test.TestCase):
     def setUp(self):
         super(VMwareAPIVMTestCase, self).setUp()
         self.context = context.RequestContext('fake', 'fake', is_admin=False)
-        self.flags(vmwareapi_host_ip='test_url',
-                   vmwareapi_host_username='test_username',
-                   vmwareapi_host_password='test_pass',
-                   vnc_enabled=False,
-                   use_linked_clone=False)
+        self.flags(host_ip='test_url',
+                   host_username='test_username',
+                   host_password='test_pass',
+                   use_linked_clone=False, group='vmware')
+        self.flags(vnc_enabled=False)
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.node_name = 'test_url'
@@ -597,9 +597,9 @@ class VMwareAPIHostTestCase(test.TestCase):
 
     def setUp(self):
         super(VMwareAPIHostTestCase, self).setUp()
-        self.flags(vmwareapi_host_ip='test_url',
-                   vmwareapi_host_username='test_username',
-                   vmwareapi_host_password='test_pass')
+        self.flags(host_ip='test_url',
+                   host_username='test_username',
+                   host_password='test_pass', group='vmware')
         vmwareapi_fake.reset()
         stubs.set_stubs(self.stubs)
         self.conn = driver.VMwareESXDriver(False)
@@ -644,11 +644,9 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
 
     def setUp(self):
         super(VMwareAPIVCDriverTestCase, self).setUp()
-        self.flags(
-                   vmwareapi_cluster_name='test_cluster',
-                   vmwareapi_task_poll_interval=10,
-                   vnc_enabled=False
-                   )
+        self.flags(cluster_name='test_cluster',
+                   task_poll_interval=10, group='vmware')
+        self.flags(vnc_enabled=False)
         self.conn = driver.VMwareVCDriver(None, False)
 
     def tearDown(self):
