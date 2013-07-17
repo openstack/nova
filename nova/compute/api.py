@@ -753,7 +753,7 @@ class API(base.Base):
                                 volume_id)
                         return volume['volume_image_metadata']
                     except Exception:
-                        raise exception.InvalidBDMVolume(volume_id)
+                        raise exception.InvalidBDMVolume(id=volume_id)
         return None
 
     def _create_instance(self, context, instance_type,
