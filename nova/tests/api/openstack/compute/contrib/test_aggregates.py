@@ -118,6 +118,12 @@ class AggregateTestCase(test.TestCase):
                                      {"name": "test",
                                       "foo": "nova1"}})
 
+    def test_create_with_null_name(self):
+        self.assertRaises(exc.HTTPBadRequest, self.controller.create,
+                          self.req, {"aggregate":
+                                     {"name": "",
+                                      "availability_zone": "nova1"}})
+
     def test_create_with_extra_invalid_arg(self):
         self.assertRaises(exc.HTTPBadRequest, self.controller.create,
                           self.req, dict(name="test",

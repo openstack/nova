@@ -66,6 +66,10 @@ class AggregateController(object):
             avail_zone = host_aggregate["availability_zone"]
         except KeyError:
             raise exc.HTTPBadRequest()
+
+        if len(name) == 0:
+            raise exc.HTTPBadRequest()
+
         if len(host_aggregate) != 2:
             raise exc.HTTPBadRequest()
 
