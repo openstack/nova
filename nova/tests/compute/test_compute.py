@@ -1539,6 +1539,25 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(instance['vm_state'], vm_states.ERROR)
         self.compute.terminate_instance(self.context, instance=instance)
 
+    def test_suspend_not_implemented(self):
+        # Ensure expected exception is raised and the vm_state of instance
+        # restore to original value if suspend is not implemented by driver
+        def fake(*args, **kwargs):
+            raise NotImplementedError('suspend test')
+        self.stubs.Set(self.compute.driver, 'suspend', fake)
+
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+        instance_state = instance['vm_state']
+
+        self.compute.run_instance(self.context, instance=instance)
+        self.assertRaises(NotImplementedError,
+                          self.compute.suspend_instance,
+                          self.context,
+                          instance=instance)
+        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
+        self.assertEqual(instance_state, instance['vm_state'])
+        self.compute.terminate_instance(self.context, instance=instance)
+
     def test_rebuild(self):
         # Ensure instance can be rebuilt.
         instance = jsonutils.to_primitive(self._create_fake_instance())

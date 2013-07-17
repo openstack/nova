@@ -3066,7 +3066,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         """Suspend the given instance."""
         context = context.elevated()
 
-        with self._error_out_instance_on_exception(context, instance['uuid']):
+        with self._error_out_instance_on_exception(context, instance['uuid'],
+             instance_state=instance['vm_state']):
             self.driver.suspend(instance)
         current_power_state = self._get_power_state(context, instance)
         instance.power_state = current_power_state
@@ -4729,9 +4730,20 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @contextlib.contextmanager
     def _error_out_instance_on_exception(self, context, instance_uuid,
-                                        reservations=None):
+                                        reservations=None,
+                                        instance_state=vm_states.ACTIVE):
         try:
             yield
+        except NotImplementedError as error:
+            with excutils.save_and_reraise_exception():
+                self._quota_rollback(context, reservations)
+                LOG.info(_("Setting instance back to %(state)s after: "
+                           "%(error)s") %
+                         {'state': instance_state, 'error': error},
+                         instance_uuid=instance_uuid)
+                self._instance_update(context, instance_uuid,
+                                      vm_state=instance_state,
+                                      task_state=None)
         except exception.InstanceFaultRollback as error:
             self._quota_rollback(context, reservations)
             LOG.info(_("Setting instance back to ACTIVE after: %s"),
