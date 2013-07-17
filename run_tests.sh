@@ -9,8 +9,6 @@ function usage {
   echo "  -V, --virtual-env           Always use virtualenv.  Install automatically if not present"
   echo "  -N, --no-virtual-env        Don't use virtualenv.  Run tests in local environment"
   echo "  -s, --no-site-packages      Isolate the virtualenv from the global Python environment"
-  echo "  -r, --recreate-db           Recreate the test database (deprecated, as this is now the default)."
-  echo "  -n, --no-recreate-db        Don't recreate the test database."
   echo "  -f, --force                 Force a clean re-build of the virtual environment. Useful when dependencies have been added."
   echo "  -u, --update                Update the virtual environment with any newer package versions"
   echo "  -p, --pep8                  Just run PEP8 and HACKING compliance check"
@@ -40,8 +38,6 @@ function process_options {
       -V|--virtual-env) always_venv=1; never_venv=0;;
       -N|--no-virtual-env) always_venv=0; never_venv=1;;
       -s|--no-site-packages) no_site_packages=1;;
-      -r|--recreate-db) recreate_db=1;;
-      -n|--no-recreate-db) recreate_db=0;;
       -f|--force) force=1;;
       -u|--update) update=1;;
       -p|--pep8) just_pep8=1;;
@@ -83,7 +79,6 @@ just_pep8=0
 no_pep8=0
 coverage=0
 debug=0
-recreate_db=1
 update=0
 
 LANG=en_US.UTF-8
@@ -217,10 +212,6 @@ fi
 if [ $just_pep8 -eq 1 ]; then
     run_pep8
     exit
-fi
-
-if [ $recreate_db -eq 1 ]; then
-    rm -f tests.sqlite
 fi
 
 init_testr

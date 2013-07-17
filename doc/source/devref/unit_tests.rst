@@ -33,8 +33,6 @@ This will show the following help information::
       -V, --virtual-env        Always use virtualenv.  Install automatically if not present
       -N, --no-virtual-env     Don't use virtualenv.  Run tests in local environment
       -s, --no-site-packages   Isolate the virtualenv from the global Python environment
-      -r, --recreate-db        Recreate the test database (deprecated, as this is now the default).
-      -n, --no-recreate-db     Don't recreate the test database.
       -x, --stop               Stop running tests after the first error or failure.
       -f, --force              Force a clean re-build of the virtual environment. Useful when dependencies have been added.
       -p, --pep8               Just run pep8
