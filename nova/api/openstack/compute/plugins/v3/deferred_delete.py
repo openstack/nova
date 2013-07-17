@@ -33,6 +33,7 @@ class DeferredDeleteController(wsgi.Controller):
         super(DeferredDeleteController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
 
+    @extensions.expected_errors((404, 409, 413))
     @wsgi.action('restore')
     def _restore(self, req, id, body):
         """Restore a previously deleted instance."""
@@ -53,6 +54,7 @@ class DeferredDeleteController(wsgi.Controller):
                     'restore')
         return webob.Response(status_int=202)
 
+    @extensions.expected_errors((404, 409))
     @wsgi.action('force_delete')
     def _force_delete(self, req, id, body):
         """Force delete of instance before deferred cleanup."""
