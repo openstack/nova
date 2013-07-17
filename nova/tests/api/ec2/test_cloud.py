@@ -759,6 +759,9 @@ class CloudTestCase(test.TestCase):
         db.service_destroy(self.context, service1['id'])
         db.service_destroy(self.context, service2['id'])
 
+    def assertEqualSorted(self, x, y):
+        self.assertEqual(sorted(x), sorted(y))
+
     def test_describe_instances(self):
         # Makes sure describe_instances works and filters results.
         self.flags(use_ipv6=True)
@@ -2588,32 +2591,32 @@ class CloudTestCase(test.TestCase):
         # We should be able to search by:
         # No filter
         tags = self.cloud.describe_tags(self.context)['tagSet']
-        self.assertEqual(tags, [inst1_key_foo, inst2_key_foo,
+        self.assertEqualSorted(tags, [inst1_key_foo, inst2_key_foo,
                                 inst2_key_baz, inst1_key_bax])
 
         # Resource ID
         tags = self.cloud.describe_tags(self.context,
                 filter=[{'name': 'resource-id',
                          'value': [ec2_id1]}])['tagSet']
-        self.assertEqual(tags, [inst1_key_foo, inst1_key_bax])
+        self.assertEqualSorted(tags, [inst1_key_foo, inst1_key_bax])
 
         # Resource Type
         tags = self.cloud.describe_tags(self.context,
                 filter=[{'name': 'resource-type',
                          'value': ['instance']}])['tagSet']
-        self.assertEqual(tags, [inst1_key_foo, inst2_key_foo,
+        self.assertEqualSorted(tags, [inst1_key_foo, inst2_key_foo,
                                 inst2_key_baz, inst1_key_bax])
 
         # Key, either bare or with wildcards
         tags = self.cloud.describe_tags(self.context,
                 filter=[{'name': 'key',
                          'value': ['foo']}])['tagSet']
-        self.assertEqual(tags, [inst1_key_foo, inst2_key_foo])
+        self.assertEqualSorted(tags, [inst1_key_foo, inst2_key_foo])
 
         tags = self.cloud.describe_tags(self.context,
                 filter=[{'name': 'key',
                          'value': ['baz']}])['tagSet']
-        self.assertEqual(tags, [inst2_key_baz])
+        self.assertEqualSorted(tags, [inst2_key_baz])
 
         tags = self.cloud.describe_tags(self.context,
                 filter=[{'name': 'key',
@@ -2629,7 +2632,7 @@ class CloudTestCase(test.TestCase):
         tags = self.cloud.describe_tags(self.context,
                 filter=[{'name': 'value',
                          'value': ['bar']}])['tagSet']
-        self.assertEqual(tags, [inst1_key_foo, inst2_key_foo])
+        self.assertEqualSorted(tags, [inst1_key_foo, inst2_key_foo])
 
         tags = self.cloud.describe_tags(self.context,
                 filter=[{'name': 'value',
@@ -2645,7 +2648,7 @@ class CloudTestCase(test.TestCase):
         tags = self.cloud.describe_tags(self.context,
                 filter=[{'name': 'key',
                          'value': ['baz', 'bax']}])['tagSet']
-        self.assertEqual(tags, [inst2_key_baz, inst1_key_bax])
+        self.assertEqualSorted(tags, [inst2_key_baz, inst1_key_bax])
 
         # Multiple filters
         tags = self.cloud.describe_tags(self.context,
@@ -2653,7 +2656,7 @@ class CloudTestCase(test.TestCase):
                          'value': ['baz']},
                         {'name': 'value',
                          'value': ['wibble']}])['tagSet']
-        self.assertEqual(tags, [inst2_key_baz, inst1_key_bax])
+        self.assertEqualSorted(tags, [inst2_key_baz, inst1_key_bax])
 
         # And we should fail on supported resource types
         self.assertRaises(exception.EC2APIError,
