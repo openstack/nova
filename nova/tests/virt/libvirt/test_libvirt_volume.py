@@ -261,6 +261,8 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
                               '-p', self.location, '--op', 'update',
                               '-n', 'node.startup', '-v', 'automatic'),
                              ('iscsiadm', '-m', 'node', '-T', self.iqn,
+                              '-p', self.location, '--rescan'),
+                             ('iscsiadm', '-m', 'node', '-T', self.iqn,
                               '-p', self.location, '--op', 'update',
                               '-n', 'node.startup', '-v', 'manual'),
                              ('iscsiadm', '-m', 'node', '-T', self.iqn,
@@ -274,15 +276,16 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
         # NOTE(vish) exists is to make driver assume connecting worked
         self.stubs.Set(os.path, 'exists', lambda x: True)
         libvirt_driver = volume.LibvirtISCSIVolumeDriver(self.fake_conn)
-        devs = ['/dev/disk/by-path/ip-%s-iscsi-%s-lun-1' % (self.location,
+        name = 'volume-00000001'
+        devs = ['/dev/disk/by-path/ip-%s-iscsi-%s-lun-2' % (self.location,
                                                             self.iqn)]
         self.stubs.Set(self.fake_conn, 'get_all_block_devices', lambda: devs)
         vol = {'id': 1, 'name': self.name}
         connection_info = self.iscsi_connection(vol, self.location, self.iqn)
         conf = libvirt_driver.connect_volume(connection_info, self.disk_info)
         tree = conf.format_dom()
-        dev_str = '/dev/disk/by-path/ip-%s-iscsi-%s-lun-1' % (self.location,
-                                                              self.iqn)
+        dev_name = 'ip-%s-iscsi-%s-lun-1' % (self.location, self.iqn)
+        dev_str = '/dev/disk/by-path/%s' % dev_name
         self.assertEqual(tree.get('type'), 'block')
         self.assertEqual(tree.find('./source').get('dev'), dev_str)
         libvirt_driver.disconnect_volume(connection_info, "vde")
@@ -293,7 +296,11 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
                               '-p', self.location, '--login'),
                              ('iscsiadm', '-m', 'node', '-T', self.iqn,
                               '-p', self.location, '--op', 'update',
-                              '-n', 'node.startup', '-v', 'automatic')]
+                              '-n', 'node.startup', '-v', 'automatic'),
+                             ('iscsiadm', '-m', 'node', '-T', self.iqn,
+                              '-p', self.location, '--rescan'),
+                             ('cp', '/dev/stdin',
+                              '/sys/block/%s/device/delete' % dev_name)]
         self.assertEqual(self.executes, expected_commands)
 
     def iser_connection(self, volume, location, iqn):
@@ -480,6 +487,51 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
         libvirt_driver.disconnect_volume(connection_info, 'vde')
         expected_multipath_cmd = ('multipath', '-f', 'foo')
         self.assertIn(expected_multipath_cmd, self.executes)
+
+    def test_libvirt_kvm_volume_with_multipath_still_in_use(self):
+        name = 'volume-00000001'
+        location = '10.0.2.15:3260'
+        iqn = 'iqn.2010-10.org.openstack:%s' % name
+        mpdev_filepath = '/dev/mapper/foo'
+
+        def _get_multipath_device_name(path):
+            if '%s-lun-1' % iqn in path:
+                return mpdev_filepath
+            return '/dev/mapper/donotdisconnect'
+
+        self.flags(iscsi_use_multipath=True, group='libvirt')
+        self.stubs.Set(os.path, 'exists', lambda x: True)
+
+        libvirt_driver = volume.LibvirtISCSIVolumeDriver(self.fake_conn)
+        libvirt_driver._get_multipath_device_name =\
+            lambda x: _get_multipath_device_name(x)
+
+        block_devs = ['/dev/disks/by-path/%s-iscsi-%s-lun-2' % (location, iqn)]
+        self.stubs.Set(self.fake_conn, 'get_all_block_devices',
+                       lambda: block_devs)
+
+        vol = {'id': 1, 'name': name}
+        connection_info = self.iscsi_connection(vol, location, iqn)
+        connection_info['data']['device_path'] = mpdev_filepath
+
+        libvirt_driver._get_multipath_iqn = lambda x: iqn
+
+        iscsi_devs = ['1.2.3.4-iscsi-%s-lun-1' % iqn,
+                      '%s-iscsi-%s-lun-1' % (location, iqn),
+                      '%s-iscsi-%s-lun-2' % (location, iqn)]
+        libvirt_driver._get_iscsi_devices = lambda: iscsi_devs
+
+        # Set up disconnect volume mock expectations
+        self.mox.StubOutWithMock(libvirt_driver, '_delete_device')
+        self.mox.StubOutWithMock(libvirt_driver, '_rescan_multipath')
+        libvirt_driver._rescan_multipath()
+        libvirt_driver._delete_device('/dev/disk/by-path/%s' % iscsi_devs[0])
+        libvirt_driver._delete_device('/dev/disk/by-path/%s' % iscsi_devs[1])
+        libvirt_driver._rescan_multipath()
+
+        # Ensure that the mpath devices are deleted
+        self.mox.ReplayAll()
+        libvirt_driver.disconnect_volume(connection_info, 'vde')
 
     def test_libvirt_kvm_volume_with_multipath_getmpdev(self):
         self.flags(iscsi_use_multipath=True, group='libvirt')
