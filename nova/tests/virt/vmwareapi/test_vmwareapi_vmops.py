@@ -17,6 +17,7 @@
 
 from nova.network import model as network_model
 from nova import test
+from nova import utils
 from nova.virt.vmwareapi import vmops
 
 
@@ -53,9 +54,25 @@ class VMwareVMOpsTestCase(test.TestCase):
                                   ovs_interfaceid=None,
                                   rxtx_cap=3)
                 ])
+        utils.reset_is_neutron()
 
     def test_get_machine_id_str(self):
         result = vmops.VMwareVMOps._get_machine_id_str(self.network_info)
         self.assertEqual(result,
                          'DE:AD:BE:EF:00:00;192.168.0.100;255.255.255.0;'
                          '192.168.0.1;192.168.0.255;192.168.0.1#')
+
+    def test_is_neutron_nova(self):
+        self.flags(network_api_class='nova.network.api.API')
+        ops = vmops.VMwareVMOps(None, None, None)
+        self.assertFalse(ops._is_neutron)
+
+    def test_is_neutron_neutron(self):
+        self.flags(network_api_class='nova.network.neutronv2.api.API')
+        ops = vmops.VMwareVMOps(None, None, None)
+        self.assertTrue(ops._is_neutron)
+
+    def test_is_neutron_quantum(self):
+        self.flags(network_api_class='nova.network.quantumv2.api.API')
+        ops = vmops.VMwareVMOps(None, None, None)
+        self.assertTrue(ops._is_neutron)

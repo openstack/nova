@@ -928,3 +928,21 @@ class ValidateIntegerTestCase(test.TestCase):
                           utils.validate_integer,
                           55, "doing 55 in a 54",
                           max_value=54)
+
+
+class ValidateNeutronConfiguration(test.TestCase):
+    def setUp(self):
+        super(ValidateNeutronConfiguration, self).setUp()
+        utils.reset_is_neutron()
+
+    def test_nova_network(self):
+        self.flags(network_api_class='nova.network.api.API')
+        self.assertFalse(utils.is_neutron())
+
+    def test_neutron(self):
+        self.flags(network_api_class='nova.network.neutronv2.api.API')
+        self.assertTrue(utils.is_neutron())
+
+    def test_quantum(self):
+        self.flags(network_api_class='nova.network.quantumv2.api.API')
+        self.assertTrue(utils.is_neutron())
