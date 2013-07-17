@@ -552,6 +552,8 @@ class VlanNetworkTestCase(test.TestCase):
         self.network.db = db
         self.context = context.RequestContext('testuser', 'testproject',
                                               is_admin=False)
+        self.context_admin = context.RequestContext('testuser', 'testproject',
+                                                is_admin=True)
 
     def test_vpn_allocate_fixed_ip(self):
         self.mox.StubOutWithMock(db, 'fixed_ip_associate')
@@ -585,11 +587,9 @@ class VlanNetworkTestCase(test.TestCase):
         network['vpn_private_address'] = '192.168.0.2'
         network['id'] = None
         instance = db.instance_create(self.context, {})
-        context_admin = context.RequestContext('testuser', 'testproject',
-                is_admin=True)
         self.assertRaises(exception.FixedIpNotFoundForNetwork,
                 self.network.allocate_fixed_ip,
-                context_admin,
+                self.context_admin,
                 instance['uuid'],
                 network,
                 vpn=True)
@@ -630,6 +630,43 @@ class VlanNetworkTestCase(test.TestCase):
         self.assertRaises(ValueError, self.network.create_networks, None,
                           num_networks=100, vlan_start=1,
                           cidr='192.168.0.1/24', network_size=100)
+
+    def test_duplicate_vlan_raises(self):
+        # VLAN 100 is already used and we force the network to be created
+        # in that vlan (vlan=100).
+        self.assertRaises(exception.DuplicateVlan,
+                          self.network.create_networks,
+                          self.context_admin, label="fake", num_networks=1,
+                          vlan=100, cidr='192.168.0.1/24', network_size=100)
+
+    def test_vlan_start(self):
+        # VLAN 100 and 101 are used, so this network shoud be created in 102
+        networks = self.network.create_networks(
+                          self.context_admin, label="fake", num_networks=1,
+                          vlan_start=100, cidr='192.168.3.1/24',
+                          network_size=100)
+
+        self.assertEqual(networks[0]["vlan"], 102)
+
+    def test_vlan_start_multiple(self):
+        # VLAN 100 and 101 are used, so these networks shoud be created in 102
+        # and 103
+        networks = self.network.create_networks(
+                          self.context_admin, label="fake", num_networks=2,
+                          vlan_start=100, cidr='192.168.3.1/24',
+                          network_size=100)
+
+        self.assertEqual(networks[0]["vlan"], 102)
+        self.assertEqual(networks[1]["vlan"], 103)
+
+    def test_vlan_start_used(self):
+        # VLAN 100 and 101 are used, but vlan_start=99.
+        networks = self.network.create_networks(
+                          self.context_admin, label="fake", num_networks=1,
+                          vlan_start=99, cidr='192.168.3.1/24',
+                          network_size=100)
+
+        self.assertEqual(networks[0]["vlan"], 102)
 
     def test_validate_networks(self):
         def network_get(_context, network_id, project_only='allow_none'):
@@ -1303,6 +1340,16 @@ class _TestDomainObject(object):
             self.__setattr__(k, v)
 
 
+class FakeNetwork(object):
+    def __init__(self, **kwargs):
+        self.vlan = None
+        for k, v in kwargs.iteritems():
+            self.__setattr__(k, v)
+
+    def __getitem__(self, item):
+        return getattr(self, item)
+
+
 class CommonNetworkTestCase(test.TestCase):
 
     def setUp(self):
@@ -1400,8 +1447,8 @@ class CommonNetworkTestCase(test.TestCase):
         manager = fake_network.FakeNetworkManager()
         self.mox.StubOutWithMock(manager.db, 'network_get_all')
         ctxt = mox.IgnoreArg()
-        manager.db.network_get_all(ctxt).AndReturn([{'id': 1,
-                                     'cidr': '192.168.2.0/24'}])
+        manager.db.network_get_all(ctxt).AndReturn([FakeNetwork(id=1,
+                                     cidr='192.168.2.0/24')])
         self.mox.ReplayAll()
         nets = manager.create_networks(None, 'fake', '192.168.0.0/16',
                                        False, 4, 256, None, None, None,
@@ -1432,8 +1479,8 @@ class CommonNetworkTestCase(test.TestCase):
         manager = fake_network.FakeNetworkManager()
         self.mox.StubOutWithMock(manager.db, 'network_get_all')
         ctxt = mox.IgnoreArg()
-        manager.db.network_get_all(ctxt).AndReturn([{'id': 1,
-                                     'cidr': '192.168.2.0/25'}])
+        manager.db.network_get_all(ctxt).AndReturn([FakeNetwork(id=1,
+                                     cidr='192.168.2.0/25')])
         self.mox.ReplayAll()
         nets = manager.create_networks(None, 'fake', '192.168.0.0/16',
                                        False, 4, 256, None, None, None, None,
@@ -1450,8 +1497,8 @@ class CommonNetworkTestCase(test.TestCase):
         manager = fake_network.FakeNetworkManager()
         self.mox.StubOutWithMock(manager.db, 'network_get_all')
         ctxt = mox.IgnoreArg()
-        manager.db.network_get_all(ctxt).AndReturn([{'id': 1,
-                                     'cidr': '192.168.2.9/29'}])
+        manager.db.network_get_all(ctxt).AndReturn([FakeNetwork(id=1,
+                                     cidr='192.168.2.9/29')])
         self.mox.ReplayAll()
         nets = manager.create_networks(None, 'fake', '192.168.2.0/24',
                                        False, 3, 32, None, None, None, None,
