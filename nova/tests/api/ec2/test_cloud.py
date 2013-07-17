@@ -1827,6 +1827,60 @@ class CloudTestCase(test.TestCase):
         # NOTE(vish) the assert for this call is in the fake_create method.
         run_instances(self.context, **kwargs)
 
+    def test_run_instances_idempotent(self):
+        # Ensure subsequent run_instances calls with same client token
+        # are idempotent and that ones with different client_token are not
+
+        kwargs = {'image_id': 'ami-00000001',
+                  'instance_type': CONF.default_flavor,
+                  'max_count': 1}
+
+        run_instances = self.cloud.run_instances
+
+        def fake_show(self, context, id):
+            return {'id': 'cedef40a-ed67-4d10-800e-17455edce175',
+                    'name': 'fake_name',
+                    'properties': {
+                        'kernel_id': 'cedef40a-ed67-4d10-800e-17455edce175',
+                        'type': 'machine'},
+                    'container_format': 'ami',
+                    'status': 'active'}
+
+        self.stubs.Set(fake._FakeImageService, 'show', fake_show)
+
+        def dumb(*args, **kwargs):
+            pass
+
+        self.stubs.Set(compute_utils, 'notify_about_instance_usage', dumb)
+        # NOTE(comstud): Make 'cast' behave like a 'call' which will
+        # ensure that operations complete
+        self.stubs.Set(rpc, 'cast', rpc.call)
+
+        kwargs['client_token'] = 'client-token-1'
+        result = run_instances(self.context, **kwargs)
+        instance = result['instancesSet'][0]
+        self.assertEqual(instance['instanceId'], 'i-00000001')
+
+        kwargs['client_token'] = 'client-token-2'
+        result = run_instances(self.context, **kwargs)
+        instance = result['instancesSet'][0]
+        self.assertEqual(instance['instanceId'], 'i-00000002')
+
+        kwargs['client_token'] = 'client-token-2'
+        result = run_instances(self.context, **kwargs)
+        instance = result['instancesSet'][0]
+        self.assertEqual(instance['instanceId'], 'i-00000002')
+
+        kwargs['client_token'] = 'client-token-1'
+        result = run_instances(self.context, **kwargs)
+        instance = result['instancesSet'][0]
+        self.assertEqual(instance['instanceId'], 'i-00000001')
+
+        kwargs['client_token'] = 'client-token-3'
+        result = run_instances(self.context, **kwargs)
+        instance = result['instancesSet'][0]
+        self.assertEqual(instance['instanceId'], 'i-00000003')
+
     def test_run_instances_image_state_none(self):
         kwargs = {'image_id': 'ami-00000001',
                   'instance_type': CONF.default_flavor,
