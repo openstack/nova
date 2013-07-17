@@ -528,17 +528,6 @@ class CellsAPITestCase(test.TestCase):
                            expected_args, version='1.13')
         self.assertEqual(result, 'fake_response')
 
-    def test_cell_delete(self):
-        call_info = self._stub_rpc_method('call', 'fake_response')
-
-        result = self.cells_rpcapi.cell_delete(self.fake_context,
-                                               'cell_name')
-
-        expected_args = {'cell_name': 'cell_name'}
-        self._check_result(call_info, 'cell_delete',
-                           expected_args, version='1.13')
-        self.assertEqual(result, 'fake_response')
-
     def test_cell_get(self):
         call_info = self._stub_rpc_method('call', 'fake_response')
 
