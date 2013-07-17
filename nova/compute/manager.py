@@ -61,6 +61,7 @@ from nova import manager
 from nova import network
 from nova.network import model as network_model
 from nova.network.security_group import openstack_driver
+from nova.objects import base as obj_base
 from nova.objects import instance as instance_obj
 from nova.openstack.common import excutils
 from nova.openstack.common import jsonutils
@@ -3078,8 +3079,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         :param instance: an Instance object
         :param image_id: an image id to snapshot to.
         """
-        self.conductor_api.notify_usage_exists(context, instance,
-                current_period=True)
+        self.conductor_api.notify_usage_exists(
+            context, obj_base.obj_to_primitive(instance),
+            current_period=True)
         self._notify_about_instance_usage(context, instance, 'shelve.start')
 
         def update_task_state(task_state, expected_state=task_states.SHELVING):
