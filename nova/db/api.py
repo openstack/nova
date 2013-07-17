@@ -272,12 +272,6 @@ def floating_ip_create(context, values):
     return IMPL.floating_ip_create(context, values)
 
 
-def floating_ip_count_by_project(context, project_id, session=None):
-    """Count floating ips used by project."""
-    return IMPL.floating_ip_count_by_project(context, project_id,
-                                             session=session)
-
-
 def floating_ip_deallocate(context, address):
     """Deallocate a floating ip by address."""
     return IMPL.floating_ip_deallocate(context, address)
@@ -521,11 +515,6 @@ def fixed_ip_update(context, address, values):
     return IMPL.fixed_ip_update(context, address, values)
 
 
-def fixed_ip_count_by_project(context, project_id, session=None):
-    """Count fixed ips used by project."""
-    return IMPL.fixed_ip_count_by_project(context, project_id,
-                                          session=session)
-
 ####################
 
 
@@ -578,12 +567,6 @@ def virtual_interface_get_all(context):
 def instance_create(context, values):
     """Create an instance from the values dictionary."""
     return IMPL.instance_create(context, values)
-
-
-def instance_data_get_for_project(context, project_id, session=None):
-    """Get (instance_count, total_cores, total_ram) for project."""
-    return IMPL.instance_data_get_for_project(context, project_id,
-                                              session=session)
 
 
 def instance_destroy(context, instance_uuid, constraint=None,
@@ -1206,12 +1189,6 @@ def security_group_ensure_default(context):
 def security_group_destroy(context, security_group_id):
     """Deletes a security group."""
     return IMPL.security_group_destroy(context, security_group_id)
-
-
-def security_group_count_by_project(context, project_id, session=None):
-    """Count number of security groups in a project."""
-    return IMPL.security_group_count_by_project(context, project_id,
-                                                session=session)
 
 
 ####################
