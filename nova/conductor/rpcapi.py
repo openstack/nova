@@ -1,4 +1,4 @@
-#    Copyright 2012 IBM Corp.
+#    Copyright 2013 IBM Corp.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -106,6 +106,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.52 - Pass instance objects for compute_confirm_resize
     1.53 - Added compute_reboot
     1.54 - Added 'update_cells' argument to bw_usage_update
+    1.55 - Pass instance objects for compute_stop
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -477,10 +478,14 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         return self.call(context, msg, version='1.42')
 
     def compute_stop(self, context, instance, do_cast=True):
-        instance_p = jsonutils.to_primitive(instance)
-        msg = self.make_msg('compute_stop', instance=instance_p,
-                            do_cast=do_cast)
-        return self.call(context, msg, version='1.43')
+        if not self.can_send_version('1.55'):
+            instance = jsonutils.to_primitive(
+                objects_base.obj_to_primitive(instance))
+            version = '1.43'
+        else:
+            version = '1.55'
+        msg = self.make_msg('compute_stop', instance=instance, do_cast=do_cast)
+        return self.call(context, msg, version=version)
 
     def compute_confirm_resize(self, context, instance, migration_ref):
         migration_p = jsonutils.to_primitive(migration_ref)

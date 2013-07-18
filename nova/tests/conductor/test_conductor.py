@@ -812,6 +812,31 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
         self.conductor.security_groups_trigger_handler(self.context,
                                                        'event', ['args'])
 
+    def test_compute_stop_with_objects(self):
+        # use an instance object rather than a dict
+        instance = self._create_fake_instance()
+        inst_obj = instance_obj.Instance._from_db_object(
+                        self.context, instance_obj.Instance(), instance)
+        self.mox.StubOutWithMock(self.conductor_manager.compute_api, 'stop')
+        self.conductor_manager.compute_api.stop(self.context, inst_obj, True)
+        self.mox.ReplayAll()
+        self.conductor.compute_stop(self.context, inst_obj)
+
+    def test_compute_confirm_resize_with_objects(self):
+        # use an instance object rather than a dict
+        instance = self._create_fake_instance()
+        inst_obj = instance_obj.Instance._from_db_object(
+                        self.context, instance_obj.Instance(), instance)
+        self.mox.StubOutWithMock(self.conductor_manager.compute_api,
+                                 'confirm_resize')
+        # make sure the instance object is serialized
+        primitive_instance = dict(inst_obj.items())
+        self.conductor_manager.compute_api.confirm_resize(
+                        self.context, primitive_instance, 'migration')
+        self.mox.ReplayAll()
+        self.conductor.compute_confirm_resize(self.context, inst_obj,
+                                              'migration')
+
 
 class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
     """Conductor RPC API Tests."""
