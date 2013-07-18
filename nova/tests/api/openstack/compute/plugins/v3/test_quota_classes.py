@@ -102,6 +102,25 @@ class QuotaClassSetsTest(test.TestCase):
 
         self.assertEqual(res_dict, body)
 
+    def test_quotas_update_with_non_integer(self):
+        body = {'quota_class_set': {'instances': "abc"}}
+        req = fakes.HTTPRequestV3.blank('/os-quota-class-sets/test_class',
+                                        use_admin_context=True)
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
+                          req, 'test_class', body)
+
+    def test_quotas_update_with_invalid_body(self):
+        body = {'quota_class_set': None}
+        req = fakes.HTTPRequestV3.blank('/os-quota-class-sets/test_class',
+                                        use_admin_context=True)
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
+                          req, 'test_class', body)
+        body = {}
+        req = fakes.HTTPRequestV3.blank('/os-quota-class-sets/test_class',
+                                        use_admin_context=True)
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
+                          req, 'test_class', body)
+
     def test_quotas_update_as_user(self):
         body = {'quota_class_set': {'instances': 50, 'cores': 50,
                                     'ram': 51200, 'floating_ips': 10,
