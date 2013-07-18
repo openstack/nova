@@ -892,3 +892,39 @@ class StringLengthTestCase(test.TestCase):
         self.assertRaises(exception.InvalidInput,
                           utils.check_string_length,
                           'a' * 256, 'name', max_length=255)
+
+
+class ValidateIntegerTestCase(test.TestCase):
+    def test_valid_inputs(self):
+        self.assertEquals(
+            utils.validate_integer(42, "answer"), 42)
+        self.assertEquals(
+            utils.validate_integer("42", "answer"), 42)
+        self.assertEquals(
+            utils.validate_integer(
+                "7", "lucky", min_value=7, max_value=8), 7)
+        self.assertEquals(
+            utils.validate_integer(
+                7, "lucky", min_value=6, max_value=7), 7)
+        self.assertEquals(
+            utils.validate_integer(
+                300, "Spartaaa!!!", min_value=300), 300)
+        self.assertEquals(
+            utils.validate_integer(
+                "300", "Spartaaa!!!", max_value=300), 300)
+
+    def test_invalid_inputs(self):
+        self.assertRaises(exception.InvalidInput,
+                          utils.validate_integer,
+                          "im-not-an-int", "not-an-int")
+        self.assertRaises(exception.InvalidInput,
+                          utils.validate_integer,
+                          3.14, "Pie")
+        self.assertRaises(exception.InvalidInput,
+                          utils.validate_integer,
+                          "299", "Sparta no-show",
+                          min_value=300, max_value=300)
+        self.assertRaises(exception.InvalidInput,
+                          utils.validate_integer,
+                          55, "doing 55 in a 54",
+                          max_value=54)
