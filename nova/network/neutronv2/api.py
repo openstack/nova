@@ -646,7 +646,11 @@ class API(base.Base):
     def get_floating_ip(self, context, id):
         """Return floating ip object given the floating ip id."""
         client = neutronv2.get_client(context)
-        fip = client.show_floatingip(id)['floatingip']
+        try:
+            fip = client.show_floatingip(id)['floatingip']
+        except neutronv2.exceptions.NeutronClientException as e:
+            if e.status_code == 404:
+                raise exception.FloatingIpNotFound(id=id)
         pool_dict = self._setup_net_dict(client,
                                          fip['floating_network_id'])
         port_dict = self._setup_port_dict(client, fip['port_id'])

@@ -1084,6 +1084,18 @@ class TestNeutronv2(TestNeutronv2Base):
                           api.get_floating_ip_by_address,
                           self.context, address)
 
+    def test_get_floating_ip_by_id_not_found(self):
+        api = neutronapi.API()
+        NeutronNotFound = neutronv2.exceptions.NeutronClientException(
+            status_code=404)
+        floating_ip_id = self.fip_unassociated['id']
+        self.moxed_client.show_floatingip(floating_ip_id).\
+            AndRaise(NeutronNotFound)
+        self.mox.ReplayAll()
+        self.assertRaises(exception.FloatingIpNotFound,
+                          api.get_floating_ip,
+                          self.context, floating_ip_id)
+
     def test_get_floating_ip_by_address_multiple_found(self):
         api = neutronapi.API()
         address = self.fip_unassociated['floating_ip_address']
