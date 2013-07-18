@@ -21,15 +21,10 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.compute import vm_states
 
-opts = [
-    cfg.ListOpt('osapi_hide_server_address_states',
-                default=[vm_states.BUILDING],
-                help='List of instance states that should hide network info'),
-]
-
 
 CONF = cfg.CONF
-CONF.register_opts(opts)
+CONF.import_opt('osapi_hide_server_address_states',
+                'nova.api.openstack.compute.plugins.v3.hide_server_addresses')
 
 authorize = extensions.soft_extension_authorizer('compute',
                                                  'hide_server_addresses')
