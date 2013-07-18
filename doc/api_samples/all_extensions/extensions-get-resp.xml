@@ -24,9 +24,6 @@
   <extension alias="OS-EXT-STS" updated="2011-11-03T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/extended_status/api/v1.1" name="ExtendedStatus">
     <description>Extended Status support.</description>
   </extension>
-  <extension alias="os-extended-volumes" updated="2013-06-07T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/extended_volumes/api/v1.1" name="ExtendedVolumes">
-    <description>Extended Volumes support.</description>
-  </extension>
   <extension alias="OS-EXT-VIF-NET" updated="2013-03-07T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/extended-virtual-interfaces-net/api/v1.1" name="ExtendedVIFNet">
     <description>Adds network id parameter to the virtual interface list.</description>
   </extension>
@@ -65,6 +62,9 @@
   </extension>
   <extension alias="os-baremetal-nodes" updated="2013-01-04T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/baremetal_nodes/api/v2" name="BareMetalNodes">
     <description>Admin-only bare-metal node administration.</description>
+  </extension>
+  <extension alias="os-block-device-mapping-v2-boot" updated="2013-07-08T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/block_device_mapping_v2_boot/api/v2" name="BlockDeviceMappingV2Boot">
+    <description>Allow boot with the new BDM data format.</description>
   </extension>
   <extension alias="os-cell-capacities" updated="2013-05-27T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/cell_capacities/api/v1.1" name="CellCapacities">
     <description>Adding functionality to get cell capacities.</description>
@@ -123,6 +123,9 @@
   <extension alias="os-extended-services" updated="2013-05-17T00:00:00-00:00" namespace="http://docs.openstack.org/compute/ext/extended_services/api/v2" name="ExtendedServices">
     <description>Extended services support.</description>
   </extension>
+  <extension alias="os-extended-volumes" updated="2013-06-07T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/extended_volumes/api/v1.1" name="ExtendedVolumes">
+    <description>Extended Volumes support.</description>
+  </extension>
   <extension alias="os-fixed-ips" updated="2012-10-18T13:25:27-06:00" namespace="http://docs.openstack.org/compute/ext/fixed_ips/api/v2" name="FixedIPs">
     <description>Fixed IPs support.</description>
   </extension>
@@ -175,6 +178,9 @@
   </extension>
   <extension alias="os-keypairs" updated="2011-08-08T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/keypairs/api/v1.1" name="Keypairs">
     <description>Keypair Support.</description>
+  </extension>
+  <extension alias="os-migrations" updated="2013-05-30T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/migrations/api/v2.0" name="Migrations">
+    <description>Provide data on migrations.</description>
   </extension>
   <extension alias="os-multiple-create" updated="2012-08-07T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/multiplecreate/api/v1.1" name="MultipleCreate">
     <description>Allow multiple create in the Create Server v1.1 API.</description>
@@ -241,9 +247,5 @@
   </extension>
   <extension alias="os-volumes" updated="2011-03-25T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/volumes/api/v1.1" name="Volumes">
     <description>Volumes support.</description>
-  </extension>
-  <extension alias="os-migrations" updated="2013-05-30T00:00:00+00:00"
-             namespace="http://docs.openstack.org/compute/ext/migrations/api/v2.0" name="Migrations">
-    <description>Provide data on migrations.</description>
   </extension>
 </extensions>

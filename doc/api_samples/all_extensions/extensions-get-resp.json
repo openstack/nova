@@ -65,14 +65,6 @@
             "updated": "2011-11-03T00:00:00+00:00"
         },
         {
-            "alias": "os-extended-volumes",
-            "description": "Extended Volumes support.",
-            "links": [],
-            "name": "ExtendedVolumes",
-            "namespace": "http://docs.openstack.org/compute/ext/extended_volumes/api/v1.1",
-            "updated": "2013-06-07T00:00:00+00:00"
-        },
-        {
             "alias": "OS-EXT-VIF-NET",
             "description": "Adds network id parameter to the virtual interface list.",
             "links": [],
@@ -159,6 +151,14 @@
             "name": "BareMetalNodes",
             "namespace": "http://docs.openstack.org/compute/ext/baremetal_nodes/api/v2",
             "updated": "2013-01-04T00:00:00+00:00"
+        },
+        {
+            "alias": "os-block-device-mapping-v2-boot",
+            "description": "Allow boot with the new BDM data format.",
+            "links": [],
+            "name": "BlockDeviceMappingV2Boot",
+            "namespace": "http://docs.openstack.org/compute/ext/block_device_mapping_v2_boot/api/v2",
+            "updated": "2013-07-08T00:00:00+00:00"
         },
         {
             "alias": "os-cell-capacities",
@@ -279,6 +279,14 @@
             "name": "ExtendedServices",
             "namespace": "http://docs.openstack.org/compute/ext/extended_services/api/v2",
             "updated": "2013-05-17T00:00:00-00:00"
+        },
+        {
+            "alias": "os-extended-volumes",
+            "description": "Extended Volumes support.",
+            "links": [],
+            "name": "ExtendedVolumes",
+            "namespace": "http://docs.openstack.org/compute/ext/extended_volumes/api/v1.1",
+            "updated": "2013-06-07T00:00:00+00:00"
         },
         {
             "alias": "os-fixed-ips",
@@ -415,6 +423,14 @@
             "name": "Keypairs",
             "namespace": "http://docs.openstack.org/compute/ext/keypairs/api/v1.1",
             "updated": "2011-08-08T00:00:00+00:00"
+        },
+        {
+            "alias": "os-migrations",
+            "description": "Provide data on migrations.",
+            "links": [],
+            "name": "Migrations",
+            "namespace": "http://docs.openstack.org/compute/ext/migrations/api/v2.0",
+            "updated": "2013-05-30T00:00:00+00:00"
         },
         {
             "alias": "os-multiple-create",
@@ -591,14 +607,6 @@
             "name": "Volumes",
             "namespace": "http://docs.openstack.org/compute/ext/volumes/api/v1.1",
             "updated": "2011-03-25T00:00:00+00:00"
-        },
-        {
-            "alias": "os-migrations",
-            "description": "Provide data on migrations.",
-            "links": [],
-            "name": "Migrations",
-            "namespace": "http://docs.openstack.org/compute/ext/migrations/api/v2.0",
-            "updated": "2013-05-30T00:00:00+00:00"
         }
     ]
 }

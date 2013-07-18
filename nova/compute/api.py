@@ -1098,7 +1098,7 @@ class API(base.Base):
                injected_files=None, admin_password=None,
                block_device_mapping=None, access_ip_v4=None,
                access_ip_v6=None, requested_networks=None, config_drive=None,
-               auto_disk_config=None, scheduler_hints=None):
+               auto_disk_config=None, scheduler_hints=None, legacy_bdm=True):
         """
         Provision instances, sending instance information to the
         scheduler.  The scheduler will determine where the instance(s)
@@ -1106,6 +1106,15 @@ class API(base.Base):
 
         Returns a tuple of (instances, reservation_id)
         """
+
+        # NOTE(ndipanov): Deal with block_device_mapping format before
+        #                 doing any work. We assume that the API class
+        #                 will be dealing with only one version of block
+        #                 devices whenever possible to keep the code
+        #                 simple. Currently this is the legacy format.
+        if block_device_mapping and not legacy_bdm:
+            block_device_mapping = block_device.legacy_mapping(
+                block_device_mapping)
 
         self._check_create_policies(context, availability_zone,
                 requested_networks, block_device_mapping)

@@ -3117,6 +3117,30 @@ class BareMetalNodesXmlTest(BareMetalNodesJsonTest):
     ctype = 'xml'
 
 
+class BlockDeviceMappingV2BootJsonTest(ServersSampleBase):
+    extension_name = ('nova.api.openstack.compute.contrib.'
+                      'block_device_mapping_v2_boot.'
+                      'Block_device_mapping_v2_boot')
+
+    def _get_flags(self):
+        f = super(BlockDeviceMappingV2BootJsonTest, self)._get_flags()
+        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
+        # We need the volumes extension as well
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.volumes.Volumes')
+        return f
+
+    def test_servers_post_with_bdm_v2(self):
+        self.stubs.Set(cinder.API, 'get', fakes.stub_volume_get)
+        self.stubs.Set(cinder.API, 'check_attach',
+                       fakes.stub_volume_check_attach)
+        return self._post_server()
+
+
+class BlockDeviceMappingV2BootXmlTest(BlockDeviceMappingV2BootJsonTest):
+    ctype = 'xml'
+
+
 class FloatingIPPoolsSampleJsonTests(ApiSampleTestBase):
     extension_name = ("nova.api.openstack.compute.contrib.floating_ip_pools."
                       "Floating_ip_pools")

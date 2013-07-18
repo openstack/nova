@@ -44,28 +44,6 @@ FAKE_UUID_D = 'dddddddd-dddd-dddd-dddd-dddddddddddd'
 IMAGE_UUID = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
 
 
-def fake_compute_api_create(cls, context, instance_type, image_href, **kwargs):
-    global _block_device_mapping_seen
-    _block_device_mapping_seen = kwargs.get('block_device_mapping')
-
-    inst_type = flavors.get_flavor_by_flavor_id(2)
-    resv_id = None
-    return ([{'id': 1,
-              'display_name': 'test_server',
-              'uuid': FAKE_UUID,
-              'instance_type': dict(inst_type),
-              'access_ip_v4': '1.2.3.4',
-              'access_ip_v6': 'fead::1234',
-              'image_ref': IMAGE_UUID,
-              'user_id': 'fake',
-              'project_id': 'fake',
-              'created_at': datetime.datetime(2010, 10, 10, 12, 0, 0),
-              'updated_at': datetime.datetime(2010, 11, 11, 11, 0, 0),
-              'progress': 0,
-              'fixed_ips': []
-              }], resv_id)
-
-
 def fake_get_instance(self, context, instance_id, want_objects=False):
     return {'uuid': instance_id}
 
@@ -120,12 +98,40 @@ class BootFromVolumeTest(test.TestCase):
 
     def setUp(self):
         super(BootFromVolumeTest, self).setUp()
-        self.stubs.Set(compute_api.API, 'create', fake_compute_api_create)
+        self.stubs.Set(compute_api.API, 'create',
+                       self._get_fake_compute_api_create())
         fakes.stub_out_nw_api(self.stubs)
+        self._block_device_mapping_seen = None
+        self._legacy_bdm_seen = True
         self.flags(
             osapi_compute_extension=[
                 'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Volumes'])
+            osapi_compute_ext_list=['Volumes', 'Block_device_mapping_v2_boot'])
+
+    def _get_fake_compute_api_create(self):
+        def _fake_compute_api_create(cls, context, instance_type,
+                                    image_href, **kwargs):
+            self._block_device_mapping_seen = kwargs.get(
+                'block_device_mapping')
+            self._legacy_bdm_seen = kwargs.get('legacy_bdm')
+
+            inst_type = flavors.get_flavor_by_flavor_id(2)
+            resv_id = None
+            return ([{'id': 1,
+                      'display_name': 'test_server',
+                      'uuid': FAKE_UUID,
+                      'instance_type': dict(inst_type),
+                      'access_ip_v4': '1.2.3.4',
+                      'access_ip_v6': 'fead::1234',
+                      'image_ref': IMAGE_UUID,
+                      'user_id': 'fake',
+                      'project_id': 'fake',
+                      'created_at': datetime.datetime(2010, 10, 10, 12, 0, 0),
+                      'updated_at': datetime.datetime(2010, 11, 11, 11, 0, 0),
+                      'progress': 0,
+                      'fixed_ips': []
+                      }], resv_id)
+        return _fake_compute_api_create
 
     def test_create_root_volume(self):
         body = dict(server=dict(
@@ -138,8 +144,6 @@ class BootFromVolumeTest(test.TestCase):
                         delete_on_termination=False,
                         )]
                 ))
-        global _block_device_mapping_seen
-        _block_device_mapping_seen = None
         req = webob.Request.blank('/v2/fake/os-volumes_boot')
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
@@ -150,9 +154,40 @@ class BootFromVolumeTest(test.TestCase):
         server = jsonutils.loads(res.body)['server']
         self.assertEqual(FAKE_UUID, server['id'])
         self.assertEqual(CONF.password_length, len(server['adminPass']))
-        self.assertEqual(len(_block_device_mapping_seen), 1)
-        self.assertEqual(_block_device_mapping_seen[0]['volume_id'], 1)
-        self.assertEqual(_block_device_mapping_seen[0]['device_name'],
+        self.assertEqual(len(self._block_device_mapping_seen), 1)
+        self.assertTrue(self._legacy_bdm_seen)
+        self.assertEqual(self._block_device_mapping_seen[0]['volume_id'], 1)
+        self.assertEqual(self._block_device_mapping_seen[0]['device_name'],
+                '/dev/vda')
+
+    def test_create_root_volume_bdm_v2(self):
+        body = dict(server=dict(
+                name='test_server', imageRef=IMAGE_UUID,
+                flavorRef=2, min_count=1, max_count=1,
+                block_device_mapping_v2=[dict(
+                        source_type='volume',
+                        uuid=1,
+                        device_name='/dev/vda',
+                        boot_index=0,
+                        delete_on_termination=False,
+                        )]
+                ))
+        req = webob.Request.blank('/v2/fake/os-volumes_boot')
+        req.method = 'POST'
+        req.body = jsonutils.dumps(body)
+        req.headers['content-type'] = 'application/json'
+        res = req.get_response(fakes.wsgi_app(
+            init_only=('os-volumes_boot', 'servers')))
+        self.assertEqual(res.status_int, 202)
+        server = jsonutils.loads(res.body)['server']
+        self.assertEqual(FAKE_UUID, server['id'])
+        self.assertEqual(CONF.password_length, len(server['adminPass']))
+        self.assertEqual(len(self._block_device_mapping_seen), 1)
+        self.assertFalse(self._legacy_bdm_seen)
+        self.assertEqual(self._block_device_mapping_seen[0]['volume_id'], 1)
+        self.assertEqual(self._block_device_mapping_seen[0]['boot_index'],
+                         0)
+        self.assertEqual(self._block_device_mapping_seen[0]['device_name'],
                 '/dev/vda')
 
 

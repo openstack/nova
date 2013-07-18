@@ -54,6 +54,17 @@ bdm_db_inherited_fields = set(['created_at', 'updated_at',
                                'deleted_at', 'deleted'])
 
 
+bdm_new_non_api_fields = set(['volume_id', 'snapshot_id',
+                              'image_id', 'connection_info'])
+
+
+bdm_new_api_only_fields = set(['uuid'])
+
+
+bdm_new_api_fields = ((bdm_new_fields - bdm_new_non_api_fields) |
+                      bdm_new_api_only_fields)
+
+
 class BlockDeviceDict(dict):
     """Represents a Block Device Mapping in Nova."""
 
@@ -125,6 +136,27 @@ class BlockDeviceDict(dict):
             raise exception.InvalidBDMFormat()
 
         return cls(new_bdm, non_computable_fields)
+
+    @classmethod
+    def from_api(cls, api_dict):
+        """Transform the API format of data to the internally used one.
+
+        Only validate if the source_type field makes sense.
+        """
+        if not api_dict.get('no_device'):
+
+            source_type = api_dict.get('source_type')
+            device_uuid = api_dict.get('uuid')
+
+            if source_type not in ('volume', 'image', 'snapshot', 'blank'):
+                raise exception.InvalidBDMFormat()
+            elif source_type != 'blank':
+                if not device_uuid:
+                    raise exception.InvalidBDMFormat()
+                api_dict[source_type + '_id'] = device_uuid
+
+        api_dict.pop('uuid', None)
+        return cls(api_dict)
 
     def legacy(self):
         copy_over_fields = bdm_legacy_fields - set(['virtual_name'])

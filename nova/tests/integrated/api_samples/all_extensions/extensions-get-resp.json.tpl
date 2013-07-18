@@ -161,6 +161,14 @@
             "updated": "%(timestamp)s"
         },
         {
+            "alias": "os-block-device-mapping-v2-boot",
+            "description": "%(text)s",
+            "links": [],
+            "name": "BlockDeviceMappingV2Boot",
+            "namespace": "http://docs.openstack.org/compute/ext/block_device_mapping_v2_boot/api/v2",
+            "updated": "%(timestamp)s"
+        },
+        {
             "alias": "os-cells",
             "description": "%(text)s",
             "links": [],
