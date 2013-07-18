@@ -15,8 +15,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.api.openstack.compute.contrib import used_limits
 from nova.api.openstack.compute import limits
+from nova.api.openstack.compute.plugins.v3 import used_limits
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 import nova.context
@@ -36,12 +36,11 @@ class UsedLimitsTestCase(test.TestCase):
     def setUp(self):
         """Run before each test."""
         super(UsedLimitsTestCase, self).setUp()
-        self.ext_mgr = self.mox.CreateMock(extensions.ExtensionManager)
-        self.controller = used_limits.UsedLimitsController(self.ext_mgr)
+        self.controller = used_limits.UsedLimitsController()
 
         self.fake_context = nova.context.RequestContext('fake', 'fake')
-        self.mox.StubOutWithMock(used_limits, 'authorize_for_admin')
-        self.authorize_for_admin = used_limits.authorize_for_admin
+        self.mox.StubOutWithMock(used_limits, 'authorize')
+        self.authorize = used_limits.authorize
 
     def _do_test_used_limits(self, reserved):
         fake_req = FakeRequest(self.fake_context, reserved=reserved)
@@ -70,7 +69,7 @@ class UsedLimitsTestCase(test.TestCase):
 
         self.stubs.Set(quota.QUOTAS, "get_project_quotas",
                        stub_get_project_quotas)
-        self.ext_mgr.is_loaded('os-used-limits-for-admin').AndReturn(False)
+        self.authorize(self.fake_context)
         self.mox.ReplayAll()
 
         self.controller.index(fake_req, res)
@@ -104,8 +103,8 @@ class UsedLimitsTestCase(test.TestCase):
         }
         fake_req = FakeRequest(self.fake_context)
         fake_req.GET = {'tenant_id': tenant_id}
-        self.ext_mgr.is_loaded('os-used-limits-for-admin').AndReturn(True)
-        self.authorize_for_admin(self.fake_context, target=target)
+        self.authorize(self.fake_context)
+        self.authorize(self.fake_context, target=target, action='tenant')
         self.mox.StubOutWithMock(quota.QUOTAS, 'get_project_quotas')
         quota.QUOTAS.get_project_quotas(self.fake_context, '%s' % tenant_id,
                                         usages=True).AndReturn({})
@@ -126,9 +125,9 @@ class UsedLimitsTestCase(test.TestCase):
         }
         fake_req = FakeRequest(self.fake_context)
         fake_req.GET = {}
-        self.ext_mgr.is_loaded('os-used-limits-for-admin').AndReturn(True)
         self.mox.StubOutWithMock(extensions, 'extension_authorizer')
         self.mox.StubOutWithMock(quota.QUOTAS, 'get_project_quotas')
+        self.authorize(self.fake_context)
         quota.QUOTAS.get_project_quotas(self.fake_context, '%s' % project_id,
                                         usages=True).AndReturn({})
         self.mox.ReplayAll()
@@ -153,8 +152,8 @@ class UsedLimitsTestCase(test.TestCase):
         }
         fake_req = FakeRequest(self.fake_context)
         fake_req.GET = {'tenant_id': tenant_id}
-        self.ext_mgr.is_loaded('os-used-limits-for-admin').AndReturn(True)
-        self.authorize_for_admin(self.fake_context, target=target). \
+        self.authorize(self.fake_context)
+        self.authorize(self.fake_context, target=target, action='tenant'). \
             AndRaise(exception.PolicyNotAuthorized(
             action="compute_extension:used_limits_for_admin"))
         self.mox.ReplayAll()
@@ -172,8 +171,8 @@ class UsedLimitsTestCase(test.TestCase):
             },
         }
         fake_req = FakeRequest(self.fake_context)
-        self.ext_mgr.is_loaded('os-used-limits-for-admin').AndReturn(False)
         self.mox.StubOutWithMock(quota.QUOTAS, 'get_project_quotas')
+        self.authorize(self.fake_context)
         quota.QUOTAS.get_project_quotas(self.fake_context, project_id,
                                         usages=True).AndReturn({})
         self.mox.ReplayAll()
@@ -195,9 +194,9 @@ class UsedLimitsTestCase(test.TestCase):
         def stub_get_project_quotas(context, project_id, usages=True):
             return {'ram': {'limit': 512, 'in_use': 256}}
 
-        self.ext_mgr.is_loaded('os-used-limits-for-admin').AndReturn(False)
         self.stubs.Set(quota.QUOTAS, "get_project_quotas",
                        stub_get_project_quotas)
+        self.authorize(self.fake_context)
         self.mox.ReplayAll()
 
         self.controller.index(fake_req, res)
@@ -218,9 +217,9 @@ class UsedLimitsTestCase(test.TestCase):
         def stub_get_project_quotas(context, project_id, usages=True):
             return {}
 
-        self.ext_mgr.is_loaded('os-used-limits-for-admin').AndReturn(False)
         self.stubs.Set(quota.QUOTAS, "get_project_quotas",
                        stub_get_project_quotas)
+        self.authorize(self.fake_context)
         self.mox.ReplayAll()
 
         self.controller.index(fake_req, res)
@@ -241,9 +240,9 @@ class UsedLimitsTestCase(test.TestCase):
         def stub_get_project_quotas(context, project_id, usages=True):
             return {}
 
-        self.ext_mgr.is_loaded('os-used-limits-for-admin').AndReturn(False)
         self.stubs.Set(quota.QUOTAS, "get_project_quotas",
                        stub_get_project_quotas)
+        self.authorize(self.fake_context)
         self.mox.ReplayAll()
 
         self.controller.index(fake_req, res)
