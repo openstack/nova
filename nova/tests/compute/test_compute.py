@@ -5810,11 +5810,9 @@ class ComputeAPITestCase(BaseTestCase):
         db.instance_destroy(self.context, instance['uuid'])
 
     def test_rebuild(self):
-        # Test we can rebuild an instance in the Error State
         self._test_rebuild(vm_state=vm_states.ACTIVE)
 
     def test_rebuild_in_error_state(self):
-        # Test we can rebuild an instance in the Error State
         self._test_rebuild(vm_state=vm_states.ERROR)
 
     def test_rebuild_in_error_not_launched(self):
