@@ -295,6 +295,31 @@ def wrap_instance_event(function):
     return decorated_function
 
 
+def delete_image_on_error(function):
+    """Used for snapshot related method to ensure the image created in
+    compute.api is deleted when an error occurs.
+    """
+
+    @functools.wraps(function)
+    def decorated_function(self, context, image_id, instance,
+                           *args, **kwargs):
+        try:
+            return function(self, context, image_id, instance,
+                            *args, **kwargs)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                LOG.debug(_("Cleaning up image %s") % image_id,
+                          exc_info=True, instance=instance)
+                try:
+                    image_service = glance.get_default_image_service()
+                    image_service.delete(context, image_id)
+                except Exception:
+                    LOG.exception(_("Error while trying to clean up image %s")
+                                  % image_id, instance=instance)
+
+    return decorated_function
+
+
 # TODO(danms): Remove me after havana
 def object_compat(function):
     """Wraps a method that expects a new-world instance
@@ -2080,6 +2105,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
     @wrap_instance_fault
+    @delete_image_on_error
     def live_snapshot_instance(self, context, image_id, instance):
         """Live snapshot an instance on this host.
 
@@ -2149,6 +2175,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
     @wrap_instance_fault
+    @delete_image_on_error
     def snapshot_instance(self, context, image_id, instance,
                           image_type=None, backup_type=None,
                           rotation=None):
