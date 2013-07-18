@@ -40,6 +40,7 @@ from nova.compute import power_state
 from nova.compute import task_states
 from nova import exception
 from nova.image import glance
+from nova.network import model as network_model
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
@@ -97,6 +98,14 @@ xenapi_vm_utils_opts = [
                default='none',
                help='Whether or not to download images via Bit Torrent '
                     '(all|some|none).'),
+    cfg.StrOpt('xenapi_ipxe_network_name',
+               help='Name of network to use for booting iPXE ISOs'),
+    cfg.StrOpt('xenapi_ipxe_boot_menu_url',
+               help='URL to the iPXE boot menu'),
+    cfg.StrOpt('xenapi_ipxe_mkisofs_cmd',
+               default='mkisofs',
+               help='Name and optionally path of the tool used for '
+                    'ISO image creation'),
     ]
 
 CONF = cfg.CONF
@@ -2265,3 +2274,64 @@ def vm_ref_or_raise(session, instance_name):
     if vm_ref is None:
         raise exception.InstanceNotFound(instance_id=instance_name)
     return vm_ref
+
+
+def handle_ipxe_iso(session, instance, cd_vdi, network_info):
+    """iPXE ISOs are a mechanism to allow the customer to roll their own
+    image.
+
+    To use this feature, a service provider needs to configure the
+    appropriate Nova flags, roll an iPXE ISO, then distribute that image
+    to customers via Glance.
+
+    NOTE: `mkisofs` is not present by default in the Dom0, so the service
+    provider can either add that package manually to Dom0 or include the
+    `mkisofs` binary in the image itself.
+    """
+    boot_menu_url = CONF.xenapi_ipxe_boot_menu_url
+    if not boot_menu_url:
+        LOG.warn(_('xenapi_ipxe_boot_menu_url not set, user will have to'
+                   ' enter URL manually...'), instance=instance)
+        return
+
+    network_name = CONF.xenapi_ipxe_network_name
+    if not network_name:
+        LOG.warn(_('xenapi_ipxe_network_name not set, user will have to'
+                   ' enter IP manually...'), instance=instance)
+        return
+
+    network = None
+    for vif in network_info:
+        if vif['network']['label'] == network_name:
+            network = vif['network']
+            break
+
+    if not network:
+        LOG.warn(_("Unable to find network matching '%(network_name)s', user"
+                   " will have to enter IP manually...") %
+                 {'network_name': network_name}, instance=instance)
+        return
+
+    sr_path = get_sr_path(session)
+
+    # Unpack IPv4 network info
+    subnet = [sn for sn in network['subnets']
+              if sn['version'] == 4][0]
+    ip = subnet['ips'][0]
+
+    ip_address = ip['address']
+    netmask = network_model.get_netmask(ip, subnet)
+    gateway = subnet['gateway']['address']
+    dns = subnet['dns'][0]['address']
+
+    try:
+        session.call_plugin_serialized("ipxe", "inject", sr_path,
+                cd_vdi['uuid'], boot_menu_url, ip_address, netmask,
+                gateway, dns, CONF.xenapi_ipxe_mkisofs_cmd)
+    except session.XenAPI.Failure as exc:
+        _type, _method, error = exc.details[:3]
+        if error == 'CommandNotFound':
+            LOG.warn(_("ISO creation tool '%s' does not exist.") %
+                     CONF.xenapi_ipxe_mkisofs_cmd, instance=instance)
+        else:
+            raise

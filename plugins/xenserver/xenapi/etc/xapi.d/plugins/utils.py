@@ -28,6 +28,10 @@ LOG = logging.getLogger(__name__)
 CHUNK_SIZE = 8192
 
 
+class CommandNotFound(Exception):
+    pass
+
+
 def delete_if_exists(path):
     try:
         os.unlink(path)
@@ -65,7 +69,13 @@ def make_subprocess(cmdline, stdout=False, stderr=False, stdin=False,
     kwargs['stdin'] = stdin and subprocess.PIPE or None
     kwargs['universal_newlines'] = universal_newlines
     kwargs['close_fds'] = close_fds
-    proc = subprocess.Popen(cmdline, **kwargs)
+    try:
+        proc = subprocess.Popen(cmdline, **kwargs)
+    except OSError, e:
+        if e.errno == errno.ENOENT:
+            raise CommandNotFound
+        else:
+            raise
     return proc
 
 
