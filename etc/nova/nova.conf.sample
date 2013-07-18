@@ -2743,6 +2743,18 @@
 #sg_retry_interval=5
 
 
+[image_file_url]
+
+#
+# Options defined in nova.image.download.file
+#
+
+# A list of filesystems that will be configured in this file
+# under the sections image_file_url:<list entry name> (list
+# value)
+#filesystems=
+
+
 [baremetal]
 
 #
