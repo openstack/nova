@@ -3009,9 +3009,9 @@ class AggregateAPI(base.Base):
                                                     aggregate_payload)
         # validates the host; ComputeHostNotFound is raised if invalid
         self.db.service_get_by_compute_host(context, host_name)
-        aggregate = self.db.aggregate_get(context, aggregate_id)
         self.db.aggregate_host_add(context, aggregate_id, host_name)
         #NOTE(jogo): Send message to host to support resource pools
+        aggregate = self.db.aggregate_get(context, aggregate_id)
         self.compute_rpcapi.add_aggregate_host(context,
                 aggregate=aggregate, host_param=host_name, host=host_name)
         aggregate_payload.update({'name': aggregate['name']})
@@ -3030,8 +3030,8 @@ class AggregateAPI(base.Base):
                                                     aggregate_payload)
         # validates the host; ComputeHostNotFound is raised if invalid
         self.db.service_get_by_compute_host(context, host_name)
-        aggregate = self.db.aggregate_get(context, aggregate_id)
         self.db.aggregate_host_delete(context, aggregate_id, host_name)
+        aggregate = self.db.aggregate_get(context, aggregate_id)
         self.compute_rpcapi.remove_aggregate_host(context,
                 aggregate=aggregate, host_param=host_name, host=host_name)
         compute_utils.notify_about_aggregate_update(context,

@@ -8376,6 +8376,14 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         fake_host = values[fake_zone][0]
         aggr = self.api.create_aggregate(self.context,
                                          'fake_aggregate', fake_zone)
+
+        def fake_add_aggregate_host(*args, **kwargs):
+            hosts = kwargs["aggregate"]["hosts"]
+            self.assertTrue(fake_host in hosts)
+
+        self.stubs.Set(self.api.compute_rpcapi, 'add_aggregate_host',
+                       fake_add_aggregate_host)
+
         test_notifier.NOTIFICATIONS = []
         aggr = self.api.add_host_to_aggregate(self.context,
                                               aggr['id'], fake_host)
@@ -8416,10 +8424,19 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         for host in values[fake_zone]:
             aggr = self.api.add_host_to_aggregate(self.context,
                                                   aggr['id'], host)
+        host_to_remove = values[fake_zone][0]
+
+        def fake_remove_aggregate_host(*args, **kwargs):
+            hosts = kwargs["aggregate"]["hosts"]
+            self.assertFalse(host_to_remove in hosts)
+
+        self.stubs.Set(self.api.compute_rpcapi, 'remove_aggregate_host',
+                       fake_remove_aggregate_host)
+
         test_notifier.NOTIFICATIONS = []
         expected = self.api.remove_host_from_aggregate(self.context,
                                                        aggr['id'],
-                                                       values[fake_zone][0])
+                                                       host_to_remove)
         self.assertEqual(len(test_notifier.NOTIFICATIONS), 2)
         msg = test_notifier.NOTIFICATIONS[0]
         self.assertEqual(msg['event_type'],
