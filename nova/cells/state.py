@@ -342,9 +342,8 @@ class CellStateManager(base.Base):
     @sync_before
     def update_cell_capabilities(self, cell_name, capabilities):
         """Update capabilities for a cell."""
-        cell = self.child_cells.get(cell_name)
-        if not cell:
-            cell = self.parent_cells.get(cell_name)
+        cell = (self.child_cells.get(cell_name) or
+                self.parent_cells.get(cell_name))
         if not cell:
             LOG.error(_("Unknown cell '%(cell_name)s' when trying to "
                         "update capabilities"),
@@ -358,9 +357,8 @@ class CellStateManager(base.Base):
     @sync_before
     def update_cell_capacities(self, cell_name, capacities):
         """Update capacities for a cell."""
-        cell = self.child_cells.get(cell_name)
-        if not cell:
-            cell = self.parent_cells.get(cell_name)
+        cell = (self.child_cells.get(cell_name) or
+                self.parent_cells.get(cell_name))
         if not cell:
             LOG.error(_("Unknown cell '%(cell_name)s' when trying to "
                         "update capacities"),
