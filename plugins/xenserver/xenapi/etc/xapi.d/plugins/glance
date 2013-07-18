@@ -197,10 +197,20 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port,
         logging.info("Wrote %d bytes to %s" % (bytes_written, url))
 
         resp = conn.getresponse()
-        if resp.status != httplib.OK:
-            logging.error("Unexpected response while writing image data to %s: "
-                          "Response Status: %i, Response body: %s"
-                          % (url, resp.status, resp.read()))
+        if resp.status == httplib.OK:
+            return
+
+        logging.error("Unexpected response while writing image data to %s: "
+                      "Response Status: %i, Response body: %s"
+                      % (url, resp.status, resp.read()))
+
+        if resp.status == httplib.UNAUTHORIZED:
+            # NOTE(johngarbutt): little point in retrying when token invalid
+            raise PluginError("Unauthorized error while uploading "
+                            "image [%s] "
+                            "to glance host [%s:%s]"
+                            % (image_id, glance_host, glance_port))
+        else:
             raise RetryableError("Unexpected response [%i] while uploading "
                             "image [%s] "
                             "to glance host [%s:%s]"
