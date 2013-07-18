@@ -1143,6 +1143,11 @@ class CellsTargetedMethodsTestCase(test.TestCase):
         self._test_instance_action_method('stop', (), {}, (),
                                           {'do_cast': False}, True)
 
+    def test_reboot_instance(self):
+        kwargs = dict(reboot_type='HARD')
+        self._test_instance_action_method('reboot', (), kwargs, (),
+                                          kwargs, False)
+
 
 class CellsBroadcastMethodsTestCase(test.TestCase):
     """Test case for _BroadcastMessageMethods class.  Most of these

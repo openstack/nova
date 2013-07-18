@@ -1898,10 +1898,8 @@ class API(base.Base):
                 method='reboot')
         state = {'SOFT': task_states.REBOOTING,
                  'HARD': task_states.REBOOTING_HARD}[reboot_type]
-        instance = self.update(context, instance,
-                               task_state=state,
-                               expected_task_state=[None,
-                                                    task_states.REBOOTING])
+        instance.task_state = state
+        instance.save(expected_task_state=[None, task_states.REBOOTING])
         elevated = context.elevated()
         block_info = self._get_block_device_info(elevated,
                                                         instance['uuid'])

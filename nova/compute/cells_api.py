@@ -39,7 +39,8 @@ class ComputeRPCAPIRedirect(object):
     # and the compute_rpcapi methods have the same signatures.  This
     # is for transitioning to a common interface where we can just
     # swap out the compute_rpcapi class with the cells_rpcapi class.
-    cells_compatible = ['start_instance', 'stop_instance']
+    cells_compatible = ['start_instance', 'stop_instance',
+                        'reboot_instance']
 
     def __init__(self, cells_rpcapi):
         self.cells_rpcapi = cells_rpcapi
@@ -268,13 +269,6 @@ class ComputeCellsAPI(compute_api.API):
         """Force delete a previously deleted (but not reclaimed) instance."""
         super(ComputeCellsAPI, self).force_delete(context, instance)
         self._cast_to_cells(context, instance, 'force_delete')
-
-    def reboot(self, context, instance, *args, **kwargs):
-        """Reboot the given instance."""
-        super(ComputeCellsAPI, self).reboot(context, instance,
-                *args, **kwargs)
-        self._cast_to_cells(context, instance, 'reboot', *args,
-                **kwargs)
 
     @check_instance_cell
     def rebuild(self, context, instance, *args, **kwargs):

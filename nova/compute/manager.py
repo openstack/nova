@@ -363,7 +363,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '2.31'
+    RPC_API_VERSION = '2.32'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1931,6 +1931,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 # Manager-detach
                 self.detach_volume(context, volume_id, instance)
 
+    @object_compat
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
     @wrap_instance_event
@@ -1954,8 +1955,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         current_power_state = self._get_power_state(context, instance)
 
-        instance = self._instance_update(context, instance['uuid'],
-                                         power_state=current_power_state)
+        instance.power_state = current_power_state
+        instance.save()
 
         if instance['power_state'] != power_state.RUNNING:
             state = instance['power_state']
@@ -2001,16 +2002,16 @@ class ComputeManager(manager.SchedulerDependentManager):
             else:
                 LOG.error(_('Cannot reboot instance: %s'), error,
                           context=context, instance=instance)
-                self._set_instance_error_state(context, instance['uuid'])
+                self._set_instance_obj_error_state(context, instance)
                 raise type_, value, tb
 
         if not new_power_state:
             new_power_state = self._get_power_state(context, instance)
         try:
-            instance = self._instance_update(context, instance['uuid'],
-                                             power_state=new_power_state,
-                                             vm_state=new_vm_state,
-                                             task_state=None)
+            instance.power_state = new_power_state
+            instance.vm_state = new_vm_state
+            instance.task_state = None
+            instance.save()
         except exception.InstanceNotFound:
             LOG.warn(_("Instance disappeared during reboot"),
                      context=context, instance=instance)
@@ -4003,8 +4004,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         if CONF.reboot_timeout > 0:
             filters = {'task_state': task_states.REBOOTING,
                        'host': self.host}
-            rebooting = self.conductor_api.instance_get_all_by_filters(
-                context, filters, columns_to_join=[])
+            rebooting = instance_obj.InstanceList.get_by_filters(
+                context, filters, expected_attrs=[])
 
             to_poll = []
             for instance in rebooting:

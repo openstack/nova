@@ -663,3 +663,12 @@ class CellsManagerClassTestCase(test.TestCase):
         self.mox.ReplayAll()
         self.assertEqual(response,
                          self.cells_manager.cell_get(self.ctxt, cell_name))
+
+    def test_reboot_instance(self):
+        self.mox.StubOutWithMock(self.msg_runner, 'reboot_instance')
+        self.msg_runner.reboot_instance(self.ctxt, 'fake-instance',
+                                        'HARD')
+        self.mox.ReplayAll()
+        self.cells_manager.reboot_instance(self.ctxt,
+                                           instance='fake-instance',
+                                           reboot_type='HARD')

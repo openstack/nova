@@ -1586,42 +1586,50 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute, '_get_instance_nw_info')
         self.mox.StubOutWithMock(self.compute, '_notify_about_instance_usage')
         self.mox.StubOutWithMock(self.compute, '_instance_update')
+        self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
         self.mox.StubOutWithMock(self.compute, '_get_power_state')
         self.mox.StubOutWithMock(self.compute.driver, 'legacy_nwinfo')
         self.mox.StubOutWithMock(self.compute.driver, 'reboot')
-
-        instance = dict(uuid='fake-instance',
-                        power_state='unknown',
-                        vm_state=vm_states.ACTIVE,
-                        launched_at=timeutils.utcnow())
-        updated_instance1 = dict(uuid='updated-instance1',
-                                 power_state='fake',
-                                 vm_state=vm_states.ACTIVE,
-                                 launched_at=timeutils.utcnow())
-        updated_instance2 = dict(uuid='updated-instance2',
-                                 power_state='fake',
-                                 vm_state=vm_states.ACTIVE,
-                                 launched_at=timeutils.utcnow())
-
-        if test_unrescue:
-            instance['vm_state'] = vm_states.RESCUED
-
-        fake_nw_model = network_model.NetworkInfo()
-        self.mox.StubOutWithMock(fake_nw_model, 'legacy')
-
-        fake_block_dev_info = 'fake_block_dev_info'
-        fake_power_state1 = 'fake_power_state1'
-        fake_power_state2 = power_state.RUNNING
-        fake_power_state3 = 'fake_power_state3'
-        reboot_type = soft and 'SOFT' or 'HARD'
-
-        # Beginning of calls we expect.
 
         # FIXME(comstud): I don't feel like the context needs to
         # be elevated at all.  Hopefully remove elevated from
         # reboot_instance and remove the stub here in a future patch.
         # econtext would just become self.context below then.
         econtext = self.context.elevated()
+
+        db_instance = fake_instance.fake_db_instance(
+            **dict(uuid='fake-instance',
+                   power_state=power_state.NOSTATE,
+                   vm_state=vm_states.ACTIVE,
+                   launched_at=timeutils.utcnow()))
+        instance = instance_obj.Instance._from_db_object(
+            econtext, instance_obj.Instance(), db_instance)
+
+        updated_dbinstance1 = fake_instance.fake_db_instance(
+            **dict(uuid='updated-instance1',
+                   power_state=10003,
+                   vm_state=vm_states.ACTIVE,
+                   launched_at=timeutils.utcnow()))
+        updated_dbinstance2 = fake_instance.fake_db_instance(
+            **dict(uuid='updated-instance2',
+                   power_state=10003,
+                   vm_state=vm_states.ACTIVE,
+                   launched_at=timeutils.utcnow()))
+
+        if test_unrescue:
+            instance['vm_state'] = vm_states.RESCUED
+        instance.obj_reset_changes()
+
+        fake_nw_model = network_model.NetworkInfo()
+        self.mox.StubOutWithMock(fake_nw_model, 'legacy')
+
+        fake_block_dev_info = 'fake_block_dev_info'
+        fake_power_state1 = 10001
+        fake_power_state2 = power_state.RUNNING
+        fake_power_state3 = 10002
+        reboot_type = soft and 'SOFT' or 'HARD'
+
+        # Beginning of calls we expect.
 
         self.mox.StubOutWithMock(self.context, 'elevated')
         self.context.elevated().AndReturn(econtext)
@@ -1634,8 +1642,10 @@ class ComputeTestCase(BaseTestCase):
                                                   'reboot.start')
         self.compute._get_power_state(econtext,
                 instance).AndReturn(fake_power_state1)
-        self.compute._instance_update(econtext, instance['uuid'],
-                power_state=fake_power_state1).AndReturn(updated_instance1)
+        db.instance_update_and_get_original(econtext, instance['uuid'],
+                                            {'power_state': fake_power_state1}
+                                            ).AndReturn((None,
+                                                         updated_dbinstance1))
 
         # Reboot should check the driver to see if legacy nwinfo is
         # needed.  If it is, the model's legacy() method should be
@@ -1654,7 +1664,7 @@ class ComputeTestCase(BaseTestCase):
         # around it.
         reboot_call_info = {}
         expected_call_info = {
-            'args': (econtext, updated_instance1, expected_nw_info,
+            'args': (econtext, instance, expected_nw_info,
                      reboot_type),
             'kwargs': {'block_device_info': fake_block_dev_info}}
 
@@ -1675,36 +1685,41 @@ class ComputeTestCase(BaseTestCase):
         if not fail_reboot or fail_running:
             new_power_state = fake_power_state2
             self.compute._get_power_state(econtext,
-                    updated_instance1).AndReturn(fake_power_state2)
+                    instance).AndReturn(fake_power_state2)
         else:
             new_power_state = fake_power_state3
             self.compute._get_power_state(econtext,
-                    updated_instance1).AndReturn(fake_power_state3)
+                    instance).AndReturn(fake_power_state3)
 
         if test_delete:
-            self.compute._instance_update(econtext, updated_instance1['uuid'],
-                    power_state=new_power_state,
-                    task_state=None,
-                    vm_state=vm_states.ACTIVE).AndRaise(
-                        exception.InstanceNotFound(
-                            instance_id=updated_instance1['uuid']))
-            self.compute._notify_about_instance_usage(econtext,
-                                                      updated_instance1,
-                                                      'reboot.end')
+            db.instance_update_and_get_original(
+                econtext, updated_dbinstance1['uuid'],
+                {'power_state': new_power_state,
+                 'task_state': None,
+                 'vm_state': vm_states.ACTIVE}
+                ).AndRaise(exception.InstanceNotFound(
+                    instance_id=instance['uuid']))
+            self.compute._notify_about_instance_usage(
+                econtext,
+                instance,
+                'reboot.end')
         elif fail_reboot and not fail_running:
-            self.compute._instance_update(econtext, updated_instance1['uuid'],
-                    vm_state=vm_states.ERROR).AndRaise(
-                        exception.InstanceNotFound(
-                            instance_id=updated_instance1['uuid']))
-
+            db.instance_update_and_get_original(
+                econtext, updated_dbinstance1['uuid'],
+                {'vm_state': vm_states.ERROR}
+                ).AndRaise(exception.InstanceNotFound(
+                    instance_id=instance['uuid']))
         else:
-            self.compute._instance_update(econtext, updated_instance1['uuid'],
-                    power_state=new_power_state,
-                    task_state=None,
-                    vm_state=vm_states.ACTIVE).AndReturn(updated_instance2)
-            self.compute._notify_about_instance_usage(econtext,
-                                                      updated_instance2,
-                                                      'reboot.end')
+            db.instance_update_and_get_original(
+                econtext, updated_dbinstance1['uuid'],
+                {'power_state': new_power_state,
+                 'task_state': None,
+                 'vm_state': vm_states.ACTIVE}
+                ).AndReturn((None, updated_dbinstance2))
+            self.compute._notify_about_instance_usage(
+                econtext,
+                instance,
+                'reboot.end')
 
         self.mox.ReplayAll()
 
@@ -2644,25 +2659,30 @@ class ComputeTestCase(BaseTestCase):
 
         # should fail with locked nonadmin context
         self.compute_api.lock(self.context, instance)
-        instance = db.instance_get_by_uuid(self.context, instance_uuid)
+        inst_obj = instance_obj.Instance.get_by_uuid(self.context,
+                                                     instance['uuid'])
+
         self.assertRaises(exception.InstanceIsLocked,
                           self.compute_api.reboot,
-                          non_admin_context, instance, 'SOFT')
+                          non_admin_context, inst_obj, 'SOFT')
         check_task_state(None)
 
         # should fail with invalid task state
+        instance = db.instance_get_by_uuid(self.context, instance_uuid)
         self.compute_api.unlock(self.context, instance)
         instance = db.instance_update(self.context, instance_uuid,
                                       {'task_state': task_states.REBOOTING})
+        inst_obj.refresh()
         self.assertRaises(exception.InstanceInvalidState,
                           self.compute_api.reboot,
-                          non_admin_context, instance, 'SOFT')
+                          non_admin_context, inst_obj, 'SOFT')
         check_task_state(task_states.REBOOTING)
 
         # should succeed with admin context
         instance = db.instance_update(self.context, instance_uuid,
                                       {'task_state': None})
-        self.compute_api.reboot(self.context, instance, 'SOFT')
+        inst_obj.refresh()
+        self.compute_api.reboot(self.context, inst_obj, 'SOFT')
         check_task_state(task_states.REBOOTING)
 
         self.compute.terminate_instance(self.context,

@@ -70,6 +70,7 @@ class CellsAPI(rpc_proxy.RpcProxy):
         1.12 - Adds instance_start() and instance_stop()
         1.13 - Adds cell_create(), cell_update(), cell_delete(), and
                cell_get()
+        1.14 - Adds reboot_instance()
     '''
     BASE_RPC_API_VERSION = '1.0'
 
@@ -406,3 +407,16 @@ class CellsAPI(rpc_proxy.RpcProxy):
         return self.call(ctxt,
                          self.make_msg('cell_get', cell_name=cell_name),
                          version='1.13')
+
+    def reboot_instance(self, ctxt, instance, block_device_info,
+                        reboot_type):
+        """Reboot an instance in its cell.
+
+        This method takes a new-world instance object.
+        """
+        if not CONF.cells.enable:
+            return
+        self.cast(ctxt,
+                  self.make_msg('reboot_instance', instance=instance,
+                                reboot_type=reboot_type),
+                  version='1.14')
