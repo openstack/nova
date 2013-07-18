@@ -24,7 +24,7 @@ import webob
 from webob import exc
 
 from nova.api.openstack import common
-from nova.api.openstack.compute import ips
+from nova.api.openstack.compute.plugins.v3 import ips
 from nova.api.openstack.compute.views import servers as views_servers
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
@@ -436,7 +436,7 @@ class ServersController(wsgi.Controller):
     EXTENSION_CREATE_NAMESPACE = 'nova.api.v3.extensions.server.create'
     EXTENSION_DESERIALIZE_EXTRACT_SERVER_NAMESPACE = (
         'nova.api.v3.extensions.server.create.deserialize')
-    _view_builder_class = views_servers.ViewBuilder
+    _view_builder_class = views_servers.ViewBuilderV3
 
     @staticmethod
     def _add_location(robj):
