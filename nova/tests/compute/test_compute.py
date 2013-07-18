@@ -7696,7 +7696,7 @@ class ComputeAPITestCase(BaseTestCase):
         req_ip = '1.2.3.4'
         self.compute.network_api.allocate_port_for_instance(
             self.context, instance, port_id, network_id, req_ip,
-            self.compute.conductor_api).AndReturn(nwinfo)
+            conductor_api=self.compute.conductor_api).AndReturn(nwinfo)
         compute_manager._get_image_meta(self.context, instance['image_ref'])
         self.mox.ReplayAll()
         network, mapping = self.compute.attach_interface(self.context,
@@ -7713,7 +7713,7 @@ class ComputeAPITestCase(BaseTestCase):
                        lambda *a, **k: nwinfo)
         self.stubs.Set(self.compute.network_api,
                        'deallocate_port_for_instance',
-                       lambda a, b, c, d: [])
+                       lambda a, b, c, conductor_api=None: [])
         self.compute.detach_interface(self.context, {}, port_id)
         self.assertEqual(self.compute.driver._interfaces, {})
 
