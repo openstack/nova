@@ -102,12 +102,14 @@ def _parse_image_ref(image_href):
 
 def _create_glance_client(context, host, port, use_ssl, version=1):
     """Instantiate a new glanceclient.Client object."""
+    params = {}
     if use_ssl:
         scheme = 'https'
+        # https specific params
+        params['insecure'] = CONF.glance_api_insecure
+        params['ssl_compression'] = False
     else:
         scheme = 'http'
-    params = {}
-    params['insecure'] = CONF.glance_api_insecure
     if CONF.auth_strategy == 'keystone':
         params['token'] = context.auth_token
     endpoint = '%s://%s:%s' % (scheme, host, port)
