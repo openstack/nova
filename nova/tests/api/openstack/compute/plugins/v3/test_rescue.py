@@ -47,7 +47,7 @@ class RescueTest(test.TestCase):
         self.app = fakes.wsgi_app_v3(init_only=('servers', 'os-rescue'))
 
     def test_rescue_with_preset_password(self):
-        body = {"rescue": {"adminPass": "AABBCC112233"}}
+        body = {"rescue": {"admin_pass": "AABBCC112233"}}
         req = webob.Request.blank('/v3/servers/test_inst/action')
         req.method = "POST"
         req.body = jsonutils.dumps(body)
@@ -56,7 +56,7 @@ class RescueTest(test.TestCase):
         resp = req.get_response(self.app)
         self.assertEqual(resp.status_int, 200)
         resp_json = jsonutils.loads(resp.body)
-        self.assertEqual("AABBCC112233", resp_json['adminPass'])
+        self.assertEqual("AABBCC112233", resp_json['admin_pass'])
 
     def test_rescue_generates_password(self):
         body = dict(rescue=None)
@@ -68,7 +68,7 @@ class RescueTest(test.TestCase):
         resp = req.get_response(self.app)
         self.assertEqual(resp.status_int, 200)
         resp_json = jsonutils.loads(resp.body)
-        self.assertEqual(CONF.password_length, len(resp_json['adminPass']))
+        self.assertEqual(CONF.password_length, len(resp_json['admin_pass']))
 
     def test_rescue_of_rescued_instance(self):
         body = dict(rescue=None)
