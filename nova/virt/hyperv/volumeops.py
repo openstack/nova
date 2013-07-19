@@ -69,7 +69,7 @@ class VolumeOps(object):
 
     def _get_volume_utils(self):
         if(not CONF.hyperv.force_volumeutils_v1 and
-           self._hostutils.get_windows_version() >= 6.2):
+           self._hostutils.check_min_windows_version(6, 2)):
             return volumeutilsv2.VolumeUtilsV2()
         else:
             return volumeutils.VolumeUtils()
