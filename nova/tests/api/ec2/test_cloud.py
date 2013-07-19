@@ -68,7 +68,7 @@ LOG = logging.getLogger(__name__)
 HOST = "testhost"
 
 
-def get_fake_cache():
+def get_fake_cache(get_floating):
     def _ip(ip, fixed=True, floats=None):
         ip_dict = {'address': ip, 'type': 'fixed'}
         if not fixed:
@@ -77,33 +77,43 @@ def get_fake_cache():
             ip_dict['floating_ips'] = [_ip(f, fixed=False) for f in floats]
         return ip_dict
 
+    if get_floating:
+        ip_info = [_ip('192.168.0.3',
+                  floats=['1.2.3.4', '5.6.7.8']),
+                  _ip('192.168.0.4')]
+    else:
+        ip_info = [_ip('192.168.0.3'),
+                   _ip('192.168.0.4')]
+
     info = [{'address': 'aa:bb:cc:dd:ee:ff',
              'id': 1,
              'network': {'bridge': 'br0',
                          'id': 1,
                          'label': 'private',
                          'subnets': [{'cidr': '192.168.0.0/24',
-                                      'ips': [_ip('192.168.0.3',
-                                                  floats=['1.2.3.4',
-                                                          '5.6.7.8']),
-                                              _ip('192.168.0.4')]}]}}]
+                                      'ips': ip_info}]}}]
+
     if CONF.use_ipv6:
         ipv6_addr = 'fe80:b33f::a8bb:ccff:fedd:eeff'
         info[0]['network']['subnets'].append({'cidr': 'fe80:b33f::/64',
                                               'ips': [_ip(ipv6_addr)]})
+
     return info
 
 
-def get_instances_with_cached_ips(orig_func, *args, **kwargs):
+def get_instances_with_cached_ips(orig_func, get_floating,
+                                  *args, **kwargs):
     """Kludge the cache into instance(s) without having to create DB
     entries
     """
     instances = orig_func(*args, **kwargs)
     if isinstance(instances, list):
         for instance in instances:
-            instance['info_cache'] = {'network_info': get_fake_cache()}
+            instance['info_cache'] = {'network_info':
+                                     get_fake_cache(get_floating)}
     else:
-        instances['info_cache'] = {'network_info': get_fake_cache()}
+        instances['info_cache'] = {'network_info':
+                                  get_fake_cache(get_floating)}
     return instances
 
 
@@ -185,11 +195,13 @@ class CloudTestCase(test.TestCase):
     def fake_remove_iscsi_target(obj, tid, lun, vol_id, **kwargs):
         pass
 
-    def _stub_instance_get_with_fixed_ips(self, func_name):
+    def _stub_instance_get_with_fixed_ips(self,
+                                          func_name, get_floating=True):
         orig_func = getattr(self.cloud.compute_api, func_name)
 
         def fake_get(*args, **kwargs):
-            return get_instances_with_cached_ips(orig_func, *args, **kwargs)
+            return get_instances_with_cached_ips(orig_func, get_floating,
+                                                 *args, **kwargs)
         self.stubs.Set(self.cloud.compute_api, func_name, fake_get)
 
     def _create_key(self, name):
@@ -812,7 +824,6 @@ class CloudTestCase(test.TestCase):
         self.assertEqual(instance['instanceId'], instance_id)
         self.assertEqual(instance['placement']['availabilityZone'],
                 'zone2')
-        self.assertEqual(instance['publicDnsName'], '1.2.3.4')
         self.assertEqual(instance['ipAddress'], '1.2.3.4')
         self.assertEqual(instance['dnsName'], '1.2.3.4')
         self.assertEqual(instance['tagSet'], [])
@@ -954,7 +965,6 @@ class CloudTestCase(test.TestCase):
                               'privateDnsName': u'server-1111',
                               'privateIpAddress': '192.168.0.3',
                               'productCodesSet': None,
-                              'publicDnsName': '1.2.3.4',
                               'rootDeviceName': '/dev/sda1',
                               'rootDeviceType': 'instance-store',
                               'tagSet': [{'key': u'foo',
@@ -986,7 +996,6 @@ class CloudTestCase(test.TestCase):
                                'privateDnsName': u'server-1112',
                                'privateIpAddress': '192.168.0.3',
                                'productCodesSet': None,
-                               'publicDnsName': '1.2.3.4',
                                'rootDeviceName': '/dev/sda1',
                                'rootDeviceType': 'instance-store',
                                'tagSet': [{'key': u'foo',
@@ -1185,7 +1194,6 @@ class CloudTestCase(test.TestCase):
         instance = result['instancesSet'][0]
         instance_id = ec2utils.id_to_ec2_inst_id(inst1['uuid'])
         self.assertEqual(instance['instanceId'], instance_id)
-        self.assertEqual(instance['publicDnsName'], '1.2.3.4')
         self.assertEqual(instance['ipAddress'], '1.2.3.4')
         self.assertEqual(instance['dnsName'], '1.2.3.4')
         self.assertEqual(instance['privateDnsName'], 'server-1234')
@@ -1239,6 +1247,26 @@ class CloudTestCase(test.TestCase):
         inst2 = db.instance_create(self.context, args2)
         result = self.cloud.describe_instances(self.context)
         self.assertEqual(len(result['reservationSet']), 2)
+
+    def test_describe_instances_dnsName_set(self):
+        # Verifies dnsName doesn't get set if floating IP is set.
+        self._stub_instance_get_with_fixed_ips('get_all', get_floating=False)
+        self._stub_instance_get_with_fixed_ips('get', get_floating=False)
+
+        image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
+        sys_meta = flavors.save_flavor_info(
+                            {}, flavors.get_flavor(1))
+        inst1 = db.instance_create(self.context, {'reservation_id': 'a',
+                                                  'image_ref': image_uuid,
+                                                  'instance_type_id': 1,
+                                                  'host': 'host1',
+                                                  'hostname': 'server-1234',
+                                                  'vm_state': 'active',
+                                                  'system_metadata': sys_meta})
+        result = self.cloud.describe_instances(self.context)
+        result = result['reservationSet'][0]
+        instance = result['instancesSet'][0]
+        self.assertEqual(instance['dnsName'], None)
 
     def test_describe_images(self):
         describe_images = self.cloud.describe_images
