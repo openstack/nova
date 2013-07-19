@@ -2163,6 +2163,8 @@ def _instance_update(context, instance_uuid, values, copy_old_instance=False):
         for key in ('created_at', 'deleted_at', 'updated_at',
                     'launched_at', 'terminated_at', 'scheduled_at'):
             if key in values and values[key]:
+                if isinstance(values[key], basestring):
+                    values[key] = timeutils.parse_strtime(values[key])
                 values[key] = values[key].replace(tzinfo=None)
 
         instance_ref.update(values)
