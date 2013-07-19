@@ -300,23 +300,36 @@ class AggregateDBApiTestCase(test.TestCase):
 
     def test_aggregate_get_by_host(self):
         ctxt = context.get_admin_context()
-        values = {'name': 'fake_aggregate2'}
-        values2 = {'name': 'fake_aggregate4'}
+        values2 = {'name': 'fake_aggregate2'}
+        values3 = {'name': 'fake_aggregate3'}
+        values4 = {'name': 'fake_aggregate4'}
+        values5 = {'name': 'fake_aggregate5'}
         a1 = _create_aggregate_with_hosts(context=ctxt)
-        a2 = _create_aggregate_with_hosts(context=ctxt, values=values)
+        a2 = _create_aggregate_with_hosts(context=ctxt, values=values2)
         # a3 has no hosts and should not be in the results.
-        a3 = _create_aggregate(context=ctxt, values=values2)
+        a3 = _create_aggregate(context=ctxt, values=values3)
+        # a4 has no matching hosts.
+        a4 = _create_aggregate_with_hosts(context=ctxt, values=values4,
+                hosts=['foo4.openstack.org'])
+        # a5 has no matching hosts after deleting the only matching host.
+        a5 = _create_aggregate_with_hosts(context=ctxt, values=values5,
+                hosts=['foo5.openstack.org', 'foo.openstack.org'])
+        db.aggregate_host_delete(ctxt, a5['id'],
+                                 'foo.openstack.org')
         r1 = db.aggregate_get_by_host(ctxt, 'foo.openstack.org')
         self.assertEqual([a1['id'], a2['id']], [x['id'] for x in r1])
 
     def test_aggregate_get_by_host_with_key(self):
         ctxt = context.get_admin_context()
-        values = {'name': 'fake_aggregate2'}
-        values2 = {'name': 'fake_aggregate4'}
+        values2 = {'name': 'fake_aggregate2'}
+        values3 = {'name': 'fake_aggregate3'}
+        values4 = {'name': 'fake_aggregate4'}
         a1 = _create_aggregate_with_hosts(context=ctxt,
                                           metadata={'goodkey': 'good'})
-        _create_aggregate_with_hosts(context=ctxt, values=values)
-        _create_aggregate(context=ctxt, values=values2)
+        _create_aggregate_with_hosts(context=ctxt, values=values2)
+        _create_aggregate(context=ctxt, values=values3)
+        _create_aggregate_with_hosts(context=ctxt, values=values4,
+                hosts=['foo4.openstack.org'], metadata={'goodkey': 'bad'})
         # filter result by key
         r1 = db.aggregate_get_by_host(ctxt, 'foo.openstack.org', key='goodkey')
         self.assertEqual([a1['id']], [x['id'] for x in r1])
