@@ -200,19 +200,27 @@ class FilterScheduler(driver.Scheduler):
             values.update({'group': group})
             values = {'system_metadata': values}
 
-        updated_instance = driver.instance_update_db(context,
-                instance_uuid, extra_values=values)
+        try:
+            updated_instance = driver.instance_update_db(context,
+                    instance_uuid, extra_values=values)
 
-        scheduler_utils.populate_filter_properties(filter_properties,
-                weighed_host.obj)
+        except exception.InstanceNotFound:
+            LOG.warning(_("Instance disappeared during scheduling"),
+                        context=context, instance_uuid=instance_uuid)
 
-        self.compute_rpcapi.run_instance(context, instance=updated_instance,
-                host=weighed_host.obj.host,
-                request_spec=request_spec, filter_properties=filter_properties,
-                requested_networks=requested_networks,
-                injected_files=injected_files,
-                admin_password=admin_password, is_first_time=is_first_time,
-                node=weighed_host.obj.nodename)
+        else:
+            scheduler_utils.populate_filter_properties(filter_properties,
+                    weighed_host.obj)
+
+            self.compute_rpcapi.run_instance(context,
+                    instance=updated_instance,
+                    host=weighed_host.obj.host,
+                    request_spec=request_spec,
+                    filter_properties=filter_properties,
+                    requested_networks=requested_networks,
+                    injected_files=injected_files,
+                    admin_password=admin_password, is_first_time=is_first_time,
+                    node=weighed_host.obj.nodename)
 
     def _get_configuration_options(self):
         """Fetch options dictionary. Broken out for testing."""

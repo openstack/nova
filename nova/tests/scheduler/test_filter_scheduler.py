@@ -663,3 +663,28 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.assertRaises(exception.NoValidHost,
                 self.driver.select_destinations, self.context,
                 {'num_instances': 1}, {})
+
+    def test_handles_deleted_instance(self):
+        """Test instance deletion while being scheduled."""
+
+        def _raise_instance_not_found(*args, **kwargs):
+            raise exception.InstanceNotFound(instance_id='123')
+
+        self.stubs.Set(driver, 'instance_update_db',
+                       _raise_instance_not_found)
+
+        sched = fakes.FakeFilterScheduler()
+
+        fake_context = context.RequestContext('user', 'project')
+        host_state = host_manager.HostState('host2', 'node2')
+        weighted_host = weights.WeighedHost(host_state, 1.42)
+        filter_properties = {}
+
+        uuid = 'fake-uuid1'
+        instance_properties = {'project_id': 1, 'os_type': 'Linux'}
+        request_spec = {'instance_type': {'memory_mb': 1, 'local_gb': 1},
+                        'instance_properties': instance_properties,
+                        'instance_uuids': [uuid]}
+        sched._provision_resource(fake_context, weighted_host,
+                                  request_spec, filter_properties,
+                                  None, None, None, None)
