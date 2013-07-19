@@ -34,6 +34,9 @@ from nova import context
 from nova import network
 from nova import utils
 
+from nova.openstack.common.gettextutils import _
+from nova.openstack.common import importutils
+from nova.openstack.common import log
 from nova.openstack.common import timeutils
 from nova.virt import netutils
 
@@ -44,7 +47,10 @@ metadata_opts = [
                         '2007-12-15 2008-02-01 2008-09-01'),
                help=('List of metadata versions to skip placing into the '
                      'config drive')),
-    ]
+    cfg.StrOpt('vendordata_driver',
+               default='nova.api.metadata.vendordata_json.JsonFileVendorData',
+               help='Driver to use for vendor data'),
+]
 
 CONF = cfg.CONF
 CONF.register_opts(metadata_opts)
@@ -65,15 +71,20 @@ VERSIONS = [
 
 FOLSOM = '2012-08-10'
 GRIZZLY = '2013-04-04'
+HAVANA = '2013-10-17'
 OPENSTACK_VERSIONS = [
     FOLSOM,
     GRIZZLY,
+    HAVANA,
 ]
 
 CONTENT_DIR = "content"
 MD_JSON_NAME = "meta_data.json"
+VD_JSON_NAME = "vendor_data.json"
 UD_NAME = "user_data"
 PASS_NAME = "password"
+
+LOG = log.getLogger(__name__)
 
 
 class InvalidMetadataVersion(Exception):
@@ -88,7 +99,7 @@ class InstanceMetadata():
     """Instance metadata."""
 
     def __init__(self, instance, address=None, content=None, extra_md=None,
-                 conductor_api=None, network_info=None):
+                 conductor_api=None, network_info=None, vd_driver=None):
         """Creation of this object should basically cover all time consuming
         collection.  Methods after that should not cause time delays due to
         network operations or lengthy cpu operations.
@@ -161,6 +172,14 @@ class InstanceMetadata():
             self.files.append({'path': path,
                 'content_path': "/%s/%s" % (CONTENT_DIR, key)})
             self.content[key] = contents
+
+        if vd_driver is None:
+            vdclass = importutils.import_class(CONF.vendordata_driver)
+        else:
+            vdclass = vd_driver
+
+        self.vddriver = vdclass(instance=instance, address=address,
+                                extra_md=extra_md, network_info=network_info)
 
     def get_ec2_metadata(self, version):
         if version == "latest":
@@ -266,6 +285,8 @@ class InstanceMetadata():
                 ret.append(UD_NAME)
             if self._check_os_version(GRIZZLY, version):
                 ret.append(PASS_NAME)
+            if self._check_os_version(HAVANA, version):
+                ret.append(VD_JSON_NAME)
             return ret
 
         if path == UD_NAME:
@@ -276,10 +297,12 @@ class InstanceMetadata():
         if path == PASS_NAME and self._check_os_version(GRIZZLY, version):
             return password.handle_password
 
+        if path == VD_JSON_NAME and self._check_os_version(HAVANA, version):
+            return json.dumps(self.vddriver.get())
+
         if path != MD_JSON_NAME:
             raise KeyError(path)
 
-        # right now, the only valid path is metadata.json
         metadata = {}
         metadata['uuid'] = self.uuid
 
@@ -353,6 +376,10 @@ class InstanceMetadata():
                 # NOTE(vish): don't show versions that are in the future
                 today = timeutils.utcnow().strftime("%Y-%m-%d")
                 versions = [v for v in OPENSTACK_VERSIONS if v <= today]
+                if OPENSTACK_VERSIONS != versions:
+                    LOG.debug(_("future versions %s hidden in version list"),
+                              [v for v in OPENSTACK_VERSIONS
+                               if v not in versions])
                 versions += ["latest"]
             else:
                 versions = VERSIONS + ["latest"]
@@ -397,8 +424,27 @@ class InstanceMetadata():
             if self.userdata_raw is not None:
                 yield (path, self.lookup(path))
 
+            if self._check_version(HAVANA, version):
+                path = 'openstack/%s/%s' % (version, VD_JSON_NAME)
+                yield (path, self.lookup(path))
+
         for (cid, content) in self.content.iteritems():
             yield ('%s/%s/%s' % ("openstack", CONTENT_DIR, cid), content)
+
+
+class VendorDataDriver(object):
+    """The base VendorData Drivers should inherit from."""
+
+    def __init__(self, *args, **kwargs):
+        """Init method should do all expensive operations."""
+        self._data = {}
+
+    def get(self):
+        """Return a dictionary of primitives to be rendered in metadata
+
+        :return: A dictionary or primitives.
+        """
+        return self._data
 
 
 def get_metadata_by_address(conductor_api, address):
