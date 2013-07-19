@@ -4504,7 +4504,9 @@ class IptablesFirewallTestCase(test.TestCase):
         from nova.network import linux_net
         linux_net.iptables_manager.execute = fake_iptables_execute
 
-        _fake_stub_out_get_nw_info(self.stubs, lambda *a, **kw: network_model)
+        from nova.compute import utils as compute_utils
+        self.stubs.Set(compute_utils, 'get_nw_info_for_instance',
+                       lambda instance: network_model)
 
         network_info = network_model.legacy()
         self.fw.prepare_instance_filter(instance_ref, network_info)
