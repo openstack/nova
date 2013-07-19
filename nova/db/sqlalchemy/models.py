@@ -21,7 +21,7 @@
 SQLAlchemy models for nova data.
 """
 
-from sqlalchemy import Column, Index, Integer, BigInteger, String, schema
+from sqlalchemy import Column, Index, Integer, BigInteger, Enum, String, schema
 from sqlalchemy.dialects.mysql import MEDIUMTEXT
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import ForeignKey, DateTime, Boolean, Text, Float
@@ -246,7 +246,11 @@ class Instance(BASE, NovaBase):
     # To remember on which host an instance booted.
     # An instance may have moved to another host by live migration.
     launched_on = Column(Text, nullable=True)
+
+    # NOTE(jdillaman): locked deprecated in favor of locked_by,
+    # to be removed in Icehouse
     locked = Column(Boolean, nullable=True)
+    locked_by = Column(Enum('owner', 'admin'), nullable=True)
 
     os_type = Column(String(255), nullable=True)
     architecture = Column(String(255), nullable=True)

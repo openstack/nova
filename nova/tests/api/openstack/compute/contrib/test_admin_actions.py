@@ -329,6 +329,21 @@ class AdminActionsTest(test.TestCase):
             unicode(exception.DestinationHypervisorTooOld()),
             res.body)
 
+    def test_unlock_not_authorized(self):
+        def fake_unlock(*args, **kwargs):
+            raise exception.PolicyNotAuthorized(action='unlock')
+
+        self.stubs.Set(compute_api.API, 'unlock', fake_unlock)
+
+        app = fakes.wsgi_app(init_only=('servers',))
+        req = webob.Request.blank('/v2/fake/servers/%s/action' %
+                self.UUID)
+        req.method = 'POST'
+        req.body = jsonutils.dumps({'unlock': None})
+        req.content_type = 'application/json'
+        res = req.get_response(app)
+        self.assertEqual(res.status_int, 403)
+
 
 class CreateBackupTests(test.TestCase):
 

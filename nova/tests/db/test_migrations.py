@@ -2433,6 +2433,28 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         else:
             self.assertIn(('reservations_uuid_idx', ['uuid']), index_data)
 
+    def _pre_upgrade_205(self, engine):
+        fake_instances = [dict(uuid='m205-uuid1', locked=True),
+                          dict(uuid='m205-uuid2', locked=False)]
+        for table_name in ['instances', 'shadow_instances']:
+            table = db_utils.get_table(engine, table_name)
+            engine.execute(table.insert(), fake_instances)
+
+    def _check_205(self, engine, data):
+        for table_name in ['instances', 'shadow_instances']:
+            table = db_utils.get_table(engine, table_name)
+            rows = table.select().\
+                where(table.c.uuid.in_(['m205-uuid1', 'm205-uuid2'])).\
+                order_by(table.c.uuid).execute().fetchall()
+            self.assertEqual(rows[0]['locked_by'], 'admin')
+            self.assertEqual(rows[1]['locked_by'], None)
+
+    def _post_downgrade_205(self, engine):
+        for table_name in ['instances', 'shadow_instances']:
+            table = db_utils.get_table(engine, table_name)
+            rows = table.select().execute().fetchall()
+            self.assertFalse('locked_by' in rows[0])
+
 
 class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""

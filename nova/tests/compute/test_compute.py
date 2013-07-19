@@ -2693,6 +2693,48 @@ class ComputeTestCase(BaseTestCase):
         self.compute.terminate_instance(self.context,
                 instance=jsonutils.to_primitive(instance))
 
+    def _check_locked_by(self, instance_uuid, locked_by):
+        instance = db.instance_get_by_uuid(self.context, instance_uuid)
+        self.assertEqual(instance['locked'], locked_by != None)
+        self.assertEqual(instance['locked_by'], locked_by)
+        return instance
+
+    def test_override_owner_lock(self):
+        admin_context = context.RequestContext('admin-user',
+                                               'admin-project',
+                                               is_admin=True)
+
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+        instance_uuid = instance['uuid']
+        self.compute.run_instance(self.context, instance=instance)
+
+        # Ensure that an admin can override the owner lock
+        self.compute_api.lock(self.context, instance)
+        self._check_locked_by(instance_uuid, 'owner')
+        self.compute_api.unlock(admin_context, instance)
+        self._check_locked_by(instance_uuid, None)
+
+    def test_upgrade_owner_lock(self):
+        admin_context = context.RequestContext('admin-user',
+                                               'admin-project',
+                                               is_admin=True)
+
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+        instance_uuid = instance['uuid']
+        self.compute.run_instance(self.context, instance=instance)
+
+        # Ensure that an admin can upgrade the lock and that
+        # the owner can no longer unlock
+        self.compute_api.lock(self.context, instance)
+        self.compute_api.lock(admin_context, instance)
+        instance = self._check_locked_by(instance_uuid, 'admin')
+        self.assertRaises(exception.PolicyNotAuthorized,
+                          self.compute_api.unlock,
+                          self.context, instance)
+        self._check_locked_by(instance_uuid, 'admin')
+        self.compute_api.unlock(admin_context, instance)
+        self._check_locked_by(instance_uuid, None)
+
     def _test_state_revert(self, instance, operation, pre_task_state,
                            post_task_state=None, kwargs=None):
         if kwargs is None:
