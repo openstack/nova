@@ -1148,6 +1148,12 @@ class CellsTargetedMethodsTestCase(test.TestCase):
         self._test_instance_action_method('reboot', (), kwargs, (),
                                           kwargs, False)
 
+    def test_suspend_instance(self):
+        self._test_instance_action_method('suspend', (), {}, (), {}, False)
+
+    def test_resume_instance(self):
+        self._test_instance_action_method('resume', (), {}, (), {}, False)
+
 
 class CellsBroadcastMethodsTestCase(test.TestCase):
     """Test case for _BroadcastMessageMethods class.  Most of these

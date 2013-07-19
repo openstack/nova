@@ -40,7 +40,8 @@ class ComputeRPCAPIRedirect(object):
     # is for transitioning to a common interface where we can just
     # swap out the compute_rpcapi class with the cells_rpcapi class.
     cells_compatible = ['start_instance', 'stop_instance',
-                        'reboot_instance']
+                        'reboot_instance', 'suspend_instance',
+                        'resume_instance']
 
     def __init__(self, cells_rpcapi):
         self.cells_rpcapi = cells_rpcapi
@@ -375,18 +376,6 @@ class ComputeCellsAPI(compute_api.API):
         # Also: only calling super() to get state/policy checking
         super(ComputeCellsAPI, self).get_diagnostics(context, instance)
         return self._call_to_cells(context, instance, 'get_diagnostics')
-
-    @check_instance_cell
-    def suspend(self, context, instance):
-        """Suspend the given instance."""
-        super(ComputeCellsAPI, self).suspend(context, instance)
-        self._cast_to_cells(context, instance, 'suspend')
-
-    @check_instance_cell
-    def resume(self, context, instance):
-        """Resume the given instance."""
-        super(ComputeCellsAPI, self).resume(context, instance)
-        self._cast_to_cells(context, instance, 'resume')
 
     @check_instance_cell
     def rescue(self, context, instance, rescue_password=None):

@@ -363,7 +363,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '2.32'
+    RPC_API_VERSION = '2.33'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -3022,6 +3022,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                       instance=instance)
             return self.driver.get_diagnostics(instance)
 
+    @object_compat
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
     @wrap_instance_event
@@ -3032,16 +3033,14 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         with self._error_out_instance_on_exception(context, instance['uuid']):
             self.driver.suspend(instance)
-
         current_power_state = self._get_power_state(context, instance)
-        instance = self._instance_update(context, instance['uuid'],
-                power_state=current_power_state,
-                vm_state=vm_states.SUSPENDED,
-                task_state=None,
-                expected_task_state=task_states.SUSPENDING)
-
+        instance.power_state = current_power_state
+        instance.vm_state = vm_states.SUSPENDED
+        instance.task_state = None
+        instance.save(expected_task_state=task_states.SUSPENDING)
         self._notify_about_instance_usage(context, instance, 'suspend')
 
+    @object_compat
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
     @wrap_instance_event
@@ -3058,11 +3057,10 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.driver.resume(instance, self._legacy_nw_info(network_info),
                            block_device_info)
 
-        current_power_state = self._get_power_state(context, instance)
-        instance = self._instance_update(context,
-                instance['uuid'], power_state=current_power_state,
-                vm_state=vm_states.ACTIVE, task_state=None)
-
+        instance.power_state = self._get_power_state(context, instance)
+        instance.vm_state = vm_states.ACTIVE
+        instance.task_state = None
+        instance.save(expected_task_state=task_states.RESUMING)
         self._notify_about_instance_usage(context, instance, 'resume')
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())

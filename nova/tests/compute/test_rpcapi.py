@@ -320,7 +320,8 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_resume_instance(self):
         self._test_compute_api('resume_instance', 'cast',
-                instance=self.fake_instance)
+                               instance=self.fake_instance,
+                               version='2.33')
 
     def test_revert_resize(self):
         self._test_compute_api('revert_resize', 'cast',
@@ -373,7 +374,8 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_suspend_instance(self):
         self._test_compute_api('suspend_instance', 'cast',
-                instance=self.fake_instance)
+                               instance=self.fake_instance,
+                               version='2.33')
 
     def test_terminate_instance(self):
         self._test_compute_api('terminate_instance', 'cast',

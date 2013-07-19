@@ -25,10 +25,12 @@ from nova.compute import vm_states
 from nova.conductor import api as conductor_api
 from nova import context
 from nova import exception
+from nova.objects import instance as instance_obj
 from nova.openstack.common import jsonutils
 from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.api.openstack import fakes
+from nova.tests import fake_instance
 
 
 CONF = cfg.CONF
@@ -61,9 +63,14 @@ def fake_compute_api_raises_invalid_state(*args, **kwargs):
             instance_uuid='fake')
 
 
-def fake_compute_api_get(self, context, instance_id):
-    return {'id': 1, 'uuid': instance_id, 'vm_state': vm_states.ACTIVE,
-            'task_state': None, 'launched_at': timeutils.utcnow()}
+def fake_compute_api_get(self, context, instance_uuid, want_objects=False):
+    instance = fake_instance.fake_db_instance(
+            id=1, uuid=instance_uuid, vm_state=vm_states.ACTIVE,
+            task_state=None, launched_at=timeutils.utcnow())
+    if want_objects:
+        instance = instance_obj.Instance._from_db_object(
+                context, instance_obj.Instance(), instance)
+    return instance
 
 
 class AdminActionsTest(test.TestCase):

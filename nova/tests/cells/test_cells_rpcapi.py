@@ -550,3 +550,23 @@ class CellsAPITestCase(test.TestCase):
                          'reboot_type': 'HARD'}
         self._check_result(call_info, 'reboot_instance',
                 expected_args, version='1.14')
+
+    def test_suspend_instance(self):
+        call_info = self._stub_rpc_method('cast', None)
+
+        self.cells_rpcapi.suspend_instance(
+                self.fake_context, 'fake-instance')
+
+        expected_args = {'instance': 'fake-instance'}
+        self._check_result(call_info, 'suspend_instance',
+                expected_args, version='1.15')
+
+    def test_resume_instance(self):
+        call_info = self._stub_rpc_method('cast', None)
+
+        self.cells_rpcapi.resume_instance(
+                self.fake_context, 'fake-instance')
+
+        expected_args = {'instance': 'fake-instance'}
+        self._check_result(call_info, 'resume_instance',
+                expected_args, version='1.15')

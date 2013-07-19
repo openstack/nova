@@ -83,7 +83,7 @@ class AdminActionsController(wsgi.Controller):
         context = req.environ['nova.context']
         authorize(context, 'suspend')
         try:
-            server = self.compute_api.get(context, id)
+            server = self.compute_api.get(context, id, want_objects=True)
             self.compute_api.suspend(context, server)
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
@@ -100,7 +100,7 @@ class AdminActionsController(wsgi.Controller):
         context = req.environ['nova.context']
         authorize(context, 'resume')
         try:
-            server = self.compute_api.get(context, id)
+            server = self.compute_api.get(context, id, want_objects=True)
             self.compute_api.resume(context, server)
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
