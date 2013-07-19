@@ -428,6 +428,7 @@ def unset_stub_network_methods(stubs):
 def stub_compute_with_ips(stubs):
     orig_get = compute_api.API.get
     orig_get_all = compute_api.API.get_all
+    orig_create = compute_api.API.create
 
     def fake_get(*args, **kwargs):
         return _get_instances_with_cached_ips(orig_get, *args, **kwargs)
@@ -435,8 +436,12 @@ def stub_compute_with_ips(stubs):
     def fake_get_all(*args, **kwargs):
         return _get_instances_with_cached_ips(orig_get_all, *args, **kwargs)
 
+    def fake_create(*args, **kwargs):
+        return _create_instances_with_cached_ips(orig_create, *args, **kwargs)
+
     stubs.Set(compute_api.API, 'get', fake_get)
     stubs.Set(compute_api.API, 'get_all', fake_get_all)
+    stubs.Set(compute_api.API, 'create', fake_create)
 
 
 def _get_fake_cache():
@@ -486,3 +491,16 @@ def _get_instances_with_cached_ips(orig_func, *args, **kwargs):
     else:
         _info_cache_for(instances)
     return instances
+
+
+def _create_instances_with_cached_ips(orig_func, *args, **kwargs):
+    """Kludge the above kludge so that the database doesn't get out
+    of sync with the actual instance.
+    """
+    instances, reservation_id = orig_func(*args, **kwargs)
+    fake_cache = _get_fake_cache()
+    for instance in instances:
+        instance['info_cache']['network_info'] = fake_cache
+        db.instance_info_cache_update(args[1], instance['uuid'],
+                                      {'network_info': fake_cache})
+    return (instances, reservation_id)

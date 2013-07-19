@@ -89,6 +89,7 @@ def return_security_group(context, instance_id, security_group_id):
 def instance_update(context, instance_uuid, values, update_cells=True):
     inst = fakes.stub_instance(INSTANCE_IDS.get(instance_uuid),
                                name=values.get('display_name'))
+    inst = dict(inst, **values)
     return (inst, inst)
 
 
@@ -1292,7 +1293,7 @@ class ServersControllerTest(test.TestCase):
         def fake_update(*args, **kwargs):
             raise exception.InstanceNotFound(instance_id='fake')
 
-        self.stubs.Set(compute_api.API, 'update', fake_update)
+        self.stubs.Set(db, 'instance_update_and_get_original', fake_update)
         req = fakes.HTTPRequest.blank('/fake/servers/%s' % FAKE_UUID)
         req.method = 'PUT'
         req.content_type = 'application/json'
