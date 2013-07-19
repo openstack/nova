@@ -16,6 +16,8 @@
 Tests For Cells RPC Communication Driver
 """
 
+import urlparse
+
 from oslo.config import cfg
 
 from nova.cells import messaging
@@ -226,6 +228,38 @@ class ParseTransportURLTestCase(test.TestCase):
 
     def test_query_string(self):
         url = "rabbit://u:p@h:10/virtual?ssl=1"
+        self.assertRaises(ValueError, rpc_driver.parse_transport_url, url)
+
+    def test_query_string_old_urlparse(self):
+        # Test parse_transport_url with urlparse.urlparse behaving as in python
+        # 2.7.3 or below. See https://bugs.launchpad.net/nova/+bug/1202149
+        url = "rabbit://u:p@h:10/virtual?ssl=1"
+
+        parse_result = urlparse.ParseResult(
+            scheme='rabbit', netloc='u:p@h:10', path='/virtual?ssl=1',
+            params='', query='', fragment=''
+        )
+
+        self.mox.StubOutWithMock(urlparse, 'urlparse')
+        urlparse.urlparse(url).AndReturn(parse_result)
+        self.mox.ReplayAll()
+
+        self.assertRaises(ValueError, rpc_driver.parse_transport_url, url)
+
+    def test_query_string_new_urlparse(self):
+        # Test parse_transport_url with urlparse.urlparse behaving as in python
+        # 2.7.4 or above. See https://bugs.launchpad.net/nova/+bug/1202149
+        url = "rabbit://u:p@h:10/virtual?ssl=1"
+
+        parse_result = urlparse.ParseResult(
+            scheme='rabbit', netloc='u:p@h:10', path='/virtual',
+            params='', query='ssl=1', fragment=''
+        )
+
+        self.mox.StubOutWithMock(urlparse, 'urlparse')
+        urlparse.urlparse(url).AndReturn(parse_result)
+        self.mox.ReplayAll()
+
         self.assertRaises(ValueError, rpc_driver.parse_transport_url, url)
 
     def test_empty(self):

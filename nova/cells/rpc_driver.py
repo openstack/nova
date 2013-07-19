@@ -208,7 +208,7 @@ def parse_transport_url(url):
     # Make sure there's not a query string; that could identify
     # requirements we can't comply with (e.g., ssl), so reject it if
     # it's present
-    if '?' in parsed.path:
+    if '?' in parsed.path or parsed.query:
         raise ValueError(_("Cannot comply with query string in transport URL"))
 
     # Extract the interesting information from the URL; this requires
