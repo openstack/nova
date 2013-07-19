@@ -1295,6 +1295,20 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertEqual(system_metadata,
                 db.instance_system_metadata_get(self.ctxt, instance['uuid']))
 
+    def test_instance_update_bad_str_dates(self):
+        instance = self.create_instance_with_args()
+        values = {'created_at': '123'}
+        self.assertRaises(ValueError,
+                          db.instance_update,
+                          self.ctxt, instance['uuid'], values)
+
+    def test_instance_update_good_str_dates(self):
+        instance = self.create_instance_with_args()
+        values = {'created_at': '2011-01-31T00:00:00.0'}
+        actual = db.instance_update(self.ctxt, instance['uuid'], values)
+        expected = datetime.datetime(2011, 1, 31)
+        self.assertEquals(expected, actual["created_at"])
+
     def test_create_instance_unique_hostname(self):
         context1 = context.RequestContext('user1', 'p1')
         context2 = context.RequestContext('user2', 'p2')
