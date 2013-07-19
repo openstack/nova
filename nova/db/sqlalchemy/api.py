@@ -36,6 +36,7 @@ from sqlalchemy.exc import NoSuchTableError
 from sqlalchemy import Integer
 from sqlalchemy import MetaData
 from sqlalchemy import or_
+from sqlalchemy.orm import contains_eager
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm import joinedload_all
 from sqlalchemy.orm import noload
@@ -4745,13 +4746,16 @@ def aggregate_get_by_host(context, host, key=None):
 
 @require_admin_context
 def aggregate_metadata_get_by_host(context, host, key=None):
-    query = model_query(context, models.Aggregate).join(
-            "_hosts").filter(models.AggregateHost.host == host).join(
-            "_metadata")
+    query = model_query(context, models.Aggregate)
+    query = query.join("_hosts")
+    query = query.join("_metadata")
+    query = query.filter(models.AggregateHost.host == host)
+    query = query.options(contains_eager("_metadata"))
 
     if key:
         query = query.filter(models.AggregateMetadata.key == key)
     rows = query.all()
+
     metadata = collections.defaultdict(set)
     for agg in rows:
         for kv in agg._metadata:
@@ -4761,9 +4765,13 @@ def aggregate_metadata_get_by_host(context, host, key=None):
 
 @require_admin_context
 def aggregate_host_get_by_metadata_key(context, key):
-    query = model_query(context, models.Aggregate).join(
-            "_metadata").filter(models.AggregateMetadata.key == key)
+    query = model_query(context, models.Aggregate)
+    query = query.join("_metadata")
+    query = query.filter(models.AggregateMetadata.key == key)
+    query = query.options(contains_eager("_metadata"))
+    query = query.options(joinedload("_hosts"))
     rows = query.all()
+
     metadata = collections.defaultdict(set)
     for agg in rows:
         for agghost in agg._hosts:

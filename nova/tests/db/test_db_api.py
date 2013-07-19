@@ -348,16 +348,22 @@ class AggregateDBApiTestCase(test.TestCase):
 
     def test_aggregate_metadata_get_by_host_with_key(self):
         ctxt = context.get_admin_context()
-        values = {'name': 'fake_aggregate2'}
-        values2 = {'name': 'fake_aggregate3'}
-        _create_aggregate_with_hosts(context=ctxt)
-        _create_aggregate_with_hosts(context=ctxt, values=values)
-        a3 = _create_aggregate_with_hosts(context=ctxt, values=values2,
-                hosts=['foo.openstack.org'], metadata={'good': 'value'})
-        r1 = db.aggregate_metadata_get_by_host(ctxt, 'foo.openstack.org',
+        values2 = {'name': 'fake_aggregate12'}
+        values3 = {'name': 'fake_aggregate23'}
+        a2_hosts = ['foo1.openstack.org', 'foo2.openstack.org']
+        a2_metadata = {'good': 'value12', 'bad': 'badvalue12'}
+        a3_hosts = ['foo2.openstack.org', 'foo3.openstack.org']
+        a3_metadata = {'good': 'value23', 'bad': 'badvalue23'}
+        a1 = _create_aggregate_with_hosts(context=ctxt)
+        a2 = _create_aggregate_with_hosts(context=ctxt, values=values2,
+                hosts=a2_hosts, metadata=a2_metadata)
+        a3 = _create_aggregate_with_hosts(context=ctxt, values=values3,
+                hosts=a3_hosts, metadata=a3_metadata)
+        r1 = db.aggregate_metadata_get_by_host(ctxt, 'foo2.openstack.org',
                                                key='good')
-        self.assertEqual(r1['good'], set(['value']))
+        self.assertEqual(r1['good'], set(['value12', 'value23']))
         self.assertFalse('fake_key1' in r1)
+        self.assertFalse('bad' in r1)
         # Delete metadata
         db.aggregate_metadata_delete(ctxt, a3['id'], 'good')
         r2 = db.aggregate_metadata_get_by_host(ctxt, 'foo.openstack.org',
@@ -366,14 +372,23 @@ class AggregateDBApiTestCase(test.TestCase):
 
     def test_aggregate_host_get_by_metadata_key(self):
         ctxt = context.get_admin_context()
-        values = {'name': 'fake_aggregate2'}
-        values2 = {'name': 'fake_aggregate3'}
-        _create_aggregate_with_hosts(context=ctxt)
-        _create_aggregate_with_hosts(context=ctxt, values=values)
-        _create_aggregate_with_hosts(context=ctxt, values=values2,
-                hosts=['foo.openstack.org'], metadata={'good': 'value'})
+        values2 = {'name': 'fake_aggregate12'}
+        values3 = {'name': 'fake_aggregate23'}
+        a2_hosts = ['foo1.openstack.org', 'foo2.openstack.org']
+        a2_metadata = {'good': 'value12', 'bad': 'badvalue12'}
+        a3_hosts = ['foo2.openstack.org', 'foo3.openstack.org']
+        a3_metadata = {'good': 'value23', 'bad': 'badvalue23'}
+        a1 = _create_aggregate_with_hosts(context=ctxt)
+        a2 = _create_aggregate_with_hosts(context=ctxt, values=values2,
+                hosts=a2_hosts, metadata=a2_metadata)
+        a3 = _create_aggregate_with_hosts(context=ctxt, values=values3,
+                hosts=a3_hosts, metadata=a3_metadata)
         r1 = db.aggregate_host_get_by_metadata_key(ctxt, key='good')
-        self.assertEqual(r1, {'foo.openstack.org': set(['value'])})
+        self.assertEqual({
+            'foo1.openstack.org': set(['value12']),
+            'foo2.openstack.org': set(['value12', 'value23']),
+            'foo3.openstack.org': set(['value23']),
+        }, r1)
         self.assertFalse('fake_key1' in r1)
 
     def test_aggregate_get_by_host_not_found(self):
