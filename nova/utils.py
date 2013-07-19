@@ -398,7 +398,7 @@ def get_my_linklocal(interface):
             raise exception.NovaException(msg)
     except Exception as ex:
         msg = _("Couldn't get Link Local IP of %(interface)s"
-                " :%(ex)s") % locals()
+                " :%(ex)s") % {'interface': interface, 'ex': ex}
         raise exception.NovaException(msg)
 
 
@@ -1105,12 +1105,12 @@ def check_string_length(value, name, min_length=0, max_length=None):
 
     if len(value) < min_length:
         msg = _("%(name)s has less than %(min_length)s "
-                    "characters.") % locals()
+                "characters.") % {'name': name, 'min_length': min_length}
         raise exception.InvalidInput(message=msg)
 
     if max_length and len(value) > max_length:
         msg = _("%(name)s has more than %(max_length)s "
-                    "characters.") % locals()
+                "characters.") % {'name': name, 'max_length': max_length}
         raise exception.InvalidInput(message=msg)
 
 

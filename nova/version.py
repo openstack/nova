@@ -62,7 +62,8 @@ def _load_config():
             NOVA_PACKAGE = cfg.get("Nova", "package")
     except Exception as ex:
         LOG = logging.getLogger(__name__)
-        LOG.error("Failed to load %(cfgfile)s: %(ex)s" % locals())
+        LOG.error("Failed to load %(cfgfile)s: %(ex)s",
+                  {'cfgfile': cfgfile, 'ex': ex})
 
 
 def vendor_string():

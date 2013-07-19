@@ -111,7 +111,7 @@ class QuotaSetsController(object):
                     value = int(value)
                 except (ValueError, TypeError):
                     msg = _("Quota '%(value)s' for %(key)s should be "
-                            "integer.") % locals()
+                            "integer.") % {'value': value, 'key': key}
                     LOG.warn(msg)
                     raise webob.exc.HTTPBadRequest(explanation=msg)
                 self._validate_quota_limit(value)

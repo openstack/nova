@@ -97,8 +97,7 @@ class AggregateCoreFilter(BaseCoreFilter):
         try:
             ratio = float(min(aggregate_vals))
         except ValueError as e:
-            LOG.warning(_("Could not decode cpu_allocation_ratio: "
-                            "'%(e)s'") % locals())
+            LOG.warning(_("Could not decode cpu_allocation_ratio: '%s'"), e)
             ratio = CONF.cpu_allocation_ratio
 
         return ratio

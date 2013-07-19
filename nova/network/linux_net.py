@@ -1474,7 +1474,7 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
 
         if interface:
             msg = _('Adding interface %(interface)s to bridge %(bridge)s')
-            LOG.debug(msg % locals())
+            LOG.debug(msg, {'interface': interface, 'bridge': bridge})
             out, err = _execute('brctl', 'addif', bridge, interface,
                                 check_exit_code=False, run_as_root=True)
 

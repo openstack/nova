@@ -485,8 +485,8 @@ class NetworkManager(manager.Manager):
                                         requested_networks=requested_networks)
         networks_list = [self._get_network_dict(network)
                                  for network in networks]
-        LOG.debug(_('networks retrieved for instance: |%(networks_list)s|'),
-                  locals(), context=context, instance_uuid=instance_uuid)
+        LOG.debug(_('networks retrieved for instance: |%s|'),
+                  networks_list, context=context, instance_uuid=instance_uuid)
 
         try:
             self._allocate_mac_addresses(context, instance_uuid, networks,
@@ -824,9 +824,8 @@ class NetworkManager(manager.Manager):
         try:
             reservations = QUOTAS.reserve(context, fixed_ips=1)
         except exception.OverQuota:
-            pid = context.project_id
-            LOG.warn(_("Quota exceeded for %(pid)s, tried to allocate "
-                       "fixed IP") % locals())
+            LOG.warn(_("Quota exceeded for %s, tried to allocate "
+                       "fixed IP"), context.project_id)
             raise exception.FixedIpLimitExceeded()
 
         try:
@@ -948,7 +947,7 @@ class NetworkManager(manager.Manager):
 
     def lease_fixed_ip(self, context, address):
         """Called by dhcp-bridge when ip is leased."""
-        LOG.debug(_('Leased IP |%(address)s|'), locals(), context=context)
+        LOG.debug(_('Leased IP |%s|'), address, context=context)
         fixed_ip = self.db.fixed_ip_get_by_address(context, address)
 
         if fixed_ip['instance_uuid'] is None:
@@ -966,7 +965,7 @@ class NetworkManager(manager.Manager):
 
     def release_fixed_ip(self, context, address):
         """Called by dhcp-bridge when ip is released."""
-        LOG.debug(_('Released IP |%(address)s|'), locals(), context=context)
+        LOG.debug(_('Released IP |%s|'), address, context=context)
         fixed_ip = self.db.fixed_ip_get_by_address(context, address)
 
         if fixed_ip['instance_uuid'] is None:

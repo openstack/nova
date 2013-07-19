@@ -63,7 +63,8 @@ class MuteChildWeigher(weights.BaseCellWeigher):
         if timeutils.is_older_than(last_seen, secs):
             # yep, that's a mute child;  recommend highly that it be skipped!
             LOG.warn(_("%(cell)s has not been seen since %(last_seen)s and is "
-                       "being treated as mute.") % locals())
+                       "being treated as mute."),
+                     {'cell': cell, 'last_seen': last_seen})
             return CONF.cells.mute_weight_value
         else:
             return 0

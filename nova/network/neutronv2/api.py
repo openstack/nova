@@ -383,8 +383,8 @@ class API(base.Base):
         try:
             neutronv2.get_client(context).delete_port(port_id)
         except Exception as ex:
-            LOG.exception(_("Failed to delete neutron port %(port_id)s ") %
-                          locals())
+            LOG.exception(_("Failed to delete neutron port %s") %
+                          port_id)
 
         return self._get_instance_nw_info(context, instance)
 

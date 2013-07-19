@@ -120,7 +120,8 @@ class ConductorManager(manager.Manager):
         for key, value in updates.iteritems():
             if key not in allowed_updates:
                 LOG.error(_("Instance update attempted for "
-                            "'%(key)s' on %(instance_uuid)s") % locals())
+                            "'%(key)s' on %(instance_uuid)s"),
+                          {'key': key, 'instance_uuid': instance_uuid})
                 raise KeyError("unexpected update keyword '%s'" % key)
             if key in datetime_fields and isinstance(value, basestring):
                 updates[key] = timeutils.parse_strtime(value)

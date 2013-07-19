@@ -2979,7 +2979,7 @@ def quota_reserve(context, resources, quotas, deltas, expire,
 
     if unders:
         LOG.warning(_("Change will make usage less than 0 for the following "
-                      "resources: %(unders)s") % locals())
+                      "resources: %s"), unders)
     if overs:
         usages = dict((k, dict(in_use=v['in_use'], reserved=v['reserved']))
                       for k, v in usages.items())
