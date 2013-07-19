@@ -1701,6 +1701,9 @@ class LibvirtDriver(driver.ComputeDriver):
             for graphic in dom.getElementsByTagName('graphics'):
                 if graphic.getAttribute('type') == 'vnc':
                     return graphic.getAttribute('port')
+            # NOTE(rmk): We had VNC consoles enabled but the instance in
+            # question is not actually listening for connections.
+            raise exception.ConsoleTypeUnavailable(console_type='vnc')
 
         port = get_vnc_port_for_instance(instance['name'])
         host = CONF.vncserver_proxyclient_address
@@ -1719,8 +1722,9 @@ class LibvirtDriver(driver.ComputeDriver):
                 if graphic.getAttribute('type') == 'spice':
                     return (graphic.getAttribute('port'),
                             graphic.getAttribute('tlsPort'))
-
-            return (None, None)
+            # NOTE(rmk): We had Spice consoles enabled but the instance in
+            # question is not actually listening for connections.
+            raise exception.ConsoleTypeUnavailable(console_type='spice')
 
         ports = get_spice_ports_for_instance(instance['name'])
         host = CONF.spice.server_proxyclient_address
