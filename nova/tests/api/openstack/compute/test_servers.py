@@ -86,7 +86,7 @@ def return_security_group(context, instance_id, security_group_id):
     pass
 
 
-def instance_update(context, instance_uuid, values):
+def instance_update(context, instance_uuid, values, update_cells=True):
     inst = fakes.stub_instance(INSTANCE_IDS.get(instance_uuid),
                                name=values.get('display_name'))
     return (inst, inst)

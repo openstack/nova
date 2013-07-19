@@ -72,6 +72,7 @@ class CellsAPI(rpc_proxy.RpcProxy):
                cell_get()
         1.14 - Adds reboot_instance()
         1.15 - Adds suspend_instance() and resume_instance()
+        1.16 - Adds instance_update_from_api()
     '''
     BASE_RPC_API_VERSION = '1.0'
 
@@ -362,6 +363,22 @@ class CellsAPI(rpc_proxy.RpcProxy):
         """Get all migrations applying the filters."""
         return self.call(ctxt, self.make_msg('get_migrations',
                                              filters=filters), version='1.11')
+
+    def instance_update_from_api(self, ctxt, instance, expected_vm_state,
+                                 expected_task_state, admin_state_reset):
+        """Update an instance in its cell.
+
+        This method takes a new-world instance object.
+        """
+        if not CONF.cells.enable:
+            return
+        self.cast(ctxt,
+                  self.make_msg('instance_update_from_api',
+                                instance=instance,
+                                expected_vm_state=expected_vm_state,
+                                expected_task_state=expected_task_state,
+                                admin_state_reset=admin_state_reset),
+                  version='1.16')
 
     def start_instance(self, ctxt, instance):
         """Start an instance in its cell.

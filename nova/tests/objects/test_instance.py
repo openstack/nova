@@ -13,9 +13,12 @@
 #    under the License.
 
 import datetime
+
 import iso8601
+import mox
 import netaddr
 
+from nova.cells import rpcapi as cells_rpcapi
 from nova import context
 from nova import db
 from nova.objects import base
@@ -35,6 +38,7 @@ class _TestInstanceObject(object):
         fake_instance = fakes.stub_instance(id=2,
                                             access_ipv4='1.2.3.4',
                                             access_ipv6='::1')
+        fake_instance['cell_name'] = 'api!child'
         fake_instance['scheduled_at'] = None
         fake_instance['terminated_at'] = None
         fake_instance['deleted_at'] = None
@@ -185,23 +189,92 @@ class _TestInstanceObject(object):
         self.assertRemotes()
         self.assertEqual(set([]), inst.obj_what_changed())
 
-    def test_save(self):
+    def _save_test_helper(self, cell_type, save_kwargs):
+        """Common code for testing save() for cells/non-cells."""
+        if cell_type:
+            self.flags(enable=True, cell_type=cell_type, group='cells')
+        else:
+            self.flags(enable=False, group='cells')
+
         ctxt = context.get_admin_context()
-        fake_inst = dict(self.fake_instance, host='oldhost')
-        fake_uuid = fake_inst['uuid']
+        old_ref = dict(self.fake_instance, host='oldhost', user_data='old',
+                       vm_state='old', task_state='old')
+        fake_uuid = old_ref['uuid']
+
+        expected_updates = dict(vm_state='meow', task_state='wuff',
+                                user_data='new')
+
+        new_ref = dict(old_ref, host='newhost', **expected_updates)
+        exp_vm_state = save_kwargs.get('expected_vm_state')
+        exp_task_state = save_kwargs.get('expected_task_state')
+        admin_reset = save_kwargs.get('admin_state_reset', False)
+        if exp_vm_state:
+            expected_updates['expected_vm_state'] = exp_vm_state
+        if exp_task_state:
+            expected_updates['expected_task_state'] = exp_task_state
         self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
         self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
         self.mox.StubOutWithMock(db, 'instance_info_cache_update')
+        cells_api_mock = self.mox.CreateMock(cells_rpcapi.CellsAPI)
+        self.mox.StubOutWithMock(cells_api_mock,
+                                 'instance_update_at_top')
+        self.mox.StubOutWithMock(cells_api_mock,
+                                 'instance_update_from_api')
+        self.mox.StubOutWithMock(cells_rpcapi, 'CellsAPI',
+                                 use_mock_anything=True)
         db.instance_get_by_uuid(ctxt, fake_uuid, columns_to_join=[]
-                                ).AndReturn(fake_inst)
+                                ).AndReturn(old_ref)
         db.instance_update_and_get_original(
-            ctxt, fake_uuid, {'user_data': 'foo'}).AndReturn(
-                (fake_inst, dict(fake_inst, host='newhost')))
+                ctxt, fake_uuid, expected_updates,
+                update_cells=False).AndReturn((old_ref, new_ref))
+        if cell_type == 'api':
+            cells_rpcapi.CellsAPI().AndReturn(cells_api_mock)
+            cells_api_mock.instance_update_from_api(
+                    ctxt, mox.IsA(instance.Instance),
+                    exp_vm_state, exp_task_state, admin_reset)
+        elif cell_type == 'compute':
+            cells_rpcapi.CellsAPI().AndReturn(cells_api_mock)
+            cells_api_mock.instance_update_at_top(ctxt, new_ref)
+
         self.mox.ReplayAll()
-        inst = instance.Instance.get_by_uuid(ctxt, fake_uuid)
-        inst.user_data = 'foo'
-        inst.save()
-        self.assertEqual(inst.host, 'newhost')
+
+        inst = instance.Instance.get_by_uuid(ctxt, old_ref['uuid'])
+        self.assertEqual('old', inst.task_state)
+        self.assertEqual('old', inst.vm_state)
+        self.assertEqual('old', inst.user_data)
+        inst.vm_state = 'meow'
+        inst.task_state = 'wuff'
+        inst.user_data = 'new'
+        inst.save(**save_kwargs)
+        self.assertEqual('newhost', inst.host)
+        self.assertEqual('meow', inst.vm_state)
+        self.assertEqual('wuff', inst.task_state)
+        self.assertEqual('new', inst.user_data)
+        self.assertEqual(set([]), inst.obj_what_changed())
+
+    def test_save(self):
+        self._save_test_helper(None, {})
+
+    def test_save_in_api_cell(self):
+        self._save_test_helper('api', {})
+
+    def test_save_in_compute_cell(self):
+        self._save_test_helper('compute', {})
+
+    def test_save_exp_vm_state(self):
+        self._save_test_helper(None, {'expected_vm_state': ['meow']})
+
+    def test_save_exp_task_state(self):
+        self._save_test_helper(None, {'expected_task_state': ['meow']})
+
+    def test_save_exp_vm_state_api_cell(self):
+        self._save_test_helper('api', {'expected_vm_state': ['meow']})
+
+    def test_save_exp_task_state_api_cell(self):
+        self._save_test_helper('api', {'expected_task_state': ['meow']})
+
+    def test_save_exp_task_state_api_cell_admin_reset(self):
+        self._save_test_helper('api', {'admin_state_reset': True})
 
     def test_get_deleted(self):
         ctxt = context.get_admin_context()

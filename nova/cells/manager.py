@@ -65,7 +65,7 @@ class CellsManager(manager.Manager):
 
     Scheduling requests get passed to the scheduler class.
     """
-    RPC_API_VERSION = '1.15'
+    RPC_API_VERSION = '1.16'
 
     def __init__(self, *args, **kwargs):
         # Mostly for tests.
@@ -417,6 +417,14 @@ class CellsManager(manager.Manager):
         for response in responses:
             migrations += response.value_or_raise()
         return migrations
+
+    def instance_update_from_api(self, ctxt, instance, expected_vm_state,
+                        expected_task_state, admin_state_reset):
+        """Update an instance in its cell."""
+        self.msg_runner.instance_update_from_api(ctxt, instance,
+                                                 expected_vm_state,
+                                                 expected_task_state,
+                                                 admin_state_reset)
 
     def start_instance(self, ctxt, instance):
         """Start an instance in its cell."""
