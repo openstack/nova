@@ -47,8 +47,10 @@ def _get_cache():
     return MC
 
 
-def _reset_cache():
-    """Reset the cache, mainly for testing purposes."""
+def reset_cache():
+    """Reset the cache, mainly for testing purposes and update
+    availability_zone for host aggregate
+    """
 
     global MC
 

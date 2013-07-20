@@ -77,7 +77,7 @@ class ExtendedServerAttributesTest(test.TestCase):
 
     def setUp(self):
         super(ExtendedServerAttributesTest, self).setUp()
-        availability_zones._reset_cache()
+        availability_zones.reset_cache()
         fakes.stub_out_nw_api(self.stubs)
         self.stubs.Set(compute.api.API, 'get', fake_compute_get)
         self.stubs.Set(compute.api.API, 'get_all', fake_compute_get_all)

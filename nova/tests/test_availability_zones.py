@@ -83,6 +83,10 @@ class AvailabilityZoneTestCases(test.TestCase):
         return db.aggregate_host_delete(self.context,
                                         aggregate['id'], service['host'])
 
+    def test_rest_availability_zone_reset_cache(self):
+        az.reset_cache()
+        self.assertEqual(az._get_cache().get('cache'), None)
+
     def test_set_availability_zone_compute_service(self):
         """Test for compute service get right availability zone."""
         service = self._create_service_with_topic('compute', self.host)
