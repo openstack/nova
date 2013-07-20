@@ -1,4 +1,4 @@
-#    Copyright 2012 IBM Corp.
+#    Copyright 2013 IBM Corp.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -32,6 +32,7 @@ from nova import network
 from nova.network.security_group import openstack_driver
 from nova import notifications
 from nova.objects import base as nova_object
+from nova.objects import instance as instance_obj
 from nova.openstack.common import excutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
@@ -73,7 +74,7 @@ class ConductorManager(manager.Manager):
     namespace.  See the ComputeTaskManager class for details.
     """
 
-    RPC_API_VERSION = '1.54'
+    RPC_API_VERSION = '1.55'
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(service_name='conductor',
@@ -514,6 +515,12 @@ class ConductorManager(manager.Manager):
         return ec2_ids
 
     def compute_stop(self, context, instance, do_cast=True):
+        # NOTE(mriedem): Clients using an interface before 1.43 will be sending
+        # dicts so we need to handle that here since compute/api::stop()
+        # requires an object.
+        if isinstance(instance, dict):
+            instance = instance_obj.Instance._from_db_object(
+                                context, instance_obj.Instance(), instance)
         self.compute_api.stop(context, instance, do_cast)
 
     def compute_confirm_resize(self, context, instance, migration_ref):
