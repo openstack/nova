@@ -194,7 +194,8 @@ class PowerVMDriver(driver.ComputeDriver):
         """Power off the specified instance."""
         self._powervm.power_off(instance['name'])
 
-    def power_on(self, instance):
+    def power_on(self, context, instance, network_info,
+                 block_device_info=None):
         """Power on the specified instance."""
         self._powervm.power_on(instance['name'])
 

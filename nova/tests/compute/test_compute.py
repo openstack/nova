@@ -1063,7 +1063,8 @@ class ComputeTestCase(BaseTestCase):
 
         called = {'power_on': False}
 
-        def fake_driver_power_on(self, instance):
+        def fake_driver_power_on(self, context, instance, network_info,
+                                 block_device_info):
             called['power_on'] = True
 
         self.stubs.Set(nova.virt.fake.FakeDriver, 'power_on',

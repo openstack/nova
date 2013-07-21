@@ -490,13 +490,24 @@ class HyperVAPITestCase(test.TestCase):
                                    constants.HYPERV_VM_STATE_DISABLED)
 
     def test_power_on(self):
-        self._test_vm_state_change(self._conn.power_on,
-                                   constants.HYPERV_VM_STATE_DISABLED,
-                                   constants.HYPERV_VM_STATE_ENABLED)
+        self._instance_data = self._get_instance_data()
+        network_info = fake_network.fake_get_instance_nw_info(self.stubs,
+                                                              spectacular=True)
+        vmutils.VMUtils.set_vm_state(mox.Func(self._check_instance_name),
+                                     constants.HYPERV_VM_STATE_ENABLED)
+        self._mox.ReplayAll()
+        self._conn.power_on(self._context, self._instance_data, network_info)
+        self._mox.VerifyAll()
 
     def test_power_on_already_running(self):
-        self._test_vm_state_change(self._conn.power_on, None,
-                                   constants.HYPERV_VM_STATE_ENABLED)
+        self._instance_data = self._get_instance_data()
+        network_info = fake_network.fake_get_instance_nw_info(self.stubs,
+                                                              spectacular=True)
+        vmutils.VMUtils.set_vm_state(mox.Func(self._check_instance_name),
+                                     constants.HYPERV_VM_STATE_ENABLED)
+        self._mox.ReplayAll()
+        self._conn.power_on(self._context, self._instance_data, network_info)
+        self._mox.VerifyAll()
 
     def test_reboot(self):
 

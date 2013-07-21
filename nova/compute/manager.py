@@ -1445,7 +1445,14 @@ class ComputeManager(manager.SchedulerDependentManager):
     def start_instance(self, context, instance):
         """Starting an instance on this host."""
         self._notify_about_instance_usage(context, instance, "power_on.start")
-        self.driver.power_on(instance)
+
+        network_info = self._get_instance_nw_info(context, instance)
+        block_device_info = self._get_instance_volume_block_device_info(
+                                context, instance)
+        self.driver.power_on(context, instance,
+                             self._legacy_nw_info(network_info),
+                             block_device_info)
+
         current_power_state = self._get_power_state(context, instance)
         instance = self._instance_update(context, instance['uuid'],
                 power_state=current_power_state,
@@ -1501,7 +1508,12 @@ class ComputeManager(manager.SchedulerDependentManager):
         except NotImplementedError:
             # Fallback to just powering on the instance if the hypervisor
             # doesn't implement the restore method
-            self.driver.power_on(instance)
+            network_info = self._get_instance_nw_info(context, instance)
+            block_device_info = self._get_instance_volume_block_device_info(
+                                context, instance)
+            self.driver.power_on(context, instance,
+                                 self._legacy_nw_info(network_info),
+                                 block_device_info)
         current_power_state = self._get_power_state(context, instance)
         instance = self._instance_update(context, instance['uuid'],
                 power_state=current_power_state,

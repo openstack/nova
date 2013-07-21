@@ -273,7 +273,8 @@ class XenAPIDriver(driver.ComputeDriver):
         """Power off the specified instance."""
         self._vmops.power_off(instance)
 
-    def power_on(self, instance):
+    def power_on(self, context, instance, network_info,
+                 block_device_info=None):
         """Power on the specified instance."""
         self._vmops.power_on(instance)
 

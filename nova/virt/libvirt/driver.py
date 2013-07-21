@@ -1401,13 +1401,13 @@ class LibvirtDriver(driver.ComputeDriver):
         """Power off the specified instance."""
         self._destroy(instance)
 
-    def power_on(self, instance):
+    def power_on(self, context, instance, network_info,
+                 block_device_info=None):
         """Power on the specified instance."""
-        dom = self._lookup_by_name(instance['name'])
-        self._create_domain(domain=dom, instance=instance)
-        timer = utils.FixedIntervalLoopingCall(self._wait_for_running,
-                                               instance)
-        timer.start(interval=0.5).wait()
+        # We use _hard_reboot here to ensure that all backing files,
+        # network, and block device connections, etc. are established
+        # and available before we attempt to start the instance.
+        self._hard_reboot(context, instance, network_info, block_device_info)
 
     def suspend(self, instance):
         """Suspend the specified instance."""
