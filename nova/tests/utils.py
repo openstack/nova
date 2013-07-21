@@ -17,6 +17,7 @@
 import errno
 import platform
 import socket
+import sys
 
 from oslo.config import cfg
 
@@ -177,7 +178,7 @@ def killer_xml_body():
 
 
 def is_ipv6_supported():
-    has_ipv6_support = True
+    has_ipv6_support = socket.has_ipv6
     try:
         s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
     except socket.error as e:
@@ -185,4 +186,14 @@ def is_ipv6_supported():
             has_ipv6_support = False
         else:
             raise
+
+    # check if there is at least one interface with ipv6
+    if has_ipv6_support and sys.platform.startswith('linux'):
+        try:
+            with open('/proc/net/if_inet6') as f:
+                if not f.read():
+                    has_ipv6_support = False
+        except IOError:
+            has_ipv6_support = False
+
     return has_ipv6_support

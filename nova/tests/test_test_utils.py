@@ -14,6 +14,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import errno
+import socket
+
+import fixtures
+
 from nova import db
 from nova import test
 from nova.tests import utils as test_utils
@@ -39,3 +44,28 @@ class TestUtilsTestCase(test.TestCase):
         # The challenge here is to define what exactly such a structure
         # must look like.
         pass
+
+    def test_ipv6_supported(self):
+        self.assertIn(test_utils.is_ipv6_supported(), (False, True))
+
+        def fake_open(path):
+            raise IOError
+
+        def fake_socket_fail(x, y):
+            e = socket.error()
+            e.errno = errno.EAFNOSUPPORT
+            raise e
+
+        def fake_socket_ok(x, y):
+            return
+
+        with fixtures.MonkeyPatch('socket.socket', fake_socket_fail):
+            self.assertFalse(test_utils.is_ipv6_supported())
+
+        with fixtures.MonkeyPatch('socket.socket', fake_socket_ok):
+            with fixtures.MonkeyPatch('sys.platform', 'windows'):
+                self.assertTrue(test_utils.is_ipv6_supported())
+
+            with fixtures.MonkeyPatch('sys.platform', 'linux2'):
+                with fixtures.MonkeyPatch('__builtin__.open', fake_open):
+                    self.assertFalse(test_utils.is_ipv6_supported())
