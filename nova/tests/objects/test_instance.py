@@ -21,6 +21,7 @@ import netaddr
 from nova.cells import rpcapi as cells_rpcapi
 from nova import context
 from nova import db
+from nova import exception
 from nova.network import model as network_model
 from nova.objects import base
 from nova.objects import instance
@@ -154,6 +155,11 @@ class _TestInstanceObject(object):
         sys_meta2 = inst.system_metadata
         self.assertEqual(sys_meta2, {'foo': 'bar'})
         self.assertRemotes()
+
+    def test_load_invalid(self):
+        inst = instance.Instance()
+        self.assertRaises(exception.ObjectActionError,
+                          inst.obj_load_attr, 'foo')
 
     def test_get_remote(self):
         # isotime doesn't have microseconds and is always UTC
