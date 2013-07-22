@@ -29,7 +29,7 @@ def fake_instance_get(context, instance_id, columns_to_join=None):
     result['deleted_at'] = None
     result['updated_at'] = None
     result['deleted'] = 0
-    result['info_cache'] = {'network_info': 'foo',
+    result['info_cache'] = {'network_info': '[]',
                             'instance_uuid': result['uuid']}
     return result
 

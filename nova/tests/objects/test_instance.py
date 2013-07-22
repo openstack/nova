@@ -21,6 +21,7 @@ import netaddr
 from nova.cells import rpcapi as cells_rpcapi
 from nova import context
 from nova import db
+from nova.network import model as network_model
 from nova.objects import base
 from nova.objects import instance
 from nova.objects import security_group
@@ -292,7 +293,11 @@ class _TestInstanceObject(object):
         ctxt = context.get_admin_context()
         fake_inst = dict(self.fake_instance)
         fake_uuid = fake_inst['uuid']
-        fake_inst['info_cache'] = {'network_info': 'foo',
+        nwinfo1 = network_model.NetworkInfo.hydrate([{'address': 'foo'}])
+        nwinfo2 = network_model.NetworkInfo.hydrate([{'address': 'bar'}])
+        nwinfo1_json = nwinfo1.json()
+        nwinfo2_json = nwinfo2.json()
+        fake_inst['info_cache'] = {'network_info': nwinfo1_json,
                                    'instance_uuid': fake_uuid}
         self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
         self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
@@ -300,13 +305,12 @@ class _TestInstanceObject(object):
         db.instance_get_by_uuid(ctxt, fake_uuid, columns_to_join=[]
                                 ).AndReturn(fake_inst)
         db.instance_info_cache_update(ctxt, fake_uuid,
-                                      {'network_info': 'bar'})
+                                      {'network_info': nwinfo2_json})
         self.mox.ReplayAll()
         inst = instance.Instance.get_by_uuid(ctxt, fake_uuid)
-        self.assertEqual(inst.info_cache.network_info,
-                         fake_inst['info_cache']['network_info'])
+        self.assertEqual(inst.info_cache.network_info, nwinfo1)
         self.assertEqual(inst.info_cache.instance_uuid, fake_uuid)
-        inst.info_cache.network_info = 'bar'
+        inst.info_cache.network_info = nwinfo2
         inst.save()
 
     def test_with_security_groups(self):
@@ -411,7 +415,7 @@ class _TestInstanceListObject(object):
         fake_instance['launched_at'] = (
             fake_instance['launched_at'].replace(
                 tzinfo=iso8601.iso8601.Utc(), microsecond=0))
-        fake_instance['info_cache'] = {'network_info': 'foo',
+        fake_instance['info_cache'] = {'network_info': '[]',
                                        'instance_uuid': fake_instance['uuid']}
         fake_instance['security_groups'] = []
         fake_instance['deleted'] = 0

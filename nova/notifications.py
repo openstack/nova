@@ -221,18 +221,19 @@ def bandwidth_usage(instance_ref, audit_start,
     """Get bandwidth usage information for the instance for the
     specified audit period.
     """
-
     admin_context = nova.context.get_admin_context(read_deleted='yes')
 
-    if (instance_ref.get('info_cache') and
-            instance_ref['info_cache'].get('network_info') is not None):
-
-        cached_info = instance_ref['info_cache']['network_info']
-        nw_info = network_model.NetworkInfo.hydrate(cached_info)
-    else:
+    def _get_nwinfo_old_skool():
+        """Support for getting network info without objects."""
+        if (instance_ref.get('info_cache') and
+                instance_ref['info_cache'].get('network_info') is not None):
+            cached_info = instance_ref['info_cache']['network_info']
+            if isinstance(cached_info, network_model.NetworkInfo):
+                return cached_info
+            return network_model.NetworkInfo.hydrate(cached_info)
         try:
-            nw_info = network.API().get_instance_nw_info(admin_context,
-                    instance_ref)
+            return network.API().get_instance_nw_info(admin_context,
+                                                      instance_ref)
         except Exception:
             try:
                 with excutils.save_and_reraise_exception():
@@ -242,6 +243,14 @@ def bandwidth_usage(instance_ref, audit_start,
                 if ignore_missing_network_data:
                     return
                 raise
+
+    # FIXME(comstud): Temporary as we transition to objects.  This import
+    # is here to avoid circular imports.
+    from nova.objects import instance as instance_obj
+    if isinstance(instance_ref, instance_obj.Instance):
+        nw_info = instance_ref.info_cache.network_info
+    else:
+        nw_info = _get_nwinfo_old_skool()
 
     macs = [vif['address'] for vif in nw_info]
     uuids = [instance_ref["uuid"]]
