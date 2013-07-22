@@ -1422,22 +1422,18 @@ class ServersControllerTest(ControllerTest):
 
 class ServersControllerRebuildInstanceTest(ControllerTest):
 
-    def test_rebuild_instance_with_access_ipv4_bad_format(self):
+    image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+    image_href = 'http://localhost/v3/fake/images/%s' % image_uuid
+
+    def setUp(self):
+        super(ServersControllerRebuildInstanceTest, self).setUp()
         self.stubs.Set(db, 'instance_get_by_uuid',
-                fakes.fake_instance_get(vm_state=vm_states.ACTIVE))
-        # proper local hrefs must start with 'http://localhost/v3/'
-        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        image_href = 'http://localhost/v3/images/%s' % image_uuid
-        access_ipv4 = 'bad_format'
-        access_ipv6 = 'fead::1234'
-        body = {
+                       fakes.fake_instance_get(vm_state=vm_states.ACTIVE))
+        self.body = {
             'rebuild': {
                 'name': 'new_name',
-                'imageRef': image_href,
-                'accessIPv4': access_ipv4,
-                'accessIPv6': access_ipv6,
+                'imageRef': self.image_href,
                 'metadata': {
-                    'hello': 'world',
                     'open': 'stack',
                 },
                 'personality': [
@@ -1448,171 +1444,77 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
                 ],
             },
         }
+        self.req = fakes.HTTPRequest.blank('/fake/servers/a/action')
+        self.req.method = 'POST'
+        self.req.headers["content-type"] = "application/json"
 
-        req = fakes.HTTPRequestV3.blank('/servers/a/action')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
+    def test_rebuild_instance_with_access_ipv4_bad_format(self):
+        # proper local hrefs must start with 'http://localhost/v2/'
+        self.body['rebuild']['accessIPv4'] = 'bad_format'
+        self.body['rebuild']['accessIPv6'] = 'fead::1234'
+        self.body['rebuild']['metadata']['hello'] = 'world'
+        self.req.body = jsonutils.dumps(self.body)
         self.assertRaises(webob.exc.HTTPBadRequest,
-            self.controller._action_rebuild, req, FAKE_UUID, body)
+                          self.controller._action_rebuild,
+                          self.req, FAKE_UUID, self.body)
 
     def test_rebuild_instance_with_blank_metadata_key(self):
-        self.stubs.Set(db, 'instance_get_by_uuid',
-                fakes.fake_instance_get(vm_state=vm_states.ACTIVE))
-        # proper local hrefs must start with 'http://localhost/v3/'
-        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        image_href = 'http://localhost/v3/images/%s' % image_uuid
-        access_ipv4 = '0.0.0.0'
-        access_ipv6 = 'fead::1234'
-        body = {
-            'rebuild': {
-                'name': 'new_name',
-                'imageRef': image_href,
-                'accessIPv4': access_ipv4,
-                'accessIPv6': access_ipv6,
-                'metadata': {
-                    '': 'world',
-                    'open': 'stack',
-                },
-                'personality': [
-                    {
-                        "path": "/etc/banner.txt",
-                        "contents": "MQ==",
-                    },
-                ],
-            },
-        }
-
-        req = fakes.HTTPRequestV3.blank('/servers/a/action')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
+        self.body['rebuild']['accessIPv4'] = '0.0.0.0'
+        self.body['rebuild']['accessIPv6'] = 'fead::1234'
+        self.body['rebuild']['metadata'][''] = 'world'
+        self.req.body = jsonutils.dumps(self.body)
         self.assertRaises(webob.exc.HTTPBadRequest,
-            self.controller._action_rebuild, req, FAKE_UUID, body)
+                          self.controller._action_rebuild,
+                          self.req, FAKE_UUID, self.body)
 
     def test_rebuild_instance_with_metadata_key_too_long(self):
-        self.stubs.Set(db, 'instance_get_by_uuid',
-                fakes.fake_instance_get(vm_state=vm_states.ACTIVE))
-        # proper local hrefs must start with 'http://localhost/v3/'
-        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        image_href = 'http://localhost/v3/images/%s' % image_uuid
-        access_ipv4 = '0.0.0.0'
-        access_ipv6 = 'fead::1234'
-        body = {
-            'rebuild': {
-                'name': 'new_name',
-                'imageRef': image_href,
-                'accessIPv4': access_ipv4,
-                'accessIPv6': access_ipv6,
-                'metadata': {
-                    ('a' * 260): 'world',
-                    'open': 'stack',
-                },
-                'personality': [
-                    {
-                        "path": "/etc/banner.txt",
-                        "contents": "MQ==",
-                    },
-                ],
-            },
-        }
+        self.body['rebuild']['accessIPv4'] = '0.0.0.0'
+        self.body['rebuild']['accessIPv6'] = 'fead::1234'
+        self.body['rebuild']['metadata'][('a' * 260)] = 'world'
 
-        req = fakes.HTTPRequestV3.blank('/servers/a/action')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
+        self.req.body = jsonutils.dumps(self.body)
         self.assertRaises(webob.exc.HTTPRequestEntityTooLarge,
-            self.controller._action_rebuild, req, FAKE_UUID, body)
+                          self.controller._action_rebuild,
+                          self.req, FAKE_UUID, self.body)
 
     def test_rebuild_instance_with_metadata_value_too_long(self):
-        self.stubs.Set(db, 'instance_get_by_uuid',
-                fakes.fake_instance_get(vm_state=vm_states.ACTIVE))
-        # proper local hrefs must start with 'http://localhost/v3/'
-        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        image_href = 'http://localhost/v3/images/%s' % image_uuid
-        access_ipv4 = '0.0.0.0'
-        access_ipv6 = 'fead::1234'
-        body = {
-            'rebuild': {
-                'name': 'new_name',
-                'imageRef': image_href,
-                'accessIPv4': access_ipv4,
-                'accessIPv6': access_ipv6,
-                'metadata': {
-                    'key1': ('a' * 260),
-                    'open': 'stack',
-                },
-                'personality': [
-                    {
-                        "path": "/etc/banner.txt",
-                        "contents": "MQ==",
-                    },
-                ],
-            },
-        }
+        self.body['rebuild']['accessIPv4'] = '0.0.0.0'
+        self.body['rebuild']['accessIPv6'] = 'fead::1234'
+        self.body['rebuild']['metadata']['key1'] = ('a' * 260)
 
-        req = fakes.HTTPRequestV3.blank('/servers/a/action')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
+        self.req.body = jsonutils.dumps(self.body)
         self.assertRaises(webob.exc.HTTPRequestEntityTooLarge,
-            self.controller._action_rebuild, req, FAKE_UUID, body)
+                          self.controller._action_rebuild, self.req,
+                          FAKE_UUID, self.body)
 
     def test_rebuild_instance_fails_when_min_ram_too_small(self):
         # make min_ram larger than our instance ram size
         def fake_get_image(self, context, image_href):
             return dict(id='76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
-                name='public image', is_public=True,
-                status='active', properties={'key1': 'value1'},
-                min_ram="4096", min_disk="10")
+                        name='public image', is_public=True,
+                        status='active', properties={'key1': 'value1'},
+                        min_ram="4096", min_disk="10")
 
         self.stubs.Set(fake._FakeImageService, 'show', fake_get_image)
 
-        self.stubs.Set(db, 'instance_get_by_uuid',
-                fakes.fake_instance_get(vm_state=vm_states.ACTIVE))
-        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        image_href = 'http://localhost/v3/images/%s' % image_uuid
-        body = {
-            'rebuild': {
-                'name': 'new_name',
-                'imageRef': image_href,
-            },
-        }
-
-        req = fakes.HTTPRequestV3.blank('/servers/a/action')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
+        self.req.body = jsonutils.dumps(self.body)
         self.assertRaises(webob.exc.HTTPBadRequest,
-            self.controller._action_rebuild, req, FAKE_UUID, body)
+                          self.controller._action_rebuild,
+                          self.req, FAKE_UUID, self.body)
 
     def test_rebuild_instance_fails_when_min_disk_too_small(self):
         # make min_disk larger than our instance disk size
         def fake_get_image(self, context, image_href):
             return dict(id='76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
-                name='public image', is_public=True,
-                status='active', properties={'key1': 'value1'},
-                min_ram="128", min_disk="100000")
+                        name='public image', is_public=True,
+                        status='active', properties={'key1': 'value1'},
+                        min_ram="128", min_disk="100000")
 
         self.stubs.Set(fake._FakeImageService, 'show', fake_get_image)
-
-        self.stubs.Set(db, 'instance_get_by_uuid',
-                fakes.fake_instance_get(vm_state=vm_states.ACTIVE))
-        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        image_href = 'http://localhost/v3/images/%s' % image_uuid
-        body = {
-            'rebuild': {
-                'name': 'new_name',
-                'imageRef': image_href,
-            },
-        }
-
-        req = fakes.HTTPRequestV3.blank('/servers/a/action')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
+        self.req.body = jsonutils.dumps(self.body)
         self.assertRaises(webob.exc.HTTPBadRequest,
-            self.controller._action_rebuild, req, FAKE_UUID, body)
+                          self.controller._action_rebuild, self.req,
+                          FAKE_UUID, self.body)
 
     def test_rebuild_instance_image_too_large(self):
         # make image size larger than our instance disk size
@@ -1624,24 +1526,10 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
                         status='active', size=size)
 
         self.stubs.Set(fake._FakeImageService, 'show', fake_get_image)
-
-        self.stubs.Set(db, 'instance_get_by_uuid',
-                fakes.fake_instance_get(vm_state=vm_states.ACTIVE))
-        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        image_href = 'http://localhost/v3/images/%s' % image_uuid
-        body = {
-            'rebuild': {
-                'name': 'new_name',
-                'imageRef': image_href,
-            },
-        }
-
-        req = fakes.HTTPRequestV3.blank('/servers/a/action')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
+        self.req.body = jsonutils.dumps(self.body)
         self.assertRaises(webob.exc.HTTPBadRequest,
-            self.controller._action_rebuild, req, FAKE_UUID, body)
+                          self.controller._action_rebuild,
+                          self.req, FAKE_UUID, self.body)
 
     def test_rebuild_instance_with_deleted_image(self):
         def fake_get_image(self, context, image_href):
@@ -1651,57 +1539,20 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
 
         self.stubs.Set(fake._FakeImageService, 'show', fake_get_image)
 
-        self.stubs.Set(db, 'instance_get_by_uuid',
-                fakes.fake_instance_get(vm_state=vm_states.ACTIVE))
-        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        image_href = 'http://localhost/v3/images/%s' % image_uuid
-        body = {
-            'rebuild': {
-                'name': 'new_name',
-                'imageRef': image_href,
-            },
-        }
-
-        req = fakes.HTTPRequestV3.blank('/servers/a/action')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
+        self.req.body = jsonutils.dumps(self.body)
         self.assertRaises(webob.exc.HTTPBadRequest,
-            self.controller._action_rebuild, req, FAKE_UUID, body)
+                          self.controller._action_rebuild,
+                          self.req, FAKE_UUID, self.body)
 
     def test_rebuild_instance_with_access_ipv6_bad_format(self):
-        self.stubs.Set(db, 'instance_get_by_uuid',
-                fakes.fake_instance_get(vm_state=vm_states.ACTIVE))
-        # proper local hrefs must start with 'http://localhost/v3/'
-        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        image_href = 'http://localhost/v3/images/%s' % image_uuid
-        access_ipv4 = '1.2.3.4'
-        access_ipv6 = 'bad_format'
-        body = {
-            'rebuild': {
-                'name': 'new_name',
-                'imageRef': image_href,
-                'accessIPv4': access_ipv4,
-                'accessIPv6': access_ipv6,
-                'metadata': {
-                    'hello': 'world',
-                    'open': 'stack',
-                },
-                'personality': [
-                    {
-                        "path": "/etc/banner.txt",
-                        "contents": "MQ==",
-                    },
-                ],
-            },
-        }
-
-        req = fakes.HTTPRequestV3.blank('/servers/a/action')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
+        self.body['rebuild']['accessIPv4'] = '1.2.3.4'
+        self.body['rebuild']['accessIPv6'] = 'bad_format'
+        self.body['rebuild']['metadata']['hello'] = 'world'
+        self.req.body = jsonutils.dumps(self.body)
+        self.req.headers["content-type"] = "application/json"
         self.assertRaises(webob.exc.HTTPBadRequest,
-            self.controller._action_rebuild, req, FAKE_UUID, body)
+                          self.controller._action_rebuild,
+                          self.req, FAKE_UUID, self.body)
 
     def test_start(self):
         self.mox.StubOutWithMock(compute_api.API, 'start')
