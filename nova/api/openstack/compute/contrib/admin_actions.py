@@ -316,8 +316,10 @@ class AdminActionsController(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=msg)
 
         try:
-            instance = self.compute_api.get(context, id)
-            self.compute_api.update_state(context, instance, state)
+            instance = self.compute_api.get(context, id, want_objects=True)
+            instance.vm_state = state
+            instance.task_state = None
+            instance.save(admin_state_reset=True)
         except exception.InstanceNotFound:
             raise exc.HTTPNotFound(_("Server not found"))
         except Exception:

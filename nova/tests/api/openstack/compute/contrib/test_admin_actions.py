@@ -13,7 +13,6 @@
 #   under the License.
 
 import datetime
-import uuid
 
 from oslo.config import cfg
 import webob
@@ -28,6 +27,7 @@ from nova import exception
 from nova.objects import instance as instance_obj
 from nova.openstack.common import jsonutils
 from nova.openstack.common import timeutils
+from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests import fake_instance
@@ -92,7 +92,7 @@ class AdminActionsTest(test.TestCase):
     def setUp(self):
         super(AdminActionsTest, self).setUp()
         self.stubs.Set(compute_api.API, 'get', fake_compute_api_get)
-        self.UUID = uuid.uuid4()
+        self.UUID = uuidutils.generate_uuid()
         for _method in self._methods:
             self.stubs.Set(compute_api.API, _method, fake_compute_api)
         self.flags(
@@ -338,7 +338,7 @@ class CreateBackupTests(test.TestCase):
         self.stubs.Set(compute_api.API, 'get', fake_compute_api_get)
         self.backup_stubs = fakes.stub_out_compute_api_backup(self.stubs)
         self.app = compute.APIRouter(init_only=('servers',))
-        self.uuid = uuid.uuid4()
+        self.uuid = uuidutils.generate_uuid()
 
     def _get_request(self, body):
         url = '/fake/servers/%s/action' % self.uuid
@@ -495,56 +495,77 @@ class ResetStateTests(test.TestCase):
     def setUp(self):
         super(ResetStateTests, self).setUp()
 
-        self.exists = True
-        self.kwargs = None
-        self.uuid = uuid.uuid4()
+        self.uuid = uuidutils.generate_uuid()
 
-        def fake_get(inst, context, instance_id):
-            if self.exists:
-                return dict(id=1, uuid=instance_id, vm_state=vm_states.ACTIVE)
-            raise exception.InstanceNotFound(instance_id=instance_id)
-
-        def fake_update(inst, context, instance, **kwargs):
-            self.kwargs = kwargs
-
-        self.stubs.Set(compute_api.API, 'get', fake_get)
-        self.stubs.Set(compute_api.API, 'update', fake_update)
         self.admin_api = admin_actions.AdminActionsController()
+        self.compute_api = self.admin_api.compute_api
 
         url = '/fake/servers/%s/action' % self.uuid
         self.request = fakes.HTTPRequest.blank(url)
+        self.context = self.request.environ['nova.context']
 
     def test_no_state(self):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.admin_api._reset_state,
-                          self.request, 'inst_id',
+                          self.request, self.uuid,
                           {"os-resetState": None})
 
     def test_bad_state(self):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.admin_api._reset_state,
-                          self.request, 'inst_id',
+                          self.request, self.uuid,
                           {"os-resetState": {"state": "spam"}})
 
     def test_no_instance(self):
-        self.exists = False
+        self.mox.StubOutWithMock(self.compute_api, 'get')
+        exc = exception.InstanceNotFound(instance_id='inst_id')
+        self.compute_api.get(self.context, self.uuid,
+                             want_objects=True).AndRaise(exc)
+
+        self.mox.ReplayAll()
+
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.admin_api._reset_state,
-                          self.request, 'inst_id',
+                          self.request, self.uuid,
                           {"os-resetState": {"state": "active"}})
 
+    def _setup_mock(self, expected):
+        instance = instance_obj.Instance()
+        instance.uuid = self.uuid
+        instance.vm_state = 'fake'
+        instance.task_state = 'fake'
+        instance.obj_reset_changes()
+
+        self.mox.StubOutWithMock(instance, 'save')
+        self.mox.StubOutWithMock(self.compute_api, 'get')
+
+        def check_state(admin_state_reset=True):
+            self.assertEqual(set(expected.keys()),
+                             instance.obj_what_changed())
+            for k, v in expected.items():
+                self.assertEqual(v, getattr(instance, k),
+                                 "Instance.%s doesn't match" % k)
+            instance.obj_reset_changes()
+
+        self.compute_api.get(self.context, instance.uuid,
+                             want_objects=True).AndReturn(instance)
+        instance.save(admin_state_reset=True).WithSideEffects(check_state)
+
     def test_reset_active(self):
+        self._setup_mock(dict(vm_state=vm_states.ACTIVE,
+                              task_state=None))
+        self.mox.ReplayAll()
+
         body = {"os-resetState": {"state": "active"}}
-        result = self.admin_api._reset_state(self.request, 'inst_id', body)
+        result = self.admin_api._reset_state(self.request, self.uuid, body)
 
         self.assertEqual(result.status_int, 202)
-        self.assertEqual(self.kwargs, dict(vm_state=vm_states.ACTIVE,
-                                           task_state=None))
 
     def test_reset_error(self):
+        self._setup_mock(dict(vm_state=vm_states.ERROR,
+                              task_state=None))
+        self.mox.ReplayAll()
         body = {"os-resetState": {"state": "error"}}
-        result = self.admin_api._reset_state(self.request, 'inst_id', body)
+        result = self.admin_api._reset_state(self.request, self.uuid, body)
 
         self.assertEqual(result.status_int, 202)
-        self.assertEqual(self.kwargs, dict(vm_state=vm_states.ERROR,
-                                           task_state=None))
