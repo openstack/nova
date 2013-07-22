@@ -5479,11 +5479,13 @@ class ComputeAPITestCase(BaseTestCase):
         base_options = {'image_ref': self.fake_image['id'],
                         'system_metadata': utils.dict_to_metadata(
                                                             {'fake': 'value'})}
+        instance = instance_obj.Instance()
+        instance.update(base_options)
         instance = self.compute_api._populate_instance_for_create(
-                                                    base_options,
+                                                    instance,
                                                     self.fake_image,
                                                     security_groups=None)
-        self.assertEquals(base_options['image_ref'],
+        self.assertEquals(str(base_options['image_ref']),
                           instance['system_metadata']['image_base_image_ref'])
         self.assertEquals(vm_states.BUILDING, instance['vm_state'])
         self.assertEquals(task_states.SCHEDULING, instance['task_state'])

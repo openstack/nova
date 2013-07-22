@@ -32,6 +32,7 @@ from nova.openstack.common import jsonutils
 from nova.openstack.common import rpc
 from nova import test
 from nova.tests.api.openstack import fakes
+from nova.tests import fake_instance
 from nova.tests.image import fake
 
 
@@ -142,7 +143,7 @@ class ServersControllerCreateTest(test.TestCase):
             image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
             def_image_ref = 'http://localhost/images/%s' % image_uuid
             self.instance_cache_num += 1
-            instance = {
+            instance = fake_instance.fake_db_instance(**{
                 'id': self.instance_cache_num,
                 'display_name': inst['display_name'] or 'test',
                 'uuid': FAKE_UUID,
@@ -160,7 +161,7 @@ class ServersControllerCreateTest(test.TestCase):
                 "fixed_ips": [],
                 "task_state": "",
                 "vm_state": "",
-            }
+            })
 
             self.instance_cache_by_id[instance['id']] = instance
             self.instance_cache_by_uuid[instance['uuid']] = instance

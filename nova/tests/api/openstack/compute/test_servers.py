@@ -54,6 +54,7 @@ from nova.openstack.common import rpc
 from nova import policy
 from nova import test
 from nova.tests.api.openstack import fakes
+from nova.tests import fake_instance
 from nova.tests import fake_network
 from nova.tests.image import fake
 from nova.tests import matchers
@@ -1614,7 +1615,7 @@ class ServersControllerCreateTest(test.TestCase):
             image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
             def_image_ref = 'http://localhost/images/%s' % image_uuid
             self.instance_cache_num += 1
-            instance = {
+            instance = fake_instance.fake_db_instance(**{
                 'id': self.instance_cache_num,
                 'display_name': inst['display_name'] or 'test',
                 'uuid': FAKE_UUID,
@@ -1633,7 +1634,8 @@ class ServersControllerCreateTest(test.TestCase):
                 "task_state": "",
                 "vm_state": "",
                 "root_device_name": inst.get('root_device_name', 'vda'),
-            }
+                "security_groups": inst['security_groups'],
+            })
 
             self.instance_cache_by_id[instance['id']] = instance
             self.instance_cache_by_uuid[instance['uuid']] = instance
@@ -1662,7 +1664,7 @@ class ServersControllerCreateTest(test.TestCase):
                         request_spec['instance_properties']))
                 return instances
 
-        def server_update(context, instance_uuid, params):
+        def server_update(context, instance_uuid, params, update_cells=False):
             inst = self.instance_cache_by_uuid[instance_uuid]
             inst.update(params)
             return (inst, inst)

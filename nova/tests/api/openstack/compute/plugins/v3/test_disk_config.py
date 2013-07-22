@@ -23,6 +23,7 @@ from nova.openstack.common import jsonutils
 import nova.openstack.common.rpc
 from nova import test
 from nova.tests.api.openstack import fakes
+from nova.tests import fake_instance
 import nova.tests.image.fake
 
 
@@ -82,23 +83,18 @@ class DiskConfigTestCase(test.TestCase):
                        fake_instance_get_all)
 
         def fake_instance_create(context, inst_, session=None):
-            class FakeModel(dict):
-                def save(self, session=None):
-                    pass
-
-            inst = FakeModel(**inst_)
-            inst['id'] = 1
-            inst['uuid'] = AUTO_INSTANCE_UUID
-            inst['created_at'] = datetime.datetime(2010, 10, 10, 12, 0, 0)
-            inst['updated_at'] = datetime.datetime(2010, 10, 10, 12, 0, 0)
-            inst['progress'] = 0
-            inst['name'] = 'instance-1'  # this is a property
-            inst['task_state'] = ''
-            inst['vm_state'] = ''
-            # NOTE(vish): db create translates security groups into model
-            #             objects. Translate here so tests pass
-            inst['security_groups'] = [{'name': group}
-                                       for group in inst['security_groups']]
+            inst = fake_instance.fake_db_instance(**{
+                    'id': 1,
+                    'uuid': AUTO_INSTANCE_UUID,
+                    'created_at': datetime.datetime(2010, 10, 10, 12, 0, 0),
+                    'updated_at': datetime.datetime(2010, 10, 10, 12, 0, 0),
+                    'progress': 0,
+                    'name': 'instance-1',  # this is a property
+                    'task_state': '',
+                    'vm_state': '',
+                    'auto_disk_config': inst_['auto_disk_config'],
+                    'security_groups': inst_['security_groups'],
+                    })
 
             def fake_instance_get_for_create(context, id_, *args, **kwargs):
                 return (inst, inst)
