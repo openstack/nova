@@ -311,13 +311,13 @@ class InstanceTypes(BASE, NovaBase):
 
     id = Column(Integer, primary_key=True)
     name = Column(String(255))
-    memory_mb = Column(Integer)
-    vcpus = Column(Integer)
+    memory_mb = Column(Integer, nullable=False)
+    vcpus = Column(Integer, nullable=False)
     root_gb = Column(Integer)
     ephemeral_gb = Column(Integer)
     flavorid = Column(String(255))
     swap = Column(Integer, nullable=False, default=0)
-    rxtx_factor = Column(Float, nullable=False, default=1)
+    rxtx_factor = Column(Float, nullable=True, default=1)
     vcpu_weight = Column(Integer, nullable=True)
     disabled = Column(Boolean, default=False)
     is_public = Column(Boolean, default=True)
@@ -828,11 +828,14 @@ class Console(BASE, NovaBase):
 class InstanceMetadata(BASE, NovaBase):
     """Represents a user-provided metadata key/value pair for an instance."""
     __tablename__ = 'instance_metadata'
+    __table_args__ = (
+        Index('instance_metadata_instance_uuid_idx', 'instance_uuid'),
+    )
     id = Column(Integer, primary_key=True)
-    key = Column(String(255))
-    value = Column(String(255))
+    key = Column(String(255), nullable=True)
+    value = Column(String(255), nullable=True)
     instance_uuid = Column(String(36), ForeignKey('instances.uuid'),
-                           nullable=False)
+                           nullable=True)
     instance = relationship(Instance, backref="metadata",
                             foreign_keys=instance_uuid,
                             primaryjoin='and_('
@@ -844,8 +847,9 @@ class InstanceMetadata(BASE, NovaBase):
 class InstanceSystemMetadata(BASE, NovaBase):
     """Represents a system-owned metadata key/value pair for an instance."""
     __tablename__ = 'instance_system_metadata'
+    __table_args__ = ()
     id = Column(Integer, primary_key=True)
-    key = Column(String(255))
+    key = Column(String(255), nullable=False)
     value = Column(String(255))
     instance_uuid = Column(String(36),
                            ForeignKey('instances.uuid'),
@@ -881,6 +885,10 @@ class InstanceTypeProjects(BASE, NovaBase):
 class InstanceTypeExtraSpecs(BASE, NovaBase):
     """Represents additional specs as key/value pairs for an instance_type."""
     __tablename__ = 'instance_type_extra_specs'
+    __table_args__ = (
+        Index('instance_type_extra_specs_instance_type_id_key_idx',
+              'instance_type_id', 'key'),
+    )
     id = Column(Integer, primary_key=True)
     key = Column(String(255))
     value = Column(String(255))
@@ -1100,6 +1108,9 @@ class InstanceActionEvent(BASE, NovaBase):
 class InstanceIdMapping(BASE, NovaBase):
     """Compatibility layer for the EC2 instance service."""
     __tablename__ = 'instance_id_mappings'
+    __table_args__ = (
+        Index('ix_instance_id_mappings_uuid', 'uuid'),
+    )
     id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
     uuid = Column(String(36), nullable=False)
 
@@ -1132,8 +1143,11 @@ class TaskLog(BASE, NovaBase):
 class InstanceGroupMember(BASE, NovaBase):
     """Represents the members for an instance group."""
     __tablename__ = 'instance_group_member'
+    __table_args__ = (
+        Index('instance_group_member_instance_idx', 'instance_id'),
+    )
     id = Column(Integer, primary_key=True, nullable=False)
-    instance_id = Column(String(255), nullable=False)
+    instance_id = Column(String(255), nullable=True)
     group_id = Column(Integer, ForeignKey('instance_groups.id'),
                       nullable=False)
 
@@ -1141,8 +1155,11 @@ class InstanceGroupMember(BASE, NovaBase):
 class InstanceGroupPolicy(BASE, NovaBase):
     """Represents the policy type for an instance group."""
     __tablename__ = 'instance_group_policy'
+    __table_args__ = (
+        Index('instance_group_policy_policy_idx', 'policy'),
+    )
     id = Column(Integer, primary_key=True, nullable=False)
-    policy = Column(String(255), nullable=False)
+    policy = Column(String(255), nullable=True)
     group_id = Column(Integer, ForeignKey('instance_groups.id'),
                       nullable=False)
 
@@ -1150,9 +1167,12 @@ class InstanceGroupPolicy(BASE, NovaBase):
 class InstanceGroupMetadata(BASE, NovaBase):
     """Represents a key/value pair for an instance group."""
     __tablename__ = 'instance_group_metadata'
+    __table_args__ = (
+        Index('instance_group_metadata_key_idx', 'key'),
+    )
     id = Column(Integer, primary_key=True, nullable=False)
-    key = Column(String(255), nullable=False)
-    value = Column(String(255), nullable=False)
+    key = Column(String(255), nullable=True)
+    value = Column(String(255), nullable=True)
     group_id = Column(Integer, ForeignKey('instance_groups.id'),
                       nullable=False)
 
