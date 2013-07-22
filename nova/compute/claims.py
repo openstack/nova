@@ -67,10 +67,15 @@ class Claim(NopClaim):
     correct decisions with respect to host selection.
     """
 
-    def __init__(self, instance, tracker):
+    def __init__(self, instance, tracker, overhead=None):
         super(Claim, self).__init__()
         self.instance = jsonutils.to_primitive(instance)
         self.tracker = tracker
+
+        if not overhead:
+            overhead = {'memory_mb': 0}
+
+        self.overhead = overhead
 
     @property
     def disk_gb(self):
@@ -78,7 +83,7 @@ class Claim(NopClaim):
 
     @property
     def memory_mb(self):
-        return self.instance['memory_mb']
+        return self.instance['memory_mb'] + self.overhead['memory_mb']
 
     @property
     def vcpus(self):
@@ -194,8 +199,8 @@ class ResizeClaim(Claim):
     """Claim used for holding resources for an incoming resize/migration
     operation.
     """
-    def __init__(self, instance, instance_type, tracker):
-        super(ResizeClaim, self).__init__(instance, tracker)
+    def __init__(self, instance, instance_type, tracker, overhead=None):
+        super(ResizeClaim, self).__init__(instance, tracker, overhead=overhead)
         self.instance_type = instance_type
         self.migration = None
 
@@ -206,7 +211,7 @@ class ResizeClaim(Claim):
 
     @property
     def memory_mb(self):
-        return self.instance_type['memory_mb']
+        return self.instance_type['memory_mb'] + self.overhead['memory_mb']
 
     @property
     def vcpus(self):
