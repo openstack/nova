@@ -555,7 +555,8 @@ class ConductorManager(manager.Manager):
             if not hasattr(objinst, nova_object.get_attrname(field)):
                 # Avoid demand-loading anything
                 continue
-            if oldobj[field] != objinst[field]:
+            if (not hasattr(oldobj, nova_object.get_attrname(field)) or
+                    oldobj[field] != objinst[field]):
                 updates[field] = objinst._attr_to_primitive(field)
         # This is safe since a field named this would conflict with the
         # method anyway
