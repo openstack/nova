@@ -23,7 +23,6 @@ from nova import context
 from nova import db
 from nova import exception
 from nova.network import model as network_model
-from nova.objects import base
 from nova.objects import instance
 from nova.objects import security_group
 from nova.openstack.common import timeutils
@@ -105,8 +104,7 @@ class _TestInstanceObject(object):
         inst = instance.Instance.get_by_uuid(ctxt, 'uuid')
         # Make sure these weren't loaded
         for attr in instance.INSTANCE_OPTIONAL_FIELDS:
-            attrname = base.get_attrname(attr)
-            self.assertFalse(hasattr(inst, attrname))
+            self.assertFalse(inst.obj_attr_is_set(attr))
         self.assertRemotes()
 
     def test_get_with_expected(self):
@@ -120,8 +118,7 @@ class _TestInstanceObject(object):
         inst = instance.Instance.get_by_uuid(
             ctxt, 'uuid', expected_attrs=instance.INSTANCE_OPTIONAL_FIELDS)
         for attr in instance.INSTANCE_OPTIONAL_FIELDS:
-            attrname = base.get_attrname(attr)
-            self.assertTrue(hasattr(inst, attrname))
+            self.assertTrue(inst.obj_attr_is_set(attr))
         self.assertRemotes()
 
     def test_get_by_id(self):
