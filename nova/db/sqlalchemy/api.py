@@ -1790,7 +1790,7 @@ def instance_get_all_by_filters(context, filters, sort_key, sort_dir,
                                 filters, exact_match_filter_names)
 
     query_prefix = regex_filter(query_prefix, models.Instance, filters)
-    query_prefix = tag_filter(query_prefix, models.Instance,
+    query_prefix = tag_filter(context, query_prefix, models.Instance,
                               models.InstanceMetadata,
                               models.InstanceMetadata.instance_uuid,
                               filters)
@@ -1810,7 +1810,8 @@ def instance_get_all_by_filters(context, filters, sort_key, sort_dir,
     return _instances_fill_metadata(context, query_prefix.all(), manual_joins)
 
 
-def tag_filter(query, model, tag_model, tag_model_col, filters):
+def tag_filter(context, query, model, model_metadata,
+               model_uuid, filters):
     """Applies tag filtering to a query.
 
     Returns the updated query.  This method alters filters to remove
@@ -1821,13 +1822,12 @@ def tag_filter(query, model, tag_model, tag_model_col, filters):
     :param model: model object the query applies to
     :param filters: dictionary of filters
     """
-
-    if filters.get('filter', None) is None:
+    if filters.get('filter') is None:
         return query
 
     or_query = None
 
-    def to_list(val):
+    def _to_list(val):
         if isinstance(val, dict):
             val = val.values()
         if not isinstance(val, (tuple, list, set)):
@@ -1838,50 +1838,32 @@ def tag_filter(query, model, tag_model, tag_model_col, filters):
         if not isinstance(filter_block, dict):
             continue
 
-        filter_name = filter_block.get('name', None)
-
+        filter_name = filter_block.get('name')
         if filter_name is None:
             continue
 
+        tag_name = filter_name[4:]
+        tag_val = _to_list(filter_block.get('value'))
+
         if filter_name.startswith('tag-'):
-            val = filter_block.get('value', None)
-            if val is None:
-                continue
-
-            val = to_list(val)
-            filter_name = filter_name[4:]
-
-            if filter_name not in ['key', 'value']:
-                msg = "Invalid field name: %s" % filter_name
+            if tag_name not in ['key', 'value']:
+                msg = _("Invalid field name: %s") % tag_name
                 raise exception.InvalidParameterValue(err=msg)
-
-            if filter_name == 'key':
-                subq = tag_model.key.in_(val)
-            else:
-                subq = tag_model.value.in_(val)
-
-            if or_query is None:
-                or_query = subq
-            else:
-                or_query = or_(or_query, subq)
+            subq = getattr(model_metadata, tag_name).in_(tag_val)
+            or_query = subq if or_query is None else or_(or_query, subq)
 
         elif filter_name.startswith('tag:'):
-            val = filter_block.get('value', None)
-            if val is None:
-                continue
-
-            val = to_list(val)
-            filter_name = filter_name[4:]
-
-            subq = query.session.query(tag_model_col)
-            subq = subq.filter(tag_model.key == filter_name)
-            subq = subq.filter(tag_model.value.in_(val))
+            subq = model_query(context, model_uuid,
+                session=query.session, base_model=model_metadata).\
+                filter_by(key=tag_name).\
+                filter(model_metadata.value.in_(tag_val))
             query = query.filter(model.uuid.in_(subq))
 
     if or_query is not None:
-        col_q = query.session.query(tag_model_col)
-        col_q = col_q.filter(or_query)
-        query = query.filter(model.uuid.in_(col_q))
+        subq = model_query(context, model_uuid,
+                session=query.session, base_model=model_metadata).\
+                filter(or_query)
+        query = query.filter(model.uuid.in_(subq))
 
     return query
 
