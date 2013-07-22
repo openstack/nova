@@ -580,29 +580,6 @@ class Controller(wsgi.Controller):
     def _validate_server_name(self, value):
         self._check_string_length(value, 'Server name', max_length=255)
 
-    def _validate_int_value(self, str_value, str_name,
-            min_value=None, max_value=None):
-        try:
-            value = int(str(str_value))
-        except ValueError:
-            msg = _('%(value_name)s must be an integer')
-            raise exc.HTTPBadRequest(explanation=msg % (
-                {'value_name': str_name}))
-
-        if min_value is not None:
-            if value < min_value:
-                msg = _('%(value_name)s must be >= %(min_value)d')
-                raise exc.HTTPBadRequest(explanation=msg % (
-                    {'value_name': str_name,
-                     'min_value': min_value}))
-        if max_value is not None:
-            if value > max_value:
-                msg = _('%{value_name}s must be <= %(max_value)d')
-                raise exc.HTTPBadRequest(explanation=msg % (
-                    {'value_name': str_name,
-                     'max_value': max_value}))
-        return value
-
     def _validate_block_device(self, bd):
         self._check_string_length(bd['device_name'],
                 'Device name', max_length=255)
@@ -612,8 +589,11 @@ class Controller(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=msg)
 
         if 'volume_size' in bd:
-            self._validate_int_value(bd['volume_size'], 'volume_size',
-                                     min_value=0)
+            try:
+                bd['volume_size'] = utils.validate_integer(
+                    bd['volume_size'], 'volume_size', min_value=0)
+            except exception.InvalidInput as e:
+                raise exc.HTTPBadRequest(explanation=e.format_message())
 
     def _get_injected_files(self, personality):
         """Create a list of injected files from the personality attribute.
@@ -874,10 +854,13 @@ class Controller(wsgi.Controller):
             min_count = server_dict.get('min_count', 1)
             max_count = server_dict.get('max_count', min_count)
 
-        min_count = self._validate_int_value(min_count, "min_count",
-                                             min_value=1)
-        max_count = self._validate_int_value(max_count, "max_count",
-                                             min_value=1)
+        try:
+            min_count = utils.validate_integer(
+                min_count, "min_count", min_value=1)
+            max_count = utils.validate_integer(
+                max_count, "max_count", min_value=1)
+        except exception.InvalidInput as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
 
         if min_count > max_count:
             msg = _('min_count must be <= max_count')
