@@ -396,14 +396,13 @@ class API(base.Base):
         """Return the port for the client given the port id."""
         return neutronv2.get_client(context).show_port(port_id)
 
-    def get_instance_nw_info(self, context, instance, conductor_api=None,
-                             networks=None):
+    def get_instance_nw_info(self, context, instance, networks=None):
         """Return network information for specified instance
            and update cache.
         """
         result = self._get_instance_nw_info(context, instance, networks)
         update_instance_info_cache(self, context, instance, result,
-                                   conductor_api)
+                                   update_cells=False)
         return result
 
     def _get_instance_nw_info(self, context, instance, networks=None):

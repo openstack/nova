@@ -140,8 +140,8 @@ class InstanceMetadata():
 
         # get network info, and the rendered network template
         if network_info is None:
-            network_info = network.API().get_instance_nw_info(ctxt, instance,
-                                                          conductor_api=capi)
+            network_info = network.API().get_instance_nw_info(ctxt,
+                                                              instance)
 
         self.network_config = None
         cfg = netutils.get_injected_network_template(network_info)

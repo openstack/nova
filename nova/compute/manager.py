@@ -854,7 +854,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             instance = self.conductor_api.instance_get_by_uuid(
                 context, instance['uuid'])
         network_info = self.network_api.get_instance_nw_info(context,
-                instance, conductor_api=self.conductor_api)
+                                                             instance)
         return network_info
 
     def _legacy_nw_info(self, network_info):
@@ -3556,8 +3556,9 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     def detach_interface(self, context, instance, port_id):
         """Detach an network adapter from an instance."""
-        network_info = self.network_api.get_instance_nw_info(
-            context.elevated(), instance, conductor_api=self.conductor_api)
+        # FIXME(comstud): Why does this need elevated context?
+        network_info = self._get_instance_nw_info(context.elevated(),
+                                                  instance)
         legacy_nwinfo = self._legacy_nw_info(network_info)
         condemned = None
         for (network, mapping) in legacy_nwinfo:
