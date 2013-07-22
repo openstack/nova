@@ -584,12 +584,13 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self.vm_info = vm_info
         self.vm = vm
 
-    def check_vm_record(self, conn, check_injection=False):
-        # Check that m1.large above turned into the right thing.
-        instance_type = db.flavor_get_by_name(conn, 'm1.large')
+    def check_vm_record(self, conn, instance_type_id, check_injection):
+        instance_type = db.flavor_get(conn, instance_type_id)
         mem_kib = long(instance_type['memory_mb']) << 10
         mem_bytes = str(mem_kib << 10)
         vcpus = instance_type['vcpus']
+        vcpu_weight = instance_type['vcpu_weight']
+
         self.assertEquals(self.vm_info['max_mem'], mem_kib)
         self.assertEquals(self.vm_info['mem'], mem_kib)
         self.assertEquals(self.vm['memory_static_max'], mem_bytes)
@@ -597,6 +598,11 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self.assertEquals(self.vm['memory_dynamic_min'], mem_bytes)
         self.assertEquals(self.vm['VCPUs_max'], str(vcpus))
         self.assertEquals(self.vm['VCPUs_at_startup'], str(vcpus))
+        if vcpu_weight == None:
+            self.assertEquals(self.vm['VCPUs_params'], {})
+        else:
+            self.assertEquals(self.vm['VCPUs_params'],
+                              {'weight': str(vcpu_weight)})
 
         # Check that the VM is running according to Nova
         self.assertEquals(self.vm_info['state'], power_state.RUNNING)
@@ -736,7 +742,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self.conn.spawn(self.context, instance, image_meta, injected_files,
                         'herp', network_info, block_device_info)
         self.create_vm_record(self.conn, os_type, instance['name'])
-        self.check_vm_record(self.conn, check_injection)
+        self.check_vm_record(self.conn, instance_type_id, check_injection)
         self.assertTrue(instance['os_type'])
         self.assertTrue(instance['architecture'])
 
@@ -815,7 +821,8 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
 
     def test_spawn_vhd_glance_windows(self):
         self._test_spawn(IMAGE_VHD, None, None,
-                         os_type="windows", architecture="i386")
+                         os_type="windows", architecture="i386",
+                         instance_type_id=5)
         self.check_vm_params_for_windows()
 
     def test_spawn_iso_glance(self):
