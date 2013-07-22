@@ -60,7 +60,18 @@ def no_db_session_in_public_api(logical_line, filename):
             yield (0, "N309: public db api methods may not accept session")
 
 
+def use_timeutils_utcnow(logical_line):
+    msg = "N310: timeutils.%s() must be used instead of datetime.%s()"
+
+    datetime_funcs = ['now', 'utcnow']
+    for f in datetime_funcs:
+        pos = logical_line.find('datetime.%s' % f)
+        if pos != -1:
+            yield (pos, msg % (f, f))
+
+
 def factory(register):
     register(import_no_db_in_virt)
     register(except_python3x_compatible)
     register(no_db_session_in_public_api)
+    register(use_timeutils_utcnow)
