@@ -1,6 +1,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright 2011 OpenStack Foundation
+# Copyright 2013 IBM Corp.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -22,13 +23,13 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova.openstack.common.gettextutils import _
-from nova.openstack.common import strutils
 
-ALIAS = 'OS-DCF'
-XMLNS_DCF = "http://docs.openstack.org/compute/ext/disk_config/api/v1.1"
-API_DISK_CONFIG = "%s:diskConfig" % ALIAS
+ALIAS = 'os-disk-config'
+XMLNS_DCF = "http://docs.openstack.org/compute/ext/disk_config/api/v3"
+API_DISK_CONFIG = "%s:disk_config" % ALIAS
 INTERNAL_DISK_CONFIG = "auto_disk_config"
-authorize = extensions.soft_extension_authorizer('compute', 'disk_config')
+authorize = extensions.soft_extension_authorizer('compute',
+                                                 'v3:' + ALIAS)
 
 
 def disk_config_to_api(value):
@@ -45,51 +46,10 @@ def disk_config_from_api(value):
         raise exc.HTTPBadRequest(explanation=msg)
 
 
-class ImageDiskConfigTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('image')
-        root.set('{%s}diskConfig' % XMLNS_DCF, API_DISK_CONFIG)
-        return xmlutil.SlaveTemplate(root, 1, nsmap={ALIAS: XMLNS_DCF})
-
-
-class ImagesDiskConfigTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('images')
-        elem = xmlutil.SubTemplateElement(root, 'image', selector='images')
-        elem.set('{%s}diskConfig' % XMLNS_DCF, API_DISK_CONFIG)
-        return xmlutil.SlaveTemplate(root, 1, nsmap={ALIAS: XMLNS_DCF})
-
-
-class ImageDiskConfigController(wsgi.Controller):
-    def _add_disk_config(self, context, images):
-        for image in images:
-            metadata = image['metadata']
-            if INTERNAL_DISK_CONFIG in metadata:
-                raw_value = metadata[INTERNAL_DISK_CONFIG]
-                value = strutils.bool_from_string(raw_value)
-                image[API_DISK_CONFIG] = disk_config_to_api(value)
-
-    @wsgi.extends
-    def show(self, req, resp_obj, id):
-        context = req.environ['nova.context']
-        if 'image' in resp_obj.obj and authorize(context):
-            resp_obj.attach(xml=ImageDiskConfigTemplate())
-            image = resp_obj.obj['image']
-            self._add_disk_config(context, [image])
-
-    @wsgi.extends
-    def detail(self, req, resp_obj):
-        context = req.environ['nova.context']
-        if 'images' in resp_obj.obj and authorize(context):
-            resp_obj.attach(xml=ImagesDiskConfigTemplate())
-            images = resp_obj.obj['images']
-            self._add_disk_config(context, images)
-
-
 class ServerDiskConfigTemplate(xmlutil.TemplateBuilder):
     def construct(self):
         root = xmlutil.TemplateElement('server')
-        root.set('{%s}diskConfig' % XMLNS_DCF, API_DISK_CONFIG)
+        root.set('{%s}disk_config' % XMLNS_DCF, API_DISK_CONFIG)
         return xmlutil.SlaveTemplate(root, 1, nsmap={ALIAS: XMLNS_DCF})
 
 
@@ -97,7 +57,7 @@ class ServersDiskConfigTemplate(xmlutil.TemplateBuilder):
     def construct(self):
         root = xmlutil.TemplateElement('servers')
         elem = xmlutil.SubTemplateElement(root, 'server', selector='servers')
-        elem.set('{%s}diskConfig' % XMLNS_DCF, API_DISK_CONFIG)
+        elem.set('{%s}disk_config' % XMLNS_DCF, API_DISK_CONFIG)
         return xmlutil.SlaveTemplate(root, 1, nsmap={ALIAS: XMLNS_DCF})
 
 
@@ -170,19 +130,55 @@ class ServerDiskConfigController(wsgi.Controller):
             yield
 
 
-class Disk_config(extensions.ExtensionDescriptor):
+class DiskConfig(extensions.V3APIExtensionBase):
     """Disk Management Extension."""
 
     name = "DiskConfig"
     alias = ALIAS
     namespace = XMLNS_DCF
-    updated = "2011-09-27T00:00:00+00:00"
+    version = 1
 
     def get_controller_extensions(self):
         servers_extension = extensions.ControllerExtension(
-                self, 'servers', ServerDiskConfigController())
+            self, 'servers', ServerDiskConfigController())
 
-        images_extension = extensions.ControllerExtension(
-                self, 'images', ImageDiskConfigController())
+        return [servers_extension]
 
-        return [servers_extension, images_extension]
+    def get_resources(self):
+        return []
+
+    def server_create(self, server_dict, create_kwargs):
+        create_kwargs['auto_disk_config'] = server_dict.get(
+            'auto_disk_config')
+
+    def server_xml_extract_server_deserialize(self, server_node, server_dict):
+        auto_disk_config =\
+            server_node.getAttribute('os-disk-config:disk_config')
+        if auto_disk_config:
+            server_dict['os-disk-config:disk_config'] = auto_disk_config
+
+    def server_rebuild(self, rebuild_dict, rebuild_kwargs):
+        if 'auto_disk_config' in rebuild_dict:
+            rebuild_kwargs['auto_disk_config'] = rebuild_dict[
+                'auto_disk_config']
+
+    def server_xml_extract_rebuild_deserialize(self, rebuild_node,
+                                               rebuild_dict):
+        if rebuild_node.hasAttribute("os-disk-config:disk_config"):
+            rebuild_dict['os-disk-config:disk_config'] =\
+                rebuild_node.getAttribute("os-disk-config:disk_config")
+
+    def server_resize(self, resize_dict, resize_kwargs):
+        if 'auto_disk_config' in resize_dict:
+            resize_kwargs['auto_disk_config'] = resize_dict[
+                'auto_disk_config']
+
+    def server_xml_extract_resize_deserialize(self, resize_node,
+                                              resize_dict):
+        if resize_node.hasAttribute("os-disk-config:disk_config"):
+            resize_dict['os-disk-config:disk_config'] =\
+                resize_node.getAttribute("os-disk-config:disk_config")
+
+    def server_update(self, update_dict, update_kwargs):
+        if 'auto_disk_config' in update_dict:
+            update_kwargs['auto_disk_config'] = update_dict['auto_disk_config']
