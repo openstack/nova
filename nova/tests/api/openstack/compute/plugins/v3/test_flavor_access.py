@@ -136,8 +136,8 @@ class FlavorAccessTest(test.TestCase):
 
     def test_list_flavor_access_public(self):
         # query os-flavor-access on public flavor should return 404
-        req = fakes.HTTPRequest.blank('/v3/fake/flavors/os-flavor-access',
-                                      use_admin_context=True)
+        req = fakes.HTTPRequestV3.blank('/flavors/os-flavor-access',
+                                        use_admin_context=True)
         self.assertRaises(exc.HTTPNotFound,
                           self.flavor_access_controller.index,
                           self.req, '1')
@@ -151,38 +151,38 @@ class FlavorAccessTest(test.TestCase):
 
     def test_list_flavor_with_admin_default_proj1(self):
         expected = {'flavors': [{'id': '0'}, {'id': '1'}]}
-        req = fakes.HTTPRequest.blank('/v3/fake/flavors',
-                                      use_admin_context=True)
+        req = fakes.HTTPRequestV3.blank('/flavors',
+                                        use_admin_context=True)
         req.environ['nova.context'].project_id = 'proj1'
         result = self.flavor_controller.index(req)
         self._verify_flavor_list(result['flavors'], expected['flavors'])
 
     def test_list_flavor_with_admin_default_proj2(self):
         expected = {'flavors': [{'id': '0'}, {'id': '1'}, {'id': '2'}]}
-        req = fakes.HTTPRequest.blank('/v3/fake/flavors',
-                                      use_admin_context=True)
+        req = fakes.HTTPRequestV3.blank('/flavors',
+                                        use_admin_context=True)
         req.environ['nova.context'].project_id = 'proj2'
         result = self.flavor_controller.index(req)
         self._verify_flavor_list(result['flavors'], expected['flavors'])
 
     def test_list_flavor_with_admin_ispublic_true(self):
         expected = {'flavors': [{'id': '0'}, {'id': '1'}]}
-        req = fakes.HTTPRequest.blank('/v3/fake/flavors?is_public=true',
-                                      use_admin_context=True)
+        req = fakes.HTTPRequestV3.blank('/flavors?is_public=true',
+                                        use_admin_context=True)
         result = self.flavor_controller.index(req)
         self._verify_flavor_list(result['flavors'], expected['flavors'])
 
     def test_list_flavor_with_admin_ispublic_false(self):
         expected = {'flavors': [{'id': '2'}, {'id': '3'}]}
-        req = fakes.HTTPRequest.blank('/v3/fake/flavors?is_public=false',
-                                      use_admin_context=True)
+        req = fakes.HTTPRequestV3.blank('/flavors?is_public=false',
+                                        use_admin_context=True)
         result = self.flavor_controller.index(req)
         self._verify_flavor_list(result['flavors'], expected['flavors'])
 
     def test_list_flavor_with_admin_ispublic_false_proj2(self):
         expected = {'flavors': [{'id': '2'}, {'id': '3'}]}
-        req = fakes.HTTPRequest.blank('/v3/fake/flavors?is_public=false',
-                                      use_admin_context=True)
+        req = fakes.HTTPRequestV3.blank('/flavors?is_public=false',
+                                        use_admin_context=True)
         req.environ['nova.context'].project_id = 'proj2'
         result = self.flavor_controller.index(req)
         self._verify_flavor_list(result['flavors'], expected['flavors'])
@@ -190,36 +190,36 @@ class FlavorAccessTest(test.TestCase):
     def test_list_flavor_with_admin_ispublic_none(self):
         expected = {'flavors': [{'id': '0'}, {'id': '1'}, {'id': '2'},
                                 {'id': '3'}]}
-        req = fakes.HTTPRequest.blank('/v3/fake/flavors?is_public=none',
-                                      use_admin_context=True)
+        req = fakes.HTTPRequestV3.blank('/flavors?is_public=none',
+                                        use_admin_context=True)
         result = self.flavor_controller.index(req)
         self._verify_flavor_list(result['flavors'], expected['flavors'])
 
     def test_list_flavor_with_no_admin_default(self):
         expected = {'flavors': [{'id': '0'}, {'id': '1'}]}
-        req = fakes.HTTPRequest.blank('/v3/fake/flavors',
-                                      use_admin_context=False)
+        req = fakes.HTTPRequestV3.blank('/flavors',
+                                        use_admin_context=False)
         result = self.flavor_controller.index(req)
         self._verify_flavor_list(result['flavors'], expected['flavors'])
 
     def test_list_flavor_with_no_admin_ispublic_true(self):
         expected = {'flavors': [{'id': '0'}, {'id': '1'}]}
-        req = fakes.HTTPRequest.blank('/v3/fake/flavors?is_public=true',
-                                      use_admin_context=False)
+        req = fakes.HTTPRequestV3.blank('/flavors?is_public=true',
+                                        use_admin_context=False)
         result = self.flavor_controller.index(req)
         self._verify_flavor_list(result['flavors'], expected['flavors'])
 
     def test_list_flavor_with_no_admin_ispublic_false(self):
         expected = {'flavors': [{'id': '0'}, {'id': '1'}]}
-        req = fakes.HTTPRequest.blank('/v3/fake/flavors?is_public=false',
-                                      use_admin_context=False)
+        req = fakes.HTTPRequestV3.blank('/flavors?is_public=false',
+                                        use_admin_context=False)
         result = self.flavor_controller.index(req)
         self._verify_flavor_list(result['flavors'], expected['flavors'])
 
     def test_list_flavor_with_no_admin_ispublic_none(self):
         expected = {'flavors': [{'id': '0'}, {'id': '1'}]}
-        req = fakes.HTTPRequest.blank('/v3/fake/flavors?is_public=none',
-                                      use_admin_context=False)
+        req = fakes.HTTPRequestV3.blank('/flavors?is_public=none',
+                                        use_admin_context=False)
         result = self.flavor_controller.index(req)
         self._verify_flavor_list(result['flavors'], expected['flavors'])
 
@@ -253,12 +253,48 @@ class FlavorAccessTest(test.TestCase):
                        stub_add_flavor_access)
         expected = {'flavor_access':
             [{'flavor_id': '3', 'tenant_id': 'proj3'}]}
-        body = {'addTenantAccess': {'tenant': 'proj2'}}
-        req = fakes.HTTPRequest.blank('/v3/fake/flavors/2/action',
-                                      use_admin_context=True)
+        body = {'add_tenant_access': {'tenant_id': 'proj2'}}
+        req = fakes.HTTPRequestV3.blank('/flavors/3/action',
+                                        use_admin_context=True)
         result = self.flavor_action_controller.\
-            _addTenantAccess(req, '3', body)
+            _add_tenant_access(req, '3', body)
         self.assertEqual(result, expected)
+
+    def test_add_tenant_access_with_non_existed_flavor(self):
+        def stub_add_flavor_access(flavorid, projectid, ctxt=None):
+            raise exception.FlavorNotFound(flavor_id=flavorid)
+        self.stubs.Set(flavors, 'add_flavor_access',
+                       stub_add_flavor_access)
+        body = {'add_tenant_access': {'tenant_id': 'proj2'}}
+        req = fakes.HTTPRequestV3.blank('/flavors/3/action',
+                                        use_admin_context=True)
+        self.assertRaises(exc.HTTPNotFound,
+                          self.flavor_action_controller._add_tenant_access,
+                          req, '3', body)
+
+    def test_add_tenant_access_without_tenant_id(self):
+        def stub_add_flavor_access(flavorid, projectid, ctxt=None):
+            raise exception.FlavorNotFound(flavor_id=flavorid)
+        self.stubs.Set(flavors, 'add_flavor_access',
+                       stub_add_flavor_access)
+        body = {'add_tenant_access': {}}
+        req = fakes.HTTPRequestV3.blank('/flavors/3/action',
+                                        use_admin_context=True)
+        self.assertRaises(exc.HTTPBadRequest,
+                          self.flavor_action_controller._add_tenant_access,
+                          req, '3', body)
+
+    def test_add_tenant_access_with_invalid_request(self):
+        def stub_add_flavor_access(flavorid, projectid, ctxt=None):
+            raise exception.FlavorNotFound(flavor_id=flavorid)
+        self.stubs.Set(flavors, 'add_flavor_access',
+                       stub_add_flavor_access)
+        body = {'add_tenant_access': None}
+        req = fakes.HTTPRequestV3.blank('/flavors/3/action',
+                                        use_admin_context=True)
+        self.assertRaises(exc.HTTPBadRequest,
+                          self.flavor_action_controller._add_tenant_access,
+                          req, '3', body)
 
     def test_add_tenant_access_with_already_added_access(self):
         def stub_add_flavor_access(flavorid, projectid, ctxt=None):
@@ -266,12 +302,12 @@ class FlavorAccessTest(test.TestCase):
                                                project_id=projectid)
         self.stubs.Set(flavors, 'add_flavor_access',
                        stub_add_flavor_access)
-        body = {'addTenantAccess': {'tenant': 'proj2'}}
-        req = fakes.HTTPRequest.blank('/v3/fake/flavors/2/action',
-                                      use_admin_context=True)
+        body = {'add_tenant_access': {'tenant_id': 'proj2'}}
+        req = fakes.HTTPRequestV3.blank('/flavors/3/action',
+                                        use_admin_context=True)
         self.assertRaises(exc.HTTPConflict,
-                          self.flavor_action_controller._addTenantAccess,
-                          self.req, '3', body)
+                          self.flavor_action_controller._add_tenant_access,
+                          req, '3', body)
 
     def test_remove_tenant_access_with_bad_access(self):
         def stub_remove_flavor_access(flavorid, projectid, ctxt=None):
@@ -279,12 +315,48 @@ class FlavorAccessTest(test.TestCase):
                                                  project_id=projectid)
         self.stubs.Set(flavors, 'remove_flavor_access',
                        stub_remove_flavor_access)
-        body = {'removeTenantAccess': {'tenant': 'proj2'}}
-        req = fakes.HTTPRequest.blank('/v3/fake/flavors/2/action',
-                                      use_admin_context=True)
+        body = {'remove_tenant_access': {'tenant_id': 'proj2'}}
+        req = fakes.HTTPRequestV3.blank('/flavors/3/action',
+                                        use_admin_context=True)
         self.assertRaises(exc.HTTPNotFound,
-                          self.flavor_action_controller._removeTenantAccess,
-                          self.req, '3', body)
+                          self.flavor_action_controller._remove_tenant_access,
+                          req, '3', body)
+
+    def test_remove_tenant_access_with_non_existed_flavor(self):
+        def stub_remove_flavor_access(flavorid, projectid, ctxt=None):
+            raise exception.FlavorNotFound(flavor_id=flavorid)
+        self.stubs.Set(flavors, 'remove_flavor_access',
+                       stub_remove_flavor_access)
+        body = {'remove_tenant_access': {'tenant_id': 'proj2'}}
+        req = fakes.HTTPRequestV3.blank('/flavors/3/action',
+                                        use_admin_context=True)
+        self.assertRaises(exc.HTTPNotFound,
+                          self.flavor_action_controller._remove_tenant_access,
+                          req, '3', body)
+
+    def test_remove_tenant_access_without_tenant_id(self):
+        def stub_remove_flavor_access(flavorid, projectid, ctxt=None):
+            raise exception.FlavorNotFound(flavor_id=flavorid)
+        self.stubs.Set(flavors, 'remove_flavor_access',
+                       stub_remove_flavor_access)
+        body = {'remove_tenant_access': {}}
+        req = fakes.HTTPRequestV3.blank('/flavors/3/action',
+                                        use_admin_context=True)
+        self.assertRaises(exc.HTTPBadRequest,
+                          self.flavor_action_controller._remove_tenant_access,
+                          req, '3', body)
+
+    def test_remove_tenant_access_with_invalid_request(self):
+        def stub_remove_flavor_access(flavorid, projectid, ctxt=None):
+            raise exception.FlavorNotFound(flavor_id=flavorid)
+        self.stubs.Set(flavors, 'remove_flavor_access',
+                       stub_remove_flavor_access)
+        body = {'remove_tenant_access': None}
+        req = fakes.HTTPRequestV3.blank('/flavors/3/action',
+                                        use_admin_context=True)
+        self.assertRaises(exc.HTTPBadRequest,
+                          self.flavor_action_controller._remove_tenant_access,
+                          req, '3', body)
 
 
 class FlavorAccessSerializerTest(test.TestCase):
