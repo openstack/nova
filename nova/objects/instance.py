@@ -308,6 +308,27 @@ class Instance(base.NovaObject):
         db_inst = db.instance_create(context, updates)
         Instance._from_db_object(context, self, db_inst, expected_attrs)
 
+    @base.remotable
+    def destroy(self, context):
+        if not self.obj_attr_is_set('id'):
+            raise exception.ObjectActionError(action='destroy',
+                                              reason='already destroyed')
+        if not self.obj_attr_is_set('uuid'):
+            raise exception.ObjectActionError(action='destroy',
+                                              reason='no uuid')
+        if not self.obj_attr_is_set('host') or not self.host:
+            # NOTE(danms): If our host is not set, avoid a race
+            constraint = db.constraint(host=db.equal_any(None))
+        else:
+            constraint = None
+
+        try:
+            db.instance_destroy(context, self.uuid, constraint=constraint)
+        except exception.ConstraintNotMet:
+            raise exception.ObjectActionError(action='destroy',
+                                              reason='host changed')
+        delattr(self, base.get_attrname('id'))
+
     def _save_info_cache(self, context):
         self.info_cache.save(context)
 

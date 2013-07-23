@@ -491,6 +491,35 @@ class _TestInstanceObject(object):
         inst.info_cache.network_info = []
         inst.create(ctxt)
 
+    def test_destroy_stubbed(self):
+        ctxt = context.get_admin_context()
+        self.mox.StubOutWithMock(db, 'instance_destroy')
+        db.instance_destroy(ctxt, 'fake-uuid', constraint=None)
+        self.mox.ReplayAll()
+        inst = instance.Instance()
+        inst.id = 1
+        inst.uuid = 'fake-uuid'
+        inst.host = 'foo'
+        inst.destroy(ctxt)
+
+    def test_destroy(self):
+        ctxt = context.get_admin_context()
+        db_inst = db.instance_create(ctxt, {})
+        inst = instance.Instance()
+        inst.id = db_inst['id']
+        inst.uuid = db_inst['uuid']
+        inst.destroy(ctxt)
+        self.assertRaises(exception.InstanceNotFound,
+                          db.instance_get_by_uuid, ctxt, db_inst['uuid'])
+
+    def test_destroy_host_constraint(self):
+        ctxt = context.get_admin_context()
+        db_inst = db.instance_create(ctxt, {'host': 'foo'})
+        inst = instance.Instance.get_by_uuid(ctxt, db_inst['uuid'])
+        inst.host = None
+        self.assertRaises(exception.ObjectActionError,
+                          inst.destroy)
+
 
 class TestInstanceObject(test_objects._LocalTest,
                          _TestInstanceObject):
