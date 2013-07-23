@@ -18,6 +18,7 @@ Unit Tests for cells scheduler filters.
 
 from nova.cells import filters
 from nova import context
+from nova.db.sqlalchemy import models
 from nova import test
 from nova.tests.cells import fakes
 
@@ -51,6 +52,49 @@ class _FilterTestClass(test.TestCase):
         return self.filter_handler.get_filtered_objects(self.filter_classes,
                                                         cells,
                                                         filter_properties)
+
+
+class ImagePropertiesFilter(_FilterTestClass):
+    filter_cls_name = \
+        'nova.cells.filters.image_properties.ImagePropertiesFilter'
+
+    def setUp(self):
+        super(ImagePropertiesFilter, self).setUp()
+        self.cell1 = models.Cell()
+        self.cell2 = models.Cell()
+        self.cell3 = models.Cell()
+        self.cells = [self.cell1, self.cell2, self.cell3]
+        for cell in self.cells:
+            cell.capabilities = {}
+        self.filter_props = {'context': self.context, 'request_spec': {}}
+
+    def test_missing_image_properties(self):
+        self.assertEqual(self.cells,
+                         self._filter_cells(self.cells, self.filter_props))
+
+    def test_missing_hypervisor_version_requires(self):
+        self.filter_props['request_spec'] = {'image': {'properties': {}}}
+        for cell in self.cells:
+            cell.capabilities = {"prominent_hypervisor_version": [u"6.2"]}
+        self.assertEqual(self.cells,
+                         self._filter_cells(self.cells, self.filter_props))
+
+    def test_missing_hypervisor_version_in_cells(self):
+        image = {'properties': {'hypervisor_version_requires': '>6.2.1'}}
+        self.filter_props['request_spec'] = {'image': image}
+        self.assertEqual(self.cells,
+                         self._filter_cells(self.cells, self.filter_props))
+
+    def test_cells_matching_hypervisor_version(self):
+        image = {'properties': {'hypervisor_version_requires': '>6.0, <=6.3'}}
+        self.filter_props['request_spec'] = {'image': image}
+
+        self.cell1.capabilities = {"prominent_hypervisor_version": [u"6.2"]}
+        self.cell2.capabilities = {"prominent_hypervisor_version": [u"6.3"]}
+        self.cell3.capabilities = {"prominent_hypervisor_version": [u"6.0"]}
+
+        self.assertEqual([self.cell1, self.cell2],
+                         self._filter_cells(self.cells, self.filter_props))
 
 
 class TestTargetCellFilter(_FilterTestClass):
