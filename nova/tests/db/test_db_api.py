@@ -1262,24 +1262,6 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
             sys_meta = utils.metadata_to_dict(inst['system_metadata'])
             self.assertEqual(sys_meta, self.sample_data['system_metadata'])
 
-    def test_instance_metadata_get_all_query(self):
-        i1 = self.create_instance_with_args(metadata={'k1': 'v1'})
-        i2 = self.create_instance_with_args(metadata={'k2': 'v2'})
-        expected1 = {'instance_id': i1['uuid'], 'key': 'k1', 'value': 'v1'}
-        expected2 = {'instance_id': i2['uuid'], 'key': 'k2', 'value': 'v2'}
-        result = db.instance_metadata_get_all(self.ctxt, [])
-        self.assertEqual(sorted(result), sorted([expected1, expected2]))
-        result = db.instance_metadata_get_all(self.ctxt, [{'key': 'k1'}])
-        self.assertEqual(result, [expected1])
-        result = db.instance_metadata_get_all(self.ctxt, [{'value': 'v2'}])
-        self.assertEqual(result, [expected2])
-        result = db.instance_metadata_get_all(self.ctxt,
-                                              [{'value': 'v1'},
-                                               {'key': 'k2'}])
-        self.assertEqual(sorted(result), sorted([expected1, expected2]))
-        result = db.instance_metadata_get_all(self.ctxt, [{'value': 'v3'}])
-        self.assertEqual(result, [])
-
     def test_instance_update(self):
         instance = self.create_instance_with_args()
         metadata = {'host': 'bar', 'key2': 'wuff'}
@@ -1723,23 +1705,6 @@ class InstanceMetadataTestCase(test.TestCase):
                                                     {'key': 'value'}})
         self.assertEqual({'key': 'value'}, db.instance_metadata_get(
                                             self.ctxt, instance['uuid']))
-
-    def test_instance_metadata_get_all(self):
-        instances = []
-        expected = []
-        for i in range(2):
-            instances.append(db.instance_create(self.ctxt,
-                        {'metadata': {'key%d' % i: 'value%d' % i}}))
-            expected.append({'instance_id': instances[i]['uuid'],
-                        'key': 'key%d' % i, 'value': 'value%d' % i})
-        self.assertEqual(expected, db.instance_metadata_get_all(self.ctxt, []))
-        self.assertEqual(expected[:1], db.instance_metadata_get_all(self.ctxt,
-                                                        [{'key': 'key0'}]))
-        self.assertEqual(expected[1:2], db.instance_metadata_get_all(self.ctxt,
-                                                        [{'value': 'value1'}]))
-        self.assertEqual(expected[:2], db.instance_metadata_get_all(self.ctxt,
-                                                        [{'value': 'value1'},
-                                                         {'key': 'key0'}]))
 
     def test_instance_metadata_delete(self):
         instance = db.instance_create(self.ctxt,
