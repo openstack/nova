@@ -3543,7 +3543,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         """Use hotplug to add an network adapter to an instance."""
         network_info = self.network_api.allocate_port_for_instance(
             context, instance, port_id, network_id, requested_ip,
-            self.conductor_api)
+            conductor_api=self.conductor_api)
         if len(network_info) != 1:
             LOG.error(_('allocate_port_for_instance returned %(ports)s ports')
                       % dict(ports=len(network_info)))
@@ -3570,8 +3570,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                            "attached") % port_id)
 
         self.network_api.deallocate_port_for_instance(context, instance,
-                                                      port_id,
-                                                      self.conductor_api)
+            port_id, conductor_api=self.conductor_api)
         self.driver.detach_interface(instance, [condemned])
 
     def _get_compute_info(self, context, host):
