@@ -894,7 +894,7 @@ class CellError(NovaException):
 
 
 class CellsUpdateUnsupported(NovaException):
-    message = _("Cannot update cells configuration file.")
+    msg_fmt = _("Cannot update cells configuration file.")
 
 
 class InstanceUnknownCell(NotFound):
