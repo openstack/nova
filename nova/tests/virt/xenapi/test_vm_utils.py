@@ -243,7 +243,12 @@ class FetchVhdImageTestCase(test.TestCase):
                 self.session, 'call_plugin_serialized_with_retry')
         self.session.call_plugin_serialized_with_retry(
                 'glance', 'download_vhd', 0, mox.IgnoreArg(),
-                auth_token='auth_token',
+                extra_headers={'X-Service-Catalog': '[]',
+                               'X-Auth-Token': 'auth_token',
+                               'X-Roles': '',
+                               'X-Tenant-Id': None,
+                               'X-User-Id': None,
+                               'X-Identity-Status': 'Confirmed'},
                 image_id='image_id',
                 uuid_stack=["uuid_stack"],
                 sr_path='sr_path').AndReturn({'root': {'uuid': 'vdi'}})
@@ -316,7 +321,12 @@ class FetchVhdImageTestCase(test.TestCase):
                 self.session, 'call_plugin_serialized_with_retry')
         self.session.call_plugin_serialized_with_retry(
                 'glance', 'download_vhd', 0, mox.IgnoreArg(),
-                auth_token='auth_token',
+                extra_headers={'X-Service-Catalog': '[]',
+                               'X-Auth-Token': 'auth_token',
+                               'X-Roles': '',
+                               'X-Tenant-Id': None,
+                               'X-User-Id': None,
+                               'X-Identity-Status': 'Confirmed'},
                 image_id='image_id',
                 uuid_stack=["uuid_stack"],
                 sr_path='sr_path').AndReturn({'root': {'uuid': 'vdi'}})

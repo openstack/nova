@@ -16,8 +16,6 @@
 #    under the License.
 
 
-import mox
-
 from nova import context
 from nova import exception
 from nova.tests.virt.xenapi import stubs
@@ -31,7 +29,6 @@ class TestGlanceStore(stubs.XenAPITestBase):
     def setUp(self):
         super(TestGlanceStore, self).setUp()
         self.store = glance.GlanceStore()
-        self.mox = mox.Mox()
 
         self.flags(glance_host='1.1.1.1',
                    glance_port=123,
@@ -56,14 +53,26 @@ class TestGlanceStore(stubs.XenAPITestBase):
                          'os_type': 'default',
                          'xenapi_use_agent': 'true'}
 
+    def _get_params(self):
+        return {'image_id': 'fake_image_uuid',
+                'glance_host': '1.1.1.1',
+                'glance_port': 123,
+                'glance_use_ssl': False,
+                'sr_path': '/fake/sr/path',
+                'extra_headers': {'X-Service-Catalog': '[]',
+                                  'X-Auth-Token': 'foobar',
+                                  'X-Roles': '',
+                                  'X-Tenant-Id': 'project',
+                                  'X-User-Id': 'user',
+                                  'X-Identity-Status': 'Confirmed'}}
+
+    def _get_download_params(self):
+        params = self._get_params()
+        params['uuid_stack'] = ['uuid1']
+        return params
+
     def test_download_image(self):
-        params = {'image_id': 'fake_image_uuid',
-                  'glance_host': '1.1.1.1',
-                  'glance_port': 123,
-                  'glance_use_ssl': False,
-                  'sr_path': '/fake/sr/path',
-                  'auth_token': 'foobar',
-                  'uuid_stack': ['uuid1']}
+        params = self._get_download_params()
 
         self.stubs.Set(vm_utils, '_make_uuid_stack',
                        lambda *a, **kw: ['uuid1'])
@@ -78,15 +87,10 @@ class TestGlanceStore(stubs.XenAPITestBase):
         self.mox.VerifyAll()
 
     def _get_upload_params(self):
-        params = {'vdi_uuids': ['fake_vdi_uuid'],
-                  'image_id': 'fake_image_uuid',
-                  'glance_host': '1.1.1.1',
-                  'glance_port': 123,
-                  'glance_use_ssl': False,
-                  'sr_path': '/fake/sr/path',
-                  'auth_token': 'foobar',
-                  'properties': {'auto_disk_config': True,
-                                 'os_type': 'default'}}
+        params = self._get_params()
+        params['vdi_uuids'] = ['fake_vdi_uuid']
+        params['properties'] = {'auto_disk_config': True,
+                                'os_type': 'default'}
         return params
 
     def test_upload_image(self):
@@ -105,10 +109,10 @@ class TestGlanceStore(stubs.XenAPITestBase):
 
         self.mox.StubOutWithMock(self.session, 'call_plugin_serialized')
         self.session.call_plugin_serialized('glance', 'upload_vhd',
-                                            **params).AndRaise(Exception)
+                                            **params).AndRaise(RuntimeError)
         self.mox.ReplayAll()
 
-        self.assertRaises(Exception, self.store.upload_image,
+        self.assertRaises(RuntimeError, self.store.upload_image,
                           self.context, self.session, self.instance,
                           ['fake_vdi_uuid'], 'fake_image_uuid')
         self.mox.VerifyAll()
