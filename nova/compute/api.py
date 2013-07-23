@@ -739,7 +739,10 @@ class API(base.Base):
             with excutils.save_and_reraise_exception():
                 try:
                     for instance in instances:
-                        self.db.instance_destroy(context, instance['uuid'])
+                        try:
+                            instance.destroy()
+                        except exception.ObjectActionError:
+                            pass
                 finally:
                     QUOTAS.rollback(context, quota_reservations)
 
@@ -1208,21 +1211,16 @@ class API(base.Base):
                                                      project_id, user_id)
 
             if not host:
-                # Just update database, nothing else we can do
-                constraint = self.db.constraint(host=self.db.equal_any(host))
                 try:
-                    self.db.instance_destroy(context, instance['uuid'],
-                                             constraint)
+                    instance.destroy()
                     if reservations:
                         QUOTAS.commit(context,
                                       reservations,
                                       project_id=project_id,
                                       user_id=user_id)
                     return
-                except exception.ConstraintNotMet:
-                    # Refresh to get new host information
-                    instance = self.get(context, instance['uuid'],
-                                        want_objects=True)
+                except exception.ObjectActionError:
+                    instance.refresh()
 
             if instance['vm_state'] == vm_states.RESIZED:
                 # If in the middle of a resize, use confirm_resize to
@@ -1363,7 +1361,7 @@ class API(base.Base):
                     self.volume_api.delete(context, bdm['volume_id'])
             self.db.block_device_mapping_destroy(context, bdm['id'])
         cb(context, instance, bdms, local=True)
-        self.db.instance_destroy(context, instance_uuid)
+        instance.destroy()
         compute_utils.notify_about_instance_usage(
             context, instance, "%s.end" % delete_type,
             system_metadata=system_meta)
