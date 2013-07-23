@@ -337,22 +337,25 @@ class InstanceTypes(BASE, NovaBase):
 class Volume(BASE, NovaBase):
     """Represents a block storage device that can be attached to a VM."""
     __tablename__ = 'volumes'
-    id = Column(String(36), primary_key=True)
+    __table_args__ = (
+        Index('volumes_instance_uuid_idx', 'instance_uuid'),
+    )
+    id = Column(String(36), primary_key=True, nullable=False)
     deleted = Column(String(36), default="")
 
     @property
     def name(self):
         return CONF.volume_name_template % self.id
 
-    ec2_id = Column(Integer)
+    ec2_id = Column(String(255))
     user_id = Column(String(255))
     project_id = Column(String(255))
 
     snapshot_id = Column(String(36))
 
-    host = Column(String(255))  # , ForeignKey('hosts.id'))
+    host = Column(String(255))
     size = Column(Integer)
-    availability_zone = Column(String(255))  # TODO(vish): foreign key?
+    availability_zone = Column(String(255))
     instance_uuid = Column(String(36))
     mountpoint = Column(String(255))
     attach_time = Column(DateTime)
@@ -366,8 +369,8 @@ class Volume(BASE, NovaBase):
     display_name = Column(String(255))
     display_description = Column(String(255))
 
-    provider_location = Column(String(255))
-    provider_auth = Column(String(255))
+    provider_location = Column(String(256))
+    provider_auth = Column(String(256))
 
     volume_type_id = Column(Integer)
 
@@ -572,7 +575,11 @@ class IscsiTarget(BASE, NovaBase):
 
 class SecurityGroupInstanceAssociation(BASE, NovaBase):
     __tablename__ = 'security_group_instance_association'
-    id = Column(Integer, primary_key=True)
+    __table_args__ = (
+        Index('security_group_instance_association_instance_uuid_idx',
+              'instance_uuid'),
+    )
+    id = Column(Integer, primary_key=True, nullable=False)
     security_group_id = Column(Integer, ForeignKey('security_groups.id'))
     instance_uuid = Column(String(36), ForeignKey('instances.uuid'))
 
@@ -580,6 +587,7 @@ class SecurityGroupInstanceAssociation(BASE, NovaBase):
 class SecurityGroup(BASE, NovaBase):
     """Represents a security group."""
     __tablename__ = 'security_groups'
+    __table_args__ = ()
     id = Column(Integer, primary_key=True)
 
     name = Column(String(255))
@@ -606,6 +614,7 @@ class SecurityGroup(BASE, NovaBase):
 class SecurityGroupIngressRule(BASE, NovaBase):
     """Represents a rule in a security group."""
     __tablename__ = 'security_group_rules'
+    __table_args__ = ()
     id = Column(Integer, primary_key=True)
 
     parent_group_id = Column(Integer, ForeignKey('security_groups.id'))
@@ -615,7 +624,7 @@ class SecurityGroupIngressRule(BASE, NovaBase):
         'SecurityGroupIngressRule.parent_group_id == SecurityGroup.id,'
         'SecurityGroupIngressRule.deleted == 0)')
 
-    protocol = Column(String(5))  # "tcp", "udp", or "icmp"
+    protocol = Column(String(255))
     from_port = Column(Integer)
     to_port = Column(Integer)
     cidr = Column(types.CIDR())
@@ -632,7 +641,8 @@ class SecurityGroupIngressRule(BASE, NovaBase):
 
 class SecurityGroupIngressDefaultRule(BASE, NovaBase):
     __tablename__ = 'security_group_default_rules'
-    id = Column(Integer, primary_key=True)
+    __table_args__ = ()
+    id = Column(Integer, primary_key=True, nullable=False)
     protocol = Column(String(5))  # "tcp", "udp" or "icmp"
     from_port = Column(Integer)
     to_port = Column(Integer)
@@ -1088,6 +1098,7 @@ class BandwidthUsage(BASE, NovaBase):
 class VolumeUsage(BASE, NovaBase):
     """Cache for volume usage data pulled from the hypervisor."""
     __tablename__ = 'volume_usage_cache'
+    __table_args__ = ()
     id = Column(Integer, primary_key=True, nullable=False)
     volume_id = Column(String(36), nullable=False)
     instance_uuid = Column(String(36))
@@ -1117,6 +1128,7 @@ class S3Image(BASE, NovaBase):
 class VolumeIdMapping(BASE, NovaBase):
     """Compatibility layer for the EC2 volume service."""
     __tablename__ = 'volume_id_mappings'
+    __table_args__ = ()
     id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
     uuid = Column(String(36), nullable=False)
 
