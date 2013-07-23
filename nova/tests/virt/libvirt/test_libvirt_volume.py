@@ -468,6 +468,26 @@ class LibvirtVolumeTestCase(test.TestCase):
             ('mount', '-t', 'glusterfs', export_string, export_mnt_base)]
         self.assertEqual(self.executes, expected_commands)
 
+    def test_libvirt_glusterfs_driver_qcow2(self):
+        libvirt_driver = volume.LibvirtGlusterfsVolumeDriver(self.fake_conn)
+        export_string = '192.168.1.1:/volume-00001'
+        name = 'volume-00001'
+        format = 'qcow2'
+
+        connection_info = {'data': {'export': export_string,
+                                    'name': name,
+                                    'format': format}}
+        disk_info = {
+            "bus": "virtio",
+            "dev": "vde",
+            "type": "disk",
+            }
+        conf = libvirt_driver.connect_volume(connection_info, disk_info)
+        tree = conf.format_dom()
+        self.assertEqual(tree.get('type'), 'file')
+        self.assertEqual(tree.find('./driver').get('type'), 'qcow2')
+        libvirt_driver.disconnect_volume(connection_info, "vde")
+
     def test_libvirt_glusterfs_driver_with_opts(self):
         mnt_base = '/mnt'
         self.flags(glusterfs_mount_point_base=mnt_base)
