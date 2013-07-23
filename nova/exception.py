@@ -1083,6 +1083,11 @@ class DuplicateVlan(Duplicate):
     message = _("Detected existing vlan with id %(vlan)d")
 
 
+class CidrConflict(NovaException):
+    message = _("There was a conflict when trying to complete your request.")
+    code = 409
+
+
 class InstanceNotFound(NotFound):
     message = _("Instance %(instance_id)s could not be found.")
 

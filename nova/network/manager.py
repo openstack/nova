@@ -1113,13 +1113,13 @@ class NetworkManager(manager.Manager):
                         subnets_v4.append(next_subnet)
                         subnet = next_subnet
                     else:
-                        raise ValueError(_('cidr already in use'))
+                        raise exception.CidrConflict(_('cidr already in use'))
                 for used_subnet in used_subnets:
                     if subnet in used_subnet:
                         msg = _('requested cidr (%(cidr)s) conflicts with '
                                 'existing supernet (%(super)s)')
-                        raise ValueError(msg % {'cidr': subnet,
-                                                'super': used_subnet})
+                        raise exception.CidrConflict(
+                                  msg % {'cidr': subnet, 'super': used_subnet})
                     if used_subnet in subnet:
                         next_subnet = find_next(subnet)
                         if next_subnet:
@@ -1130,8 +1130,8 @@ class NetworkManager(manager.Manager):
                             msg = _('requested cidr (%(cidr)s) conflicts '
                                     'with existing smaller cidr '
                                     '(%(smaller)s)')
-                            raise ValueError(msg % {'cidr': subnet,
-                                                    'smaller': used_subnet})
+                            raise exception.CidrConflict(
+                                msg % {'cidr': subnet, 'smaller': used_subnet})
 
         networks = []
         subnets = itertools.izip_longest(subnets_v4, subnets_v6)
