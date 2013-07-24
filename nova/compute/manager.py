@@ -40,7 +40,6 @@ import uuid
 from eventlet import greenthread
 from oslo.config import cfg
 
-from nova import block_device
 from nova.cells import rpcapi as cells_rpcapi
 from nova.cloudpipe import pipelib
 from nova import compute
@@ -76,6 +75,7 @@ from nova import paths
 from nova import quota
 from nova import safe_utils
 from nova import utils
+from nova.virt import block_device as driver_block_device
 from nova.virt import driver
 from nova.virt import event as virtevent
 from nova.virt import storage_users
@@ -906,70 +906,6 @@ class ComputeManager(manager.SchedulerDependentManager):
                                          seconds=int(time.time() - start),
                                          attempts=attempts)
 
-    def _setup_block_device_mapping(self, context, instance, bdms):
-        """setup volumes for block device mapping."""
-        block_device_mapping = []
-        swap = None
-        ephemerals = []
-        for bdm in bdms:
-            LOG.debug(_('Setting up bdm %s'), bdm, instance=instance)
-
-            if bdm['no_device']:
-                continue
-            if bdm['virtual_name']:
-                virtual_name = bdm['virtual_name']
-                device_name = bdm['device_name']
-                assert block_device.is_swap_or_ephemeral(virtual_name)
-                if virtual_name == 'swap':
-                    swap = {'device_name': device_name,
-                            'swap_size': bdm['volume_size']}
-                elif block_device.is_ephemeral(virtual_name):
-                    eph = {'num': block_device.ephemeral_num(virtual_name),
-                           'virtual_name': virtual_name,
-                           'device_name': device_name,
-                           'size': bdm['volume_size']}
-                    ephemerals.append(eph)
-                continue
-
-            if ((bdm['snapshot_id'] is not None) and
-                    (bdm['volume_id'] is None)):
-                # TODO(yamahata): default name and description
-                snapshot = self.volume_api.get_snapshot(context,
-                                                        bdm['snapshot_id'])
-                vol = self.volume_api.create(context, bdm['volume_size'],
-                                             '', '', snapshot)
-                self._await_block_device_map_created(context, vol['id'])
-                self.conductor_api.block_device_mapping_update(
-                    context, bdm['id'], {'volume_id': vol['id']})
-                bdm['volume_id'] = vol['id']
-
-            if bdm['volume_id'] is not None:
-                volume = self.volume_api.get(context, bdm['volume_id'])
-                self.volume_api.check_attach(context, volume,
-                                             instance=instance)
-                cinfo = self._attach_volume_boot(context,
-                                                 instance,
-                                                 volume,
-                                                 bdm['device_name'])
-                if 'serial' not in cinfo:
-                    cinfo['serial'] = bdm['volume_id']
-                self.conductor_api.block_device_mapping_update(
-                        context, bdm['id'],
-                        {'connection_info': jsonutils.dumps(cinfo)})
-                bdmap = {'connection_info': cinfo,
-                         'mount_device': bdm['device_name'],
-                         'delete_on_termination': bdm['delete_on_termination']}
-                block_device_mapping.append(bdmap)
-
-        block_device_info = {
-            'root_device_name': instance['root_device_name'],
-            'swap': swap,
-            'ephemerals': ephemerals,
-            'block_device_mapping': block_device_mapping
-        }
-
-        return block_device_info
-
     def _decode_files(self, injected_files):
         """Base64 decode the list of files to inject."""
         if not injected_files:
@@ -1068,7 +1004,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         network_info = None
         bdms = self.conductor_api.block_device_mapping_get_all_by_instance(
-            context, instance)
+            context, instance, legacy=False)
 
         # b64 decode the files to inject:
         injected_files_orig = injected_files
@@ -1333,7 +1269,29 @@ class ComputeManager(manager.SchedulerDependentManager):
     def _prep_block_device(self, context, instance, bdms):
         """Set up the block device for an instance with error logging."""
         try:
-            return self._setup_block_device_mapping(context, instance, bdms)
+            block_device_info = {
+                'root_device_name': instance['root_device_name'],
+                'swap': driver_block_device.get_swap(
+                    driver_block_device.legacy_block_devices(
+                        driver_block_device.convert_swap(bdms))),
+                'ephemerals': driver_block_device.legacy_block_devices(
+                    driver_block_device.convert_ephemerals(bdms)),
+                'block_device_mapping':
+                    (driver_block_device.legacy_block_devices(
+                            driver_block_device.attach_block_devices(
+                                driver_block_device.convert_volumes(bdms),
+                                context, instance, self.volume_api,
+                                self.driver, self.conductor_api)) +
+                     driver_block_device.legacy_block_devices(
+                            driver_block_device.attach_block_devices(
+                                driver_block_device.convert_snapshots(bdms),
+                                context, instance, self.volume_api,
+                                self.driver, self.conductor_api,
+                                self._await_block_device_map_created)))
+            }
+
+            return block_device_info
+
         except Exception:
             with excutils.save_and_reraise_exception():
                 LOG.exception(_('Instance failed block device setup'),
@@ -3381,25 +3339,6 @@ class ComputeManager(manager.SchedulerDependentManager):
             console_info = self.driver.get_vnc_console(instance)
 
         return console_info['port'] == port
-
-    def _attach_volume_boot(self, context, instance, volume, mountpoint):
-        """Attach a volume to an instance at boot time. So actual attach
-        is done by instance creation.
-        """
-
-        instance_id = instance['id']
-        instance_uuid = instance['uuid']
-        volume_id = volume['id']
-        context = context.elevated()
-        LOG.audit(_('Booting with volume %(volume_id)s at %(mountpoint)s'),
-                  {'volume_id': volume_id, 'mountpoint': mountpoint},
-                  context=context, instance=instance)
-        connector = self.driver.get_volume_connector(instance)
-        connection_info = self.volume_api.initialize_connection(context,
-                                                                volume_id,
-                                                                connector)
-        self.volume_api.attach(context, volume_id, instance_uuid, mountpoint)
-        return connection_info
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state

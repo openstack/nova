@@ -419,17 +419,19 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.assertEqual(attempts, 3)
 
     def test_boot_volume_serial(self):
-        block_device_mapping = [{
+        block_device_mapping = [
+        block_device.BlockDeviceDict({
             'id': 1,
             'no_device': None,
-            'virtual_name': None,
+            'source_type': 'volume',
+            'destination_type': 'volume',
             'snapshot_id': None,
             'volume_id': self.volume_id,
             'device_name': '/dev/vdb',
             'delete_on_termination': False,
-        }]
-        self.compute._setup_block_device_mapping(self.context, self.instance,
-                                                 block_device_mapping)
+        })]
+        self.compute._prep_block_device(self.context, self.instance,
+                                        block_device_mapping)
         self.assertEqual(self.cinfo.get('serial'), self.volume_id)
 
     def test_boot_volume_metadata(self):
@@ -1204,7 +1206,7 @@ class ComputeTestCase(BaseTestCase):
         def fake(*args, **kwargs):
             raise test.TestingException()
         self.stubs.Set(nova.compute.manager.ComputeManager,
-                       '_setup_block_device_mapping', fake)
+                       '_prep_block_device', fake)
         instance = self._create_instance()
         self.assertRaises(test.TestingException, self.compute.run_instance,
                           self.context, instance=instance)
@@ -2771,8 +2773,8 @@ class ComputeTestCase(BaseTestCase):
         # When a spawn fails the network must be deallocated.
         instance = jsonutils.to_primitive(self._create_fake_instance())
 
-        self.mox.StubOutWithMock(self.compute, "_setup_block_device_mapping")
-        self.compute._setup_block_device_mapping(
+        self.mox.StubOutWithMock(self.compute, "_prep_block_device")
+        self.compute._prep_block_device(
                 mox.IgnoreArg(), mox.IgnoreArg(),
                 mox.IgnoreArg()).AndRaise(rpc.common.RemoteError('', '', ''))
 
@@ -8981,6 +8983,7 @@ class EvacuateHostTestCase(BaseTestCase):
     def test_rebuild_on_host_with_volumes(self):
         """Confirm evacuate scenario reconnects volumes."""
         values = {'instance_uuid': self.inst_ref['uuid'],
+                  'source_type': 'volume',
                   'device_name': '/dev/vdc',
                   'delete_on_termination': False,
                   'volume_id': 'fake_volume_id'}
@@ -9007,10 +9010,10 @@ class EvacuateHostTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute.volume_api, 'detach')
         self.compute.volume_api.detach(mox.IsA(self.context), mox.IgnoreArg())
 
-        self.mox.StubOutWithMock(self.compute, '_setup_block_device_mapping')
-        self.compute._setup_block_device_mapping(mox.IsA(self.context),
-                                                 mox.IsA(self.inst_ref),
-                                                 mox.IgnoreArg())
+        self.mox.StubOutWithMock(self.compute, '_prep_block_device')
+        self.compute._prep_block_device(mox.IsA(self.context),
+                                        mox.IsA(self.inst_ref),
+                                        mox.IgnoreArg())
 
         self.stubs.Set(self.compute.driver, 'instance_on_disk', lambda x: True)
         self.mox.ReplayAll()
