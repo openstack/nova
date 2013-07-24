@@ -94,12 +94,16 @@ def get_host_availability_zone(context, host, conductor_api=None):
     return az
 
 
-def get_availability_zones(context):
-    """Return available and unavailable zones."""
+def get_availability_zones(context, get_only_available=False):
+    """Return available and unavailable zones on demands.
+
+       :param get_only_available: flag to determine whether to return
+           available zones only, default False indicates return both
+           available zones and not available zones, True indicates return
+           available zones only
+    """
     enabled_services = db.service_get_all(context, False)
-    disabled_services = db.service_get_all(context, True)
     enabled_services = set_availability_zones(context, enabled_services)
-    disabled_services = set_availability_zones(context, disabled_services)
 
     available_zones = []
     for zone in [service['availability_zone'] for service
@@ -107,13 +111,18 @@ def get_availability_zones(context):
         if zone not in available_zones:
             available_zones.append(zone)
 
-    not_available_zones = []
-    zones = [service['availability_zone'] for service in disabled_services
-            if service['availability_zone'] not in available_zones]
-    for zone in zones:
-        if zone not in not_available_zones:
-            not_available_zones.append(zone)
-    return (available_zones, not_available_zones)
+    if not get_only_available:
+        disabled_services = db.service_get_all(context, True)
+        disabled_services = set_availability_zones(context, disabled_services)
+        not_available_zones = []
+        zones = [service['availability_zone'] for service in disabled_services
+                if service['availability_zone'] not in available_zones]
+        for zone in zones:
+            if zone not in not_available_zones:
+                not_available_zones.append(zone)
+        return (available_zones, not_available_zones)
+    else:
+        return available_zones
 
 
 def get_instance_availability_zone(context, instance):
