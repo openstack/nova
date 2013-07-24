@@ -326,9 +326,10 @@ class VolumeAttachmentController(wsgi.Controller):
 
     """
 
-    def __init__(self):
+    def __init__(self, ext_mgr=None):
         self.compute_api = compute.API()
         self.volume_api = volume.API()
+        self.ext_mgr = ext_mgr
         super(VolumeAttachmentController, self).__init__()
 
     @wsgi.serializers(xml=VolumeAttachmentsTemplate)
@@ -431,8 +432,52 @@ class VolumeAttachmentController(wsgi.Controller):
         return {'volumeAttachment': attachment}
 
     def update(self, req, server_id, id, body):
-        """Update a volume attachment.  We don't currently support this."""
-        raise exc.HTTPBadRequest()
+        if (not self.ext_mgr or
+                not self.ext_mgr.is_loaded('os-volume-attachment-update')):
+            raise exc.HTTPBadRequest()
+        context = req.environ['nova.context']
+        authorize(context)
+        authorize_attach(context, action='update')
+
+        if not self.is_valid_body(body, 'volumeAttachment'):
+            raise exc.HTTPUnprocessableEntity()
+
+        old_volume_id = id
+        old_volume = self.volume_api.get(context, old_volume_id)
+
+        new_volume_id = body['volumeAttachment']['volumeId']
+        self._validate_volume_id(new_volume_id)
+        new_volume = self.volume_api.get(context, new_volume_id)
+
+        try:
+            instance = self.compute_api.get(context, server_id,
+                                            want_objects=True)
+        except exception.NotFound:
+            raise exc.HTTPNotFound()
+
+        bdms = self.compute_api.get_instance_bdms(context, instance)
+        found = False
+        try:
+            for bdm in bdms:
+                if bdm['volume_id'] != old_volume_id:
+                    continue
+                try:
+                    self.compute_api.swap_volume(context, instance, old_volume,
+                                                 new_volume)
+                    found = True
+                    break
+                except exception.VolumeUnattached:
+                    # The volume is not attached.  Treat it as NotFound
+                    # by falling through.
+                    pass
+        except exception.InstanceInvalidState as state_error:
+            common.raise_http_conflict_for_instance_invalid_state(state_error,
+                    'swap_volume')
+
+        if not found:
+            raise exc.HTTPNotFound()
+        else:
+            return webob.Response(status_int=202)
 
     def delete(self, req, server_id, id):
         """Detach a volume from an instance."""
@@ -656,8 +701,9 @@ class Volumes(extensions.ExtensionDescriptor):
                                         collection_actions={'detail': 'GET'})
         resources.append(res)
 
+        attachment_controller = VolumeAttachmentController(self.ext_mgr)
         res = extensions.ResourceExtension('os-volume_attachments',
-                                           VolumeAttachmentController(),
+                                           attachment_controller,
                                            parent=dict(
                                                 member_name='server',
                                                 collection_name='servers'))

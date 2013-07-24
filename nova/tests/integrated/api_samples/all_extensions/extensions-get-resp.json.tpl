@@ -561,6 +561,14 @@
             "updated": "%(timestamp)s"
         },
         {
+            "alias": "os-volume-attachment-update",
+            "description": "%(text)s",
+            "links": [],
+            "name": "VolumeAttachmentUpdate",
+            "namespace": "http://docs.openstack.org/compute/ext/os-volume-attachment-update/api/v2",
+            "updated": "%(timestamp)s"
+        },
+        {
             "alias": "os-volumes",
             "description": "%(text)s",
             "links": [],

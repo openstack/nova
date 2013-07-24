@@ -1044,6 +1044,65 @@ class LibvirtDriver(driver.ComputeDriver):
                                           connection_info,
                                           disk_dev)
 
+    def _swap_volume(self, domain, disk_path, new_path):
+        """Swap existing disk with a new block device."""
+        # Save a copy of the domain's running XML file
+        xml = domain.XMLDesc(0)
+
+        # Abort is an idempotent operation, so make sure any block
+        # jobs which may have failed are ended.
+        try:
+            domain.blockJobAbort(disk_path, 0)
+        except Exception:
+            pass
+
+        try:
+            # NOTE (rmk): blockRebase cannot be executed on persistent
+            #             domains, so we need to temporarily undefine it.
+            #             If any part of this block fails, the domain is
+            #             re-defined regardless.
+            if domain.isPersistent():
+                domain.undefine()
+
+            domain.blockRebase(disk_path, new_path, 0,
+                               libvirt.VIR_DOMAIN_BLOCK_REBASE_COPY)
+
+            while self._wait_for_block_job(domain, disk_path):
+                time.sleep(0.5)
+
+            domain.blockJobAbort(disk_path,
+                                 libvirt.VIR_DOMAIN_BLOCK_JOB_ABORT_PIVOT)
+        finally:
+            self._conn.defineXML(xml)
+
+    def swap_volume(self, old_connection_info,
+                    new_connection_info, instance, mountpoint):
+        instance_name = instance['name']
+        virt_dom = self._lookup_by_name(instance_name)
+        disk_dev = mountpoint.rpartition("/")[2]
+        xml = self._get_disk_xml(virt_dom.XMLDesc(0), disk_dev)
+        if not xml:
+            raise exception.DiskNotFound(location=disk_dev)
+        disk_info = {
+            'dev': disk_dev,
+            'bus': blockinfo.get_disk_bus_for_disk_dev(CONF.libvirt_type,
+                                                       disk_dev),
+            'type': 'disk',
+            }
+        conf = self.volume_driver_method('connect_volume',
+                                         new_connection_info,
+                                         disk_info)
+        if not conf.source_path:
+            self.volume_driver_method('disconnect_volume',
+                                      new_connection_info,
+                                      disk_dev)
+            raise NotImplementedError(_("Swap only supports host devices"))
+
+        self._swap_volume(virt_dom, disk_dev, conf.source_path)
+        self.volume_driver_method('disconnect_volume',
+                                  old_connection_info,
+                                  disk_dev)
+
     @staticmethod
     def _get_disk_xml(xml, device):
         """Returns the xml for the disk mounted at device."""
@@ -1288,23 +1347,31 @@ class LibvirtDriver(driver.ComputeDriver):
                 LOG.info(_("Snapshot image upload complete"),
                          instance=instance)
 
+    @staticmethod
+    def _wait_for_block_job(domain, disk_path):
+        status = domain.blockJobInfo(disk_path, 0)
+        try:
+            cur = status.get('cur', 0)
+            end = status.get('end', 0)
+        except Exception:
+            return False
+
+        if cur == end and cur != 0 and end != 0:
+            return False
+        else:
+            return True
+
     def _live_snapshot(self, domain, disk_path, out_path, image_format):
         """Snapshot an instance without downtime."""
         # Save a copy of the domain's running XML file
         xml = domain.XMLDesc(0)
 
-        def _wait_for_block_job(domain, disk_path):
-            status = domain.blockJobInfo(disk_path, 0)
-            try:
-                cur = status.get('cur', 0)
-                end = status.get('end', 0)
-            except Exception:
-                return False
-
-            if cur == end and cur != 0 and end != 0:
-                return False
-            else:
-                return True
+        # Abort is an idempotent operation, so make sure any block
+        # jobs which may have failed are ended.
+        try:
+            domain.blockJobAbort(disk_path, 0)
+        except Exception:
+            pass
 
         # NOTE (rmk): We are using shallow rebases as a workaround to a bug
         #             in QEMU 1.3. In order to do this, we need to create
@@ -1332,7 +1399,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                libvirt.VIR_DOMAIN_BLOCK_REBASE_REUSE_EXT |
                                libvirt.VIR_DOMAIN_BLOCK_REBASE_SHALLOW)
 
-            while _wait_for_block_job(domain, disk_path):
+            while self._wait_for_block_job(domain, disk_path):
                 time.sleep(0.5)
 
             domain.blockJobAbort(disk_path, 0)

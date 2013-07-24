@@ -210,6 +210,9 @@
   <extension alias="os-virtual-interfaces" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/virtual_interfaces/api/v1.1" name="VirtualInterfaces">
     <description>%(text)s</description>
   </extension>
+  <extension alias="os-volume-attachment-update" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/os-volume-attachment-update/api/v2" name="VolumeAttachmentUpdate">
+    <description>%(text)s</description>
+  </extension>
   <extension alias="os-volumes" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/volumes/api/v1.1" name="Volumes">
     <description>%(text)s</description>
   </extension>

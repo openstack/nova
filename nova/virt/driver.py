@@ -328,6 +328,11 @@ class ComputeDriver(object):
         """Detach the disk attached to the instance."""
         raise NotImplementedError()
 
+    def swap_volume(self, old_connection_info, new_connection_info,
+                    instance, mountpoint):
+        """Replace the disk attached to the instance."""
+        raise NotImplementedError()
+
     def attach_interface(self, instance, image_meta, network_info):
         """Attach an interface to the instance."""
         raise NotImplementedError()

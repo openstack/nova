@@ -186,6 +186,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         2.32 - Make reboot_instance take a new world instance object
         2.33 - Made suspend_instance() and resume_instance() take new-world
                instance objects
+        2.34 - Added swap_volume()
     '''
 
     #
@@ -599,6 +600,13 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         topic = _compute_topic(self.topic, ctxt, host, None)
         return self.call(ctxt, self.make_msg('set_host_enabled',
                 enabled=enabled), topic)
+
+    def swap_volume(self, ctxt, instance, old_volume_id, new_volume_id):
+        self.cast(ctxt, self.make_msg('swap_volume',
+                instance=instance, old_volume_id=old_volume_id,
+                new_volume_id=new_volume_id),
+                topic=_compute_topic(self.topic, ctxt, None, instance),
+                version='2.34')
 
     def get_host_uptime(self, ctxt, host):
         topic = _compute_topic(self.topic, ctxt, host, None)
