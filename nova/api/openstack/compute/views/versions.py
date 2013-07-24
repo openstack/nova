@@ -44,7 +44,7 @@ class ViewBuilder(common.ViewBuilder):
                 "links": [
                     {
                         "rel": "self",
-                        "href": self.generate_href(req.path),
+                        "href": self.generate_href(version['id'], req.path),
                     },
                 ],
                 "media-types": version['media-types'],
@@ -75,7 +75,7 @@ class ViewBuilder(common.ViewBuilder):
 
     def _build_links(self, version_data):
         """Generate a container of links that refer to the provided version."""
-        href = self.generate_href()
+        href = self.generate_href(version_data['id'])
 
         links = [
             {
@@ -86,10 +86,14 @@ class ViewBuilder(common.ViewBuilder):
 
         return links
 
-    def generate_href(self, path=None):
+    def generate_href(self, version, path=None):
         """Create an url that refers to a specific version_number."""
         prefix = self._update_compute_link_prefix(self.base_url)
-        version_number = 'v2'
+        if version.find('v3.') == 0:
+            version_number = 'v3'
+        else:
+            version_number = 'v2'
+
         if path:
             path = path.strip('/')
             return os.path.join(prefix, version_number, path)

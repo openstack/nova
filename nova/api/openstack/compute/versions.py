@@ -16,6 +16,7 @@
 #    under the License.
 
 from lxml import etree
+from oslo.config import cfg
 
 from nova.api.openstack.compute.views import versions as views_versions
 from nova.api.openstack import wsgi
@@ -23,12 +24,21 @@ from nova.api.openstack import xmlutil
 from nova.openstack.common import timeutils
 
 
+CONF = cfg.CONF
+CONF.import_opt('enabled', 'nova.api.openstack', group='osapi_v3')
+
 LINKS = {
    'v2.0': {
        'pdf': 'http://docs.openstack.org/'
                'api/openstack-compute/2/os-compute-devguide-2.pdf',
        'wadl': 'http://docs.openstack.org/'
                'api/openstack-compute/2/wadl/os-compute-2.wadl'
+    },
+   'v3.0': {
+       'pdf': 'http://docs.openstack.org/'
+               'api/openstack-compute/3/os-compute-devguide-3.pdf',
+       'wadl': 'http://docs.openstack.org/'
+               'api/openstack-compute/3/wadl/os-compute-3.wadl'
     },
 }
 
@@ -58,6 +68,33 @@ VERSIONS = {
             {
                 "base": "application/json",
                 "type": "application/vnd.openstack.compute+json;version=2",
+            }
+        ],
+    },
+    "v3.0": {
+        "id": "v3.0",
+        "status": "EXPERIMENTAL",
+        "updated": "2013-07-23T11:33:21Z",
+        "links": [
+            {
+                "rel": "describedby",
+                "type": "application/pdf",
+                "href": LINKS['v3.0']['pdf'],
+            },
+            {
+                "rel": "describedby",
+                "type": "application/vnd.sun.wadl+xml",
+                "href": LINKS['v3.0']['wadl'],
+            },
+        ],
+        "media-types": [
+            {
+                "base": "application/xml",
+                "type": "application/vnd.openstack.compute+xml;version=3",
+            },
+            {
+                "base": "application/json",
+                "type": "application/vnd.openstack.compute+json;version=3",
             }
         ],
     }
@@ -205,6 +242,8 @@ class VersionAtomSerializer(AtomSerializer):
 class Versions(wsgi.Resource):
     def __init__(self):
         super(Versions, self).__init__(None)
+        if not CONF.osapi_v3.enabled:
+            del VERSIONS["v3.0"]
 
     @wsgi.serializers(xml=VersionsTemplate,
                       atom=VersionsAtomSerializer)
