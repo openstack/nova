@@ -4128,6 +4128,9 @@ class TestAddressesXMLSerialization(test.TestCase):
 
 class ServersViewBuilderTest(test.TestCase):
 
+    image_bookmark = "http://localhost/fake/images/5"
+    flavor_bookmark = "http://localhost/fake/flavors/1"
+
     def setUp(self):
         super(ServersViewBuilderTest, self).setUp()
         self.flags(use_ipv6=True)
@@ -4159,66 +4162,9 @@ class ServersViewBuilderTest(test.TestCase):
         self.uuid = self.instance['uuid']
         self.view_builder = views.servers.ViewBuilder()
         self.request = fakes.HTTPRequest.blank("/v2/fake")
-
-    def test_get_flavor_valid_flavor(self):
-        flavor_bookmark = "http://localhost/fake/flavors/1"
-        expected = {"id": "1",
-                    "links": [{"rel": "bookmark",
-                               "href": flavor_bookmark}]}
-        result = self.view_builder._get_flavor(self.request, self.instance)
-        self.assertEqual(result, expected)
-
-    def test_build_server(self):
-        self_link = "http://localhost/v2/fake/servers/%s" % self.uuid
-        bookmark_link = "http://localhost/fake/servers/%s" % self.uuid
-        expected_server = {
-            "server": {
-                "id": self.uuid,
-                "name": "test_server",
-                "links": [
-                    {
-                        "rel": "self",
-                        "href": self_link,
-                    },
-                    {
-                        "rel": "bookmark",
-                        "href": bookmark_link,
-                    },
-                ],
-            }
-        }
-
-        output = self.view_builder.basic(self.request, self.instance)
-        self.assertThat(output, matchers.DictMatches(expected_server))
-
-    def test_build_server_with_project_id(self):
-        expected_server = {
-            "server": {
-                "id": self.uuid,
-                "name": "test_server",
-                "links": [
-                    {
-                        "rel": "self",
-                        "href": "http://localhost/v2/fake/servers/%s" %
-                                self.uuid,
-                    },
-                    {
-                        "rel": "bookmark",
-                        "href": "http://localhost/fake/servers/%s" % self.uuid,
-                    },
-                ],
-            }
-        }
-
-        output = self.view_builder.basic(self.request, self.instance)
-        self.assertThat(output, matchers.DictMatches(expected_server))
-
-    def test_build_server_detail(self):
-        image_bookmark = "http://localhost/fake/images/5"
-        flavor_bookmark = "http://localhost/fake/flavors/1"
-        self_link = "http://localhost/v2/fake/servers/%s" % self.uuid
-        bookmark_link = "http://localhost/fake/servers/%s" % self.uuid
-        expected_server = {
+        self.self_link = "http://localhost/v2/fake/servers/%s" % self.uuid
+        self.bookmark_link = "http://localhost/fake/servers/%s" % self.uuid
+        self.expected_detailed_server = {
             "server": {
                 "id": self.uuid,
                 "user_id": "fake_user",
@@ -4236,7 +4182,7 @@ class ServersViewBuilderTest(test.TestCase):
                     "links": [
                         {
                             "rel": "bookmark",
-                            "href": image_bookmark,
+                            "href": self.image_bookmark,
                         },
                     ],
                 },
@@ -4245,7 +4191,7 @@ class ServersViewBuilderTest(test.TestCase):
                   "links": [
                                             {
                           "rel": "bookmark",
-                          "href": flavor_bookmark,
+                          "href": self.flavor_bookmark,
                       },
                   ],
                 },
@@ -4259,18 +4205,56 @@ class ServersViewBuilderTest(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": self_link,
+                        "href": self.self_link,
                     },
                     {
                         "rel": "bookmark",
-                        "href": bookmark_link,
+                        "href": self.bookmark_link,
                     },
                 ],
             }
         }
 
+        self.expected_server = {
+            "server": {
+                "id": self.uuid,
+                "name": "test_server",
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": self.self_link,
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": self.bookmark_link,
+                    },
+                ],
+            }
+        }
+
+    def test_get_flavor_valid_flavor(self):
+        expected = {"id": "1",
+                    "links": [{"rel": "bookmark",
+                               "href": self.flavor_bookmark}]}
+        result = self.view_builder._get_flavor(self.request, self.instance)
+        self.assertEqual(result, expected)
+
+    def test_build_server(self):
+        output = self.view_builder.basic(self.request, self.instance)
+        self.assertThat(output,
+                matchers.DictMatches(self.expected_server))
+
+    def test_build_server_with_project_id(self):
+
+        output = self.view_builder.basic(self.request, self.instance)
+        self.assertThat(output,
+                matchers.DictMatches(self.expected_server))
+
+    def test_build_server_detail(self):
+
         output = self.view_builder.show(self.request, self.instance)
-        self.assertThat(output, matchers.DictMatches(expected_server))
+        self.assertThat(output,
+                matchers.DictMatches(self.expected_detailed_server))
 
     def test_build_server_no_image(self):
         self.instance["image_ref"] = ""
@@ -4287,69 +4271,19 @@ class ServersViewBuilderTest(test.TestCase):
             'created_at': datetime.datetime(2010, 10, 10, 12, 0, 0),
         }
 
-        image_bookmark = "http://localhost/fake/images/5"
-        flavor_bookmark = "http://localhost/fake/flavors/1"
-        self_link = "http://localhost/v2/fake/servers/%s" % self.uuid
-        bookmark_link = "http://localhost/fake/servers/%s" % self.uuid
-        expected_server = {
-            "server": {
-                "id": self.uuid,
-                "user_id": "fake_user",
-                "tenant_id": "fake_project",
-                "updated": "2010-11-11T11:00:00Z",
-                "created": "2010-10-10T12:00:00Z",
-                "name": "test_server",
-                "status": "ERROR",
-                "accessIPv4": "",
-                "accessIPv6": "",
-                "hostId": '',
-                "image": {
-                    "id": "5",
-                    "links": [
-                        {
-                            "rel": "bookmark",
-                            "href": image_bookmark,
-                        },
-                    ],
-                },
-                "flavor": {
-                    "id": "1",
-                  "links": [
-                                            {
-                          "rel": "bookmark",
-                          "href": flavor_bookmark,
-                      },
-                  ],
-                },
-                "addresses": {
-                    'test1': [
-                        {'version': 4, 'addr': '192.168.1.100'},
-                        {'version': 6, 'addr': '2001:db8:0:1::1'}
-                    ]
-                },
-                "metadata": {},
-                "links": [
-                    {
-                        "rel": "self",
-                        "href": self_link,
-                    },
-                    {
-                        "rel": "bookmark",
-                        "href": bookmark_link,
-                    },
-                ],
-                "fault": {
+        self.expected_detailed_server["server"]["status"] = "ERROR"
+        self.expected_detailed_server["server"]["fault"] = {
                     "code": 404,
                     "created": "2010-10-10T12:00:00Z",
                     "message": "HTTPNotFound",
                     "details": "Stock details for test",
-                },
-            }
-        }
+                }
+        del self.expected_detailed_server["server"]["progress"]
 
         self.request.context = context.RequestContext('fake', 'fake')
         output = self.view_builder.show(self.request, self.instance)
-        self.assertThat(output, matchers.DictMatches(expected_server))
+        self.assertThat(output,
+                matchers.DictMatches(self.expected_detailed_server))
 
     def test_build_server_detail_with_fault_no_details_not_admin(self):
         self.instance['vm_state'] = vm_states.ERROR
@@ -4420,11 +4354,6 @@ class ServersViewBuilderTest(test.TestCase):
             'created_at': datetime.datetime(2010, 10, 10, 12, 0, 0),
         }
 
-        image_bookmark = "http://localhost/fake/images/5"
-        flavor_bookmark = "http://localhost/fake/flavors/1"
-        self_link = "http://localhost/v2/fake/servers/%s" % self.uuid
-        bookmark_link = "http://localhost/fake/servers/%s" % self.uuid
-
         output = self.view_builder.show(self.request, self.instance)
         self.assertFalse('fault' in output['server'])
 
@@ -4432,187 +4361,34 @@ class ServersViewBuilderTest(test.TestCase):
         #set the power state of the instance to running
         self.instance['vm_state'] = vm_states.ACTIVE
         self.instance['progress'] = 100
-        image_bookmark = "http://localhost/fake/images/5"
-        flavor_bookmark = "http://localhost/fake/flavors/1"
-        self_link = "http://localhost/v2/fake/servers/%s" % self.uuid
-        bookmark_link = "http://localhost/fake/servers/%s" % self.uuid
-        expected_server = {
-            "server": {
-                "id": self.uuid,
-                "user_id": "fake_user",
-                "tenant_id": "fake_project",
-                "updated": "2010-11-11T11:00:00Z",
-                "created": "2010-10-10T12:00:00Z",
-                "progress": 100,
-                "name": "test_server",
-                "status": "ACTIVE",
-                "accessIPv4": "",
-                "accessIPv6": "",
-                "hostId": '',
-                "image": {
-                    "id": "5",
-                    "links": [
-                        {
-                            "rel": "bookmark",
-                            "href": image_bookmark,
-                        },
-                    ],
-                },
-                "flavor": {
-                    "id": "1",
-                  "links": [
-                                            {
-                          "rel": "bookmark",
-                          "href": flavor_bookmark,
-                      },
-                  ],
-                },
-                "addresses": {
-                    'test1': [
-                        {'version': 4, 'addr': '192.168.1.100'},
-                        {'version': 6, 'addr': '2001:db8:0:1::1'}
-                    ]
-                },
-                "metadata": {},
-                "links": [
-                    {
-                        "rel": "self",
-                        "href": self_link,
-                    },
-                    {
-                        "rel": "bookmark",
-                        "href": bookmark_link,
-                    },
-                ],
-            }
-        }
+
+        self.expected_detailed_server["server"]["status"] = "ACTIVE"
+        self.expected_detailed_server["server"]["progress"] = 100
 
         output = self.view_builder.show(self.request, self.instance)
-        self.assertThat(output, matchers.DictMatches(expected_server))
+        self.assertThat(output,
+                matchers.DictMatches(self.expected_detailed_server))
 
     def test_build_server_detail_with_accessipv4(self):
 
-        self.instance['access_ip_v4'] = '1.2.3.4'
+        access_ip_v4 = '1.2.3.4'
+        self.instance['access_ip_v4'] = access_ip_v4
 
-        image_bookmark = "http://localhost/fake/images/5"
-        flavor_bookmark = "http://localhost/fake/flavors/1"
-        self_link = "http://localhost/v2/fake/servers/%s" % self.uuid
-        bookmark_link = "http://localhost/fake/servers/%s" % self.uuid
-        expected_server = {
-            "server": {
-                "id": self.uuid,
-                "user_id": "fake_user",
-                "tenant_id": "fake_project",
-                "updated": "2010-11-11T11:00:00Z",
-                "created": "2010-10-10T12:00:00Z",
-                "progress": 0,
-                "name": "test_server",
-                "status": "BUILD",
-                "hostId": '',
-                "image": {
-                    "id": "5",
-                    "links": [
-                        {
-                            "rel": "bookmark",
-                            "href": image_bookmark,
-                        },
-                    ],
-                },
-                "flavor": {
-                    "id": "1",
-                    "links": [
-                                              {
-                            "rel": "bookmark",
-                            "href": flavor_bookmark,
-                        },
-                    ],
-                },
-                "addresses": {
-                    'test1': [
-                        {'version': 4, 'addr': '192.168.1.100'},
-                        {'version': 6, 'addr': '2001:db8:0:1::1'}
-                    ]
-                },
-                "metadata": {},
-                "accessIPv4": "1.2.3.4",
-                "accessIPv6": "",
-                "links": [
-                    {
-                        "rel": "self",
-                        "href": self_link,
-                    },
-                    {
-                        "rel": "bookmark",
-                        "href": bookmark_link,
-                    },
-                ],
-            }
-        }
-
+        self.expected_detailed_server["server"]["accessIPv4"] = access_ip_v4
         output = self.view_builder.show(self.request, self.instance)
-        self.assertThat(output, matchers.DictMatches(expected_server))
+        self.assertThat(output,
+                matchers.DictMatches(self.expected_detailed_server))
 
     def test_build_server_detail_with_accessipv6(self):
 
-        self.instance['access_ip_v6'] = 'fead::1234'
+        access_ip_v6 = 'fead::1234'
+        self.instance['access_ip_v6'] = access_ip_v6
 
-        image_bookmark = "http://localhost/fake/images/5"
-        flavor_bookmark = "http://localhost/fake/flavors/1"
-        self_link = "http://localhost/v2/fake/servers/%s" % self.uuid
-        bookmark_link = "http://localhost/fake/servers/%s" % self.uuid
-        expected_server = {
-            "server": {
-                "id": self.uuid,
-                "user_id": "fake_user",
-                "tenant_id": "fake_project",
-                "updated": "2010-11-11T11:00:00Z",
-                "created": "2010-10-10T12:00:00Z",
-                "progress": 0,
-                "name": "test_server",
-                "status": "BUILD",
-                "hostId": '',
-                "image": {
-                    "id": "5",
-                    "links": [
-                        {
-                            "rel": "bookmark",
-                            "href": image_bookmark,
-                        },
-                    ],
-                },
-                "flavor": {
-                    "id": "1",
-                    "links": [
-                                              {
-                            "rel": "bookmark",
-                            "href": flavor_bookmark,
-                        },
-                    ],
-                },
-                "addresses": {
-                    'test1': [
-                        {'version': 4, 'addr': '192.168.1.100'},
-                        {'version': 6, 'addr': '2001:db8:0:1::1'}
-                    ]
-                },
-                "metadata": {},
-                "accessIPv4": "",
-                "accessIPv6": "fead::1234",
-                "links": [
-                    {
-                        "rel": "self",
-                        "href": self_link,
-                    },
-                    {
-                        "rel": "bookmark",
-                        "href": bookmark_link,
-                    },
-                ],
-            }
-        }
+        self.expected_detailed_server["server"]["accessIPv6"] = access_ip_v6
 
         output = self.view_builder.show(self.request, self.instance)
-        self.assertThat(output, matchers.DictMatches(expected_server))
+        self.assertThat(output,
+                matchers.DictMatches(self.expected_detailed_server))
 
     def test_build_server_detail_with_metadata(self):
 
@@ -4620,63 +4396,10 @@ class ServersViewBuilderTest(test.TestCase):
         metadata.append(models.InstanceMetadata(key="Open", value="Stack"))
         self.instance['metadata'] = metadata
 
-        image_bookmark = "http://localhost/fake/images/5"
-        flavor_bookmark = "http://localhost/fake/flavors/1"
-        self_link = "http://localhost/v2/fake/servers/%s" % self.uuid
-        bookmark_link = "http://localhost/fake/servers/%s" % self.uuid
-        expected_server = {
-            "server": {
-                "id": self.uuid,
-                "user_id": "fake_user",
-                "tenant_id": "fake_project",
-                "updated": "2010-11-11T11:00:00Z",
-                "created": "2010-10-10T12:00:00Z",
-                "progress": 0,
-                "name": "test_server",
-                "status": "BUILD",
-                "accessIPv4": "",
-                "accessIPv6": "",
-                "hostId": '',
-                "image": {
-                    "id": "5",
-                    "links": [
-                        {
-                            "rel": "bookmark",
-                            "href": image_bookmark,
-                        },
-                    ],
-                },
-                "flavor": {
-                    "id": "1",
-                    "links": [
-                                              {
-                            "rel": "bookmark",
-                            "href": flavor_bookmark,
-                        },
-                    ],
-                },
-                "addresses": {
-                    'test1': [
-                        {'version': 4, 'addr': '192.168.1.100'},
-                        {'version': 6, 'addr': '2001:db8:0:1::1'}
-                    ]
-                },
-                "metadata": {"Open": "Stack"},
-                "links": [
-                    {
-                        "rel": "self",
-                        "href": self_link,
-                    },
-                    {
-                        "rel": "bookmark",
-                        "href": bookmark_link,
-                    },
-                ],
-            }
-        }
-
+        self.expected_detailed_server["server"]["metadata"] = {"Open": "Stack"}
         output = self.view_builder.show(self.request, self.instance)
-        self.assertThat(output, matchers.DictMatches(expected_server))
+        self.assertThat(output,
+                matchers.DictMatches(self.expected_detailed_server))
 
 
 class ServerXMLSerializationTest(test.TestCase):
