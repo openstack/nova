@@ -509,7 +509,8 @@ class ServersController(wsgi.Controller):
               namespace=self.EXTENSION_CREATE_NAMESPACE,
               check_func=_create_check_load_extension('server_create'),
               invoke_on_load=True,
-              invoke_kwds={"extension_info": self.extension_info})
+              invoke_kwds={"extension_info": self.extension_info},
+              propagate_map_exceptions=True)
         if not list(self.create_extension_manager):
             LOG.debug(_("Did not find any server create extensions"))
 
@@ -521,7 +522,8 @@ class ServersController(wsgi.Controller):
               check_func=_create_check_load_extension(
                   'server_xml_extract_server_deserialize'),
               invoke_on_load=True,
-              invoke_kwds={"extension_info": self.extension_info})
+              invoke_kwds={"extension_info": self.extension_info},
+              propagate_map_exceptions=True)
         if not list(self.create_xml_deserialize_manager):
             LOG.debug(_("Did not find any server create xml deserializer"
                         " extensions"))
