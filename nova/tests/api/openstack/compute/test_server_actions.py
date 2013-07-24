@@ -899,6 +899,61 @@ class ServerActionsControllerTest(test.TestCase):
         self._do_test_create_volume_backed_image(dict(ImageType='Gold',
                                                       ImageVersion='2.0'))
 
+    def test_create_volume_backed_image_with_metadata_from_volume(self):
+
+        def _fake_id(x):
+            return '%s-%s-%s-%s' % (x * 8, x * 4, x * 4, x * 12)
+
+        body = dict(createImage=dict(name='snapshot_of_volume_backed'))
+
+        image_service = glance.get_default_image_service()
+
+        def fake_block_device_mapping_get_all_by_instance(context, inst_id):
+            return [dict(volume_id=_fake_id('a'),
+                         source_type='snapshot',
+                         destination_type='volume',
+                         volume_size=1,
+                         device_name='vda',
+                         snapshot_id=1,
+                         delete_on_termination=False,
+                         no_device=None)]
+
+        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
+                       fake_block_device_mapping_get_all_by_instance)
+
+        instance = fakes.fake_instance_get(image_ref='',
+                                           vm_state=vm_states.ACTIVE,
+                                           root_device_name='/dev/vda')
+        self.stubs.Set(db, 'instance_get_by_uuid', instance)
+
+        volume = dict(id=_fake_id('a'),
+                      size=1,
+                      host='fake',
+                      display_description='fake')
+        snapshot = dict(id=_fake_id('d'))
+        self.mox.StubOutWithMock(self.controller.compute_api, 'volume_api')
+        volume_api = self.controller.compute_api.volume_api
+        volume_api.get(mox.IgnoreArg(), volume['id']).AndReturn(volume)
+        volume_api.create_snapshot_force(mox.IgnoreArg(), volume['id'],
+               mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(snapshot)
+
+        def fake_volume_image_metadata(fd, context, bdms):
+            return {'test_key1': 'test_value1',
+                    'test_key2': 'test_value2'}
+        req = fakes.HTTPRequest.blank(self.url)
+        self.stubs.Set(compute_api.API, '_get_volume_image_metadata',
+                       fake_volume_image_metadata)
+
+        self.mox.ReplayAll()
+        response = self.controller._action_create_image(req, FAKE_UUID, body)
+        location = response.headers['Location']
+        image_id = location.replace('http://localhost/v2/fake/images/', '')
+        image = image_service.show(None, image_id)
+
+        properties = image['properties']
+        self.assertEquals(properties['test_key1'], 'test_value1')
+        self.assertEquals(properties['test_key2'], 'test_value2')
+
     def test_create_image_snapshots_disabled(self):
         """Don't permit a snapshot if the allow_instance_snapshots flag is
         False
