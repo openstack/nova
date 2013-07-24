@@ -1148,14 +1148,20 @@ class SnapshotIdMapping(BASE, NovaBase):
 
 class InstanceFault(BASE, NovaBase):
     __tablename__ = 'instance_faults'
-    id = Column(Integer(), primary_key=True, autoincrement=True)
+    __table_args__ = (
+        Index('instance_faults_host_idx', 'host'),
+        Index('instance_faults_instance_uuid_deleted_created_at_idx',
+              'instance_uuid', 'deleted', 'created_at')
+    )
+
+    id = Column(Integer, primary_key=True, nullable=False)
     instance_uuid = Column(String(36),
                            ForeignKey('instances.uuid'),
-                           nullable=False)
+                           nullable=True)
     code = Column(Integer(), nullable=False)
-    message = Column(String(255))
-    details = Column(Text)
-    host = Column(String(255))
+    message = Column(String(255), nullable=True)
+    details = Column(MediumText(), nullable=True)
+    host = Column(String(255), nullable=True)
 
 
 class InstanceAction(BASE, NovaBase):
@@ -1165,30 +1171,37 @@ class InstanceAction(BASE, NovaBase):
     lookup by (instance_uuid, request_id) should always return a single result.
     """
     __tablename__ = 'instance_actions'
+    __table_args__ = (
+        Index('instance_uuid_idx', 'instance_uuid'),
+        Index('request_id_idx', 'request_id')
+    )
+
     id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
-    action = Column(String(255))
+    action = Column(String(255), nullable=True)
     instance_uuid = Column(String(36),
                            ForeignKey('instances.uuid'),
-                           nullable=False)
-    request_id = Column(String(255))
-    user_id = Column(String(255))
-    project_id = Column(String(255))
-    start_time = Column(DateTime, default=timeutils.utcnow)
-    finish_time = Column(DateTime)
-    message = Column(String(255))
+                           nullable=True)
+    request_id = Column(String(255), nullable=True)
+    user_id = Column(String(255), nullable=True)
+    project_id = Column(String(255), nullable=True)
+    start_time = Column(DateTime, default=timeutils.utcnow, nullable=True)
+    finish_time = Column(DateTime, nullable=True)
+    message = Column(String(255), nullable=True)
 
 
 class InstanceActionEvent(BASE, NovaBase):
     """Track events that occur during an InstanceAction."""
     __tablename__ = 'instance_actions_events'
+    __table_args__ = ()
+
     id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
-    event = Column(String(255))
+    event = Column(String(255), nullable=True)
     action_id = Column(Integer, ForeignKey('instance_actions.id'),
-                       nullable=False)
-    start_time = Column(DateTime, default=timeutils.utcnow)
-    finish_time = Column(DateTime)
-    result = Column(String(255))
-    traceback = Column(Text)
+                       nullable=True)
+    start_time = Column(DateTime, default=timeutils.utcnow, nullable=True)
+    finish_time = Column(DateTime, nullable=True)
+    result = Column(String(255), nullable=True)
+    traceback = Column(Text, nullable=True)
 
 
 class InstanceIdMapping(BASE, NovaBase):
