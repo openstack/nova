@@ -274,39 +274,32 @@ class VMOps(object):
     def finish_migration(self, context, migration, instance, disk_info,
                          network_info, image_meta, resize_instance,
                          block_device_info=None, power_on=True):
-        root_vdi = vm_utils.move_disks(self._session, instance, disk_info)
-        vdis = {'root': root_vdi}
 
-        if resize_instance:
-            self._resize_up_root_vdi(instance, root_vdi)
+        def null_step_decorator(f):
+            return f
 
-        name_label = instance['name']
+        def create_disks_step(undo_mgr, disk_image_type, image_meta,
+                              name_label):
+            #TODO(johngarbutt) clean up the move_disks if this is not run
+            root_vdi = vm_utils.move_disks(self._session, instance, disk_info)
 
-        kernel_file, ramdisk_file = vm_utils.create_kernel_and_ramdisk(
-                context, self._session, instance, name_label)
+            def undo_create_disks():
+                vm_utils.safe_destroy_vdis(self._session, [root_vdi['ref']])
 
-        disk_image_type = vm_utils.determine_disk_image_type(image_meta)
-        self._ensure_instance_name_unique(name_label)
-        self._ensure_enough_free_mem(instance)
-        vm_ref = self._create_vm_record(context, instance, name_label,
-                vdis, disk_image_type, kernel_file, ramdisk_file)
+            undo_mgr.undo_with(undo_create_disks)
+            return {'root': root_vdi}
 
-        self._attach_disks(instance, vm_ref, name_label, vdis,
-                           disk_image_type)
+        def completed_callback():
+            self._update_instance_progress(context, instance,
+                                           step=5,
+                                           total_steps=RESIZE_TOTAL_STEPS)
 
-        self._file_inject_vm_settings(instance, vm_ref, vdis, network_info)
-        self._create_vifs(instance, vm_ref, network_info)
-        self.inject_network_info(instance, network_info, vm_ref)
-        self._inject_instance_metadata(instance, vm_ref)
-
-        self._attach_mapped_block_devices(instance, block_device_info)
-
-        # 5. Start VM
-        if power_on:
-            self._start(instance, vm_ref)
-        self._update_instance_progress(context, instance,
-                                       step=5,
-                                       total_steps=RESIZE_TOTAL_STEPS)
+        self._spawn(context, instance, image_meta, null_step_decorator,
+                    create_disks_step, first_boot=False, injected_files=None,
+                    admin_password=None, network_info=network_info,
+                    block_device_info=block_device_info, name_label=None,
+                    rescue=False, power_on=power_on, resize=resize_instance,
+                    completed_callback=completed_callback)
 
     def _start(self, instance, vm_ref=None, bad_volumes_callback=None):
         """Power on a VM instance."""
@@ -336,6 +329,7 @@ class VMOps(object):
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info=None, block_device_info=None,
               name_label=None, rescue=False):
+
         if block_device_info:
             LOG.debug(_("Block device information present: %s")
                       % block_device_info, instance=instance)
@@ -345,18 +339,9 @@ class VMOps(object):
         step = make_step_decorator(context, instance,
                                    self._update_instance_progress)
 
-        if name_label is None:
-            name_label = instance['name']
-
-        self._ensure_instance_name_unique(name_label)
-        self._ensure_enough_free_mem(instance)
-
         @step
-        def determine_disk_image_type_step(undo_mgr):
-            return vm_utils.determine_disk_image_type(image_meta)
-
-        @step
-        def create_disks_step(undo_mgr, disk_image_type, image_meta):
+        def create_disks_step(undo_mgr, disk_image_type, image_meta,
+                              name_label):
             vdis = vm_utils.get_vdis_for_instance(context, self._session,
                         instance, name_label, image_meta.get('id'),
                         disk_image_type, block_device_info=block_device_info)
@@ -368,6 +353,25 @@ class VMOps(object):
 
             undo_mgr.undo_with(undo_create_disks)
             return vdis
+
+        self._spawn(context, instance, image_meta, step, create_disks_step,
+                    True, injected_files, admin_password,
+                    network_info, block_device_info, name_label, rescue)
+
+    def _spawn(self, context, instance, image_meta, step, create_disks_step,
+               first_boot, injected_files=None, admin_password=None,
+               network_info=None, block_device_info=None,
+               name_label=None, rescue=False, power_on=True, resize=True,
+               completed_callback=None):
+        if name_label is None:
+            name_label = instance['name']
+
+        self._ensure_instance_name_unique(name_label)
+        self._ensure_enough_free_mem(instance)
+
+        @step
+        def determine_disk_image_type_step(undo_mgr):
+            return vm_utils.determine_disk_image_type(image_meta)
 
         @step
         def create_kernel_ramdisk_step(undo_mgr):
@@ -410,12 +414,15 @@ class VMOps(object):
                                 instance=instance)
 
             root_vdi = vdis.get('root')
-            if root_vdi:
+            if root_vdi and resize:
                 self._resize_up_root_vdi(instance, root_vdi)
 
             self._attach_disks(instance, vm_ref, name_label, vdis,
                                disk_image_type, admin_password,
                                injected_files)
+            if not first_boot:
+                self._attach_mapped_block_devices(instance,
+                                                  block_device_info)
 
             if rescue:
                 # NOTE(johannes): Attach root disk to rescue VM now, before
@@ -427,7 +434,8 @@ class VMOps(object):
         def inject_instance_data_step(undo_mgr, vm_ref, vdis):
             self._inject_instance_metadata(instance, vm_ref)
             self._inject_auto_disk_config(instance, vm_ref)
-            self._inject_hostname(instance, vm_ref, rescue)
+            if first_boot:
+                self._inject_hostname(instance, vm_ref, rescue)
             self._file_inject_vm_settings(instance, vm_ref, vdis, network_info)
             self.inject_network_info(instance, network_info, vm_ref)
 
@@ -449,14 +457,16 @@ class VMOps(object):
 
         @step
         def boot_instance_step(undo_mgr, vm_ref):
-            self._start(instance, vm_ref)
-            self._wait_for_instance_to_start(instance, vm_ref)
+            if power_on:
+                self._start(instance, vm_ref)
+                self._wait_for_instance_to_start(instance, vm_ref)
 
         @step
         def configure_booted_instance_step(undo_mgr, vm_ref):
-            self._configure_new_instance_with_agent(instance, vm_ref,
-                    injected_files, admin_password)
-            self._remove_hostname(instance, vm_ref)
+            if first_boot:
+                self._configure_new_instance_with_agent(instance, vm_ref,
+                        injected_files, admin_password)
+                self._remove_hostname(instance, vm_ref)
 
         @step
         def apply_security_group_filters_step(undo_mgr):
@@ -471,7 +481,8 @@ class VMOps(object):
             # first step is something that completes rather quickly.
             disk_image_type = determine_disk_image_type_step(undo_mgr)
 
-            vdis = create_disks_step(undo_mgr, disk_image_type, image_meta)
+            vdis = create_disks_step(undo_mgr, disk_image_type, image_meta,
+                                     name_label)
             kernel_file, ramdisk_file = create_kernel_ramdisk_step(undo_mgr)
 
             vm_ref = create_vm_record_step(undo_mgr, vdis, disk_image_type,
@@ -485,6 +496,9 @@ class VMOps(object):
 
             configure_booted_instance_step(undo_mgr, vm_ref)
             apply_security_group_filters_step(undo_mgr)
+
+            if completed_callback:
+                completed_callback()
         except Exception:
             msg = _("Failed to spawn, rolling back")
             undo_mgr.rollback_and_reraise(msg=msg, instance=instance)
