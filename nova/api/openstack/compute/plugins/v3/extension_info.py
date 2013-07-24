@@ -82,6 +82,7 @@ class ExtensionInfoController(object):
                           alias)
         return discoverable_extensions
 
+    @extensions.expected_errors(())
     @wsgi.serializers(xml=ExtensionsTemplate)
     def index(self, req):
         context = req.environ['nova.context']
@@ -94,6 +95,7 @@ class ExtensionInfoController(object):
             extensions.append(self._translate(ext))
         return dict(extensions=extensions)
 
+    @extensions.expected_errors(404)
     @wsgi.serializers(xml=ExtensionTemplate)
     def show(self, req, id):
         context = req.environ['nova.context']
