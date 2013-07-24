@@ -77,22 +77,6 @@ CONF.register_opts(ec2_opts)
 CONF.import_opt('use_forwarded_for', 'nova.api.auth')
 
 
-def ec2_error(req, request_id, code, message):
-    """Helper to send an ec2_compatible error."""
-    LOG.error(_('%(code)s: %(message)s'), {'code': code, 'message': message})
-    resp = webob.Response()
-    resp.status = 400
-    resp.headers['Content-Type'] = 'text/xml'
-    resp.body = str('<?xml version="1.0"?>\n'
-                     '<Response><Errors><Error><Code>%s</Code>'
-                     '<Message>%s</Message></Error></Errors>'
-                     '<RequestID>%s</RequestID></Response>' %
-                     (utils.xhtml_escape(utils.utf8(code)),
-                      utils.xhtml_escape(utils.utf8(message)),
-                      utils.xhtml_escape(utils.utf8(request_id))))
-    return resp
-
-
 ## Fault Wrapper around all EC2 requests ##
 class FaultWrapper(wsgi.Middleware):
     """Calls the middleware stack, captures any exceptions into faults."""
@@ -202,11 +186,13 @@ class EC2KeystoneAuth(wsgi.Middleware):
         signature = req.params.get('Signature')
         if not signature:
             msg = _("Signature not provided")
-            return ec2_error(req, request_id, "Unauthorized", msg)
+            return faults.ec2_error_response(request_id, "Unauthorized", msg,
+                                             status=400)
         access = req.params.get('AWSAccessKeyId')
         if not access:
             msg = _("Access key not provided")
-            return ec2_error(req, request_id, "Unauthorized", msg)
+            return faults.ec2_error_response(request_id, "Unauthorized", msg,
+                                             status=400)
 
         # Make a copy of args for authentication and signature verification.
         auth_params = dict(req.params)
@@ -241,7 +227,8 @@ class EC2KeystoneAuth(wsgi.Middleware):
                 msg = response.reason
             else:
                 msg = _("Failure communicating with keystone")
-            return ec2_error(req, request_id, "Unauthorized", msg)
+            return faults.ec2_error_response(request_id, "Unauthorized", msg,
+                                             status=400)
         result = jsonutils.loads(data)
         conn.close()
 
@@ -256,7 +243,8 @@ class EC2KeystoneAuth(wsgi.Middleware):
         except (AttributeError, KeyError) as e:
             LOG.exception(_("Keystone failure: %s") % e)
             msg = _("Failure communicating with keystone")
-            return ec2_error(req, request_id, "Unauthorized", msg)
+            return faults.ec2_error_response(request_id, "Unauthorized", msg,
+                                             status=400)
 
         remote_address = req.remote_addr
         if CONF.use_forwarded_for:
@@ -468,6 +456,75 @@ class Validator(wsgi.Middleware):
             raise webob.exc.HTTPBadRequest()
 
 
+def exception_to_ec2code(ex):
+    """Helper to extract EC2 error code from exception.
+
+    For other than EC2 exceptions (those without ec2_code attribute),
+    use exception name.
+    """
+    if hasattr(ex, 'ec2_code'):
+        code = ex.ec2_code
+    else:
+        code = type(ex).__name__
+    return code
+
+
+def ec2_error_ex(ex, req, code=None, message=None, unexpected=False):
+    """
+    Return an EC2 error response based on passed exception and log
+    the exception on an appropriate log level:
+
+        * DEBUG: expected errors
+        * ERROR: unexpected client (4xx) errors
+        * CRITICAL: unexpected server (5xx) errors
+
+    Unexpected 5xx errors may contain sensitive information,
+    supress their messages for security.
+    """
+    if not code:
+        code = exception_to_ec2code(ex)
+    status = getattr(ex, 'code', None)
+    if not status:
+        status = 500
+
+    if unexpected:
+        log_msg = _("Unexpected %(ex_name)s raised")
+        if status >= 500:
+            log_fun = LOG.critical
+        else:
+            log_fun = LOG.error
+            if ex.args:
+                log_msg = _("Unexpected %(ex_name)s raised: %(ex_str)s")
+    else:
+        log_fun = LOG.debug
+        if ex.args:
+            log_msg = _("%(ex_name)s raised: %(ex_str)s")
+        else:
+            log_msg = _("%(ex_name)s raised")
+    context = req.environ['nova.context']
+    request_id = context.request_id
+    log_msg_args = {
+        'ex_name': type(ex).__name__,
+        'ex_str': unicode(ex)
+    }
+    log_fun(log_msg % log_msg_args, context=context)
+
+    if ex.args and not message and (not unexpected or status < 500):
+        message = unicode(ex.args[0])
+    if unexpected:
+        # Log filtered environment for unexpected errors.
+        env = req.environ.copy()
+        for k in env.keys():
+            if not isinstance(env[k], basestring):
+                env.pop(k)
+        log_fun(_('Environment: %s') % jsonutils.dumps(env))
+    if not message:
+        message = _('Unknown error occured.')
+    # note(jruzicka): To preserve old behavior, all exceptions are returned
+    # with 400 status until EC2 errors are properly fixed.
+    return faults.ec2_error_response(request_id, code, message, status=400)
+
+
 class Executor(wsgi.Application):
 
     """Execute an EC2 API request.
@@ -480,83 +537,39 @@ class Executor(wsgi.Application):
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
         context = req.environ['nova.context']
-        request_id = context.request_id
         api_request = req.environ['ec2.request']
         result = None
         try:
             result = api_request.invoke(context)
         except exception.InstanceNotFound as ex:
-            LOG.info(_('InstanceNotFound raised: %s'), unicode(ex),
-                     context=context)
             ec2_id = ec2utils.id_to_ec2_inst_id(ex.kwargs['instance_id'])
             message = ex.msg_fmt % {'instance_id': ec2_id}
-            return ec2_error(req, request_id, type(ex).__name__, message)
+            return ec2_error_ex(ex, req, message=message)
         except exception.VolumeNotFound as ex:
-            LOG.info(_('VolumeNotFound raised: %s'), unicode(ex),
-                     context=context)
             ec2_id = ec2utils.id_to_ec2_vol_id(ex.kwargs['volume_id'])
             message = ex.msg_fmt % {'volume_id': ec2_id}
-            return ec2_error(req, request_id, type(ex).__name__, message)
+            return ec2_error_ex(ex, req, message=message)
         except exception.SnapshotNotFound as ex:
-            LOG.info(_('SnapshotNotFound raised: %s'), unicode(ex),
-                     context=context)
             ec2_id = ec2utils.id_to_ec2_snap_id(ex.kwargs['snapshot_id'])
             message = ex.msg_fmt % {'snapshot_id': ec2_id}
-            return ec2_error(req, request_id, type(ex).__name__, message)
-        except exception.NotFound as ex:
-            LOG.info(_('NotFound raised: %s'), unicode(ex), context=context)
-            return ec2_error(req, request_id, type(ex).__name__, unicode(ex))
-        except exception.EC2APIError as ex:
-            if ex.code:
-                return ec2_error(req, request_id, ex.code, unicode(ex))
-            else:
-                return ec2_error(req, request_id, type(ex).__name__,
-                                   unicode(ex))
+            return ec2_error_ex(ex, req, message=message)
         except exception.KeyPairExists as ex:
-            LOG.debug(_('KeyPairExists raised: %s'), unicode(ex),
-                     context=context)
             code = 'InvalidKeyPair.Duplicate'
-            return ec2_error(req, request_id, code, unicode(ex))
+            return ec2_error_ex(ex, req, code=code)
         except exception.InvalidKeypair as ex:
-            LOG.debug(_('InvalidKeypair raised: %s'), unicode(ex),
-                        context)
             code = 'InvalidKeyPair.Format'
-            return ec2_error(req, request_id, code, unicode(ex))
-        except exception.InvalidParameterValue as ex:
-            LOG.debug(_('InvalidParameterValue raised: %s'), unicode(ex),
-                     context=context)
-            return ec2_error(req, request_id, type(ex).__name__, unicode(ex))
-        except exception.InvalidPortRange as ex:
-            LOG.debug(_('InvalidPortRange raised: %s'), unicode(ex),
-                     context=context)
-            return ec2_error(req, request_id, type(ex).__name__, unicode(ex))
-        except exception.NotAuthorized as ex:
-            LOG.info(_('NotAuthorized raised: %s'), unicode(ex),
-                    context=context)
-            return ec2_error(req, request_id, type(ex).__name__, unicode(ex))
-        except exception.InvalidRequest as ex:
-            LOG.debug(_('InvalidRequest raised: %s'), unicode(ex),
-                     context=context)
-            return ec2_error(req, request_id, type(ex).__name__, unicode(ex))
-        except exception.QuotaError as ex:
-            LOG.debug(_('QuotaError raised: %s'), unicode(ex),
-                      context=context)
-            return ec2_error(req, request_id, type(ex).__name__, unicode(ex))
-        except exception.InvalidInstanceIDMalformed as ex:
-            LOG.debug(_('Invalid id: bogus (expecting "i-..."): %s'),
-                        unicode(ex), context=context)
-            return ec2_error(req, request_id, type(ex).__name__, unicode(ex))
+            return ec2_error_ex(ex, req, code=code)
+        except (exception.EC2APIError,
+                exception.NotFound,
+                exception.InvalidParameterValue,
+                exception.InvalidPortRange,
+                exception.NotAuthorized,
+                exception.InvalidRequest,
+                exception.QuotaError,
+                exception.InvalidInstanceIDMalformed) as ex:
+            return ec2_error_ex(ex, req)
         except Exception as ex:
-            env = req.environ.copy()
-            for k in env.keys():
-                if not isinstance(env[k], basestring):
-                    env.pop(k)
-
-            LOG.exception(_('Unexpected error raised: %s'), unicode(ex))
-            LOG.error(_('Environment: %s') % jsonutils.dumps(env))
-            return ec2_error(req, request_id, 'UnknownError',
-                             _('An unknown error has occurred. '
-                               'Please try your request again.'))
+            return ec2_error_ex(ex, req, unexpected=True)
         else:
             resp = webob.Response()
             resp.status = 200

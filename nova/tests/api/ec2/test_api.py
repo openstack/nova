@@ -455,10 +455,12 @@ class ApiEc2TestCase(test.TestCase):
         # Invalid protocol
         _assert('Invalid IP protocol', 'xyz', 1, 14, '0.0.0.0/0')
         # Invalid port
-        _assert('An unknown error has occurred', 'tcp', " ", "81", '0.0.0.0/0')
+        _assert('Invalid input received: To and From ports must be integers',
+                'tcp', " ", "81", '0.0.0.0/0')
         # Invalid icmp port
-        _assert('An unknown error has occurred', 'icmp', " ", "81",
-                '0.0.0.0/0')
+        _assert('Invalid input received: '
+                'Type and Code must be integers for ICMP protocol type',
+                'icmp', " ", "81", '0.0.0.0/0')
         # Invalid CIDR Address
         _assert('Invalid CIDR', 'icmp', -1, -1, '0.0.0.0')
         # Invalid CIDR Address
