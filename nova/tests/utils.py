@@ -133,7 +133,7 @@ def get_test_network_info(count=1, legacy_model=True):
                                         ips=[network_model.IP(fake_ip),
                                              network_model.IP(fake_ip)],
                                         routes=None,
-                                        dhcp_server=network_model.IP(fake_ip))
+                                        dhcp_server=fake_ip)
         subnet_6 = network_model.Subnet(cidr=fake_ip,
                                         gateway=network_model.IP(fake_ip),
                                         ips=[network_model.IP(fake_ip),

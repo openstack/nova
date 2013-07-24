@@ -2503,9 +2503,8 @@ class XenAPIDom0IptablesFirewallTestCase(stubs.XenAPITestBase):
         self.stubs.Set(compute_utils, 'get_nw_info_for_instance',
                        lambda instance: network_model)
 
-        network_info = network_model.legacy()
-        self.fw.prepare_instance_filter(instance_ref, network_info)
-        self.fw.apply_instance_filter(instance_ref, network_info)
+        self.fw.prepare_instance_filter(instance_ref, network_model)
+        self.fw.apply_instance_filter(instance_ref, network_model)
 
         self._validate_security_group()
         # Extra test for TCP acceptance rules
@@ -2521,14 +2520,16 @@ class XenAPIDom0IptablesFirewallTestCase(stubs.XenAPITestBase):
 
     def test_filters_for_instance_with_ip_v6(self):
         self.flags(use_ipv6=True)
-        network_info = fake_network.fake_get_instance_nw_info(self.stubs, 1)
+        network_info = fake_network.fake_get_instance_nw_info(self.stubs, 1,
+                                                        spectacular=True)
         rulesv4, rulesv6 = self.fw._filters_for_instance("fake", network_info)
         self.assertEquals(len(rulesv4), 2)
         self.assertEquals(len(rulesv6), 1)
 
     def test_filters_for_instance_without_ip_v6(self):
         self.flags(use_ipv6=False)
-        network_info = fake_network.fake_get_instance_nw_info(self.stubs, 1)
+        network_info = fake_network.fake_get_instance_nw_info(self.stubs, 1,
+                                                    spectacular=True)
         rulesv4, rulesv6 = self.fw._filters_for_instance("fake", network_info)
         self.assertEquals(len(rulesv4), 2)
         self.assertEquals(len(rulesv6), 0)
@@ -2543,7 +2544,10 @@ class XenAPIDom0IptablesFirewallTestCase(stubs.XenAPITestBase):
         _get_instance_nw_info = fake_network.fake_get_instance_nw_info
         network_info = _get_instance_nw_info(self.stubs,
                                              networks_count,
-                                             ipv4_addr_per_network)
+                                             ipv4_addr_per_network,
+                                             spectacular=True)
+        network_info[0]['network']['subnets'][0]['meta']['dhcp_server'] = \
+            '1.1.1.1'
         ipv4_len = len(self.fw.iptables.ipv4['filter'].rules)
         ipv6_len = len(self.fw.iptables.ipv6['filter'].rules)
         inst_ipv4, inst_ipv6 = self.fw.instance_rules(instance_ref,
@@ -2563,7 +2567,8 @@ class XenAPIDom0IptablesFirewallTestCase(stubs.XenAPITestBase):
     def test_do_refresh_security_group_rules(self):
         admin_ctxt = context.get_admin_context()
         instance_ref = self._create_instance_ref()
-        network_info = fake_network.fake_get_instance_nw_info(self.stubs, 1, 1)
+        network_info = fake_network.fake_get_instance_nw_info(self.stubs, 1, 1,
+                                                    spectacular=True)
         secgroup = self._create_test_security_group()
         db.instance_add_security_group(admin_ctxt, instance_ref['uuid'],
                                        secgroup['id'])
@@ -2592,7 +2597,8 @@ class XenAPIDom0IptablesFirewallTestCase(stubs.XenAPITestBase):
         # peeks at how the firewall names chains
         chain_name = 'inst-%s' % instance_ref['id']
 
-        network_info = fake_network.fake_get_instance_nw_info(self.stubs, 1, 1)
+        network_info = fake_network.fake_get_instance_nw_info(self.stubs, 1, 1,
+                                                        spectacular=True)
         self.fw.prepare_instance_filter(instance_ref, network_info)
         self.assertTrue('provider' in self.fw.iptables.ipv4['filter'].chains)
         rules = [rule for rule in self.fw.iptables.ipv4['filter'].rules

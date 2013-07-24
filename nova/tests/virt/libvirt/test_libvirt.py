@@ -454,7 +454,8 @@ class LibvirtConnTestCase(test.TestCase):
         disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
                                             instance_ref)
         cfg = conn.get_guest_config(instance_ref,
-                                    _fake_network_info(self.stubs, 1),
+                                    _fake_network_info(self.stubs, 1,
+                                                    spectacular=True),
                                     None, disk_info)
         self.assertEquals(cfg.acpi, True)
         self.assertEquals(cfg.apic, True)
@@ -501,7 +502,8 @@ class LibvirtConnTestCase(test.TestCase):
         disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
                                             instance_ref)
         cfg = conn.get_guest_config(instance_ref,
-                                    _fake_network_info(self.stubs, 2),
+                                    _fake_network_info(self.stubs, 2,
+                                            spectacular=True),
                                     None, disk_info)
         self.assertEquals(cfg.acpi, True)
         self.assertEquals(cfg.memory, 1024 * 1024 * 2)
@@ -772,7 +774,8 @@ class LibvirtConnTestCase(test.TestCase):
         disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
                                             instance_ref)
         conf = conn.get_guest_config(instance_ref,
-                                     _fake_network_info(self.stubs, 1),
+                                     _fake_network_info(self.stubs, 1,
+                                            spectacular=True),
                                      None, disk_info)
         self.assertEquals(conf.cpu, None)
 
@@ -792,7 +795,8 @@ class LibvirtConnTestCase(test.TestCase):
         disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
                                             instance_ref)
         conf = conn.get_guest_config(instance_ref,
-                                     _fake_network_info(self.stubs, 1),
+                                     _fake_network_info(self.stubs, 1,
+                                            spectacular=True),
                                      None, disk_info)
         self.assertEquals(type(conf.cpu),
                           vconfig.LibvirtConfigGuestCPU)
@@ -809,7 +813,8 @@ class LibvirtConnTestCase(test.TestCase):
         disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
                                             instance_ref)
         conf = conn.get_guest_config(instance_ref,
-                                     _fake_network_info(self.stubs, 1),
+                                     _fake_network_info(self.stubs, 1,
+                                            spectacular=True),
                                      None, disk_info)
         self.assertEquals(conf.cpu, None)
 
@@ -823,7 +828,8 @@ class LibvirtConnTestCase(test.TestCase):
         disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
                                             instance_ref)
         conf = conn.get_guest_config(instance_ref,
-                                     _fake_network_info(self.stubs, 1),
+                                     _fake_network_info(self.stubs, 1,
+                                            spectacular=True),
                                      None, disk_info)
         self.assertEquals(conf.cpu, None)
 
@@ -841,7 +847,8 @@ class LibvirtConnTestCase(test.TestCase):
         disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
                                             instance_ref)
         conf = conn.get_guest_config(instance_ref,
-                                     _fake_network_info(self.stubs, 1),
+                                     _fake_network_info(self.stubs, 1,
+                                            spectacular=True),
                                      None, disk_info)
         self.assertEquals(type(conf.cpu),
                           vconfig.LibvirtConfigGuestCPU)
@@ -862,7 +869,8 @@ class LibvirtConnTestCase(test.TestCase):
         disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
                                             instance_ref)
         conf = conn.get_guest_config(instance_ref,
-                                     _fake_network_info(self.stubs, 1),
+                                     _fake_network_info(self.stubs, 1,
+                                            spectacular=True),
                                      None, disk_info)
         self.assertEquals(type(conf.cpu),
                           vconfig.LibvirtConfigGuestCPU)
@@ -884,7 +892,8 @@ class LibvirtConnTestCase(test.TestCase):
         disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
                                             instance_ref)
         conf = conn.get_guest_config(instance_ref,
-                                     _fake_network_info(self.stubs, 1),
+                                     _fake_network_info(self.stubs, 1,
+                                                spectacular=True),
                                      None, disk_info)
         self.assertEquals(type(conf.cpu),
                           vconfig.LibvirtConfigGuestCPU)
@@ -907,7 +916,8 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertRaises(exception.NovaException,
                           conn.get_guest_config,
                           instance_ref,
-                          _fake_network_info(self.stubs, 1),
+                          _fake_network_info(self.stubs, 1,
+                                    spectacular=True),
                           None,
                           disk_info)
 
@@ -942,7 +952,8 @@ class LibvirtConnTestCase(test.TestCase):
         disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
                                             instance_ref)
         conf = conn.get_guest_config(instance_ref,
-                                     _fake_network_info(self.stubs, 1),
+                                     _fake_network_info(self.stubs, 1,
+                                            spectacular=True),
                                      None, disk_info)
         self.assertEquals(type(conf.cpu),
                           vconfig.LibvirtConfigGuestCPU)
@@ -968,7 +979,8 @@ class LibvirtConnTestCase(test.TestCase):
         disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
                                             instance_ref)
         conf = conn.get_guest_config(instance_ref,
-                                     _fake_network_info(self.stubs, 1),
+                                     _fake_network_info(self.stubs, 1,
+                                            spectacular=True),
                                      None, disk_info)
         self.assertEquals(type(conf.cpu),
                           vconfig.LibvirtConfigGuestCPU)
@@ -1865,7 +1877,8 @@ class LibvirtConnTestCase(test.TestCase):
 
     def test_multi_nic(self):
         instance_data = dict(self.test_instance)
-        network_info = _fake_network_info(self.stubs, 2)
+        network_info = _fake_network_info(self.stubs, 2,
+                                spectacular=True)
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_ref = db.instance_create(self.context, instance_data)
         disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
@@ -1886,7 +1899,8 @@ class LibvirtConnTestCase(test.TestCase):
 
         self.assertEquals(conn.uri(), 'lxc:///')
 
-        network_info = _fake_network_info(self.stubs, 1)
+        network_info = _fake_network_info(self.stubs, 1,
+                                spectacular=True)
         disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
                                             instance_ref)
         xml = conn.to_xml(instance_ref, network_info, disk_info)
@@ -1940,7 +1954,8 @@ class LibvirtConnTestCase(test.TestCase):
                 self.flags(libvirt_disk_prefix=prefix)
             conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
-            network_info = _fake_network_info(self.stubs, 1)
+            network_info = _fake_network_info(self.stubs, 1,
+                                spectacular=True)
             disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
                                                 instance_ref)
             xml = conn.to_xml(instance_ref, network_info, disk_info)
@@ -1974,7 +1989,7 @@ class LibvirtConnTestCase(test.TestCase):
 
         user_context = context.RequestContext(self.user_id, self.project_id)
         instance_ref = db.instance_create(user_context, self.test_instance)
-        network_info = _fake_network_info(self.stubs, 1)
+        network_info = _fake_network_info(self.stubs, 1, spectacular=True)
 
         drv = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
@@ -2002,7 +2017,7 @@ class LibvirtConnTestCase(test.TestCase):
                                 block_device_info, wantConfig):
         user_context = context.RequestContext(self.user_id, self.project_id)
         instance_ref = db.instance_create(user_context, self.test_instance)
-        network_info = _fake_network_info(self.stubs, 1)
+        network_info = _fake_network_info(self.stubs, 1, spectacular=True)
 
         drv = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
@@ -2031,7 +2046,7 @@ class LibvirtConnTestCase(test.TestCase):
     def _check_xml_and_uuid(self, image_meta):
         user_context = context.RequestContext(self.user_id, self.project_id)
         instance_ref = db.instance_create(user_context, self.test_instance)
-        network_info = _fake_network_info(self.stubs, 1)
+        network_info = _fake_network_info(self.stubs, 1, spectacular=True)
 
         drv = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
@@ -2188,7 +2203,7 @@ class LibvirtConnTestCase(test.TestCase):
 
             self.assertEquals(conn.uri(), expected_uri)
 
-            network_info = _fake_network_info(self.stubs, 1)
+            network_info = _fake_network_info(self.stubs, 1, spectacular=True)
             disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
                                                 instance_ref,
                                                 rescue=rescue)
@@ -2208,8 +2223,8 @@ class LibvirtConnTestCase(test.TestCase):
                                  (check(tree), expected_result, i))
 
             filterref = './devices/interface/filterref'
-            (network, mapping) = network_info[0]
-            nic_id = mapping['mac'].replace(':', '')
+            vif = network_info[0]
+            nic_id = vif['address'].replace(':', '')
             fw = firewall.NWFilterFirewall(fake.FakeVirtAPI(), conn)
             instance_filter_name = fw._instance_filter_name(instance_ref,
                                                             nic_id)
@@ -2250,7 +2265,7 @@ class LibvirtConnTestCase(test.TestCase):
         # _fake_network_info must be called before create_fake_libvirt_mock(),
         # as _fake_network_info calls importutils.import_class() and
         # create_fake_libvirt_mock() mocks importutils.import_class().
-        network_info = _fake_network_info(self.stubs, 1)
+        network_info = _fake_network_info(self.stubs, 1, spectacular=True)
         self.create_fake_libvirt_mock()
         instance_ref = db.instance_create(self.context, self.test_instance)
 
@@ -2768,7 +2783,7 @@ class LibvirtConnTestCase(test.TestCase):
         # _fake_network_info must be called before create_fake_libvirt_mock(),
         # as _fake_network_info calls importutils.import_class() and
         # create_fake_libvirt_mock() mocks importutils.import_class().
-        network_info = _fake_network_info(self.stubs, 1)
+        network_info = _fake_network_info(self.stubs, 1, spectacular=True)
         self.create_fake_libvirt_mock(getLibVersion=fake_getLibVersion,
                                       getCapabilities=fake_getCapabilities,
                                       getVersion=lambda: 1005001)
@@ -4615,9 +4630,8 @@ class IptablesFirewallTestCase(test.TestCase):
         self.stubs.Set(compute_utils, 'get_nw_info_for_instance',
                        lambda instance: network_model)
 
-        network_info = network_model.legacy()
-        self.fw.prepare_instance_filter(instance_ref, network_info)
-        self.fw.apply_instance_filter(instance_ref, network_info)
+        self.fw.prepare_instance_filter(instance_ref, network_model)
+        self.fw.apply_instance_filter(instance_ref, network_model)
 
         in_rules = filter(lambda l: not l.startswith('#'),
                           self.in_rules)
@@ -4674,14 +4688,14 @@ class IptablesFirewallTestCase(test.TestCase):
 
     def test_filters_for_instance_with_ip_v6(self):
         self.flags(use_ipv6=True)
-        network_info = _fake_network_info(self.stubs, 1)
+        network_info = _fake_network_info(self.stubs, 1, spectacular=True)
         rulesv4, rulesv6 = self.fw._filters_for_instance("fake", network_info)
         self.assertEquals(len(rulesv4), 2)
         self.assertEquals(len(rulesv6), 1)
 
     def test_filters_for_instance_without_ip_v6(self):
         self.flags(use_ipv6=False)
-        network_info = _fake_network_info(self.stubs, 1)
+        network_info = _fake_network_info(self.stubs, 1, spectacular=True)
         rulesv4, rulesv6 = self.fw._filters_for_instance("fake", network_info)
         self.assertEquals(len(rulesv4), 2)
         self.assertEquals(len(rulesv6), 0)
@@ -4694,7 +4708,9 @@ class IptablesFirewallTestCase(test.TestCase):
         networks_count = 5
         instance_ref = self._create_instance_ref()
         network_info = _fake_network_info(self.stubs, networks_count,
-                                                      ipv4_addr_per_network)
+                                ipv4_addr_per_network, spectacular=True)
+        network_info[0]['network']['subnets'][0]['meta']['dhcp_server'] = \
+            '1.1.1.1'
         ipv4_len = len(self.fw.iptables.ipv4['filter'].rules)
         ipv6_len = len(self.fw.iptables.ipv6['filter'].rules)
         inst_ipv4, inst_ipv6 = self.fw.instance_rules(instance_ref,
@@ -4743,7 +4759,7 @@ class IptablesFirewallTestCase(test.TestCase):
         self.fw.nwfilter._conn.nwfilterLookupByName = _lookup_name
         instance_ref = self._create_instance_ref()
 
-        network_info = _fake_network_info(self.stubs, 1)
+        network_info = _fake_network_info(self.stubs, 1, spectacular=True)
         self.fw.setup_basic_filtering(instance_ref, network_info)
         self.fw.prepare_instance_filter(instance_ref, network_info)
         self.fw.apply_instance_filter(instance_ref, network_info)
@@ -4763,7 +4779,7 @@ class IptablesFirewallTestCase(test.TestCase):
 
         # create a firewall via setup_basic_filtering like libvirt_conn.spawn
         # should have a chain with 0 rules
-        network_info = _fake_network_info(self.stubs, 1)
+        network_info = _fake_network_info(self.stubs, 1, spectacular=True)
         self.fw.setup_basic_filtering(instance_ref, network_info)
         self.assertTrue('provider' in self.fw.iptables.ipv4['filter'].chains)
         rules = [rule for rule in self.fw.iptables.ipv4['filter'].rules
@@ -4926,32 +4942,40 @@ class NWFilterTestCase(test.TestCase):
                                                    mac.translate(None, ':'))
             requiredlist = ['no-arp-spoofing', 'no-ip-spoofing',
                              'no-mac-spoofing']
+            required_not_list = []
             if allow_dhcp:
                 requiredlist.append('allow-dhcp-server')
+            else:
+                required_not_list.append('allow-dhcp-server')
             for required in requiredlist:
                 self.assertTrue(required in
                                 self.recursive_depends[instance_filter],
                                 "Instance's filter does not include %s" %
                                 required)
+            for required_not in required_not_list:
+                self.assertFalse(required_not in
+                    self.recursive_depends[instance_filter],
+                    "Instance filter includes %s" % required_not)
 
         self.security_group = self.setup_and_return_security_group()
 
         db.instance_add_security_group(self.context, inst_uuid,
                                        self.security_group['id'])
         instance = db.instance_get(self.context, inst_id)
-
-        network_info = _fake_network_info(self.stubs, 1)
+        network_info = _fake_network_info(self.stubs, 1, spectacular=True)
         # since there is one (network_info) there is one vif
         # pass this vif's mac to _ensure_all_called()
         # to set the instance_filter properly
-        mac = network_info[0][1]['mac']
+        mac = network_info[0]['address']
+        network_info[0]['network']['subnets'][0]['meta']['dhcp_server'] = \
+            '1.1.1.1'
+        self.fw.setup_basic_filtering(instance, network_info)
+        allow_dhcp = True
+        _ensure_all_called(mac, allow_dhcp)
 
+        network_info[0]['network']['subnets'][0]['meta']['dhcp_server'] = None
         self.fw.setup_basic_filtering(instance, network_info)
         allow_dhcp = False
-        for (network, mapping) in network_info:
-            if mapping['dhcp_server']:
-                allow_dhcp = True
-                break
         _ensure_all_called(mac, allow_dhcp)
         db.instance_remove_security_group(self.context, inst_uuid,
                                           self.security_group['id'])
@@ -4976,7 +5000,7 @@ class NWFilterTestCase(test.TestCase):
 
         instance = db.instance_get(self.context, inst_id)
 
-        network_info = _fake_network_info(self.stubs, 1)
+        network_info = _fake_network_info(self.stubs, 1, spectacular=True)
         self.fw.setup_basic_filtering(instance, network_info)
         original_filter_count = len(fakefilter.filters)
         self.fw.unfilter_instance(instance, network_info)
@@ -5002,11 +5026,11 @@ class NWFilterTestCase(test.TestCase):
 
         instance = db.instance_get(self.context, inst_id)
 
-        network_info = _fake_network_info(self.stubs, 1)
+        network_info = _fake_network_info(self.stubs, 1, spectacular=True)
         self.fw.setup_basic_filtering(instance, network_info)
 
-        (network, mapping) = network_info[0]
-        nic_id = mapping['mac'].replace(':', '')
+        vif = network_info[0]
+        nic_id = vif['address'].replace(':', '')
         instance_filter_name = self.fw._instance_filter_name(instance, nic_id)
         f = fakefilter.nwfilterLookupByName(instance_filter_name)
         tree = etree.fromstring(f.xml)
@@ -5014,29 +5038,30 @@ class NWFilterTestCase(test.TestCase):
         for fref in tree.findall('filterref'):
             parameters = fref.findall('./parameter')
             for parameter in parameters:
+                subnet_v4, subnet_v6 = vif['network']['subnets']
                 if parameter.get('name') == 'IP':
                     self.assertTrue(_ipv4_like(parameter.get('value'),
                                                              '192.168'))
                 elif parameter.get('name') == 'DHCPSERVER':
-                    dhcp_server = mapping['dhcp_server']
+                    dhcp_server = subnet_v4.get('dhcp_server')
                     self.assertEqual(parameter.get('value'), dhcp_server)
                 elif parameter.get('name') == 'RASERVER':
-                    ra_server = mapping.get('gateway_v6') + "/128"
+                    ra_server = subnet_v6['gateway']['address'] + "/128"
                     self.assertEqual(parameter.get('value'), ra_server)
                 elif parameter.get('name') == 'PROJNET':
-                    ipv4_cidr = network['cidr']
+                    ipv4_cidr = subnet_v4['cidr']
                     net, mask = netutils.get_net_and_mask(ipv4_cidr)
                     self.assertEqual(parameter.get('value'), net)
                 elif parameter.get('name') == 'PROJMASK':
-                    ipv4_cidr = network['cidr']
+                    ipv4_cidr = subnet_v4['cidr']
                     net, mask = netutils.get_net_and_mask(ipv4_cidr)
                     self.assertEqual(parameter.get('value'), mask)
                 elif parameter.get('name') == 'PROJNET6':
-                    ipv6_cidr = network['cidr_v6']
+                    ipv6_cidr = subnet_v6['cidr']
                     net, prefix = netutils.get_net_and_prefixlen(ipv6_cidr)
                     self.assertEqual(parameter.get('value'), net)
                 elif parameter.get('name') == 'PROJMASK6':
-                    ipv6_cidr = network['cidr_v6']
+                    ipv6_cidr = subnet_v6['cidr']
                     net, prefix = netutils.get_net_and_prefixlen(ipv6_cidr)
                     self.assertEqual(parameter.get('value'), prefix)
                 else:
@@ -5716,11 +5741,13 @@ class LibvirtDriverTestCase(test.TestCase):
 
         self.mox.StubOutWithMock(self.libvirtconnection, "_cleanup_resize")
         self.libvirtconnection._cleanup_resize(ins_ref,
-                             _fake_network_info(self.stubs, 1))
+                             _fake_network_info(self.stubs, 1,
+                                    spectacular=True))
 
         self.mox.ReplayAll()
         self.libvirtconnection.confirm_migration("migration_ref", ins_ref,
-                                            _fake_network_info(self.stubs, 1))
+                                            _fake_network_info(self.stubs, 1,
+                                                spectacular=True))
 
     def test_cleanup_resize_same_host(self):
         ins_ref = self._create_instance({'host': CONF.host})
@@ -5736,7 +5763,8 @@ class LibvirtDriverTestCase(test.TestCase):
 
         self.mox.ReplayAll()
         self.libvirtconnection._cleanup_resize(ins_ref,
-                                            _fake_network_info(self.stubs, 1))
+                                            _fake_network_info(self.stubs, 1,
+                                                    spectacular=True))
 
     def test_cleanup_resize_not_same_host(self):
         host = 'not' + CONF.host
@@ -5768,7 +5796,8 @@ class LibvirtDriverTestCase(test.TestCase):
 
         self.mox.ReplayAll()
         self.libvirtconnection._cleanup_resize(ins_ref,
-                                            _fake_network_info(self.stubs, 1))
+                                            _fake_network_info(self.stubs, 1,
+                                                spectacular=True))
 
     def test_get_instance_disk_info_exception(self):
         instance_name = "fake-instance-name"

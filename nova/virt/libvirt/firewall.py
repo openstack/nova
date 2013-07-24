@@ -118,49 +118,68 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
         self._ensure_static_filters()
 
         allow_dhcp = False
-        for (network, mapping) in network_info:
-            if mapping['dhcp_server']:
-                allow_dhcp = True
-                break
+        for vif in network_info:
+            if not vif['network'] or not vif['network']['subnets']:
+                continue
+            for subnet in vif['network']['subnets']:
+                if subnet.get_meta('dhcp_server'):
+                    allow_dhcp = True
+                    break
 
         base_filter = self.get_base_filter_list(instance, allow_dhcp)
 
-        for (network, mapping) in network_info:
+        for vif in network_info:
             self._define_filter(self._get_instance_filter_xml(instance,
                                                               base_filter,
-                                                              network,
-                                                              mapping))
+                                                              vif))
 
-    def _get_instance_filter_parameters(self, network, mapping):
+    def _get_instance_filter_parameters(self, vif):
         parameters = []
 
         def format_parameter(parameter, value):
             return ("<parameter name='%s' value='%s'/>" % (parameter, value))
 
-        for address in mapping['ips']:
-            parameters.append(format_parameter('IP', address['ip']))
-        if mapping['dhcp_server']:
-            parameters.append(format_parameter('DHCPSERVER',
-                                               mapping['dhcp_server']))
+        network = vif['network']
+        if not vif['network'] or not vif['network']['subnets']:
+            return parameters
+
+        v4_subnets = [s for s in network['subnets'] if s['version'] == 4]
+        v6_subnets = [s for s in network['subnets'] if s['version'] == 6]
+
+        for subnet in v4_subnets:
+            for ip in subnet['ips']:
+                parameters.append(format_parameter('IP', ip['address']))
+
+            dhcp_server = subnet.get_meta('dhcp_server')
+            if dhcp_server:
+                parameters.append(format_parameter('DHCPSERVER', dhcp_server))
         if CONF.use_ipv6:
-            ra_server = mapping.get('gateway_v6') + "/128"
-            parameters.append(format_parameter('RASERVER', ra_server))
+            for subnet in v6_subnets:
+                gateway = subnet.get('gateway')
+                if gateway:
+                    ra_server = gateway['address'] + "/128"
+                    parameters.append(format_parameter('RASERVER', ra_server))
+
         if CONF.allow_same_net_traffic:
-            ipv4_cidr = network['cidr']
-            net, mask = netutils.get_net_and_mask(ipv4_cidr)
-            parameters.append(format_parameter('PROJNET', net))
-            parameters.append(format_parameter('PROJMASK', mask))
+            for subnet in v4_subnets:
+                ipv4_cidr = subnet['cidr']
+                net, mask = netutils.get_net_and_mask(ipv4_cidr)
+                parameters.append(format_parameter('PROJNET', net))
+                parameters.append(format_parameter('PROJMASK', mask))
+
             if CONF.use_ipv6:
-                ipv6_cidr = network['cidr_v6']
-                net, prefix = netutils.get_net_and_prefixlen(ipv6_cidr)
-                parameters.append(format_parameter('PROJNET6', net))
-                parameters.append(format_parameter('PROJMASK6', prefix))
+                for subnet in v6_subnets:
+                    ipv6_cidr = subnet['cidr']
+                    net, prefix = netutils.get_net_and_prefixlen(ipv6_cidr)
+                    parameters.append(format_parameter('PROJNET6', net))
+                    parameters.append(format_parameter('PROJMASK6', prefix))
+
         return parameters
 
-    def _get_instance_filter_xml(self, instance, filters, network, mapping):
-        nic_id = mapping['mac'].replace(':', '')
+    def _get_instance_filter_xml(self, instance, filters, vif):
+        nic_id = vif['address'].replace(':', '')
         instance_filter_name = self._instance_filter_name(instance, nic_id)
-        parameters = self._get_instance_filter_parameters(network, mapping)
+        parameters = self._get_instance_filter_parameters(vif)
         xml = '''<filter name='%s' chain='root'>''' % instance_filter_name
         for f in filters:
             xml += '''<filterref filter='%s'>''' % f
@@ -233,8 +252,8 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
     def unfilter_instance(self, instance, network_info):
         """Clear out the nwfilter rules."""
         instance_name = instance['name']
-        for (network, mapping) in network_info:
-            nic_id = mapping['mac'].replace(':', '')
+        for vif in network_info:
+            nic_id = vif['address'].replace(':', '')
             instance_filter_name = self._instance_filter_name(instance, nic_id)
 
             try:
@@ -261,8 +280,8 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
 
     def instance_filter_exists(self, instance, network_info):
         """Check nova-instance-instance-xxx exists."""
-        for (network, mapping) in network_info:
-            nic_id = mapping['mac'].replace(':', '')
+        for vif in network_info:
+            nic_id = vif['address'].replace(':', '')
             instance_filter_name = self._instance_filter_name(instance, nic_id)
             try:
                 self._conn.nwfilterLookupByName(instance_filter_name)

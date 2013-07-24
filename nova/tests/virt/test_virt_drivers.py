@@ -204,7 +204,9 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
 
     def _get_running_instance(self):
         instance_ref = test_utils.get_test_instance()
-        network_info = test_utils.get_test_network_info()
+        network_info = test_utils.get_test_network_info(legacy_model=False)
+        network_info[0]['network']['subnets'][0]['meta']['dhcp_server'] = \
+            '1.1.1.1'
         image_info = test_utils.get_test_image_info(None, instance_ref)
         self.connection.spawn(self.ctxt, instance_ref, image_info,
                               [], 'herp', network_info=network_info)
@@ -396,7 +398,7 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
     def test_destroy_instance_nonexistent(self):
         fake_instance = {'id': 42, 'name': 'I just made this up!',
                          'uuid': 'bda5fb9e-b347-40e8-8256-42397848cb00'}
-        network_info = test_utils.get_test_network_info()
+        network_info = test_utils.get_test_network_info(legacy_model=False)
         self.connection.destroy(fake_instance, network_info)
 
     @catch_notimplementederror
@@ -550,14 +552,14 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
     @catch_notimplementederror
     def test_ensure_filtering_for_instance(self):
         instance_ref = test_utils.get_test_instance()
-        network_info = test_utils.get_test_network_info()
+        network_info = test_utils.get_test_network_info(legacy_model=False)
         self.connection.ensure_filtering_rules_for_instance(instance_ref,
                                                             network_info)
 
     @catch_notimplementederror
     def test_unfilter_instance(self):
         instance_ref = test_utils.get_test_instance()
-        network_info = test_utils.get_test_network_info()
+        network_info = test_utils.get_test_network_info(legacy_model=False)
         self.connection.unfilter_instance(instance_ref, network_info)
 
     @catch_notimplementederror

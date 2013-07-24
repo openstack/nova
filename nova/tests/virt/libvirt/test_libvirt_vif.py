@@ -29,78 +29,133 @@ from nova.virt.libvirt import vif
 CONF = cfg.CONF
 
 
-def get_default_mapping(exclude=None, **kwargs):
-    mapping_body = {
-        'mac': 'ca:fe:de:ad:be:ef',
-        'ips': [{'ip': '101.168.1.9'}],
-        'dhcp_server': '191.168.1.1',
-        'vif_uuid': 'vif-xxx-yyy-zzz',
-        'vif_devname': 'tap-xxx-yyy-zzz'
-    }
-    mapping_body.update(kwargs)
-    if exclude:
-        for key in exclude:
-            del mapping_body[key]
-    return mapping_body
-
-
-def get_default_net(**kwargs):
-    body = {
-        'cidr': '101.168.1.0/24',
-        'cidr_v6': '101:1db9::/64',
-        'gateway_v6': '101:1db9::1',
-        'netmask_v6': '64',
-        'netmask': '255.255.255.0',
-        'vlan': 99,
-        'gateway': '101.168.1.1',
-        'broadcast': '101.168.1.255',
-        'dns1': '8.8.8.8',
-        'id': 'network-id-xxx-yyy-zzz'
-    }
-    body.update(kwargs)
-    return body
-
-
 class LibvirtVifTestCase(test.TestCase):
 
-    net_bridge = get_default_net(bridge='br0', bridge_interface='eth0')
-    net_bridge_neutron = get_default_net(bridge_interface='eth0')
-    net_ovs = get_default_net(bridge='br0')
-    net_8021 = get_default_net(interface='eth0')
+    gateway_bridge_4 = network_model.IP(address='101.168.1.1', type='gateway')
+    dns_bridge_4 = network_model.IP(address='8.8.8.8', type=None)
+    ips_bridge_4 = [network_model.IP(address='101.168.1.9', type=None)]
+    subnet_bridge_4 = network_model.Subnet(cidr='101.168.1.0/24',
+                                           dns=[dns_bridge_4],
+                                           gateway=gateway_bridge_4,
+                                           routes=None,
+                                           dhcp_server='191.168.1.1')
 
-    mapping_bridge = get_default_mapping(gateway_v6=net_bridge['gateway_v6'],
-                                         vif_type=
-                                         network_model.VIF_TYPE_BRIDGE)
-    mapping_bridge_neutron = get_default_mapping(
-        gateway_v6=net_bridge['gateway_v6'])
-    mapping_ovs = get_default_mapping(gateway_v6=net_ovs['gateway_v6'],
-                                      vif_type=network_model.VIF_TYPE_OVS,
-                                      ovs_interfaceid='aaa-bbb-ccc')
+    gateway_bridge_6 = network_model.IP(address='101:1db9::1', type='gateway')
+    subnet_bridge_6 = network_model.Subnet(cidr='101:1db9::/64',
+                                           dns=None,
+                                           gateway=gateway_bridge_6,
+                                           ips=None,
+                                           routes=None)
 
-    mapping_ivs = get_default_mapping(gateway_v6=net_ovs['gateway_v6'],
-                                      vif_type=network_model.VIF_TYPE_IVS,
-                                      ivs_interfaceid='aaa-bbb-ccc')
+    network_bridge = network_model.Network(id='network-id-xxx-yyy-zzz',
+                                           bridge='br0',
+                                           label=None,
+                                           subnets=[subnet_bridge_4,
+                                                    subnet_bridge_6],
+                                           bridge_interface='eth0',
+                                           vlan=99)
 
-    mapping_ovs_legacy = get_default_mapping(['vif_devname'],
-                                             gateway_v6=net_ovs['gateway_v6'])
+    vif_bridge = network_model.VIF(id='vif-xxx-yyy-zzz',
+                                   address='ca:fe:de:ad:be:ef',
+                                   network=network_bridge,
+                                   type=network_model.VIF_TYPE_BRIDGE,
+                                   devname='tap-xxx-yyy-zzz',
+                                   ovs_interfaceid=None)
 
-    mapping_8021qbh = get_default_mapping(
-        ['ips', 'dhcp_server'], vif_type=network_model.VIF_TYPE_802_QBH,
-        qbh_params=network_model.VIF8021QbhParams(profileid="xxx-yyy-zzz"),)
+    network_bridge_neutron = network_model.Network(id='network-id-xxx-yyy-zzz',
+                                                   bridge=None,
+                                                   label=None,
+                                                   subnets=[subnet_bridge_4,
+                                                            subnet_bridge_6],
+                                                   bridge_interface='eth0',
+                                                   vlan=99)
 
-    net_iovisor = get_default_net(interface='eth0')
+    vif_bridge_neutron = network_model.VIF(id='vif-xxx-yyy-zzz',
+                                           address='ca:fe:de:ad:be:ef',
+                                           network=network_bridge_neutron,
+                                           type=None,
+                                           devname='tap-xxx-yyy-zzz',
+                                           ovs_interfaceid='aaa-bbb-ccc')
 
-    mapping_iovisor = get_default_mapping(
-        ['ips', 'dhcp_server'], vif_type=network_model.VIF_TYPE_IOVISOR)
+    network_ovs = network_model.Network(id='network-id-xxx-yyy-zzz',
+                                        bridge='br0',
+                                        label=None,
+                                        subnets=[subnet_bridge_4,
+                                                 subnet_bridge_6],
+                                        bridge_interface=None,
+                                        vlan=99)
 
-    mapping_8021qbg = get_default_mapping(
-        ['ips', 'dhcp_server'], vif_type=network_model.VIF_TYPE_802_QBG,
-        qbg_params=network_model.VIF8021QbgParams(managerid="xxx-yyy-zzz",
-                                                  typeid="aaa-bbb-ccc",
-                                                  typeidversion="1",
-                                                  instanceid="ddd-eee-fff"))
+    network_ivs = network_model.Network(id='network-id-xxx-yyy-zzz',
+                                        bridge='br0',
+                                        label=None,
+                                        subnets=[subnet_bridge_4,
+                                                 subnet_bridge_6],
+                                        bridge_interface=None,
+                                        vlan=99)
 
-    mapping_none = get_default_mapping(gateway_v6=net_bridge['gateway_v6'])
+    vif_ovs = network_model.VIF(id='vif-xxx-yyy-zzz',
+                                address='ca:fe:de:ad:be:ef',
+                                network=network_ovs,
+                                type=network_model.VIF_TYPE_OVS,
+                                devname='tap-xxx-yyy-zzz',
+                                ovs_interfaceid='aaa-bbb-ccc')
+
+    vif_ovs_legacy = network_model.VIF(id='vif-xxx-yyy-zzz',
+                                       address='ca:fe:de:ad:be:ef',
+                                       network=network_ovs,
+                                       type=None,
+                                       devname=None,
+                                       ovs_interfaceid=None)
+
+    vif_ivs = network_model.VIF(id='vif-xxx-yyy-zzz',
+                                address='ca:fe:de:ad:be:ef',
+                                network=network_ivs,
+                                type=network_model.VIF_TYPE_IVS,
+                                devname='tap-xxx-yyy-zzz',
+                                ovs_interfaceid='aaa-bbb-ccc')
+
+    vif_ivs_legacy = network_model.VIF(id='vif-xxx-yyy-zzz',
+                                       address='ca:fe:de:ad:be:ef',
+                                       network=network_ovs,
+                                       type=None,
+                                       devname=None,
+                                       ovs_interfaceid='aaa')
+
+    vif_none = network_model.VIF(id='vif-xxx-yyy-zzz',
+                                 address='ca:fe:de:ad:be:ef',
+                                 network=network_bridge,
+                                 type=None,
+                                 devname='tap-xxx-yyy-zzz',
+                                 ovs_interfaceid=None)
+
+    network_8021 = network_model.Network(id='network-id-xxx-yyy-zzz',
+                                         bridge=None,
+                                         label=None,
+                                         subnets=[subnet_bridge_4,
+                                                  subnet_bridge_6],
+                                         interface='eth0',
+                                         vlan=99)
+
+    vif_8021qbh = network_model.VIF(id='vif-xxx-yyy-zzz',
+                                    address='ca:fe:de:ad:be:ef',
+                                    network=network_8021,
+                                    type=network_model.VIF_TYPE_802_QBH,
+                                    devname='tap-xxx-yyy-zzz',
+                                    ovs_interfaceid=None,
+                                    qbh_params=network_model.VIF8021QbhParams(
+                                    profileid="xxx-yyy-zzz"))
+
+    vif_8021qbg = network_model.VIF(id='vif-xxx-yyy-zzz',
+                                    address='ca:fe:de:ad:be:ef',
+                                    network=network_8021,
+                                    type=network_model.VIF_TYPE_802_QBG,
+                                    devname='tap-xxx-yyy-zzz',
+                                    ovs_interfaceid=None,
+                                    qbg_params=network_model.VIF8021QbgParams(
+                                    managerid="xxx-yyy-zzz",
+                                    typeid="aaa-bbb-ccc",
+                                    typeidversion="1",
+                                    instanceid="ddd-eee-fff"))
 
     instance = {
         'name': 'instance-name',
@@ -141,9 +196,9 @@ class LibvirtVifTestCase(test.TestCase):
         self.assertEqual(len(ret), 1)
         return ret[0]
 
-    def _assertMacEquals(self, node, mapping):
+    def _assertMacEquals(self, node, vif):
         mac = node.find("mac").get("address")
-        self.assertEqual(mac, mapping['mac'])
+        self.assertEqual(mac, vif['address'])
 
     def _assertTypeEquals(self, node, type, attr, source, br_want,
                           prefix=None):
@@ -154,13 +209,13 @@ class LibvirtVifTestCase(test.TestCase):
         else:
             self.assertTrue(br_name.startswith(prefix))
 
-    def _assertTypeAndMacEquals(self, node, type, attr, source, mapping,
+    def _assertTypeAndMacEquals(self, node, type, attr, source, vif,
                                 br_want=None, size=0, prefix=None):
         ret = node.findall("filterref")
         self.assertEqual(len(ret), size)
         self._assertTypeEquals(node, type, attr, source, br_want,
                                prefix)
-        self._assertMacEquals(node, mapping)
+        self._assertMacEquals(node, vif)
 
     def _assertModel(self, xml, model_want=None, driver_want=None):
         node = self._get_node(xml)
@@ -186,13 +241,13 @@ class LibvirtVifTestCase(test.TestCase):
         conf.vcpus = 4
         return conf
 
-    def _get_instance_xml(self, driver, net, mapping, image_meta=None):
+    def _get_instance_xml(self, driver, vif, image_meta=None):
         default_inst_type = flavors.get_default_flavor()
         extra_specs = default_inst_type['extra_specs'].items()
         quota_bandwith = self.bandwidth.items()
         default_inst_type['extra_specs'] = dict(extra_specs + quota_bandwith)
         conf = self._get_conf()
-        nic = driver.get_config(self.instance, net, mapping, image_meta,
+        nic = driver.get_config(self.instance, vif, image_meta,
                                 default_inst_type)
         conf.add_device(nic)
         return conf.to_xml()
@@ -238,9 +293,7 @@ class LibvirtVifTestCase(test.TestCase):
                    libvirt_type='kvm')
 
         d = vif.LibvirtGenericVIFDriver(self._get_conn())
-        xml = self._get_instance_xml(d,
-                                     self.net_bridge,
-                                     self.mapping_bridge)
+        xml = self._get_instance_xml(d, self.vif_bridge)
         self._assertModel(xml)
 
     def test_model_kvm(self):
@@ -248,9 +301,7 @@ class LibvirtVifTestCase(test.TestCase):
                    libvirt_type='kvm')
 
         d = vif.LibvirtGenericVIFDriver(self._get_conn())
-        xml = self._get_instance_xml(d,
-                                     self.net_bridge,
-                                     self.mapping_bridge)
+        xml = self._get_instance_xml(d, self.vif_bridge)
 
         self._assertModel(xml, "virtio")
 
@@ -260,9 +311,7 @@ class LibvirtVifTestCase(test.TestCase):
 
         d = vif.LibvirtGenericVIFDriver(self._get_conn())
         image_meta = {'properties': {'hw_vif_model': 'e1000'}}
-        xml = self._get_instance_xml(d,
-                                     self.net_bridge,
-                                     self.mapping_bridge,
+        xml = self._get_instance_xml(d, self.vif_bridge,
                                      image_meta)
         self._assertModel(xml, "e1000")
 
@@ -275,8 +324,7 @@ class LibvirtVifTestCase(test.TestCase):
         self.assertRaises(exception.UnsupportedHardware,
                           self._get_instance_xml,
                           d,
-                          self.net_bridge,
-                          self.mapping_bridge,
+                          self.vif_bridge,
                           image_meta)
 
     def test_model_qemu(self):
@@ -284,9 +332,7 @@ class LibvirtVifTestCase(test.TestCase):
                    libvirt_type='qemu')
 
         d = vif.LibvirtGenericVIFDriver(self._get_conn())
-        xml = self._get_instance_xml(d,
-                                     self.net_bridge,
-                                     self.mapping_bridge)
+        xml = self._get_instance_xml(d, self.vif_bridge)
 
         doc = etree.fromstring(xml)
 
@@ -300,9 +346,7 @@ class LibvirtVifTestCase(test.TestCase):
                    libvirt_type='xen')
 
         d = vif.LibvirtGenericVIFDriver(self._get_conn("xen:///system"))
-        xml = self._get_instance_xml(d,
-                                     self.net_bridge,
-                                     self.mapping_bridge)
+        xml = self._get_instance_xml(d, self.vif_bridge)
         self._assertModel(xml)
 
     def test_generic_driver_none(self):
@@ -310,90 +354,77 @@ class LibvirtVifTestCase(test.TestCase):
         self.assertRaises(exception.NovaException,
                           self._get_instance_xml,
                           d,
-                          self.net_bridge,
-                          self.mapping_none)
+                          self.vif_none)
 
-    def _check_bridge_driver(self, d, net, mapping, br_want):
-        xml = self._get_instance_xml(d, net, mapping)
+    def _check_bridge_driver(self, d, vif, br_want):
+        xml = self._get_instance_xml(d, vif)
         node = self._get_node(xml)
         self._assertTypeAndMacEquals(node, "bridge", "source", "bridge",
-                                     self.mapping_bridge, br_want, 1)
+                                     self.vif_bridge, br_want, 1)
 
     def test_bridge_driver(self):
         d = vif.LibvirtBridgeDriver(self._get_conn())
         self._check_bridge_driver(d,
-                                  self.net_bridge,
-                                  self.mapping_bridge,
-                                  self.net_bridge['bridge'])
+                                  self.vif_bridge,
+                                  self.vif_bridge['network']['bridge'])
 
     def test_generic_driver_bridge(self):
         d = vif.LibvirtGenericVIFDriver(self._get_conn())
         self._check_bridge_driver(d,
-                                  self.net_bridge,
-                                  self.mapping_bridge,
-                                  self.net_bridge['bridge'])
+                                  self.vif_bridge,
+                                  self.vif_bridge['network']['bridge'])
 
     def test_neutron_bridge_driver(self):
         d = vif.NeutronLinuxBridgeVIFDriver(self._get_conn())
-        br_want = 'brq' + self.net_bridge_neutron['id']
+        br_want = 'brq' + self.vif_bridge_neutron['network']['id']
         br_want = br_want[:network_model.NIC_NAME_LEN]
         self._check_bridge_driver(d,
-                                  self.net_bridge_neutron,
-                                  self.mapping_bridge_neutron,
+                                  self.vif_bridge_neutron,
                                   br_want)
 
-    def _check_ivs_ethernet_driver(self, d, net, mapping, dev_prefix):
+    def _check_ivs_ethernet_driver(self, d, vif, dev_prefix):
         self.flags(firewall_driver="nova.virt.firewall.NoopFirewallDriver")
-        xml = self._get_instance_xml(d, net, mapping)
+        xml = self._get_instance_xml(d, vif)
         node = self._get_node(xml)
         self._assertTypeAndMacEquals(node, "ethernet", "target", "dev",
-                                     self.mapping_ivs, prefix=dev_prefix)
+                                     self.vif_ivs, prefix=dev_prefix)
         script = node.find("script").get("path")
         self.assertEquals(script, "")
 
-    def _check_ovs_ethernet_driver(self, d, net, mapping, dev_prefix):
+    def _check_ovs_ethernet_driver(self, d, vif, dev_prefix):
         self.flags(firewall_driver="nova.virt.firewall.NoopFirewallDriver")
-        xml = self._get_instance_xml(d, net, mapping)
+        xml = self._get_instance_xml(d, vif)
         node = self._get_node(xml)
         self._assertTypeAndMacEquals(node, "ethernet", "target", "dev",
-                                     self.mapping_ovs, prefix=dev_prefix)
+                                     self.vif_ovs, prefix=dev_prefix)
         script = node.find("script").get("path")
         self.assertEquals(script, "")
-
-    def test_ovs_ethernet_driver_legacy(self):
-        d = vif.LibvirtOpenVswitchDriver(self._get_conn(ver=9010))
-        self._check_ovs_ethernet_driver(d,
-                                        self.net_ovs,
-                                        self.mapping_ovs_legacy,
-                                        "nic")
 
     def test_ovs_ethernet_driver(self):
         d = vif.LibvirtGenericVIFDriver(self._get_conn(ver=9010))
         self._check_ovs_ethernet_driver(d,
-                                        self.net_ovs,
-                                        self.mapping_ovs,
+                                        self.vif_ovs,
                                         "tap")
 
     def test_ivs_ethernet_driver(self):
         d = vif.LibvirtGenericVIFDriver(self._get_conn(ver=9010))
         self._check_ivs_ethernet_driver(d,
-                                        self.net_ovs,
-                                        self.mapping_ivs,
+                                        self.vif_ivs,
                                         "tap")
 
-    def _check_ivs_virtualport_driver(self, d, net, mapping, want_iface_id):
+    def _check_ivs_virtualport_driver(self, d, vif, want_iface_id):
         self.flags(firewall_driver="nova.virt.firewall.NoopFirewallDriver")
-        xml = self._get_instance_xml(d, net, mapping)
+        xml = self._get_instance_xml(d, vif)
         node = self._get_node(xml)
         self._assertTypeAndMacEquals(node, "ethernet", "target", "dev",
-                                     mapping, mapping['vif_devname'])
+                                     vif, vif['devname'])
 
-    def _check_ovs_virtualport_driver(self, d, net, mapping, want_iface_id):
+    def _check_ovs_virtualport_driver(self, d, vif, want_iface_id):
         self.flags(firewall_driver="nova.virt.firewall.NoopFirewallDriver")
-        xml = self._get_instance_xml(d, net, mapping)
+        xml = self._get_instance_xml(d, vif)
         node = self._get_node(xml)
         self._assertTypeAndMacEquals(node, "bridge", "source", "bridge",
-                                     mapping, "br0")
+                                     vif, "br0")
         vp = node.find("virtualport")
         self.assertEqual(vp.get("type"), "openvswitch")
         iface_id_found = False
@@ -409,73 +440,65 @@ class LibvirtVifTestCase(test.TestCase):
         d = vif.LibvirtOpenVswitchVirtualPortDriver(self._get_conn(ver=9011))
         want_iface_id = 'vif-xxx-yyy-zzz'
         self._check_ovs_virtualport_driver(d,
-                                           self.net_ovs,
-                                           self.mapping_ovs_legacy,
+                                           self.vif_ovs_legacy,
                                            want_iface_id)
 
     def test_generic_ovs_virtualport_driver(self):
         d = vif.LibvirtGenericVIFDriver(self._get_conn(ver=9011))
-        want_iface_id = self.mapping_ovs['ovs_interfaceid']
+        want_iface_id = self.vif_ovs['ovs_interfaceid']
         self._check_ovs_virtualport_driver(d,
-                                           self.net_ovs,
-                                           self.mapping_ovs,
+                                           self.vif_ovs,
                                            want_iface_id)
 
     def test_generic_ivs_virtualport_driver(self):
         d = vif.LibvirtGenericVIFDriver(self._get_conn(ver=9011))
-        want_iface_id = self.mapping_ivs['ivs_interfaceid']
+        want_iface_id = self.vif_ivs['ovs_interfaceid']
         self._check_ivs_virtualport_driver(d,
-                                           self.net_ovs,
-                                           self.mapping_ivs,
+                                           self.vif_ivs,
                                            want_iface_id)
 
-    def _check_neutron_hybrid_driver(self, d, net, mapping, br_want):
+    def _check_neutron_hybrid_driver(self, d, vif, br_want):
         self.flags(firewall_driver="nova.virt.firewall.IptablesFirewallDriver")
-        xml = self._get_instance_xml(d, net, mapping)
+        xml = self._get_instance_xml(d, vif)
         node = self._get_node(xml)
         self._assertTypeAndMacEquals(node, "bridge", "source", "bridge",
-                                     mapping, br_want, 1)
+                                     vif, br_want, 1)
 
     def test_quantum_hybrid_driver(self):
-        br_want = "qbr" + self.mapping_ovs['vif_uuid']
+        br_want = "qbr" + self.vif_ovs['id']
         br_want = br_want[:network_model.NIC_NAME_LEN]
         d = vif.LibvirtHybridOVSBridgeDriver(self._get_conn())
         self._check_neutron_hybrid_driver(d,
-                                          self.net_ovs,
-                                          self.mapping_ovs_legacy,
+                                          self.vif_ovs_legacy,
                                           br_want)
 
     def test_generic_hybrid_driver(self):
         d = vif.LibvirtGenericVIFDriver(self._get_conn())
-        br_want = "qbr" + self.mapping_ovs['vif_uuid']
+        br_want = "qbr" + self.vif_ovs['id']
         br_want = br_want[:network_model.NIC_NAME_LEN]
         self._check_neutron_hybrid_driver(d,
-                                          self.net_ovs,
-                                          self.mapping_ovs,
+                                          self.vif_ovs,
                                           br_want)
 
     def test_ivs_hybrid_driver(self):
         d = vif.LibvirtGenericVIFDriver(self._get_conn())
-        br_want = "qbr" + self.mapping_ivs['vif_uuid']
+        br_want = "qbr" + self.vif_ivs['id']
         br_want = br_want[:network_model.NIC_NAME_LEN]
         self._check_neutron_hybrid_driver(d,
-                                          self.net_ovs,
-                                          self.mapping_ivs,
+                                          self.vif_ivs,
                                           br_want)
 
     def test_generic_8021qbh_driver(self):
         d = vif.LibvirtGenericVIFDriver(self._get_conn())
-        xml = self._get_instance_xml(d,
-                                     self.net_8021,
-                                     self.mapping_8021qbh)
+        xml = self._get_instance_xml(d, self.vif_8021qbh)
         node = self._get_node(xml)
         self._assertTypeEquals(node, "direct", "source", "dev", "eth0")
-        self._assertMacEquals(node, self.mapping_8021qbh)
+        self._assertMacEquals(node, self.vif_8021qbh)
         vp = node.find("virtualport")
         self.assertEqual(vp.get("type"), "802.1Qbh")
         profile_id_found = False
         for p_elem in vp.findall("parameters"):
-            wantparams = self.mapping_8021qbh['qbh_params']
+            wantparams = self.vif_8021qbh['qbh_params']
             profile_id = p_elem.get("profileid", None)
             if profile_id:
                 self.assertEqual(profile_id,
@@ -484,26 +507,22 @@ class LibvirtVifTestCase(test.TestCase):
 
         self.assertTrue(profile_id_found)
 
-        def test_generic_iovisor_driver(self):
-            d = vif.LibvirtGenericVIFDriver(self._get_conn())
-            self.flags(firewall_driver="nova.virt.firewall.NoopFirewallDriver")
-            xml = self._get_instance_xml(d,
-                                         self.net_iovisor,
-                                         self.mapping_iovisor)
-            node = self._get_node(xml)
-            self._assertTypeAndMacEquals(node, "ethernet", "target", "dev",
-                                         self.mapping_iovisor,
-                                         self.mapping_iovisor['vif_devname'])
+    def test_generic_iovisor_driver(self):
+        d = vif.LibvirtGenericVIFDriver(self._get_conn())
+        self.flags(firewall_driver="nova.virt.firewall.NoopFirewallDriver")
+        br_want = self.vif_ivs['devname']
+        xml = self._get_instance_xml(d, self.vif_ivs)
+        node = self._get_node(xml)
+        self._assertTypeAndMacEquals(node, "ethernet", "target", "dev",
+                                     self.vif_ivs, br_want)
 
     def test_generic_8021qbg_driver(self):
         d = vif.LibvirtGenericVIFDriver(self._get_conn())
-        xml = self._get_instance_xml(d,
-                                     self.net_8021,
-                                     self.mapping_8021qbg)
+        xml = self._get_instance_xml(d, self.vif_8021qbg)
 
         node = self._get_node(xml)
         self._assertTypeEquals(node, "direct", "source", "dev", "eth0")
-        self._assertMacEquals(node, self.mapping_8021qbg)
+        self._assertMacEquals(node, self.vif_8021qbg)
 
         vp = node.find("virtualport")
         self.assertEqual(vp.get("type"), "802.1Qbg")
@@ -512,7 +531,7 @@ class LibvirtVifTestCase(test.TestCase):
         typeversion_id_found = False
         instance_id_found = False
         for p_elem in vp.findall("parameters"):
-            wantparams = self.mapping_8021qbg['qbg_params']
+            wantparams = self.vif_8021qbg['qbg_params']
             manager_id = p_elem.get("managerid", None)
             type_id = p_elem.get("typeid", None)
             typeversion_id = p_elem.get("typeidversion", None)
