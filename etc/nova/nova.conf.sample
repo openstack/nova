@@ -1198,7 +1198,7 @@
 
 # If True, send a dhcp release on instance termination
 # (boolean value)
-#force_dhcp_release=false
+#force_dhcp_release=true
 
 # If True in multi_host mode, all compute hosts share the same
 # dhcp address. (boolean value)
