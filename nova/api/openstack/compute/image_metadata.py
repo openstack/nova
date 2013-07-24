@@ -62,7 +62,10 @@ class Controller(object):
                 image['properties'][key] = value
         common.check_img_metadata_properties_quota(context,
                                                    image['properties'])
-        image = self.image_service.update(context, image_id, image, None)
+        try:
+            image = self.image_service.update(context, image_id, image, None)
+        except exception.ImageNotAuthorized as e:
+            raise exc.HTTPForbidden(explanation=e.format_message())
         return dict(metadata=image['properties'])
 
     @wsgi.serializers(xml=common.MetaItemTemplate)
@@ -90,7 +93,7 @@ class Controller(object):
         try:
             self.image_service.update(context, image_id, image, None)
         except exception.ImageNotAuthorized as e:
-            raise exc.HTTPForbidden(explanation=str(e))
+            raise exc.HTTPForbidden(explanation=e.format_message())
         return dict(meta=meta)
 
     @wsgi.serializers(xml=common.MetadataTemplate)
@@ -101,7 +104,10 @@ class Controller(object):
         metadata = body.get('metadata', {})
         common.check_img_metadata_properties_quota(context, metadata)
         image['properties'] = metadata
-        self.image_service.update(context, image_id, image, None)
+        try:
+            self.image_service.update(context, image_id, image, None)
+        except exception.ImageNotAuthorized as e:
+            raise exc.HTTPForbidden(explanation=e.format_message())
         return dict(metadata=metadata)
 
     @wsgi.response(204)
@@ -112,7 +118,10 @@ class Controller(object):
             msg = _("Invalid metadata key")
             raise exc.HTTPNotFound(explanation=msg)
         image['properties'].pop(id)
-        self.image_service.update(context, image_id, image, None)
+        try:
+            self.image_service.update(context, image_id, image, None)
+        except exception.ImageNotAuthorized as e:
+            raise exc.HTTPForbidden(explanation=e.format_message())
 
 
 def create_resource():
