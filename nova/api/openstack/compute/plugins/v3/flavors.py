@@ -69,7 +69,7 @@ class FlavorsTemplate(xmlutil.TemplateBuilder):
 class FlavorsController(wsgi.Controller):
     """Flavor controller for the OpenStack API."""
 
-    _view_builder_class = flavors_view.ViewBuilder
+    _view_builder_class = flavors_view.V3ViewBuilder
 
     @wsgi.serializers(xml=MinimalFlavorsTemplate)
     def index(self, req):

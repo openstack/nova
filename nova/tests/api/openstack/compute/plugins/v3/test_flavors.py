@@ -40,12 +40,14 @@ FAKE_FLAVORS = {
         "name": 'flavor 1',
         "memory_mb": '256',
         "root_gb": '10',
+        "swap": '512',
     },
     'flavor 2': {
         "flavorid": '2',
         "name": 'flavor 2',
         "memory_mb": '512',
         "root_gb": '20',
+        "swap": '1024',
     },
 }
 
@@ -112,6 +114,7 @@ class FlavorsTest(test.TestCase):
                 "ram": "256",
                 "disk": "10",
                 "vcpus": "",
+                "swap": '512',
                 "links": [
                     {
                         "rel": "self",
@@ -138,6 +141,7 @@ class FlavorsTest(test.TestCase):
                 "ram": "256",
                 "disk": "10",
                 "vcpus": "",
+                "swap": '512',
                 "links": [
                     {
                         "rel": "self",
@@ -304,6 +308,7 @@ class FlavorsTest(test.TestCase):
                     "ram": "256",
                     "disk": "10",
                     "vcpus": "",
+                    "swap": '512',
                     "links": [
                         {
                             "rel": "self",
@@ -321,6 +326,7 @@ class FlavorsTest(test.TestCase):
                     "ram": "512",
                     "disk": "20",
                     "vcpus": "",
+                    "swap": '1024',
                     "links": [
                         {
                             "rel": "self",
@@ -420,6 +426,7 @@ class FlavorsTest(test.TestCase):
                     "ram": "512",
                     "disk": "20",
                     "vcpus": "",
+                    "swap": '1024',
                     "links": [
                         {
                             "rel": "self",
