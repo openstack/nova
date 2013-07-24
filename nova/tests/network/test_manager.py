@@ -528,6 +528,10 @@ class VlanNetworkTestCase(test.TestCase):
         self.context = context.RequestContext('testuser', 'testproject',
                                               is_admin=False)
 
+    def test_quota_driver_type(self):
+        self.assertEqual(quota.NoopQuotaDriver,
+                         type(self.network.quotas._driver))
+
     def test_vpn_allocate_fixed_ip(self):
         self.mox.StubOutWithMock(db, 'fixed_ip_associate')
         self.mox.StubOutWithMock(db, 'fixed_ip_update')

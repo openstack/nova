@@ -79,8 +79,6 @@ from nova import utils
 
 LOG = logging.getLogger(__name__)
 
-QUOTAS = quota.QUOTAS
-
 
 network_opts = [
     cfg.StrOpt('flat_network_bridge',
@@ -308,6 +306,8 @@ class NetworkManager(manager.Manager):
             self._import_ipam_lib('nova.network.nova_ipam_lib')
         l3_lib = kwargs.get("l3_lib", CONF.l3_lib)
         self.l3driver = importutils.import_object(l3_lib)
+
+        self.quotas = quota.QUOTAS
 
         super(NetworkManager, self).__init__(service_name='network',
                                              *args, **kwargs)
@@ -826,7 +826,7 @@ class NetworkManager(manager.Manager):
         # Check the quota; can't put this in the API because we get
         # called into from other places
         try:
-            reservations = QUOTAS.reserve(context, fixed_ips=1)
+            reservations = self.quotas.reserve(context, fixed_ips=1)
         except exception.OverQuota:
             LOG.warn(_("Quota exceeded for %s, tried to allocate "
                        "fixed IP"), context.project_id)
@@ -863,12 +863,12 @@ class NetworkManager(manager.Manager):
                     instance_id, address, "A", self.instance_dns_domain)
             self._setup_network_on_host(context, network)
 
-            QUOTAS.commit(context, reservations)
+            self.quotas.commit(context, reservations)
             return address
 
         except Exception:
             with excutils.save_and_reraise_exception():
-                QUOTAS.rollback(context, reservations)
+                self.quotas.rollback(context, reservations)
 
     def deallocate_fixed_ip(self, context, address, host=None, teardown=True):
         """Returns a fixed ip to the pool."""
@@ -877,7 +877,7 @@ class NetworkManager(manager.Manager):
         vif_id = fixed_ip_ref['virtual_interface_id']
 
         try:
-            reservations = QUOTAS.reserve(context, fixed_ips=-1)
+            reservations = self.quotas.reserve(context, fixed_ips=-1)
         except Exception:
             reservations = None
             LOG.exception(_("Failed to update usages deallocating "
@@ -947,7 +947,7 @@ class NetworkManager(manager.Manager):
 
         # Commit the reservations
         if reservations:
-            QUOTAS.commit(context, reservations)
+            self.quotas.commit(context, reservations)
 
     def lease_fixed_ip(self, context, address):
         """Called by dhcp-bridge when ip is leased."""
@@ -1679,6 +1679,14 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
     SHOULD_CREATE_VLAN = True
     DHCP = True
     required_create_args = ['bridge_interface']
+
+    def __init__(self, network_driver=None, *args, **kwargs):
+        super(VlanManager, self).__init__(network_driver=network_driver,
+                                          *args, **kwargs)
+        # NOTE(cfb) VlanManager doesn't enforce quotas on fixed IP addresses
+        #           because a project is assigned an entire network.
+        self.quotas = quota.QuotaEngine(
+                quota_driver_class='nova.quota.NoopQuotaDriver')
 
     def init_host(self):
         """Do any initialization that needs to be run if this is a
