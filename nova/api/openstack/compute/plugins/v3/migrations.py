@@ -18,12 +18,12 @@ from nova.api.openstack import xmlutil
 from nova import compute
 
 
-XMLNS = "http://docs.openstack.org/compute/ext/migrations/api/v2.0"
+XMLNS = "http://docs.openstack.org/compute/ext/migrations/api/v3"
 ALIAS = "os-migrations"
 
 
 def authorize(context, action_name):
-    action = 'migrations:%s' % action_name
+    action = 'v3:%s:%s' % (ALIAS, action_name)
     extensions.extension_authorizer('compute', action)(context)
 
 
@@ -62,12 +62,12 @@ class MigrationsController(object):
         return {'migrations': migrations}
 
 
-class Migrations(extensions.ExtensionDescriptor):
+class Migrations(extensions.V3APIExtensionBase):
     """Provide data on migrations."""
     name = "Migrations"
     alias = ALIAS
     namespace = XMLNS
-    updated = "2013-05-30T00:00:00+00:00"
+    version = 1
 
     def get_resources(self):
         resources = []
@@ -75,3 +75,6 @@ class Migrations(extensions.ExtensionDescriptor):
                                                 MigrationsController())
         resources.append(resource)
         return resources
+
+    def get_controller_extensions(self):
+        return []

@@ -266,7 +266,7 @@ policy_data = """
     "compute_extension:v3:os-used-limits": "",
     "compute_extension:v3:os-used-limits:tenant": "is_admin:True",
     "compute_extension:migrations:index": "is_admin:True",
-
+    "compute_extension:v3:os-migrations:index": "is_admin:True",
 
     "volume:create": "",
     "volume:get": "",

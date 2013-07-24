@@ -189,6 +189,7 @@
     "compute_extension:v3:os-used-limits": "",
     "compute_extension:v3:os-used-limits:tenant": "rule:admin_api",
     "compute_extension:migrations:index": "rule:admin_api",
+    "compute_extension:v3:os-migrations:index": "rule:admin_api",
 
 
     "volume:create": "",

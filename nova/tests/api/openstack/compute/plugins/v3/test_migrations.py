@@ -18,7 +18,7 @@ import datetime
 
 from lxml import etree
 
-from nova.api.openstack.compute.contrib import migrations
+from nova.api.openstack.compute.plugins.v3 import migrations
 from nova import context
 from nova import exception
 from nova import test
