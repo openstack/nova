@@ -249,12 +249,9 @@ def _downgrade_bdm_v2(meta, bdm_table):
             (bdm_table.c.source_type == 'blank')
         ).order_by(bdm_table.c.id.asc())
 
-        blanks = [
-            dict(zip(('id', 'source', 'format'), row))
-            for row in bdm_q.execute().fetchall()
-        ]
+        blanks = [dict(row) for row in bdm_q.execute().fetchall()]
 
-        swap = [dev for dev in blanks if dev['format'] == 'swap']
+        swap = [dev for dev in blanks if dev['guest_format'] == 'swap']
         assert len(swap) < 2
         ephemerals = [dev for dev in blanks if dev not in swap]
 
