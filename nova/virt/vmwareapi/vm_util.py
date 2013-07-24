@@ -47,7 +47,7 @@ def get_vm_create_spec(client_factory, instance, data_store_name,
                        vif_infos, os_type="otherGuest"):
     """Builds the VM Create spec."""
     config_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
-    config_spec.name = instance['name']
+    config_spec.name = instance['uuid']
     config_spec.guestId = os_type
 
     vm_file_info = client_factory.create('ns0:VirtualMachineFileInfo')
@@ -501,6 +501,25 @@ def get_vm_ref_from_name(session, vm_name):
         if vm.propSet[0].val == vm_name:
             return vm.obj
     return None
+
+
+def get_vm_ref_from_uuid(session, instance_uuid):
+    """Get reference to the VM with the uuid specified."""
+    vms = session._call_method(vim_util, "get_objects",
+                "VirtualMachine", ["name"])
+    for vm in vms:
+        if vm.propSet[0].val == instance_uuid:
+            return vm.obj
+
+
+def get_vm_ref(session, instance):
+    """Get reference to the VM through uuid or vm name."""
+    vm_ref = get_vm_ref_from_uuid(session, instance['uuid'])
+    if not vm_ref:
+        vm_ref = get_vm_ref_from_name(session, instance['name'])
+    if vm_ref is None:
+        raise exception.InstanceNotFound(instance_id=instance['uuid'])
+    return vm_ref
 
 
 def get_cluster_ref_from_name(session, cluster_name):
