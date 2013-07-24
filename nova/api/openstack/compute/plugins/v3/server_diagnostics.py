@@ -20,7 +20,6 @@ from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import compute
 from nova import exception
-from nova.openstack.common.gettextutils import _
 
 
 ALIAS = "os-server-diagnostics"
@@ -38,6 +37,7 @@ class ServerDiagnosticsTemplate(xmlutil.TemplateBuilder):
 
 
 class ServerDiagnosticsController(object):
+    @extensions.expected_errors(404)
     @wsgi.serializers(xml=ServerDiagnosticsTemplate)
     def index(self, req, server_id):
         context = req.environ["nova.context"]
@@ -45,8 +45,8 @@ class ServerDiagnosticsController(object):
         compute_api = compute.API()
         try:
             instance = compute_api.get(context, server_id)
-        except exception.NotFound():
-            raise webob.exc.HTTPNotFound(_("Instance not found"))
+        except exception.InstanceNotFound as e:
+            raise webob.exc.HTTPNotFound(e.format_message())
 
         return compute_api.get_diagnostics(context, instance)
 
