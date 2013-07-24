@@ -217,7 +217,7 @@ class VMwareVMOps(object):
         # Set the vnc configuration of the instance, vnc port starts from 5900
         if CONF.vnc_enabled:
             vnc_port = self._get_vnc_port(vm_ref)
-            vnc_pass = CONF.vnc_password or ''
+            vnc_pass = CONF.vmware.vnc_password or ''
             self._set_vnc_config(client_factory, instance, vnc_port, vnc_pass)
 
         def _create_virtual_disk():
@@ -345,7 +345,7 @@ class VMwareVMOps(object):
                 self._default_root_device, block_device_info)
 
         if not ebs_root:
-            linked_clone = CONF.use_linked_clone
+            linked_clone = CONF.vmware.use_linked_clone
             if linked_clone:
                 upload_folder = self._instance_path_base
                 upload_name = instance['image_ref']
@@ -1087,7 +1087,7 @@ class VMwareVMOps(object):
         """Return connection info for a vnc console."""
         vm_ref = vm_util.get_vm_ref(self._session, instance)
 
-        return {'host': CONF.vmwareapi_host_ip,
+        return {'host': CONF.vmware.host_ip,
                 'port': self._get_vnc_port(vm_ref),
                 'internal_access_path': None}
 
@@ -1115,7 +1115,7 @@ class VMwareVMOps(object):
     def _get_vnc_port(vm_ref):
         """Return VNC port for an VM."""
         vm_id = int(vm_ref.value.replace('vm-', ''))
-        port = CONF.vnc_port + vm_id % CONF.vnc_port_total
+        port = CONF.vmware.vnc_port + vm_id % CONF.vmware.vnc_port_total
 
         return port
 

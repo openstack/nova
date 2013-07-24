@@ -2170,72 +2170,6 @@
 
 
 #
-# Options defined in nova.virt.vmwareapi.driver
-#
-
-# URL for connection to VMware ESX/VC host. Required if
-# compute_driver is vmwareapi.VMwareESXDriver or
-# vmwareapi.VMwareVCDriver. (string value)
-#vmwareapi_host_ip=<None>
-
-# Username for connection to VMware ESX/VC host. Used only if
-# compute_driver is vmwareapi.VMwareESXDriver or
-# vmwareapi.VMwareVCDriver. (string value)
-#vmwareapi_host_username=<None>
-
-# Password for connection to VMware ESX/VC host. Used only if
-# compute_driver is vmwareapi.VMwareESXDriver or
-# vmwareapi.VMwareVCDriver. (string value)
-#vmwareapi_host_password=<None>
-
-# Name of a VMware Cluster ComputeResource. Used only if
-# compute_driver is vmwareapi.VMwareVCDriver. (string value)
-#vmwareapi_cluster_name=<None>
-
-# The interval used for polling of remote tasks. Used only if
-# compute_driver is vmwareapi.VMwareESXDriver or
-# vmwareapi.VMwareVCDriver. (floating point value)
-#vmwareapi_task_poll_interval=5.0
-
-# The number of times we retry on failures, e.g., socket
-# error, etc. Used only if compute_driver is
-# vmwareapi.VMwareESXDriver or vmwareapi.VMwareVCDriver.
-# (integer value)
-#vmwareapi_api_retry_count=10
-
-# VNC starting port (integer value)
-#vnc_port=5900
-
-# Total number of VNC ports (integer value)
-#vnc_port_total=10000
-
-# VNC password (string value)
-#vnc_password=<None>
-
-# Whether to use linked clone (boolean value)
-#use_linked_clone=true
-
-
-#
-# Options defined in nova.virt.vmwareapi.vif
-#
-
-# Physical ethernet adapter name for vlan networking (string
-# value)
-#vmwareapi_vlan_interface=vmnic0
-
-
-#
-# Options defined in nova.virt.vmwareapi.vim
-#
-
-# Optional VIM Service WSDL Location e.g
-# http://<server>/vimService.wsdl. Optional over-ride to
-# default location for bug work-arounds (string value)
-#vmwareapi_wsdl_loc=<None>
-
-
-#
 # Options defined in nova.virt.xenapi.agent
 #
 
@@ -3090,6 +3024,72 @@
 
 
 [vmware]
+
+#
+# Options defined in nova.virt.vmwareapi.driver
+#
+
+# URL for connection to VMware ESX/VC host. Required if
+# compute_driver is vmwareapi.VMwareESXDriver or
+# vmwareapi.VMwareVCDriver. (string value)
+#host_ip=<None>
+
+# Username for connection to VMware ESX/VC host. Used only if
+# compute_driver is vmwareapi.VMwareESXDriver or
+# vmwareapi.VMwareVCDriver. (string value)
+#host_username=<None>
+
+# Password for connection to VMware ESX/VC host. Used only if
+# compute_driver is vmwareapi.VMwareESXDriver or
+# vmwareapi.VMwareVCDriver. (string value)
+#host_password=<None>
+
+# Name of a VMware Cluster ComputeResource. Used only if
+# compute_driver is vmwareapi.VMwareVCDriver. (string value)
+#cluster_name=<None>
+
+# The interval used for polling of remote tasks. Used only if
+# compute_driver is vmwareapi.VMwareESXDriver or
+# vmwareapi.VMwareVCDriver. (floating point value)
+#task_poll_interval=5.0
+
+# The number of times we retry on failures, e.g., socket
+# error, etc. Used only if compute_driver is
+# vmwareapi.VMwareESXDriver or vmwareapi.VMwareVCDriver.
+# (integer value)
+#api_retry_count=10
+
+# VNC starting port (integer value)
+#vnc_port=5900
+
+# Total number of VNC ports (integer value)
+#vnc_port_total=10000
+
+# VNC password (string value)
+#vnc_password=<None>
+
+# Whether to use linked clone (boolean value)
+#use_linked_clone=true
+
+
+#
+# Options defined in nova.virt.vmwareapi.vif
+#
+
+# Physical ethernet adapter name for vlan networking (string
+# value)
+#vlan_interface=vmnic0
+
+
+#
+# Options defined in nova.virt.vmwareapi.vim
+#
+
+# Optional VIM Service WSDL Location e.g
+# http://<server>/vimService.wsdl. Optional over-ride to
+# default location for bug work-arounds (string value)
+#wsdl_location=<None>
+
 
 #
 # Options defined in nova.virt.vmwareapi.vmops

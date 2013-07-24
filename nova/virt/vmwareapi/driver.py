@@ -60,56 +60,76 @@ from nova.virt.vmwareapi import volumeops
 LOG = logging.getLogger(__name__)
 
 vmwareapi_opts = [
-    cfg.StrOpt('vmwareapi_host_ip',
+    cfg.StrOpt('host_ip',
                default=None,
+               deprecated_name='vmwareapi_host_ip',
+               deprecated_group='DEFAULT',
                help='URL for connection to VMware ESX/VC host. Required if '
                     'compute_driver is vmwareapi.VMwareESXDriver or '
                     'vmwareapi.VMwareVCDriver.'),
-    cfg.StrOpt('vmwareapi_host_username',
+    cfg.StrOpt('host_username',
                default=None,
+               deprecated_name='vmwareapi_host_username',
+               deprecated_group='DEFAULT',
                help='Username for connection to VMware ESX/VC host. '
                     'Used only if compute_driver is '
                     'vmwareapi.VMwareESXDriver or vmwareapi.VMwareVCDriver.'),
-    cfg.StrOpt('vmwareapi_host_password',
+    cfg.StrOpt('host_password',
                default=None,
+               deprecated_name='vmwareapi_host_password',
+               deprecated_group='DEFAULT',
                help='Password for connection to VMware ESX/VC host. '
                     'Used only if compute_driver is '
                     'vmwareapi.VMwareESXDriver or vmwareapi.VMwareVCDriver.',
                secret=True),
-    cfg.StrOpt('vmwareapi_cluster_name',
+    cfg.StrOpt('cluster_name',
                default=None,
+               deprecated_name='vmwareapi_cluster_name',
+               deprecated_group='DEFAULT',
                help='Name of a VMware Cluster ComputeResource. '
                     'Used only if compute_driver is '
                     'vmwareapi.VMwareVCDriver.'),
-    cfg.FloatOpt('vmwareapi_task_poll_interval',
+    cfg.FloatOpt('task_poll_interval',
                  default=5.0,
+                 deprecated_name='vmwareapi_task_poll_interval',
+                 deprecated_group='DEFAULT',
                  help='The interval used for polling of remote tasks. '
                        'Used only if compute_driver is '
                        'vmwareapi.VMwareESXDriver or '
                        'vmwareapi.VMwareVCDriver.'),
-    cfg.IntOpt('vmwareapi_api_retry_count',
+    cfg.IntOpt('api_retry_count',
                default=10,
+               deprecated_name='vmwareapi_api_retry_count',
+               deprecated_group='DEFAULT',
                help='The number of times we retry on failures, e.g., '
                     'socket error, etc. '
                     'Used only if compute_driver is '
                     'vmwareapi.VMwareESXDriver or vmwareapi.VMwareVCDriver.'),
     cfg.IntOpt('vnc_port',
                default=5900,
+               deprecated_name='vnc_port',
+               deprecated_group='DEFAULT',
                help='VNC starting port'),
     cfg.IntOpt('vnc_port_total',
                default=10000,
+               deprecated_name='vnc_port_total',
+               deprecated_group='DEFAULT',
                help='Total number of VNC ports'),
     cfg.StrOpt('vnc_password',
                default=None,
+               deprecated_name='vnc_password',
+               deprecated_group='DEFAULT',
                help='VNC password',
                secret=True),
     cfg.BoolOpt('use_linked_clone',
                 default=True,
+                deprecated_name='use_linked_clone',
+                deprecated_group='DEFAULT',
                 help='Whether to use linked clone'),
     ]
 
 CONF = cfg.CONF
-CONF.register_opts(vmwareapi_opts)
+CONF.register_opts(vmwareapi_opts, 'vmware')
 
 TIME_BETWEEN_API_CALL_RETRIES = 2.0
 
@@ -136,10 +156,10 @@ class VMwareESXDriver(driver.ComputeDriver):
     def __init__(self, virtapi, read_only=False, scheme="https"):
         super(VMwareESXDriver, self).__init__(virtapi)
 
-        self._host_ip = CONF.vmwareapi_host_ip
-        host_username = CONF.vmwareapi_host_username
-        host_password = CONF.vmwareapi_host_password
-        api_retry_count = CONF.vmwareapi_api_retry_count
+        self._host_ip = CONF.vmware.host_ip
+        host_username = CONF.vmware.host_username
+        host_password = CONF.vmware.host_password
+        api_retry_count = CONF.vmware.api_retry_count
         if not self._host_ip or host_username is None or host_password is None:
             raise Exception(_("Must specify vmwareapi_host_ip,"
                               "vmwareapi_host_username "
@@ -293,9 +313,9 @@ class VMwareESXDriver(driver.ComputeDriver):
 
     def get_console_pool_info(self, console_type):
         """Get info about the host on which the VM resides."""
-        return {'address': CONF.vmwareapi_host_ip,
-                'username': CONF.vmwareapi_host_username,
-                'password': CONF.vmwareapi_host_password}
+        return {'address': CONF.vmware.host_ip,
+                'username': CONF.vmware.host_username,
+                'password': CONF.vmware.host_password}
 
     def get_available_resource(self, nodename):
         """Retrieve resource info.
@@ -376,7 +396,7 @@ class VMwareVCDriver(VMwareESXDriver):
 
     def __init__(self, virtapi, read_only=False, scheme="https"):
         super(VMwareVCDriver, self).__init__(virtapi)
-        self._cluster_name = CONF.vmwareapi_cluster_name
+        self._cluster_name = CONF.vmware.cluster_name
         if not self._cluster_name:
             self._cluster = None
         else:
@@ -596,7 +616,7 @@ class VMwareAPISession(object):
         loop = loopingcall.FixedIntervalLoopingCall(self._poll_task,
                                                     instance_uuid,
                                                     task_ref, done)
-        loop.start(CONF.vmwareapi_task_poll_interval)
+        loop.start(CONF.vmware.task_poll_interval)
         ret_val = done.wait()
         loop.stop()
         return ret_val

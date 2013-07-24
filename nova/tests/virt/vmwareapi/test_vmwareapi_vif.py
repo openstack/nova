@@ -24,7 +24,7 @@ from nova.virt.vmwareapi import vif
 class VMwareVifTestCase(test.TestCase):
     def setUp(self):
         super(VMwareVifTestCase, self).setUp()
-        self.flags(vmwareapi_vlan_interface='vmnet0')
+        self.flags(vlan_interface='vmnet0', group='vmware')
         network = network_model.Network(id=0,
                                         bridge='fa0',
                                         label='fake',

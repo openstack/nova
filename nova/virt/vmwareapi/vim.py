@@ -35,14 +35,16 @@ RESP_NOT_XML_ERROR = 'Response is "text/html", not "text/xml"'
 CONN_ABORT_ERROR = 'Software caused connection abort'
 ADDRESS_IN_USE_ERROR = 'Address already in use'
 
-vmwareapi_wsdl_loc_opt = cfg.StrOpt('vmwareapi_wsdl_loc',
+vmwareapi_wsdl_loc_opt = cfg.StrOpt('wsdl_location',
         default=None,
+        deprecated_name='vmwareapi_wsdl_loc',
+        deprecated_group='DEFAULT',
         help='Optional VIM Service WSDL Location '
              'e.g http://<server>/vimService.wsdl. '
              'Optional over-ride to default location for bug work-arounds')
 
 CONF = cfg.CONF
-CONF.register_opt(vmwareapi_wsdl_loc_opt)
+CONF.register_opt(vmwareapi_wsdl_loc_opt, 'vmware')
 
 
 if suds:
@@ -105,7 +107,7 @@ class Vim:
         :return: string to WSDL location for vSphere WS Management API
         """
         # optional WSDL location over-ride for work-arounds
-        wsdl_url = CONF.vmwareapi_wsdl_loc
+        wsdl_url = CONF.vmware.wsdl_location
         if wsdl_url is None:
             # calculate default WSDL location if no override supplied
             wsdl_url = '%s://%s/sdk/vimService.wsdl' % (protocol, host_name)
