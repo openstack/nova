@@ -1710,6 +1710,8 @@ class ServerStatusTest(test.TestCase):
 
 
 class ServersControllerCreateTest(test.TestCase):
+    image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+    flavor_ref = 'http://localhost/123/flavors/3'
 
     def setUp(self):
         """Shared implementation for tests below that create instance."""
@@ -1811,6 +1813,32 @@ class ServersControllerCreateTest(test.TestCase):
         self.stubs.Set(rpc, 'queue_get_for', queue_get_for)
         self.stubs.Set(manager.VlanManager, 'allocate_fixed_ip',
                        fake_method)
+        self.body = {
+            'server': {
+                'min_count': 2,
+                'name': 'server_test',
+                'imageRef': self.image_uuid,
+                'flavorRef': self.flavor_ref,
+                'metadata': {
+                    'hello': 'world',
+                    'open': 'stack',
+                    },
+                'personality': [
+                    {
+                        "path": "/etc/banner.txt",
+                        "contents": "MQ==",
+                        },
+                    ],
+                },
+            }
+        self.bdm = [{'delete_on_termination': 1,
+                     'device_name': 123,
+                     'volume_size': 1,
+                     'volume_id': '11111111-1111-1111-1111-111111111111'}]
+
+        self.req = fakes.HTTPRequest.blank('/fake/servers')
+        self.req.method = 'POST'
+        self.req.headers["content-type"] = "application/json"
 
     def _check_admin_pass_len(self, server_dict):
         """utility function - check server_dict for adminPass length."""
@@ -1823,40 +1851,21 @@ class ServersControllerCreateTest(test.TestCase):
 
     def _test_create_instance(self):
         image_uuid = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
-        body = dict(server=dict(
-            name='server_test', imageRef=image_uuid, flavorRef=2,
-            metadata={'hello': 'world', 'open': 'stack'},
-            personality={}))
-        req = fakes.HTTPRequestV3.blank('/servers')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-        server = self.controller.create(req, body).obj['server']
-
+        self.body['server']['imageRef'] = image_uuid
+        self.body['server']['flavorRef'] = 2
+        self.req.body = jsonutils.dumps(self.body)
+        server = self.controller.create(self.req, self.body).obj['server']
         self._check_admin_pass_len(server)
         self.assertEqual(FAKE_UUID, server['id'])
 
     def test_create_server_bad_image_href(self):
         image_href = 1
-        flavor_ref = 'http://localhost/123/flavors/3'
-
-        body = {
-            'server': {
-                'min_count': 1,
-                'name': 'server_test',
-                'imageRef': image_href,
-                'flavorRef': flavor_ref,
-            }
-        }
-        req = fakes.HTTPRequestV3.blank('/servers')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
+        self.body['server']['min_count'] = 1
+        self.body['server']['imageRef'] = image_href,
+        self.req.body = jsonutils.dumps(self.body)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create,
-                          req,
-                          body)
-
+                          self.req, self.body)
     # TODO(cyeoh): bp-v3-api-unittests
     # This needs to be ported to the os-networks extension tests
     # def test_create_server_with_invalid_networks_parameter(self):
@@ -1881,56 +1890,41 @@ class ServersControllerCreateTest(test.TestCase):
     #                       body)
 
     def test_create_server_with_deleted_image(self):
-        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
         # Get the fake image service so we can set the status to deleted
         (image_service, image_id) = glance.get_remote_image_service(
                 context, '')
-        image_service.update(context, image_uuid, {'status': 'DELETED'})
-        self.addCleanup(image_service.update, context, image_uuid,
+        image_service.update(context, self.image_uuid, {'status': 'DELETED'})
+        self.addCleanup(image_service.update, context, self.image_uuid,
                         {'status': 'active'})
 
-        req = fakes.HTTPRequestV3.blank('/servers')
-        req.method = 'POST'
-        body = dict(server=dict(
-            name='server_test', imageRef=image_uuid, flavorRef=2,
-            metadata={'hello': 'world', 'open': 'stack'},
-            personality={}))
-        req.body = jsonutils.dumps(body)
-
-        req.headers["content-type"] = "application/json"
+        self.body['server']['flavorRef'] = 2
+        self.req.body = jsonutils.dumps(self.body)
         with testtools.ExpectedException(
-            webob.exc.HTTPBadRequest,
+                webob.exc.HTTPBadRequest,
                 'Image 76fa36fc-c930-4bf3-8c8a-ea2a2420deb6 is not active.'):
-                self.controller.create(req, body)
+            self.controller.create(self.req, self.body)
 
     def test_create_server_image_too_large(self):
-        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-
         # Get the fake image service so we can set the status to deleted
         (image_service, image_id) = glance.get_remote_image_service(
-                context, image_uuid)
+                                    context, self.image_uuid)
 
         image = image_service.show(context, image_id)
 
         orig_size = image['size']
         new_size = str(1000 * (1024 ** 3))
-        image_service.update(context, image_uuid, {'size': new_size})
+        image_service.update(context, self.image_uuid, {'size': new_size})
 
-        self.addCleanup(image_service.update, context, image_uuid,
+        self.addCleanup(image_service.update, context, self.image_uuid,
                         {'size': orig_size})
 
-        req = fakes.HTTPRequestV3.blank('/servers')
-        req.method = 'POST'
-        body = dict(server=dict(name='server_test',
-                                imageRef=image_uuid,
-                                flavorRef=2))
-        req.body = jsonutils.dumps(body)
+        self.body['server']['flavorRef'] = 2
+        self.req.body = jsonutils.dumps(self.body)
 
-        req.headers["content-type"] = "application/json"
         with testtools.ExpectedException(
-            webob.exc.HTTPBadRequest,
+                webob.exc.HTTPBadRequest,
                 "Instance type's disk is too small for requested image."):
-                self.controller.create(req, body)
+            self.controller.create(self.req, self.body)
 
     # TODO(cyeoh): bp-v3-api-unittests
     # This needs to be ported to the os-multiple-create extension tests
@@ -2226,22 +2220,10 @@ class ServersControllerCreateTest(test.TestCase):
     #                       self.controller.create, req, body)
 
     def test_create_instance_image_ref_is_bookmark(self):
-        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        image_href = 'http://localhost/images/%s' % image_uuid
-        flavor_ref = 'http://localhost/flavors/3'
-        body = {
-            'server': {
-                'name': 'server_test',
-                'imageRef': image_href,
-                'flavorRef': flavor_ref,
-            },
-        }
-
-        req = fakes.HTTPRequestV3.blank('/servers')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-        res = self.controller.create(req, body).obj
+        image_href = 'http://localhost/images/%s' % self.image_uuid
+        self.body['server']['imageRef'] = image_href
+        self.req.body = jsonutils.dumps(self.body)
+        res = self.controller.create(self.req, self.body).obj
 
         server = res['server']
         self.assertEqual(FAKE_UUID, server['id'])
@@ -2250,37 +2232,24 @@ class ServersControllerCreateTest(test.TestCase):
         image_uuid = 'this_is_not_a_valid_uuid'
         image_href = 'http://localhost/images/%s' % image_uuid
         flavor_ref = 'http://localhost/flavors/3'
-        body = {
-            'server': {
-                'name': 'server_test',
-                'imageRef': image_href,
-                'flavorRef': flavor_ref,
-            },
-        }
-
-        req = fakes.HTTPRequestV3.blank('/servers')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
+        self.body['server']['imageRef'] = image_href
+        self.body['server']['flavorRef'] = flavor_ref
+        self.req.body = jsonutils.dumps(self.body)
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
-                          req, body)
+                          self.req, self.body)
 
     def test_create_instance_no_key_pair(self):
         fakes.stub_out_key_pair_funcs(self.stubs, have_key_pair=False)
         self._test_create_instance()
 
     def _test_create_extra(self, params, no_image=False):
-        image_uuid = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
-        server = dict(name='server_test', imageRef=image_uuid, flavorRef=2)
+        self.body['server']['flavorRef'] = 2
         if no_image:
-            server.pop('imageRef', None)
-        server.update(params)
-        body = dict(server=server)
-        req = fakes.HTTPRequestV3.blank('/servers')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-        server = self.controller.create(req, body).obj['server']
+            self.body['server'].pop('imageRef', None)
+        self.body['server'].update(params)
+        self.req.body = jsonutils.dumps(self.body)
+        self.req.headers["content-type"] = "application/json"
+        server = self.controller.create(self.req, self.body).obj['server']
 
     # TODO(cyeoh): bp-v3-api-unittests
     # This needs to be ported to the os-security-groups extension tests
@@ -2630,37 +2599,13 @@ class ServersControllerCreateTest(test.TestCase):
 
     def test_create_instance_with_access_ip(self):
         # proper local hrefs must start with 'http://localhost/v3/'
-        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        image_href = 'http://localhost/v3/images/%s' % image_uuid
-        flavor_ref = 'http://localhost/flavors/3'
-        access_ipv4 = '1.2.3.4'
-        access_ipv6 = 'fead::1234'
-        body = {
-            'server': {
-                'name': 'server_test',
-                'imageRef': image_href,
-                'flavorRef': flavor_ref,
-                'accessIPv4': access_ipv4,
-                'accessIPv6': access_ipv6,
-                'metadata': {
-                    'hello': 'world',
-                    'open': 'stack',
-                },
-                'personality': [
-                    {
-                        "path": "/etc/banner.txt",
-                        "contents": "MQ==",
-                    },
-                ],
-            },
-        }
+        image_href = 'http://localhost/v2/fake/images/%s' % self.image_uuid
+        self.body['server']['imageRef'] = image_href
+        self.body['server']['accessIPv4'] = '1.2.3.4'
+        self.body['server']['accessIPv6'] = 'fead::1234'
 
-        req = fakes.HTTPRequestV3.blank('/servers')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-        res = self.controller.create(req, body).obj
-
+        self.req.body = jsonutils.dumps(self.body)
+        res = self.controller.create(self.req, self.body).obj
         server = res['server']
         self._check_admin_pass_len(server)
         self.assertEqual(FAKE_UUID, server['id'])
@@ -2670,36 +2615,13 @@ class ServersControllerCreateTest(test.TestCase):
         self.flags(enable_instance_password=False)
 
         # proper local hrefs must start with 'http://localhost/v3/'
-        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        image_href = 'http://localhost/v3/images/%s' % image_uuid
-        flavor_ref = 'http://localhost/flavors/3'
-        access_ipv4 = '1.2.3.4'
-        access_ipv6 = 'fead::1234'
-        body = {
-            'server': {
-                'name': 'server_test',
-                'imageRef': image_href,
-                'flavorRef': flavor_ref,
-                'accessIPv4': access_ipv4,
-                'accessIPv6': access_ipv6,
-                'metadata': {
-                    'hello': 'world',
-                    'open': 'stack',
-                },
-                'personality': [
-                    {
-                        "path": "/etc/banner.txt",
-                        "contents": "MQ==",
-                    },
-                ],
-            },
-        }
-
-        req = fakes.HTTPRequestV3.blank('/servers')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-        res = self.controller.create(req, body).obj
+        self.flags(enable_instance_password=False)
+        image_href = 'http://localhost/v2/fake/images/%s' % self.image_uuid
+        self.body['server']['imageRef'] = image_href
+        self.body['server']['accessIPv4'] = '1.2.3.4'
+        self.body['server']['accessIPv6'] = 'fead::1234'
+        self.req.body = jsonutils.dumps(self.body)
+        res = self.controller.create(self.req, self.body).obj
 
         server = res['server']
         self._check_admin_pass_missing(server)
@@ -2707,132 +2629,39 @@ class ServersControllerCreateTest(test.TestCase):
 
     def test_create_instance_bad_format_access_ip_v4(self):
         # proper local hrefs must start with 'http://localhost/v3/'
-        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        image_href = 'http://localhost/v3/images/%s' % image_uuid
-        flavor_ref = 'http://localhost/flavors/3'
-        access_ipv4 = 'bad_format'
-        access_ipv6 = 'fead::1234'
-        body = {
-            'server': {
-                'name': 'server_test',
-                'imageRef': image_href,
-                'flavorRef': flavor_ref,
-                'accessIPv4': access_ipv4,
-                'accessIPv6': access_ipv6,
-                'metadata': {
-                    'hello': 'world',
-                    'open': 'stack',
-                },
-                'personality': [
-                    {
-                        "path": "/etc/banner.txt",
-                        "contents": "MQ==",
-                    },
-                ],
-            },
-        }
-
-        req = fakes.HTTPRequestV3.blank('/servers')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
+        image_href = 'http://localhost/v2/fake/images/%s' % self.image_uuid
+        self.body['server']['imageRef'] = image_href
+        self.body['server']['accessIPv4'] = 'bad_format'
+        self.body['server']['accessIPv6'] = 'fead::1234'
+        self.req.body = jsonutils.dumps(self.body)
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
-                            req, body)
+                          self.req, self.body)
 
     def test_create_instance_bad_format_access_ip_v6(self):
         # proper local hrefs must start with 'http://localhost/v3/'
-        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        image_href = 'http://localhost/v3/images/%s' % image_uuid
-        flavor_ref = 'http://localhost/flavors/3'
-        access_ipv4 = '1.2.3.4'
-        access_ipv6 = 'bad_format'
-        body = {
-            'server': {
-                'name': 'server_test',
-                'imageRef': image_href,
-                'flavorRef': flavor_ref,
-                'accessIPv4': access_ipv4,
-                'accessIPv6': access_ipv6,
-                'metadata': {
-                    'hello': 'world',
-                    'open': 'stack',
-                },
-                'personality': [
-                    {
-                        "path": "/etc/banner.txt",
-                        "contents": "MQ==",
-                    },
-                ],
-            },
-        }
-
-        req = fakes.HTTPRequestV3.blank('/servers')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
+        image_href = 'http://localhost/v2/fake/images/%s' % self.image_uuid
+        self.body['server']['imageRef'] = image_href
+        self.body['server']['accessIPv4'] = '1.2.3.4'
+        self.body['server']['accessIPv6'] = 'bad_format'
+        self.req.body = jsonutils.dumps(self.body)
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
-                            req, body)
+                          self.req, self.body)
 
     def test_create_instance_name_too_long(self):
         # proper local hrefs must start with 'http://localhost/v3/'
-        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        image_href = 'http://localhost/v3/images/%s' % image_uuid
-        flavor_ref = 'http://localhost/123/flavors/3'
-        body = {
-            'server': {
-                'name': 'X' * 256,
-                'imageRef': image_href,
-                'flavorRef': flavor_ref,
-                'metadata': {
-                    'hello': 'world',
-                    'open': 'stack',
-                },
-                'personality': [
-                    {
-                        "path": "/etc/banner.txt",
-                        "contents": "MQ==",
-                    },
-
-                ],
-            },
-        }
-
-        req = fakes.HTTPRequestV3.blank('/servers')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
+        image_href = 'http://localhost/v2/images/%s' % self.image_uuid
+        self.body['server']['name'] = 'X' * 256
+        self.body['server']['imageRef'] = image_href
+        self.req.body = jsonutils.dumps(self.body)
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
-                            req, body)
+                          self.req, self.body)
 
     def test_create_instance(self):
         # proper local hrefs must start with 'http://localhost/v3/'
-        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        image_href = 'http://localhost/v3/images/%s' % image_uuid
-        flavor_ref = 'http://localhost/123/flavors/3'
-        body = {
-            'server': {
-                'name': 'server_test',
-                'imageRef': image_href,
-                'flavorRef': flavor_ref,
-                'metadata': {
-                    'hello': 'world',
-                    'open': 'stack',
-                },
-                'personality': [
-                    {
-                        "path": "/etc/banner.txt",
-                        "contents": "MQ==",
-                    },
-
-                ],
-            },
-        }
-
-        req = fakes.HTTPRequestV3.blank('/servers')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-        res = self.controller.create(req, body).obj
+        image_href = 'http://localhost/v2/images/%s' % self.image_uuid
+        self.body['server']['imageRef'] = image_href
+        self.req.body = jsonutils.dumps(self.body)
+        res = self.controller.create(self.req, self.body).obj
 
         server = res['server']
         self._check_admin_pass_len(server)
@@ -2877,33 +2706,10 @@ class ServersControllerCreateTest(test.TestCase):
     def test_create_instance_pass_disabled(self):
         self.flags(enable_instance_password=False)
         # proper local hrefs must start with 'http://localhost/v3/'
-        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        image_href = 'http://localhost/v3/images/%s' % image_uuid
-        flavor_ref = 'http://localhost/123/flavors/3'
-        body = {
-            'server': {
-                'name': 'server_test',
-                'imageRef': image_href,
-                'flavorRef': flavor_ref,
-                'metadata': {
-                    'hello': 'world',
-                    'open': 'stack',
-                },
-                'personality': [
-                    {
-                        "path": "/etc/banner.txt",
-                        "contents": "MQ==",
-                    },
-
-                ],
-            },
-        }
-
-        req = fakes.HTTPRequestV3.blank('/servers')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-        res = self.controller.create(req, body).obj
+        image_href = 'http://localhost/v2/images/%s' % self.image_uuid
+        self.body['server']['imageRef'] = image_href
+        self.req.body = jsonutils.dumps(self.body)
+        res = self.controller.create(self.req, self.body).obj
 
         server = res['server']
         self._check_admin_pass_missing(server)
@@ -2911,271 +2717,125 @@ class ServersControllerCreateTest(test.TestCase):
 
     def test_create_instance_too_much_metadata(self):
         self.flags(quota_metadata_items=1)
-        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        image_href = 'http://localhost/v3/images/%s' % image_uuid
-        flavor_ref = 'http://localhost/123/flavors/3'
-        body = {
-            'server': {
-                'name': 'server_test',
-                'imageRef': image_href,
-                'flavorRef': flavor_ref,
-                'metadata': {
-                    'hello': 'world',
-                    'open': 'stack',
-                    'vote': 'fiddletown',
-                },
-            },
-        }
-
-        req = fakes.HTTPRequestV3.blank('/servers')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-
+        image_href = 'http://localhost/v2/images/%s' % self.image_uuid
+        self.body['server']['imageRef'] = image_href
+        self.body['server']['metadata']['vote'] = 'fiddletown'
+        self.req.body = jsonutils.dumps(self.body)
         self.assertRaises(webob.exc.HTTPRequestEntityTooLarge,
-                          self.controller.create, req, body)
+                          self.controller.create, self.req, self.body)
 
     def test_create_instance_metadata_key_too_long(self):
         self.flags(quota_metadata_items=1)
-        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        image_href = 'http://localhost/v3/images/%s' % image_uuid
-        flavor_ref = 'http://localhost/123/flavors/3'
-        body = {
-            'server': {
-                'name': 'server_test',
-                'imageRef': image_href,
-                'flavorRef': flavor_ref,
-                'metadata': {
-                    ('a' * 260): '12345',
-                },
-            },
-        }
+        image_href = 'http://localhost/v2/images/%s' % self.image_uuid
+        self.body['server']['imageRef'] = image_href
+        self.body['server']['metadata'] = {('a' * 260): '12345'}
 
-        req = fakes.HTTPRequestV3.blank('/servers')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-
+        self.req.body = jsonutils.dumps(self.body)
         self.assertRaises(webob.exc.HTTPRequestEntityTooLarge,
-                          self.controller.create, req, body)
+                          self.controller.create, self.req, self.body)
 
     def test_create_instance_metadata_value_too_long(self):
         self.flags(quota_metadata_items=1)
-        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        image_href = 'http://localhost/v3/images/%s' % image_uuid
-        flavor_ref = 'http://localhost/123/flavors/3'
-        body = {
-            'server': {
-                'name': 'server_test',
-                'imageRef': image_href,
-                'flavorRef': flavor_ref,
-                'metadata': {
-                    'key1': ('a' * 260),
-                },
-            },
-        }
-
-        req = fakes.HTTPRequestV3.blank('/servers')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-
+        image_href = 'http://localhost/v2/images/%s' % self.image_uuid
+        self.body['server']['imageRef'] = image_href
+        self.body['server']['metadata'] = {'key1': ('a' * 260)}
+        self.req.body = jsonutils.dumps(self.body)
         self.assertRaises(webob.exc.HTTPRequestEntityTooLarge,
-                          self.controller.create, req, body)
+                          self.controller.create, self.req, self.body)
 
     def test_create_instance_metadata_key_blank(self):
         self.flags(quota_metadata_items=1)
-        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        image_href = 'http://localhost/v3/images/%s' % image_uuid
-        flavor_ref = 'http://localhost/123/flavors/3'
-        body = {
-            'server': {
-                'name': 'server_test',
-                'imageRef': image_href,
-                'flavorRef': flavor_ref,
-                'metadata': {
-                    '': '12345',
-                },
-            },
-        }
-
-        req = fakes.HTTPRequestV3.blank('/servers')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-
+        image_href = 'http://localhost/v2/images/%s' % self.image_uuid
+        self.body['server']['imageRef'] = image_href
+        self.body['server']['metadata'] = {'': 'abcd'}
+        self.req.body = jsonutils.dumps(self.body)
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create, req, body)
+                          self.controller.create, self.req, self.body)
 
     def test_create_instance_invalid_key_name(self):
-        image_href = 'http://localhost/v3/images/2'
-        flavor_ref = 'http://localhost/flavors/3'
-        body = dict(server=dict(
-            name='server_test', imageRef=image_href, flavorRef=flavor_ref,
-            key_name='nonexistentkey'))
-        req = fakes.HTTPRequestV3.blank('/servers')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-
+        image_href = 'http://localhost/v2/images/2'
+        self.body['server']['imageRef'] = image_href
+        self.body['server']['key_name'] = 'nonexistentkey'
+        self.req.body = jsonutils.dumps(self.body)
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create, req, body)
+                          self.controller.create, self.req, self.body)
 
     def test_create_instance_valid_key_name(self):
-        image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        flavor_ref = 'http://localhost/flavors/3'
-        body = dict(server=dict(
-            name='server_test', imageRef=image_href, flavorRef=flavor_ref,
-            key_name='key'))
-        req = fakes.HTTPRequestV3.blank('/servers')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-        res = self.controller.create(req, body).obj
+        self.body['server']['key_name'] = 'key'
+        self.req.body = jsonutils.dumps(self.body)
+        res = self.controller.create(self.req, self.body).obj
 
         self.assertEqual(FAKE_UUID, res["server"]["id"])
         self._check_admin_pass_len(res["server"])
 
     def test_create_instance_invalid_flavor_href(self):
-        image_href = 'http://localhost/v3/images/2'
-        flavor_ref = 'http://localhost/v3/flavors/asdf'
-        body = dict(server=dict(
-            name='server_test', imageRef=image_href, flavorRef=flavor_ref,
-            metadata={'hello': 'world', 'open': 'stack'},
-            personality={}))
-        req = fakes.HTTPRequestV3.blank('/servers')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-
+        image_href = 'http://localhost/v2/images/2'
+        flavor_ref = 'http://localhost/v2/flavors/asdf'
+        self.body['server']['imageRef'] = image_href
+        self.body['server']['flavorRef'] = flavor_ref
+        self.req.body = jsonutils.dumps(self.body)
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create, req, body)
+                          self.controller.create, self.req, self.body)
 
     def test_create_instance_invalid_flavor_id_int(self):
-        image_href = 'http://localhost/v3/images/2'
+        image_href = 'http://localhost/v2/images/2'
         flavor_ref = -1
-        body = dict(server=dict(
-            name='server_test', imageRef=image_href, flavorRef=flavor_ref,
-            metadata={'hello': 'world', 'open': 'stack'},
-            personality={}))
-        req = fakes.HTTPRequestV3.blank('/servers')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-
+        self.body['server']['imageRef'] = image_href
+        self.body['server']['flavorRef'] = flavor_ref
+        self.req.body = jsonutils.dumps(self.body)
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create, req, body)
+                          self.controller.create, self.req, self.body)
 
     def test_create_instance_bad_flavor_href(self):
-        image_href = 'http://localhost/v3/images/2'
-        flavor_ref = 'http://localhost/v3/flavors/17'
-        body = dict(server=dict(
-            name='server_test', imageRef=image_href, flavorRef=flavor_ref,
-            metadata={'hello': 'world', 'open': 'stack'},
-            personality={}))
-        req = fakes.HTTPRequestV3.blank('/servers')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-
+        image_href = 'http://localhost/v2/images/2'
+        flavor_ref = 'http://localhost/v2/flavors/17'
+        self.body['server']['imageRef'] = image_href
+        self.body['server']['flavorRef'] = flavor_ref
+        self.req.body = jsonutils.dumps(self.body)
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create, req, body)
+                          self.controller.create, self.req, self.body)
 
     def test_create_instance_bad_href(self):
         image_href = 'asdf'
-        flavor_ref = 'http://localhost/v3/flavors/3'
-        body = dict(server=dict(
-            name='server_test', imageRef=image_href, flavorRef=flavor_ref,
-            metadata={'hello': 'world', 'open': 'stack'},
-            personality={}))
-        req = fakes.HTTPRequestV3.blank('/servers')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
+        self.body['server']['imageRef'] = image_href
+        self.req.body = jsonutils.dumps(self.body)
 
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create, req, body)
+                          self.controller.create, self.req, self.body)
 
     def test_create_instance_local_href(self):
-        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        flavor_ref = 'http://localhost/v3/flavors/3'
-        body = {
-            'server': {
-                'name': 'server_test',
-                'imageRef': image_uuid,
-                'flavorRef': flavor_ref,
-            },
-        }
-
-        req = fakes.HTTPRequestV3.blank('/servers')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-        res = self.controller.create(req, body).obj
+        self.req.body = jsonutils.dumps(self.body)
+        res = self.controller.create(self.req, self.body).obj
 
         server = res['server']
         self.assertEqual(FAKE_UUID, server['id'])
 
     def test_create_instance_admin_pass(self):
-        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        body = {
-            'server': {
-                'name': 'server_test',
-                'imageRef': image_uuid,
-                'flavorRef': 3,
-                'adminPass': 'testpass',
-            },
-        }
-
-        req = fakes.HTTPRequestV3.blank('/servers')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers['content-type'] = "application/json"
-        res = self.controller.create(req, body).obj
+        self.body['server']['flavorRef'] = 3,
+        self.body['server']['adminPass'] = 'testpass'
+        self.req.body = jsonutils.dumps(self.body)
+        res = self.controller.create(self.req, self.body).obj
 
         server = res['server']
-        self.assertEqual(server['adminPass'], body['server']['adminPass'])
+        self.assertEqual(server['adminPass'], self.body['server']['adminPass'])
 
     def test_create_instance_admin_pass_pass_disabled(self):
         self.flags(enable_instance_password=False)
-        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        body = {
-            'server': {
-                'name': 'server_test',
-                'imageRef': image_uuid,
-                'flavorRef': 3,
-                'adminPass': 'testpass',
-            },
-        }
-
-        req = fakes.HTTPRequestV3.blank('/servers')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers['content-type'] = "application/json"
-        res = self.controller.create(req, body).obj
+        self.body['server']['flavorRef'] = 3,
+        self.body['server']['adminPass'] = 'testpass'
+        self.req.body = jsonutils.dumps(self.body)
+        res = self.controller.create(self.req, self.body).obj
 
         server = res['server']
-        self.assertTrue('adminPass' in body['server'])
-        self.assertTrue('adminPass' not in server)
+        self.assertTrue('adminPass' in self.body['server'])
 
     def test_create_instance_admin_pass_empty(self):
-        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        body = {
-            'server': {
-                'name': 'server_test',
-                'imageRef': image_uuid,
-                'flavorRef': 3,
-                'adminPass': '',
-            },
-        }
-
-        req = fakes.HTTPRequestV3.blank('/servers')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers['content-type'] = "application/json"
+        self.body['server']['flavorRef'] = 3,
+        self.body['server']['adminPass'] = ''
+        self.req.body = jsonutils.dumps(self.body)
 
         # The fact that the action doesn't raise is enough validation
-        self.controller.create(req, body)
+        self.controller.create(self.req, self.body)
 
     def test_create_instance_invalid_personality(self):
 
@@ -3186,80 +2846,34 @@ class ServersControllerCreateTest(test.TestCase):
             end_position = 20
             msg = 'invalid start byte'
             raise UnicodeDecodeError(codec, content, start_position,
-                                                    end_position, msg)
+                                     end_position, msg)
 
         self.stubs.Set(compute_api.API,
-                                'create',
-                                fake_create)
-        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        flavor_ref = 'http://localhost/v3/flavors/3'
-        body = {
-            'server': {
-                'name': 'server_test',
-                'imageRef': image_uuid,
-                'flavorRef': flavor_ref,
-                'personality': [
-                    {
-                        "path": "/etc/banner.txt",
-                        "contents": "b25zLiINCg0KLVJpY2hhcmQgQ$$%QQmFjaA==",
-                    },
-                ],
-            },
-        }
+                       'create',
+                       fake_create)
 
-        req = fakes.HTTPRequestV3.blank('/servers')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
+        self.body['server']['personality'][0]["contents"] = \
+            "b25zLiINCg0KLVJpY2hhcmQgQ$$%QQmFjaA=="
+
+        self.req.body = jsonutils.dumps(self.body)
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create, req, body)
+                          self.controller.create, self.req, self.body)
 
     def test_create_location(self):
-        selfhref = 'http://localhost/v3/servers/%s' % FAKE_UUID
-        bookhref = 'http://localhost/servers/%s' % FAKE_UUID
-        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        image_href = 'http://localhost/v3/images/%s' % image_uuid
-        flavor_ref = 'http://localhost/123/flavors/3'
-        body = {
-            'server': {
-                'name': 'server_test',
-                'imageRef': image_href,
-                'flavorRef': flavor_ref,
-                'metadata': {
-                    'hello': 'world',
-                    'open': 'stack',
-                },
-                'personality': [
-                    {
-                        "path": "/etc/banner.txt",
-                        "contents": "MQ==",
-                    },
-                ],
-            },
-        }
-
-        req = fakes.HTTPRequestV3.blank('/servers')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers['content-type'] = 'application/json'
-        robj = self.controller.create(req, body)
+        selfhref = 'http://localhost/v2/fake/servers/%s' % FAKE_UUID
+        bookhref = 'http://localhost/fake/servers/%s' % FAKE_UUID
+        self.req.body = jsonutils.dumps(self.body)
+        robj = self.controller.create(self.req, self.body)
 
         self.assertEqual(robj['Location'], selfhref)
 
     def _do_test_create_instance_above_quota(self, resource, allowed, quota,
                                              expected_msg):
         fakes.stub_out_instance_quota(self.stubs, allowed, quota, resource)
-        image_uuid = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
-        body = dict(server=dict(
-            name='server_test', imageRef=image_uuid, flavorRef=3,
-            metadata={'hello': 'world', 'open': 'stack'},
-            personality={}))
-        req = fakes.HTTPRequestV3.blank('/servers')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
+        self.body['server']['flavorRef'] = 3
+        self.req.body = jsonutils.dumps(self.body)
         try:
-            server = self.controller.create(req, body).obj['server']
+            server = self.controller.create(self.req, self.body).obj['server']
             self.fail('expected quota to be exceeded')
         except webob.exc.HTTPRequestEntityTooLarge as e:
             self.assertEquals(e.explanation, expected_msg)
