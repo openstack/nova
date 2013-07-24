@@ -176,7 +176,7 @@ class AdminActionsController(wsgi.Controller):
 
     @wsgi.action('unlock')
     def _unlock(self, req, id, body):
-        """Permit admins to lock a server."""
+        """Permit admins to unlock a server."""
         context = req.environ['nova.context']
         authorize(context, 'unlock')
         try:
