@@ -324,6 +324,12 @@ class MiscFunctionsTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest,
                 common.check_img_metadata_properties_quota, ctxt, metadata3)
 
+    def test_task_and_vm_state_from_status(self):
+        fixture = 'reboot'
+        actual = common.task_and_vm_state_from_status(fixture)
+        excepted = 'active', ['rebooting']
+        self.assertEqual(actual, excepted)
+
 
 class MetadataXMLDeserializationTest(test.TestCase):
 

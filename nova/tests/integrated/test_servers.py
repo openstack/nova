@@ -185,7 +185,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
 
         # Wait for queued deletion
         found_server = self._wait_for_state_change(found_server, 'ACTIVE')
-        self.assertEqual('DELETED', found_server['status'])
+        self.assertEqual('SOFT_DELETED', found_server['status'])
 
         self._force_reclaim()
 
@@ -216,7 +216,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
 
         # Wait for queued deletion
         found_server = self._wait_for_state_change(found_server, 'ACTIVE')
-        self.assertEqual('DELETED', found_server['status'])
+        self.assertEqual('SOFT_DELETED', found_server['status'])
 
         # Restore server
         self.api.post_server_action(created_server_id, {'restore': {}})
@@ -249,7 +249,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
 
         # Wait for queued deletion
         found_server = self._wait_for_state_change(found_server, 'ACTIVE')
-        self.assertEqual('DELETED', found_server['status'])
+        self.assertEqual('SOFT_DELETED', found_server['status'])
 
         # Force delete server
         self.api.post_server_action(created_server_id, {'forceDelete': {}})
