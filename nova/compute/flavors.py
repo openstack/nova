@@ -48,7 +48,7 @@ CONF.register_opts(flavor_opts)
 
 LOG = logging.getLogger(__name__)
 
-INVALID_NAME_REGEX = re.compile("[^\w\.\- ]")
+VALID_NAME_OR_ID_REGEX = re.compile("^[\w\.\- ]*$")
 
 
 def _int_or_none(val):
@@ -89,9 +89,28 @@ def create(name, memory, vcpus, root_gb, ephemeral_gb=0, flavorid=None,
     utils.check_string_length(name, 'name', min_length=1, max_length=255)
 
     # ensure name does not contain any special characters
-    invalid_name = INVALID_NAME_REGEX.search(name)
-    if invalid_name:
+    valid_name = VALID_NAME_OR_ID_REGEX.search(name)
+    if not valid_name:
         msg = _("names can only contain [a-zA-Z0-9_.- ]")
+        raise exception.InvalidInput(reason=msg)
+
+    # NOTE(vish): Internally, flavorid is stored as a string but it comes
+    #             in through json as an integer, so we convert it here.
+    flavorid = unicode(flavorid)
+
+    # ensure leading/trailing whitespaces not present.
+    if flavorid.strip() != flavorid:
+        msg = _("id cannot contain leading and/or trailing whitespace(s)")
+        raise exception.InvalidInput(reason=msg)
+
+    # ensure flavor id does not exceed 255 characters
+    utils.check_string_length(flavorid, 'id', min_length=1,
+                              max_length=255)
+
+    # ensure flavor id does not contain any special characters
+    valid_flavor_id = VALID_NAME_OR_ID_REGEX.search(flavorid)
+    if not valid_flavor_id:
+        msg = _("id can only contain [a-zA-Z0-9_.- ]")
         raise exception.InvalidInput(reason=msg)
 
     # Some attributes are positive ( > 0) integers
@@ -125,10 +144,7 @@ def create(name, memory, vcpus, root_gb, ephemeral_gb=0, flavorid=None,
         raise exception.InvalidInput(reason=msg)
 
     kwargs['name'] = name
-    # NOTE(vish): Internally, flavorid is stored as a string but it comes
-    #             in through json as an integer, so we convert it here.
-    kwargs['flavorid'] = unicode(flavorid)
-
+    kwargs['flavorid'] = flavorid
     # ensure is_public attribute is boolean
     try:
         kwargs['is_public'] = strutils.bool_from_string(
