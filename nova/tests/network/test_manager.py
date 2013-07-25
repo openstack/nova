@@ -1292,7 +1292,6 @@ class CommonNetworkTestCase(test.TestCase):
             return domains.get(instance_domain)
 
         self.stubs.Set(db, 'dnsdomain_get', dnsdomain_get)
-        CONF.instance_dns_domain = domain
         fake_instance = {'uuid': FAKEUUID,
                          'availability_zone': az}
 
