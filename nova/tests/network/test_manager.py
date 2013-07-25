@@ -543,7 +543,8 @@ class VlanNetworkTestCase(test.TestCase):
         db.virtual_interface_get_by_instance_and_network(mox.IgnoreArg(),
                 mox.IgnoreArg(), mox.IgnoreArg()).AndReturn({'id': 0})
         db.instance_get_by_uuid(mox.IgnoreArg(),
-                        mox.IgnoreArg()).AndReturn({'display_name': HOST})
+                        mox.IgnoreArg()).AndReturn({'display_name': HOST,
+                                                    'uuid': FAKEUUID})
         self.mox.ReplayAll()
 
         network = dict(networks[0])
@@ -585,7 +586,8 @@ class VlanNetworkTestCase(test.TestCase):
         db.virtual_interface_get_by_instance_and_network(mox.IgnoreArg(),
                 mox.IgnoreArg(), mox.IgnoreArg()).AndReturn({'id': 0})
         db.instance_get_by_uuid(mox.IgnoreArg(),
-                    mox.IgnoreArg()).AndReturn({'display_name': HOST})
+                mox.IgnoreArg()).AndReturn({'display_name': HOST,
+                                            'uuid': FAKEUUID})
         self.mox.ReplayAll()
 
         network = dict(networks[0])
@@ -1060,7 +1062,8 @@ class VlanNetworkTestCase(test.TestCase):
                        mox.IgnoreArg(),
                        project_only=mox.IgnoreArg()).AndReturn(networks[0])
         db.instance_get_by_uuid(mox.IgnoreArg(),
-                mox.IgnoreArg()).AndReturn({'display_name': HOST})
+                mox.IgnoreArg()).AndReturn({'display_name': HOST,
+                                            'uuid': FAKEUUID})
         self.network.get_instance_nw_info(mox.IgnoreArg(), mox.IgnoreArg(),
                                           mox.IgnoreArg(), mox.IgnoreArg())
         self.mox.ReplayAll()
