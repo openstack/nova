@@ -16,11 +16,10 @@
 #    under the License.
 
 
+import contextlib
 import errno
 import functools
 import os
-import shutil
-import tempfile
 import time
 import weakref
 
@@ -28,7 +27,7 @@ from eventlet import semaphore
 from oslo.config import cfg
 
 from nova.openstack.common import fileutils
-from nova.openstack.common.gettextutils import _
+from nova.openstack.common.gettextutils import _  # noqa
 from nova.openstack.common import local
 from nova.openstack.common import log as logging
 
@@ -40,8 +39,7 @@ util_opts = [
     cfg.BoolOpt('disable_process_locking', default=False,
                 help='Whether to disable inter-process locks'),
     cfg.StrOpt('lock_path',
-               help=('Directory to use for lock files. Default to a '
-                     'temp directory'))
+               help=('Directory to use for lock files.'))
 ]
 
 
@@ -135,7 +133,87 @@ else:
 _semaphores = weakref.WeakValueDictionary()
 
 
-def synchronized(name, lock_file_prefix, external=False, lock_path=None):
+@contextlib.contextmanager
+def lock(name, lock_file_prefix=None, external=False, lock_path=None):
+    """Context based lock
+
+    This function yields a `semaphore.Semaphore` instance unless external is
+    True, in which case, it'll yield an InterProcessLock instance.
+
+    :param lock_file_prefix: The lock_file_prefix argument is used to provide
+    lock files on disk with a meaningful prefix.
+
+    :param external: The external keyword argument denotes whether this lock
+    should work across multiple processes. This means that if two different
+    workers both run a a method decorated with @synchronized('mylock',
+    external=True), only one of them will execute at a time.
+
+    :param lock_path: The lock_path keyword argument is used to specify a
+    special location for external lock files to live. If nothing is set, then
+    CONF.lock_path is used as a default.
+    """
+    # NOTE(soren): If we ever go natively threaded, this will be racy.
+    #              See http://stackoverflow.com/questions/5390569/dyn
+    #              amically-allocating-and-destroying-mutexes
+    sem = _semaphores.get(name, semaphore.Semaphore())
+    if name not in _semaphores:
+        # this check is not racy - we're already holding ref locally
+        # so GC won't remove the item and there was no IO switch
+        # (only valid in greenthreads)
+        _semaphores[name] = sem
+
+    with sem:
+        LOG.debug(_('Got semaphore "%(lock)s"'), {'lock': name})
+
+        # NOTE(mikal): I know this looks odd
+        if not hasattr(local.strong_store, 'locks_held'):
+            local.strong_store.locks_held = []
+        local.strong_store.locks_held.append(name)
+
+        try:
+            if external and not CONF.disable_process_locking:
+                LOG.debug(_('Attempting to grab file lock "%(lock)s"'),
+                          {'lock': name})
+
+                # We need a copy of lock_path because it is non-local
+                local_lock_path = lock_path or CONF.lock_path
+                if not local_lock_path:
+                    raise cfg.RequiredOptError('lock_path')
+
+                if not os.path.exists(local_lock_path):
+                    fileutils.ensure_tree(local_lock_path)
+                    LOG.info(_('Created lock path: %s'), local_lock_path)
+
+                def add_prefix(name, prefix):
+                    if not prefix:
+                        return name
+                    sep = '' if prefix.endswith('-') else '-'
+                    return '%s%s%s' % (prefix, sep, name)
+
+                # NOTE(mikal): the lock name cannot contain directory
+                # separators
+                lock_file_name = add_prefix(name.replace(os.sep, '_'),
+                                            lock_file_prefix)
+
+                lock_file_path = os.path.join(local_lock_path, lock_file_name)
+
+                try:
+                    lock = InterProcessLock(lock_file_path)
+                    with lock as lock:
+                        LOG.debug(_('Got file lock "%(lock)s" at %(path)s'),
+                                  {'lock': name, 'path': lock_file_path})
+                        yield lock
+                finally:
+                    LOG.debug(_('Released file lock "%(lock)s" at %(path)s'),
+                              {'lock': name, 'path': lock_file_path})
+            else:
+                yield sem
+
+        finally:
+            local.strong_store.locks_held.remove(name)
+
+
+def synchronized(name, lock_file_prefix=None, external=False, lock_path=None):
     """Synchronization decorator.
 
     Decorating a method like so::
@@ -157,99 +235,18 @@ def synchronized(name, lock_file_prefix, external=False, lock_path=None):
            ...
 
     This way only one of either foo or bar can be executing at a time.
-
-    :param lock_file_prefix: The lock_file_prefix argument is used to provide
-    lock files on disk with a meaningful prefix. The prefix should end with a
-    hyphen ('-') if specified.
-
-    :param external: The external keyword argument denotes whether this lock
-    should work across multiple processes. This means that if two different
-    workers both run a a method decorated with @synchronized('mylock',
-    external=True), only one of them will execute at a time.
-
-    :param lock_path: The lock_path keyword argument is used to specify a
-    special location for external lock files to live. If nothing is set, then
-    CONF.lock_path is used as a default.
     """
 
     def wrap(f):
         @functools.wraps(f)
         def inner(*args, **kwargs):
-            # NOTE(soren): If we ever go natively threaded, this will be racy.
-            #              See http://stackoverflow.com/questions/5390569/dyn
-            #              amically-allocating-and-destroying-mutexes
-            sem = _semaphores.get(name, semaphore.Semaphore())
-            if name not in _semaphores:
-                # this check is not racy - we're already holding ref locally
-                # so GC won't remove the item and there was no IO switch
-                # (only valid in greenthreads)
-                _semaphores[name] = sem
+            with lock(name, lock_file_prefix, external, lock_path):
+                LOG.debug(_('Got semaphore / lock "%(function)s"'),
+                          {'function': f.__name__})
+                return f(*args, **kwargs)
 
-            with sem:
-                LOG.debug(_('Got semaphore "%(lock)s" for method '
-                            '"%(method)s"...'), {'lock': name,
-                                                 'method': f.__name__})
-
-                # NOTE(mikal): I know this looks odd
-                if not hasattr(local.strong_store, 'locks_held'):
-                    local.strong_store.locks_held = []
-                local.strong_store.locks_held.append(name)
-
-                try:
-                    if external and not CONF.disable_process_locking:
-                        LOG.debug(_('Attempting to grab file lock "%(lock)s" '
-                                    'for method "%(method)s"...'),
-                                  {'lock': name, 'method': f.__name__})
-                        cleanup_dir = False
-
-                        # We need a copy of lock_path because it is non-local
-                        local_lock_path = lock_path
-                        if not local_lock_path:
-                            local_lock_path = CONF.lock_path
-
-                        if not local_lock_path:
-                            cleanup_dir = True
-                            local_lock_path = tempfile.mkdtemp()
-
-                        if not os.path.exists(local_lock_path):
-                            fileutils.ensure_tree(local_lock_path)
-
-                        # NOTE(mikal): the lock name cannot contain directory
-                        # separators
-                        safe_name = name.replace(os.sep, '_')
-                        lock_file_name = '%s%s' % (lock_file_prefix, safe_name)
-                        lock_file_path = os.path.join(local_lock_path,
-                                                      lock_file_name)
-
-                        try:
-                            lock = InterProcessLock(lock_file_path)
-                            with lock:
-                                LOG.debug(_('Got file lock "%(lock)s" at '
-                                            '%(path)s for method '
-                                            '"%(method)s"...'),
-                                          {'lock': name,
-                                           'path': lock_file_path,
-                                           'method': f.__name__})
-                                retval = f(*args, **kwargs)
-                        finally:
-                            LOG.debug(_('Released file lock "%(lock)s" at '
-                                        '%(path)s for method "%(method)s"...'),
-                                      {'lock': name,
-                                       'path': lock_file_path,
-                                       'method': f.__name__})
-                            # NOTE(vish): This removes the tempdir if we needed
-                            #             to create one. This is used to
-                            #             cleanup the locks left behind by unit
-                            #             tests.
-                            if cleanup_dir:
-                                shutil.rmtree(local_lock_path)
-                    else:
-                        retval = f(*args, **kwargs)
-
-                finally:
-                    local.strong_store.locks_held.remove(name)
-
-            return retval
+            LOG.debug(_('Semaphore / lock released "%(function)s"'),
+                      {'function': f.__name__})
         return inner
     return wrap
 
@@ -273,7 +270,7 @@ def synchronized_with_prefix(lock_file_prefix):
            ...
 
     The lock_file_prefix argument is used to provide lock files on disk with a
-    meaningful prefix. The prefix should end with a hyphen ('-') if specified.
+    meaningful prefix.
     """
 
     return functools.partial(synchronized, lock_file_prefix=lock_file_prefix)
