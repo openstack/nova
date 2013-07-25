@@ -2693,12 +2693,12 @@ class CloudTestCase(test.TestCase):
         tags = self.cloud.describe_tags(self.context,
                 filter=[{'name': 'key',
                          'value': ['ba?']}])['tagSet']
-        self.assertEqual(tags, [])
+        self.assertEqualSorted(tags, [inst1_key_bax, inst2_key_baz])
 
         tags = self.cloud.describe_tags(self.context,
                 filter=[{'name': 'key',
                          'value': ['b*']}])['tagSet']
-        self.assertEqual(tags, [])
+        self.assertEqualSorted(tags, [inst1_key_bax, inst2_key_baz])
 
         # Value, either bare or with wildcards
         tags = self.cloud.describe_tags(self.context,
@@ -2709,12 +2709,12 @@ class CloudTestCase(test.TestCase):
         tags = self.cloud.describe_tags(self.context,
                 filter=[{'name': 'value',
                          'value': ['wi*']}])['tagSet']
-        self.assertEqual(tags, [])
+        self.assertEqual(tags, [inst1_key_bax])
 
         tags = self.cloud.describe_tags(self.context,
                 filter=[{'name': 'value',
                          'value': ['quu?']}])['tagSet']
-        self.assertEqual(tags, [])
+        self.assertEqual(tags, [inst2_key_baz])
 
         # Multiple values
         tags = self.cloud.describe_tags(self.context,

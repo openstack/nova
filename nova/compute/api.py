@@ -2612,6 +2612,10 @@ class API(base.Base):
     def get_all_instance_metadata(self, context, search_filts):
         """Get all metadata."""
 
+        def _match_any(pattern_list, string):
+            return any([re.match(pattern, string)
+                        for pattern in pattern_list])
+
         def _filter_metadata(instance, search_filt, input_metadata):
             uuids = search_filt.get('resource_id', [])
             keys_filter = search_filt.get('key', [])
@@ -2624,12 +2628,14 @@ class API(base.Base):
             for (k, v) in input_metadata.iteritems():
                 # Both keys and value defined -- AND
                 if ((keys_filter and values_filter) and
-                   (k not in keys_filter) and (v not in values_filter)):
+                   not _match_any(keys_filter, k) and
+                   not _match_any(values_filter, v)):
                     continue
                 # Only keys or value is defined
-                elif ((keys_filter and k not in keys_filter) or
-                     (values_filter and v not in values_filter)):
+                elif ((keys_filter and not _match_any(keys_filter, k)) or
+                      (values_filter and not _match_any(values_filter, v))):
                     continue
+
                 output_metadata[k] = v
             return output_metadata
 

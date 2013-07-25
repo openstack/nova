@@ -1851,7 +1851,8 @@ class CloudController(object):
                             search_block['resource_id'].append(
                                 ec2utils.ec2_inst_id_to_uuid(context, res_id))
                     elif key_name in ['key', 'value']:
-                        search_block[key_name] = val
+                        search_block[key_name] = \
+                            [ec2utils.regex_from_ec2_regex(v) for v in val]
                     elif key_name in ('resource_type', 'resource-type'):
                         for res_type in val:
                             if res_type != 'instance':

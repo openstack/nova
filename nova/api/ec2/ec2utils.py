@@ -405,3 +405,30 @@ def dict_from_dotted_str(items):
 def search_opts_from_filters(filters):
     return dict((f['name'].replace('-', '_'), f['value']['1'])
                 for f in filters if f['value']['1']) if filters else {}
+
+
+def regex_from_ec2_regex(ec2_re):
+    """Converts an EC2-style regex to a python regex.
+    Approach is based on python fnmatch.
+    """
+
+    iter_ec2_re = iter(ec2_re)
+
+    py_re = ''
+    for char in iter_ec2_re:
+        if char == '*':
+            py_re += '.*'
+        elif char == '?':
+            py_re += '.'
+        elif char == '\\':
+            try:
+                next_char = iter_ec2_re.next()
+            except StopIteration:
+                next_char = ''
+            if next_char == '*' or next_char == '?':
+                py_re += '[%s]' % next_char
+            else:
+                py_re += '\\\\' + next_char
+        else:
+            py_re += re.escape(char)
+    return '\A%s\Z(?s)' % py_re
