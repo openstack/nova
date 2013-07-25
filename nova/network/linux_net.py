@@ -617,12 +617,12 @@ def metadata_forward():
 
 def metadata_accept():
     """Create the filter accept rule for metadata."""
-    iptables_manager.ipv4['filter'].add_rule('INPUT',
-                                             '-s 0.0.0.0/0 -d %s '
-                                             '-p tcp -m tcp --dport %s '
-                                             '-j ACCEPT' %
-                                             (CONF.metadata_host,
-                                              CONF.metadata_port))
+    rule = '-s 0.0.0.0/0 -p tcp -m tcp --dport %s' % CONF.metadata_port
+    if CONF.metadata_host != '127.0.0.1':
+        rule += ' -d %s -j ACCEPT' % CONF.metadata_host
+    else:
+        rule += ' -m addrtype --dst-type LOCAL -j ACCEPT'
+    iptables_manager.ipv4['filter'].add_rule('INPUT', rule)
     iptables_manager.apply()
 
 
