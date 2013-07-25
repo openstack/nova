@@ -29,6 +29,8 @@ LOG = logging.getLogger(__name__)
 class XmlTests(integrated_helpers._IntegratedTestBase):
     """"Some basic XML sanity checks."""
 
+    _api_version = 'v2'
+
     def test_namespace_limits(self):
         headers = {}
         headers['Accept'] = 'application/xml'

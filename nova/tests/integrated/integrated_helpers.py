@@ -98,8 +98,9 @@ class _IntegratedTestBase(test.TestCase):
     def _start_api_service(self):
         self.osapi = service.WSGIService("osapi_compute")
         self.osapi.start()
-        self.auth_url = 'http://%s:%s/v2' % (self.osapi.host, self.osapi.port)
-        LOG.warn(self.auth_url)
+        self.auth_url = 'http://%(host)s:%(port)s/%(api_version)s' % ({
+            'host': self.osapi.host, 'port': self.osapi.port,
+            'api_version': self._api_version})
 
     def _get_flags(self):
         """An opportunity to setup flags, before the services are started."""
