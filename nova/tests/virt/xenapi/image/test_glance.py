@@ -51,7 +51,7 @@ class TestGlanceStore(stubs.XenAPITestBase):
                 vm_utils, 'get_sr_path', lambda *a, **kw: '/fake/sr/path')
 
         self.instance = {'uuid': 'blah',
-                         'system_metadata': {'image_xenapi_use_agent': 'true'},
+                         'system_metadata': [],
                          'auto_disk_config': True,
                          'os_type': 'default',
                          'xenapi_use_agent': 'true'}
@@ -86,8 +86,7 @@ class TestGlanceStore(stubs.XenAPITestBase):
                   'sr_path': '/fake/sr/path',
                   'auth_token': 'foobar',
                   'properties': {'auto_disk_config': True,
-                                 'os_type': 'default',
-                                 'xenapi_use_agent': 'true'}}
+                                 'os_type': 'default'}}
         return params
 
     def test_upload_image(self):
