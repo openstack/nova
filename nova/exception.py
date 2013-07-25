@@ -512,6 +512,11 @@ class InvalidImageRef(Invalid):
     msg_fmt = _("Invalid image href %(image_href)s.")
 
 
+class AutoDiskConfigDisabledByImage(Invalid):
+    msg_fmt = _("Requested image %(image)s "
+                "has automatic disk resize disabled.")
+
+
 class ImageNotFound(NotFound):
     msg_fmt = _("Image %(image_id)s could not be found.")
 

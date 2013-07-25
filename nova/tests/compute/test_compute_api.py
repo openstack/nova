@@ -35,6 +35,7 @@ from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
 from nova import quota
 from nova import test
+from nova.tests.image import fake as fake_image
 from nova.tests.objects import test_migration
 
 
@@ -78,7 +79,7 @@ class _ComputeAPIUnitTestMixIn(object):
             flavor = self._create_flavor()
 
         def make_fake_sys_meta():
-            sys_meta = {}
+            sys_meta = params.pop("system_metadata", {})
             for key in flavors.system_metadata_flavor_props:
                 sys_meta['instance_type_%s' % key] = flavor[key]
             return sys_meta
@@ -1381,6 +1382,52 @@ class _ComputeAPIUnitTestMixIn(object):
 
         self.compute_api.volume_snapshot_delete(self.context, volume_id,
                 snapshot_id, {})
+
+    def _create_instance_with_disabled_disk_config(self):
+        sys_meta = {"image_auto_disk_config": "Disabled"}
+        params = {"system_metadata": sys_meta}
+        return obj_base.obj_to_primitive(self._create_instance_obj(
+                                                            params=params))
+
+    def _setup_fake_image_with_disabled_disk_config(self):
+        self.fake_image = {
+            'id': 1,
+            'name': 'fake_name',
+            'status': 'active',
+            'properties': {"auto_disk_config": "Disabled"},
+        }
+
+        def fake_show(obj, context, image_id):
+            return self.fake_image
+        fake_image.stub_out_image_service(self.stubs)
+        self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
+        return self.fake_image['id']
+
+    def test_resize_with_disabled_auto_disk_config_fails(self):
+        fake_inst = self._create_instance_with_disabled_disk_config()
+
+        self.assertRaises(exception.AutoDiskConfigDisabledByImage,
+                          self.compute_api.resize,
+                          self.context, fake_inst,
+                          auto_disk_config=True)
+
+    def test_create_with_disabled_auto_disk_config_fails(self):
+        image_id = self._setup_fake_image_with_disabled_disk_config()
+
+        self.assertRaises(exception.AutoDiskConfigDisabledByImage,
+            self.compute_api.create, self.context,
+            "fake_flavor", image_id, auto_disk_config=True)
+
+    def test_rebuild_with_disabled_auto_disk_config_fails(self):
+        fake_inst = self._create_instance_with_disabled_disk_config()
+        image_id = self._setup_fake_image_with_disabled_disk_config()
+        self.assertRaises(exception.AutoDiskConfigDisabledByImage,
+                          self.compute_api.rebuild,
+                          self.context,
+                          fake_inst,
+                          image_id,
+                          "new password",
+                          auto_disk_config=True)
 
 
 class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):

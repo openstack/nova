@@ -505,31 +505,29 @@ class API(base.Base):
 
         return availability_zone, forced_host, forced_node
 
-    @staticmethod
-    def _inherit_properties_from_image(image, auto_disk_config):
+    def _ensure_auto_disk_config_is_valid(self, auto_disk_config_img,
+                                          auto_disk_config, image):
+        auto_disk_config_disabled = \
+                utils.is_auto_disk_config_disabled(auto_disk_config_img)
+        if auto_disk_config_disabled and auto_disk_config:
+            raise exception.AutoDiskConfigDisabledByImage(image=image)
+
+    def _inherit_properties_from_image(self, image, auto_disk_config):
         image_properties = image.get('properties', {})
-
-        def prop(prop_, prop_type=None):
-            """Return the value of an image property."""
-            value = image_properties.get(prop_)
-
-            if value is not None:
-                if prop_type == 'bool':
-                    value = strutils.bool_from_string(value)
-
-            return value
-
-        options_from_image = {'os_type': prop('os_type'),
-                              'architecture': prop('architecture'),
-                              'vm_mode': prop('vm_mode')}
-
-        # If instance doesn't have auto_disk_config overridden by request, use
-        # whatever the image indicates
+        auto_disk_config_img = \
+                utils.get_auto_disk_config_from_image_props(image_properties)
+        self._ensure_auto_disk_config_is_valid(auto_disk_config_img,
+                                               auto_disk_config,
+                                               image.get("id"))
         if auto_disk_config is None:
-            auto_disk_config = prop('auto_disk_config', prop_type='bool')
+            auto_disk_config = strutils.bool_from_string(auto_disk_config_img)
 
-        options_from_image['auto_disk_config'] = auto_disk_config
-        return options_from_image
+        return {
+            'os_type': image_properties.get('os_type'),
+            'architecture': image_properties.get('architecture'),
+            'vm_mode': image_properties.get('vm_mode'),
+            'auto_disk_config': auto_disk_config
+        }
 
     def _apply_instance_name_template(self, context, instance, index):
         params = {
@@ -837,6 +835,9 @@ class API(base.Base):
             boot_meta['properties'] = \
                 self._get_bdm_image_metadata(context,
                     block_device_mapping, legacy_bdm)
+
+        self._check_auto_disk_config(image=boot_meta,
+                                     auto_disk_config=auto_disk_config)
 
         handle_az = self._handle_availability_zone
         availability_zone, forced_host, forced_node = handle_az(
@@ -1221,6 +1222,30 @@ class API(base.Base):
                                   instance_ref, service="api")
 
         return dict(old_ref.iteritems()), dict(instance_ref.iteritems())
+
+    def _check_auto_disk_config(self, instance=None, image=None,
+                                **extra_instance_updates):
+        auto_disk_config = extra_instance_updates.get("auto_disk_config")
+        if auto_disk_config is None:
+            return
+        if not image and not instance:
+            return
+
+        if image:
+            image_props = image.get("properties", {})
+            LOG.error(image_props)
+            auto_disk_config_img = \
+                utils.get_auto_disk_config_from_image_props(image_props)
+            image_ref = image.get("id")
+        else:
+            sys_meta = utils.instance_sys_meta(instance)
+            image_ref = sys_meta.get('image_base_image_ref')
+            auto_disk_config_img = \
+                utils.get_auto_disk_config_from_instance(sys_meta=sys_meta)
+
+        self._ensure_auto_disk_config_is_valid(auto_disk_config_img,
+                                               auto_disk_config,
+                                               image_ref)
 
     def _delete(self, context, instance, delete_type, cb, **instance_attrs):
         if instance['disable_terminate']:
@@ -1970,10 +1995,11 @@ class API(base.Base):
         orig_image_ref = instance['image_ref'] or ''
         files_to_inject = kwargs.pop('files_to_inject', [])
         metadata = kwargs.get('metadata', {})
-        instance_type = flavors.extract_flavor(instance)
 
         image_id, image = self._get_image(context, image_href)
+        self._check_auto_disk_config(image=image, **kwargs)
 
+        instance_type = flavors.extract_flavor(instance)
         self._checks_for_create_and_rebuild(context, image_id, image,
                 instance_type, metadata, files_to_inject)
 
@@ -2203,6 +2229,8 @@ class API(base.Base):
         the original flavor_id. If flavor_id is not None, the instance should
         be migrated to a new host and resized to the new flavor_id.
         """
+        self._check_auto_disk_config(instance, **extra_instance_updates)
+
         current_instance_type = flavors.extract_flavor(instance)
 
         # If flavor_id is not provided, only migrate the instance.
