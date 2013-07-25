@@ -1266,6 +1266,12 @@ class VlanNetworkTestCase(test.TestCase):
         self.assertEqual(res[1]['id'], 0)
 
 
+class _TestDomainObject(object):
+    def __init__(self, **kwargs):
+        for k, v in kwargs.iteritems():
+            self.__setattr__(k, v)
+
+
 class CommonNetworkTestCase(test.TestCase):
 
     def setUp(self):
@@ -1273,6 +1279,27 @@ class CommonNetworkTestCase(test.TestCase):
         self.context = context.RequestContext('fake', 'fake')
         self.flags(ipv6_backend='rfc2462')
         ipv6.reset_backend()
+
+    def test_validate_instance_zone_for_dns_domain(self):
+        domain = 'example.com'
+        az = 'test_az'
+        domains = {
+            domain: _TestDomainObject(
+                domain=domain,
+                availability_zone=az)}
+
+        def dnsdomain_get(context, instance_domain):
+            return domains.get(instance_domain)
+
+        self.stubs.Set(db, 'dnsdomain_get', dnsdomain_get)
+        CONF.instance_dns_domain = domain
+        fake_instance = {'uuid': FAKEUUID,
+                         'availability_zone': az}
+
+        manager = network_manager.NetworkManager()
+        res = manager._validate_instance_zone_for_dns_domain(self.context,
+                                                             fake_instance)
+        self.assertTrue(res)
 
     def fake_create_fixed_ips(self, context, network_id, fixed_cidr=None):
         return None
