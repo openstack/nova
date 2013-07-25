@@ -1,9 +1,4 @@
-# Install bounded pep8/pyflakes first, then let flake8 install
-pep8==1.4.5
-pyflakes==0.7.2
-flake8==2.0
-hacking>=0.5.3,<0.6
-
+hacking>=0.5.6,<0.7
 coverage>=3.6
 discover
 feedparser
