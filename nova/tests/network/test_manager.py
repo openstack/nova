@@ -331,7 +331,8 @@ class FlatNetworkTestCase(test.TestCase):
                              fixed_ips=mox.IgnoreArg()).AndReturn(None)
 
         db.instance_get_by_uuid(self.context,
-                        mox.IgnoreArg()).AndReturn({'display_name': HOST})
+                        mox.IgnoreArg()).AndReturn({'display_name': HOST,
+                                                    'uuid': FAKEUUID})
 
         db.network_get(mox.IgnoreArg(),
                        mox.IgnoreArg(),
@@ -374,7 +375,8 @@ class FlatNetworkTestCase(test.TestCase):
                              fixed_ips=mox.IgnoreArg()).AndReturn(None)
 
         db.instance_get_by_uuid(self.context,
-                        mox.IgnoreArg()).AndReturn({'display_name': HOST})
+                        mox.IgnoreArg()).AndReturn({'display_name': HOST,
+                                                    'uuid': FAKEUUID})
 
         db.network_get_by_uuid(mox.IgnoreArg(),
                                mox.IgnoreArg()).AndReturn(networks[0])
@@ -461,7 +463,8 @@ class FlatNetworkTestCase(test.TestCase):
                              fixed_ips=mox.IgnoreArg()).AndReturn(None)
 
         db.instance_get_by_uuid(self.context,
-                        mox.IgnoreArg()).AndReturn({'display_name': HOST})
+                        mox.IgnoreArg()).AndReturn({'display_name': HOST,
+                                                    'uuid': FAKEUUID})
 
         db.network_get_by_uuid(mox.IgnoreArg(),
                                mox.IgnoreArg()).AndReturn(networks[0])
