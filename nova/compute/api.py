@@ -2725,6 +2725,9 @@ class API(base.Base):
         if not instance['image_ref']:
             return True
 
+        if instance.get('root_device_name') is None:
+            return False
+
         if bdms is None:
             bdms = self.get_instance_bdms(context, instance)
 
