@@ -217,6 +217,11 @@ def create_vm(session, instance, name_label, kernel, ramdisk,
     mem = str(long(instance_type['memory_mb']) * 1024 * 1024)
     vcpus = str(instance_type['vcpus'])
 
+    vcpu_weight = instance_type['vcpu_weight']
+    vcpu_params = {}
+    if vcpu_weight is not None:
+        vcpu_params = {"weight": str(vcpu_weight)}
+
     rec = {
         'actions_after_crash': 'destroy',
         'actions_after_reboot': 'restart',
@@ -250,7 +255,7 @@ def create_vm(session, instance, name_label, kernel, ramdisk,
         'user_version': '0',
         'VCPUs_at_startup': vcpus,
         'VCPUs_max': vcpus,
-        'VCPUs_params': {},
+        'VCPUs_params': vcpu_params,
         'xenstore_data': {'allowvssprovider': 'false'}}
 
     # Complete VM configuration record according to the image type

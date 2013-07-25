@@ -704,13 +704,6 @@ class VMOps(object):
             agent.resetnetwork()
 
         self.remove_hostname(instance, vm_ref)
-        # Set VCPU weight
-        instance_type = flavors.extract_flavor(instance)
-        vcpu_weight = instance_type['vcpu_weight']
-        if vcpu_weight is not None:
-            LOG.debug(_("Setting VCPU weight"), instance=instance)
-            self._session.call_xenapi('VM.add_to_VCPUs_params', vm_ref,
-                                      'weight', str(vcpu_weight))
 
     def _get_vm_opaque_ref(self, instance, check_rescue=False):
         """Get xapi OpaqueRef from a db record.
