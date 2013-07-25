@@ -69,7 +69,7 @@ class RpcProxy(object):
         v = vers if vers else self.default_version
         if (self.version_cap and not
                 rpc_common.version_is_compatible(self.version_cap, v)):
-            raise rpc_common.RpcVersionCapError(version=self.version_cap)
+            raise rpc_common.RpcVersionCapError(version_cap=self.version_cap)
         msg['version'] = v
 
     def _get_topic(self, topic):

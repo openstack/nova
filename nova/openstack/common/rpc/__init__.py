@@ -29,7 +29,7 @@ import inspect
 
 from oslo.config import cfg
 
-from nova.openstack.common.gettextutils import _
+from nova.openstack.common.gettextutils import _  # noqa
 from nova.openstack.common import importutils
 from nova.openstack.common import local
 from nova.openstack.common import log as logging
