@@ -299,3 +299,30 @@ class TestOpenStackClient(object):
     def delete_server_volume(self, server_id, attachment_id):
         return self.api_delete('/servers/%s/os-volume_attachments/%s' %
                             (server_id, attachment_id))
+
+
+class TestOpenStackClientV3(TestOpenStackClient):
+    """Simple OpenStack v3 API Client.
+
+    This is a really basic OpenStack API client that is under our control,
+    so we can make changes / insert hooks for testing
+
+    """
+
+    def get_image(self, image_id):
+        return self.api_get('/os-images/%s' % image_id)['image']
+
+    def get_images(self, detail=True):
+        rel_url = '/os-images/detail' if detail else '/os-images'
+        return self.api_get(rel_url)['images']
+
+    def post_image(self, image):
+        return self.api_post('/os-images', image)['image']
+
+    def delete_image(self, image_id):
+        return self.api_delete('/os-images/%s' % image_id)
+
+
+class TestOpenStackClientV3Mixin(object):
+    def _get_test_client(self):
+        return TestOpenStackClientV3('fake', 'fake', self.auth_url)

@@ -24,6 +24,7 @@ import traceback
 
 from nova.openstack.common import log as logging
 from nova import service
+from nova.tests.integrated.api import client
 from nova.tests.integrated import integrated_helpers
 
 LOG = logging.getLogger(__name__)
@@ -35,7 +36,9 @@ class MultiprocessWSGITest(integrated_helpers._IntegratedTestBase):
     def _start_api_service(self):
         # Process will be started in _spawn()
         self.osapi = service.WSGIService("osapi_compute")
-        self.auth_url = 'http://%s:%s/v2' % (self.osapi.host, self.osapi.port)
+        self.auth_url = 'http://%(host)s:%(port)s/%(api_version)s' % ({
+            'host': self.osapi.host, 'port': self.osapi.port,
+            'api_version': self._api_version})
         LOG.info('auth_url = %s' % self.auth_url)
 
     def _get_flags(self):
@@ -174,3 +177,8 @@ class MultiprocessWSGITest(integrated_helpers._IntegratedTestBase):
         status = self._reap_test()
         self.assertTrue(os.WIFEXITED(status))
         self.assertEqual(os.WEXITSTATUS(status), 0)
+
+
+class MultiprocessWSGITestV3(client.TestOpenStackClientV3Mixin,
+                             MultiprocessWSGITest):
+    _api_version = 'v3'
