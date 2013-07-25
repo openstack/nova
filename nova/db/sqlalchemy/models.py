@@ -1015,7 +1015,7 @@ class AggregateHost(BASE, NovaBase):
         ),
     )
     id = Column(Integer, primary_key=True, autoincrement=True)
-    host = Column(String(255), unique=False)
+    host = Column(String(255))
     aggregate_id = Column(Integer, ForeignKey('aggregates.id'), nullable=False)
 
 
@@ -1034,6 +1034,7 @@ class AggregateMetadata(BASE, NovaBase):
 class Aggregate(BASE, NovaBase):
     """Represents a cluster of hosts that exists in this zone."""
     __tablename__ = 'aggregates'
+    __table_args__ = ()
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(255))
     _hosts = relationship(AggregateHost,
@@ -1070,6 +1071,8 @@ class AgentBuild(BASE, NovaBase):
     """Represents an agent build."""
     __tablename__ = 'agent_builds'
     __table_args__ = (
+        Index('agent_builds_hypervisor_os_arch_idx', 'hypervisor', 'os',
+              'architecture'),
         schema.UniqueConstraint("hypervisor", "os", "architecture", "deleted",
                 name="uniq_agent_builds0hypervisor0os0architecture0deleted"),
     )
