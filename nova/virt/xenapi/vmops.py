@@ -703,6 +703,7 @@ class VMOps(object):
             # Reset network config
             agent.resetnetwork()
 
+        self.remove_hostname(instance, vm_ref)
         # Set VCPU weight
         instance_type = flavors.extract_flavor(instance)
         vcpu_weight = instance_type['vcpu_weight']
@@ -1617,6 +1618,10 @@ class VMOps(object):
 
         LOG.debug(_("Injecting hostname to xenstore"), instance=instance)
         self._add_to_param_xenstore(vm_ref, 'vm-data/hostname', hostname)
+
+    def remove_hostname(self, instance, vm_ref):
+        LOG.debug(_("Removing hostname from xenstore"), instance=instance)
+        self._remove_from_param_xenstore(vm_ref, 'vm-data/hostname')
 
     def _write_to_xenstore(self, instance, path, value, vm_ref=None):
         """

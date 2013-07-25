@@ -606,7 +606,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
 
         if check_injection:
             xenstore_data = self.vm['xenstore_data']
-            self.assertEquals(xenstore_data['vm-data/hostname'], 'test')
+            self.assertFalse('vm-data/hostname' in xenstore_data)
             key = 'vm-data/networking/DEADBEEF0001'
             xenstore_value = xenstore_data[key]
             tcpip_data = ast.literal_eval(xenstore_value)

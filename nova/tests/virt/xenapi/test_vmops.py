@@ -260,3 +260,19 @@ class GetConsoleOutputTestCase(VMOpsTestBase):
         vm, vm_ref = self.create_vm("dummy")
         self.assertEqual(vm["domid"],
                          self.vmops._get_dom_id(vm_ref=vm_ref))
+
+
+class VMOpsTestCase(VMOpsTestBase):
+    def setUp(self):
+        super(VMOpsTestCase, self).setUp()
+
+    def test_remove_hostname(self):
+        vm, vm_ref = self.create_vm("dummy")
+        instance = {"name": "dummy", "uuid": "1234", "auto_disk_config": None}
+        self.mox.StubOutWithMock(self._session, 'call_xenapi')
+        self._session.call_xenapi("VM.remove_from_xenstore_data", vm_ref,
+                                  "vm-data/hostname")
+
+        self.mox.ReplayAll()
+        self.vmops.remove_hostname(instance, vm_ref)
+        self.mox.VerifyAll()
