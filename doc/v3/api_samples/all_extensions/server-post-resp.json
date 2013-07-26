@@ -1,0 +1,22 @@
+{
+    "server": {
+        "admin_pass": "zPnp2GseTqG4",
+        "id": "8195065c-fea4-4d57-b93f-5c5c63fe90e8",
+        "links": [
+            {
+                "href": "http://openstack.example.com/v3/servers/8195065c-fea4-4d57-b93f-5c5c63fe90e8",
+                "rel": "self"
+            },
+            {
+                "href": "http://openstack.example.com/servers/8195065c-fea4-4d57-b93f-5c5c63fe90e8",
+                "rel": "bookmark"
+            }
+        ],
+        "os-disk-config:disk_config": "AUTO",
+        "security_groups": [
+            {
+                "name": "default"
+            }
+        ]
+    }
+}

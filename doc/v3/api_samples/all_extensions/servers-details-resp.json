@@ -1,0 +1,77 @@
+{
+    "servers": [
+        {
+            "access_ip_v4": "",
+            "access_ip_v6": "",
+            "addresses": {
+                "private": [
+                    {
+                        "addr": "192.168.0.3",
+                        "mac_addr": "aa:bb:cc:dd:ee:ff",
+                        "type": "fixed",
+                        "version": 4
+                    }
+                ]
+            },
+            "created": "2013-09-23T13:53:12Z",
+            "flavor": {
+                "id": "1",
+                "links": [
+                    {
+                        "href": "http://openstack.example.com/flavors/1",
+                        "rel": "bookmark"
+                    }
+                ]
+            },
+            "host_id": "f1e160ad2bf07084f3d3e0dfdd0795d80da18a60825322c15775c0dd",
+            "id": "9cbefc35-d372-40c5-88e2-9fda1b6ea12c",
+            "image": {
+                "id": "70a599e0-31e7-49b7-b260-868f441e862b",
+                "links": [
+                    {
+                        "href": "http://glance.openstack.example.com/images/70a599e0-31e7-49b7-b260-868f441e862b",
+                        "rel": "bookmark"
+                    }
+                ]
+            },
+            "key_name": null,
+            "links": [
+                {
+                    "href": "http://openstack.example.com/v3/servers/9cbefc35-d372-40c5-88e2-9fda1b6ea12c",
+                    "rel": "self"
+                },
+                {
+                    "href": "http://openstack.example.com/servers/9cbefc35-d372-40c5-88e2-9fda1b6ea12c",
+                    "rel": "bookmark"
+                }
+            ],
+            "metadata": {
+                "My Server Name": "Apache1"
+            },
+            "name": "new-server-test",
+            "os-config-drive:config_drive": "",
+            "os-disk-config:disk_config": "AUTO",
+            "os-extended-availability-zone:availability_zone": "nova",
+            "os-extended-server-attributes:host": "c3f14e9812ad496baf92ccfb3c61e15f",
+            "os-extended-server-attributes:hypervisor_hostname": "fake-mini",
+            "os-extended-server-attributes:instance_name": "instance-00000001",
+            "os-extended-status:locked_by": null,
+            "os-extended-status:power_state": 1,
+            "os-extended-status:task_state": null,
+            "os-extended-status:vm_state": "active",
+            "os-extended-volumes:volumes_attached": [],
+            "os-server-usage:launched_at": "2013-09-23T13:53:12.774549",
+            "os-server-usage:terminated_at": null,
+            "progress": 0,
+            "security_groups": [
+                {
+                    "name": "default"
+                }
+            ],
+            "status": "ACTIVE",
+            "tenant_id": "openstack",
+            "updated": "2013-09-23T13:53:12Z",
+            "user_id": "fake"
+        }
+    ]
+}
