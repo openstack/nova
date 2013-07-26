@@ -228,7 +228,6 @@ class API(base.Base):
             if not name_match and not uuid_match:
                 raise exception.SecurityGroupNotFound(
                     security_group_id=security_group)
-                security_group_ids.append(name_match)
             elif name_match:
                 security_group_ids.append(name_match)
             elif uuid_match:

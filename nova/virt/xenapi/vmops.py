@@ -1666,7 +1666,6 @@ class VMOps(object):
                           {'method': method, 'args': args, 'e': e},
                           instance=instance)
                 return {'returncode': 'error', 'message': err_msg}
-            return None
 
     def _get_dom_id(self, instance=None, vm_ref=None, check_rescue=False):
         vm_ref = vm_ref or self._get_vm_opaque_ref(instance, check_rescue)
