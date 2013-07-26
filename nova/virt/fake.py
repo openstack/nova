@@ -241,15 +241,15 @@ class FakeDriver(driver.ComputeDriver):
         return True
 
     def attach_interface(self, instance, image_meta, network_info):
-        for (network, mapping) in network_info:
-            if mapping['vif_uuid'] in self._interfaces:
+        for vif in [network_info]:
+            if vif['id'] in self._interfaces:
                 raise exception.InterfaceAttachFailed('duplicate')
-            self._interfaces[mapping['vif_uuid']] = mapping
+            self._interfaces[vif['id']] = vif
 
     def detach_interface(self, instance, network_info):
-        for (network, mapping) in network_info:
+        for vif in network_info:
             try:
-                del self._interfaces[mapping['vif_uuid']]
+                del self._interfaces[vif['id']]
             except KeyError:
                 raise exception.InterfaceDetachFailed('not attached')
 

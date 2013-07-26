@@ -372,9 +372,7 @@ def fake_get_instance_nw_info(stubs, num_networks=1, ips_per_vif=2,
     nw_model = network.get_instance_nw_info(
                 FakeContext('fakeuser', 'fake_project'),
                 0, 3, None)
-    if spectacular:
-        return nw_model
-    return nw_model.legacy()
+    return nw_model
 
 
 def stub_out_nw_api_get_instance_nw_info(stubs, func=None,

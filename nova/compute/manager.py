@@ -518,7 +518,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                     # always destroy disks if the instance was deleted
                     destroy_disks = True
                 self.driver.destroy(instance,
-                                    self._legacy_nw_info(network_info),
+                                    network_info,
                                     bdi, destroy_disks)
 
     def _is_instance_storage_shared(self, context, instance):
@@ -626,36 +626,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         net_info = compute_utils.get_nw_info_for_instance(instance)
 
-        # We're calling plug_vifs to ensure bridge and iptables
-        # rules exist. This needs to be called for each instance.
-        legacy_net_info = self._legacy_nw_info(net_info)
-
-        # Keep compatibility with folsom, update networkinfo and
-        # add vif type to instance_info_cache.
-        if (legacy_net_info and
-                isinstance(legacy_net_info[0], tuple) and
-                legacy_net_info[0][1].get('vif_type') is None):
-            # Call to network API to get instance info, this will
-            # force an update to the instance's info_cache
-            retry_time = 0
-            # Continue retrying until _get_instance_nw_info() succeeds.
-            while True:
-                try:
-                    net_info = self._get_instance_nw_info(context, instance)
-                    break
-                except Exception:
-                    # Retry in an exponential backoff fashion
-                    # capped at 60 seconds.
-                    if retry_time < 60:
-                        retry_time += 6
-                    LOG.exception(_("Error raised getting network info for "
-                                    "instance %(instance_uuid)s. Retrying "
-                                    "in %(retry_time)s seconds."),
-                                    {'instance_uuid': instance['uuid'],
-                                     'retry_time': retry_time})
-                    time.sleep(retry_time)
-            legacy_net_info = self._legacy_nw_info(net_info)
-        self.driver.plug_vifs(instance, legacy_net_info)
+        self.driver.plug_vifs(instance, net_info)
 
         if instance['task_state'] == task_states.RESIZE_MIGRATING:
             # We crashed during resize/migration, so roll back for safety
@@ -670,8 +641,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                             context, instance)
 
                 self.driver.finish_revert_migration(
-                    instance, self._legacy_nw_info(net_info),
-                    block_dev_info, power_on)
+                    instance, net_info, block_dev_info, power_on)
 
             except Exception as e:
                 LOG.exception(_('Failed to revert crashed migration'),
@@ -703,10 +673,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             try:
                 self.driver.resume_state_on_host_boot(
-                        context,
-                        instance,
-                        self._legacy_nw_info(net_info),
-                        block_device_info)
+                    context, instance, net_info, block_device_info)
             except NotImplementedError:
                 LOG.warning(_('Hypervisor driver does not support '
                               'resume guests'), instance=instance)
@@ -720,8 +687,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             # VMwareAPI drivers will raise an exception
             try:
                 self.driver.ensure_filtering_rules_for_instance(
-                                       instance,
-                                       self._legacy_nw_info(net_info))
+                                       instance, net_info)
             except NotImplementedError:
                 LOG.warning(_('Hypervisor driver does not support '
                               'firewall rules'), instance=instance)
@@ -874,12 +840,6 @@ class ComputeManager(manager.SchedulerDependentManager):
                 context, instance['uuid'])
         network_info = self.network_api.get_instance_nw_info(context,
                                                              instance)
-        return network_info
-
-    def _legacy_nw_info(self, network_info):
-        """Converts the model nw_info object to legacy style."""
-        if self.driver.legacy_nwinfo():
-            network_info = network_info.legacy()
         return network_info
 
     def _await_block_device_map_created(self, context, vol_id, max_tries=30,
@@ -1350,7 +1310,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         try:
             self.driver.spawn(context, instance, image_meta,
                               injected_files, admin_password,
-                              self._legacy_nw_info(network_info),
+                              network_info,
                               block_device_info)
 
         except Exception:
@@ -1511,7 +1471,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         # NOTE(melwitt): attempt driver destroy before releasing ip, may
         #                want to keep ip allocated for certain failures
         try:
-            self.driver.destroy(instance, self._legacy_nw_info(network_info),
+            self.driver.destroy(instance, network_info,
                                 block_device_info)
         except exception.InstancePowerOffFailure:
             # if the instance can't power off, don't release the ip
@@ -1680,7 +1640,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         block_device_info = self._get_instance_volume_block_device_info(
                                 context, instance)
         self.driver.power_on(context, instance,
-                             self._legacy_nw_info(network_info),
+                             network_info,
                              block_device_info)
 
     # NOTE(johannes): This is probably better named power_on_instance
@@ -1898,7 +1858,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 block_device_info = self._get_volume_block_device_info(
                         self._get_volume_bdms(bdms))
                 self.driver.destroy(instance,
-                                    self._legacy_nw_info(network_info),
+                                    network_info,
                                     block_device_info=block_device_info)
 
             instance = self._instance_update(
@@ -1919,7 +1879,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             self.driver.spawn(context, instance, image_meta,
                               files, new_pass,
-                              network_info=self._legacy_nw_info(network_info),
+                              network_info=network_info,
                               block_device_info=block_device_info)
 
             instance = self._instance_update(
@@ -2018,7 +1978,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             new_power_state = None
 
             self.driver.reboot(context, instance,
-                               self._legacy_nw_info(network_info),
+                               network_info,
                                reboot_type,
                                block_device_info=block_device_info,
                                bad_volumes_callback=bad_volumes_callback)
@@ -2357,7 +2317,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         try:
             self.driver.rescue(context, instance,
-                               self._legacy_nw_info(network_info),
+                               network_info,
                                rescue_image_meta, admin_password)
         except Exception as e:
             LOG.exception(_("Error trying to Rescue Instance"),
@@ -2388,7 +2348,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         with self._error_out_instance_on_exception(context, instance['uuid']):
             self.driver.unrescue(instance,
-                                 self._legacy_nw_info(network_info))
+                                 network_info)
 
         current_power_state = self._get_power_state(context, instance)
         self._instance_update(context,
@@ -2455,7 +2415,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             network_info = self._get_instance_nw_info(context, instance)
             self.driver.confirm_migration(migration, instance,
-                                          self._legacy_nw_info(network_info))
+                                          network_info)
 
             self.conductor_api.migration_update(context, migration,
                                                 'confirmed')
@@ -2525,7 +2485,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             block_device_info = self._get_instance_volume_block_device_info(
                                 context, instance)
 
-            self.driver.destroy(instance, self._legacy_nw_info(network_info),
+            self.driver.destroy(instance, network_info,
                                 block_device_info)
 
             self._terminate_volume_connections(context, instance)
@@ -2611,7 +2571,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             power_on = old_vm_state != vm_states.STOPPED
             self.driver.finish_revert_migration(instance,
-                                       self._legacy_nw_info(network_info),
+                                       network_info,
                                        block_device_info, power_on)
 
             # Just roll back the record. There's no need to resize down since
@@ -2805,7 +2765,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             disk_info = self.driver.migrate_disk_and_power_off(
                     context, instance, migration['dest_host'],
-                    instance_type, self._legacy_nw_info(network_info),
+                    instance_type, network_info,
                     block_device_info)
 
             self._terminate_volume_connections(context, instance)
@@ -2899,7 +2859,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         power_on = old_vm_state != vm_states.STOPPED
         self.driver.finish_migration(context, migration, instance,
                                      disk_info,
-                                     self._legacy_nw_info(network_info),
+                                     network_info,
                                      image, resize_instance,
                                      block_device_info, power_on)
 
@@ -3093,7 +3053,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         block_device_info = self._get_instance_volume_block_device_info(
                             context, instance)
 
-        self.driver.resume(instance, self._legacy_nw_info(network_info),
+        self.driver.resume(instance, network_info,
                            block_device_info)
 
         instance.power_state = self._get_power_state(context, instance)
@@ -3178,7 +3138,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         network_info = self._get_instance_nw_info(context, instance)
         block_device_info = self._get_instance_volume_block_device_info(
                 context, instance)
-        self.driver.destroy(instance, self._legacy_nw_info(network_info),
+        self.driver.destroy(instance, network_info,
                 block_device_info)
 
         instance.power_state = current_power_state
@@ -3234,7 +3194,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         try:
             self.driver.spawn(context, instance, image, injected_files=[],
                     admin_password=None,
-                    network_info=self._legacy_nw_info(network_info),
+                    network_info=network_info,
                     block_device_info=block_device_info)
         except Exception:
             with excutils.save_and_reraise_exception():
@@ -3268,7 +3228,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                   instance=instance)
 
         self.driver.inject_network_info(instance,
-                                        self._legacy_nw_info(network_info))
+                                        network_info)
         return network_info
 
     @wrap_instance_fault
@@ -3651,21 +3611,18 @@ class ComputeManager(manager.SchedulerDependentManager):
                       % dict(ports=len(network_info)))
             raise exception.InterfaceAttachFailed(instance=instance)
         image_meta = _get_image_meta(context, instance['image_ref'])
-        legacy_net_info = self._legacy_nw_info(network_info)
-        (network, mapping) = legacy_net_info[0]
-        self.driver.attach_interface(instance, image_meta, legacy_net_info)
-        return legacy_net_info[0]
+        self.driver.attach_interface(instance, image_meta, network_info[0])
+        return network_info[0]
 
     def detach_interface(self, context, instance, port_id):
         """Detach an network adapter from an instance."""
         # FIXME(comstud): Why does this need elevated context?
         network_info = self._get_instance_nw_info(context.elevated(),
                                                   instance)
-        legacy_nwinfo = self._legacy_nw_info(network_info)
         condemned = None
-        for (network, mapping) in legacy_nwinfo:
-            if mapping['vif_uuid'] == port_id:
-                condemned = (network, mapping)
+        for vif in network_info:
+            if vif['id'] == port_id:
+                condemned = vif
                 break
         if condemned is None:
             raise exception.PortNotFound(_("Port %s is not "
@@ -3781,7 +3738,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         pre_live_migration_data = self.driver.pre_live_migration(context,
                                        instance,
                                        block_device_info,
-                                       self._legacy_nw_info(network_info),
+                                       network_info,
                                        disk,
                                        migrate_data)
 
@@ -3796,7 +3753,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         # In addition, this method is creating filtering rule
         # onto destination host.
         self.driver.ensure_filtering_rules_for_instance(instance,
-                                            self._legacy_nw_info(network_info))
+                                            network_info)
 
         self._notify_about_instance_usage(
                      context, instance, "live_migration.pre.end",
@@ -3885,7 +3842,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                           network_info=network_info)
         # Releasing security group ingress rule.
         self.driver.unfilter_instance(instance_ref,
-                                      self._legacy_nw_info(network_info))
+                                      network_info)
 
         migration = {'source_compute': self.host,
                      'dest_compute': dest, }
@@ -3905,15 +3862,13 @@ class ComputeManager(manager.SchedulerDependentManager):
         if migrate_data:
             is_shared_storage = migrate_data.get('is_shared_storage', True)
         if block_migration or not is_shared_storage:
-            self.driver.destroy(instance_ref,
-                                self._legacy_nw_info(network_info))
+            self.driver.destroy(instance_ref, network_info)
         else:
             # self.driver.destroy() usually performs  vif unplugging
             # but we must do it explicitly here when block_migration
             # is false, as the network devices at the source must be
             # torn down
-            self.driver.unplug_vifs(instance_ref,
-                                    self._legacy_nw_info(network_info))
+            self.driver.unplug_vifs(instance_ref, network_info)
 
         # NOTE(tr3buchet): tear down networks on source host
         self.network_api.setup_networks_on_host(ctxt, instance_ref,
@@ -3962,7 +3917,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                             context, instance)
 
         self.driver.post_live_migration_at_destination(context, instance,
-                                            self._legacy_nw_info(network_info),
+                                            network_info,
                                             block_migration, block_device_info)
         # Restore instance state
         current_power_state = self._get_power_state(context, instance)
@@ -4054,8 +4009,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         #             from remote volumes if necessary
         block_device_info = self._get_instance_volume_block_device_info(
                             context, instance)
-        self.driver.destroy(instance, self._legacy_nw_info(network_info),
-                            block_device_info)
+        self.driver.destroy(instance, network_info, block_device_info)
         self._notify_about_instance_usage(
                         context, instance, "live_migration.rollback.dest.end",
                         network_info=network_info)
