@@ -129,6 +129,7 @@ policy_data = """
     "compute_extension:attach_interfaces": "",
     "compute_extension:v3:os-attach-interfaces": "",
     "compute_extension:baremetal_nodes": "",
+    "compute_extension:v3:os-baremetal-nodes": "",
     "compute_extension:cells": "",
     "compute_extension:v3:os-cells": "",
     "compute_extension:certificates": "",

@@ -15,7 +15,7 @@
 
 from webob import exc
 
-from nova.api.openstack.compute.contrib import baremetal_nodes
+from nova.api.openstack.compute.plugins.v3 import baremetal_nodes
 from nova import context
 from nova import exception
 from nova import test

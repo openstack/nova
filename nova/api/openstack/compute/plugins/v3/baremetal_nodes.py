@@ -23,7 +23,9 @@ from nova.api.openstack import xmlutil
 from nova import exception
 from nova.virt.baremetal import db
 
-authorize = extensions.extension_authorizer('compute', 'baremetal_nodes')
+ALIAS = 'os-baremetal-nodes'
+authorize = extensions.extension_authorizer('compute',
+                                            'v3:' + ALIAS)
 
 node_fields = ['id', 'cpus', 'local_gb', 'memory_mb', 'pm_address',
                'pm_user',
@@ -115,8 +117,8 @@ class BareMetalNodeController(wsgi.Controller):
         authorize(context)
         try:
             node = db.bm_node_get(context, id)
-        except exception.NodeNotFound:
-            raise webob.exc.HTTPNotFound()
+        except exception.NodeNotFound as e:
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
         try:
             ifs = db.bm_interface_get_all_by_bm_node_id(context, id)
         except exception.NodeNotFound:
@@ -150,15 +152,15 @@ class BareMetalNodeController(wsgi.Controller):
         authorize(context)
         try:
             db.bm_node_destroy(context, id)
-        except exception.NodeNotFound:
-            raise webob.exc.HTTPNotFound()
+        except exception.NodeNotFound as e:
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
         return webob.Response(status_int=202)
 
     def _check_node_exists(self, context, node_id):
         try:
             db.bm_node_get(context, node_id)
-        except exception.NodeNotFound:
-            raise webob.exc.HTTPNotFound()
+        except exception.NodeNotFound as e:
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
     @wsgi.serializers(xml=InterfaceTemplate)
     @wsgi.action('add_interface')
@@ -201,18 +203,21 @@ class BareMetalNodeController(wsgi.Controller):
         raise webob.exc.HTTPNotFound()
 
 
-class Baremetal_nodes(extensions.ExtensionDescriptor):
+class BaremetalNodes(extensions.V3APIExtensionBase):
     """Admin-only bare-metal node administration."""
 
     name = "BareMetalNodes"
-    alias = "os-baremetal-nodes"
-    namespace = "http://docs.openstack.org/compute/ext/baremetal_nodes/api/v2"
-    updated = "2013-01-04T00:00:00+00:00"
+    alias = ALIAS
+    namespace = "http://docs.openstack.org/compute/ext/baremetal_nodes/api/v3"
+    version = 1
 
     def get_resources(self):
         resources = []
-        res = extensions.ResourceExtension('os-baremetal-nodes',
+        res = extensions.ResourceExtension(ALIAS,
                 BareMetalNodeController(),
                 member_actions={"action": "POST", })
         resources.append(res)
         return resources
+
+    def get_controller_extensions(self):
+        return []
