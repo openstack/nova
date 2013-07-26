@@ -34,6 +34,7 @@ class BareMetalPduTestCase(test.TestCase):
 
     def setUp(self):
         super(BareMetalPduTestCase, self).setUp()
+        self.flags(tile_power_wait=0, group='baremetal')
         self.node = bm_db_utils.new_bm_node(
                 id=123,
                 pm_address='fake-address',
