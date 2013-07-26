@@ -179,6 +179,21 @@ class ExtendedVolumesTest(test.TestCase):
         res = self._make_request(url, {"detach": {"volume_id": UUID2}})
         self.assertEqual(res.status_int, 400)
 
+    def test_detach_with_bad_id(self):
+        url = "/v3/servers/%s/action" % UUID1
+        res = self._make_request(url, {"detach": {"volume_id": 'xxx'}})
+        self.assertEqual(res.status_int, 400)
+
+    def test_detach_without_id(self):
+        url = "/v3/servers/%s/action" % UUID1
+        res = self._make_request(url, {"detach": {}})
+        self.assertEqual(res.status_int, 400)
+
+    def test_detach_volume_with_invalid_request(self):
+        url = "/v3/servers/%s/action" % UUID1
+        res = self._make_request(url, {"detach": None})
+        self.assertEqual(res.status_int, 400)
+
     def test_attach_volume(self):
         url = "/v3/servers/%s/action" % UUID1
         res = self._make_request(url, {"attach": {"volume_id": UUID1}})
@@ -187,6 +202,16 @@ class ExtendedVolumesTest(test.TestCase):
     def test_attach_volume_with_bad_id(self):
         url = "/v3/servers/%s/action" % UUID1
         res = self._make_request(url, {"attach": {"volume_id": 'xxx'}})
+        self.assertEqual(res.status_int, 400)
+
+    def test_attach_volume_without_id(self):
+        url = "/v3/servers/%s/action" % UUID1
+        res = self._make_request(url, {"attach": {}})
+        self.assertEqual(res.status_int, 400)
+
+    def test_attach_volume_with_invalid_request(self):
+        url = "/v3/servers/%s/action" % UUID1
+        res = self._make_request(url, {"attach": None})
         self.assertEqual(res.status_int, 400)
 
     def test_attach_volume_with_non_existe_vol(self):
