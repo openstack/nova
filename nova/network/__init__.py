@@ -22,11 +22,19 @@ import oslo.config.cfg
 # collisions with use of 'from nova.network import <foo>' elsewhere.
 import nova.openstack.common.importutils
 
+import sys
+from nova import context
+from nova.openstack.common import log as logging
+LOG = logging.getLogger(__name__)
+
 _network_opts = [
     oslo.config.cfg.StrOpt('network_api_class',
                            default='nova.network.api.API',
                            help='The full class name of the '
                                 'network API class to use'),
+    oslo.config.cfg.StrOpt('pre_defined_network',
+                           default=None,
+                           help='Name of pre-defined network used on this node'),
 ]
 
 oslo.config.cfg.CONF.register_opts(_network_opts)
@@ -37,3 +45,22 @@ def API():
     network_api_class = oslo.config.cfg.CONF.network_api_class
     cls = importutils.import_class(network_api_class)
     return cls()
+
+def get_pre_defined_network(pre_defined_network=None):
+    if not pre_defined_network:
+        pre_defined_network = oslo.config.cfg.CONF.pre_defined_network
+
+    if not pre_defined_network:
+        LOG.error(_("Pre-defined network required, but not specified"))
+        sys.exit(1)
+
+    try:
+        network_api = API()
+        pre_defined_network_id = network_api.get_network_id_by_name(
+                                     context=context.get_admin_context(),
+                                     network_name=pre_defined_network)
+        return [(pre_defined_network_id, None, None)]
+    except Exception:
+        LOG.error(_("Unable to get pre-defined network '%s' ID")
+            % pre_defined_network)
+        sys.exit(1)
