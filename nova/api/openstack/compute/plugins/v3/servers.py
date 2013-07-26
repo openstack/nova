@@ -1446,9 +1446,10 @@ class ServersController(wsgi.Controller):
         handler.server_xml_extract_server_deserialize(server_node, server_dict)
 
     def server_create_xml_deserialize(self, server_node, server):
-        self.create_xml_deserialize_manager.map(
-            self._server_create_xml_deserialize_extension_point,
-            server_node, server)
+        if list(self.create_xml_deserialize_manager):
+            self.create_xml_deserialize_manager.map(
+                self._server_create_xml_deserialize_extension_point,
+                server_node, server)
 
     def _get_instance(self, context, instance_uuid):
         try:
