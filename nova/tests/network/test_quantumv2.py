@@ -355,7 +355,6 @@ class TestQuantumv2Base(test.TestCase):
                                         self._returned_nw_info)
         self.mox.ReplayAll()
         return api
->>>>>>> 6ace89b... Pass instance host-id to Quantum using port bindings extension.
 
     def _verify_nw_info(self, nw_inf, index=0):
         id_suffix = index + 1
