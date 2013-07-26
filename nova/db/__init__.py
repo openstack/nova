@@ -20,4 +20,4 @@
 DB abstraction for Nova
 """
 
-from nova.db.api import *
+from nova.db.api import *  # noqa
