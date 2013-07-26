@@ -396,3 +396,17 @@ class ComputeRpcAPITestCase(test.TestCase):
     def test_unrescue_instance(self):
         self._test_compute_api('unrescue_instance', 'cast',
                 instance=self.fake_instance)
+
+    def test_shelve_instance(self):
+        self._test_compute_api('shelve_instance', 'cast',
+                instance=self.fake_instance, image_id='image_id',
+                version='2.31')
+
+    def test_shelve_offload_instance(self):
+        self._test_compute_api('shelve_offload_instance', 'cast',
+                instance=self.fake_instance, version='2.31')
+
+    def test_unshelve_instance(self):
+        self._test_compute_api('unshelve_instance', 'cast',
+                instance=self.fake_instance, host='host', image='image',
+                version='2.31')
