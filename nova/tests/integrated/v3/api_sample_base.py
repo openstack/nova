@@ -17,7 +17,7 @@ import os
 
 from oslo.config import cfg
 
-from nova.api.openstack import API_V3_CORE_EXTENSIONS
+from nova.api.openstack import API_V3_CORE_EXTENSIONS  # noqa
 from nova import test
 from nova.tests import fake_network
 from nova.tests import fake_utils

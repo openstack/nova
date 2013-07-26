@@ -20,10 +20,10 @@ Unit tests for EC2 error responses.
 
 from lxml import etree
 
-from nova.api.ec2 import ec2_error_ex
-from nova.context import RequestContext
+from nova.api import ec2
+from nova import context
 from nova import test
-from nova.wsgi import Request
+from nova import wsgi
 
 
 class TestClientExceptionEC2(Exception):
@@ -37,12 +37,13 @@ class Ec2ErrorResponseTestCase(test.TestCase):
     Test EC2 error responses.
 
     This deals mostly with api/ec2/__init__.py code, especially
-    the ec2_error_ex helper.
+    the ec2.ec2_error_ex helper.
     """
     def setUp(self):
         super(Ec2ErrorResponseTestCase, self).setUp()
-        self.context = RequestContext('test_user_id', 'test_project_id')
-        self.req = Request.blank('/test')
+        self.context = context.RequestContext('test_user_id',
+                'test_project_id')
+        self.req = wsgi.Request.blank('/test')
         self.req.environ['nova.context'] = self.context
 
     def _validate_ec2_error(self, response, http_status, ec2_code, msg=None,
@@ -82,7 +83,7 @@ class Ec2ErrorResponseTestCase(test.TestCase):
         Test response to client (400) EC2 exception.
         """
         msg = "Test client failure."
-        err = ec2_error_ex(TestClientExceptionEC2(msg), self.req)
+        err = ec2.ec2_error_ex(TestClientExceptionEC2(msg), self.req)
         self._validate_ec2_error(err, TestClientExceptionEC2.code,
                                  TestClientExceptionEC2.ec2_code, msg)
 
@@ -91,7 +92,7 @@ class Ec2ErrorResponseTestCase(test.TestCase):
         Test response to an unexpected client (400) exception.
         """
         msg = "Test client failure."
-        err = ec2_error_ex(TestClientExceptionEC2(msg), self.req,
+        err = ec2.ec2_error_ex(TestClientExceptionEC2(msg), self.req,
                            unexpected=True)
         self._validate_ec2_error(err, TestClientExceptionEC2.code,
                                  TestClientExceptionEC2.ec2_code, msg)

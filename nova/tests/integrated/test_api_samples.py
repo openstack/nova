@@ -30,7 +30,7 @@ from oslo.config import cfg
 from nova.api.metadata import password
 from nova.api.openstack.compute.contrib import coverage_ext
 from nova.api.openstack.compute.contrib import fping
-from nova.api.openstack.compute.extensions import ExtensionManager as ext_mgr
+from nova.api.openstack.compute import extensions
 # Import extensions to pull in osapi_compute_extension CONF option used below.
 from nova.cells import rpcapi as cells_rpcapi
 from nova.cells import state
@@ -1759,7 +1759,8 @@ class ServicesJsonTest(ApiSampleTestBaseV2):
         Return a list of all running services with the disable reason
         information if that exists.
         """
-        self.stubs.Set(ext_mgr, "is_loaded", self.fake_load)
+        self.stubs.Set(extensions.ExtensionManager, "is_loaded",
+                self.fake_load)
         response = self._do_get('os-services')
         self.assertEqual(response.status, 200)
         subs = {'binary': 'nova-compute',
@@ -1773,7 +1774,8 @@ class ServicesJsonTest(ApiSampleTestBaseV2):
 
     def test_service_disable_log_reason(self):
         """Disable an existing service and log the reason."""
-        self.stubs.Set(ext_mgr, "is_loaded", self.fake_load)
+        self.stubs.Set(extensions.ExtensionManager, "is_loaded",
+                self.fake_load)
         subs = {"host": "host1",
                 'binary': 'nova-compute',
                 'disabled_reason': 'test2'}
@@ -2140,7 +2142,8 @@ class UserQuotasSampleJsonTests(ApiSampleTestBaseV2):
 
     def test_delete_quotas_for_user(self):
         # Get api sample to delete quota for user.
-        self.stubs.Set(ext_mgr, "is_loaded", self.fake_load)
+        self.stubs.Set(extensions.ExtensionManager, "is_loaded",
+                self.fake_load)
         response = self._do_delete('os-quota-sets/fake_tenant?user_id=1')
         self.assertEqual(response.status, 202)
         self.assertEqual(response.read(), '')

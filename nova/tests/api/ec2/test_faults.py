@@ -17,7 +17,7 @@ import webob
 
 from nova.api.ec2 import faults
 from nova import test
-from nova.wsgi import Request
+from nova import wsgi
 
 
 class TestFaults(test.TestCase):
@@ -40,7 +40,7 @@ class TestFaults(test.TestCase):
         message = 'test message'
         ex = webob.exc.HTTPNotFound(explanation=message)
         fault = faults.Fault(ex)
-        req = Request.blank('/test')
+        req = wsgi.Request.blank('/test')
         req.GET['AWSAccessKeyId'] = "test_user_id:test_project_id"
         self.mox.StubOutWithMock(faults, 'ec2_error_response')
         faults.ec2_error_response(mox.IgnoreArg(), 'HTTPNotFound',

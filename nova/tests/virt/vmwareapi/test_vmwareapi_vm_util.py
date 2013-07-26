@@ -16,7 +16,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from collections import namedtuple
+import collections
 import re
 
 from nova import exception
@@ -159,9 +159,9 @@ class VMwareVMUtilTestCase(test.TestCase):
 
     def test_property_from_property_set(self):
 
-        ObjectContent = namedtuple('ObjectContent', ['propSet'])
-        DynamicProperty = namedtuple('Property', ['name', 'val'])
-        MoRef = namedtuple('Val', ['value'])
+        ObjectContent = collections.namedtuple('ObjectContent', ['propSet'])
+        DynamicProperty = collections.namedtuple('Property', ['name', 'val'])
+        MoRef = collections.namedtuple('Val', ['value'])
 
         good_objects = fake.FakeRetrieveResult()
         results_good = [

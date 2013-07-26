@@ -15,7 +15,7 @@
 # under the License.
 
 from nova import test
-from nova.virt.libvirt.designer import set_vif_bandwidth_config
+from nova.virt.libvirt import designer
 
 
 class DesignerTestCase(test.TestCase):
@@ -27,6 +27,6 @@ class DesignerTestCase(test.TestCase):
             # The conf will never be user be used, so we can use 'None'.
             # An empty dictionary is fine: all that matters it that there is no
             # 'extra_specs' field.
-            set_vif_bandwidth_config(None, {})
+            designer.set_vif_bandwidth_config(None, {})
         except KeyError as e:
             self.fail('KeyError: %s' % e)
