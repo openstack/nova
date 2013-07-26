@@ -37,7 +37,7 @@ class MyObj(base.NovaObject):
         setattr(self, attrname, 'loaded!')
 
     @base.remotable_classmethod
-    def get(cls, context):
+    def query(cls, context):
         obj = cls()
         obj.foo = 1
         obj.bar = 'bar'
@@ -78,7 +78,7 @@ class MyObj2(object):
         return 'MyObj'
 
     @base.remotable_classmethod
-    def get(cls, *args, **kwargs):
+    def query(cls, *args, **kwargs):
         pass
 
 
@@ -371,14 +371,14 @@ class _TestObject(object):
     def test_with_alternate_context(self):
         ctxt1 = context.RequestContext('foo', 'foo')
         ctxt2 = context.RequestContext('bar', 'alternate')
-        obj = MyObj.get(ctxt1)
+        obj = MyObj.query(ctxt1)
         obj.update_test(ctxt2)
         self.assertEqual(obj.bar, 'alternate-context')
         self.assertRemotes()
 
     def test_orphaned_object(self):
         ctxt = context.get_admin_context()
-        obj = MyObj.get(ctxt)
+        obj = MyObj.query(ctxt)
         obj._context = None
         self.assertRaises(exception.OrphanedObjectError,
                           obj.update_test)
@@ -386,7 +386,7 @@ class _TestObject(object):
 
     def test_changed_1(self):
         ctxt = context.get_admin_context()
-        obj = MyObj.get(ctxt)
+        obj = MyObj.query(ctxt)
         obj.foo = 123
         self.assertEqual(obj.obj_what_changed(), set(['foo']))
         obj.update_test(ctxt)
@@ -396,7 +396,7 @@ class _TestObject(object):
 
     def test_changed_2(self):
         ctxt = context.get_admin_context()
-        obj = MyObj.get(ctxt)
+        obj = MyObj.query(ctxt)
         obj.foo = 123
         self.assertEqual(obj.obj_what_changed(), set(['foo']))
         obj.save(ctxt)
@@ -406,7 +406,7 @@ class _TestObject(object):
 
     def test_changed_3(self):
         ctxt = context.get_admin_context()
-        obj = MyObj.get(ctxt)
+        obj = MyObj.query(ctxt)
         obj.foo = 123
         self.assertEqual(obj.obj_what_changed(), set(['foo']))
         obj.refresh(ctxt)
@@ -417,7 +417,7 @@ class _TestObject(object):
 
     def test_changed_4(self):
         ctxt = context.get_admin_context()
-        obj = MyObj.get(ctxt)
+        obj = MyObj.query(ctxt)
         obj.bar = 'something'
         self.assertEqual(obj.obj_what_changed(), set(['bar']))
         obj.modify_save_modify(ctxt)
@@ -428,7 +428,7 @@ class _TestObject(object):
 
     def test_static_result(self):
         ctxt = context.get_admin_context()
-        obj = MyObj.get(ctxt)
+        obj = MyObj.query(ctxt)
         self.assertEqual(obj.bar, 'bar')
         result = obj.marco()
         self.assertEqual(result, 'polo')
@@ -436,7 +436,7 @@ class _TestObject(object):
 
     def test_updates(self):
         ctxt = context.get_admin_context()
-        obj = MyObj.get(ctxt)
+        obj = MyObj.query(ctxt)
         self.assertEqual(obj.foo, 1)
         obj.update_test()
         self.assertEqual(obj.bar, 'updated')
@@ -477,6 +477,24 @@ class _TestObject(object):
         self.assertFalse(obj.obj_attr_is_set('bar'))
         self.assertRaises(AttributeError, obj.obj_attr_is_set, 'bang')
 
+    def test_get(self):
+        obj = MyObj()
+        obj.foo = 1
+        # Foo has value, should not get the default
+        self.assertEqual(obj.get('foo', 2), 1)
+        # Foo has value, should return the value without error
+        self.assertEqual(obj.get('foo'), 1)
+        # Bar is not loaded, so we should get the default
+        self.assertEqual(obj.get('bar', 'not-loaded'), 'not-loaded')
+        # Bar without a default should lazy-load
+        self.assertEqual(obj.get('bar'), 'loaded!')
+        # Bar now has a default, but loaded value should be returned
+        self.assertEqual(obj.get('bar', 'not-loaded'), 'loaded!')
+        # Invalid attribute should raise AttributeError
+        self.assertRaises(AttributeError, obj.get, 'nothing')
+        # ...even with a default
+        self.assertRaises(AttributeError, obj.get, 'nothing', 3)
+
 
 class TestObject(_LocalTest, _TestObject):
     pass
@@ -487,18 +505,18 @@ class TestRemoteObject(_RemoteTest, _TestObject):
         ctxt = context.get_admin_context()
         MyObj2.version = '2.0'
         self.assertRaises(exception.IncompatibleObjectVersion,
-                          MyObj2.get, ctxt)
+                          MyObj2.query, ctxt)
 
     def test_minor_version_greater(self):
         ctxt = context.get_admin_context()
         MyObj2.version = '1.6'
         self.assertRaises(exception.IncompatibleObjectVersion,
-                          MyObj2.get, ctxt)
+                          MyObj2.query, ctxt)
 
     def test_minor_version_less(self):
         ctxt = context.get_admin_context()
         MyObj2.version = '1.2'
-        obj = MyObj2.get(ctxt)
+        obj = MyObj2.query(ctxt)
         self.assertEqual(obj.bar, 'bar')
         self.assertRemotes()
 
