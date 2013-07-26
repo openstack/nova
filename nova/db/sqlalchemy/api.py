@@ -1472,6 +1472,27 @@ def _validate_unique_server_name(context, session, name):
         raise exception.InstanceExists(name=lowername)
 
 
+def _handle_objects_related_type_conversions(values):
+    """Make sure that certain things in values (which may have come from
+    an objects.instance.Instance object) are in suitable form for the
+    database.
+    """
+    # NOTE(danms): Make sure IP addresses are passed as strings to
+    # the database engine
+    for key in ('access_ip_v4', 'access_ip_v6'):
+        if key in values and values[key] is not None:
+            values[key] = str(values[key])
+
+    # NOTE(danms): Strip UTC timezones from datetimes, since they're
+    # stored that way in the database
+    for key in ('created_at', 'deleted_at', 'updated_at',
+                'launched_at', 'terminated_at', 'scheduled_at'):
+        if key in values and values[key]:
+            if isinstance(values[key], basestring):
+                values[key] = timeutils.parse_strtime(values[key])
+            values[key] = values[key].replace(tzinfo=None)
+
+
 @require_context
 def instance_create(context, values):
     """Create a new Instance record in the database.
@@ -1485,6 +1506,7 @@ def instance_create(context, values):
 
     values['system_metadata'] = _metadata_refs(
             values.get('system_metadata'), models.InstanceSystemMetadata)
+    _handle_objects_related_type_conversions(values)
 
     instance_ref = models.Instance()
     if not values.get('uuid'):
@@ -2133,21 +2155,7 @@ def _instance_update(context, instance_uuid, values, copy_old_instance=False):
                                                values.pop('system_metadata'),
                                                session)
 
-        # NOTE(danms): Make sure IP addresses are passed as strings to
-        # the database engine
-        for key in ('access_ip_v4', 'access_ip_v6'):
-            if key in values and values[key] is not None:
-                values[key] = str(values[key])
-
-        # NOTE(danms): Strip UTC timezones from datetimes, since they're
-        # stored that way in the database
-        for key in ('created_at', 'deleted_at', 'updated_at',
-                    'launched_at', 'terminated_at', 'scheduled_at'):
-            if key in values and values[key]:
-                if isinstance(values[key], basestring):
-                    values[key] = timeutils.parse_strtime(values[key])
-                values[key] = values[key].replace(tzinfo=None)
-
+        _handle_objects_related_type_conversions(values)
         instance_ref.update(values)
         instance_ref.save(session=session)
 
