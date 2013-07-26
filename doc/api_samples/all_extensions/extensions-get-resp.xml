@@ -191,6 +191,9 @@
   <extension alias="os-quota-sets" updated="2011-08-08T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/quotas-sets/api/v1.1" name="Quotas">
     <description>Quotas management support.</description>
   </extension>
+  <extension alias="os-user-quotas" updated="2013-07-18T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/user_quotas/api/v1.1" name="UserQuotas">
+    <description>Project user quota support.</description>
+  </extension>
   <extension alias="os-rescue" updated="2011-08-18T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/rescue/api/v1.1" name="Rescue">
     <description>Instance rescue mode.</description>
   </extension>

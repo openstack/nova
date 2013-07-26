@@ -62,7 +62,7 @@ get_engine = db_session.get_engine
 get_session = db_session.get_session
 
 
-def _quota_reserve(context, project_id):
+def _quota_reserve(context, project_id, user_id):
     """Create sample Quota, QuotaUsage and Reservation objects.
 
     There is no method db.quota_usage_create(), so we have to use
@@ -72,25 +72,28 @@ def _quota_reserve(context, project_id):
 
     """
     def get_sync(resource, usage):
-        def sync(elevated, project_id, session):
+        def sync(elevated, project_id, user_id, session):
             return {resource: usage}
         return sync
     quotas = {}
+    user_quotas = {}
     resources = {}
     deltas = {}
     for i in range(3):
         resource = 'resource%d' % i
         sync_name = '_sync_%s' % resource
         quotas[resource] = db.quota_create(context, project_id, resource, i)
+        user_quotas[resource] = db.quota_create(context, project_id,
+                                                resource, i, user_id=user_id)
         resources[resource] = ReservableResource(
             resource, sync_name, 'quota_res_%d' % i)
         deltas[resource] = i
         setattr(sqlalchemy_api, sync_name, get_sync(resource, i))
         sqlalchemy_api.QUOTA_SYNC_FUNCTIONS[sync_name] = getattr(
             sqlalchemy_api, sync_name)
-    return db.quota_reserve(context, resources, quotas, deltas,
+    return db.quota_reserve(context, resources, quotas, user_quotas, deltas,
                     timeutils.utcnow(), timeutils.utcnow(),
-                    datetime.timedelta(days=1), project_id)
+                    datetime.timedelta(days=1), project_id, user_id)
 
 
 class DbTestCase(test.TestCase):
@@ -834,6 +837,7 @@ class ReservationTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.ctxt = context.get_admin_context()
         self.values = {'uuid': 'sample-uuid',
                 'project_id': 'project1',
+                'user_id': 'user1',
                 'resource': 'resource',
                 'delta': 42,
                 'expire': timeutils.utcnow() + datetime.timedelta(days=1),
@@ -858,55 +862,54 @@ class ReservationTestCase(test.TestCase, ModelsObjectComparatorMixin):
                                     self.ctxt, 'non-exitent-resevation-uuid')
 
     def test_reservation_commit(self):
-        reservations = _quota_reserve(self.ctxt, 'project1')
-        expected = {'project_id': 'project1',
+        reservations = _quota_reserve(self.ctxt, 'project1', 'user1')
+        expected = {'project_id': 'project1', 'user_id': 'user1',
                 'resource0': {'reserved': 0, 'in_use': 0},
                 'resource1': {'reserved': 1, 'in_use': 1},
                 'resource2': {'reserved': 2, 'in_use': 2}}
-        self.assertEqual(expected, db.quota_usage_get_all_by_project(
-                                            self.ctxt, 'project1'))
+        self.assertEqual(expected, db.quota_usage_get_all_by_project_and_user(
+                                            self.ctxt, 'project1', 'user1'))
         db.reservation_get(self.ctxt, reservations[0])
-        db.reservation_commit(self.ctxt, reservations, 'project1')
+        db.reservation_commit(self.ctxt, reservations, 'project1', 'user1')
         self.assertRaises(exception.ReservationNotFound,
             db.reservation_get, self.ctxt, reservations[0])
-        expected = {'project_id': 'project1',
+        expected = {'project_id': 'project1', 'user_id': 'user1',
                 'resource0': {'reserved': 0, 'in_use': 0},
                 'resource1': {'reserved': 0, 'in_use': 2},
                 'resource2': {'reserved': 0, 'in_use': 4}}
-        self.assertEqual(expected, db.quota_usage_get_all_by_project(
-                                            self.ctxt, 'project1'))
+        self.assertEqual(expected, db.quota_usage_get_all_by_project_and_user(
+                                            self.ctxt, 'project1', 'user1'))
 
     def test_reservation_rollback(self):
-        reservations = _quota_reserve(self.ctxt, 'project1')
-        expected = {'project_id': 'project1',
+        reservations = _quota_reserve(self.ctxt, 'project1', 'user1')
+        expected = {'project_id': 'project1', 'user_id': 'user1',
                 'resource0': {'reserved': 0, 'in_use': 0},
                 'resource1': {'reserved': 1, 'in_use': 1},
                 'resource2': {'reserved': 2, 'in_use': 2}}
-        self.assertEqual(expected, db.quota_usage_get_all_by_project(
-                                            self.ctxt, 'project1'))
+        self.assertEqual(expected, db.quota_usage_get_all_by_project_and_user(
+                                            self.ctxt, 'project1', 'user1'))
         db.reservation_get(self.ctxt, reservations[0])
-        db.reservation_rollback(self.ctxt, reservations, 'project1')
+        db.reservation_rollback(self.ctxt, reservations, 'project1', 'user1')
         self.assertRaises(exception.ReservationNotFound,
             db.reservation_get, self.ctxt, reservations[0])
-        expected = {'project_id': 'project1',
+        expected = {'project_id': 'project1', 'user_id': 'user1',
                 'resource0': {'reserved': 0, 'in_use': 0},
                 'resource1': {'reserved': 0, 'in_use': 1},
                 'resource2': {'reserved': 0, 'in_use': 2}}
-        self.assertEqual(expected, db.quota_usage_get_all_by_project(
-                                            self.ctxt, 'project1'))
+        self.assertEqual(expected, db.quota_usage_get_all_by_project_and_user(
+                                            self.ctxt, 'project1', 'user1'))
 
     def test_reservation_expire(self):
         self.values['expire'] = timeutils.utcnow() + datetime.timedelta(days=1)
-
-        _quota_reserve(self.ctxt, 'project1')
+        _quota_reserve(self.ctxt, 'project1', 'user1')
         db.reservation_expire(self.ctxt)
 
-        expected = {'project_id': 'project1',
+        expected = {'project_id': 'project1', 'user_id': 'user1',
                 'resource0': {'reserved': 0, 'in_use': 0},
                 'resource1': {'reserved': 0, 'in_use': 1},
                 'resource2': {'reserved': 0, 'in_use': 2}}
-        self.assertEqual(expected, db.quota_usage_get_all_by_project(
-                                            self.ctxt, 'project1'))
+        self.assertEqual(expected, db.quota_usage_get_all_by_project_and_user(
+                                            self.ctxt, 'project1', 'user1'))
 
 
 class SecurityGroupRuleTestCase(test.TestCase, ModelsObjectComparatorMixin):
@@ -4715,7 +4718,7 @@ class QuotaTestCase(test.TestCase, ModelsObjectComparatorMixin):
             db.security_group_create(self.ctxt, {'project_id': 'project1'})
 
         reservations_uuids = db.quota_reserve(self.ctxt, reservable_resources,
-                                              quotas, deltas, None,
+                                              quotas, quotas, deltas, None,
                                               None, None, 'project1')
         resources_names = reservable_resources.keys()
         for reservation_uuid in reservations_uuids:
@@ -4730,7 +4733,7 @@ class QuotaTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertEqual(len(resources_names), 0)
 
     def test_quota_destroy_all_by_project(self):
-        reservations = _quota_reserve(self.ctxt, 'project1')
+        reservations = _quota_reserve(self.ctxt, 'project1', 'user1')
         db.quota_destroy_all_by_project(self.ctxt, 'project1')
         self.assertEqual(db.quota_get_all_by_project(self.ctxt, 'project1'),
                             {'project_id': 'project1'})
@@ -4746,7 +4749,7 @@ class QuotaTestCase(test.TestCase, ModelsObjectComparatorMixin):
             self.ctxt, 'p1', 'nonexitent_resource')
 
     def test_quota_usage_get(self):
-        _quota_reserve(self.ctxt, 'p1')
+        _quota_reserve(self.ctxt, 'p1', 'u1')
         quota_usage = db.quota_usage_get(self.ctxt, 'p1', 'resource0')
         expected = {'resource': 'resource0', 'project_id': 'p1',
                     'in_use': 0, 'reserved': 0, 'total': 0}
@@ -4754,7 +4757,7 @@ class QuotaTestCase(test.TestCase, ModelsObjectComparatorMixin):
             self.assertEqual(value, quota_usage[key])
 
     def test_quota_usage_get_all_by_project(self):
-        _quota_reserve(self.ctxt, 'p1')
+        _quota_reserve(self.ctxt, 'p1', 'u1')
         expected = {'project_id': 'p1',
                     'resource0': {'in_use': 0, 'reserved': 0},
                     'resource1': {'in_use': 1, 'reserved': 1},
@@ -4764,15 +4767,15 @@ class QuotaTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_quota_usage_update_nonexistent(self):
         self.assertRaises(exception.QuotaUsageNotFound, db.quota_usage_update,
-            self.ctxt, 'p1', 'resource', in_use=42)
+            self.ctxt, 'p1', 'u1', 'resource', in_use=42)
 
     def test_quota_usage_update(self):
-        _quota_reserve(self.ctxt, 'p1')
-        db.quota_usage_update(self.ctxt, 'p1', 'resource0', in_use=42,
+        _quota_reserve(self.ctxt, 'p1', 'u1')
+        db.quota_usage_update(self.ctxt, 'p1', 'u1', 'resource0', in_use=42,
                               reserved=43)
-        quota_usage = db.quota_usage_get(self.ctxt, 'p1', 'resource0')
+        quota_usage = db.quota_usage_get(self.ctxt, 'p1', 'resource0', 'u1')
         expected = {'resource': 'resource0', 'project_id': 'p1',
-                    'in_use': 42, 'reserved': 43, 'total': 85}
+                    'user_id': 'u1', 'in_use': 42, 'reserved': 43, 'total': 85}
         for key, value in expected.iteritems():
             self.assertEqual(value, quota_usage[key])
 

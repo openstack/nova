@@ -399,6 +399,28 @@ class Quota(BASE, NovaBase):
     hard_limit = Column(Integer, nullable=True)
 
 
+class ProjectUserQuota(BASE, NovaBase):
+    """Represents a single quota override for a user with in a project."""
+
+    __tablename__ = 'project_user_quotas'
+    uniq_name = "uniq_project_user_quotas0user_id0project_id0resource0deleted"
+    __table_args__ = (
+        schema.UniqueConstraint("user_id", "project_id", "resource", "deleted",
+                                name=uniq_name),
+        Index('project_user_quotas_project_id_deleted_idx',
+              'project_id', 'deleted'),
+        Index('project_user_quotas_user_id_deleted_idx',
+              'user_id', 'deleted')
+    )
+    id = Column(Integer, primary_key=True, nullable=False)
+
+    project_id = Column(String(255), nullable=False)
+    user_id = Column(String(255), nullable=False)
+
+    resource = Column(String(255), nullable=False)
+    hard_limit = Column(Integer, nullable=True)
+
+
 class QuotaClass(BASE, NovaBase):
     """Represents a single quota override for a quota class.
 
@@ -429,7 +451,8 @@ class QuotaUsage(BASE, NovaBase):
     id = Column(Integer, primary_key=True)
 
     project_id = Column(String(255), nullable=True)
-    resource = Column(String(255), nullable=True)
+    user_id = Column(String(255), nullable=True)
+    resource = Column(String(255), nullable=False)
 
     in_use = Column(Integer, nullable=False)
     reserved = Column(Integer, nullable=False)
@@ -454,6 +477,7 @@ class Reservation(BASE, NovaBase):
     usage_id = Column(Integer, ForeignKey('quota_usages.id'), nullable=False)
 
     project_id = Column(String(255))
+    user_id = Column(String(255))
     resource = Column(String(255))
 
     delta = Column(Integer, nullable=False)

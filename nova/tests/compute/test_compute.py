@@ -2770,31 +2770,39 @@ class ComputeTestCase(BaseTestCase):
         for operation in actions:
             self._test_state_revert(instance, *operation)
 
-    def _ensure_quota_reservations_committed(self, expect_project=False):
+    def _ensure_quota_reservations_committed(self, expect_project=False,
+                                             expect_user=False):
         """Mock up commit of quota reservations."""
         reservations = list('fake_res')
         self.mox.StubOutWithMock(nova.quota.QUOTAS, 'commit')
         nova.quota.QUOTAS.commit(mox.IgnoreArg(), reservations,
                                  project_id=(expect_project and
                                              self.context.project_id or
-                                             None))
+                                             None),
+                                 user_id=(expect_user and
+                                          self.context.user_id or
+                                          None))
         self.mox.ReplayAll()
         return reservations
 
-    def _ensure_quota_reservations_rolledback(self, expect_project=False):
+    def _ensure_quota_reservations_rolledback(self, expect_project=False,
+                                              expect_user=False):
         """Mock up rollback of quota reservations."""
         reservations = list('fake_res')
         self.mox.StubOutWithMock(nova.quota.QUOTAS, 'rollback')
         nova.quota.QUOTAS.rollback(mox.IgnoreArg(), reservations,
                                    project_id=(expect_project and
                                                self.context.project_id or
-                                               None))
+                                               None),
+                                   user_id=(expect_user and
+                                            self.context.user_id or
+                                            None))
         self.mox.ReplayAll()
         return reservations
 
     def test_quotas_succesful_delete(self):
         instance = jsonutils.to_primitive(self._create_fake_instance())
-        resvs = self._ensure_quota_reservations_committed(True)
+        resvs = self._ensure_quota_reservations_committed(True, True)
         self.compute.terminate_instance(self.context, instance,
                                         bdms=None, reservations=resvs)
 
@@ -2807,7 +2815,7 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(self.compute, '_shutdown_instance',
                        fake_shutdown_instance)
 
-        resvs = self._ensure_quota_reservations_rolledback(True)
+        resvs = self._ensure_quota_reservations_rolledback(True, True)
         self.assertRaises(test.TestingException,
                           self.compute.terminate_instance,
                           self.context, instance,
@@ -2816,7 +2824,7 @@ class ComputeTestCase(BaseTestCase):
     def test_quotas_succesful_soft_delete(self):
         instance = jsonutils.to_primitive(self._create_fake_instance(
             params=dict(task_state=task_states.SOFT_DELETING)))
-        resvs = self._ensure_quota_reservations_committed(True)
+        resvs = self._ensure_quota_reservations_committed(True, True)
         self.compute.soft_delete_instance(self.context, instance,
                                           reservations=resvs)
 
@@ -2830,7 +2838,7 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(self.compute.driver, 'soft_delete',
                        fake_soft_delete)
 
-        resvs = self._ensure_quota_reservations_rolledback(True)
+        resvs = self._ensure_quota_reservations_rolledback(True, True)
         self.assertRaises(test.TestingException,
                           self.compute.soft_delete_instance,
                           self.context, instance,

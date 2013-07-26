@@ -276,6 +276,75 @@ class QuotaSetsTest(test.TestCase):
         res_dict = self.controller.update(req, 'update_me', body)
         self.assertEqual(res_dict, expected)
 
+    def test_user_quotas_show_as_admin(self):
+        req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/1234?user_id=1',
+                                      use_admin_context=True)
+        res_dict = self.controller.show(req, 1234)
+
+        self.assertEqual(res_dict, quota_set('1234'))
+
+    def test_user_quotas_show_as_unauthorized_user(self):
+        req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/1234?user_id=1')
+        self.assertRaises(webob.exc.HTTPForbidden, self.controller.show,
+                          req, 1234)
+
+    def test_user_quotas_update_as_admin(self):
+        body = {'quota_set': {'instances': 10, 'cores': 20,
+                              'ram': 51200, 'floating_ips': 10,
+                              'fixed_ips': -1, 'metadata_items': 128,
+                              'injected_files': 5,
+                              'injected_file_content_bytes': 10240,
+                              'injected_file_path_bytes': 255,
+                              'security_groups': 10,
+                              'security_group_rules': 20,
+                              'key_pairs': 100, 'fixed_ips': -1}}
+
+        url = '/v2/fake4/os-quota-sets/update_me?user_id=1'
+        req = fakes.HTTPRequest.blank(url, use_admin_context=True)
+        res_dict = self.controller.update(req, 'update_me', body)
+
+        self.assertEqual(res_dict, body)
+
+    def test_user_quotas_update_as_user(self):
+        body = {'quota_set': {'instances': 10, 'cores': 20,
+                              'ram': 51200, 'floating_ips': 10,
+                              'fixed_ips': -1, 'metadata_items': 128,
+                              'injected_files': 5,
+                              'injected_file_content_bytes': 10240,
+                              'security_groups': 10,
+                              'security_group_rules': 20,
+                              'key_pairs': 100}}
+
+        url = '/v2/fake4/os-quota-sets/update_me?user_id=1'
+        req = fakes.HTTPRequest.blank(url)
+        self.assertRaises(webob.exc.HTTPForbidden, self.controller.update,
+                          req, 'update_me', body)
+
+    def test_user_quotas_update_exceed_project(self):
+        body = {'quota_set': {'instances': 20}}
+        url = '/v2/fake4/os-quota-sets/update_me?user_id=1'
+        req = fakes.HTTPRequest.blank(url, use_admin_context=True)
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
+                          req, 'update_me', body)
+
+    def test_user_quotas_delete_as_unauthorized_user(self):
+        req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/1234?user_id=1')
+        self.assertRaises(webob.exc.HTTPForbidden, self.controller.delete,
+                          req, 1234)
+
+    def test_user_quotas_delete_as_admin(self):
+        context = context_maker.get_admin_context()
+        url = '/v2/fake4/os-quota-sets/1234?user_id=1'
+        self.req = fakes.HTTPRequest.blank(url)
+        self.req.environ['nova.context'] = context
+        self.mox.StubOutWithMock(quota.QUOTAS,
+                                 "destroy_all_by_project_and_user")
+        quota.QUOTAS.destroy_all_by_project_and_user(context, 1234, '1')
+        self.mox.ReplayAll()
+        res = self.controller.delete(self.req, 1234)
+        self.mox.VerifyAll()
+        self.assertEqual(res.status_int, 202)
+
 
 class QuotaXMLSerializerTest(test.TestCase):
     def setUp(self):
@@ -353,7 +422,7 @@ fake_quotas = {'ram': {'limit': 51200,
                              'reserved': 0}}
 
 
-def fake_get_quotas(self, context, id, usages=False):
+def fake_get_quotas(self, context, id, user_id=None, usages=False):
     if usages:
         return fake_quotas
     else:

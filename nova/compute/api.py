@@ -1172,6 +1172,10 @@ class API(base.Base):
             project_id = instance['project_id']
         else:
             project_id = context.project_id
+        if context.user_id != instance['user_id']:
+            user_id = instance['user_id']
+        else:
+            user_id = context.user_id
 
         try:
             # NOTE(maoy): no expected_task_state needs to be set
@@ -1187,7 +1191,8 @@ class API(base.Base):
             reservations = self._create_reservations(context,
                                                      old,
                                                      updated,
-                                                     project_id)
+                                                     project_id,
+                                                     user_id)
 
             if not host:
                 # Just update database, nothing else we can do
@@ -1198,7 +1203,8 @@ class API(base.Base):
                     if reservations:
                         QUOTAS.commit(context,
                                       reservations,
-                                      project_id=project_id)
+                                      project_id=project_id,
+                                      user_id=user_id)
                     return
                 except exception.ConstraintNotMet:
                     # Refresh to get new host information
@@ -1256,23 +1262,27 @@ class API(base.Base):
                 if reservations:
                     QUOTAS.commit(context,
                                   reservations,
-                                  project_id=project_id)
+                                  project_id=project_id,
+                                  user_id=user_id)
                     reservations = None
         except exception.InstanceNotFound:
             # NOTE(comstud): Race condition. Instance already gone.
             if reservations:
                 QUOTAS.rollback(context,
                                 reservations,
-                                project_id=project_id)
+                                project_id=project_id,
+                                user_id=user_id)
         except Exception:
             with excutils.save_and_reraise_exception():
                 if reservations:
                     QUOTAS.rollback(context,
                                     reservations,
-                                    project_id=project_id)
+                                    project_id=project_id,
+                                    user_id=user_id)
 
     def _create_reservations(self, context, old_instance, new_instance,
-                                                            project_id):
+                                                            project_id,
+                                                            user_id):
         instance_vcpus = old_instance['vcpus']
         instance_memory_mb = old_instance['memory_mb']
         # NOTE(wangpan): if the instance is resizing, and the resources
@@ -1304,6 +1314,7 @@ class API(base.Base):
 
         reservations = QUOTAS.reserve(context,
                                       project_id=project_id,
+                                      user_id=user_id,
                                       instances=-1,
                                       cores=-instance_vcpus,
                                       ram=-instance_memory_mb)
