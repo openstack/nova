@@ -2591,6 +2591,14 @@
 # / Windows Server 2012 and above (boolean value)
 #enable_instance_metrics_collection=false
 
+# Enables dynamic memory allocation (ballooning) when set to a
+# value greater than 1. The value expresses the ratio between
+# the total RAM assigned to an instance and its startup RAM
+# amount. For example a ratio of 2.0 for an instance with
+# 1024MB of RAM implies 512MB of RAM allocated at startup
+# (floating point value)
+#dynamic_memory_ratio=1.0
+
 
 #
 # Options defined in nova.virt.hyperv.volumeops

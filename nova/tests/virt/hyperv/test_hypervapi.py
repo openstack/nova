@@ -363,6 +363,10 @@ class HyperVAPITestCase(test.TestCase):
     def test_spawn_no_cow_image(self):
         self._test_spawn_instance(False)
 
+    def test_spawn_dynamic_memory(self):
+        CONF.set_override('dynamic_memory_ratio', 2.0, 'hyperv')
+        self._test_spawn_instance()
+
     def _setup_spawn_config_drive_mocks(self, use_cdrom):
         im = instance_metadata.InstanceMetadata(mox.IgnoreArg(),
                                                 content=mox.IsA(list),
@@ -871,7 +875,8 @@ class HyperVAPITestCase(test.TestCase):
                                      block_device_info=None,
                                      admin_permissions=True):
         vmutils.VMUtils.create_vm(mox.Func(self._check_vm_name), mox.IsA(int),
-                                  mox.IsA(int), mox.IsA(bool))
+                                  mox.IsA(int), mox.IsA(bool),
+                                  CONF.hyperv.dynamic_memory_ratio)
 
         if not boot_from_volume:
             m = vmutils.VMUtils.attach_ide_drive(mox.Func(self._check_vm_name),

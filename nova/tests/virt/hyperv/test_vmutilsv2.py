@@ -38,6 +38,7 @@ class VMUtilsV2TestCase(test.TestCase):
     _FAKE_SNAPSHOT_PATH = "_FAKE_SNAPSHOT_PATH"
     _FAKE_RES_DATA = "fake_res_data"
     _FAKE_RES_PATH = "fake_res_path"
+    _FAKE_DYNAMIC_MEMORY_RATIO = 1.0
 
     def setUp(self):
         self._vmutils = vmutilsv2.VMUtilsV2()
@@ -68,11 +69,14 @@ class VMUtilsV2TestCase(test.TestCase):
         self._vmutils._set_vm_vcpus = mock.MagicMock()
 
         self._vmutils.create_vm(self._FAKE_VM_NAME, self._FAKE_MEMORY_MB,
-                                self._FAKE_VCPUS_NUM, False)
+                                self._FAKE_VCPUS_NUM, False,
+                                self._FAKE_DYNAMIC_MEMORY_RATIO)
 
         self.assertTrue(mock_svc.DefineSystem.called)
-        self._vmutils._set_vm_memory.assert_called_with(mock_vm, mock_s,
-                                                        self._FAKE_MEMORY_MB)
+        self._vmutils._set_vm_memory.assert_called_with(
+            mock_vm, mock_s, self._FAKE_MEMORY_MB,
+            self._FAKE_DYNAMIC_MEMORY_RATIO)
+
         self._vmutils._set_vm_vcpus.assert_called_with(mock_vm, mock_s,
                                                        self._FAKE_VCPUS_NUM,
                                                        False)
