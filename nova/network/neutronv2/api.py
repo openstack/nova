@@ -174,6 +174,8 @@ class API(base.Base):
             for network_id, fixed_ip, port_id in requested_networks:
                 if port_id:
                     port = neutron.show_port(port_id)['port']
+                    if port.get('device_id'):
+                        raise exception.PortInUse(port_id=port_id)
                     if hypervisor_macs is not None:
                         if port['mac_address'] not in hypervisor_macs:
                             raise exception.PortNotUsable(port_id=port_id,
