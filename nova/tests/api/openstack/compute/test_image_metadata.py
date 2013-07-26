@@ -198,7 +198,7 @@ class ImageMetaDataTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPRequestEntityTooLarge,
                           self.controller.update, req, '123', 'blah', body)
 
-    def test_image_not_authorized(self):
+    def test_image_not_authorized_update(self):
         image_id = 131
         # see nova.tests.api.openstack.fakes:_make_image_fixtures
 
@@ -211,3 +211,31 @@ class ImageMetaDataTest(test.TestCase):
 
         self.assertRaises(webob.exc.HTTPForbidden,
                           self.controller.update, req, image_id, 'key1', body)
+
+    def test_image_not_authorized_update_all(self):
+        image_id = 131
+        # see nova.tests.api.openstack.fakes:_make_image_fixtures
+
+        req = fakes.HTTPRequest.blank('/v2/fake/images/%s/metadata/key1'
+                                      % image_id)
+        req.method = 'PUT'
+        body = {"meta": {"key1": "value1"}}
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        self.assertRaises(webob.exc.HTTPForbidden,
+                          self.controller.update_all, req, image_id, body)
+
+    def test_image_not_authorized_create(self):
+        image_id = 131
+        # see nova.tests.api.openstack.fakes:_make_image_fixtures
+
+        req = fakes.HTTPRequest.blank('/v2/fake/images/%s/metadata/key1'
+                                      % image_id)
+        req.method = 'POST'
+        body = {"meta": {"key1": "value1"}}
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        self.assertRaises(webob.exc.HTTPForbidden,
+                          self.controller.create, req, image_id, body)
