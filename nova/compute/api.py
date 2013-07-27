@@ -2965,7 +2965,7 @@ class AggregateAPI(base.Base):
                                                     aggregate_payload)
         aggregate = self.db.aggregate_create(context, values,
                 metadata=metadata)
-        aggregate = self._get_aggregate_info(context, aggregate)
+        aggregate = self._reformat_aggregate_info(aggregate)
         # To maintain the same API result as before.
         del aggregate['hosts']
         del aggregate['metadata']
@@ -2978,12 +2978,12 @@ class AggregateAPI(base.Base):
     def get_aggregate(self, context, aggregate_id):
         """Get an aggregate by id."""
         aggregate = self.db.aggregate_get(context, aggregate_id)
-        return self._get_aggregate_info(context, aggregate)
+        return self._reformat_aggregate_info(aggregate)
 
     def get_aggregate_list(self, context):
         """Get all the aggregates."""
         aggregates = self.db.aggregate_get_all(context)
-        return [self._get_aggregate_info(context, a) for a in aggregates]
+        return [self._reformat_aggregate_info(agg) for agg in aggregates]
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def update_aggregate(self, context, aggregate_id, values):
@@ -2997,7 +2997,7 @@ class AggregateAPI(base.Base):
         compute_utils.notify_about_aggregate_update(context,
                                                     "updateprop.end",
                                                     aggregate_payload)
-        return self._get_aggregate_info(context, aggregate)
+        return self._reformat_aggregate_info(aggregate)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def update_aggregate_metadata(self, context, aggregate_id, metadata):
@@ -3079,16 +3079,12 @@ class AggregateAPI(base.Base):
                                                     aggregate_payload)
         return self.get_aggregate(context, aggregate_id)
 
-    def _get_aggregate_info(self, context, aggregate):
+    def _reformat_aggregate_info(self, aggregate):
         """Builds a dictionary with aggregate props, metadata and hosts."""
-        metadata = self.db.aggregate_metadata_get(context, aggregate['id'])
-        hosts = self.db.aggregate_host_get_all(context, aggregate['id'])
         result = dict(aggregate.iteritems())
-        # metadetails was not originally included here.  We need to pull it
-        # back out to maintain API stability.
-        del result['metadetails']
-        result["metadata"] = metadata
-        result["hosts"] = hosts
+        # metadetails was not originally included here. We need to rename it
+        # to maintain API stability.
+        result["metadata"] = result.pop('metadetails')
         return result
 
 
