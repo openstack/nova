@@ -73,8 +73,9 @@ db_opts = [
 CONF = cfg.CONF
 CONF.register_opts(db_opts)
 CONF.import_opt('compute_topic', 'nova.compute.rpcapi')
-CONF.import_opt('sql_connection',
-                'nova.openstack.common.db.sqlalchemy.session')
+CONF.import_opt('connection',
+                'nova.openstack.common.db.sqlalchemy.session',
+                group='database')
 
 LOG = logging.getLogger(__name__)
 
@@ -1888,7 +1889,7 @@ def regex_filter(query, model, filters):
         'oracle': 'REGEXP_LIKE',
         'sqlite': 'REGEXP'
     }
-    db_string = CONF.sql_connection.split(':')[0].split('+')[0]
+    db_string = CONF.database.connection.split(':')[0].split('+')[0]
     db_regexp_op = regexp_op_map.get(db_string, 'LIKE')
     for filter_name in filters.iterkeys():
         try:

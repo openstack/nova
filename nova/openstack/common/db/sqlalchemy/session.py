@@ -25,8 +25,9 @@ Initializing:
 
   Example:
 
-    session.set_defaults(sql_connection="sqlite:///var/lib/nova/sqlite.db",
-                         sqlite_db="/var/lib/nova/sqlite.db")
+    session.set_defaults(
+        sql_connection="sqlite:///var/lib/nova/sqlite.db",
+        sqlite_db="/var/lib/nova/sqlite.db")
 
 Recommended ways to use sessions within this framework:
 
@@ -246,6 +247,7 @@ import time
 
 from eventlet import greenthread
 from oslo.config import cfg
+import six
 from sqlalchemy import exc as sqla_exc
 import sqlalchemy.interfaces
 from sqlalchemy.interfaces import PoolListener
@@ -254,72 +256,133 @@ from sqlalchemy.pool import NullPool, StaticPool
 from sqlalchemy.sql.expression import literal_column
 
 from nova.openstack.common.db import exception
+from nova.openstack.common.gettextutils import _  # noqa
 from nova.openstack.common import log as logging
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import timeutils
 
+sqlite_db_opts = [
+    cfg.StrOpt('sqlite_db',
+               default='nova.sqlite',
+               help='the filename to use with sqlite'),
+    cfg.BoolOpt('sqlite_synchronous',
+                default=True,
+                help='If true, use synchronous mode for sqlite'),
+]
 
-sql_opts = [
-    cfg.StrOpt('sql_connection',
+database_opts = [
+    cfg.StrOpt('connection',
                default='sqlite:///' +
                        os.path.abspath(os.path.join(os.path.dirname(__file__),
                        '../', '$sqlite_db')),
                help='The SQLAlchemy connection string used to connect to the '
                     'database',
+               deprecated_opts=[cfg.DeprecatedOpt('sql_connection',
+                                                  group='DEFAULT'),
+                                cfg.DeprecatedOpt('sql_connection',
+                                                  group='DATABASE')],
                secret=True),
-    cfg.StrOpt('sqlite_db',
-               default='nova.sqlite',
-               help='the filename to use with sqlite'),
-    cfg.IntOpt('sql_idle_timeout',
+    cfg.StrOpt('slave_connection',
+               default='',
+               help='The SQLAlchemy connection string used to connect to the '
+                    'slave database',
+               secret=True),
+    cfg.IntOpt('idle_timeout',
                default=3600,
+               deprecated_opts=[cfg.DeprecatedOpt('sql_idle_timeout',
+                                                  group='DEFAULT'),
+                                cfg.DeprecatedOpt('sql_idle_timeout',
+                                                  group='DATABASE')],
                help='timeout before idle sql connections are reaped'),
-    cfg.BoolOpt('sqlite_synchronous',
-                default=True,
-                help='If passed, use synchronous mode for sqlite'),
-    cfg.IntOpt('sql_min_pool_size',
+    cfg.IntOpt('min_pool_size',
                default=1,
+               deprecated_opts=[cfg.DeprecatedOpt('sql_min_pool_size',
+                                                  group='DEFAULT'),
+                                cfg.DeprecatedOpt('sql_min_pool_size',
+                                                  group='DATABASE')],
                help='Minimum number of SQL connections to keep open in a '
                     'pool'),
-    cfg.IntOpt('sql_max_pool_size',
-               default=5,
+    cfg.IntOpt('max_pool_size',
+               default=None,
+               deprecated_opts=[cfg.DeprecatedOpt('sql_max_pool_size',
+                                                  group='DEFAULT'),
+                                cfg.DeprecatedOpt('sql_max_pool_size',
+                                                  group='DATABASE')],
                help='Maximum number of SQL connections to keep open in a '
                     'pool'),
-    cfg.IntOpt('sql_max_retries',
+    cfg.IntOpt('max_retries',
                default=10,
+               deprecated_opts=[cfg.DeprecatedOpt('sql_max_retries',
+                                                  group='DEFAULT'),
+                                cfg.DeprecatedOpt('sql_max_retries',
+                                                  group='DATABASE')],
                help='maximum db connection retries during startup. '
                     '(setting -1 implies an infinite retry count)'),
-    cfg.IntOpt('sql_retry_interval',
+    cfg.IntOpt('retry_interval',
                default=10,
+               deprecated_opts=[cfg.DeprecatedOpt('sql_retry_interval',
+                                                  group='DEFAULT'),
+                                cfg.DeprecatedOpt('reconnect_interval',
+                                                  group='DATABASE')],
                help='interval between retries of opening a sql connection'),
-    cfg.IntOpt('sql_max_overflow',
+    cfg.IntOpt('max_overflow',
                default=None,
+               deprecated_opts=[cfg.DeprecatedOpt('sql_max_overflow',
+                                                  group='DEFAULT'),
+                                cfg.DeprecatedOpt('sqlalchemy_max_overflow',
+                                                  group='DATABASE')],
                help='If set, use this value for max_overflow with sqlalchemy'),
-    cfg.IntOpt('sql_connection_debug',
+    cfg.IntOpt('connection_debug',
                default=0,
+               deprecated_opts=[cfg.DeprecatedOpt('sql_connection_debug',
+                                                  group='DEFAULT')],
                help='Verbosity of SQL debugging information. 0=None, '
                     '100=Everything'),
-    cfg.BoolOpt('sql_connection_trace',
+    cfg.BoolOpt('connection_trace',
                 default=False,
+                deprecated_opts=[cfg.DeprecatedOpt('sql_connection_trace',
+                                                   group='DEFAULT')],
                 help='Add python stack traces to SQL as comment strings'),
+    cfg.IntOpt('pool_timeout',
+               default=None,
+               deprecated_opts=[cfg.DeprecatedOpt('sqlalchemy_pool_timeout',
+                                                  group='DATABASE')],
+               help='If set, use this value for pool_timeout with sqlalchemy'),
 ]
 
 CONF = cfg.CONF
-CONF.register_opts(sql_opts)
+CONF.register_opts(sqlite_db_opts)
+CONF.register_opts(database_opts, 'database')
+
 LOG = logging.getLogger(__name__)
 
 _ENGINE = None
 _MAKER = None
+_SLAVE_ENGINE = None
+_SLAVE_MAKER = None
 
 
-def set_defaults(sql_connection, sqlite_db):
+def set_defaults(sql_connection, sqlite_db, max_pool_size=None,
+                 max_overflow=None, pool_timeout=None):
     """Set defaults for configuration variables."""
-    cfg.set_defaults(sql_opts,
-                     sql_connection=sql_connection,
+    cfg.set_defaults(database_opts,
+                     connection=sql_connection)
+    cfg.set_defaults(sqlite_db_opts,
                      sqlite_db=sqlite_db)
+    # Update the QueuePool defaults
+    if max_pool_size is not None:
+        cfg.set_defaults(database_opts,
+                         max_pool_size=max_pool_size)
+    if max_overflow is not None:
+        cfg.set_defaults(database_opts,
+                         max_overflow=max_overflow)
+    if pool_timeout is not None:
+        cfg.set_defaults(database_opts,
+                         pool_timeout=pool_timeout)
 
 
 def cleanup():
     global _ENGINE, _MAKER
+    global _SLAVE_ENGINE, _SLAVE_MAKER
 
     if _MAKER:
         _MAKER.close_all()
@@ -327,11 +390,16 @@ def cleanup():
     if _ENGINE:
         _ENGINE.dispose()
         _ENGINE = None
+    if _SLAVE_MAKER:
+        _SLAVE_MAKER.close_all()
+        _SLAVE_MAKER = None
+    if _SLAVE_ENGINE:
+        _SLAVE_ENGINE.dispose()
+        _SLAVE_ENGINE = None
 
 
 class SqliteForeignKeysListener(PoolListener):
-    """
-    Ensures that the foreign key constraints are enforced in SQLite.
+    """Ensures that the foreign key constraints are enforced in SQLite.
 
     The foreign key constraints are disabled by default in SQLite,
     so the foreign key constraints will be enabled here for every
@@ -342,15 +410,25 @@ class SqliteForeignKeysListener(PoolListener):
 
 
 def get_session(autocommit=True, expire_on_commit=False,
-                sqlite_fk=False):
+                sqlite_fk=False, slave_session=False):
     """Return a SQLAlchemy session."""
     global _MAKER
+    global _SLAVE_MAKER
+    maker = _MAKER
 
-    if _MAKER is None:
-        engine = get_engine(sqlite_fk=sqlite_fk)
-        _MAKER = get_maker(engine, autocommit, expire_on_commit)
+    if slave_session:
+        maker = _SLAVE_MAKER
 
-    session = _MAKER()
+    if maker is None:
+        engine = get_engine(sqlite_fk=sqlite_fk, slave_engine=slave_session)
+        maker = get_maker(engine, autocommit, expire_on_commit)
+
+    if slave_session:
+        _SLAVE_MAKER = maker
+    else:
+        _MAKER = maker
+
+    session = maker()
     return session
 
 
@@ -380,15 +458,16 @@ _DUP_KEY_RE_DB = {
 
 
 def _raise_if_duplicate_entry_error(integrity_error, engine_name):
-    """
+    """Raise exception if two entries are duplicated.
+
     In this function will be raised DBDuplicateEntry exception if integrity
     error wrap unique constraint violation.
     """
 
     def get_columns_from_uniq_cons_or_name(columns):
         # note(vsergeyev): UniqueConstraint name convention: "uniq_t0c10c2"
-        #                  where `t` it is table name, `0` it is delimiter and
-        #                  columns `c1`, `c2` are in UniqueConstraint.
+        #                  where `t` it is table name and columns `c1`, `c2`
+        #                  are in UniqueConstraint.
         uniqbase = "uniq_"
         if not columns.startswith(uniqbase):
             if engine_name == "postgresql":
@@ -423,7 +502,8 @@ _DEADLOCK_RE_DB = {
 
 
 def _raise_if_deadlock_error(operational_error, engine_name):
-    """
+    """Raise exception on deadlock condition.
+
     Raise DBDeadlock exception if OperationalError contains a Deadlock
     condition.
     """
@@ -465,13 +545,26 @@ def _wrap_db_error(f):
     return _wrap
 
 
-def get_engine(sqlite_fk=False):
+def get_engine(sqlite_fk=False, slave_engine=False):
     """Return a SQLAlchemy engine."""
     global _ENGINE
-    if _ENGINE is None:
-        _ENGINE = create_engine(CONF.sql_connection,
-                                sqlite_fk=sqlite_fk)
-    return _ENGINE
+    global _SLAVE_ENGINE
+    engine = _ENGINE
+    db_uri = CONF.database.connection
+
+    if slave_engine:
+        engine = _SLAVE_ENGINE
+        db_uri = CONF.database.slave_connection
+
+    if engine is None:
+        engine = create_engine(db_uri,
+                               sqlite_fk=sqlite_fk)
+    if slave_engine:
+        _SLAVE_ENGINE = engine
+    else:
+        _ENGINE = engine
+
+    return engine
 
 
 def _synchronous_switch_listener(dbapi_conn, connection_rec):
@@ -484,24 +577,22 @@ def _add_regexp_listener(dbapi_con, con_record):
 
     def regexp(expr, item):
         reg = re.compile(expr)
-        return reg.search(unicode(item)) is not None
+        return reg.search(six.text_type(item)) is not None
     dbapi_con.create_function('regexp', 2, regexp)
 
 
 def _greenthread_yield(dbapi_con, con_record):
-    """
-    Ensure other greenthreads get a chance to execute by forcing a context
-    switch. With common database backends (eg MySQLdb and sqlite), there is
-    no implicit yield caused by network I/O since they are implemented by
-    C libraries that eventlet cannot monkey patch.
+    """Ensure other greenthreads get a chance to be executed.
+
+    Force a context switch. With common database backends (eg MySQLdb and
+    sqlite), there is no implicit yield caused by network I/O since they are
+    implemented by C libraries that eventlet cannot monkey patch.
     """
     greenthread.sleep(0)
 
 
 def _ping_listener(dbapi_conn, connection_rec, connection_proxy):
-    """
-    Ensures that MySQL connections checked out of the
-    pool are alive.
+    """Ensures that MySQL connections checked out of the pool are alive.
 
     Borrowed from:
     http://groups.google.com/group/sqlalchemy/msg/a4ce563d802c929f
@@ -529,18 +620,23 @@ def _is_db_connection_error(args):
 
 def create_engine(sql_connection, sqlite_fk=False):
     """Return a new SQLAlchemy engine."""
+    # NOTE(geekinutah): At this point we could be connecting to the normal
+    #                   db handle or the slave db handle. Things like
+    #                   _wrap_db_error aren't going to work well if their
+    #                   backends don't match. Let's check.
+    _assert_matching_drivers()
     connection_dict = sqlalchemy.engine.url.make_url(sql_connection)
 
     engine_args = {
-        "pool_recycle": CONF.sql_idle_timeout,
+        "pool_recycle": CONF.database.idle_timeout,
         "echo": False,
         'convert_unicode': True,
     }
 
     # Map our SQL debug level to SQLAlchemy's options
-    if CONF.sql_connection_debug >= 100:
+    if CONF.database.connection_debug >= 100:
         engine_args['echo'] = 'debug'
-    elif CONF.sql_connection_debug >= 50:
+    elif CONF.database.connection_debug >= 50:
         engine_args['echo'] = True
 
     if "sqlite" in connection_dict.drivername:
@@ -548,13 +644,16 @@ def create_engine(sql_connection, sqlite_fk=False):
             engine_args["listeners"] = [SqliteForeignKeysListener()]
         engine_args["poolclass"] = NullPool
 
-        if CONF.sql_connection == "sqlite://":
+        if CONF.database.connection == "sqlite://":
             engine_args["poolclass"] = StaticPool
             engine_args["connect_args"] = {'check_same_thread': False}
     else:
-        engine_args['pool_size'] = CONF.sql_max_pool_size
-        if CONF.sql_max_overflow is not None:
-            engine_args['max_overflow'] = CONF.sql_max_overflow
+        if CONF.database.max_pool_size is not None:
+            engine_args['pool_size'] = CONF.database.max_pool_size
+        if CONF.database.max_overflow is not None:
+            engine_args['max_overflow'] = CONF.database.max_overflow
+        if CONF.database.pool_timeout is not None:
+            engine_args['pool_timeout'] = CONF.database.pool_timeout
 
     engine = sqlalchemy.create_engine(sql_connection, **engine_args)
 
@@ -568,7 +667,7 @@ def create_engine(sql_connection, sqlite_fk=False):
                                     _synchronous_switch_listener)
         sqlalchemy.event.listen(engine, 'connect', _add_regexp_listener)
 
-    if (CONF.sql_connection_trace and
+    if (CONF.database.connection_trace and
             engine.dialect.dbapi.__name__ == 'MySQLdb'):
         _patch_mysqldb_with_stacktrace_comments()
 
@@ -578,7 +677,7 @@ def create_engine(sql_connection, sqlite_fk=False):
         if not _is_db_connection_error(e.args[0]):
             raise
 
-        remaining = CONF.sql_max_retries
+        remaining = CONF.database.max_retries
         if remaining == -1:
             remaining = 'infinite'
         while True:
@@ -586,7 +685,7 @@ def create_engine(sql_connection, sqlite_fk=False):
             LOG.warn(msg % remaining)
             if remaining != 'infinite':
                 remaining -= 1
-            time.sleep(CONF.sql_retry_interval)
+            time.sleep(CONF.database.retry_interval)
             try:
                 engine.connect()
                 break
@@ -631,8 +730,9 @@ def get_maker(engine, autocommit=True, expire_on_commit=False):
 
 
 def _patch_mysqldb_with_stacktrace_comments():
-    """Adds current stack trace as a comment in queries by patching
-    MySQLdb.cursors.BaseCursor._do_query.
+    """Adds current stack trace as a comment in queries.
+
+    Patches MySQLdb.cursors.BaseCursor._do_query.
     """
     import MySQLdb.cursors
     import traceback
@@ -670,3 +770,15 @@ def _patch_mysqldb_with_stacktrace_comments():
         old_mysql_do_query(self, qq)
 
     setattr(MySQLdb.cursors.BaseCursor, '_do_query', _do_query)
+
+
+def _assert_matching_drivers():
+    """Make sure slave handle and normal handle have the same driver."""
+    # NOTE(geekinutah): There's no use case for writing to one backend and
+    #                 reading from another. Who knows what the future holds?
+    if CONF.database.slave_connection == '':
+        return
+
+    normal = sqlalchemy.engine.url.make_url(CONF.database.connection)
+    slave = sqlalchemy.engine.url.make_url(CONF.database.slave_connection)
+    assert normal.drivername == slave.drivername

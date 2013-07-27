@@ -19,8 +19,9 @@
 
 Supported configuration options:
 
-`db_backend`: DB backend name or full module path to DB backend module.
-`dbapi_use_tpool`: Enable thread pooling of DB API calls.
+The following two parameters are in the 'database' group:
+`backend`: DB backend name or full module path to DB backend module.
+`use_tpool`: Enable thread pooling of DB API calls.
 
 A DB backend module should implement a method named 'get_backend' which
 takes no arguments.  The method can return any object that implements DB
@@ -44,17 +45,21 @@ from nova.openstack.common import lockutils
 
 
 db_opts = [
-    cfg.StrOpt('db_backend',
+    cfg.StrOpt('backend',
                default='sqlalchemy',
+               deprecated_name='db_backend',
+               deprecated_group='DEFAULT',
                help='The backend to use for db'),
-    cfg.BoolOpt('dbapi_use_tpool',
+    cfg.BoolOpt('use_tpool',
                 default=False,
+                deprecated_name='dbapi_use_tpool',
+                deprecated_group='DEFAULT',
                 help='Enable the experimental use of thread pooling for '
                      'all DB API calls')
 ]
 
 CONF = cfg.CONF
-CONF.register_opts(db_opts)
+CONF.register_opts(db_opts, 'database')
 
 
 class DBAPI(object):
@@ -75,8 +80,8 @@ class DBAPI(object):
         if self.__backend:
             # Another thread assigned it
             return self.__backend
-        backend_name = CONF.db_backend
-        self.__use_tpool = CONF.dbapi_use_tpool
+        backend_name = CONF.database.backend
+        self.__use_tpool = CONF.database.use_tpool
         if self.__use_tpool:
             from eventlet import tpool
             self.__tpool = tpool
