@@ -20,6 +20,8 @@
 Handle lease database updates from DHCP servers.
 """
 
+from __future__ import print_function
+
 import os
 import sys
 
@@ -127,6 +129,6 @@ def main():
             LOG.error(_("Environment variable 'NETWORK_ID' must be set."))
             return(1)
 
-        print init_leases(network_id)
+        print(init_leases(network_id))
 
     rpc.cleanup()

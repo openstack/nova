@@ -19,6 +19,8 @@
 
 """Utility methods for working with WSGI servers."""
 
+from __future__ import print_function
+
 import os.path
 import socket
 import sys
@@ -371,15 +373,15 @@ class Debug(Middleware):
 
     @webob.dec.wsgify(RequestClass=Request)
     def __call__(self, req):
-        print ('*' * 40) + ' REQUEST ENVIRON'
+        print(('*' * 40) + ' REQUEST ENVIRON')
         for key, value in req.environ.items():
-            print key, '=', value
-        print
+            print(key, '=', value)
+        print()
         resp = req.get_response(self.application)
 
-        print ('*' * 40) + ' RESPONSE HEADERS'
+        print(('*' * 40) + ' RESPONSE HEADERS')
         for (key, value) in resp.headers.iteritems():
-            print key, '=', value
+            print(key, '=', value)
         print
 
         resp.app_iter = self.print_generator(resp.app_iter)
@@ -389,12 +391,12 @@ class Debug(Middleware):
     @staticmethod
     def print_generator(app_iter):
         """Iterator that prints the contents of a wrapper string."""
-        print ('*' * 40) + ' BODY'
+        print(('*' * 40) + ' BODY')
         for part in app_iter:
             sys.stdout.write(part)
             sys.stdout.flush()
             yield part
-        print
+        print()
 
 
 class Router(object):
