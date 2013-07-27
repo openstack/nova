@@ -44,13 +44,16 @@ domains=$($list_domains | sed '/^id*/d' | sed 's/|.*|.*$//g' | xargs)
 for i in $domains; do
     log="${log_file_base}$i"
     tmp="${tmp_file_base}$i"
-    size=$(stat -c%s "$tmp")
 
-    # Trim the log if required
-    if [ "$size" -gt "$max_size_bytes" ]; then
-        tail -c $truncated_size_bytes $tmp > $log || true
-    else
-        mv $tmp $log || true
+    if [ -e "$tmp" ]; then
+        size=$(stat -c%s "$tmp")
+
+        # Trim the log if required
+        if [ "$size" -gt "$max_size_bytes" ]; then
+            tail -c $truncated_size_bytes $tmp > $log || true
+        else
+            mv $tmp $log || true
+        fi
     fi
 
     # Notify xen that it needs to reload the file
