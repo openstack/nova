@@ -649,6 +649,10 @@ def stub_volume_get_all_by_project(self, context, search_opts=None):
     return [stub_volume_get(self, context, '1')]
 
 
+def stub_volume_check_attach(self, context, *args, **param):
+    pass
+
+
 def stub_snapshot(id, **kwargs):
     snapshot = {
         'id': id,

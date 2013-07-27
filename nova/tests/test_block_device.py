@@ -136,6 +136,37 @@ class TestBlockDeviceDict(test.TestCase):
 
         BDM = block_device.BlockDeviceDict
 
+        self.api_mapping = [
+            {'id': 1, 'instance_uuid': 'fake-instance',
+             'device_name': '/dev/sdb1',
+             'source_type': 'blank',
+             'destination_type': 'local',
+             'delete_on_termination': True,
+             'guest_format': 'swap',
+             'boot_index': -1},
+            {'id': 2, 'instance_uuid': 'fake-instance',
+             'device_name': '/dev/sdc1',
+             'source_type': 'blank',
+             'destination_type': 'local',
+             'delete_on_termination': True,
+             'boot_index': -1},
+            {'id': 3, 'instance_uuid': 'fake-instance',
+             'device_name': '/dev/sda1',
+             'source_type': 'volume',
+             'destination_type': 'volume',
+             'uuid': 'fake-volume-id-1',
+             'boot_index': -1},
+            {'id': 4, 'instance_uuid': 'fake-instance',
+             'device_name': '/dev/sda2',
+             'source_type': 'snapshot',
+             'destination_type': 'volume',
+             'uuid': 'fake-snapshot-id-1',
+             'boot_index': -1},
+            {'id': 5, 'instance_uuid': 'fake-instance',
+             'no_device': True,
+             'device_name': '/dev/vdc'},
+        ]
+
         self.new_mapping = [
             BDM({'id': 1, 'instance_uuid': 'fake-instance',
                  'device_name': '/dev/sdb1',
@@ -154,7 +185,7 @@ class TestBlockDeviceDict(test.TestCase):
                  'device_name': '/dev/sda1',
                  'source_type': 'volume',
                  'destination_type': 'volume',
-                 'volume_id': 'fake-folume-id-1',
+                 'volume_id': 'fake-volume-id-1',
                  'connection_info': "{'fake': 'connection_info'}",
                  'boot_index': -1}),
             BDM({'id': 4, 'instance_uuid': 'fake-instance',
@@ -181,7 +212,7 @@ class TestBlockDeviceDict(test.TestCase):
              'virtual_name': 'ephemeral0'},
             {'id': 3, 'instance_uuid': 'fake-instance',
              'device_name': '/dev/sda1',
-             'volume_id': 'fake-folume-id-1',
+             'volume_id': 'fake-volume-id-1',
              'connection_info': "{'fake': 'connection_info'}"},
             {'id': 4, 'instance_uuid': 'fake-instance',
              'device_name': '/dev/sda2',
@@ -236,6 +267,15 @@ class TestBlockDeviceDict(test.TestCase):
         for legacy, new in zip(self.legacy_mapping, self.new_mapping):
             self.assertThat(
                 block_device.BlockDeviceDict.from_legacy(legacy),
+                matchers.IsSubDictOf(new))
+
+    def test_from_api(self):
+        for api, new in zip(self.api_mapping, self.new_mapping):
+            new['connection_info'] = None
+            if new['snapshot_id']:
+                new['volume_id'] = None
+            self.assertThat(
+                block_device.BlockDeviceDict.from_api(api),
                 matchers.IsSubDictOf(new))
 
     def test_legacy(self):

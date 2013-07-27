@@ -34,6 +34,7 @@ from nova.api.openstack.compute import servers
 from nova.api.openstack.compute import views
 from nova.api.openstack import extensions
 from nova.api.openstack import xmlutil
+from nova import block_device
 from nova.compute import api as compute_api
 from nova.compute import flavors
 from nova.compute import task_states
@@ -2454,6 +2455,18 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self._test_create_extra, {}, no_image=True)
 
+    def test_create_instance_with_bdm_v2_enabled_no_image(self):
+        self.ext_mgr.extensions = {'os-block-device-mapping-v2-boot': 'fake'}
+        old_create = compute_api.API.create
+
+        def create(*args, **kwargs):
+            self.assertNotIn('imageRef', kwargs)
+            return old_create(*args, **kwargs)
+
+        self.stubs.Set(compute_api.API, 'create', create)
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self._test_create_extra, {}, no_image=True)
+
     def test_create_instance_with_volumes_enabled_and_bdms_no_image(self):
         """
         Test that the create works if there is no image supplied but
@@ -2492,6 +2505,40 @@ class ServersControllerCreateTest(test.TestCase):
 
         self.stubs.Set(compute_api.API, 'create', create)
         self.mox.ReplayAll()
+        self._test_create_extra(params, no_image=True)
+
+    def test_create_instance_with_bdm_v2_enabled_and_bdms_no_image(self):
+        self.ext_mgr.extensions = {
+            'os-volumes': 'fake',
+            'os-block-device-mapping-v2-boot': 'fake'}
+        bdm_v2 = [{
+            'no_device': None,
+            'source_type': 'volume',
+            'destination_type': 'volume',
+            'uuid': self.volume_id,
+            'device_name': 'vda',
+            'delete_on_termination': False,
+        }]
+        params = {'block_device_mapping_v2': bdm_v2}
+        old_create = compute_api.API.create
+
+        def create(*args, **kwargs):
+            self.assertThat(block_device.BlockDeviceDict(bdm_v2[0]),
+                            matchers.DictMatches(
+                                kwargs['block_device_mapping'][0]))
+            self.assertNotIn('imageRef', kwargs)
+            return old_create(*args, **kwargs)
+
+        self.mox.StubOutWithMock(compute_api.API, '_validate_bdm')
+        self.mox.StubOutWithMock(compute_api.API, '_get_volume_image_metadata')
+
+        compute_api.API._validate_bdm(mox.IgnoreArg(),
+                                      mox.IgnoreArg()).AndReturn(True)
+        compute_api.API._get_volume_image_metadata(
+            mox.IgnoreArg(), mox.IgnoreArg()).AndReturn({})
+        self.mox.ReplayAll()
+        self.stubs.Set(compute_api.API, 'create', create)
+
         self._test_create_extra(params, no_image=True)
 
     def test_create_instance_with_volumes_disabled(self):
@@ -2554,6 +2601,7 @@ class ServersControllerCreateTest(test.TestCase):
         old_create = compute_api.API.create
 
         def create(*args, **kwargs):
+            self.assertTrue(kwargs['legacy_bdm'])
             self.assertEqual(kwargs['block_device_mapping'], self.bdm)
             return old_create(*args, **kwargs)
 
@@ -2614,6 +2662,96 @@ class ServersControllerCreateTest(test.TestCase):
         self.stubs.Set(compute_api.API, 'create', create)
         self.stubs.Set(compute_api.API, '_validate_bdm', _validate_bdm)
         self._test_create_extra(params)
+
+    def test_create_instance_bdm_v2(self):
+        self.ext_mgr.extensions = {'os-volumes': 'fake',
+                                   'os-block-device-mapping-v2-boot': 'fake'}
+        bdm_v2 = [{'source_type': 'volume',
+                   'uuid': 'fake_vol'}]
+        bdm_v2_expected = [{'source_type': 'volume',
+                            'volume_id': 'fake_vol'}]
+        params = {'block_device_mapping_v2': bdm_v2}
+        old_create = compute_api.API.create
+
+        def create(*args, **kwargs):
+            self.assertFalse(kwargs['legacy_bdm'])
+            for expected, received in zip(bdm_v2_expected,
+                                          kwargs['block_device_mapping']):
+                self.assertThat(block_device.BlockDeviceDict(expected),
+                                matchers.DictMatches(received))
+            return old_create(*args, **kwargs)
+
+        def _validate_bdm(*args, **kwargs):
+            pass
+
+        self.stubs.Set(compute_api.API, 'create', create)
+        self.stubs.Set(compute_api.API, '_validate_bdm', _validate_bdm)
+        self._test_create_extra(params)
+
+    def test_create_instance_decide_format_legacy(self):
+        self.ext_mgr.extensions = {'os-volumes': 'fake',
+                                   'os-block-device-mapping-v2-boot': 'fake'}
+        bdm = [{'device_name': 'foo1',
+                'volume_id': 'fake_vol',
+                'delete_on_termination': 1}]
+
+        expected_legacy_flag = True
+
+        old_create = compute_api.API.create
+
+        def create(*args, **kwargs):
+            self.assertEqual(kwargs['legacy_bdm'], expected_legacy_flag)
+            return old_create(*args, **kwargs)
+
+        def _validate_bdm(*args, **kwargs):
+            pass
+
+        self.stubs.Set(compute_api.API, 'create', create)
+        self.stubs.Set(compute_api.API, '_validate_bdm',
+                       _validate_bdm)
+
+        self._test_create_extra({})
+
+        params = {'block_device_mapping': bdm}
+        self._test_create_extra(params)
+
+    def test_create_instance_decide_format_new(self):
+        self.ext_mgr.extensions = {'os-volumes': 'fake',
+                                   'os-block-device-mapping-v2-boot': 'fake'}
+
+        bdm_v2 = [{'source_type': 'volume',
+                   'device_name': 'fake_dev',
+                   'uuid': 'fake_vol'}]
+
+        old_create = compute_api.API.create
+
+        expected_legacy_flag = False
+
+        def create(*args, **kwargs):
+            self.assertEqual(kwargs['legacy_bdm'], expected_legacy_flag)
+            return old_create(*args, **kwargs)
+
+        def _validate_bdm(*args, **kwargs):
+            pass
+
+        self.stubs.Set(compute_api.API, 'create', create)
+        self.stubs.Set(compute_api.API, '_validate_bdm',
+                       _validate_bdm)
+
+        params = {'block_device_mapping_v2': bdm_v2}
+        self._test_create_extra(params)
+
+    def test_create_instance_both_bdm_formats(self):
+        self.ext_mgr.extensions = {'os-volumes': 'fake',
+                                   'os-block-device-mapping-v2-boot': 'fake'}
+        bdm = [{'device_name': 'foo'}]
+        bdm_v2 = [{'source_type': 'volume',
+                   'uuid': 'fake_vol'}]
+        params = {'block_device_mapping': bdm,
+                  'block_device_mapping_v2': bdm_v2}
+
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self._test_create_extra, params)
 
     def test_create_instance_with_user_data_enabled(self):
         self.ext_mgr.extensions = {'os-user-data': 'fake'}
