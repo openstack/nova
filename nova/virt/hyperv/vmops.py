@@ -137,7 +137,9 @@ class VMOps(object):
 
     def _create_root_vhd(self, context, instance):
         base_vhd_path = self._imagecache.get_cached_image(context, instance)
-        root_vhd_path = self._pathutils.get_vhd_path(instance['name'])
+        format_ext = base_vhd_path.split('.')[-1]
+        root_vhd_path = self._pathutils.get_root_vhd_path(instance['name'],
+                                                          format_ext)
 
         try:
             if CONF.use_cow_images:

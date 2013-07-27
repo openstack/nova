@@ -20,6 +20,8 @@ import sys
 if sys.platform == 'win32':
     import wmi
 
+from nova.openstack.common.gettextutils import _
+from nova.virt.hyperv import constants
 from nova.virt.hyperv import vmutils
 from xml.etree import ElementTree
 
@@ -96,3 +98,13 @@ class VHDUtils(object):
                 vhd_info_dict[name] = int(value_text)
 
         return vhd_info_dict
+
+    def get_vhd_format(self, path):
+        with open(path, 'rb') as f:
+            signature = f.read(8)
+        if signature == 'vhdxfile':
+            return constants.DISK_FORMAT_VHDX
+        elif signature == 'conectix':
+            return constants.DISK_FORMAT_VHD
+        else:
+            raise vmutils.HyperVException(_('Unsupported virtual disk format'))

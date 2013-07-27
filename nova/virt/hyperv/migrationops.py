@@ -152,7 +152,7 @@ class MigrationOps(object):
         if self._volumeops.ebs_root_in_block_devices(block_device_info):
             root_vhd_path = None
         else:
-            root_vhd_path = self._pathutils.get_vhd_path(instance_name)
+            root_vhd_path = self._pathutils.lookup_root_vhd_path(instance_name)
         self._vmops.create_instance(instance, network_info, block_device_info,
                                     root_vhd_path)
 
@@ -191,11 +191,13 @@ class MigrationOps(object):
                     self._pathutils.remove(base_vhd_copy_path)
 
     def _resize_vhd(self, vhd_path, new_size):
-        LOG.debug(_("Getting info for disk: %s"), vhd_path)
-        base_disk_path = self._vhdutils.get_vhd_parent_path(vhd_path)
-        if base_disk_path:
-            # A differential VHD cannot be resized
-            self._merge_base_vhd(vhd_path, base_disk_path)
+        if vhd_path.split('.')[-1].lower() == "vhd":
+            LOG.debug(_("Getting parent disk info for disk: %s"), vhd_path)
+            base_disk_path = self._vhdutils.get_vhd_parent_path(vhd_path)
+            if base_disk_path:
+                # A differential VHD cannot be resized. This limitation
+                # does not apply to the VHDX format.
+                self._merge_base_vhd(vhd_path, base_disk_path)
         LOG.debug(_("Resizing disk \"%(vhd_path)s\" to new max "
                     "size %(new_size)s"),
                   {'vhd_path': vhd_path, 'new_size': new_size})
@@ -226,10 +228,11 @@ class MigrationOps(object):
         if self._volumeops.ebs_root_in_block_devices(block_device_info):
             root_vhd_path = None
         else:
-            root_vhd_path = self._pathutils.get_vhd_path(instance_name)
-            if not self._pathutils.exists(root_vhd_path):
+            root_vhd_path = self._pathutils.lookup_root_vhd_path(instance_name)
+            if not root_vhd_path:
                 raise vmutils.HyperVException(_("Cannot find boot VHD "
-                                                "file: %s") % root_vhd_path)
+                                                "file for instance: %s") %
+                                              instance_name)
 
             vhd_info = self._vhdutils.get_vhd_info(root_vhd_path)
             src_base_disk_path = vhd_info.get("ParentPath")
