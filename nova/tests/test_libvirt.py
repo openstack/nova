@@ -4409,6 +4409,17 @@ class LibvirtUtilsTestCase(test.TestCase):
         result = libvirt_utils.get_iscsi_initiator()
         self.assertEqual(initiator, result)
 
+    def test_get_missing_iscsi_initiator(self):
+        self.mox.StubOutWithMock(utils, 'execute')
+        file_path = '/etc/iscsi/initiatorname.iscsi'
+        utils.execute('cat', file_path, run_as_root=True).AndRaise(
+            exception.FileNotFound(file_path=file_path)
+        )
+        # Start test
+        self.mox.ReplayAll()
+        result = libvirt_utils.get_iscsi_initiator()
+        self.assertIsNone(result)
+
     def test_create_image(self):
         self.mox.StubOutWithMock(utils, 'execute')
         utils.execute('qemu-img', 'create', '-f', 'raw',
