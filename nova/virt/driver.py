@@ -830,12 +830,6 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
-    def legacy_nwinfo(self):
-        """True if the driver requires the legacy network_info format."""
-        # TODO(tr3buchet): update all subclasses and remove this method and
-        # related helpers.
-        raise NotImplementedError(self.legacy_nwinfo)
-
     def macs_for_instance(self, instance):
         """What MAC addresses must this instance have?
 

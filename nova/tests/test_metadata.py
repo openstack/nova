@@ -139,8 +139,7 @@ class MetadataTestCase(test.TestCase):
         self.instance = INSTANCES[0]
         self.instance['system_metadata'] = get_default_sys_meta()
         self.flags(use_local=True, group='conductor')
-        fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs,
-                                                          spectacular=True)
+        fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs)
 
     def test_can_pickle_metadata(self):
         # Make sure that InstanceMetadata is possible to pickle. This is
@@ -316,8 +315,7 @@ class OpenStackMetadataTestCase(test.TestCase):
         self.instance = INSTANCES[0]
         self.instance['system_metadata'] = get_default_sys_meta()
         self.flags(use_local=True, group='conductor')
-        fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs,
-                                                          spectacular=True)
+        fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs)
 
     def test_top_level_listing(self):
         # request for /openstack/<version>/ should show metadata.json
@@ -488,8 +486,7 @@ class MetadataHandlerTestCase(test.TestCase):
     def setUp(self):
         super(MetadataHandlerTestCase, self).setUp()
 
-        fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs,
-                                                          spectacular=True)
+        fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs)
         self.instance = INSTANCES[0]
         self.instance['system_metadata'] = get_default_sys_meta()
         self.flags(use_local=True, group='conductor')
@@ -665,8 +662,7 @@ class MetadataHandlerTestCase(test.TestCase):
 class MetadataPasswordTestCase(test.TestCase):
     def setUp(self):
         super(MetadataPasswordTestCase, self).setUp()
-        fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs,
-                                                          spectacular=True)
+        fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs)
         self.instance = copy.copy(INSTANCES[0])
         self.instance['system_metadata'] = get_default_sys_meta()
         self.flags(use_local=True, group='conductor')

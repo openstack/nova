@@ -223,8 +223,7 @@ class BaseTestCase(test.TestCase):
 
         def fake_get_nw_info(cls, ctxt, instance, *args, **kwargs):
             self.assertTrue(ctxt.is_admin)
-            return fake_network.fake_get_instance_nw_info(self.stubs, 1, 1,
-                                                          spectacular=True)
+            return fake_network.fake_get_instance_nw_info(self.stubs, 1, 1)
 
         self.stubs.Set(network_api.API, 'get_instance_nw_info',
                        fake_get_nw_info)
@@ -2647,8 +2646,8 @@ class ComputeTestCase(BaseTestCase):
             vpn=False, macs=macs,
             conductor_api=self.compute.conductor_api,
             security_groups=[], dhcp_options=None).AndReturn(
-                fake_network.fake_get_instance_nw_info(self.stubs, 1, 1,
-                                                       spectacular=True))
+                fake_network.fake_get_instance_nw_info(self.stubs, 1, 1))
+
         self.mox.StubOutWithMock(self.compute.driver, "macs_for_instance")
         self.compute.driver.macs_for_instance(instance).AndReturn(macs)
         self.mox.ReplayAll()
@@ -4098,8 +4097,7 @@ class ComputeTestCase(BaseTestCase):
     def test_pre_live_migration_works_correctly(self):
         # Confirm setup_compute_volume is called when volume is mounted.
         def stupid(*args, **kwargs):
-            return fake_network.fake_get_instance_nw_info(self.stubs,
-                                                          spectacular=True)
+            return fake_network.fake_get_instance_nw_info(self.stubs)
         self.stubs.Set(nova.compute.manager.ComputeManager,
                        '_get_instance_nw_info', stupid)
 
@@ -4107,8 +4105,7 @@ class ComputeTestCase(BaseTestCase):
         instance = jsonutils.to_primitive(self._create_fake_instance(
                                           {'host': 'dummy'}))
         c = context.get_admin_context()
-        nw_info = fake_network.fake_get_instance_nw_info(self.stubs,
-                                                        spectacular=True)
+        nw_info = fake_network.fake_get_instance_nw_info(self.stubs)
 
         # creating mocks
         self.mox.StubOutWithMock(self.compute.driver, 'pre_live_migration')
@@ -5388,8 +5385,7 @@ class ComputeAPITestCase(BaseTestCase):
     def setUp(self):
         def fake_get_nw_info(cls, ctxt, instance):
             self.assertTrue(ctxt.is_admin)
-            return fake_network.fake_get_instance_nw_info(self.stubs, 1, 1,
-                                                          spectacular=True)
+            return fake_network.fake_get_instance_nw_info(self.stubs, 1, 1)
 
         super(ComputeAPITestCase, self).setUp()
         self.stubs.Set(network_api.API, 'get_instance_nw_info',

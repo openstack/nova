@@ -229,8 +229,7 @@ class UsageInfoTestCase(test.TestCase):
     def setUp(self):
         def fake_get_nw_info(cls, ctxt, instance):
             self.assertTrue(ctxt.is_admin)
-            return fake_network.fake_get_instance_nw_info(self.stubs, 1, 1,
-                                                          spectacular=True)
+            return fake_network.fake_get_instance_nw_info(self.stubs, 1, 1)
 
         super(UsageInfoTestCase, self).setUp()
         self.stubs.Set(network_api.API, 'get_instance_nw_info',

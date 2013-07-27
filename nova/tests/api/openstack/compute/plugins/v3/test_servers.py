@@ -182,8 +182,7 @@ class ControllerTest(test.TestCase):
         self.ips_controller = ips.IPsController()
         policy.reset()
         policy.init()
-        fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs,
-                                                          spectacular=True)
+        fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs)
 
 
 class ServersControllerTest(ControllerTest):

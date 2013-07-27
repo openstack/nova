@@ -597,13 +597,6 @@ class XenAPIDriver(driver.ComputeDriver):
         return self._pool.undo_aggregate_operation(context, op,
                 aggregate, host, set_error)
 
-    def legacy_nwinfo(self):
-        """
-        Indicate if the driver requires the legacy network_info format.
-        """
-        # TODO(tr3buchet): remove this function once all virts return false
-        return False
-
     def resume_state_on_host_boot(self, context, instance, network_info,
                                   block_device_info=None):
         """resume guest state when a host is booted."""

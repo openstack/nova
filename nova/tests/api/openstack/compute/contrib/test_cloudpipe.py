@@ -83,8 +83,7 @@ class CloudpipeTest(test.TestCase):
                     'vpn_public_port': 22}
 
         def fake_get_nw_info_for_instance(instance):
-            return fake_network.fake_get_instance_nw_info(self.stubs,
-                                                          spectacular=True)
+            return fake_network.fake_get_instance_nw_info(self.stubs)
 
         self.stubs.Set(compute_utils, "get_nw_info_for_instance",
                        fake_get_nw_info_for_instance)

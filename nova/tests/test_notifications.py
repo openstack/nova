@@ -43,7 +43,7 @@ class NotificationsTestCase(test.TestCase):
         super(NotificationsTestCase, self).setUp()
 
         self.net_info = fake_network.fake_get_instance_nw_info(self.stubs, 1,
-                                                        1, spectacular=True)
+                                                               1)
 
         def fake_get_nw_info(cls, ctxt, instance):
             self.assertTrue(ctxt.is_admin)

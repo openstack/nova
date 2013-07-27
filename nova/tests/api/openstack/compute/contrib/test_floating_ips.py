@@ -94,7 +94,7 @@ def fake_instance_get(context, instance_id):
 
 def stub_nw_info(stubs):
     def get_nw_info_for_instance(instance):
-        return fake_network.fake_get_instance_nw_info(stubs, spectacular=True)
+        return fake_network.fake_get_instance_nw_info(stubs)
     return get_nw_info_for_instance
 
 
@@ -148,8 +148,7 @@ class FloatingIpTest(test.TestCase):
                 'nova.api.openstack.compute.contrib.select_extensions'],
             osapi_compute_ext_list=['Floating_ips'])
 
-        fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs,
-                                                          spectacular=True)
+        fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs)
         self.stubs.Set(db, 'instance_get',
                        fake_instance_get)
 
@@ -614,8 +613,7 @@ class ExtendedFloatingIpTest(test.TestCase):
                 'nova.api.openstack.compute.contrib.select_extensions'],
             osapi_compute_ext_list=['Floating_ips', 'Extended_floating_ips'])
 
-        fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs,
-                                                          spectacular=True)
+        fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs)
         self.stubs.Set(db, 'instance_get',
                        fake_instance_get)
 

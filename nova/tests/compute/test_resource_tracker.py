@@ -52,9 +52,6 @@ class UnsupportedVirtDriver(driver.ComputeDriver):
         # no support for getting resource usage info
         return {}
 
-    def legacy_nwinfo(self):
-        return True
-
 
 class FakeVirtDriver(driver.ComputeDriver):
 
@@ -91,9 +88,6 @@ class FakeVirtDriver(driver.ComputeDriver):
             'memory_mb': FAKE_VIRT_MEMORY_OVERHEAD
         }
         return overhead  # just return a constant value for testing
-
-    def legacy_nwinfo(self):
-        return True
 
 
 class BaseTestCase(test.TestCase):

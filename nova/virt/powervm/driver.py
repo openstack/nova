@@ -211,12 +211,6 @@ class PowerVMDriver(driver.ComputeDriver):
         raise NotImplementedError(_("Host power action is not supported by the"
                                     "PowerVM driver."))
 
-    def legacy_nwinfo(self):
-        """
-        Indicate if the driver requires the legacy network_info format.
-        """
-        return False
-
     def migrate_disk_and_power_off(self, context, instance, dest,
                                    instance_type, network_info,
                                    block_device_info=None):
