@@ -19,6 +19,7 @@ from sqlalchemy import Index, UniqueConstraint, MetaData, String, Table
 
 from nova.db.sqlalchemy import api as db
 from nova.db.sqlalchemy import utils
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)

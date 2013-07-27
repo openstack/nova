@@ -18,6 +18,7 @@ import httplib
 import urllib
 import urlparse
 
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 

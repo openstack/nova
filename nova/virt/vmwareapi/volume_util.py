@@ -22,6 +22,7 @@ and storage repositories
 import re
 import string
 
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util

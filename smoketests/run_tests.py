@@ -55,7 +55,6 @@ To run a single test module:
 
 """
 
-import gettext
 import os
 import sys
 import unittest
@@ -69,13 +68,14 @@ if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
     sys.path.insert(0, possible_topdir)
 
 
-gettext.install('nova', unicode=1)
-
 from nose import config
 from nose import core
 from nose import result
 
 from smoketests import flags
+
+from nova.openstack.common.gettextutils import _
+
 FLAGS = flags.FLAGS
 
 

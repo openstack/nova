@@ -26,6 +26,7 @@ import time
 from eventlet.green import subprocess
 from oslo.config import cfg
 
+from nova.openstack.common.gettextutils import _
 from nova import utils
 from nova.virt.hyperv import basevolumeutils
 from nova.virt.hyperv import vmutils

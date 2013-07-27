@@ -27,6 +27,7 @@ import urllib
 import urllib2
 import urlparse
 
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)

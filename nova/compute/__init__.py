@@ -19,6 +19,7 @@
 # Importing full names to not pollute the namespace and cause possible
 # collisions with use of 'from nova.compute import <foo>' elsewhere.
 import nova.cells.opts
+import nova.exception
 import nova.openstack.common.importutils
 
 

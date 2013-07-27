@@ -32,6 +32,7 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import baserpc
 from nova import db
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common.rpc import common as rpc_common
 

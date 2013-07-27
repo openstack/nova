@@ -26,6 +26,7 @@ from nova.api.openstack import xmlutil
 from nova.compute import api
 from nova.compute import flavors
 from nova import exception
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import timeutils
 
 ALIAS = 'os-simple-tenant-usage'

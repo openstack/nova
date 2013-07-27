@@ -28,6 +28,7 @@ from nova.compute import api as compute_api
 from nova import context
 from nova import crypto
 from nova import exception
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import strutils

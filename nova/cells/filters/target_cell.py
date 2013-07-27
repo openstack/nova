@@ -22,6 +22,7 @@ done as there's no way to know whether the full path is a valid.
 """
 
 from nova.cells import filters
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)

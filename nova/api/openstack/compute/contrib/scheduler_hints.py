@@ -18,6 +18,7 @@ import webob.exc
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova.openstack.common.gettextutils import _
 
 
 class SchedulerHintsController(wsgi.Controller):

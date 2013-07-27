@@ -25,6 +25,7 @@ import string
 
 from oslo.config import cfg
 
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 
 CONF = cfg.CONF

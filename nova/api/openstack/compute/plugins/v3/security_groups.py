@@ -30,6 +30,7 @@ from nova.compute import api as compute_api
 from nova import exception
 from nova.network.security_group import neutron_driver
 from nova.network.security_group import openstack_driver
+from nova.openstack.common.gettextutils import _
 
 
 ALIAS = 'os-security-groups'

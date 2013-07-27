@@ -19,6 +19,7 @@ from sqlalchemy import Column, Integer, MetaData, String, Table
 from sqlalchemy.sql.expression import select
 
 from nova.cells import rpc_driver
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)

@@ -17,14 +17,11 @@
 """vm_vdi_cleaner.py - List or clean orphaned VDIs/instances on XenServer."""
 
 import doctest
-import gettext
 import os
 import sys
 
 from oslo.config import cfg
 import XenAPI
-
-gettext.install('nova', unicode=1)
 
 possible_topdir = os.getcwd()
 if os.path.exists(os.path.join(possible_topdir, "nova", "__init__.py")):
@@ -37,6 +34,7 @@ from nova import exception
 from nova.openstack.common import timeutils
 from nova.virt import virtapi
 from nova.virt.xenapi import driver as xenapi_driver
+
 
 cleaner_opts = [
     cfg.IntOpt('zombie_instance_updated_at_window',

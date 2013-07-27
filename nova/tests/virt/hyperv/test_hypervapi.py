@@ -35,6 +35,7 @@ from nova import context
 from nova import db
 from nova import exception
 from nova.image import glance
+from nova.openstack.common.gettextutils import _
 from nova import test
 from nova.tests import fake_network
 from nova.tests.image import fake as fake_image

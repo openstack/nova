@@ -70,6 +70,7 @@ from oslo.config import cfg
 from nova import block_device
 from nova.compute import flavors
 from nova import exception
+from nova.openstack.common.gettextutils import _
 from nova.virt import configdrive
 from nova.virt import driver
 

@@ -21,6 +21,7 @@ Utility functions for Image transfer.
 
 from nova import exception
 from nova.image import glance
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.virt.vmwareapi import io_util
 from nova.virt.vmwareapi import read_write_util

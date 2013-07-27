@@ -20,6 +20,7 @@ from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import compute
 from nova import exception
+from nova.openstack.common.gettextutils import _
 
 ALIAS = "os-instance-actions"
 authorize_actions = extensions.extension_authorizer('compute',

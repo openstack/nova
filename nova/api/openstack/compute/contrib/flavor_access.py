@@ -24,6 +24,7 @@ from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova.compute import flavors
 from nova import exception
+from nova.openstack.common.gettextutils import _
 
 
 authorize = extensions.soft_extension_authorizer('compute', 'flavor_access')

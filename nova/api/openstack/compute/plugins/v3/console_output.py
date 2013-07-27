@@ -23,6 +23,7 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
 from nova import exception
+from nova.openstack.common.gettextutils import _
 
 ALIAS = "os-console-output"
 authorize = extensions.extension_authorizer('compute', "v3:" + ALIAS)

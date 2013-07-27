@@ -23,6 +23,7 @@ from oslo.config import cfg
 from nova import context as nova_context
 from nova.db import api as nova_db_api
 from nova import exception
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils

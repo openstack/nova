@@ -21,6 +21,7 @@ PowerVM LPAR configuration attributes.
 
 import shlex
 
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.virt.powervm import exception
 

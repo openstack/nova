@@ -29,6 +29,7 @@ from nova import config
 from nova import context
 from nova import db
 from nova.network import rpcapi as network_rpcapi
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging

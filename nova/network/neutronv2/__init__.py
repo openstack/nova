@@ -21,6 +21,7 @@ from neutronclient.v2_0 import client as clientv20
 from oslo.config import cfg
 
 from nova.openstack.common import excutils
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 
 CONF = cfg.CONF

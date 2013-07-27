@@ -21,6 +21,7 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import exception
+from nova.openstack.common.gettextutils import _
 from nova.virt.baremetal import db
 
 ALIAS = 'os-baremetal-nodes'

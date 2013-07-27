@@ -30,6 +30,7 @@ from nova.image import glance
 from nova import network
 from nova.network import model as network_model
 from nova.openstack.common import excutils
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log
 from nova.openstack.common.notifier import api as notifier_api
 from nova.openstack.common import timeutils

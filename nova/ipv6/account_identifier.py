@@ -22,6 +22,8 @@
 import hashlib
 import netaddr
 
+from nova.openstack.common.gettextutils import _
+
 
 def to_global(prefix, mac, project_id):
     project_hash = netaddr.IPAddress(

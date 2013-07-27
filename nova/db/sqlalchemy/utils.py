@@ -39,6 +39,7 @@ from sqlalchemy.types import NullType
 
 from nova.db.sqlalchemy import api as db
 from nova import exception
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 

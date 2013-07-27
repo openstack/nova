@@ -21,6 +21,7 @@ from nova.api.openstack import wsgi
 from nova import compute
 from nova import exception
 from nova.objects import instance as instance_obj
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 
 

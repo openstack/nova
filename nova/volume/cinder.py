@@ -30,6 +30,7 @@ from oslo.config import cfg
 
 from nova.db import base
 from nova import exception
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 
 cinder_opts = [

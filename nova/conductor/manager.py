@@ -34,6 +34,7 @@ from nova import notifications
 from nova.objects import base as nova_object
 from nova.objects import instance as instance_obj
 from nova.openstack.common import excutils
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.notifier import api as notifier

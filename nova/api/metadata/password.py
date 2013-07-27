@@ -17,6 +17,7 @@ from webob import exc
 
 from nova import conductor
 from nova import context
+from nova.openstack.common.gettextutils import _
 from nova import utils
 
 

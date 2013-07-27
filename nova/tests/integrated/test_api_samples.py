@@ -43,6 +43,7 @@ from nova import db
 from nova.db.sqlalchemy import models
 from nova import exception
 from nova.network import api as network_api
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging

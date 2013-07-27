@@ -21,6 +21,7 @@ Management class for migration / resize operations.
 import os
 
 from nova.openstack.common import excutils
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.virt.hyperv import hostutils
 from nova.virt.hyperv import imagecache

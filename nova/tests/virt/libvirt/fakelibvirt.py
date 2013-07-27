@@ -19,6 +19,8 @@ from lxml import etree
 import time
 import uuid
 
+from nova.openstack.common.gettextutils import _
+
 # Allow passing None to the various connect methods
 # (i.e. allow the client to rely on default URLs)
 allow_default_uri_connection = True

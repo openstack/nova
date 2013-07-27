@@ -21,6 +21,7 @@ from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import exception
 import nova.image.glance
+from nova.openstack.common.gettextutils import _
 import nova.utils
 
 

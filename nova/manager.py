@@ -58,6 +58,7 @@ from oslo.config import cfg
 from nova import baserpc
 from nova.db import base
 from nova.objects import base as objects_base
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import periodic_task
 from nova.openstack.common.rpc import dispatcher as rpc_dispatcher

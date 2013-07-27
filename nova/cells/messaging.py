@@ -39,6 +39,7 @@ from nova import exception
 from nova.objects import base as objects_base
 from nova.objects import instance as instance_obj
 from nova.openstack.common import excutils
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging

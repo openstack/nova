@@ -23,6 +23,7 @@ from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import exception
 from nova import network
+from nova.openstack.common.gettextutils import _
 from nova import utils
 
 

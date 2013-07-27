@@ -43,6 +43,7 @@ from nova.compute import task_states
 from nova import exception
 from nova.image import glance
 from nova.openstack.common import excutils
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
 from nova.openstack.common import strutils

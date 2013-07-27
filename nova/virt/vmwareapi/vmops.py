@@ -37,6 +37,7 @@ from nova import conductor
 from nova import context as nova_context
 from nova import exception
 from nova.openstack.common import excutils
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.virt import driver
 from nova.virt.vmwareapi import vif as vmwarevif

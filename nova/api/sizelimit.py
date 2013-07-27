@@ -22,6 +22,7 @@ from oslo.config import cfg
 import webob.dec
 import webob.exc
 
+from nova.openstack.common.gettextutils import _
 from nova import wsgi
 
 

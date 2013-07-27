@@ -25,6 +25,7 @@ from nova import db
 from nova import exception
 from nova.network import model as network_model
 from nova.objects import instance as instance_obj
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import memorycache
 from nova.openstack.common import timeutils

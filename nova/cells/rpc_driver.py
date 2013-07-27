@@ -22,6 +22,7 @@ import urlparse
 from oslo.config import cfg
 
 from nova.cells import driver
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import rpc
 from nova.openstack.common.rpc import dispatcher as rpc_dispatcher
 from nova.openstack.common.rpc import proxy as rpc_proxy

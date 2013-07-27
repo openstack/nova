@@ -20,6 +20,7 @@ from nova.compute import flavors
 from nova.compute import utils as compute_utils
 from nova import db
 from nova import notifications
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.notifier import api as notifier

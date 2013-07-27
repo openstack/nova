@@ -21,6 +21,7 @@ from eventlet import tpool
 from oslo.config import cfg
 
 from nova.cloudpipe import pipelib
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 import nova.virt.firewall as base_firewall
 from nova.virt import netutils

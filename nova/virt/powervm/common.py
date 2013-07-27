@@ -21,6 +21,7 @@ import uuid
 
 import paramiko
 
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
 from nova.virt.powervm import constants

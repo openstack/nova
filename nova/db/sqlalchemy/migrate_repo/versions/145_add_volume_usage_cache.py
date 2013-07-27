@@ -17,6 +17,7 @@
 from sqlalchemy import Column, DateTime
 from sqlalchemy import Boolean, BigInteger, MetaData, Integer, String, Table
 
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
