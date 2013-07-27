@@ -602,21 +602,6 @@ class Controller(wsgi.Controller):
     def _validate_server_name(self, value):
         self._check_string_length(value, 'Server name', max_length=255)
 
-    def _validate_block_device(self, bd):
-        self._check_string_length(bd['device_name'],
-                'Device name', max_length=255)
-
-        if ' ' in bd['device_name']:
-            msg = _("Device name cannot include spaces.")
-            raise exc.HTTPBadRequest(explanation=msg)
-
-        if 'volume_size' in bd:
-            try:
-                bd['volume_size'] = utils.validate_integer(
-                    bd['volume_size'], 'volume_size', min_value=0)
-            except exception.InvalidInput as e:
-                raise exc.HTTPBadRequest(explanation=e.format_message())
-
     def _get_injected_files(self, personality):
         """Create a list of injected files from the personality attribute.
 
@@ -858,10 +843,12 @@ class Controller(wsgi.Controller):
         if self.ext_mgr.is_loaded('os-volumes'):
             block_device_mapping = server_dict.get('block_device_mapping', [])
             for bdm in block_device_mapping:
-                # Ignore empty volume size
-                if 'volume_size' in bdm and not bdm['volume_size']:
-                    del bdm['volume_size']
-                self._validate_block_device(bdm)
+                try:
+                    block_device.validate_device_name(bdm.get("device_name"))
+                    block_device.validate_and_default_volume_size(bdm)
+                except exception.InvalidBDMFormat as e:
+                    raise exc.HTTPBadRequest(explanation=e.format_message())
+
                 if 'delete_on_termination' in bdm:
                     bdm['delete_on_termination'] = strutils.bool_from_string(
                         bdm['delete_on_termination'])
@@ -880,10 +867,20 @@ class Controller(wsgi.Controller):
                 # Assume legacy format
                 legacy_bdm = not bool(block_device_mapping_v2)
 
-                # This will also do basic validation of block_devices
-                block_device_mapping_v2 = [
-                    block_device.BlockDeviceDict.from_api(bdm_dict)
-                    for bdm_dict in block_device_mapping_v2]
+                # NOTE (ndipanov) Don't allow empty device_name values
+                #                 for now until we can handle it on the
+                #                 compute side.
+                if any('device_name' not in bdm
+                       for bdm in block_device_mapping_v2):
+                    expl = _('Missing device_name in some block devices.')
+                    raise exc.HTTPBadRequest(explanation=expl)
+
+                try:
+                    block_device_mapping_v2 = [
+                        block_device.BlockDeviceDict.from_api(bdm_dict)
+                        for bdm_dict in block_device_mapping_v2]
+                except exception.InvalidBDMFormat as e:
+                    raise exc.HTTPBadRequest(explanation=e.format_message())
 
         block_device_mapping = (block_device_mapping or
                                 block_device_mapping_v2)

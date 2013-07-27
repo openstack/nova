@@ -22,6 +22,8 @@ from oslo.config import cfg
 from nova import exception
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
+from nova.openstack.common import strutils
+from nova import utils
 from nova.virt import driver
 
 CONF = cfg.CONF
@@ -73,6 +75,8 @@ class BlockDeviceDict(dict):
     _db_only_fields = (bdm_db_only_fields |
                bdm_db_inherited_fields)
 
+    _required_fields = set(['source_type'])
+
     def __init__(self, bdm_dict=None, do_not_default=None):
         super(BlockDeviceDict, self).__init__()
 
@@ -88,10 +92,39 @@ class BlockDeviceDict(dict):
 
     def _validate(self, bdm_dict):
         """Basic data format validations."""
-        if (not set(key for key, _ in bdm_dict.iteritems()) <=
+        dict_fields = set(key for key, _ in bdm_dict.iteritems())
+
+        # Check that there are no bogus fields
+        if not (dict_fields <=
                 (self._fields | self._db_only_fields)):
-            raise exception.InvalidBDMFormat()
-        # TODO(ndipanov): Validate must-have fields!
+            raise exception.InvalidBDMFormat(
+                details="Some fields are invalid.")
+
+        if bdm_dict.get('no_device'):
+            return
+
+        # Check that all required fields are there
+        if (self._required_fields and
+                not ((dict_fields & self._required_fields) ==
+                      self._required_fields)):
+            raise exception.InvalidBDMFormat(
+                details="Some required fields are missing")
+
+        if 'delete_on_termination' in bdm_dict:
+            bdm_dict['delete_on_termination'] = strutils.bool_from_string(
+                bdm_dict['delete_on_termination'])
+
+        if bdm_dict.get('device_name') is not None:
+            validate_device_name(bdm_dict['device_name'])
+
+        validate_and_default_volume_size(bdm_dict)
+
+        if bdm_dict.get('boot_index'):
+            try:
+                bdm_dict['boot_index'] = int(bdm_dict['boot_index'])
+            except ValueError:
+                raise exception.InvalidBDMFormat(
+                    details="Boot index is invalid.")
 
     @classmethod
     def from_legacy(cls, legacy_bdm):
@@ -134,7 +167,8 @@ class BlockDeviceDict(dict):
             pass
 
         else:
-            raise exception.InvalidBDMFormat()
+            raise exception.InvalidBDMFormat(
+                details="Unrecognized legacy format.")
 
         return cls(new_bdm, non_computable_fields)
 
@@ -150,10 +184,12 @@ class BlockDeviceDict(dict):
             device_uuid = api_dict.get('uuid')
 
             if source_type not in ('volume', 'image', 'snapshot', 'blank'):
-                raise exception.InvalidBDMFormat()
+                raise exception.InvalidBDMFormat(
+                    details="Invalid source_type field.")
             elif source_type != 'blank':
                 if not device_uuid:
-                    raise exception.InvalidBDMFormat()
+                    raise exception.InvalidBDMFormat(
+                        details="Missing device UUID.")
                 api_dict[source_type + '_id'] = device_uuid
 
         api_dict.pop('uuid', None)
@@ -255,6 +291,32 @@ def properties_root_device_name(properties):
         root_device_name = properties['root_device_name']
 
     return root_device_name
+
+
+def validate_device_name(value):
+    try:
+        # NOTE (ndipanov): Do not allow empty device names
+        #                  until assigning default values
+        #                  is supported by nova.compute
+        utils.check_string_length(value, 'Device name',
+                                  min_length=1, max_length=255)
+    except exception.InvalidInput as e:
+        raise exception.InvalidBDMFormat(
+            details="Device name empty or too long.")
+
+    if ' ' in value:
+        raise exception.InvalidBDMFormat(
+            details="Device name contains spaces.")
+
+
+def validate_and_default_volume_size(bdm):
+    if bdm.get('volume_size'):
+        try:
+            bdm['volume_size'] = utils.validate_integer(
+                bdm['volume_size'], 'volume_size', min_value=0)
+        except exception.InvalidInput as e:
+            raise exception.InvalidBDMFormat(
+                details="Invalid volume_size.")
 
 
 _ephemeral = re.compile('^ephemeral(\d|[1-9]\d+)$')
