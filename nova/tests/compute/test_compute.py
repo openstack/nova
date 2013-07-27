@@ -331,6 +331,59 @@ class ComputeVolumeTestCase(BaseTestCase):
                                                  block_device_mapping)
         self.assertEqual(self.cinfo.get('serial'), self.volume_id)
 
+    def test_validate_bdm(self):
+        # Test if volume is checked for availability before being attached
+        # at boot time
+
+        def fake_bdms(context, instance_uuid):
+            block_device_mapping = [{
+                'id': 1,
+                'no_device': None,
+                'virtual_name': None,
+                'snapshot_id': None,
+                'volume_id': self.volume_id,
+                'device_name': 'vda',
+                'delete_on_termination': False,
+            }]
+            return block_device_mapping
+        self.stubs.Set(self.compute.db,
+                       'block_device_mapping_get_all_by_instance',
+                       fake_bdms)
+
+        # Check that the volume status is 'available' and reject if not
+        def fake_volume_get_1(self, context, volume_id):
+            return {'id': volume_id,
+                    'status': 'creating',
+                    'attach_status': 'detached'}
+        self.stubs.Set(cinder.API, 'get', fake_volume_get_1)
+
+        self.assertRaises(exception.InvalidBDMVolume,
+                          self.compute_api._validate_bdm,
+                          self.context,
+                          instance=self.instance)
+
+        # Check that the volume attach_status is 'detached' and reject if not
+        def fake_volume_get_2(self, context, volume_id):
+            return {'id': volume_id,
+                    'status': 'available',
+                    'attach_status': 'attached'}
+        self.stubs.Set(cinder.API, 'get', fake_volume_get_2)
+
+        self.assertRaises(exception.InvalidBDMVolume,
+                          self.compute_api._validate_bdm,
+                          self.context,
+                          instance=self.instance)
+
+        # Check that the volume status is 'available' and attach_status is
+        # 'detached' and accept the request if so
+        def fake_volume_get_3(self, context, volume_id):
+            return {'id': volume_id,
+                    'status': 'available',
+                    'attach_status': 'detached'}
+        self.stubs.Set(cinder.API, 'get', fake_volume_get_3)
+
+        self.compute_api._validate_bdm(self.context, instance=self.instance)
+
 
 class ComputeTestCase(BaseTestCase):
     def test_wrap_instance_fault(self):
