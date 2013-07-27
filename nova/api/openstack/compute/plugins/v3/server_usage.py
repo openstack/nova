@@ -19,7 +19,9 @@ from nova import compute
 from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
-authorize = extensions.soft_extension_authorizer('compute', 'server_usage')
+
+ALIAS = "os-server-usage"
+authorize = extensions.soft_extension_authorizer('compute', 'v3:' + ALIAS)
 
 
 class ServerUsageController(wsgi.Controller):
@@ -29,7 +31,7 @@ class ServerUsageController(wsgi.Controller):
 
     def _extend_server(self, server, instance):
         for k in ['launched_at', 'terminated_at']:
-            key = "%s:%s" % (Server_usage.alias, k)
+            key = "%s:%s" % (ServerUsage.alias, k)
             # NOTE(danms): Historically, this timestamp has been generated
             # merely by grabbing str(datetime) of a TZ-naive object. The
             # only way we can keep that with instance objects is to strip
@@ -63,26 +65,29 @@ class ServerUsageController(wsgi.Controller):
                 self._extend_server(server, db_instance)
 
 
-class Server_usage(extensions.ExtensionDescriptor):
+class ServerUsage(extensions.V3APIExtensionBase):
     """Adds launched_at and terminated_at on Servers."""
 
     name = "ServerUsage"
-    alias = "OS-SRV-USG"
+    alias = ALIAS
     namespace = ("http://docs.openstack.org/compute/ext/"
-                 "server_usage/api/v1.1")
-    updated = "2013-04-29T00:00:00+00:00"
+                 "os-server-usage/api/v3")
+    version = 1
 
     def get_controller_extensions(self):
         controller = ServerUsageController()
         extension = extensions.ControllerExtension(self, 'servers', controller)
         return [extension]
 
+    def get_resources(self):
+        return []
+
 
 def make_server(elem):
-    elem.set('{%s}launched_at' % Server_usage.namespace,
-             '%s:launched_at' % Server_usage.alias)
-    elem.set('{%s}terminated_at' % Server_usage.namespace,
-             '%s:terminated_at' % Server_usage.alias)
+    elem.set('{%s}launched_at' % ServerUsage.namespace,
+             '%s:launched_at' % ServerUsage.alias)
+    elem.set('{%s}terminated_at' % ServerUsage.namespace,
+             '%s:terminated_at' % ServerUsage.alias)
 
 
 class ServerUsageTemplate(xmlutil.TemplateBuilder):
@@ -90,7 +95,7 @@ class ServerUsageTemplate(xmlutil.TemplateBuilder):
         root = xmlutil.TemplateElement('server', selector='server')
         make_server(root)
         return xmlutil.SlaveTemplate(root, 1, nsmap={
-            Server_usage.alias: Server_usage.namespace})
+            ServerUsage.alias: ServerUsage.namespace})
 
 
 class ServerUsagesTemplate(xmlutil.TemplateBuilder):
@@ -99,4 +104,4 @@ class ServerUsagesTemplate(xmlutil.TemplateBuilder):
         elem = xmlutil.SubTemplateElement(root, 'server', selector='servers')
         make_server(elem)
         return xmlutil.SlaveTemplate(root, 1, nsmap={
-            Server_usage.alias: Server_usage.namespace})
+            ServerUsage.alias: ServerUsage.namespace})
