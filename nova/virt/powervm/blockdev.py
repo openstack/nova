@@ -423,9 +423,14 @@ class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
 
         # If the image does not exist already
         if not output:
-            # Copy file to IVM
-            common.ftp_put_command(self.connection_data, source_path,
-                                   remote_path)
+            try:
+                # Copy file to IVM
+                common.ftp_put_command(self.connection_data, source_path,
+                                       remote_path)
+            except exception.PowerVMFTPTransferFailed:
+                with excutils.save_and_reraise_exception():
+                    cmd = "/usr/bin/rm -f %s" % final_path
+                    self.run_vios_command_as_root(cmd)
 
             # Verify image file checksums match
             output = self._md5sum_remote_file(final_path)

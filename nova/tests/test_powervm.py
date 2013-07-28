@@ -572,6 +572,37 @@ class PowerVMLocalVolumeAdapterTestCase(test.TestCase):
         self.powervm_adapter = powervm_blockdev.PowerVMLocalVolumeAdapter(
                                                             self.connection)
 
+    def test_copy_image_file_ftp_failed(self):
+        file_path = os.tempnam('/tmp', 'image')
+        remote_path = '/mnt/openstack/images'
+        exp_remote_path = os.path.join(remote_path,
+                                       os.path.basename(file_path))
+        exp_cmd = ' '.join(['/usr/bin/rm -f', exp_remote_path])
+
+        fake_noop = lambda *args, **kwargs: None
+        fake_op = self.powervm_adapter
+        self.stubs.Set(fake_op, 'run_vios_command', fake_noop)
+        self.stubs.Set(fake_op, '_checksum_local_file', fake_noop)
+
+        self.mox.StubOutWithMock(common, 'ftp_put_command')
+        self.mox.StubOutWithMock(self.powervm_adapter,
+                                 'run_vios_command_as_root')
+        msg_args = {'ftp_cmd': 'PUT',
+                    'source_path': file_path,
+                    'dest_path': remote_path}
+        exp_exception = exception.PowerVMFTPTransferFailed(**msg_args)
+
+        common.ftp_put_command(self.connection, file_path,
+                               remote_path).AndRaise(exp_exception)
+
+        self.powervm_adapter.run_vios_command_as_root(exp_cmd).AndReturn([])
+
+        self.mox.ReplayAll()
+
+        self.assertRaises(exception.PowerVMFTPTransferFailed,
+                          self.powervm_adapter._copy_image_file,
+                          file_path, remote_path)
+
     def test_copy_image_file_wrong_checksum(self):
         file_path = os.tempnam('/tmp', 'image')
         remote_path = '/mnt/openstack/images'
