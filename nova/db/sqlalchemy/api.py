@@ -2629,16 +2629,25 @@ def quota_get(context, project_id, resource, user_id=None):
 def quota_get_all_by_project_and_user(context, project_id, user_id):
     nova.context.authorize_project_context(context, project_id)
 
-    rows = model_query(context, models.ProjectUserQuota.resource,
+    user_quotas = model_query(context, models.ProjectUserQuota.resource,
                        models.ProjectUserQuota.hard_limit,
                        base_model=models.ProjectUserQuota).\
                    filter_by(project_id=project_id).\
                    filter_by(user_id=user_id).\
                    all()
 
+    proj_quotas = model_query(context, models.Quota.resource,
+                       models.Quota.hard_limit,
+                       base_model=models.Quota).\
+                   filter_by(project_id=project_id).\
+                   all()
+
     result = {'project_id': project_id, 'user_id': user_id}
-    for row in rows:
-        result[row.resource] = row.hard_limit
+    # Use the project quota for default user quota.
+    for quota in proj_quotas:
+        result[quota.resource] = quota.hard_limit
+    for quota in user_quotas:
+        result[quota.resource] = quota.hard_limit
 
     return result
 
