@@ -6,7 +6,7 @@ nova-baremetal-manage
 Manage bare-metal DB in OpenStack Nova
 ------------------------------------------------------
 
-:Author: openstack@lists.launchpad.net
+:Author: openstack@lists.openstack.org
 :Date:   2012-10-17
 :Copyright: OpenStack Foundation
 :Version: 2013.1

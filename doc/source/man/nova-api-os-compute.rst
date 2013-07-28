@@ -6,7 +6,7 @@ nova-api-os-compute
 Server for the Nova OpenStack Compute APIs
 -------------------------------------------
 
-:Author: openstack@lists.launchpad.net
+:Author: openstack@lists.openstack.org
 :Date:   2012-09-27
 :Copyright: OpenStack Foundation
 :Version: 2012.1

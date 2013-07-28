@@ -6,7 +6,7 @@ nova-baremetal-deploy-helper
 Writes images to a bare-metal node and switch it to instance-mode
 ------------------------------------------------------------------
 
-:Author: openstack@lists.launchpad.net
+:Author: openstack@lists.openstack.org
 :Date:   2012-10-17
 :Copyright: OpenStack Foundation
 :Version: 2013.1

@@ -6,7 +6,7 @@ nova-network
 Nova Network Server
 ---------------------
 
-:Author: openstack@lists.launchpad.net
+:Author: openstack@lists.openstack.org
 :Date:   2012-09-27
 :Copyright: OpenStack Foundation
 :Version: 2012.1
