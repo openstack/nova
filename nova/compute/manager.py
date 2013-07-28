@@ -3908,7 +3908,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             old_enough = (not instance['deleted_at'] or
                           timeutils.is_older_than(instance['deleted_at'],
                                                   interval))
-            soft_deleted = instance['vm_state'] == vm_states.SOFT_DELETED
+            soft_deleted = (instance['vm_state'] == vm_states.SOFT_DELETED and
+                            instance['task_state'] == None)
 
             if soft_deleted and old_enough:
                 capi = self.conductor_api

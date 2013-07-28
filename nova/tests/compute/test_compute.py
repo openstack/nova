@@ -4304,6 +4304,45 @@ class ComputeTestCase(BaseTestCase):
         updated_ats = (updated_at_1, updated_at_2, updated_at_3)
         self.assertEqual(len(updated_ats), len(set(updated_ats)))
 
+    def test_reclaim_queued_deletes(self):
+        self.flags(reclaim_instance_interval=3600)
+        ctxt = context.get_admin_context()
+
+        # Active
+        self._create_fake_instance(params={'host': CONF.host})
+
+        # Deleted not old enough
+        self._create_fake_instance(params={'host': CONF.host,
+                                           'vm_state': vm_states.SOFT_DELETED,
+                                           'deleted_at': timeutils.utcnow()})
+
+        # Deleted old enough (only this one should be reclaimed)
+        deleted_at = (timeutils.utcnow() -
+                      datetime.timedelta(hours=1, minutes=5))
+        instance = self._create_fake_instance(
+                params={'host': CONF.host,
+                        'vm_state': vm_states.SOFT_DELETED,
+                        'deleted_at': deleted_at})
+
+        # Restoring
+        # NOTE(hanlind): This specifically tests for a race condition
+        # where restoring a previously soft deleted instance sets
+        # deleted_at back to None, causing reclaim to think it can be
+        # deleted, see LP #1186243.
+        self._create_fake_instance(
+                params={'host': CONF.host,
+                        'vm_state': vm_states.SOFT_DELETED,
+                        'task_state': task_states.RESTORING})
+
+        self.mox.StubOutWithMock(self.compute, '_delete_instance')
+        instance_ref = jsonutils.to_primitive(db.instance_get_by_uuid(
+                                          ctxt, instance['uuid']))
+        self.compute._delete_instance(ctxt, instance_ref, [])
+
+        self.mox.ReplayAll()
+
+        self.compute._reclaim_queued_deletes(ctxt)
+
 
 class ComputeAPITestCase(BaseTestCase):
 
