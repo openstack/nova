@@ -4324,6 +4324,8 @@ def cell_get_all(context):
 # User-provided metadata
 
 def _instance_metadata_get_multi(context, instance_uuids, session=None):
+    if not instance_uuids:
+        return []
     return model_query(context, models.InstanceMetadata,
                        session=session).\
                     filter(
@@ -4395,6 +4397,8 @@ def instance_metadata_update(context, instance_uuid, metadata, delete,
 
 
 def _instance_system_metadata_get_multi(context, instance_uuids, session=None):
+    if not instance_uuids:
+        return []
     return model_query(context, models.InstanceSystemMetadata,
                        session=session).\
                     filter(
@@ -5023,6 +5027,9 @@ def instance_fault_create(context, values):
 
 def instance_fault_get_by_instance_uuids(context, instance_uuids):
     """Get all instance faults for the provided instance_uuids."""
+    if not instance_uuids:
+        return {}
+
     rows = model_query(context, models.InstanceFault, read_deleted='no').\
                        filter(models.InstanceFault.instance_uuid.in_(
                            instance_uuids)).\

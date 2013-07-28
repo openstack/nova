@@ -1352,6 +1352,29 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         filtered_instances = db.instance_get_all_by_filters(self.ctxt, {})
         self._assertEqualListsOfInstances(instances, filtered_instances)
 
+    def test_instance_metadata_get_multi(self):
+        uuids = [self.create_instance_with_args()['uuid'] for i in range(3)]
+        meta = sqlalchemy_api._instance_metadata_get_multi(self.ctxt, uuids)
+        for row in meta:
+            self.assertTrue(row['instance_uuid'] in uuids)
+
+    def test_instance_metadata_get_multi_no_uuids(self):
+        self.mox.StubOutWithMock(query.Query, 'filter')
+        self.mox.ReplayAll()
+        sqlalchemy_api._instance_metadata_get_multi(self.ctxt, [])
+
+    def test_instance_system_system_metadata_get_multi(self):
+        uuids = [self.create_instance_with_args()['uuid'] for i in range(3)]
+        sys_meta = sqlalchemy_api._instance_system_metadata_get_multi(
+                self.ctxt, uuids)
+        for row in sys_meta:
+            self.assertTrue(row['instance_uuid'] in uuids)
+
+    def test_instance_system_metadata_get_multi_no_uuids(self):
+        self.mox.StubOutWithMock(query.Query, 'filter')
+        self.mox.ReplayAll()
+        sqlalchemy_api._instance_system_metadata_get_multi(self.ctxt, [])
+
     def test_instance_get_all_by_filters_regex(self):
         i1 = self.create_instance_with_args(display_name='test1')
         i2 = self.create_instance_with_args(display_name='teeeest2')
@@ -2270,6 +2293,12 @@ class InstanceFaultTestCase(test.TestCase, ModelsObjectComparatorMixin):
         faults = db.instance_fault_get_by_instance_uuids(self.ctxt, [uuid])
         expected = {uuid: []}
         self.assertEqual(expected, faults)
+
+    def test_instance_faults_get_by_instance_uuids_no_uuids(self):
+        self.mox.StubOutWithMock(query.Query, 'filter')
+        self.mox.ReplayAll()
+        faults = db.instance_fault_get_by_instance_uuids(self.ctxt, [])
+        self.assertEqual({}, faults)
 
 
 class InstanceTypeTestCase(BaseInstanceTypeTestCase):
