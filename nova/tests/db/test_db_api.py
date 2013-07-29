@@ -1535,7 +1535,7 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         # Ensure one rebooting instance with updated_at older than 10 seconds
         # is returned.
         instance = self.create_instance_with_args(task_state="rebooting",
-                updated_at=datetime.datetime(2000, 01, 01, 12, 00, 00))
+                updated_at=datetime.datetime(2000, 1, 1, 12, 0, 0))
         results = db.instance_get_all_hung_in_rebooting(self.ctxt, 10)
         self._assertEqualListsOfObjects([instance], results,
             ignored_keys=['task_state', 'info_cache', 'security_groups',
