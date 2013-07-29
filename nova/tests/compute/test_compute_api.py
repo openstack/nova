@@ -526,11 +526,11 @@ class _ComputeAPIUnitTestMixIn(object):
             {'progress': 0,
              'deleted_at': delete_time,
              'task_state': task_states.SOFT_DELETING,
-             }).AndRaise(Exception)
+             }).AndRaise(test.TestingException)
 
         self.mox.ReplayAll()
 
-        self.assertRaises(Exception,
+        self.assertRaises(test.TestingException,
                           self.compute_api.soft_delete, self.context, db_inst)
 
     def test_is_volume_backed_being_true_if_root_is_block_device(self):
