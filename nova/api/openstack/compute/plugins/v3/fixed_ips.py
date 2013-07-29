@@ -37,7 +37,8 @@ class FixedIPController(object):
 
         try:
             fixed_ip = db.fixed_ip_get_by_address_detailed(context, id)
-        except exception.FixedIpNotFoundForAddress as ex:
+        except (exception.FixedIpNotFoundForAddress,
+                exception.FixedIpInvalid) as ex:
             raise webob.exc.HTTPNotFound(explanation=ex.format_message())
 
         fixed_ip_info = {"fixed_ip": {}}
@@ -76,7 +77,8 @@ class FixedIPController(object):
             fixed_ip = db.fixed_ip_get_by_address(context, address)
             db.fixed_ip_update(context, fixed_ip['address'],
                                {'reserved': reserved})
-        except exception.FixedIpNotFoundForAddress:
+        except (exception.FixedIpNotFoundForAddress,
+                exception.FixedIpInvalid) as ex:
             msg = _("Fixed IP %s not found") % address
             raise webob.exc.HTTPNotFound(explanation=msg)
 
