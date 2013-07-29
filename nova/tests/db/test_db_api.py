@@ -4694,6 +4694,33 @@ class QuotaTestCase(test.TestCase, ModelsObjectComparatorMixin):
                                                         'resource1': 1,
                                                         'resource2': 2})
 
+    def test_quota_get_all_by_project_and_user(self):
+        for i in range(3):
+            for j in range(3):
+                db.quota_create(self.ctxt, 'proj%d' % i, 'resource%d' % j, j)
+        for i in range(3):
+            quotas_db = db.quota_get_all_by_project_and_user(self.ctxt,
+                                                             'proj%d' % i,
+                                                             'user%d' % i)
+            self.assertEqual(quotas_db, {'project_id': 'proj%d' % i,
+                                         'user_id': 'user%d' % i,
+                                                        'resource0': 0,
+                                                        'resource1': 1,
+                                                        'resource2': 2})
+        for i in range(3):
+            for j in range(3):
+                db.quota_create(self.ctxt, 'proj%d' % i, 'resource%d' % j,
+                                j - 1, user_id='user%d' % i)
+        for i in range(3):
+            quotas_db = db.quota_get_all_by_project_and_user(self.ctxt,
+                                                             'proj%d' % i,
+                                                             'user%d' % i)
+            self.assertEqual(quotas_db, {'project_id': 'proj%d' % i,
+                                         'user_id': 'user%d' % i,
+                                                        'resource0': -1,
+                                                        'resource1': 0,
+                                                        'resource2': 1})
+
     def test_quota_update(self):
         db.quota_create(self.ctxt, 'project1', 'resource1', 41)
         db.quota_update(self.ctxt, 'project1', 'resource1', 42)
@@ -4773,6 +4800,25 @@ class QuotaTestCase(test.TestCase, ModelsObjectComparatorMixin):
             self.assertRaises(exception.ReservationNotFound,
                             db.reservation_get, self.ctxt, r)
 
+    def test_quota_destroy_all_by_project_and_user(self):
+        reservations = _quota_reserve(self.ctxt, 'project1', 'user1')
+        db.quota_destroy_all_by_project_and_user(self.ctxt, 'project1',
+                                                 'user1')
+        self.assertEqual(db.quota_get_all_by_project_and_user(self.ctxt,
+                            'project1', 'user1'),
+                            {'project_id': 'project1',
+                             'user_id': 'user1',
+                             'resource0': 0,
+                             'resource1': 1,
+                             'resource2': 2})
+        self.assertEqual(db.quota_usage_get_all_by_project_and_user(
+                            self.ctxt, 'project1', 'user1'),
+                            {'project_id': 'project1',
+                             'user_id': 'user1'})
+        for r in reservations:
+            self.assertRaises(exception.ReservationNotFound,
+                            db.reservation_get, self.ctxt, r)
+
     def test_quota_usage_get_nonexistent(self):
         self.assertRaises(exception.QuotaUsageNotFound, db.quota_usage_get,
             self.ctxt, 'p1', 'nonexitent_resource')
@@ -4793,6 +4839,16 @@ class QuotaTestCase(test.TestCase, ModelsObjectComparatorMixin):
                     'resource2': {'in_use': 2, 'reserved': 2}}
         self.assertEqual(expected, db.quota_usage_get_all_by_project(
                          self.ctxt, 'p1'))
+
+    def test_quota_usage_get_all_by_project_and_user(self):
+        _quota_reserve(self.ctxt, 'p1', 'u1')
+        expected = {'project_id': 'p1',
+                    'user_id': 'u1',
+                    'resource0': {'in_use': 0, 'reserved': 0},
+                    'resource1': {'in_use': 1, 'reserved': 1},
+                    'resource2': {'in_use': 2, 'reserved': 2}}
+        self.assertEqual(expected, db.quota_usage_get_all_by_project_and_user(
+                         self.ctxt, 'p1', 'u1'))
 
     def test_quota_usage_update_nonexistent(self):
         self.assertRaises(exception.QuotaUsageNotFound, db.quota_usage_update,
