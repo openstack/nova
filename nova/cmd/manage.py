@@ -897,10 +897,13 @@ class DbCommands(object):
         db.archive_deleted_rows(admin_context, max_rows)
 
 
-class InstanceTypeCommands(object):
-    """Class for managing instance types / flavors."""
+class FlavorCommands(object):
+    """Class for managing flavors.
 
-    def _print_instance_types(self, name, val):
+    Note instance type is a deprecated synonym for flavor.
+    """
+
+    def _print_flavors(self, name, val):
         is_public = ('private', 'public')[val["is_public"] == 1]
         print ("%s: Memory: %sMB, VCPUS: %s, Root: %sGB, Ephemeral: %sGb, "
             "FlavorID: %s, Swap: %sMB, RXTX Factor: %s, %s, ExtraSpecs %s") % (
@@ -909,7 +912,7 @@ class InstanceTypeCommands(object):
             val["rxtx_factor"], is_public, val["extra_specs"])
 
     @args('--name', metavar='<name>',
-            help='Name of instance type/flavor')
+            help='Name of flavor')
     @args('--memory', metavar='<memory size>', help='Memory size')
     @args('--cpu', dest='vcpus', metavar='<num cores>', help='Number cpus')
     @args('--root_gb', metavar='<root_gb>', help='Root disk size')
@@ -923,21 +926,21 @@ class InstanceTypeCommands(object):
             help='Make flavor accessible to the public')
     def create(self, name, memory, vcpus, root_gb, ephemeral_gb=0,
                flavorid=None, swap=0, rxtx_factor=1.0, is_public=True):
-        """Creates instance types / flavors."""
+        """Creates flavors."""
         try:
             flavors.create(name, memory, vcpus, root_gb,
                            ephemeral_gb=ephemeral_gb, flavorid=flavorid,
                            swap=swap, rxtx_factor=rxtx_factor,
                            is_public=is_public)
         except exception.InvalidInput as e:
-            print _("Must supply valid parameters to create instance_type")
+            print _("Must supply valid parameters to create flavor")
             print e
             return(1)
         except exception.InstanceTypeExists:
-            print _("Instance Type exists.")
-            print _("Please ensure instance_type name and flavorid are "
+            print _("Flavor exists.")
+            print _("Please ensure flavor name and flavorid are "
                     "unique.")
-            print _("Currently defined instance_type names and flavorids:")
+            print _("Currently defined flavor names and flavorids:")
             print
             self.list()
             return(2)
@@ -947,13 +950,13 @@ class InstanceTypeCommands(object):
         else:
             print _("%s created") % name
 
-    @args('--name', metavar='<name>', help='Name of instance type/flavor')
+    @args('--name', metavar='<name>', help='Name of flavor')
     def delete(self, name):
-        """Marks instance types / flavors as deleted."""
+        """Marks flavors as deleted."""
         try:
             flavors.destroy(name)
         except exception.InstanceTypeNotFound:
-            print _("Valid instance type name is required")
+            print _("Valid flavor name is required")
             return(1)
         except db_exc.DBError as e:
             print _("DB Error: %s") % e
@@ -963,9 +966,9 @@ class InstanceTypeCommands(object):
         else:
             print _("%s deleted") % name
 
-    @args('--name', metavar='<name>', help='Name of instance type/flavor')
+    @args('--name', metavar='<name>', help='Name of flavor')
     def list(self, name=None):
-        """Lists all active or specific instance types / flavors."""
+        """Lists all active or specific flavors."""
         try:
             if name is None:
                 inst_types = flavors.get_all_flavors()
@@ -975,15 +978,15 @@ class InstanceTypeCommands(object):
             _db_error(e)
         if isinstance(inst_types.values()[0], dict):
             for k, v in inst_types.iteritems():
-                self._print_instance_types(k, v)
+                self._print_flavors(k, v)
         else:
-            self._print_instance_types(name, inst_types)
+            self._print_flavors(name, inst_types)
 
-    @args('--name', metavar='<name>', help='Name of instance type/flavor')
+    @args('--name', metavar='<name>', help='Name of flavor')
     @args('--key', metavar='<key>', help='The key of the key/value pair')
     @args('--value', metavar='<value>', help='The value of the key/value pair')
     def set_key(self, name, key, value=None):
-        """Add key/value pair to specified instance type's extra_specs."""
+        """Add key/value pair to specified flavor's extra_specs."""
         try:
             try:
                 inst_type = flavors.get_flavor_by_name(name)
@@ -1003,10 +1006,10 @@ class InstanceTypeCommands(object):
         except db_exc.DBError as e:
             _db_error(e)
 
-    @args('--name', metavar='<name>', help='Name of instance type/flavor')
+    @args('--name', metavar='<name>', help='Name of flavor')
     @args('--key', metavar='<key>', help='The key to be deleted')
     def unset_key(self, name, key):
-        """Delete the specified extra spec for instance type."""
+        """Delete the specified extra spec for flavor."""
         try:
             try:
                 inst_type = flavors.get_flavor_by_name(name)
@@ -1020,7 +1023,7 @@ class InstanceTypeCommands(object):
                         inst_type["flavorid"],
                         key)
 
-            print (_("Key %(key)s on instance type %(name)s unset") %
+            print (_("Key %(key)s on flavor %(name)s unset") %
                    {'key': key, 'name': name})
         except db_exc.DBError as e:
             _db_error(e)
@@ -1238,10 +1241,11 @@ CATEGORIES = {
     'cell': CellCommands,
     'db': DbCommands,
     'fixed': FixedIpCommands,
-    'flavor': InstanceTypeCommands,
+    'flavor': FlavorCommands,
     'floating': FloatingIpCommands,
     'host': HostCommands,
-    'instance_type': InstanceTypeCommands,
+    # Deprecated, remove in Icehouse
+    'instance_type': FlavorCommands,
     'logs': GetLogCommands,
     'network': NetworkCommands,
     'project': ProjectCommands,

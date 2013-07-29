@@ -281,9 +281,9 @@ class NetworkCommandsTestCase(test.TestCase):
                                dis_host=True)
 
 
-class InstanceTypeCommandsTestCase(test.TestCase):
+class FlavorCommandsTestCase(test.TestCase):
     def setUp(self):
-        super(InstanceTypeCommandsTestCase, self).setUp()
+        super(FlavorCommandsTestCase, self).setUp()
 
         values = dict(name="test.small",
                       memory_mb=220,
@@ -296,13 +296,13 @@ class InstanceTypeCommandsTestCase(test.TestCase):
         self.instance_type_name = ref["name"]
         self.instance_type_id = ref["id"]
         self.instance_type_flavorid = ref["flavorid"]
-        self.set_key = manage.InstanceTypeCommands().set_key
-        self.unset_key = manage.InstanceTypeCommands().unset_key
+        self.set_key = manage.FlavorCommands().set_key
+        self.unset_key = manage.FlavorCommands().unset_key
 
     def tearDown(self):
         db.flavor_destroy(context.get_admin_context(),
                                  "test.small")
-        super(InstanceTypeCommandsTestCase, self).tearDown()
+        super(FlavorCommandsTestCase, self).tearDown()
 
     def _test_extra_specs_empty(self):
         empty_specs = {}
