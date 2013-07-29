@@ -38,27 +38,23 @@ class InstanceUsageAuditLogController(object):
     def __init__(self):
         self.host_api = compute.HostAPI()
 
+    @extensions.expected_errors(400)
     def index(self, req):
         context = req.environ['nova.context']
         authorize(context)
-        task_log = self._get_audit_task_logs(context)
-        return {'instance_usage_audit_log': task_log}
-
-    def show(self, req, id):
-        context = req.environ['nova.context']
-        authorize(context)
-        try:
-            if '.' in id:
-                before_date = datetime.datetime.strptime(str(id),
-                                                "%Y-%m-%d %H:%M:%S.%f")
-            else:
-                before_date = datetime.datetime.strptime(str(id),
-                                                "%Y-%m-%d %H:%M:%S")
-        except ValueError:
-            msg = _("Invalid timestamp for date %s") % id
-            raise webob.exc.HTTPBadRequest(explanation=msg)
-        task_log = self._get_audit_task_logs(context,
-                                                     before=before_date)
+        before = req.GET.get('before', None)
+        if before:
+            try:
+                if '.' in before:
+                    before = datetime.datetime.strptime(str(before),
+                                                    "%Y-%m-%d %H:%M:%S.%f")
+                else:
+                    before = datetime.datetime.strptime(str(before),
+                                                    "%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                msg = _("Invalid timestamp for date %s") % id
+                raise webob.exc.HTTPBadRequest(explanation=msg)
+        task_log = self._get_audit_task_logs(context, before=before)
         return {'instance_usage_audit_log': task_log}
 
     def _get_audit_task_logs(self, context, begin=None, end=None,
