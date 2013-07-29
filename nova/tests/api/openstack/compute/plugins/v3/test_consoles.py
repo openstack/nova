@@ -146,6 +146,15 @@ class ConsolesControllerTest(test.TestCase):
         req = fakes.HTTPRequestV3.blank(self.url)
         self.controller.create(req, self.uuid)
 
+    def test_create_console_unknown_instance(self):
+        def fake_create_console(cons_self, context, instance_id):
+            raise exception.InstanceNotFound(instance_id=instance_id)
+        self.stubs.Set(console.api.API, 'create_console', fake_create_console)
+
+        req = fakes.HTTPRequestV3.blank(self.url)
+        self.assertRaises(webob.exc.HTTPNotFound, self.controller.create,
+                          req, self.uuid)
+
     def test_show_console(self):
         def fake_get_console(cons_self, context, instance_id, console_id):
             self.assertEqual(instance_id, self.uuid)
@@ -180,7 +189,8 @@ class ConsolesControllerTest(test.TestCase):
 
     def test_show_console_unknown_instance(self):
         def fake_get_console(cons_self, context, instance_id, console_id):
-            raise exception.InstanceNotFound(instance_id=instance_id)
+            raise exception.ConsoleNotFoundForInstance(
+                instance_uuid=instance_id)
 
         self.stubs.Set(console.api.API, 'get_console', fake_get_console)
 
@@ -211,6 +221,15 @@ class ConsolesControllerTest(test.TestCase):
         req = fakes.HTTPRequestV3.blank(self.url)
         res_dict = self.controller.index(req, self.uuid)
         self.assertThat(res_dict, matchers.DictMatches(expected))
+
+    def test_list_consoles_unknown_instance(self):
+        def fake_get_consoles(cons_self, context, instance_id):
+            raise exception.InstanceNotFound(instance_id=instance_id)
+        self.stubs.Set(console.api.API, 'get_consoles', fake_get_consoles)
+
+        req = fakes.HTTPRequestV3.blank(self.url)
+        self.assertRaises(webob.exc.HTTPNotFound, self.controller.index,
+                          req, self.uuid)
 
     def test_delete_console(self):
         def fake_get_console(cons_self, context, instance_id, console_id):
@@ -243,7 +262,8 @@ class ConsolesControllerTest(test.TestCase):
 
     def test_delete_console_unknown_instance(self):
         def fake_delete_console(cons_self, context, instance_id, console_id):
-            raise exception.InstanceNotFound(instance_id=instance_id)
+            raise exception.ConsoleNotFoundForInstance(
+                instance_uuid=instance_id)
 
         self.stubs.Set(console.api.API, 'delete_console', fake_delete_console)
 
