@@ -1595,8 +1595,20 @@ class ComputeManager(manager.SchedulerDependentManager):
                     LOG.info(_("disk not on shared storagerebuilding from:"
                                " '%s'") % str(image_ref))
 
-                instance = self._instance_update(
-                        context, instance['uuid'], host=self.host)
+                # NOTE(mriedem): On a recreate (evacuate), we need to update
+                # the instance's host and node properties to reflect it's
+                # destination node for the recreate.
+                node_name = None
+                try:
+                    compute_node = self._get_compute_info(context, self.host)
+                    node_name = compute_node['hypervisor_hostname']
+                except exception.NotFound:
+                    LOG.exception(_('Failed to get compute_info for %s') %
+                                  self.host)
+                finally:
+                    instance = self._instance_update(
+                            context, instance['uuid'], host=self.host,
+                            node=node_name)
 
             if image_ref:
                 image_meta = _get_image_meta(context, image_ref)
