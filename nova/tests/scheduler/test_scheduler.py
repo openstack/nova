@@ -808,9 +808,7 @@ class SchedulerTestCase(test.TestCase):
 
         request_spec = {'instance_properties': instance,
                         'instance_type': {},
-                        'instance_uuids': [instance['uuid']],
-                        'image': None
-                        }
+                        'instance_uuids': [instance['uuid']]}
         ignore_hosts = [instance['host']]
         filter_properties = {'ignore_hosts': ignore_hosts}
 
