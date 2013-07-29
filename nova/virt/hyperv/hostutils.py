@@ -67,6 +67,10 @@ class HostUtils(object):
                                               % drive)[0]
         return (long(logical_disk.Size), long(logical_disk.FreeSpace))
 
+    def check_min_windows_version(self, major, minor, build=0):
+        version_str = self.get_windows_version()
+        return map(int, version_str.split('.')) >= [major, minor, build]
+
     def get_windows_version(self):
         return self._conn_cimv2.Win32_OperatingSystem()[0].Version
 
