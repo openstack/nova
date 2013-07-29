@@ -38,21 +38,6 @@ def stub_out_db_instance_api(stubs):
         'm1.xlarge':
             dict(memory_mb=16384, vcpus=8, root_gb=160, flavorid=5)}
 
-    class FakeModel(object):
-        """Stubs out for model."""
-
-        def __init__(self, values):
-            self.values = values
-
-        def __getattr__(self, name):
-            return self.values[name]
-
-        def __getitem__(self, key):
-            if key in self.values:
-                return self.values[key]
-            else:
-                raise NotImplementedError()
-
     def fake_instance_create(context, values):
         """Stubs out the db.instance_create method."""
 
@@ -77,7 +62,8 @@ def stub_out_db_instance_api(stubs):
             'root_gb': type_data['root_gb'],
             'node': values['node'],
             }
-        return FakeModel(base_options)
+
+        return base_options
 
     def fake_flavor_get_all(context, inactive=0, filters=None):
         return INSTANCE_TYPES.values()

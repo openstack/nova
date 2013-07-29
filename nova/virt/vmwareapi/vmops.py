@@ -22,6 +22,7 @@ Class for VM tasks like spawn, snapshot, suspend, resume etc.
 """
 
 import base64
+import copy
 import os
 import time
 import urllib
@@ -799,8 +800,10 @@ class VMwareVMOps(object):
         vm_ref = vm_util.get_vm_ref(self._session, instance)
 
         self.power_off(instance)
-        instance['name'] = instance['name'] + self._rescue_suffix
-        self.spawn(context, instance, image_meta, network_info)
+        r_instance = copy.deepcopy(instance)
+        r_instance['name'] = r_instance['name'] + self._rescue_suffix
+        r_instance['uuid'] = r_instance['uuid'] + self._rescue_suffix
+        self.spawn(context, r_instance, image_meta, network_info)
 
         # Attach vmdk to the rescue VM
         hardware_devices = self._session._call_method(vim_util,
@@ -811,22 +814,22 @@ class VMwareVMOps(object):
         # Figure out the correct unit number
         unit_number = unit_number + 1
         rescue_vm_ref = vm_util.get_vm_ref_from_uuid(self._session,
-                                                     instance['uuid'])
+                                                     r_instance['uuid'])
         if rescue_vm_ref is None:
             rescue_vm_ref = vm_util.get_vm_ref_from_name(self._session,
-                                                     instance['name'])
+                                                     r_instance['name'])
         self._volumeops.attach_disk_to_vm(
-                                rescue_vm_ref, instance,
+                                rescue_vm_ref, r_instance,
                                 adapter_type, disk_type, vmdk_path,
                                 controller_key=controller_key,
                                 unit_number=unit_number)
 
     def unrescue(self, instance):
         """Unrescue the specified instance."""
-        instance_orig_name = instance['name']
-        instance['name'] = instance['name'] + self._rescue_suffix
-        self.destroy(instance, None)
-        instance['name'] = instance_orig_name
+        r_instance = copy.deepcopy(instance)
+        r_instance['name'] = r_instance['name'] + self._rescue_suffix
+        r_instance['uuid'] = r_instance['uuid'] + self._rescue_suffix
+        self.destroy(r_instance, None)
         self._power_on(instance)
 
     def power_off(self, instance):
