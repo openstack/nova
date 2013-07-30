@@ -25,9 +25,7 @@ from oslo.config import cfg
 from nova.compute import task_states
 from nova.image import glance
 from nova.openstack.common import log as logging
-from nova.virt.hyperv import pathutils
-from nova.virt.hyperv import vhdutils
-from nova.virt.hyperv import vmutils
+from nova.virt.hyperv import utilsfactory
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -35,9 +33,9 @@ LOG = logging.getLogger(__name__)
 
 class SnapshotOps(object):
     def __init__(self):
-        self._pathutils = pathutils.PathUtils()
-        self._vmutils = vmutils.VMUtils()
-        self._vhdutils = vhdutils.VHDUtils()
+        self._pathutils = utilsfactory.get_pathutils()
+        self._vmutils = utilsfactory.get_vmutils()
+        self._vhdutils = utilsfactory.get_vhdutils()
 
     def _save_glance_image(self, context, name, image_vhd_path):
         (glance_image_service,
