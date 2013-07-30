@@ -975,6 +975,7 @@ class Controller(wsgi.Controller):
                 exception.InstanceTypeNotFound,
                 exception.InvalidMetadata,
                 exception.InvalidRequest,
+                exception.PortNotFound,
                 exception.SecurityGroupNotFound) as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
         except exception.PortInUse as error:
