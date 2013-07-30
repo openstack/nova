@@ -58,16 +58,36 @@ class HyperVAuthorizationException(HyperVException):
 
 class VMUtils(object):
 
+    # These constants can be overridden by inherited classes
+    _PHYS_DISK_RES_SUB_TYPE = 'Microsoft Physical Disk Drive'
+    _DISK_RES_SUB_TYPE = 'Microsoft Synthetic Disk Drive'
+    _DVD_RES_SUB_TYPE = 'Microsoft Synthetic DVD Drive'
+    _IDE_DISK_RES_SUB_TYPE = 'Microsoft Virtual Hard Disk'
+    _IDE_DVD_RES_SUB_TYPE = 'Microsoft Virtual CD/DVD Disk'
+    _IDE_CTRL_RES_SUB_TYPE = 'Microsoft Emulated IDE Controller'
+    _SCSI_CTRL_RES_SUB_TYPE = 'Microsoft Synthetic SCSI Controller'
+
+    _vm_power_states_map = {constants.HYPERV_VM_STATE_ENABLED: 2,
+                            constants.HYPERV_VM_STATE_DISABLED: 3,
+                            constants.HYPERV_VM_STATE_REBOOT: 10,
+                            constants.HYPERV_VM_STATE_PAUSED: 32768,
+                            constants.HYPERV_VM_STATE_SUSPENDED: 32769}
+
     def __init__(self, host='.'):
+        self._enabled_states_map = dict((v, k) for k, v in
+                                        self._vm_power_states_map.iteritems())
         if sys.platform == 'win32':
-            self._conn = wmi.WMI(moniker='//%s/root/virtualization' % host)
+            self._init_hyperv_wmi_conn(host)
             self._conn_cimv2 = wmi.WMI(moniker='//%s/root/cimv2' % host)
+
+    def _init_hyperv_wmi_conn(self, host):
+        self._conn = wmi.WMI(moniker='//%s/root/virtualization' % host)
 
     def list_instances(self):
         """Return the names of all the instances known to Hyper-V."""
-        vm_names = [v.ElementName
-                    for v in self._conn.Msvm_ComputerSystem(['ElementName'],
-                    Caption="Virtual Machine")]
+        vm_names = [v.ElementName for v in
+                    self._conn.Msvm_ComputerSystem(['ElementName'],
+                                                   Caption="Virtual Machine")]
         return vm_names
 
     def get_vm_summary_info(self, vm_name):
@@ -97,8 +117,10 @@ class VMUtils(object):
         if si.UpTime is not None:
             up_time = long(si.UpTime)
 
+        enabled_state = self._enabled_states_map[si.EnabledState]
+
         summary_info_dict = {'NumberOfProcessors': si.NumberOfProcessors,
-                             'EnabledState': si.EnabledState,
+                             'EnabledState': enabled_state,
                              'MemoryUsage': memory_usage,
                              'UpTime': up_time}
         return summary_info_dict
@@ -167,16 +189,9 @@ class VMUtils(object):
         """Creates a VM."""
         vs_man_svc = self._conn.Msvm_VirtualSystemManagementService()[0]
 
-        vs_gs_data = self._conn.Msvm_VirtualSystemGlobalSettingData.new()
-        vs_gs_data.ElementName = vm_name
-
         LOG.debug(_('Creating VM %s'), vm_name)
-        (job_path,
-         ret_val) = vs_man_svc.DefineVirtualSystem([], None,
-                                                   vs_gs_data.GetText_(1))[1:]
-        self.check_ret_val(ret_val, job_path)
+        vm = self._create_vm_obj(vs_man_svc, vm_name)
 
-        vm = self._lookup_vm_check(vm_name)
         vmsetting = self._get_vm_setting_data(vm)
 
         LOG.debug(_('Setting memory for vm %s'), vm_name)
@@ -184,6 +199,17 @@ class VMUtils(object):
 
         LOG.debug(_('Set vCPUs for vm %s'), vm_name)
         self._set_vm_vcpus(vm, vmsetting, vcpus_num, limit_cpu_features)
+
+    def _create_vm_obj(self, vs_man_svc, vm_name):
+        vs_gs_data = self._conn.Msvm_VirtualSystemGlobalSettingData.new()
+        vs_gs_data.ElementName = vm_name
+
+        (job_path,
+         ret_val) = vs_man_svc.DefineVirtualSystem([], None,
+                                                   vs_gs_data.GetText_(1))[1:]
+        self.check_ret_val(ret_val, job_path)
+
+        return self._lookup_vm_check(vm_name)
 
     def get_vm_scsi_controller(self, vm_name):
         vm = self._lookup_vm_check(vm_name)
@@ -193,8 +219,7 @@ class VMUtils(object):
         rasds = vmsettings[0].associators(
             wmi_result_class='MSVM_ResourceAllocationSettingData')
         res = [r for r in rasds
-               if r.ResourceSubType ==
-               'Microsoft Synthetic SCSI Controller'][0]
+               if r.ResourceSubType == self._SCSI_CTRL_RES_SUB_TYPE][0]
         return res.path_()
 
     def _get_vm_ide_controller(self, vm, ctrller_addr):
@@ -203,7 +228,7 @@ class VMUtils(object):
         rasds = vmsettings[0].associators(
             wmi_result_class='MSVM_ResourceAllocationSettingData')
         return [r for r in rasds
-                if r.ResourceSubType == 'Microsoft Emulated IDE Controller'
+                if r.ResourceSubType == self._IDE_CTRL_RES_SUB_TYPE
                 and r.Address == str(ctrller_addr)][0].path_()
 
     def get_vm_ide_controller(self, vm_name, ctrller_addr):
@@ -213,11 +238,28 @@ class VMUtils(object):
     def get_attached_disks_count(self, scsi_controller_path):
         volumes = self._conn.query("SELECT * FROM "
                                    "Msvm_ResourceAllocationSettingData "
-                                   "WHERE ResourceSubType LIKE "
-                                   "'Microsoft Physical Disk Drive' "
-                                   "AND Parent = '%s'" %
-                                   scsi_controller_path.replace("'", "''"))
+                                   "WHERE ResourceSubType = "
+                                   "'%(res_sub_type)s' AND "
+                                   "Parent = '%(parent)s'" %
+                                   {'res_sub_type':
+                                    self._PHYS_DISK_RES_SUB_TYPE,
+                                    'parent':
+                                    scsi_controller_path.replace("'", "''")})
         return len(volumes)
+
+    def _get_new_setting_data(self, class_name):
+        return self._conn.query("SELECT * FROM %s WHERE InstanceID "
+                                "LIKE '%%\\Default'" % class_name)[0]
+
+    def _get_new_resource_setting_data(
+            self, resource_sub_type,
+            class_name='Msvm_ResourceAllocationSettingData'):
+        return self._conn.query("SELECT * FROM %(class_name)s "
+                                "WHERE ResourceSubType = "
+                                "'%(res_sub_type)s' AND "
+                                "InstanceID LIKE '%%\\Default'" %
+                                {"class_name": class_name,
+                                 "res_sub_type": resource_sub_type})[0]
 
     def attach_ide_drive(self, vm_name, path, ctrller_addr, drive_addr,
                          drive_type=constants.IDE_DISK):
@@ -228,18 +270,12 @@ class VMUtils(object):
         ctrller_path = self._get_vm_ide_controller(vm, ctrller_addr)
 
         if drive_type == constants.IDE_DISK:
-            res_sub_type = 'Microsoft Synthetic Disk Drive'
+            res_sub_type = self._DISK_RES_SUB_TYPE
         elif drive_type == constants.IDE_DVD:
-            res_sub_type = 'Microsoft Synthetic DVD Drive'
+            res_sub_type = self._DVD_RES_SUB_TYPE
 
-        #Find the default disk drive object for the vm and clone it.
-        drivedflt = self._conn.query("SELECT * FROM "
-                                     "Msvm_ResourceAllocationSettingData "
-                                     "WHERE ResourceSubType LIKE "
-                                     "'%s' AND InstanceID LIKE "
-                                     "'%%Default%%'" % res_sub_type)[0]
-        drive = self._clone_wmi_obj('Msvm_ResourceAllocationSettingData',
-                                    drivedflt)
+        drive = self._get_new_resource_setting_data(res_sub_type)
+
         #Set the IDE ctrller as parent.
         drive.Parent = ctrller_path
         drive.Address = drive_addr
@@ -248,21 +284,11 @@ class VMUtils(object):
         drive_path = new_resources[0]
 
         if drive_type == constants.IDE_DISK:
-            res_sub_type = 'Microsoft Virtual Hard Disk'
+            res_sub_type = self._IDE_DISK_RES_SUB_TYPE
         elif drive_type == constants.IDE_DVD:
-            res_sub_type = 'Microsoft Virtual CD/DVD Disk'
+            res_sub_type = self._IDE_DVD_RES_SUB_TYPE
 
-        #Find the default VHD disk object.
-        drivedefault = self._conn.query("SELECT * FROM "
-                                        "Msvm_ResourceAllocationSettingData "
-                                        "WHERE ResourceSubType LIKE "
-                                        "'%s' AND "
-                                        "InstanceID LIKE '%%Default%%'"
-                                        % res_sub_type)[0]
-
-        #Clone the default and point it to the image file.
-        res = self._clone_wmi_obj('Msvm_ResourceAllocationSettingData',
-                                  drivedefault)
+        res = self._get_new_resource_setting_data(res_sub_type)
         #Set the new drive as the parent.
         res.Parent = drive_path
         res.Connection = [path]
@@ -274,15 +300,9 @@ class VMUtils(object):
         """Create an iscsi controller ready to mount volumes."""
 
         vm = self._lookup_vm_check(vm_name)
-        scsicontrldflt = self._conn.query("SELECT * FROM "
-                                          "Msvm_ResourceAllocationSettingData "
-                                          "WHERE ResourceSubType = 'Microsoft "
-                                          "Synthetic SCSI Controller' AND "
-                                          "InstanceID LIKE '%Default%'")[0]
-        if scsicontrldflt is None:
-            raise HyperVException(_('Controller not found'))
-        scsicontrl = self._clone_wmi_obj('Msvm_ResourceAllocationSettingData',
-                                         scsicontrldflt)
+        scsicontrl = self._get_new_resource_setting_data(
+            self._SCSI_CTRL_RES_SUB_TYPE)
+
         scsicontrl.VirtualSystemIdentifiers = ['{' + str(uuid.uuid4()) + '}']
         self._add_virt_resource(scsicontrl, vm.path_())
 
@@ -292,21 +312,17 @@ class VMUtils(object):
 
         vm = self._lookup_vm_check(vm_name)
 
-        diskdflt = self._conn.query("SELECT * FROM "
-                                    "Msvm_ResourceAllocationSettingData "
-                                    "WHERE ResourceSubType LIKE "
-                                    "'Microsoft Physical Disk Drive' "
-                                    "AND InstanceID LIKE '%Default%'")[0]
-        diskdrive = self._clone_wmi_obj('Msvm_ResourceAllocationSettingData',
-                                        diskdflt)
+        diskdrive = self._get_new_resource_setting_data(
+            self._PHYS_DISK_RES_SUB_TYPE)
+
         diskdrive.Address = address
         diskdrive.Parent = controller_path
         diskdrive.HostResource = [mounted_disk_path]
         self._add_virt_resource(diskdrive, vm.path_())
 
-    def set_nic_connection(self, vm_name, nic_name, vswitch_port):
+    def set_nic_connection(self, vm_name, nic_name, vswitch_conn_data):
         nic_data = self._get_nic_data_by_name(nic_name)
-        nic_data.Connection = [vswitch_port]
+        nic_data.Connection = [vswitch_conn_data]
 
         vm = self._lookup_vm_check(vm_name)
         self._modify_virt_resource(nic_data, vm.path_())
@@ -318,11 +334,8 @@ class VMUtils(object):
     def create_nic(self, vm_name, nic_name, mac_address):
         """Create a (synthetic) nic and attach it to the vm."""
         #Create a new nic
-        syntheticnics_data = self._conn.Msvm_SyntheticEthernetPortSettingData()
-        default_nic_data = [n for n in syntheticnics_data
-                            if n.InstanceID.rfind('Default') > 0]
-        new_nic_data = self._clone_wmi_obj(
-            'Msvm_SyntheticEthernetPortSettingData', default_nic_data[0])
+        new_nic_data = self._get_new_setting_data(
+            'Msvm_SyntheticEthernetPortSettingData')
 
         #Configure the nic
         new_nic_data.ElementName = nic_name
@@ -338,7 +351,8 @@ class VMUtils(object):
     def set_vm_state(self, vm_name, req_state):
         """Set the desired state of the VM."""
         vm = self._lookup_vm_check(vm_name)
-        (job_path, ret_val) = vm.RequestStateChange(req_state)
+        (job_path,
+         ret_val) = vm.RequestStateChange(self._vm_power_states_map[req_state])
         #Invalid state for current operation (32775) typically means that
         #the VM is already in the state requested
         self.check_ret_val(ret_val, job_path, [0, 32775])
@@ -349,17 +363,16 @@ class VMUtils(object):
     def get_vm_storage_paths(self, vm_name):
         vm = self._lookup_vm_check(vm_name)
 
-        self._conn.Msvm_VirtualSystemManagementService()
         vmsettings = vm.associators(
             wmi_result_class='Msvm_VirtualSystemSettingData')
         rasds = vmsettings[0].associators(
-            wmi_result_class='MSVM_ResourceAllocationSettingData')
+            wmi_result_class='Msvm_ResourceAllocationSettingData')
         disk_resources = [r for r in rasds
                           if r.ResourceSubType ==
-                          'Microsoft Virtual Hard Disk']
+                          self._IDE_DISK_RES_SUB_TYPE]
         volume_resources = [r for r in rasds
                             if r.ResourceSubType ==
-                            'Microsoft Physical Disk Drive']
+                            self._PHYS_DISK_RES_SUB_TYPE]
 
         volume_drives = []
         for volume_resource in volume_resources:
@@ -382,20 +395,18 @@ class VMUtils(object):
 
     def check_ret_val(self, ret_val, job_path, success_values=[0]):
         if ret_val == constants.WMI_JOB_STATUS_STARTED:
-            self._wait_for_job(job_path)
+            return self._wait_for_job(job_path)
         elif ret_val not in success_values:
             raise HyperVException(_('Operation failed with return value: %s')
                                   % ret_val)
 
     def _wait_for_job(self, job_path):
         """Poll WMI job state and wait for completion."""
-
-        job_wmi_path = job_path.replace('\\', '/')
-        job = wmi.WMI(moniker=job_wmi_path)
+        job = self._get_wmi_obj(job_path)
 
         while job.JobState == constants.WMI_JOB_STATE_RUNNING:
             time.sleep(0.1)
-            job = wmi.WMI(moniker=job_wmi_path)
+            job = self._get_wmi_obj(job_path)
         if job.JobState != constants.WMI_JOB_STATE_COMPLETED:
             job_state = job.JobState
             if job.path().Class == "Msvm_ConcreteJob":
@@ -427,6 +438,10 @@ class VMUtils(object):
         elap = job.ElapsedTime
         LOG.debug(_("WMI job succeeded: %(desc)s, Elapsed=%(elap)s"),
                   {'desc': desc, 'elap': elap})
+        return job
+
+    def _get_wmi_obj(self, path):
+        return wmi.WMI(moniker=path.replace('\\', '/'))
 
     def _clone_wmi_obj(self, wmi_class, wmi_obj):
         """Clone a WMI object."""
@@ -494,16 +509,15 @@ class VMUtils(object):
 
     def detach_vm_disk(self, vm_name, disk_path):
         vm = self._lookup_vm_check(vm_name)
-        physical_disk = self._get_mounted_disk_resource_from_path(
-            disk_path)
+        physical_disk = self._get_mounted_disk_resource_from_path(disk_path)
         if physical_disk:
             self._remove_virt_resource(physical_disk, vm.path_())
 
     def _get_mounted_disk_resource_from_path(self, disk_path):
         physical_disks = self._conn.query("SELECT * FROM "
                                           "Msvm_ResourceAllocationSettingData"
-                                          " WHERE ResourceSubType = "
-                                          "'Microsoft Physical Disk Drive'")
+                                          " WHERE ResourceSubType = '%s'" %
+                                          self._PHYS_DISK_RES_SUB_TYPE)
         for physical_disk in physical_disks:
             if physical_disk.HostResource:
                 if physical_disk.HostResource[0].lower() == disk_path.lower():
@@ -519,9 +533,10 @@ class VMUtils(object):
     def get_controller_volume_paths(self, controller_path):
         disks = self._conn.query("SELECT * FROM "
                                  "Msvm_ResourceAllocationSettingData "
-                                 "WHERE ResourceSubType="
-                                 "'Microsoft Physical Disk Drive' AND "
-                                 "Parent='%s'" % controller_path)
+                                 "WHERE ResourceSubType = %(res_sub_type)s "
+                                 "AND Parent='%(parent)s'" %
+                                 {"res_sub_type": self._PHYS_DISK_RES_SUB_TYPE,
+                                  "parent": controller_path})
         disk_data = {}
         for disk in disks:
             if disk.HostResource:

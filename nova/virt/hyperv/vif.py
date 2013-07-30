@@ -72,9 +72,13 @@ class HyperVNovaNetworkVIFDriver(HyperVBaseVIFDriver):
 
         vm_name = instance['name']
         LOG.debug(_('Creating vswitch port for instance: %s') % vm_name)
-        vswitch_port = self._netutils.create_vswitch_port(vswitch_path,
-                                                          vm_name)
-        self._vmutils.set_nic_connection(vm_name, vif['id'], vswitch_port)
+        if self._netutils.vswitch_port_needed():
+            vswitch_data = self._netutils.create_vswitch_port(vswitch_path,
+                                                              vm_name)
+        else:
+            vswitch_data = vswitch_path
+
+        self._vmutils.set_nic_connection(vm_name, vif['id'], vswitch_data)
 
     def unplug(self, instance, vif):
         #TODO(alepilotti) Not implemented

@@ -186,6 +186,8 @@ class HyperVAPITestCase(test.TestCase):
                                   'get_external_vswitch')
         self._mox.StubOutWithMock(networkutils.NetworkUtils,
                                   'create_vswitch_port')
+        self._mox.StubOutWithMock(networkutils.NetworkUtils,
+                                  'vswitch_port_needed')
 
         self._mox.StubOutWithMock(livemigrationutils.LiveMigrationUtils,
                                   'live_migrate_vm')
@@ -422,7 +424,7 @@ class HyperVAPITestCase(test.TestCase):
         self._test_spawn_instance(expected_ide_disks=expected_ide_disks,
                                   expected_ide_dvds=expected_ide_dvds)
 
-    def test_spawn_nova_net_vif(self):
+    def _test_spawn_nova_net_vif(self, with_port):
         self.flags(network_api_class='nova.network.api.API')
         # Reinstantiate driver, as the VIF plugin is loaded during __init__
         self._conn = driver_hyperv.HyperVDriver(None)
@@ -435,14 +437,27 @@ class HyperVAPITestCase(test.TestCase):
                 CONF.hyperv.vswitch_name)
             m.AndReturn(fake_vswitch_path)
 
-            m = networkutils.NetworkUtils.create_vswitch_port(
-                fake_vswitch_path, mox.IsA(str))
-            m.AndReturn(fake_vswitch_port)
+            m = networkutils.NetworkUtils.vswitch_port_needed()
+            m.AndReturn(with_port)
+
+            if with_port:
+                m = networkutils.NetworkUtils.create_vswitch_port(
+                    fake_vswitch_path, mox.IsA(str))
+                m.AndReturn(fake_vswitch_port)
+                vswitch_conn_data = fake_vswitch_port
+            else:
+                vswitch_conn_data = fake_vswitch_path
 
             vmutils.VMUtils.set_nic_connection(mox.IsA(str), mox.IsA(str),
-                                               fake_vswitch_port)
+                                               vswitch_conn_data)
 
         self._test_spawn_instance(setup_vif_mocks_func=setup_vif_mocks)
+
+    def test_spawn_nova_net_vif_with_port(self):
+        self._test_spawn_nova_net_vif(True)
+
+    def test_spawn_nova_net_vif_without_port(self):
+        self._test_spawn_nova_net_vif(False)
 
     def test_spawn_nova_net_vif_no_vswitch_exception(self):
         self.flags(network_api_class='nova.network.api.API')
