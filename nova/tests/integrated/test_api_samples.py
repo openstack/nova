@@ -2096,12 +2096,17 @@ class SimpleTenantUsageSampleJsonTest(ServersSampleBase):
     def setUp(self):
         """setUp method for simple tenant usage."""
         super(SimpleTenantUsageSampleJsonTest, self).setUp()
+
+        started = timeutils.utcnow()
+        now = started + datetime.timedelta(hours=1)
+
+        timeutils.set_time_override(started)
         self._post_server()
-        timeutils.set_time_override(timeutils.utcnow() +
-                                    datetime.timedelta(hours=1))
+        timeutils.set_time_override(now)
+
         self.query = {
-            'start': str(timeutils.utcnow() - datetime.timedelta(hours=1)),
-            'end': str(timeutils.utcnow())
+            'start': str(started),
+            'end': str(now)
         }
 
     def tearDown(self):
