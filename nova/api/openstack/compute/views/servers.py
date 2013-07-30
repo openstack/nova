@@ -222,8 +222,43 @@ class ViewBuilder(common.ViewBuilder):
 
 
 class ViewBuilderV3(ViewBuilder):
+    """Model a server V3 API response as a python dictionary."""
 
     def __init__(self):
         """Initialize view builder."""
         super(ViewBuilderV3, self).__init__()
         self._address_builder = views_addresses.ViewBuilderV3()
+
+    def show(self, request, instance):
+        """Detailed view of a single instance."""
+        ip_v4 = instance.get('access_ip_v4')
+        ip_v6 = instance.get('access_ip_v6')
+        server = {
+            "server": {
+                "id": instance["uuid"],
+                "name": instance["display_name"],
+                "status": self._get_vm_state(instance),
+                "tenant_id": instance.get("project_id") or "",
+                "user_id": instance.get("user_id") or "",
+                "metadata": self._get_metadata(instance),
+                "host_id": self._get_host_id(instance) or "",
+                "image": self._get_image(request, instance),
+                "flavor": self._get_flavor(request, instance),
+                "created": timeutils.isotime(instance["created_at"]),
+                "updated": timeutils.isotime(instance["updated_at"]),
+                "addresses": self._get_addresses(request, instance),
+                "access_ip_v4": str(ip_v4) if ip_v4 is not None else '',
+                "access_ip_v6": str(ip_v6) if ip_v6 is not None else '',
+                "links": self._get_links(request,
+                                         instance["uuid"],
+                                         self._collection_name),
+            },
+        }
+        _inst_fault = self._get_fault(request, instance)
+        if server["server"]["status"] in self._fault_statuses and _inst_fault:
+            server['server']['fault'] = _inst_fault
+
+        if server["server"]["status"] in self._progress_statuses:
+            server["server"]["progress"] = instance.get("progress", 0)
+
+        return server
