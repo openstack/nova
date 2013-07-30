@@ -183,8 +183,9 @@ class SchedulerManager(manager.Manager):
                 }
                 return self.driver.schedule_prep_resize(**kwargs)
             except exception.NoValidHost as ex:
+                vm_state = instance.get('vm_state', vm_states.ACTIVE)
                 self._set_vm_state_and_notify('prep_resize',
-                                             {'vm_state': vm_states.ACTIVE,
+                                             {'vm_state': vm_state,
                                               'task_state': None},
                                              context, ex, request_spec)
                 if reservations:

@@ -348,6 +348,41 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
         self.mox.ReplayAll()
         self.manager.prep_resize(**kwargs)
 
+    def test_prep_resize_no_valid_host_back_in_shutoff_state(self):
+        fake_instance_uuid = 'fake-instance-id'
+        fake_instance = {'uuid': fake_instance_uuid, "vm_state": "stopped"}
+        inst = {"vm_state": "stopped", "task_state": ""}
+
+        self._mox_schedule_method_helper('schedule_prep_resize')
+
+        self.mox.StubOutWithMock(compute_utils, 'add_instance_fault_from_exc')
+        self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
+
+        request_spec = {'instance_type': 'fake_type',
+                        'instance_uuids': [fake_instance_uuid],
+                        'instance_properties': {'uuid': fake_instance_uuid}}
+        kwargs = {
+                'context': self.context,
+                'image': 'fake_image',
+                'request_spec': request_spec,
+                'filter_properties': 'fake_props',
+                'instance': fake_instance,
+                'instance_type': 'fake_type',
+                'reservations': list('fake_res'),
+        }
+        self.manager.driver.schedule_prep_resize(**kwargs).AndRaise(
+                exception.NoValidHost(reason=""))
+        old_ref, new_ref = db.instance_update_and_get_original(self.context,
+                fake_instance_uuid,
+                {"vm_state": vm_states.STOPPED, "task_state": None}).AndReturn(
+                        (inst, inst))
+        compute_utils.add_instance_fault_from_exc(self.context,
+                mox.IsA(conductor_api.LocalAPI), new_ref,
+                mox.IsA(exception.NoValidHost), mox.IgnoreArg())
+
+        self.mox.ReplayAll()
+        self.manager.prep_resize(**kwargs)
+
     def test_prep_resize_exception_host_in_error_state_and_raise(self):
         fake_instance_uuid = 'fake-instance-id'
         fake_instance = {'uuid': fake_instance_uuid}
