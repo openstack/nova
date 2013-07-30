@@ -34,33 +34,25 @@ def upgrade(migrate_engine):
     # Add 'user_id' column to quota_usages table and its shadow table.
     quota_usages = utils.get_table(migrate_engine, 'quota_usages')
     user_id = Column('user_id',
-                     String(length=255, convert_unicode=False,
-                            assert_unicode=None, unicode_error=None,
-                            _warn_on_bytestring=False))
+                     String(length=255))
     quota_usages.create_column(user_id)
 
     shadow_quota_usages = utils.get_table(migrate_engine,
                                 db._SHADOW_TABLE_PREFIX + 'quota_usages')
     user_id = Column('user_id',
-                     String(length=255, convert_unicode=False,
-                            assert_unicode=None, unicode_error=None,
-                            _warn_on_bytestring=False))
+                     String(length=255))
     shadow_quota_usages.create_column(user_id)
 
     # Add 'user_id' column to reservations table and its shadow table.
     reservations = utils.get_table(migrate_engine, 'reservations')
     user_id = Column('user_id',
-                     String(length=255, convert_unicode=False,
-                            assert_unicode=None, unicode_error=None,
-                            _warn_on_bytestring=False))
+                     String(length=255))
     reservations.create_column(user_id)
 
     shadow_reservations = utils.get_table(migrate_engine,
                                 db._SHADOW_TABLE_PREFIX + 'reservations')
     user_id = Column('user_id',
-                     String(length=255, convert_unicode=False,
-                            assert_unicode=None, unicode_error=None,
-                            _warn_on_bytestring=False))
+                     String(length=255))
     shadow_reservations.create_column(user_id)
 
     indexes = [
@@ -82,19 +74,13 @@ def upgrade(migrate_engine):
                         Column('deleted_at', DateTime),
                         Column('deleted', Integer),
                         Column('user_id',
-                               String(length=255, convert_unicode=False,
-                                      assert_unicode=None, unicode_error=None,
-                                      _warn_on_bytestring=False),
+                               String(length=255),
                                nullable=False),
                         Column('project_id',
-                               String(length=255, convert_unicode=False,
-                                      assert_unicode=None, unicode_error=None,
-                                      _warn_on_bytestring=False),
+                               String(length=255),
                                nullable=False),
                         Column('resource',
-                               String(length=255, convert_unicode=False,
-                                      assert_unicode=None, unicode_error=None,
-                                      _warn_on_bytestring=False),
+                               String(length=25),
                                nullable=False),
                         Column('hard_limit', Integer, nullable=True),
                         UniqueConstraint('user_id', 'project_id', 'resource',
