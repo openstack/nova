@@ -44,14 +44,15 @@ class RescueController(wsgi.Controller):
             msg = _("Server not found")
             raise exc.HTTPNotFound(msg)
 
+    @extensions.expected_errors((400, 404, 409))
     @wsgi.action('rescue')
     def _rescue(self, req, id, body):
         """Rescue an instance."""
         context = req.environ["nova.context"]
         authorize(context)
 
-        if body['rescue'] and 'adminPass' in body['rescue']:
-            password = body['rescue']['adminPass']
+        if body['rescue'] and 'admin_pass' in body['rescue']:
+            password = body['rescue']['admin_pass']
         else:
             password = utils.generate_password()
 
@@ -68,8 +69,9 @@ class RescueController(wsgi.Controller):
             raise exc.HTTPBadRequest(
                 explanation=non_rescuable.format_message())
 
-        return {'adminPass': password}
+        return {'admin_pass': password}
 
+    @extensions.expected_errors((404, 409))
     @wsgi.action('unrescue')
     def _unrescue(self, req, id, body):
         """Unrescue an instance."""
