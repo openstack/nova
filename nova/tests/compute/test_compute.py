@@ -8214,6 +8214,50 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                           self.api.remove_host_from_aggregate,
                           self.context, aggr['id'], 'invalid_host')
 
+    def test_aggregate_list(self):
+        aggregate = self.api.create_aggregate(self.context,
+                                              'fake_aggregate',
+                                              'fake_zone')
+        metadata = {'foo_key1': 'foo_value1',
+                    'foo_key2': 'foo_value2'}
+        meta_aggregate = self.api.create_aggregate(self.context,
+                                                   'fake_aggregate2',
+                                                   'fake_zone2')
+        self.api.update_aggregate_metadata(self.context, meta_aggregate['id'],
+                                           metadata)
+        aggregate_list = self.api.get_aggregate_list(self.context)
+        self.assertIn(aggregate['id'],
+                      map(lambda x: x['id'], aggregate_list))
+        self.assertIn(meta_aggregate['id'],
+                      map(lambda x: x['id'], aggregate_list))
+        self.assertIn('fake_aggregate',
+                      map(lambda x: x['name'], aggregate_list))
+        self.assertIn('fake_aggregate2',
+                      map(lambda x: x['name'], aggregate_list))
+        self.assertIn('fake_zone',
+                      map(lambda x: x['availability_zone'], aggregate_list))
+        self.assertIn('fake_zone2',
+                      map(lambda x: x['availability_zone'], aggregate_list))
+        test_meta_aggregate = aggregate_list[1]
+        self.assertIn('foo_key1', test_meta_aggregate.get('metadata'))
+        self.assertIn('foo_key2', test_meta_aggregate.get('metadata'))
+        self.assertEquals('foo_value1',
+                          test_meta_aggregate.get('metadata')['foo_key1'])
+        self.assertEquals('foo_value2',
+                          test_meta_aggregate.get('metadata')['foo_key2'])
+
+    def test_aggregate_list_with_hosts(self):
+        values = _create_service_entries(self.context)
+        fake_zone = values.keys()[0]
+        host_aggregate = self.api.create_aggregate(self.context,
+                                                   'fake_aggregate',
+                                                   fake_zone)
+        self.api.add_host_to_aggregate(self.context, host_aggregate['id'],
+                                       values[fake_zone][0])
+        aggregate_list = self.api.get_aggregate_list(self.context)
+        aggregate = aggregate_list[0]
+        self.assertIn(values[fake_zone][0], aggregate.get('hosts'))
+
 
 class ComputeAggrTestCase(BaseTestCase):
     """This is for unit coverage of aggregate-related methods
