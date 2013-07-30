@@ -6532,7 +6532,8 @@ class LibvirtDriverTestCase(test.TestCase):
     def test_finish_revert_migration_power_off(self):
         self._test_finish_revert_migration(False)
 
-    def _test_finish_revert_migration_after_crash(self, backup_made, new_made):
+    def _test_finish_revert_migration_after_crash(self, backup_made=True,
+                                                  del_inst_failed=False):
         class FakeLoopingCall:
             def start(self, *a, **k):
                 return self
@@ -6555,8 +6556,10 @@ class LibvirtDriverTestCase(test.TestCase):
         libvirt_utils.get_instance_path({}).AndReturn('/fake/foo')
         os.path.exists('/fake/foo_resize').AndReturn(backup_made)
         if backup_made:
-            os.path.exists('/fake/foo').AndReturn(new_made)
-            if new_made:
+            if del_inst_failed:
+                os_error = OSError(errno.ENOENT, 'No such file or directory')
+                shutil.rmtree('/fake/foo').AndRaise(os_error)
+            else:
                 shutil.rmtree('/fake/foo')
             utils.execute('mv', '/fake/foo_resize', '/fake/foo')
 
@@ -6565,13 +6568,17 @@ class LibvirtDriverTestCase(test.TestCase):
         self.libvirtconnection.finish_revert_migration({}, [])
 
     def test_finish_revert_migration_after_crash(self):
-        self._test_finish_revert_migration_after_crash(True, True)
+        self._test_finish_revert_migration_after_crash(backup_made=True)
 
     def test_finish_revert_migration_after_crash_before_new(self):
-        self._test_finish_revert_migration_after_crash(True, False)
+        self._test_finish_revert_migration_after_crash(backup_made=True)
 
     def test_finish_revert_migration_after_crash_before_backup(self):
-        self._test_finish_revert_migration_after_crash(False, False)
+        self._test_finish_revert_migration_after_crash(backup_made=False)
+
+    def test_finish_revert_migration_after_crash_delete_failed(self):
+        self._test_finish_revert_migration_after_crash(backup_made=True,
+                                                       del_inst_failed=True)
 
     def test_cleanup_failed_migration(self):
         self.mox.StubOutWithMock(shutil, 'rmtree')
