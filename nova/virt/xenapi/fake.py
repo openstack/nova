@@ -98,16 +98,25 @@ def reset_table(table):
     _db_content[table] = {}
 
 
-def create_pool(name_label):
+def _create_pool(name_label):
     return _create_object('pool',
                           {'name_label': name_label})
 
 
 def create_host(name_label, hostname='fake_name', address='fake_addr'):
-    return _create_object('host',
-                          {'name_label': name_label,
-                           'hostname': hostname,
-                           'address': address})
+    host_ref = _create_object('host',
+                               {'name_label': name_label,
+                                'hostname': hostname,
+                                'address': address})
+    host_default_sr_ref = _create_local_srs(host_ref)
+    _create_local_pif(host_ref)
+
+    # Create a pool if we don't have one already
+    if len(_db_content['pool']) == 0:
+        pool_ref = _create_pool('')
+        _db_content['pool'][pool_ref]['master'] = host_ref
+        _db_content['pool'][pool_ref]['default-SR'] = host_default_sr_ref
+        _db_content['pool'][pool_ref]['suspend-image-SR'] = host_default_sr_ref
 
 
 def create_network(name_label, bridge):
@@ -244,38 +253,29 @@ def create_task(name_label):
                            'status': 'pending'})
 
 
-def create_local_pifs():
-    """Adds a PIF for each to the local database with VLAN=-1.
-       Do this one per host.
-    """
-    for host_ref in _db_content['host'].keys():
-        _create_local_pif(host_ref)
-
-
-def create_local_srs():
+def _create_local_srs(host_ref):
     """Create an SR that looks like the one created on the local disk by
-    default by the XenServer installer.  Do this one per host. Also, fake
-    the installation of an ISO SR.
+    default by the XenServer installer.  Also, fake the installation of
+    an ISO SR.
     """
-    for host_ref in _db_content['host'].keys():
-        create_sr(name_label='Local storage',
-                  type='lvm',
-                  other_config={'i18n-original-value-name_label':
-                                'Local storage',
-                                'i18n-key': 'local-storage'},
-                  physical_size=40000,
-                  physical_utilisation=20000,
-                  virtual_allocation=10000,
-                  host_ref=host_ref)
-        create_sr(name_label='Local storage ISO',
-                  type='iso',
-                  other_config={'i18n-original-value-name_label':
-                                'Local storage ISO',
-                                'i18n-key': 'local-storage-iso'},
-                  physical_size=80000,
-                  physical_utilisation=40000,
-                  virtual_allocation=80000,
-                  host_ref=host_ref)
+    create_sr(name_label='Local storage ISO',
+              type='iso',
+              other_config={'i18n-original-value-name_label':
+                            'Local storage ISO',
+                            'i18n-key': 'local-storage-iso'},
+              physical_size=80000,
+              physical_utilisation=40000,
+              virtual_allocation=80000,
+              host_ref=host_ref)
+    return create_sr(name_label='Local storage',
+                     type='ext',
+                     other_config={'i18n-original-value-name_label':
+                                   'Local storage',
+                                   'i18n-key': 'local-storage'},
+                     physical_size=40000,
+                     physical_utilisation=20000,
+                     virtual_allocation=10000,
+                     host_ref=host_ref)
 
 
 def create_sr(**kwargs):
@@ -409,7 +409,7 @@ class SessionBase(object):
         self._session = None
 
     def pool_get_default_SR(self, _1, pool_ref):
-        return 'FAKE DEFAULT SR'
+        return _db_content['pool'].values()[0]['default-SR']
 
     def VBD_insert(self, _1, vbd_ref, vdi_ref):
         vbd_rec = get_record('VBD', vbd_ref)
@@ -464,7 +464,7 @@ class SessionBase(object):
         if not rec['currently_attached']:
             raise Failure(['DEVICE_ALREADY_DETACHED', rec])
         rec['currently_attached'] = False
-        sr_ref = pbd_ref['SR']
+        sr_ref = rec['SR']
         _db_content['SR'][sr_ref]['PBDs'].remove(pbd_ref)
 
     def SR_introduce(self, _1, sr_uuid, label, desc, type, content_type,
@@ -473,34 +473,31 @@ class SessionBase(object):
         rec = None
         for ref, rec in _db_content['SR'].iteritems():
             if rec.get('uuid') == sr_uuid:
-                break
-        if rec:
-            # make forgotten = 0 and return ref
-            _db_content['SR'][ref]['forgotten'] = 0
-            return ref
-        else:
-            # SR not found in db, so we create one
-            params = {'sr_uuid': sr_uuid,
-                      'label': label,
-                      'desc': desc,
-                      'type': type,
-                      'content_type': content_type,
-                      'shared': shared,
-                      'sm_config': sm_config}
-            sr_ref = _create_object('SR', params)
-            _db_content['SR'][sr_ref]['uuid'] = sr_uuid
-            _db_content['SR'][sr_ref]['forgotten'] = 0
-            vdi_per_lun = False
-            if type in ('iscsi'):
-                # Just to be clear
-                vdi_per_lun = True
-            if vdi_per_lun:
-                # we need to create a vdi because this introduce
-                # is likely meant for a single vdi
-                vdi_ref = create_vdi('', sr_ref)
-                _db_content['SR'][sr_ref]['VDIs'] = [vdi_ref]
-                _db_content['VDI'][vdi_ref]['SR'] = sr_ref
-            return sr_ref
+                # make forgotten = 0 and return ref
+                _db_content['SR'][ref]['forgotten'] = 0
+                return ref
+        # SR not found in db, so we create one
+        params = {'sr_uuid': sr_uuid,
+                  'label': label,
+                  'desc': desc,
+                  'type': type,
+                  'content_type': content_type,
+                  'shared': shared,
+                  'sm_config': sm_config}
+        sr_ref = _create_object('SR', params)
+        _db_content['SR'][sr_ref]['uuid'] = sr_uuid
+        _db_content['SR'][sr_ref]['forgotten'] = 0
+        vdi_per_lun = False
+        if type in ('iscsi'):
+            # Just to be clear
+            vdi_per_lun = True
+        if vdi_per_lun:
+            # we need to create a vdi because this introduce
+            # is likely meant for a single vdi
+            vdi_ref = create_vdi('', sr_ref)
+            _db_content['SR'][sr_ref]['VDIs'] = [vdi_ref]
+            _db_content['VDI'][vdi_ref]['SR'] = sr_ref
+        return sr_ref
 
     def SR_forget(self, _1, sr_ref):
         _db_content['SR'][sr_ref]['forgotten'] = 1
