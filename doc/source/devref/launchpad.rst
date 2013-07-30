@@ -18,13 +18,12 @@ OpenStack-related sites. These sites include:
 Mailing list
 ------------
 
-The mailing list email is ``openstack@lists.launchpad.net``. This is a common
+The mailing list email is ``openstack@lists.openstack.org``. This is a common
 mailing list across the OpenStack projects. To participate in the mailing list:
 
-#. Join the `Nova Team`_ on Launchpad.
-#. Subscribe to the list on the `OpenStack Team`_ page on Launchpad.
+#. Subscribe at http://lists.openstack.org/cgi-bin/mailman/listinfo/openstack
 
-The mailing list archives are at https://lists.launchpad.net/openstack.
+The mailing list archives are at http://lists.openstack.org/pipermail/openstack.
 
 
 Bug tracking
@@ -44,11 +43,11 @@ Technical support (Answers)
 Nova uses Launchpad Answers to track Nova technical support questions. The Nova
 Answers page is at https://answers.launchpad.net/nova.
 
-Note that the `OpenStack Forums`_ (which are not hosted on Launchpad) can also
+Note that `Ask OpenStack`_ (which are not hosted on Launchpad) can also
 be used for technical support requests.
 
 .. _Launchpad: http://launchpad.net
 .. _Wiki: http://wiki.openstack.org
 .. _Nova Team: https://launchpad.net/~nova
 .. _OpenStack Team: https://launchpad.net/~openstack
-.. _OpenStack Forums: http://forums.openstack.org/
+.. _Ask OpenStack: http://ask.openstack.org/

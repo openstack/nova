@@ -6,7 +6,7 @@ nova-cert
 Server for the Nova Cert
 --------------------------------
 
-:Author: openstack@lists.launchpad.net
+:Author: openstack@lists.openstack.org
 :Date:   2012-09-27
 :Copyright: OpenStack Foundation
 :Version: 2012.1

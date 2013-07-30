@@ -6,7 +6,7 @@ nova-api
 Server for the Nova EC2 and OpenStack APIs
 -------------------------------------------
 
-:Author: openstack@lists.launchpad.net
+:Author: openstack@lists.openstack.org
 :Date:   2012-09-27
 :Copyright: OpenStack Foundation
 :Version: 2012.1

@@ -47,7 +47,7 @@ the master GIT repository at:
 Developers should also join the discussion on the mailing list,
 at:
 
-   https://lists.launchpad.net/openstack/
+   http://lists.openstack.org/cgi-bin/mailman/listinfo/openstack
 
 Any new code must follow the development guidelines detailed
 in the HACKING.rst file, and pass all unit tests. Further
