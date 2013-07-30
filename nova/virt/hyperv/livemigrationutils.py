@@ -24,6 +24,7 @@ from nova import exception
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.virt.hyperv import vmutils
+from nova.virt.hyperv import vmutilsv2
 from nova.virt.hyperv import volumeutilsv2
 
 LOG = logging.getLogger(__name__)
@@ -32,7 +33,7 @@ LOG = logging.getLogger(__name__)
 class LiveMigrationUtils(object):
 
     def __init__(self):
-        self._vmutils = vmutils.VMUtils()
+        self._vmutils = vmutilsv2.VMUtilsV2()
         self._volutils = volumeutilsv2.VolumeUtilsV2()
 
     def _get_conn_v2(self, host='localhost'):
@@ -229,7 +230,7 @@ class LiveMigrationUtils(object):
         planned_vm = None
         disk_paths = self._get_physical_disk_paths(vm_name)
         if disk_paths:
-            vmutils_remote = vmutils.VMUtils(dest_host)
+            vmutils_remote = vmutilsv2.VMUtilsV2(dest_host)
             (disk_paths_remote,
              iscsi_targets) = self._get_remote_disk_data(vmutils_remote,
                                                          disk_paths,
