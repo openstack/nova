@@ -980,11 +980,11 @@ class GenerateDiskTestCase(stubs.XenAPITestBase):
     def test_generate_disk_ensure_cleanup_called(self):
         self._expect_parted_calls()
         utils.execute('mkfs', '-t', 'ext4', '/dev/fakedev1',
-            run_as_root=True).AndRaise(Exception)
+            run_as_root=True).AndRaise(test.TestingException)
         vm_utils.destroy_vdi(self.session, mox.IgnoreArg())
 
         self.mox.ReplayAll()
-        self.assertRaises(Exception, vm_utils._generate_disk,
+        self.assertRaises(test.TestingException, vm_utils._generate_disk,
             self.session, {"uuid": "fake_uuid"},
             self.vm_ref, "2", "name", "ephemeral", 10, "ext4")
 
