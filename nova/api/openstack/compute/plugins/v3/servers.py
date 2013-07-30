@@ -700,17 +700,31 @@ class ServersController(wsgi.Controller):
         networks = []
         for network in requested_networks:
             try:
+                # fixed IP address is optional
+                # if the fixed IP address is not provided then
+                # it will use one of the available IP address from the network
+                address = network.get('fixed_ip', None)
+                if address is not None and not utils.is_valid_ipv4(address):
+                    msg = _("Invalid fixed IP address (%s)") % address
+                    raise exc.HTTPBadRequest(explanation=msg)
+
                 port_id = network.get('port', None)
                 if port_id:
                     network_uuid = None
                     if not self._is_neutron_v2():
                         # port parameter is only for neutron v2.0
-                        msg = _("Unknown argment : port")
+                        msg = _("Unknown argument: port")
                         raise exc.HTTPBadRequest(explanation=msg)
                     if not uuidutils.is_uuid_like(port_id):
                         msg = _("Bad port format: port uuid is "
                                 "not in proper format "
                                 "(%s)") % port_id
+                        raise exc.HTTPBadRequest(explanation=msg)
+                    if address is not None:
+                        msg = _("Specified Fixed IP '%(addr)s' cannot be used "
+                                "with port '%(port)s': port already has "
+                                "a Fixed IP allocated.") % {"addr": address,
+                                                            "port": port_id}
                         raise exc.HTTPBadRequest(explanation=msg)
                 else:
                     network_uuid = network['uuid']
@@ -723,15 +737,7 @@ class ServersController(wsgi.Controller):
                                 "(%s)") % network_uuid
                         raise exc.HTTPBadRequest(explanation=msg)
 
-                #fixed IP address is optional
-                #if the fixed IP address is not provided then
-                #it will use one of the available IP address from the network
-                address = network.get('fixed_ip', None)
-                if address is not None and not utils.is_valid_ipv4(address):
-                    msg = _("Invalid fixed IP address (%s)") % address
-                    raise exc.HTTPBadRequest(explanation=msg)
-
-                # For neutronv2, requestd_networks
+                # For neutronv2, requested_networks
                 # should be tuple of (network_uuid, fixed_ip, port_id)
                 if self._is_neutron_v2():
                     networks.append((network_uuid, address, port_id))

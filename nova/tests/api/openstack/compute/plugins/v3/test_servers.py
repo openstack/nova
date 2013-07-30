@@ -221,6 +221,19 @@ class ServersControllerTest(ControllerTest):
         res = self.controller._get_requested_networks(requested_networks)
         self.assertEquals(res, [(None, None, port)])
 
+    def test_requested_networks_neutronv2_enabled_conflict_on_fixed_ip(self):
+        self.flags(network_api_class='nova.network.neutronv2.api.API')
+        network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+        port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
+        addr = '10.0.0.1'
+        requested_networks = [{'uuid': network,
+                               'fixed_ip': addr,
+                               'port': port}]
+        self.assertRaises(
+            webob.exc.HTTPBadRequest,
+            self.controller._get_requested_networks,
+            requested_networks)
+
     def test_requested_networks_neutronv2_disabled_with_port(self):
         port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
         requested_networks = [{'port': port}]
