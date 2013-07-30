@@ -53,6 +53,8 @@
   CLI interface for nova management.
 """
 
+from __future__ import print_function
+
 import netaddr
 import os
 import sys
@@ -204,10 +206,10 @@ class ShellCommands(object):
 
 
 def _db_error(caught_exception):
-    print caught_exception
-    print _("The above error may show that the database has not "
+    print(caught_exception)
+    print(_("The above error may show that the database has not "
             "been created.\nPlease create a database using "
-            "'nova-manage db sync' before running this command.")
+            "'nova-manage db sync' before running this command."))
     exit(1)
 
 
@@ -247,14 +249,14 @@ class ProjectCommands(object):
                 if value.lower() == 'unlimited':
                     value = -1
                 if int(value) < -1:
-                    print _('Quota limit must be -1 or greater.')
+                    print(_('Quota limit must be -1 or greater.'))
                     return(2)
                 if ((int(value) < minimum) and
                    (maximum != -1 or (maximum == -1 and int(value) != -1))):
-                    print _('Quota limit must greater than %s.') % minimum
+                    print(_('Quota limit must greater than %s.') % minimum)
                     return(2)
                 if maximum != -1 and int(value) > maximum:
-                    print _('Quota limit must less than %s.') % maximum
+                    print(_('Quota limit must less than %s.') % maximum)
                     return(2)
                 try:
                     db.quota_create(ctxt, project_id, key, value,
@@ -263,16 +265,16 @@ class ProjectCommands(object):
                     db.quota_update(ctxt, project_id, key, value,
                                     user_id=user_id)
             else:
-                print _('%(key)s is not a valid quota key. Valid options are: '
+                print(_('%(key)s is not a valid quota key. Valid options are: '
                         '%(options)s.') % {'key': key,
-                                           'options': ', '.join(quota)}
+                                           'options': ', '.join(quota)})
                 return(2)
         print_format = "%-36s %-10s %-10s %-10s"
-        print print_format % (
+        print(print_format % (
                     _('Quota'),
                     _('Limit'),
                     _('In Use'),
-                    _('Reserved'))
+                    _('Reserved')))
         # Retrieve the quota after update
         if user_id:
             quota = QUOTAS.get_user_quotas(ctxt, project_id, user_id)
@@ -281,8 +283,8 @@ class ProjectCommands(object):
         for key, value in quota.iteritems():
             if value['limit'] < 0 or value['limit'] is None:
                 value['limit'] = 'unlimited'
-            print print_format % (key, value['limit'], value['in_use'],
-                                  value['reserved'])
+            print(print_format % (key, value['limit'], value['in_use'],
+                                  value['reserved']))
 
     @args('--project', dest='project_id', metavar='<Project name>',
             help='Project name')
@@ -315,7 +317,7 @@ class FixedIpCommands(object):
                 fixed_ips = db.fixed_ip_get_by_host(ctxt, host)
 
         except exception.NotFound as ex:
-            print _("error: %s") % ex
+            print(_("error: %s") % ex)
             return(2)
 
         instances = db.instance_get_all(context.get_admin_context())
@@ -323,10 +325,10 @@ class FixedIpCommands(object):
         for instance in instances:
             instances_by_uuid[instance['uuid']] = instance
 
-        print "%-18s\t%-15s\t%-15s\t%s" % (_('network'),
+        print("%-18s\t%-15s\t%-15s\t%s" % (_('network'),
                                               _('IP address'),
                                               _('hostname'),
-                                              _('host'))
+                                              _('host')))
 
         all_networks = {}
         try:
@@ -338,7 +340,7 @@ class FixedIpCommands(object):
         except exception.NoNetworksFound:
             # do not have any networks, so even if there are IPs, these
             # IPs should have been deleted ones, so return.
-            print _('No fixed IP found.')
+            print(_('No fixed IP found.'))
             return
 
         has_ip = False
@@ -354,15 +356,15 @@ class FixedIpCommands(object):
                         hostname = instance['hostname']
                         host = instance['host']
                     else:
-                        print _('WARNING: fixed ip %s allocated to missing'
-                                ' instance') % str(fixed_ip['address'])
-                print "%-18s\t%-15s\t%-15s\t%s" % (
+                        print(_('WARNING: fixed ip %s allocated to missing'
+                                ' instance') % str(fixed_ip['address']))
+                print("%-18s\t%-15s\t%-15s\t%s" % (
                         network['cidr'],
                         fixed_ip['address'],
-                        hostname, host)
+                        hostname, host))
 
         if not has_ip:
-            print _('No fixed IP found.')
+            print(_('No fixed IP found.'))
 
     @args('--address', metavar='<ip address>', help='IP address')
     def reserve(self, address):
@@ -390,7 +392,7 @@ class FixedIpCommands(object):
             db.fixed_ip_update(ctxt, fixed_ip['address'],
                                 {'reserved': reserved})
         except exception.NotFound as ex:
-            print _("error: %s") % ex
+            print(_("error: %s") % ex)
             return(2)
 
 
@@ -468,7 +470,7 @@ class FloatingIpCommands(object):
             else:
                 floating_ips = db.floating_ip_get_all_by_host(ctxt, host)
         except exception.NoFloatingIpsDefined:
-            print _("No floating IP addresses have been defined.")
+            print(_("No floating IP addresses have been defined."))
             return
         for floating_ip in floating_ips:
             instance_uuid = None
@@ -476,11 +478,11 @@ class FloatingIpCommands(object):
                 fixed_ip = db.fixed_ip_get(ctxt, floating_ip['fixed_ip_id'])
                 instance_uuid = fixed_ip['instance_uuid']
 
-            print "%s\t%s\t%s\t%s\t%s" % (floating_ip['project_id'],
+            print("%s\t%s\t%s\t%s\t%s" % (floating_ip['project_id'],
                                           floating_ip['address'],
                                           instance_uuid,
                                           floating_ip['pool'],
-                                          floating_ip['interface'])
+                                          floating_ip['interface']))
 
 
 class NetworkCommands(object):
@@ -530,7 +532,7 @@ class NetworkCommands(object):
     def list(self):
         """List all created networks."""
         _fmt = "%-5s\t%-18s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s"
-        print _fmt % (_('id'),
+        print(_fmt % (_('id'),
                           _('IPv4'),
                           _('IPv6'),
                           _('start address'),
@@ -538,17 +540,17 @@ class NetworkCommands(object):
                           _('DNS2'),
                           _('VlanID'),
                           _('project'),
-                          _("uuid"))
+                          _("uuid")))
         try:
             # Since network_get_all can throw exception.NoNetworksFound
             # for this command to show a nice result, this exception
             # should be caught and handled as such.
             networks = db.network_get_all(context.get_admin_context())
         except exception.NoNetworksFound:
-            print _('No networks found')
+            print(_('No networks found'))
         else:
             for network in networks:
-                print _fmt % (network.id,
+                print(_fmt % (network.id,
                               network.cidr,
                               network.cidr_v6,
                               network.dhcp_start,
@@ -556,7 +558,7 @@ class NetworkCommands(object):
                               network.dns2,
                               network.vlan,
                               network.project_id,
-                              network.uuid)
+                              network.uuid))
 
     @args('--fixed_range', metavar='<x.x.x.x/yy>', help='Network to delete')
     @args('--uuid', metavar='<uuid>', help='UUID of network to delete')
@@ -634,7 +636,7 @@ class VmCommands(object):
     def list(self, host=None):
         """Show a list of all instances."""
 
-        print ("%-10s %-15s %-10s %-10s %-26s %-9s %-9s %-9s"
+        print(("%-10s %-15s %-10s %-10s %-26s %-9s %-9s %-9s"
                "  %-10s %-10s %-10s %-5s" % (_('instance'),
                                              _('node'),
                                              _('type'),
@@ -646,7 +648,7 @@ class VmCommands(object):
                                              _('project'),
                                              _('user'),
                                              _('zone'),
-                                             _('index')))
+                                             _('index'))))
 
         if host is None:
             instances = db.instance_get_all(context.get_admin_context())
@@ -656,7 +658,7 @@ class VmCommands(object):
 
         for instance in instances:
             instance_type = flavors.extract_flavor(instance)
-            print ("%-10s %-15s %-10s %-10s %-26s %-9s %-9s %-9s"
+            print(("%-10s %-15s %-10s %-10s %-26s %-9s %-9s %-9s"
                    " %-10s %-10s %-10s %-5d" % (instance['display_name'],
                                                 instance['host'],
                                                 instance_type['name'],
@@ -668,7 +670,7 @@ class VmCommands(object):
                                                 instance['project_id'],
                                                 instance['user_id'],
                                                 instance['availability_zone'],
-                                                instance['launch_index']))
+                                                instance['launch_index'])))
 
 
 class ServiceCommands(object):
@@ -689,22 +691,22 @@ class ServiceCommands(object):
         if service:
             services = [s for s in services if s['binary'] == service]
         print_format = "%-16s %-36s %-16s %-10s %-5s %-10s"
-        print print_format % (
+        print(print_format % (
                     _('Binary'),
                     _('Host'),
                     _('Zone'),
                     _('Status'),
                     _('State'),
-                    _('Updated_At'))
+                    _('Updated_At')))
         for svc in services:
             alive = servicegroup_api.service_is_up(svc)
             art = (alive and ":-)") or "XXX"
             active = 'enabled'
             if svc['disabled']:
                 active = 'disabled'
-            print print_format % (svc['binary'], svc['host'],
+            print(print_format % (svc['binary'], svc['host'],
                                   svc['availability_zone'], active, art,
-                                  svc['updated_at'])
+                                  svc['updated_at']))
 
     @args('--host', metavar='<host>', help='Host')
     @args('--service', metavar='<service>', help='Nova service')
@@ -715,10 +717,10 @@ class ServiceCommands(object):
             svc = db.service_get_by_args(ctxt, host, service)
             db.service_update(ctxt, svc['id'], {'disabled': False})
         except exception.NotFound as ex:
-            print _("error: %s") % ex
+            print(_("error: %s") % ex)
             return(2)
-        print (_("Service %(service)s on host %(host)s enabled.") %
-               {'service': service, 'host': host})
+        print((_("Service %(service)s on host %(host)s enabled.") %
+               {'service': service, 'host': host}))
 
     @args('--host', metavar='<host>', help='Host')
     @args('--service', metavar='<service>', help='Nova service')
@@ -729,10 +731,10 @@ class ServiceCommands(object):
             svc = db.service_get_by_args(ctxt, host, service)
             db.service_update(ctxt, svc['id'], {'disabled': True})
         except exception.NotFound as ex:
-            print _("error: %s") % ex
+            print(_("error: %s") % ex)
             return(2)
-        print (_("Service %(service)s on host %(host)s disabled.") %
-               {'service': service, 'host': host})
+        print((_("Service %(service)s on host %(host)s disabled.") %
+               {'service': service, 'host': host}))
 
     def _show_host_resources(self, context, host):
         """Shows the physical/usage resource given by hosts.
@@ -799,27 +801,27 @@ class ServiceCommands(object):
                                            host=host)
 
         if not isinstance(result, dict):
-            print _('An unexpected error has occurred.')
-            print _('[Result]'), result
+            print(_('An unexpected error has occurred.'))
+            print(_('[Result]'), result)
         else:
             # Printing a total and used_now
             # (NOTE)The host name width 16 characters
-            print '%(a)-25s%(b)16s%(c)8s%(d)8s%(e)8s' % {"a": _('HOST'),
+            print('%(a)-25s%(b)16s%(c)8s%(d)8s%(e)8s' % {"a": _('HOST'),
                                                          "b": _('PROJECT'),
                                                          "c": _('cpu'),
                                                          "d": _('mem(mb)'),
-                                                         "e": _('hdd')}
-            print ('%(a)-16s(total)%(b)26s%(c)8s%(d)8s' %
+                                                         "e": _('hdd')})
+            print(('%(a)-16s(total)%(b)26s%(c)8s%(d)8s' %
                    {"a": host,
                     "b": result['resource']['vcpus'],
                     "c": result['resource']['memory_mb'],
-                    "d": result['resource']['local_gb']})
+                    "d": result['resource']['local_gb']}))
 
-            print ('%(a)-16s(used_now)%(b)23s%(c)8s%(d)8s' %
+            print(('%(a)-16s(used_now)%(b)23s%(c)8s%(d)8s' %
                    {"a": host,
                     "b": result['resource']['vcpus_used'],
                     "c": result['resource']['memory_mb_used'],
-                    "d": result['resource']['local_gb_used']})
+                    "d": result['resource']['local_gb_used']}))
 
             # Printing a used_max
             cpu_sum = 0
@@ -830,18 +832,18 @@ class ServiceCommands(object):
                 mem_sum += val['memory_mb']
                 hdd_sum += val['root_gb']
                 hdd_sum += val['ephemeral_gb']
-            print '%(a)-16s(used_max)%(b)23s%(c)8s%(d)8s' % {"a": host,
+            print('%(a)-16s(used_max)%(b)23s%(c)8s%(d)8s' % {"a": host,
                                                              "b": cpu_sum,
                                                              "c": mem_sum,
-                                                             "d": hdd_sum}
+                                                             "d": hdd_sum})
 
             for p_id, val in result['usage'].items():
-                print '%(a)-25s%(b)16s%(c)8s%(d)8s%(e)8s' % {
+                print('%(a)-25s%(b)16s%(c)8s%(d)8s%(e)8s' % {
                         "a": host,
                         "b": p_id,
                         "c": val['vcpus'],
                         "d": val['memory_mb'],
-                        "e": val['root_gb'] + val['ephemeral_gb']}
+                        "e": val['root_gb'] + val['ephemeral_gb']})
 
 
 class HostCommands(object):
@@ -851,8 +853,8 @@ class HostCommands(object):
         """Show a list of all physical hosts. Filter by zone.
         args: [zone]
         """
-        print "%-25s\t%-15s" % (_('host'),
-                                _('zone'))
+        print("%-25s\t%-15s" % (_('host'),
+                                _('zone')))
         ctxt = context.get_admin_context()
         services = db.service_get_all(ctxt)
         services = availability_zones.set_availability_zones(ctxt, services)
@@ -864,7 +866,7 @@ class HostCommands(object):
                 hosts.append(srv)
 
         for h in hosts:
-            print "%-25s\t%-15s" % (h['host'], h['availability_zone'])
+            print("%-25s\t%-15s" % (h['host'], h['availability_zone']))
 
 
 class DbCommands(object):
@@ -880,7 +882,7 @@ class DbCommands(object):
 
     def version(self):
         """Print the current database version."""
-        print migration.db_version()
+        print(migration.db_version())
 
     @args('--max_rows', metavar='<number>',
             help='Maximum number of deleted rows to archive')
@@ -891,7 +893,7 @@ class DbCommands(object):
         if max_rows is not None:
             max_rows = int(max_rows)
             if max_rows < 0:
-                print _("Must supply a positive value for max_rows")
+                print(_("Must supply a positive value for max_rows"))
                 return(1)
         admin_context = context.get_admin_context()
         db.archive_deleted_rows(admin_context, max_rows)
@@ -905,11 +907,11 @@ class FlavorCommands(object):
 
     def _print_flavors(self, name, val):
         is_public = ('private', 'public')[val["is_public"] == 1]
-        print ("%s: Memory: %sMB, VCPUS: %s, Root: %sGB, Ephemeral: %sGb, "
+        print(("%s: Memory: %sMB, VCPUS: %s, Root: %sGB, Ephemeral: %sGb, "
             "FlavorID: %s, Swap: %sMB, RXTX Factor: %s, %s, ExtraSpecs %s") % (
             name, val["memory_mb"], val["vcpus"], val["root_gb"],
             val["ephemeral_gb"], val["flavorid"], val["swap"],
-            val["rxtx_factor"], is_public, val["extra_specs"])
+            val["rxtx_factor"], is_public, val["extra_specs"]))
 
     @args('--name', metavar='<name>',
             help='Name of flavor')
@@ -933,22 +935,22 @@ class FlavorCommands(object):
                            swap=swap, rxtx_factor=rxtx_factor,
                            is_public=is_public)
         except exception.InvalidInput as e:
-            print _("Must supply valid parameters to create flavor")
-            print e
-            return(1)
+            print(_("Must supply valid parameters to create flavor"))
+            print(e)
+            return 1
         except exception.InstanceTypeExists:
-            print _("Flavor exists.")
-            print _("Please ensure flavor name and flavorid are "
-                    "unique.")
-            print _("Currently defined flavor names and flavorids:")
-            print
+            print(_("Flavor exists."))
+            print(_("Please ensure flavor name and flavorid are "
+                    "unique."))
+            print(_("Currently defined flavor names and flavorids:"))
+            print()
             self.list()
-            return(2)
+            return 2
         except Exception:
-            print _("Unknown error")
-            return(3)
+            print(_("Unknown error"))
+            return 3
         else:
-            print _("%s created") % name
+            print(_("%s created") % name)
 
     @args('--name', metavar='<name>', help='Name of flavor')
     def delete(self, name):
@@ -956,15 +958,15 @@ class FlavorCommands(object):
         try:
             flavors.destroy(name)
         except exception.InstanceTypeNotFound:
-            print _("Valid flavor name is required")
-            return(1)
+            print(_("Valid flavor name is required"))
+            return 1
         except db_exc.DBError as e:
-            print _("DB Error: %s") % e
+            print(_("DB Error: %s") % e)
             return(2)
         except Exception:
             return(3)
         else:
-            print _("%s deleted") % name
+            print(_("%s deleted") % name)
 
     @args('--name', metavar='<name>', help='Name of flavor')
     def list(self, name=None):
@@ -991,7 +993,7 @@ class FlavorCommands(object):
             try:
                 inst_type = flavors.get_flavor_by_name(name)
             except exception.InstanceTypeNotFoundByName as e:
-                print e
+                print(e)
                 return(2)
 
             ctxt = context.get_admin_context()
@@ -1000,9 +1002,9 @@ class FlavorCommands(object):
                             ctxt,
                             inst_type["flavorid"],
                             ext_spec)
-            print (_("Key %(key)s set to %(value)s on instance "
+            print((_("Key %(key)s set to %(value)s on instance "
                      "type %(name)s") %
-                   {'key': key, 'value': value, 'name': name})
+                   {'key': key, 'value': value, 'name': name}))
         except db_exc.DBError as e:
             _db_error(e)
 
@@ -1014,7 +1016,7 @@ class FlavorCommands(object):
             try:
                 inst_type = flavors.get_flavor_by_name(name)
             except exception.InstanceTypeNotFoundByName as e:
-                print e
+                print(e)
                 return(2)
 
             ctxt = context.get_admin_context()
@@ -1023,8 +1025,8 @@ class FlavorCommands(object):
                         inst_type["flavorid"],
                         key)
 
-            print (_("Key %(key)s on flavor %(name)s unset") %
-                   {'key': key, 'name': name})
+            print((_("Key %(key)s on flavor %(name)s unset") %
+                   {'key': key, 'name': name}))
         except db_exc.DBError as e:
             _db_error(e)
 
@@ -1084,12 +1086,12 @@ class AgentBuildCommands(object):
             if hypervisor and key != hypervisor:
                 continue
 
-            print _('Hypervisor: %s') % key
-            print fmt % ('-' * 10, '-' * 8, '-' * 12, '-' * 32)
+            print(_('Hypervisor: %s') % key)
+            print(fmt % ('-' * 10, '-' * 8, '-' * 12, '-' * 32))
             for agent_build in buildlist:
-                print fmt % (agent_build.os, agent_build.architecture,
-                             agent_build.version, agent_build.md5hash)
-                print '    %s' % agent_build.url
+                print(fmt % (agent_build.os, agent_build.architecture,
+                             agent_build.version, agent_build.md5hash))
+                print('    %s' % agent_build.url)
 
             print
 
@@ -1130,13 +1132,13 @@ class GetLogCommands(object):
                     if line.find(" ERROR ") > 0:
                         error_found += 1
                         if print_name == 0:
-                            print log_file + ":-"
+                            print(log_file + ":-")
                             print_name = 1
                         linenum = len(lines) - index
-                        print (_('Line %(linenum)d : %(line)s') %
-                               {'linenum': linenum, 'line': line})
+                        print((_('Line %(linenum)d : %(line)s') %
+                               {'linenum': linenum, 'line': line}))
         if error_found == 0:
-            print _('No errors in logfiles!')
+            print(_('No errors in logfiles!'))
 
     @args('--num_entries', metavar='<number of entries>',
             help='number of entries(default: 10)')
@@ -1150,20 +1152,20 @@ class GetLogCommands(object):
         elif os.path.exists('/var/log/messages'):
             log_file = '/var/log/messages'
         else:
-            print _('Unable to find system log file!')
+            print(_('Unable to find system log file!'))
             return(1)
         lines = [line.strip() for line in open(log_file, "r")]
         lines.reverse()
-        print _('Last %s nova syslog entries:-') % (entries)
+        print(_('Last %s nova syslog entries:-') % (entries))
         for line in lines:
             if line.find("nova") > 0:
                 count += 1
-                print "%s" % (line)
+                print("%s" % (line))
             if count == entries:
                 break
 
         if count == 0:
-            print _('No nova entries in syslog!')
+            print(_('No nova entries in syslog!'))
 
 
 class CellCommands(object):
@@ -1189,7 +1191,7 @@ class CellCommands(object):
                woffset=None, wscale=None):
 
         if cell_type not in ['parent', 'child']:
-            print "Error: cell type must be 'parent' or 'child'"
+            print("Error: cell type must be 'parent' or 'child'")
             return(2)
 
         # Set up the transport URL
@@ -1221,18 +1223,18 @@ class CellCommands(object):
         ctxt = context.get_admin_context()
         cells = db.cell_get_all(ctxt)
         fmt = "%3s  %-10s  %-6s  %-10s  %-15s  %-5s  %-10s"
-        print fmt % ('Id', 'Name', 'Type', 'Username', 'Hostname',
-                'Port', 'VHost')
-        print fmt % ('-' * 3, '-' * 10, '-' * 6, '-' * 10, '-' * 15,
-                '-' * 5, '-' * 10)
+        print(fmt % ('Id', 'Name', 'Type', 'Username', 'Hostname',
+                'Port', 'VHost'))
+        print(fmt % ('-' * 3, '-' * 10, '-' * 6, '-' * 10, '-' * 15,
+                '-' * 5, '-' * 10))
         for cell in cells:
             transport = rpc_driver.parse_transport_url(cell.transport_url)
-            print fmt % (cell.id, cell.name,
+            print(fmt % (cell.id, cell.name,
                     'parent' if cell.is_parent else 'child',
                     transport['username'], transport['hostname'],
-                    transport['port'], transport['virtual_host'])
-        print fmt % ('-' * 3, '-' * 10, '-' * 6, '-' * 10, '-' * 15,
-                '-' * 5, '-' * 10)
+                    transport['port'], transport['virtual_host']))
+        print(fmt % ('-' * 3, '-' * 10, '-' * 6, '-' * 10, '-' * 15,
+                '-' * 5, '-' * 10))
 
 
 CATEGORIES = {
@@ -1321,27 +1323,27 @@ def main():
         cfgfile = CONF.config_file[-1] if CONF.config_file else None
         if cfgfile and not os.access(cfgfile, os.R_OK):
             st = os.stat(cfgfile)
-            print _("Could not read %s. Re-running with sudo") % cfgfile
+            print(_("Could not read %s. Re-running with sudo") % cfgfile)
             try:
                 os.execvp('sudo', ['sudo', '-u', '#%s' % st.st_uid] + sys.argv)
             except Exception:
-                print _('sudo failed, continuing as if nothing happened')
+                print(_('sudo failed, continuing as if nothing happened'))
 
-        print _('Please re-run nova-manage as root.')
+        print(_('Please re-run nova-manage as root.'))
         return(2)
 
     if CONF.category.name == "version":
-        print version.version_string_with_package()
+        print(version.version_string_with_package())
         return(0)
 
     if CONF.category.name == "bash-completion":
         if not CONF.category.query_category:
-            print " ".join(CATEGORIES.keys())
+            print(" ".join(CATEGORIES.keys()))
         elif CONF.category.query_category in CATEGORIES:
             fn = CATEGORIES[CONF.category.query_category]
             command_object = fn()
             actions = methods_of(command_object)
-            print " ".join([k for (k, v) in actions])
+            print(" ".join([k for (k, v) in actions]))
         return(0)
 
     fn = CONF.category.action_fn
@@ -1363,14 +1365,14 @@ def main():
         # NOTE(mikal): this isn't the most helpful error message ever. It is
         # long, and tells you a lot of things you probably don't want to know
         # if you just got a single arg wrong.
-        print fn.__doc__
+        print(fn.__doc__)
         CONF.print_help()
-        print e
+        print(e)
         return(1)
     try:
         ret = fn(*fn_args, **fn_kwargs)
         rpc.cleanup()
         return(ret)
     except Exception:
-        print _("Command failed, please check log for more info")
+        print(_("Command failed, please check log for more info"))
         raise

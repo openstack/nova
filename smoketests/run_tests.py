@@ -55,6 +55,8 @@ To run a single test module:
 
 """
 
+from __future__ import print_function
+
 import os
 import sys
 import unittest
@@ -295,9 +297,9 @@ class NovaTestRunner(core.TextTestRunner):
 
 if __name__ == '__main__':
     if not os.getenv('EC2_ACCESS_KEY'):
-        print _('Missing EC2 environment variables. Please '
+        print(_('Missing EC2 environment variables. Please '
                 'source the appropriate novarc file before '
-                'running this test.')
+                'running this test.'))
         sys.exit(1)
 
     argv = FLAGS(sys.argv)

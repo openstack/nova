@@ -20,6 +20,8 @@ Websocket proxy that is compatible with OpenStack Nova
 SPICE HTML5 consoles. Leverages websockify.py by Joel Martin
 """
 
+from __future__ import print_function
+
 import os
 import sys
 
@@ -53,12 +55,12 @@ def main():
     config.parse_args(sys.argv)
 
     if CONF.ssl_only and not os.path.exists(CONF.cert):
-        print "SSL only and %s not found." % CONF.cert
+        print("SSL only and %s not found." % CONF.cert)
         return(-1)
 
     # Check to see if spice html/js/css files are present
     if not os.path.exists(CONF.web):
-        print "Can not find spice html/js/css files at %s." % CONF.web
+        print("Can not find spice html/js/css files at %s." % CONF.web)
         return(-1)
 
     # Create and start the NovaWebSockets proxy
