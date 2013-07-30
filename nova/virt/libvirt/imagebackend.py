@@ -283,9 +283,13 @@ class Qcow2(Image):
         # NOTE(cfb): Having a flavor that sets the root size to 0 and having
         #            nova effectively ignore that size and use the size of the
         #            image is considered a feature at this time, not a bug.
-        if size and size < disk.get_disk_size(base):
-            LOG.error('%s virtual size larger than flavor root disk size %s' %
-                      (base, size))
+        disk_size = disk.get_disk_size(base)
+        if size and size < disk_size:
+            msg = _('%(base)s virtual size %(disk_size)s'
+                    'larger than flavor root disk size %(size)s')
+            LOG.error(msg % {'base': base,
+                              'disk_size': disk_size,
+                              'size': size})
             raise exception.InstanceTypeDiskTooSmall()
         if not os.path.exists(self.path):
             with fileutils.remove_path_on_error(self.path):
