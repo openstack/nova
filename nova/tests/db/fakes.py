@@ -103,7 +103,8 @@ def stub_out_db_network_api(stubs):
     virtual_interfacees = [virtual_interface_fields]
     networks = [network_fields]
 
-    def fake_floating_ip_allocate_address(context, project_id, pool):
+    def fake_floating_ip_allocate_address(context, project_id, pool,
+                                          auto_assigned=False):
         ips = filter(lambda i: i['fixed_ip_id'] is None and
                                i['project_id'] is None and
                                i['pool'] == pool,
@@ -111,6 +112,7 @@ def stub_out_db_network_api(stubs):
         if not ips:
             raise exception.NoMoreFloatingIps()
         ips[0]['project_id'] = project_id
+        ips[0]['auto_assigned'] = auto_assigned
         return FakeModel(ips[0])
 
     def fake_floating_ip_deallocate(context, address):

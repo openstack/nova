@@ -249,13 +249,15 @@ def floating_ip_get_pools(context):
     return IMPL.floating_ip_get_pools(context)
 
 
-def floating_ip_allocate_address(context, project_id, pool):
+def floating_ip_allocate_address(context, project_id, pool,
+                                 auto_assigned=False):
     """Allocate free floating ip from specified pool and return the address.
 
     Raises if one is not available.
 
     """
-    return IMPL.floating_ip_allocate_address(context, project_id, pool)
+    return IMPL.floating_ip_allocate_address(context, project_id, pool,
+                                             auto_assigned)
 
 
 def floating_ip_bulk_create(context, ips):

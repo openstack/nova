@@ -3296,6 +3296,24 @@ class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
                 alloc_addrs.append(float_addr)
             self._assertEqualListsOfPrimitivesAsSets(alloc_addrs, addresses)
 
+    def test_floating_ip_allocate_auto_assigned(self):
+        addresses = ['1.1.1.1', '1.1.1.2', '1.1.1.3', '1.1.1.4']
+
+        float_ips = []
+        for i in range(0, 2):
+            float_ips.append(self._create_floating_ip(
+                {"address": addresses[i]}))
+        for i in range(2, 4):
+            float_ips.append(self._create_floating_ip({"address": addresses[i],
+                                                       "auto_assigned": True}))
+
+        for i in range(0, 2):
+            float_ip = db.floating_ip_get(self.ctxt, float_ips[i].id)
+            self.assertFalse(float_ip.auto_assigned)
+        for i in range(2, 4):
+            float_ip = db.floating_ip_get(self.ctxt, float_ips[i].id)
+            self.assertTrue(float_ip.auto_assigned)
+
     def test_floating_ip_allocate_address_no_more_floating_ips(self):
         self.assertRaises(exception.NoMoreFloatingIps,
                           db.floating_ip_allocate_address,
