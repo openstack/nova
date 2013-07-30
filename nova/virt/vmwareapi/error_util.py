@@ -70,7 +70,7 @@ class FaultCheckers(object):
     @staticmethod
     def retrieveproperties_fault_checker(resp_obj):
         """
-        Checks the RetrieveProperties response for errors. Certain faults
+        Checks the RetrievePropertiesEx response for errors. Certain faults
         are sent as part of the SOAP body as property of missingSet.
         For example NotAuthenticated fault.
         """
@@ -94,5 +94,5 @@ class FaultCheckers(object):
         if fault_list:
             exc_msg_list = ', '.join(fault_list)
             raise VimFaultException(fault_list, Exception(_("Error(s) %s "
-                    "occurred in the call to RetrieveProperties") %
+                    "occurred in the call to RetrievePropertiesEx") %
                     exc_msg_list))

@@ -36,8 +36,7 @@ class Host(object):
 
     def host_power_action(self, host, action):
         """Reboots or shuts down the host."""
-        host_mor = self._session._call_method(vim_util, "get_objects",
-                                              "HostSystem")[0].obj
+        host_mor = vm_util.get_host_ref(self._session)
         LOG.debug(_("%(action)s %(host)s"), {'action': action, 'host': host})
         if action == "reboot":
             host_task = self._session._call_method(
@@ -60,8 +59,7 @@ class Host(object):
         """Start/Stop host maintenance window. On start, it triggers
         guest VMs evacuation.
         """
-        host_mor = self._session._call_method(vim_util, "get_objects",
-                                              "HostSystem")[0].obj
+        host_mor = vm_util.get_host_ref(self._session)
         LOG.debug(_("Set maintenance mod on %(host)s to %(mode)s"),
                   {'host': host, 'mode': mode})
         if mode:
@@ -104,8 +102,7 @@ class HostState(object):
     def update_status(self):
         """Update the current state of the host.
         """
-        host_mor = self._session._call_method(vim_util, "get_objects",
-                                              "HostSystem")[0].obj
+        host_mor = vm_util.get_host_ref(self._session)
         summary = self._session._call_method(vim_util,
                                              "get_dynamic_property",
                                              host_mor,

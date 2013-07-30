@@ -78,10 +78,20 @@ def _create_object(table, table_obj):
 
 def _get_objects(obj_type):
     """Get objects of the type."""
-    lst_objs = []
+    lst_objs = FakeRetrieveResult()
     for key in _db_content[obj_type]:
-        lst_objs.append(_db_content[obj_type][key])
+        lst_objs.add_object(_db_content[obj_type][key])
     return lst_objs
+
+
+class FakeRetrieveResult(object):
+    """Object to retrieve a ObjectContent list."""
+
+    def __init__(self):
+        self.objects = []
+
+    def add_object(self, object):
+        self.objects.append(object)
 
 
 class Property(object):
@@ -318,16 +328,19 @@ class ClusterComputeResource(ManagedObject):
         super(ClusterComputeResource, self).__init__("ClusterComputeResource",
                                                      value="domain-test")
         r_pool = DataObject()
-        r_pool.ManagedObjectReference = [_get_objects("ResourcePool")[0].obj]
+        obj = _get_objects("ResourcePool").objects[0].obj
+        r_pool.ManagedObjectReference = [obj]
         self.set("resourcePool", r_pool)
 
         host_sys = DataObject()
-        host_sys.ManagedObjectReference = [_get_objects("HostSystem")[0].obj]
+        obj = _get_objects("HostSystem").objects[0].obj
+        host_sys.ManagedObjectReference = [obj]
         self.set("host", host_sys)
         self.set("name", "test_cluster")
 
         datastore = DataObject()
-        datastore.ManagedObjectReference = [_get_objects("Datastore")[0].obj]
+        obj = _get_objects("Datastore").objects[0].obj
+        datastore.ManagedObjectReference = [obj]
         self.set("datastore", datastore)
 
 
@@ -774,6 +787,14 @@ class FakeVim(object):
         task_mdo = create_task(method, "success")
         return task_mdo.obj
 
+    def _retrieve_properties_continue(self, method, *args, **kwargs):
+        """Continues the retrieve."""
+        return FakeRetrieveResult()
+
+    def _retrieve_properties_cancel(self, method, *args, **kwargs):
+        """Cancels the retrieve."""
+        return None
+
     def _retrieve_properties(self, method, *args, **kwargs):
         """Retrieves properties based on the type."""
         spec_set = kwargs.get("specSet")[0]
@@ -782,7 +803,7 @@ class FakeVim(object):
         if not isinstance(properties, list):
             properties = properties.split()
         objs = spec_set.objectSet
-        lst_ret_objs = []
+        lst_ret_objs = FakeRetrieveResult()
         for obj in objs:
             try:
                 obj_ref = obj.obj
@@ -798,14 +819,14 @@ class FakeVim(object):
                         temp_mdo = ManagedObject(mdo.objName, mdo.obj)
                         for prop in properties:
                             temp_mdo.set(prop, mdo.get(prop))
-                        lst_ret_objs.append(temp_mdo)
+                        lst_ret_objs.add_object(temp_mdo)
                 else:
                     if obj_ref in _db_content[type]:
                         mdo = _db_content[type][obj_ref]
                         temp_mdo = ManagedObject(mdo.objName, obj_ref)
                         for prop in properties:
                             temp_mdo.set(prop, mdo.get(prop))
-                        lst_ret_objs.append(temp_mdo)
+                        lst_ret_objs.add_object(temp_mdo)
             except Exception as exc:
                 LOG.exception(exc)
                 continue
@@ -873,8 +894,14 @@ class FakeVim(object):
         elif attr_name == "MakeDirectory":
             return lambda *args, **kwargs: self._make_dir(attr_name,
                                                 *args, **kwargs)
-        elif attr_name == "RetrieveProperties":
+        elif attr_name == "RetrievePropertiesEx":
             return lambda *args, **kwargs: self._retrieve_properties(
+                                                attr_name, *args, **kwargs)
+        elif attr_name == "ContinueRetrievePropertiesEx":
+            return lambda *args, **kwargs: self._retrieve_properties_continue(
+                                                attr_name, *args, **kwargs)
+        elif attr_name == "CancelRetrievePropertiesEx":
+            return lambda *args, **kwargs: self._retrieve_properties_cancel(
                                                 attr_name, *args, **kwargs)
         elif attr_name == "AcquireCloneTicket":
             return lambda *args, **kwargs: self._just_return()
