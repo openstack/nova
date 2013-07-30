@@ -1005,18 +1005,47 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
                        '_plugin_agent_inject_file', fake_inject_file)
 
         def fake_encrypt_text(sshkey, new_pass):
-            self.assertEqual("fake_keydata", sshkey)
+            self.assertEqual("ssh-rsa fake_keydata", sshkey)
             return "fake"
 
         self.stubs.Set(crypto, 'ssh_encrypt_text', fake_encrypt_text)
 
         expected_data = ('\n# The following ssh key was injected by '
-                         'Nova\nfake_keydata\n')
+                         'Nova\nssh-rsa fake_keydata\n')
 
         injected_files = [('/root/.ssh/authorized_keys', expected_data)]
         self._test_spawn(IMAGE_VHD, None, None,
                          os_type="linux", architecture="x86-64",
-                         key_data='fake_keydata')
+                         key_data='ssh-rsa fake_keydata')
+        self.assertEquals(actual_injected_files, injected_files)
+
+    def test_spawn_ssh_key_injection_non_rsa(self):
+        # Test spawning with key_data on an instance.  Should use
+        # agent file injection.
+        self.flags(xenapi_use_agent_default=True)
+        actual_injected_files = []
+
+        def fake_inject_file(self, method, args):
+            path = base64.b64decode(args['b64_path'])
+            contents = base64.b64decode(args['b64_contents'])
+            actual_injected_files.append((path, contents))
+            return jsonutils.dumps({'returncode': '0', 'message': 'success'})
+
+        self.stubs.Set(stubs.FakeSessionForVMTests,
+                       '_plugin_agent_inject_file', fake_inject_file)
+
+        def fake_encrypt_text(sshkey, new_pass):
+            raise NotImplementedError("Should not be called")
+
+        self.stubs.Set(crypto, 'ssh_encrypt_text', fake_encrypt_text)
+
+        expected_data = ('\n# The following ssh key was injected by '
+                         'Nova\nssh-dsa fake_keydata\n')
+
+        injected_files = [('/root/.ssh/authorized_keys', expected_data)]
+        self._test_spawn(IMAGE_VHD, None, None,
+                         os_type="linux", architecture="x86-64",
+                         key_data='ssh-dsa fake_keydata')
         self.assertEquals(actual_injected_files, injected_files)
 
     def test_spawn_injected_files(self):
