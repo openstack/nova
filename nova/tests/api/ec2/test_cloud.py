@@ -1899,6 +1899,17 @@ class CloudTestCase(test.TestCase):
         instance = result['instancesSet'][0]
         self.assertEqual(instance['instanceId'], 'i-00000003')
 
+        # make sure terminated instances lose their client tokens
+        self.cloud.stop_instances(self.context,
+                                  instance_id=[instance['instanceId']])
+        self.cloud.terminate_instances(self.context,
+                                       instance_id=[instance['instanceId']])
+
+        kwargs['client_token'] = 'client-token-3'
+        result = run_instances(self.context, **kwargs)
+        instance = result['instancesSet'][0]
+        self.assertEqual(instance['instanceId'], 'i-00000004')
+
     def test_run_instances_image_state_none(self):
         kwargs = {'image_id': 'ami-00000001',
                   'instance_type': CONF.default_flavor,

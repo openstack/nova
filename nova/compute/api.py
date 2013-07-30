@@ -2631,6 +2631,14 @@ class API(base.Base):
         return dict(rv.iteritems())
 
     def get_all_instance_metadata(self, context, search_filts):
+        return self._get_all_instance_metadata(
+            context, search_filts, metadata_type='metadata')
+
+    def get_all_system_metadata(self, context, search_filts):
+        return self._get_all_instance_metadata(
+            context, search_filts, metadata_type='system_metadata')
+
+    def _get_all_instance_metadata(self, context, search_filts, metadata_type):
         """Get all metadata."""
 
         def _filter_metadata(instance, search_filt, input_metadata):
@@ -2660,8 +2668,9 @@ class API(base.Base):
                                                    sort_dir='desc')
         for instance in instances:
             try:
-                check_policy(context, 'get_all_instance_metadata', instance)
-                metadata = instance.get('metadata', {})
+                check_policy(context, 'get_all_instance_%s' % metadata_type,
+                             instance)
+                metadata = instance.get(metadata_type, {})
                 for filt in search_filts:
                     # By chaining the input to the output, the filters are
                     # ANDed together

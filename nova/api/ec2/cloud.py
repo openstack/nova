@@ -1368,25 +1368,36 @@ class CloudController(object):
     def _add_client_token(self, context, client_token, instance_ids):
         """Add client token to reservation ID mapping."""
         if client_token:
-            self.create_tags(context, resource_id=instance_ids,
-                             tag=[{'key': 'EC2_client_token',
-                                   'value': client_token}])
+            for ec2_id in instance_ids:
+                instance_uuid = ec2utils.ec2_inst_id_to_uuid(context, ec2_id)
+                db.instance_system_metadata_update(
+                    context, instance_uuid, {'EC2_client_token': client_token},
+                    delete=False)
+
+    def _remove_client_token(self, context, instance_ids):
+        """Remove client token to reservation ID mapping."""
+
+        for ec2_id in instance_ids:
+            instance_uuid = ec2utils.ec2_inst_id_to_uuid(context, ec2_id)
+            sys_meta = db.instance_system_metadata_get(context, instance_uuid)
+            if 'EC2_client_token' in sys_meta:
+                del sys_meta['EC2_client_token']
+            db.instance_system_metadata_update(context, instance_uuid,
+                                               sys_meta, delete=True)
 
     def _resv_id_from_token(self, context, client_token):
         """Get reservation ID from db."""
         resv_id = None
-        tags = self.describe_tags(context, filter=[
-                {'name': 'key', 'value': 'EC2_client_token'},
-                ])
+        sys_metas = self.compute_api.get_all_system_metadata(
+            context, search_filts=[{'key': 'EC2_client_token'},
+                                   {'value': client_token}])
 
-        tagSet = tags.get('tagSet')
-
-        # work around bug #1190845
-        for tags in tagSet:
-            if tags.get('value') == client_token:
-                instances = self._ec2_ids_to_instances(
-                    context, [tags['resource_id']])
-                resv_id = instances[0]['reservation_id']
+        for sys_meta in sys_metas:
+            if sys_meta and sys_meta.get('value') == client_token:
+                instance = instance_obj.Instance.get_by_uuid(
+                    context, sys_meta['instance_id'], expected_attrs=None)
+                resv_id = instance.get('reservation_id')
+                break
         return resv_id
 
     def _ec2_ids_to_instances(self, context, instance_id, objects=False):
@@ -1409,6 +1420,7 @@ class CloudController(object):
         instance_id is a kwarg so its name cannot be modified.
         """
         previous_states = self._ec2_ids_to_instances(context, instance_id)
+        self._remove_client_token(context, instance_id)
         LOG.debug(_("Going to start terminating instances"))
         for instance in previous_states:
             self.compute_api.delete(context, instance)
