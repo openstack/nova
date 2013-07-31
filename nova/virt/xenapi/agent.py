@@ -37,6 +37,11 @@ from nova import utils
 
 USE_AGENT_KEY = "xenapi_use_agent"
 USE_AGENT_SM_KEY = compute_api.SM_IMAGE_PROP_PREFIX + USE_AGENT_KEY
+SKIP_SSH_KEY = "xenapi_skip_agent_inject_ssh"
+SKIP_SSH_SM_KEY = compute_api.SM_IMAGE_PROP_PREFIX + SKIP_SSH_KEY
+SKIP_FILES_AT_BOOT_KEY = "xenapi_skip_agent_inject_files_at_boot"
+SKIP_FILES_AT_BOOT_SM_KEY = compute_api.SM_IMAGE_PROP_PREFIX \
+                                        + SKIP_FILES_AT_BOOT_KEY
 
 LOG = logging.getLogger(__name__)
 
@@ -228,8 +233,14 @@ class XenAPIBasedAgent(object):
         sshkey = self.instance.get('key_data')
         if not sshkey:
             return
+
         if self.instance['os_type'] == 'windows':
             LOG.debug(_("Skipping setting of ssh key for Windows."),
+                      instance=self.instance)
+            return
+
+        if self._skip_ssh_key_inject():
+            LOG.debug(_("Skipping agent ssh key injection for this image."),
                       instance=self.instance)
             return
 
@@ -243,6 +254,14 @@ class XenAPIBasedAgent(object):
             '\n',
         ])
         return self.inject_file(keyfile, key_data)
+
+    def inject_files(self, injected_files):
+        if self._skip_inject_files_at_boot():
+            LOG.debug(_("Skipping agent file injection for this image."),
+                      instance=self.instance)
+        else:
+            for path, contents in injected_files:
+                self.inject_file(path, contents)
 
     def inject_file(self, path, contents):
         LOG.debug(_('Injecting file path: %r'), path, instance=self.instance)
@@ -259,6 +278,17 @@ class XenAPIBasedAgent(object):
 
         return self._call_agent('resetnetwork',
                                 timeout=CONF.agent_resetnetwork_timeout)
+
+    def _skip_ssh_key_inject(self):
+        return self._get_sys_meta_key(SKIP_SSH_SM_KEY)
+
+    def _skip_inject_files_at_boot(self):
+        return self._get_sys_meta_key(SKIP_FILES_AT_BOOT_SM_KEY)
+
+    def _get_sys_meta_key(self, key):
+        sys_meta = utils.instance_sys_meta(self.instance)
+        raw_value = sys_meta.get(key, 'False')
+        return strutils.bool_from_string(raw_value, strict=False)
 
 
 def find_guest_agent(base_dir):
