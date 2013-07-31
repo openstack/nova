@@ -3832,6 +3832,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                    self._rollback_live_migration,
                                    block_migration, migrate_data)
 
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def _post_live_migration(self, ctxt, instance_ref,
                             dest, block_migration=False, migrate_data=None):
         """Post operations for live migration.
@@ -3866,6 +3867,10 @@ class ComputeManager(manager.SchedulerDependentManager):
         # (not necessary in current implementation?)
 
         network_info = self._get_instance_nw_info(ctxt, instance_ref)
+
+        self._notify_about_instance_usage(ctxt, instance_ref,
+                                          "live_migration._post.start",
+                                          network_info=network_info)
         # Releasing security group ingress rule.
         self.driver.unfilter_instance(instance_ref,
                                       self._legacy_nw_info(network_info))
@@ -3902,6 +3907,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.network_api.setup_networks_on_host(ctxt, instance_ref,
                                                 self.host, teardown=True)
 
+        self._notify_about_instance_usage(ctxt, instance_ref,
+                                          "live_migration._post.end",
+                                          network_info=network_info)
         LOG.info(_('Migrating instance to %s finished successfully.'),
                  dest, instance=instance_ref)
         LOG.info(_("You may see the error \"libvirt: QEMU error: "
@@ -3965,6 +3973,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                      context, instance, "live_migration.post.dest.end",
                      network_info=network_info)
 
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def _rollback_live_migration(self, context, instance,
                                  dest, block_migration, migrate_data=None):
         """Recovers Instance/volume state from migrating -> running.
@@ -3992,6 +4001,9 @@ class ComputeManager(manager.SchedulerDependentManager):
             self.compute_rpcapi.remove_volume_connection(context, instance,
                     volume_id, dest)
 
+        self._notify_about_instance_usage(context, instance,
+                                          "live_migration._rollback.start")
+
         # Block migration needs empty image at destination host
         # before migration starts, so if any failure occurs,
         # any empty images has to be deleted.
@@ -4006,6 +4018,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         if block_migration or (is_volume_backed and not is_shared_storage):
             self.compute_rpcapi.rollback_live_migration_at_destination(context,
                     instance, dest)
+
+        self._notify_about_instance_usage(context, instance,
+                                          "live_migration._rollback.end")
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def rollback_live_migration_at_destination(self, context, instance):
