@@ -3249,7 +3249,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         :param block_migration: if true, prepare for block migration
 
         """
-        LOG.info(_('Post operation of migration started'),
+        LOG.info(_('Post operation of migration started at destinaation'),
                  instance=instance)
 
         # NOTE(tr3buchet): setup networks on destination host
@@ -3287,7 +3287,32 @@ class ComputeManager(manager.SchedulerDependentManager):
                     node=node_name)
 
         # NOTE(vish): this is necessary to update dhcp
-        self.network_api.setup_networks_on_host(context, instance, self.host)
+
+        LOG.info('setup floating  network')
+
+        LOG.info("network info fiexed %s floating",network_info.fixed_ips())
+        LOG.info("network info floating ip %s",network_info.floating_ips())
+        self.network_api.migrate_instance_finish(context,instance,migration)
+        #fixed_ips = network_info.fixed_ips()
+        #floating_ip = network_info.floating_ips();
+        #LOG.info("fixed_id %s",fixed_ips)
+        #legacy_net_info= network_info.legacy()
+        #network_dict=legacy_net_info[0]
+
+        #if network_dict['multi_host'] is true:
+        #    LOG.info("multhhost is enabled ")
+
+        #for vif in fixed_ips:
+        #    floating_ip_address = vif['floating_ips']
+        #    LOG.info('ddress  %s',floating_ip_address[0])
+        #    LOG.info("network info private %s",vif['address'])
+        #    for  fip in floating_ip_address:
+        #        LOG.info("network info %s",fip['address'])
+        #        self.network_api.migrate_instance_finish(context,instance,migration)
+
+
+        LOG.info('migrate is done')
+        LOG.debug('migrate is done')
 
     def _rollback_live_migration(self, context, instance,
                                  dest, block_migration, migrate_data=None):
