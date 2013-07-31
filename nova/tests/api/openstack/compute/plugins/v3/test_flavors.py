@@ -41,6 +41,7 @@ FAKE_FLAVORS = {
         "memory_mb": '256',
         "root_gb": '10',
         "swap": '512',
+        "ephemeral_gb": '1',
     },
     'flavor 2': {
         "flavorid": '2',
@@ -48,6 +49,7 @@ FAKE_FLAVORS = {
         "memory_mb": '512',
         "root_gb": '20',
         "swap": '1024',
+        "ephemeral_gb": '10',
     },
 }
 
@@ -115,6 +117,7 @@ class FlavorsTest(test.TestCase):
                 "disk": "10",
                 "vcpus": "",
                 "swap": '512',
+                "ephemeral": "1",
                 "links": [
                     {
                         "rel": "self",
@@ -142,6 +145,7 @@ class FlavorsTest(test.TestCase):
                 "disk": "10",
                 "vcpus": "",
                 "swap": '512',
+                "ephemeral": "1",
                 "links": [
                     {
                         "rel": "self",
@@ -309,6 +313,7 @@ class FlavorsTest(test.TestCase):
                     "disk": "10",
                     "vcpus": "",
                     "swap": '512',
+                    "ephemeral": "1",
                     "links": [
                         {
                             "rel": "self",
@@ -327,6 +332,7 @@ class FlavorsTest(test.TestCase):
                     "disk": "20",
                     "vcpus": "",
                     "swap": '1024',
+                    "ephemeral": "10",
                     "links": [
                         {
                             "rel": "self",
@@ -427,6 +433,7 @@ class FlavorsTest(test.TestCase):
                     "disk": "20",
                     "vcpus": "",
                     "swap": '1024',
+                    "ephemeral": "10",
                     "links": [
                         {
                             "rel": "self",
@@ -455,6 +462,7 @@ class FlavorsXMLSerializationTest(test.TestCase):
                 "disk": "10",
                 "vcpus": "",
                 "swap": "512",
+                "ephemeral": "512",
                 "links": [
                     {
                         "rel": "self",
