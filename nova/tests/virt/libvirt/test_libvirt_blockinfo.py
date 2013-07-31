@@ -248,10 +248,50 @@ class LibvirtBlockInfoTest(test.TestCase):
         expect = {
             'disk': {'bus': 'virtio', 'dev': 'vda', 'type': 'disk'},
             'disk.local': {'bus': 'virtio', 'dev': 'vdb', 'type': 'disk'},
-            'disk.config': {'bus': 'virtio', 'dev': 'vdz', 'type': 'disk'},
+            'disk.config': {'bus': 'ide', 'dev': 'hdd', 'type': 'cdrom'},
             'root': {'bus': 'virtio', 'dev': 'vda', 'type': 'disk'}
             }
         self.assertEqual(mapping, expect)
+
+    def test_get_disk_mapping_cdrom_configdrive(self):
+        # A simple disk mapping setup, with configdrive added as cdrom
+
+        self.flags(force_config_drive=True)
+        self.flags(config_drive_format='iso9660')
+
+        user_context = context.RequestContext(self.user_id, self.project_id)
+        instance_ref = db.instance_create(user_context, self.test_instance)
+
+        mapping = blockinfo.get_disk_mapping("kvm", instance_ref,
+                                             "virtio", "ide")
+
+        expect = {
+            'disk': {'bus': 'virtio', 'dev': 'vda', 'type': 'disk'},
+            'disk.local': {'bus': 'virtio', 'dev': 'vdb', 'type': 'disk'},
+            'disk.config': {'bus': 'ide', 'dev': 'hdd', 'type': 'cdrom'},
+            'root': {'bus': 'virtio', 'dev': 'vda', 'type': 'disk'}
+            }
+        self.assertEqual(expect, mapping)
+
+    def test_get_disk_mapping_disk_configdrive(self):
+        # A simple disk mapping setup, with configdrive added as disk
+
+        self.flags(force_config_drive=True)
+        self.flags(config_drive_format='vfat')
+
+        user_context = context.RequestContext(self.user_id, self.project_id)
+        instance_ref = db.instance_create(user_context, self.test_instance)
+
+        mapping = blockinfo.get_disk_mapping("kvm", instance_ref,
+                                             "virtio", "ide")
+
+        expect = {
+            'disk': {'bus': 'virtio', 'dev': 'vda', 'type': 'disk'},
+            'disk.local': {'bus': 'virtio', 'dev': 'vdb', 'type': 'disk'},
+            'disk.config': {'bus': 'virtio', 'dev': 'vdz', 'type': 'disk'},
+            'root': {'bus': 'virtio', 'dev': 'vda', 'type': 'disk'}
+            }
+        self.assertEqual(expect, mapping)
 
     def test_get_disk_mapping_ephemeral(self):
         # A disk mapping with ephemeral devices
@@ -444,3 +484,22 @@ class LibvirtBlockInfoTest(test.TestCase):
                           blockinfo.get_disk_bus_for_device_type,
                           'kvm',
                           image_meta)
+
+    def test_get_config_drive_type_default(self):
+        config_drive_type = blockinfo.get_config_drive_type()
+        self.assertEqual('cdrom', config_drive_type)
+
+    def test_get_config_drive_type_cdrom(self):
+        self.flags(config_drive_format='iso9660')
+        config_drive_type = blockinfo.get_config_drive_type()
+        self.assertEqual('cdrom', config_drive_type)
+
+    def test_get_config_drive_type_disk(self):
+        self.flags(config_drive_format='vfat')
+        config_drive_type = blockinfo.get_config_drive_type()
+        self.assertEqual('disk', config_drive_type)
+
+    def test_get_config_drive_type_improper_value(self):
+        self.flags(config_drive_format='test')
+        self.assertRaises(exception.ConfigDriveUnknownFormat,
+                          blockinfo.get_config_drive_type)
