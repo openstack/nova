@@ -3072,6 +3072,27 @@ class LibvirtConnTestCase(test.TestCase):
                     "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64"}
         conn.destroy(instance, [])
 
+    def test_destroy_timed_out(self):
+        mock = self.mox.CreateMock(libvirt.virDomain)
+        mock.ID()
+        mock.destroy().AndRaise(libvirt.libvirtError("timed out"))
+        self.mox.ReplayAll()
+
+        def fake_lookup_by_name(instance_name):
+            return mock
+
+        def fake_get_error_code(self):
+            return libvirt.VIR_ERR_OPERATION_TIMEOUT
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.stubs.Set(conn, '_lookup_by_name', fake_lookup_by_name)
+        self.stubs.Set(libvirt.libvirtError, 'get_error_code',
+                fake_get_error_code)
+        instance = {"name": "instancename", "id": "instanceid",
+                    "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64"}
+        self.assertRaises(exception.InstancePowerOffFailure,
+                conn.destroy, instance, [])
+
     def test_private_destroy_not_found(self):
         mock = self.mox.CreateMock(libvirt.virDomain)
         mock.ID()
