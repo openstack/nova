@@ -17,13 +17,12 @@
 
 """Fetch Bandwidth data from VIF network devices."""
 
-import os
-import shutil
-
 import utils
 
-from pluginlib_nova import *
-configure_logging('bandwidth')
+import pluginlib_nova
+
+
+pluginlib_nova.configure_logging('bandwidth')
 
 
 def _read_proc_net():

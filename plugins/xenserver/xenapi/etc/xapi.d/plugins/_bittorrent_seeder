@@ -23,9 +23,11 @@ import time
 
 import libtorrent
 
-#FIXME(sirp): should this use pluginlib from 5.6?
-from pluginlib_nova import *
-configure_logging('_bittorrent_seeder')
+import pluginlib_nova
+
+
+pluginlib_nova.configure_logging('_bittorrent_seeder')
+logging = pluginlib_nova.logging
 
 
 def _daemonize(stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):

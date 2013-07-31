@@ -29,7 +29,6 @@ as will be required after a log rotate:
 
 import base64
 import logging
-import os
 import zlib
 
 import XenAPIPlugin
