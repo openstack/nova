@@ -25,7 +25,7 @@ from nova import exception
 from nova.openstack.common.gettextutils import _
 
 
-class ServerMetadataController(object):
+class ServerMetadataController(wsgi.Controller):
     """The server metadata API controller for the OpenStack API."""
 
     def __init__(self):
@@ -45,21 +45,21 @@ class ServerMetadataController(object):
             meta_dict[key] = value
         return meta_dict
 
+    @extensions.expected_errors(404)
     @wsgi.serializers(xml=common.MetadataTemplate)
     def index(self, req, server_id):
         """Returns the list of metadata for a given instance."""
         context = req.environ['nova.context']
         return {'metadata': self._get_metadata(context, server_id)}
 
+    @extensions.expected_errors((400, 404, 409, 413))
     @wsgi.serializers(xml=common.MetadataTemplate)
     @wsgi.deserializers(xml=common.MetadataDeserializer)
     def create(self, req, server_id, body):
-        try:
-            metadata = body['metadata']
-        except (KeyError, TypeError):
+        if not self.is_valid_body(body, 'metadata'):
             msg = _("Malformed request body")
             raise exc.HTTPBadRequest(explanation=msg)
-
+        metadata = body['metadata']
         context = req.environ['nova.context']
 
         new_metadata = self._update_instance_metadata(context,
@@ -69,15 +69,14 @@ class ServerMetadataController(object):
 
         return {'metadata': new_metadata}
 
+    @extensions.expected_errors((400, 404, 409, 413))
     @wsgi.serializers(xml=common.MetaItemTemplate)
     @wsgi.deserializers(xml=common.MetaItemDeserializer)
     def update(self, req, server_id, id, body):
-        try:
-            meta_item = body['meta']
-        except (TypeError, KeyError):
-            expl = _('Malformed request body')
-            raise exc.HTTPBadRequest(explanation=expl)
-
+        if not self.is_valid_body(body, 'metadata'):
+            msg = _("Malformed request body")
+            raise exc.HTTPBadRequest(explanation=msg)
+        meta_item = body['metadata']
         if id not in meta_item:
             expl = _('Request body and URI mismatch')
             raise exc.HTTPBadRequest(explanation=expl)
@@ -92,17 +91,16 @@ class ServerMetadataController(object):
                                        meta_item,
                                        delete=False)
 
-        return {'meta': meta_item}
+        return {'metadata': meta_item}
 
+    @extensions.expected_errors((400, 404, 409, 413))
     @wsgi.serializers(xml=common.MetadataTemplate)
     @wsgi.deserializers(xml=common.MetadataDeserializer)
     def update_all(self, req, server_id, body):
-        try:
-            metadata = body['metadata']
-        except (TypeError, KeyError):
-            expl = _('Malformed request body')
-            raise exc.HTTPBadRequest(explanation=expl)
-
+        if not self.is_valid_body(body, 'metadata'):
+            msg = _("Malformed request body")
+            raise exc.HTTPBadRequest(explanation=msg)
+        metadata = body['metadata']
         context = req.environ['nova.context']
         new_metadata = self._update_instance_metadata(context,
                                                       server_id,
@@ -124,10 +122,6 @@ class ServerMetadataController(object):
             msg = _('Server does not exist')
             raise exc.HTTPNotFound(explanation=msg)
 
-        except (ValueError, AttributeError):
-            msg = _("Malformed request body")
-            raise exc.HTTPBadRequest(explanation=msg)
-
         except exception.InvalidMetadata as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
 
@@ -144,6 +138,7 @@ class ServerMetadataController(object):
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'update metadata')
 
+    @extensions.expected_errors(404)
     @wsgi.serializers(xml=common.MetaItemTemplate)
     def show(self, req, server_id, id):
         """Return a single metadata item."""
@@ -151,11 +146,12 @@ class ServerMetadataController(object):
         data = self._get_metadata(context, server_id)
 
         try:
-            return {'meta': {id: data[id]}}
+            return {'metadata': {id: data[id]}}
         except KeyError:
             msg = _("Metadata item was not found")
             raise exc.HTTPNotFound(explanation=msg)
 
+    @extensions.expected_errors((404, 409))
     @wsgi.response(204)
     def delete(self, req, server_id, id):
         """Deletes an existing metadata."""
