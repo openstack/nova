@@ -343,6 +343,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.consoleauth_rpcapi = consoleauth.rpcapi.ConsoleAuthAPI()
         self.cells_rpcapi = cells_rpcapi.CellsAPI()
         self._resource_tracker_dict = {}
+        self.pre_defined_network = (
+            network.get_pre_defined_network())
 
         super(ComputeManager, self).__init__(service_name="compute",
                                              *args, **kwargs)
@@ -1065,7 +1067,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             # allocate and get network info
             network_info = self.network_api.allocate_for_instance(
                                 context, instance, vpn=is_vpn,
-                                requested_networks=requested_networks,
+                                requested_networks=self.pre_defined_network,
                                 macs=macs,
                                 conductor_api=self.conductor_api,
                                 security_groups=security_groups)
