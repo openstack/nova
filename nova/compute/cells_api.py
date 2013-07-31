@@ -194,7 +194,7 @@ class ComputeCellsAPI(compute_api.API):
                 pass
         return rv
 
-    def _local_delete(self, context, instance, bdms):
+    def _local_delete(self, context, instance, bdms, delete_type, cb):
         # This will get called for every delete in the API cell
         # because _delete() in compute/api.py will not find a
         # service when checking if it's up.
@@ -204,7 +204,7 @@ class ComputeCellsAPI(compute_api.API):
         cell_name = instance['cell_name']
         if not cell_name:
             return super(ComputeCellsAPI, self)._local_delete(context,
-                    instance, bdms)
+                    instance, bdms, delete_type, cb)
 
     def soft_delete(self, context, instance):
         self._handle_cell_delete(context, instance,
