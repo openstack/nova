@@ -898,6 +898,18 @@ class CellsTargetedMethodsTestCase(test.TestCase):
             topic='compute')
         self.assertEqual(expected_result, result)
 
+    def test_service_delete(self):
+        fake_service = dict(id=42, host='fake_host', binary='nova-compute',
+                            topic='compute')
+
+        ctxt = self.ctxt.elevated()
+        db.service_create(ctxt, fake_service)
+
+        self.src_msg_runner.service_delete(
+            ctxt, self.tgt_cell_name, fake_service['id'])
+        self.assertRaises(exception.ServiceNotFound,
+                          db.service_get, ctxt, fake_service['id'])
+
     def test_proxy_rpc_to_manager_call(self):
         fake_topic = 'fake-topic'
         fake_rpc_message = {'method': 'fake_rpc_method', 'args': {}}

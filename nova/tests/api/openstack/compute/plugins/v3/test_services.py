@@ -14,6 +14,8 @@
 
 import calendar
 import datetime
+
+import mock
 import webob.exc
 
 from nova.api.openstack.compute.plugins.v3 import services
@@ -150,6 +152,7 @@ class ServicesTest(test.TestCase):
         res_dict = self.controller.index(req)
         response = {'services': [
                     {'binary': 'nova-scheduler',
+                    'id': 1,
                     'host': 'host1',
                     'zone': 'internal',
                     'status': 'disabled',
@@ -158,6 +161,7 @@ class ServicesTest(test.TestCase):
                     'disabled_reason': 'test1'},
                     {'binary': 'nova-compute',
                      'host': 'host1',
+                     'id': 2,
                      'zone': 'nova',
                      'status': 'disabled',
                      'state': 'up',
@@ -165,6 +169,7 @@ class ServicesTest(test.TestCase):
                      'disabled_reason': 'test2'},
                     {'binary': 'nova-scheduler',
                      'host': 'host2',
+                     'id': 3,
                      'zone': 'internal',
                      'status': 'enabled',
                      'state': 'down',
@@ -172,6 +177,7 @@ class ServicesTest(test.TestCase):
                      'disabled_reason': ''},
                     {'binary': 'nova-compute',
                      'host': 'host2',
+                     'id': 4,
                      'zone': 'nova',
                      'status': 'disabled',
                      'state': 'down',
@@ -187,6 +193,7 @@ class ServicesTest(test.TestCase):
         response = {'services': [
                     {'binary': 'nova-scheduler',
                     'host': 'host1',
+                    'id': 1,
                     'zone': 'internal',
                     'status': 'disabled',
                     'state': 'up',
@@ -194,6 +201,7 @@ class ServicesTest(test.TestCase):
                     'disabled_reason': 'test1'},
                    {'binary': 'nova-compute',
                     'host': 'host1',
+                    'id': 2,
                     'zone': 'nova',
                     'status': 'disabled',
                     'state': 'up',
@@ -209,6 +217,7 @@ class ServicesTest(test.TestCase):
         response = {'services': [
                     {'binary': 'nova-compute',
                     'host': 'host1',
+                    'id': 2,
                     'zone': 'nova',
                     'status': 'disabled',
                     'state': 'up',
@@ -216,6 +225,7 @@ class ServicesTest(test.TestCase):
                     'disabled_reason': 'test2'},
                     {'binary': 'nova-compute',
                      'host': 'host2',
+                     'id': 4,
                      'zone': 'nova',
                      'status': 'disabled',
                      'state': 'down',
@@ -231,6 +241,7 @@ class ServicesTest(test.TestCase):
         response = {'services': [
                     {'binary': 'nova-compute',
                     'host': 'host1',
+                    'id': 2,
                     'zone': 'nova',
                     'status': 'disabled',
                     'state': 'up',
@@ -299,3 +310,22 @@ class ServicesTest(test.TestCase):
         self.assertFalse(self.controller._is_valid_as_reason(reason))
         reason = 'it\'s a valid reason.'
         self.assertTrue(self.controller._is_valid_as_reason(reason))
+
+    def test_services_delete(self):
+        request = fakes.HTTPRequestV3.blank('/v3/os-services/1',
+                                            use_admin_context=True)
+        request.method = 'DELETE'
+
+        with mock.patch.object(self.controller.host_api,
+                               'service_delete') as service_delete:
+            response = self.controller.delete(request, '1')
+            service_delete.assert_called_once_with(
+                request.environ['nova.context'], '1')
+            self.assertEqual(self.controller.delete.wsgi_code, 204)
+
+    def test_services_delete_not_found(self):
+        request = fakes.HTTPRequestV3.blank('/v3/os-services/abc',
+                                            use_admin_context=True)
+        request.method = 'DELETE'
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          self.controller.delete, request, 'abc')

@@ -18,6 +18,7 @@ Tests For CellsManager
 import copy
 import datetime
 
+import mock
 from oslo.config import cfg
 
 from nova.cells import messaging
@@ -340,6 +341,17 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
             self.ctxt, host_name=cell_and_host, binary='nova-api',
             params_to_update=params_to_update)
         self.assertEqual(expected_response, response)
+
+    def test_service_delete(self):
+        fake_cell = 'fake-cell'
+        service_id = '1'
+        cell_service_id = cells_utils.cell_with_item(fake_cell, service_id)
+
+        with mock.patch.object(self.msg_runner,
+                               'service_delete') as service_delete:
+            self.cells_manager.service_delete(self.ctxt, cell_service_id)
+            service_delete.assert_called_once_with(
+                self.ctxt, fake_cell, service_id)
 
     def test_proxy_rpc_to_manager(self):
         self.mox.StubOutWithMock(self.msg_runner,

@@ -558,6 +558,10 @@ class HostAPI(compute_api.HostAPI):
                                                        service_obj.Service(),
                                                        db_service)
 
+    def service_delete(self, context, service_id):
+        """Deletes the specified service."""
+        self.cells_rpcapi.service_delete(context, service_id)
+
     def instance_get_all_by_host(self, context, host_name):
         """Get all instances by host.  Host might have a cell prepended
         to it, so we'll need to strip it out.  We don't need to proxy

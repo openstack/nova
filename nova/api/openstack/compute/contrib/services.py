@@ -33,6 +33,7 @@ class ServicesIndexTemplate(xmlutil.TemplateBuilder):
     def construct(self):
         root = xmlutil.TemplateElement('services')
         elem = xmlutil.SubTemplateElement(root, 'service', selector='services')
+        elem.set('id')
         elem.set('binary')
         elem.set('host')
         elem.set('zone')
@@ -106,6 +107,8 @@ class ServiceController(object):
                      'zone': svc['availability_zone'],
                      'status': active, 'state': state,
                      'updated_at': svc['updated_at']}
+        if self.ext_mgr.is_loaded('os-extended-services-delete'):
+            service_detail['id'] = svc['id']
         if detailed:
             service_detail['disabled_reason'] = svc['disabled_reason']
 
@@ -127,6 +130,21 @@ class ServiceController(object):
             return False
 
         return True
+
+    @wsgi.response(204)
+    def delete(self, req, id):
+        """Deletes the specified service."""
+        if not self.ext_mgr.is_loaded('os-extended-services-delete'):
+            raise webob.exc.HTTPMethodNotAllowed()
+
+        context = req.environ['nova.context']
+        authorize(context)
+
+        try:
+            self.host_api.service_delete(context, id)
+        except exception.ServiceNotFound:
+            explanation = _("Service %s not found.") % id
+            raise webob.exc.HTTPNotFound(explanation=explanation)
 
     @wsgi.serializers(xml=ServicesIndexTemplate)
     def index(self, req):

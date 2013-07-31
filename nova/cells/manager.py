@@ -71,7 +71,7 @@ class CellsManager(manager.Manager):
     Scheduling requests get passed to the scheduler class.
     """
 
-    target = oslo_messaging.Target(version='1.25')
+    target = oslo_messaging.Target(version='1.26')
 
     def __init__(self, *args, **kwargs):
         LOG.warn(_('The cells feature of Nova is considered experimental '
@@ -302,6 +302,12 @@ class CellsManager(manager.Manager):
         service = response.value_or_raise()
         cells_utils.add_cell_to_service(service, response.cell_name)
         return service
+
+    def service_delete(self, ctxt, cell_service_id):
+        """Deletes the specified service."""
+        cell_name, service_id = cells_utils.split_cell_and_item(
+            cell_service_id)
+        self.msg_runner.service_delete(ctxt, cell_name, service_id)
 
     def proxy_rpc_to_manager(self, ctxt, topic, rpc_message, call, timeout):
         """Proxy an RPC message as-is to a manager."""
