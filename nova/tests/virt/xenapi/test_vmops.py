@@ -262,10 +262,7 @@ class GetConsoleOutputTestCase(VMOpsTestBase):
                          self.vmops._get_dom_id(vm_ref=vm_ref))
 
 
-class VMOpsTestCase(VMOpsTestBase):
-    def setUp(self):
-        super(VMOpsTestCase, self).setUp()
-
+class RemoveHostnameTestCase(VMOpsTestBase):
     def test_remove_hostname(self):
         vm, vm_ref = self.create_vm("dummy")
         instance = {"name": "dummy", "uuid": "1234", "auto_disk_config": None}
