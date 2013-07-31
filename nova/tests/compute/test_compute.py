@@ -294,10 +294,6 @@ class BaseTestCase(test.TestCase):
                     {'fake_zone': [inst['host']]})
         return db.instance_create(self.context, inst)
 
-    def _create_instance(self, params=None, type_name='m1.tiny'):
-        """Create a test instance. Returns uuid."""
-        return self._create_fake_instance(params, type_name=type_name)
-
     def _objectify(self, db_inst):
         return instance_obj.Instance._from_db_object(
             self.context, instance_obj.Instance(), db_inst,
@@ -1190,8 +1186,9 @@ class ComputeTestCase(BaseTestCase):
 
     def test_fail_to_schedule_persists(self):
         # check the persistence of the ERROR(scheduling) state.
-        self._create_instance(params={'vm_state': vm_states.ERROR,
-                                      'task_state': task_states.SCHEDULING})
+        params = {'vm_state': vm_states.ERROR,
+                  'task_state': task_states.SCHEDULING}
+        self._create_fake_instance(params=params)
         #check state is failed even after the periodic poll
         self.compute.periodic_tasks(context.get_admin_context())
         self._assert_state({'vm_state': vm_states.ERROR,
@@ -1207,7 +1204,7 @@ class ComputeTestCase(BaseTestCase):
             raise test.TestingException()
         self.stubs.Set(nova.compute.manager.ComputeManager,
                        '_prep_block_device', fake)
-        instance = self._create_instance()
+        instance = self._create_fake_instance()
         self.assertRaises(test.TestingException, self.compute.run_instance,
                           self.context, instance=instance)
         #check state is failed even after the periodic poll
@@ -1226,7 +1223,7 @@ class ComputeTestCase(BaseTestCase):
         def fake(*args, **kwargs):
             raise test.TestingException()
         self.stubs.Set(self.compute.driver, 'spawn', fake)
-        instance = self._create_instance()
+        instance = self._create_fake_instance()
         self.assertRaises(test.TestingException, self.compute.run_instance,
                           self.context, instance=instance)
         #check state is failed even after the periodic poll
@@ -1242,7 +1239,7 @@ class ComputeTestCase(BaseTestCase):
         Make sure that when an instance is not found during spawn
         that the network is deallocated
         """
-        instance = self._create_instance()
+        instance = self._create_fake_instance()
 
         def fake(*args, **kwargs):
             raise exception.InstanceNotFound(instance_id="fake")
@@ -1257,7 +1254,7 @@ class ComputeTestCase(BaseTestCase):
     def test_run_instance_bails_on_missing_instance(self):
         # Make sure that run_instance() will quickly ignore a deleted instance
         called = {}
-        instance = self._create_instance()
+        instance = self._create_fake_instance()
 
         def fake_instance_update(self, *a, **args):
             called['instance_update'] = True
@@ -1270,7 +1267,8 @@ class ComputeTestCase(BaseTestCase):
     def test_can_terminate_on_error_state(self):
         # Make sure that the instance can be terminated in ERROR state.
         #check failed to schedule --> terminate
-        instance = self._create_instance(params={'vm_state': vm_states.ERROR})
+        params = {'vm_state': vm_states.ERROR}
+        instance = self._create_fake_instance(params=params)
         self.compute.terminate_instance(self.context, instance=instance)
         self.assertRaises(exception.InstanceNotFound, db.instance_get_by_uuid,
                           self.context, instance['uuid'])
