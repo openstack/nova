@@ -37,6 +37,7 @@ from nova.cells import rpcapi as cells_rpcapi
 from nova.cells import state
 from nova.cloudpipe import pipelib
 from nova.compute import api as compute_api
+from nova.compute import cells_api as cells_api
 from nova.compute import manager as compute_manager
 from nova import context
 from nova import db
@@ -75,6 +76,7 @@ CONF.import_opt('vpn_image_id', 'nova.cloudpipe.pipelib')
 CONF.import_opt('osapi_compute_link_prefix', 'nova.api.openstack.common')
 CONF.import_opt('osapi_glance_link_prefix', 'nova.api.openstack.common')
 CONF.import_opt('enable', 'nova.cells.opts', group='cells')
+CONF.import_opt('cell_type', 'nova.cells.opts', group='cells')
 CONF.import_opt('db_check_interval', 'nova.cells.state', group='cells')
 LOG = logging.getLogger(__name__)
 
@@ -3689,6 +3691,40 @@ class HypervisorsSampleJsonTests(ApiSampleTestBase):
 
 
 class HypervisorsSampleXmlTests(HypervisorsSampleJsonTests):
+    ctype = "xml"
+
+
+class HypervisorsCellsSampleJsonTests(ApiSampleTestBase):
+    extension_name = ("nova.api.openstack.compute.contrib.hypervisors."
+                      "Hypervisors")
+
+    def setUp(self):
+        self.flags(enable=True, cell_type='api', group='cells')
+        super(HypervisorsCellsSampleJsonTests, self).setUp()
+
+    def test_hypervisor_uptime(self):
+        fake_hypervisor = {'service': {'host': 'fake-mini'}, 'id': 1,
+                           'hypervisor_hostname': 'fake-mini'}
+
+        def fake_get_host_uptime(self, context, hyp):
+            return (" 08:32:11 up 93 days, 18:25, 12 users,  load average:"
+                    " 0.20, 0.12, 0.14")
+
+        def fake_compute_node_get(self, context, hyp):
+            return fake_hypervisor
+
+        self.stubs.Set(cells_api.HostAPI, 'compute_node_get',
+                       fake_compute_node_get)
+
+        self.stubs.Set(cells_api.HostAPI,
+                       'get_host_uptime', fake_get_host_uptime)
+        hypervisor_id = fake_hypervisor['id']
+        response = self._do_get('os-hypervisors/%s/uptime' % hypervisor_id)
+        subs = {'hypervisor_id': hypervisor_id}
+        self._verify_response('hypervisors-uptime-resp', subs, response, 200)
+
+
+class HypervisorsCellsSampleXmlTests(HypervisorsCellsSampleJsonTests):
     ctype = "xml"
 
 
