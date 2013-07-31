@@ -936,4 +936,4 @@ def load_compute_driver(virtapi, compute_driver=None):
 
 
 def compute_driver_matches(match):
-    return CONF.compute_driver.endswith(match)
+    return CONF.compute_driver and CONF.compute_driver.endswith(match)
