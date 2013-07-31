@@ -12,11 +12,11 @@ Filtering
 
 During its work Filter Scheduler firstly makes dictionary of unfiltered hosts,
 then filters them using filter properties and finally chooses hosts for the
-requested number of instances (each time it chooses the least costed host and
-appends it to the list of selected costs).
+requested number of instances (each time it chooses the most weighed host and
+appends it to the list of selected hosts).
 
 If it turns up, that it can't find candidates for the next instance, it means
-that there are no more appropriate instances locally.
+that there are no more appropriate hosts where the instance could be scheduled.
 
 If we speak about `filtering` and `weighting`, their work is quite flexible
 in the Filter Scheduler. There are a lot of filtering strategies for the
@@ -259,19 +259,10 @@ driver.  The standard nova filters and MyFilter are available to the
 FilterScheduler.  The RamFilter, ComputeFilter, and MyFilter are used by
 default when no filters are specified in the request.
 
-Costs and weights
------------------
+Weights
+-------
 
-Filter Scheduler uses so-called **weights** and **costs** during its work.
-
-`Costs` are the computed integers, expressing hosts measure of fitness to be
-chosen as a result of the request. Of course, costs are computed due to hosts
-characteristics compared with characteristics from the request. So trying to
-put instance on a not appropriate host (for example, trying to put really
-simple and plain instance on a high performance host) would have high cost, and
-putting instance on an appropriate host would have low.
-
-So let's find out, how does all this computing work happen.
+Filter Scheduler uses so-called **weights** during its work.
 
 The Filter Scheduler weights hosts based on the config option
 ``scheduler_weight_classes``, this defaults to
