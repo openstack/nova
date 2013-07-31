@@ -22,6 +22,7 @@ from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import db
 from nova import exception
+from nova.openstack.common.gettextutils import _
 
 
 ALIAS = "os-agents"
@@ -66,6 +67,7 @@ class AgentController(object):
     http://wiki.openstack.org/GuestAgent
     http://wiki.openstack.org/GuestAgentXenStoreCommunication
     """
+    @extensions.expected_errors(())
     @wsgi.serializers(xml=AgentsIndexTemplate)
     def index(self, req):
         """
@@ -89,18 +91,22 @@ class AgentController(object):
 
         return {'agents': agents}
 
+    @extensions.expected_errors((400, 404))
     def update(self, req, id, body):
         """Update an existing agent build."""
         context = req.environ['nova.context']
         authorize(context)
 
         try:
-            para = body['para']
+            para = body['agent']
             url = para['url']
             md5hash = para['md5hash']
             version = para['version']
-        except (TypeError, KeyError):
-            raise webob.exc.HTTPUnprocessableEntity()
+        except TypeError as e:
+            raise webob.exc.HTTPBadRequest()
+        except KeyError as e:
+            raise webob.exc.HTTPBadRequest(explanation=_(
+                "Could not find %s parameter in the request") % e.args[0])
 
         try:
             db.agent_build_update(context, id,
@@ -113,6 +119,8 @@ class AgentController(object):
         return {"agent": {'agent_id': id, 'version': version,
                 'url': url, 'md5hash': md5hash}}
 
+    @extensions.expected_errors(404)
+    @wsgi.response(204)
     def delete(self, req, id):
         """Deletes an existing agent build."""
         context = req.environ['nova.context']
@@ -123,6 +131,7 @@ class AgentController(object):
         except exception.AgentBuildNotFound as ex:
             raise webob.exc.HTTPNotFound(explanation=ex.format_message())
 
+    @extensions.expected_errors((400, 409))
     def create(self, req, body):
         """Creates a new agent build."""
         context = req.environ['nova.context']
@@ -136,8 +145,11 @@ class AgentController(object):
             version = agent['version']
             url = agent['url']
             md5hash = agent['md5hash']
-        except (TypeError, KeyError):
-            raise webob.exc.HTTPUnprocessableEntity()
+        except TypeError as e:
+            raise webob.exc.HTTPBadRequest()
+        except KeyError as e:
+            raise webob.exc.HTTPBadRequest(explanation=_(
+                "Could not find %s parameter in the request") % e.args[0])
 
         try:
             agent_build_ref = db.agent_build_create(context,
@@ -148,8 +160,8 @@ class AgentController(object):
                                                  'url': url,
                                                  'md5hash': md5hash})
             agent['agent_id'] = agent_build_ref.id
-        except Exception as ex:
-            raise webob.exc.HTTPServerError(str(ex))
+        except exception.AgentBuildExists as ex:
+            raise webob.exc.HTTPConflict(explanation=ex.format_message())
         return {'agent': agent}
 
 
