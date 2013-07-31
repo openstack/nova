@@ -35,6 +35,7 @@ class EvacuateController(wsgi.Controller):
         super(EvacuateController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
 
+    @extensions.expected_errors((400, 404, 409))
     @wsgi.action('evacuate')
     def _evacuate(self, req, id, body):
         """
@@ -76,10 +77,10 @@ class EvacuateController(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'evacuate')
-        except Exception as e:
-            msg = _("Error in evacuate, %s") % e
-            LOG.exception(msg, instance=instance)
-            raise exc.HTTPBadRequest(explanation=msg)
+        except exception.InstanceNotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
+        except exception.ComputeServiceUnavailable as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
 
         return {'admin_password': password}
 
