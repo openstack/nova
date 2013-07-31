@@ -238,6 +238,31 @@ class TestDriverBlockDevice(test.TestCase):
         self.assertThat(test_bdm['connection_info'],
                         matchers.DictMatches(expected_conn_info))
 
+    def test_refresh_connection(self):
+        test_bdm = self.driver_classes['snapshot'](
+            self.snapshot_bdm)
+
+        instance = {'id': 'fake_id', 'uuid': 'fake_uuid'}
+        connector = {'ip': 'fake_ip', 'host': 'fake_host'}
+        connection_info = {'data': 'fake_data'}
+        expected_conn_info = {'data': 'fake_data',
+                              'serial': 'fake-volume-id-2'}
+
+        self.virt_driver.get_volume_connector(instance).AndReturn(connector)
+        self.volume_api.initialize_connection(
+            self.context, test_bdm.volume_id,
+            connector).AndReturn(connection_info)
+        self.db_api.block_device_mapping_update(self.context, 4,
+                {'connection_info': jsonutils.dumps(expected_conn_info)})
+
+        self.mox.ReplayAll()
+
+        test_bdm.refresh_connection_info(self.context, instance,
+                                         self.volume_api, self.virt_driver,
+                                         self.db_api)
+        self.assertThat(test_bdm['connection_info'],
+                        matchers.DictMatches(expected_conn_info))
+
     def test_snapshot_attach_no_volume(self):
         no_volume_snapshot = self.snapshot_bdm.copy()
         no_volume_snapshot['volume_id'] = None

@@ -1726,6 +1726,8 @@ class ComputeTestCase(BaseTestCase):
         # This is a true unit test, so we don't need the network stubs.
         fake_network.unset_stub_network_methods(self.stubs)
 
+        self.mox.StubOutWithMock(self.compute,
+                                 '_get_instance_volume_block_device_info')
         self.mox.StubOutWithMock(self.compute, '_get_instance_nw_info')
         self.mox.StubOutWithMock(self.compute, '_notify_about_instance_usage')
         self.mox.StubOutWithMock(self.compute, '_instance_update')
@@ -1777,6 +1779,8 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.context, 'elevated')
         self.context.elevated().AndReturn(econtext)
 
+        self.compute._get_instance_volume_block_device_info(
+            econtext, instance).AndReturn(fake_block_dev_info)
         self.compute._get_instance_nw_info(econtext,
                                            instance).AndReturn(
                                                    fake_nw_model)
@@ -1872,13 +1876,13 @@ class ComputeTestCase(BaseTestCase):
 
         if not fail_reboot or fail_running:
             self.compute.reboot_instance(self.context, instance=instance,
-                                         block_device_info=fake_block_dev_info,
+                                         block_device_info=None,
                                          reboot_type=reboot_type)
         else:
             self.assertRaises(exception.InstanceNotFound,
                               self.compute.reboot_instance,
                               self.context, instance=instance,
-                              block_device_info=fake_block_dev_info,
+                              block_device_info=None,
                               reboot_type=reboot_type)
 
         self.assertEqual(expected_call_info, reboot_call_info)
