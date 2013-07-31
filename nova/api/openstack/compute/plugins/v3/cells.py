@@ -194,6 +194,7 @@ class CellsController(object):
         items = [_scrub_cell(item, detail=detail) for item in items]
         return dict(cells=items)
 
+    @extensions.expected_errors(())
     @wsgi.serializers(xml=CellsTemplate)
     def index(self, req):
         """Return all cells in brief."""
@@ -201,6 +202,7 @@ class CellsController(object):
         authorize(ctxt)
         return self._get_cells(ctxt, req)
 
+    @extensions.expected_errors(())
     @wsgi.serializers(xml=CellsTemplate)
     def detail(self, req):
         """Return all cells in detail."""
@@ -208,6 +210,7 @@ class CellsController(object):
         authorize(ctxt)
         return self._get_cells(ctxt, req, detail=True)
 
+    @extensions.expected_errors(())
     @wsgi.serializers(xml=CellTemplate)
     def info(self, req):
         """Return name and capabilities for this cell."""
@@ -226,6 +229,7 @@ class CellsController(object):
                 'capabilities': cell_capabs}
         return dict(cell=cell)
 
+    @extensions.expected_errors(404)
     @wsgi.serializers(xml=CellTemplate)
     def capacities(self, req, id=None):
         """Return capacities for a given cell or all cells."""
@@ -236,12 +240,12 @@ class CellsController(object):
         try:
             capacities = self.cells_rpcapi.get_capacities(context,
                                                           cell_name=id)
-        except exception.CellNotFound:
-            msg = (_("Cell %(id)s not found.") % {'id': id})
-            raise exc.HTTPNotFound(explanation=msg)
+        except exception.CellNotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
 
         return dict(cell={"capacities": capacities})
 
+    @extensions.expected_errors(404)
     @wsgi.serializers(xml=CellTemplate)
     def show(self, req, id):
         """Return data about the given cell name.  'id' is a cell name."""
@@ -249,10 +253,12 @@ class CellsController(object):
         authorize(context)
         try:
             cell = self.cells_rpcapi.cell_get(context, id)
-        except exception.CellNotFound:
-            raise exc.HTTPNotFound()
+        except exception.CellNotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
         return dict(cell=_scrub_cell(cell))
 
+    @extensions.expected_errors((403, 404))
+    @wsgi.response(204)
     def delete(self, req, id):
         """Delete a child or parent cell entry.  'id' is a cell name."""
         context = req.environ['nova.context']
@@ -262,8 +268,8 @@ class CellsController(object):
         except exception.CellsUpdateUnsupported as e:
             raise exc.HTTPForbidden(explanation=e.format_message())
         if num_deleted == 0:
-            raise exc.HTTPNotFound()
-        return {}
+            raise exc.HTTPNotFound(
+                explanation=_("Cell %s doesn't exist.") % id)
 
     def _validate_cell_name(self, cell_name):
         """Validate cell name is not empty and doesn't contain '!' or '.'."""
@@ -325,6 +331,7 @@ class CellsController(object):
         # Now set the transport URL
         cell['transport_url'] = rpc_driver.unparse_transport_url(transport)
 
+    @extensions.expected_errors((400, 403))
     @wsgi.serializers(xml=CellTemplate)
     @wsgi.deserializers(xml=CellDeserializer)
     def create(self, req, body):
@@ -348,6 +355,7 @@ class CellsController(object):
             raise exc.HTTPForbidden(explanation=e.format_message())
         return dict(cell=_scrub_cell(cell))
 
+    @extensions.expected_errors((400, 403, 404))
     @wsgi.serializers(xml=CellTemplate)
     @wsgi.deserializers(xml=CellDeserializer)
     def update(self, req, id, body):
@@ -370,17 +378,19 @@ class CellsController(object):
             #            will be going away in the future, I don't see
             #            it as much of a problem...
             existing = self.cells_rpcapi.cell_get(context, id)
-        except exception.CellNotFound:
-            raise exc.HTTPNotFound()
+        except exception.CellNotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
         self._normalize_cell(cell, existing)
         try:
             cell = self.cells_rpcapi.cell_update(context, id, cell)
-        except exception.CellNotFound:
-            raise exc.HTTPNotFound()
+        except exception.CellNotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
         except exception.CellsUpdateUnsupported as e:
             raise exc.HTTPForbidden(explanation=e.format_message())
         return dict(cell=_scrub_cell(cell))
 
+    @extensions.expected_errors(400)
+    @wsgi.response(204)
     def sync_instances(self, req, body):
         """Tell all cells to sync instance info."""
         context = req.environ['nova.context']
