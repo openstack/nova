@@ -37,6 +37,7 @@ from nova.openstack.common.notifier import test_notifier
 from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import timeutils
 from nova import quota
+from nova.scheduler import utils as scheduler_utils
 from nova import test
 from nova.tests.compute import test_compute
 from nova.tests import fake_instance_actions
@@ -1245,19 +1246,50 @@ class _BaseTaskTestCase(object):
         self.context = FakeContext(self.user_id, self.project_id)
         fake_instance_actions.stub_out_action_events(self.stubs)
 
-    def test_migrate_server(self):
+    def test_live_migrate(self):
         self.mox.StubOutWithMock(self.conductor_manager.scheduler_rpcapi,
                                  'live_migration')
         self.conductor_manager.scheduler_rpcapi.live_migration(self.context,
             'block_migration', 'disk_over_commit', 'instance', 'destination')
         self.mox.ReplayAll()
         self.conductor.migrate_server(self.context, 'instance',
-            {'host': 'destination'}, True, False, None, 'block_migration',
-            'disk_over_commit')
+            {'host': 'destination'}, True, False, None,
+             'block_migration', 'disk_over_commit')
 
-    def test_migrate_server_fails_with_non_live(self):
-        self.assertRaises(NotImplementedError, self.conductor.migrate_server,
-            self.context, None, None, False, False, None, None, None)
+    def test_cold_migrate(self):
+        self.mox.StubOutWithMock(
+                self.conductor_manager.scheduler_rpcapi, 'prep_resize')
+        fake_instance = {'image_ref': 'image_ref'}
+        instance_type = {}
+        instance_type['extra_specs'] = 'extra_specs'
+        request_spec = {'instance_type': instance_type}
+        args = {
+                "instance": fake_instance,
+                "instance_type": 'flavor',
+                "image": 'image',
+                "request_spec": request_spec,
+                "filter_properties": {},
+                "reservations": []
+            }
+        self.conductor_manager.scheduler_rpcapi.prep_resize(
+                self.context, **args)
+
+        self.mox.StubOutWithMock(self.conductor_manager.image_service, 'show')
+        self.conductor_manager.image_service.show(
+            self.context, fake_instance['image_ref']).AndReturn('image')
+
+        def _fake_build_request_spec(context, image, instances):
+            return request_spec
+
+        self.stubs.Set(scheduler_utils, 'build_request_spec',
+                       _fake_build_request_spec)
+
+        self.mox.ReplayAll()
+
+        scheduler_hint = {'filter_properties': {}}
+        self.conductor.migrate_server(
+            self.context, fake_instance, scheduler_hint,
+            False, False, 'flavor', None, None, [])
 
     def test_migrate_server_fails_with_rebuild(self):
         self.assertRaises(NotImplementedError, self.conductor.migrate_server,

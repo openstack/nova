@@ -561,6 +561,35 @@ class _ComputeAPIUnitTestMixIn(object):
                                                         self.context,
                                                         instance, bdms))
 
+    def test_resize(self):
+        self.mox.StubOutWithMock(self.compute_api, 'update')
+        self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
+        self.mox.StubOutWithMock(self.compute_api.compute_task_api,
+                                 'migrate_server')
+
+        if self.is_cells:
+            self.mox.StubOutWithMock(self.compute_api.db, 'migration_create')
+            self.compute_api.db.migration_create(mox.IgnoreArg(),
+                                                 mox.IgnoreArg())
+
+        inst = self._create_instance_obj()
+        self.compute_api.update(self.context, inst, expected_task_state=None,
+                                progress=0,
+                                task_state='resize_prep').AndReturn(inst)
+        self.compute_api._record_action_start(self.context, inst, 'resize')
+
+        filter_properties = {'ignore_hosts': ['fake_host', 'fake_host']}
+        scheduler_hint = {'filter_properties': filter_properties}
+        flavor = flavors.extract_flavor(inst)
+        self.compute_api.compute_task_api.migrate_server(
+                self.context, inst, scheduler_hint=scheduler_hint,
+                live=False, rebuild=False, flavor=flavor,
+                block_migration=None, disk_over_commit=None,
+                reservations=None)
+
+        self.mox.ReplayAll()
+        self.compute_api.resize(self.context, inst)
+
 
 class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
     def setUp(self):
