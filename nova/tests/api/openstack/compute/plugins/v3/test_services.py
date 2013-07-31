@@ -243,7 +243,8 @@ class ServicesTest(test.TestCase):
 
         self.stubs.Set(db_driver.DbDriver, 'is_up', dummy_is_up)
         req = FakeRequestWithHostService()
-        self.assertRaises(KeyError, self.controller.index, req)
+        self.assertRaises(webob.exc.HTTPInternalServerError,
+                          self.controller.index, req)
 
     def test_services_disable(self):
         req = fakes.HTTPRequestV3.blank('/os-services/disable')

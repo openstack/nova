@@ -114,6 +114,7 @@ class ServiceController(object):
 
         return True
 
+    @extensions.expected_errors(())
     @wsgi.serializers(xml=ServicesIndexTemplate)
     def index(self, req):
         """
@@ -123,6 +124,7 @@ class ServiceController(object):
 
         return {'services': services}
 
+    @extensions.expected_errors((400, 404))
     @wsgi.serializers(xml=ServiceUpdateTemplate)
     def update(self, req, id, body):
         """Enable/Disable scheduling for a service."""

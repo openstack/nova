@@ -50,6 +50,7 @@ class ServerPasswordController(object):
         except exception.InstanceNotFound as exp:
             raise webob.exc.HTTPNotFound(explanation=exp.format_message())
 
+    @extensions.expected_errors(404)
     @wsgi.serializers(xml=ServerPasswordTemplate)
     def index(self, req, server_id):
         context = req.environ['nova.context']
@@ -59,6 +60,7 @@ class ServerPasswordController(object):
         passw = password.extract_password(instance)
         return {'password': passw or ''}
 
+    @extensions.expected_errors(404)
     @wsgi.response(204)
     def clear(self, req, server_id):
         """
