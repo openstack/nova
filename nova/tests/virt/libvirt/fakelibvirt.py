@@ -890,6 +890,9 @@ class Connection(object):
     def listDefinedDomains(self):
         return []
 
+    def listDevices(self, cap, flags):
+        return []
+
 
 def openAuth(uri, auth, flags):
 

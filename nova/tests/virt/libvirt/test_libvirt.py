@@ -85,6 +85,51 @@ _fake_network_info = fake_network.fake_get_instance_nw_info
 _fake_stub_out_get_nw_info = fake_network.stub_out_nw_api_get_instance_nw_info
 _ipv4_like = fake_network.ipv4_like
 
+_fake_NodeDevXml = \
+    {"pci_0000_04_00_3": """
+        <device>
+        <name>pci_0000_04_00_3</name>
+        <parent>pci_0000_00_01_1</parent>
+        <driver>
+            <name>igb</name>
+        </driver>
+        <capability type='pci'>
+            <domain>0</domain>
+            <bus>4</bus>
+            <slot>0</slot>
+            <function>3</function>
+            <product id='0x1521'>I350 Gigabit Network Connection</product>
+            <vendor id='0x8086'>Intel Corporation</vendor>
+            <capability type='virt_functions'>
+              <address domain='0x0000' bus='0x04' slot='0x10' function='0x3'/>
+              <address domain='0x0000' bus='0x04' slot='0x10' function='0x7'/>
+              <address domain='0x0000' bus='0x04' slot='0x11' function='0x3'/>
+              <address domain='0x0000' bus='0x04' slot='0x11' function='0x7'/>
+            </capability>
+        </capability>
+      </device>""",
+    "pci_0000_04_10_7": """
+      <device>
+         <name>pci_0000_04_10_7</name>
+         <parent>pci_0000_00_01_1</parent>
+         <driver>
+         <name>igbvf</name>
+         </driver>
+         <capability type='pci'>
+          <domain>0</domain>
+          <bus>4</bus>
+          <slot>16</slot>
+          <function>7</function>
+       <product id='0x1520'>I350 Ethernet Controller Virtual Function</product>
+          <vendor id='0x8086'>Intel Corporation</vendor>
+          <capability type='phys_function'>
+             <address domain='0x0000' bus='0x04' slot='0x00' function='0x3'/>
+          </capability>
+          <capability type='virt_functions'>
+          </capability>
+        </capability>
+    </device>"""}
+
 
 def _concurrency(signal, wait, done, target):
     signal.send()
@@ -284,6 +329,14 @@ class FakeConfigGuestDisk(object):
 class FakeConfigGuest(object):
     def __init__(self, *args, **kwargs):
         self.driver_cache = None
+
+
+class FakeNodeDevice(object):
+    def __init__(self, fakexml):
+        self.xml = fakexml
+
+    def XMLDesc(self, *args):
+        return self.xml
 
 
 class LibvirtConnTestCase(test.TestCase):
@@ -3765,6 +3818,92 @@ class LibvirtConnTestCase(test.TestCase):
         got = jsonutils.loads(conn.get_cpu_info())
         self.assertEqual(want, got)
 
+    def test_get_pcidev_info(self):
+
+        def fake_nodeDeviceLookupByName(name):
+            return FakeNodeDevice(_fake_NodeDevXml[name])
+
+        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
+        libvirt_driver.LibvirtDriver._conn.nodeDeviceLookupByName =\
+                                             fake_nodeDeviceLookupByName
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        actualvf = conn._get_pcidev_info("pci_0000_04_00_3")
+        expect_vf = {
+            "dev_id": "pci_0000_04_00_3",
+            "address": "0000:04:00.3",
+            "product_id": '1521',
+            "vendor_id": '8086',
+            "label": 'label_8086_1521',
+            "dev_type": 'type-PF',
+            }
+
+        self.assertEqual(actualvf, expect_vf)
+        actualvf = conn._get_pcidev_info("pci_0000_04_10_7")
+        expect_vf = {
+            "dev_id": "pci_0000_04_10_7",
+            "address": "0000:04:10.7",
+            "product_id": '1520',
+            "vendor_id": '8086',
+            "label": 'label_8086_1520',
+            "dev_type": 'type-VF',
+            "phys_function": [('0x0000', '0x04', '0x00', '0x3')],
+            }
+
+        self.assertEqual(actualvf, expect_vf)
+
+    def test_pci_device_assignbale(self):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.stubs.Set(conn.dev_filter, 'device_assignable', lambda x: True)
+
+        fake_dev = {'dev_type': 'type-PF'}
+        self.assertFalse(conn._pci_device_assignbale(fake_dev))
+        fake_dev = {'dev_type': 'type-VF'}
+        self.assertTrue(conn._pci_device_assignbale(fake_dev))
+        fake_dev = {'dev_type': 'type-PCI'}
+        self.assertTrue(conn._pci_device_assignbale(fake_dev))
+
+    def test_get_pci_passthrough_devices(self):
+
+        def fakelistDevices(caps, fakeargs=0):
+            return ['pci_0000_04_00_3', 'pci_0000_04_10_7']
+
+        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
+        libvirt_driver.LibvirtDriver._conn.listDevices = fakelistDevices
+
+        def fake_nodeDeviceLookupByName(name):
+            return FakeNodeDevice(_fake_NodeDevXml[name])
+
+        libvirt_driver.LibvirtDriver._conn.nodeDeviceLookupByName =\
+                                             fake_nodeDeviceLookupByName
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.stubs.Set(conn.dev_filter, 'device_assignable', lambda x: x)
+        actjson = conn.get_pci_passthrough_devices()
+
+        expectvfs = [
+            {
+                "dev_id": "pci_0000_04_00_3",
+                "address": "0000:04:10.3",
+                "product_id": '1521',
+                "vendor_id": '8086',
+                "dev_type": 'type-PF',
+                "phys_function": None},
+            {
+                "dev_id": "pci_0000_04_10_7",
+                "domain": 0,
+                "address": "0000:04:10.7",
+                "product_id": '1520',
+                "vendor_id": '8086',
+                "dev_type": 'type-VF',
+                "phys_function": [('0x0000', '0x04', '0x00', '0x3')],
+            }
+        ]
+
+        actctualvfs = jsonutils.loads(actjson)
+        for key in actctualvfs[0].keys():
+            if key not in ['phys_function', 'virt_functions', 'label']:
+                self.assertEqual(actctualvfs[0][key], expectvfs[1][key])
+
     def test_diagnostic_vcpus_exception(self):
         xml = """
                 <domain type='kvm'>
@@ -4577,6 +4716,13 @@ class HostStateTestCase(test.TestCase):
                  '"mtrr", "sep", "apic"], '
                  '"topology": {"cores": "1", "threads": "1", "sockets": "1"}}')
     instance_caps = [("x86_64", "kvm", "hvm"), ("i686", "kvm", "hvm")]
+    pci_devices = [{
+        "dev_id": "pci_0000_04_00_3",
+        "address": "0000:04:10.3",
+        "product_id": '1521',
+        "vendor_id": '8086',
+        "dev_type": 'type-PF',
+        "phys_function": None}]
 
     class FakeConnection(object):
         """Fake connection object."""
@@ -4621,6 +4767,9 @@ class HostStateTestCase(test.TestCase):
         def get_instance_capabilities(self):
             return HostStateTestCase.instance_caps
 
+        def get_pci_passthrough_devices(self):
+            return jsonutils.dumps(HostStateTestCase.pci_devices)
+
     def test_update_status(self):
         hs = libvirt_driver.HostState(self.FakeConnection())
         stats = hs._stats
@@ -4641,6 +4790,8 @@ class HostStateTestCase(test.TestCase):
                  "topology": {"cores": "1", "threads": "1", "sockets": "1"}
                 })
         self.assertEquals(stats["disk_available_least"], 80)
+        self.assertEquals(jsonutils.loads(stats["pci_passthrough_devices"]),
+                          HostStateTestCase.pci_devices)
 
 
 class NWFilterFakes:
