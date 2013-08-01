@@ -52,47 +52,36 @@ class EvacuateTest(test.TestCase):
         for _method in self._methods:
             self.stubs.Set(compute_api.API, _method, fake_compute_api)
 
-    def test_evacuate_instance_with_no_target(self):
+    def _fake_update(self, context, instance,
+                     task_state, expected_task_state):
+        return
+
+    def _gen_request_with_app(self, json_load, is_admin=True):
         ctxt = context.get_admin_context()
         ctxt.user_id = 'fake'
         ctxt.project_id = 'fake'
-        ctxt.is_admin = True
+        ctxt.is_admin = is_admin
         app = fakes.wsgi_app_v3(fake_auth_context=ctxt)
         req = webob.Request.blank('/v3/servers/%s/action' % self.UUID)
         req.method = 'POST'
-        req.body = jsonutils.dumps({
-            'evacuate': {
-                'on_shared_storage': 'False',
-                'admin_password': 'MyNewPass'
-            }
-        })
+        base_json_load = {'evacuate': json_load}
+        req.body = jsonutils.dumps(base_json_load)
         req.content_type = 'application/json'
+
+        return req, app
+
+    def test_evacuate_instance_with_no_target(self):
+        req, app = self._gen_request_with_app({'on_shared_storage': 'False',
+                                               'admin_password': 'MyNewPass'})
         res = req.get_response(app)
         self.assertEqual(res.status_int, 400)
 
     def test_evacuate_instance_with_target(self):
-        ctxt = context.get_admin_context()
-        ctxt.user_id = 'fake'
-        ctxt.project_id = 'fake'
-        ctxt.is_admin = True
-        app = fakes.wsgi_app_v3(fake_auth_context=ctxt)
-        uuid1 = self.UUID
-        req = webob.Request.blank('/v3/servers/%s/action' % uuid1)
-        req.method = 'POST'
-        req.body = jsonutils.dumps({
-            'evacuate': {
-                'host': 'my_host',
-                'on_shared_storage': 'false',
-                'admin_password': 'MyNewPass'
-            }
-        })
-        req.content_type = 'application/json'
+        req, app = self._gen_request_with_app({'host': 'my_host',
+                                               'on_shared_storage': 'False',
+                                               'admin_password': 'MyNewPass'})
 
-        def fake_update(inst, context, instance,
-                        task_state, expected_task_state):
-            return None
-
-        self.stubs.Set(compute_api.API, 'update', fake_update)
+        self.stubs.Set(compute_api.API, 'update', self._fake_update)
 
         resp = req.get_response(app)
         self.assertEqual(resp.status_int, 200)
@@ -100,55 +89,19 @@ class EvacuateTest(test.TestCase):
         self.assertEqual("MyNewPass", resp_json['admin_password'])
 
     def test_evacuate_shared_and_pass(self):
-        ctxt = context.get_admin_context()
-        ctxt.user_id = 'fake'
-        ctxt.project_id = 'fake'
-        ctxt.is_admin = True
-        app = fakes.wsgi_app_v3(fake_auth_context=ctxt)
-        uuid1 = self.UUID
-        req = webob.Request.blank('/v3/servers/%s/action' % uuid1)
-        req.method = 'POST'
-        req.body = jsonutils.dumps({
-            'evacuate': {
-                'host': 'my_host',
-                'on_shared_storage': 'True',
-                'admin_password': 'MyNewPass'
-            }
-        })
-        req.content_type = 'application/json'
-
-        def fake_update(inst, context, instance,
-                        task_state, expected_task_state):
-            return None
-
-        self.stubs.Set(compute_api.API, 'update', fake_update)
+        req, app = self._gen_request_with_app({'host': 'my_host',
+                                               'on_shared_storage': 'True',
+                                               'admin_password': 'MyNewPass'})
+        self.stubs.Set(compute_api.API, 'update', self._fake_update)
 
         res = req.get_response(app)
         self.assertEqual(res.status_int, 400)
 
     def test_evacuate_not_shared_pass_generated(self):
-        ctxt = context.get_admin_context()
-        ctxt.user_id = 'fake'
-        ctxt.project_id = 'fake'
-        ctxt.is_admin = True
-        app = fakes.wsgi_app_v3(fake_auth_context=ctxt)
-        uuid1 = self.UUID
-        req = webob.Request.blank('/v3/servers/%s/action' % uuid1)
-        req.method = 'POST'
-        req.body = jsonutils.dumps({
-            'evacuate': {
-                'host': 'my_host',
-                'on_shared_storage': 'False',
-            }
-        })
+        req, app = self._gen_request_with_app({'host': 'my_host',
+                                               'on_shared_storage': 'False'})
 
-        req.content_type = 'application/json'
-
-        def fake_update(inst, context, instance,
-                        task_state, expected_task_state):
-            return None
-
-        self.stubs.Set(compute_api.API, 'update', fake_update)
+        self.stubs.Set(compute_api.API, 'update', self._fake_update)
 
         resp = req.get_response(app)
         self.assertEqual(resp.status_int, 200)
@@ -157,27 +110,9 @@ class EvacuateTest(test.TestCase):
                          len(resp_json['admin_password']))
 
     def test_evacuate_shared(self):
-        ctxt = context.get_admin_context()
-        ctxt.user_id = 'fake'
-        ctxt.project_id = 'fake'
-        ctxt.is_admin = True
-        app = fakes.wsgi_app_v3(fake_auth_context=ctxt)
-        uuid1 = self.UUID
-        req = webob.Request.blank('/v3/servers/%s/action' % uuid1)
-        req.method = 'POST'
-        req.body = jsonutils.dumps({
-            'evacuate': {
-                'host': 'my_host',
-                'on_shared_storage': 'True',
-            }
-        })
-        req.content_type = 'application/json'
-
-        def fake_update(inst, context, instance,
-                        task_state, expected_task_state):
-            return None
-
-        self.stubs.Set(compute_api.API, 'update', fake_update)
+        req, app = self._gen_request_with_app({'host': 'my_host',
+                                               'on_shared_storage': 'True'})
+        self.stubs.Set(compute_api.API, 'update', self._fake_update)
 
         res = req.get_response(app)
         self.assertEqual(res.status_int, 200)
@@ -185,17 +120,10 @@ class EvacuateTest(test.TestCase):
         self.assertEqual(resp_json['admin_password'], None)
 
     def test_not_admin(self):
-        ctxt = context.RequestContext('fake', 'fake', is_admin=False)
-        app = fakes.wsgi_app_v3(fake_auth_context=ctxt)
-        uuid1 = self.UUID
-        req = webob.Request.blank('/v3/servers/%s/action' % uuid1)
-        req.method = 'POST'
-        req.body = jsonutils.dumps({
-            'evacuate': {
-                'host': 'my_host',
-                'on_shared_storage': 'True',
-            }
-        })
+        req, app = self._gen_request_with_app({'host': 'my_host',
+                                               'on_shared_storage': 'True'},
+                                               is_admin=False)
+
         req.content_type = 'application/json'
         res = req.get_response(app)
         self.assertEqual(res.status_int, 403)
