@@ -110,7 +110,12 @@ def _uc_rename(migrate_engine, upgrade=True):
 
             utils.drop_unique_constraint(migrate_engine, table,
                                          old_name, *(columns))
-            UniqueConstraint(*columns, table=t, name=new_name).create()
+            if (new_name != 'virtual_interfaces_instance_uuid_fkey' or
+                    migrate_engine.name != "mysql"):
+                # NOTE(jhesketh): The virtual_interfaces_instance_uuid_fkey
+                # key always existed in the table, we don't need to create
+                # a unique constraint. See bug/1207344
+                UniqueConstraint(*columns, table=t, name=new_name).create()
 
             if table in constraint_names and migrate_engine.name == "mysql":
                 ForeignKeyConstraint(
