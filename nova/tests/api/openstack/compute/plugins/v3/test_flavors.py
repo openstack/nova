@@ -705,6 +705,7 @@ class ParseIsPublicTest(test.TestCase):
 
     def test_string_none(self):
         self.assertPublic(None, 'none')
+        self.assertPublic(None, 'None')
 
     def test_other(self):
         self.assertRaises(
