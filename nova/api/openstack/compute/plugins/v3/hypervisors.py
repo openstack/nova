@@ -156,6 +156,7 @@ class HypervisorsController(object):
 
         return hyp_dict
 
+    @extensions.expected_errors(())
     @wsgi.serializers(xml=HypervisorIndexTemplate)
     def index(self, req):
         context = req.environ['nova.context']
@@ -164,6 +165,7 @@ class HypervisorsController(object):
         return dict(hypervisors=[self._view_hypervisor(hyp, False)
                                  for hyp in compute_nodes])
 
+    @extensions.expected_errors(())
     @wsgi.serializers(xml=HypervisorDetailTemplate)
     def detail(self, req):
         context = req.environ['nova.context']
@@ -172,6 +174,7 @@ class HypervisorsController(object):
         return dict(hypervisors=[self._view_hypervisor(hyp, True)
                                  for hyp in compute_nodes])
 
+    @extensions.expected_errors(404)
     @wsgi.serializers(xml=HypervisorTemplate)
     def show(self, req, id):
         context = req.environ['nova.context']
@@ -183,6 +186,7 @@ class HypervisorsController(object):
             raise webob.exc.HTTPNotFound(explanation=msg)
         return dict(hypervisor=self._view_hypervisor(hyp, True))
 
+    @extensions.expected_errors((404, 501))
     @wsgi.serializers(xml=HypervisorUptimeTemplate)
     def uptime(self, req, id):
         context = req.environ['nova.context']
@@ -204,6 +208,7 @@ class HypervisorsController(object):
         return dict(hypervisor=self._view_hypervisor(hyp, False,
                                                      uptime=uptime))
 
+    @extensions.expected_errors(400)
     @wsgi.serializers(xml=HypervisorIndexTemplate)
     def search(self, req):
         context = req.environ['nova.context']
@@ -218,6 +223,7 @@ class HypervisorsController(object):
         return dict(hypervisors=[self._view_hypervisor(hyp, False)
                                  for hyp in hypervisors])
 
+    @extensions.expected_errors(404)
     @wsgi.serializers(xml=HypervisorServersTemplate)
     def servers(self, req, id):
         context = req.environ['nova.context']
@@ -232,6 +238,7 @@ class HypervisorsController(object):
         return dict(hypervisor=self._view_hypervisor(compute_node, False,
             instances))
 
+    @extensions.expected_errors(())
     @wsgi.serializers(xml=HypervisorStatisticsTemplate)
     def statistics(self, req):
         context = req.environ['nova.context']
