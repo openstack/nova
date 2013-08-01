@@ -3941,10 +3941,11 @@ class ComputeTestCase(BaseTestCase):
         c = context.get_admin_context()
 
         src_host = 'fake-src-host'
-        dest_host = 'fake-dest-host'
         instance = dict(uuid='fake_instance', host=src_host,
                         name='fake-name')
-        updated_instance = 'fake_updated_instance'
+        updated_instance = self._create_fake_instance(
+                                               {'host': 'fake-dest-host'})
+        dest_host = updated_instance['host']
         fake_bdms = [dict(volume_id='vol1-id'), dict(volume_id='vol2-id')]
 
         # creating mocks
