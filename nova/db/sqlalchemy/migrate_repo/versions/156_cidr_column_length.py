@@ -33,15 +33,9 @@ def upgrade(migrate_engine):
     meta.bind = migrate_engine
     dialect = migrate_engine.url.get_dialect()
 
-    if dialect is postgresql.dialect:
-        for table, column in CIDR_TABLE_COLUMNS:
-            # can't use migrate's alter() because it does not support
-            # explicit casting
-            migrate_engine.execute(
-                "ALTER TABLE %(table)s "
-                "ALTER COLUMN %(column)s TYPE INET USING %(column)s::INET"
-                % {'table': table, 'column': column})
-    else:
+    if dialect is not postgresql.dialect:
+        # NOTE(jhesketh): Postgres was always of TYPE INET so there is nothing
+        # to undo here (see migration 149).
         for table, column in CIDR_TABLE_COLUMNS:
             t = Table(table, meta, autoload=True)
             getattr(t.c, column).alter(type=String(43))
@@ -51,6 +45,11 @@ def downgrade(migrate_engine):
     """Convert columns back to the larger String(255)."""
     meta = MetaData()
     meta.bind = migrate_engine
-    for table, column in CIDR_TABLE_COLUMNS:
-        t = Table(table, meta, autoload=True)
-        getattr(t.c, column).alter(type=String(39))
+    dialect = migrate_engine.url.get_dialect()
+
+    if dialect is not postgresql.dialect:
+        # NOTE(jhesketh): Postgres was always of TYPE INET so there is nothing
+        # to undo here (see migration 149).
+        for table, column in CIDR_TABLE_COLUMNS:
+            t = Table(table, meta, autoload=True)
+            getattr(t.c, column).alter(type=String(39))
