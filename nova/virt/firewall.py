@@ -19,8 +19,8 @@
 
 from oslo.config import cfg
 
+from nova.compute import utils as compute_utils
 from nova import context
-from nova import network
 from nova.network import linux_net
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
@@ -415,16 +415,9 @@ class IptablesFirewallDriver(FirewallDriver):
                     fw_rules += [' '.join(args)]
                 else:
                     if rule['grantee_group']:
-                        # FIXME(jkoelker) This needs to be ported up into
-                        #                 the compute manager which already
-                        #                 has access to a nw_api handle,
-                        #                 and should be the only one making
-                        #                 making rpc calls.
-                        nw_api = network.API()
                         for instance in rule['grantee_group']['instances']:
-                            nw_info = nw_api.get_instance_nw_info(
-                                ctxt,
-                                instance)
+                            nw_info = compute_utils.get_nw_info_for_instance(
+                                    instance)
 
                             ips = [ip['address']
                                 for ip in nw_info.fixed_ips()
