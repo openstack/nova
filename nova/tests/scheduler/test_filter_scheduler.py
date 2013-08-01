@@ -195,33 +195,6 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         for weighed_host in weighed_hosts:
             self.assertTrue(weighed_host.obj is not None)
 
-    def test_schedule_prep_resize_doesnt_update_host(self):
-        fake_context = context.RequestContext('user', 'project',
-                is_admin=True)
-
-        sched = fakes.FakeFilterScheduler()
-
-        def _return_hosts(*args, **kwargs):
-            host_state = host_manager.HostState('host2', 'node2')
-            return [weights.WeighedHost(host_state, 1.0)]
-
-        self.stubs.Set(sched, '_schedule', _return_hosts)
-
-        info = {'called': 0}
-
-        def _fake_instance_update_db(*args, **kwargs):
-            # This should not be called
-            info['called'] = 1
-
-        self.stubs.Set(driver, 'instance_update_db',
-                _fake_instance_update_db)
-
-        instance = {'uuid': 'fake-uuid', 'host': 'host1'}
-
-        sched.schedule_prep_resize(fake_context, {}, {}, {},
-                                   instance, {}, None)
-        self.assertEqual(info['called'], 0)
-
     def test_max_attempts(self):
         self.flags(scheduler_max_attempts=4)
 
@@ -342,53 +315,6 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                          filter_properties['retry']['hosts'][0])
 
         self.assertEqual({'vcpus': 5}, host_state.limits)
-
-    def test_prep_resize_post_populates_retry(self):
-        # Prep resize should add a ('host', 'node') entry to the retry dict.
-        sched = fakes.FakeFilterScheduler()
-
-        image = 'image'
-        instance = {'disable_terminate': False,
-                    'uuid': 'fakeuuid',
-                    'deleted': 0, 'info_cache': {},
-                    'created_at': None,
-                    'system_metadata': [], 'shutdown_terminate': False,
-                    'id': 1, 'security_groups': [], 'metadata': []}
-
-        instance_properties = {'project_id': 'fake', 'os_type': 'Linux'}
-        instance_type = {
-             'memory_mb': 1024, 'root_gb': 40, 'deleted_at': None,
-             'name': u'm1.medium', 'deleted': 0, 'created_at': None,
-             'ephemeral_gb': 0, 'updated_at': None, 'disabled': False,
-             'vcpus': 2, 'extra_specs': {}, 'swap': 0,
-             'rxtx_factor': 1.0, 'is_public': True, 'flavorid': u'3',
-             'vcpu_weight': None, 'id': 1}
-
-        request_spec = {'instance_properties': instance_properties,
-                        'instance_type': instance_type}
-        retry = {'hosts': [], 'num_attempts': 1}
-        filter_properties = {'retry': retry}
-        reservations = None
-
-        host = fakes.FakeHostState('host', 'node', {})
-        weighed_host = weights.WeighedHost(host, 1)
-        weighed_hosts = [weighed_host]
-
-        self.mox.StubOutWithMock(sched, '_schedule')
-        self.mox.StubOutWithMock(sched.compute_rpcapi, 'prep_resize')
-
-        sched._schedule(self.context, request_spec, filter_properties,
-                [instance['uuid']]).AndReturn(weighed_hosts)
-        sched.compute_rpcapi.prep_resize(self.context, image, instance,
-                instance_type, 'host', reservations, request_spec=request_spec,
-                filter_properties=filter_properties, node='node')
-
-        self.mox.ReplayAll()
-        sched.schedule_prep_resize(self.context, image, request_spec,
-                filter_properties, instance, instance_type, reservations)
-
-        self.assertEqual([['host', 'node']],
-                         filter_properties['retry']['hosts'])
 
     def test_basic_schedule_run_instances_anti_affinity(self):
         filter_properties = {'scheduler_hints':

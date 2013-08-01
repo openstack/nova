@@ -138,30 +138,6 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.driver.schedule_run_instance(
                 ctxt, request_spec, None, None, None, None, {})
 
-    def test_schedule_prep_resize_doesnt_update_host(self):
-        fake_context = context.RequestContext('user', 'project',
-                is_admin=True)
-
-        def _return_host(*args, **kwargs):
-            return 'host2'
-
-        self.stubs.Set(self.driver, '_schedule', _return_host)
-
-        info = {'called': 0}
-
-        def _fake_instance_update_db(*args, **kwargs):
-            # This should not be called
-            info['called'] = 1
-
-        self.stubs.Set(driver, 'instance_update_db',
-                _fake_instance_update_db)
-
-        instance = {'uuid': 'fake-uuid', 'host': 'host1'}
-
-        self.driver.schedule_prep_resize(fake_context, {}, {}, {},
-                instance, {}, None)
-        self.assertEqual(info['called'], 0)
-
     def test_select_hosts(self):
         ctxt = context.RequestContext('fake', 'fake', False)
         ctxt_elevated = 'fake-context-elevated'
