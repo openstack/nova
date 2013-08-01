@@ -22,6 +22,8 @@ import urlparse
 
 from nova.api.openstack.compute.plugins.v3 import flavors
 from nova.api.openstack import xmlutil
+from nova.openstack.common import jsonutils
+
 import nova.compute.flavors
 from nova import context
 from nova import db
@@ -42,6 +44,7 @@ FAKE_FLAVORS = {
         "root_gb": '10',
         "swap": '512',
         "ephemeral_gb": '1',
+        "disabled": False,
     },
     'flavor 2': {
         "flavorid": '2',
@@ -50,6 +53,7 @@ FAKE_FLAVORS = {
         "root_gb": '20',
         "swap": '1024',
         "ephemeral_gb": '10',
+        "disabled": True,
     },
 }
 
@@ -118,6 +122,7 @@ class FlavorsTest(test.TestCase):
                 "vcpus": "",
                 "swap": '512',
                 "ephemeral": "1",
+                "disabled": False,
                 "links": [
                     {
                         "rel": "self",
@@ -146,6 +151,7 @@ class FlavorsTest(test.TestCase):
                 "vcpus": "",
                 "swap": '512',
                 "ephemeral": "1",
+                "disabled": False,
                 "links": [
                     {
                         "rel": "self",
@@ -314,6 +320,7 @@ class FlavorsTest(test.TestCase):
                     "vcpus": "",
                     "swap": '512',
                     "ephemeral": "1",
+                    "disabled": False,
                     "links": [
                         {
                             "rel": "self",
@@ -333,6 +340,7 @@ class FlavorsTest(test.TestCase):
                     "vcpus": "",
                     "swap": '1024',
                     "ephemeral": "10",
+                    "disabled": True,
                     "links": [
                         {
                             "rel": "self",
@@ -434,6 +442,7 @@ class FlavorsTest(test.TestCase):
                     "vcpus": "",
                     "swap": '1024',
                     "ephemeral": "10",
+                    "disabled": True,
                     "links": [
                         {
                             "rel": "self",
@@ -450,6 +459,62 @@ class FlavorsTest(test.TestCase):
         self.assertEqual(flavor, expected)
 
 
+class FlavorDisabledTest(test.TestCase):
+    content_type = 'application/json'
+
+    def setUp(self):
+        super(FlavorDisabledTest, self).setUp()
+        fakes.stub_out_nw_api(self.stubs)
+
+        #def fake_flavor_get_all(*args, **kwargs):
+        #    return FAKE_FLAVORS
+        #
+        self.stubs.Set(nova.compute.flavors, "get_all_flavors",
+                       fake_flavor_get_all)
+        self.stubs.Set(nova.compute.flavors,
+                       "get_flavor_by_flavor_id",
+                       fake_flavor_get_by_flavor_id)
+
+    def _make_request(self, url):
+        req = webob.Request.blank(url)
+        req.headers['Accept'] = self.content_type
+        app = fakes.wsgi_app_v3(init_only=('servers', 'flavors',
+                                           'os-flavor-disabled'))
+        return req.get_response(app)
+
+    def _get_flavor(self, body):
+        return jsonutils.loads(body).get('flavor')
+
+    def _get_flavors(self, body):
+        return jsonutils.loads(body).get('flavors')
+
+    def assertFlavorDisabled(self, flavor, disabled):
+        self.assertEqual(str(flavor.get('disabled')), disabled)
+
+    def test_show(self):
+        res = self._make_request('/v3/flavors/1')
+        self.assertEqual(res.status_int, 200, res.body)
+        self.assertFlavorDisabled(self._get_flavor(res.body), 'False')
+
+    def test_detail(self):
+        res = self._make_request('/v3/flavors/detail')
+
+        self.assertEqual(res.status_int, 200, res.body)
+        flavors = self._get_flavors(res.body)
+        self.assertFlavorDisabled(flavors[0], 'False')
+        self.assertFlavorDisabled(flavors[1], 'True')
+
+
+class FlavorDisabledXmlTest(FlavorDisabledTest):
+    content_type = 'application/xml'
+
+    def _get_flavor(self, body):
+        return etree.XML(body)
+
+    def _get_flavors(self, body):
+        return etree.XML(body).getchildren()
+
+
 class FlavorsXMLSerializationTest(test.TestCase):
     def _create_flavor(self):
         id = 0
@@ -463,6 +528,7 @@ class FlavorsXMLSerializationTest(test.TestCase):
                 "vcpus": "",
                 "swap": "512",
                 "ephemeral": "512",
+                "disabled": False,
                 "links": [
                     {
                         "rel": "self",
