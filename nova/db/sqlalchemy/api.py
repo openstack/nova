@@ -3232,6 +3232,8 @@ def security_group_rule_get_by_security_group(context, security_group_id,
             filter_by(parent_group_id=security_group_id).\
             options(joinedload_all('grantee_group.instances.'
                                    'system_metadata')).\
+            options(joinedload('grantee_group.instances.'
+                               'info_cache')).\
             all()
 
 
