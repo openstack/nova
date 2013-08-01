@@ -89,16 +89,13 @@ class HypervisorUptimeTemplate(xmlutil.TemplateBuilder):
 
 class HypervisorServersTemplate(xmlutil.TemplateBuilder):
     def construct(self):
-        root = xmlutil.TemplateElement('hypervisors')
-        elem = xmlutil.SubTemplateElement(root, 'hypervisor',
-                                          selector='hypervisors')
-        make_hypervisor(elem, False)
-
-        servers = xmlutil.SubTemplateElement(elem, 'servers')
+        root = xmlutil.TemplateElement('hypervisor', selector='hypervisor')
+        make_hypervisor(root, False)
+        servers = xmlutil.SubTemplateElement(root, 'servers')
         server = xmlutil.SubTemplateElement(servers, 'server',
                                             selector='servers')
         server.set('name')
-        server.set('uuid')
+        server.set('id')
 
         return xmlutil.MasterTemplate(root, 1)
 
@@ -149,8 +146,8 @@ class HypervisorsController(object):
                 'host': hypervisor['service']['host'],
                 }
 
-        if servers:
-            hyp_dict['servers'] = [dict(name=serv['name'], uuid=serv['uuid'])
+        if servers != None:
+            hyp_dict['servers'] = [dict(name=serv['name'], id=serv['uuid'])
                                    for serv in servers]
 
         # Add any additional info
@@ -225,18 +222,15 @@ class HypervisorsController(object):
     def servers(self, req, id):
         context = req.environ['nova.context']
         authorize(context)
-        compute_nodes = self.host_api.compute_node_search_by_hypervisor(
-                context, id)
-        if not compute_nodes:
-            msg = _("No hypervisor matching '%s' could be found.") % id
+        try:
+            compute_node = self.host_api.compute_node_get(context, id)
+        except (ValueError, exception.ComputeHostNotFound):
+            msg = _("Hypervisor with ID '%s' could not be found.") % id
             raise webob.exc.HTTPNotFound(explanation=msg)
-        hypervisors = []
-        for compute_node in compute_nodes:
-            instances = self.host_api.instance_get_all_by_host(context,
-                    compute_node['service']['host'])
-            hyp = self._view_hypervisor(compute_node, False, instances)
-            hypervisors.append(hyp)
-        return dict(hypervisors=hypervisors)
+        instances = self.host_api.instance_get_all_by_host(context,
+            compute_node['service']['host'])
+        return dict(hypervisor=self._view_hypervisor(compute_node, False,
+            instances))
 
     @wsgi.serializers(xml=HypervisorStatisticsTemplate)
     def statistics(self, req):

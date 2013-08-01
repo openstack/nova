@@ -179,10 +179,10 @@ class HypervisorsTest(test.TestCase):
                 id=1,
                 hypervisor_hostname="hyper1",
                 servers=[
-                    dict(name="inst1", uuid="uuid1"),
-                    dict(name="inst2", uuid="uuid2"),
-                    dict(name="inst3", uuid="uuid3"),
-                    dict(name="inst4", uuid="uuid4")]))
+                    dict(name="inst1", id="uuid1"),
+                    dict(name="inst2", id="uuid2"),
+                    dict(name="inst3", id="uuid3"),
+                    dict(name="inst4", id="uuid4")]))
 
     def test_index(self):
         req = fakes.HTTPRequestV3.blank('/os-hypervisors',
@@ -351,26 +351,44 @@ class HypervisorsTest(test.TestCase):
         self.assertRaises(exc.HTTPBadRequest, self.controller.search, req)
 
     def test_servers(self):
-        req = fakes.HTTPRequestV3.blank('/os-hypervisors/hyper/servers',
+        req = fakes.HTTPRequestV3.blank('/os-hypervisors/1/servers',
                                         use_admin_context=True)
-        result = self.controller.servers(req, 'hyper')
-
-        self.assertEqual(result, dict(hypervisors=[
+        result = self.controller.servers(req, '1')
+        self.assertEqual(result, dict(hypervisor=
                     dict(id=1,
                          hypervisor_hostname="hyper1",
                          servers=[
-                            dict(name="inst1", uuid="uuid1"),
-                            dict(name="inst3", uuid="uuid3")]),
-                    dict(id=2,
-                         hypervisor_hostname="hyper2",
-                         servers=[
-                            dict(name="inst2", uuid="uuid2"),
-                            dict(name="inst4", uuid="uuid4")])]))
+                            dict(name="inst1", id="uuid1"),
+                            dict(name="inst3", id="uuid3")])))
+
+    def test_servers_non_id(self):
+        req = fakes.HTTPRequestV3.blank('/os-hypervisors/3/servers',
+                                        use_admin_context=True)
+        self.assertRaises(exc.HTTPNotFound, self.controller.servers, req, '3')
 
     def test_servers_non_admin(self):
-        req = fakes.HTTPRequestV3.blank('/os-hypervisors/hyper/servers')
+        req = fakes.HTTPRequestV3.blank('/os-hypervisors/1/servers')
         self.assertRaises(exception.PolicyNotAuthorized,
-                          self.controller.servers, req, 'hyper')
+                          self.controller.servers, req, '1')
+
+    def test_servers_return_empty(self):
+        def fake_instance_get_all_by_host_return_empty(context, hypervisor_re):
+            return []
+        self.stubs.Set(db, 'instance_get_all_by_host',
+                       fake_instance_get_all_by_host_return_empty)
+        req = fakes.HTTPRequestV3.blank('/os-hypervisors/1/servers',
+                                        use_admin_context=True)
+        result = self.controller.servers(req, '1')
+        self.assertEqual(result, dict(hypervisor=
+                    dict(id=1,
+                         hypervisor_hostname="hyper1",
+                         servers=[])))
+
+    def test_servers_with_non_integer_hypervisor_id(self):
+        req = fakes.HTTPRequestV3.blank('/os-hypervisors/abc/servers',
+                                        use_admin_context=True)
+        self.assertRaises(exc.HTTPNotFound,
+                          self.controller.servers, req, 'abc')
 
     def test_statistics(self):
         req = fakes.HTTPRequestV3.blank('/os-hypervisors/statistics',
@@ -420,6 +438,7 @@ class HypervisorsSerializersTest(test.TestCase):
                 for key, value in exemplar['service'].items():
                     self.assertEqual(str(value), child.get(key))
             elif child.tag == 'servers':
+                self.assertEqual(len(child), len(exemplar['servers']))
                 for idx, grandchild in enumerate(child):
                     self.assertEqual('server', grandchild.tag)
                     for key, value in exemplar['servers'][idx].items():
@@ -530,29 +549,18 @@ class HypervisorsSerializersTest(test.TestCase):
 
     def test_servers_serializer(self):
         serializer = hypervisors.HypervisorServersTemplate()
-        exemplar = dict(hypervisors=[
+        exemplar = dict(hypervisor=
                 dict(hypervisor_hostname="hyper1",
                      id=1,
                      servers=[
                         dict(name="inst1",
-                             uuid="uuid1"),
+                             id="uuid1"),
                         dict(name="inst2",
-                             uuid="uuid2")]),
-                dict(hypervisor_hostname="hyper2",
-                     id=2,
-                     servers=[
-                        dict(name="inst3",
-                             uuid="uuid3"),
-                        dict(name="inst4",
-                             uuid="uuid4")])])
+                             id="uuid2")]))
         text = serializer.serialize(exemplar)
         tree = etree.fromstring(text)
-
-        self.assertEqual('hypervisors', tree.tag)
-        self.assertEqual(len(exemplar['hypervisors']), len(tree))
-        for idx, hyper in enumerate(tree):
-            self.assertEqual('hypervisor', hyper.tag)
-            self.compare_to_exemplar(exemplar['hypervisors'][idx], hyper)
+        self.assertEqual('hypervisor', tree.tag)
+        self.compare_to_exemplar(exemplar['hypervisor'], tree)
 
     def test_statistics_serializer(self):
         serializer = hypervisors.HypervisorStatisticsTemplate()
