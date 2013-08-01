@@ -182,6 +182,24 @@ class VMOps(object):
         self.image_upload_handler = importutils.import_object(
                                 CONF.xenapi_image_upload_handler)
 
+    def _create_kernel_and_ramdisk(self, instance, context, name_label):
+        kernel_file = None
+        ramdisk_file = None
+
+        if instance['kernel_id']:
+            vdis = vm_utils.create_kernel_image(context, self._session,
+                    instance, name_label, instance['kernel_id'],
+                    vm_utils.ImageType.KERNEL)
+            kernel_file = vdis['kernel'].get('file')
+
+        if instance['ramdisk_id']:
+            vdis = vm_utils.create_kernel_image(context, self._session,
+                    instance, name_label, instance['ramdisk_id'],
+                    vm_utils.ImageType.RAMDISK)
+            ramdisk_file = vdis['ramdisk'].get('file')
+
+        return (kernel_file, ramdisk_file)
+
     def agent_enabled(self, instance):
         if CONF.xenapi_disable_agent:
             return False
@@ -277,21 +295,10 @@ class VMOps(object):
         if resize_instance:
             self._resize_instance(instance, root_vdi)
 
-        # Check if kernel and ramdisk are external
-        kernel_file = None
-        ramdisk_file = None
-
         name_label = instance['name']
-        if instance['kernel_id']:
-            vdis = vm_utils.create_kernel_image(context, self._session,
-                        instance, name_label, instance['kernel_id'],
-                        vm_utils.ImageType.KERNEL)
-            kernel_file = vdis['kernel'].get('file')
-        if instance['ramdisk_id']:
-            vdis = vm_utils.create_kernel_image(context, self._session,
-                        instance, name_label, instance['ramdisk_id'],
-                        vm_utils.ImageType.RAMDISK)
-            ramdisk_file = vdis['ramdisk'].get('file')
+
+        kernel_file, ramdisk_file = self._create_kernel_and_ramdisk(
+            instance, context, name_label)
 
         disk_image_type = vm_utils.determine_disk_image_type(image_meta)
         vm_ref = self._create_vm(context, instance, instance['name'],
@@ -380,20 +387,8 @@ class VMOps(object):
 
         @step
         def create_kernel_ramdisk_step(undo_mgr):
-            kernel_file = None
-            ramdisk_file = None
-
-            if instance['kernel_id']:
-                vdis = vm_utils.create_kernel_image(context, self._session,
-                        instance, name_label, instance['kernel_id'],
-                        vm_utils.ImageType.KERNEL)
-                kernel_file = vdis['kernel'].get('file')
-
-            if instance['ramdisk_id']:
-                vdis = vm_utils.create_kernel_image(context, self._session,
-                        instance, name_label, instance['ramdisk_id'],
-                        vm_utils.ImageType.RAMDISK)
-                ramdisk_file = vdis['ramdisk'].get('file')
+            kernel_file, ramdisk_file = self._create_kernel_and_ramdisk(
+                instance, context, name_label)
 
             def undo_create_kernel_ramdisk():
                 if kernel_file or ramdisk_file:
