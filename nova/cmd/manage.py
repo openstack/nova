@@ -797,8 +797,12 @@ class ServiceCommands(object):
         :param host: hostname.
 
         """
-        result = self._show_host_resources(context.get_admin_context(),
-                                           host=host)
+        try:
+            result = self._show_host_resources(context.get_admin_context(),
+                                               host=host)
+        except exception.NovaException as ex:
+            print (_("error: %s") % ex)
+            return 2
 
         if not isinstance(result, dict):
             print(_('An unexpected error has occurred.'))
