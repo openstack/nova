@@ -29,11 +29,13 @@ from nova import conductor
 from nova import context
 from nova import exception
 from nova.objects import base as obj_base
+from nova.objects import instance as instance_obj
 from nova.objects import migration as migration_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
+from nova.pci import pci_manager
 from nova import utils
 
 resource_tracker_opts = [
@@ -61,6 +63,7 @@ class ResourceTracker(object):
     def __init__(self, host, driver, nodename):
         self.host = host
         self.driver = driver
+        self.pci_tracker = pci_manager.PciDevTracker()
         self.nodename = nodename
         self.compute_node = None
         self.stats = importutils.import_object(CONF.compute_stats_class)
@@ -227,6 +230,7 @@ class ResourceTracker(object):
 
             if instance_type['id'] == itype['id']:
                 self.stats.update_stats_for_migration(itype, sign=-1)
+                self.pci_tracker.update_pci_for_migration(instance, sign=-1)
                 self._update_usage(self.compute_node, itype, sign=-1)
                 self.compute_node['stats'] = self.stats
 
@@ -276,8 +280,12 @@ class ResourceTracker(object):
 
         self._report_hypervisor_resource_view(resources)
 
+        if 'pci_passthrough_devices' in resources:
+            self.pci_tracker.set_hvdevs(jsonutils.loads(resources.pop(
+                'pci_passthrough_devices')))
+
         # Grab all instances assigned to this node:
-        instances = self.conductor_api.instance_get_all_by_host_and_node(
+        instances = instance_obj.InstanceList.get_by_host_and_node(
             context, self.host, self.nodename)
 
         # Now calculate usage based on instance utilization:
@@ -294,6 +302,13 @@ class ResourceTracker(object):
         # hypervisor, but are not in the DB:
         orphans = self._find_orphaned_instances()
         self._update_usage_from_orphans(resources, orphans)
+
+        # NOTE(yjiang5): Because pci device tracker status is not cleared in
+        # this periodic task, and also because the resource tracker is not
+        # notified when instances are deleted, we need remove all usages
+        # from deleted instances.
+        self.pci_tracker.clean_usage(instances, migrations, orphans)
+        resources['pci_stats'] = jsonutils.dumps(self.pci_tracker.stats)
 
         self._report_final_resource_view(resources)
 
@@ -313,12 +328,14 @@ class ResourceTracker(object):
                 for cn in compute_node_refs:
                     if cn.get('hypervisor_hostname') == self.nodename:
                         self.compute_node = cn
+                        self.pci_tracker.set_compute_node_id(cn['id'])
                         break
 
         if not self.compute_node:
             # Need to create the ComputeNode record:
             resources['service_id'] = service['id']
             self._create(context, resources)
+            self.pci_tracker.set_compute_node_id(self.compute_node['id'])
             LOG.info(_('Compute_service record created for %(host)s:%(node)s')
                     % {'host': self.host, 'node': self.nodename})
 
@@ -342,9 +359,16 @@ class ResourceTracker(object):
             LOG.warn(_("No service record for host %s"), self.host)
 
     def _report_hypervisor_resource_view(self, resources):
-        """Log the hypervisor's view of free memory in and free disk.
+        """Log the hypervisor's view of free resources.
+
         This is just a snapshot of resource usage recorded by the
         virt driver.
+
+        The following resources are logged:
+            - free memory
+            - free disk
+            - free CPUs
+            - assignable PCI devices
         """
         free_ram_mb = resources['memory_mb'] - resources['memory_mb_used']
         free_disk_gb = resources['local_gb'] - resources['local_gb_used']
@@ -359,9 +383,16 @@ class ResourceTracker(object):
         else:
             LOG.debug(_("Hypervisor: VCPU information unavailable"))
 
+        if 'pci_passthrough_devices' in resources and \
+                resources['pci_passthrough_devices']:
+            LOG.debug(_("Hypervisor: assignable PCI devices: %s") %
+                resources['pci_passthrough_devices'])
+        else:
+            LOG.debug(_("Hypervisor: no assignable PCI devices"))
+
     def _report_final_resource_view(self, resources):
-        """Report final calculate of free memory and free disk including
-        instance calculations and in-progress resource claims.  These
+        """Report final calculate of free memory, disk, CPUs, and PCI devices,
+        including instance calculations and in-progress resource claims. These
         values will be exposed via the compute node table to the scheduler.
         """
         LOG.audit(_("Free ram (MB): %s") % resources['free_ram_mb'])
@@ -374,12 +405,16 @@ class ResourceTracker(object):
         else:
             LOG.audit(_("Free VCPU information unavailable"))
 
+        if 'pci_devices' in resources:
+            LOG.audit(_("Free PCI devices: %s") % resources['pci_devices'])
+
     def _update(self, context, values, prune_stats=False):
         """Persist the compute node updates to the DB."""
         if "service" in self.compute_node:
             del self.compute_node['service']
         self.compute_node = self.conductor_api.compute_node_update(
             context, self.compute_node, values, prune_stats)
+        self.pci_tracker.save(context)
 
     def _update_usage(self, resources, usage, sign=1):
         mem_usage = usage['memory_mb']
@@ -442,8 +477,10 @@ class ResourceTracker(object):
 
         if itype:
             self.stats.update_stats_for_migration(itype)
+            self.pci_tracker.update_pci_for_migration(instance)
             self._update_usage(resources, itype)
             resources['stats'] = self.stats
+            resources['pci_stats'] = jsonutils.dumps(self.pci_tracker.stats)
             self.tracked_migrations[uuid] = (migration, itype)
 
     def _update_usage_from_migrations(self, context, resources, migrations):
@@ -493,7 +530,7 @@ class ResourceTracker(object):
         is_deleted_instance = instance['vm_state'] == vm_states.DELETED
 
         if is_new_instance:
-            self.tracked_instances[uuid] = jsonutils.to_primitive(instance)
+            self.tracked_instances[uuid] = obj_base.obj_to_primitive(instance)
             sign = 1
 
         if is_deleted_instance:
@@ -502,6 +539,8 @@ class ResourceTracker(object):
 
         self.stats.update_stats_for_instance(instance)
 
+        self.pci_tracker.update_pci_for_instance(instance)
+
         # if it's a new or deleted instance:
         if is_new_instance or is_deleted_instance:
             # new instance, update compute node resource usage:
@@ -509,6 +548,7 @@ class ResourceTracker(object):
 
         resources['current_workload'] = self.stats.calculate_workload()
         resources['stats'] = self.stats
+        resources['pci_stats'] = jsonutils.dumps(self.pci_tracker.stats)
 
     def _update_usage_from_instances(self, resources, instances):
         """Calculate resource usage based on instance utilization.  This is

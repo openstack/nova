@@ -32,6 +32,7 @@ from nova.openstack.common.db import exception as db_exc
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import strutils
+from nova.pci import pci_request
 from nova import utils
 
 flavor_opts = [
@@ -296,6 +297,7 @@ def save_flavor_info(metadata, instance_type, prefix=''):
     for key in system_metadata_flavor_props.keys():
         to_key = '%sinstance_type_%s' % (prefix, key)
         metadata[to_key] = instance_type[key]
+    pci_request.save_flavor_pci_info(metadata, instance_type, prefix)
     return metadata
 
 
@@ -308,4 +310,5 @@ def delete_flavor_info(metadata, *prefixes):
         for prefix in prefixes:
             to_key = '%sinstance_type_%s' % (prefix, key)
             del metadata[to_key]
+    pci_request.delete_flavor_pci_info(metadata, *prefixes)
     return metadata
