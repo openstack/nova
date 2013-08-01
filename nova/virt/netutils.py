@@ -21,7 +21,9 @@
 
 """Network-related utilities for supporting libvirt connection code."""
 
+import os
 
+import jinja2
 import netaddr
 
 from oslo.config import cfg
@@ -31,16 +33,6 @@ from nova.network import model
 CONF = cfg.CONF
 CONF.import_opt('use_ipv6', 'nova.netconf')
 CONF.import_opt('injected_network_template', 'nova.virt.disk.api')
-
-Template = None
-
-
-def _late_load_cheetah():
-    global Template
-    if Template is None:
-        t = __import__('Cheetah.Template', globals(), locals(),
-                       ['Template'], -1)
-        Template = t.Template
 
 
 def get_net_and_mask(cidr):
@@ -138,9 +130,8 @@ def get_injected_network_template(network_info, use_ipv6=CONF.use_ipv6,
 
 
 def build_template(template, nets, ipv6_is_available):
-    _late_load_cheetah()
-
-    ifc_template = open(template).read()
-    return str(Template(ifc_template,
-                        searchList=[{'interfaces': nets,
-                                     'use_ipv6': ipv6_is_available}]))
+    tmpl_path, tmpl_file = os.path.split(CONF.injected_network_template)
+    env = jinja2.Environment(loader=jinja2.FileSystemLoader(tmpl_path))
+    template = env.get_template(tmpl_file)
+    return template.render({'interfaces': nets,
+                            'use_ipv6': ipv6_is_available})
