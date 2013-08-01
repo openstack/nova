@@ -385,6 +385,9 @@
 # drive (string value)
 #config_drive_skip_versions=1.0 2007-01-19 2007-03-01 2007-08-29 2007-10-10 2007-12-15 2008-02-01 2008-09-01
 
+# Driver to use for vendor data (string value)
+#vendordata_driver=nova.api.metadata.vendordata_json.JsonFileVendorData
+
 
 #
 # Options defined in nova.api.metadata.handler
@@ -397,6 +400,14 @@
 # Shared secret to validate proxies Neutron metadata requests
 # (string value)
 #neutron_metadata_proxy_shared_secret=
+
+
+#
+# Options defined in nova.api.metadata.vendordata_json
+#
+
+# File to load json formated vendor data from (string value)
+#vendordata_jsonfile_path=<None>
 
 
 #
