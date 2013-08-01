@@ -1124,7 +1124,17 @@ class VMOps(object):
 
     def change_instance_metadata(self, instance, diff):
         """Apply changes to instance metadata to xenstore."""
-        vm_ref = self._get_vm_opaque_ref(instance)
+        try:
+            vm_ref = self._get_vm_opaque_ref(instance)
+        except exception.NotFound:
+            # NOTE(johngarbutt) race conditions mean we can still get here
+            # during operations where the VM is not present, like resize.
+            # Skip the update when not possible, as the updated metadata will
+            # get added when the VM is being booted up at the end of the
+            # resize or rebuild.
+            LOG.warn(_("Unable to update metadata, VM not found."),
+                     instance=instance, exc_info=True)
+            return
 
         def process_change(location, change):
             if change[0] == '-':
