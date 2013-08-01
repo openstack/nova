@@ -290,7 +290,7 @@ class RateLimitingMiddleware(base_wsgi.Middleware):
         if delay:
             msg = _("This request was rate-limited.")
             retry = time.time() + delay
-            return wsgi.OverLimitFault(msg, error, retry)
+            return wsgi.RateLimitFault(msg, error, retry)
 
         req.environ["nova.limits"] = self._limiter.get_limits(username)
 
