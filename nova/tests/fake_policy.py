@@ -97,6 +97,7 @@ policy_data = """
     "compute:soft_delete": "",
     "compute:force_delete": "",
     "compute:restore": "",
+    "compute:swap_volume": "",
 
 
     "compute_extension:accounts": "",
