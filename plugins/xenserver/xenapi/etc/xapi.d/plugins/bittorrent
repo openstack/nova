@@ -26,13 +26,15 @@ import time
 
 import libtorrent
 import urllib2
-import XenAPIPlugin
 
 import utils
 
-#FIXME(sirp): should this use pluginlib from 5.6?
-from pluginlib_nova import *
-configure_logging('bittorrent')
+import pluginlib_nova
+
+
+pluginlib_nova.configure_logging('bittorrent')
+logging = pluginlib_nova.logging
+
 
 DEFAULT_TORRENT_CACHE = '/images/torrents'
 DEFAULT_SEED_CACHE = '/images/seeds'

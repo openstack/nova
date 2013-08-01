@@ -20,8 +20,11 @@ XenAPI Plugin for transferring data between host nodes
 """
 import utils
 
-from pluginlib_nova import *
-configure_logging('migration')
+import pluginlib_nova
+
+
+pluginlib_nova.configure_logging('migration')
+logging = pluginlib_nova.logging
 
 
 def move_vhds_into_sr(session, instance_uuid, sr_path, uuid_stack):

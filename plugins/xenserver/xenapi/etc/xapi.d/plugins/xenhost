@@ -37,6 +37,8 @@ import XenAPIPlugin
 
 
 pluginlib.configure_logging("xenhost")
+_ = pluginlib._
+
 
 host_data_pattern = re.compile(r"\s*(\S+) \([^\)]+\) *: ?(.*)")
 config_file_path = "/usr/etc/xenhost.conf"

@@ -26,9 +26,15 @@ import shutil
 
 import XenAPIPlugin
 
-#FIXME(sirp): should this use pluginlib from 5.6?
-from pluginlib_nova import *
-configure_logging('kernel')
+import pluginlib_nova
+
+
+pluginlib_nova.configure_logging('kernel')
+logging = pluginlib_nova.logging
+exists = pluginlib_nova.exists
+optional = pluginlib_nova.optional
+with_vdi_in_dom0 = pluginlib_nova.with_vdi_in_dom0
+
 
 KERNEL_DIR = '/boot/guest'
 
