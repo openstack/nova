@@ -13,7 +13,6 @@
 #   under the License.
 
 import os.path
-import traceback
 
 import webob
 from webob import exc
@@ -44,6 +43,7 @@ class AdminActionsController(wsgi.Controller):
         super(AdminActionsController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
 
+    @extensions.expected_errors((404, 409))
     @wsgi.action('pause')
     def _pause(self, req, id, body):
         """Permit Admins to pause the server."""
@@ -55,12 +55,13 @@ class AdminActionsController(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'pause')
-        except Exception:
-            readable = traceback.format_exc()
-            LOG.exception(_("Compute.api::pause %s"), readable)
-            raise exc.HTTPUnprocessableEntity()
+        except exception.InstanceIsLocked as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
+        except exception.InstanceNotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
         return webob.Response(status_int=202)
 
+    @extensions.expected_errors((404, 409))
     @wsgi.action('unpause')
     def _unpause(self, req, id, body):
         """Permit Admins to unpause the server."""
@@ -72,12 +73,13 @@ class AdminActionsController(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'unpause')
-        except Exception:
-            readable = traceback.format_exc()
-            LOG.exception(_("Compute.api::unpause %s"), readable)
-            raise exc.HTTPUnprocessableEntity()
+        except exception.InstanceNotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
+        except exception.InstanceIsLocked as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
         return webob.Response(status_int=202)
 
+    @extensions.expected_errors((404, 409))
     @wsgi.action('suspend')
     def _suspend(self, req, id, body):
         """Permit admins to suspend the server."""
@@ -89,12 +91,13 @@ class AdminActionsController(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'suspend')
-        except Exception:
-            readable = traceback.format_exc()
-            LOG.exception(_("compute.api::suspend %s"), readable)
-            raise exc.HTTPUnprocessableEntity()
+        except exception.InstanceNotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
+        except exception.InstanceIsLocked as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
         return webob.Response(status_int=202)
 
+    @extensions.expected_errors((404, 409))
     @wsgi.action('resume')
     def _resume(self, req, id, body):
         """Permit admins to resume the server from suspend."""
@@ -106,12 +109,13 @@ class AdminActionsController(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'resume')
-        except Exception:
-            readable = traceback.format_exc()
-            LOG.exception(_("compute.api::resume %s"), readable)
-            raise exc.HTTPUnprocessableEntity()
+        except exception.InstanceNotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
+        except exception.InstanceIsLocked as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
         return webob.Response(status_int=202)
 
+    @extensions.expected_errors((400, 404, 409, 413))
     @wsgi.action('migrate')
     def _migrate(self, req, id, body):
         """Permit admins to migrate a server to a new host."""
@@ -123,11 +127,19 @@ class AdminActionsController(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'migrate')
-        except Exception as e:
-            LOG.exception(_("Error in migrate %s"), e)
-            raise exc.HTTPBadRequest()
+        except exception.InstanceNotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
+        except exception.InstanceIsLocked as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
+        except exception.FlavorNotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
+        except exception.CannotResizeToSameFlavor as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
+        except exception.TooManyInstances as e:
+            raise exc.HTTPRequestEntityTooLarge(explanation=e.format_message())
         return webob.Response(status_int=202)
 
+    @extensions.expected_errors((404, 409))
     @wsgi.action('reset_network')
     def _reset_network(self, req, id, body):
         """Permit admins to reset networking on a server."""
@@ -136,12 +148,13 @@ class AdminActionsController(wsgi.Controller):
         try:
             instance = self.compute_api.get(context, id)
             self.compute_api.reset_network(context, instance)
-        except Exception:
-            readable = traceback.format_exc()
-            LOG.exception(_("Compute.api::reset_network %s"), readable)
-            raise exc.HTTPUnprocessableEntity()
+        except exception.InstanceNotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
+        except exception.InstanceIsLocked as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
         return webob.Response(status_int=202)
 
+    @extensions.expected_errors((404, 409))
     @wsgi.action('inject_network_info')
     def _inject_network_info(self, req, id, body):
         """Permit admins to inject network info into a server."""
@@ -150,14 +163,13 @@ class AdminActionsController(wsgi.Controller):
         try:
             instance = self.compute_api.get(context, id)
             self.compute_api.inject_network_info(context, instance)
-        except exception.InstanceNotFound:
-            raise exc.HTTPNotFound(_("Server not found"))
-        except Exception:
-            readable = traceback.format_exc()
-            LOG.exception(_("Compute.api::inject_network_info %s"), readable)
-            raise exc.HTTPUnprocessableEntity()
+        except exception.InstanceNotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
+        except exception.InstanceIsLocked as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
         return webob.Response(status_int=202)
 
+    @extensions.expected_errors(404)
     @wsgi.action('lock')
     def _lock(self, req, id, body):
         """Permit admins to lock a server."""
@@ -166,14 +178,11 @@ class AdminActionsController(wsgi.Controller):
         try:
             instance = self.compute_api.get(context, id)
             self.compute_api.lock(context, instance)
-        except exception.InstanceNotFound:
-            raise exc.HTTPNotFound(_("Server not found"))
-        except Exception:
-            readable = traceback.format_exc()
-            LOG.exception(_("Compute.api::lock %s"), readable)
-            raise exc.HTTPUnprocessableEntity()
+        except exception.InstanceNotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
         return webob.Response(status_int=202)
 
+    @extensions.expected_errors(404)
     @wsgi.action('unlock')
     def _unlock(self, req, id, body):
         """Permit admins to lock a server."""
@@ -182,14 +191,11 @@ class AdminActionsController(wsgi.Controller):
         try:
             instance = self.compute_api.get(context, id)
             self.compute_api.unlock(context, instance)
-        except exception.InstanceNotFound:
-            raise exc.HTTPNotFound(_("Server not found"))
-        except Exception:
-            readable = traceback.format_exc()
-            LOG.exception(_("Compute.api::unlock %s"), readable)
-            raise exc.HTTPUnprocessableEntity()
+        except exception.InstanceNotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
         return webob.Response(status_int=202)
 
+    @extensions.expected_errors((400, 404, 409, 413))
     @wsgi.action('create_backup')
     def _create_backup(self, req, id, body):
         """Backup a server instance.
@@ -244,8 +250,8 @@ class AdminActionsController(wsgi.Controller):
 
         try:
             instance = self.compute_api.get(context, id)
-        except exception.NotFound:
-            raise exc.HTTPNotFound(_("Instance not found"))
+        except exception.InstanceNotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
 
         try:
             image = self.compute_api.backup(context, instance, image_name,
@@ -264,6 +270,7 @@ class AdminActionsController(wsgi.Controller):
 
         return resp
 
+    @extensions.expected_errors((400, 404, 409))
     @wsgi.action('migrate_live')
     def _migrate_live(self, req, id, body):
         """Permit admins to (live) migrate a server to a new host."""
@@ -286,21 +293,20 @@ class AdminActionsController(wsgi.Controller):
         except (exception.ComputeServiceUnavailable,
                 exception.InvalidHypervisorType,
                 exception.UnableToMigrateToSelf,
-                exception.DestinationHypervisorTooOld) as ex:
+                exception.DestinationHypervisorTooOld,
+                exception.NoValidHost,
+                exception.InvalidLocalStorage,
+                exception.InvalidSharedStorage,
+                exception.MigrationPreCheckError) as ex:
             raise exc.HTTPBadRequest(explanation=ex.format_message())
-        except Exception:
-            if host is None:
-                msg = _("Live migration of instance %s to another host "
-                        "failed") % id
-            else:
-                msg = _("Live migration of instance %(id)s to host %(host)s "
-                        "failed") % {'id': id, 'host': host}
-            LOG.exception(msg)
-            # Return messages from scheduler
-            raise exc.HTTPBadRequest(explanation=msg)
-
+        except exception.InstanceInvalidState as state_error:
+            common.raise_http_conflict_for_instance_invalid_state(state_error,
+                    'migrate_live')
+        except exception.InstanceNotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
         return webob.Response(status_int=202)
 
+    @extensions.expected_errors((400, 404))
     @wsgi.action('reset_state')
     def _reset_state(self, req, id, body):
         """Permit admins to reset the state of a server."""
@@ -320,12 +326,8 @@ class AdminActionsController(wsgi.Controller):
             instance.vm_state = state
             instance.task_state = None
             instance.save(admin_state_reset=True)
-        except exception.InstanceNotFound:
-            raise exc.HTTPNotFound(_("Server not found"))
-        except Exception:
-            readable = traceback.format_exc()
-            LOG.exception(_("Compute.api::reset_state %s"), readable)
-            raise exc.HTTPUnprocessableEntity()
+        except exception.InstanceNotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
         return webob.Response(status_int=202)
 
 
