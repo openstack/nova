@@ -19,6 +19,7 @@ from nova.api.openstack import compute
 from nova.api.openstack.compute.plugins.v3 import server_diagnostics
 from nova.api.openstack import wsgi
 from nova.compute import api as compute_api
+from nova import exception
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
@@ -35,6 +36,10 @@ def fake_instance_get(self, _context, instance_uuid):
     if instance_uuid != UUID:
         raise Exception("Invalid UUID")
     return {'uuid': instance_uuid}
+
+
+def fake_instance_get_instance_not_found(self, _context, instance_uuid):
+    raise exception.InstanceNotFound(instance_id=instance_uuid)
 
 
 class ServerDiagnosticsTest(test.TestCase):
@@ -54,6 +59,14 @@ class ServerDiagnosticsTest(test.TestCase):
         res = req.get_response(self.router)
         output = jsonutils.loads(res.body)
         self.assertEqual(output, {'data': 'Some diagnostic info'})
+
+    def test_get_diagnostics_with_non_existed_instance(self):
+        req = fakes.HTTPRequestV3.blank(
+            '/servers/%s/os-server-diagnostics' % UUID)
+        self.stubs.Set(compute_api.API, 'get',
+                       fake_instance_get_instance_not_found)
+        res = req.get_response(self.router)
+        self.assertEqual(res.status_int, 404)
 
 
 class TestServerDiagnosticsXMLSerializer(test.TestCase):
