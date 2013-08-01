@@ -15,7 +15,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import eventlet
 import fixtures
 
 from nova import context
@@ -73,14 +72,16 @@ class MemcachedServiceGroupTestCase(test.TestCase):
                                              time=self.down_time)
 
         self.assertTrue(self.servicegroup_api.service_is_up(service_ref))
-        eventlet.sleep(self.down_time + 1)
+        self.useFixture(test.TimeOverride())
+        timeutils.advance_time_seconds(self.down_time + 1)
+        self.servicegroup_api._driver._report_state(serv)
         service_ref = db.service_get_by_args(self._ctx,
                                              self._host,
                                              self._binary)
 
         self.assertTrue(self.servicegroup_api.service_is_up(service_ref))
         serv.stop()
-        eventlet.sleep(self.down_time + 1)
+        timeutils.advance_time_seconds(self.down_time + 1)
         service_ref = db.service_get_by_args(self._ctx,
                                              self._host,
                                              self._binary)
