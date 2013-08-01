@@ -727,7 +727,7 @@ class API(base.Base):
 
     def _get_floating_ip_by_address(self, client, address):
         """Get floatingip from floating ip address."""
-        data = client.lst_floatingips(floating_ip_address=address)
+        data = client.list_floatingips(floating_ip_address=address)
         fips = data['floatingips']
         if len(fips) == 0:
             raise exception.FloatingIpNotFoundForAddress(address=address)
@@ -791,23 +791,7 @@ class API(base.Base):
         LOG.info("vagration is finishing.....")
         if not self._has_port_binding_extension(refresh_cache=True):
             return
-
-        network_info = self.get_instance_nw_info(context,instance,self.conductor_api)
-        fixed_ips=network_info.fixed_ips()
-
-        for fixed_ip in fixed_ips:
-            floating_ip_address=fixed_ip['floating_ips']
-            for floating_ip in floating_ip_address:
-                LOG.info("floating_ip_address is %s floating_ip %s",floating_ip, floating_ip['address'])
-                try:
-                    self.disassociate_floating_ip(context,instance,floating_ip['address'])
-                    self.associate_floating_ip(context,instance,floating_ip['address'],fixed_ip['address'])
-                except Exception as ex:
-                    with excutils.save_and_reraise_exception():
-                        msg = _("Unable to update host of port %s")
-                        LOG.exception(msg, p['id'])
-
-
+        
         quantum = quantumv2.get_client(context, admin=True)
         search_opts = {'device_id': instance['uuid'],
                        'tenant_id': instance['project_id']}
@@ -821,6 +805,21 @@ class API(base.Base):
                 with excutils.save_and_reraise_exception():
                     msg = _("Unable to update host of port %s")
                     LOG.exception(msg, p['id'])
+	
+	network_info = self.get_instance_nw_info(context,instance,self.conductor_api)
+        fixed_ips=network_info.fixed_ips()
+
+        for fixed_ip in fixed_ips:
+            floating_ip_address=fixed_ip['floating_ips']
+            for floating_ip in floating_ip_address:
+                LOG.info("floating_ip_address is %s floating_ip %s",floating_ip, floating_ip['address'])
+                try:
+                    self.disassociate_floating_ip(context,instance,floating_ip['address'])
+                    self.associate_floating_ip(context,instance,floating_ip['address'],fixed_ip['address'])
+                except Exception as ex:
+                    with excutils.save_and_reraise_exception():
+                        msg = _("Unable to floating ip of port %s")
+                        LOG.exception(msg, p['id'])
 
     def add_network_to_project(self, context, project_id, network_uuid=None):
         """Force add a network to the project."""
