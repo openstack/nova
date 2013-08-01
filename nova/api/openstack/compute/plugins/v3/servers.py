@@ -34,7 +34,6 @@ from nova.compute import flavors
 from nova import exception
 from nova.objects import instance as instance_obj
 from nova.openstack.common.gettextutils import _
-from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import strutils
@@ -451,7 +450,6 @@ class ServersController(wsgi.Controller):
         self.extension_info = kwargs.pop('extension_info')
         super(ServersController, self).__init__(**kwargs)
         self.compute_api = compute.API()
-        self.neutron_attempted = False
 
         # Look for implmentation of extension point of server creation
         self.create_extension_manager = \
@@ -654,27 +652,6 @@ class ServersController(wsgi.Controller):
             msg = _("Device name cannot include spaces.")
             raise exc.HTTPBadRequest(explanation=msg)
 
-    def _is_neutron_v2(self):
-        # NOTE(dprince): neutron is not a requirement
-        if self.neutron_attempted:
-            return self.have_neutron
-
-        try:
-            # compatibility with Folsom/Grizzly configs
-            cls_name = CONF.network_api_class
-            if cls_name == 'nova.network.quantumv2.api.API':
-                cls_name = 'nova.network.neutronv2.api.API'
-
-            self.neutron_attempted = True
-            from nova.network.neutronv2 import api as neutron_api
-            self.have_neutron = issubclass(
-                importutils.import_class(cls_name),
-                neutron_api.API)
-        except ImportError:
-            self.have_neutron = False
-
-        return self.have_neutron
-
     def _get_requested_networks(self, requested_networks):
         """Create a list of requested networks from the networks attribute."""
         networks = []
@@ -691,7 +668,7 @@ class ServersController(wsgi.Controller):
                 port_id = network.get('port', None)
                 if port_id:
                     network_uuid = None
-                    if not self._is_neutron_v2():
+                    if not utils.is_neutron():
                         # port parameter is only for neutron v2.0
                         msg = _("Unknown argument: port")
                         raise exc.HTTPBadRequest(explanation=msg)
@@ -719,7 +696,7 @@ class ServersController(wsgi.Controller):
 
                 # For neutronv2, requested_networks
                 # should be tuple of (network_uuid, fixed_ip, port_id)
-                if self._is_neutron_v2():
+                if utils.is_neutron():
                     networks.append((network_uuid, address, port_id))
                 else:
                     # check if the network id is already present in the list,
@@ -832,12 +809,12 @@ class ServersController(wsgi.Controller):
         # TODO(cyeoh): bp v3-api-core-as-extensions
         # Replace with an extension point when the os-networks
         # extension is ported. Currently reworked
-        # to take into account _is_neutron_v2
+        # to take into account is_neutron
         #if (self.ext_mgr.is_loaded('os-networks')
-        #        or self._is_neutron_v2()):
+        #        or utils.is_neutron()):
         #    requested_networks = server_dict.get('networks')
 
-        if self._is_neutron_v2():
+        if utils.is_neutron():
             requested_networks = server_dict.get('networks')
         if requested_networks is not None:
             requested_networks = self._get_requested_networks(

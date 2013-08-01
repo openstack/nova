@@ -32,7 +32,6 @@ from nova import compute
 from nova.compute import flavors
 from nova import exception
 from nova.openstack.common.gettextutils import _
-from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import strutils
@@ -486,7 +485,6 @@ class Controller(wsgi.Controller):
         super(Controller, self).__init__(**kwargs)
         self.compute_api = compute.API()
         self.ext_mgr = ext_mgr
-        self.neutron_attempted = False
 
     @wsgi.serializers(xml=MinimalServersTemplate)
     def index(self, req):
@@ -628,27 +626,6 @@ class Controller(wsgi.Controller):
             injected_files.append((path, contents))
         return injected_files
 
-    def _is_neutron_v2(self):
-        # NOTE(dprince): neutronclient is not a requirement
-        if self.neutron_attempted:
-            return self.have_neutron
-
-        try:
-            # compatibility with Folsom/Grizzly configs
-            cls_name = CONF.network_api_class
-            if cls_name == 'nova.network.quantumv2.api.API':
-                cls_name = 'nova.network.neutronv2.api.API'
-            self.neutron_attempted = True
-
-            from nova.network.neutronv2 import api as neutron_api
-            self.have_neutron = issubclass(
-                importutils.import_class(cls_name),
-                neutron_api.API)
-        except ImportError:
-            self.have_neutron = False
-
-        return self.have_neutron
-
     def _get_requested_networks(self, requested_networks):
         """Create a list of requested networks from the networks attribute."""
         networks = []
@@ -657,7 +634,7 @@ class Controller(wsgi.Controller):
                 port_id = network.get('port', None)
                 if port_id:
                     network_uuid = None
-                    if not self._is_neutron_v2():
+                    if not utils.is_neutron():
                         # port parameter is only for neutron v2.0
                         msg = _("Unknown argment : port")
                         raise exc.HTTPBadRequest(explanation=msg)
@@ -687,7 +664,7 @@ class Controller(wsgi.Controller):
 
                 # For neutronv2, requestd_networks
                 # should be tuple of (network_uuid, fixed_ip, port_id)
-                if self._is_neutron_v2():
+                if utils.is_neutron():
                     networks.append((network_uuid, address, port_id))
                 else:
                     # check if the network id is already present in the list,
@@ -800,7 +777,7 @@ class Controller(wsgi.Controller):
 
         requested_networks = None
         if (self.ext_mgr.is_loaded('os-networks')
-                or self._is_neutron_v2()):
+                or utils.is_neutron()):
             requested_networks = server_dict.get('networks')
 
         if requested_networks is not None:
