@@ -29,6 +29,8 @@ from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
+from nova.pci import pci_request
+from nova.pci import pci_stats
 from nova.scheduler import filters
 from nova.scheduler import weights
 
@@ -166,6 +168,10 @@ class HostState(object):
         self.vcpus_total = compute['vcpus']
         self.vcpus_used = compute['vcpus_used']
         self.updated = compute['updated_at']
+        if hasattr(compute, 'pci_stats'):
+            self.pci_stats = pci_stats.PciDeviceStats(compute['pci_stats'])
+        else:
+            self.pci_stats = None
 
         # All virt drivers report host_ip
         self.host_ip = compute['host_ip']
@@ -251,6 +257,10 @@ class HostState(object):
         if os_type not in self.num_instances_by_os_type:
             self.num_instances_by_os_type[os_type] = 0
         self.num_instances_by_os_type[os_type] += 1
+
+        pci_requests = pci_request.get_instance_pci_requests(instance)
+        if pci_requests and self.pci_stats:
+            self.pci_stats.apply_requests(pci_requests)
 
         vm_state = instance.get('vm_state', vm_states.BUILDING)
         task_state = instance.get('task_state')

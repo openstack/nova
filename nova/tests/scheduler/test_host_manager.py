@@ -464,6 +464,27 @@ class HostStateTestCase(test.NoDBTestCase):
         self.assertEqual('cpu_info', host.cpu_info)
         self.assertEqual({}, host.supported_instances)
 
+    def test_stat_consumption_from_compute_node_non_pci(self):
+        stats = [
+            dict(key='num_instances', value='5'),
+            dict(key='num_proj_12345', value='3'),
+            dict(key='num_proj_23456', value='1'),
+            dict(key='num_vm_%s' % vm_states.BUILDING, value='2'),
+            dict(key='num_vm_%s' % vm_states.SUSPENDED, value='1'),
+            dict(key='num_task_%s' % task_states.RESIZE_MIGRATING, value='1'),
+            dict(key='num_task_%s' % task_states.MIGRATING, value='2'),
+            dict(key='num_os_type_linux', value='4'),
+            dict(key='num_os_type_windoze', value='1'),
+            dict(key='io_workload', value='42'),
+        ]
+        compute = dict(stats=stats, memory_mb=0, free_disk_gb=0, local_gb=0,
+                       local_gb_used=0, free_ram_mb=0, vcpus=0, vcpus_used=0,
+                       updated_at=None, host_ip='127.0.0.1')
+
+        host = host_manager.HostState("fakehost", "fakenode")
+        host.update_from_compute_node(compute)
+        self.assertEqual(None, host.pci_stats)
+
     def test_stat_consumption_from_instance(self):
         host = host_manager.HostState("fakehost", "fakenode")
 
