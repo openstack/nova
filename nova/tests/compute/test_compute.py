@@ -123,6 +123,10 @@ def unify_instance(instance):
         elif k == 'fault':
             # NOTE(danms): DB models don't have 'fault'
             continue
+        elif k == 'pci_devices':
+            # NOTE(yonlig.he) pci devices need lazy loading
+            # fake db does not support it yet.
+            continue
         newdict[k] = v
     return newdict
 
@@ -282,6 +286,7 @@ class BaseTestCase(test.TestCase):
         inst['updated_at'] = timeutils.utcnow()
         inst['launched_at'] = timeutils.utcnow()
         inst['security_groups'] = []
+        inst['pci_devices'] = []
         inst.update(params)
         if services:
             _create_service_entries(self.context.elevated(),

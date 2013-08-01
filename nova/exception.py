@@ -1376,3 +1376,15 @@ class PciDeviceNotFoundById(NotFound):
 
 class PciDeviceNotFound(NovaException):
     msg_fmt = _("PCI Device %(node_id)s:%(address)s not found.")
+
+
+class PciDeviceInvalidStatus(NovaException):
+    msg_fmt = _(
+        "PCI Device %(compute_node_id)s:%(address)s is %(status)s "
+        "instead of %(hopestatus)s")
+
+
+class PciDeviceInvalidOwner(NovaException):
+    msg_fmt = _(
+        "PCI Device %(compute_node_id)s:%(address)s is owned by %(owner)s "
+        "instead of %(hopeowner)s")
