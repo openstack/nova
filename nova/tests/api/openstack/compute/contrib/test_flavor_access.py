@@ -68,7 +68,7 @@ def fake_get_instance_type_access_by_flavor_id(flavorid):
     return res
 
 
-def fake_get_instance_type_by_flavor_id(flavorid):
+def fake_get_instance_type_by_flavor_id(flavorid, ctxt=None):
     return INSTANCE_TYPES[flavorid]
 
 

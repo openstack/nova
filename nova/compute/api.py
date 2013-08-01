@@ -1323,7 +1323,7 @@ class API(base.Base):
     #NOTE(bcwaldon): this doesn't really belong in this class
     def get_instance_type(self, context, instance_type_id):
         """Get an instance type by instance type id."""
-        return instance_types.get_instance_type(instance_type_id)
+        return instance_types.get_instance_type(instance_type_id, ctxt=context)
 
     def get(self, context, instance_id):
         """Get a single instance with the given instance_id."""

@@ -23,7 +23,7 @@ from nova import test
 from nova.tests.api.openstack import fakes
 
 
-def fake_get_instance_type_by_flavor_id(flavorid):
+def fake_get_instance_type_by_flavor_id(flavorid, ctxt=None):
     return {
         'id': flavorid,
         'flavorid': str(flavorid),
