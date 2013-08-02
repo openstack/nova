@@ -18,10 +18,13 @@
 """
 Management class for live migration VM operations.
 """
+import functools
+
 from oslo.config import cfg
 
 from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
+from nova.virt.hyperv import hostutils
 from nova.virt.hyperv import imagecache
 from nova.virt.hyperv import livemigrationutils
 from nova.virt.hyperv import pathutils
@@ -32,13 +35,30 @@ CONF = cfg.CONF
 CONF.import_opt('use_cow_images', 'nova.virt.driver')
 
 
+def check_os_version_requirement(function):
+    @functools.wraps(function)
+    def wrapper(self, *args, **kwds):
+        if not self._livemigrutils:
+            raise NotImplementedError(_('Live migration is supported '
+                                        'starting with Hyper-V Server '
+                                        '2012'))
+        return function(self, *args, **kwds)
+    return wrapper
+
+
 class LiveMigrationOps(object):
     def __init__(self):
+        # Live migration is supported starting from Hyper-V Server 2012
+        if hostutils.HostUtils().check_min_windows_version(6, 2):
+            self._livemigrutils = livemigrationutils.LiveMigrationUtils()
+        else:
+            self._livemigrutils = None
+
         self._pathutils = pathutils.PathUtils()
-        self._livemigrutils = livemigrationutils.LiveMigrationUtils()
         self._volumeops = volumeops.VolumeOps()
         self._imagecache = imagecache.ImageCache()
 
+    @check_os_version_requirement
     def live_migration(self, context, instance_ref, dest, post_method,
                        recover_method, block_migration=False,
                        migrate_data=None):
@@ -60,6 +80,7 @@ class LiveMigrationOps(object):
                   instance_name)
         post_method(context, instance_ref, dest, block_migration)
 
+    @check_os_version_requirement
     def pre_live_migration(self, context, instance, block_device_info,
                            network_info):
         LOG.debug(_("pre_live_migration called"), instance=instance)
@@ -73,11 +94,13 @@ class LiveMigrationOps(object):
 
         self._volumeops.login_storage_targets(block_device_info)
 
+    @check_os_version_requirement
     def post_live_migration_at_destination(self, ctxt, instance_ref,
                                            network_info, block_migration):
         LOG.debug(_("post_live_migration_at_destination called"),
                   instance=instance_ref)
 
+    @check_os_version_requirement
     def check_can_live_migrate_destination(self, ctxt, instance_ref,
                                            src_compute_info, dst_compute_info,
                                            block_migration=False,
@@ -85,10 +108,12 @@ class LiveMigrationOps(object):
         LOG.debug(_("check_can_live_migrate_destination called"), instance_ref)
         return {}
 
+    @check_os_version_requirement
     def check_can_live_migrate_destination_cleanup(self, ctxt,
                                                    dest_check_data):
         LOG.debug(_("check_can_live_migrate_destination_cleanup called"))
 
+    @check_os_version_requirement
     def check_can_live_migrate_source(self, ctxt, instance_ref,
                                       dest_check_data):
         LOG.debug(_("check_can_live_migrate_source called"), instance_ref)

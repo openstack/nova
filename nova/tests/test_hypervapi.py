@@ -52,7 +52,6 @@ from nova.virt.hyperv import networkutils
 from nova.virt.hyperv import pathutils
 from nova.virt.hyperv import vhdutils
 from nova.virt.hyperv import vmutils
-from nova.virt.hyperv import volumeops
 from nova.virt.hyperv import volumeutils
 from nova.virt.hyperv import volumeutilsv2
 from nova.virt import images
@@ -84,11 +83,13 @@ class HyperVAPITestCase(test.TestCase):
         self._instance_ide_dvds = []
         self._instance_volume_disks = []
         self._test_vm_name = None
+        self._check_min_windows_version_satisfied = True
 
         self._setup_stubs()
 
         self.flags(instances_path=r'C:\Hyper-V\test\instances',
                    network_api_class='nova.network.quantumv2.api.API')
+        self.flags(force_volumeutils_v1=True, group='hyperv')
 
         self._conn = driver_hyperv.HyperVDriver(None)
 
@@ -112,6 +113,11 @@ class HyperVAPITestCase(test.TestCase):
         self.stubs.Set(glance, 'get_remote_image_service',
                        fake_get_remote_image_service)
 
+        def fake_check_min_windows_version(fake_self, major, minor):
+            return self._check_min_windows_version_satisfied
+        self.stubs.Set(hostutils.HostUtils, 'check_min_windows_version',
+                       fake_check_min_windows_version)
+
         def fake_sleep(ms):
             pass
         self.stubs.Set(time, 'sleep', fake_sleep)
@@ -119,10 +125,6 @@ class HyperVAPITestCase(test.TestCase):
         def fake_vmutils__init__(self, host='.'):
             pass
         vmutils.VMUtils.__init__ = fake_vmutils__init__
-
-        def fake_get_volume_utils(self):
-            return volumeutils.VolumeUtils()
-        volumeops.VolumeOps._get_volume_utils = fake_get_volume_utils
 
         self.stubs.Set(pathutils, 'PathUtils', fake.PathUtils)
         self._mox.StubOutWithMock(fake.PathUtils, 'open')
@@ -544,6 +546,11 @@ class HyperVAPITestCase(test.TestCase):
         self._conn.destroy(self._instance_data, None)
         self._mox.VerifyAll()
 
+    def test_live_migration_unsupported_os(self):
+        self._check_min_windows_version_satisfied = False
+        self._conn = driver_hyperv.HyperVDriver(None)
+        self._test_live_migration(unsupported_os=True)
+
     def test_live_migration_without_volumes(self):
         self._test_live_migration()
 
@@ -554,14 +561,15 @@ class HyperVAPITestCase(test.TestCase):
         self._test_live_migration(test_failure=True)
 
     def _test_live_migration(self, test_failure=False,
-                             with_volumes=False):
+                             with_volumes=False,
+                             unsupported_os=False):
         dest_server = 'fake_server'
 
         instance_data = self._get_instance_data()
         instance_name = instance_data['name']
 
         fake_post_method = self._mox.CreateMockAnything()
-        if not test_failure:
+        if not test_failure and not unsupported_os:
             fake_post_method(self._context, instance_data, dest_server,
                              False)
 
@@ -581,27 +589,32 @@ class HyperVAPITestCase(test.TestCase):
         else:
             fake_scsi_paths = {}
 
-        m = livemigrationutils.LiveMigrationUtils.live_migrate_vm(
-            instance_data['name'], dest_server)
-        if test_failure:
-            m.AndRaise(vmutils.HyperVException('Simulated failure'))
+        if not unsupported_os:
+            m = livemigrationutils.LiveMigrationUtils.live_migrate_vm(
+                instance_data['name'], dest_server)
+            if test_failure:
+                m.AndRaise(vmutils.HyperVException('Simulated failure'))
 
-        if with_volumes:
-            m.AndReturn([(fake_target_iqn, fake_target_lun)])
-            volumeutils.VolumeUtils.logout_storage_target(fake_target_iqn)
-        else:
-            m.AndReturn([])
+            if with_volumes:
+                m.AndReturn([(fake_target_iqn, fake_target_lun)])
+                volumeutils.VolumeUtils.logout_storage_target(fake_target_iqn)
+            else:
+                m.AndReturn([])
 
         self._mox.ReplayAll()
         try:
+            hyperv_exception_raised = False
+            unsupported_os_exception_raised = False
             self._conn.live_migration(self._context, instance_data,
                                       dest_server, fake_post_method,
                                       fake_recover_method)
-            exception_raised = False
         except vmutils.HyperVException:
-            exception_raised = True
+            hyperv_exception_raised = True
+        except NotImplementedError:
+            unsupported_os_exception_raised = True
 
-        self.assertTrue(not test_failure ^ exception_raised)
+        self.assertTrue(not test_failure ^ hyperv_exception_raised)
+        self.assertTrue(not unsupported_os ^ unsupported_os_exception_raised)
         self._mox.VerifyAll()
 
     def test_pre_live_migration_cow_image(self):
@@ -953,6 +966,26 @@ class HyperVAPITestCase(test.TestCase):
                                                         fake_free_slot,
                                                         fake_mounted_disk)
         m.WithSideEffects(self._add_volume_disk)
+
+    def _test_volumeutils_version(self, is_hyperv_2012=True,
+                                  force_volumeutils_v1=False):
+        self._check_min_windows_version_satisfied = is_hyperv_2012
+        self.flags(force_volumeutils_v1=force_volumeutils_v1, group='hyperv')
+        self._conn = driver_hyperv.HyperVDriver(None)
+        is_volutils_v2 = isinstance(self._conn._volumeops._volutils,
+                                    volumeutilsv2.VolumeUtilsV2)
+
+        self.assertTrue((is_hyperv_2012 and not force_volumeutils_v1) ^
+                        (not is_volutils_v2))
+
+    def test_volumeutils_version_hyperv_2012(self):
+        self._test_volumeutils_version(True, False)
+
+    def test_volumeutils_version_hyperv_2012_force_v1(self):
+        self._test_volumeutils_version(True, True)
+
+    def test_volumeutils_version_hyperv_2008R2(self):
+        self._test_volumeutils_version(False, False)
 
     def test_attach_volume(self):
         instance_data = self._get_instance_data()
