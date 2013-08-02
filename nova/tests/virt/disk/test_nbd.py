@@ -18,7 +18,9 @@
 
 import os
 import tempfile
+import time
 
+import eventlet
 import fixtures
 
 from nova import test
@@ -284,3 +286,48 @@ class NbdTestCase(test.TestCase):
         mount.map_dev = fake_returns_true
 
         self.assertFalse(mount.do_mount())
+
+    def test_device_creation_race(self):
+        # Make sure that even if two threads create instances at the same time
+        # they cannot choose the same nbd number (see bug 1207422)
+
+        tempdir = self.useFixture(fixtures.TempDir()).path
+        free_devices = _fake_detect_nbd_devices(None)[:]
+        chosen_devices = []
+
+        def fake_find_unused(self):
+            return os.path.join('/dev', free_devices[-1])
+
+        def delay_and_remove_device(*args, **kwargs):
+            # Ensure that context switch happens before the device is marked
+            # as used. This will cause a failure without nbd-allocation-lock
+            # in place.
+            time.sleep(0.1)
+
+            # We always choose the top device in find_unused - remove it now.
+            free_devices.pop()
+
+            return '', ''
+
+        def pid_exists(pidfile):
+            return pidfile not in [os.path.join('/sys/block', dev, 'pid')
+                                   for dev in free_devices]
+
+        self.stubs.Set(nbd.NbdMount, '_allocate_nbd', fake_find_unused)
+        self.useFixture(fixtures.MonkeyPatch('nova.utils.trycmd',
+                                             delay_and_remove_device))
+        self.useFixture(fixtures.MonkeyPatch('os.path.exists',
+                                             pid_exists))
+
+        def get_a_device():
+            n = nbd.NbdMount(None, tempdir)
+            n.get_dev()
+            chosen_devices.append(n.device)
+
+        thread1 = eventlet.spawn(get_a_device)
+        thread2 = eventlet.spawn(get_a_device)
+        thread1.wait()
+        thread2.wait()
+
+        self.assertEqual(2, len(chosen_devices))
+        self.assertNotEqual(chosen_devices[0], chosen_devices[1])
