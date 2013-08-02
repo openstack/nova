@@ -24,7 +24,7 @@ from oslo.config import cfg
 from nova.api.metadata import base
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
-from nova.openstack.common import log
+from nova.openstack.common import log as logging
 
 file_opt = cfg.StrOpt('vendordata_jsonfile_path',
                       default=None,
@@ -32,7 +32,7 @@ file_opt = cfg.StrOpt('vendordata_jsonfile_path',
 
 CONF = cfg.CONF
 CONF.register_opt(file_opt)
-LOG = log.getLogger(__name__)
+LOG = logging.getLogger(__name__)
 
 
 class JsonFileVendorData(base.VendorDataDriver):
@@ -40,7 +40,7 @@ class JsonFileVendorData(base.VendorDataDriver):
         super(JsonFileVendorData, self).__init__(*args, **kwargs)
         data = {}
         fpath = CONF.vendordata_jsonfile_path
-        logprefix = "%s['%s']:" % (file_opt.name, fpath)
+        logprefix = "%s[%s]: " % (file_opt.name, fpath)
         if fpath:
             try:
                 with open(fpath, "r") as fp:

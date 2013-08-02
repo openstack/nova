@@ -32,12 +32,11 @@ from nova.compute import flavors
 from nova import conductor
 from nova import context
 from nova import network
-from nova import utils
-
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
-from nova.openstack.common import log
+from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
+from nova import utils
 from nova.virt import netutils
 
 
@@ -84,7 +83,7 @@ VD_JSON_NAME = "vendor_data.json"
 UD_NAME = "user_data"
 PASS_NAME = "password"
 
-LOG = log.getLogger(__name__)
+LOG = logging.getLogger(__name__)
 
 
 class InvalidMetadataVersion(Exception):
