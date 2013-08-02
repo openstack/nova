@@ -3052,6 +3052,20 @@ class AggregateAPI(base.Base):
                                                     aggregate_payload)
         # validates the host; ComputeHostNotFound is raised if invalid
         self.db.service_get_by_compute_host(context, host_name)
+        host_az = availability_zones.get_host_availability_zone(context,
+                                                                host_name)
+        if host_az and host_az != CONF.default_availability_zone:
+            aggregate_meta = self.db.aggregate_metadata_get_by_metadata_key(
+                context, aggregate_id, 'availability_zone')
+            aggregate_az = aggregate_meta["availability_zone"].pop()
+            if aggregate_az != host_az:
+                msg = _("Host already in availability zone %s.") % host_az
+                action_name = "add_host_to_aggregate"
+                id = aggregate_id
+                raise exception.InvalidAggregateAction(action=action_name,
+                                                       aggregate_id=id,
+                                                       reason=msg)
+        aggregate = self.db.aggregate_get(context, aggregate_id)
         self.db.aggregate_host_add(context, aggregate_id, host_name)
         #NOTE(jogo): Send message to host to support resource pools
         aggregate = self.db.aggregate_get(context, aggregate_id)

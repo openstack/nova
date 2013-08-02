@@ -1654,6 +1654,12 @@ def aggregate_metadata_get_by_host(context, host, key=None):
     return IMPL.aggregate_metadata_get_by_host(context, host, key)
 
 
+def aggregate_metadata_get_by_metadata_key(context, aggregate_id, key):
+    """Get metadata for an aggregate by metadata key."""
+    return IMPL.aggregate_metadata_get_by_metadata_key(context, aggregate_id,
+                                                        key)
+
+
 def aggregate_host_get_by_metadata_key(context, key):
     """Get hosts with a specific metadata key metadata for all aggregates.
 
