@@ -106,7 +106,7 @@ def wsgi_app_v3(inner_app_v3=None, fake_auth_context=None,
         inner_app_v3 = compute.APIRouterV3(init_only)
 
     if use_no_auth:
-        api_v3 = openstack_api.FaultWrapper(auth.NoAuthMiddleware(
+        api_v3 = openstack_api.FaultWrapper(auth.NoAuthMiddlewareV3(
               limits.RateLimitingMiddleware(inner_app_v3)))
     else:
         if fake_auth_context is not None:
