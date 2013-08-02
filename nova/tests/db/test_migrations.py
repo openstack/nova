@@ -2410,6 +2410,29 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         self.assertFalse('user_id' in reservation)
         self.assertFalse(table_exist)
 
+    def _check_204(self, engine, data):
+        if engine.name != 'sqlite':
+            return
+
+        meta = sqlalchemy.MetaData()
+        meta.bind = engine
+        reservations = sqlalchemy.Table('reservations', meta, autoload=True)
+
+        index_data = [(idx.name, idx.columns.keys())
+                      for idx in reservations.indexes]
+
+        if engine.name == "postgresql":
+            # we can not get correct order of columns in index
+            # definition to postgresql using sqlalchemy. So we sort
+            # columns list before compare
+            # bug http://www.sqlalchemy.org/trac/ticket/2767
+            self.assertIn(
+                ('reservations_uuid_idx', sorted(['uuid'])),
+                ([(idx[0], sorted(idx[1])) for idx in index_data])
+            )
+        else:
+            self.assertIn(('reservations_uuid_idx', ['uuid']), index_data)
+
 
 class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""
