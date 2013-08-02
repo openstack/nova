@@ -40,8 +40,18 @@ def get_attrname(name):
 
 
 def make_class_properties(cls):
-    # NOTE(danms): Inherit NovaObject's base fields only
-    cls.fields.update(NovaObject.fields)
+    # NOTE(danms/comstud): Inherit fields from super classes.
+    # mro() returns the current class first and returns 'object' last, so
+    # those can be skipped.  Also be careful to not overwrite any fields
+    # that already exist.  And make sure each cls has its own copy of
+    # fields and that it is not sharing the dict with a super class.
+    cls.fields = dict(cls.fields)
+    for supercls in cls.mro()[1:-1]:
+        if not hasattr(supercls, 'fields'):
+            continue
+        for field, typefn in supercls.fields.items():
+            if field not in cls.fields:
+                cls.fields[field] = typefn
     for name, typefn in cls.fields.iteritems():
 
         def getter(self, name=name):
@@ -178,9 +188,7 @@ class NovaObject(object):
     #            'baz': lambda x: str(x).ljust(8),
     #          }
     #
-    # NOTE(danms): The base NovaObject class' fields will be inherited
-    # by subclasses, but that is a special case. Objects inheriting from
-    # other objects will not receive this merging of fields contents.
+    # NOTE(danms): These fields will be inherited by all subclasses.
     fields = {
         'created_at': obj_utils.datetime_or_str_or_none,
         'updated_at': obj_utils.datetime_or_str_or_none,
