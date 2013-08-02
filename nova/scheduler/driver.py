@@ -337,7 +337,7 @@ class Scheduler(object):
             reason = _("Unable to migrate %(instance_uuid)s to %(dest)s: "
                        "Lack of memory(host:%(avail)s <= "
                        "instance:%(mem_inst)s)")
-            raise exception.MigrationError(reason=reason % locals())
+            raise exception.MigrationPreCheckError(reason=reason % locals())
 
     def _get_compute_info(self, context, host):
         """get compute node's information specified by key

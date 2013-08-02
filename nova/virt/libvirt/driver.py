@@ -2962,7 +2962,7 @@ class LibvirtDriver(driver.ComputeDriver):
                        "Disk of instance is too large(available"
                        " on destination host:%(available)s "
                        "< need:%(necessary)s)")
-            raise exception.MigrationError(reason=reason % locals())
+            raise exception.MigrationPreCheckError(reason=reason % locals())
 
     def _compare_cpu(self, cpu_info):
         """Checks the host cpu is compatible to a cpu given by xml.

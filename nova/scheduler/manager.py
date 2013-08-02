@@ -39,6 +39,7 @@ from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.notifier import api as notifier
+from nova.openstack.common.rpc import common as rpc_common
 from nova import quota
 
 
@@ -88,6 +89,14 @@ class SchedulerManager(manager.Manager):
         #function removed in RPC API 2.3
         pass
 
+    @rpc_common.client_exceptions(exception.NoValidHost,
+                                  exception.ComputeServiceUnavailable,
+                                  exception.InvalidHypervisorType,
+                                  exception.UnableToMigrateToSelf,
+                                  exception.DestinationHypervisorTooOld,
+                                  exception.InvalidLocalStorage,
+                                  exception.InvalidSharedStorage,
+                                  exception.MigrationPreCheckError)
     def live_migration(self, context, instance, dest,
                        block_migration, disk_over_commit):
         try:
@@ -100,7 +109,8 @@ class SchedulerManager(manager.Manager):
                 exception.UnableToMigrateToSelf,
                 exception.DestinationHypervisorTooOld,
                 exception.InvalidLocalStorage,
-                exception.InvalidSharedStorage) as ex:
+                exception.InvalidSharedStorage,
+                exception.MigrationPreCheckError) as ex:
             request_spec = {'instance_properties': {
                 'uuid': instance['uuid'], },
             }

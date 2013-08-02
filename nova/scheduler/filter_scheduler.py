@@ -389,6 +389,8 @@ class FilterScheduler(driver.Scheduler):
                                                      'RamFilter')
         if not hosts:
             instance_uuid = instance_ref['uuid']
-            reason = _("Unable to migrate %(instance_uuid)s to %(dest)s: "
-                       "Lack of memory")
-            raise exception.MigrationError(reason=reason % locals())
+            reason = (_("Unable to migrate %(instance_uuid)s to %(dest)s: "
+                        "Lack of memory")
+                      % {'instance_uuid': instance_uuid,
+                         'dest': dest})
+            raise exception.MigrationPreCheckError(reason=reason)
