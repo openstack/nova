@@ -1277,6 +1277,10 @@
 # (integer value)
 #neutron_extension_sync_interval=600
 
+# Location of ca certicates file to use for neutronclient
+# requests. (string value)
+#neutron_ca_certificates_file=<None>
+
 
 #
 # Options defined in nova.network.rpcapi

@@ -102,7 +102,8 @@ class TestNeutronClient(test.TestCase):
             endpoint_url=CONF.neutron_url,
             token=my_context.auth_token,
             timeout=CONF.neutron_url_timeout,
-            insecure=False).AndReturn(None)
+            insecure=False,
+            ca_cert=None).AndReturn(None)
         self.mox.ReplayAll()
         neutronv2.get_client(my_context)
 
@@ -124,7 +125,8 @@ class TestNeutronClient(test.TestCase):
             endpoint_url=CONF.neutron_url,
             auth_strategy=None,
             timeout=CONF.neutron_url_timeout,
-            insecure=False).AndReturn(None)
+            insecure=False,
+            ca_cert=None).AndReturn(None)
         self.mox.ReplayAll()
         neutronv2.get_client(my_context)
 

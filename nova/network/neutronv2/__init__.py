@@ -38,6 +38,7 @@ def _get_auth_token():
             auth_url=CONF.neutron_admin_auth_url,
             timeout=CONF.neutron_url_timeout,
             auth_strategy=CONF.neutron_auth_strategy,
+            ca_cert=CONF.neutron_ca_certificates_file,
             insecure=CONF.neutron_api_insecure)
         httpclient.authenticate()
         return httpclient.auth_token
@@ -53,6 +54,7 @@ def _get_client(token=None):
         'endpoint_url': CONF.neutron_url,
         'timeout': CONF.neutron_url_timeout,
         'insecure': CONF.neutron_api_insecure,
+        'ca_cert': CONF.neutron_ca_certificates_file,
     }
     if token:
         params['token'] = token

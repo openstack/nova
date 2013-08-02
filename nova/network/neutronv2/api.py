@@ -82,6 +82,10 @@ neutron_opts = [
                 deprecated_name='quantum_extension_sync_interval',
                 help='Number of seconds before querying neutron for'
                      ' extensions'),
+    cfg.StrOpt('neutron_ca_certificates_file',
+                default=None,
+                help='Location of ca certicates file to use for neutronclient'
+                     ' requests.'),
     ]
 
 CONF = cfg.CONF
