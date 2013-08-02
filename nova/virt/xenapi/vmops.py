@@ -113,7 +113,7 @@ def cmp_version(a, b):
     return len(a) - len(b)
 
 
-def make_step_decorator(context, instance, instance_update):
+def make_step_decorator(context, instance, update_instance_progress):
     """Factory to create a decorator that records instance progress as a series
     of discrete steps.
 
@@ -141,10 +141,8 @@ def make_step_decorator(context, instance, instance_update):
 
     def bump_progress():
         step_info['current'] += 1
-        progress = round(float(step_info['current']) /
-                         step_info['total'] * 100)
-        LOG.debug(_("Updating progress to %d"), progress, instance=instance)
-        instance_update(context, instance['uuid'], {'progress': progress})
+        update_instance_progress(context, instance,
+                                 step_info['current'], step_info['total'])
 
     def step_decorator(f):
         step_info['total'] += 1
@@ -365,7 +363,7 @@ class VMOps(object):
             name_label = instance['name']
 
         step = make_step_decorator(context, instance,
-                                   self._virtapi.instance_update)
+                                   self._update_instance_progress)
 
         @step
         def determine_disk_image_type_step(undo_mgr):
@@ -818,7 +816,7 @@ class VMOps(object):
     def _migrate_disk_resizing_down(self, context, instance, dest,
                                     instance_type, vm_ref, sr_path):
         step = make_step_decorator(context, instance,
-                                   self._virtapi.instance_update)
+                                   self._update_instance_progress)
 
         @step
         def fake_step_to_match_resizing_up():
