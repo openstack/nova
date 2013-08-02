@@ -235,7 +235,7 @@ class Instance(base.NovaObject):
             instance_info_cache.InstanceInfoCache._from_db_object(
                     context, instance['info_cache'], db_inst['info_cache'])
         if ('security_groups' in expected_attrs and
-                db_inst.get('security_groups')):
+                db_inst.get('security_groups') is not None):
             instance['security_groups'] = security_group.SecurityGroupList()
             security_group._make_secgroup_list(context,
                                                instance['security_groups'],

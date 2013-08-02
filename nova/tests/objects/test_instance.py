@@ -348,6 +348,17 @@ class _TestInstanceObject(object):
         inst.save()
         self.assertEqual(inst.security_groups.obj_what_changed(), set())
 
+    def test_with_empty_security_groups(self):
+        ctxt = context.get_admin_context()
+        fake_inst = dict(self.fake_instance, security_groups=[])
+        fake_uuid = fake_inst['uuid']
+        self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
+        db.instance_get_by_uuid(ctxt, fake_uuid, columns_to_join=[]
+                                ).AndReturn(fake_inst)
+        self.mox.ReplayAll()
+        inst = instance.Instance.get_by_uuid(ctxt, fake_uuid)
+        self.assertEqual(0, len(inst.security_groups))
+
     def test_with_fault(self):
         ctxt = context.get_admin_context()
         fake_inst = dict(self.fake_instance)
