@@ -297,7 +297,6 @@ class VMOps(object):
         self._file_inject_vm_settings(instance, vm_ref, vdis, network_info)
         self._create_vifs(instance, vm_ref, network_info)
         self.inject_network_info(instance, network_info, vm_ref)
-        self._inject_hostname(instance, vm_ref, False)
         self._inject_instance_metadata(instance, vm_ref)
 
         self._attach_mapped_block_devices(instance, block_device_info)

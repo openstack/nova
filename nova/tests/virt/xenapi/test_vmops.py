@@ -457,7 +457,6 @@ class SpawnTestCase(VMOpsTestBase):
                                             network_info)
         self.vmops._create_vifs(instance, vm_ref, network_info)
         self.vmops.inject_network_info(instance, network_info, vm_ref)
-        self.vmops._inject_hostname(instance, vm_ref, False)
         self.vmops._inject_instance_metadata(instance, vm_ref)
 
         self.vmops._attach_mapped_block_devices(instance, block_device_info)
