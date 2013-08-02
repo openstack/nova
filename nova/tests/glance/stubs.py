@@ -22,7 +22,14 @@ NOW_GLANCE_FORMAT = "2010-10-11T10:30:22"
 
 class StubGlanceClient(object):
 
-    def __init__(self, images=None):
+    def __init__(self, images=None, version=None, endpoint=None, **params):
+        self.auth_token = params.get('token')
+        self.identity_headers = params.get('identity_headers')
+        if self.identity_headers:
+            if self.identity_headers.get('X-Auth-Token'):
+                self.auth_token = (self.identity_headers.get('X-Auth_Token') or
+                                   self.auth_token)
+                del self.identity_headers['X-Auth-Token']
         self._images = []
         _images = images or []
         map(lambda image: self.create(**image), _images)

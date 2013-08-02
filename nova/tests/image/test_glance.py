@@ -607,6 +607,34 @@ class TestGlanceClientWrapper(test.TestCase):
             pass
         self.stubs.Set(time, 'sleep', _fake_sleep)
 
+    def test_headers_passed_glanceclient(self):
+        auth_token = 'auth_token'
+        ctxt = context.RequestContext('fake', 'fake', auth_token=auth_token)
+        fake_host = 'host4'
+        fake_port = 9295
+        fake_use_ssl = False
+
+        def _get_fake_glanceclient(version, endpoint, **params):
+            fake_client = glance_stubs.StubGlanceClient(version,
+                                       endpoint, **params)
+            self.assertTrue(fake_client.auth_token is not None)
+            self.assertTrue(fake_client.identity_headers is not None)
+            self.assertEquals(fake_client.identity_header['X-Auth_Token'],
+                              auth_token)
+            self.assertEquals(fake_client.identity_header['X-User-Id'], 'fake')
+            self.assertEquals(fake_client.identity_header['X-Roles'], None)
+            self.assertEquals(fake_client.identity_header['X-Tenant-Id'], None)
+            self.assertEquals(fake_client.
+                              identity_header['X-Service-Catalog'], None)
+            self.assertEquals(fake_client.
+                              identity_header['X-Identity-Status'],
+                              'Confirmed')
+
+        self.stubs.Set(glanceclient.Client, '__init__',
+                       _get_fake_glanceclient)
+
+        glance._create_glance_client(ctxt, fake_host, fake_port, fake_use_ssl)
+
     def test_static_client_without_retries(self):
         self.flags(glance_num_retries=0)
 
