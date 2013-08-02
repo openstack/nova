@@ -1183,20 +1183,25 @@ class ServersControllerTest(ControllerTest):
 
 class ServersControllerUpdateTest(ControllerTest):
 
-    def test_update_server_all_attributes(self):
-        self.stubs.Set(db, 'instance_get',
-                fakes.fake_instance_get(name='server_test',
-                                        access_ipv4='0.0.0.0',
-                                        access_ipv6='beef::0123'))
+    def _get_request(self, body=None, content_type='json', options=None):
+        if options:
+            self.stubs.Set(db, 'instance_get',
+                           fakes.fake_instance_get(**options))
         req = fakes.HTTPRequest.blank('/fake/servers/%s' % FAKE_UUID)
         req.method = 'PUT'
-        req.content_type = 'application/json'
+        req.content_type = 'application/%s' % content_type
+        req.body = jsonutils.dumps(body)
+        return req
+
+    def test_update_server_all_attributes(self):
         body = {'server': {
                   'name': 'server_test',
                   'accessIPv4': '0.0.0.0',
                   'accessIPv6': 'beef::0123',
                }}
-        req.body = jsonutils.dumps(body)
+        req = self._get_request(body, {'name': 'server_test',
+                                       'access_ipv4': '0.0.0.0',
+                                       'access_ipv6': 'beef::0123'})
         res_dict = self.controller.update(req, FAKE_UUID, body)
 
         self.assertEqual(res_dict['server']['id'], FAKE_UUID)
@@ -1205,175 +1210,110 @@ class ServersControllerUpdateTest(ControllerTest):
         self.assertEqual(res_dict['server']['accessIPv6'], 'beef::123')
 
     def test_update_server_invalid_xml_raises_lookup(self):
-        req = fakes.HTTPRequest.blank('/fake/servers/%s' % FAKE_UUID)
-        req.method = 'PUT'
-        req.content_type = 'application/xml'
-        #xml request which raises LookupError
-        req.body = """<?xml version="1.0" encoding="TF-8"?>
+        body = """<?xml version="1.0" encoding="TF-8"?>
             <metadata
             xmlns="http://docs.openstack.org/compute/api/v1.1"
             key="Label"></meta>"""
+        req = self._get_request(body, content_type='xml')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
 
     def test_update_server_invalid_xml_raises_expat(self):
-        req = fakes.HTTPRequest.blank('/fake/servers/%s' % FAKE_UUID)
-        req.method = 'PUT'
-        req.content_type = 'application/xml'
-        #xml request which raises ExpatError
-        req.body = """<?xml version="1.0" encoding="UTF-8"?>
+        body = """<?xml version="1.0" encoding="UTF-8"?>
             <metadata
             xmlns="http://docs.openstack.org/compute/api/v1.1"
             key="Label"></meta>"""
+        req = self._get_request(body, content_type='xml')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
 
     def test_update_server_name(self):
-        self.stubs.Set(db, 'instance_get',
-                fakes.fake_instance_get(name='server_test'))
-        req = fakes.HTTPRequest.blank('/fake/servers/%s' % FAKE_UUID)
-        req.method = 'PUT'
-        req.content_type = 'application/json'
         body = {'server': {'name': 'server_test'}}
-        req.body = jsonutils.dumps(body)
+        req = self._get_request(body, {'name': 'server_test'})
         res_dict = self.controller.update(req, FAKE_UUID, body)
 
         self.assertEqual(res_dict['server']['id'], FAKE_UUID)
         self.assertEqual(res_dict['server']['name'], 'server_test')
 
     def test_update_server_name_too_long(self):
-        self.stubs.Set(db, 'instance_get',
-                fakes.fake_instance_get(name='server_test'))
-        req = fakes.HTTPRequest.blank('/fake/servers/%s' % FAKE_UUID)
-        req.method = 'PUT'
-        req.content_type = 'application/json'
         body = {'server': {'name': 'x' * 256}}
-        req.body = jsonutils.dumps(body)
+        req = self._get_request(body, {'name': 'server_test'})
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
                             req, FAKE_UUID, body)
 
     def test_update_server_name_all_blank_spaces(self):
-        self.stubs.Set(db, 'instance_get',
-                fakes.fake_instance_get(name='server_test'))
-        req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
-        req.method = 'PUT'
-        req.content_type = 'application/json'
         body = {'server': {'name': ' ' * 64}}
-        req.body = jsonutils.dumps(body)
+        req = self._get_request(body, {'name': 'server_test'})
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
                           req, FAKE_UUID, body)
 
     def test_update_server_access_ipv4(self):
-        self.stubs.Set(db, 'instance_get',
-                fakes.fake_instance_get(access_ipv4='0.0.0.0'))
-        req = fakes.HTTPRequest.blank('/fake/servers/%s' % FAKE_UUID)
-        req.method = 'PUT'
-        req.content_type = 'application/json'
         body = {'server': {'accessIPv4': '0.0.0.0'}}
-        req.body = jsonutils.dumps(body)
+        req = self._get_request(body, {'access_ipv4': '0.0.0.0'})
         res_dict = self.controller.update(req, FAKE_UUID, body)
 
         self.assertEqual(res_dict['server']['id'], FAKE_UUID)
         self.assertEqual(res_dict['server']['accessIPv4'], '0.0.0.0')
 
     def test_update_server_access_ipv4_bad_format(self):
-        self.stubs.Set(db, 'instance_get',
-                fakes.fake_instance_get(access_ipv4='0.0.0.0'))
-        req = fakes.HTTPRequest.blank('/fake/servers/%s' % FAKE_UUID)
-        req.method = 'PUT'
-        req.content_type = 'application/json'
         body = {'server': {'accessIPv4': 'bad_format'}}
-        req.body = jsonutils.dumps(body)
+        req = self._get_request(body, {'access_ipv4': '0.0.0.0'})
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
                             req, FAKE_UUID, body)
 
     def test_update_server_access_ipv4_none(self):
-        self.stubs.Set(db, 'instance_get',
-                fakes.fake_instance_get(access_ipv4='0.0.0.0'))
-        req = fakes.HTTPRequest.blank('/fake/servers/%s' % FAKE_UUID)
-        req.method = 'PUT'
-        req.content_type = 'application/json'
         body = {'server': {'accessIPv4': None}}
-        req.body = jsonutils.dumps(body)
+        req = self._get_request(body, {'access_ipv4': '0.0.0.0'})
         res_dict = self.controller.update(req, FAKE_UUID, body)
 
         self.assertEqual(res_dict['server']['id'], FAKE_UUID)
         self.assertEqual(res_dict['server']['accessIPv4'], '')
 
     def test_update_server_access_ipv4_blank(self):
-        self.stubs.Set(db, 'instance_get',
-                fakes.fake_instance_get(access_ipv4='0.0.0.0'))
-        req = fakes.HTTPRequest.blank('/fake/servers/%s' % FAKE_UUID)
-        req.method = 'PUT'
-        req.content_type = 'application/json'
         body = {'server': {'accessIPv4': ''}}
-        req.body = jsonutils.dumps(body)
+        req = self._get_request(body, {'access_ipv4': '0.0.0.0'})
         res_dict = self.controller.update(req, FAKE_UUID, body)
 
         self.assertEqual(res_dict['server']['id'], FAKE_UUID)
         self.assertEqual(res_dict['server']['accessIPv4'], '')
 
     def test_update_server_access_ipv6(self):
-        self.stubs.Set(db, 'instance_get',
-                fakes.fake_instance_get(access_ipv6='beef::0123'))
-        req = fakes.HTTPRequest.blank('/fake/servers/%s' % FAKE_UUID)
-        req.method = 'PUT'
-        req.content_type = 'application/json'
         body = {'server': {'accessIPv6': 'beef::0123'}}
-        req.body = jsonutils.dumps(body)
+        req = self._get_request(body, {'access_ipv6': 'beef::0123'})
         res_dict = self.controller.update(req, FAKE_UUID, body)
 
         self.assertEqual(res_dict['server']['id'], FAKE_UUID)
         self.assertEqual(res_dict['server']['accessIPv6'], 'beef::123')
 
     def test_update_server_access_ipv6_bad_format(self):
-        self.stubs.Set(db, 'instance_get',
-                fakes.fake_instance_get(access_ipv6='beef::0123'))
-        req = fakes.HTTPRequest.blank('/fake/servers/%s' % FAKE_UUID)
-        req.method = 'PUT'
-        req.content_type = 'application/json'
         body = {'server': {'accessIPv6': 'bad_format'}}
-        req.body = jsonutils.dumps(body)
+        req = self._get_request(body, {'access_ipv6': 'beef::0123'})
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
                             req, FAKE_UUID, body)
 
     def test_update_server_access_ipv6_none(self):
-        self.stubs.Set(db, 'instance_get',
-                fakes.fake_instance_get(access_ipv6='beef::0123'))
-        req = fakes.HTTPRequest.blank('/fake/servers/%s' % FAKE_UUID)
-        req.method = 'PUT'
-        req.content_type = 'application/json'
         body = {'server': {'accessIPv6': None}}
-        req.body = jsonutils.dumps(body)
+        req = self._get_request(body, {'access_ipv6': 'beef::0123'})
         res_dict = self.controller.update(req, FAKE_UUID, body)
 
         self.assertEqual(res_dict['server']['id'], FAKE_UUID)
         self.assertEqual(res_dict['server']['accessIPv6'], '')
 
     def test_update_server_access_ipv6_blank(self):
-        self.stubs.Set(db, 'instance_get',
-                fakes.fake_instance_get(access_ipv6='beef::0123'))
-        req = fakes.HTTPRequest.blank('/fake/servers/%s' % FAKE_UUID)
-        req.method = 'PUT'
-        req.content_type = 'application/json'
         body = {'server': {'accessIPv6': ''}}
-        req.body = jsonutils.dumps(body)
+        req = self._get_request(body, {'access_ipv6': 'beef::0123'})
         res_dict = self.controller.update(req, FAKE_UUID, body)
 
         self.assertEqual(res_dict['server']['id'], FAKE_UUID)
         self.assertEqual(res_dict['server']['accessIPv6'], '')
 
     def test_update_server_personality(self):
-        req = fakes.HTTPRequest.blank('/fake/servers/%s' % FAKE_UUID)
-        req.method = 'PUT'
-        req.content_type = 'application/json'
         body = {
             'server': {
                 'personality': []
             }
         }
-        req.body = jsonutils.dumps(body)
-
+        req = self._get_request(body)
         self.assertRaises(webob.exc.HTTPBadRequest,
             self.controller.update, req, FAKE_UUID, body)
 
@@ -1408,11 +1348,8 @@ class ServersControllerUpdateTest(ControllerTest):
             raise exception.InstanceNotFound(instance_id='fake')
 
         self.stubs.Set(compute_api.API, 'get', fake_get)
-        req = fakes.HTTPRequest.blank('/fake/servers/%s' % FAKE_UUID)
-        req.method = 'PUT'
-        req.content_type = 'application/json'
         body = {'server': {'name': 'server_test'}}
-        req.body = jsonutils.dumps(body)
+        req = self._get_request(body)
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.update,
                           req, FAKE_UUID, body)
 
@@ -1421,11 +1358,8 @@ class ServersControllerUpdateTest(ControllerTest):
             raise exception.InstanceNotFound(instance_id='fake')
 
         self.stubs.Set(db, 'instance_update_and_get_original', fake_update)
-        req = fakes.HTTPRequest.blank('/fake/servers/%s' % FAKE_UUID)
-        req.method = 'PUT'
-        req.content_type = 'application/json'
         body = {'server': {'name': 'server_test'}}
-        req.body = jsonutils.dumps(body)
+        req = self._get_request(body)
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.update,
                           req, FAKE_UUID, body)
 
