@@ -1,5 +1,6 @@
 # Copyright (c) 2012 Rackspace Hosting
 # All Rights Reserved.
+# Copyright 2013 Red Hat, Inc.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -23,14 +24,14 @@ messging module.
 """
 
 from oslo.config import cfg
+from oslo import messaging
 
 from nova import exception
 from nova.objects import base as objects_base
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
-from nova import rpcclient
-
+from nova import rpc
 
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
@@ -42,7 +43,7 @@ rpcapi_cap_opt = cfg.StrOpt('cells',
 CONF.register_opt(rpcapi_cap_opt, 'upgrade_levels')
 
 
-class CellsAPI(rpcclient.RpcProxy):
+class CellsAPI(object):
     '''Cells client-side RPC API
 
     API version history:
@@ -88,7 +89,6 @@ class CellsAPI(rpcclient.RpcProxy):
 
         1.25 - Adds rebuild_instance()
     '''
-    BASE_RPC_API_VERSION = '1.0'
 
     VERSION_ALIASES = {
         'grizzly': '1.6',
@@ -96,13 +96,14 @@ class CellsAPI(rpcclient.RpcProxy):
     }
 
     def __init__(self):
+        super(CellsAPI, self).__init__()
+        target = messaging.Target(topic=CONF.cells.topic, version='1.0')
         version_cap = self.VERSION_ALIASES.get(CONF.upgrade_levels.cells,
                                                CONF.upgrade_levels.cells)
-        super(CellsAPI, self).__init__(topic=CONF.cells.topic,
-                default_version=self.BASE_RPC_API_VERSION,
-                serializer=objects_base.NovaObjectSerializer(),
-                version_cap=version_cap)
-        self.client = self.get_client()
+        serializer = objects_base.NovaObjectSerializer()
+        self.client = rpc.get_client(target,
+                                     version_cap=version_cap,
+                                     serializer=serializer)
 
     def cast_compute_api_method(self, ctxt, cell_name, method,
             *args, **kwargs):

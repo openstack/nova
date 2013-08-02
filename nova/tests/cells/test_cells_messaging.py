@@ -1,4 +1,6 @@
-# Copyright (c) 2012 Rackspace Hosting # All Rights Reserved.
+# Copyright (c) 2012 Rackspace Hosting
+# All Rights Reserved.
+# Copyright 2013 Red Hat, Inc.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -15,7 +17,9 @@
 Tests For Cells Messaging module
 """
 
+import mox
 from oslo.config import cfg
+from oslo import messaging as oslo_messaging
 
 from nova.cells import messaging
 from nova.cells import utils as cells_utils
@@ -29,17 +33,15 @@ from nova.objects import base as objects_base
 from nova.objects import fields as objects_fields
 from nova.objects import instance as instance_obj
 from nova.openstack.common import jsonutils
-from nova.openstack.common import rpc
 from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
+from nova import rpc
 from nova import test
 from nova.tests.cells import fakes
 from nova.tests import fake_instance_actions
 
 CONF = cfg.CONF
 CONF.import_opt('name', 'nova.cells.opts', group='cells')
-CONF.import_opt('allowed_rpc_exception_modules',
-                'nova.openstack.common.rpc')
 
 
 class CellsMessageClassesTestCase(test.TestCase):
@@ -48,10 +50,6 @@ class CellsMessageClassesTestCase(test.TestCase):
         super(CellsMessageClassesTestCase, self).setUp()
         fakes.init(self)
         self.ctxt = context.RequestContext('fake', 'fake')
-        # Need to be able to deserialize test.TestingException.
-        allowed_modules = CONF.allowed_rpc_exception_modules
-        allowed_modules.append('nova.test')
-        self.flags(allowed_rpc_exception_modules=allowed_modules)
         self.our_name = 'api-cell'
         self.msg_runner = fakes.get_message_runner(self.our_name)
         self.state_manager = self.msg_runner.state_manager
@@ -902,17 +900,22 @@ class CellsTargetedMethodsTestCase(test.TestCase):
 
     def test_proxy_rpc_to_manager_call(self):
         fake_topic = 'fake-topic'
-        fake_rpc_message = 'fake-rpc-message'
+        fake_rpc_message = {'method': 'fake_rpc_method', 'args': {}}
         fake_host_name = 'fake-host-name'
 
         self.mox.StubOutWithMock(self.tgt_db_inst,
                                  'service_get_by_compute_host')
-        self.mox.StubOutWithMock(rpc, 'call')
-
         self.tgt_db_inst.service_get_by_compute_host(self.ctxt,
                                                      fake_host_name)
-        rpc.call(self.ctxt, fake_topic,
-                 fake_rpc_message, timeout=5).AndReturn('fake_result')
+
+        target = oslo_messaging.Target(topic='fake-topic')
+        rpcclient = self.mox.CreateMockAnything()
+
+        self.mox.StubOutWithMock(rpc, 'get_client')
+        rpc.get_client(target).AndReturn(rpcclient)
+        rpcclient.prepare(timeout=5).AndReturn(rpcclient)
+        rpcclient.call(mox.IgnoreArg(),
+                       'fake_rpc_method').AndReturn('fake_result')
 
         self.mox.ReplayAll()
 
@@ -927,16 +930,20 @@ class CellsTargetedMethodsTestCase(test.TestCase):
 
     def test_proxy_rpc_to_manager_cast(self):
         fake_topic = 'fake-topic'
-        fake_rpc_message = 'fake-rpc-message'
+        fake_rpc_message = {'method': 'fake_rpc_method', 'args': {}}
         fake_host_name = 'fake-host-name'
 
         self.mox.StubOutWithMock(self.tgt_db_inst,
                                  'service_get_by_compute_host')
-        self.mox.StubOutWithMock(rpc, 'cast')
-
         self.tgt_db_inst.service_get_by_compute_host(self.ctxt,
                                                      fake_host_name)
-        rpc.cast(self.ctxt, fake_topic, fake_rpc_message)
+
+        target = oslo_messaging.Target(topic='fake-topic')
+        rpcclient = self.mox.CreateMockAnything()
+
+        self.mox.StubOutWithMock(rpc, 'get_client')
+        rpc.get_client(target).AndReturn(rpcclient)
+        rpcclient.cast(mox.IgnoreArg(), 'fake_rpc_method')
 
         self.mox.ReplayAll()
 

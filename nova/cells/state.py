@@ -31,6 +31,7 @@ from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
+from nova import rpc
 from nova import utils
 
 cell_state_manager_opts = [
@@ -98,10 +99,10 @@ class CellState(object):
             for field in db_fields_to_return:
                 cell_info[field] = self.db_info[field]
 
-            url_info = rpc_driver.parse_transport_url(
-                self.db_info['transport_url'])
-            for field, canonical in url_fields_to_return.items():
-                cell_info[canonical] = url_info[field]
+            url = rpc.get_transport_url(self.db_info['transport_url'])
+            if url.hosts:
+                for field, canonical in url_fields_to_return.items():
+                    cell_info[canonical] = getattr(url.hosts[0], field)
         return cell_info
 
     def send_message(self, message):

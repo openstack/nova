@@ -20,6 +20,7 @@
 import socket
 
 from oslo.config import cfg
+from oslo import messaging
 
 from nova.compute import rpcapi as compute_rpcapi
 from nova import exception
@@ -54,7 +55,7 @@ class ConsoleProxyManager(manager.Manager):
 
     """
 
-    RPC_API_VERSION = '2.0'
+    target = messaging.Target(version='2.0')
 
     def __init__(self, console_driver=None, *args, **kwargs):
         if not console_driver:

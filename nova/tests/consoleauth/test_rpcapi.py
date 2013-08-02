@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012, Red Hat, Inc.
+# Copyright 2013 Red Hat, Inc.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -18,11 +18,13 @@
 Unit Tests for nova.consoleauth.rpcapi
 """
 
+import contextlib
+
+import mock
 from oslo.config import cfg
 
 from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import context
-from nova.openstack.common import rpc
 from nova import test
 
 CONF = cfg.CONF
@@ -31,38 +33,33 @@ CONF = cfg.CONF
 class ConsoleAuthRpcAPITestCase(test.NoDBTestCase):
     def _test_consoleauth_api(self, method, **kwargs):
         do_cast = kwargs.pop('_do_cast', False)
+
         ctxt = context.RequestContext('fake_user', 'fake_project')
+
         rpcapi = consoleauth_rpcapi.ConsoleAuthAPI()
-        expected_retval = 'foo'
-        expected_version = kwargs.pop('version', rpcapi.BASE_RPC_API_VERSION)
-        expected_msg = rpcapi.make_msg(method, **kwargs)
-        expected_msg['version'] = expected_version
+        self.assertIsNotNone(rpcapi.client)
+        self.assertEqual(rpcapi.client.target.topic, CONF.consoleauth_topic)
 
-        self.call_ctxt = None
-        self.call_topic = None
-        self.call_msg = None
-        self.call_timeout = None
+        orig_prepare = rpcapi.client.prepare
+        expected_version = kwargs.pop('version', rpcapi.client.target.version)
 
-        def _fake_call(_ctxt, _topic, _msg, _timeout=None):
-            self.call_ctxt = _ctxt
-            self.call_topic = _topic
-            self.call_msg = _msg
-            self.call_timeout = _timeout
-            return expected_retval
+        with contextlib.nested(
+            mock.patch.object(rpcapi.client, 'cast' if do_cast else 'call'),
+            mock.patch.object(rpcapi.client, 'prepare'),
+            mock.patch.object(rpcapi.client, 'can_send_version'),
+        ) as (
+            rpc_mock, prepare_mock, csv_mock
+        ):
+            prepare_mock.return_value = rpcapi.client
+            rpc_mock.return_value = None if do_cast else 'foo'
+            csv_mock.side_effect = (
+                lambda v: orig_prepare(version=v).can_send_version())
 
-        if do_cast:
-            self.stubs.Set(rpc, 'cast', _fake_call)
-        else:
-            self.stubs.Set(rpc, 'call', _fake_call)
+            retval = getattr(rpcapi, method)(ctxt, **kwargs)
+            self.assertEqual(retval, rpc_mock.return_value)
 
-        retval = getattr(rpcapi, method)(ctxt, **kwargs)
-
-        if not do_cast:
-            self.assertEqual(retval, expected_retval)
-        self.assertEqual(self.call_ctxt, ctxt)
-        self.assertEqual(self.call_topic, CONF.consoleauth_topic)
-        self.assertEqual(self.call_msg, expected_msg)
-        self.assertIsNone(self.call_timeout)
+            prepare_mock.assert_called_once_with(version=expected_version)
+            rpc_mock.assert_called_once_with(ctxt, method, **kwargs)
 
     def test_authorize_console(self):
         self._test_consoleauth_api('authorize_console', token='token',

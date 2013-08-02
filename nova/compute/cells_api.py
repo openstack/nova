@@ -1,5 +1,6 @@
 # Copyright (c) 2012 Rackspace Hosting
 # All Rights Reserved.
+# Copyright 2013 Red Hat, Inc.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -15,6 +16,8 @@
 
 """Compute API that proxies via Cells Service."""
 
+from oslo import messaging
+
 from nova import availability_zones
 from nova import block_device
 from nova.cells import rpcapi as cells_rpcapi
@@ -25,7 +28,7 @@ from nova import exception
 from nova.objects import base as obj_base
 from nova.objects import service as service_obj
 from nova.openstack.common import excutils
-from nova import rpcclient
+from nova import rpc
 
 
 check_instance_state = compute_api.check_instance_state
@@ -92,34 +95,79 @@ class ConductorTaskRPCAPIRedirect(object):
         return _noop_rpc_wrapper
 
 
-class RPCClientCellsProxy(rpcclient.RPCClient):
+class RPCClientCellsProxy(object):
 
-    def __init__(self, proxy, *args, **kwargs):
-        super(RPCClientCellsProxy, self).__init__(proxy, *args, **kwargs)
+    def __init__(self, target, version_cap):
+        super(RPCClientCellsProxy, self).__init__()
+
+        self.target = target
+        self.version_cap = version_cap
+        self._server = None
+        self._version = None
+
         self.cells_rpcapi = cells_rpcapi.CellsAPI()
 
+    def prepare(self, **kwargs):
+        ret = type(self)(self.target, self.version_cap)
+        ret.cells_rpcapi = self.cells_rpcapi
+
+        server = kwargs.pop('server', None)
+        version = kwargs.pop('version', None)
+
+        if kwargs:
+            raise ValueError("Unsupported kwargs: %s" % kwargs.keys())
+
+        if server:
+            ret._server = server
+        if version:
+            ret._version = version
+
+        return ret
+
+    def _check_version_cap(self, version):
+        client = rpc.get_client(self.target, version_cap=self.version_cap)
+        if not client.can_send_version(version):
+            raise messaging.RPCVersionCapError(version=version,
+                                               version_cap=self.version_cap)
+
+    def _make_msg(self, method, **kwargs):
+        version = self._version if self._version else self.target.version
+        self._check_version_cap(version)
+        return {
+            'method': method,
+            'namespace': None,
+            'version': version,
+            'args': kwargs
+        }
+
+    def _get_topic(self):
+        if self._server is not None:
+            return '%s.%s' % (self.target.topic, self._server)
+        else:
+            return self.target.topic
+
+    def can_send_version(self, version):
+        client = rpc.get_client(self.target, version_cap=self.version_cap)
+        return client.can_send_version(version)
+
     def cast(self, ctxt, method, **kwargs):
-        msg = self.proxy.make_msg(method, **kwargs)
-        self.proxy._set_version(msg, self.kwargs.get('version'))
-        topic = self.proxy._get_topic(self.kwargs.get('topic'))
+        msg = self._make_msg(method, **kwargs)
+        topic = self._get_topic()
         self.cells_rpcapi.proxy_rpc_to_manager(ctxt, msg, topic)
 
     def call(self, ctxt, method, **kwargs):
-        msg = self.proxy.make_msg(method, **kwargs)
-        self.proxy._set_version(msg, self.kwargs.get('version'))
-        topic = self.proxy._get_topic(self.kwargs.get('topic'))
-        timeout = self.kwargs.get('timeout')
-        return self.cells_rpcapi.proxy_rpc_to_manager(ctxt, msg, topic,
-                                                      call=True,
-                                                      timeout=timeout)
+        msg = self._make_msg(method, **kwargs)
+        topic = self._get_topic()
+        return self.cells_rpcapi.proxy_rpc_to_manager(ctxt, msg,
+                                                      topic, call=True)
 
 
 class ComputeRPCProxyAPI(compute_rpcapi.ComputeAPI):
     """Class used to substitute Compute RPC API that will proxy
     via the cells manager to a compute manager in a child cell.
     """
-    def get_client(self):
-        return RPCClientCellsProxy(self)
+    def get_client(self, target, version_cap, serializer):
+        return RPCClientCellsProxy(target, version_cap)
 
 
 class ComputeCellsAPI(compute_api.API):
@@ -317,7 +365,7 @@ class ComputeCellsAPI(compute_api.API):
         self.consoleauth_rpcapi.authorize_console(context,
                 connect_info['token'], console_type, connect_info['host'],
                 connect_info['port'], connect_info['internal_access_path'],
-                instance_uuid=instance['uuid'])
+                instance['uuid'])
         return {'url': connect_info['access_url']}
 
     @wrap_check_policy
@@ -333,7 +381,7 @@ class ComputeCellsAPI(compute_api.API):
         self.consoleauth_rpcapi.authorize_console(context,
                 connect_info['token'], console_type, connect_info['host'],
                 connect_info['port'], connect_info['internal_access_path'],
-                instance_uuid=instance['uuid'])
+                instance['uuid'])
         return {'url': connect_info['access_url']}
 
     @check_instance_cell

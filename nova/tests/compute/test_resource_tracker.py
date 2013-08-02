@@ -32,8 +32,8 @@ from nova import db
 from nova.objects import base as obj_base
 from nova.objects import migration as migration_obj
 from nova.openstack.common import jsonutils
-from nova.openstack.common.notifier import api as notifier_api
 from nova.openstack.common import timeutils
+from nova import rpc
 from nova import test
 from nova.tests.compute.monitors import test_monitors
 from nova.tests.objects import test_migration
@@ -1077,21 +1077,35 @@ class ComputeMonitorTestCase(BaseTestCase):
         class2 = test_monitors.FakeMonitorClass2(self.tracker)
         self.tracker.monitors = [class1, class2]
 
-        def fake_notify(context, publisher, event, priority, payload):
-            self.info['publisher'] = publisher
-            self.info['event'] = event
-            self.info['payload'] = payload
+        mock_notifier = mock.Mock()
 
-        with mock.patch.object(notifier_api, 'notify',
-                               side_effect=fake_notify):
+        with mock.patch.object(rpc, 'get_notifier',
+                               return_value=mock_notifier) as mock_get:
             metrics = self.tracker._get_host_metrics(self.context,
                                                      self.node_name)
-        self.assertEqual(metrics, [{'timestamp': 1232,
-                                    'name': 'key1',
-                                    'value': 2600,
-                                    'source': 'libvirt'},
-                                   {'name': 'key2',
-                                    'source': 'libvirt',
-                                    'timestamp': 123,
-                                    'value': 1600}])
-        self.assertTrue(len(self.info) > 0)
+            mock_get.assert_called_once_with(service='compute',
+                                             host=self.node_name)
+
+        expected_metrics = [{
+                    'timestamp': 1232,
+                    'name': 'key1',
+                    'value': 2600,
+                    'source': 'libvirt'
+                }, {
+                    'name': 'key2',
+                    'source': 'libvirt',
+                    'timestamp': 123,
+                    'value': 1600
+                }]
+
+        payload = {
+            'metrics': expected_metrics,
+            'host': self.tracker.host,
+            'host_ip': CONF.my_ip,
+            'nodename': self.node_name
+        }
+
+        mock_notifier.info.assert_called_once_with(
+            self.context, 'compute.metrics.update', payload)
+
+        self.assertEqual(metrics, expected_metrics)

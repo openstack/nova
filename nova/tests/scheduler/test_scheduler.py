@@ -21,6 +21,7 @@ Tests For Scheduler
 
 import mox
 from oslo.config import cfg
+from oslo import messaging
 
 from nova.compute import api as compute_api
 from nova.compute import task_states
@@ -32,9 +33,8 @@ from nova import context
 from nova import db
 from nova import exception
 from nova.image import glance
-from nova import notifier as notify
 from nova.objects import instance as instance_obj
-from nova.openstack.common.rpc import common as rpc_common
+from nova import rpc
 from nova.scheduler import driver
 from nova.scheduler import manager
 from nova import servicegroup
@@ -389,10 +389,10 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
 
         self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
         self.mox.StubOutWithMock(db, 'instance_fault_create')
-        self.mox.StubOutWithMock(notify, 'get_notifier')
+        self.mox.StubOutWithMock(rpc, 'get_notifier')
         notifier = self.mox.CreateMockAnything()
-        notify.get_notifier('conductor', CONF.host).AndReturn(notifier)
-        notify.get_notifier('scheduler').AndReturn(notifier)
+        rpc.get_notifier('conductor', CONF.host).AndReturn(notifier)
+        rpc.get_notifier('scheduler').AndReturn(notifier)
         db.instance_update_and_get_original(self.context, 'fake-uuid',
                                             updates).AndReturn((None,
                                                                 fake_inst))
@@ -410,7 +410,7 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
                 exception.NoValidHost(reason=""))
 
         self.mox.ReplayAll()
-        self.assertRaises(rpc_common.ClientException,
+        self.assertRaises(messaging.ExpectedException,
                           self.manager.select_hosts,
                           self.context, {}, {})
 
@@ -505,10 +505,10 @@ class SchedulerTestCase(test.NoDBTestCase):
                                             mox.IgnoreArg()).AndReturn(
                                                 (None, instance))
         db.instance_fault_create(self.context, mox.IgnoreArg())
-        self.mox.StubOutWithMock(notify, 'get_notifier')
+        self.mox.StubOutWithMock(rpc, 'get_notifier')
         notifier = self.mox.CreateMockAnything()
-        notify.get_notifier('conductor', CONF.host).AndReturn(notifier)
-        notify.get_notifier('scheduler').AndReturn(notifier)
+        rpc.get_notifier('conductor', CONF.host).AndReturn(notifier)
+        rpc.get_notifier('scheduler').AndReturn(notifier)
         notifier.error(self.context, 'scheduler.run_instance', mox.IgnoreArg())
         self.mox.ReplayAll()
 

@@ -72,7 +72,6 @@ from nova.compute import vm_mode
 from nova import context as nova_context
 from nova import exception
 from nova.image import glance
-from nova import notifier
 from nova.objects import instance as instance_obj
 from nova.objects import service as service_obj
 from nova.openstack.common import excutils
@@ -88,6 +87,7 @@ from nova.openstack.common import xmlutils
 from nova.pci import pci_manager
 from nova.pci import pci_utils
 from nova.pci import pci_whitelist
+from nova import rpc
 from nova import utils
 from nova import version
 from nova.virt import configdrive
@@ -766,9 +766,9 @@ class LibvirtDriver(driver.ComputeDriver):
             payload = dict(ip=LibvirtDriver.get_host_ip_addr(),
                            method='_connect',
                            reason=ex)
-            notifier.get_notifier('compute').error(
-                nova_context.get_admin_context(),
-                'compute.libvirt.error', payload)
+            rpc.get_notifier('compute').error(nova_context.get_admin_context(),
+                                              'compute.libvirt.error',
+                                              payload)
             raise exception.HypervisorUnavailable(host=CONF.host)
 
     def get_num_instances(self):

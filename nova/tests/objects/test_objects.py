@@ -28,6 +28,7 @@ from nova.objects import base
 from nova.objects import fields
 from nova.objects import utils
 from nova.openstack.common import timeutils
+from nova import rpc
 from nova import test
 
 
@@ -395,6 +396,14 @@ class _RemoteTest(_BaseTestCase):
 
         # Things are remoted by default in this session
         base.NovaObject.indirection_api = conductor_rpcapi.ConductorAPI()
+
+        # To make sure local and remote contexts match
+        self.stubs.Set(rpc.RequestContextSerializer,
+                       'serialize_context',
+                       lambda s, c: c)
+        self.stubs.Set(rpc.RequestContextSerializer,
+                       'deserialize_context',
+                       lambda s, c: c)
 
     def setUp(self):
         super(_RemoteTest, self).setUp()

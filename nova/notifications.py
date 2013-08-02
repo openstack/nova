@@ -30,12 +30,12 @@ from nova import db
 from nova.image import glance
 from nova import network
 from nova.network import model as network_model
-from nova import notifier as notify
 from nova.openstack.common import context as common_context
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log
 from nova.openstack.common import timeutils
+from nova import rpc
 from nova import utils
 
 LOG = log.getLogger(__name__)
@@ -50,15 +50,16 @@ notify_opts = [
     cfg.BoolOpt('notify_api_faults', default=False,
         help='If set, send api.fault notifications on caught exceptions '
              'in the API service.'),
+    cfg.StrOpt('default_notification_level',
+               default='INFO',
+               help='Default notification level for outgoing notifications'),
+    cfg.StrOpt('default_publisher_id',
+               help='Default publisher_id for outgoing notifications'),
 ]
 
 
 CONF = cfg.CONF
 CONF.register_opts(notify_opts)
-CONF.import_opt('default_notification_level',
-                'nova.openstack.common.notifier.api')
-CONF.import_opt('default_publisher_id',
-                'nova.openstack.common.notifier.api')
 
 
 def notify_decorator(name, fn):
@@ -81,8 +82,8 @@ def notify_decorator(name, fn):
         ctxt = common_context.get_context_from_function_and_args(
             fn, args, kwarg)
 
-        notifier = notify.get_notifier(publisher_id=(CONF.default_publisher_id
-                                                     or CONF.host))
+        notifier = rpc.get_notifier(publisher_id=(CONF.default_publisher_id
+                                                  or CONF.host))
         method = notifier.getattr(CONF.default_notification_level.lower(),
                                   'info')
         method(ctxt, name, body)
@@ -99,7 +100,7 @@ def send_api_fault(url, status, exception):
 
     payload = {'url': url, 'exception': str(exception), 'status': status}
 
-    notify.get_notifier('api').error(None, 'api.fault', payload)
+    rpc.get_notifier('api').error(None, 'api.fault', payload)
 
 
 def send_update(context, old_instance, new_instance, service=None, host=None):
@@ -225,8 +226,8 @@ def _send_instance_update_notification(context, instance, old_vm_state=None,
     if old_display_name:
         payload["old_display_name"] = old_display_name
 
-    notify.get_notifier(service, host).info(context,
-                                            'compute.instance.update', payload)
+    rpc.get_notifier(service, host).info(context,
+                                         'compute.instance.update', payload)
 
 
 def audit_period_bounds(current_period=False):

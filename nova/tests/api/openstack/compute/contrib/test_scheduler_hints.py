@@ -16,8 +16,8 @@
 #    under the License.
 
 from nova.api.openstack import compute
+import nova.compute.api
 from nova.openstack.common import jsonutils
-import nova.openstack.common.rpc
 from nova import test
 from nova.tests.api.openstack import fakes
 

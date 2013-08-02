@@ -18,11 +18,11 @@ import copy
 from webob import exc
 
 from nova.api.openstack.compute.plugins.v3 import cells as cells_ext
-from nova.cells import rpc_driver
 from nova.cells import rpcapi as cells_rpcapi
 from nova import context
 from nova import exception
 from nova.openstack.common import timeutils
+from nova import rpc
 from nova import test
 from nova.tests.api.openstack import fakes
 
@@ -71,8 +71,9 @@ class BaseCellsTest(test.NoDBTestCase):
 
     def _get_all_cell_info(self, *args):
         def insecure_transport_url(url):
-            transport = rpc_driver.parse_transport_url(url)
-            return rpc_driver.unparse_transport_url(transport, False)
+            transport_url = rpc.get_transport_url(url)
+            transport_url.hosts[0].password = None
+            return str(transport_url)
 
         cells = copy.deepcopy(self.fake_cells)
         cells[0]['transport_url'] = insecure_transport_url(

@@ -15,13 +15,13 @@
 """Handles all requests to the conductor service."""
 
 from oslo.config import cfg
+from oslo import messaging
 
 from nova import baserpc
 from nova.conductor import manager
 from nova.conductor import rpcapi
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
-from nova.openstack.common.rpc import common as rpc_common
 from nova import utils
 
 conductor_opts = [
@@ -382,7 +382,7 @@ class API(LocalAPI):
                 self.base_rpcapi.ping(context, '1.21 GigaWatts',
                                       timeout=timeout)
                 break
-            except rpc_common.Timeout:
+            except messaging.MessagingTimeout:
                 LOG.warning(_('Timed out waiting for nova-conductor. '
                                 'Is it running? Or did this service start '
                                 'before nova-conductor?'))

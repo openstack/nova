@@ -22,7 +22,6 @@ from oslo.config import cfg
 from nova.compute import rpcapi as compute_rpcapi
 from nova.console import rpcapi as console_rpcapi
 from nova.db import base
-from nova.openstack.common import rpc
 from nova.openstack.common import uuidutils
 
 CONF = cfg.CONF
@@ -44,9 +43,8 @@ class API(base.Base):
 
     def delete_console(self, context, instance_uuid, console_uuid):
         console = self.db.console_get(context, console_uuid, instance_uuid)
-        topic = rpc.queue_get_for(context, CONF.console_topic,
-                                  console['pool']['host'])
-        rpcapi = console_rpcapi.ConsoleAPI(topic=topic)
+        rpcapi = console_rpcapi.ConsoleAPI(topic=CONF.console_topic,
+                                           server=console['pool']['host'])
         rpcapi.remove_console(context, console['id'])
 
     def create_console(self, context, instance_uuid):
@@ -57,7 +55,10 @@ class API(base.Base):
         #               here.
         instance = self._get_instance(context, instance_uuid)
         topic = self._get_console_topic(context, instance['host'])
-        rpcapi = console_rpcapi.ConsoleAPI(topic=topic)
+        server = None
+        if '.' in topic:
+            topic, server = topic.split('.', 1)
+        rpcapi = console_rpcapi.ConsoleAPI(topic=topic, server=server)
         rpcapi.add_console(context, instance['id'])
 
     def _get_console_topic(self, context, instance_host):

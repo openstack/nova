@@ -14,6 +14,7 @@
 
 """Handles database requests from other nova services."""
 
+from oslo import messaging
 import six
 
 from nova.api.ec2 import ec2utils
@@ -39,7 +40,6 @@ from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
-from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import timeutils
 from nova import quota
 from nova.scheduler import rpcapi as scheduler_rpcapi
@@ -76,7 +76,7 @@ class ConductorManager(manager.Manager):
     namespace.  See the ComputeTaskManager class for details.
     """
 
-    RPC_API_VERSION = '1.62'
+    target = messaging.Target(version='1.62')
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(service_name='conductor',
@@ -88,11 +88,7 @@ class ConductorManager(manager.Manager):
         self.compute_task_mgr = ComputeTaskManager()
         self.quotas = quota.QUOTAS
         self.cells_rpcapi = cells_rpcapi.CellsAPI()
-
-    def create_rpc_dispatcher(self, *args, **kwargs):
-        kwargs['additional_apis'] = [self.compute_task_mgr]
-        return super(ConductorManager, self).create_rpc_dispatcher(*args,
-                **kwargs)
+        self.additional_endpoints.append(self.compute_task_mgr)
 
     @property
     def network_api(self):
@@ -114,10 +110,10 @@ class ConductorManager(manager.Manager):
         # now a part of the base rpc API.
         return jsonutils.to_primitive({'service': 'conductor', 'arg': arg})
 
-    @rpc_common.client_exceptions(KeyError, ValueError,
-                                  exception.InvalidUUID,
-                                  exception.InstanceNotFound,
-                                  exception.UnexpectedTaskStateError)
+    @messaging.expected_exceptions(KeyError, ValueError,
+                                   exception.InvalidUUID,
+                                   exception.InstanceNotFound,
+                                   exception.UnexpectedTaskStateError)
     def instance_update(self, context, instance_uuid,
                         updates, service=None):
         for key, value in updates.iteritems():
@@ -134,12 +130,12 @@ class ConductorManager(manager.Manager):
         notifications.send_update(context, old_ref, instance_ref, service)
         return jsonutils.to_primitive(instance_ref)
 
-    @rpc_common.client_exceptions(exception.InstanceNotFound)
+    @messaging.expected_exceptions(exception.InstanceNotFound)
     def instance_get(self, context, instance_id):
         return jsonutils.to_primitive(
             self.db.instance_get(context, instance_id))
 
-    @rpc_common.client_exceptions(exception.InstanceNotFound)
+    @messaging.expected_exceptions(exception.InstanceNotFound)
     def instance_get_by_uuid(self, context, instance_uuid,
                              columns_to_join=None):
         return jsonutils.to_primitive(
@@ -162,7 +158,7 @@ class ConductorManager(manager.Manager):
 
     # NOTE(comstud): This method is now deprecated and can be removed in
     # version v2.0 of the RPC API
-    @rpc_common.client_exceptions(exception.MigrationNotFound)
+    @messaging.expected_exceptions(exception.MigrationNotFound)
     def migration_get(self, context, migration_id):
         migration_ref = self.db.migration_get(context.elevated(),
                                               migration_id)
@@ -191,26 +187,26 @@ class ConductorManager(manager.Manager):
         migration_ref = self.db.migration_create(context.elevated(), values)
         return jsonutils.to_primitive(migration_ref)
 
-    @rpc_common.client_exceptions(exception.MigrationNotFound)
+    @messaging.expected_exceptions(exception.MigrationNotFound)
     def migration_update(self, context, migration, status):
         migration_ref = self.db.migration_update(context.elevated(),
                                                  migration['id'],
                                                  {'status': status})
         return jsonutils.to_primitive(migration_ref)
 
-    @rpc_common.client_exceptions(exception.AggregateHostExists)
+    @messaging.expected_exceptions(exception.AggregateHostExists)
     def aggregate_host_add(self, context, aggregate, host):
         host_ref = self.db.aggregate_host_add(context.elevated(),
                 aggregate['id'], host)
 
         return jsonutils.to_primitive(host_ref)
 
-    @rpc_common.client_exceptions(exception.AggregateHostNotFound)
+    @messaging.expected_exceptions(exception.AggregateHostNotFound)
     def aggregate_host_delete(self, context, aggregate, host):
         self.db.aggregate_host_delete(context.elevated(),
                 aggregate['id'], host)
 
-    @rpc_common.client_exceptions(exception.AggregateNotFound)
+    @messaging.expected_exceptions(exception.AggregateNotFound)
     def aggregate_get(self, context, aggregate_id):
         aggregate = self.db.aggregate_get(context.elevated(), aggregate_id)
         return jsonutils.to_primitive(aggregate)
@@ -231,7 +227,7 @@ class ConductorManager(manager.Manager):
 
     # NOTE(danms): This method is now deprecated and can be removed in
     # version 2.0 of the RPC API
-    @rpc_common.client_exceptions(exception.AggregateMetadataNotFound)
+    @messaging.expected_exceptions(exception.AggregateMetadataNotFound)
     def aggregate_metadata_delete(self, context, aggregate, key):
         self.db.aggregate_metadata_delete(context.elevated(),
                                           aggregate['id'], key)
@@ -414,8 +410,8 @@ class ConductorManager(manager.Manager):
         self.notifier.info(context, 'volume.usage',
                            compute_utils.usage_volume_info(vol_usage))
 
-    @rpc_common.client_exceptions(exception.ComputeHostNotFound,
-                                  exception.HostBinaryNotFound)
+    @messaging.expected_exceptions(exception.ComputeHostNotFound,
+                                   exception.HostBinaryNotFound)
     def service_get_all_by(self, context, topic=None, host=None, binary=None):
         if not any((topic, host, binary)):
             result = self.db.service_get_all(context)
@@ -448,7 +444,7 @@ class ConductorManager(manager.Manager):
         svc = self.db.service_create(context, values)
         return jsonutils.to_primitive(svc)
 
-    @rpc_common.client_exceptions(exception.ServiceNotFound)
+    @messaging.expected_exceptions(exception.ServiceNotFound)
     def service_destroy(self, context, service_id):
         self.db.service_destroy(context, service_id)
 
@@ -465,7 +461,7 @@ class ConductorManager(manager.Manager):
         result = self.db.compute_node_delete(context, node['id'])
         return jsonutils.to_primitive(result)
 
-    @rpc_common.client_exceptions(exception.ServiceNotFound)
+    @messaging.expected_exceptions(exception.ServiceNotFound)
     def service_update(self, context, service, values):
         svc = self.db.service_update(context, service['id'], values)
         return jsonutils.to_primitive(svc)
@@ -567,7 +563,7 @@ class ConductorManager(manager.Manager):
         """Dispatch a call to an object method.
 
         This ensures that object methods get called and any exception
-        that is raised gets wrapped in a ClientException for forwarding
+        that is raised gets wrapped in an ExpectedException for forwarding
         back to the caller (without spamming the conductor logs).
         """
         try:
@@ -575,7 +571,7 @@ class ConductorManager(manager.Manager):
             # a missing method is really a client problem
             return getattr(target, method)(context, *args, **kwargs)
         except Exception:
-            raise rpc_common.ClientException()
+            raise messaging.ExpectedException()
 
     def object_class_action(self, context, objname, objmethod,
                             objver, args, kwargs):
@@ -629,8 +625,7 @@ class ComputeTaskManager(base.Base):
     may involve coordinating activities on multiple compute nodes.
     """
 
-    RPC_API_NAMESPACE = 'compute_task'
-    RPC_API_VERSION = '1.6'
+    target = messaging.Target(namespace='compute_task', version='1.6')
 
     def __init__(self):
         super(ComputeTaskManager, self).__init__()
@@ -639,14 +634,14 @@ class ComputeTaskManager(base.Base):
         self.image_service = glance.get_default_image_service()
         self.quotas = quota.QUOTAS
 
-    @rpc_common.client_exceptions(exception.NoValidHost,
-                                  exception.ComputeServiceUnavailable,
-                                  exception.InvalidHypervisorType,
-                                  exception.UnableToMigrateToSelf,
-                                  exception.DestinationHypervisorTooOld,
-                                  exception.InvalidLocalStorage,
-                                  exception.InvalidSharedStorage,
-                                  exception.MigrationPreCheckError)
+    @messaging.expected_exceptions(exception.NoValidHost,
+                                   exception.ComputeServiceUnavailable,
+                                   exception.InvalidHypervisorType,
+                                   exception.UnableToMigrateToSelf,
+                                   exception.DestinationHypervisorTooOld,
+                                   exception.InvalidLocalStorage,
+                                   exception.InvalidSharedStorage,
+                                   exception.MigrationPreCheckError)
     def migrate_server(self, context, instance, scheduler_hint, live, rebuild,
             flavor, block_migration, disk_over_commit, reservations=None):
         if instance and not isinstance(instance, instance_obj.Instance):

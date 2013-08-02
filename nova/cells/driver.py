@@ -28,12 +28,12 @@ class BaseCellsDriver(object):
     One instance is also created by the cells manager for setting up
     the consumers.
     """
-    def start_consumers(self, msg_runner):
-        """Start any consumers the driver may need."""
+    def start_servers(self, msg_runner):
+        """Start any messaging servers the driver may need."""
         raise NotImplementedError()
 
-    def stop_consumers(self):
-        """Stop consuming messages."""
+    def stop_servers(self):
+        """Stop accepting messages."""
         raise NotImplementedError()
 
     def send_message_to_cell(self, cell_state, message):

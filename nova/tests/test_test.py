@@ -19,10 +19,10 @@
 """Tests for the testing base code."""
 
 from oslo.config import cfg
+from oslo import messaging
 
-from nova.openstack.common import rpc
+from nova import rpc
 from nova import test
-
 
 CONF = cfg.CONF
 CONF.import_opt('use_local', 'nova.conductor.api', group='conductor')
@@ -45,7 +45,7 @@ class IsolationTestCase(test.TestCase):
             def __getattribute__(*args):
                 assert False, "I should never get called."
 
-        connection = rpc.create_connection(new=True)
-        proxy = NeverCalled()
-        connection.create_consumer('compute', proxy, fanout=False)
-        connection.consume_in_thread()
+        server = rpc.get_server(messaging.Target(topic='compute',
+                                                 server=CONF.host),
+                                endpoints=[NeverCalled()])
+        server.start()

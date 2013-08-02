@@ -25,10 +25,10 @@ from oslo.config import cfg
 
 from nova.compute import rpcapi as compute_rpcapi
 from nova import exception
-from nova import notifier
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.pci import pci_request
+from nova import rpc
 from nova.scheduler import driver
 from nova.scheduler import scheduler_options
 from nova.scheduler import utils as scheduler_utils
@@ -59,7 +59,7 @@ class FilterScheduler(driver.Scheduler):
         super(FilterScheduler, self).__init__(*args, **kwargs)
         self.options = scheduler_options.SchedulerOptions()
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
-        self.notifier = notifier.get_notifier('scheduler')
+        self.notifier = rpc.get_notifier('scheduler')
 
     def schedule_run_instance(self, context, request_spec,
                               admin_password, injected_files,

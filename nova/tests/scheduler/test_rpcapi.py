@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012, Red Hat, Inc.
+# Copyright 2013 Red Hat, Inc.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -18,10 +18,10 @@
 Unit Tests for nova.scheduler.rpcapi
 """
 
+import mox
 from oslo.config import cfg
 
 from nova import context
-from nova.openstack.common import rpc
 from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import test
 
@@ -31,29 +31,40 @@ CONF = cfg.CONF
 class SchedulerRpcAPITestCase(test.NoDBTestCase):
     def _test_scheduler_api(self, method, rpc_method, **kwargs):
         ctxt = context.RequestContext('fake_user', 'fake_project')
+
         rpcapi = scheduler_rpcapi.SchedulerAPI()
+        self.assertIsNotNone(rpcapi.client)
+        self.assertEqual(rpcapi.client.target.topic, CONF.scheduler_topic)
+
         expected_retval = 'foo' if method == 'call' else None
-        expected_version = kwargs.pop('version', rpcapi.BASE_RPC_API_VERSION)
-        expected_msg = rpcapi.make_msg(method, **kwargs)
-        expected_msg['version'] = expected_version
+        expected_version = kwargs.pop('version', None)
+        expected_fanout = kwargs.pop('fanout', None)
+        expected_kwargs = kwargs.copy()
 
-        self.fake_args = None
-        self.fake_kwargs = None
+        self.mox.StubOutWithMock(rpcapi, 'client')
 
-        def _fake_rpc_method(*args, **kwargs):
-            self.fake_args = args
-            self.fake_kwargs = kwargs
-            if expected_retval:
-                return expected_retval
+        rpcapi.client.can_send_version(
+            mox.IsA(str)).MultipleTimes().AndReturn(True)
 
-        self.stubs.Set(rpc, rpc_method, _fake_rpc_method)
+        prepare_kwargs = {}
+        if expected_fanout:
+            prepare_kwargs['fanout'] = True
+        if expected_version:
+            prepare_kwargs['version'] = expected_version
+        if prepare_kwargs:
+            rpcapi.client.prepare(**prepare_kwargs).AndReturn(rpcapi.client)
+
+        rpc_method = getattr(rpcapi.client, rpc_method)
+
+        rpc_method(ctxt, method, **expected_kwargs).AndReturn(expected_retval)
+
+        self.mox.ReplayAll()
+
+        # NOTE(markmc): MultipleTimes() is OnceOrMore() not ZeroOrMore()
+        rpcapi.client.can_send_version('I fool you mox')
 
         retval = getattr(rpcapi, method)(ctxt, **kwargs)
-
         self.assertEqual(retval, expected_retval)
-        expected_args = [ctxt, CONF.scheduler_topic, expected_msg]
-        for arg, expected_arg in zip(self.fake_args, expected_args):
-            self.assertEqual(arg, expected_arg)
 
     def test_run_instance(self):
         self._test_scheduler_api('run_instance', rpc_method='cast',

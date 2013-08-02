@@ -1,5 +1,9 @@
 # Copyright (c) 2012 Rackspace Hosting
 # All Rights Reserved.
+# Copyright 2010 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+# Copyright 2013 Red Hat, Inc.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -23,9 +27,12 @@ reached.
 The interface into this module is the MessageRunner class.
 """
 import sys
+import traceback
 
 from eventlet import queue
 from oslo.config import cfg
+from oslo import messaging
+import six
 
 from nova.cells import state as cells_state
 from nova.cells import utils as cells_utils
@@ -45,10 +52,9 @@ from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
-from nova.openstack.common import rpc
-from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
+from nova import rpc
 from nova import utils
 
 
@@ -756,10 +762,19 @@ class _TargetedMessageMethods(_BaseMessageMethods):
         """Proxy RPC to the given compute topic."""
         # Check that the host exists.
         self.db.service_get_by_compute_host(message.ctxt, host_name)
+
+        topic, _sep, server = topic.partition('.')
+
+        cctxt = rpc.get_client(messaging.Target(topic=topic,
+                                                server=server or None))
+        method = rpc_message['method']
+        kwargs = rpc_message['args']
+
         if message.need_response:
-            return rpc.call(message.ctxt, topic, rpc_message,
-                    timeout=timeout)
-        rpc.cast(message.ctxt, topic, rpc_message)
+            cctxt = cctxt.prepare(timeout=timeout)
+            return cctxt.call(message.ctxt, method, **kwargs)
+        else:
+            cctxt.cast(message.ctxt, method, **kwargs)
 
     def compute_node_get(self, message, compute_id):
         """Get compute node by ID."""
@@ -1303,7 +1318,7 @@ class MessageRunner(object):
     def _create_response_message(self, ctxt, direction, target_cell,
             response_uuid, response_kwargs, **kwargs):
         """Create a ResponseMessage.  This is used internally within
-        the messaging module.
+        the nova.cells.messaging module.
         """
         return _ResponseMessage(self, ctxt, 'parse_responses',
                                 response_kwargs, direction, target_cell,
@@ -1803,8 +1818,8 @@ class Response(object):
     def to_json(self):
         resp_value = self.value
         if self.failure:
-            resp_value = rpc_common.serialize_remote_exception(resp_value,
-                    log_failure=False)
+            resp_value = serialize_remote_exception(resp_value,
+                                                    log_failure=False)
         _dict = {'cell_name': self.cell_name,
                  'value': resp_value,
                  'failure': self.failure}
@@ -1814,8 +1829,8 @@ class Response(object):
     def from_json(cls, json_message):
         _dict = jsonutils.loads(json_message)
         if _dict['failure']:
-            resp_value = rpc_common.deserialize_remote_exception(
-                    CONF, _dict['value'])
+            resp_value = deserialize_remote_exception(_dict['value'],
+                                                      rpc.get_allowed_exmods())
             _dict['value'] = resp_value
         return cls(**_dict)
 
@@ -1826,3 +1841,88 @@ class Response(object):
             else:
                 raise self.value
         return self.value
+
+
+_REMOTE_POSTFIX = '_Remote'
+
+
+def serialize_remote_exception(failure_info, log_failure=True):
+    """Prepares exception data to be sent over rpc.
+
+    Failure_info should be a sys.exc_info() tuple.
+
+    """
+    tb = traceback.format_exception(*failure_info)
+    failure = failure_info[1]
+    if log_failure:
+        LOG.error(_("Returning exception %s to caller"),
+                  six.text_type(failure))
+        LOG.error(tb)
+
+    kwargs = {}
+    if hasattr(failure, 'kwargs'):
+        kwargs = failure.kwargs
+
+    # NOTE(matiu): With cells, it's possible to re-raise remote, remote
+    # exceptions. Lets turn it back into the original exception type.
+    cls_name = str(failure.__class__.__name__)
+    mod_name = str(failure.__class__.__module__)
+    if (cls_name.endswith(_REMOTE_POSTFIX) and
+            mod_name.endswith(_REMOTE_POSTFIX)):
+        cls_name = cls_name[:-len(_REMOTE_POSTFIX)]
+        mod_name = mod_name[:-len(_REMOTE_POSTFIX)]
+
+    data = {
+        'class': cls_name,
+        'module': mod_name,
+        'message': six.text_type(failure),
+        'tb': tb,
+        'args': failure.args,
+        'kwargs': kwargs
+    }
+
+    json_data = jsonutils.dumps(data)
+
+    return json_data
+
+
+def deserialize_remote_exception(data, allowed_remote_exmods):
+    failure = jsonutils.loads(str(data))
+
+    trace = failure.get('tb', [])
+    message = failure.get('message', "") + "\n" + "\n".join(trace)
+    name = failure.get('class')
+    module = failure.get('module')
+
+    # NOTE(ameade): We DO NOT want to allow just any module to be imported, in
+    # order to prevent arbitrary code execution.
+    if module != 'exceptions' and module not in allowed_remote_exmods:
+        return messaging.RemoteError(name, failure.get('message'), trace)
+
+    try:
+        mod = importutils.import_module(module)
+        klass = getattr(mod, name)
+        if not issubclass(klass, Exception):
+            raise TypeError("Can only deserialize Exceptions")
+
+        failure = klass(*failure.get('args', []), **failure.get('kwargs', {}))
+    except (AttributeError, TypeError, ImportError):
+        return messaging.RemoteError(name, failure.get('message'), trace)
+
+    ex_type = type(failure)
+    str_override = lambda self: message
+    new_ex_type = type(ex_type.__name__ + _REMOTE_POSTFIX, (ex_type,),
+                       {'__str__': str_override, '__unicode__': str_override})
+    new_ex_type.__module__ = '%s%s' % (module, _REMOTE_POSTFIX)
+    try:
+        # NOTE(ameade): Dynamically create a new exception type and swap it in
+        # as the new type for the exception. This only works on user defined
+        # Exceptions and not core python exceptions. This is important because
+        # we cannot necessarily change an exception message so we must override
+        # the __str__ method.
+        failure.__class__ = new_ex_type
+    except TypeError:
+        # NOTE(ameade): If a core exception then just add the traceback to the
+        # first exception argument.
+        failure.args = (message,) + failure.args[1:]
+    return failure

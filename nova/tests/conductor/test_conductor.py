@@ -18,6 +18,7 @@
 import contextlib
 import mock
 import mox
+from oslo import messaging
 
 from nova.api.ec2 import ec2utils
 from nova.compute import flavors
@@ -39,11 +40,12 @@ from nova.objects import fields
 from nova.objects import instance as instance_obj
 from nova.objects import migration as migration_obj
 from nova.openstack.common import jsonutils
-from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import timeutils
 from nova import quota
+from nova import rpc
 from nova.scheduler import utils as scheduler_utils
 from nova import test
+from nova.tests import cast_as_call
 from nova.tests.compute import test_compute
 from nova.tests import fake_instance
 from nova.tests import fake_instance_actions
@@ -73,6 +75,14 @@ class _BaseTestCase(object):
 
         fake_notifier.stub_notifier(self.stubs)
         self.addCleanup(fake_notifier.reset)
+
+        def fake_deserialize_context(serializer, ctxt_dict):
+            self.assertEqual(self.context.user_id, ctxt_dict['user_id'])
+            self.assertEqual(self.context.project_id, ctxt_dict['project_id'])
+            return self.context
+
+        self.stubs.Set(rpc.RequestContextSerializer, 'deserialize_context',
+                       fake_deserialize_context)
 
     def _create_fake_instance(self, params=None, type_name='m1.tiny'):
         if not params:
@@ -702,7 +712,7 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
             getattr(db, name)(self.context, *dbargs).AndReturn('fake-result')
         self.mox.ReplayAll()
         if db_exception:
-            self.assertRaises(rpc_common.ClientException,
+            self.assertRaises(messaging.ExpectedException,
                               self.conductor.service_get_all_by,
                               self.context, **condargs)
 
@@ -818,14 +828,14 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
         self._test_object_action(False, False)
 
     def test_object_action_on_raise(self):
-        self.assertRaises(rpc_common.ClientException,
+        self.assertRaises(messaging.ExpectedException,
                           self._test_object_action, False, True)
 
     def test_object_class_action(self):
         self._test_object_action(True, False)
 
     def test_object_class_action_on_raise(self):
-        self.assertRaises(rpc_common.ClientException,
+        self.assertRaises(messaging.ExpectedException,
                           self._test_object_action, True, True)
 
     def test_object_action_copies_object(self):
@@ -1189,7 +1199,7 @@ class ConductorAPITestCase(_BaseTestCase, test.TestCase):
             timeouts.append(timeout)
             calls['count'] += 1
             if calls['count'] < 15:
-                raise rpc_common.Timeout("fake")
+                raise messaging.MessagingTimeout("fake")
 
         self.stubs.Set(self.conductor.base_rpcapi, 'ping', fake_ping)
 
@@ -1288,6 +1298,14 @@ class _BaseTaskTestCase(object):
         self.project_id = 'fake'
         self.context = FakeContext(self.user_id, self.project_id)
         fake_instance_actions.stub_out_action_events(self.stubs)
+
+        def fake_deserialize_context(serializer, ctxt_dict):
+            self.assertEqual(self.context.user_id, ctxt_dict['user_id'])
+            self.assertEqual(self.context.project_id, ctxt_dict['project_id'])
+            return self.context
+
+        self.stubs.Set(rpc.RequestContextSerializer, 'deserialize_context',
+                       fake_deserialize_context)
 
     def test_live_migrate(self):
         inst = fake_instance.fake_db_instance()
@@ -1395,6 +1413,10 @@ class _BaseTaskTestCase(object):
                 requested_networks='requested_networks', is_first_time=True,
                 filter_properties={}, legacy_bdm_in_spec=False)
         self.mox.ReplayAll()
+
+        # build_instances() is a cast, we need to wait for it to complete
+        self.useFixture(cast_as_call.CastAsCall(self.stubs))
+
         self.conductor.build_instances(self.context,
                 instances=[{'uuid': 'fakeuuid',
                             'system_metadata': system_metadata},

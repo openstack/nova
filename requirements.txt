@@ -32,3 +32,4 @@ wsgiref>=0.1.2
 oslo.config>=1.2.0
 oslo.rootwrap
 pycadf>=0.1.9
+oslo.messaging>=1.3.0a4

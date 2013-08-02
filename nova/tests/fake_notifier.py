@@ -17,7 +17,9 @@
 import collections
 import functools
 
-from nova import notifier
+from oslo import messaging
+
+from nova import rpc
 
 NOTIFICATIONS = []
 
@@ -33,7 +35,8 @@ FakeMessage = collections.namedtuple('Message',
 
 class FakeNotifier(object):
 
-    def __init__(self, publisher_id):
+    def __init__(self, transport, publisher_id):
+        self.transport = transport
         self.publisher_id = publisher_id
         for priority in ['debug', 'info', 'warn', 'error', 'critical']:
             setattr(self, priority,
@@ -42,7 +45,7 @@ class FakeNotifier(object):
     def prepare(self, publisher_id=None):
         if publisher_id is None:
             publisher_id = self.publisher_id
-        return self.__class__(publisher_id)
+        return self.__class__(self.transport, publisher_id)
 
     def _notify(self, priority, ctxt, event_type, payload):
         msg = FakeMessage(self.publisher_id, priority, event_type, payload)
@@ -50,4 +53,7 @@ class FakeNotifier(object):
 
 
 def stub_notifier(stubs):
-    stubs.Set(notifier, 'Notifier', FakeNotifier)
+    stubs.Set(messaging, 'Notifier', FakeNotifier)
+    if rpc.NOTIFIER:
+        stubs.Set(rpc, 'NOTIFIER', FakeNotifier(rpc.NOTIFIER.transport,
+                                                rpc.NOTIFIER.publisher_id))

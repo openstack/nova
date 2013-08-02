@@ -4,6 +4,7 @@
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
+# Copyright 2013 Red Hat, Inc.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -60,11 +61,11 @@ import sys
 
 import netaddr
 from oslo.config import cfg
+from oslo import messaging
 import six
 
 from nova.api.ec2 import ec2utils
 from nova import availability_zones
-from nova.cells import rpc_driver
 from nova.compute import flavors
 from nova import config
 from nova import context
@@ -76,8 +77,8 @@ from nova.openstack.common.db import exception as db_exc
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
-from nova.openstack.common import rpc
 from nova import quota
+from nova import rpc
 from nova import servicegroup
 from nova import version
 
@@ -1200,19 +1201,19 @@ class CellCommands(object):
             return(2)
 
         # Set up the transport URL
-        transport = {
-            'username': username,
-            'password': password,
-            'hostname': hostname,
-            'port': int(port),
-            'virtual_host': virtual_host,
-        }
-        transport_url = rpc_driver.unparse_transport_url(transport)
+        transport_host = messaging.TransportHost(hostname=hostname,
+                                                 port=int(port),
+                                                 username=username,
+                                                 password=password)
+
+        transport_url = rpc.get_transport_url()
+        transport_url.hosts.append(transport_host)
+        transport_url.virtual_host = virtual_host
 
         is_parent = cell_type == 'parent'
         values = {'name': name,
                   'is_parent': is_parent,
-                  'transport_url': transport_url,
+                  'transport_url': str(transport_url),
                   'weight_offset': float(woffset),
                   'weight_scale': float(wscale)}
         ctxt = context.get_admin_context()
@@ -1233,11 +1234,12 @@ class CellCommands(object):
         print(fmt % ('-' * 3, '-' * 10, '-' * 6, '-' * 10, '-' * 15,
                 '-' * 5, '-' * 10))
         for cell in cells:
-            transport = rpc_driver.parse_transport_url(cell.transport_url)
+            url = rpc.get_transport_url(cell.transport_url)
+            host = url.hosts[0] if url.hosts else messaging.TransportHost()
             print(fmt % (cell.id, cell.name,
                     'parent' if cell.is_parent else 'child',
-                    transport['username'], transport['hostname'],
-                    transport['port'], transport['virtual_host']))
+                    host.username, host.hostname,
+                    host.port, url.virtual_host))
         print(fmt % ('-' * 3, '-' * 10, '-' * 6, '-' * 10, '-' * 15,
                 '-' * 5, '-' * 10))
 

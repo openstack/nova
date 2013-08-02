@@ -22,6 +22,7 @@ Scheduler Service
 """
 
 from oslo.config import cfg
+from oslo import messaging
 
 from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import task_states
@@ -37,7 +38,6 @@ from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import periodic_task
-from nova.openstack.common.rpc import common as rpc_common
 from nova import quota
 from nova.scheduler import utils as scheduler_utils
 
@@ -57,7 +57,7 @@ QUOTAS = quota.QUOTAS
 class SchedulerManager(manager.Manager):
     """Chooses a host to run instances on."""
 
-    RPC_API_VERSION = '2.9'
+    target = messaging.Target(version='2.9')
 
     def __init__(self, scheduler_driver=None, *args, **kwargs):
         if not scheduler_driver:
@@ -72,14 +72,14 @@ class SchedulerManager(manager.Manager):
         #function removed in RPC API 2.3
         pass
 
-    @rpc_common.client_exceptions(exception.NoValidHost,
-                                  exception.ComputeServiceUnavailable,
-                                  exception.InvalidHypervisorType,
-                                  exception.UnableToMigrateToSelf,
-                                  exception.DestinationHypervisorTooOld,
-                                  exception.InvalidLocalStorage,
-                                  exception.InvalidSharedStorage,
-                                  exception.MigrationPreCheckError)
+    @messaging.expected_exceptions(exception.NoValidHost,
+                                   exception.ComputeServiceUnavailable,
+                                   exception.InvalidHypervisorType,
+                                   exception.UnableToMigrateToSelf,
+                                   exception.DestinationHypervisorTooOld,
+                                   exception.InvalidLocalStorage,
+                                   exception.InvalidSharedStorage,
+                                   exception.MigrationPreCheckError)
     def live_migration(self, context, instance, dest,
                        block_migration, disk_over_commit):
         try:
@@ -264,7 +264,7 @@ class SchedulerManager(manager.Manager):
         return self.backdoor_port
 
     # NOTE(hanlind): This method can be removed in v4.0 of the RPC API.
-    @rpc_common.client_exceptions(exception.NoValidHost)
+    @messaging.expected_exceptions(exception.NoValidHost)
     def select_hosts(self, context, request_spec, filter_properties):
         """Returns host(s) best suited for this request_spec
         and filter_properties.
@@ -274,7 +274,7 @@ class SchedulerManager(manager.Manager):
         hosts = [dest['host'] for dest in dests]
         return jsonutils.to_primitive(hosts)
 
-    @rpc_common.client_exceptions(exception.NoValidHost)
+    @messaging.expected_exceptions(exception.NoValidHost)
     def select_destinations(self, context, request_spec, filter_properties):
         """Returns destinations(s) best suited for this request_spec and
         filter_properties.

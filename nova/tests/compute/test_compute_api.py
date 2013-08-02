@@ -444,7 +444,7 @@ class _ComputeAPIUnitTestMixIn(object):
     def _test_downed_host_part(self, inst, updates, delete_time, delete_type):
         inst.info_cache.delete()
         compute_utils.notify_about_instance_usage(
-                mox.IgnoreArg(), self.context, inst,
+                self.compute_api.notifier, self.context, inst,
                 '%s.start' % delete_type)
         self.context.elevated().AndReturn(self.context)
         self.compute_api.network_api.deallocate_for_instance(
@@ -462,7 +462,7 @@ class _ComputeAPIUnitTestMixIn(object):
         db.instance_destroy(self.context, inst.uuid,
                             constraint=None).AndReturn(fake_inst)
         compute_utils.notify_about_instance_usage(
-                mox.IgnoreArg(),
+                self.compute_api.notifier,
                 self.context, inst, '%s.end' % delete_type,
                 system_metadata=inst.system_metadata)
 
@@ -669,10 +669,9 @@ class _ComputeAPIUnitTestMixIn(object):
             rpcapi.terminate_instance(self.context, inst, [],
                                       reservations=None)
         else:
-            compute_utils.notify_about_instance_usage(mox.IgnoreArg(),
-                                                      self.context,
-                                                      inst,
-                                                      'delete.start')
+            compute_utils.notify_about_instance_usage(
+                    self.compute_api.notifier, self.context,
+                    inst, 'delete.start')
             db.constraint(host=mox.IgnoreArg()).AndReturn('constraint')
             delete_time = datetime.datetime(1955, 11, 5, 9, 30,
                                             tzinfo=iso8601.iso8601.Utc())
@@ -682,7 +681,8 @@ class _ComputeAPIUnitTestMixIn(object):
             db.instance_destroy(self.context, inst.uuid,
                                 constraint='constraint').AndReturn(fake_inst)
             compute_utils.notify_about_instance_usage(
-                    mox.IgnoreArg(), self.context, inst, 'delete.end',
+                    self.compute_api.notifier, self.context,
+                    inst, 'delete.end',
                     system_metadata=inst.system_metadata)
 
         self.mox.ReplayAll()
@@ -715,10 +715,9 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(db, 'block_device_mapping_destroy')
 
         inst.info_cache.delete()
-        compute_utils.notify_about_instance_usage(mox.IgnoreArg(),
-                                                  self.context,
-                                                   inst,
-                                                   'delete.start')
+        compute_utils.notify_about_instance_usage(
+                    self.compute_api.notifier, self.context,
+                    inst, 'delete.start')
         self.context.elevated().MultipleTimes().AndReturn(self.context)
         if self.cell_type != 'api':
             self.compute_api.network_api.deallocate_for_instance(
@@ -731,9 +730,9 @@ class _ComputeAPIUnitTestMixIn(object):
 
         inst.destroy()
         compute_utils.notify_about_instance_usage(
-                mox.IgnoreArg(),
-                self.context, inst, 'delete.end',
-                system_metadata=inst.system_metadata)
+                    self.compute_api.notifier, self.context,
+                    inst, 'delete.end',
+                    system_metadata=inst.system_metadata)
 
         self.mox.ReplayAll()
         self.compute_api._local_delete(self.context, inst, bdms,

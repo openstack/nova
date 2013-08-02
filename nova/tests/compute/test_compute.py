@@ -21,7 +21,6 @@
 
 import base64
 import contextlib
-import copy
 import datetime
 import operator
 import sys
@@ -33,6 +32,7 @@ import uuid
 import mock
 import mox
 from oslo.config import cfg
+from oslo import messaging
 from testtools import matchers as testtools_matchers
 
 import nova
@@ -64,8 +64,6 @@ from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
-from nova.openstack.common import rpc
-from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
 from nova import policy
@@ -906,7 +904,7 @@ class ComputeVolumeTestCase(BaseTestCase):
                                        instance_type, all_mappings)
 
     def test_volume_snapshot_create(self):
-        self.assertRaises(rpc_common.ClientException,
+        self.assertRaises(messaging.ExpectedException,
                 self.compute.volume_snapshot_create, self.context,
                 self.instance_object, 'fake_id', {})
 
@@ -917,7 +915,7 @@ class ComputeVolumeTestCase(BaseTestCase):
                 self.instance_object, 'fake_id', {})
 
     def test_volume_snapshot_delete(self):
-        self.assertRaises(rpc_common.ClientException,
+        self.assertRaises(messaging.ExpectedException,
                 self.compute.volume_snapshot_delete, self.context,
                 self.instance_object, 'fake_id', 'fake_id2', {})
 
@@ -2688,7 +2686,7 @@ class ComputeTestCase(BaseTestCase):
             jsonutils.to_primitive(instance), {}, {}, [], None,
             None, True, None, False)
 
-        self.assertRaises(rpc_common.ClientException,
+        self.assertRaises(messaging.ExpectedException,
                           self.compute.get_console_output, self.context,
                           instance, 0)
 
@@ -2787,7 +2785,7 @@ class ComputeTestCase(BaseTestCase):
             jsonutils.to_primitive(instance), {}, {}, [], None,
             None, True, None, False)
 
-        self.assertRaises(rpc_common.ClientException,
+        self.assertRaises(messaging.ExpectedException,
                           self.compute.get_vnc_console,
                           self.context, 'invalid', instance=instance)
 
@@ -2809,7 +2807,7 @@ class ComputeTestCase(BaseTestCase):
             jsonutils.to_primitive(instance), {}, {}, [], None,
             None, True, None, False)
 
-        self.assertRaises(rpc_common.ClientException,
+        self.assertRaises(messaging.ExpectedException,
                           self.compute.get_vnc_console,
                           self.context, None, instance=instance)
 
@@ -2830,7 +2828,7 @@ class ComputeTestCase(BaseTestCase):
             jsonutils.to_primitive(instance), {}, {}, [], None,
             None, True, None, False)
 
-        self.assertRaises(rpc_common.ClientException,
+        self.assertRaises(messaging.ExpectedException,
                           self.compute.get_vnc_console,
                           self.context, 'novnc', instance=instance)
 
@@ -2869,7 +2867,7 @@ class ComputeTestCase(BaseTestCase):
             jsonutils.to_primitive(instance), {}, {}, [], None,
             None, True, None, False)
 
-        self.assertRaises(rpc_common.ClientException,
+        self.assertRaises(messaging.ExpectedException,
                           self.compute.get_spice_console,
                           self.context, 'invalid', instance=instance)
 
@@ -2891,7 +2889,7 @@ class ComputeTestCase(BaseTestCase):
             jsonutils.to_primitive(instance), {}, {}, [], None,
             None, True, None, False)
 
-        self.assertRaises(rpc_common.ClientException,
+        self.assertRaises(messaging.ExpectedException,
                           self.compute.get_spice_console,
                           self.context, None, instance=instance)
 
@@ -3213,7 +3211,7 @@ class ComputeTestCase(BaseTestCase):
                 requested_networks=None,
                 vpn=False, macs=None,
                 security_groups=[], dhcp_options=None
-                ).AndRaise(rpc_common.RemoteError())
+                ).AndRaise(messaging.RemoteError())
         self.compute.network_api.deallocate_for_instance(
                 mox.IgnoreArg(),
                 mox.IgnoreArg(),
@@ -3223,7 +3221,7 @@ class ComputeTestCase(BaseTestCase):
 
         self.mox.ReplayAll()
 
-        self.assertRaises(rpc_common.RemoteError,
+        self.assertRaises(messaging.RemoteError,
                           self.compute.run_instance,
                           self.context, instance, {}, {}, None, None, None,
                           True, None, False)
@@ -3347,11 +3345,11 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute, "_prep_block_device")
         self.compute._prep_block_device(
                 mox.IgnoreArg(), mox.IgnoreArg(),
-                mox.IgnoreArg()).AndRaise(rpc.common.RemoteError('', '', ''))
+                mox.IgnoreArg()).AndRaise(messaging.RemoteError('', '', ''))
 
         self.mox.ReplayAll()
 
-        self.assertRaises(rpc.common.RemoteError,
+        self.assertRaises(messaging.RemoteError,
                           self.compute.run_instance,
                           self.context, instance, {}, {}, None, None, None,
                           True, None, False)
@@ -5098,7 +5096,7 @@ class ComputeTestCase(BaseTestCase):
         exc_info = None
 
         def fake_db_fault_create(ctxt, values):
-            self.assertTrue('raise rpc_common.RemoteError'
+            self.assertTrue('raise messaging.RemoteError'
                 in values['details'])
             del values['details']
 
@@ -5111,8 +5109,8 @@ class ComputeTestCase(BaseTestCase):
             self.assertEqual(expected, values)
 
         try:
-            raise rpc_common.RemoteError('test', 'My Test Message')
-        except rpc_common.RemoteError as exc:
+            raise messaging.RemoteError('test', 'My Test Message')
+        except messaging.RemoteError as exc:
             exc_info = sys.exc_info()
 
         self.stubs.Set(nova.db, 'instance_fault_create', fake_db_fault_create)
@@ -6836,10 +6834,12 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual(inst_ref['vm_state'], vm_states.ACTIVE)
         self.assertIsNone(inst_ref['task_state'])
 
-        def fake_rpc_method(context, topic, msg, do_cast=True):
-            self.assertFalse(do_cast)
+        def fake_set_admin_password(self, context, **kwargs):
+            pass
 
-        self.stubs.Set(rpc, 'call', fake_rpc_method)
+        self.stubs.Set(compute_rpcapi.ComputeAPI,
+                       'set_admin_password',
+                       fake_set_admin_password)
 
         self.compute_api.set_admin_password(self.context, inst_ref)
 
@@ -7967,26 +7967,20 @@ class ComputeAPITestCase(BaseTestCase):
                              'host': 'fake_console_host',
                              'port': 'fake_console_port',
                              'internal_access_path': 'fake_access_path',
-                             'instance_uuid': fake_instance['uuid']}
-        fake_connect_info2 = copy.deepcopy(fake_connect_info)
-        fake_connect_info2['access_url'] = 'fake_console_url'
+                             'instance_uuid': fake_instance['uuid'],
+                             'access_url': 'fake_console_url'}
 
-        self.mox.StubOutWithMock(rpc, 'call')
+        rpcapi = compute_rpcapi.ComputeAPI
+        self.mox.StubOutWithMock(rpcapi, 'get_vnc_console')
+        rpcapi.get_vnc_console(
+            self.context, instance=fake_instance,
+            console_type=fake_console_type).AndReturn(fake_connect_info)
 
-        rpc_msg1 = {'method': 'get_vnc_console',
-                    'namespace': None,
-                    'args': {'instance': fake_instance,
-                             'console_type': fake_console_type},
-                   'version': '3.2'}
-        rpc_msg2 = {'method': 'authorize_console',
-                    'namespace': None,
-                    'args': fake_connect_info,
-                    'version': '2.0'}
-
-        rpc.call(self.context, 'compute.%s' % fake_instance['host'],
-                rpc_msg1, None).AndReturn(fake_connect_info2)
-        rpc.call(self.context, CONF.consoleauth_topic,
-                rpc_msg2, None).AndReturn(None)
+        self.mox.StubOutWithMock(self.compute_api.consoleauth_rpcapi,
+                                 'authorize_console')
+        self.compute_api.consoleauth_rpcapi.authorize_console(
+            self.context, 'fake_token', fake_console_type, 'fake_console_host',
+            'fake_console_port', 'fake_access_path', 'fake_uuid')
 
         self.mox.ReplayAll()
 
@@ -8014,26 +8008,20 @@ class ComputeAPITestCase(BaseTestCase):
                              'host': 'fake_console_host',
                              'port': 'fake_console_port',
                              'internal_access_path': 'fake_access_path',
-                             'instance_uuid': fake_instance['uuid']}
-        fake_connect_info2 = copy.deepcopy(fake_connect_info)
-        fake_connect_info2['access_url'] = 'fake_console_url'
+                             'instance_uuid': fake_instance['uuid'],
+                             'access_url': 'fake_console_url'}
 
-        self.mox.StubOutWithMock(rpc, 'call')
+        rpcapi = compute_rpcapi.ComputeAPI
+        self.mox.StubOutWithMock(rpcapi, 'get_spice_console')
+        rpcapi.get_spice_console(
+            self.context, instance=fake_instance,
+            console_type=fake_console_type).AndReturn(fake_connect_info)
 
-        rpc_msg1 = {'method': 'get_spice_console',
-                    'namespace': None,
-                    'args': {'instance': fake_instance,
-                             'console_type': fake_console_type},
-                   'version': '3.1'}
-        rpc_msg2 = {'method': 'authorize_console',
-                    'namespace': None,
-                    'args': fake_connect_info,
-                    'version': '2.0'}
-
-        rpc.call(self.context, 'compute.%s' % fake_instance['host'],
-                rpc_msg1, None).AndReturn(fake_connect_info2)
-        rpc.call(self.context, CONF.consoleauth_topic,
-                rpc_msg2, None).AndReturn(None)
+        self.mox.StubOutWithMock(self.compute_api.consoleauth_rpcapi,
+                                 'authorize_console')
+        self.compute_api.consoleauth_rpcapi.authorize_console(
+            self.context, 'fake_token', fake_console_type, 'fake_console_host',
+            'fake_console_port', 'fake_access_path', 'fake_uuid')
 
         self.mox.ReplayAll()
 
@@ -8056,15 +8044,11 @@ class ComputeAPITestCase(BaseTestCase):
         fake_tail_length = 699
         fake_console_output = 'fake console output'
 
-        self.mox.StubOutWithMock(rpc, 'call')
-
-        rpc_msg = {'method': 'get_console_output',
-                   'namespace': None,
-                   'args': {'instance': fake_instance,
-                            'tail_length': fake_tail_length},
-                   'version': compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION}
-        rpc.call(self.context, 'compute.%s' % fake_instance['host'],
-                rpc_msg, None).AndReturn(fake_console_output)
+        rpcapi = compute_rpcapi.ComputeAPI
+        self.mox.StubOutWithMock(rpcapi, 'get_console_output')
+        rpcapi.get_console_output(
+            self.context, instance=fake_instance,
+            tail_length=fake_tail_length).AndReturn(fake_console_output)
 
         self.mox.ReplayAll()
 
@@ -8173,12 +8157,26 @@ class ComputeAPITestCase(BaseTestCase):
         def fake_rpc_attach_volume(self, context, **kwargs):
             called['fake_rpc_attach_volume'] = True
 
+        def fake_rpc_reserve_block_device_name(self, context, **kwargs):
+            called['fake_rpc_reserve_block_device_name'] = True
+
         self.stubs.Set(cinder.API, 'get', fake_volume_get)
         self.stubs.Set(cinder.API, 'check_attach', fake_check_attach)
         self.stubs.Set(cinder.API, 'reserve_volume',
                        fake_reserve_volume)
+        self.stubs.Set(compute_rpcapi.ComputeAPI,
+                       'reserve_block_device_name',
+                       fake_rpc_reserve_block_device_name)
         self.stubs.Set(compute_rpcapi.ComputeAPI, 'attach_volume',
                        fake_rpc_attach_volume)
+
+        instance = self._create_fake_instance()
+        self.compute_api.attach_volume(self.context, instance, 1, device=None)
+        self.assertTrue(called.get('fake_check_attach'))
+        self.assertTrue(called.get('fake_reserve_volume'))
+        self.assertTrue(called.get('fake_reserve_volume'))
+        self.assertTrue(called.get('fake_rpc_reserve_block_device_name'))
+        self.assertTrue(called.get('fake_rpc_attach_volume'))
 
     def test_detach_volume(self):
         # Ensure volume can be detached from instance
@@ -8430,15 +8428,11 @@ class ComputeAPITestCase(BaseTestCase):
                    rule_get)
         self.stubs.Set(self.compute_api.db, 'security_group_get', group_get)
 
-        self.mox.StubOutWithMock(rpc, 'cast')
-        topic = rpc.queue_get_for(self.context, CONF.compute_topic,
-                                  instance['host'])
-        rpc.cast(self.context, topic,
-                {"method": "refresh_instance_security_rules",
-                 "namespace": None,
-                 "args": {'instance': jsonutils.to_primitive(instance)},
-                 "version":
-                    compute_rpcapi.SecurityGroupAPI.BASE_RPC_API_VERSION})
+        rpcapi = self.security_group_api.security_group_rpcapi
+        self.mox.StubOutWithMock(rpcapi, 'refresh_instance_security_rules')
+        rpcapi.refresh_instance_security_rules(self.context,
+                                               instance['host'],
+                                               instance)
         self.mox.ReplayAll()
 
         self.security_group_api.trigger_members_refresh(self.context, [1])
@@ -8460,15 +8454,11 @@ class ComputeAPITestCase(BaseTestCase):
                    rule_get)
         self.stubs.Set(self.compute_api.db, 'security_group_get', group_get)
 
-        self.mox.StubOutWithMock(rpc, 'cast')
-        topic = rpc.queue_get_for(self.context, CONF.compute_topic,
-                                  instance['host'])
-        rpc.cast(self.context, topic,
-                {"method": "refresh_instance_security_rules",
-                 "namespace": None,
-                 "args": {'instance': jsonutils.to_primitive(instance)},
-                 "version":
-                   compute_rpcapi.SecurityGroupAPI.BASE_RPC_API_VERSION})
+        rpcapi = self.security_group_api.security_group_rpcapi
+        self.mox.StubOutWithMock(rpcapi, 'refresh_instance_security_rules')
+        rpcapi.refresh_instance_security_rules(self.context,
+                                               instance['host'],
+                                               instance)
         self.mox.ReplayAll()
 
         self.security_group_api.trigger_members_refresh(self.context, [1, 2])
@@ -8488,7 +8478,9 @@ class ComputeAPITestCase(BaseTestCase):
                    rule_get)
         self.stubs.Set(self.compute_api.db, 'security_group_get', group_get)
 
-        self.mox.StubOutWithMock(rpc, 'cast')
+        rpcapi = self.security_group_api.security_group_rpcapi
+        self.mox.StubOutWithMock(rpcapi, 'refresh_instance_security_rules')
+
         self.mox.ReplayAll()
 
         self.security_group_api.trigger_members_refresh(self.context, [1])
@@ -8502,15 +8494,11 @@ class ComputeAPITestCase(BaseTestCase):
 
         self.stubs.Set(self.compute_api.db, 'security_group_get', group_get)
 
-        self.mox.StubOutWithMock(rpc, 'cast')
-        topic = rpc.queue_get_for(self.context, CONF.compute_topic,
-                                  instance['host'])
-        rpc.cast(self.context, topic,
-                {"method": "refresh_instance_security_rules",
-                 "namespace": None,
-                 "args": {'instance': jsonutils.to_primitive(instance)},
-                 "version":
-                   compute_rpcapi.SecurityGroupAPI.BASE_RPC_API_VERSION})
+        rpcapi = self.security_group_api.security_group_rpcapi
+        self.mox.StubOutWithMock(rpcapi, 'refresh_instance_security_rules')
+        rpcapi.refresh_instance_security_rules(self.context,
+                                               instance['host'],
+                                               instance)
         self.mox.ReplayAll()
 
         self.security_group_api.trigger_rules_refresh(self.context, [1])
@@ -8524,15 +8512,11 @@ class ComputeAPITestCase(BaseTestCase):
 
         self.stubs.Set(self.compute_api.db, 'security_group_get', group_get)
 
-        self.mox.StubOutWithMock(rpc, 'cast')
-        topic = rpc.queue_get_for(self.context, CONF.compute_topic,
-                                  instance['host'])
-        rpc.cast(self.context, topic,
-                {"method": "refresh_instance_security_rules",
-                 "namespace": None,
-                 "args": {'instance': jsonutils.to_primitive(instance)},
-                 "version":
-                   compute_rpcapi.SecurityGroupAPI.BASE_RPC_API_VERSION})
+        rpcapi = self.security_group_api.security_group_rpcapi
+        self.mox.StubOutWithMock(rpcapi, 'refresh_instance_security_rules')
+        rpcapi.refresh_instance_security_rules(self.context,
+                                               instance['host'],
+                                               instance)
         self.mox.ReplayAll()
 
         self.security_group_api.trigger_rules_refresh(self.context, [1, 2])
@@ -8544,7 +8528,8 @@ class ComputeAPITestCase(BaseTestCase):
 
         self.stubs.Set(self.compute_api.db, 'security_group_get', group_get)
 
-        self.mox.StubOutWithMock(rpc, 'cast')
+        rpcapi = self.security_group_api.security_group_rpcapi
+        self.mox.StubOutWithMock(rpcapi, 'refresh_instance_security_rules')
         self.mox.ReplayAll()
 
         self.security_group_api.trigger_rules_refresh(self.context, [1, 2])
@@ -8726,7 +8711,7 @@ class ComputeAPITestCase(BaseTestCase):
                          self.compute_api.get_instance_bdms({}, instance))
 
 
-def fake_rpc_method(context, topic, msg, do_cast=True):
+def fake_rpc_method(context, method, **kwargs):
     pass
 
 
@@ -8752,8 +8737,8 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         super(ComputeAPIAggrTestCase, self).setUp()
         self.api = compute_api.AggregateAPI()
         self.context = context.get_admin_context()
-        self.stubs.Set(rpc, 'call', fake_rpc_method)
-        self.stubs.Set(rpc, 'cast', fake_rpc_method)
+        self.stubs.Set(self.api.compute_rpcapi.client, 'call', fake_rpc_method)
+        self.stubs.Set(self.api.compute_rpcapi.client, 'cast', fake_rpc_method)
 
     def test_aggregate_no_zone(self):
         # Ensure we can create an aggregate without an availability  zone

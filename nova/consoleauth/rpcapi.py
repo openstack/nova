@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012, Red Hat, Inc.
+# Copyright 2013 Red Hat, Inc.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -19,8 +19,9 @@ Client side of the consoleauth RPC API.
 """
 
 from oslo.config import cfg
+from oslo import messaging
 
-from nova import rpcclient
+from nova import rpc
 
 CONF = cfg.CONF
 
@@ -29,7 +30,7 @@ rpcapi_cap_opt = cfg.StrOpt('consoleauth',
 CONF.register_opt(rpcapi_cap_opt, 'upgrade_levels')
 
 
-class ConsoleAuthAPI(rpcclient.RpcProxy):
+class ConsoleAuthAPI(object):
     '''Client side of the consoleauth rpc API.
 
     API version history:
@@ -46,36 +47,24 @@ class ConsoleAuthAPI(rpcclient.RpcProxy):
         2.0 - Major API rev for Icehouse
     '''
 
-    #
-    # NOTE(russellb): This is the default minimum version that the server
-    # (manager) side must implement unless otherwise specified using a version
-    # argument to self.call()/cast()/etc. here.  It should be left as X.0 where
-    # X is the current major API version (1.0, 2.0, ...).  For more information
-    # about rpc API versioning, see the docs in
-    # openstack/common/rpc/dispatcher.py.
-    #
-    BASE_RPC_API_VERSION = '2.0'
-
     VERSION_ALIASES = {
         'grizzly': '1.2',
         'havana': '1.2',
     }
 
     def __init__(self):
+        super(ConsoleAuthAPI, self).__init__()
+        target = messaging.Target(topic=CONF.consoleauth_topic, version='2.0')
         version_cap = self.VERSION_ALIASES.get(CONF.upgrade_levels.consoleauth,
                                                CONF.upgrade_levels.consoleauth)
-        super(ConsoleAuthAPI, self).__init__(
-                topic=CONF.consoleauth_topic,
-                default_version=self.BASE_RPC_API_VERSION,
-                version_cap=version_cap)
-        self.client = self.get_client()
+        self.client = rpc.get_client(target, version_cap=version_cap)
 
     def authorize_console(self, ctxt, token, console_type, host, port,
                           internal_access_path, instance_uuid):
         # The remote side doesn't return anything, but we want to block
         # until it completes.'
         version = '2.0'
-        if not self.can_send_version('2.0'):
+        if not self.client.can_send_version('2.0'):
             # NOTE(russellb) Havana compat
             version = '1.2'
         cctxt = self.client.prepare(version=version)
@@ -88,7 +77,7 @@ class ConsoleAuthAPI(rpcclient.RpcProxy):
 
     def check_token(self, ctxt, token):
         version = '2.0'
-        if not self.can_send_version('2.0'):
+        if not self.client.can_send_version('2.0'):
             # NOTE(russellb) Havana compat
             version = '1.0'
         cctxt = self.client.prepare(version=version)
@@ -96,7 +85,7 @@ class ConsoleAuthAPI(rpcclient.RpcProxy):
 
     def delete_tokens_for_instance(self, ctxt, instance_uuid):
         version = '2.0'
-        if not self.can_send_version('2.0'):
+        if not self.client.can_send_version('2.0'):
             # NOTE(russellb) Havana compat
             version = '1.2'
         cctxt = self.client.prepare(version=version)

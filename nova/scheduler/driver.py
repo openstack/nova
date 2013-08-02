@@ -31,11 +31,11 @@ from nova.conductor import api as conductor_api
 from nova import db
 from nova import exception
 from nova import notifications
-from nova import notifier
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
+from nova import rpc
 from nova import servicegroup
 
 LOG = logging.getLogger(__name__)
@@ -81,8 +81,8 @@ def handle_schedule_error(context, ex, instance_uuid, request_spec):
                    method='run_instance',
                    reason=ex)
 
-    notifier.get_notifier('scheduler').error(context,
-                                             'scheduler.run_instance', payload)
+    rpc.get_notifier('scheduler').error(context,
+                                        'scheduler.run_instance', payload)
 
 
 def instance_update_db(context, instance_uuid, extra_values=None):
