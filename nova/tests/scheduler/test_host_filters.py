@@ -896,10 +896,13 @@ class HostFiltersTestCase(test.NoDBTestCase):
             passes=False)
 
     def _do_test_isolated_hosts(self, host_in_list, image_in_list,
-                                set_flags=True):
+                            set_flags=True,
+                            restrict_isolated_hosts_to_isolated_images=True):
         if set_flags:
             self.flags(isolated_images=['isolated_image'],
-                       isolated_hosts=['isolated_host'])
+                       isolated_hosts=['isolated_host'],
+                       restrict_isolated_hosts_to_isolated_images=
+                       restrict_isolated_hosts_to_isolated_images)
         host_name = 'isolated_host' if host_in_list else 'free_host'
         image_ref = 'isolated_image' if image_in_list else 'free_image'
         filter_properties = {
@@ -948,6 +951,18 @@ class HostFiltersTestCase(test.NoDBTestCase):
         self.assertFalse(self._do_test_isolated_hosts(True, False, False))
         self.assertFalse(self._do_test_isolated_hosts(True, True, False))
         self.assertTrue(self._do_test_isolated_hosts(False, False, False))
+
+    def test_isolated_hosts_less_restrictive(self):
+        # If there are isolated hosts and non isolated images
+        self.assertTrue(self._do_test_isolated_hosts(True, False, True, False))
+        # If there are isolated hosts and isolated images
+        self.assertTrue(self._do_test_isolated_hosts(True, True, True, False))
+        # If there are non isolated hosts and non isolated images
+        self.assertTrue(self._do_test_isolated_hosts(False, False, True,
+                                                     False))
+        # If there are non isolated hosts and isolated images
+        self.assertFalse(self._do_test_isolated_hosts(False, True, True,
+                                                      False))
 
     def test_json_filter_passes(self):
         filt_cls = self.class_map['JsonFilter']()
