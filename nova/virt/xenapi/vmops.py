@@ -333,36 +333,23 @@ class VMOps(object):
         if bad_volumes_callback and bad_devices:
             bad_volumes_callback(bad_devices)
 
-    def _create_disks(self, context, instance, name_label, disk_image_type,
-                      image_meta, block_device_info=None):
-        vdis = vm_utils.get_vdis_for_instance(context, self._session,
-                                          instance, name_label,
-                                          image_meta.get('id'),
-                                          disk_image_type,
-                                          block_device_info=block_device_info)
-
-        root_vdi = vdis.get('root')
-        if root_vdi:
-            self._resize_up_root_vdi(instance, root_vdi)
-
-        return vdis
-
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info=None, block_device_info=None,
               name_label=None, rescue=False):
-        if name_label is None:
-            name_label = instance['name']
+        if block_device_info:
+            LOG.debug(_("Block device information present: %s")
+                      % block_device_info, instance=instance)
+        if block_device_info and not block_device_info['root_device_name']:
+            block_device_info['root_device_name'] = self.default_root_dev
 
         step = make_step_decorator(context, instance,
                                    self._update_instance_progress)
 
-        @step
-        def bdev_set_default_root(undo_mgr):
-            if block_device_info:
-                LOG.debug(_("Block device information present: %s")
-                          % block_device_info, instance=instance)
-            if block_device_info and not block_device_info['root_device_name']:
-                block_device_info['root_device_name'] = self.default_root_dev
+        if name_label is None:
+            name_label = instance['name']
+
+        self._ensure_instance_name_unique(name_label)
+        self._ensure_enough_free_mem(instance)
 
         @step
         def determine_disk_image_type_step(undo_mgr):
@@ -370,9 +357,9 @@ class VMOps(object):
 
         @step
         def create_disks_step(undo_mgr, disk_image_type, image_meta):
-            vdis = self._create_disks(context, instance, name_label,
-                                      disk_image_type, image_meta,
-                                      block_device_info=block_device_info)
+            vdis = vm_utils.get_vdis_for_instance(context, self._session,
+                        instance, name_label, image_meta.get('id'),
+                        disk_image_type, block_device_info=block_device_info)
 
             def undo_create_disks():
                 vdi_refs = [vdi['ref'] for vdi in vdis.values()
@@ -397,8 +384,6 @@ class VMOps(object):
         @step
         def create_vm_record_step(undo_mgr, vdis, disk_image_type,
                 kernel_file, ramdisk_file):
-            self._ensure_instance_name_unique(name_label)
-            self._ensure_enough_free_mem(instance)
             vm_ref = self._create_vm_record(context, instance, name_label,
                     vdis, disk_image_type, kernel_file, ramdisk_file)
 
@@ -424,32 +409,32 @@ class VMOps(object):
                     LOG.warning(_('ipxe_boot is True but no ISO image found'),
                                 instance=instance)
 
+            root_vdi = vdis.get('root')
+            if root_vdi:
+                self._resize_up_root_vdi(instance, root_vdi)
+
             self._attach_disks(instance, vm_ref, name_label, vdis,
                                disk_image_type, admin_password,
                                injected_files)
 
-        if rescue:
-            # NOTE(johannes): Attach root disk to rescue VM now, before
-            # booting the VM, since we can't hotplug block devices
-            # on non-PV guests
-            @step
-            def attach_root_disk_step(undo_mgr, vm_ref):
+            if rescue:
+                # NOTE(johannes): Attach root disk to rescue VM now, before
+                # booting the VM, since we can't hotplug block devices
+                # on non-PV guests
                 self._attach_orig_disk_for_rescue(instance, vm_ref)
 
         @step
-        def setup_network_step(undo_mgr, vm_ref, vdis):
-            self._file_inject_vm_settings(instance, vm_ref, vdis, network_info)
-            self._create_vifs(instance, vm_ref, network_info)
-            self.inject_network_info(instance, network_info, vm_ref)
-            self._inject_hostname(instance, vm_ref, rescue)
-
-        @step
-        def inject_instance_data_step(undo_mgr, vm_ref):
+        def inject_instance_data_step(undo_mgr, vm_ref, vdis):
             self._inject_instance_metadata(instance, vm_ref)
             self._inject_auto_disk_config(instance, vm_ref)
+            self._inject_hostname(instance, vm_ref, rescue)
+            self._file_inject_vm_settings(instance, vm_ref, vdis, network_info)
+            self.inject_network_info(instance, network_info, vm_ref)
 
         @step
-        def prepare_security_group_filters_step(undo_mgr):
+        def setup_network_step(undo_mgr, vm_ref):
+            self._create_vifs(instance, vm_ref, network_info)
+
             try:
                 self.firewall_driver.setup_basic_filtering(
                         instance, network_info)
@@ -466,6 +451,9 @@ class VMOps(object):
         def boot_instance_step(undo_mgr, vm_ref):
             self._start(instance, vm_ref)
             self._wait_for_instance_to_start(instance, vm_ref)
+
+        @step
+        def configure_booted_instance_step(undo_mgr, vm_ref):
             self._configure_new_instance_with_agent(instance, vm_ref,
                     injected_files, admin_password)
             self._remove_hostname(instance, vm_ref)
@@ -481,23 +469,21 @@ class VMOps(object):
             # over the network and images can be several gigs in size. To
             # avoid progress remaining at 0% for too long, make sure the
             # first step is something that completes rather quickly.
-            bdev_set_default_root(undo_mgr)
             disk_image_type = determine_disk_image_type_step(undo_mgr)
 
             vdis = create_disks_step(undo_mgr, disk_image_type, image_meta)
             kernel_file, ramdisk_file = create_kernel_ramdisk_step(undo_mgr)
+
             vm_ref = create_vm_record_step(undo_mgr, vdis, disk_image_type,
                     kernel_file, ramdisk_file)
             attach_disks_step(undo_mgr, vm_ref, vdis, disk_image_type)
-            setup_network_step(undo_mgr, vm_ref, vdis)
-            inject_instance_data_step(undo_mgr, vm_ref)
-            prepare_security_group_filters_step(undo_mgr)
 
-            if rescue:
-                attach_root_disk_step(undo_mgr, vm_ref)
+            inject_instance_data_step(undo_mgr, vm_ref, vdis)
+            setup_network_step(undo_mgr, vm_ref)
 
             boot_instance_step(undo_mgr, vm_ref)
 
+            configure_booted_instance_step(undo_mgr, vm_ref)
             apply_security_group_filters_step(undo_mgr)
         except Exception:
             msg = _("Failed to spawn, rolling back")
