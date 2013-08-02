@@ -123,6 +123,7 @@ policy_data = """
     "compute_extension:v3:os-admin-actions:migrate_live": "",
     "compute_extension:v3:os-admin-actions:reset_state": "",
     "compute_extension:v3:os-admin-actions:migrate": "",
+    "compute_extension:v3:os-admin-password": "",
     "compute_extension:aggregates": "",
     "compute_extension:v3:os-aggregates": "",
     "compute_extension:agents": "",

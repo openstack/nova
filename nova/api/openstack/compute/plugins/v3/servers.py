@@ -324,11 +324,6 @@ class ActionDeserializer(CommonDeserializer):
     def _action_create_image(self, node):
         return self._deserialize_image_action(node, ('name',))
 
-    def _action_change_password(self, node):
-        if not node.hasAttribute("adminPass"):
-            raise AttributeError("No adminPass was specified in request")
-        return {"adminPass": node.getAttribute("adminPass")}
-
     def _action_reboot(self, node):
         if not node.hasAttribute("type"):
             raise AttributeError("No reboot type was specified in request")
@@ -1233,28 +1228,6 @@ class ServersController(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=msg)
 
         return common.get_id_from_href(flavor_ref)
-
-    @wsgi.response(202)
-    @wsgi.serializers(xml=FullServerTemplate)
-    @wsgi.deserializers(xml=ActionDeserializer)
-    @wsgi.action('changePassword')
-    def _action_change_password(self, req, id, body):
-        context = req.environ['nova.context']
-        if (not 'changePassword' in body
-                or 'adminPass' not in body['changePassword']):
-            msg = _("No adminPass was specified")
-            raise exc.HTTPBadRequest(explanation=msg)
-        password = body['changePassword']['adminPass']
-        if not isinstance(password, basestring):
-            msg = _("Invalid adminPass")
-            raise exc.HTTPBadRequest(explanation=msg)
-        server = self._get_server(context, req, id)
-        try:
-            self.compute_api.set_admin_password(context, server, password)
-        except NotImplementedError:
-            msg = _("Unable to set password on instance")
-            raise exc.HTTPNotImplemented(explanation=msg)
-        return webob.Response(status_int=202)
 
     def _validate_metadata(self, metadata):
         """Ensure that we can work with the metadata given."""
