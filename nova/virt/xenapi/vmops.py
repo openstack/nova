@@ -181,24 +181,6 @@ class VMOps(object):
         self.image_upload_handler = importutils.import_object(
                                 CONF.xenapi_image_upload_handler)
 
-    def _create_kernel_and_ramdisk(self, instance, context, name_label):
-        kernel_file = None
-        ramdisk_file = None
-
-        if instance['kernel_id']:
-            vdis = vm_utils.create_kernel_image(context, self._session,
-                    instance, name_label, instance['kernel_id'],
-                    vm_utils.ImageType.KERNEL)
-            kernel_file = vdis['kernel'].get('file')
-
-        if instance['ramdisk_id']:
-            vdis = vm_utils.create_kernel_image(context, self._session,
-                    instance, name_label, instance['ramdisk_id'],
-                    vm_utils.ImageType.RAMDISK)
-            ramdisk_file = vdis['ramdisk'].get('file')
-
-        return (kernel_file, ramdisk_file)
-
     def agent_enabled(self, instance):
         if CONF.xenapi_disable_agent:
             return False
@@ -299,8 +281,8 @@ class VMOps(object):
 
         name_label = instance['name']
 
-        kernel_file, ramdisk_file = self._create_kernel_and_ramdisk(
-            instance, context, name_label)
+        kernel_file, ramdisk_file = vm_utils.create_kernel_and_ramdisk(
+                context, self._session, instance, name_label)
 
         disk_image_type = vm_utils.determine_disk_image_type(image_meta)
         vm_ref = self._create_vm(context, instance, instance['name'],
@@ -389,15 +371,12 @@ class VMOps(object):
 
         @step
         def create_kernel_ramdisk_step(undo_mgr):
-            kernel_file, ramdisk_file = self._create_kernel_and_ramdisk(
-                instance, context, name_label)
+            kernel_file, ramdisk_file = vm_utils.create_kernel_and_ramdisk(
+                    context, self._session, instance, name_label)
 
             def undo_create_kernel_ramdisk():
-                if kernel_file or ramdisk_file:
-                    LOG.debug(_("Removing kernel/ramdisk files from dom0"),
-                              instance=instance)
-                    vm_utils.destroy_kernel_ramdisk(
-                            self._session, kernel_file, ramdisk_file)
+                vm_utils.destroy_kernel_ramdisk(self._session, instance,
+                        kernel_file, ramdisk_file)
 
             undo_mgr.undo_with(undo_create_kernel_ramdisk)
             return kernel_file, ramdisk_file
@@ -1219,7 +1198,8 @@ class VMOps(object):
         (kernel, ramdisk) = vm_utils.lookup_kernel_ramdisk(self._session,
                                                            vm_ref)
         if kernel or ramdisk:
-            vm_utils.destroy_kernel_ramdisk(self._session, kernel, ramdisk)
+            vm_utils.destroy_kernel_ramdisk(self._session, instance,
+                                            kernel, ramdisk)
             LOG.debug(_("kernel/ramdisk files removed"), instance=instance)
 
     def _destroy_rescue_instance(self, rescue_vm_ref, original_vm_ref):
