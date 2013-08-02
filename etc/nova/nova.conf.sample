@@ -2341,7 +2341,7 @@
 
 # Object Store Driver used to handle image uploads. (string
 # value)
-#xenapi_image_upload_handler=nova.virt.xenapi.imageupload.glance.GlanceStore
+#xenapi_image_upload_handler=nova.virt.xenapi.image.glance.GlanceStore
 
 
 #
