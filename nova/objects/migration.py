@@ -18,7 +18,7 @@ from nova.objects import instance as instance_obj
 from nova.objects import utils
 
 
-class Migration(base.NovaObject):
+class Migration(base.NovaPersistentObject, base.NovaObject):
     fields = {
         'id': int,
         'source_compute': utils.str_or_none,

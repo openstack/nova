@@ -18,7 +18,7 @@ from nova.objects import base
 from nova.objects import utils
 
 
-class InstanceAction(base.NovaObject):
+class InstanceAction(base.NovaPersistentObject, base.NovaObject):
     fields = {
         'id': int,
         'action': utils.str_or_none,
@@ -93,7 +93,7 @@ class InstanceActionList(base.ObjectListBase, base.NovaObject):
         return _make_list(context, cls(), InstanceAction, db_actions)
 
 
-class InstanceActionEvent(base.NovaObject):
+class InstanceActionEvent(base.NovaPersistentObject, base.NovaObject):
     fields = {
         'id': int,
         'event': utils.str_or_none,

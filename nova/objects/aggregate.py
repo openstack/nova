@@ -19,7 +19,7 @@ from nova.objects import base
 from nova.objects import utils
 
 
-class Aggregate(base.NovaObject):
+class Aggregate(base.NovaPersistentObject, base.NovaObject):
     fields = {
         'id': int,
         'name': str,

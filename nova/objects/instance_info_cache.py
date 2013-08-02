@@ -24,7 +24,7 @@ from nova.openstack.common import log as logging
 LOG = logging.getLogger(__name__)
 
 
-class InstanceInfoCache(base.NovaObject):
+class InstanceInfoCache(base.NovaPersistentObject, base.NovaObject):
     VERSION = '1.3'
     # Version 1.0: Initial version
     # Version 1.1: Converted network_info to store the model.

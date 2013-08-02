@@ -20,7 +20,7 @@ from nova.objects import compute_node
 from nova.objects import utils
 
 
-class Service(base.NovaObject):
+class Service(base.NovaPersistentObject, base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Added compute_node nested object
     VERSION = '1.1'

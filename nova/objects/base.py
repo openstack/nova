@@ -186,14 +186,7 @@ class NovaObject(object):
     #            'bar': str,
     #            'baz': lambda x: str(x).ljust(8),
     #          }
-    #
-    # NOTE(danms): These fields will be inherited by all subclasses.
-    fields = {
-        'created_at': obj_utils.datetime_or_str_or_none,
-        'updated_at': obj_utils.datetime_or_str_or_none,
-        'deleted_at': obj_utils.datetime_or_str_or_none,
-        'deleted': bool,
-        }
+    fields = {}
     obj_extra_fields = []
 
     def __init__(self):
@@ -230,10 +223,6 @@ class NovaObject(object):
 
         raise exception.IncompatibleObjectVersion(objname=objname,
                                                   objver=objver)
-
-    _attr_created_at_from_primitive = obj_utils.dt_deserializer
-    _attr_updated_at_from_primitive = obj_utils.dt_deserializer
-    _attr_deleted_at_from_primitive = obj_utils.dt_deserializer
 
     def _attr_from_primitive(self, attribute, value):
         """Attribute deserialization dispatcher.
@@ -272,10 +261,6 @@ class NovaObject(object):
         changes = primitive.get('nova_object.changes', [])
         self._changed_fields = set([x for x in changes if x in self.fields])
         return self
-
-    _attr_created_at_to_primitive = obj_utils.dt_serializer('created_at')
-    _attr_updated_at_to_primitive = obj_utils.dt_serializer('updated_at')
-    _attr_deleted_at_to_primitive = obj_utils.dt_serializer('deleted_at')
 
     def _attr_to_primitive(self, attribute):
         """Attribute serialization dispatcher.
@@ -413,6 +398,26 @@ class NovaObject(object):
         """
         for key, value in updates.items():
             self[key] = value
+
+
+class NovaPersistentObject(object):
+    """Mixin class for Persistent objects.
+
+    This adds the fields that we use in common for all persisent objects.
+    """
+    fields = {
+        'created_at': obj_utils.datetime_or_str_or_none,
+        'updated_at': obj_utils.datetime_or_str_or_none,
+        'deleted_at': obj_utils.datetime_or_str_or_none,
+        'deleted': bool,
+        }
+
+    _attr_created_at_from_primitive = obj_utils.dt_deserializer
+    _attr_updated_at_from_primitive = obj_utils.dt_deserializer
+    _attr_deleted_at_from_primitive = obj_utils.dt_deserializer
+    _attr_created_at_to_primitive = obj_utils.dt_serializer('created_at')
+    _attr_updated_at_to_primitive = obj_utils.dt_serializer('updated_at')
+    _attr_deleted_at_to_primitive = obj_utils.dt_serializer('deleted_at')
 
 
 class ObjectListBase(object):

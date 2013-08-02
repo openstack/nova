@@ -17,7 +17,7 @@ from nova.objects import base
 from nova.objects import utils
 
 
-class KeyPair(base.NovaObject):
+class KeyPair(base.NovaPersistentObject, base.NovaObject):
     fields = {
         'id': int,
         'name': utils.str_or_none,

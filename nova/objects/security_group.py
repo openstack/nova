@@ -16,7 +16,7 @@ from nova import db
 from nova.objects import base
 
 
-class SecurityGroup(base.NovaObject):
+class SecurityGroup(base.NovaPersistentObject, base.NovaObject):
     fields = {
         'id': int,
         'name': str,
