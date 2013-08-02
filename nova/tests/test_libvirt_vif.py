@@ -17,6 +17,7 @@
 from lxml import etree
 from oslo.config import cfg
 
+from nova.compute import instance_types
 from nova import exception
 from nova.network import model as network_model
 from nova import test
@@ -160,6 +161,15 @@ class LibvirtVifTestCase(test.TestCase):
         'uuid': 'instance-uuid'
     }
 
+    bandwidth = {
+        'quota:vif_inbound_peak': '102400',
+        'quota:vif_outbound_peak': '102400',
+        'quota:vif_inbound_average': '102400',
+        'quota:vif_outbound_average': '102400',
+        'quota:vif_inbound_burst': '102400',
+        'quota:vif_inbound_burst': '102400'
+    }
+
     def setUp(self):
         super(LibvirtVifTestCase, self).setUp()
         self.flags(allow_same_net_traffic=True)
@@ -179,7 +189,13 @@ class LibvirtVifTestCase(test.TestCase):
         conf.memory = 100 * 1024
         conf.vcpus = 4
 
-        nic = driver.get_config(self.instance, net, mapping, image_meta)
+        default_inst_type = instance_types.get_default_instance_type()
+        extra_specs = default_inst_type['extra_specs'].items()
+        quota_bandwith = self.bandwidth.items()
+        default_inst_type['extra_specs'] = dict(extra_specs + quota_bandwith)
+
+        nic = driver.get_config(self.instance, net, mapping, image_meta,
+                                default_inst_type)
         conf.add_device(nic)
         return conf.to_xml()
 
@@ -322,6 +338,10 @@ class LibvirtVifTestCase(test.TestCase):
                                      self.mapping_bridge)
 
         doc = etree.fromstring(xml)
+
+        ret = doc.findall('./devices/interface/bandwidth')
+        self.assertEqual(len(ret), 1)
+
         ret = doc.findall('./devices/interface')
         self.assertEqual(len(ret), 1)
         node = ret[0]
