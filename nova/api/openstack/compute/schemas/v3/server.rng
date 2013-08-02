@@ -40,19 +40,9 @@
       </element>
     </zeroOrMore>
   </element>
-  <element name="addresses">
-    <zeroOrMore>
-      <element name="network">
-        <attribute name="id"> <text/> </attribute>
-          <zeroOrMore>
-            <element name="ip">
-              <attribute name="version"> <text/> </attribute>
-              <attribute name="addr">    <text/> </attribute>
-            </element>
-          </zeroOrMore>
-      </element>
-    </zeroOrMore>
-  </element>
+  <oneOrMore>
+    <externalRef href="addresses.rng"/>
+  </oneOrMore>
   <zeroOrMore>
     <externalRef href="../atom-link.rng"/>
   </zeroOrMore>

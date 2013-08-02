@@ -219,3 +219,11 @@ class ViewBuilder(common.ViewBuilder):
                 fault_dict['details'] = fault["details"]
 
         return fault_dict
+
+
+class ViewBuilderV3(ViewBuilder):
+
+    def __init__(self):
+        """Initialize view builder."""
+        super(ViewBuilderV3, self).__init__()
+        self._address_builder = views_addresses.ViewBuilderV3()

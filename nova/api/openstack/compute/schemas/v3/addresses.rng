@@ -7,6 +7,8 @@
           <element name="ip">
             <attribute name="version"> <text/> </attribute>
             <attribute name="addr"> <text/> </attribute>
+            <attribute name="type"> <text/> </attribute>
+            <attribute name="mac_addr"> <text/> </attribute>
           </element>
         </zeroOrMore>
     </element>

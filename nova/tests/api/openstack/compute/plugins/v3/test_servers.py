@@ -327,8 +327,10 @@ class ServersControllerTest(ControllerTest):
                 },
                 "addresses": {
                     'test1': [
-                        {'version': 4, 'addr': '192.168.1.100'},
-                        {'version': 6, 'addr': '2001:db8:0:1::1'}
+                        {'version': 4, 'addr': '192.168.1.100',
+                         'type': 'fixed', 'mac_addr': 'aa:aa:aa:aa:aa:aa'},
+                        {'version': 6, 'addr': '2001:db8:0:1::1',
+                         'type': 'fixed', 'mac_addr': 'aa:aa:aa:aa:aa:aa'}
                     ]
                 },
                 "metadata": {
@@ -393,8 +395,10 @@ class ServersControllerTest(ControllerTest):
                 },
                 "addresses": {
                     'test1': [
-                        {'version': 4, 'addr': '192.168.1.100'},
-                        {'version': 6, 'addr': '2001:db8:0:1::1'}
+                        {'version': 4, 'addr': '192.168.1.100',
+                         'type': 'fixed', 'mac_addr': 'aa:aa:aa:aa:aa:aa'},
+                        {'version': 6, 'addr': '2001:db8:0:1::1',
+                         'type': 'fixed', 'mac_addr': 'aa:aa:aa:aa:aa:aa'},
                     ]
                 },
                 "metadata": {
@@ -462,8 +466,10 @@ class ServersControllerTest(ControllerTest):
                 },
                 "addresses": {
                     'test1': [
-                        {'version': 4, 'addr': '192.168.1.100'},
-                        {'version': 6, 'addr': '2001:db8:0:1::1'}
+                        {'version': 4, 'addr': '192.168.1.100',
+                         'type': 'fixed', 'mac_addr': 'aa:aa:aa:aa:aa:aa'},
+                        {'version': 6, 'addr': '2001:db8:0:1::1',
+                         'type': 'fixed', 'mac_addr': 'aa:aa:aa:aa:aa:aa'},
                     ]
                 },
                 "metadata": {
@@ -522,14 +528,20 @@ class ServersControllerTest(ControllerTest):
         expected = {
             'addresses': {
                 'private': [
-                    {'version': 4, 'addr': '192.168.0.3'},
-                    {'version': 4, 'addr': '192.168.0.4'},
+                    {'version': 4, 'addr': '192.168.0.3',
+                     'type': 'fixed', 'mac_addr': 'bb:bb:bb:bb:bb:bb'},
+                    {'version': 4, 'addr': '192.168.0.4',
+                     'type': 'fixed', 'mac_addr': 'bb:bb:bb:bb:bb:bb'},
                 ],
                 'public': [
-                    {'version': 4, 'addr': '172.19.0.1'},
-                    {'version': 4, 'addr': '172.19.0.2'},
-                    {'version': 4, 'addr': '1.2.3.4'},
-                    {'version': 6, 'addr': 'b33f::fdee:ddff:fecc:bbaa'},
+                    {'version': 4, 'addr': '172.19.0.1',
+                     'type': 'fixed', 'mac_addr': 'aa:aa:aa:aa:aa:aa'},
+                    {'version': 4, 'addr': '172.19.0.2',
+                     'type': 'fixed', 'mac_addr': 'aa:aa:aa:aa:aa:aa'},
+                    {'version': 4, 'addr': '1.2.3.4',
+                     'type': 'fixed', 'mac_addr': 'aa:aa:aa:aa:aa:aa'},
+                    {'version': 6, 'addr': 'b33f::fdee:ddff:fecc:bbaa',
+                     'type': 'fixed', 'mac_addr': 'aa:aa:aa:aa:aa:aa'},
                 ],
             },
         }
@@ -3527,8 +3539,10 @@ class TestAddressesXMLSerialization(test.TestCase):
     def test_xml_declaration(self):
         fixture = {
             'network_2': [
-                {'addr': '192.168.0.1', 'version': 4},
-                {'addr': 'fe80::beef', 'version': 6},
+                {'addr': '192.168.0.1', 'version': 4,
+                 'type': 'fixed', 'mac_addr': 'aa:aa:aa:aa:aa:aa'},
+                {'addr': 'fe80::beef', 'version': 6,
+                 'type': 'fixed', 'mac_addr': 'aa:aa:aa:aa:aa:aa'}
             ],
         }
         output = self.show_serializer.serialize(fixture)
@@ -3538,8 +3552,10 @@ class TestAddressesXMLSerialization(test.TestCase):
     def test_show(self):
         fixture = {
             'network_2': [
-                {'addr': '192.168.0.1', 'version': 4},
-                {'addr': 'fe80::beef', 'version': 6},
+                {'addr': '192.168.0.1', 'version': 4,
+                 'type': 'fixed', 'mac_addr': 'aa:aa:aa:aa:aa:aa'},
+                {'addr': 'fe80::beef', 'version': 6,
+                 'type': 'fixed', 'mac_addr': 'aa:aa:aa:aa:aa:aa'}
             ],
         }
         output = self.show_serializer.serialize(fixture)
@@ -3553,23 +3569,31 @@ class TestAddressesXMLSerialization(test.TestCase):
                              str(ip['version']))
             self.assertEqual(str(ip_elem.get('addr')),
                              str(ip['addr']))
+            self.assertEqual(str(ip_elem.get('type')),
+                                 str(ip['type']))
+            self.assertEqual(str(ip_elem.get('mac_addr')),
+                                 str(ip['mac_addr']))
 
     def test_index(self):
         fixture = {
             'addresses': {
                 'network_1': [
-                    {'addr': '192.168.0.3', 'version': 4},
-                    {'addr': '192.168.0.5', 'version': 4},
+                    {'addr': '192.168.0.3', 'version': 4,
+                     'type': 'fixed', 'mac_addr': 'aa:aa:aa:aa:aa:aa'},
+                    {'addr': '192.168.0.5', 'version': 4,
+                     'type': 'fixed', 'mac_addr': 'aa:aa:aa:aa:aa:aa'}
                 ],
                 'network_2': [
-                    {'addr': '192.168.0.1', 'version': 4},
-                    {'addr': 'fe80::beef', 'version': 6},
+                    {'addr': '192.168.0.1', 'version': 4,
+                     'type': 'fixed', 'mac_addr': 'aa:aa:aa:aa:aa:aa'},
+                    {'addr': 'fe80::beef', 'version': 6,
+                     'type': 'fixed', 'mac_addr': 'aa:aa:aa:aa:aa:aa'}
                 ],
             },
         }
         output = self.index_serializer.serialize(fixture)
         root = etree.XML(output)
-        xmlutil.validate_schema(root, 'addresses')
+        xmlutil.validate_schema(root, 'addresses', version='v3')
         addresses_dict = fixture['addresses']
         network_elems = root.findall('{0}network'.format(NS))
         self.assertEqual(len(network_elems), 2)
@@ -3583,6 +3607,10 @@ class TestAddressesXMLSerialization(test.TestCase):
                                  str(ip['version']))
                 self.assertEqual(str(ip_elem.get('addr')),
                                  str(ip['addr']))
+                self.assertEqual(str(ip_elem.get('type')),
+                                 str(ip['type']))
+                self.assertEqual(str(ip_elem.get('mac_addr')),
+                                 str(ip['mac_addr']))
 
 
 class ServersViewBuilderTest(test.TestCase):
@@ -3616,7 +3644,7 @@ class ServersViewBuilderTest(test.TestCase):
                                                                 floaters)
 
         self.uuid = self.instance['uuid']
-        self.view_builder = views.servers.ViewBuilder()
+        self.view_builder = views.servers.ViewBuilderV3()
         self.request = fakes.HTTPRequestV3.blank("")
 
     def test_get_flavor_valid_instance_type(self):
@@ -3710,8 +3738,10 @@ class ServersViewBuilderTest(test.TestCase):
                 },
                 "addresses": {
                     'test1': [
-                        {'version': 4, 'addr': '192.168.1.100'},
-                        {'version': 6, 'addr': '2001:db8:0:1::1'}
+                        {'version': 4, 'addr': '192.168.1.100',
+                         'type': 'fixed', 'mac_addr': 'aa:aa:aa:aa:aa:aa'},
+                        {'version': 6, 'addr': '2001:db8:0:1::1',
+                         'type': 'fixed', 'mac_addr': 'aa:aa:aa:aa:aa:aa'}
                     ]
                 },
                 "metadata": {},
@@ -3782,8 +3812,10 @@ class ServersViewBuilderTest(test.TestCase):
                 },
                 "addresses": {
                     'test1': [
-                        {'version': 4, 'addr': '192.168.1.100'},
-                        {'version': 6, 'addr': '2001:db8:0:1::1'}
+                        {'version': 4, 'addr': '192.168.1.100',
+                         'type': 'fixed', 'mac_addr': 'aa:aa:aa:aa:aa:aa'},
+                        {'version': 6, 'addr': '2001:db8:0:1::1',
+                         'type': 'fixed', 'mac_addr': 'aa:aa:aa:aa:aa:aa'}
                     ]
                 },
                 "metadata": {},
@@ -3928,8 +3960,10 @@ class ServersViewBuilderTest(test.TestCase):
                 },
                 "addresses": {
                     'test1': [
-                        {'version': 4, 'addr': '192.168.1.100'},
-                        {'version': 6, 'addr': '2001:db8:0:1::1'}
+                        {'version': 4, 'addr': '192.168.1.100',
+                         'type': 'fixed', 'mac_addr': 'aa:aa:aa:aa:aa:aa'},
+                        {'version': 6, 'addr': '2001:db8:0:1::1',
+                         'type': 'fixed', 'mac_addr': 'aa:aa:aa:aa:aa:aa'}
                     ]
                 },
                 "metadata": {},
@@ -3988,8 +4022,10 @@ class ServersViewBuilderTest(test.TestCase):
                 },
                 "addresses": {
                     'test1': [
-                        {'version': 4, 'addr': '192.168.1.100'},
-                        {'version': 6, 'addr': '2001:db8:0:1::1'}
+                        {'version': 4, 'addr': '192.168.1.100',
+                         'type': 'fixed', 'mac_addr': 'aa:aa:aa:aa:aa:aa'},
+                        {'version': 6, 'addr': '2001:db8:0:1::1',
+                         'type': 'fixed', 'mac_addr': 'aa:aa:aa:aa:aa:aa'},
                     ]
                 },
                 "metadata": {},
@@ -4050,8 +4086,10 @@ class ServersViewBuilderTest(test.TestCase):
                 },
                 "addresses": {
                     'test1': [
-                        {'version': 4, 'addr': '192.168.1.100'},
-                        {'version': 6, 'addr': '2001:db8:0:1::1'}
+                        {'version': 4, 'addr': '192.168.1.100',
+                         'type': 'fixed', 'mac_addr': 'aa:aa:aa:aa:aa:aa'},
+                        {'version': 6, 'addr': '2001:db8:0:1::1',
+                         'type': 'fixed', 'mac_addr': 'aa:aa:aa:aa:aa:aa'},
                     ]
                 },
                 "metadata": {},
@@ -4116,8 +4154,10 @@ class ServersViewBuilderTest(test.TestCase):
                 },
                 "addresses": {
                     'test1': [
-                        {'version': 4, 'addr': '192.168.1.100'},
-                        {'version': 6, 'addr': '2001:db8:0:1::1'}
+                        {'version': 4, 'addr': '192.168.1.100',
+                         'type': 'fixed', 'mac_addr': 'aa:aa:aa:aa:aa:aa'},
+                        {'version': 6, 'addr': '2001:db8:0:1::1',
+                         'type': 'fixed', 'mac_addr': 'aa:aa:aa:aa:aa:aa'},
                     ]
                 },
                 "metadata": {"Open": "Stack"},
@@ -4186,20 +4226,28 @@ class ServerXMLSerializationTest(test.TestCase):
                         {
                             "version": 4,
                             "addr": "67.23.10.138",
+                            "type": "fixed",
+                            "mac_addr": "aa:aa:aa:aa:aa:aa"
                         },
                         {
                             "version": 6,
                             "addr": "::babe:67.23.10.138",
+                            "type": "fixed",
+                            "mac_addr": "aa:aa:aa:aa:aa:aa"
                         },
                     ],
                     "network_two": [
                         {
                             "version": 4,
                             "addr": "67.23.10.139",
+                            "type": "fixed",
+                            "mac_addr": "aa:aa:aa:aa:aa:aa"
                         },
                         {
                             "version": 6,
                             "addr": "::babe:67.23.10.139",
+                            "type": "fixed",
+                            "mac_addr": "aa:aa:aa:aa:aa:aa"
                         },
                     ],
                 },
@@ -4263,20 +4311,28 @@ class ServerXMLSerializationTest(test.TestCase):
                         {
                             "version": 4,
                             "addr": "67.23.10.138",
+                            "type": "fixed",
+                            "mac_addr": "aa:aa:aa:aa:aa:aa"
                         },
                         {
                             "version": 6,
                             "addr": "::babe:67.23.10.138",
+                            "type": "fixed",
+                            "mac_addr": "aa:aa:aa:aa:aa:aa"
                         },
                     ],
                     "network_two": [
                         {
                             "version": 4,
                             "addr": "67.23.10.139",
+                            "type": "fixed",
+                            "mac_addr": "aa:aa:aa:aa:aa:aa"
                         },
                         {
                             "version": 6,
                             "addr": "::babe:67.23.10.139",
+                            "type": "fixed",
+                            "mac_addr": "aa:aa:aa:aa:aa:aa"
                         },
                     ],
                 },
@@ -4299,7 +4355,7 @@ class ServerXMLSerializationTest(test.TestCase):
 
         output = serializer.serialize(fixture)
         root = etree.XML(output)
-        xmlutil.validate_schema(root, 'server')
+        xmlutil.validate_schema(root, 'server', version='v3')
 
         server_dict = fixture['server']
 
@@ -4352,6 +4408,10 @@ class ServerXMLSerializationTest(test.TestCase):
                                  str(ip['version']))
                 self.assertEqual(str(ip_elem.get('addr')),
                                  str(ip['addr']))
+                self.assertEqual(str(ip_elem.get('type')),
+                                 str(ip['type']))
+                self.assertEqual(str(ip_elem.get('mac_addr')),
+                                 str(ip['mac_addr']))
 
     def test_create(self):
         serializer = servers.FullServerTemplate()
@@ -4393,20 +4453,28 @@ class ServerXMLSerializationTest(test.TestCase):
                         {
                             "version": 4,
                             "addr": "67.23.10.138",
+                            "type": "fixed",
+                            "mac_addr": "aa:aa:aa:aa:aa:aa"
                         },
                         {
                             "version": 6,
                             "addr": "::babe:67.23.10.138",
+                            "type": "fixed",
+                            "mac_addr": "aa:aa:aa:aa:aa:aa"
                         },
                     ],
                     "network_two": [
                         {
                             "version": 4,
                             "addr": "67.23.10.139",
+                            "type": "fixed",
+                            "mac_addr": "aa:aa:aa:aa:aa:aa"
                         },
                         {
                             "version": 6,
                             "addr": "::babe:67.23.10.139",
+                            "type": "fixed",
+                            "mac_addr": "aa:aa:aa:aa:aa:aa"
                         },
                     ],
                 },
@@ -4429,7 +4497,7 @@ class ServerXMLSerializationTest(test.TestCase):
 
         output = serializer.serialize(fixture)
         root = etree.XML(output)
-        xmlutil.validate_schema(root, 'server')
+        xmlutil.validate_schema(root, 'server', version='v3')
 
         server_dict = fixture['server']
 
@@ -4482,6 +4550,10 @@ class ServerXMLSerializationTest(test.TestCase):
                                  str(ip['version']))
                 self.assertEqual(str(ip_elem.get('addr')),
                                  str(ip['addr']))
+                self.assertEqual(str(ip_elem.get('type')),
+                                 str(ip['type']))
+                self.assertEqual(str(ip_elem.get('mac_addr')),
+                                 str(ip['mac_addr']))
 
     def test_index(self):
         serializer = servers.MinimalServersTemplate()
@@ -4525,7 +4597,7 @@ class ServerXMLSerializationTest(test.TestCase):
 
         output = serializer.serialize(fixture)
         root = etree.XML(output)
-        xmlutil.validate_schema(root, 'servers_index')
+        xmlutil.validate_schema(root, 'servers_index', version='v3')
         server_elems = root.findall('{0}server'.format(NS))
         self.assertEqual(len(server_elems), 2)
         for i, server_elem in enumerate(server_elems):
@@ -4588,7 +4660,7 @@ class ServerXMLSerializationTest(test.TestCase):
 
         output = serializer.serialize(fixture)
         root = etree.XML(output)
-        xmlutil.validate_schema(root, 'servers_index')
+        xmlutil.validate_schema(root, 'servers_index', version='v3')
         server_elems = root.findall('{0}server'.format(NS))
         self.assertEqual(len(server_elems), 2)
         for i, server_elem in enumerate(server_elems):
@@ -4656,10 +4728,16 @@ class ServerXMLSerializationTest(test.TestCase):
                         {
                             "version": 4,
                             "addr": "67.23.10.138",
+                            "type": "fixed",
+                            "mac_addr": "aa:aa:aa:aa:aa:aa"
+
                         },
                         {
                             "version": 6,
                             "addr": "::babe:67.23.10.138",
+                            "type": "fixed",
+                            "mac_addr": "aa:aa:aa:aa:aa:aa"
+
                         },
                     ],
                 },
@@ -4712,10 +4790,16 @@ class ServerXMLSerializationTest(test.TestCase):
                         {
                             "version": 4,
                             "addr": "67.23.10.138",
+                            "type": "fixed",
+                            "mac_addr": "aa:aa:aa:aa:aa:aa"
+
                         },
                         {
                             "version": 6,
                             "addr": "::babe:67.23.10.138",
+                            "type": "fixed",
+                            "mac_addr": "aa:aa:aa:aa:aa:aa"
+
                         },
                     ],
                 },
@@ -4737,7 +4821,7 @@ class ServerXMLSerializationTest(test.TestCase):
 
         output = serializer.serialize(fixture)
         root = etree.XML(output)
-        xmlutil.validate_schema(root, 'servers')
+        xmlutil.validate_schema(root, 'servers', version='v3')
         server_elems = root.findall('{0}server'.format(NS))
         self.assertEqual(len(server_elems), 2)
         for i, server_elem in enumerate(server_elems):
@@ -4792,6 +4876,10 @@ class ServerXMLSerializationTest(test.TestCase):
                                      str(ip['version']))
                     self.assertEqual(str(ip_elem.get('addr')),
                                      str(ip['addr']))
+                    self.assertEqual(str(ip_elem.get('type')),
+                                 str(ip['type']))
+                self.assertEqual(str(ip_elem.get('mac_addr')),
+                                 str(ip['mac_addr']))
 
     def test_update(self):
         serializer = servers.ServerTemplate()
@@ -4832,20 +4920,28 @@ class ServerXMLSerializationTest(test.TestCase):
                         {
                             "version": 4,
                             "addr": "67.23.10.138",
+                            "type": "fixed",
+                            "mac_addr": "aa:aa:aa:aa:aa:aa"
                         },
                         {
                             "version": 6,
                             "addr": "::babe:67.23.10.138",
+                            "type": "fixed",
+                            "mac_addr": "aa:aa:aa:aa:aa:aa"
                         },
                     ],
                     "network_two": [
                         {
                             "version": 4,
                             "addr": "67.23.10.139",
+                            "type": "fixed",
+                            "mac_addr": "aa:aa:aa:aa:aa:aa"
                         },
                         {
                             "version": 6,
                             "addr": "::babe:67.23.10.139",
+                            "type": "fixed",
+                            "mac_addr": "aa:aa:aa:aa:aa:aa"
                         },
                     ],
                 },
@@ -4874,7 +4970,7 @@ class ServerXMLSerializationTest(test.TestCase):
 
         output = serializer.serialize(fixture)
         root = etree.XML(output)
-        xmlutil.validate_schema(root, 'server')
+        xmlutil.validate_schema(root, 'server', version='v3')
 
         server_dict = fixture['server']
 
@@ -4927,6 +5023,10 @@ class ServerXMLSerializationTest(test.TestCase):
                                  str(ip['version']))
                 self.assertEqual(str(ip_elem.get('addr')),
                                  str(ip['addr']))
+                self.assertEqual(str(ip_elem.get('type')),
+                                 str(ip['type']))
+                self.assertEqual(str(ip_elem.get('mac_addr')),
+                                 str(ip['mac_addr']))
 
         fault_root = root.find('{0}fault'.format(NS))
         fault_dict = server_dict['fault']
@@ -4977,20 +5077,28 @@ class ServerXMLSerializationTest(test.TestCase):
                         {
                             "version": 4,
                             "addr": "67.23.10.138",
+                            "type": "fixed",
+                            "mac_addr": "aa:aa:aa:aa:aa:aa"
                         },
                         {
                             "version": 6,
                             "addr": "::babe:67.23.10.138",
+                            "type": "fixed",
+                            "mac_addr": "aa:aa:aa:aa:aa:aa"
                         },
                     ],
                     "network_two": [
                         {
                             "version": 4,
                             "addr": "67.23.10.139",
+                            "type": "fixed",
+                            "mac_addr": "aa:aa:aa:aa:aa:aa"
                         },
                         {
                             "version": 6,
                             "addr": "::babe:67.23.10.139",
+                            "type": "fixed",
+                            "mac_addr": "aa:aa:aa:aa:aa:aa"
                         },
                     ],
                 },
@@ -5013,7 +5121,7 @@ class ServerXMLSerializationTest(test.TestCase):
 
         output = serializer.serialize(fixture)
         root = etree.XML(output)
-        xmlutil.validate_schema(root, 'server')
+        xmlutil.validate_schema(root, 'server', version='v3')
 
         server_dict = fixture['server']
 
@@ -5066,6 +5174,10 @@ class ServerXMLSerializationTest(test.TestCase):
                                  str(ip['version']))
                 self.assertEqual(str(ip_elem.get('addr')),
                                  str(ip['addr']))
+                self.assertEqual(str(ip_elem.get('type')),
+                                 str(ip['type']))
+                self.assertEqual(str(ip_elem.get('mac_addr')),
+                                 str(ip['mac_addr']))
 
 
 class ServersAllExtensionsTestCase(test.TestCase):

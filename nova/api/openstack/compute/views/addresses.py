@@ -44,3 +44,15 @@ class ViewBuilder(common.ViewBuilder):
             network_dict = self.show(network, label)
             addresses[label] = network_dict[label]
         return dict(addresses=addresses)
+
+
+class ViewBuilderV3(ViewBuilder):
+    """Models server addresses as a dictionary."""
+    def basic(self, ip):
+        """Return a dictionary describing an IP address."""
+        return {
+            "version": ip["version"],
+            "addr": ip["address"],
+            "type": ip["type"],
+            "mac_addr": ip['mac_address'],
+        }

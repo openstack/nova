@@ -19,7 +19,7 @@ from webob import exc
 
 import nova
 from nova.api.openstack import common
-from nova.api.openstack.compute.views import addresses as view_addresses
+from nova.api.openstack.compute.views import addresses as views_addresses
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
@@ -32,7 +32,8 @@ def make_network(elem):
     ip = xmlutil.SubTemplateElement(elem, 'ip', selector=1)
     ip.set('version')
     ip.set('addr')
-
+    ip.set('type')
+    ip.set('mac_addr')
 
 network_nsmap = {None: xmlutil.XMLNS_V11}
 
@@ -57,7 +58,7 @@ class AddressesTemplate(xmlutil.TemplateBuilder):
 class IPsController(wsgi.Controller):
     """The servers addresses API controller for the OpenStack API."""
 
-    _view_builder_class = view_addresses.ViewBuilder
+    _view_builder_class = views_addresses.ViewBuilderV3
 
     def __init__(self, **kwargs):
         super(IPsController, self).__init__(**kwargs)
