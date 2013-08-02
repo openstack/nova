@@ -243,7 +243,6 @@ class DomainEntry(DNSEntry):
                      'dc': [name]}
             self.lobj.add_s(newdn, create_modlist(attrs))
             return self.subentry_with_name(name)
-        self.update_soa()
 
     def remove_entry(self, name):
         entry = self.subentry_with_name(name)
