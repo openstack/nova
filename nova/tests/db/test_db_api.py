@@ -1564,7 +1564,8 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         result = db.instance_get_all_by_filters(self.ctxt, {})
         self._assertEqualListsOfObjects([inst1, inst2], result,
             ignored_keys=['metadata', 'system_metadata',
-                          'deleted', 'deleted_at', 'info_cache'])
+                          'deleted', 'deleted_at', 'info_cache',
+                          'pci_devices'])
 
     def test_instance_get_all_by_filters_deleted_and_soft_deleted(self):
         inst1 = self.create_instance_with_args()
@@ -1575,7 +1576,8 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
                                                 {'deleted': True})
         self._assertEqualListsOfObjects([inst1, inst2], result,
             ignored_keys=['metadata', 'system_metadata',
-                          'deleted', 'deleted_at', 'info_cache'])
+                          'deleted', 'deleted_at', 'info_cache',
+                          'pci_devices'])
 
     def test_instance_get_all_by_filters_deleted_no_soft_deleted(self):
         inst1 = self.create_instance_with_args()
@@ -1587,7 +1589,7 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
                                                  'soft_deleted': False})
         self._assertEqualListsOfObjects([inst1], result,
                 ignored_keys=['deleted', 'deleted_at', 'metadata',
-                              'system_metadata', 'info_cache'])
+                              'system_metadata', 'info_cache', 'pci_devices'])
 
     def test_instance_get_all_by_filters_alive_and_soft_deleted(self):
         inst1 = self.create_instance_with_args()
@@ -1632,7 +1634,7 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         results = db.instance_get_all_hung_in_rebooting(self.ctxt, 10)
         self._assertEqualListsOfObjects([instance], results,
             ignored_keys=['task_state', 'info_cache', 'security_groups',
-                          'metadata', 'system_metadata'])
+                          'metadata', 'system_metadata', 'pci_devices'])
         db.instance_update(self.ctxt, instance['uuid'], {"task_state": None})
 
         # Ensure the newly rebooted instance is not returned.
@@ -3312,7 +3314,8 @@ class FixedIPTestCase(BaseInstanceTypeTestCase):
         # Instance check here
         instance_data = db.instance_get_by_uuid(self.ctxt, instance_uuid)
         ignored_keys = ['info_cache', 'system_metadata',
-                        'security_groups', 'metadata']  # HOW ????
+                        'security_groups', 'metadata',
+                        'pci_devices']  # HOW ????
         self._assertEqualObjects(instance_data, fixed_ip_data[2], ignored_keys)
 
     def test_fixed_ip_update_not_found_for_address(self):
@@ -5106,7 +5109,8 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
                                  disk_available_least=100,
                                  hypervisor_hostname='abracadabra104',
                                  host_ip='127.0.0.1',
-                                 supported_instances='')
+                                 supported_instances='',
+                                 pci_stats='')
         # add some random stats
         self.stats = dict(num_instances=3, num_proj_12345=2,
                      num_proj_23456=2, num_vm_building=3)
@@ -6513,3 +6517,169 @@ class InstanceGroupPoliciesDBApiTestCase(InstanceGroupDBApiTestCase):
         self.assertRaises(exception.InstanceGroupPolicyNotFound,
                           db.instance_group_policy_delete,
                           self.context, id, 'invalid_policy')
+
+
+class PciDeviceDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
+    def setUp(self):
+        super(PciDeviceDBApiTestCase, self).setUp()
+        self.user_id = 'fake_user'
+        self.project_id = 'fake_project'
+        self.context = context.RequestContext(self.user_id, self.project_id)
+        self.admin_context = context.get_admin_context()
+        self.ignored_keys = ['id', 'deleted', 'deleted_at', 'updated_at',
+                             'created_at']
+
+    def _get_fake_pci_devs(self):
+        return {'id': 3353,
+                'compute_node_id': 1,
+                'address': '0000:0f:08:07',
+                'vendor_id': '8086',
+                'product_id': '1520',
+                'dev_type': 'type-VF',
+                'dev_id': 'pci_0000:0f:08:07',
+                'extra_info': None,
+                'label': 'label_8086_1520',
+                'status': 'available',
+                'instance_uuid': '00000000-0000-0000-0000-000000000010',
+                }, {'id': 3356,
+                'compute_node_id': 1,
+                'address': '0000:0f:03:07',
+                'vendor_id': '8083',
+                'product_id': '1523',
+                'dev_type': 'type-VF',
+                'dev_id': 'pci_0000:0f:08:07',
+                'extra_info': None,
+                'label': 'label_8086_1520',
+                'status': 'available',
+                'instance_uuid': '00000000-0000-0000-0000-000000000010',
+                }
+
+    def _create_fake_pci_devs(self):
+        v1, v2 = self._get_fake_pci_devs()
+        db.pci_device_update(self.admin_context, v1['compute_node_id'],
+                             v1['address'], v1)
+        db.pci_device_update(self.admin_context, v2['compute_node_id'],
+                             v2['address'], v2)
+        return (v1, v2)
+
+    def test_pci_device_get_by_addr(self):
+        v1, v2 = self._create_fake_pci_devs()
+        result = db.pci_device_get_by_addr(self.admin_context, 1,
+                                           '0000:0f:08:07')
+        self._assertEqualObjects(v1, result, self.ignored_keys)
+
+    def test_pci_device_get_by_addr_not_found(self):
+        self._create_fake_pci_devs()
+        self.assertRaises(exception.PciDeviceNotFound,
+                          db.pci_device_get_by_addr, self.admin_context,
+                          1, '0000:0f:08:09')
+
+    def test_pci_device_get_by_addr_low_priv(self):
+        self._create_fake_pci_devs()
+        self.assertRaises(exception.AdminRequired,
+                          db.pci_device_get_by_addr,
+                          self.context, 1, '0000:0f:08:07')
+
+    def test_pci_device_get_by_id(self):
+        v1, v2 = self._create_fake_pci_devs()
+        result = db.pci_device_get_by_id(self.admin_context, 3353)
+        ignored_keys = ['id', 'deleted', 'deleted_at', 'updated_at',
+                        'created_at']
+        self._assertEqualObjects(v1, result, self.ignored_keys)
+
+    def test_pci_device_get_by_id_not_found(self):
+        self._create_fake_pci_devs()
+        self.assertRaises(exception.PciDeviceNotFoundById,
+                          db.pci_device_get_by_id,
+                          self.admin_context, 3354)
+
+    def test_pci_device_get_by_id_low_priv(self):
+        self._create_fake_pci_devs()
+        self.assertRaises(exception.AdminRequired,
+                          db.pci_device_get_by_id,
+                          self.context, 3553)
+
+    def test_pci_device_get_all_by_node(self):
+        v1, v2 = self._create_fake_pci_devs()
+        results = db.pci_device_get_all_by_node(self.admin_context, 1)
+        self._assertEqualListsOfObjects(results, [v1, v2], self.ignored_keys)
+
+    def test_pci_device_get_all_by_node_empty(self):
+        v1, v2 = self._get_fake_pci_devs()
+        results = db.pci_device_get_all_by_node(self.admin_context, 9)
+        self.assertEqual(len(results), 0)
+
+    def test_pci_device_get_all_by_node_low_priv(self):
+        self._create_fake_pci_devs()
+        self.assertRaises(exception.AdminRequired,
+                          db.pci_device_get_all_by_node,
+                          self.context, 1)
+
+    def test_pci_device_get_by_instance_uuid(self):
+        v1, v2 = self._get_fake_pci_devs()
+        v1['status'] = 'allocated'
+        v2['status'] = 'allocated'
+        db.pci_device_update(self.admin_context, v1['compute_node_id'],
+                             v1['address'], v1)
+        db.pci_device_update(self.admin_context, v2['compute_node_id'],
+                             v2['address'], v2)
+        results = db.pci_device_get_all_by_instance_uuid(
+            self.context,
+            '00000000-0000-0000-0000-000000000010')
+        self._assertEqualListsOfObjects(results, [v1, v2], self.ignored_keys)
+
+    def test_pci_device_get_by_instance_uuid_check_status(self):
+        v1, v2 = self._get_fake_pci_devs()
+        v1['status'] = 'allocated'
+        v2['status'] = 'claimed'
+        db.pci_device_update(self.admin_context, v1['compute_node_id'],
+                             v1['address'], v1)
+        db.pci_device_update(self.admin_context, v2['compute_node_id'],
+                             v2['address'], v2)
+        results = db.pci_device_get_all_by_instance_uuid(
+            self.context,
+            '00000000-0000-0000-0000-000000000010')
+        self._assertEqualListsOfObjects(results, [v1], self.ignored_keys)
+
+    def test_pci_device_update(self):
+        v1, v2 = self._get_fake_pci_devs()
+        v1['status'] = 'allocated'
+        db.pci_device_update(self.admin_context, v1['compute_node_id'],
+                             v1['address'], v1)
+        result = db.pci_device_get_by_addr(
+            self.admin_context, 1, '0000:0f:08:07')
+        self._assertEqualObjects(v1, result, self.ignored_keys)
+
+        v1['status'] = 'claimed'
+        db.pci_device_update(self.admin_context, v1['compute_node_id'],
+                             v1['address'], v1)
+        result = db.pci_device_get_by_addr(
+            self.admin_context, 1, '0000:0f:08:07')
+        self._assertEqualObjects(v1, result, self.ignored_keys)
+
+    def test_pci_device_update_low_priv(self):
+        v1, v2 = self._get_fake_pci_devs()
+        self.assertRaises(exception.AdminRequired,
+                          db.pci_device_update, self.context,
+                          v1['compute_node_id'], v1['address'], v1)
+
+    def test_pci_device_destroy(self):
+        v1, v2 = self._create_fake_pci_devs()
+        results = db.pci_device_get_all_by_node(self.admin_context, 1)
+        self._assertEqualListsOfObjects(results, [v1, v2], self.ignored_keys)
+        db.pci_device_destroy(self.admin_context, v1['compute_node_id'],
+                              v1['address'])
+        results = db.pci_device_get_all_by_node(self.admin_context, 1)
+        self._assertEqualListsOfObjects(results, [v2], self.ignored_keys)
+
+    def test_pci_device_destroy_exception(self):
+        v1, v2 = self._get_fake_pci_devs()
+        db.pci_device_update(self.admin_context, v1['compute_node_id'],
+                             v1['address'], v1)
+        results = db.pci_device_get_all_by_node(self.admin_context, 1)
+        self._assertEqualListsOfObjects(results, [v1], self.ignored_keys)
+        self.assertRaises(exception.PciDeviceNotFound,
+                          db.pci_device_destroy,
+                          self.admin_context,
+                          v2['compute_node_id'],
+                          v2['address'])

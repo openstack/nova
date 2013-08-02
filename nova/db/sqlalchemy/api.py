@@ -1668,11 +1668,18 @@ def _instances_fill_metadata(context, instances, manual_joins=None):
         for row in _instance_system_metadata_get_multi(context, uuids):
             sys_meta[row['instance_uuid']].append(row)
 
+    pcidevs = collections.defaultdict(list)
+    if 'pci_devices' in manual_joins:
+        for row in _instance_pcidevs_get_multi(context, uuids):
+            pcidevs[row['instance_uuid']].append(row)
+
     filled_instances = []
     for inst in instances:
         inst = dict(inst.iteritems())
         inst['system_metadata'] = sys_meta[inst['uuid']]
         inst['metadata'] = meta[inst['uuid']]
+        if 'pci_devices' in manual_joins:
+            inst['pci_devices'] = pcidevs[inst['uuid']]
         filled_instances.append(inst)
 
     return filled_instances
@@ -1680,7 +1687,7 @@ def _instances_fill_metadata(context, instances, manual_joins=None):
 
 def _manual_join_columns(columns_to_join):
     manual_joins = []
-    for column in ('metadata', 'system_metadata'):
+    for column in ('metadata', 'system_metadata', 'pci_devices'):
         if column in columns_to_join:
             columns_to_join.remove(column)
             manual_joins.append(column)
@@ -5774,3 +5781,74 @@ def instance_group_policies_get(context, group_uuid):
                            base_model=models.InstanceGroupPolicy).\
                     filter_by(group_id=id).all()
     return [policy[0] for policy in policies]
+
+
+####################
+
+
+@require_admin_context
+def pci_device_get_by_addr(context, node_id, dev_addr):
+    pci_dev_ref = model_query(context, models.PciDevice).\
+                        filter_by(compute_node_id=node_id).\
+                        filter_by(address=dev_addr).\
+                        first()
+    if not pci_dev_ref:
+        raise exception.PciDeviceNotFound(node_id=node_id, address=dev_addr)
+    return pci_dev_ref
+
+
+@require_admin_context
+def pci_device_get_by_id(context, id):
+    pci_dev_ref = model_query(context, models.PciDevice).\
+                        filter_by(id=id).\
+                        first()
+    if not pci_dev_ref:
+        raise exception.PciDeviceNotFoundById(id=id)
+    return pci_dev_ref
+
+
+@require_admin_context
+def pci_device_get_all_by_node(context, node_id):
+    return model_query(context, models.PciDevice).\
+                       filter_by(compute_node_id=node_id).\
+                       all()
+
+
+@require_context
+def pci_device_get_all_by_instance_uuid(context, instance_uuid):
+    return model_query(context, models.PciDevice).\
+                       filter_by(status='allocated').\
+                       filter_by(instance_uuid=instance_uuid).\
+                       all()
+
+
+def _instance_pcidevs_get_multi(context, instance_uuids, session=None):
+    return model_query(context, models.PciDevice, session=session).\
+        filter_by(status='allocated').\
+        filter(models.PciDevice.instance_uuid.in_(instance_uuids))
+
+
+@require_admin_context
+def pci_device_destroy(context, node_id, address):
+    result = model_query(context, models.PciDevice).\
+                         filter_by(compute_node_id=node_id).\
+                         filter_by(address=address).\
+                         soft_delete()
+    if not result:
+        raise exception.PciDeviceNotFound(node_id=node_id, address=address)
+
+
+@require_admin_context
+def pci_device_update(context, node_id, address, values):
+    session = get_session()
+    with session.begin():
+        device = model_query(context, models.PciDevice, session=session,
+                             read_deleted="no").\
+                        filter_by(compute_node_id=node_id).\
+                        filter_by(address=address).\
+                        first()
+        if not device:
+            device = models.PciDevice()
+        device.update(values)
+        session.add(device)
+    return device

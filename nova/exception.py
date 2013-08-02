@@ -1368,3 +1368,11 @@ class ImageDownloadModuleConfigurationError(ImageDownloadModuleError):
 
 class PciDeviceWrongAddressFormat(NovaException):
     msg_fmt = _("The PCI address %(address)s has an incorrect format.")
+
+
+class PciDeviceNotFoundById(NotFound):
+    msg_fmt = _("PCI device %(id)s not found")
+
+
+class PciDeviceNotFound(NovaException):
+    msg_fmt = _("PCI Device %(node_id)s:%(address)s not found.")

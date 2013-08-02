@@ -112,6 +112,10 @@ class ComputeNode(BASE, NovaBase):
     host_ip = Column(types.IPAddress())
     supported_instances = Column(Text)
 
+    # Note(yongli): json string PCI Stats
+    # '{"vendor_id":"8086", "product_id":"1234", "count":3 }'
+    pci_stats = Column(Text, nullable=True)
+
 
 class ComputeNodeStat(BASE, NovaBase):
     """Stats related to the current workload of a compute host that are
@@ -1365,3 +1369,46 @@ class InstanceGroup(BASE, NovaBase):
     @property
     def members(self):
         return [m.instance_id for m in self._members]
+
+
+class PciDevice(BASE, NovaBase):
+    """
+    Represents a PCI host device that can be passed through to instances.
+    """
+    __tablename__ = 'pci_devices'
+    __table_args__ = (
+        Index('ix_pci_devices_compute_node_id_deleted',
+              'compute_node_id', 'deleted'),
+        Index('ix_pci_devices_instance_uuid_deleted',
+              'instance_uuid', 'deleted'),
+        schema.UniqueConstraint(
+            "compute_node_id", "address", "deleted",
+            name="uniq_pci_devices0compute_node_id0address0deleted")
+    )
+    id = Column(Integer, primary_key=True)
+
+    compute_node_id = Column(Integer, ForeignKey('compute_nodes.id'),
+                             nullable=False)
+
+    # physical address of device domain:bus:slot.func (0000:09:01.1)
+    address = Column(String(12), nullable=False)
+
+    vendor_id = Column(String(4), nullable=False)
+    product_id = Column(String(4), nullable=False)
+    dev_type = Column(String(8), nullable=False)
+    dev_id = Column(String(255), nullable=True)
+
+    # label is abstract device name, that is used to unify devices with the
+    # same functionality with different addresses or host.
+    label = Column(String(255), nullable=False)
+
+    status = Column(String(36), nullable=False)
+
+    extra_info = Column(Text, nullable=True)
+
+    instance_uuid = Column(String(36), nullable=True)
+    instance = relationship(Instance, backref="pci_devices",
+                            foreign_keys=instance_uuid,
+                            primaryjoin='and_('
+                            'PciDevice.instance_uuid == Instance.uuid,'
+                            'PciDevice.deleted == 0)')
