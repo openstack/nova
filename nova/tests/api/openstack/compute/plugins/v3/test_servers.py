@@ -1103,19 +1103,22 @@ class ServersControllerTest(ControllerTest):
         self.assertEqual(res_dict['server']['accessIPv6'], 'beef::123')
 
     def test_update_server_invalid_xml_raises_lookup(self):
-        req = fakes.HTTPRequestV3.blank('/servers/%s' % FAKE_UUID)
+        req = webob.Request.blank('/v3/servers/%s' % FAKE_UUID)
         req.method = 'PUT'
         req.content_type = 'application/xml'
         #xml request which raises LookupError
         req.body = """<?xml version="1.0" encoding="TF-8"?>
             <metadata
             xmlns="http://docs.openstack.org/compute/api/v1.1"
-            key="Label"></meta>"""
-        res = req.get_response(fakes.wsgi_app())
+            key="Label"></metadata>"""
+        res = req.get_response(fakes.wsgi_app_v3())
         self.assertEqual(res.status_int, 400)
+        res_dict = jsonutils.loads(res.body)
+        self.assertEqual(res_dict['badRequest']['message'],
+                         "Malformed request body")
 
     def test_update_server_invalid_xml_raises_expat(self):
-        req = fakes.HTTPRequestV3.blank('/servers/%s' % FAKE_UUID)
+        req = webob.Request.blank('/v3/servers/%s' % FAKE_UUID)
         req.method = 'PUT'
         req.content_type = 'application/xml'
         #xml request which raises ExpatError
@@ -1123,8 +1126,11 @@ class ServersControllerTest(ControllerTest):
             <metadata
             xmlns="http://docs.openstack.org/compute/api/v1.1"
             key="Label"></meta>"""
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(fakes.wsgi_app_v3())
         self.assertEqual(res.status_int, 400)
+        res_dict = jsonutils.loads(res.body)
+        self.assertEqual(res_dict['badRequest']['message'],
+                         "Malformed request body")
 
     def test_update_server_name(self):
         self.stubs.Set(db, 'instance_get',
