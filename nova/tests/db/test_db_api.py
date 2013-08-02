@@ -4146,11 +4146,34 @@ class BlockDeviceMappingTestCase(test.TestCase):
         self.assertEqual(bdm_real['device_name'], 'fake_name')
         self.assertEqual(bdm_real['destination_type'], 'camelot')
 
+    def test_block_device_mapping_update_or_create_multiple_ephemeral(self):
+        uuid = self.instance['uuid']
+        values = {
+            'instance_uuid': uuid,
+            'source_type': 'blank',
+            'guest_format': 'myformat',
+        }
+
+        bdm1 = dict(values)
+        bdm1['device_name'] = '/dev/sdb'
+        db.block_device_mapping_update_or_create(self.ctxt, bdm1, legacy=False)
+
+        bdm2 = dict(values)
+        bdm2['device_name'] = '/dev/sdc'
+        db.block_device_mapping_update_or_create(self.ctxt, bdm2, legacy=False)
+
+        bdm_real = db.block_device_mapping_get_all_by_instance(self.ctxt, uuid)
+        self.assertEqual(len(bdm_real), 2)
+        for bdm, device_name in zip(bdm_real, ['/dev/sdb', '/dev/sdc']):
+            self.assertEqual(bdm['device_name'], device_name)
+            self.assertEqual(bdm['guest_format'], 'myformat')
+
     def test_block_device_mapping_update_or_create_check_remove_virt(self):
         uuid = self.instance['uuid']
         values = {
             'instance_uuid': uuid,
             'source_type': 'blank',
+            'destination_type': 'local',
             'guest_format': 'swap',
         }
 
@@ -4168,27 +4191,6 @@ class BlockDeviceMappingTestCase(test.TestCase):
         self.assertEqual(bdm_real['source_type'], 'blank')
         self.assertEqual(bdm_real['guest_format'], 'swap')
         db.block_device_mapping_destroy(self.ctxt, bdm_real['id'])
-
-        # check that old ephemerals are deleted no matter what
-        val3 = dict(values)
-        val3['device_name'] = 'device3'
-        val3['guest_format'] = None
-        val4 = dict(values)
-        val4['device_name'] = 'device4'
-        val4['guest_format'] = None
-        db.block_device_mapping_create(self.ctxt, val3, legacy=False)
-        db.block_device_mapping_create(self.ctxt, val4, legacy=False)
-        bdm_real = db.block_device_mapping_get_all_by_instance(self.ctxt, uuid)
-        self.assertEqual(len(bdm_real), 2)
-
-        val5 = dict(values)
-        val5['device_name'] = 'device5'
-        val5['guest_format'] = None
-        db.block_device_mapping_update_or_create(self.ctxt, val5, legacy=False)
-        bdm_real = db.block_device_mapping_get_all_by_instance(self.ctxt, uuid)
-        self.assertEqual(len(bdm_real), 1)
-        bdm_real = bdm_real[0]
-        self.assertEqual(bdm_real['device_name'], 'device5')
 
     def test_block_device_mapping_get_all_by_instance(self):
         uuid1 = self.instance['uuid']
