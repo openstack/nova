@@ -98,3 +98,10 @@ class ViewBuilder(object):
             "unit": rate_limit["unit"],
             "next-available": timeutils.isotime(at=next_avail),
         }
+
+
+class ViewBuilderV3(ViewBuilder):
+
+    def build(self, rate_limits):
+        rate_limits = self._build_rate_limits(rate_limits)
+        return {"limits": {"rate": rate_limits}}

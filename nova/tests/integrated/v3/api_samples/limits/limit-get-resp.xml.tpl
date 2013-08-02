@@ -13,17 +13,4 @@
       <limit next-available="%(timestamp)s" unit="MINUTE" verb="GET" remaining="3" value="3"/>
     </rate>
   </rates>
-  <absolute>
-    <limit name="maxServerMeta" value="128"/>
-    <limit name="maxPersonality" value="5"/>
-    <limit name="maxImageMeta" value="128"/>
-    <limit name="maxPersonalitySize" value="10240"/>
-    <limit name="maxSecurityGroupRules" value="20"/>
-    <limit name="maxTotalKeypairs" value="100"/>
-    <limit name="maxSecurityGroups" value="10"/>
-    <limit name="maxTotalCores" value="20"/>
-    <limit name="maxTotalFloatingIps" value="10"/>
-    <limit name="maxTotalInstances" value="10"/>
-    <limit name="maxTotalRAMSize" value="51200"/>
-  </absolute>
 </limits>
