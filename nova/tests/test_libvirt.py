@@ -2503,6 +2503,80 @@ class LibvirtConnTestCase(test.TestCase):
 
         db.instance_destroy(self.context, instance_ref['uuid'])
 
+    def test_get_instance_disk_info_excludes_volumes(self):
+        # Test data
+        instance_ref = db.instance_create(self.context, self.test_instance)
+        dummyxml = ("<domain type='kvm'><name>instance-0000000a</name>"
+                    "<devices>"
+                    "<disk type='file'><driver name='qemu' type='raw'/>"
+                    "<source file='/test/disk'/>"
+                    "<target dev='vda' bus='virtio'/></disk>"
+                    "<disk type='file'><driver name='qemu' type='qcow2'/>"
+                    "<source file='/test/disk.local'/>"
+                    "<target dev='vdb' bus='virtio'/></disk>"
+                    "<disk type='file'><driver name='qemu' type='qcow2'/>"
+                    "<source file='/fake/path/to/volume1'/>"
+                    "<target dev='vdc' bus='virtio'/></disk>"
+                    "<disk type='file'><driver name='qemu' type='qcow2'/>"
+                    "<source file='/fake/path/to/volume2'/>"
+                    "<target dev='vdd' bus='virtio'/></disk>"
+                    "</devices></domain>")
+
+        # Preparing mocks
+        vdmock = self.mox.CreateMock(libvirt.virDomain)
+        self.mox.StubOutWithMock(vdmock, "XMLDesc")
+        vdmock.XMLDesc(0).AndReturn(dummyxml)
+
+        def fake_lookup(instance_name):
+            if instance_name == instance_ref['name']:
+                return vdmock
+        self.create_fake_libvirt_mock(lookupByName=fake_lookup)
+
+        GB = 1024 * 1024 * 1024
+        fake_libvirt_utils.disk_sizes['/test/disk'] = 10 * GB
+        fake_libvirt_utils.disk_sizes['/test/disk.local'] = 20 * GB
+        fake_libvirt_utils.disk_backing_files['/test/disk.local'] = 'file'
+
+        self.mox.StubOutWithMock(os.path, "getsize")
+        os.path.getsize('/test/disk').AndReturn((10737418240))
+        os.path.getsize('/test/disk.local').AndReturn((3328599655))
+
+        ret = ("image: /test/disk\n"
+               "file format: raw\n"
+               "virtual size: 20G (21474836480 bytes)\n"
+               "disk size: 3.1G\n"
+               "cluster_size: 2097152\n"
+               "backing file: /test/dummy (actual path: /backing/file)\n")
+
+        self.mox.StubOutWithMock(os.path, "exists")
+        os.path.exists('/test/disk.local').AndReturn(True)
+
+        self.mox.StubOutWithMock(utils, "execute")
+        utils.execute('env', 'LC_ALL=C', 'LANG=C', 'qemu-img', 'info',
+                      '/test/disk.local').AndReturn((ret, ''))
+
+        self.mox.ReplayAll()
+        conn_info = {'driver_volume_type': 'fake'}
+        info = {'block_device_mapping': [
+                  {'connection_info': conn_info, 'mount_device': '/dev/vdc'},
+                  {'connection_info': conn_info, 'mount_device': '/dev/vdd'}]}
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        info = conn.get_instance_disk_info(instance_ref['name'],
+                                           block_device_info=info)
+        info = jsonutils.loads(info)
+        self.assertEquals(info[0]['type'], 'raw')
+        self.assertEquals(info[0]['path'], '/test/disk')
+        self.assertEquals(info[0]['disk_size'], 10737418240)
+        self.assertEquals(info[0]['backing_file'], "")
+        self.assertEquals(info[0]['over_committed_disk_size'], 0)
+        self.assertEquals(info[1]['type'], 'qcow2')
+        self.assertEquals(info[1]['path'], '/test/disk.local')
+        self.assertEquals(info[1]['virt_disk_size'], 21474836480)
+        self.assertEquals(info[1]['backing_file'], "file")
+        self.assertEquals(info[1]['over_committed_disk_size'], 18146236825)
+
+        db.instance_destroy(self.context, instance_ref['uuid'])
+
     def test_spawn_with_network_info(self):
         # Preparing mocks
         def fake_none(*args, **kwargs):
@@ -4803,7 +4877,8 @@ class LibvirtDriverTestCase(test.TestCase):
         self.counter = 0
         self.checked_shared_storage = False
 
-        def fake_get_instance_disk_info(instance, xml=None):
+        def fake_get_instance_disk_info(instance, xml=None,
+                                        block_device_info=None):
             return '[]'
 
         def fake_destroy(instance):
@@ -4854,7 +4929,8 @@ class LibvirtDriverTestCase(test.TestCase):
                       'disk_size': '83886080'}]
         disk_info_text = jsonutils.dumps(disk_info)
 
-        def fake_get_instance_disk_info(instance, xml=None):
+        def fake_get_instance_disk_info(instance, xml=None,
+                                        block_device_info=None):
             return disk_info_text
 
         def fake_destroy(instance):
