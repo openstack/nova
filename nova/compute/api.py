@@ -1166,7 +1166,7 @@ class API(base.Base):
 
         return dict(old_ref.iteritems()), dict(instance_ref.iteritems())
 
-    def _delete(self, context, instance, cb, **instance_attrs):
+    def _delete(self, context, instance, delete_type, cb, **instance_attrs):
         if instance['disable_terminate']:
             LOG.info(_('instance termination disabled'),
                      instance=instance)
@@ -1268,7 +1268,7 @@ class API(base.Base):
 
             if not is_up:
                 # If compute node isn't up, just delete from DB
-                self._local_delete(context, instance, bdms)
+                self._local_delete(context, instance, bdms, delete_type, cb)
                 if reservations:
                     QUOTAS.commit(context,
                                   reservations,
@@ -1330,13 +1330,13 @@ class API(base.Base):
                                       ram=-instance_memory_mb)
         return reservations
 
-    def _local_delete(self, context, instance, bdms):
+    def _local_delete(self, context, instance, bdms, delete_type, cb):
         LOG.warning(_("instance's host %s is down, deleting from "
                       "database") % instance['host'], instance=instance)
         instance_uuid = instance['uuid']
         self.db.instance_info_cache_delete(context, instance_uuid)
         compute_utils.notify_about_instance_usage(
-            context, instance, "delete.start")
+            context, instance, "%s.start" % delete_type)
 
         elevated = context.elevated()
         self.network_api.deallocate_for_instance(elevated,
@@ -1359,14 +1359,33 @@ class API(base.Base):
                 if bdm['delete_on_termination']:
                     self.volume_api.delete(context, bdm['volume_id'])
             self.db.block_device_mapping_destroy(context, bdm['id'])
-        instance = self._instance_update(context,
-                                         instance_uuid,
-                                         vm_state=vm_states.DELETED,
-                                         task_state=None,
-                                         terminated_at=timeutils.utcnow())
+        instance = cb(context, instance, bdms, local=True)
         self.db.instance_destroy(context, instance_uuid)
         compute_utils.notify_about_instance_usage(
-            context, instance, "delete.end", system_metadata=system_meta)
+            context, instance, "%s.end" % delete_type,
+            system_metadata=system_meta)
+
+    def _do_delete(self, context, instance, bdms, reservations=None,
+                   local=False):
+        if local:
+            return self.update(context, instance,
+                               vm_state=vm_states.DELETED,
+                               task_state=None,
+                               terminated_at=timeutils.utcnow())
+        else:
+            self.compute_rpcapi.terminate_instance(context, instance, bdms,
+                                                   reservations=reservations)
+
+    def _do_soft_delete(self, context, instance, bdms, reservations=None,
+                        local=False):
+        if local:
+            return self.update(context, instance,
+                               vm_state=vm_states.SOFT_DELETED,
+                               task_state=None,
+                               terminated_at=timeutils.utcnow())
+        else:
+            self.compute_rpcapi.soft_delete_instance(context, instance,
+                                                     reservations=reservations)
 
     # NOTE(maoy): we allow delete to be called no matter what vm_state says.
     @wrap_check_policy
@@ -1378,20 +1397,12 @@ class API(base.Base):
         LOG.debug(_('Going to try to soft delete instance'),
                   instance=instance)
 
-        def soft_delete(context, instance, bdms, reservations=None):
-            self.compute_rpcapi.soft_delete_instance(context, instance,
-                    reservations=reservations)
-
-        self._delete(context, instance, soft_delete,
+        self._delete(context, instance, 'soft_delete', self._do_soft_delete,
                      task_state=task_states.SOFT_DELETING,
                      deleted_at=timeutils.utcnow())
 
     def _delete_instance(self, context, instance):
-        def terminate(context, instance, bdms, reservations=None):
-            self.compute_rpcapi.terminate_instance(context, instance, bdms,
-                    reservations=reservations)
-
-        self._delete(context, instance, terminate,
+        self._delete(context, instance, 'delete', self._do_delete,
                      task_state=task_states.DELETING)
 
     @wrap_check_policy
