@@ -291,6 +291,26 @@ def get_eph_disk(ephemeral):
     return 'disk.eph' + str(ephemeral['num'])
 
 
+def get_config_drive_type():
+    """Determine the type of config drive.
+
+       If config_drive_format is set to iso9660 then the config drive will
+       be 'cdrom', otherwise 'disk'.
+
+       Returns a string indicating the config drive type.
+    """
+
+    if CONF.config_drive_format == 'iso9660':
+        config_drive_type = 'cdrom'
+    elif CONF.config_drive_format == 'vfat':
+        config_drive_type = 'disk'
+    else:
+        raise exception.ConfigDriveUnknownFormat(
+            format=CONF.config_drive_format)
+
+    return config_drive_type
+
+
 def get_disk_mapping(virt_type, instance,
                      disk_bus, cdrom_bus,
                      block_device_info=None,
@@ -408,8 +428,13 @@ def get_disk_mapping(virt_type, instance,
                                         'type': 'disk'}
 
     if configdrive.enabled_for(instance):
+        device_type = get_config_drive_type()
+        disk_bus = get_disk_bus_for_device_type(virt_type,
+                                                image_meta,
+                                                device_type)
         config_info = get_next_disk_info(mapping,
                                          disk_bus,
+                                         device_type,
                                          last_device=True)
         mapping['disk.config'] = config_info
 
