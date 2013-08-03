@@ -1805,8 +1805,17 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
 
     def setUp(self):
         super(QuotaReserveSqlAlchemyTestCase, self).setUp()
-
         self.sync_called = set()
+        self.quotas = dict(
+            instances=5,
+            cores=10,
+            ram=10 * 1024,
+            )
+        self.deltas = dict(
+            instances=2,
+            cores=4,
+            ram=2 * 1024,
+            )
 
         def make_sync(res_name):
             def sync(context, project_id, user_id, session):
@@ -1827,10 +1836,29 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
             self.resources[res_name] = res
 
         self.expire = timeutils.utcnow() + datetime.timedelta(seconds=3600)
-
         self.usages = {}
         self.usages_created = {}
         self.reservations_created = {}
+        self.usages_list = [
+                dict(resource='instances',
+                     project_id='test_project',
+                     user_id='fake_user',
+                     in_use=2,
+                     reserved=2,
+                     until_refresh=None),
+                dict(resource='cores',
+                     project_id='test_project',
+                     user_id='fake_user',
+                     in_use=2,
+                     reserved=4,
+                     until_refresh=None),
+                dict(resource='ram',
+                     project_id='test_project',
+                     user_id='fake_user',
+                     in_use=2,
+                     reserved=2 * 1024,
+                     until_refresh=None),
+                ]
 
         def fake_get_session():
             return FakeSession()
@@ -1890,7 +1918,7 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
 
         return quota_usage_ref
 
-    def init_usage(self, project_id, user_id, resource, in_use, reserved,
+    def init_usage(self, project_id, user_id, resource, in_use, reserved=0,
                    until_refresh=None, created_at=None, updated_at=None):
         if created_at is None:
             created_at = timeutils.utcnow()
@@ -1948,458 +1976,169 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
 
         self.assertEqual(len(reservations), 0)
 
+    def _update_reservations_list(self, usage_id_change=False,
+                                  delta_change=False):
+        reservations_list = [
+            dict(resource='instances',
+                project_id='test_project',
+                delta=2),
+            dict(resource='cores',
+                project_id='test_project',
+                delta=4),
+            dict(resource='ram',
+                delta=2 * 1024),
+            ]
+        if usage_id_change:
+            reservations_list[0]["usage_id"] = self.usages_created['instances']
+            reservations_list[1]["usage_id"] = self.usages_created['cores']
+            reservations_list[2]["usage_id"] = self.usages_created['ram']
+        else:
+            reservations_list[0]["usage_id"] = self.usages['instances']
+            reservations_list[1]["usage_id"] = self.usages['cores']
+            reservations_list[2]["usage_id"] = self.usages['ram']
+        if delta_change:
+            reservations_list[0]["delta"] = -2
+            reservations_list[1]["delta"] = -4
+            reservations_list[2]["delta"] = -2 * 1024
+        return reservations_list
+
+    def _init_usages(self, *in_use, **kwargs):
+        for i, option in enumerate(('instances', 'cores', 'ram')):
+            self.init_usage('test_project', 'fake_user',
+                            option, in_use[i], **kwargs)
+        return FakeContext('test_project', 'test_class')
+
     def test_quota_reserve_create_usages(self):
         context = FakeContext('test_project', 'test_class')
-        quotas = dict(
-            instances=5,
-            cores=10,
-            ram=10 * 1024,
-            )
-        user_quotas = dict(
-            instances=5,
-            cores=10,
-            ram=10 * 1024,
-            )
-        deltas = dict(
-            instances=2,
-            cores=4,
-            ram=2 * 1024,
-            )
-        result = sqa_api.quota_reserve(context, self.resources, quotas,
-                                       user_quotas, deltas, self.expire, 0, 0)
+        result = sqa_api.quota_reserve(context, self.resources, self.quotas,
+                                       self.quotas, self.deltas, self.expire,
+                                       0, 0)
 
         self.assertEqual(self.sync_called, set(['instances', 'cores', 'ram']))
-        self.compare_usage(self.usages_created, [
-                dict(resource='instances',
-                     project_id='test_project',
-                     in_use=0,
-                     reserved=2,
-                     until_refresh=None),
-                dict(resource='cores',
-                     project_id='test_project',
-                     in_use=0,
-                     reserved=4,
-                     until_refresh=None),
-                dict(resource='ram',
-                     project_id='test_project',
-                     in_use=0,
-                     reserved=2 * 1024,
-                     until_refresh=None),
-                ])
-        self.compare_reservation(result, [
-                dict(resource='instances',
-                     usage_id=self.usages_created['instances'],
-                     project_id='test_project',
-                     delta=2),
-                dict(resource='cores',
-                     usage_id=self.usages_created['cores'],
-                     project_id='test_project',
-                     delta=4),
-                dict(resource='ram',
-                     usage_id=self.usages_created['ram'],
-                     delta=2 * 1024),
-                ])
+        self.usages_list[0]["in_use"] = 0
+        self.usages_list[1]["in_use"] = 0
+        self.usages_list[2]["in_use"] = 0
+        self.compare_usage(self.usages_created, self.usages_list)
+        reservations_list = self._update_reservations_list(True)
+        self.compare_reservation(result, reservations_list)
 
     def test_quota_reserve_negative_in_use(self):
-        self.init_usage('test_project', 'fake_user', 'instances', -1, 0,
-                        until_refresh=1)
-        self.init_usage('test_project', 'fake_user', 'cores', -1, 0,
-                        until_refresh=1)
-        self.init_usage('test_project', 'fake_user', 'ram', -1, 0,
-                        until_refresh=1)
-        context = FakeContext('test_project', 'test_class')
-        quotas = dict(
-            instances=5,
-            cores=10,
-            ram=10 * 1024,
-            )
-        user_quotas = dict(
-            instances=5,
-            cores=10,
-            ram=10 * 1024,
-            )
-        deltas = dict(
-            instances=2,
-            cores=4,
-            ram=2 * 1024,
-            )
-        result = sqa_api.quota_reserve(context, self.resources, quotas,
-                                       user_quotas, deltas, self.expire, 5, 0)
+        context = self._init_usages(-1, -1, -1, until_refresh=1)
+        result = sqa_api.quota_reserve(context, self.resources, self.quotas,
+                                       self.quotas, self.deltas, self.expire,
+                                       5, 0)
 
         self.assertEqual(self.sync_called, set(['instances', 'cores', 'ram']))
-        self.compare_usage(self.usages, [
-                dict(resource='instances',
-                     project_id='test_project',
-                     in_use=2,
-                     reserved=2,
-                     until_refresh=5),
-                dict(resource='cores',
-                     project_id='test_project',
-                     in_use=2,
-                     reserved=4,
-                     until_refresh=5),
-                dict(resource='ram',
-                     project_id='test_project',
-                     in_use=2,
-                     reserved=2 * 1024,
-                     until_refresh=5),
-                ])
+        self.usages_list[0]["until_refresh"] = 5
+        self.usages_list[1]["until_refresh"] = 5
+        self.usages_list[2]["until_refresh"] = 5
+        self.compare_usage(self.usages, self.usages_list)
         self.assertEqual(self.usages_created, {})
-        self.compare_reservation(result, [
-                dict(resource='instances',
-                     usage_id=self.usages['instances'],
-                     project_id='test_project',
-                     delta=2),
-                dict(resource='cores',
-                     usage_id=self.usages['cores'],
-                     project_id='test_project',
-                     delta=4),
-                dict(resource='ram',
-                     usage_id=self.usages['ram'],
-                     delta=2 * 1024),
-                ])
+        self.compare_reservation(result, self._update_reservations_list())
 
     def test_quota_reserve_until_refresh(self):
-        self.init_usage('test_project', 'fake_user', 'instances', 3, 0,
-                        until_refresh=1)
-        self.init_usage('test_project', 'fake_user', 'cores', 3, 0,
-                        until_refresh=1)
-        self.init_usage('test_project', 'fake_user', 'ram', 3, 0,
-                        until_refresh=1)
-        context = FakeContext('test_project', 'test_class')
-        quotas = dict(
-            instances=5,
-            cores=10,
-            ram=10 * 1024,
-            )
-        user_quotas = dict(
-            instances=5,
-            cores=10,
-            ram=10 * 1024,
-            )
-        deltas = dict(
-            instances=2,
-            cores=4,
-            ram=2 * 1024,
-            )
-        result = sqa_api.quota_reserve(context, self.resources, quotas,
-                                       user_quotas, deltas, self.expire, 5, 0)
+        context = self._init_usages(3, 3, 3, until_refresh=1)
+        result = sqa_api.quota_reserve(context, self.resources, self.quotas,
+                                       self.quotas, self.deltas, self.expire,
+                                       5, 0)
 
         self.assertEqual(self.sync_called, set(['instances', 'cores', 'ram']))
-        self.compare_usage(self.usages, [
-                dict(resource='instances',
-                     project_id='test_project',
-                     in_use=2,
-                     reserved=2,
-                     until_refresh=5),
-                dict(resource='cores',
-                     project_id='test_project',
-                     in_use=2,
-                     reserved=4,
-                     until_refresh=5),
-                dict(resource='ram',
-                     project_id='test_project',
-                     in_use=2,
-                     reserved=2 * 1024,
-                     until_refresh=5),
-                ])
+        self.usages_list[0]["until_refresh"] = 5
+        self.usages_list[1]["until_refresh"] = 5
+        self.usages_list[2]["until_refresh"] = 5
+        self.compare_usage(self.usages, self.usages_list)
         self.assertEqual(self.usages_created, {})
-        self.compare_reservation(result, [
-                dict(resource='instances',
-                     usage_id=self.usages['instances'],
-                     project_id='test_project',
-                     delta=2),
-                dict(resource='cores',
-                     usage_id=self.usages['cores'],
-                     project_id='test_project',
-                     delta=4),
-                dict(resource='ram',
-                     usage_id=self.usages['ram'],
-                     delta=2 * 1024),
-                ])
+        self.compare_reservation(result, self._update_reservations_list())
 
     def test_quota_reserve_max_age(self):
         max_age = 3600
         record_created = (timeutils.utcnow() -
                           datetime.timedelta(seconds=max_age))
-        self.init_usage('test_project', 'fake_user', 'instances', 3, 0,
-                        created_at=record_created, updated_at=record_created)
-        self.init_usage('test_project', 'fake_user', 'cores', 3, 0,
-                        created_at=record_created, updated_at=record_created)
-        self.init_usage('test_project', 'fake_user', 'ram', 3, 0,
-                        created_at=record_created, updated_at=record_created)
-        context = FakeContext('test_project', 'test_class')
-        quotas = dict(
-            instances=5,
-            cores=10,
-            ram=10 * 1024,
-            )
-        user_quotas = dict(
-            instances=5,
-            cores=10,
-            ram=10 * 1024,
-            )
-        deltas = dict(
-            instances=2,
-            cores=4,
-            ram=2 * 1024,
-            )
-        result = sqa_api.quota_reserve(context, self.resources, quotas,
-                                       user_quotas, deltas, self.expire, 0,
-                                       max_age)
+        context = self._init_usages(3, 3, 3, created_at=record_created,
+                                    updated_at=record_created)
+        result = sqa_api.quota_reserve(context, self.resources, self.quotas,
+                                       self.quotas, self.deltas, self.expire,
+                                       0, max_age)
 
         self.assertEqual(self.sync_called, set(['instances', 'cores', 'ram']))
-        self.compare_usage(self.usages, [
-                dict(resource='instances',
-                     project_id='test_project',
-                     user_id='fake_user',
-                     in_use=2,
-                     reserved=2,
-                     until_refresh=None),
-                dict(resource='cores',
-                     project_id='test_project',
-                     user_id='fake_user',
-                     in_use=2,
-                     reserved=4,
-                     until_refresh=None),
-                dict(resource='ram',
-                     project_id='test_project',
-                     user_id='fake_user',
-                     in_use=2,
-                     reserved=2 * 1024,
-                     until_refresh=None),
-                ])
+        self.compare_usage(self.usages, self.usages_list)
         self.assertEqual(self.usages_created, {})
-        self.compare_reservation(result, [
-                dict(resource='instances',
-                     usage_id=self.usages['instances'],
-                     project_id='test_project',
-                     user_id='fake_user',
-                     delta=2),
-                dict(resource='cores',
-                     usage_id=self.usages['cores'],
-                     project_id='test_project',
-                     user_id='fake_user',
-                     delta=4),
-                dict(resource='ram',
-                     usage_id=self.usages['ram'],
-                     delta=2 * 1024),
-                ])
+        self.compare_reservation(result, self._update_reservations_list())
 
     def test_quota_reserve_no_refresh(self):
-        self.init_usage('test_project', 'fake_user', 'instances', 3, 0)
-        self.init_usage('test_project', 'fake_user', 'cores', 3, 0)
-        self.init_usage('test_project', 'fake_user', 'ram', 3, 0)
-        context = FakeContext('test_project', 'test_class')
-        quotas = dict(
-            instances=5,
-            cores=10,
-            ram=10 * 1024,
-            )
-        user_quotas = dict(
-            instances=5,
-            cores=10,
-            ram=10 * 1024,
-            )
-        deltas = dict(
-            instances=2,
-            cores=4,
-            ram=2 * 1024,
-            )
-        result = sqa_api.quota_reserve(context, self.resources, quotas,
-                                       user_quotas, deltas, self.expire, 0, 0)
+        context = self._init_usages(3, 3, 3)
+        result = sqa_api.quota_reserve(context, self.resources, self.quotas,
+                                       self.quotas, self.deltas, self.expire,
+                                       0, 0)
 
         self.assertEqual(self.sync_called, set([]))
-        self.compare_usage(self.usages, [
-                dict(resource='instances',
-                     project_id='test_project',
-                     in_use=3,
-                     reserved=2,
-                     until_refresh=None),
-                dict(resource='cores',
-                     project_id='test_project',
-                     in_use=3,
-                     reserved=4,
-                     until_refresh=None),
-                dict(resource='ram',
-                     project_id='test_project',
-                     in_use=3,
-                     reserved=2 * 1024,
-                     until_refresh=None),
-                ])
+        self.usages_list[0]["in_use"] = 3
+        self.usages_list[1]["in_use"] = 3
+        self.usages_list[2]["in_use"] = 3
+        self.compare_usage(self.usages, self.usages_list)
         self.assertEqual(self.usages_created, {})
-        self.compare_reservation(result, [
-                dict(resource='instances',
-                     usage_id=self.usages['instances'],
-                     project_id='test_project',
-                     delta=2),
-                dict(resource='cores',
-                     usage_id=self.usages['cores'],
-                     project_id='test_project',
-                     delta=4),
-                dict(resource='ram',
-                     usage_id=self.usages['ram'],
-                     delta=2 * 1024),
-                ])
+        self.compare_reservation(result, self._update_reservations_list())
 
     def test_quota_reserve_unders(self):
-        self.init_usage('test_project', 'fake_user', 'instances', 1, 0)
-        self.init_usage('test_project', 'fake_user', 'cores', 3, 0)
-        self.init_usage('test_project', 'fake_user', 'ram', 1 * 1024, 0)
-        context = FakeContext('test_project', 'test_class')
-        quotas = dict(
-            instances=5,
-            cores=10,
-            ram=10 * 1024,
-            )
-        user_quotas = dict(
-            instances=5,
-            cores=10,
-            ram=10 * 1024,
-            )
-        deltas = dict(
-            instances=-2,
-            cores=-4,
-            ram=-2 * 1024,
-            )
-        result = sqa_api.quota_reserve(context, self.resources, quotas,
-                                       user_quotas, deltas, self.expire, 0, 0)
+        context = self._init_usages(1, 3, 1 * 1024)
+        self.deltas["instances"] = -2
+        self.deltas["cores"] = -4
+        self.deltas["ram"] = -2 * 1024
+        result = sqa_api.quota_reserve(context, self.resources, self.quotas,
+                                       self.quotas, self.deltas, self.expire,
+                                       0, 0)
 
         self.assertEqual(self.sync_called, set([]))
-        self.compare_usage(self.usages, [
-                dict(resource='instances',
-                     project_id='test_project',
-                     in_use=1,
-                     reserved=0,
-                     until_refresh=None),
-                dict(resource='cores',
-                     project_id='test_project',
-                     in_use=3,
-                     reserved=0,
-                     until_refresh=None),
-                dict(resource='ram',
-                     project_id='test_project',
-                     in_use=1 * 1024,
-                     reserved=0,
-                     until_refresh=None),
-                ])
+        self.usages_list[0]["in_use"] = 1
+        self.usages_list[0]["reserved"] = 0
+        self.usages_list[1]["in_use"] = 3
+        self.usages_list[1]["reserved"] = 0
+        self.usages_list[2]["in_use"] = 1 * 1024
+        self.usages_list[2]["reserved"] = 0
+        self.compare_usage(self.usages, self.usages_list)
         self.assertEqual(self.usages_created, {})
-        self.compare_reservation(result, [
-                dict(resource='instances',
-                     usage_id=self.usages['instances'],
-                     project_id='test_project',
-                     delta=-2),
-                dict(resource='cores',
-                     usage_id=self.usages['cores'],
-                     project_id='test_project',
-                     delta=-4),
-                dict(resource='ram',
-                     usage_id=self.usages['ram'],
-                     delta=-2 * 1024),
-                ])
+        reservations_list = self._update_reservations_list(False, True)
+        self.compare_reservation(result, reservations_list)
 
     def test_quota_reserve_overs(self):
-        self.init_usage('test_project', 'fake_user', 'instances', 4, 0)
-        self.init_usage('test_project', 'fake_user', 'cores', 8, 0)
-        self.init_usage('test_project', 'fake_user', 'ram', 10 * 1024, 0)
-        context = FakeContext('test_project', 'test_class')
-        quotas = dict(
-            instances=5,
-            cores=10,
-            ram=10 * 1024,
-            )
-        user_quotas = dict(
-            instances=5,
-            cores=10,
-            ram=10 * 1024,
-            )
-        deltas = dict(
-            instances=2,
-            cores=4,
-            ram=2 * 1024,
-            )
+        context = self._init_usages(4, 8, 10 * 1024)
         self.assertRaises(exception.OverQuota,
                           sqa_api.quota_reserve,
-                          context, self.resources, quotas, user_quotas,
-                          deltas, self.expire, 0, 0)
+                          context, self.resources, self.quotas,
+                          self.quotas, self.deltas, self.expire,
+                          0, 0)
 
         self.assertEqual(self.sync_called, set([]))
-        self.compare_usage(self.usages, [
-                dict(resource='instances',
-                     project_id='test_project',
-                     in_use=4,
-                     reserved=0,
-                     until_refresh=None),
-                dict(resource='cores',
-                     project_id='test_project',
-                     in_use=8,
-                     reserved=0,
-                     until_refresh=None),
-                dict(resource='ram',
-                     project_id='test_project',
-                     in_use=10 * 1024,
-                     reserved=0,
-                     until_refresh=None),
-                ])
+        self.usages_list[0]["in_use"] = 4
+        self.usages_list[0]["reserved"] = 0
+        self.usages_list[1]["in_use"] = 8
+        self.usages_list[1]["reserved"] = 0
+        self.usages_list[2]["in_use"] = 10 * 1024
+        self.usages_list[2]["reserved"] = 0
+        self.compare_usage(self.usages, self.usages_list)
         self.assertEqual(self.usages_created, {})
         self.assertEqual(self.reservations_created, {})
 
     def test_quota_reserve_reduction(self):
-        self.init_usage('test_project', 'fake_user', 'instances', 10, 0)
-        self.init_usage('test_project', 'fake_user', 'cores', 20, 0)
-        self.init_usage('test_project', 'fake_user', 'ram', 20 * 1024, 0)
-        context = FakeContext('test_project', 'test_class')
-        quotas = dict(
-            instances=5,
-            cores=10,
-            ram=10 * 1024,
-            )
-        user_quotas = dict(
-            instances=5,
-            cores=10,
-            ram=10 * 1024,
-            )
-        deltas = dict(
-            instances=-2,
-            cores=-4,
-            ram=-2 * 1024,
-            )
-        result = sqa_api.quota_reserve(context, self.resources, quotas,
-                                       user_quotas, deltas, self.expire, 0, 0)
+        context = self._init_usages(10, 20, 20 * 1024)
+        self.deltas["instances"] = -2
+        self.deltas["cores"] = -4
+        self.deltas["ram"] = -2 * 1024
+        result = sqa_api.quota_reserve(context, self.resources, self.quotas,
+                                       self.quotas, self.deltas, self.expire,
+                                       0, 0)
 
         self.assertEqual(self.sync_called, set([]))
-        self.compare_usage(self.usages, [
-                dict(resource='instances',
-                     project_id='test_project',
-                     in_use=10,
-                     reserved=0,
-                     until_refresh=None),
-                dict(resource='cores',
-                     project_id='test_project',
-                     in_use=20,
-                     reserved=0,
-                     until_refresh=None),
-                dict(resource='ram',
-                     project_id='test_project',
-                     in_use=20 * 1024,
-                     reserved=0,
-                     until_refresh=None),
-                ])
+        self.usages_list[0]["in_use"] = 10
+        self.usages_list[0]["reserved"] = 0
+        self.usages_list[1]["in_use"] = 20
+        self.usages_list[1]["reserved"] = 0
+        self.usages_list[2]["in_use"] = 20 * 1024
+        self.usages_list[2]["reserved"] = 0
+        self.compare_usage(self.usages, self.usages_list)
         self.assertEqual(self.usages_created, {})
-        self.compare_reservation(result, [
-                dict(resource='instances',
-                     usage_id=self.usages['instances'],
-                     project_id='test_project',
-                     delta=-2),
-                dict(resource='cores',
-                     usage_id=self.usages['cores'],
-                     project_id='test_project',
-                     delta=-4),
-                dict(resource='ram',
-                     usage_id=self.usages['ram'],
-                     project_id='test_project',
-                     delta=-2 * 1024),
-                ])
+        reservations_list = self._update_reservations_list(False, True)
+        self.compare_reservation(result, reservations_list)
 
 
 class NoopQuotaDriverTestCase(test.TestCase):
