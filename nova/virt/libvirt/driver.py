@@ -3089,13 +3089,14 @@ class LibvirtDriver(driver.ComputeDriver):
         self.firewall_driver.refresh_provider_fw_rules()
 
     def get_available_resource(self, nodename):
-        """Retrieve resource info.
+        """Retrieve resource information.
 
-        This method is called as a periodic task and is used only
-        in live migration currently.
+        This method is called when nova-compute launches, and
+        as part of a periodic task that records the results in the DB.
 
         :param nodename: ignored in this driver
-        :returns: dictionary containing resource info
+        :returns: dictionary describing resources
+
         """
 
         def _get_disk_available_least():

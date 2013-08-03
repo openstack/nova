@@ -325,10 +325,10 @@ class VMwareESXDriver(driver.ComputeDriver):
                 'password': CONF.vmware.host_password}
 
     def get_available_resource(self, nodename):
-        """Retrieve resource info.
+        """Retrieve resource information.
 
         This method is called when nova-compute launches, and
-        as part of a periodic task.
+        as part of a periodic task that records the results in the DB.
 
         :returns: dictionary describing resources
 
