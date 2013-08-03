@@ -111,11 +111,6 @@ class HostState(object):
         self.free_disk_mb = 0
         self.vcpus_total = 0
         self.vcpus_used = 0
-        # Valid vm types on this host: 'pv', 'hvm' or 'all'
-        if 'allowed_vm_type' in self.capabilities:
-            self.allowed_vm_type = self.capabilities['allowed_vm_type']
-        else:
-            self.allowed_vm_type = 'all'
 
         # Additional host information from the compute node stats:
         self.vm_states = {}
@@ -246,9 +241,9 @@ class HostState(object):
         return dict((st['key'], st['value']) for st in stats)
 
     def __repr__(self):
-        return ("(%s, %s) ram:%s disk:%s io_ops:%s instances:%s vm_type:%s" %
+        return ("(%s, %s) ram:%s disk:%s io_ops:%s instances:%s" %
                 (self.host, self.nodename, self.free_ram_mb, self.free_disk_mb,
-                 self.num_io_ops, self.num_instances, self.allowed_vm_type))
+                 self.num_io_ops, self.num_instances))
 
 
 class HostManager(object):
