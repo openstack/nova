@@ -718,3 +718,17 @@ class CellsManagerClassTestCase(test.TestCase):
         self.mox.ReplayAll()
         self.cells_manager.resume_instance(self.ctxt,
                                            instance='fake-instance')
+
+    def test_terminate_instance(self):
+        self.mox.StubOutWithMock(self.msg_runner, 'terminate_instance')
+        self.msg_runner.terminate_instance(self.ctxt, 'fake-instance')
+        self.mox.ReplayAll()
+        self.cells_manager.terminate_instance(self.ctxt,
+                                              instance='fake-instance')
+
+    def test_soft_delete_instance(self):
+        self.mox.StubOutWithMock(self.msg_runner, 'soft_delete_instance')
+        self.msg_runner.soft_delete_instance(self.ctxt, 'fake-instance')
+        self.mox.ReplayAll()
+        self.cells_manager.soft_delete_instance(self.ctxt,
+                                                instance='fake-instance')

@@ -596,3 +596,21 @@ class CellsAPITestCase(test.TestCase):
         expected_args = {'instance': 'fake-instance'}
         self._check_result(call_info, 'resume_instance',
                 expected_args, version='1.15')
+
+    def test_terminate_instance(self):
+        call_info = self._stub_rpc_method('cast', None)
+
+        self.cells_rpcapi.terminate_instance(self.fake_context,
+                                             'fake-instance', [])
+        expected_args = {'instance': 'fake-instance'}
+        self._check_result(call_info, 'terminate_instance',
+                           expected_args, version='1.18')
+
+    def test_soft_delete_instance(self):
+        call_info = self._stub_rpc_method('cast', None)
+
+        self.cells_rpcapi.soft_delete_instance(self.fake_context,
+                                               'fake-instance')
+        expected_args = {'instance': 'fake-instance'}
+        self._check_result(call_info, 'soft_delete_instance',
+                           expected_args, version='1.18')

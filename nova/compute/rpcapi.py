@@ -188,6 +188,8 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         2.33 - Made suspend_instance() and resume_instance() take new-world
                instance objects
         2.34 - Added swap_volume()
+        2.35 - Made terminate_instance() and soft_delete_instance() take
+               new-world instance objects
     '''
 
     #
@@ -662,13 +664,17 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                   version=version)
 
     def terminate_instance(self, ctxt, instance, bdms, reservations=None):
-        instance_p = jsonutils.to_primitive(instance)
+        if self.can_send_version('2.35'):
+            version = '2.35'
+        else:
+            version = '2.27'
+            instance = jsonutils.to_primitive(instance)
         bdms_p = jsonutils.to_primitive(bdms)
         self.cast(ctxt, self.make_msg('terminate_instance',
-                instance=instance_p, bdms=bdms_p,
+                instance=instance, bdms=bdms_p,
                 reservations=reservations),
                 topic=_compute_topic(self.topic, ctxt, None, instance),
-                version='2.27')
+                version=version)
 
     def unpause_instance(self, ctxt, instance):
         instance_p = jsonutils.to_primitive(instance)
@@ -686,11 +692,15 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         self.fanout_cast(ctxt, self.make_msg('publish_service_capabilities'))
 
     def soft_delete_instance(self, ctxt, instance, reservations=None):
-        instance_p = jsonutils.to_primitive(instance)
+        if self.can_send_version('2.35'):
+            version = '2.35'
+        else:
+            version = '2.27'
+            instance = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('soft_delete_instance',
-                instance=instance_p, reservations=reservations),
+                instance=instance, reservations=reservations),
                 topic=_compute_topic(self.topic, ctxt, None, instance),
-                version='2.27')
+                version=version)
 
     def restore_instance(self, ctxt, instance):
         instance_p = jsonutils.to_primitive(instance)

@@ -472,3 +472,11 @@ class CellsManager(manager.Manager):
     def resume_instance(self, ctxt, instance):
         """Resume an instance in its cell."""
         self.msg_runner.resume_instance(ctxt, instance)
+
+    def terminate_instance(self, ctxt, instance):
+        """Delete an instance in its cell."""
+        self.msg_runner.terminate_instance(ctxt, instance)
+
+    def soft_delete_instance(self, ctxt, instance):
+        """Soft-delete an instance in its cell."""
+        self.msg_runner.soft_delete_instance(ctxt, instance)
