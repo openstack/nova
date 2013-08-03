@@ -38,6 +38,27 @@ def stub_out_db_instance_api(stubs):
         'm1.xlarge':
             dict(memory_mb=16384, vcpus=8, root_gb=160, flavorid=5)}
 
+    class FakeModel(object):
+        """Stubs out for model."""
+
+        def __init__(self, values):
+            self.values = values
+
+        def __getattr__(self, name):
+            return self.values[name]
+
+        def get(self, attr):
+            try:
+                return self.__getattr__(attr)
+            except KeyError:
+                return None
+
+        def __getitem__(self, key):
+            if key in self.values:
+                return self.values[key]
+            else:
+                raise NotImplementedError()
+
     def fake_instance_create(context, values):
         """Stubs out the db.instance_create method."""
 

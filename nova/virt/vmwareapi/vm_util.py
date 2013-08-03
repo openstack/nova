@@ -224,6 +224,29 @@ def get_vmdk_attach_config_spec(client_factory,
     return config_spec
 
 
+def get_cdrom_attach_config_spec(client_factory,
+                                 datastore,
+                                 file_path,
+                                 cdrom_unit_number):
+    """Builds and returns the cdrom attach config spec."""
+    config_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
+
+    device_config_spec = []
+    # For IDE devices, there are these two default controllers created in the
+    # VM having keys 200 and 201
+    controller_key = 200
+    virtual_device_config_spec = create_virtual_cdrom_spec(client_factory,
+                                                           datastore,
+                                                           controller_key,
+                                                           file_path,
+                                                           cdrom_unit_number)
+
+    device_config_spec.append(virtual_device_config_spec)
+
+    config_spec.deviceChange = device_config_spec
+    return config_spec
+
+
 def get_vmdk_detach_config_spec(client_factory, device):
     """Builds the vmdk detach config spec."""
     config_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
@@ -318,6 +341,39 @@ def get_rdm_create_spec(client_factory, device, adapter_type="lsiLogic",
     create_vmdk_spec.diskType = disk_type
     create_vmdk_spec.device = device
     return create_vmdk_spec
+
+
+def create_virtual_cdrom_spec(client_factory,
+                              datastore,
+                              controller_key,
+                              file_path,
+                              cdrom_unit_number):
+    """Builds spec for the creation of a new Virtual CDROM to the VM."""
+    config_spec = client_factory.create(
+        'ns0:VirtualDeviceConfigSpec')
+    config_spec.operation = "add"
+
+    cdrom = client_factory.create('ns0:VirtualCdrom')
+
+    cdrom_device_backing = client_factory.create(
+        'ns0:VirtualCdromIsoBackingInfo')
+    cdrom_device_backing.datastore = datastore
+    cdrom_device_backing.fileName = file_path
+
+    cdrom.backing = cdrom_device_backing
+    cdrom.controllerKey = controller_key
+    cdrom.unitNumber = cdrom_unit_number
+    cdrom.key = -1
+
+    connectable_spec = client_factory.create('ns0:VirtualDeviceConnectInfo')
+    connectable_spec.startConnected = True
+    connectable_spec.allowGuestControl = False
+    connectable_spec.connected = True
+
+    cdrom.connectable = connectable_spec
+
+    config_spec.device = cdrom
+    return config_spec
 
 
 def create_virtual_disk_spec(client_factory, controller_key,
