@@ -12,7 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from sqlalchemy import String, Column, MetaData, Table, delete, select
+from sqlalchemy import String, Column, MetaData, Table, delete
 
 
 def upgrade(migrate_engine):
@@ -44,11 +44,24 @@ def downgrade(migrate_engine):
     aggregate_metadata = Table('aggregate_metadata', meta, autoload=True)
     availability_zone = Column('availability_zone', String(255))
     aggregates.create_column(availability_zone)
-    # migrate data
-    aggregates.update().values(availability_zone=select(
-        [aggregate_metadata.c.value]).where(aggregates.c.id ==
-        aggregate_metadata.c.aggregate_id).where(aggregate_metadata.c.key ==
-        'availability_zone')).execute()
+
+    # Migrate data back
+    # NOTE(jhesketh): This needs to be done with individual inserts as multiple
+    # results in an update sub-query do not work with MySQL. See bug/1207956.
+    record_list = list(aggregates.select().execute())
+    for rec in record_list:
+        result = aggregate_metadata.select().where(
+            aggregate_metadata.c.key == 'availability_zone'
+        ).where(
+            aggregate_metadata.c.aggregate_id == rec['id']
+        )
+
+        aggregates.update().values(
+            availability_zone=list(result.execute())[0]['value']
+        ).where(
+            aggregates.c.id == rec['id']
+        ).execute()
+
     delete(aggregate_metadata,
            aggregate_metadata.c.key == 'availability_zone').execute()
     aggregates.c.availability_zone.alter(nullable=False)
