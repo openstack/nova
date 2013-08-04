@@ -2380,7 +2380,7 @@ def network_delete_safe(context, network_id):
                          count()
         if result != 0:
             raise exception.NetworkInUse(network_id=network_id)
-        network_ref = network_get(context, network_id=network_id,
+        network_ref = _network_get(context, network_id=network_id,
                                   session=session)
 
         model_query(context, models.FixedIp, session=session,
@@ -2402,8 +2402,7 @@ def network_disassociate(context, network_id, disassociate_host,
     network_update(context, network_id, net_update)
 
 
-@require_context
-def network_get(context, network_id, session=None, project_only='allow_none'):
+def _network_get(context, network_id, session=None, project_only='allow_none'):
     result = model_query(context, models.Network, session=session,
                          project_only=project_only).\
                     filter_by(id=network_id).\
@@ -2413,6 +2412,11 @@ def network_get(context, network_id, session=None, project_only='allow_none'):
         raise exception.NetworkNotFound(network_id=network_id)
 
     return result
+
+
+@require_context
+def network_get(context, network_id, project_only='allow_none'):
+    return _network_get(context, network_id, project_only=project_only)
 
 
 @require_context
@@ -2591,7 +2595,7 @@ def network_set_host(context, network_id, host_id):
 def network_update(context, network_id, values):
     session = get_session()
     with session.begin():
-        network_ref = network_get(context, network_id, session=session)
+        network_ref = _network_get(context, network_id, session=session)
         network_ref.update(values)
         try:
             network_ref.save(session=session)
@@ -3702,9 +3706,8 @@ def _security_group_rule_get_default_query(context, session=None):
 
 
 @require_context
-def security_group_default_rule_get(context, security_group_rule_default_id,
-                                    session=None):
-    result = _security_group_rule_get_default_query(context, session=session).\
+def security_group_default_rule_get(context, security_group_rule_default_id):
+    result = _security_group_rule_get_default_query(context).\
                         filter_by(id=security_group_rule_default_id).\
                         first()
 
@@ -3738,8 +3741,8 @@ def security_group_default_rule_create(context, values):
 
 
 @require_context
-def security_group_default_rule_list(context, session=None):
-    return _security_group_rule_get_default_query(context, session=session).\
+def security_group_default_rule_list(context):
+    return _security_group_rule_get_default_query(context).\
                                     all()
 
 
