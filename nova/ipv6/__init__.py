@@ -14,4 +14,4 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.ipv6.api import *
+from nova.ipv6.api import *  # noqa

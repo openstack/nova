@@ -18,5 +18,3 @@
 :mod:`integrated` -- Tests whole systems, using mock services where needed
 =================================
 """
-# NOTE(vish): this forces the fixtures from tests/__init.py:setup() to work
-from nova.tests import *

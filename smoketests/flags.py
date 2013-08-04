@@ -22,7 +22,7 @@ where they're used.
 """
 
 
-from gflags import *
+from gflags import *  # noqa
 
 # This keeps pylint from barfing on the imports
 FLAGS = FLAGS
