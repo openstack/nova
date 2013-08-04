@@ -140,8 +140,7 @@ class AdminActionsTest(test.TestCase):
             req.content_type = 'application/json'
             res = req.get_response(app)
             self.assertEqual(res.status_int, 409)
-            self.assertIn("Cannot \'%(_action)s\' while instance" % locals(),
-                    res.body)
+            self.assertIn("Cannot \'%s\' while instance" % _action, res.body)
 
     def test_admin_api_actions_raise_not_found(self):
         app = fakes.wsgi_app(init_only=('servers',))

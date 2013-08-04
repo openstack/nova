@@ -433,7 +433,7 @@ class BaseTrackerTestCase(BaseTestCase):
 
         if field not in tracker.compute_node:
             raise test.TestingException(
-                "'%(field)s' not in compute node." % locals())
+                "'%(field)s' not in compute node." % {'field': field})
         x = tracker.compute_node[field]
 
         self.assertEqual(value, x)

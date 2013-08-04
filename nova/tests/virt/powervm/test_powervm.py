@@ -809,7 +809,8 @@ class PowerVMDriverLparTestCase(test.TestCase):
         exp_mac_str = mac[:-2].replace(':', '')
 
         exp_cmd = ('chsyscfg -r lpar -i "name=%(inst_name)s, '
-                   'virtual_eth_mac_base_value=%(exp_mac_str)s"') % locals()
+                'virtual_eth_mac_base_value=%(exp_mac_str)s"'
+                % {'inst_name': inst_name, 'exp_mac_str': exp_mac_str})
 
         fake_op = self.powervm_connection._powervm
         self.mox.StubOutWithMock(fake_op._operator, 'run_vios_command')

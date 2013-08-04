@@ -152,8 +152,7 @@ class AdminActionsTest(test.TestCase):
             res = self._make_request('/v3/servers/%s/action' % self.UUID,
                                      {_action: None})
             self.assertEqual(res.status_int, 409)
-            self.assertIn("Cannot \'%(_action)s\' while instance" % locals(),
-                    res.body)
+            self.assertIn("Cannot \'%s\' while instance" % _action, res.body)
 
     def test_admin_api_actions_with_non_existed_instance(self):
         app = fakes.wsgi_app_v3(init_only=('servers', 'os-admin-actions'))

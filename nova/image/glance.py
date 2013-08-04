@@ -311,7 +311,7 @@ class GlanceImageService(object):
             return None
         except Exception as ex:
             LOG.error(_("Failed to instantiate the download handler "
-                        "for %(scheme)s") % locals())
+                "for %(scheme)s") % {'scheme': scheme})
         return
 
     def download(self, context, image_id, data=None):

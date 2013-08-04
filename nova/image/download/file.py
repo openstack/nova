@@ -119,7 +119,7 @@ class FileTransfer(xfer_base.TransferBase):
             if r not in metadata:
                 url = url_parts.geturl()
                 msg = _('The key %(r)s is required in the location metadata '
-                        'to access the url %(url)s.') % locals()
+                        'to access the url %(url)s.') % {'r': r, 'url': url}
                 LOG.info(msg)
                 raise exception.ImageDownloadModuleMetaDataError(
                     module=str(self), reason=msg)
@@ -128,8 +128,9 @@ class FileTransfer(xfer_base.TransferBase):
 
     def _normalize_destination(self, nova_mount, glance_mount, path):
         if not path.startswith(glance_mount):
-            msg = _('The mount point advertised by glance: %(glance_mount)s, '
-                    'does not match the URL path: %(path)s') % locals()
+            msg = (_('The mount point advertised by glance: %(glance_mount)s, '
+                     'does not match the URL path: %(path)s') %
+                     {'glance_mount': glance_mount, 'path': path})
             raise exception.ImageDownloadModuleMetaDataError(
                 module=str(self), reason=msg)
         new_path = path.replace(glance_mount, nova_mount, 1)
