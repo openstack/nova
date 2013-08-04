@@ -3807,14 +3807,13 @@ def migration_create(context, values):
 def migration_update(context, id, values):
     session = get_session()
     with session.begin():
-        migration = migration_get(context, id, session=session)
+        migration = _migration_get(context, id, session=session)
         migration.update(values)
         migration.save(session=session)
         return migration
 
 
-@require_admin_context
-def migration_get(context, id, session=None):
+def _migration_get(context, id, session=None):
     result = model_query(context, models.Migration, session=session,
                          read_deleted="yes").\
                      filter_by(id=id).\
@@ -3824,6 +3823,11 @@ def migration_get(context, id, session=None):
         raise exception.MigrationNotFound(migration_id=id)
 
     return result
+
+
+@require_admin_context
+def migration_get(context, id):
+    return _migration_get(context, id)
 
 
 @require_admin_context
@@ -3842,12 +3846,11 @@ def migration_get_by_instance_and_status(context, instance_uuid, status):
 
 @require_admin_context
 def migration_get_unconfirmed_by_dest_compute(context, confirm_window,
-        dest_compute, session=None):
+                                              dest_compute):
     confirm_window = (timeutils.utcnow() -
                       datetime.timedelta(seconds=confirm_window))
 
-    return model_query(context, models.Migration, session=session,
-                       read_deleted="yes").\
+    return model_query(context, models.Migration, read_deleted="yes").\
             filter(models.Migration.updated_at <= confirm_window).\
             filter_by(status="finished").\
             filter_by(dest_compute=dest_compute).\
@@ -3855,10 +3858,9 @@ def migration_get_unconfirmed_by_dest_compute(context, confirm_window,
 
 
 @require_admin_context
-def migration_get_in_progress_by_host_and_node(context, host, node,
-                                               session=None):
+def migration_get_in_progress_by_host_and_node(context, host, node):
 
-    return model_query(context, models.Migration, session=session).\
+    return model_query(context, models.Migration).\
             filter(or_(and_(models.Migration.source_compute == host,
                             models.Migration.source_node == node),
                        and_(models.Migration.dest_compute == host,
