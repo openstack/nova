@@ -42,6 +42,8 @@ from nova.virt.vmwareapi import fake as vmwareapi_fake
 from nova.virt.vmwareapi import vim
 from nova.virt.vmwareapi import vm_util
 from nova.virt.vmwareapi import vmops
+from nova.virt.vmwareapi import volume_util
+from nova.virt.vmwareapi import volumeops
 
 
 class fake_vm_ref(object):
@@ -605,6 +607,75 @@ class VMwareAPIVMTestCase(test.TestCase):
         self.assertEquals(connector_dict['ip'], "test_url")
         self.assertEquals(connector_dict['initiator'], "iscsi-name")
         self.assertEquals(connector_dict['host'], "test_url")
+
+    def _test_vmdk_connection_info(self, type):
+        return {'driver_volume_type': type,
+                'serial': 'volume-fake-id',
+                'data': {'volume': 'vm-10',
+                         'volume_id': 'volume-fake-id'}}
+
+    def test_volume_attach_iscsi(self):
+        self._create_vm()
+        connection_info = self._test_vmdk_connection_info('iscsi')
+        mount_point = '/dev/vdc'
+        self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
+                                 '_attach_volume_iscsi')
+        volumeops.VMwareVolumeOps._attach_volume_iscsi(connection_info,
+                self.instance, mount_point)
+        self.mox.ReplayAll()
+        self.conn.attach_volume(connection_info, self.instance, mount_point)
+
+    def test_volume_detach_iscsi(self):
+        self._create_vm()
+        connection_info = self._test_vmdk_connection_info('iscsi')
+        mount_point = '/dev/vdc'
+        self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
+                                 '_detach_volume_iscsi')
+        volumeops.VMwareVolumeOps._detach_volume_iscsi(connection_info,
+                self.instance, mount_point)
+        self.mox.ReplayAll()
+        self.conn.detach_volume(connection_info, self.instance, mount_point)
+
+    def test_attach_iscsi_disk_to_vm(self):
+        self._create_vm()
+        connection_info = self._test_vmdk_connection_info('iscsi')
+        connection_info['data']['target_portal'] = 'fake_target_portal'
+        connection_info['data']['target_iqn'] = 'fake_target_iqn'
+        mount_point = '/dev/vdc'
+        discover = ('fake_name', 'fake_uuid')
+        self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
+                                 'discover_st')
+        volumeops.VMwareVolumeOps.discover_st(
+                connection_info['data']).AndReturn(discover)
+        self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
+                                 'attach_disk_to_vm')
+        volumeops.VMwareVolumeOps.attach_disk_to_vm(mox.IgnoreArg(),
+                self.instance, mox.IgnoreArg(), 'rdmp',
+                controller_key=mox.IgnoreArg(),
+                unit_number=mox.IgnoreArg(),
+                device_name=mox.IgnoreArg())
+        self.mox.ReplayAll()
+        self.conn.attach_volume(connection_info, self.instance, mount_point)
+
+    def test_detach_iscsi_disk_from_vm(self):
+        self._create_vm()
+        connection_info = self._test_vmdk_connection_info('iscsi')
+        connection_info['data']['target_portal'] = 'fake_target_portal'
+        connection_info['data']['target_iqn'] = 'fake_target_iqn'
+        mount_point = '/dev/vdc'
+        find = ('fake_name', 'fake_uuid')
+        self.mox.StubOutWithMock(volume_util, 'find_st')
+        volume_util.find_st(mox.IgnoreArg(), connection_info['data'],
+                mox.IgnoreArg()).AndReturn(find)
+        self.mox.StubOutWithMock(vm_util, 'get_rdm_disk')
+        device = 'fake_device'
+        vm_util.get_rdm_disk(mox.IgnoreArg(), 'fake_uuid').AndReturn(device)
+        self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
+                                 'detach_disk_from_vm')
+        volumeops.VMwareVolumeOps.detach_disk_from_vm(mox.IgnoreArg(),
+                self.instance, device)
+        self.mox.ReplayAll()
+        self.conn.detach_volume(connection_info, self.instance, mount_point)
 
 
 class VMwareAPIHostTestCase(test.TestCase):
