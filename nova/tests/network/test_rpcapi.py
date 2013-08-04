@@ -79,6 +79,8 @@ class NetworkRpcAPITestCase(test.TestCase):
         retval = getattr(rpcapi, method)(ctxt, **kwargs)
 
         self.assertEqual(retval, expected_retval)
+        self.assertIsNotNone(self.fake_args)
+        self.assertIsNotNone(self.fake_kwargs)
         expected_args = [ctxt, expected_topic, expected_msg]
         for arg, expected_arg in zip(self.fake_args, expected_args):
             try:

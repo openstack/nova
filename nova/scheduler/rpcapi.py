@@ -21,7 +21,7 @@ Client side of the scheduler manager RPC API.
 from oslo.config import cfg
 
 from nova.openstack.common import jsonutils
-import nova.openstack.common.rpc.proxy
+from nova import rpcclient
 
 rpcapi_opts = [
     cfg.StrOpt('scheduler_topic',
@@ -37,7 +37,7 @@ rpcapi_cap_opt = cfg.StrOpt('scheduler',
 CONF.register_opt(rpcapi_cap_opt, 'upgrade_levels')
 
 
-class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
+class SchedulerAPI(rpcclient.RpcProxy):
     '''Client side of the scheduler rpc API.
 
     API version history:
@@ -94,11 +94,12 @@ class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         super(SchedulerAPI, self).__init__(topic=CONF.scheduler_topic,
                 default_version=self.BASE_RPC_API_VERSION,
                 version_cap=version_cap)
+        self.client = self.get_client()
 
     def select_destinations(self, ctxt, request_spec, filter_properties):
-        return self.call(ctxt, self.make_msg('select_destinations',
-            request_spec=request_spec, filter_properties=filter_properties),
-            version='2.7')
+        cctxt = self.client.prepare(version='2.7')
+        return cctxt.call(ctxt, 'select_destinations',
+            request_spec=request_spec, filter_properties=filter_properties)
 
     def run_instance(self, ctxt, request_spec, admin_password,
             injected_files, requested_networks, is_first_time,
@@ -110,11 +111,11 @@ class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                       'requested_networks': requested_networks,
                       'is_first_time': is_first_time,
                       'filter_properties': filter_properties}
-        if self.can_send_version('2.9'):
+        if self.client.can_send_version('2.9'):
             version = '2.9'
             msg_kwargs['legacy_bdm_in_spec'] = legacy_bdm_in_spec
-        return self.cast(ctxt, self.make_msg('run_instance', **msg_kwargs),
-                         version=version)
+        cctxt = self.client.prepare(version=version)
+        return cctxt.cast(ctxt, 'run_instance', **msg_kwargs)
 
     def prep_resize(self, ctxt, instance, instance_type, image,
             request_spec, filter_properties, reservations):
@@ -122,24 +123,24 @@ class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         instance_type_p = jsonutils.to_primitive(instance_type)
         reservations_p = jsonutils.to_primitive(reservations)
         image_p = jsonutils.to_primitive(image)
-        self.cast(ctxt, self.make_msg('prep_resize',
-                instance=instance_p, instance_type=instance_type_p,
-                image=image_p, request_spec=request_spec,
-                filter_properties=filter_properties,
-                reservations=reservations_p))
+        self.client.cast(ctxt, 'prep_resize',
+                         instance=instance_p, instance_type=instance_type_p,
+                         image=image_p, request_spec=request_spec,
+                         filter_properties=filter_properties,
+                         reservations=reservations_p)
 
     def update_service_capabilities(self, ctxt, service_name, host,
             capabilities):
         #NOTE(jogo) This is deprecated, but is used by the deprecated
         # publish_service_capabilities call. So this can begin its removal
         # process once publish_service_capabilities is removed.
-        self.fanout_cast(ctxt, self.make_msg('update_service_capabilities',
-                service_name=service_name, host=host,
-                capabilities=capabilities),
-                version='2.4')
+        cctxt = self.client.prepare(fanout=True, version='2.4')
+        cctxt.cast(ctxt, 'update_service_capabilities',
+                   service_name=service_name, host=host,
+                   capabilities=capabilities)
 
     def select_hosts(self, ctxt, request_spec, filter_properties):
-        return self.call(ctxt, self.make_msg('select_hosts',
-                request_spec=request_spec,
-                filter_properties=filter_properties),
-                version='2.6')
+        cctxt = self.client.prepare(version='2.6')
+        return cctxt.call(ctxt, 'select_hosts',
+                          request_spec=request_spec,
+                          filter_properties=filter_properties)

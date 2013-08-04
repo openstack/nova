@@ -24,9 +24,7 @@ from nova import exception
 from nova.objects import base as objects_base
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
-from nova.openstack.common import rpc
-import nova.openstack.common.rpc
-import nova.openstack.common.rpc.proxy
+from nova import rpcclient
 
 rpcapi_opts = [
     cfg.StrOpt('compute_topic',
@@ -42,28 +40,26 @@ rpcapi_cap_opt = cfg.StrOpt('compute',
 CONF.register_opt(rpcapi_cap_opt, 'upgrade_levels')
 
 
-def _compute_topic(topic, ctxt, host, instance):
-    '''Get the topic to use for a message.
+def _compute_host(host, instance):
+    '''Get the destination host for a message.
 
-    :param topic: the base topic
-    :param ctxt: request context
     :param host: explicit host to send the message to.
     :param instance: If an explicit host was not specified, use
                      instance['host']
 
-    :returns: A topic string
+    :returns: A host
     '''
-    if not host:
-        if not instance:
-            raise exception.NovaException(_('No compute host specified'))
-        host = instance['host']
-        if not host:
-            raise exception.NovaException(_('Unable to find host for '
-                                          'Instance %s') % instance['uuid'])
-    return rpc.queue_get_for(ctxt, topic, host)
+    if host:
+        return host
+    if not instance:
+        raise exception.NovaException(_('No compute host specified'))
+    if not instance['host']:
+        raise exception.NovaException(_('Unable to find host for '
+                                        'Instance %s') % instance['uuid'])
+    return instance['host']
 
 
-class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
+class ComputeAPI(rpcclient.RpcProxy):
     '''Client side of the compute rpc API.
 
     API version history:
@@ -227,6 +223,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 default_version=self.BASE_RPC_API_VERSION,
                 serializer=objects_base.NovaObjectSerializer(),
                 version_cap=version_cap)
+        self.client = self.get_client()
 
     def add_aggregate_host(self, ctxt, aggregate, host_param, host,
                            slave_info=None):
@@ -240,84 +237,77 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         '''
 
         aggregate_p = jsonutils.to_primitive(aggregate)
-        self.cast(ctxt, self.make_msg('add_aggregate_host',
-                aggregate=aggregate_p, host=host_param,
-                slave_info=slave_info),
-                topic=_compute_topic(self.topic, ctxt, host, None),
-                version='2.14')
+        cctxt = self.client.prepare(server=host, version='2.14')
+        cctxt.cast(ctxt, 'add_aggregate_host',
+                   aggregate=aggregate_p, host=host_param,
+                   slave_info=slave_info)
 
     def add_fixed_ip_to_instance(self, ctxt, instance, network_id):
         instance_p = jsonutils.to_primitive(instance)
-        self.cast(ctxt, self.make_msg('add_fixed_ip_to_instance',
-                instance=instance_p, network_id=network_id),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+        cctxt = self.client.prepare(server=_compute_host(None, instance))
+        cctxt.cast(ctxt, 'add_fixed_ip_to_instance',
+                   instance=instance_p, network_id=network_id)
 
     def attach_interface(self, ctxt, instance, network_id, port_id,
                          requested_ip):
         instance_p = jsonutils.to_primitive(instance)
-        return self.call(ctxt, self.make_msg('attach_interface',
-                 instance=instance_p, network_id=network_id,
-                 port_id=port_id, requested_ip=requested_ip),
-                 topic=_compute_topic(self.topic, ctxt, None, instance),
-                 version='2.25')
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                                    version='2.25')
+        return cctxt.call(ctxt, 'attach_interface',
+                          instance=instance_p, network_id=network_id,
+                          port_id=port_id, requested_ip=requested_ip)
 
     def attach_volume(self, ctxt, instance, volume_id, mountpoint):
         instance_p = jsonutils.to_primitive(instance)
-        self.cast(ctxt, self.make_msg('attach_volume',
-                instance=instance_p, volume_id=volume_id,
-                mountpoint=mountpoint),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+        cctxt = self.client.prepare(server=_compute_host(None, instance))
+        cctxt.cast(ctxt, 'attach_volume',
+                   instance=instance_p, volume_id=volume_id,
+                   mountpoint=mountpoint)
 
     def change_instance_metadata(self, ctxt, instance, diff):
         instance_p = jsonutils.to_primitive(instance)
-        self.cast(ctxt, self.make_msg('change_instance_metadata',
-                  instance=instance_p, diff=diff),
-                  topic=_compute_topic(self.topic, ctxt, None, instance))
+        cctxt = self.client.prepare(server=_compute_host(None, instance))
+        cctxt.cast(ctxt, 'change_instance_metadata',
+                   instance=instance_p, diff=diff)
 
     def check_can_live_migrate_destination(self, ctxt, instance, destination,
                                            block_migration, disk_over_commit):
-        if self.can_send_version('2.38'):
+        if self.client.can_send_version('2.38'):
             version = '2.38'
         else:
             version = '2.0'
             instance = jsonutils.to_primitive(
                     objects_base.obj_to_primitive(instance))
-        return self.call(ctxt,
-                         self.make_msg('check_can_live_migrate_destination',
-                                       instance=instance,
-                                       block_migration=block_migration,
-                                       disk_over_commit=disk_over_commit),
-                         topic=_compute_topic(self.topic,
-                                              ctxt, destination, None),
-                         version=version)
+        cctxt = self.client.prepare(server=destination, version=version)
+        return cctxt.call(ctxt, 'check_can_live_migrate_destination',
+                          instance=instance,
+                          block_migration=block_migration,
+                          disk_over_commit=disk_over_commit)
 
     def check_can_live_migrate_source(self, ctxt, instance, dest_check_data):
-        if self.can_send_version('2.38'):
+        if self.client.can_send_version('2.38'):
             version = '2.38'
         else:
             version = '2.0'
             instance = jsonutils.to_primitive(
                     objects_base.obj_to_primitive(instance))
-        return self.call(ctxt, self.make_msg('check_can_live_migrate_source',
-                                             instance=instance,
-                                             dest_check_data=dest_check_data),
-                         topic=_compute_topic(self.topic, ctxt, None,
-                                              instance),
-                         version=version)
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                                    version=version)
+        return cctxt.call(ctxt, 'check_can_live_migrate_source',
+                          instance=instance,
+                          dest_check_data=dest_check_data)
 
     def check_instance_shared_storage(self, ctxt, instance, data):
         instance_p = jsonutils.to_primitive(instance)
-        return self.call(ctxt, self.make_msg('check_instance_shared_storage',
-                                             instance=instance_p,
-                                             data=data),
-                         topic=_compute_topic(self.topic, ctxt, None,
-                                              instance),
-                         version='2.28')
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                                    version='2.28')
+        return cctxt.call(ctxt, 'check_instance_shared_storage',
+                          instance=instance_p,
+                          data=data)
 
     def confirm_resize(self, ctxt, instance, migration, host,
             reservations=None, cast=True):
-        rpc_method = self.cast if cast else self.call
-        if self.can_send_version('2.39'):
+        if self.client.can_send_version('2.39'):
             version = '2.39'
         else:
             instance = jsonutils.to_primitive(
@@ -325,85 +315,85 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
             migration = jsonutils.to_primitive(
                     objects_base.obj_to_primitive(migration))
             version = '2.7'
-        return rpc_method(ctxt, self.make_msg('confirm_resize',
-                instance=instance, migration=migration,
-                reservations=reservations),
-                topic=_compute_topic(self.topic, ctxt, host, instance),
-                version=version)
+        cctxt = self.client.prepare(server=_compute_host(host, instance),
+                                    version=version)
+        rpc_method = cctxt.cast if cast else cctxt.call
+        return rpc_method(ctxt, 'confirm_resize',
+                          instance=instance, migration=migration,
+                          reservations=reservations)
 
     def detach_interface(self, ctxt, instance, port_id):
         instance_p = jsonutils.to_primitive(instance)
-        self.cast(ctxt, self.make_msg('detach_interface',
-                 instance=instance_p, port_id=port_id),
-                 topic=_compute_topic(self.topic, ctxt, None, instance),
-                 version='2.25')
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                                    version='2.25')
+        cctxt.cast(ctxt, 'detach_interface',
+                   instance=instance_p, port_id=port_id)
 
     def detach_volume(self, ctxt, instance, volume_id):
         instance_p = jsonutils.to_primitive(instance)
-        self.cast(ctxt, self.make_msg('detach_volume',
-                instance=instance_p, volume_id=volume_id),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+        cctxt = self.client.prepare(server=_compute_host(None, instance))
+        cctxt.cast(ctxt, 'detach_volume',
+                   instance=instance_p, volume_id=volume_id)
 
     def finish_resize(self, ctxt, instance, migration, image, disk_info,
             host, reservations=None):
         instance_p = jsonutils.to_primitive(instance)
         migration_p = jsonutils.to_primitive(migration)
-        self.cast(ctxt, self.make_msg('finish_resize',
-                instance=instance_p, migration=migration_p,
-                image=image, disk_info=disk_info, reservations=reservations),
-                topic=_compute_topic(self.topic, ctxt, host, None),
-                version='2.8')
+        cctxt = self.client.prepare(server=host, version='2.8')
+        cctxt.cast(ctxt, 'finish_resize',
+                   instance=instance_p, migration=migration_p,
+                   image=image, disk_info=disk_info, reservations=reservations)
 
     def finish_revert_resize(self, ctxt, instance, migration, host,
                              reservations=None):
         instance_p = jsonutils.to_primitive(instance)
         migration_p = jsonutils.to_primitive(migration)
-        self.cast(ctxt, self.make_msg('finish_revert_resize',
-                instance=instance_p, migration=migration_p,
-                reservations=reservations),
-                topic=_compute_topic(self.topic, ctxt, host, None),
-                version='2.13')
+        cctxt = self.client.prepare(server=host, version='2.13')
+        cctxt.cast(ctxt, 'finish_revert_resize',
+                   instance=instance_p, migration=migration_p,
+                   reservations=reservations)
 
     def get_console_output(self, ctxt, instance, tail_length):
         instance_p = jsonutils.to_primitive(instance)
-        return self.call(ctxt, self.make_msg('get_console_output',
-                instance=instance_p, tail_length=tail_length),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+        cctxt = self.client.prepare(server=_compute_host(None, instance))
+        return cctxt.call(ctxt, 'get_console_output',
+                          instance=instance_p, tail_length=tail_length)
 
     def get_console_pool_info(self, ctxt, console_type, host):
-        return self.call(ctxt, self.make_msg('get_console_pool_info',
-                console_type=console_type),
-                topic=_compute_topic(self.topic, ctxt, host, None))
+        cctxt = self.client.prepare(server=host)
+        return cctxt.call(ctxt, 'get_console_pool_info',
+                          console_type=console_type)
 
     def get_console_topic(self, ctxt, host):
-        return self.call(ctxt, self.make_msg('get_console_topic'),
-                topic=_compute_topic(self.topic, ctxt, host, None))
+        cctxt = self.client.prepare(server=host)
+        return cctxt.call(ctxt, 'get_console_topic')
 
     def get_diagnostics(self, ctxt, instance):
         instance_p = jsonutils.to_primitive(instance)
-        return self.call(ctxt, self.make_msg('get_diagnostics',
-                instance=instance_p),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+        cctxt = self.client.prepare(server=_compute_host(None, instance))
+        return cctxt.call(ctxt, 'get_diagnostics',
+                          instance=instance_p)
 
     def get_vnc_console(self, ctxt, instance, console_type):
         instance_p = jsonutils.to_primitive(instance)
-        return self.call(ctxt, self.make_msg('get_vnc_console',
-                instance=instance_p, console_type=console_type),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+        cctxt = self.client.prepare(server=_compute_host(None, instance))
+        return cctxt.call(ctxt, 'get_vnc_console',
+                          instance=instance_p, console_type=console_type)
 
     def get_spice_console(self, ctxt, instance, console_type):
         instance_p = jsonutils.to_primitive(instance)
-        return self.call(ctxt, self.make_msg('get_spice_console',
-                instance=instance_p, console_type=console_type),
-                topic=_compute_topic(self.topic, ctxt, None, instance),
-                         version='2.24')
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                                    version='2.24')
+        return cctxt.call(ctxt, 'get_spice_console',
+                          instance=instance_p, console_type=console_type)
 
     def validate_console_port(self, ctxt, instance, port, console_type):
         instance_p = jsonutils.to_primitive(instance)
-        return self.call(ctxt, self.make_msg('validate_console_port',
-                instance=instance_p, port=port, console_type=console_type),
-                topic=_compute_topic(self.topic, ctxt, None, instance),
-                version='2.26')
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                                    version='2.26')
+        return cctxt.call(ctxt, 'validate_console_port',
+                          instance=instance_p, port=port,
+                          console_type=console_type)
 
     def host_maintenance_mode(self, ctxt, host_param, mode, host):
         '''Set host maintenance mode
@@ -414,88 +404,82 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         :param mode:
         :param host: This is the host to send the message to.
         '''
-        return self.call(ctxt, self.make_msg('host_maintenance_mode',
-                host=host_param, mode=mode),
-                topic=_compute_topic(self.topic, ctxt, host, None))
+        cctxt = self.client.prepare(server=host)
+        return cctxt.call(ctxt, 'host_maintenance_mode',
+                          host=host_param, mode=mode)
 
     def host_power_action(self, ctxt, action, host):
-        topic = _compute_topic(self.topic, ctxt, host, None)
-        return self.call(ctxt, self.make_msg('host_power_action',
-                action=action), topic)
+        cctxt = self.client.prepare(server=host)
+        return cctxt.call(ctxt, 'host_power_action', action=action)
 
     def inject_file(self, ctxt, instance, path, file_contents):
         instance_p = jsonutils.to_primitive(instance)
-        self.cast(ctxt, self.make_msg('inject_file',
-                instance=instance_p, path=path,
-                file_contents=file_contents),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+        cctxt = self.client.prepare(server=_compute_host(None, instance))
+        cctxt.cast(ctxt, 'inject_file',
+                   instance=instance_p, path=path,
+                   file_contents=file_contents)
 
     def inject_network_info(self, ctxt, instance):
-        if self.can_send_version('2.41'):
+        if self.client.can_send_version('2.41'):
             version = '2.41'
         else:
             instance = jsonutils.to_primitive(
                     objects_base.obj_to_primitive(instance))
             version = '2.0'
-        self.cast(ctxt, self.make_msg('inject_network_info',
-                                      instance=instance),
-                  topic=_compute_topic(self.topic, ctxt, None, instance),
-                  version=version)
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                                    version=version)
+        cctxt.cast(ctxt, 'inject_network_info', instance=instance)
 
     def live_migration(self, ctxt, instance, dest, block_migration, host,
                        migrate_data=None):
         instance_p = jsonutils.to_primitive(instance)
-        self.cast(ctxt, self.make_msg('live_migration', instance=instance_p,
-                dest=dest, block_migration=block_migration,
-                migrate_data=migrate_data),
-                topic=_compute_topic(self.topic, ctxt, host, None))
+        cctxt = self.client.prepare(server=host)
+        cctxt.cast(ctxt, 'live_migration', instance=instance_p,
+                   dest=dest, block_migration=block_migration,
+                   migrate_data=migrate_data)
 
     def pause_instance(self, ctxt, instance):
-        if self.can_send_version('2.36'):
+        if self.client.can_send_version('2.36'):
             version = '2.36'
         else:
             version = '2.0'
             instance = jsonutils.to_primitive(
                     objects_base.obj_to_primitive(instance))
-        self.cast(ctxt, self.make_msg('pause_instance',
-                instance=instance),
-                topic=_compute_topic(self.topic, ctxt, None, instance),
-                version=version)
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                                    version=version)
+        cctxt.cast(ctxt, 'pause_instance', instance=instance)
 
     def post_live_migration_at_destination(self, ctxt, instance,
             block_migration, host):
         instance_p = jsonutils.to_primitive(instance)
-        return self.call(ctxt,
-                self.make_msg('post_live_migration_at_destination',
-                instance=instance_p, block_migration=block_migration),
-                _compute_topic(self.topic, ctxt, host, None))
+        cctxt = self.client.prepare(server=host)
+        return cctxt.call(ctxt,
+                          'post_live_migration_at_destination',
+                          instance=instance_p, block_migration=block_migration)
 
     def power_off_instance(self, ctxt, instance):
         instance_p = jsonutils.to_primitive(instance)
-        self.cast(ctxt, self.make_msg('power_off_instance',
-                instance=instance_p),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+        cctxt = self.client.prepare(server=_compute_host(None, instance))
+        cctxt.cast(ctxt, 'power_off_instance', instance=instance_p)
 
     def power_on_instance(self, ctxt, instance):
         instance_p = jsonutils.to_primitive(instance)
-        self.cast(ctxt, self.make_msg('power_on_instance',
-                instance=instance_p),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+        cctxt = self.client.prepare(server=_compute_host(None, instance))
+        cctxt.cast(ctxt, 'power_on_instance', instance=instance_p)
 
     def pre_live_migration(self, ctxt, instance, block_migration, disk,
             host, migrate_data=None):
         instance_p = jsonutils.to_primitive(instance)
-        return self.call(ctxt, self.make_msg('pre_live_migration',
-                        instance=instance_p,
-                        block_migration=block_migration,
-                        disk=disk, migrate_data=migrate_data),
-                        _compute_topic(self.topic, ctxt, host, None),
-                        version='2.21')
+        cctxt = self.client.prepare(server=host, version='2.21')
+        return cctxt.call(ctxt, 'pre_live_migration',
+                          instance=instance_p,
+                          block_migration=block_migration,
+                          disk=disk, migrate_data=migrate_data)
 
     def prep_resize(self, ctxt, image, instance, instance_type, host,
                     reservations=None, request_spec=None,
                     filter_properties=None, node=None):
-        if self.can_send_version('2.43'):
+        if self.client.can_send_version('2.43'):
             version = '2.43'
         else:
             instance = jsonutils.to_primitive(
@@ -503,49 +487,47 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
             version = '2.20'
         instance_type_p = jsonutils.to_primitive(instance_type)
         image_p = jsonutils.to_primitive(image)
-        self.cast(ctxt,
-                  self.make_msg('prep_resize',
-                                instance=instance,
-                                instance_type=instance_type_p,
-                                image=image_p, reservations=reservations,
-                                request_spec=request_spec,
-                                filter_properties=filter_properties,
-                                node=node),
-                  _compute_topic(self.topic, ctxt, host, None),
-                  version=version)
+        cctxt = self.client.prepare(server=host, version=version)
+        cctxt.cast(ctxt, 'prep_resize',
+                   instance=instance,
+                   instance_type=instance_type_p,
+                   image=image_p, reservations=reservations,
+                   request_spec=request_spec,
+                   filter_properties=filter_properties,
+                   node=node)
 
     def reboot_instance(self, ctxt, instance, block_device_info,
                         reboot_type):
-        if not self.can_send_version('2.32'):
+        if not self.client.can_send_version('2.32'):
             version = '2.23'
             instance = jsonutils.to_primitive(
                 objects_base.obj_to_primitive(instance))
         else:
             version = '2.32'
-        self.cast(ctxt, self.make_msg('reboot_instance',
-                instance=instance,
-                block_device_info=block_device_info,
-                reboot_type=reboot_type),
-                topic=_compute_topic(self.topic, ctxt, None, instance),
-                version=version)
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                                    version=version)
+        cctxt.cast(ctxt, 'reboot_instance',
+                   instance=instance,
+                   block_device_info=block_device_info,
+                   reboot_type=reboot_type)
 
     def rebuild_instance(self, ctxt, instance, new_pass, injected_files,
             image_ref, orig_image_ref, orig_sys_metadata, bdms,
             recreate=False, on_shared_storage=False, host=None):
         instance_p = jsonutils.to_primitive(instance)
         bdms_p = jsonutils.to_primitive(bdms)
-        self.cast(ctxt, self.make_msg('rebuild_instance',
-                instance=instance_p, new_pass=new_pass,
-                injected_files=injected_files, image_ref=image_ref,
-                orig_image_ref=orig_image_ref,
-                orig_sys_metadata=orig_sys_metadata, bdms=bdms_p,
-                recreate=recreate, on_shared_storage=on_shared_storage),
-                topic=_compute_topic(self.topic, ctxt, host, instance),
-                version='2.22')
+        cctxt = self.client.prepare(server=_compute_host(host, instance),
+                                    version='2.22')
+        cctxt.cast(ctxt, 'rebuild_instance',
+                   instance=instance_p, new_pass=new_pass,
+                   injected_files=injected_files, image_ref=image_ref,
+                   orig_image_ref=orig_image_ref,
+                   orig_sys_metadata=orig_sys_metadata, bdms=bdms_p,
+                   recreate=recreate, on_shared_storage=on_shared_storage)
 
     def refresh_provider_fw_rules(self, ctxt, host):
-        self.cast(ctxt, self.make_msg('refresh_provider_fw_rules'),
-                _compute_topic(self.topic, ctxt, host, None))
+        cctxt = self.client.prepare(server=host)
+        cctxt.cast(ctxt, 'refresh_provider_fw_rules')
 
     def remove_aggregate_host(self, ctxt, aggregate, host_param, host,
                               slave_info=None):
@@ -559,70 +541,67 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         '''
 
         aggregate_p = jsonutils.to_primitive(aggregate)
-        self.cast(ctxt, self.make_msg('remove_aggregate_host',
-                aggregate=aggregate_p, host=host_param,
-                slave_info=slave_info),
-                topic=_compute_topic(self.topic, ctxt, host, None),
-                version='2.15')
+        cctxt = self.client.prepare(server=host, version='2.15')
+        cctxt.cast(ctxt, 'remove_aggregate_host',
+                   aggregate=aggregate_p, host=host_param,
+                   slave_info=slave_info)
 
     def remove_fixed_ip_from_instance(self, ctxt, instance, address):
         instance_p = jsonutils.to_primitive(instance)
-        self.cast(ctxt, self.make_msg('remove_fixed_ip_from_instance',
-                instance=instance_p, address=address),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+        cctxt = self.client.prepare(server=_compute_host(None, instance))
+        cctxt.cast(ctxt, 'remove_fixed_ip_from_instance',
+                   instance=instance_p, address=address)
 
     def remove_volume_connection(self, ctxt, instance, volume_id, host):
         instance_p = jsonutils.to_primitive(instance)
-        return self.call(ctxt, self.make_msg('remove_volume_connection',
-                instance=instance_p, volume_id=volume_id),
-                topic=_compute_topic(self.topic, ctxt, host, None))
+        cctxt = self.client.prepare(server=host)
+        return cctxt.call(ctxt, 'remove_volume_connection',
+                          instance=instance_p, volume_id=volume_id)
 
     def rescue_instance(self, ctxt, instance, rescue_password):
         instance_p = jsonutils.to_primitive(instance)
-        self.cast(ctxt, self.make_msg('rescue_instance',
-                instance=instance_p,
-                rescue_password=rescue_password),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+        cctxt = self.client.prepare(server=_compute_host(None, instance))
+        cctxt.cast(ctxt, 'rescue_instance',
+                   instance=instance_p,
+                   rescue_password=rescue_password)
 
     def reset_network(self, ctxt, instance):
-        if self.can_send_version('2.40'):
+        if self.client.can_send_version('2.40'):
             version = '2.40'
         else:
             instance = jsonutils.to_primitive(
                     objects_base.obj_to_primitive(instance))
             version = '2.0'
-        self.cast(ctxt, self.make_msg('reset_network',
-                                      instance=instance),
-                  topic=_compute_topic(self.topic, ctxt, None, instance),
-                  version=version)
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                                    version=version)
+        cctxt.cast(ctxt, 'reset_network', instance=instance)
 
     def resize_instance(self, ctxt, instance, migration, image, instance_type,
                         reservations=None):
-        topic = _compute_topic(self.topic, ctxt, None, instance)
         instance_p = jsonutils.to_primitive(instance)
         migration_p = jsonutils.to_primitive(migration)
         instance_type_p = jsonutils.to_primitive(instance_type)
-        self.cast(ctxt, self.make_msg('resize_instance',
-                instance=instance_p, migration=migration_p,
-                image=image, reservations=reservations,
-                instance_type=instance_type_p), topic,
-                version='2.16')
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                                    version='2.16')
+        cctxt.cast(ctxt, 'resize_instance',
+                   instance=instance_p, migration=migration_p,
+                   image=image, reservations=reservations,
+                   instance_type=instance_type_p)
 
     def resume_instance(self, ctxt, instance):
-        if self.can_send_version('2.33'):
+        if self.client.can_send_version('2.33'):
             version = '2.33'
         else:
             version = '2.0'
             instance = jsonutils.to_primitive(
                     objects_base.obj_to_primitive(instance))
-        self.cast(ctxt, self.make_msg('resume_instance',
-                                      instance=instance),
-                  topic=_compute_topic(self.topic, ctxt, None, instance),
-                  version=version)
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                                    version=version)
+        cctxt.cast(ctxt, 'resume_instance', instance=instance)
 
     def revert_resize(self, ctxt, instance, migration, host,
                       reservations=None):
-        if self.can_send_version('2.39'):
+        if self.client.can_send_version('2.39'):
             version = '2.39'
         else:
             instance = jsonutils.to_primitive(
@@ -630,17 +609,17 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
             migration = jsonutils.to_primitive(
                     objects_base.obj_to_primitive(migration))
             version = '2.12'
-        self.cast(ctxt, self.make_msg('revert_resize',
-                instance=instance, migration=migration,
-                reservations=reservations),
-                topic=_compute_topic(self.topic, ctxt, host, instance),
-                version=version)
+        cctxt = self.client.prepare(server=_compute_host(host, instance),
+                                    version=version)
+        cctxt.cast(ctxt, 'revert_resize',
+                   instance=instance, migration=migration,
+                   reservations=reservations)
 
     def rollback_live_migration_at_destination(self, ctxt, instance, host):
         instance_p = jsonutils.to_primitive(instance)
-        self.cast(ctxt, self.make_msg('rollback_live_migration_at_destination',
-            instance=instance_p),
-            topic=_compute_topic(self.topic, ctxt, host, None))
+        cctxt = self.client.prepare(server=host)
+        cctxt.cast(ctxt, 'rollback_live_migration_at_destination',
+                   instance=instance_p)
 
     def run_instance(self, ctxt, instance, host, request_spec,
                      filter_properties, requested_networks,
@@ -654,55 +633,53 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                       'admin_password': admin_password,
                       'is_first_time': is_first_time, 'node': node}
 
-        if self.can_send_version('2.37'):
+        if self.client.can_send_version('2.37'):
             version = '2.37'
             msg_kwargs['legacy_bdm_in_spec'] = legacy_bdm_in_spec
         else:
             version = '2.19'
-        msg = self.make_msg('run_instance', **msg_kwargs)
-        self.cast(ctxt, msg,
-                  topic=_compute_topic(self.topic, ctxt, host, None),
-                  version=version)
+        cctxt = self.client.prepare(server=host, version=version)
+        cctxt.cast(ctxt, 'run_instance', **msg_kwargs)
 
     def set_admin_password(self, ctxt, instance, new_pass):
         instance_p = jsonutils.to_primitive(instance)
-        return self.call(ctxt, self.make_msg('set_admin_password',
-                instance=instance_p, new_pass=new_pass),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+        cctxt = self.client.prepare(server=_compute_host(None, instance))
+        return cctxt.call(ctxt, 'set_admin_password',
+                          instance=instance_p, new_pass=new_pass)
 
     def set_host_enabled(self, ctxt, enabled, host):
-        topic = _compute_topic(self.topic, ctxt, host, None)
-        return self.call(ctxt, self.make_msg('set_host_enabled',
-                enabled=enabled), topic)
+        cctxt = self.client.prepare(server=host)
+        return cctxt.call(ctxt, 'set_host_enabled', enabled=enabled)
 
     def swap_volume(self, ctxt, instance, old_volume_id, new_volume_id):
-        self.cast(ctxt, self.make_msg('swap_volume',
-                instance=instance, old_volume_id=old_volume_id,
-                new_volume_id=new_volume_id),
-                topic=_compute_topic(self.topic, ctxt, None, instance),
-                version='2.34')
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                                    version='2.34')
+        cctxt.cast(ctxt, 'swap_volume',
+                   instance=instance, old_volume_id=old_volume_id,
+                   new_volume_id=new_volume_id)
 
     def get_host_uptime(self, ctxt, host):
-        topic = _compute_topic(self.topic, ctxt, host, None)
-        return self.call(ctxt, self.make_msg('get_host_uptime'), topic)
+        cctxt = self.client.prepare(server=host)
+        return cctxt.call(ctxt, 'get_host_uptime')
 
     def reserve_block_device_name(self, ctxt, instance, device, volume_id):
         instance_p = jsonutils.to_primitive(instance)
-        return self.call(ctxt, self.make_msg('reserve_block_device_name',
-                instance=instance_p, device=device, volume_id=volume_id),
-                topic=_compute_topic(self.topic, ctxt, None, instance),
-                version='2.3')
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                                    version='2.3')
+        return cctxt.call(ctxt, 'reserve_block_device_name',
+                          instance=instance_p, device=device,
+                          volume_id=volume_id)
 
     def live_snapshot_instance(self, ctxt, instance, image_id):
         instance_p = jsonutils.to_primitive(instance)
-        self.cast(ctxt, self.make_msg('live_snapshot_instance',
-                instance=instance_p, image_id=image_id),
-                topic=_compute_topic(self.topic, ctxt, None, instance),
-                version='2.30')
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                                    version='2.30')
+        cctxt.cast(ctxt, 'live_snapshot_instance',
+                   instance=instance_p, image_id=image_id)
 
     def backup_instance(self, ctxt, instance, image_id, backup_type,
                         rotation):
-        if self.can_send_version('2.42'):
+        if self.client.can_send_version('2.42'):
             version = '2.42'
             method = 'backup_instance'
             extra_kwargs = dict()
@@ -712,17 +689,17 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
             method = 'snapshot_instance'
             extra_kwargs = dict(image_type='backup')
             version = '2.0'
-        self.cast(ctxt, self.make_msg(method,
-                                      instance=instance,
-                                      image_id=image_id,
-                                      backup_type=backup_type,
-                                      rotation=rotation,
-                                      **extra_kwargs),
-                  topic=_compute_topic(self.topic, ctxt, None, instance),
-                  version=version)
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                                    version=version)
+        cctxt.cast(ctxt, method,
+                   instance=instance,
+                   image_id=image_id,
+                   backup_type=backup_type,
+                   rotation=rotation,
+                   **extra_kwargs)
 
     def snapshot_instance(self, ctxt, instance, image_id):
-        if self.can_send_version('2.42'):
+        if self.client.can_send_version('2.42'):
             version = '2.42'
             extra_kwargs = dict()
         else:
@@ -732,135 +709,127 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                                 backup_type=None,
                                 rotation=None)
             version = '2.0'
-        self.cast(ctxt, self.make_msg('snapshot_instance',
-                                      instance=instance,
-                                      image_id=image_id,
-                                      **extra_kwargs),
-                  topic=_compute_topic(self.topic, ctxt, None, instance),
-                  version=version)
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                                    version=version)
+        cctxt.cast(ctxt, 'snapshot_instance',
+                   instance=instance,
+                   image_id=image_id,
+                   **extra_kwargs)
 
     def start_instance(self, ctxt, instance):
-        if self.can_send_version('2.29'):
+        if self.client.can_send_version('2.29'):
             version = '2.29'
         else:
             version = '2.0'
             instance = jsonutils.to_primitive(
                     objects_base.obj_to_primitive(instance))
-        self.cast(ctxt, self.make_msg('start_instance',
-                instance=instance),
-                topic=_compute_topic(self.topic, ctxt, None, instance),
-                version=version)
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                                    version=version)
+        cctxt.cast(ctxt, 'start_instance', instance=instance)
 
     def stop_instance(self, ctxt, instance, do_cast=True):
-        if self.can_send_version('2.29'):
+        if self.client.can_send_version('2.29'):
             version = '2.29'
         else:
             version = '2.0'
             instance = jsonutils.to_primitive(
                     objects_base.obj_to_primitive(instance))
-        rpc_method = self.cast if do_cast else self.call
-        return rpc_method(ctxt, self.make_msg('stop_instance',
-                instance=instance),
-                topic=_compute_topic(self.topic, ctxt, None, instance),
-                version=version)
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                                    version=version)
+        rpc_method = cctxt.cast if do_cast else cctxt.call
+        return rpc_method(ctxt, 'stop_instance', instance=instance)
 
     def suspend_instance(self, ctxt, instance):
-        if self.can_send_version('2.33'):
+        if self.client.can_send_version('2.33'):
             version = '2.33'
         else:
             version = '2.0'
             instance = jsonutils.to_primitive(
                     objects_base.obj_to_primitive(instance))
-        self.cast(ctxt, self.make_msg('suspend_instance',
-                                      instance=instance),
-                  topic=_compute_topic(self.topic, ctxt, None, instance),
-                  version=version)
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                                    version=version)
+        cctxt.cast(ctxt, 'suspend_instance', instance=instance)
 
     def terminate_instance(self, ctxt, instance, bdms, reservations=None):
-        if self.can_send_version('2.35'):
+        if self.client.can_send_version('2.35'):
             version = '2.35'
         else:
             version = '2.27'
             instance = jsonutils.to_primitive(instance)
         bdms_p = jsonutils.to_primitive(bdms)
-        self.cast(ctxt, self.make_msg('terminate_instance',
-                instance=instance, bdms=bdms_p,
-                reservations=reservations),
-                topic=_compute_topic(self.topic, ctxt, None, instance),
-                version=version)
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                                    version=version)
+        cctxt.cast(ctxt, 'terminate_instance',
+                   instance=instance, bdms=bdms_p,
+                   reservations=reservations)
 
     def unpause_instance(self, ctxt, instance):
-        if self.can_send_version('2.36'):
+        if self.client.can_send_version('2.36'):
             version = '2.36'
         else:
             version = '2.0'
             instance = jsonutils.to_primitive(
                     objects_base.obj_to_primitive(instance))
-        self.cast(ctxt, self.make_msg('unpause_instance',
-                instance=instance),
-                topic=_compute_topic(self.topic, ctxt, None, instance),
-                version=version)
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                                    version=version)
+        cctxt.cast(ctxt, 'unpause_instance', instance=instance)
 
     def unrescue_instance(self, ctxt, instance):
         instance_p = jsonutils.to_primitive(instance)
-        self.cast(ctxt, self.make_msg('unrescue_instance',
-                instance=instance_p),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+        cctxt = self.client.prepare(server=_compute_host(None, instance))
+        cctxt.cast(ctxt, 'unrescue_instance', instance=instance_p)
 
     def soft_delete_instance(self, ctxt, instance, reservations=None):
-        if self.can_send_version('2.35'):
+        if self.client.can_send_version('2.35'):
             version = '2.35'
         else:
             version = '2.27'
             instance = jsonutils.to_primitive(instance)
-        self.cast(ctxt, self.make_msg('soft_delete_instance',
-                instance=instance, reservations=reservations),
-                topic=_compute_topic(self.topic, ctxt, None, instance),
-                version=version)
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                                    version=version)
+        cctxt.cast(ctxt, 'soft_delete_instance',
+                   instance=instance, reservations=reservations)
 
     def restore_instance(self, ctxt, instance):
         instance_p = jsonutils.to_primitive(instance)
-        self.cast(ctxt, self.make_msg('restore_instance',
-                instance=instance_p),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+        cctxt = self.client.prepare(server=_compute_host(None, instance))
+        cctxt.cast(ctxt, 'restore_instance', instance=instance_p)
 
     def shelve_instance(self, ctxt, instance, image_id=None):
-        self.cast(ctxt, self.make_msg('shelve_instance',
-            instance=instance, image_id=image_id),
-            topic=_compute_topic(self.topic, ctxt, None, instance),
-            version='2.31')
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                                    version='2.31')
+        cctxt.cast(ctxt, 'shelve_instance',
+                   instance=instance, image_id=image_id)
 
     def shelve_offload_instance(self, ctxt, instance):
-        self.cast(ctxt, self.make_msg('shelve_offload_instance',
-            instance=instance),
-            topic=_compute_topic(self.topic, ctxt, None, instance),
-            version='2.31')
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                                    version='2.31')
+        cctxt.cast(ctxt, 'shelve_offload_instance', instance=instance)
 
     def unshelve_instance(self, ctxt, instance, host, image=None):
-        self.cast(ctxt, self.make_msg('unshelve_instance',
-            instance=instance, image=image),
-            topic=_compute_topic(self.topic, ctxt, host, None),
-            version='2.31')
+        cctxt = self.client.prepare(server=host, version='2.31')
+        cctxt.cast(ctxt, 'unshelve_instance',
+                   instance=instance, image=image)
 
     def volume_snapshot_create(self, ctxt, instance, volume_id,
                                create_info):
         instance_p = jsonutils.to_primitive(instance)
-        msg = self.make_msg('volume_snapshot_create', instance=instance_p,
-                volume_id=volume_id, create_info=create_info)
-        topic = _compute_topic(self.topic, ctxt, None, instance)
-        self.cast(ctxt, msg, topic=topic, version='2.44')
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                                    version='2.44')
+        cctxt.cast(ctxt, 'volume_snapshot_create', instance=instance_p,
+                   volume_id=volume_id, create_info=create_info)
 
     def volume_snapshot_delete(self, ctxt, instance, volume_id, snapshot_id,
                                delete_info):
         instance_p = jsonutils.to_primitive(instance)
-        msg = self.make_msg('volume_snapshot_delete', instance=instance_p,
-                volume_id=volume_id, snapshot_id=snapshot_id,
-                delete_info=delete_info)
-        topic = _compute_topic(self.topic, ctxt, None, instance)
-        self.cast(ctxt, msg, topic=topic, version='2.44')
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                                    version='2.44')
+        cctxt.cast(ctxt, 'volume_snapshot_delete', instance=instance_p,
+                   volume_id=volume_id, snapshot_id=snapshot_id,
+                   delete_info=delete_info)
 
 
-class SecurityGroupAPI(nova.openstack.common.rpc.proxy.RpcProxy):
+class SecurityGroupAPI(rpcclient.RpcProxy):
     '''Client side of the security group rpc API.
 
     API version history:
@@ -885,21 +854,21 @@ class SecurityGroupAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         super(SecurityGroupAPI, self).__init__(
                 topic=CONF.compute_topic,
                 default_version=self.BASE_RPC_API_VERSION)
+        self.client = self.get_client()
 
     def refresh_security_group_rules(self, ctxt, security_group_id, host):
-        self.cast(ctxt, self.make_msg('refresh_security_group_rules',
-                security_group_id=security_group_id),
-                topic=_compute_topic(self.topic, ctxt, host, None))
+        cctxt = self.client.prepare(server=host)
+        cctxt.cast(ctxt, 'refresh_security_group_rules',
+                   security_group_id=security_group_id)
 
     def refresh_security_group_members(self, ctxt, security_group_id,
             host):
-        self.cast(ctxt, self.make_msg('refresh_security_group_members',
-                security_group_id=security_group_id),
-                topic=_compute_topic(self.topic, ctxt, host, None))
+        cctxt = self.client.prepare(server=host)
+        cctxt.cast(ctxt, 'refresh_security_group_members',
+                   security_group_id=security_group_id)
 
     def refresh_instance_security_rules(self, ctxt, host, instance):
         instance_p = jsonutils.to_primitive(instance)
-        self.cast(ctxt, self.make_msg('refresh_instance_security_rules',
-                instance=instance_p),
-                topic=_compute_topic(self.topic, ctxt, instance['host'],
-                instance))
+        cctxt = self.client.prepare(server=_compute_host(None, instance))
+        cctxt.cast(ctxt, 'refresh_instance_security_rules',
+                   instance=instance_p)

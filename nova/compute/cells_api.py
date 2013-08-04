@@ -24,6 +24,7 @@ from nova.compute import rpcapi as compute_rpcapi
 from nova import exception
 from nova.objects import service as service_obj
 from nova.openstack.common import excutils
+from nova import rpcclient
 
 
 check_instance_state = compute_api.check_instance_state
@@ -89,25 +90,34 @@ class ConductorTaskRPCAPIRedirect(object):
         return _noop_rpc_wrapper
 
 
+class RPCClientCellsProxy(rpcclient.RPCClient):
+
+    def __init__(self, proxy, *args, **kwargs):
+        super(RPCClientCellsProxy, self).__init__(proxy, *args, **kwargs)
+        self.cells_rpcapi = cells_rpcapi.CellsAPI()
+
+    def cast(self, ctxt, method, **kwargs):
+        msg = self.proxy.make_msg(method, **kwargs)
+        self.proxy._set_version(msg, self.kwargs.get('version'))
+        topic = self.proxy._get_topic(self.kwargs.get('topic'))
+        self.cells_rpcapi.proxy_rpc_to_manager(ctxt, msg, topic)
+
+    def call(self, ctxt, method, **kwargs):
+        msg = self.proxy.make_msg(method, **kwargs)
+        self.proxy._set_version(msg, self.kwargs.get('version'))
+        topic = self.proxy._get_topic(self.kwargs.get('topic'))
+        timeout = self.kwargs.get('timeout')
+        return self.cells_rpcapi.proxy_rpc_to_manager(ctxt, msg, topic,
+                                                      call=True,
+                                                      timeout=timeout)
+
+
 class ComputeRPCProxyAPI(compute_rpcapi.ComputeAPI):
     """Class used to substitute Compute RPC API that will proxy
     via the cells manager to a compute manager in a child cell.
     """
-    def __init__(self, *args, **kwargs):
-        super(ComputeRPCProxyAPI, self).__init__(*args, **kwargs)
-        self.cells_rpcapi = cells_rpcapi.CellsAPI()
-
-    def cast(self, ctxt, msg, topic=None, version=None):
-        self._set_version(msg, version)
-        topic = self._get_topic(topic)
-        self.cells_rpcapi.proxy_rpc_to_manager(ctxt, msg, topic)
-
-    def call(self, ctxt, msg, topic=None, version=None, timeout=None):
-        self._set_version(msg, version)
-        topic = self._get_topic(topic)
-        return self.cells_rpcapi.proxy_rpc_to_manager(ctxt, msg, topic,
-                                                      call=True,
-                                                      timeout=timeout)
+    def get_client(self):
+        return RPCClientCellsProxy(self)
 
 
 class ComputeCellsAPI(compute_api.API):
