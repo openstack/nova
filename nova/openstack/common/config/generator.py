@@ -179,24 +179,24 @@ def _get_my_ip():
         return None
 
 
-def _sanitize_default(s):
+def _sanitize_default(name, value):
     """Set up a reasonably sensible default for pybasedir, my_ip and host."""
-    if s.startswith(sys.prefix):
+    if value.startswith(sys.prefix):
         # NOTE(jd) Don't use os.path.join, because it is likely to think the
         # second part is an absolute pathname and therefore drop the first
         # part.
-        s = os.path.normpath("/usr/" + s[len(sys.prefix):])
-    elif s.startswith(BASEDIR):
-        return s.replace(BASEDIR, '/usr/lib/python/site-packages')
-    elif BASEDIR in s:
-        return s.replace(BASEDIR, '')
-    elif s == _get_my_ip():
+        value = os.path.normpath("/usr/" + value[len(sys.prefix):])
+    elif value.startswith(BASEDIR):
+        return value.replace(BASEDIR, '/usr/lib/python/site-packages')
+    elif BASEDIR in value:
+        return value.replace(BASEDIR, '')
+    elif value == _get_my_ip():
         return '10.0.0.1'
-    elif s == socket.gethostname():
+    elif value == socket.gethostname() and 'host' in name:
         return 'nova'
-    elif s.strip() != s:
-        return '"%s"' % s
-    return s
+    elif value.strip() != value:
+        return '"%s"' % value
+    return value
 
 
 def _print_opt(opt):
@@ -217,7 +217,8 @@ def _print_opt(opt):
             print('#%s=<None>' % opt_name)
         elif opt_type == STROPT:
             assert(isinstance(opt_default, basestring))
-            print('#%s=%s' % (opt_name, _sanitize_default(opt_default)))
+            print('#%s=%s' % (opt_name, _sanitize_default(opt_name,
+                                                          opt_default)))
         elif opt_type == BOOLOPT:
             assert(isinstance(opt_default, bool))
             print('#%s=%s' % (opt_name, str(opt_default).lower()))
