@@ -1693,8 +1693,7 @@ def instance_get_all(context, columns_to_join=None):
 
 @require_context
 def instance_get_all_by_filters(context, filters, sort_key, sort_dir,
-                                limit=None, marker=None, columns_to_join=None,
-                                session=None):
+                                limit=None, marker=None, columns_to_join=None):
     """Return instances that match all filters.  Deleted instances
     will be returned by default, unless there's a filter that says
     otherwise.
@@ -1731,8 +1730,7 @@ def instance_get_all_by_filters(context, filters, sort_key, sort_dir,
 
     sort_fn = {'desc': desc, 'asc': asc}
 
-    if not session:
-        session = get_session()
+    session = get_session()
 
     if columns_to_join is None:
         columns_to_join = ['info_cache', 'security_groups']
@@ -4350,15 +4348,9 @@ def _instance_metadata_get_query(context, instance_uuid, session=None):
 
 
 @require_context
-def instance_metadata_get(context, instance_uuid, session=None):
-    rows = _instance_metadata_get_query(context, instance_uuid,
-                                        session=session).all()
-
-    result = {}
-    for row in rows:
-        result[row['key']] = row['value']
-
-    return result
+def instance_metadata_get(context, instance_uuid):
+    rows = _instance_metadata_get_query(context, instance_uuid).all()
+    return dict((row['key'], row['value']) for row in rows)
 
 
 @require_context
@@ -4369,19 +4361,15 @@ def instance_metadata_delete(context, instance_uuid, key):
 
 
 @require_context
-def instance_metadata_update(context, instance_uuid, metadata, delete,
-                             session=None):
+def instance_metadata_update(context, instance_uuid, metadata, delete):
     all_keys = metadata.keys()
-    synchronize_session = "fetch"
-    if session is None:
-        session = get_session()
-        synchronize_session = False
+    session = get_session()
     with session.begin(subtransactions=True):
         if delete:
             _instance_metadata_get_query(context, instance_uuid,
                                          session=session).\
                 filter(~models.InstanceMetadata.key.in_(all_keys)).\
-                soft_delete(synchronize_session=synchronize_session)
+                soft_delete(synchronize_session=False)
 
         already_existing_keys = []
         meta_refs = _instance_metadata_get_query(context, instance_uuid,
@@ -4423,31 +4411,21 @@ def _instance_system_metadata_get_query(context, instance_uuid, session=None):
 
 
 @require_context
-def instance_system_metadata_get(context, instance_uuid, session=None):
-    rows = _instance_system_metadata_get_query(context, instance_uuid,
-                                               session=session).all()
-
-    result = {}
-    for row in rows:
-        result[row['key']] = row['value']
-
-    return result
+def instance_system_metadata_get(context, instance_uuid):
+    rows = _instance_system_metadata_get_query(context, instance_uuid).all()
+    return dict((row['key'], row['value']) for row in rows)
 
 
 @require_context
-def instance_system_metadata_update(context, instance_uuid, metadata, delete,
-                                    session=None):
+def instance_system_metadata_update(context, instance_uuid, metadata, delete):
     all_keys = metadata.keys()
-    synchronize_session = "fetch"
-    if session is None:
-        session = get_session()
-        synchronize_session = False
+    session = get_session()
     with session.begin(subtransactions=True):
         if delete:
             _instance_system_metadata_get_query(context, instance_uuid,
                                                 session=session).\
                 filter(~models.InstanceSystemMetadata.key.in_(all_keys)).\
-                soft_delete(synchronize_session=synchronize_session)
+                soft_delete(synchronize_session=False)
 
         already_existing_keys = []
         meta_refs = _instance_system_metadata_get_query(context, instance_uuid,
