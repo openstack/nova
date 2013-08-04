@@ -3307,6 +3307,33 @@ class LibvirtConnTestCase(test.TestCase):
         conn.reboot(None, instance, [])
         self.assertTrue(self.reboot_hard_reboot_called)
 
+    def test_soft_reboot_libvirt_exception(self):
+        # Tests that a hard reboot is performed when a soft reboot results
+        # in raising a libvirtError.
+        info_tuple = ('fake', 'fake', 'fake', 'also_fake')
+
+        # setup mocks
+        mock_domain = self.mox.CreateMock(libvirt.virDomain)
+        mock_domain.info().AndReturn(
+            (libvirt_driver.VIR_DOMAIN_RUNNING,) + info_tuple)
+        mock_domain.ID().AndReturn('some_fake_id')
+        mock_domain.shutdown().AndRaise(libvirt.libvirtError('Err'))
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        context = None
+        instance = {"name": "instancename", "id": "instanceid",
+                    "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64"}
+        network_info = []
+
+        self.mox.StubOutWithMock(conn, '_lookup_by_name')
+        conn._lookup_by_name(instance['name']).AndReturn(mock_domain)
+        self.mox.StubOutWithMock(conn, '_hard_reboot')
+        conn._hard_reboot(context, instance, network_info, None)
+
+        self.mox.ReplayAll()
+
+        conn.reboot(context, instance, network_info)
+
     def test_destroy_undefines(self):
         mock = self.mox.CreateMock(libvirt.virDomain)
         mock.ID()
