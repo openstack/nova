@@ -265,8 +265,8 @@ class Instance(base.NovaObject):
         columns_to_join = cls._attrs_to_columns(expected_attrs)
         db_inst = db.instance_get_by_uuid(context, uuid,
                                           columns_to_join=columns_to_join)
-        return Instance._from_db_object(context, cls(), db_inst,
-                                        expected_attrs)
+        return cls._from_db_object(context, cls(), db_inst,
+                                   expected_attrs)
 
     @base.remotable_classmethod
     def get_by_id(cls, context, inst_id, expected_attrs=None):
@@ -275,8 +275,8 @@ class Instance(base.NovaObject):
         columns_to_join = cls._attrs_to_columns(expected_attrs)
         db_inst = db.instance_get(context, inst_id,
                                   columns_to_join=columns_to_join)
-        return Instance._from_db_object(context, cls(), db_inst,
-                                        expected_attrs)
+        return cls._from_db_object(context, cls(), db_inst,
+                                   expected_attrs)
 
     def _save_info_cache(self, context):
         self.info_cache.save(context)
@@ -361,7 +361,7 @@ class Instance(base.NovaObject):
         for attr in INSTANCE_OPTIONAL_FIELDS:
             if hasattr(self, base.get_attrname(attr)):
                 expected_attrs.append(attr)
-        Instance._from_db_object(context, self, inst_ref, expected_attrs)
+        self._from_db_object(context, self, inst_ref, expected_attrs)
         if 'vm_state' in changes or 'task_state' in changes:
             notifications.send_update(context, old_ref, inst_ref)
         self.obj_reset_changes()
