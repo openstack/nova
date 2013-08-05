@@ -325,9 +325,9 @@ class VMwareVMOps(object):
                         "data_store_name": data_store_name,
                         "disk_type": disk_type},
                       instance=instance)
-            vmdk_copy_spec = vm_util.get_vmdk_create_spec(client_factory,
-                                    vmdk_file_size_in_kb, adapter_type,
-                                    disk_type)
+            vmdk_copy_spec = self.get_copy_virtual_disk_spec(client_factory,
+                                                             adapter_type,
+                                                             disk_type)
             vmdk_copy_task = self._session._call_method(
                 self._session._get_vim(),
                 "CopyVirtualDisk_Task",
@@ -425,8 +425,8 @@ class VMwareVMOps(object):
             LOG.debug(_("Powered on the VM instance"), instance=instance)
         _power_on_vm()
 
-    def _get_copy_virtual_disk_spec(self, client_factory, adapter_type,
-                                    disk_type):
+    def get_copy_virtual_disk_spec(self, client_factory, adapter_type,
+                                   disk_type):
         return vm_util.get_copy_virtual_disk_spec(client_factory,
                                                   adapter_type,
                                                   disk_type)
@@ -521,11 +521,11 @@ class VMwareVMOps(object):
         dc_ref = self._get_datacenter_ref_and_name()[0]
 
         def _copy_vmdk_content():
-            # Copy the contents of the disk ( or disks, if there were snapshots
+            # Copy the contents of the disk (or disks, if there were snapshots
             # done earlier) to a temporary vmdk file.
-            copy_spec = self._get_copy_virtual_disk_spec(client_factory,
-                                                         adapter_type,
-                                                         disk_type)
+            copy_spec = self.get_copy_virtual_disk_spec(client_factory,
+                                                        adapter_type,
+                                                        disk_type)
             LOG.debug(_('Copying disk data before snapshot of the VM'),
                       instance=instance)
             copy_disk_task = self._session._call_method(
@@ -1332,8 +1332,8 @@ class VMwareVCVMOps(VMwareVMOps):
     when invoked on Virtual Center instead of ESX host.
     """
 
-    def _get_copy_virtual_disk_spec(self, client_factory, adapter_type,
-                                    disk_type):
+    def get_copy_virtual_disk_spec(self, client_factory, adapter_type,
+                                   disk_type):
         LOG.debug(_("Will copy while retaining adapter type "
                     "%(adapter_type)s and disk type %(disk_type)s") %
                     {"disk_type": disk_type,
