@@ -49,7 +49,7 @@ def fake_get(self, context, instance_uuid):
 
 
 def fake_get_not_found(*args, **kwargs):
-    raise exception.NotFound()
+    raise exception.InstanceNotFound(instance_id='')
 
 
 class ConsoleOutputExtensionTest(test.TestCase):
@@ -113,14 +113,6 @@ class ConsoleOutputExtensionTest(test.TestCase):
 
     def test_get_text_console_no_instance(self):
         self.stubs.Set(compute_api.API, 'get', fake_get_not_found)
-        req = self._create_request(length_dict={})
-        res = req.get_response(self.app)
-        self.assertEqual(res.status_int, 404)
-
-    def test_get_text_console_no_instance_on_get_output(self):
-        self.stubs.Set(compute_api.API,
-                       'get_console_output',
-                       fake_get_not_found)
         req = self._create_request(length_dict={})
         res = req.get_response(self.app)
         self.assertEqual(res.status_int, 404)
