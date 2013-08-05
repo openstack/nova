@@ -458,8 +458,8 @@
 # Options defined in nova.api.openstack.compute.contrib.os_tenant_networks
 #
 
-# Enables or disables quotaing of tenant networks (boolean
-# value)
+# Enables or disables quota checking for tenant networks
+# (boolean value)
 #enable_network_quota=false
 
 # Control for checking for default networks (string value)
@@ -1125,11 +1125,11 @@
 # the port for the metadata api port (integer value)
 #metadata_port=8775
 
-# Regular expression to match iptables rule that shouldalways
+# Regular expression to match iptables rule that should always
 # be on the top. (string value)
 #iptables_top_regex=
 
-# Regular expression to match iptables rule that shouldalways
+# Regular expression to match iptables rule that should always
 # be on the bottom. (string value)
 #iptables_bottom_regex=
 

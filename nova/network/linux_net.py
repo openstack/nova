@@ -112,11 +112,11 @@ linux_net_opts = [
                help='the port for the metadata api port'),
     cfg.StrOpt('iptables_top_regex',
                default='',
-               help='Regular expression to match iptables rule that should'
+               help='Regular expression to match iptables rule that should '
                     'always be on the top.'),
     cfg.StrOpt('iptables_bottom_regex',
                default='',
-               help='Regular expression to match iptables rule that should'
+               help='Regular expression to match iptables rule that should '
                     'always be on the bottom.'),
     cfg.StrOpt('iptables_drop_action',
                default='DROP',
