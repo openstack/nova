@@ -3344,8 +3344,18 @@ class EvacuateJsonTest(ServersSampleBase):
             """Simulate validation of instance host is down."""
             return False
 
+        def fake_service_get_by_compute_host(self, context, host):
+            """Simulate that given host is a valid host."""
+            return {
+                    'host_name': host,
+                    'service': 'compute',
+                    'zone': 'nova'
+                    }
+
         self.stubs.Set(service_group_api.API, 'service_is_up',
                        fake_service_is_up)
+        self.stubs.Set(compute_api.HostAPI, 'service_get_by_compute_host',
+                       fake_service_get_by_compute_host)
 
         response = self._do_post('servers/%s/action' % uuid,
                                  'server-evacuate-req', req_subs)

@@ -20,6 +20,7 @@ import webob
 from nova.compute import api as compute_api
 from nova.compute import vm_states
 from nova import context
+from nova import exception
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
@@ -41,6 +42,17 @@ def fake_compute_api_get(self, context, instance_id):
     }
 
 
+def fake_service_get_by_compute_host(self, context, host):
+    if host == 'bad_host':
+        raise exception.ComputeHostNotFound(host=host)
+    else:
+        return {
+            'host_name': host,
+            'service': 'compute',
+            'zone': 'nova'
+            }
+
+
 class EvacuateTest(test.TestCase):
 
     _methods = ('resize', 'evacuate')
@@ -48,6 +60,8 @@ class EvacuateTest(test.TestCase):
     def setUp(self):
         super(EvacuateTest, self).setUp()
         self.stubs.Set(compute_api.API, 'get', fake_compute_api_get)
+        self.stubs.Set(compute_api.HostAPI, 'service_get_by_compute_host',
+                       fake_service_get_by_compute_host)
         self.UUID = uuid.uuid4()
         for _method in self._methods:
             self.stubs.Set(compute_api.API, _method, fake_compute_api)
@@ -69,6 +83,25 @@ class EvacuateTest(test.TestCase):
         req.content_type = 'application/json'
         res = req.get_response(app)
         self.assertEqual(res.status_int, 400)
+
+    def test_evacuate_instance_with_bad_target(self):
+        ctxt = context.get_admin_context()
+        ctxt.user_id = 'fake'
+        ctxt.project_id = 'fake'
+        ctxt.is_admin = True
+        app = fakes.wsgi_app(fake_auth_context=ctxt)
+        req = webob.Request.blank('/v2/fake/servers/%s/action' % self.UUID)
+        req.method = 'POST'
+        req.body = jsonutils.dumps({
+            'evacuate': {
+                'host': 'bad_host',
+                'onSharedStorage': 'false',
+                'adminPass': 'MyNewPass'
+                }
+            })
+        req.content_type = 'application/json'
+        res = req.get_response(app)
+        self.assertEqual(res.status_int, 404)
 
     def test_evacuate_instance_with_target(self):
         ctxt = context.get_admin_context()

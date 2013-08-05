@@ -34,6 +34,7 @@ class EvacuateController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         super(EvacuateController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
+        self.host_api = compute.HostAPI()
 
     @extensions.expected_errors((400, 404, 409))
     @wsgi.action('evacuate')
@@ -69,6 +70,12 @@ class EvacuateController(wsgi.Controller):
         except (TypeError, KeyError):
             msg = _("host and on_shared_storage must be specified.")
             raise exc.HTTPBadRequest(explanation=msg)
+
+        try:
+            self.host_api.service_get_by_compute_host(context, host)
+        except exception.NotFound:
+            msg = _("Compute host %s not found.") % host
+            raise exc.HTTPNotFound(explanation=msg)
 
         try:
             instance = self.compute_api.get(context, id)
