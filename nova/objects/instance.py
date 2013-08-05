@@ -69,7 +69,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
     # Version 1.7: String attributes updated to support unicode
     # Version 1.8: 'security_groups' and 'pci_devices' cannot be None
     # Version 1.9: Make uuid a non-None real string
-    VERSION = '1.9'
+    # Version 1.10: Added use_slave to refresh and get_by_uuid
+    VERSION = '1.10'
 
     fields = {
         'id': fields.IntegerField(),
@@ -256,12 +257,13 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
         return instance
 
     @base.remotable_classmethod
-    def get_by_uuid(cls, context, uuid, expected_attrs=None):
+    def get_by_uuid(cls, context, uuid, expected_attrs=None, use_slave=False):
         if expected_attrs is None:
             expected_attrs = ['info_cache', 'security_groups']
         columns_to_join = _expected_cols(expected_attrs)
         db_inst = db.instance_get_by_uuid(context, uuid,
-                                          columns_to_join=columns_to_join)
+                                          columns_to_join=columns_to_join,
+                                          use_slave=use_slave)
         return cls._from_db_object(context, cls(), db_inst,
                                    expected_attrs)
 
@@ -419,11 +421,12 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
         self.obj_reset_changes()
 
     @base.remotable
-    def refresh(self, context):
+    def refresh(self, context, use_slave=False):
         extra = [field for field in INSTANCE_OPTIONAL_ATTRS
                        if self.obj_attr_is_set(field)]
         current = self.__class__.get_by_uuid(context, uuid=self.uuid,
-                                             expected_attrs=extra)
+                                             expected_attrs=extra,
+                                             use_slave=use_slave)
         # NOTE(danms): We orphan the instance copy so we do not unexpectedly
         # trigger a lazy-load (which would mean we failed to calculate the
         # expected_attrs properly)
@@ -487,9 +490,13 @@ def _make_instance_list(context, inst_list, db_inst_list, expected_attrs):
 
 
 class InstanceList(base.ObjectListBase, base.NovaObject):
+    # Version 1.0: Initial version
+    # Version 1.1: Added use_slave to get_by_host
+    VERSION = '1.1'
+
     fields = {
         'objects': fields.ListOfObjectsField('Instance'),
-        }
+    }
 
     @base.remotable_classmethod
     def get_by_filters(cls, context, filters,
@@ -502,9 +509,10 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
                                    expected_attrs)
 
     @base.remotable_classmethod
-    def get_by_host(cls, context, host, expected_attrs=None):
+    def get_by_host(cls, context, host, expected_attrs=None, use_slave=False):
         db_inst_list = db.instance_get_all_by_host(
-            context, host, columns_to_join=_expected_cols(expected_attrs))
+            context, host, columns_to_join=_expected_cols(expected_attrs),
+            use_slave=use_slave)
         return _make_instance_list(context, cls(), db_inst_list,
                                    expected_attrs)
 

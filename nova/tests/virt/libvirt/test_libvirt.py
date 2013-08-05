@@ -3893,7 +3893,8 @@ class LibvirtConnTestCase(test.TestCase):
         self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
         db.instance_get_by_uuid(mox.IgnoreArg(), mox.IgnoreArg(),
                                 columns_to_join=['info_cache',
-                                                 'security_groups']
+                                                 'security_groups'],
+                                use_slave=False
                                 ).AndReturn(instance)
         self.mox.StubOutWithMock(shutil, "rmtree")
         shutil.rmtree(os.path.join(CONF.instances_path,
@@ -3981,7 +3982,8 @@ class LibvirtConnTestCase(test.TestCase):
 
         db.instance_get_by_uuid(mox.IgnoreArg(), mox.IgnoreArg(),
                                 columns_to_join=['info_cache',
-                                                 'security_groups']
+                                                 'security_groups'],
+                                use_slave=False
                                 ).AndReturn(instance)
         os.path.exists(mox.IgnoreArg()).AndReturn(False)
         os.path.exists(mox.IgnoreArg()).AndReturn(True)

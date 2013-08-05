@@ -4984,12 +4984,14 @@ class ComputeTestCase(BaseTestCase):
         call_info = {'get_all_by_host': 0, 'get_by_uuid': 0,
                 'get_nw_info': 0, 'expected_instance': None}
 
-        def fake_instance_get_all_by_host(context, host, columns_to_join):
+        def fake_instance_get_all_by_host(context, host,
+                                          columns_to_join, use_slave=False):
             call_info['get_all_by_host'] += 1
             self.assertEqual([], columns_to_join)
             return instances[:]
 
-        def fake_instance_get_by_uuid(context, instance_uuid, columns_to_join):
+        def fake_instance_get_by_uuid(context, instance_uuid,
+                                      columns_to_join, use_slave=False):
             if instance_uuid not in instance_map:
                 raise exception.InstanceNotFound(instance_id=instance_uuid)
             call_info['get_by_uuid'] += 1
@@ -5120,7 +5122,7 @@ class ComputeTestCase(BaseTestCase):
             migrations.append(fake_mig)
 
         def fake_instance_get_by_uuid(context, instance_uuid,
-                columns_to_join=None):
+                columns_to_join=None, use_slave=False):
             self.assertIn('metadata', columns_to_join)
             self.assertIn('system_metadata', columns_to_join)
             # raise InstanceNotFound exception for uuid 'noexist'
@@ -5660,11 +5662,13 @@ class ComputeTestCase(BaseTestCase):
         self.compute.driver.get_info(mox.IgnoreArg()).AndReturn(
             {'state': power_state.RUNNING})
         self.compute._sync_instance_power_state(ctxt, mox.IgnoreArg(),
-                                                power_state.RUNNING)
+                                                power_state.RUNNING,
+                                                use_slave=True)
         self.compute.driver.get_info(mox.IgnoreArg()).AndReturn(
             {'state': power_state.SHUTDOWN})
         self.compute._sync_instance_power_state(ctxt, mox.IgnoreArg(),
-                                                power_state.SHUTDOWN)
+                                                power_state.SHUTDOWN,
+                                                use_slave=True)
         self.mox.ReplayAll()
         self.compute._sync_power_states(ctxt)
 
@@ -6526,7 +6530,8 @@ class ComputeAPITestCase(BaseTestCase):
                 self.context, instance_obj.Instance(), exp_instance,
                 instance_obj.INSTANCE_DEFAULT_FIELDS + ['fault']))
 
-        def fake_db_get(_context, _instance_uuid, columns_to_join=None):
+        def fake_db_get(_context, _instance_uuid,
+                        columns_to_join=None, use_slave=False):
             return exp_instance
 
         self.stubs.Set(db, 'instance_get_by_uuid', fake_db_get)
@@ -6546,7 +6551,8 @@ class ComputeAPITestCase(BaseTestCase):
                 c, instance_obj.Instance(), exp_instance,
                 instance_obj.INSTANCE_DEFAULT_FIELDS + ['fault']))
 
-        def fake_db_get(context, instance_uuid, columns_to_join=None):
+        def fake_db_get(context, instance_uuid,
+                        columns_to_join=None, use_slave=False):
             return exp_instance
 
         self.stubs.Set(db, 'instance_get_by_uuid', fake_db_get)

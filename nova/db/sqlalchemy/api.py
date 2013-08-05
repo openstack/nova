@@ -77,6 +77,10 @@ CONF.import_opt('compute_topic', 'nova.compute.rpcapi')
 CONF.import_opt('connection',
                 'nova.openstack.common.db.sqlalchemy.session',
                 group='database')
+CONF.import_opt('slave_connection',
+                'nova.openstack.common.db.sqlalchemy.session',
+                group='database')
+
 
 LOG = logging.getLogger(__name__)
 
@@ -176,6 +180,7 @@ def model_query(context, model, *args, **kwargs):
     """Query helper that accounts for context's `read_deleted` field.
 
     :param context: context to query under
+    :param use_slave: If true, use slave_connection
     :param session: if present, the session to use
     :param read_deleted: if present, overrides context's read_deleted field.
     :param project_only: if present and context is user-type, then restrict
@@ -186,7 +191,12 @@ def model_query(context, model, *args, **kwargs):
             parameter that is a subclass of NovaBase and corresponds to the
             model parameter.
     """
-    session = kwargs.get('session') or get_session()
+
+    use_slave = kwargs.get('use_slave') or False
+    if CONF.database.slave_connection == '':
+        use_slave = False
+
+    session = kwargs.get('session') or get_session(slave_session=use_slave)
     read_deleted = kwargs.get('read_deleted') or context.read_deleted
     project_only = kwargs.get('project_only', False)
 
@@ -1672,14 +1682,16 @@ def instance_destroy(context, instance_uuid, constraint=None):
 
 
 @require_context
-def instance_get_by_uuid(context, uuid, columns_to_join=None):
+def instance_get_by_uuid(context, uuid, columns_to_join=None, use_slave=False):
     return _instance_get_by_uuid(context, uuid,
-            columns_to_join=columns_to_join)
+            columns_to_join=columns_to_join, use_slave=use_slave)
 
 
-def _instance_get_by_uuid(context, uuid, session=None, columns_to_join=None):
+def _instance_get_by_uuid(context, uuid, session=None,
+                          columns_to_join=None, use_slave=False):
     result = _build_instance_get(context, session=session,
-                                 columns_to_join=columns_to_join).\
+                                 columns_to_join=columns_to_join,
+                                 use_slave=use_slave).\
                 filter_by(uuid=uuid).\
                 first()
 
@@ -1707,9 +1719,10 @@ def instance_get(context, instance_id, columns_to_join=None):
         raise exception.InvalidID(id=instance_id)
 
 
-def _build_instance_get(context, session=None, columns_to_join=None):
+def _build_instance_get(context, session=None,
+                        columns_to_join=None, use_slave=False):
     query = model_query(context, models.Instance, session=session,
-                        project_only=True).\
+                        project_only=True, use_slave=use_slave).\
             options(joinedload_all('security_groups.rules')).\
             options(joinedload('info_cache'))
     if columns_to_join is None:
@@ -1726,7 +1739,8 @@ def _build_instance_get(context, session=None, columns_to_join=None):
     return query
 
 
-def _instances_fill_metadata(context, instances, manual_joins=None):
+def _instances_fill_metadata(context, instances,
+                             manual_joins=None, use_slave=False):
     """Selectively fill instances with manually-joined metadata. Note that
     instance will be converted to a dict.
 
@@ -1743,12 +1757,13 @@ def _instances_fill_metadata(context, instances, manual_joins=None):
 
     meta = collections.defaultdict(list)
     if 'metadata' in manual_joins:
-        for row in _instance_metadata_get_multi(context, uuids):
+        for row in _instance_metadata_get_multi(context, uuids, use_slave):
             meta[row['instance_uuid']].append(row)
 
     sys_meta = collections.defaultdict(list)
     if 'system_metadata' in manual_joins:
-        for row in _instance_system_metadata_get_multi(context, uuids):
+        for row in _instance_system_metadata_get_multi(context, uuids,
+                                                       use_slave):
             sys_meta[row['instance_uuid']].append(row)
 
     pcidevs = collections.defaultdict(list)
@@ -2038,21 +2053,29 @@ def instance_get_active_by_window_joined(context, begin, end=None,
     return _instances_fill_metadata(context, query.all())
 
 
-def _instance_get_all_query(context, project_only=False, joins=None):
+def _instance_get_all_query(context, project_only=False,
+                            joins=None, use_slave=False):
     if joins is None:
         joins = ['info_cache', 'security_groups']
 
-    query = model_query(context, models.Instance, project_only=project_only)
+    query = model_query(context,
+                        models.Instance,
+                        project_only=project_only,
+                        use_slave=use_slave)
     for join in joins:
         query = query.options(joinedload(join))
     return query
 
 
 @require_admin_context
-def instance_get_all_by_host(context, host, columns_to_join=None):
+def instance_get_all_by_host(context, host,
+                             columns_to_join=None,
+                             use_slave=False):
     return _instances_fill_metadata(context,
-        _instance_get_all_query(context).filter_by(host=host).all(),
-                                manual_joins=columns_to_join)
+      _instance_get_all_query(context,
+                              use_slave=use_slave).filter_by(host=host).all(),
+                              manual_joins=columns_to_join,
+                              use_slave=use_slave)
 
 
 def _instance_get_all_uuids_by_host(context, host, session=None):

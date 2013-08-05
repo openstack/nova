@@ -23,7 +23,8 @@ from nova import test
 from nova.tests.api.openstack import fakes
 
 
-def fake_instance_get(context, instance_id, columns_to_join=None):
+def fake_instance_get(context, instance_id,
+                      columns_to_join=None, use_slave=False):
     result = fakes.stub_instance(id=1, uuid=instance_id)
     result['created_at'] = None
     result['deleted_at'] = None
