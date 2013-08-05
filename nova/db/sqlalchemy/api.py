@@ -2640,16 +2640,7 @@ def quota_get_all_by_project_and_user(context, project_id, user_id):
                    filter_by(user_id=user_id).\
                    all()
 
-    proj_quotas = model_query(context, models.Quota.resource,
-                       models.Quota.hard_limit,
-                       base_model=models.Quota).\
-                   filter_by(project_id=project_id).\
-                   all()
-
     result = {'project_id': project_id, 'user_id': user_id}
-    # Use the project quota for default user quota.
-    for quota in proj_quotas:
-        result[quota.resource] = quota.hard_limit
     for quota in user_quotas:
         result[quota.resource] = quota.hard_limit
 

@@ -4766,18 +4766,6 @@ class QuotaTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def test_quota_get_all_by_project_and_user(self):
         for i in range(3):
             for j in range(3):
-                db.quota_create(self.ctxt, 'proj%d' % i, 'resource%d' % j, j)
-        for i in range(3):
-            quotas_db = db.quota_get_all_by_project_and_user(self.ctxt,
-                                                             'proj%d' % i,
-                                                             'user%d' % i)
-            self.assertEqual(quotas_db, {'project_id': 'proj%d' % i,
-                                         'user_id': 'user%d' % i,
-                                                        'resource0': 0,
-                                                        'resource1': 1,
-                                                        'resource2': 2})
-        for i in range(3):
-            for j in range(3):
                 db.quota_create(self.ctxt, 'proj%d' % i, 'resource%d' % j,
                                 j - 1, user_id='user%d' % i)
         for i in range(3):
@@ -4876,10 +4864,7 @@ class QuotaTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertEqual(db.quota_get_all_by_project_and_user(self.ctxt,
                             'project1', 'user1'),
                             {'project_id': 'project1',
-                             'user_id': 'user1',
-                             'resource0': 0,
-                             'resource1': 1,
-                             'resource2': 2})
+                             'user_id': 'user1'})
         self.assertEqual(db.quota_usage_get_all_by_project_and_user(
                             self.ctxt, 'project1', 'user1'),
                             {'project_id': 'project1',
