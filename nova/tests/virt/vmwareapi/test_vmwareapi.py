@@ -604,17 +604,89 @@ class VMwareAPIVMTestCase(test.TestCase):
         self.assertEquals(self.conn.get_host_ip_addr(), "test_url")
 
     def test_get_volume_connector(self):
-        self._create_instance_in_the_db()
+        self._create_vm()
         connector_dict = self.conn.get_volume_connector(self.instance)
-        self.assertEquals(connector_dict['ip'], "test_url")
-        self.assertEquals(connector_dict['initiator'], "iscsi-name")
-        self.assertEquals(connector_dict['host'], "test_url")
+        fake_vm = vmwareapi_fake._get_objects("VirtualMachine").objects[0]
+        fake_vm_id = fake_vm.obj.value
+        self.assertEquals(connector_dict['ip'], 'test_url')
+        self.assertEquals(connector_dict['initiator'], 'iscsi-name')
+        self.assertEquals(connector_dict['host'], 'test_url')
+        self.assertEquals(connector_dict['instance'], fake_vm_id)
 
     def _test_vmdk_connection_info(self, type):
         return {'driver_volume_type': type,
                 'serial': 'volume-fake-id',
                 'data': {'volume': 'vm-10',
                          'volume_id': 'volume-fake-id'}}
+
+    def test_volume_attach_vmdk(self):
+        self._create_vm()
+        connection_info = self._test_vmdk_connection_info('vmdk')
+        mount_point = '/dev/vdc'
+        self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
+                                 '_attach_volume_vmdk')
+        volumeops.VMwareVolumeOps._attach_volume_vmdk(connection_info,
+                self.instance, mount_point)
+        self.mox.ReplayAll()
+        self.conn.attach_volume(connection_info, self.instance, mount_point)
+
+    def test_volume_detach_vmdk(self):
+        self._create_vm()
+        connection_info = self._test_vmdk_connection_info('vmdk')
+        mount_point = '/dev/vdc'
+        self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
+                                 '_detach_volume_vmdk')
+        volumeops.VMwareVolumeOps._detach_volume_vmdk(connection_info,
+                self.instance, mount_point)
+        self.mox.ReplayAll()
+        self.conn.detach_volume(connection_info, self.instance, mount_point)
+
+    def test_attach_vmdk_disk_to_vm(self):
+        self._create_vm()
+        connection_info = self._test_vmdk_connection_info('vmdk')
+        mount_point = '/dev/vdc'
+        discover = ('fake_name', 'fake_uuid')
+
+        # create fake backing info
+        volume_device = vmwareapi_fake.DataObject()
+        volume_device.backing = vmwareapi_fake.DataObject()
+        volume_device.backing.fileName = 'fake_path'
+
+        self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
+                                 '_get_vmdk_base_volume_device')
+        volumeops.VMwareVolumeOps._get_vmdk_base_volume_device(
+                mox.IgnoreArg()).AndReturn(volume_device)
+        self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
+                                 'attach_disk_to_vm')
+        volumeops.VMwareVolumeOps.attach_disk_to_vm(mox.IgnoreArg(),
+                self.instance, mox.IgnoreArg(), mox.IgnoreArg(),
+                vmdk_path='fake_path',
+                controller_key=mox.IgnoreArg(),
+                unit_number=mox.IgnoreArg())
+        self.mox.ReplayAll()
+        self.conn.attach_volume(connection_info, self.instance, mount_point)
+
+    def test_detach_vmdk_disk_from_vm(self):
+        self._create_vm()
+        connection_info = self._test_vmdk_connection_info('vmdk')
+        mount_point = '/dev/vdc'
+        self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
+                                 '_get_volume_uuid')
+        volumeops.VMwareVolumeOps._get_volume_uuid(mox.IgnoreArg(),
+                'volume-fake-id').AndReturn('fake_disk_uuid')
+        self.mox.StubOutWithMock(vm_util, 'get_vmdk_backed_disk_device')
+        vm_util.get_vmdk_backed_disk_device(mox.IgnoreArg(),
+                'fake_disk_uuid').AndReturn('fake_device')
+        self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
+                                 '_consolidate_vmdk_volume')
+        volumeops.VMwareVolumeOps._consolidate_vmdk_volume(self.instance,
+                 mox.IgnoreArg(), 'fake_device', mox.IgnoreArg())
+        self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
+                                 'detach_disk_from_vm')
+        volumeops.VMwareVolumeOps.detach_disk_from_vm(mox.IgnoreArg(),
+                self.instance, mox.IgnoreArg())
+        self.mox.ReplayAll()
+        self.conn.detach_volume(connection_info, self.instance, mount_point)
 
     def test_volume_attach_iscsi(self):
         self._create_vm()

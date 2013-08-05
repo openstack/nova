@@ -261,6 +261,20 @@ def get_vmdk_detach_config_spec(client_factory, device):
     return config_spec
 
 
+def get_vm_extra_config_spec(client_factory, extra_opts):
+    """Builds extra spec fields from a dictionary."""
+    config_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
+    # add the key value pairs
+    extra_config = []
+    for key, value in extra_opts.iteritems():
+        opt = client_factory.create('ns0:OptionValue')
+        opt.key = key
+        opt.value = value
+        extra_config.append(opt)
+        config_spec.extraConfig = extra_config
+    return config_spec
+
+
 def get_vmdk_path_and_adapter_type(hardware_devices):
     """Gets the vmdk file path and the storage adapter type."""
     if hardware_devices.__class__.__name__ == "ArrayOfVirtualDevice":
@@ -835,3 +849,36 @@ def get_datastore_ref_and_name(session, cluster=None, host=None,
             else:
                 raise exception.DatastoreNotFound()
     raise exception.DatastoreNotFound()
+
+
+def get_vmdk_backed_disk_uuid(hardware_devices, volume_uuid):
+    if hardware_devices.__class__.__name__ == "ArrayOfVirtualDevice":
+        hardware_devices = hardware_devices.VirtualDevice
+
+    for device in hardware_devices:
+        if (device.__class__.__name__ == "VirtualDisk" and
+                device.backing.__class__.__name__ ==
+                "VirtualDiskFlatVer2BackingInfo" and
+                volume_uuid in device.backing.fileName):
+            return device.backing.uuid
+
+
+def get_vmdk_backed_disk_device(hardware_devices, uuid):
+    if hardware_devices.__class__.__name__ == "ArrayOfVirtualDevice":
+        hardware_devices = hardware_devices.VirtualDevice
+
+    for device in hardware_devices:
+        if (device.__class__.__name__ == "VirtualDisk" and
+                device.backing.__class__.__name__ ==
+                "VirtualDiskFlatVer2BackingInfo" and
+                device.backing.uuid == uuid):
+            return device
+
+
+def get_vmdk_volume_disk(hardware_devices):
+    if hardware_devices.__class__.__name__ == "ArrayOfVirtualDevice":
+        hardware_devices = hardware_devices.VirtualDevice
+
+    for device in hardware_devices:
+        if (device.__class__.__name__ == "VirtualDisk"):
+            return device
