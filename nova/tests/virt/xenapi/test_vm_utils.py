@@ -16,7 +16,6 @@
 #    under the License.
 
 import contextlib
-import copy
 import pkg_resources
 import urlparse
 
@@ -215,60 +214,55 @@ class FakeSession():
     def call_xenapi(self, *args):
         pass
 
+    def call_plugin_serialized_with_retry(self, plugin, fn, num_retries,
+                                          callback, *args, **kwargs):
+        pass
+
 
 class FetchVhdImageTestCase(test.TestCase):
-    def _apply_stubouts(self):
-        self.mox.StubOutWithMock(vm_utils, '_make_uuid_stack')
-        self.mox.StubOutWithMock(vm_utils, 'get_sr_path')
-        self.mox.StubOutWithMock(vm_utils, '_image_uses_bittorrent')
-        self.mox.StubOutWithMock(vm_utils, '_add_torrent_url')
-        self.mox.StubOutWithMock(vm_utils, '_add_bittorrent_params')
-        self.mox.StubOutWithMock(vm_utils, '_generate_glance_callback')
-        self.mox.StubOutWithMock(vm_utils,
-            '_fetch_using_dom0_plugin_with_retry')
-        self.mox.StubOutWithMock(vm_utils, 'safe_find_sr')
-        self.mox.StubOutWithMock(vm_utils, '_scan_sr')
-        self.mox.StubOutWithMock(vm_utils, '_check_vdi_size')
-        self.mox.StubOutWithMock(vm_utils, 'destroy_vdi')
+    def setUp(self):
+        super(FetchVhdImageTestCase, self).setUp()
+        self.context = context.get_admin_context()
+        self.context.auth_token = 'auth_token'
 
-    def _common_params_setup(self, uses_bittorrent):
-        self.context = "context"
         self.session = FakeSession()
         self.instance = {"uuid": "uuid"}
         self.image_id = "image_id"
         self.uuid_stack = ["uuid_stack"]
         self.sr_path = "sr_path"
         self.params = {'image_id': self.image_id,
-            'uuid_stack': self.uuid_stack, 'sr_path': self.sr_path}
-        self.bt_params = copy.copy(self.params)
-        self.bt_params['torrent_url'] = "%s.torrent" % self.image_id
+                       'uuid_stack': self.uuid_stack,
+                       'sr_path': self.sr_path}
         self.vdis = {'root': {'uuid': 'vdi'}}
+
+        self.mox.StubOutWithMock(vm_utils, '_make_uuid_stack')
+        self.mox.StubOutWithMock(vm_utils, 'get_sr_path')
+        self.mox.StubOutWithMock(vm_utils, '_image_uses_bittorrent')
+        self.mox.StubOutWithMock(vm_utils, '_add_bittorrent_params')
+        self.mox.StubOutWithMock(vm_utils, 'safe_find_sr')
+        self.mox.StubOutWithMock(vm_utils, '_scan_sr')
+        self.mox.StubOutWithMock(vm_utils, '_check_vdi_size')
+        self.mox.StubOutWithMock(vm_utils, 'destroy_vdi')
+        self.mox.StubOutWithMock(
+                self.session, 'call_plugin_serialized_with_retry')
+        self.mox.StubOutWithMock(vm_utils, '_add_torrent_url')
 
         vm_utils._make_uuid_stack().AndReturn(self.uuid_stack)
         vm_utils.get_sr_path(self.session).AndReturn(self.sr_path)
-        vm_utils._image_uses_bittorrent(self.context,
-            self.instance).AndReturn(uses_bittorrent)
-        if uses_bittorrent:
-            def set_url(instance, image_id, params):
-                params['torrent_url'] = "%s.torrent" % image_id
-
-            vm_utils._add_torrent_url(self.instance, self.image_id,
-                    self.params).WithSideEffects(set_url).AndReturn(True)
 
     def test_fetch_vhd_image_works_with_glance(self):
-        self._apply_stubouts()
-        self._common_params_setup(False)
+        vm_utils._image_uses_bittorrent(
+            self.context, self.instance).AndReturn(False)
+        self.params['auth_token'] = 'auth_token'
 
-        vm_utils._generate_glance_callback(self.context).AndReturn("dummy")
-
-        vm_utils._fetch_using_dom0_plugin_with_retry(self.context,
-            self.session, self.image_id, "glance", self.params,
-            callback="dummy").AndReturn(self.vdis)
+        self.session.call_plugin_serialized_with_retry(
+                'glance', 'download_vhd', 0, mox.IgnoreArg(),
+                **self.params).AndReturn(self.vdis)
 
         vm_utils.safe_find_sr(self.session).AndReturn("sr")
         vm_utils._scan_sr(self.session, "sr")
-        vm_utils._check_vdi_size(self.context, self.session, self.instance,
-                                 "vdi")
+        vm_utils._check_vdi_size(
+                self.context, self.session, self.instance, "vdi")
 
         self.mox.ReplayAll()
 
@@ -277,15 +271,24 @@ class FetchVhdImageTestCase(test.TestCase):
 
         self.mox.VerifyAll()
 
+    def _setup_bittorrent(self):
+        vm_utils._image_uses_bittorrent(
+            self.context, self.instance).AndReturn(True)
+
+        def _add_torrent_url(instance, image_id, params):
+            params['torrent_url'] = "%s.torrent" % image_id
+
+        vm_utils._add_torrent_url(
+                self.instance, self.image_id, mox.IgnoreArg()).AndReturn(True)
+
+        vm_utils._add_bittorrent_params(self.image_id, self.params)
+
+        self.session.call_plugin_serialized_with_retry(
+                'bittorrent', 'download_vhd', 0, None,
+                **self.params).AndReturn(self.vdis)
+
     def test_fetch_vhd_image_works_with_bittorrent(self):
-        self._apply_stubouts()
-        self._common_params_setup(True)
-
-        vm_utils._add_bittorrent_params(self.image_id, self.bt_params)
-
-        vm_utils._fetch_using_dom0_plugin_with_retry(self.context,
-            self.session, self.image_id, "bittorrent", self.bt_params,
-            callback=None).AndReturn(self.vdis)
+        self._setup_bittorrent()
 
         vm_utils.safe_find_sr(self.session).AndReturn("sr")
         vm_utils._scan_sr(self.session, "sr")
@@ -300,15 +303,8 @@ class FetchVhdImageTestCase(test.TestCase):
         self.mox.VerifyAll()
 
     def test_fetch_vhd_image_cleans_up_vdi_on_fail(self):
-        self._apply_stubouts()
-        self._common_params_setup(True)
         self.mox.StubOutWithMock(self.session, 'call_xenapi')
-
-        vm_utils._add_bittorrent_params(self.image_id, self.bt_params)
-
-        vm_utils._fetch_using_dom0_plugin_with_retry(self.context,
-            self.session, self.image_id, "bittorrent", self.bt_params,
-            callback=None).AndReturn(self.vdis)
+        self._setup_bittorrent()
 
         vm_utils.safe_find_sr(self.session).AndReturn("sr")
         vm_utils._scan_sr(self.session, "sr")

@@ -44,6 +44,7 @@ from nova import exception
 from nova.image import glance
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
+from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
 from nova.openstack.common import strutils
@@ -1107,36 +1108,6 @@ def _fetch_image(context, session, instance, name_label, image_id, image_type):
     return vdis
 
 
-def _fetch_using_dom0_plugin_with_retry(context, session, image_id,
-                                        plugin_name, params, callback=None):
-    max_attempts = CONF.glance_num_retries + 1
-    sleep_time = 0.5
-    for attempt_num in xrange(1, max_attempts + 1):
-        LOG.info(_('download_vhd %(image_id)s, attempt '
-                   '%(attempt_num)d/%(max_attempts)d, params: %(params)s'),
-                 {'image_id': image_id, 'attempt_num': attempt_num,
-                  'max_attempts': max_attempts, 'params': params})
-
-        try:
-            if callback:
-                callback(params)
-
-            return session.call_plugin_serialized(
-                    plugin_name, 'download_vhd', **params)
-        except session.XenAPI.Failure as exc:
-            _type, _method, error = exc.details[:3]
-            if error == 'RetryableError':
-                LOG.error(_('download_vhd failed: %r') %
-                          (exc.details[3:],))
-            else:
-                raise
-
-        time.sleep(sleep_time)
-        sleep_time = min(2 * sleep_time, 15)
-
-    raise exception.CouldNotFetchImage(image_id=image_id)
-
-
 def _make_uuid_stack():
     # NOTE(sirp): The XenAPI plugins run under Python 2.4
     # which does not have the `uuid` module. To work around this,
@@ -1175,23 +1146,26 @@ def _fetch_vhd_image(context, session, instance, image_id):
     LOG.debug(_("Asking xapi to fetch vhd image %s"), image_id,
               instance=instance)
 
-    params = {'image_id': image_id,
-              'uuid_stack': _make_uuid_stack(),
-              'sr_path': get_sr_path(session)}
-
+    params = {}
     if (_image_uses_bittorrent(context, instance) and
             _add_torrent_url(instance, image_id, params)):
-
-        plugin_name = 'bittorrent'
-        callback = None
+        params.update({'image_id': image_id,
+                       'uuid_stack': _make_uuid_stack(),
+                       'sr_path': get_sr_path(session)})
         _add_bittorrent_params(image_id, params)
-    else:
-        plugin_name = 'glance'
-        callback = _generate_glance_callback(context)
+        try:
+            vdis = session.call_plugin_serialized_with_retry(
+                    'bittorrent', 'download_vhd', CONF.glance_num_retries,
+                    None, **params)
+        except exception.PluginRetriesExceeded:
+            raise exception.CouldNotFetchImage(image_id=image_id)
 
-    vdis = _fetch_using_dom0_plugin_with_retry(
-            context, session, image_id, plugin_name, params,
-            callback=callback)
+    else:
+        download_handler = importutils.import_object(
+                'nova.virt.xenapi.image.glance.GlanceStore')
+
+        vdis = download_handler.download_image(
+                context, session, instance, image_id)
 
     sr_ref = safe_find_sr(session)
     _scan_sr(session, sr_ref)
@@ -1207,19 +1181,6 @@ def _fetch_vhd_image(context, session, instance, image_id):
                 destroy_vdi(session, vdi_ref)
 
     return vdis
-
-
-def _generate_glance_callback(context):
-    glance_api_servers = glance.get_api_servers()
-
-    def pick_glance(params):
-        g_host, g_port, g_use_ssl = glance_api_servers.next()
-        params['glance_host'] = g_host
-        params['glance_port'] = g_port
-        params['glance_use_ssl'] = g_use_ssl
-        params['auth_token'] = getattr(context, 'auth_token', None)
-
-    return pick_glance
 
 
 _TORRENT_URL_FN = None  # driver function to determine torrent URL to use

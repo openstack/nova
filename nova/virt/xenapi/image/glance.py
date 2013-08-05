@@ -13,83 +13,59 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import time
-
 from oslo.config import cfg
 
 from nova import exception
 from nova.image import glance
-from nova.openstack.common.gettextutils import _
-import nova.openstack.common.log as logging
 from nova.virt.xenapi import agent
 from nova.virt.xenapi import vm_utils
-
-LOG = logging.getLogger(__name__)
 
 CONF = cfg.CONF
 CONF.import_opt('glance_num_retries', 'nova.image.glance')
 
 
 class GlanceStore(object):
+    def _call_glance_plugin(self, session, fn, params):
+        glance_api_servers = glance.get_api_servers()
+
+        def pick_glance(kwargs):
+            g_host, g_port, g_use_ssl = glance_api_servers.next()
+            kwargs['glance_host'] = g_host
+            kwargs['glance_port'] = g_port
+            kwargs['glance_use_ssl'] = g_use_ssl
+
+        return session.call_plugin_serialized_with_retry(
+            'glance', fn, CONF.glance_num_retries, pick_glance, **params)
+
+    def _make_params(self, context, session, image_id):
+        return {'image_id': image_id,
+                'sr_path': vm_utils.get_sr_path(session),
+                'auth_token': getattr(context, 'auth_token', None)}
+
+    def download_image(self, context, session, instance, image_id):
+        params = self._make_params(context, session, image_id)
+        params['uuid_stack'] = vm_utils._make_uuid_stack()
+
+        try:
+            vdis = self._call_glance_plugin(session, 'download_vhd', params)
+        except exception.PluginRetriesExceeded:
+            raise exception.CouldNotFetchImage(image_id=image_id)
+
+        return vdis
 
     def upload_image(self, context, session, instance, vdi_uuids, image_id):
-        """Requests that the Glance plugin bundle the specified VDIs and
-        push them into Glance using the specified human-friendly name.
-        """
-        # NOTE(sirp): Currently we only support uploading images as VHD, there
-        # is no RAW equivalent (yet)
-        max_attempts = CONF.glance_num_retries + 1
-        sleep_time = 0.5
-        glance_api_servers = glance.get_api_servers()
-        properties = {
-            'auto_disk_config': instance['auto_disk_config'],
-            'os_type': instance['os_type'] or CONF.default_os_type,
-        }
+        params = self._make_params(context, session, image_id)
+        params['vdi_uuids'] = vdi_uuids
 
-        if agent.USE_AGENT_SM_KEY in instance["system_metadata"]:
-            properties[agent.USE_AGENT_KEY] = \
-                instance["system_metadata"][agent.USE_AGENT_SM_KEY]
+        props = params['properties'] = {}
+        props['auto_disk_config'] = instance['auto_disk_config']
+        props['os_type'] = instance['os_type'] or CONF.default_os_type
 
-        for attempt_num in xrange(1, max_attempts + 1):
+        sys_meta = instance["system_metadata"]
+        if agent.USE_AGENT_SM_KEY in sys_meta:
+            props[agent.USE_AGENT_KEY] = sys_meta[agent.USE_AGENT_SM_KEY]
 
-            (glance_host,
-             glance_port,
-             glance_use_ssl) = glance_api_servers.next()
-
-            try:
-
-                params = {'vdi_uuids': vdi_uuids,
-                          'image_id': image_id,
-                          'glance_host': glance_host,
-                          'glance_port': glance_port,
-                          'glance_use_ssl': glance_use_ssl,
-                          'sr_path': vm_utils.get_sr_path(session),
-                          'auth_token': getattr(context, 'auth_token', None),
-                          'properties': properties}
-
-                LOG.debug(_("Asking xapi to upload to glance %(vdi_uuids)s as"
-                            " ID %(image_id)s"
-                            " glance server: %(glance_host)s:%(glance_port)d"
-                            " attempt %(attempt_num)d/%(max_attempts)d"),
-                          {'vdi_uuids': vdi_uuids,
-                           'image_id': image_id,
-                           'glance_host': glance_host,
-                           'glance_port': glance_port,
-                           'attempt_num': attempt_num,
-                           'max_attempts': max_attempts}, instance=instance)
-
-                return session.call_plugin_serialized('glance',
-                                                      'upload_vhd',
-                                                      **params)
-
-            except session.XenAPI.Failure as exc:
-                _type, _method, error = exc.details[:3]
-                if error == 'RetryableError':
-                    LOG.error(_('upload_vhd failed: %r') %
-                              (exc.details[3:],))
-                else:
-                    raise
-            time.sleep(sleep_time)
-            sleep_time = min(2 * sleep_time, 15)
-
-        raise exception.CouldNotUploadImage(image_id=image_id)
+        try:
+            self._call_glance_plugin(session, 'upload_vhd', params)
+        except exception.PluginRetriesExceeded:
+            raise exception.CouldNotUploadImage(image_id=image_id)
