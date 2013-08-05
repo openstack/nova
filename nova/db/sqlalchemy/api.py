@@ -4468,10 +4468,8 @@ def agent_build_create(context, values):
 
 
 @require_admin_context
-def agent_build_get_by_triple(context, hypervisor, os, architecture,
-                              session=None):
-    return model_query(context, models.AgentBuild, session=session,
-                       read_deleted="no").\
+def agent_build_get_by_triple(context, hypervisor, os, architecture):
+    return model_query(context, models.AgentBuild, read_deleted="no").\
                    filter_by(hypervisor=hypervisor).\
                    filter_by(os=os).\
                    filter_by(architecture=architecture).\
@@ -4528,10 +4526,9 @@ def bw_usage_get_by_uuids(context, uuids, start_period):
 @require_context
 @_retry_on_deadlock
 def bw_usage_update(context, uuid, mac, start_period, bw_in, bw_out,
-                    last_ctr_in, last_ctr_out, last_refreshed=None,
-                    session=None):
-    if not session:
-        session = get_session()
+                    last_ctr_in, last_ctr_out, last_refreshed=None):
+
+    session = get_session()
 
     if last_refreshed is None:
         last_refreshed = timeutils.utcnow()
@@ -4917,9 +4914,8 @@ def aggregate_get_all(context):
     return _aggregate_get_query(context, models.Aggregate).all()
 
 
-@require_admin_context
-def aggregate_metadata_get_query(context, aggregate_id, session=None,
-                                 read_deleted="yes"):
+def _aggregate_metadata_get_query(context, aggregate_id, session=None,
+                                  read_deleted="yes"):
     return model_query(context,
                        models.AggregateMetadata,
                        read_deleted=read_deleted,
@@ -4961,9 +4957,9 @@ def aggregate_metadata_add(context, aggregate_id, metadata, set_delete=False):
     session = get_session()
     all_keys = metadata.keys()
     with session.begin():
-        query = aggregate_metadata_get_query(context, aggregate_id,
-                                             read_deleted='no',
-                                             session=session)
+        query = _aggregate_metadata_get_query(context, aggregate_id,
+                                              read_deleted='no',
+                                              session=session)
         if set_delete:
             query.filter(~models.AggregateMetadata.key.in_(all_keys)).\
                 soft_delete(synchronize_session=False)
