@@ -76,6 +76,7 @@ class CellsAPI(rpc_proxy.RpcProxy):
         1.16 - Adds instance_update_from_api()
         1.17 - Adds get_host_uptime()
         1.18 - Adds terminate_instance() and soft_delete_instance()
+        1.19 - Adds pause_instance() and unpause_instance()
     '''
     BASE_RPC_API_VERSION = '1.0'
 
@@ -449,6 +450,28 @@ class CellsAPI(rpc_proxy.RpcProxy):
                   self.make_msg('reboot_instance', instance=instance,
                                 reboot_type=reboot_type),
                   version='1.14')
+
+    def pause_instance(self, ctxt, instance):
+        """Pause an instance in its cell.
+
+        This method takes a new-world instance object.
+        """
+        if not CONF.cells.enable:
+            return
+        self.cast(ctxt,
+                  self.make_msg('pause_instance', instance=instance),
+                  version='1.19')
+
+    def unpause_instance(self, ctxt, instance):
+        """Unpause an instance in its cell.
+
+        This method takes a new-world instance object.
+        """
+        if not CONF.cells.enable:
+            return
+        self.cast(ctxt,
+                  self.make_msg('unpause_instance', instance=instance),
+                  version='1.19')
 
     def suspend_instance(self, ctxt, instance):
         """Suspend an instance in its cell.

@@ -862,6 +862,14 @@ class _TargetedMessageMethods(_BaseMessageMethods):
     def soft_delete_instance(self, message, instance):
         self._call_compute_api_with_obj(message.ctxt, instance, 'soft_delete')
 
+    def pause_instance(self, message, instance):
+        """Pause an instance via compute_api.pause()."""
+        self._call_compute_api_with_obj(message.ctxt, instance, 'pause')
+
+    def unpause_instance(self, message, instance):
+        """Unpause an instance via compute_api.pause()."""
+        self._call_compute_api_with_obj(message.ctxt, instance, 'unpause')
+
 
 class _BroadcastMessageMethods(_BaseMessageMethods):
     """These are the methods that can be called as a part of a broadcast
@@ -1608,6 +1616,14 @@ class MessageRunner(object):
 
     def soft_delete_instance(self, ctxt, instance):
         self._instance_action(ctxt, instance, 'soft_delete_instance')
+
+    def pause_instance(self, ctxt, instance):
+        """Pause an instance in its cell."""
+        self._instance_action(ctxt, instance, 'pause_instance')
+
+    def unpause_instance(self, ctxt, instance):
+        """Unpause an instance in its cell."""
+        self._instance_action(ctxt, instance, 'unpause_instance')
 
     @staticmethod
     def get_message_types():

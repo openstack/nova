@@ -42,7 +42,8 @@ class ComputeRPCAPIRedirect(object):
     cells_compatible = ['start_instance', 'stop_instance',
                         'reboot_instance', 'suspend_instance',
                         'resume_instance', 'terminate_instance',
-                        'soft_delete_instance']
+                        'soft_delete_instance', 'pause_instance',
+                        'unpause_instance']
 
     def __init__(self, cells_rpcapi):
         self.cells_rpcapi = cells_rpcapi
@@ -335,18 +336,6 @@ class ComputeCellsAPI(compute_api.API):
                 *args, **kwargs)
         self._cast_to_cells(context, instance, 'remove_fixed_ip',
                 *args, **kwargs)
-
-    @check_instance_cell
-    def pause(self, context, instance):
-        """Pause the given instance."""
-        super(ComputeCellsAPI, self).pause(context, instance)
-        self._cast_to_cells(context, instance, 'pause')
-
-    @check_instance_cell
-    def unpause(self, context, instance):
-        """Unpause the given instance."""
-        super(ComputeCellsAPI, self).unpause(context, instance)
-        self._cast_to_cells(context, instance, 'unpause')
 
     def get_diagnostics(self, context, instance):
         """Retrieve diagnostics for the given instance."""

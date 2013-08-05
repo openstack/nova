@@ -1230,6 +1230,12 @@ class CellsTargetedMethodsTestCase(test.TestCase):
         self._test_instance_action_method('soft_delete',
                                           (), {}, (), {}, False)
 
+    def test_pause_instance(self):
+        self._test_instance_action_method('pause', (), {}, (), {}, False)
+
+    def test_unpause_instance(self):
+        self._test_instance_action_method('unpause', (), {}, (), {}, False)
+
 
 class CellsBroadcastMethodsTestCase(test.TestCase):
     """Test case for _BroadcastMessageMethods class.  Most of these
