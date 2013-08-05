@@ -497,7 +497,7 @@ class VMwareVCDriver(VMwareESXDriver):
             _volumeops = volumeops.VMwareVolumeOps(self._session,
                                         self.dict_mors[node]['cluster_mor'],
                                         vc_support=True)
-            _vmops = vmops.VMwareVMOps(self._session, self._virtapi,
+            _vmops = vmops.VMwareVCVMOps(self._session, self._virtapi,
                                        _volumeops,
                                        self.dict_mors[node]['cluster_mor'])
             name = self.dict_mors.get(node)['name']
