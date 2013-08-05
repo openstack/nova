@@ -85,6 +85,7 @@ class QuotaSetsController(object):
         else:
             return dict((k, v['limit']) for k, v in values.items())
 
+    @extensions.expected_errors(403)
     @wsgi.serializers(xml=QuotaTemplate)
     def show(self, req, id):
         context = req.environ['nova.context']
@@ -98,6 +99,7 @@ class QuotaSetsController(object):
         except exception.NotAuthorized:
             raise webob.exc.HTTPForbidden()
 
+    @extensions.expected_errors((400, 403))
     @wsgi.serializers(xml=QuotaTemplate)
     def update(self, req, id, body):
         context = req.environ['nova.context']
@@ -180,12 +182,14 @@ class QuotaSetsController(object):
         return self._format_quota_set(id, self._get_quotas(context, id,
                                                            user_id=user_id))
 
+    @extensions.expected_errors(())
     @wsgi.serializers(xml=QuotaTemplate)
     def defaults(self, req, id):
         context = req.environ['nova.context']
         authorize_show(context)
         return self._format_quota_set(id, QUOTAS.get_defaults(context))
 
+    @extensions.expected_errors(403)
     @wsgi.response(204)
     def delete(self, req, id):
         context = req.environ['nova.context']
