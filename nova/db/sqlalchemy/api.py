@@ -3167,6 +3167,11 @@ def quota_destroy_all_by_project(context, project_id):
                 filter_by(project_id=project_id).\
                 soft_delete(synchronize_session=False)
 
+        model_query(context, models.ProjectUserQuota, session=session,
+                    read_deleted="no").\
+                filter_by(project_id=project_id).\
+                soft_delete(synchronize_session=False)
+
         model_query(context, models.QuotaUsage,
                     session=session, read_deleted="no").\
                 filter_by(project_id=project_id).\
