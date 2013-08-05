@@ -195,7 +195,7 @@ class XenAPIBasedAgent(object):
 
     def _save_instance_password_if_sshkey_present(self, new_pass):
         sshkey = self.instance.get('key_data')
-        if sshkey:
+        if sshkey and sshkey.startswith("ssh-rsa"):
             ctxt = context.get_admin_context()
             enc = crypto.ssh_encrypt_text(sshkey, new_pass)
             sys_meta = utils.instance_sys_meta(self.instance)
