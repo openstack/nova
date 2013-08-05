@@ -552,10 +552,10 @@ class ConductorManager(manager.Manager):
         # NOTE(danms): Diff the object with the one passed to us and
         # generate a list of changes to forward back
         for field in objinst.fields:
-            if not hasattr(objinst, nova_object.get_attrname(field)):
+            if not objinst.obj_attr_is_set(field):
                 # Avoid demand-loading anything
                 continue
-            if (not hasattr(oldobj, nova_object.get_attrname(field)) or
+            if (not oldobj.obj_attr_is_set(field) or
                     oldobj[field] != objinst[field]):
                 updates[field] = objinst._attr_to_primitive(field)
         # This is safe since a field named this would conflict with the

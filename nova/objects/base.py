@@ -286,7 +286,7 @@ class NovaObject(object):
         """
         primitive = dict()
         for name in self.fields:
-            if hasattr(self, get_attrname(name)):
+            if self.obj_attr_is_set(name):
                 primitive[name] = self._attr_to_primitive(name)
         obj = {'nova_object.name': self.obj_name(),
                'nova_object.namespace': 'nova',
@@ -327,6 +327,20 @@ class NovaObject(object):
         else:
             self._changed_fields.clear()
 
+    def obj_attr_is_set(self, attrname):
+        """Test object to see if attrname is present.
+
+        Returns True if the named attribute has a value set, or
+        False if not. Raises AttributeError if attrname is not
+        a valid attribute for this object.
+        """
+        if (attrname not in self.fields and
+                attrname not in self.obj_extra_fields):
+            raise AttributeError(
+                _("%(objname)s object has no attribute '%(attrname)s'") %
+                {'objname': self.obj_name(), 'attrname': attrname})
+        return hasattr(self, get_attrname(attrname))
+
     # dictish syntactic sugar
     def iteritems(self):
         """For backwards-compatibility with dict-based objects.
@@ -334,7 +348,7 @@ class NovaObject(object):
         NOTE(danms): May be removed in the future.
         """
         for name in self.fields.keys() + self.obj_extra_fields:
-            if (hasattr(self, get_attrname(name)) or
+            if (self.obj_attr_is_set(name) or
                     name in self.obj_extra_fields):
                 yield name, getattr(self, name)
 
@@ -359,7 +373,10 @@ class NovaObject(object):
 
         NOTE(danms): May be removed in the future.
         """
-        return hasattr(self, get_attrname(name))
+        try:
+            return self.obj_attr_is_set(name)
+        except AttributeError:
+            return False
 
     def get(self, key, value=None):
         """For backwards-compatibility with dict-based objects.

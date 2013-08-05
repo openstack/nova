@@ -470,6 +470,13 @@ class _TestObject(object):
         self.assertTrue('foo' in obj)
         self.assertFalse('does_not_exist' in obj)
 
+    def test_obj_attr_is_set(self):
+        obj = MyObj()
+        obj.foo = 1
+        self.assertTrue(obj.obj_attr_is_set('foo'))
+        self.assertFalse(obj.obj_attr_is_set('bar'))
+        self.assertRaises(AttributeError, obj.obj_attr_is_set, 'bang')
+
 
 class TestObject(_LocalTest, _TestObject):
     pass
