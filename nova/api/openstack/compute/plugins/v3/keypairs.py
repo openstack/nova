@@ -128,6 +128,7 @@ class KeypairController(object):
             raise webob.exc.HTTPNotFound()
         return {'keypair': keypair}
 
+    @extensions.expected_errors(())
     @wsgi.serializers(xml=KeypairsTemplate)
     def index(self, req):
         """

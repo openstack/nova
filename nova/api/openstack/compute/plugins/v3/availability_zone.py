@@ -141,6 +141,7 @@ class AvailabilityZoneController(wsgi.Controller):
                            "hosts": None})
         return {'availability_zone_info': result}
 
+    @extensions.expected_errors(())
     @wsgi.serializers(xml=AvailabilityZonesTemplate)
     def index(self, req):
         """Returns a summary list of availability zone."""
@@ -149,6 +150,7 @@ class AvailabilityZoneController(wsgi.Controller):
 
         return self._describe_availability_zones(context)
 
+    @extensions.expected_errors(())
     @wsgi.serializers(xml=AvailabilityZonesTemplate)
     def detail(self, req):
         """Returns a detailed list of availability zone."""
