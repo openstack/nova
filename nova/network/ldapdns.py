@@ -12,7 +12,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import ldap
+try:
+    import ldap
+except ImportError:
+    # This module needs to be importable despite ldap not being a requirement
+    ldap = None
+
 import time
 
 from oslo.config import cfg
@@ -313,6 +318,9 @@ class LdapDNS(dns_driver.DNSDriver):
     """
 
     def __init__(self):
+        if not ldap:
+            raise ImportError(_('ldap not installed'))
+
         self.lobj = ldap.initialize(CONF.ldap_dns_url)
         self.lobj.simple_bind_s(CONF.ldap_dns_user,
                                 CONF.ldap_dns_password)
