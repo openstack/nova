@@ -1290,6 +1290,10 @@ class IncompatibleObjectVersion(NovaException):
     msg_fmt = _('Version %(objver)s of %(objname)s is not supported')
 
 
+class ObjectActionError(NovaException):
+    msg_fmt = _('Object action %(action)s failed because: %(reason)s')
+
+
 class CoreAPIMissing(NovaException):
     msg_fmt = _("Core API extensions are missing: %(missing_apis)s")
 

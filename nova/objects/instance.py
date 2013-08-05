@@ -17,6 +17,7 @@ import copy
 from nova.cells import opts as cells_opts
 from nova.cells import rpcapi as cells_rpcapi
 from nova import db
+from nova import exception
 from nova import notifications
 from nova.objects import base
 from nova.objects import instance_fault
@@ -394,7 +395,9 @@ class Instance(base.NovaObject):
             extra.append('fault')
 
         if not extra:
-            raise Exception('Cannot load "%s" from instance' % attrname)
+            raise exception.ObjectActionError(
+                action='obj_load_attr',
+                reason='attribute %s not lazy-loadable' % attrname)
 
         # NOTE(danms): This could be optimized to just load the bits we need
         instance = self.__class__.get_by_uuid(self._context,
@@ -405,7 +408,9 @@ class Instance(base.NovaObject):
         if hasattr(instance, base.get_attrname(attrname)):
             self[attrname] = instance[attrname]
         else:
-            raise Exception('Cannot load "%s" from instance' % attrname)
+            raise exception.ObjectActionError(
+                action='obj_load_attr',
+                reason='loading %s requires recursion' % attrname)
 
 
 def _make_instance_list(context, inst_list, db_inst_list, expected_attrs):
