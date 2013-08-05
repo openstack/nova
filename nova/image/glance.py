@@ -23,7 +23,6 @@ import copy
 import itertools
 import json
 import random
-import shutil
 import sys
 import time
 import urlparse
@@ -33,6 +32,7 @@ import glanceclient.exc
 from oslo.config import cfg
 
 from nova import exception
+import nova.image.download as image_xfers
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
@@ -73,6 +73,8 @@ CONF = cfg.CONF
 CONF.register_opts(glance_opts)
 CONF.import_opt('auth_strategy', 'nova.api.auth')
 CONF.import_opt('my_ip', 'nova.netconf')
+
+_DOWNLOAD_MODULES = image_xfers.load_transfer_modules()
 
 
 def generate_glance_url():
@@ -220,6 +222,22 @@ class GlanceImageService(object):
 
     def __init__(self, client=None):
         self._client = client or GlanceClientWrapper()
+        #NOTE(jbresnah) build the table of download handlers at the beginning
+        # so that operators can catch errors at load time rather than whenever
+        # a user attempts to use a module.  Note this cannot be done in glance
+        # space when this python module is loaded because the download module
+        # may require configuration options to be parsed.
+        self._download_handlers = {}
+        for scheme in _DOWNLOAD_MODULES:
+            if scheme in CONF.allowed_direct_url_schemes:
+                mod = _DOWNLOAD_MODULES[scheme]
+                try:
+                    self._download_handlers[scheme] = mod.get_download_hander()
+                except Exception as ex:
+                    msg = _('When loading the module %(module_str)s the '
+                            'following error occurred: %(ex)s')\
+                            % {'module_str': str(mod), 'ex': ex}
+                    LOG.error(msg)
 
     def detail(self, context, **kwargs):
         """Calls out to Glance for a list of detailed image information."""
@@ -264,7 +282,7 @@ class GlanceImageService(object):
         base_image_meta = self._translate_from_glance(image)
         return base_image_meta
 
-    def get_location(self, context, image_id):
+    def _get_locations(self, context, image_id):
         """Returns the direct url representing the backend storage location,
         or None if this attribute is not shown by Glance.
         """
@@ -277,21 +295,37 @@ class GlanceImageService(object):
         if not self._is_image_available(context, image_meta):
             raise exception.ImageNotFound(image_id=image_id)
 
-        return getattr(image_meta, 'direct_url', None)
+        locations = getattr(image_meta, 'locations', [])
+        du = getattr(image_meta, 'direct_url', None)
+        if du:
+            locations.append({'url': du, 'metadata': {}})
+        return locations
+
+    def _get_transfer_module(self, scheme):
+        try:
+            return self._download_handlers[scheme]
+        except KeyError:
+            return None
+        except Exception as ex:
+            LOG.error(_("Failed to instantiate the download handler "
+                        "for %(scheme)s") % locals())
+        return
 
     def download(self, context, image_id, data=None):
         """Calls out to Glance for data and writes data."""
-        if 'file' in CONF.allowed_direct_url_schemes:
-            location = self.get_location(context, image_id)
-            o = urlparse.urlparse(location)
-            if o.scheme == "file":
-                with open(o.path, "r") as f:
-                    # FIXME(jbresnah) a system call to cp could have
-                    # significant performance advantages, however we
-                    # do not have the path to files at this point in
-                    # the abstraction.
-                    shutil.copyfileobj(f, data)
-                return
+        locations = self._get_locations(context, image_id)
+        for entry in locations:
+            loc_url = entry['url']
+            loc_meta = entry['metadata']
+            o = urlparse.urlparse(loc_url)
+            xfer_mod = self._get_transfer_module(o.scheme)
+            if xfer_mod:
+                try:
+                    xfer_mod.download(o, data, loc_meta)
+                    LOG.info("Successfully transferred using %s" % o.scheme)
+                    return
+                except Exception as ex:
+                    LOG.exception(ex)
 
         try:
             image_chunks = self._client.call(context, 1, 'data', image_id)

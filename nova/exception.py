@@ -1335,3 +1335,30 @@ class InstanceGroupPolicyNotFound(NotFound):
 
 class PluginRetriesExceeded(NovaException):
     msg_fmt = _("Number of retries to plugin (%(num_retries)d) exceeded.")
+
+
+class ImageDownloadModuleError(NovaException):
+    msg_fmt = _("There was an error with the download module %(module)s. "
+                "%(reason)s")
+
+
+class ImageDownloadModuleLoadError(ImageDownloadModuleError):
+    msg_fmt = _("Could not load the module %(module)s")
+
+
+class ImageDownloadModuleMetaDataError(ImageDownloadModuleError):
+    msg_fmt = _("The metadata for this location will not work with this "
+                "module %(module)s.  %(reason)s.")
+
+
+class ImageDownloadModuleNotImplementedError(ImageDownloadModuleError):
+    msg_fmt = _("The method %(method_name)s is not implemented.")
+
+
+class ImageDownloadModuleMetaDataError(ImageDownloadModuleError):
+    msg_fmt = _("The metadata for this location will not work with this "
+                "module %(module)s.  %(reason)s.")
+
+
+class ImageDownloadModuleConfigurationError(ImageDownloadModuleError):
+    msg_fmt = _("The module %(module)s is misconfigured: %(reason)s.")
