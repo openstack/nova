@@ -1335,7 +1335,7 @@ class API(base.Base):
         LOG.warning(_("instance's host %s is down, deleting from "
                       "database") % instance['host'], instance=instance)
         instance_uuid = instance['uuid']
-        self.db.instance_info_cache_delete(context, instance_uuid)
+        instance.info_cache.delete()
         compute_utils.notify_about_instance_usage(
             context, instance, "%s.start" % delete_type)
 

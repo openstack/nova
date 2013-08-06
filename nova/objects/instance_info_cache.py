@@ -25,10 +25,11 @@ LOG = logging.getLogger(__name__)
 
 
 class InstanceInfoCache(base.NovaObject):
-    VERSION = '1.2'
+    VERSION = '1.3'
     # Version 1.0: Initial version
     # Version 1.1: Converted network_info to store the model.
     # Version 1.2: Added new() and update_cells kwarg to save().
+    # Version 1.3: Added delete()
 
     fields = {
         'instance_uuid': str,
@@ -92,3 +93,7 @@ class InstanceInfoCache(base.NovaObject):
             if update_cells and rv:
                 self._info_cache_cells_update(context, rv)
         self.obj_reset_changes()
+
+    @base.remotable
+    def delete(self, context):
+        db.instance_info_cache_delete(context, self.instance_uuid)
