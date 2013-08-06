@@ -477,6 +477,31 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
                     globals(), locals(), ['versioning_api'], -1)
             self.migration_api = temp.versioning_api
 
+    def assertColumnExists(self, engine, table, column):
+        t = db_utils.get_table(engine, table)
+        self.assertIn(column, t.c)
+
+    def assertColumnNotExists(self, engine, table, column):
+        t = db_utils.get_table(engine, table)
+        self.assertNotIn(column, t.c)
+
+    def assertIndexExists(self, engine, table, index):
+        t = db_utils.get_table(engine, table)
+        index_names = [idx.name for idx in t.indexes]
+        self.assertIn(index, index_names)
+
+    def assertIndexMembers(self, engine, table, index, members):
+        self.assertIndexExists(engine, table, index)
+
+        t = db_utils.get_table(engine, table)
+        index_columns = None
+        for idx in t.indexes:
+            if idx.name == index:
+                index_columns = idx.columns.keys()
+                break
+
+        self.assertEqual(sorted(members), sorted(index_columns))
+
     def _pre_upgrade_134(self, engine):
         now = timeutils.utcnow()
         data = [{
@@ -2454,6 +2479,54 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
             table = db_utils.get_table(engine, table_name)
             rows = table.select().execute().fetchall()
             self.assertFalse('locked_by' in rows[0])
+
+    def _pre_upgrade_206(self, engine):
+        instances = db_utils.get_table(engine, 'instances')
+        shadow_instances = db_utils.get_table(engine, 'shadow_instances')
+
+        data = [
+            {
+                'id': 650,
+                'deleted': 0,
+            },
+            {
+                'id': 651,
+                'deleted': 2,
+            },
+        ]
+        for item in data:
+            instances.insert().values(item).execute()
+            shadow_instances.insert().values(item).execute()
+        return data
+
+    def _check_206(self, engine, data):
+        self.assertColumnExists(engine, 'instances', 'cleaned')
+        self.assertColumnExists(engine, 'shadow_instances', 'cleaned')
+        self.assertIndexMembers(engine, 'instances',
+                                'instances_host_deleted_cleaned_idx',
+                                ['host', 'deleted', 'cleaned'])
+
+        instances = db_utils.get_table(engine, 'instances')
+        shadow_instances = db_utils.get_table(engine, 'shadow_instances')
+
+        def get_(table, ident):
+            return table.select().\
+                where(table.c.id == ident).\
+                execute().\
+                first()
+
+        for table in (instances, shadow_instances):
+            id_1 = get_(instances, 650)
+            self.assertEqual(0, id_1['deleted'])
+            self.assertEqual(0, id_1['cleaned'])
+
+            id_2 = get_(instances, 651)
+            self.assertEqual(2, id_2['deleted'])
+            self.assertEqual(1, id_2['cleaned'])
+
+    def _post_downgrade_206(self, engine):
+        self.assertColumnNotExists(engine, 'instances', 'cleaned')
+        self.assertColumnNotExists(engine, 'shadow_instances', 'cleaned')
 
 
 class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):

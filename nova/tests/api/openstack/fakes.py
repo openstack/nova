@@ -471,7 +471,7 @@ def stub_instance(id, user_id=None, project_id=None, host=None,
                   limit=None, marker=None,
                   launched_at=timeutils.utcnow(),
                   terminated_at=timeutils.utcnow(),
-                  availability_zone='', locked_by=None):
+                  availability_zone='', locked_by=None, cleaned=False):
 
     if user_id is None:
         user_id = 'fake_user'
@@ -565,7 +565,8 @@ def stub_instance(id, user_id=None, project_id=None, host=None,
         "launched_on": "",
         "cell_name": "",
         "architecture": "",
-        "os_type": ""}
+        "os_type": "",
+        "cleaned": cleaned}
 
     instance.update(info_cache)
     instance['info_cache']['instance_uuid'] = instance['uuid']

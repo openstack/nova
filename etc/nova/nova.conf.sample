@@ -687,6 +687,10 @@
 # (integer value)
 #network_allocate_retries=0
 
+# The number of times to attempt to reap an instance's files.
+# (integer value)
+#maximum_instance_delete_attempts=5
+
 # interval to pull bandwidth usage info (integer value)
 #bandwidth_poll_interval=600
 
@@ -722,6 +726,10 @@
 # removing from a host.  -1 never offload, 0 offload when
 # shelved (integer value)
 #shelved_offload_time=0
+
+# Interval in seconds for retrying failed instance file
+# deletes (integer value)
+#instance_delete_interval=300
 
 # Action to take if a running deleted instance is
 # detected.Valid options are 'noop', 'log' and 'reap'. Set to
