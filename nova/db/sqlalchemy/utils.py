@@ -528,3 +528,56 @@ def _change_deleted_column_type_to_id_type_sqlite(migrate_engine, table_name,
         where(new_table.c.deleted == False).\
         values(deleted=default_deleted_value).\
         execute()
+
+
+def _add_index(migrate_engine, table, index_name, idx_columns):
+    index = Index(
+        index_name, *[getattr(table.c, col) for col in idx_columns]
+    )
+    index.create()
+
+
+def _drop_index(migrate_engine, table, index_name, idx_columns):
+    index = Index(
+        index_name, *[getattr(table.c, col) for col in idx_columns]
+    )
+    index.drop()
+
+
+def _change_index_columns(migrate_engine, table, index_name,
+                          new_columns, old_columns):
+    Index(
+        index_name,
+        *[getattr(table.c, col) for col in old_columns]
+    ).drop(migrate_engine)
+
+    Index(
+        index_name,
+        *[getattr(table.c, col) for col in new_columns]
+    ).create()
+
+
+def modify_indexes(migrate_engine, data, upgrade=True):
+    if migrate_engine.name == 'sqlite':
+        return
+
+    meta = MetaData()
+    meta.bind = migrate_engine
+
+    for table_name, indexes in data.iteritems():
+        table = Table(table_name, meta, autoload=True)
+
+        for index_name, old_columns, new_columns in indexes:
+            if not upgrade:
+                new_columns, old_columns = old_columns, new_columns
+
+            if migrate_engine.name == 'postgresql':
+                if upgrade:
+                    _add_index(migrate_engine, table, index_name, new_columns)
+                else:
+                    _drop_index(migrate_engine, table, index_name, old_columns)
+            elif migrate_engine.name == 'mysql':
+                _change_index_columns(migrate_engine, table, index_name,
+                                      new_columns, old_columns)
+            else:
+                raise ValueError('Unsupported DB %s' % migrate_engine.name)

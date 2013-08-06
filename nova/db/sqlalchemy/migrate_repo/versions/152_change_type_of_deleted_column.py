@@ -1,3 +1,4 @@
+from nova.db.sqlalchemy import utils
 from sqlalchemy import CheckConstraint
 from sqlalchemy.engine import reflection
 from sqlalchemy.ext.compiler import compiles
@@ -27,6 +28,61 @@ all_tables = ['services', 'compute_nodes', 'compute_node_stats',
               'instance_actions', 'instance_actions_events']
 # note(boris-42): We can't do migration for the dns_domains table because it
 #                 doesn't have `id` column.
+
+# NOTE(jhesketh): The following indexes are lost with this upgrade. We need to
+#                 ensure they are added back in when downgrade() occurs.
+lost_indexes_data = {
+    # table_name: ((index_name_1, (*old_columns), (*new_columns)), ...)
+    "certificates": (
+        ("certificates_project_id_deleted_idx",
+         ("project_id",), ("project_id", "deleted")),
+        ("certificates_user_id_deleted_idx",
+         ("user_id",), ("user_id", "deleted")),
+    ),
+    "instances": (
+        ("instances_host_deleted_idx", ("host",), ("host", "deleted")),
+        ("instances_uuid_deleted_idx", ("uuid",), ("uuid", "deleted")),
+        ("instances_host_node_deleted_idx",
+         ("host", "node"), ("host", "node", "deleted")),
+    ),
+    "iscsi_targets": (
+        ("iscsi_targets_host_volume_id_deleted_idx",
+         ("host", "volume_id"), ("host", "volume_id", "deleted")),
+    ),
+    "networks": (
+        ("networks_bridge_deleted_idx", ("bridge",), ("bridge", "deleted")),
+        ("networks_project_id_deleted_idx",
+         ("project_id",), ("project_id", "deleted")),
+        ("networks_uuid_project_id_deleted_idx",
+         ("uuid", "project_id"), ("uuid", "project_id", "deleted")),
+        ("networks_vlan_deleted_idx", ("vlan",), ("vlan", "deleted")),
+    ),
+    "fixed_ips": (
+        ("fixed_ips_network_id_host_deleted_idx",
+         ("network_id", "host"), ("network_id", "host", "deleted")),
+        ("fixed_ips_address_reserved_network_id_deleted_idx",
+         ("address", "reserved", "network_id"),
+         ("address", "reserved", "network_id", "deleted")),
+        ("fixed_ips_deleted_allocated_idx",
+         ("address", "allocated"),
+         ('address', 'deleted', 'allocated')),
+    ),
+    "floating_ips": (
+        ("floating_ips_pool_deleted_fixed_ip_id_project_id_idx",
+         ("pool", "fixed_ip_id", "project_id"),
+         ("pool", "deleted", "fixed_ip_id", "project_id")),
+    ),
+    "instance_faults": (
+        ("instance_faults_instance_uuid_deleted_created_at_idx",
+         ("instance_uuid", "created_at"),
+         ("instance_uuid", "deleted", "created_at")),
+    ),
+    "migrations": (
+        ("migrations_instance_uuid_and_status_idx",
+         ("instance_uuid", "status"),
+         ("deleted", "instance_uuid", "status")),
+    ),
+}
 
 
 class InsertFromSelect(UpdateBase):
@@ -167,6 +223,39 @@ def downgrade_enterprise_dbs(migrate_engine):
 
         table.c.deleted.drop()
         table.c.old_deleted.alter(name="deleted")
+
+    # NOTE(jhesketh): Unfortunately indexes were lost with this upgrade
+    # so we need to recreate them so the downgrade is consistent with
+    # the previous state.
+
+    if migrate_engine.name == "mysql":
+        # NOTE(jhesketh): MySQL kept the second index due to migration 144
+        # where it was added with a truncated key to be compatible with
+        # mysql.
+        sql = ("drop index migrations_by_host_nodes_and_status_idx ON "
+               "migrations")
+        migrate_engine.execute(sql)
+
+        sql = ("create index migrations_by_host_nodes_and_status_idx ON "
+               "migrations (deleted, source_compute(100), "
+               "dest_compute(100), source_node(100), dest_node(100), "
+               "status)")
+
+        migrate_engine.execute(sql)
+    else:
+        lost_indexes_data['migrations'] = ((
+            'migrations_instance_uuid_and_status_idx',
+            ('instance_uuid', 'status'),
+            ('deleted', 'instance_uuid', 'status'),
+        ), (
+            'migrations_by_host_nodes_and_status_idx',
+            ('source_compute', 'dest_compute', 'source_node',
+             'dest_node', 'status'),
+            ('deleted', 'source_compute', 'dest_compute', 'source_node',
+             'dest_node', 'status'),
+        ))
+
+    utils.modify_indexes(migrate_engine, lost_indexes_data)
 
 
 def downgrade(migrate_engine):
