@@ -95,22 +95,22 @@ class SecurityGroupActionController(wsgi.Controller):
 
         return webob.Response(status_int=202)
 
-    @wsgi.action('addSecurityGroup')
-    def _addSecurityGroup(self, req, id, body):
+    @wsgi.action('add_security_group')
+    def _add_security_group(self, req, id, body):
         context = req.environ['nova.context']
         authorize(context)
 
-        group_name = self._parse(body, 'addSecurityGroup')
+        group_name = self._parse(body, 'add_security_group')
 
         return self._invoke(self.security_group_api.add_to_instance,
                             context, id, group_name)
 
-    @wsgi.action('removeSecurityGroup')
-    def _removeSecurityGroup(self, req, id, body):
+    @wsgi.action('remove_security_group')
+    def _remove_security_group(self, req, id, body):
         context = req.environ['nova.context']
         authorize(context)
 
-        group_name = self._parse(body, 'removeSecurityGroup')
+        group_name = self._parse(body, 'remove_security_group')
 
         return self._invoke(self.security_group_api.remove_from_instance,
                             context, id, group_name)

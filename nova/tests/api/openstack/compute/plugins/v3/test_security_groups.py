@@ -83,52 +83,53 @@ class TestSecurityGroups(test.TestCase):
         self.stubs.Set(nova.db, 'instance_get', return_server)
         self.assertEquals(return_server(None, '1'),
                           nova.db.instance_get(None, '1'))
-        body = dict(addSecurityGroup=dict(name='non-existing'))
+        body = dict(add_security_group=dict(name='non-existing'))
 
         req = fakes.HTTPRequestV3.blank('/servers/1/action')
         self.assertRaises(webob.exc.HTTPNotFound,
-                          self.manager._addSecurityGroup, req, '1', body)
+                          self.manager._add_security_group, req, '1', body)
 
     def test_associate_by_invalid_server_id(self):
-        body = dict(addSecurityGroup=dict(name='test'))
+        body = dict(add_security_group=dict(name='test'))
 
         req = fakes.HTTPRequestV3.blank('/servers/invalid/action')
         self.assertRaises(webob.exc.HTTPNotFound,
-                          self.manager._addSecurityGroup, req, 'invalid', body)
+                          self.manager._add_security_group,
+                          req, 'invalid', body)
 
     def test_associate_without_body(self):
         self.stubs.Set(nova.db, 'instance_get', return_server)
-        body = dict(addSecurityGroup=None)
+        body = dict(add_security_group=None)
 
         req = fakes.HTTPRequestV3.blank('/servers/1/action')
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.manager._addSecurityGroup, req, '1', body)
+                          self.manager._add_security_group, req, '1', body)
 
     def test_associate_no_security_group_name(self):
         self.stubs.Set(nova.db, 'instance_get', return_server)
-        body = dict(addSecurityGroup=dict())
+        body = dict(add_security_group=dict())
 
         req = fakes.HTTPRequestV3.blank('/servers/1/action')
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.manager._addSecurityGroup, req, '1', body)
+                          self.manager._add_security_group, req, '1', body)
 
     def test_associate_security_group_name_with_whitespaces(self):
         self.stubs.Set(nova.db, 'instance_get', return_server)
-        body = dict(addSecurityGroup=dict(name="   "))
+        body = dict(add_security_group=dict(name="   "))
 
         req = fakes.HTTPRequestV3.blank('/servers/1/action')
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.manager._addSecurityGroup, req, '1', body)
+                          self.manager._add_security_group, req, '1', body)
 
     def test_associate_non_existing_instance(self):
         self.stubs.Set(nova.db, 'instance_get', return_server_nonexistent)
         self.stubs.Set(nova.db, 'instance_get_by_uuid',
                        return_server_nonexistent)
-        body = dict(addSecurityGroup=dict(name="test"))
+        body = dict(add_security_group=dict(name="test"))
 
         req = fakes.HTTPRequestV3.blank('/servers/1/action')
         self.assertRaises(webob.exc.HTTPNotFound,
-                          self.manager._addSecurityGroup, req, '1', body)
+                          self.manager._add_security_group, req, '1', body)
 
     def test_associate_non_running_instance(self):
         self.stubs.Set(nova.db, 'instance_get', return_non_running_server)
@@ -136,10 +137,10 @@ class TestSecurityGroups(test.TestCase):
                        return_non_running_server)
         self.stubs.Set(nova.db, 'security_group_get_by_name',
                        return_security_group_without_instances)
-        body = dict(addSecurityGroup=dict(name="test"))
+        body = dict(add_security_group=dict(name="test"))
 
         req = fakes.HTTPRequestV3.blank('/servers/1/action')
-        self.manager._addSecurityGroup(req, '1', body)
+        self.manager._add_security_group(req, '1', body)
 
     def test_associate_already_associated_security_group_to_instance(self):
         self.stubs.Set(nova.db, 'instance_get', return_server)
@@ -147,11 +148,11 @@ class TestSecurityGroups(test.TestCase):
                        return_server_by_uuid)
         self.stubs.Set(nova.db, 'security_group_get_by_name',
                        return_security_group_by_name)
-        body = dict(addSecurityGroup=dict(name="test"))
+        body = dict(add_security_group=dict(name="test"))
 
         req = fakes.HTTPRequestV3.blank('/servers/1/action')
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.manager._addSecurityGroup, req, '1', body)
+                          self.manager._add_security_group, req, '1', body)
 
     def test_associate(self):
         self.stubs.Set(nova.db, 'instance_get', return_server)
@@ -165,64 +166,64 @@ class TestSecurityGroups(test.TestCase):
                        return_security_group_without_instances)
         self.mox.ReplayAll()
 
-        body = dict(addSecurityGroup=dict(name="test"))
+        body = dict(add_security_group=dict(name="test"))
 
         req = fakes.HTTPRequestV3.blank('/servers/1/action')
-        self.manager._addSecurityGroup(req, '1', body)
+        self.manager._add_security_group(req, '1', body)
 
     def test_disassociate_by_non_existing_security_group_name(self):
         self.stubs.Set(nova.db, 'instance_get', return_server)
         self.assertEquals(return_server(None, '1'),
                           nova.db.instance_get(None, '1'))
-        body = dict(removeSecurityGroup=dict(name='non-existing'))
+        body = dict(remove_security_group=dict(name='non-existing'))
 
         req = fakes.HTTPRequestV3.blank('/servers/1/action')
         self.assertRaises(webob.exc.HTTPNotFound,
-                          self.manager._removeSecurityGroup, req, '1', body)
+                          self.manager._remove_security_group, req, '1', body)
 
     def test_disassociate_by_invalid_server_id(self):
         self.stubs.Set(nova.db, 'security_group_get_by_name',
                        return_security_group_by_name)
-        body = dict(removeSecurityGroup=dict(name='test'))
+        body = dict(remove_security_group=dict(name='test'))
 
         req = fakes.HTTPRequestV3.blank('/servers/invalid/action')
         self.assertRaises(webob.exc.HTTPNotFound,
-                          self.manager._removeSecurityGroup, req, 'invalid',
+                          self.manager._remove_security_group, req, 'invalid',
                           body)
 
     def test_disassociate_without_body(self):
         self.stubs.Set(nova.db, 'instance_get', return_server)
-        body = dict(removeSecurityGroup=None)
+        body = dict(remove_security_group=None)
 
         req = fakes.HTTPRequestV3.blank('/servers/1/action')
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.manager._removeSecurityGroup, req, '1', body)
+                          self.manager._remove_security_group, req, '1', body)
 
     def test_disassociate_no_security_group_name(self):
         self.stubs.Set(nova.db, 'instance_get', return_server)
-        body = dict(removeSecurityGroup=dict())
+        body = dict(remove_security_group=dict())
 
         req = fakes.HTTPRequestV3.blank('/servers/1/action')
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.manager._removeSecurityGroup, req, '1', body)
+                          self.manager._remove_security_group, req, '1', body)
 
     def test_disassociate_security_group_name_with_whitespaces(self):
         self.stubs.Set(nova.db, 'instance_get', return_server)
-        body = dict(removeSecurityGroup=dict(name="   "))
+        body = dict(remove_security_group=dict(name="   "))
 
         req = fakes.HTTPRequestV3.blank('/servers/1/action')
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.manager._removeSecurityGroup, req, '1', body)
+                          self.manager._remove_security_group, req, '1', body)
 
     def test_disassociate_non_existing_instance(self):
         self.stubs.Set(nova.db, 'instance_get', return_server_nonexistent)
         self.stubs.Set(nova.db, 'security_group_get_by_name',
                        return_security_group_by_name)
-        body = dict(removeSecurityGroup=dict(name="test"))
+        body = dict(remove_security_group=dict(name="test"))
 
         req = fakes.HTTPRequestV3.blank('/servers/1/action')
         self.assertRaises(webob.exc.HTTPNotFound,
-                          self.manager._removeSecurityGroup, req, '1', body)
+                          self.manager._remove_security_group, req, '1', body)
 
     def test_disassociate_non_running_instance(self):
         self.stubs.Set(nova.db, 'instance_get', return_non_running_server)
@@ -230,10 +231,10 @@ class TestSecurityGroups(test.TestCase):
                        return_non_running_server)
         self.stubs.Set(nova.db, 'security_group_get_by_name',
                        return_security_group_by_name)
-        body = dict(removeSecurityGroup=dict(name="test"))
+        body = dict(remove_security_group=dict(name="test"))
 
         req = fakes.HTTPRequestV3.blank('/servers/1/action')
-        self.manager._removeSecurityGroup(req, '1', body)
+        self.manager._remove_security_group(req, '1', body)
 
     def test_disassociate_already_associated_security_group_to_instance(self):
         self.stubs.Set(nova.db, 'instance_get', return_server)
@@ -241,11 +242,11 @@ class TestSecurityGroups(test.TestCase):
                        return_server_by_uuid)
         self.stubs.Set(nova.db, 'security_group_get_by_name',
                        return_security_group_without_instances)
-        body = dict(removeSecurityGroup=dict(name="test"))
+        body = dict(remove_security_group=dict(name="test"))
 
         req = fakes.HTTPRequestV3.blank('/servers/1/action')
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.manager._removeSecurityGroup, req, '1', body)
+                          self.manager._remove_security_group, req, '1', body)
 
     def test_disassociate(self):
         self.stubs.Set(nova.db, 'instance_get', return_server)
@@ -259,10 +260,10 @@ class TestSecurityGroups(test.TestCase):
                        return_security_group_by_name)
         self.mox.ReplayAll()
 
-        body = dict(removeSecurityGroup=dict(name="test"))
+        body = dict(remove_security_group=dict(name="test"))
 
         req = fakes.HTTPRequestV3.blank('/servers/1/action')
-        self.manager._removeSecurityGroup(req, '1', body)
+        self.manager._remove_security_group(req, '1', body)
 
 
 UUID1 = '00000000-0000-0000-0000-000000000001'
