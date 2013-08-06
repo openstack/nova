@@ -2,7 +2,7 @@
     "hypervisor": {
         "cpu_info": "?",
         "current_workload": 0,
-        "disk_available_least": null,
+        "disk_available_least": 0,
         "free_disk_gb": 1028,
         "free_ram_mb": 7680,
         "hypervisor_hostname": "fake-mini",

@@ -4418,6 +4418,9 @@ class HostStateTestCase(test.TestCase):
         def get_cpu_info(self):
             return HostStateTestCase.cpu_info
 
+        def get_disk_over_committed_size_total(self):
+            return 0
+
         def get_local_gb_info(self):
             return {'total': 100, 'used': 20, 'free': 80}
 
@@ -4450,22 +4453,22 @@ class HostStateTestCase(test.TestCase):
         hs = libvirt_driver.HostState(self.FakeConnection())
         stats = hs._stats
         self.assertEquals(stats["vcpus"], 1)
+        self.assertEquals(stats["memory_mb"], 497)
+        self.assertEquals(stats["local_gb"], 100)
         self.assertEquals(stats["vcpus_used"], 0)
-        self.assertEquals(stats["cpu_info"],
+        self.assertEquals(stats["memory_mb_used"], 88)
+        self.assertEquals(stats["local_gb_used"], 20)
+        self.assertEquals(stats["hypervisor_type"], 'QEMU')
+        self.assertEquals(stats["hypervisor_version"], 13091)
+        self.assertEquals(stats["hypervisor_hostname"], 'compute1')
+        self.assertEquals(jsonutils.loads(stats["cpu_info"]),
                 {"vendor": "Intel", "model": "pentium", "arch": "i686",
                  "features": ["ssse3", "monitor", "pni", "sse2", "sse",
                               "fxsr", "clflush", "pse36", "pat", "cmov",
                               "mca", "pge", "mtrr", "sep", "apic"],
                  "topology": {"cores": "1", "threads": "1", "sockets": "1"}
                 })
-        self.assertEquals(stats["disk_total"], 100)
-        self.assertEquals(stats["disk_used"], 20)
-        self.assertEquals(stats["disk_available"], 80)
-        self.assertEquals(stats["host_memory_total"], 497)
-        self.assertEquals(stats["host_memory_free"], 409)
-        self.assertEquals(stats["hypervisor_type"], 'QEMU')
-        self.assertEquals(stats["hypervisor_version"], 13091)
-        self.assertEquals(stats["hypervisor_hostname"], 'compute1')
+        self.assertEquals(stats["disk_available_least"], 80)
 
 
 class NWFilterFakes:

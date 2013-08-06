@@ -567,16 +567,23 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
                                        lambda *a: None, lambda *a: None)
 
     @catch_notimplementederror
-    def _check_host_status_fields(self, host_status):
-        self.assertIn('disk_total', host_status)
-        self.assertIn('disk_used', host_status)
-        self.assertIn('host_memory_total', host_status)
-        self.assertIn('host_memory_free', host_status)
+    def _check_available_resouce_fields(self, host_status):
+        keys = ['vcpus', 'memory_mb', 'local_gb', 'vcpus_used',
+                'memory_mb_used', 'hypervisor_type', 'hypervisor_version',
+                'hypervisor_hostname', 'cpu_info', 'disk_available_least']
+        for key in keys:
+            self.assertIn(key, host_status)
 
     @catch_notimplementederror
     def test_get_host_stats(self):
         host_status = self.connection.get_host_stats()
-        self._check_host_status_fields(host_status)
+        self._check_available_resouce_fields(host_status)
+
+    @catch_notimplementederror
+    def test_get_available_resource(self):
+        available_resource = self.connection.get_available_resource(
+                'myhostname')
+        self._check_available_resouce_fields(available_resource)
 
     @catch_notimplementederror
     def test_set_host_enabled(self):
@@ -682,6 +689,7 @@ class AbstractDriverTestCase(_VirtDriverTestCase, test.TestCase):
 class FakeConnectionTestCase(_VirtDriverTestCase, test.TestCase):
     def setUp(self):
         self.driver_module = 'nova.virt.fake.FakeDriver'
+        fake.set_nodes(['myhostname'])
         super(FakeConnectionTestCase, self).setUp()
 
 
