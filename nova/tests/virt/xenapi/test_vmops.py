@@ -204,14 +204,14 @@ class InjectAutoDiskConfigTestCase(VMOpsTestBase):
     def test_inject_auto_disk_config_when_present(self):
         vm, vm_ref = self.create_vm("dummy")
         instance = {"name": "dummy", "uuid": "1234", "auto_disk_config": True}
-        self.vmops.inject_auto_disk_config(instance, vm_ref)
+        self.vmops._inject_auto_disk_config(instance, vm_ref)
         xenstore_data = vm['xenstore_data']
         self.assertEquals(xenstore_data['vm-data/auto-disk-config'], 'True')
 
     def test_inject_auto_disk_config_none_as_false(self):
         vm, vm_ref = self.create_vm("dummy")
         instance = {"name": "dummy", "uuid": "1234", "auto_disk_config": None}
-        self.vmops.inject_auto_disk_config(instance, vm_ref)
+        self.vmops._inject_auto_disk_config(instance, vm_ref)
         xenstore_data = vm['xenstore_data']
         self.assertEquals(xenstore_data['vm-data/auto-disk-config'], 'False')
 
@@ -271,5 +271,5 @@ class RemoveHostnameTestCase(VMOpsTestBase):
                                   "vm-data/hostname")
 
         self.mox.ReplayAll()
-        self.vmops.remove_hostname(instance, vm_ref)
+        self.vmops._remove_hostname(instance, vm_ref)
         self.mox.VerifyAll()
