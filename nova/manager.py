@@ -109,7 +109,7 @@ class Manager(base.Base, periodic_task.PeriodicTasks):
         """
         pass
 
-    def pre_start_hook(self, **kwargs):
+    def pre_start_hook(self):
         """Hook to provide the manager the ability to do additional
         start-up work before any RPC queues/consumers are created. This is
         called after other initialization has succeeded and a service

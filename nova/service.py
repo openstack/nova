@@ -161,14 +161,14 @@ class Service(service.Service):
         except exception.NotFound:
             self.service_ref = self._create_service_ref(ctxt)
 
+        self.manager.pre_start_hook()
+
         if self.backdoor_port is not None:
             self.manager.backdoor_port = self.backdoor_port
 
         self.conn = rpc.create_connection(new=True)
         LOG.debug(_("Creating Consumer connection for Service %s") %
                   self.topic)
-
-        self.manager.pre_start_hook(rpc_connection=self.conn)
 
         rpc_dispatcher = self.manager.create_rpc_dispatcher(self.backdoor_port)
 
