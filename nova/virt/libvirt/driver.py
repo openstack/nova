@@ -1883,7 +1883,8 @@ class LibvirtDriver(driver.ComputeDriver):
     def _create_image(self, context, instance,
                       disk_mapping, suffix='',
                       disk_images=None, network_info=None,
-                      block_device_info=None, files=None, admin_pass=None):
+                      block_device_info=None, files=None,
+                      admin_pass=None, inject_files=True):
         if not suffix:
             suffix = ''
 
@@ -2028,8 +2029,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                   'with error: %s'),
                                   e, instance=instance)
 
-        # File injection
-        elif CONF.libvirt_inject_partition != -2:
+        # File injection only if needed
+        elif inject_files and CONF.libvirt_inject_partition != -2:
             target_partition = None
             if not instance['kernel_id']:
                 target_partition = CONF.libvirt_inject_partition
@@ -3912,11 +3913,10 @@ class LibvirtDriver(driver.ComputeDriver):
                                             block_device_info,
                                             image_meta)
         # assume _create_image do nothing if a target file exists.
-        # TODO(oda): injecting files is not necessary
         self._create_image(context, instance,
                            disk_mapping=disk_info['mapping'],
                            network_info=network_info,
-                           block_device_info=None)
+                           block_device_info=None, inject_files=False)
         xml = self.to_xml(instance, network_info, disk_info,
                           block_device_info=block_device_info,
                           write_to_disk=True)
