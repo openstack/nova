@@ -958,3 +958,17 @@ class StringLengthTestCase(test.TestCase):
         self.assertRaises(exception.InvalidInput,
                           utils.check_string_length,
                           'a' * 256, 'name', max_length=255)
+
+
+class ValidateQuantumConfiguration(test.TestCase):
+    def setUp(self):
+        super(ValidateQuantumConfiguration, self).setUp()
+        utils.reset_is_quantum()
+
+    def test_nova_network(self):
+        self.flags(network_api_class='nova.network.api.API')
+        self.assertFalse(utils.is_quantum())
+
+    def test_quantum(self):
+        self.flags(network_api_class='nova.network.quantumv2.api.API')
+        self.assertTrue(utils.is_quantum())

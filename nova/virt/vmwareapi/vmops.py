@@ -37,6 +37,7 @@ from nova import context as nova_context
 from nova import exception
 from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
+from nova import utils
 from nova.virt import driver
 from nova.virt.vmwareapi import vif as vmwarevif
 from nova.virt.vmwareapi import vim_util
@@ -89,6 +90,7 @@ class VMwareVMOps(object):
         self._default_root_device = 'vda'
         self._rescue_suffix = '-rescue'
         self._poll_rescue_last_ran = None
+        self._is_quantum = utils.is_quantum()
 
     def list_instances(self):
         """Lists the VM instances that are registered with the ESX host."""
@@ -174,14 +176,10 @@ class VMwareVMOps(object):
                 mac_address = vif['address']
                 network_name = vif['network']['bridge'] or \
                                CONF.vmware.integration_bridge
-                if vif['network'].get_meta('should_create_vlan', False):
-                    network_ref = vmwarevif.ensure_vlan_bridge(
-                                                        self._session, vif,
-                                                        self._cluster)
-                else:
-                    # FlatDHCP network without vlan.
-                    network_ref = vmwarevif.ensure_vlan_bridge(
-                        self._session, vif, self._cluster, create_vlan=False)
+                network_ref = vmwarevif.get_network_ref(self._session,
+                                                        self._cluster,
+                                                        vif,
+                                                        self._is_quantum)
                 vif_infos.append({'network_name': network_name,
                                   'mac_address': mac_address,
                                   'network_ref': network_ref,

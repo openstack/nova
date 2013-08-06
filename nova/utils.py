@@ -87,6 +87,7 @@ utils_opts = [
 CONF = cfg.CONF
 CONF.register_opts(monkey_patch_opts)
 CONF.register_opts(utils_opts)
+CONF.import_opt('network_api_class', 'nova.network')
 
 LOG = logging.getLogger(__name__)
 
@@ -99,6 +100,9 @@ BYTE_MULTIPLIERS = {
     'm': 1024 ** 2,
     'k': 1024,
 }
+
+_IS_QUANTUM_ATTEMPTED = False
+_IS_QUANTUM = False
 
 
 def vpn_ping(address, port, timeout=0.05, session_id=None):
@@ -1371,3 +1375,31 @@ def check_string_length(value, name, min_length=0, max_length=None):
         msg = _("%(name)s has more than %(max_length)s "
                     "characters.") % locals()
         raise exception.InvalidInput(message=msg)
+
+
+def is_quantum():
+    global _IS_QUANTUM_ATTEMPTED
+    global _IS_QUANTUM
+
+    if _IS_QUANTUM_ATTEMPTED:
+        return _IS_QUANTUM
+
+    try:
+        cls_name = CONF.network_api_class
+        _IS_QUANTUM_ATTEMPTED = True
+
+        from nova.network.quantumv2 import api as quantum_api
+        _IS_QUANTUM = issubclass(importutils.import_class(cls_name),
+                                 quantum_api.API)
+    except ImportError:
+        _IS_QUANTUM = False
+
+    return _IS_QUANTUM
+
+
+def reset_is_quantum():
+    global _IS_QUANTUM_ATTEMPTED
+    global _IS_QUANTUM
+
+    _IS_QUANTUM_ATTEMPTED = False
+    _IS_QUANTUM = False
