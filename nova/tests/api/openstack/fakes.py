@@ -471,7 +471,7 @@ def stub_instance(id, user_id=None, project_id=None, host=None,
                   limit=None, marker=None,
                   launched_at=timeutils.utcnow(),
                   terminated_at=timeutils.utcnow(),
-                  availability_zone=''):
+                  availability_zone='', locked_by=None):
 
     if user_id is None:
         user_id = 'fake_user'
@@ -545,7 +545,8 @@ def stub_instance(id, user_id=None, project_id=None, host=None,
         "availability_zone": availability_zone,
         "display_name": display_name or server_name,
         "display_description": "",
-        "locked": False,
+        "locked": locked_by != None,
+        "locked_by": locked_by,
         "metadata": metadata,
         "access_ip_v4": access_ipv4,
         "access_ip_v6": access_ipv6,

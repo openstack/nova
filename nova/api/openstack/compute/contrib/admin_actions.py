@@ -161,7 +161,7 @@ class AdminActionsController(wsgi.Controller):
 
     @wsgi.action('lock')
     def _lock(self, req, id, body):
-        """Permit admins to lock a server."""
+        """Lock a server instance."""
         context = req.environ['nova.context']
         authorize(context, 'lock')
         try:
@@ -177,12 +177,14 @@ class AdminActionsController(wsgi.Controller):
 
     @wsgi.action('unlock')
     def _unlock(self, req, id, body):
-        """Permit admins to unlock a server."""
+        """Unlock a server instance."""
         context = req.environ['nova.context']
         authorize(context, 'unlock')
         try:
             instance = self.compute_api.get(context, id)
             self.compute_api.unlock(context, instance)
+        except exception.PolicyNotAuthorized as e:
+            raise webob.exc.HTTPForbidden(explanation=e.format_message())
         except exception.InstanceNotFound:
             raise exc.HTTPNotFound(_("Server not found"))
         except Exception:

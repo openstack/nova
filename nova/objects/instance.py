@@ -48,7 +48,8 @@ class Instance(base.NovaObject):
     # Version 1.2: Added security_groups
     # Version 1.3: Added expected_vm_state and admin_state_reset to
     #              save()
-    VERSION = '1.3'
+    # Version 1.4: Added locked_by and deprecated locked
+    VERSION = '1.4'
 
     fields = {
         'id': int,
@@ -93,7 +94,11 @@ class Instance(base.NovaObject):
         'display_description': obj_utils.str_or_none,
 
         'launched_on': obj_utils.str_or_none,
+
+        # NOTE(jdillaman): locked deprecated in favor of locked_by,
+        # to be removed in Icehouse
         'locked': bool,
+        'locked_by': obj_utils.str_or_none,
 
         'os_type': obj_utils.str_or_none,
         'architecture': obj_utils.str_or_none,

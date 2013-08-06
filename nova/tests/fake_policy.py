@@ -44,6 +44,7 @@ policy_data = """
     "compute:get_lock": "",
     "compute:lock": "",
     "compute:unlock": "",
+    "compute:unlock_override": "is_admin:True",
 
     "compute:get_vnc_console": "",
     "compute:get_spice_console": "",

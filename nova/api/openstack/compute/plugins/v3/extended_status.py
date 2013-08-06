@@ -29,7 +29,7 @@ class ExtendedStatusController(wsgi.Controller):
         self.compute_api = compute.API()
 
     def _extend_server(self, server, instance):
-        for state in ['task_state', 'vm_state', 'power_state']:
+        for state in ['task_state', 'vm_state', 'power_state', 'locked_by']:
             key = "%s:%s" % (ExtendedStatus.alias, state)
             server[key] = instance[state]
 
@@ -84,6 +84,8 @@ def make_server(elem):
              '%s:power_state' % ExtendedStatus.alias)
     elem.set('{%s}vm_state' % ExtendedStatus.namespace,
              '%s:vm_state' % ExtendedStatus.alias)
+    elem.set('{%s}locked_by' % ExtendedStatus.namespace,
+             '%s:locked_by' % ExtendedStatus.alias)
 
 
 class ExtendedStatusTemplate(xmlutil.TemplateBuilder):

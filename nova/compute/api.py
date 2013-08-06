@@ -2478,18 +2478,33 @@ class API(base.Base):
     @wrap_check_policy
     def lock(self, context, instance):
         """Lock the given instance."""
+        # Only update the lock if we are an admin (non-owner)
+        is_owner = instance['project_id'] == context.project_id
+        if instance['locked'] and is_owner:
+            return
+
         context = context.elevated()
         instance_uuid = instance['uuid']
         LOG.debug(_('Locking'), context=context, instance_uuid=instance_uuid)
-        self._instance_update(context, instance_uuid, locked=True)
+        self._instance_update(context, instance_uuid, locked=True,
+                              locked_by='owner' if is_owner else 'admin')
 
     @wrap_check_policy
     def unlock(self, context, instance):
         """Unlock the given instance."""
+        # If the instance was locked by someone else, check
+        # that we're allowed to override the lock
+        is_owner = instance['project_id'] == context.project_id
+        expect_locked_by = 'owner' if is_owner else 'admin'
+        locked_by = instance['locked_by']
+        if locked_by and locked_by != expect_locked_by:
+            check_policy(context, 'unlock_override', instance)
+
         context = context.elevated()
         instance_uuid = instance['uuid']
         LOG.debug(_('Unlocking'), context=context, instance_uuid=instance_uuid)
-        self._instance_update(context, instance_uuid, locked=False)
+        self._instance_update(context, instance_uuid, locked=False,
+                              locked_by=None)
 
     @wrap_check_policy
     def get_lock(self, context, instance):

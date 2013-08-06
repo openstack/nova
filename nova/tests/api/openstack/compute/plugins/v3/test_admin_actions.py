@@ -312,6 +312,21 @@ class AdminActionsTest(test.TestCase):
                                    'disk_over_commit': False}})
         self.assertEqual(res.status_int, 409)
 
+    def test_unlock_not_authorized(self):
+        def fake_unlock(*args, **kwargs):
+            raise exception.PolicyNotAuthorized(action='unlock')
+
+        self.stubs.Set(compute_api.API, 'unlock', fake_unlock)
+
+        app = fakes.wsgi_app_v3(init_only=('servers', 'os-admin-actions'))
+        req = webob.Request.blank('/v3/servers/%s/action' %
+                self.UUID)
+        req.method = 'POST'
+        req.body = jsonutils.dumps({'unlock': None})
+        req.content_type = 'application/json'
+        res = req.get_response(app)
+        self.assertEqual(res.status_int, 403)
+
 
 class CreateBackupTests(test.TestCase):
 

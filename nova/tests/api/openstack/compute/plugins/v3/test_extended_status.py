@@ -32,15 +32,15 @@ UUID3 = '00000000-0000-0000-0000-000000000003'
 
 def fake_compute_get(*args, **kwargs):
     return fakes.stub_instance(1, uuid=UUID3, task_state="kayaking",
-            vm_state="slightly crunchy", power_state=1)
+            vm_state="slightly crunchy", power_state=1, locked_by='owner')
 
 
 def fake_compute_get_all(*args, **kwargs):
     db_list = [
         fakes.stub_instance(1, uuid=UUID1, task_state="task-1",
-                vm_state="vm-1", power_state=1),
+                vm_state="vm-1", power_state=1, locked_by=None),
         fakes.stub_instance(2, uuid=UUID2, task_state="task-2",
-                vm_state="vm-2", power_state=2),
+                vm_state="vm-2", power_state=2, locked_by='admin'),
     ]
     fields = instance_obj.INSTANCE_DEFAULT_FIELDS
     return instance_obj._make_instance_list(args[1],
@@ -73,11 +73,14 @@ class ExtendedStatusTest(test.TestCase):
     def _get_servers(self, body):
         return jsonutils.loads(body).get('servers')
 
-    def assertServerStates(self, server, vm_state, power_state, task_state):
+    def assertServerStates(self, server, vm_state, power_state, task_state,
+                           locked_by):
         self.assertEqual(server.get('%svm_state' % self.prefix), vm_state)
         self.assertEqual(int(server.get('%spower_state' % self.prefix)),
                          power_state)
         self.assertEqual(server.get('%stask_state' % self.prefix), task_state)
+        self.assertEqual(str(server.get('%slocked_by' % self.prefix)),
+                         locked_by)
 
     def test_show(self):
         url = '/v3/servers/%s' % UUID3
@@ -87,7 +90,8 @@ class ExtendedStatusTest(test.TestCase):
         self.assertServerStates(self._get_server(res.body),
                                 vm_state='slightly crunchy',
                                 power_state=1,
-                                task_state='kayaking')
+                                task_state='kayaking',
+                                locked_by='owner')
 
     def test_detail(self):
         url = '/v3/servers/detail'
@@ -98,7 +102,8 @@ class ExtendedStatusTest(test.TestCase):
             self.assertServerStates(server,
                                     vm_state='vm-%s' % (i + 1),
                                     power_state=(i + 1),
-                                    task_state='task-%s' % (i + 1))
+                                    task_state='task-%s' % (i + 1),
+                                    locked_by=['None', 'admin'][i])
 
     def test_no_instance_passthrough_404(self):
 

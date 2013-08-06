@@ -172,7 +172,7 @@ class AdminActionsController(wsgi.Controller):
     @extensions.expected_errors(404)
     @wsgi.action('lock')
     def _lock(self, req, id, body):
-        """Permit admins to lock a server."""
+        """Lock a server instance."""
         context = req.environ['nova.context']
         authorize(context, 'lock')
         try:
@@ -185,7 +185,7 @@ class AdminActionsController(wsgi.Controller):
     @extensions.expected_errors(404)
     @wsgi.action('unlock')
     def _unlock(self, req, id, body):
-        """Permit admins to lock a server."""
+        """Unlock a server instance."""
         context = req.environ['nova.context']
         authorize(context, 'unlock')
         try:
