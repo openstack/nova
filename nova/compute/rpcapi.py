@@ -190,7 +190,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         2.34 - Added swap_volume()
         2.35 - Made terminate_instance() and soft_delete_instance() take
                new-world instance objects
-        2.34 - Made pause_instance() and unpause_instance() take new-world
+        2.36 - Made pause_instance() and unpause_instance() take new-world
                instance objects
     '''
 
