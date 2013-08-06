@@ -19,6 +19,7 @@
 import mox
 
 from nova import context
+from nova import exception
 from nova.tests.virt.xenapi import stubs
 from nova.virt.xenapi import driver as xenapi_conn
 from nova.virt.xenapi import fake
@@ -76,7 +77,7 @@ class TestGlanceStore(stubs.XenAPITestBase):
 
         self.mox.VerifyAll()
 
-    def test_upload_image(self):
+    def _get_upload_params(self):
         params = {'vdi_uuids': ['fake_vdi_uuid'],
                   'image_id': 'fake_image_uuid',
                   'glance_host': '1.1.1.1',
@@ -87,12 +88,71 @@ class TestGlanceStore(stubs.XenAPITestBase):
                   'properties': {'auto_disk_config': True,
                                  'os_type': 'default',
                                  'xenapi_use_agent': 'true'}}
+        return params
+
+    def test_upload_image(self):
+        params = self._get_upload_params()
 
         self.mox.StubOutWithMock(self.session, 'call_plugin_serialized')
         self.session.call_plugin_serialized('glance', 'upload_vhd', **params)
+
+        self.mox.ReplayAll()
+        self.store.upload_image(self.context, self.session, self.instance,
+                                ['fake_vdi_uuid'], 'fake_image_uuid')
+        self.mox.VerifyAll()
+
+    def test_upload_image_raises_exception(self):
+        params = self._get_upload_params()
+
+        self.mox.StubOutWithMock(self.session, 'call_plugin_serialized')
+        self.session.call_plugin_serialized('glance', 'upload_vhd',
+                                            **params).AndRaise(Exception)
+        self.mox.ReplayAll()
+
+        self.assertRaises(Exception, self.store.upload_image,
+                          self.context, self.session, self.instance,
+                          ['fake_vdi_uuid'], 'fake_image_uuid')
+        self.mox.VerifyAll()
+
+    def test_upload_image_retries_then_raises_exception(self):
+        self.flags(glance_num_retries=2)
+        params = self._get_upload_params()
+
+        self.mox.StubOutWithMock(self.session, 'call_plugin_serialized')
+        error_deatils = ["", "", "RetryableError", ""]
+        error = self.session.XenAPI.Failure(details=error_deatils)
+        self.session.call_plugin_serialized('glance', 'upload_vhd',
+                                            **params).AndRaise(error)
+        self.session.call_plugin_serialized('glance', 'upload_vhd',
+                                            **params).AndRaise(error)
+        self.session.call_plugin_serialized('glance', 'upload_vhd',
+                                            **params).AndRaise(error)
+        self.mox.ReplayAll()
+
+        self.assertRaises(exception.CouldNotUploadImage,
+                          self.store.upload_image,
+                          self.context, self.session, self.instance,
+                          ['fake_vdi_uuid'], 'fake_image_uuid')
+        self.mox.VerifyAll()
+
+    def test_upload_image_retries_on_signal_exception(self):
+        self.flags(glance_num_retries=2)
+        params = self._get_upload_params()
+
+        self.mox.StubOutWithMock(self.session, 'call_plugin_serialized')
+        error_deatils = ["", "task signaled", "", ""]
+        error = self.session.XenAPI.Failure(details=error_deatils)
+        self.session.call_plugin_serialized('glance', 'upload_vhd',
+                                            **params).AndRaise(error)
+        # Note(johngarbutt) XenServer 6.1 and later has this error
+        error_deatils = ["", "signal: SIGTERM", "", ""]
+        error = self.session.XenAPI.Failure(details=error_deatils)
+        self.session.call_plugin_serialized('glance', 'upload_vhd',
+                                            **params).AndRaise(error)
+        self.session.call_plugin_serialized('glance', 'upload_vhd',
+                                            **params)
         self.mox.ReplayAll()
 
         self.store.upload_image(self.context, self.session, self.instance,
                                 ['fake_vdi_uuid'], 'fake_image_uuid')
-
         self.mox.VerifyAll()

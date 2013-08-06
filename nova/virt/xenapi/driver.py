@@ -757,11 +757,9 @@ class XenAPISession(object):
                     callback(kwargs)
                 return self.call_plugin_serialized(plugin, fn, *args, **kwargs)
             except self.XenAPI.Failure as exc:
-                _type, _method, error = exc.details[:3]
-                if error == 'RetryableError':
-                    LOG.error(_('%(plugin)s.%(fn)s failed: %(details)r') %
-                              {'plugin': plugin, 'fn': fn,
-                               'details': exc.details[3:]})
+                if self._is_retryable_exception(exc):
+                    LOG.warn(_('%(plugin)s.%(fn)s failed. Retrying call.')
+                             % {'plugin': plugin, 'fn': fn})
                 else:
                     raise
 
@@ -769,6 +767,19 @@ class XenAPISession(object):
             sleep_time = min(2 * sleep_time, 15)
 
         raise exception.PluginRetriesExceeded(num_retries=num_retries)
+
+    def _is_retryable_exception(self, exc):
+        _type, method, error = exc.details[:3]
+        if error == 'RetryableError':
+            LOG.debug(_("RetryableError, so retrying upload_vhd"),
+                      exc_info=True)
+            return True
+        elif "signal" in method:
+            LOG.debug(_("Error due to a signal, retrying upload_vhd"),
+                      exc_info=True)
+            return True
+        else:
+            return False
 
     def _create_session(self, url):
         """Stubout point. This can be replaced with a mock session."""
