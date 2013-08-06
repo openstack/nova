@@ -16,13 +16,13 @@
 #    under the License.
 
 import logging
-import shutil
 
 from oslo.config import cfg
 
 from nova import exception
 import nova.image.download.base as xfer_base
 from nova.openstack.common.gettextutils import _
+import nova.virt.libvirt.utils as lv_utils
 
 
 CONF = cfg.CONF
@@ -123,7 +123,12 @@ class FileTransfer(xfer_base.TransferBase):
                 LOG.info(msg)
                 raise exception.ImageDownloadModuleMetaDataError(
                     module=str(self), reason=msg)
-        fs_descriptor = self.filesystems[metadata['id']]
+        id = metadata['id']
+        if id not in self.filesystems:
+            msg = _('The ID %(id)s is unknown.') % {'id': id}
+            LOG.info(msg)
+            return
+        fs_descriptor = self.filesystems[id]
         return fs_descriptor
 
     def _normalize_destination(self, nova_mount, glance_mount, path):
@@ -136,7 +141,7 @@ class FileTransfer(xfer_base.TransferBase):
         new_path = path.replace(glance_mount, nova_mount, 1)
         return new_path
 
-    def download(self, url_parts, destination, metadata, **kwargs):
+    def download(self, url_parts, dst_file, metadata, **kwargs):
         self.filesystems = self._get_options()
         if not self.filesystems:
             #NOTE(jbresnah) when nothing is configured assume legacy behavior
@@ -156,10 +161,9 @@ class FileTransfer(xfer_base.TransferBase):
         source_file = self._normalize_destination(nova_mountpoint,
                                                   glance_mountpoint,
                                                   url_parts.path)
-        with open(source_file, "r") as f:
-            shutil.copyfileobj(f, destination)
-            LOG.info(_('Copied %(source_file)s using %(module_str)s') %
-                     {'source_file': source_file, 'module_str': str(self)})
+        lv_utils.copy_image(source_file, dst_file)
+        LOG.info(_('Copied %(source_file)s using %(module_str)s') %
+                 {'source_file': source_file, 'module_str': str(self)})
 
 
 def get_download_hander(**kwargs):

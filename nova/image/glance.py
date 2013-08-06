@@ -38,6 +38,7 @@ from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 
+
 glance_opts = [
     cfg.StrOpt('glance_host',
                default='$my_ip',
@@ -73,8 +74,6 @@ CONF = cfg.CONF
 CONF.register_opts(glance_opts)
 CONF.import_opt('auth_strategy', 'nova.api.auth')
 CONF.import_opt('my_ip', 'nova.netconf')
-
-_DOWNLOAD_MODULES = image_xfers.load_transfer_modules()
 
 
 def generate_glance_url():
@@ -231,9 +230,11 @@ class GlanceImageService(object):
         # space when this python module is loaded because the download module
         # may require configuration options to be parsed.
         self._download_handlers = {}
-        for scheme in _DOWNLOAD_MODULES:
+        download_modules = image_xfers.load_transfer_modules()
+
+        for scheme in download_modules:
             if scheme in CONF.allowed_direct_url_schemes:
-                mod = _DOWNLOAD_MODULES[scheme]
+                mod = download_modules[scheme]
                 try:
                     self._download_handlers[scheme] = mod.get_download_hander()
                 except Exception as ex:
@@ -314,9 +315,9 @@ class GlanceImageService(object):
                 "for %(scheme)s") % {'scheme': scheme})
         return
 
-    def download(self, context, image_id, data=None):
+    def download(self, context, image_id, data=None, dst_path=None):
         """Calls out to Glance for data and writes data."""
-        if CONF.allowed_direct_url_schemes:
+        if CONF.allowed_direct_url_schemes and dst_path is not None:
             locations = self._get_locations(context, image_id)
             for entry in locations:
                 loc_url = entry['url']
@@ -325,9 +326,10 @@ class GlanceImageService(object):
                 xfer_mod = self._get_transfer_module(o.scheme)
                 if xfer_mod:
                     try:
-                        xfer_mod.download(o, data, loc_meta)
-                        LOG.info("Successfully transferred using %s"
-                                 % o.scheme)
+                        xfer_mod.download(o, dst_path, loc_meta)
+                        msg = _("Successfully transferred "
+                                "using %s") % o.scheme
+                        LOG.info(msg)
                         return
                     except Exception as ex:
                         LOG.exception(ex)
@@ -337,11 +339,20 @@ class GlanceImageService(object):
         except Exception:
             _reraise_translated_image_exception(image_id)
 
+        close_file = False
+        if data is None and dst_path:
+            data = open(dst_path, 'wb')
+            close_file = True
+
         if data is None:
             return image_chunks
         else:
-            for chunk in image_chunks:
-                data.write(chunk)
+            try:
+                for chunk in image_chunks:
+                    data.write(chunk)
+            finally:
+                if close_file:
+                    data.close()
 
     def create(self, context, image_meta, data=None):
         """Store the image data and return the new image object."""
