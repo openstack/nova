@@ -894,10 +894,6 @@ class NoCellsAvailable(NovaException):
     msg_fmt = _("No cells available matching scheduling criteria.")
 
 
-class CellError(NovaException):
-    msg_fmt = _("Exception received during cell processing: %(exc_name)s.")
-
-
 class CellsUpdateUnsupported(NovaException):
     msg_fmt = _("Cannot update cells configuration file.")
 
@@ -912,11 +908,6 @@ class SchedulerHostFilterNotFound(NotFound):
 
 class InstanceMetadataNotFound(NotFound):
     msg_fmt = _("Instance %(instance_uuid)s has no metadata with "
-                "key %(metadata_key)s.")
-
-
-class InstanceSystemMetadataNotFound(NotFound):
-    msg_fmt = _("Instance %(instance_uuid)s has no system metadata with "
                 "key %(metadata_key)s.")
 
 
