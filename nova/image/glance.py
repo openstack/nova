@@ -313,19 +313,21 @@ class GlanceImageService(object):
 
     def download(self, context, image_id, data=None):
         """Calls out to Glance for data and writes data."""
-        locations = self._get_locations(context, image_id)
-        for entry in locations:
-            loc_url = entry['url']
-            loc_meta = entry['metadata']
-            o = urlparse.urlparse(loc_url)
-            xfer_mod = self._get_transfer_module(o.scheme)
-            if xfer_mod:
-                try:
-                    xfer_mod.download(o, data, loc_meta)
-                    LOG.info("Successfully transferred using %s" % o.scheme)
-                    return
-                except Exception as ex:
-                    LOG.exception(ex)
+        if CONF.allowed_direct_url_schemes:
+            locations = self._get_locations(context, image_id)
+            for entry in locations:
+                loc_url = entry['url']
+                loc_meta = entry['metadata']
+                o = urlparse.urlparse(loc_url)
+                xfer_mod = self._get_transfer_module(o.scheme)
+                if xfer_mod:
+                    try:
+                        xfer_mod.download(o, data, loc_meta)
+                        LOG.info("Successfully transferred using %s"
+                                 % o.scheme)
+                        return
+                    except Exception as ex:
+                        LOG.exception(ex)
 
         try:
             image_chunks = self._client.call(context, 1, 'data', image_id)
