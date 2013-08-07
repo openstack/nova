@@ -20,6 +20,7 @@ import webob
 
 from nova.api.openstack.compute.plugins.v3 import extended_volumes
 from nova import compute
+from nova import context
 from nova import exception
 from nova.objects import instance as instance_obj
 from nova.openstack.common import jsonutils
@@ -79,6 +80,21 @@ def fake_attach_volume_invalid_volume(self, context, instance,
 
 def fake_detach_volume(self, context, instance, volume):
     pass
+
+
+def fake_swap_volume(self, context, instance,
+                     old_volume_id, new_volume_id):
+    pass
+
+
+def fake_swap_volume_invalid_volume(self, context, instance,
+                                    volume_id, device):
+    raise exception.InvalidVolume(reason='', volume_id=volume_id)
+
+
+def fake_swap_volume_unattached_volume(self, context, instance,
+                                       volume_id, device):
+    raise exception.VolumeUnattached(reason='', volume_id=volume_id)
 
 
 def fake_detach_volume_invalid_volume(self, context, instance, volume):
@@ -255,6 +271,60 @@ class ExtendedVolumesTest(test.TestCase):
                        fake_attach_volume_invalid_volume)
         res = self._make_request(url, {"attach": None})
         self.assertEqual(res.status_int, 400)
+
+    def _test_swap(self, uuid=UUID1, body=None):
+        body = body or {'swap_volume_attachment': {'old_volume_id': uuid,
+                                                   'new_volume_id': UUID2}}
+        req = webob.Request.blank('/v3/servers/%s/action' % UUID1)
+        req.method = 'PUT'
+        req.body = jsonutils.dumps({})
+        req.headers['content-type'] = 'application/json'
+        req.environ['nova.context'] = context.get_admin_context()
+        return self.Controller.swap(req, UUID1, body)
+
+    def test_swap_volume(self):
+        self.stubs.Set(compute.api.API, 'swap_volume', fake_swap_volume)
+        result = self._test_swap()
+        self.assertEqual('202 Accepted', result.status)
+
+    def test_swap_volume_instance_not_found(self):
+        self.stubs.Set(compute.api.API, 'get', fake_compute_get_not_found)
+        self.assertRaises(webob.exc.HTTPNotFound, self._test_swap)
+
+    def test_swap_volume_with_bad_action(self):
+        self.stubs.Set(compute.api.API, 'swap_volume', fake_swap_volume)
+        body = {'swap_volume_attachment_bad_action': None}
+        self.assertRaises(webob.exc.HTTPBadRequest, self._test_swap, body=body)
+
+    def test_swap_volume_with_invalid_body(self):
+        self.stubs.Set(compute.api.API, 'swap_volume', fake_swap_volume)
+        body = {'swap_volume_attachment': {'bad_volume_id_body': UUID1,
+                                           'new_volume_id': UUID2}}
+        self.assertRaises(webob.exc.HTTPBadRequest, self._test_swap, body=body)
+
+    def test_swap_volume_with_invalid_volume(self):
+        self.stubs.Set(compute.api.API, 'swap_volume',
+                       fake_swap_volume_invalid_volume)
+        self.assertRaises(webob.exc.HTTPBadRequest, self._test_swap)
+
+    def test_swap_volume_with_unattached_volume(self):
+        self.stubs.Set(compute.api.API, 'swap_volume',
+                       fake_swap_volume_unattached_volume)
+        self.assertRaises(webob.exc.HTTPNotFound, self._test_swap)
+
+    def test_swap_volume_with_bad_state_instance(self):
+        self.stubs.Set(compute.api.API, 'swap_volume',
+                       fake_attach_volume_instance_invalid_state)
+        self.assertRaises(webob.exc.HTTPConflict, self._test_swap)
+
+    def test_swap_volume_no_attachment(self):
+        self.stubs.Set(compute.api.API, 'swap_volume', fake_swap_volume)
+        self.assertRaises(webob.exc.HTTPNotFound, self._test_swap, UUID3)
+
+    def test_swap_volume_not_found(self):
+        self.stubs.Set(compute.api.API, 'swap_volume', fake_swap_volume)
+        self.stubs.Set(volume.cinder.API, 'get', fake_volume_get_not_found)
+        self.assertRaises(webob.exc.HTTPNotFound, self._test_swap)
 
 
 class ExtendedVolumesXmlTest(ExtendedVolumesTest):
