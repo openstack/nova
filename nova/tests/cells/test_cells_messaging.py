@@ -25,6 +25,7 @@ from nova import db
 from nova import exception
 from nova.objects import base as objects_base
 from nova.objects import instance as instance_obj
+from nova.openstack.common import jsonutils
 from nova.openstack.common import rpc
 from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
@@ -992,7 +993,7 @@ class CellsTargetedMethodsTestCase(test.TestCase):
                                                    self.tgt_cell_name,
                                                    'fake-uuid')
         result = response.value_or_raise()
-        self.assertEqual([fake_act], result)
+        self.assertEqual([jsonutils.to_primitive(fake_act)], result)
 
     def test_action_get_by_request_id(self):
         fake_uuid = fake_instance_actions.FAKE_UUID
@@ -1007,7 +1008,7 @@ class CellsTargetedMethodsTestCase(test.TestCase):
         response = self.src_msg_runner.action_get_by_request_id(self.ctxt,
                 self.tgt_cell_name, 'fake-uuid', 'req-fake')
         result = response.value_or_raise()
-        self.assertEqual(fake_act, result)
+        self.assertEqual(jsonutils.to_primitive(fake_act), result)
 
     def test_action_events_get(self):
         fake_action_id = fake_instance_actions.FAKE_ACTION_ID1
@@ -1022,7 +1023,7 @@ class CellsTargetedMethodsTestCase(test.TestCase):
                                                          self.tgt_cell_name,
                                                          'fake-action')
         result = response.value_or_raise()
-        self.assertEqual(fake_events, result)
+        self.assertEqual(jsonutils.to_primitive(fake_events), result)
 
     def test_validate_console_port(self):
         instance_uuid = 'fake_instance_uuid'

@@ -14,14 +14,16 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import datetime
+
 from nova import db
 
 
 FAKE_UUID = 'b48316c5-71e8-45e4-9884-6c78055b9b13'
 FAKE_REQUEST_ID1 = 'req-3293a3f1-b44c-4609-b8d2-d81b105636b8'
 FAKE_REQUEST_ID2 = 'req-25517360-b757-47d3-be45-0e8d2a01b36a'
-FAKE_ACTION_ID1 = 'f811a359-0c98-4daa-87a4-2948d4c21b78'
-FAKE_ACTION_ID2 = '4e9594b5-4ac5-421c-ac60-2d802b11c798'
+FAKE_ACTION_ID1 = 123
+FAKE_ACTION_ID2 = 456
 
 FAKE_ACTIONS = {
     FAKE_UUID: {
@@ -31,8 +33,9 @@ FAKE_ACTIONS = {
                           'request_id': FAKE_REQUEST_ID1,
                           'project_id': '147',
                           'user_id': '789',
-                          'start_time': '2012-12-05 00:00:00.000000',
-                          'finish_time': '',
+                          'start_time': datetime.datetime(
+                              2012, 12, 5, 0, 0, 0, 0),
+                          'finish_time': None,
                           'message': '',
         },
         FAKE_REQUEST_ID2: {'id': FAKE_ACTION_ID2,
@@ -41,33 +44,40 @@ FAKE_ACTIONS = {
                           'request_id': FAKE_REQUEST_ID2,
                           'user_id': '789',
                           'project_id': '842',
-                          'start_time': '2012-12-05 01:00:00.000000',
-                          'finish_time': '',
+                          'start_time': datetime.datetime(
+                              2012, 12, 5, 1, 0, 0, 0),
+                          'finish_time': None,
                           'message': '',
         }
     }
 }
 
 FAKE_EVENTS = {
-    FAKE_ACTION_ID1: [{'id': '1',
+    FAKE_ACTION_ID1: [{'id': 1,
                        'event': 'schedule',
-                       'start_time': '2012-12-05 01:00:02.000000',
-                       'finish_time': '2012-12-05 01:02:00.000000',
+                       'start_time': datetime.datetime(
+                           2012, 12, 5, 1, 0, 2, 0),
+                       'finish_time': datetime.datetime(
+                           2012, 12, 5, 1, 2, 0, 0),
                        'result': 'Success',
                        'traceback': '',
                       },
-                      {'id': '2',
+                      {'id': 2,
                        'event': 'compute_create',
-                       'start_time': '2012-12-05 01:03:00.000000',
-                       'finish_time': '2012-12-05 01:04:00.000000',
+                       'start_time': datetime.datetime(
+                           2012, 12, 5, 1, 3, 0, 0),
+                       'finish_time': datetime.datetime(
+                           2012, 12, 5, 1, 4, 0, 0),
                        'result': 'Success',
                        'traceback': '',
                        }
     ],
-    FAKE_ACTION_ID2: [{'id': '3',
+    FAKE_ACTION_ID2: [{'id': 3,
                        'event': 'schedule',
-                       'start_time': '2012-12-05 03:00:00.000000',
-                       'finish_time': '2012-12-05 03:02:00.000000',
+                       'start_time': datetime.datetime(
+                           2012, 12, 5, 3, 0, 0, 0),
+                       'finish_time': datetime.datetime(
+                           2012, 12, 5, 3, 2, 0, 0),
                        'result': 'Error',
                        'traceback': ''
                        }
