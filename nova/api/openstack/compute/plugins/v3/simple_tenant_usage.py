@@ -34,6 +34,8 @@ authorize_show = extensions.extension_authorizer('compute',
                                                  'v3:' + ALIAS + ':show')
 authorize_list = extensions.extension_authorizer('compute',
                                                  'v3:' + ALIAS + ':list')
+VALID_DATETIME_FORMAT = ["%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%S.%f",
+                         "%Y-%m-%d %H:%M:%S.%f"]
 
 
 def make_usage(elem):
@@ -210,21 +212,27 @@ class SimpleTenantUsageController(object):
             return timeutils.utcnow()
         elif isinstance(dtstr, datetime.datetime):
             return dtstr
-        try:
-            return timeutils.parse_strtime(dtstr, "%Y-%m-%dT%H:%M:%S")
-        except Exception:
+        for format in VALID_DATETIME_FORMAT:
             try:
-                return timeutils.parse_strtime(dtstr, "%Y-%m-%dT%H:%M:%S.%f")
-            except Exception:
-                return timeutils.parse_strtime(dtstr, "%Y-%m-%d %H:%M:%S.%f")
+                return timeutils.parse_strtime(dtstr, format)
+            except ValueError:
+                continue
+        return None
 
     def _get_datetime_range(self, req):
         qs = req.environ.get('QUERY_STRING', '')
         env = urlparse.parse_qs(qs)
         # NOTE(lzyeval): env.get() always returns a list
         period_start = self._parse_datetime(env.get('start', [None])[0])
+        if not period_start:
+            msg = _("Start time is invalid format, valid "
+                    "formats are %s") % VALID_DATETIME_FORMAT
+            raise exc.HTTPBadRequest(explanation=msg)
         period_stop = self._parse_datetime(env.get('end', [None])[0])
-
+        if not period_stop:
+            msg = _("Stop time is invalid format, valid "
+                    "formats are %s") % VALID_DATETIME_FORMAT
+            raise exc.HTTPBadRequest(explanation=msg)
         if not period_start < period_stop:
             msg = _("Invalid start time. The start time cannot occur after "
                     "the end time.")
@@ -233,6 +241,7 @@ class SimpleTenantUsageController(object):
         detailed = env.get('detailed', ['0'])[0] == '1'
         return (period_start, period_stop, detailed)
 
+    @extensions.expected_errors(400)
     @wsgi.serializers(xml=SimpleTenantUsagesTemplate)
     def index(self, req):
         """Retrieve tenant_usage for all tenants."""
@@ -250,6 +259,7 @@ class SimpleTenantUsageController(object):
                                                 detailed=detailed)
         return {'tenant_usages': usages}
 
+    @extensions.expected_errors(400)
     @wsgi.serializers(xml=SimpleTenantUsageTemplate)
     def show(self, req, id):
         """Retrieve tenant_usage for a specified tenant."""
