@@ -1398,24 +1398,27 @@ def determine_disk_image_type(image_meta):
     disk_format = image_meta['disk_format']
 
     disk_format_map = {
-        'ami': 'DISK',
-        'aki': 'KERNEL',
-        'ari': 'RAMDISK',
-        'raw': 'DISK_RAW',
-        'vhd': 'DISK_VHD',
-        'iso': 'DISK_ISO',
+        'ami': ImageType.DISK,
+        'aki': ImageType.KERNEL,
+        'ari': ImageType.RAMDISK,
+        'raw': ImageType.DISK_RAW,
+        'vhd': ImageType.DISK_VHD,
+        'iso': ImageType.DISK_ISO,
     }
 
     try:
-        image_type_str = disk_format_map[disk_format]
+        image_type = disk_format_map[disk_format]
     except KeyError:
         raise exception.InvalidDiskFormat(disk_format=disk_format)
 
-    image_type = getattr(ImageType, image_type_str)
-
     image_ref = image_meta['id']
+
+    params = {
+        'image_type_str': ImageType.to_string(image_type),
+        'image_ref': image_ref
+    }
     LOG.debug(_("Detected %(image_type_str)s format for image %(image_ref)s"),
-              {'image_type_str': image_type_str, 'image_ref': image_ref})
+              params)
 
     return image_type
 
@@ -1425,21 +1428,15 @@ def determine_is_pv(session, vdi_ref, disk_image_type, os_type):
     Determine whether the VM will use a paravirtualized kernel or if it
     will use hardware virtualization.
 
-        1. Glance (VHD): then we use `os_type`, raise if not set
+        1. Glance (VHD): if `os_type` is windows, HVM, otherwise PV
 
-        2. Glance (DISK_RAW): use Pygrub to figure out if pv kernel is
-           available
+        2. Glance (DISK_RAW): HVM
 
-        3. Glance (DISK): pv is assumed
+        3. Glance (DISK): PV
 
-        4. Glance (DISK_ISO): no pv is assumed
+        4. Glance (DISK_ISO): HVM
 
-        5. Boot From Volume - without image metadata (None): attempt to
-           use Pygrub to figure out if the volume stores a PV VM or a
-           HVM one. Log a warning, because there may be cases where the
-           volume is RAW (in which case using pygrub is fine) and cases
-           where the content of the volume is VHD, and pygrub might not
-           work as expected.
+        5. Boot From Volume - without image metadata (None): use HVM
            NOTE: if disk_image_type is not specified, instances launched
            from remote volumes will have to include kernel and ramdisk
            because external kernel and ramdisk will not be fetched.
@@ -1454,8 +1451,7 @@ def determine_is_pv(session, vdi_ref, disk_image_type, os_type):
             is_pv = True
     elif disk_image_type == ImageType.DISK_RAW:
         # 2. RAW
-        with vdi_attached_here(session, vdi_ref, read_only=True) as dev:
-            is_pv = _is_vdi_pv(dev)
+        is_pv = False
     elif disk_image_type == ImageType.DISK:
         # 3. Disk
         is_pv = True
@@ -1463,11 +1459,7 @@ def determine_is_pv(session, vdi_ref, disk_image_type, os_type):
         # 4. ISO
         is_pv = False
     elif not disk_image_type:
-        LOG.warning(_("Image format is None: trying to determine PV status "
-                      "using pygrub; if instance with vdi %s does not boot "
-                      "correctly, try with image metadata.") % vdi_ref)
-        with vdi_attached_here(session, vdi_ref, read_only=True) as dev:
-            is_pv = _is_vdi_pv(dev)
+        is_pv = False
     else:
         raise exception.NovaException(_("Unknown image format %s") %
                                       disk_image_type)
@@ -1980,27 +1972,6 @@ def get_this_vm_uuid():
 
 def _get_this_vm_ref(session):
     return session.call_xenapi("VM.get_by_uuid", get_this_vm_uuid())
-
-
-def _is_vdi_pv(dev):
-    LOG.debug(_("Running pygrub against %s"), dev)
-    dev_path = utils.make_dev_path(dev)
-    try:
-        out, err = utils.execute('pygrub', '-qn', dev_path, run_as_root=True)
-        for line in out:
-            # try to find kernel string
-            m = re.search('(?<=kernel:)/.*(?:>)', line)
-            if m and m.group(0).find('xen') != -1:
-                LOG.debug(_("Found Xen kernel %s") % m.group(0))
-                return True
-        LOG.debug(_("No Xen kernel found.  Booting HVM."))
-    except processutils.ProcessExecutionError:
-        LOG.exception(_("Error while executing pygrub! Please, ensure the "
-                        "binary is installed correctly, and available in your "
-                        "PATH; on some Linux distros, pygrub may be installed "
-                        "in /usr/lib/xen-X.Y/bin/pygrub. Attempting to boot "
-                        "in HVM mode."))
-    return False
 
 
 def _get_partitions(dev):
