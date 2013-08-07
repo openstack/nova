@@ -1,20 +1,20 @@
 <element name="server" ns="http://docs.openstack.org/compute/api/v1.1"
     xmlns="http://relaxng.org/ns/structure/1.0">
   <attribute name="name">       <text/> </attribute>
-  <attribute name="userId">     <text/> </attribute>
-  <attribute name="tenantId">   <text/> </attribute>
+  <attribute name="user_id">     <text/> </attribute>
+  <attribute name="tenant_id">   <text/> </attribute>
   <attribute name="id">         <text/> </attribute>
   <attribute name="updated">    <text/> </attribute>
   <attribute name="created">    <text/> </attribute>
-  <attribute name="hostId">     <text/> </attribute>
-  <attribute name="accessIPv4"> <text/> </attribute>
-  <attribute name="accessIPv6"> <text/> </attribute>
+  <attribute name="host_id">     <text/> </attribute>
+  <attribute name="access_ip_v4"> <text/> </attribute>
+  <attribute name="access_ip_v6"> <text/> </attribute>
   <attribute name="status">     <text/> </attribute>
   <optional>
     <attribute name="progress"> <text/> </attribute>
   </optional>
   <optional>
-    <attribute name="adminPass"><text/> </attribute>
+    <attribute name="admin_pass"><text/> </attribute>
   </optional>
   <element name="image">
     <attribute name="id"> <text/> </attribute>

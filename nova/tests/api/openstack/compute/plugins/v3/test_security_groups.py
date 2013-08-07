@@ -345,7 +345,7 @@ class SecurityGroupsOutputTest(test.TestCase):
     def test_create(self):
         url = '/v3/servers'
         image_uuid = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
-        server = dict(name='server_test', imageRef=image_uuid, flavorRef=2)
+        server = dict(name='server_test', image_ref=image_uuid, flavor_ref=2)
         res = self._make_request(url, {'server': server})
         self.assertEqual(res.status_int, 202)
         server = self._get_server(res.body)
@@ -393,8 +393,8 @@ class SecurityGroupsOutputXmlTest(SecurityGroupsOutputTest):
             root = xmlutil.TemplateElement('server', selector='server')
             root.set('name')
             root.set('id')
-            root.set('imageRef')
-            root.set('flavorRef')
+            root.set('image_ref')
+            root.set('flavor_ref')
             return xmlutil.MasterTemplate(root, 1,
                                           nsmap={None: xmlutil.XMLNS_V11})
 
