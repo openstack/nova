@@ -36,16 +36,11 @@ class ComputeFilter(filters.BaseHostFilter):
 
     def host_passes(self, host_state, filter_properties):
         """Returns True for only active compute nodes."""
-        capabilities = host_state.capabilities
         service = host_state.service
 
         alive = self.servicegroup_api.service_is_up(service)
         if not alive or service['disabled']:
             LOG.debug(_("%(host_state)s is disabled or has not been "
                     "heard from in a while"), {'host_state': host_state})
-            return False
-        if not capabilities.get("enabled", True):
-            LOG.debug(_("%(host_state)s is disabled via capabilities"),
-                    {'host_state': host_state})
             return False
         return True

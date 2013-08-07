@@ -1959,6 +1959,8 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
         self.flags(xenapi_connection_url='test_url',
                    xenapi_connection_password='test_pass')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
+        self.context = context.get_admin_context()
+        self.flags(use_local=True, group='conductor')
         self.conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
 
     def test_host_state(self):
@@ -2004,10 +2006,18 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
                                False, 'off_maintenance')
 
     def test_set_enable_host_enable(self):
+        values = _create_service_entries(self.context, values={'nova':
+            ['host']})
         self._test_host_action(self.conn.set_host_enabled, True, 'enabled')
+        service = db.service_get_by_args(self.context, 'host', 'nova-compute')
+        self.assertEquals(service.disabled, False)
 
     def test_set_enable_host_disable(self):
+        values = _create_service_entries(self.context, values={'nova':
+            ['host']})
         self._test_host_action(self.conn.set_host_enabled, False, 'disabled')
+        service = db.service_get_by_args(self.context, 'host', 'nova-compute')
+        self.assertEquals(service.disabled, True)
 
     def test_get_host_uptime(self):
         result = self.conn.get_host_uptime('host')
