@@ -37,6 +37,10 @@ FAKE_ACTIONS = {
                               2012, 12, 5, 0, 0, 0, 0),
                           'finish_time': None,
                           'message': '',
+                           'created_at': None,
+                           'updated_at': None,
+                           'deleted_at': None,
+                           'deleted': False,
         },
         FAKE_REQUEST_ID2: {'id': FAKE_ACTION_ID2,
                           'action': 'resize',
@@ -48,12 +52,17 @@ FAKE_ACTIONS = {
                               2012, 12, 5, 1, 0, 0, 0),
                           'finish_time': None,
                           'message': '',
+                           'created_at': None,
+                           'updated_at': None,
+                           'deleted_at': None,
+                           'deleted': False,
         }
     }
 }
 
 FAKE_EVENTS = {
     FAKE_ACTION_ID1: [{'id': 1,
+                       'action_id': FAKE_ACTION_ID1,
                        'event': 'schedule',
                        'start_time': datetime.datetime(
                            2012, 12, 5, 1, 0, 2, 0),
@@ -61,8 +70,13 @@ FAKE_EVENTS = {
                            2012, 12, 5, 1, 2, 0, 0),
                        'result': 'Success',
                        'traceback': '',
+                       'created_at': None,
+                       'updated_at': None,
+                       'deleted_at': None,
+                       'deleted': False,
                       },
                       {'id': 2,
+                       'action_id': FAKE_ACTION_ID1,
                        'event': 'compute_create',
                        'start_time': datetime.datetime(
                            2012, 12, 5, 1, 3, 0, 0),
@@ -70,16 +84,25 @@ FAKE_EVENTS = {
                            2012, 12, 5, 1, 4, 0, 0),
                        'result': 'Success',
                        'traceback': '',
+                       'created_at': None,
+                       'updated_at': None,
+                       'deleted_at': None,
+                       'deleted': False,
                        }
     ],
     FAKE_ACTION_ID2: [{'id': 3,
+                       'action_id': FAKE_ACTION_ID2,
                        'event': 'schedule',
                        'start_time': datetime.datetime(
                            2012, 12, 5, 3, 0, 0, 0),
                        'finish_time': datetime.datetime(
                            2012, 12, 5, 3, 2, 0, 0),
                        'result': 'Error',
-                       'traceback': ''
+                       'traceback': '',
+                       'created_at': None,
+                       'updated_at': None,
+                       'deleted_at': None,
+                       'deleted': False,
                        }
    ]
 }
