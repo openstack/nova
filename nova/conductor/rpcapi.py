@@ -508,12 +508,6 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                             objmethod=objmethod, args=args, kwargs=kwargs)
         return self.call(context, msg, version='1.50')
 
-    def compute_reboot(self, context, instance, reboot_type):
-        instance_p = jsonutils.to_primitive(instance)
-        msg = self.make_msg('compute_reboot', instance=instance_p,
-                            reboot_type=reboot_type)
-        return self.call(context, msg, version='1.53')
-
 
 class ComputeTaskAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     """Client side of the conductor 'compute' namespaced RPC API

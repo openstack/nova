@@ -28,7 +28,6 @@ from oslo.config import cfg
 from nova.compute import api as compute_api
 from nova.compute import power_state
 from nova.compute import task_states
-from nova.conductor import api as conductor_api
 from nova import context
 from nova import db
 from nova import exception
@@ -285,10 +284,8 @@ class VMwareAPIVMTestCase(test.TestCase):
 
     def test_poll_rebooting_instances(self):
         self.mox.StubOutWithMock(compute_api.API, 'reboot')
-        self.mox.StubOutWithMock(conductor_api.API, 'compute_reboot')
-        conductor_api.API.compute_reboot(mox.IgnoreArg(), mox.IgnoreArg(),
-                                         mox.IgnoreArg())
-        # mox will detect if compute_api.API.reboot is called unexpectedly
+        compute_api.API.reboot(mox.IgnoreArg(), mox.IgnoreArg(),
+                               mox.IgnoreArg())
         self.mox.ReplayAll()
         self._create_vm()
         instances = [self.instance]
