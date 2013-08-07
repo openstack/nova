@@ -374,7 +374,6 @@ def service_destroy(context, service_id):
                     soft_delete(synchronize_session=False)
 
 
-@require_admin_context
 def _service_get(context, service_id, with_compute_node=True, session=None):
     query = model_query(context, models.Service, session=session).\
                      filter_by(id=service_id)
@@ -889,7 +888,6 @@ def floating_ip_get_by_address(context, address):
     return _floating_ip_get_by_address(context, address)
 
 
-@require_context
 def _floating_ip_get_by_address(context, address, session=None):
 
     # if address string is empty explicitly set it to None
@@ -945,7 +943,6 @@ def floating_ip_update(context, address, values):
             raise exception.FloatingIpExists(address=values['address'])
 
 
-@require_context
 def _dnsdomain_get(context, session, fqdomain):
     return model_query(context, models.DNSDomain,
                        session=session, read_deleted="no").\
@@ -961,7 +958,6 @@ def dnsdomain_get(context, fqdomain):
         return _dnsdomain_get(context, session, fqdomain)
 
 
-@require_admin_context
 def _dnsdomain_get_or_create(context, session, fqdomain):
     domain_ref = _dnsdomain_get(context, session, fqdomain)
     if not domain_ref:
@@ -1186,7 +1182,6 @@ def fixed_ip_get_by_address(context, address):
     return _fixed_ip_get_by_address(context, address)
 
 
-@require_context
 def _fixed_ip_get_by_address(context, address, session=None):
     if session is None:
         session = get_session()
@@ -1346,7 +1341,6 @@ def virtual_interface_create(context, values):
     return vif_ref
 
 
-@require_context
 def _virtual_interface_query(context, session=None):
     return model_query(context, models.VirtualInterface, session=session,
                        read_deleted="no")
@@ -1579,7 +1573,6 @@ def instance_get_by_uuid(context, uuid, columns_to_join=None):
             columns_to_join=columns_to_join)
 
 
-@require_context
 def _instance_get_by_uuid(context, uuid, session=None, columns_to_join=None):
     result = _build_instance_get(context, session=session,
                                  columns_to_join=columns_to_join).\
@@ -1610,7 +1603,6 @@ def instance_get(context, instance_id, columns_to_join=None):
         raise exception.InvalidID(id=instance_id)
 
 
-@require_context
 def _build_instance_get(context, session=None, columns_to_join=None):
     query = model_query(context, models.Instance, session=session,
                         project_only=True).\
@@ -1928,7 +1920,6 @@ def instance_get_active_by_window_joined(context, begin, end=None,
     return _instances_fill_metadata(context, query.all())
 
 
-@require_admin_context
 def _instance_get_all_query(context, project_only=False, joins=None):
     if joins is None:
         joins = ['info_cache', 'security_groups']
@@ -1946,7 +1937,6 @@ def instance_get_all_by_host(context, host, columns_to_join=None):
                                 manual_joins=columns_to_join)
 
 
-@require_admin_context
 def _instance_get_all_uuids_by_host(context, host, session=None):
     """Return a list of the instance uuids on a given host.
 
@@ -2349,7 +2339,6 @@ def network_associate(context, project_id, network_id=None, force=False):
     return network_ref
 
 
-@require_admin_context
 def _network_ips_query(context, network_id):
     return model_query(context, models.FixedIp, read_deleted="no").\
                    filter_by(network_id=network_id)
@@ -2522,7 +2511,6 @@ def network_in_use_on_host(context, network_id, host):
     return len(fixed_ips) > 0
 
 
-@require_admin_context
 def _network_get_query(context, session=None):
     return model_query(context, models.Network, session=session,
                        read_deleted="no")
@@ -2833,7 +2821,6 @@ def quota_usage_get_all_by_project(context, project_id):
     return _quota_usage_get_all(context, project_id)
 
 
-@require_admin_context
 def _quota_usage_create(context, project_id, user_id, resource, in_use,
                         reserved, until_refresh, session=None):
     quota_usage_ref = models.QuotaUsage()
@@ -2891,7 +2878,6 @@ def reservation_create(context, uuid, usage, project_id, user_id, resource,
                                resource, delta, expire)
 
 
-@require_admin_context
 def _reservation_create(context, uuid, usage, project_id, user_id, resource,
                         delta, expire, session=None):
     reservation_ref = models.Reservation()
@@ -3206,13 +3192,11 @@ def reservation_expire(context):
 ###################
 
 
-@require_context
 def _ec2_volume_get_query(context, session=None):
     return model_query(context, models.VolumeIdMapping,
                        session=session, read_deleted='yes')
 
 
-@require_context
 def _ec2_snapshot_get_query(context, session=None):
     return model_query(context, models.SnapshotIdMapping,
                        session=session, read_deleted='yes')
@@ -4099,14 +4083,12 @@ def flavor_get_all(context, inactive=False, filters=None):
     return [_dict_with_extra_specs(i) for i in inst_types]
 
 
-@require_context
 def _instance_type_get_id_from_flavor_query(context, flavor_id, session=None):
     return model_query(context, models.InstanceTypes.id, read_deleted="no",
                        session=session, base_model=models.InstanceTypes).\
                 filter_by(flavorid=flavor_id)
 
 
-@require_context
 def _instance_type_get_id_from_flavor(context, flavor_id, session=None):
     result = _instance_type_get_id_from_flavor_query(context, flavor_id,
                                                      session=session).\
@@ -4173,7 +4155,6 @@ def flavor_destroy(context, name):
                 soft_delete()
 
 
-@require_context
 def _instance_type_access_query(context, session=None):
     return model_query(context, models.InstanceTypeProjects, session=session,
                        read_deleted="no")
@@ -5222,7 +5203,6 @@ def get_instance_uuid_by_ec2_id(context, ec2_id):
     return result['uuid']
 
 
-@require_context
 def _ec2_instance_get_query(context, session=None):
     return model_query(context,
                        models.InstanceIdMapping,
@@ -5230,7 +5210,6 @@ def _ec2_instance_get_query(context, session=None):
                        read_deleted='yes')
 
 
-@require_admin_context
 def _task_log_get_query(context, task_name, period_beginning,
                         period_ending, host=None, state=None, session=None):
     query = model_query(context, models.TaskLog, session=session).\
