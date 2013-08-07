@@ -184,6 +184,7 @@ class IptablesTable(object):
         self.chains = set()
         self.unwrapped_chains = set()
         self.remove_chains = set()
+        self.dirty = True
 
     def add_chain(self, name, wrap=True):
         """Adds a named chain to the table.
@@ -201,6 +202,7 @@ class IptablesTable(object):
             self.chains.add(name)
         else:
             self.unwrapped_chains.add(name)
+        self.dirty = True
 
     def remove_chain(self, name, wrap=True):
         """Remove named chain.
@@ -220,6 +222,7 @@ class IptablesTable(object):
             LOG.warn(_('Attempted to remove chain %s which does not exist'),
                      name)
             return
+        self.dirty = True
 
         # non-wrapped chains and rules need to be dealt with specially,
         # so we keep a list of them to be iterated over in apply()
@@ -257,7 +260,12 @@ class IptablesTable(object):
         if '$' in rule:
             rule = ' '.join(map(self._wrap_target_chain, rule.split(' ')))
 
-        self.rules.append(IptablesRule(chain, rule, wrap, top))
+        rule_obj = IptablesRule(chain, rule, wrap, top)
+        if rule_obj in self.rules:
+            LOG.debug(_("Skipping duplicate iptables rule addition"))
+        else:
+            self.rules.append(IptablesRule(chain, rule, wrap, top))
+            self.dirty = True
 
     def _wrap_target_chain(self, s):
         if s.startswith('$'):
@@ -276,6 +284,7 @@ class IptablesTable(object):
             self.rules.remove(IptablesRule(chain, rule, wrap, top))
             if not wrap:
                 self.remove_rules.append(IptablesRule(chain, rule, wrap, top))
+            self.dirty = True
         except ValueError:
             LOG.warn(_('Tried to remove rule that was not there:'
                        ' %(chain)r %(rule)r %(wrap)r %(top)r'),
@@ -288,12 +297,17 @@ class IptablesTable(object):
             regex = re.compile(regex)
         num_rules = len(self.rules)
         self.rules = filter(lambda r: not regex.match(str(r)), self.rules)
-        return num_rules - len(self.rules)
+        removed = num_rules - len(self.rules)
+        if removed > 0:
+            self.dirty = True
+        return removed
 
     def empty_chain(self, chain, wrap=True):
         """Remove all rules from a chain."""
         chained_rules = [rule for rule in self.rules
                               if rule.chain == chain and rule.wrap == wrap]
+        if chained_rules:
+            self.dirty = True
         for rule in chained_rules:
             self.rules.remove(rule)
 
@@ -389,13 +403,25 @@ class IptablesManager(object):
 
     def defer_apply_off(self):
         self.iptables_apply_deferred = False
-        self._apply()
+        self.apply()
+
+    def dirty(self):
+        for table in self.ipv4.itervalues():
+            if table.dirty:
+                return True
+        if CONF.use_ipv6:
+            for table in self.ipv6.itervalues():
+                if table.dirty:
+                    return True
+        return False
 
     def apply(self):
         if self.iptables_apply_deferred:
             return
-
-        self._apply()
+        if self.dirty():
+            self._apply()
+        else:
+            LOG.debug(_("Skipping apply due to lack of new rules"))
 
     @utils.synchronized('iptables', external=True)
     def _apply(self):
@@ -419,6 +445,7 @@ class IptablesManager(object):
                 start, end = self._find_table(all_lines, table_name)
                 all_lines[start:end] = self._modify_rules(
                         all_lines[start:end], table, table_name)
+                table.dirty = False
             self.execute('%s-restore' % (cmd,), '-c', run_as_root=True,
                          process_input='\n'.join(all_lines),
                          attempts=5)
