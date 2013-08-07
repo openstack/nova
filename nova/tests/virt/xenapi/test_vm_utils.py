@@ -1000,3 +1000,60 @@ class GenerateEphemeralTestCase(test.TestCase):
         self.assertRaises(exception.NovaException, vm_utils.generate_ephemeral,
             self.session, self.instance, self.vm_ref,
             str(self.userdevice), self.name_label, 4030)
+
+
+class FakeFile(object):
+    def __init__(self):
+        self._file_operations = []
+
+    def seek(self, offset):
+        self._file_operations.append((self.seek, offset))
+
+
+class StreamDiskTestCase(test.TestCase):
+    def setUp(self):
+        import __builtin__
+        super(StreamDiskTestCase, self).setUp()
+        self.mox.StubOutWithMock(vm_utils.utils, 'make_dev_path')
+        self.mox.StubOutWithMock(vm_utils.utils, 'temporary_chown')
+        self.mox.StubOutWithMock(vm_utils, '_write_partition')
+
+        # NOTE(matelakat): This might hide the fail reason, as test runners
+        # are unhappy with a mocked out open.
+        self.mox.StubOutWithMock(__builtin__, 'open')
+        self.image_service_func = self.mox.CreateMockAnything()
+
+    def test_non_ami(self):
+        fake_file = FakeFile()
+
+        vm_utils.utils.make_dev_path('dev').AndReturn('some_path')
+        vm_utils.utils.temporary_chown(
+            'some_path').AndReturn(contextified(None))
+        open('some_path', 'wb').AndReturn(contextified(fake_file))
+        self.image_service_func(fake_file)
+
+        self.mox.ReplayAll()
+
+        vm_utils._stream_disk(
+            self.image_service_func, vm_utils.ImageType.KERNEL, None, 'dev')
+
+        self.assertEquals([(fake_file.seek, 0)], fake_file._file_operations)
+
+    def test_ami_disk(self):
+        fake_file = FakeFile()
+
+        vm_utils._write_partition(100, 'dev')
+        vm_utils.utils.make_dev_path('dev').AndReturn('some_path')
+        vm_utils.utils.temporary_chown(
+            'some_path').AndReturn(contextified(None))
+        open('some_path', 'wb').AndReturn(contextified(fake_file))
+        self.image_service_func(fake_file)
+
+        self.mox.ReplayAll()
+
+        vm_utils._stream_disk(
+            self.image_service_func, vm_utils.ImageType.DISK, 100, 'dev')
+
+        self.assertEquals(
+            [(fake_file.seek, vm_utils.MBR_SIZE_BYTES)],
+            fake_file._file_operations)
