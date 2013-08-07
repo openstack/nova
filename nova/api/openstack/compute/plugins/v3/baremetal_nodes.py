@@ -95,6 +95,7 @@ class InterfaceTemplate(xmlutil.TemplateBuilder):
 class BareMetalNodeController(wsgi.Controller):
     """The Bare-Metal Node API controller for the OpenStack API."""
 
+    @extensions.expected_errors(())
     @wsgi.serializers(xml=NodesTemplate)
     def index(self, req):
         context = req.environ['nova.context']
@@ -112,6 +113,7 @@ class BareMetalNodeController(wsgi.Controller):
             nodes.append(node)
         return {'nodes': nodes}
 
+    @extensions.expected_errors(404)
     @wsgi.serializers(xml=NodeTemplate)
     def show(self, req, id):
         context = req.environ['nova.context']
@@ -128,6 +130,7 @@ class BareMetalNodeController(wsgi.Controller):
         node['interfaces'] = [_interface_dict(i) for i in ifs]
         return {'node': node}
 
+    @extensions.expected_errors(())
     @wsgi.serializers(xml=NodeTemplate)
     def create(self, req, body):
         context = req.environ['nova.context']
@@ -148,6 +151,7 @@ class BareMetalNodeController(wsgi.Controller):
             node['interfaces'] = []
         return {'node': node}
 
+    @extensions.expected_errors(404)
     def delete(self, req, id):
         context = req.environ['nova.context']
         authorize(context)
@@ -163,6 +167,7 @@ class BareMetalNodeController(wsgi.Controller):
         except exception.NodeNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
+    @extensions.expected_errors(404)
     @wsgi.serializers(xml=InterfaceTemplate)
     @wsgi.action('add_interface')
     def _add_interface(self, req, id, body):
@@ -181,6 +186,7 @@ class BareMetalNodeController(wsgi.Controller):
         if_ref = db.bm_interface_get(context, if_id)
         return {'interface': _interface_dict(if_ref)}
 
+    @extensions.expected_errors((400, 404))
     @wsgi.response(202)
     @wsgi.action('remove_interface')
     def _remove_interface(self, req, id, body):
@@ -200,7 +206,7 @@ class BareMetalNodeController(wsgi.Controller):
             if address and address != i['address']:
                 continue
             db.bm_interface_destroy(context, i['id'])
-            return webob.Response(status_int=202)
+            return
         raise webob.exc.HTTPNotFound()
 
 
