@@ -30,6 +30,10 @@ import nova.openstack.common.rpc.serializer
 LOG = logging.getLogger('object')
 
 
+class NotSpecifiedSentinel:
+    pass
+
+
 def get_attrname(name):
     """Return the mangled name of the attribute's underlying storage."""
     return '_%s' % name
@@ -378,12 +382,18 @@ class NovaObject(object):
         except AttributeError:
             return False
 
-    def get(self, key, value=None):
+    def get(self, key, value=NotSpecifiedSentinel):
         """For backwards-compatibility with dict-based objects.
 
         NOTE(danms): May be removed in the future.
         """
-        return self[key]
+        if key not in self.fields:
+            raise AttributeError("'%s' object has no attribute '%s'" % (
+                    self.__class__, key))
+        if value != NotSpecifiedSentinel and not self.obj_attr_is_set(key):
+            return value
+        else:
+            return self[key]
 
     def update(self, updates):
         """For backwards-compatibility with dict-base objects.
