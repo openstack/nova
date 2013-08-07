@@ -152,46 +152,16 @@ class ViewBuilder(common.ViewBuilder):
 
 class ViewBuilderV3(ViewBuilder):
 
-    def show(self, request, image):
-        """Return a dictionary with image details."""
-        image_dict = {
-            "id": image.get("id"),
-            "name": image.get("name"),
-            "size": int(image.get("size") or 0),
-            "minRam": int(image.get("min_ram") or 0),
-            "minDisk": int(image.get("min_disk") or 0),
-            "metadata": image.get("properties", {}),
-            "created": self._format_date(image.get("created_at")),
-            "updated": self._format_date(image.get("updated_at")),
-            "status": self._get_status(image),
-            "progress": self._get_progress(image),
-            "links": self._get_links(request,
-                                     image["id"],
-                                     self._collection_name),
-        }
-
-        instance_uuid = image.get("properties", {}).get("instance_uuid")
-
-        if instance_uuid is not None:
-            server_ref = self._get_href_link(request, instance_uuid, 'servers')
-            image_dict["server"] = {
-                "id": instance_uuid,
-                "links": [{
-                    "rel": "self",
-                    "href": server_ref,
-                },
-                {
-                    "rel": "bookmark",
-                    "href": self._get_bookmark_link(request,
-                                                    instance_uuid,
-                                                    'servers'),
-                }],
-            }
-
-        return dict(image=image_dict)
-
-    def _get_alternate_link(self, request, identifier):
-        """Create an alternate link for a specific image id."""
-        glance_url = glance.generate_glance_url()
-        glance_url = self._update_glance_link_prefix(glance_url)
-        return '/'.join([glance_url, self._collection_name, str(identifier)])
+    def _get_bookmark_link(self, request, identifier, collection_name):
+        """Create a URL that refers to a specific resource."""
+        if collection_name == "images":
+            glance_url = glance.generate_image_url(identifier)
+            return self._update_glance_link_prefix(glance_url)
+        else:
+            raise NotImplementedError
+            # NOTE(cyeoh) The V3 version of _get_bookmark_link should
+            # only ever be called with images as the
+            # collection_name. The images API has been removed in the
+            # V3 API and the V3 version of the view only exists for
+            # the servers view to be able to generate the appropriate
+            # bookmark link for the image of the instance.

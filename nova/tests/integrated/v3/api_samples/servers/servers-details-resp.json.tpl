@@ -29,7 +29,7 @@
                 "id": "%(uuid)s",
                 "links": [
                     {
-                        "href": "%(host)s/images/%(uuid)s",
+                        "href": "%(glance_host)s/images/%(uuid)s",
                         "rel": "bookmark"
                     }
                 ]

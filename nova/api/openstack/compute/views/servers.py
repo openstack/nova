@@ -228,6 +228,7 @@ class ViewBuilderV3(ViewBuilder):
         """Initialize view builder."""
         super(ViewBuilderV3, self).__init__()
         self._address_builder = views_addresses.ViewBuilderV3()
+        self._image_builder = views_images.ViewBuilderV3()
 
     def show(self, request, instance):
         """Detailed view of a single instance."""

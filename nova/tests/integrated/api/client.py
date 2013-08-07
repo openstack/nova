@@ -21,6 +21,7 @@ import urlparse
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
+from nova.tests.image import fake
 
 
 LOG = logging.getLogger(__name__)
@@ -305,22 +306,26 @@ class TestOpenStackClientV3(TestOpenStackClient):
     """Simple OpenStack v3 API Client.
 
     This is a really basic OpenStack API client that is under our control,
-    so we can make changes / insert hooks for testing
+    so we can make changes / insert hooks for testing.
+
+    Note that the V3 API does not have an image API and so it is
+    not possible to query the api for the image information.
+    So instead we just access the fake image service used by the unittests
+    directly.
 
     """
 
     def get_image(self, image_id):
-        return self.api_get('/os-images/%s' % image_id)['image']
+        return fake._fakeImageService.show(None, image_id)
 
     def get_images(self, detail=True):
-        rel_url = '/os-images/detail' if detail else '/os-images'
-        return self.api_get(rel_url)['images']
+        return fake._fakeImageService.detail(None)
 
     def post_image(self, image):
-        return self.api_post('/os-images', image)['image']
+        raise NotImplementedError
 
     def delete_image(self, image_id):
-        return self.api_delete('/os-images/%s' % image_id)
+        return fake._fakeImageService.delete(None, image_id)
 
 
 class TestOpenStackClientV3Mixin(object):
