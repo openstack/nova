@@ -116,8 +116,17 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
                        'disk_bus', 'boot_index'])
     _fields = _legacy_fields | _new_fields
 
+    _valid_source = 'volume'
+    _valid_destination = 'volume'
+
+    # Override in subclasses if volume should be created from
+    # another source.
+    _source_id_field = None
+
     def _transform(self, bdm):
-        if not bdm.get('source_type') == 'volume':
+        if not bdm.get('source_type') == self._valid_source\
+                or not bdm.get('destination_type') == \
+                self._valid_destination:
             raise _InvalidType
 
         # NOTE (ndipanov): Save it as an attribute as we will
@@ -125,6 +134,9 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
         self.volume_size = bdm.get('volume_size')
         self.volume_id = bdm.get('volume_id')
 
+        if self._source_id_field:
+            setattr(self, self._source_id_field,
+                    bdm.get(self._source_id_field, None))
         self.update(
             dict((k, v) for k, v in bdm.iteritems()
                  if k in self._new_fields | set(['delete_on_termination']))
@@ -187,26 +199,9 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
 
 
 class DriverSnapshotBlockDevice(DriverVolumeBlockDevice):
-    def _transform(self, bdm):
-        if not bdm.get('source_type') == 'snapshot':
-            raise _InvalidType
 
-        # NOTE (ndipanov): Save these as attributes as we will
-        #                  need them for attach()
-        self.volume_size = bdm.get('volume_size')
-        self.snapshot_id = bdm.get('snapshot_id')
-        self.volume_id = bdm.get('volume_id')
-
-        self.update(
-            dict((k, v) for k, v in bdm.iteritems()
-                 if k in self._new_fields | set(['delete_on_termination']))
-        )
-        self['mount_device'] = bdm.get('device_name')
-        try:
-            self['connection_info'] = jsonutils.loads(
-                bdm.get('connection_info'))
-        except TypeError:
-            self['connection_info'] = None
+    _valid_source = 'snapshot'
+    _source_id_field = 'snapshot_id'
 
     def attach(self, context, instance, volume_api, virt_driver,
                db_api=None, wait_func=None):
@@ -227,6 +222,28 @@ class DriverSnapshotBlockDevice(DriverVolumeBlockDevice):
         super(DriverSnapshotBlockDevice, self).attach(context, instance,
                                                       volume_api, virt_driver,
                                                       db_api)
+
+
+class DriverImageBlockDevice(DriverVolumeBlockDevice):
+
+    _valid_source = 'image'
+    _source_id_field = 'image_id'
+
+    def attach(self, context, instance, volume_api, virt_driver,
+               db_api=None, wait_func=None):
+        if not self.volume_id:
+            vol = volume_api.create(context, self.volume_size,
+                                    '', '', image_id=self.image_id)
+            if wait_func:
+                wait_func(context, vol['id'])
+            if db_api:
+                db_api.block_device_mapping_update(context, self.id,
+                                                   {'volume_id': vol['id']})
+            self.volume_id = vol['id']
+
+        super(DriverImageBlockDevice, self).attach(context, instance,
+                                                   volume_api, virt_driver,
+                                                   db_api)
 
 
 def _convert_block_devices(device_type, block_device_mapping):
@@ -256,6 +273,9 @@ convert_volumes = functools.partial(_convert_block_devices,
 
 convert_snapshots = functools.partial(_convert_block_devices,
                                      DriverSnapshotBlockDevice)
+
+convert_images = functools.partial(_convert_block_devices,
+                                     DriverImageBlockDevice)
 
 
 def attach_block_devices(block_device_mapping, *attach_args, **attach_kwargs):

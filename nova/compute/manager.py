@@ -895,7 +895,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         while attempts < max_tries:
             volume = self.volume_api.get(context, vol_id)
             volume_status = volume['status']
-            if volume_status != 'creating':
+            if volume_status not in ['creating', 'downloading']:
                 if volume_status != 'available':
                     LOG.warn(_("Volume id: %s finished being created but was"
                                " not set as 'available'"), vol_id)
@@ -1282,6 +1282,11 @@ class ComputeManager(manager.SchedulerDependentManager):
                         self.driver, self.conductor_api) +
                     driver_block_device.attach_block_devices(
                         driver_block_device.convert_snapshots(bdms),
+                        context, instance, self.volume_api,
+                        self.driver, self.conductor_api,
+                        self._await_block_device_map_created) +
+                    driver_block_device.attach_block_devices(
+                        driver_block_device.convert_images(bdms),
                         context, instance, self.volume_api,
                         self.driver, self.conductor_api,
                         self._await_block_device_map_created))

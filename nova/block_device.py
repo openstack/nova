@@ -203,6 +203,7 @@ class BlockDeviceDict(dict):
             for field in copy_over_fields if field in self)
 
         source_type = self.get('source_type')
+        destination_type = self.get('destination_type')
         no_device = self.get('no_device')
         if source_type == 'blank':
             if self['guest_format'] == 'swap':
@@ -214,9 +215,11 @@ class BlockDeviceDict(dict):
         elif source_type in ('volume', 'snapshot') or no_device:
             legacy_block_device['virtual_name'] = None
         elif source_type == 'image':
-            # NOTE(ndipanov): Image bdms have no meaning in
-            # the legacy format - raise
-            raise exception.InvalidBDMForLegacy()
+            if destination_type != 'volume':
+            # NOTE(ndipanov): Image bdms with local destination
+            # have no meaning in the legacy format - raise
+                raise exception.InvalidBDMForLegacy()
+            legacy_block_device['virtual_name'] = None
 
         return legacy_block_device
 
