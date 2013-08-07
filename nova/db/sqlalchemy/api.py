@@ -3228,8 +3228,8 @@ def ec2_volume_create(context, volume_uuid, id=None):
 
 
 @require_context
-def get_ec2_volume_id_by_uuid(context, volume_id, session=None):
-    result = _ec2_volume_get_query(context, session=session).\
+def get_ec2_volume_id_by_uuid(context, volume_id):
+    result = _ec2_volume_get_query(context).\
                     filter_by(uuid=volume_id).\
                     first()
 
@@ -3240,8 +3240,8 @@ def get_ec2_volume_id_by_uuid(context, volume_id, session=None):
 
 
 @require_context
-def get_volume_uuid_by_ec2_id(context, ec2_id, session=None):
-    result = _ec2_volume_get_query(context, session=session).\
+def get_volume_uuid_by_ec2_id(context, ec2_id):
+    result = _ec2_volume_get_query(context).\
                     filter_by(id=ec2_id).\
                     first()
 
@@ -3265,8 +3265,8 @@ def ec2_snapshot_create(context, snapshot_uuid, id=None):
 
 
 @require_context
-def get_ec2_snapshot_id_by_uuid(context, snapshot_id, session=None):
-    result = _ec2_snapshot_get_query(context, session=session).\
+def get_ec2_snapshot_id_by_uuid(context, snapshot_id):
+    result = _ec2_snapshot_get_query(context).\
                     filter_by(uuid=snapshot_id).\
                     first()
 
@@ -3277,8 +3277,8 @@ def get_ec2_snapshot_id_by_uuid(context, snapshot_id, session=None):
 
 
 @require_context
-def get_snapshot_uuid_by_ec2_id(context, ec2_id, session=None):
-    result = _ec2_snapshot_get_query(context, session=session).\
+def get_snapshot_uuid_by_ec2_id(context, ec2_id):
+    result = _ec2_snapshot_get_query(context).\
                     filter_by(id=ec2_id).\
                     first()
 
@@ -5198,9 +5198,8 @@ def ec2_instance_create(context, instance_uuid, id=None):
 
 
 @require_context
-def get_ec2_instance_id_by_uuid(context, instance_id, session=None):
-    result = _ec2_instance_get_query(context,
-                                     session=session).\
+def get_ec2_instance_id_by_uuid(context, instance_id):
+    result = _ec2_instance_get_query(context).\
                     filter_by(uuid=instance_id).\
                     first()
 
@@ -5211,9 +5210,8 @@ def get_ec2_instance_id_by_uuid(context, instance_id, session=None):
 
 
 @require_context
-def get_instance_uuid_by_ec2_id(context, ec2_id, session=None):
-    result = _ec2_instance_get_query(context,
-                                     session=session).\
+def get_instance_uuid_by_ec2_id(context, ec2_id):
+    result = _ec2_instance_get_query(context).\
                     filter_by(id=ec2_id).\
                     first()
 
