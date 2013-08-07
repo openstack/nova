@@ -86,7 +86,7 @@ class ComputeNode(BASE, NovaBase):
     vcpus_used = Column(Integer, nullable=False)
     memory_mb_used = Column(Integer, nullable=False)
     local_gb_used = Column(Integer, nullable=False)
-    hypervisor_type = Column(Text, nullable=False)
+    hypervisor_type = Column(MediumText(), nullable=False)
     hypervisor_version = Column(Integer, nullable=False)
     hypervisor_hostname = Column(String(255), nullable=True)
 
@@ -108,7 +108,7 @@ class ComputeNode(BASE, NovaBase):
     # Points are "json translatable" and it must have all dictionary keys
     # above, since it is copied from <cpu> tag of getCapabilities()
     # (See libvirt.virtConnection).
-    cpu_info = Column(Text, nullable=True)
+    cpu_info = Column(MediumText(), nullable=False)
     disk_available_least = Column(Integer, nullable=True)
 
 
@@ -124,8 +124,8 @@ class ComputeNodeStat(BASE, NovaBase):
     )
 
     id = Column(Integer, primary_key=True)
-    key = Column(String(511), nullable=False)
-    value = Column(String(255), nullable=False)
+    key = Column(String(255), nullable=False)
+    value = Column(String(255), nullable=True)
     compute_node_id = Column(Integer, ForeignKey('compute_nodes.id'),
                              nullable=False)
 
@@ -156,6 +156,8 @@ class Instance(BASE, NovaBase):
     """Represents a guest VM."""
     __tablename__ = 'instances'
     __table_args__ = (
+        Index('uuid', 'uuid', unique=True),
+        Index('project_id', 'project_id'),
         Index('instances_host_deleted_idx',
               'host', 'deleted'),
         Index('instances_reservation_id_idx',
@@ -210,7 +212,7 @@ class Instance(BASE, NovaBase):
 
     launch_index = Column(Integer, nullable=True)
     key_name = Column(String(255), nullable=True)
-    key_data = Column(Text)
+    key_data = Column(MediumText())
 
     power_state = Column(Integer, nullable=True)
     vm_state = Column(String(255), nullable=True)
@@ -231,7 +233,7 @@ class Instance(BASE, NovaBase):
     # *not* flavorid, this is the internal primary_key
     instance_type_id = Column(Integer, nullable=True)
 
-    user_data = Column(Text, nullable=True)
+    user_data = Column(MediumText(), nullable=True)
 
     reservation_id = Column(String(255), nullable=True)
 
@@ -247,7 +249,7 @@ class Instance(BASE, NovaBase):
 
     # To remember on which host an instance booted.
     # An instance may have moved to another host by live migration.
-    launched_on = Column(Text, nullable=True)
+    launched_on = Column(MediumText(), nullable=True)
 
     # NOTE(jdillaman): locked deprecated in favor of locked_by,
     # to be removed in Icehouse
@@ -257,7 +259,7 @@ class Instance(BASE, NovaBase):
     os_type = Column(String(255), nullable=True)
     architecture = Column(String(255), nullable=True)
     vm_mode = Column(String(255), nullable=True)
-    uuid = Column(String(36), unique=True)
+    uuid = Column(String(36))
 
     root_device_name = Column(String(255), nullable=True)
     default_ephemeral_device = Column(String(255), nullable=True)
@@ -285,6 +287,7 @@ class Instance(BASE, NovaBase):
     # OpenStack compute cell name.  This will only be set at the top of
     # the cells tree and it'll be a full cell name such as 'api!hop1!hop2'
     cell_name = Column(String(255), nullable=True)
+    internal_id = Column(Integer, nullable=True)
 
     # Records whether an instance has been deleted from disk
     cleaned = Column(Integer, default=0)
@@ -302,10 +305,10 @@ class InstanceInfoCache(BASE, NovaBase):
     id = Column(Integer, primary_key=True, autoincrement=True)
 
     # text column used for storing a json object of network data for api
-    network_info = Column(Text)
+    network_info = Column(MediumText())
 
     instance_uuid = Column(String(36), ForeignKey('instances.uuid'),
-                           nullable=False, unique=True)
+                           nullable=False)
     instance = relationship(Instance,
                             backref=backref('info_cache', uselist=False),
                             foreign_keys=instance_uuid,
@@ -621,7 +624,10 @@ class SecurityGroupInstanceAssociation(BASE, NovaBase):
 class SecurityGroup(BASE, NovaBase):
     """Represents a security group."""
     __tablename__ = 'security_groups'
-    __table_args__ = ()
+    __table_args__ = (
+        Index('uniq_security_groups0project_id0name0deleted', 'project_id',
+              'name', 'deleted'),
+    )
     id = Column(Integer, primary_key=True)
 
     name = Column(String(255))
@@ -699,7 +705,7 @@ class KeyPair(BASE, NovaBase):
     """Represents a public key pair for ssh."""
     __tablename__ = 'key_pairs'
     __table_args__ = (
-        schema.UniqueConstraint("name", "user_id", "deleted",
+        schema.UniqueConstraint("user_id", "name", "deleted",
                                 name="uniq_key_pairs0user_id0name0deleted"),
     )
     id = Column(Integer, primary_key=True, nullable=False)
@@ -1321,7 +1327,10 @@ class InstanceGroup(BASE, NovaBase):
     """
 
     __tablename__ = 'instance_groups'
-    __table_args__ = (schema.UniqueConstraint("uuid", "deleted"), )
+    __table_args__ = (
+        schema.UniqueConstraint("uuid", "deleted",
+                                 name="uniq_instance_groups0uuid0deleted"),
+    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(String(255))
