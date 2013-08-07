@@ -2594,6 +2594,79 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     def _post_downgrade_207(self, engine):
         self._207(engine)
 
+    def _data_209(self):
+        ret = {"compute_nodes": {"service_id": 999, "vcpus": 1, "memory_mb": 1,
+                                 "local_gb": 1, "vcpus_used": 1,
+                                 "memory_mb_used": 1, "local_gb_used": 1,
+                                 "hypervisor_type": "fake_type",
+                                 "hypervisor_version": 1, "cpu_info": "info"},
+               "instance_actions": {"instance_uuid": "fake"},
+               "migrations": {"instance_uuid": "fake"},
+               "instance_faults": {"instance_uuid": "fake", "code": 1},
+               "compute_node_stats": {"compute_node_id": 1, "key": "fake"}}
+        return ret
+
+    def _constraints_209(self):
+        return {"compute_nodes": ('services', 'id'),
+                "instance_actions": ('instances', 'uuid'),
+                "migrations": ('instances', 'uuid'),
+                "instance_faults": ('instances', 'uuid'),
+                "compute_node_stats": ('compute_nodes', 'id')}
+
+    def _pre_upgrade_209(self, engine):
+        if engine.name == 'sqlite':
+            return
+        instances = db_utils.get_table(engine, 'instances')
+        instances.delete().where(instances.c.uuid == None).execute()
+        tables = ["compute_nodes", "instance_actions", "migrations",
+                  "instance_faults", "compute_node_stats"]
+        change_tables = dict((i, db_utils.get_table(engine, i))
+                             for i in tables)
+        data = self._data_209()
+        for i in tables:
+            change_tables[i].delete().execute()
+            change_tables[i].insert().values(data[i]).execute()
+
+    def _check_209(self, engine, data):
+        if engine.name == 'sqlite':
+            return
+        tables = ["compute_nodes", "instance_actions", "migrations",
+                  "instance_faults", "compute_node_stats"]
+        change_tables = dict((i, db_utils.get_table(engine, i))
+                             for i in tables)
+        data = self._data_209()
+        for i in tables:
+            insert_values = data[i]
+            table = change_tables[i]
+            self.assertRaises(sqlalchemy.exc.IntegrityError,
+                              table.insert().execute,
+                              insert_values)
+            dump_table = db_utils.get_table(engine, 'dump_' + i)
+            self.assertEqual(len(dump_table.select().execute().fetchall()), 1)
+            table.delete().execute()
+            fks = [(f.column.table.name, f.column.name)
+                   for f in table.foreign_keys]
+            self.assertIn(self._constraints_209().get(i), fks)
+
+    def _post_downgrade_209(self, engine):
+        if engine.name == 'sqlite':
+            return
+        check_tables = engine.table_names()
+        tables = ["compute_nodes", "instance_actions", "migrations",
+                  "instance_faults", "compute_node_stats"]
+        change_tables = dict((i, db_utils.get_table(engine, i))
+                             for i in tables)
+        data = self._data_209()
+        for i in tables:
+            dump_table_name = 'dump_' + i
+            self.asserFalse(dump_table_name in check_tables)
+            table = change_tables[i]
+            table.insert().values(data[i]).execute()
+            self.assertEqual(len(table.select().execute().fetchall()), 2)
+            fks = [(f.column.table.name, f.column.name)
+                   for f in table.foreign_keys]
+            self.assertNotIn(self._constraints_209().get(i), fks)
+
 
 class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""
