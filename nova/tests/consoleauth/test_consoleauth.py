@@ -105,6 +105,29 @@ class ConsoleauthTestCase(test.TestCase):
                                         instance_uuid=None)
         self.assertFalse(self.manager.check_token(self.context, u"token"))
 
+    def test_delete_expired_tokens(self):
+        self.useFixture(test.TimeOverride())
+        token = u'mytok'
+        self.flags(console_token_ttl=1)
+
+        self._stub_validate_console_port(True)
+
+        self.manager.authorize_console(self.context, token, 'novnc',
+                                         '127.0.0.1', '8080', 'host',
+                                         self.instance['uuid'])
+        timeutils.advance_time_seconds(1)
+        self.assertFalse(self.manager.check_token(self.context, token))
+
+        token1 = u'mytok2'
+        self.manager.authorize_console(self.context, token1, 'novnc',
+                                       '127.0.0.1', '8080', 'host',
+                                       self.instance['uuid'])
+        stored_tokens = self.manager._get_tokens_for_instance(
+                self.instance['uuid'])
+        # when trying to store token1, expired token is removed fist.
+        self.assertTrue(len(stored_tokens), 1)
+        self.assertTrue(stored_tokens[0], token1)
+
 
 class ControlauthMemcacheEncodingTestCase(test.TestCase):
     def setUp(self):
