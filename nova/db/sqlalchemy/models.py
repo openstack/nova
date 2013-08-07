@@ -97,7 +97,6 @@ class ComputeNode(BASE, NovaBase):
     free_disk_gb = Column(Integer, nullable=True)
     current_workload = Column(Integer, nullable=True)
     running_vms = Column(Integer, nullable=True)
-
     # Note(masumotok): Expected Strings example:
     #
     # '{"arch":"x86_64",
@@ -110,6 +109,8 @@ class ComputeNode(BASE, NovaBase):
     # (See libvirt.virtConnection).
     cpu_info = Column(MediumText(), nullable=False)
     disk_available_least = Column(Integer, nullable=True)
+    host_ip = Column(types.IPAddress())
+    supported_instances = Column(Text)
 
 
 class ComputeNodeStat(BASE, NovaBase):

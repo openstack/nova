@@ -3090,7 +3090,13 @@ class LibvirtDriver(driver.ComputeDriver):
         :returns: dictionary describing resources
 
         """
-        return self.host_state.get_host_stats(refresh=True)
+
+        # Temporary: convert supported_instances into a string, while keeping
+        # the RPC version as JSON. Can be changed when RPC broadcast is removed
+        stats = self.host_state.get_host_stats(refresh=True)
+        stats['supported_instances'] = jsonutils.dumps(
+                stats['supported_instances'])
+        return stats
 
     def check_instance_shared_storage_local(self, context, instance):
         dirpath = libvirt_utils.get_instance_path(instance)
