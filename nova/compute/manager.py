@@ -4531,7 +4531,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                     # Note(maoy): here we call the API instead of
                     # brutally updating the vm_state in the database
                     # to allow all the hooks and checks to be performed.
-                    self.conductor_api.compute_stop(context, db_instance)
+                    self.compute_api.stop(context, db_instance)
                 except Exception:
                     # Note(maoy): there is no need to propagate the error
                     # because the same power_state will be retrieved next
@@ -4544,7 +4544,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 LOG.warn(_("Instance is suspended unexpectedly. Calling "
                            "the stop API."), instance=db_instance)
                 try:
-                    self.conductor_api.compute_stop(context, db_instance)
+                    self.compute_api.stop(context, db_instance)
                 except Exception:
                     LOG.exception(_("error during stop() in "
                                     "sync_power_state."),
@@ -4574,7 +4574,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 try:
                     # Note(maoy): this assumes that the stop API is
                     # idempotent.
-                    self.conductor_api.compute_stop(context, db_instance)
+                    self.compute_api.stop(context, db_instance)
                 except Exception:
                     LOG.exception(_("error during stop() in "
                                     "sync_power_state."),

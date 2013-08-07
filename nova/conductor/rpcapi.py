@@ -479,16 +479,6 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         msg = self.make_msg('get_ec2_ids', instance=instance_p)
         return self.call(context, msg, version='1.42')
 
-    def compute_stop(self, context, instance, do_cast=True):
-        if not self.can_send_version('1.55'):
-            instance = jsonutils.to_primitive(
-                objects_base.obj_to_primitive(instance))
-            version = '1.43'
-        else:
-            version = '1.55'
-        msg = self.make_msg('compute_stop', instance=instance, do_cast=do_cast)
-        return self.call(context, msg, version=version)
-
     def compute_confirm_resize(self, context, instance, migration_ref):
         migration_p = jsonutils.to_primitive(migration_ref)
         if not self.can_send_version('1.52'):

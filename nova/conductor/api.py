@@ -334,9 +334,6 @@ class LocalAPI(object):
     def get_ec2_ids(self, context, instance):
         return self._manager.get_ec2_ids(context, instance)
 
-    def compute_stop(self, context, instance, do_cast=True):
-        return self._manager.compute_stop(context, instance, do_cast)
-
     def compute_confirm_resize(self, context, instance, migration_ref):
         return self._manager.compute_confirm_resize(context, instance,
                                                     migration_ref)
