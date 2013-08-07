@@ -2528,6 +2528,39 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         self.assertColumnNotExists(engine, 'instances', 'cleaned')
         self.assertColumnNotExists(engine, 'shadow_instances', 'cleaned')
 
+    def _207(self, engine, upgrade=False):
+        uniq_names = ['uniq_cell_name0deleted',
+                      'uniq_cells0name0deleted']
+        if upgrade:
+            uniq_names = uniq_names[::-1]
+        cells = db_utils.get_table(engine, 'cells')
+        values = {'name': 'name',
+                  'deleted': 0,
+                  'transport_url': 'fake_transport_url'}
+        cells.insert().values(values).execute()
+        values['deleted'] = 1
+        cells.insert().values(values).execute()
+        values['deleted'] = 0
+        self.assertRaises(sqlalchemy.exc.IntegrityError,
+                          cells.insert().execute,
+                          values)
+        cells.delete().execute()
+        indexes = dict((i.name, i) for i in cells.indexes)
+        if indexes:
+            check_index_old = indexes.get(uniq_names[0])
+            check_index_new = indexes.get(uniq_names[1])
+            self.assertTrue(bool(check_index_old))
+            self.assertFalse(bool(check_index_new))
+
+    def _pre_upgrade_207(self, engine):
+        self._207(engine)
+
+    def _check_207(self, engine, data):
+        self._207(engine, upgrade=True)
+
+    def _post_downgrade_207(self, engine):
+        self._207(engine)
+
 
 class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""
