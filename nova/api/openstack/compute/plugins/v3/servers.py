@@ -309,7 +309,6 @@ class ActionDeserializer(CommonDeserializer):
 
         action_deserializer = {
             'create_image': self._action_create_image,
-            'change_password': self._action_change_password,
             'reboot': self._action_reboot,
             'rebuild': self._action_rebuild,
             'resize': self._action_resize,
