@@ -119,8 +119,13 @@ class PowerVMDriver(driver.ComputeDriver):
         :param bad_volumes_callback: Function to handle any bad volumes
             encountered
         """
-        raise NotImplementedError(_("Reboot is not supported by the"
-                                    "PowerVM driver."))
+        if reboot_type == 'SOFT':
+            LOG.debug(_('Soft reboot is not supported for PowerVM.'),
+                      instance=instance)
+            return
+
+        self.power_off(instance)
+        self.power_on(context, instance, network_info, block_device_info)
 
     def get_host_ip_addr(self):
         """Retrieves the IP address of the hypervisor host."""

@@ -36,17 +36,18 @@ from nova.tests.image import fake
 from nova.virt import images
 from nova.virt.powervm import blockdev as powervm_blockdev
 from nova.virt.powervm import common
+from nova.virt.powervm import constants
 from nova.virt.powervm import driver as powervm_driver
 from nova.virt.powervm import exception
 from nova.virt.powervm import lpar
 from nova.virt.powervm import operator as powervm_operator
 
 
-def fake_lpar(instance_name):
+def fake_lpar(instance_name, state=constants.POWERVM_RUNNING):
     return lpar.LPAR(name=instance_name,
                      lpar_id=1, desired_mem=1024,
                      max_mem=2048, max_procs=2,
-                     uptime=939395, state='Running')
+                     uptime=939395, state=state)
 
 
 def fake_ssh_connect(connection):
@@ -817,12 +818,6 @@ class PowerVMDriverTestCase(test.TestCase):
                           self.powervm_connection.plug_vifs,
                           instance=None, network_info=None)
 
-    def test_reboot(self):
-        # Check to make sure the method raises NotImplementedError.
-        self.assertRaises(NotImplementedError, self.powervm_connection.reboot,
-                          context=None, instance=None, network_info=None,
-                          reboot_type='SOFT')
-
     def test_manage_image_cache(self):
         # Check to make sure the method passes (does nothing) since
         # it's not implemented in the powervm driver and it passes
@@ -861,6 +856,28 @@ class PowerVMDriverTestCase(test.TestCase):
         self.assertRaises(NotImplementedError,
                           self.powervm_connection.host_power_action,
                           host='fake', action='die!')
+
+    def test_soft_reboot(self):
+        # Tests that soft reboot is a no-op (mock out the power_off/power_on
+        # methods to ensure they aren't called)
+        self.mox.StubOutWithMock(self.powervm_connection._powervm, 'power_off')
+        self.mox.StubOutWithMock(self.powervm_connection._powervm, 'power_on')
+        self.mox.ReplayAll()
+        self.powervm_connection.reboot(context.get_admin_context(),
+                                       self.instance, network_info=None,
+                                       reboot_type='SOFT')
+
+    def test_hard_reboot(self):
+        # Tests that hard reboot is performed by stopping the lpar and then
+        # starting it.
+        self.mox.StubOutWithMock(self.powervm_connection._powervm, 'power_off')
+        self.powervm_connection._powervm.power_off(self.instance['name'])
+        self.mox.StubOutWithMock(self.powervm_connection._powervm, 'power_on')
+        self.powervm_connection._powervm.power_on(self.instance['name'])
+        self.mox.ReplayAll()
+        self.powervm_connection.reboot(context.get_admin_context(),
+                                       self.instance, network_info=None,
+                                       reboot_type='HARD')
 
 
 class PowerVMDriverLparTestCase(test.TestCase):
@@ -1110,3 +1127,50 @@ class PowerVMLocalVolumeAdapterTestCase(test.TestCase):
         self.assertRaises(exception.PowerVMFileTransferFailed,
                           self.powervm_adapter._copy_image_file_from_host,
                           remote_path, local_path)
+
+
+class IVMOperatorTestCase(test.TestCase):
+    """Tests the IVMOperator class."""
+
+    def setUp(self):
+        super(IVMOperatorTestCase, self).setUp()
+        ivm_connection = common.Connection('fake_host', 'fake_user',
+                                           'fake_password')
+        self.ivm_operator = powervm_operator.IVMOperator(ivm_connection)
+
+    def test_start_lpar(self):
+        self.mox.StubOutWithMock(self.ivm_operator, 'run_vios_command')
+        self.ivm_operator.run_vios_command('chsysstate -r lpar -o on -n fake')
+        self.mox.ReplayAll()
+        self.ivm_operator.start_lpar('fake')
+
+    def test_stop_lpar(self):
+        instance_name = 'fake'
+        # mock the remote command call
+        self.mox.StubOutWithMock(self.ivm_operator, 'run_vios_command')
+        self.ivm_operator.run_vios_command('chsysstate -r lpar -o shutdown '
+                                           '--immed -n %s' % instance_name)
+        self.mox.StubOutWithMock(self.ivm_operator, 'get_lpar')
+        # the first time we check, the lpar is still running
+        lpar1 = fake_lpar(instance_name)
+        self.ivm_operator.get_lpar(instance_name).AndReturn(lpar1)
+        # the second time we check, the lpar is stopped
+        lpar2 = fake_lpar(instance_name, constants.POWERVM_SHUTDOWN)
+        self.ivm_operator.get_lpar(instance_name).AndReturn(lpar2)
+        self.mox.ReplayAll()
+        self.ivm_operator.stop_lpar(instance_name)
+
+    def test_stop_lpar_timeout(self):
+        instance_name = 'fake'
+        # mock the remote command call
+        self.mox.StubOutWithMock(self.ivm_operator, 'run_vios_command')
+        self.ivm_operator.run_vios_command('chsysstate -r lpar -o shutdown '
+                                           '--immed -n %s' % instance_name)
+        self.mox.StubOutWithMock(self.ivm_operator, 'get_lpar')
+        # the lpar is running and the timeout is 0 so we timeout
+        lpar1 = fake_lpar(instance_name)
+        self.ivm_operator.get_lpar(instance_name).AndReturn(lpar1)
+        self.mox.ReplayAll()
+        self.assertRaises(exception.PowerVMLPAROperationTimeout,
+                          self.ivm_operator.stop_lpar,
+                          instance_name=instance_name, timeout=0)
