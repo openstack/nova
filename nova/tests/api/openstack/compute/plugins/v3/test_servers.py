@@ -84,10 +84,6 @@ def return_servers_empty(context, *args, **kwargs):
     return []
 
 
-def return_security_group(context, instance_id, security_group_id):
-    pass
-
-
 def instance_update(context, instance_uuid, values, update_cells=True):
     inst = fakes.stub_instance(INSTANCE_IDS.get(instance_uuid),
                                name=values.get('display_name'))
@@ -172,8 +168,6 @@ class ControllerTest(test.TestCase):
                        return_servers)
         self.stubs.Set(db, 'instance_get_by_uuid',
                        return_server)
-        self.stubs.Set(db, 'instance_add_security_group',
-                       return_security_group)
         self.stubs.Set(db, 'instance_update_and_get_original',
                        instance_update)
 
@@ -1688,8 +1682,6 @@ class ServersControllerCreateTest(test.TestCase):
         fakes.stub_out_key_pair_funcs(self.stubs)
         fake.stub_out_image_service(self.stubs)
         self.stubs.Set(uuid, 'uuid4', fake_gen_uuid)
-        self.stubs.Set(db, 'instance_add_security_group',
-                       return_security_group)
         self.stubs.Set(db, 'project_get_networks',
                        project_get_networks)
         self.stubs.Set(db, 'instance_create', instance_create)
@@ -1856,48 +1848,6 @@ class ServersControllerCreateTest(test.TestCase):
         self.req.body = jsonutils.dumps(self.body)
         self.req.headers["content-type"] = "application/json"
         server = self.controller.create(self.req, self.body).obj['server']
-
-    # TODO(cyeoh): bp-v3-api-unittests
-    # This needs to be ported to the os-security-groups extension tests
-    # def test_create_instance_with_security_group_enabled(self):
-    #     self.ext_mgr.extensions = {'os-security-groups': 'fake'}
-    #     group = 'foo'
-    #     old_create = compute_api.API.create
-
-    #     def sec_group_get(ctx, proj, name):
-    #         if name == group:
-    #             return True
-    #         else:
-    #             raise exception.SecurityGroupNotFoundForProject(
-    #                 project_id=proj, security_group_id=name)
-
-    #     def create(*args, **kwargs):
-    #         self.assertEqual(kwargs['security_group'], [group])
-    #         return old_create(*args, **kwargs)
-
-    #     self.stubs.Set(db, 'security_group_get_by_name', sec_group_get)
-    #     # negative test
-    #     self.assertRaises(webob.exc.HTTPBadRequest,
-    #                       self._test_create_extra,
-    #                       {'security_groups': [{'name': 'bogus'}]})
-    #     # positive test - extra assert in create path
-    #     self.stubs.Set(compute_api.API, 'create', create)
-    #     self._test_create_extra({'security_groups': [{'name': group}]})
-
-    def test_create_instance_with_security_group_disabled(self):
-        group = 'foo'
-        params = {'security_groups': [{'name': group}]}
-        old_create = compute_api.API.create
-
-        def create(*args, **kwargs):
-            # NOTE(vish): if the security groups extension is not
-            #             enabled, then security groups passed in
-            #             are ignored.
-            self.assertEqual(kwargs['security_group'], ['default'])
-            return old_create(*args, **kwargs)
-
-        self.stubs.Set(compute_api.API, 'create', create)
-        self._test_create_extra(params)
 
     # TODO(cyeoh): bp-v3-api-unittests
     # This needs to be ported to the os-volumes extension tests
