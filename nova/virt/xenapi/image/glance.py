@@ -17,7 +17,6 @@ from oslo.config import cfg
 
 from nova import exception
 from nova.image import glance
-from nova.virt.xenapi import agent
 from nova.virt.xenapi import vm_utils
 
 CONF = cfg.CONF
@@ -60,10 +59,6 @@ class GlanceStore(object):
         props = params['properties'] = {}
         props['auto_disk_config'] = instance['auto_disk_config']
         props['os_type'] = instance['os_type'] or CONF.default_os_type
-
-        sys_meta = instance["system_metadata"]
-        if agent.USE_AGENT_SM_KEY in sys_meta:
-            props[agent.USE_AGENT_KEY] = sys_meta[agent.USE_AGENT_SM_KEY]
 
         try:
             self._call_glance_plugin(session, 'upload_vhd', params)
