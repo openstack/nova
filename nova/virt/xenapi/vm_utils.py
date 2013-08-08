@@ -1208,6 +1208,11 @@ def get_stream_funct_for(context, image_service, image_id):
     return stream_func
 
 
+def get_virtual_size(context, image_service, image_id):
+    meta = image_service.show(context, image_id)
+    return int(meta['size'])
+
+
 def _fetch_disk_image(context, session, instance, name_label, image_id,
                       image_type):
     """Fetch the image from Glance
@@ -1235,8 +1240,7 @@ def _fetch_disk_image(context, session, instance, name_label, image_id,
 
     image_service, image_id = glance.get_remote_image_service(
             context, image_id)
-    meta = image_service.show(context, image_id)
-    virtual_size = int(meta['size'])
+    virtual_size = get_virtual_size(context, image_service, image_id)
     vdi_size = virtual_size
     LOG.debug(_("Size for image %(image_id)s: %(virtual_size)d"),
               {'image_id': image_id, 'virtual_size': virtual_size},
