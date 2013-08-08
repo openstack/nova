@@ -63,6 +63,10 @@ def fake_compute_api_raises_invalid_state(*args, **kwargs):
             instance_uuid='fake')
 
 
+def fake_compute_api_raises_instance_not_found(*args, **kwargs):
+    raise exception.InstanceNotFound(instance_id='fake_id')
+
+
 def fake_compute_api_get(self, context, instance_uuid, want_objects=False):
     instance = fake_instance.fake_db_instance(
             id=1, uuid=instance_uuid, vm_state=vm_states.ACTIVE,
@@ -88,6 +92,17 @@ class AdminActionsTest(test.TestCase):
             ('suspend', 'suspend'),
             ('resume', 'resume'),
             ('migrate', 'resize'))
+
+    _actions_that_check_for_instance = (
+            # action, method
+            ('pause', 'pause'),
+            ('unpause', 'unpause'),
+            ('suspend', 'suspend'),
+            ('resume', 'resume'),
+            ('resetNetwork', 'reset_network'),
+            ('injectNetworkInfo', 'inject_network_info'),
+            ('lock', 'lock'),
+            ('unlock', 'unlock'))
 
     def setUp(self):
         super(AdminActionsTest, self).setUp()
@@ -127,6 +142,21 @@ class AdminActionsTest(test.TestCase):
             self.assertEqual(res.status_int, 409)
             self.assertIn("Cannot \'%(_action)s\' while instance" % locals(),
                     res.body)
+
+    def test_admin_api_actions_raise_not_found(self):
+        app = fakes.wsgi_app(init_only=('servers',))
+
+        for _action, _method in self._actions_that_check_for_instance:
+            self.stubs.Set(compute_api.API, _method,
+                fake_compute_api_raises_instance_not_found)
+
+            req = webob.Request.blank('/v2/fake/servers/%s/action' % self.UUID)
+            req.method = 'POST'
+            req.body = jsonutils.dumps({_action: None})
+            req.content_type = 'application/json'
+            res = req.get_response(app)
+            self.assertEqual(res.status_int, 404)
+            self.assertIn("could not be found", res.body)
 
     def test_migrate_live_enabled(self):
         ctxt = context.get_admin_context()

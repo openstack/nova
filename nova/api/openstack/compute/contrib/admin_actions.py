@@ -56,6 +56,8 @@ class AdminActionsController(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'pause')
+        except exception.InstanceNotFound:
+            raise exc.HTTPNotFound(_("Server not found"))
         except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::pause %s"), readable)
@@ -73,6 +75,8 @@ class AdminActionsController(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'unpause')
+        except exception.InstanceNotFound:
+            raise exc.HTTPNotFound(_("Server not found"))
         except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::unpause %s"), readable)
@@ -90,6 +94,8 @@ class AdminActionsController(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'suspend')
+        except exception.InstanceNotFound:
+            raise exc.HTTPNotFound(_("Server not found"))
         except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("compute.api::suspend %s"), readable)
@@ -107,6 +113,8 @@ class AdminActionsController(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'resume')
+        except exception.InstanceNotFound:
+            raise exc.HTTPNotFound(_("Server not found"))
         except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("compute.api::resume %s"), readable)
@@ -137,6 +145,8 @@ class AdminActionsController(wsgi.Controller):
         try:
             instance = self.compute_api.get(context, id)
             self.compute_api.reset_network(context, instance)
+        except exception.InstanceNotFound:
+            raise exc.HTTPNotFound(_("Server not found"))
         except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::reset_network %s"), readable)
