@@ -24,6 +24,7 @@ from nova import db
 from nova import exception
 from nova.network import model as network_model
 from nova.objects import instance
+from nova.objects import instance_info_cache
 from nova.objects import security_group
 from nova.openstack.common import timeutils
 from nova import test
@@ -428,6 +429,67 @@ class _TestInstanceObject(object):
 
     def test_system_metadata_change_tracking(self):
         self._test_metadata_change_tracking('system_metadata')
+
+    def test_create_stubbed(self):
+        ctxt = context.get_admin_context()
+        self.mox.StubOutWithMock(db, 'instance_create')
+        vals = {'host': 'foo-host',
+                'memory_mb': 128,
+                'system_metadata': {'foo': 'bar'}}
+        fake_inst = fake_instance.fake_db_instance(**vals)
+        db.instance_create(ctxt, vals).AndReturn(fake_inst)
+        self.mox.ReplayAll()
+        inst = instance.Instance()
+        inst.host = 'foo-host'
+        inst.memory_mb = 128
+        inst.system_metadata = {'foo': 'bar'}
+        inst.create(ctxt)
+
+    def test_create(self):
+        ctxt = context.get_admin_context()
+        inst1 = instance.Instance()
+        inst1.create(ctxt)
+        inst2 = instance.Instance.get_by_uuid(ctxt, inst1.uuid)
+        self.assertEqual(inst1.id, inst2.id)
+
+    def test_create_with_values(self):
+        ctxt = context.get_admin_context()
+        inst1 = instance.Instance()
+        inst1.host = 'foo-host'
+        inst1.create(ctxt)
+        self.assertEqual(inst1.host, 'foo-host')
+        inst2 = instance.Instance.get_by_uuid(ctxt, inst1.uuid)
+        self.assertEqual(inst2.host, 'foo-host')
+
+    def test_recreate_fails(self):
+        ctxt = context.get_admin_context()
+        inst = instance.Instance()
+        inst.create(ctxt)
+        self.assertRaises(exception.ObjectActionError, inst.create, ctxt)
+
+    def test_create_with_special_things(self):
+        ctxt = context.get_admin_context()
+        self.mox.StubOutWithMock(db, 'instance_create')
+        fake_inst = fake_instance.fake_db_instance()
+        db.instance_create(ctxt,
+                           {'host': 'foo-host',
+                            'security_groups': ['foo', 'bar'],
+                            'info_cache': {'network_info': '[]'},
+                            }
+                           ).AndReturn(fake_inst)
+        self.mox.ReplayAll()
+        inst = instance.Instance()
+        inst.host = 'foo-host'
+        secgroups = security_group.SecurityGroupList()
+        secgroups.objects = []
+        for name in ('foo', 'bar'):
+            secgroup = security_group.SecurityGroup()
+            secgroup.name = name
+            secgroups.objects.append(secgroup)
+        inst.security_groups = secgroups
+        inst.info_cache = instance_info_cache.InstanceInfoCache()
+        inst.info_cache.network_info = []
+        inst.create(ctxt)
 
 
 class TestInstanceObject(test_objects._LocalTest,

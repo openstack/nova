@@ -230,10 +230,9 @@ class Instance(base.NovaObject):
                 instance[field] = db_inst[field]
 
         if 'metadata' in expected_attrs:
-            instance['metadata'] = utils.metadata_to_dict(db_inst['metadata'])
+            instance['metadata'] = utils.instance_meta(db_inst)
         if 'system_metadata' in expected_attrs:
-            instance['system_metadata'] = utils.metadata_to_dict(
-                db_inst['system_metadata'])
+            instance['system_metadata'] = utils.instance_sys_meta(db_inst)
         if 'fault' in expected_attrs:
             instance['fault'] = (
                 instance_fault.InstanceFault.get_latest_for_instance(
@@ -288,6 +287,26 @@ class Instance(base.NovaObject):
                                   columns_to_join=columns_to_join)
         return cls._from_db_object(context, cls(), db_inst,
                                    expected_attrs)
+
+    @base.remotable
+    def create(self, context):
+        if hasattr(self, base.get_attrname('id')):
+            raise exception.ObjectActionError(action='create',
+                                              reason='already created')
+        updates = {}
+        for attr in self.obj_what_changed() - set(['id']):
+            updates[attr] = self[attr]
+        expected_attrs = [attr for attr in INSTANCE_DEFAULT_FIELDS
+                          if attr in updates]
+        if 'security_groups' in updates:
+            updates['security_groups'] = [x.name for x in
+                                          updates['security_groups']]
+        if 'info_cache' in updates:
+            updates['info_cache'] = {
+                'network_info': updates['info_cache'].network_info.json()
+                }
+        db_inst = db.instance_create(context, updates)
+        Instance._from_db_object(context, self, db_inst, expected_attrs)
 
     def _save_info_cache(self, context):
         self.info_cache.save(context)
