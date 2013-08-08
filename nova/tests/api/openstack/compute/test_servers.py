@@ -1061,6 +1061,128 @@ class ServersControllerTest(ControllerTest):
         self.assertEqual(len(servers), 1)
         self.assertEqual(servers[0]['id'], server_uuid)
 
+    def test_get_all_server_details(self):
+        expected_flavor = {
+            "id": "1",
+            "links": [
+                {
+                    "rel": "bookmark",
+                    "href": 'http://localhost/fake/flavors/1',
+                },
+            ],
+        }
+        expected_image = {
+            "id": "10",
+            "links": [
+                {
+                    "rel": "bookmark",
+                    "href": 'http://localhost/fake/images/10',
+                },
+            ],
+        }
+        req = fakes.HTTPRequest.blank('/fake/servers/detail')
+        res_dict = self.controller.detail(req)
+
+        for i, s in enumerate(res_dict['servers']):
+            self.assertEqual(s['id'], fakes.get_fake_uuid(i))
+            self.assertEqual(s['hostId'], '')
+            self.assertEqual(s['name'], 'server%d' % (i + 1))
+            self.assertEqual(s['image'], expected_image)
+            self.assertEqual(s['flavor'], expected_flavor)
+            self.assertEqual(s['status'], 'BUILD')
+            self.assertEqual(s['metadata']['seq'], str(i + 1))
+
+    def test_get_all_server_details_with_host(self):
+        '''
+        We want to make sure that if two instances are on the same host, then
+        they return the same hostId. If two instances are on different hosts,
+        they should return different hostId's. In this test, there are 5
+        instances - 2 on one host and 3 on another.
+        '''
+
+        def return_servers_with_host(context, *args, **kwargs):
+            return [fakes.stub_instance(i + 1, 'fake', 'fake', host=i % 2,
+                                        uuid=fakes.get_fake_uuid(i))
+                    for i in xrange(5)]
+
+        self.stubs.Set(db, 'instance_get_all_by_filters',
+                       return_servers_with_host)
+
+        req = fakes.HTTPRequest.blank('/fake/servers/detail')
+        res_dict = self.controller.detail(req)
+
+        server_list = res_dict['servers']
+        host_ids = [server_list[0]['hostId'], server_list[1]['hostId']]
+        self.assertTrue(host_ids[0] and host_ids[1])
+        self.assertNotEqual(host_ids[0], host_ids[1])
+
+        for i, s in enumerate(server_list):
+            self.assertEqual(s['id'], fakes.get_fake_uuid(i))
+            self.assertEqual(s['hostId'], host_ids[i % 2])
+            self.assertEqual(s['name'], 'server%d' % (i + 1))
+
+    def _delete_server_instance(self, uuid=FAKE_UUID):
+        fakes.stub_out_instance_quota(self.stubs, 0, 10)
+        req = fakes.HTTPRequest.blank('/fake/servers/%s' % uuid)
+        req.method = 'DELETE'
+
+        self.server_delete_called = False
+
+        self.stubs.Set(db, 'instance_get_by_uuid',
+                       fakes.fake_instance_get(vm_state=vm_states.ACTIVE))
+
+        def instance_destroy_mock(*args, **kwargs):
+            self.server_delete_called = True
+        self.stubs.Set(db, 'instance_destroy', instance_destroy_mock)
+
+        self.controller.delete(req, uuid)
+
+    def test_delete_server_instance(self):
+        self._delete_server_instance()
+        self.assertEqual(self.server_delete_called, True)
+
+    def test_delete_server_instance_not_found(self):
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          self._delete_server_instance,
+                          uuid='non-existent-uuid')
+
+    def test_delete_server_instance_while_building(self):
+        fakes.stub_out_instance_quota(self.stubs, 0, 10)
+        req = fakes.HTTPRequest.blank('/fake/servers/%s' % FAKE_UUID)
+        req.method = 'DELETE'
+
+        self.server_delete_called = False
+
+        def instance_destroy_mock(*args, **kwargs):
+            self.server_delete_called = True
+        self.stubs.Set(db, 'instance_destroy', instance_destroy_mock)
+
+        self.controller.delete(req, FAKE_UUID)
+
+        self.assertEqual(self.server_delete_called, True)
+
+    def test_delete_server_instance_while_resize(self):
+        req = fakes.HTTPRequest.blank('/fake/servers/%s' % FAKE_UUID)
+        req.method = 'DELETE'
+
+        self.server_delete_called = False
+
+        self.stubs.Set(db, 'instance_get_by_uuid',
+            fakes.fake_instance_get(vm_state=vm_states.ACTIVE,
+                                    task_state=task_states.RESIZE_PREP))
+
+        def instance_destroy_mock(*args, **kwargs):
+            self.server_delete_called = True
+        self.stubs.Set(db, 'instance_destroy', instance_destroy_mock)
+
+        self.controller.delete(req, FAKE_UUID)
+        # Delete shoud be allowed in any case, even during resizing,
+        # because it may get stuck.
+        self.assertEqual(self.server_delete_called, True)
+
+
+class ServersControllerUpdateTest(ControllerTest):
+
     def test_update_server_all_attributes(self):
         self.stubs.Set(db, 'instance_get',
                 fakes.fake_instance_get(name='server_test',
@@ -1306,125 +1428,6 @@ class ServersControllerTest(ControllerTest):
         req.body = jsonutils.dumps(body)
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.update,
                           req, FAKE_UUID, body)
-
-    def test_get_all_server_details(self):
-        expected_flavor = {
-            "id": "1",
-            "links": [
-                {
-                    "rel": "bookmark",
-                    "href": 'http://localhost/fake/flavors/1',
-                },
-            ],
-        }
-        expected_image = {
-            "id": "10",
-            "links": [
-                {
-                    "rel": "bookmark",
-                    "href": 'http://localhost/fake/images/10',
-                },
-            ],
-        }
-        req = fakes.HTTPRequest.blank('/fake/servers/detail')
-        res_dict = self.controller.detail(req)
-
-        for i, s in enumerate(res_dict['servers']):
-            self.assertEqual(s['id'], fakes.get_fake_uuid(i))
-            self.assertEqual(s['hostId'], '')
-            self.assertEqual(s['name'], 'server%d' % (i + 1))
-            self.assertEqual(s['image'], expected_image)
-            self.assertEqual(s['flavor'], expected_flavor)
-            self.assertEqual(s['status'], 'BUILD')
-            self.assertEqual(s['metadata']['seq'], str(i + 1))
-
-    def test_get_all_server_details_with_host(self):
-        '''
-        We want to make sure that if two instances are on the same host, then
-        they return the same hostId. If two instances are on different hosts,
-        they should return different hostId's. In this test, there are 5
-        instances - 2 on one host and 3 on another.
-        '''
-
-        def return_servers_with_host(context, *args, **kwargs):
-            return [fakes.stub_instance(i + 1, 'fake', 'fake', host=i % 2,
-                                        uuid=fakes.get_fake_uuid(i))
-                    for i in xrange(5)]
-
-        self.stubs.Set(db, 'instance_get_all_by_filters',
-                       return_servers_with_host)
-
-        req = fakes.HTTPRequest.blank('/fake/servers/detail')
-        res_dict = self.controller.detail(req)
-
-        server_list = res_dict['servers']
-        host_ids = [server_list[0]['hostId'], server_list[1]['hostId']]
-        self.assertTrue(host_ids[0] and host_ids[1])
-        self.assertNotEqual(host_ids[0], host_ids[1])
-
-        for i, s in enumerate(server_list):
-            self.assertEqual(s['id'], fakes.get_fake_uuid(i))
-            self.assertEqual(s['hostId'], host_ids[i % 2])
-            self.assertEqual(s['name'], 'server%d' % (i + 1))
-
-    def _delete_server_instance(self, uuid=FAKE_UUID):
-        fakes.stub_out_instance_quota(self.stubs, 0, 10)
-        req = fakes.HTTPRequest.blank('/fake/servers/%s' % uuid)
-        req.method = 'DELETE'
-
-        self.server_delete_called = False
-
-        self.stubs.Set(db, 'instance_get_by_uuid',
-                       fakes.fake_instance_get(vm_state=vm_states.ACTIVE))
-
-        def instance_destroy_mock(*args, **kwargs):
-            self.server_delete_called = True
-        self.stubs.Set(db, 'instance_destroy', instance_destroy_mock)
-
-        self.controller.delete(req, uuid)
-
-    def test_delete_server_instance(self):
-        self._delete_server_instance()
-        self.assertEqual(self.server_delete_called, True)
-
-    def test_delete_server_instance_not_found(self):
-        self.assertRaises(webob.exc.HTTPNotFound,
-                          self._delete_server_instance,
-                          uuid='non-existent-uuid')
-
-    def test_delete_server_instance_while_building(self):
-        fakes.stub_out_instance_quota(self.stubs, 0, 10)
-        req = fakes.HTTPRequest.blank('/fake/servers/%s' % FAKE_UUID)
-        req.method = 'DELETE'
-
-        self.server_delete_called = False
-
-        def instance_destroy_mock(*args, **kwargs):
-            self.server_delete_called = True
-        self.stubs.Set(db, 'instance_destroy', instance_destroy_mock)
-
-        self.controller.delete(req, FAKE_UUID)
-
-        self.assertEqual(self.server_delete_called, True)
-
-    def test_delete_server_instance_while_resize(self):
-        req = fakes.HTTPRequest.blank('/fake/servers/%s' % FAKE_UUID)
-        req.method = 'DELETE'
-
-        self.server_delete_called = False
-
-        self.stubs.Set(db, 'instance_get_by_uuid',
-            fakes.fake_instance_get(vm_state=vm_states.ACTIVE,
-                                    task_state=task_states.RESIZE_PREP))
-
-        def instance_destroy_mock(*args, **kwargs):
-            self.server_delete_called = True
-        self.stubs.Set(db, 'instance_destroy', instance_destroy_mock)
-
-        self.controller.delete(req, FAKE_UUID)
-        # Delete shoud be allowed in any case, even during resizing,
-        # because it may get stuck.
-        self.assertEqual(self.server_delete_called, True)
 
 
 class ServersControllerRebuildInstanceTest(ControllerTest):
