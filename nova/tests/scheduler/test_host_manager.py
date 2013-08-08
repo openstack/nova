@@ -437,7 +437,7 @@ class HostStateTestCase(test.NoDBTestCase):
         ]
         compute = dict(stats=stats, memory_mb=0, free_disk_gb=0, local_gb=0,
                        local_gb_used=0, free_ram_mb=0, vcpus=0, vcpus_used=0,
-                       updated_at=None)
+                       updated_at=None, host_ip='127.0.0.1')
 
         host = host_manager.HostState("fakehost", "fakenode")
         host.update_from_compute_node(compute)

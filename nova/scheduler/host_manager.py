@@ -120,6 +120,9 @@ class HostState(object):
         self.num_instances_by_os_type = {}
         self.num_io_ops = 0
 
+        # Other information
+        self.host_ip = None
+
         # Resource oversubscription values for the compute host:
         self.limits = {}
 
@@ -157,6 +160,8 @@ class HostState(object):
         self.vcpus_total = compute['vcpus']
         self.vcpus_used = compute['vcpus_used']
         self.updated = compute['updated_at']
+
+        self.host_ip = compute['host_ip']
 
         stats = compute.get('stats', [])
         statmap = self._statmap(stats)
