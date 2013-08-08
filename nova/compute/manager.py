@@ -409,10 +409,10 @@ class ComputeManager(manager.SchedulerDependentManager):
     def _get_resource_tracker(self, nodename):
         rt = self._resource_tracker_dict.get(nodename)
         if not rt:
-            if nodename not in self.driver.get_available_nodes():
+            if not self.driver.node_is_available(nodename):
                 raise exception.NovaException(
-                    _("%s is not a valid node managed by this "
-                      "compute host.") % nodename)
+                        _("%s is not a valid node managed by this "
+                          "compute host.") % nodename)
 
             rt = resource_tracker.ResourceTracker(self.host,
                                                   self.driver,
@@ -427,8 +427,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                           instance_uuid,
                                                           **kwargs)
         if (instance_ref['host'] == self.host and
-                instance_ref['node'] in self.driver.get_available_nodes()):
-
+                self.driver.node_is_available(instance_ref['node'])):
             rt = self._get_resource_tracker(instance_ref.get('node'))
             rt.update_usage(context, instance_ref)
 
@@ -793,7 +792,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     def pre_start_hook(self, **kwargs):
         """After the service is initialized, but before we fully bring
         the service up by listening on RPC queues, make sure to update
-        our available resources.
+        our available resources (and indirectly our available nodes).
         """
         self.update_available_resource(nova.context.get_admin_context())
 
@@ -1064,7 +1063,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             security_groups = []
 
         if node is None:
-            node = self.driver.get_available_nodes()[0]
+            node = self.driver.get_available_nodes(refresh=True)[0]
             LOG.debug(_("No node specified, defaulting to %s"), node)
 
         network_info = None
@@ -2706,7 +2705,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         """
         if node is None:
-            node = self.driver.get_available_nodes()[0]
+            node = self.driver.get_available_nodes(refresh=True)[0]
             LOG.debug(_("No node specified, defaulting to %s"), node)
 
         with self._error_out_instance_on_exception(context, instance['uuid'],

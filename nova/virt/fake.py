@@ -443,7 +443,7 @@ class FakeDriver(driver.ComputeDriver):
     def get_volume_connector(self, instance):
         return {'ip': '127.0.0.1', 'initiator': 'fake', 'host': 'fakehost'}
 
-    def get_available_nodes(self):
+    def get_available_nodes(self, refresh=False):
         return _FAKE_NODES
 
     def instance_on_disk(self, instance):
