@@ -14,8 +14,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from xml.dom import minidom
-
 import webob
 from webob import exc
 
@@ -27,6 +25,7 @@ from nova import exception
 from nova.network.security_group import openstack_driver
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
+from nova.openstack.common import xmlutils
 
 
 LOG = logging.getLogger(__name__)
@@ -74,7 +73,7 @@ class SecurityGroupDefaultRuleTemplate(xmlutil.TemplateBuilder):
 
 class SecurityGroupDefaultRulesXMLDeserializer(wsgi.MetadataXMLDeserializer):
     def default(self, string):
-        dom = minidom.parseString(string)
+        dom = xmlutils.safe_minidom_parse_string(string)
         security_group_rule = self._extract_security_group_default_rule(dom)
         return {'body': {'security_group_default_rule': security_group_rule}}
 
