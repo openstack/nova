@@ -38,6 +38,8 @@ from nova.virt import driver
 from nova.virt import firewall
 from nova.virt.libvirt import imagecache
 
+LOG = logging.getLogger(__name__)
+
 opts = [
     cfg.BoolOpt('inject_password',
                 default=True,
@@ -79,6 +81,7 @@ CONF = cfg.CONF
 CONF.register_group(baremetal_group)
 CONF.register_opts(opts, baremetal_group)
 CONF.import_opt('host', 'nova.netconf')
+CONF.import_opt('my_ip', 'nova.netconf')
 
 DEFAULT_FIREWALL_DRIVER = "%s.%s" % (
     firewall.__name__,
@@ -502,3 +505,23 @@ class BareMetalDriver(driver.ComputeDriver):
         context = nova_context.get_admin_context()
         return [str(n['uuid']) for n in
                 db.bm_node_get_all(context, service_host=CONF.host)]
+
+    def dhcp_options_for_instance(self, instance):
+        # NOTE(deva): This only works for PXE driver currently.
+        try:
+            bootfile_path = self.driver.get_pxe_config_file_path(instance)
+        except AttributeError as ex:
+            # NOTE: not all drivers are going to support PXE boot capability
+            LOG.exception(_("Exception no pxe bootfile-name path: %s"),
+                          unicode(ex))
+            return None
+
+        opts = [{'opt_name': 'bootfile-name',
+                 'opt_value': bootfile_path},
+                {'opt_name': 'server-ip-address',
+                 'opt_value': CONF.my_ip},
+                {'opt_name': 'tftp-server',
+                 'opt_value': CONF.my_ip}
+               ]
+
+        return opts

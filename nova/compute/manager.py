@@ -1078,9 +1078,11 @@ class ComputeManager(manager.SchedulerDependentManager):
             limits = filter_properties.get('limits', {})
             with rt.instance_claim(context, instance, limits):
                 macs = self.driver.macs_for_instance(instance)
+                dhcp_options = self.driver.dhcp_options_for_instance(instance)
 
                 network_info = self._allocate_network(context, instance,
-                        requested_networks, macs, security_groups)
+                        requested_networks, macs, security_groups,
+                        dhcp_options)
 
                 self._instance_update(
                         context, instance['uuid'],
@@ -1266,7 +1268,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                    None))
 
     def _allocate_network_async(self, context, instance, requested_networks,
-                                macs, security_groups, is_vpn):
+                                macs, security_groups, is_vpn, dhcp_options):
         """Method used to allocate networks in the background.
 
         Broken out for testing.
@@ -1287,7 +1289,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                         requested_networks=requested_networks,
                         macs=macs,
                         conductor_api=self.conductor_api,
-                        security_groups=security_groups)
+                        security_groups=security_groups,
+                        dhcp_options=dhcp_options)
                 LOG.debug(_('Instance network_info: |%s|'), nwinfo,
                           instance=instance)
                 return nwinfo
@@ -1310,7 +1313,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         # Not reached.
 
     def _allocate_network(self, context, instance, requested_networks, macs,
-                          security_groups):
+                          security_groups, dhcp_options):
         """Start network allocation asynchronously.  Return an instance
         of NetworkInfoAsyncWrapper that can be used to retrieve the
         allocated networks when the operation has finished.
@@ -1325,7 +1328,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         is_vpn = pipelib.is_vpn_image(instance['image_ref'])
         return network_model.NetworkInfoAsyncWrapper(
                 self._allocate_network_async, context, instance,
-                requested_networks, macs, security_groups, is_vpn)
+                requested_networks, macs, security_groups, is_vpn,
+                dhcp_options)
 
     def _prep_block_device(self, context, instance, bdms):
         """Set up the block device for an instance with error logging."""

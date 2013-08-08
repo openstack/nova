@@ -85,6 +85,9 @@ neutron_opts = [
     cfg.StrOpt('neutron_ca_certificates_file',
                 help='Location of ca certicates file to use for neutronclient'
                      ' requests.'),
+    cfg.BoolOpt('dhcp_options_enabled',
+                default=False,
+                help='Use per-port DHCP options with Neutron'),
     ]
 
 CONF = cfg.CONF
@@ -155,9 +158,15 @@ class API(base.Base):
             function correctly if more than one network is being used with
             the bare metal hypervisor (which is the only one known to limit
             MAC addresses).
+        :param dhcp_options: None or a set of key/value pairs that should
+            determine the DHCP BOOTP response, eg. for PXE booting an instance
+            configured with the baremetal hypervisor. It is expected that these
+            are already formatted for the quantum v2 api.
+            See nova/virt/driver.py:dhcp_options_for_instance for an example.
         """
         hypervisor_macs = kwargs.get('macs', None)
         available_macs = None
+        dhcp_opts = None
         if hypervisor_macs is not None:
             # Make a copy we can mutate: records macs that have not been used
             # to create a port on a network. If we find a mac with a
@@ -171,6 +180,10 @@ class API(base.Base):
             raise exception.InvalidInput(
                 reason=msg % instance['display_name'])
         requested_networks = kwargs.get('requested_networks')
+        # Note: (dkehn) this option check should be removed as soon as support
+        # in neutron released, see https://bugs.launchpad.net/nova/+bug/1214162
+        if CONF.dhcp_options_enabled:
+            dhcp_opts = kwargs.get('dhcp_options', None)
         ports = {}
         fixed_ips = {}
         net_ids = []
@@ -282,6 +295,8 @@ class API(base.Base):
                                 instance=instance['display_name'])
                         mac_address = available_macs.pop()
                         port_req_body['port']['mac_address'] = mac_address
+                    if dhcp_opts is not None:
+                        port_req_body['port']['extra_dhcp_opts'] = dhcp_opts
                     created_port_ids.append(
                         port_client.create_port(port_req_body)['port']['id'])
             except Exception:
