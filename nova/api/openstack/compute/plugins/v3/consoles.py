@@ -85,20 +85,28 @@ class ConsolesController(object):
     def __init__(self):
         self.console_api = console_api.API()
 
+    @extensions.expected_errors(404)
     @wsgi.serializers(xml=ConsolesTemplate)
     def index(self, req, server_id):
         """Returns a list of consoles for this instance."""
-        consoles = self.console_api.get_consoles(
-                                    req.environ['nova.context'],
-                                    server_id)
+        try:
+            consoles = self.console_api.get_consoles(
+                req.environ['nova.context'], server_id)
+        except exception.InstanceNotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
         return dict(consoles=[_translate_keys(console)
                               for console in consoles])
 
+    @extensions.expected_errors(404)
     def create(self, req, server_id):
         """Creates a new console."""
-        self.console_api.create_console(
-                                req.environ['nova.context'], server_id)
+        try:
+            self.console_api.create_console(
+                req.environ['nova.context'], server_id)
+        except exception.InstanceNotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
 
+    @extensions.expected_errors(404)
     @wsgi.serializers(xml=ConsoleTemplate)
     def show(self, req, server_id, id):
         """Shows in-depth information on a specific console."""
@@ -107,18 +115,19 @@ class ConsolesController(object):
                                         req.environ['nova.context'],
                                         server_id,
                                         int(id))
-        except exception.NotFound:
-            raise exc.HTTPNotFound()
+        except exception.ConsoleNotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
         return _translate_detail_keys(console)
 
+    @extensions.expected_errors(404)
     def delete(self, req, server_id, id):
         """Deletes a console."""
         try:
             self.console_api.delete_console(req.environ['nova.context'],
                                             server_id,
                                             int(id))
-        except exception.NotFound:
-            raise exc.HTTPNotFound()
+        except exception.ConsoleNotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
         return webob.Response(status_int=202)
 
 
