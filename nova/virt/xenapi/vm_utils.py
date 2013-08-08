@@ -29,7 +29,6 @@ import time
 import urllib
 import urlparse
 import uuid
-from xml.dom import minidom
 from xml.parsers import expat
 
 from eventlet import greenthread
@@ -44,6 +43,7 @@ from nova import exception
 from nova.image import glance
 from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
+from nova.openstack.common import xmlutils
 from nova import utils
 from nova.virt import configdrive
 from nova.virt.disk import api as disk
@@ -1437,7 +1437,7 @@ def compile_diagnostics(record):
         vm_uuid = record["uuid"]
         xml = _get_rrd(_get_rrd_server(), vm_uuid)
         if xml:
-            rrd = minidom.parseString(xml)
+            rrd = xmlutils.safe_minidom_parse_string(xml)
             for i, node in enumerate(rrd.firstChild.childNodes):
                 # Provide the last update of the information
                 if node.localName == 'lastupdate':
