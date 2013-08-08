@@ -44,8 +44,8 @@ class DeferredDeleteExtensionTest(test.TestCase):
 
         fake_instance = 'fake_instance'
 
-        compute_api.API.get(self.fake_context, self.fake_uuid).AndReturn(
-                fake_instance)
+        compute_api.API.get(self.fake_context, self.fake_uuid,
+                            want_objects=True).AndReturn(fake_instance)
         compute_api.API.force_delete(self.fake_context, fake_instance)
 
         self.mox.ReplayAll()
@@ -56,7 +56,8 @@ class DeferredDeleteExtensionTest(test.TestCase):
     def test_force_delete_instance_not_found(self):
         self.mox.StubOutWithMock(compute_api.API, 'get')
 
-        compute_api.API.get(self.fake_context, self.fake_uuid).AndRaise(
+        compute_api.API.get(self.fake_context, self.fake_uuid,
+                            want_objects=True).AndRaise(
             exception.InstanceNotFound(instance_id='instance-0000'))
 
         self.mox.ReplayAll()
@@ -72,7 +73,8 @@ class DeferredDeleteExtensionTest(test.TestCase):
 
         fake_instance = 'fake_instance'
 
-        compute_api.API.get(self.fake_context, self.fake_uuid).AndReturn(
+        compute_api.API.get(self.fake_context, self.fake_uuid,
+                            want_objects=True).AndReturn(
                 fake_instance)
 
         exc = exception.InstanceInvalidState(attr='fake_attr',

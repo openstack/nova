@@ -80,8 +80,8 @@ class DeferredDeleteExtensionTest(test.TestCase):
 
         fake_instance = 'fake_instance'
 
-        compute_api.API.get(self.fake_context, self.fake_uuid).AndReturn(
-                fake_instance)
+        compute_api.API.get(self.fake_context, self.fake_uuid,
+                            want_objects=True).AndReturn(fake_instance)
         compute_api.API.restore(self.fake_context, fake_instance)
 
         self.mox.ReplayAll()
@@ -98,8 +98,8 @@ class DeferredDeleteExtensionTest(test.TestCase):
                 state='fake_state', method='fake_method',
                 instance_uuid='fake')
 
-        compute_api.API.get(self.fake_context, self.fake_uuid).AndReturn(
-                fake_instance)
+        compute_api.API.get(self.fake_context, self.fake_uuid,
+                            want_objects=True).AndReturn(fake_instance)
         compute_api.API.restore(self.fake_context, fake_instance).AndRaise(
                 exc)
 

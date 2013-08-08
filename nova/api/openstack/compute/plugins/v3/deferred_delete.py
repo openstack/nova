@@ -61,7 +61,7 @@ class DeferredDeleteController(wsgi.Controller):
         context = req.environ["nova.context"]
         authorize(context)
         try:
-            instance = self.compute_api.get(context, id)
+            instance = self.compute_api.get(context, id, want_objects=True)
         except exception.InstanceNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
         try:
