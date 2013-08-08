@@ -40,6 +40,11 @@ def format_action(action):
         del(action['id'])
     if 'finish_time' in action:
         del(action['finish_time'])
+    if 'start_time' in action:
+        # NOTE(danms): Without WSGI above us, these will be just stringified
+        action['start_time'] = str(action['start_time'])
+    for event in action.get('events', []):
+        format_event(event)
     return action
 
 
@@ -47,6 +52,12 @@ def format_event(event):
     '''Remove keys that aren't serialized.'''
     if 'id' in event:
         del(event['id'])
+    if 'start_time' in event:
+        # NOTE(danms): Without WSGI above us, these will be just stringified
+        event['start_time'] = str(event['start_time'])
+    if 'finish_time' in event:
+        # NOTE(danms): Without WSGI above us, these will be just stringified
+        event['finish_time'] = str(event['finish_time'])
     return event
 
 
@@ -121,8 +132,7 @@ class InstanceActionsTest(test.TestCase):
         res_dict = self.controller.index(req, FAKE_UUID)
         for res in res_dict['instanceActions']:
             fake_action = self.fake_actions[FAKE_UUID][res['request_id']]
-            fake_action = format_action(fake_action)
-            self.assertEqual(fake_action, res)
+            self.assertEqual(format_action(fake_action), format_action(res))
 
     def test_get_action_with_events_allowed(self):
         def fake_get_action(context, uuid, request_id):
@@ -149,7 +159,8 @@ class InstanceActionsTest(test.TestCase):
         fake_events = [format_event(event) for event in fake_events]
         fake_action = format_action(fake_action)
         fake_action['events'] = fake_events
-        self.assertEqual(fake_action, res_dict['instanceAction'])
+        self.assertEqual(format_action(fake_action),
+                         format_action(res_dict['instanceAction']))
 
     def test_get_action_with_events_not_allowed(self):
         def fake_get_action(context, uuid, request_id):
@@ -170,8 +181,8 @@ class InstanceActionsTest(test.TestCase):
                                 '/v2/123/servers/12/os-instance-actions/1')
         res_dict = self.controller.show(req, FAKE_UUID, FAKE_REQUEST_ID)
         fake_action = self.fake_actions[FAKE_UUID][FAKE_REQUEST_ID]
-        fake_action = format_action(fake_action)
-        self.assertEqual(fake_action, res_dict['instanceAction'])
+        self.assertEqual(format_action(fake_action),
+                         format_action(res_dict['instanceAction']))
 
     def test_action_not_found(self):
         def fake_no_action(context, uuid, action_id):

@@ -5,7 +5,7 @@
             "request_id": "%(request_id)s",
             "user_id": "%(integer_id)s",
             "project_id": "%(integer_id)s",
-            "start_time": "%(start_time)s",
+            "start_time": "%(timestamp)s",
             "message": "",
             "events": [
                 {
