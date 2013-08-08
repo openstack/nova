@@ -1399,3 +1399,11 @@ class PciDevicePoolEmpty(NovaException):
     msg_fmt = _(
         "Attempt to consume PCI Device %(compute_node_id)s:%(address)s "
         "from empty pool")
+
+
+class PciInvalidAlias(NovaException):
+    msg_fmt = _("Invalid PCI alias definition: %(reason)s")
+
+
+class PciRequestAliasNotDefined(NovaException):
+    msg_fmt = _("PCI alias %(alias)s is not defined")
