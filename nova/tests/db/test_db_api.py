@@ -21,6 +21,7 @@
 
 import copy
 import datetime
+import iso8601
 import types
 import uuid as stdlib_uuid
 
@@ -1271,6 +1272,41 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def test_instance_create(self):
         instance = self.create_instance_with_args()
         self.assertTrue(uuidutils.is_uuid_like(instance['uuid']))
+
+    def test_instance_create_with_object_values(self):
+        values = {
+            'access_ip_v4': netaddr.IPAddress('1.2.3.4'),
+            'access_ip_v6': netaddr.IPAddress('::1'),
+            }
+        dt_keys = ('created_at', 'deleted_at', 'updated_at',
+                   'launched_at', 'terminated_at', 'scheduled_at')
+        dt = timeutils.utcnow()
+        dt_utc = dt.replace(tzinfo=iso8601.iso8601.Utc())
+        for key in dt_keys:
+            values[key] = dt_utc
+        inst = db.instance_create(self.ctxt, values)
+        self.assertEqual(inst['access_ip_v4'], '1.2.3.4')
+        self.assertEqual(inst['access_ip_v6'], '::1')
+        for key in dt_keys:
+            self.assertEqual(inst[key], dt)
+
+    def test_instance_update_with_object_values(self):
+        values = {
+            'access_ip_v4': netaddr.IPAddress('1.2.3.4'),
+            'access_ip_v6': netaddr.IPAddress('::1'),
+            }
+        dt_keys = ('created_at', 'deleted_at', 'updated_at',
+                   'launched_at', 'terminated_at', 'scheduled_at')
+        dt = timeutils.utcnow()
+        dt_utc = dt.replace(tzinfo=iso8601.iso8601.Utc())
+        for key in dt_keys:
+            values[key] = dt_utc
+        inst = db.instance_create(self.ctxt, {})
+        inst = db.instance_update(self.ctxt, inst['uuid'], values)
+        self.assertEqual(inst['access_ip_v4'], '1.2.3.4')
+        self.assertEqual(inst['access_ip_v6'], '::1')
+        for key in dt_keys:
+            self.assertEqual(inst[key], dt)
 
     def test_instance_get_all_with_meta(self):
         inst = self.create_instance_with_args()
