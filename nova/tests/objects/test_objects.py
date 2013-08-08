@@ -82,6 +82,15 @@ class MyObj2(object):
         pass
 
 
+class RandomMixInWithNoFields(object):
+    """Used to test object inheritance using a mixin that has no fields."""
+    pass
+
+
+class TestSubclassedObject(RandomMixInWithNoFields, MyObj):
+    fields = {'new_field': str}
+
+
 class TestMetaclass(test.TestCase):
     def test_obj_tracking(self):
 
@@ -494,6 +503,18 @@ class _TestObject(object):
         self.assertRaises(AttributeError, obj.get, 'nothing')
         # ...even with a default
         self.assertRaises(AttributeError, obj.get, 'nothing', 3)
+
+    def test_object_inheritance(self):
+        base_fields = base.NovaObject.fields.keys()
+        myobj_fields = ['foo', 'bar', 'missing'] + base_fields
+        myobj3_fields = ['new_field']
+        self.assertTrue(issubclass(TestSubclassedObject, MyObj))
+        self.assertEqual(len(myobj_fields), len(MyObj.fields))
+        self.assertEqual(set(myobj_fields), set(MyObj.fields.keys()))
+        self.assertEqual(len(myobj_fields) + len(myobj3_fields),
+                         len(TestSubclassedObject.fields))
+        self.assertEqual(set(myobj_fields) | set(myobj3_fields),
+                         set(TestSubclassedObject.fields.keys()))
 
 
 class TestObject(_LocalTest, _TestObject):
