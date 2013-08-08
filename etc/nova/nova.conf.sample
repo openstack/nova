@@ -1678,6 +1678,16 @@
 
 
 #
+# Options defined in nova.pci.pci_whitelist
+#
+
+# White list of PCI devices available to VMs. For example:
+# pci_passthrough_whitelist =  [{"vendor_id": "8086",
+# "product_id": "0443"}] (multi valued)
+#pci_passthrough_whitelist=
+
+
+#
 # Options defined in nova.scheduler.driver
 #
 

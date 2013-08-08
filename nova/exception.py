@@ -1419,3 +1419,7 @@ class MissingParameter(NovaException):
     ec2_code = 'MissingParameter'
     msg_fmt = _("Not enough parameters: %(reason)s")
     code = 400
+
+
+class PciConfigInvalidWhitelist(Invalid):
+    mst_fmt = _("Invalid PCI devices Whitelist config %(reason)s")
