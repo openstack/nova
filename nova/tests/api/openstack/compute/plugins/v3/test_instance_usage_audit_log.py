@@ -14,6 +14,7 @@
 #    under the License.
 
 import datetime
+from webob import exc
 
 from nova.api.openstack.compute.plugins.v3 import \
     instance_usage_audit_log as ial
@@ -23,6 +24,7 @@ from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova import utils
+import urllib
 
 
 TEST_COMPUTE_SERVICES = [dict(host='foo', topic='compute'),
@@ -143,9 +145,11 @@ class InstanceUsageAuditLogTest(test.TestCase):
         self.assertEquals(0, logs['num_hosts_not_run'])
         self.assertEquals("ALL hosts done. 0 errors.", logs['overall_status'])
 
-    def test_show(self):
-        req = fakes.HTTPRequestV3.blank('/os-instance_usage_audit_log/show')
-        result = self.controller.show(req, '2012-07-05 10:00:00')
+    def test_index_with_format1(self):
+        before = urllib.quote("2012-07-05 10:00:00")
+        req = fakes.HTTPRequestV3.blank(
+            '/os-instance_usage_audit_log?before=' + before)
+        result = self.controller.index(req)
         self.assertIn('instance_usage_audit_log', result)
         logs = result['instance_usage_audit_log']
         self.assertEquals(57, logs['total_instances'])
@@ -157,9 +161,32 @@ class InstanceUsageAuditLogTest(test.TestCase):
         self.assertEquals(0, logs['num_hosts_not_run'])
         self.assertEquals("ALL hosts done. 0 errors.", logs['overall_status'])
 
-    def test_show_with_running(self):
-        req = fakes.HTTPRequestV3.blank('/os-instance_usage_audit_log/show')
-        result = self.controller.show(req, '2012-07-06 10:00:00')
+    def test_index_with_format2(self):
+        before = urllib.quote('2012-07-05 10:00:00.10')
+        req = fakes.HTTPRequestV3.blank(
+            '/os-instance_usage_audit_log?before=' + before)
+        result = self.controller.index(req)
+        self.assertIn('instance_usage_audit_log', result)
+        logs = result['instance_usage_audit_log']
+        self.assertEquals(57, logs['total_instances'])
+        self.assertEquals(0, logs['total_errors'])
+        self.assertEquals(4, len(logs['log']))
+        self.assertEquals(4, logs['num_hosts'])
+        self.assertEquals(4, logs['num_hosts_done'])
+        self.assertEquals(0, logs['num_hosts_running'])
+        self.assertEquals(0, logs['num_hosts_not_run'])
+        self.assertEquals("ALL hosts done. 0 errors.", logs['overall_status'])
+
+    def test_index_with_invalid_format(self):
+        req = fakes.HTTPRequestV3.blank(
+            '/os-instance_usage_audit_log?before=abc')
+        self.assertRaises(exc.HTTPBadRequest, self.controller.index, req)
+
+    def test_index_with_running(self):
+        before = urllib.quote('2012-07-06 10:00:00')
+        req = fakes.HTTPRequestV3.blank(
+            '/os-instance_usage_audit_log?before=' + before)
+        result = self.controller.index(req)
         self.assertIn('instance_usage_audit_log', result)
         logs = result['instance_usage_audit_log']
         self.assertEquals(57, logs['total_instances'])
@@ -172,9 +199,11 @@ class InstanceUsageAuditLogTest(test.TestCase):
         self.assertEquals("3 of 4 hosts done. 0 errors.",
                           logs['overall_status'])
 
-    def test_show_with_errors(self):
-        req = fakes.HTTPRequestV3.blank('/os-instance_usage_audit_log/show')
-        result = self.controller.show(req, '2012-07-07 10:00:00')
+    def test_index_with_errors(self):
+        before = urllib.quote('2012-07-07 10:00:00')
+        req = fakes.HTTPRequestV3.blank(
+            '/os-instance_usage_audit_log?before=' + before)
+        result = self.controller.index(req)
         self.assertIn('instance_usage_audit_log', result)
         logs = result['instance_usage_audit_log']
         self.assertEquals(57, logs['total_instances'])
