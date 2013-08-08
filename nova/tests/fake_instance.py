@@ -18,6 +18,24 @@ import uuid
 from nova.objects import instance as instance_obj
 
 
+def fake_db_secgroups(instance, names):
+    secgroups = []
+    for i, name in enumerate(names):
+        secgroups.append(
+            {'id': i,
+             'instance_uuid': instance['uuid'],
+             'name': 'secgroup-%i' % i,
+             'description': 'Fake secgroup',
+             'user_id': instance['user_id'],
+             'project_id': instance['project_id'],
+             'deleted': False,
+             'deleted_at': None,
+             'created_at': None,
+             'updated_at': None,
+             })
+    return secgroups
+
+
 def fake_db_instance(**updates):
     db_instance = {
         'id': 1,
@@ -38,4 +56,9 @@ def fake_db_instance(**updates):
 
     if updates:
         db_instance.update(updates)
+
+    if db_instance.get('security_groups'):
+        db_instance['security_groups'] = fake_db_secgroups(
+            db_instance, db_instance['security_groups'])
+
     return db_instance
