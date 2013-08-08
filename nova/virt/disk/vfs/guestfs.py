@@ -87,6 +87,16 @@ class VFSGuestFS(vfs.VFS):
                 {'root': root, 'imgfile': self.imgfile})
 
         mounts.sort(key=lambda mount: mount[1])
+
+        # the root directory must be mounted first
+        mounts_tmp = []
+        for mount in mounts:
+            if mount[0] == "/":
+                mounts_tmp.insert(0, mount)
+            else:
+                mounts_tmp.append(mount)
+        mounts = mounts_tmp
+
         for mount in mounts:
             LOG.debug(_("Mounting %(dev)s at %(dir)s") %
                       {'dev': mount[1], 'dir': mount[0]})
