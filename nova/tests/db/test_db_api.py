@@ -93,7 +93,7 @@ def _quota_reserve(context, project_id, user_id):
         sqlalchemy_api.QUOTA_SYNC_FUNCTIONS[sync_name] = getattr(
             sqlalchemy_api, sync_name)
     return db.quota_reserve(context, resources, quotas, user_quotas, deltas,
-                    timeutils.utcnow(), timeutils.utcnow(),
+                    timeutils.utcnow(), CONF.until_refresh,
                     datetime.timedelta(days=1), project_id, user_id)
 
 
