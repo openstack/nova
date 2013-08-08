@@ -96,18 +96,20 @@ def create(name, memory, vcpus, root_gb, ephemeral_gb=0, flavorid=None,
     # Some attributes are positive ( > 0) integers
     for option in ['memory_mb', 'vcpus']:
         try:
-            assert int(str(kwargs[option])) > 0
+            if int(str(kwargs[option])) <= 0:
+                raise ValueError()
             kwargs[option] = int(kwargs[option])
-        except (ValueError, AssertionError, TypeError):
+        except (ValueError, TypeError):
             msg = _("'%s' argument must be a positive integer") % option
             raise exception.InvalidInput(reason=msg)
 
     # Some attributes are non-negative ( >= 0) integers
     for option in ['root_gb', 'ephemeral_gb', 'swap']:
         try:
-            assert int(str(kwargs[option])) >= 0
+            if int(str(kwargs[option])) < 0:
+                raise ValueError()
             kwargs[option] = int(kwargs[option])
-        except (ValueError, AssertionError, TypeError):
+        except (ValueError, TypeError):
             msg = _("'%s' argument must be an integer greater than or"
                     " equal to 0") % option
             raise exception.InvalidInput(reason=msg)
@@ -115,8 +117,9 @@ def create(name, memory, vcpus, root_gb, ephemeral_gb=0, flavorid=None,
     # rxtx_factor should be a positive float
     try:
         kwargs['rxtx_factor'] = float(kwargs['rxtx_factor'])
-        assert kwargs['rxtx_factor'] > 0
-    except (ValueError, AssertionError):
+        if kwargs['rxtx_factor'] <= 0:
+            raise ValueError()
+    except ValueError:
         msg = _("'rxtx_factor' argument must be a positive float")
         raise exception.InvalidInput(reason=msg)
 
@@ -142,9 +145,10 @@ def create(name, memory, vcpus, root_gb, ephemeral_gb=0, flavorid=None,
 def destroy(name):
     """Marks flavor as deleted."""
     try:
-        assert name is not None
+        if not name:
+            raise ValueError()
         db.flavor_destroy(context.get_admin_context(), name)
-    except (AssertionError, exception.NotFound):
+    except (ValueError, exception.NotFound):
         LOG.exception(_('Instance type %s not found for deletion') % name)
         raise exception.InstanceTypeNotFoundByName(instance_type_name=name)
 
