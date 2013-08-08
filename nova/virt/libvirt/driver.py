@@ -81,6 +81,8 @@ from nova.openstack.common import loopingcall
 from nova.openstack.common.notifier import api as notifier
 from nova.openstack.common import processutils
 from nova.openstack.common import xmlutils
+from nova.pci import pci_manager
+from nova.pci import pci_utils
 from nova.pci import pci_whitelist
 from nova import utils
 from nova import version
@@ -282,6 +284,7 @@ MIN_LIBVIRT_VERSION = (0, 9, 6)
 # delete it & corresponding code using it
 MIN_LIBVIRT_HOST_CPU_VERSION = (0, 9, 10)
 MIN_LIBVIRT_CLOSE_CALLBACK_VERSION = (1, 0, 1)
+MIN_LIBVIRT_DEVICE_CALLBACK_VERSION = (1, 1, 1)
 # Live snapshot requirements
 REQ_HYPERVISOR_LIVESNAPSHOT = "QEMU"
 MIN_LIBVIRT_LIVESNAPSHOT_VERSION = (1, 0, 0)
@@ -1324,6 +1327,8 @@ class LibvirtDriver(driver.ComputeDriver):
         # NOTE(dkang): managedSave does not work for LXC
         if CONF.libvirt_type != 'lxc' and not live_snapshot:
             if state == power_state.RUNNING or state == power_state.PAUSED:
+                self._detach_pci_devices(virt_dom,
+                    pci_manager.get_instance_pci_devs(instance))
                 virt_dom.managedSave(0)
 
         snapshot_backend = self.image_backend.snapshot(disk_path,
@@ -1355,14 +1360,18 @@ class LibvirtDriver(driver.ComputeDriver):
             finally:
                 if not live_snapshot:
                     snapshot_backend.snapshot_delete()
+                new_dom = None
                 # NOTE(dkang): because previous managedSave is not called
                 #              for LXC, _create_domain must not be called.
                 if CONF.libvirt_type != 'lxc' and not live_snapshot:
                     if state == power_state.RUNNING:
-                        self._create_domain(domain=virt_dom)
+                        new_dom = self._create_domain(domain=virt_dom)
                     elif state == power_state.PAUSED:
-                        self._create_domain(domain=virt_dom,
+                        new_dom = self._create_domain(domain=virt_dom,
                                 launch_flags=libvirt.VIR_DOMAIN_START_PAUSED)
+                    if new_dom is not None:
+                        self._attach_pci_devices(new_dom,
+                            pci_manager.get_instance_pci_devs(instance))
                 LOG.info(_("Snapshot extracted, beginning image upload"),
                          instance=instance)
 
@@ -1794,6 +1803,8 @@ class LibvirtDriver(driver.ComputeDriver):
         # NOTE(vish): This actually could take slighty longer than the
         #             FLAG defines depending on how long the get_info
         #             call takes to return.
+        self._prepare_pci_devices_for_use(
+            pci_manager.get_instance_pci_devs(instance))
         for x in xrange(CONF.libvirt_wait_soft_reboot_seconds):
             dom = self._lookup_by_name(instance["name"])
             (state, _max_mem, _mem, _cpus, _t) = dom.info()
@@ -1858,6 +1869,8 @@ class LibvirtDriver(driver.ComputeDriver):
         # start the instance.
         self._create_domain_and_network(xml, instance, network_info,
                                         block_device_info)
+        self._prepare_pci_devices_for_use(
+            pci_manager.get_instance_pci_devs(instance))
 
         def _wait_for_reboot():
             """Called at an interval until the VM is running again."""
@@ -1896,14 +1909,18 @@ class LibvirtDriver(driver.ComputeDriver):
     def suspend(self, instance):
         """Suspend the specified instance."""
         dom = self._lookup_by_name(instance['name'])
+        self._detach_pci_devices(dom,
+            pci_manager.get_instance_pci_devs(instance))
         dom.managedSave(0)
 
     def resume(self, instance, network_info, block_device_info=None):
         """resume the specified instance."""
         xml = self._get_existing_domain_xml(instance, network_info,
                                             block_device_info)
-        self._create_domain_and_network(xml, instance, network_info,
-                                        block_device_info)
+        dom = self._create_domain_and_network(xml, instance, network_info,
+                                              block_device_info)
+        self._attach_pci_devices(dom,
+            pci_manager.get_instance_pci_devs(instance))
 
     def resume_state_on_host_boot(self, context, instance, network_info,
                                   block_device_info=None):
@@ -2417,6 +2434,88 @@ class LibvirtDriver(driver.ComputeDriver):
         if CONF.libvirt_type == 'uml':
             libvirt_utils.chown(image('disk').path, 'root')
 
+    def _prepare_pci_devices_for_use(self, pci_devices):
+        # kvm , qemu support managed mode
+        # In managed mode, the configured device will be automatically
+        # detached from the host OS drivers when the guest is started,
+        # and then re-attached when the guest shuts down.
+        if CONF.libvirt_type not in ('xen'):
+            # we do manual detach only for xen
+            return
+        try:
+            for dev in pci_devices:
+                libvirt_dev_addr = dev['hypervisor_name']
+                libvirt_dev = \
+                        self._conn.nodeDeviceLookupByName(libvirt_dev_addr)
+                # Note(yjiang5) Spelling for 'dettach' is correct, see
+                # http://libvirt.org/html/libvirt-libvirt.html.
+                libvirt_dev.dettach()
+
+            # Note(yjiang5): A reset of one PCI device may impact other
+            # devices on the same bus, thus we need two separated loops
+            # to detach and then reset it.
+            for dev in pci_devices:
+                libvirt_dev_addr = dev['hypervisor_name']
+                libvirt_dev = \
+                        self._conn.nodeDeviceLookupByName(libvirt_dev_addr)
+                libvirt_dev.reset()
+
+        except libvirt.libvirtError as exc:
+            raise exception.PciDevicePrepareFailed(id=dev['id'],
+                                                   instance_uuid=
+                                                   dev['instance_uuid'],
+                                                   reason=str(exc))
+
+    def _detach_pci_devices(self, dom, pci_devs):
+
+        # for libvirt version < 1.1.1, this is race condition
+        # so forbiden detach if not had this version
+        if not self.has_min_version(MIN_LIBVIRT_DEVICE_CALLBACK_VERSION):
+            if pci_devs:
+                reason = (_("Detaching PCI devices with libvirt < %(ver)s"
+                           " is not permitted") %
+                           {'ver': MIN_LIBVIRT_DEVICE_CALLBACK_VERSION})
+                raise exception.PciDeviceDetachFailed(reason=reason,
+                                                      dev=pci_devs)
+        try:
+            for dev in pci_devs:
+                dom.detachDeviceFlags(self.get_guest_pci_device(dev).to_xml(),
+                                            libvirt.VIR_DOMAIN_AFFECT_LIVE)
+                # after detachDeviceFlags returned, we should check the dom to
+                # ensure the detaching is finished
+                xml = dom.XMLDesc(0)
+                xml_doc = etree.fromstring(xml)
+                guest_config = vconfig.LibvirtConfigGuest()
+                guest_config.parse_dom(xml_doc)
+
+                for hdev in [d for d in guest_config.devices
+                             if d.type == 'pci']:
+                    hdbsf = [hdev.domain, hdev.bus, hdev.slot, hdev.function]
+                    dbsf = pci_utils.parse_address(dev['address'])
+                    if [int(x, 16) for x in hdbsf] ==\
+                            [int(x, 16) for x in dbsf]:
+                        raise exception.PciDeviceDetachFailed(reason=
+                                                              "timeout",
+                                                              dev=dev)
+
+        except libvirt.libvirtError as ex:
+            error_code = ex.get_error_code()
+            if error_code == libvirt.VIR_ERR_NO_DOMAIN:
+                LOG.warn(_("Instance disappeared while detaching "
+                           "a PCI device from it."))
+            else:
+                raise
+
+    def _attach_pci_devices(self, dom, pci_devs):
+        try:
+            for dev in pci_devs:
+                dom.attachDevice(self.get_guest_pci_device(dev).to_xml())
+
+        except libvirt.libvirtError:
+            LOG.error(_('Attaching PCI devices %(dev)s to %(dom)s failed.')
+                      % {'dev': pci_devs, 'dom': dom.ID()})
+            raise
+
     def get_host_capabilities(self):
         """Returns an instance of config.LibvirtConfigCaps representing
            the capabilities of the host.
@@ -2617,6 +2716,20 @@ class LibvirtDriver(driver.ComputeDriver):
         sysinfo.system_uuid = instance['uuid']
 
         return sysinfo
+
+    def get_guest_pci_device(self, pci_device):
+
+        dbsf = pci_utils.parse_address(pci_device['address'])
+        dev = vconfig.LibvirtConfigGuestHostdevPCI()
+        dev.domain, dev.bus, dev.slot, dev.function = dbsf
+
+        # only kvm support managed mode
+        if CONF.libvirt_type in ('xen'):
+            dev.managed = 'no'
+        if CONF.libvirt_type in ('kvm', 'qemu'):
+            dev.managed = 'yes'
+
+        return dev
 
     def get_guest_config(self, instance, network_info, image_meta,
                          disk_info, rescue=None, block_device_info=None):
@@ -2840,6 +2953,14 @@ class LibvirtDriver(driver.ComputeDriver):
                 qga.source_path = ("/var/lib/libvirt/qemu/%s.%s.sock" %
                                 ("org.qemu.guest_agent.0", instance['name']))
                 guest.add_device(qga)
+
+        if CONF.libvirt_type in ('xen', 'qemu', 'kvm'):
+            for pci_dev in pci_manager.get_instance_pci_devs(instance):
+                guest.add_device(self.get_guest_pci_device(pci_dev))
+        else:
+            if len(pci_manager.get_instance_pci_devs(instance)) > 0:
+                raise exception.PciDeviceUnsupportedHypervisor(
+                    type=CONF.libvirt_type)
 
         return guest
 
