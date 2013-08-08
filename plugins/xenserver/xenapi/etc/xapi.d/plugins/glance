@@ -207,17 +207,23 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port,
                       "Response Status: %i, Response body: %s"
                       % (url, resp.status, resp.read()))
 
-        if resp.status == httplib.UNAUTHORIZED:
-            # NOTE(johngarbutt): little point in retrying when token invalid
-            raise PluginError("Unauthorized error while uploading "
-                            "image [%s] "
-                            "to glance host [%s:%s]"
-                            % (image_id, glance_host, glance_port))
+        if resp.status in (httplib.UNAUTHORIZED,
+                           httplib.REQUEST_ENTITY_TOO_LARGE,
+                           httplib.PRECONDITION_FAILED,
+                           httplib.CONFLICT,
+                           httplib.FORBIDDEN):
+            # No point in retrying for these conditions
+            raise PluginError("Got Error response [%i] while uploading "
+                              "image [%s] "
+                              "to glance host [%s:%s]"
+                              % (resp.status, image_id,
+                                 glance_host, glance_port))
         else:
             raise RetryableError("Unexpected response [%i] while uploading "
-                            "image [%s] "
-                            "to glance host [%s:%s]"
-                            % (resp.status, image_id, glance_host, glance_port))
+                                 "image [%s] "
+                                 "to glance host [%s:%s]"
+                                 % (resp.status, image_id,
+                                    glance_host, glance_port))
     finally:
         conn.close()
 
