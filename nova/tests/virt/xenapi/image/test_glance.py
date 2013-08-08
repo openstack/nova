@@ -118,8 +118,8 @@ class TestGlanceStore(stubs.XenAPITestBase):
         params = self._get_upload_params()
 
         self.mox.StubOutWithMock(self.session, 'call_plugin_serialized')
-        error_deatils = ["", "", "RetryableError", ""]
-        error = self.session.XenAPI.Failure(details=error_deatils)
+        error_details = ["", "", "RetryableError", ""]
+        error = self.session.XenAPI.Failure(details=error_details)
         self.session.call_plugin_serialized('glance', 'upload_vhd',
                                             **params).AndRaise(error)
         self.session.call_plugin_serialized('glance', 'upload_vhd',
@@ -139,13 +139,13 @@ class TestGlanceStore(stubs.XenAPITestBase):
         params = self._get_upload_params()
 
         self.mox.StubOutWithMock(self.session, 'call_plugin_serialized')
-        error_deatils = ["", "task signaled", "", ""]
-        error = self.session.XenAPI.Failure(details=error_deatils)
+        error_details = ["", "task signaled", "", ""]
+        error = self.session.XenAPI.Failure(details=error_details)
         self.session.call_plugin_serialized('glance', 'upload_vhd',
                                             **params).AndRaise(error)
         # Note(johngarbutt) XenServer 6.1 and later has this error
-        error_deatils = ["", "signal: SIGTERM", "", ""]
-        error = self.session.XenAPI.Failure(details=error_deatils)
+        error_details = ["", "signal: SIGTERM", "", ""]
+        error = self.session.XenAPI.Failure(details=error_details)
         self.session.call_plugin_serialized('glance', 'upload_vhd',
                                             **params).AndRaise(error)
         self.session.call_plugin_serialized('glance', 'upload_vhd',
