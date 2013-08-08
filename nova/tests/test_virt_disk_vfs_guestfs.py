@@ -37,12 +37,15 @@ class VirtDiskVFSGuestFSTest(test.TestCase):
         vfs.setup()
 
         self.assertEqual(vfs.handle.running, True)
-        self.assertEqual(len(vfs.handle.mounts), 2)
+        self.assertEqual(len(vfs.handle.mounts), 3)
         self.assertEqual(vfs.handle.mounts[0][1],
                          "/dev/mapper/guestvgf-lv_root")
         self.assertEqual(vfs.handle.mounts[1][1], "/dev/vda1")
+        self.assertEqual(vfs.handle.mounts[2][1],
+                         "/dev/mapper/guestvgf-lv_home")
         self.assertEqual(vfs.handle.mounts[0][2], "/")
         self.assertEqual(vfs.handle.mounts[1][2], "/boot")
+        self.assertEqual(vfs.handle.mounts[2][2], "/home")
 
         handle = vfs.handle
         vfs.teardown()
