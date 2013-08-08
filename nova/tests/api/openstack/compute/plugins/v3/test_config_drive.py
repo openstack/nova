@@ -20,7 +20,6 @@ from oslo.config import cfg
 import webob
 
 from nova.api.openstack.compute import plugins
-from nova.api.openstack.compute.plugins.v3 import config_drive
 from nova.api.openstack.compute.plugins.v3 import servers
 from nova.compute import api as compute_api
 from nova.compute import flavors
@@ -50,9 +49,6 @@ class ConfigDriveTest(test.TestCase):
 
     def setUp(self):
         super(ConfigDriveTest, self).setUp()
-        ext_info = plugins.LoadedExtensionInfo()
-        self.Controller = config_drive.ConfigDriveController(
-            extension_info=ext_info)
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
         fake.stub_out_image_service(self.stubs)

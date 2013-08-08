@@ -20,7 +20,6 @@
 import webob
 import webob.exc
 
-from nova.api.openstack.compute import servers
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
@@ -163,7 +162,7 @@ class ServersKeyNameTemplate(xmlutil.TemplateBuilder):
         return xmlutil.SlaveTemplate(root, 1)
 
 
-class Controller(servers.Controller):
+class Controller(wsgi.Controller):
 
     def _add_key_name(self, req, servers):
         for server in servers:

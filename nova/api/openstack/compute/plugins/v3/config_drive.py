@@ -17,7 +17,6 @@
 
 """Config Drive extension."""
 
-from nova.api.openstack.compute.plugins.v3 import servers
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
@@ -41,7 +40,7 @@ class ServersConfigDriveTemplate(xmlutil.TemplateBuilder):
         return xmlutil.SlaveTemplate(root, 1)
 
 
-class ConfigDriveController(servers.ServersController):
+class ConfigDriveController(wsgi.Controller):
 
     def _add_config_drive(self, req, servers):
         for server in servers:
@@ -80,7 +79,7 @@ class ConfigDrive(extensions.V3APIExtensionBase):
     version = 1
 
     def get_controller_extensions(self):
-        controller = ConfigDriveController(extension_info=self.extension_info)
+        controller = ConfigDriveController()
         extension = extensions.ControllerExtension(self, 'servers', controller)
         return [extension]
 
