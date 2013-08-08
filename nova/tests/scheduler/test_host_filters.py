@@ -770,9 +770,9 @@ class HostFiltersTestCase(test.NoDBTestCase):
         service = {'disabled': False}
         filter_properties = {'instance_type': {'memory_mb': 1024,
                                                'extra_specs': especs}}
-        host = fakes.FakeHostState('host1', 'node1',
-                {'free_ram_mb': 1024, 'capabilities': capabilities,
-                 'service': service})
+        host_state = {'free_ram_mb': 1024, 'service': service}
+        host_state.update(capabilities)
+        host = fakes.FakeHostState('host1', 'node1', host_state)
         assertion = self.assertTrue if passes else self.assertFalse
         assertion(filt_cls.host_passes(host, filter_properties))
 
