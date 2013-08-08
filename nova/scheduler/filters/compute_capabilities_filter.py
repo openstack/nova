@@ -28,8 +28,8 @@ class ComputeCapabilitiesFilter(filters.BaseHostFilter):
     # Instance type and host capabilities do not change within a request
     run_filter_once_per_request = True
 
-    def _satisfies_extra_specs(self, capabilities, instance_type):
-        """Check that the capabilities provided by the compute service
+    def _satisfies_extra_specs(self, host_state, instance_type):
+        """Check that the host_state provided by the compute service
         satisfy the extra specs associated with the instance type.
         """
         if 'extra_specs' not in instance_type:
@@ -43,10 +43,17 @@ class ComputeCapabilitiesFilter(filters.BaseHostFilter):
                     continue
                 else:
                     del scope[0]
-            cap = capabilities
+            cap = host_state
             for index in range(0, len(scope)):
                 try:
-                    cap = cap.get(scope[index], None)
+                    if not isinstance(cap, dict):
+                        if getattr(cap, scope[index], None) is None:
+                            # If can't find, check stats dict
+                            cap = cap.stats.get(scope[index], None)
+                        else:
+                            cap = getattr(cap, scope[index], None)
+                    else:
+                        cap = cap.get(scope[index], None)
                 except AttributeError:
                     return False
                 if cap is None:
@@ -58,7 +65,7 @@ class ComputeCapabilitiesFilter(filters.BaseHostFilter):
     def host_passes(self, host_state, filter_properties):
         """Return a list of hosts that can create instance_type."""
         instance_type = filter_properties.get('instance_type')
-        if not self._satisfies_extra_specs(host_state.capabilities,
+        if not self._satisfies_extra_specs(host_state,
                 instance_type):
             LOG.debug(_("%(host_state)s fails instance_type extra_specs "
                     "requirements"), {'host_state': host_state})
