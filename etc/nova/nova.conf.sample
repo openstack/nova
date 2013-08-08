@@ -2245,6 +2245,40 @@
 
 
 #
+# Options defined in nova.virt.xenapi.image.bittorrent
+#
+
+# Base URL for torrent files. (string value)
+#xenapi_torrent_base_url=<None>
+
+# Probability that peer will become a seeder. (1.0 = 100%)
+# (floating point value)
+#xenapi_torrent_seed_chance=1.0
+
+# Number of seconds after downloading an image via BitTorrent
+# that it should be seeded for other peers. (integer value)
+#xenapi_torrent_seed_duration=3600
+
+# Cached torrent files not accessed within this number of
+# seconds can be reaped (integer value)
+#xenapi_torrent_max_last_accessed=86400
+
+# Beginning of port range to listen on (integer value)
+#xenapi_torrent_listen_port_start=6881
+
+# End of port range to listen on (integer value)
+#xenapi_torrent_listen_port_end=6891
+
+# Number of seconds a download can remain at the same progress
+# percentage w/o being considered a stall (integer value)
+#xenapi_torrent_download_stall_cutoff=600
+
+# Maximum number of seeder processes to run concurrently
+# within a given dom0. (-1 = no limit) (integer value)
+#xenapi_torrent_max_seeder_processes_per_host=1
+
+
+#
 # Options defined in nova.virt.xenapi.pool
 #
 
@@ -2305,35 +2339,6 @@
 # (all|some|none). (string value)
 #xenapi_torrent_images=none
 
-# Base URL for torrent files. (string value)
-#xenapi_torrent_base_url=<None>
-
-# Probability that peer will become a seeder. (1.0 = 100%)
-# (floating point value)
-#xenapi_torrent_seed_chance=1.0
-
-# Number of seconds after downloading an image via BitTorrent
-# that it should be seeded for other peers. (integer value)
-#xenapi_torrent_seed_duration=3600
-
-# Cached torrent files not accessed within this number of
-# seconds can be reaped (integer value)
-#xenapi_torrent_max_last_accessed=86400
-
-# Beginning of port range to listen on (integer value)
-#xenapi_torrent_listen_port_start=6881
-
-# End of port range to listen on (integer value)
-#xenapi_torrent_listen_port_end=6891
-
-# Number of seconds a download can remain at the same progress
-# percentage w/o being considered a stall (integer value)
-#xenapi_torrent_download_stall_cutoff=600
-
-# Maximum number of seeder processes to run concurrently
-# within a given dom0. (-1 = no limit) (integer value)
-#xenapi_torrent_max_seeder_processes_per_host=1
-
 
 #
 # Options defined in nova.virt.xenapi.vmops
@@ -2347,7 +2352,7 @@
 # value)
 #xenapi_vif_driver=nova.virt.xenapi.vif.XenAPIBridgeDriver
 
-# Object Store Driver used to handle image uploads. (string
+# Dom0 plugin driver used to handle image uploads. (string
 # value)
 #xenapi_image_upload_handler=nova.virt.xenapi.image.glance.GlanceStore
 

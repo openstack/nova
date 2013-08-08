@@ -23,7 +23,6 @@ their attributes like VDIs, VIFs, as well as their lookup functions.
 
 import contextlib
 import os
-import pkg_resources
 import re
 import time
 import urllib
@@ -98,35 +97,6 @@ xenapi_vm_utils_opts = [
                default='none',
                help='Whether or not to download images via Bit Torrent '
                     '(all|some|none).'),
-    cfg.StrOpt('xenapi_torrent_base_url',
-               default=None,
-               help='Base URL for torrent files.'),
-    cfg.FloatOpt('xenapi_torrent_seed_chance',
-                 default=1.0,
-                 help='Probability that peer will become a seeder.'
-                      ' (1.0 = 100%)'),
-    cfg.IntOpt('xenapi_torrent_seed_duration',
-               default=3600,
-               help='Number of seconds after downloading an image via'
-                    ' BitTorrent that it should be seeded for other peers.'),
-    cfg.IntOpt('xenapi_torrent_max_last_accessed',
-               default=86400,
-               help='Cached torrent files not accessed within this number of'
-                    ' seconds can be reaped'),
-    cfg.IntOpt('xenapi_torrent_listen_port_start',
-               default=6881,
-               help='Beginning of port range to listen on'),
-    cfg.IntOpt('xenapi_torrent_listen_port_end',
-               default=6891,
-               help='End of port range to listen on'),
-    cfg.IntOpt('xenapi_torrent_download_stall_cutoff',
-               default=600,
-               help='Number of seconds a download can remain at the same'
-                    ' progress percentage w/o being considered a stall'),
-    cfg.IntOpt('xenapi_torrent_max_seeder_processes_per_host',
-               default=1,
-               help='Maximum number of seeder processes to run concurrently'
-                    ' within a given dom0. (-1 = no limit)')
     ]
 
 CONF = cfg.CONF
@@ -1138,6 +1108,20 @@ def _image_uses_bittorrent(context, instance):
     return bittorrent
 
 
+def _default_download_handler():
+    # TODO(sirp):  This should be configurable like upload_handler
+    return importutils.import_object(
+            'nova.virt.xenapi.image.glance.GlanceStore')
+
+
+def _choose_download_handler(context, instance):
+    if _image_uses_bittorrent(context, instance):
+        return importutils.import_object(
+                'nova.virt.xenapi.image.bittorrent.BittorrentStore')
+    else:
+        return _default_download_handler()
+
+
 def _fetch_vhd_image(context, session, instance, image_id):
     """Tell glance to download an image and put the VHDs into the SR
 
@@ -1146,25 +1130,23 @@ def _fetch_vhd_image(context, session, instance, image_id):
     LOG.debug(_("Asking xapi to fetch vhd image %s"), image_id,
               instance=instance)
 
-    params = {}
-    if (_image_uses_bittorrent(context, instance) and
-            _add_torrent_url(instance, image_id, params)):
-        params.update({'image_id': image_id,
-                       'uuid_stack': _make_uuid_stack(),
-                       'sr_path': get_sr_path(session)})
-        _add_bittorrent_params(image_id, params)
-        try:
-            vdis = session.call_plugin_serialized_with_retry(
-                    'bittorrent', 'download_vhd', CONF.glance_num_retries,
-                    None, **params)
-        except exception.PluginRetriesExceeded:
-            raise exception.CouldNotFetchImage(image_id=image_id)
+    handler = _choose_download_handler(context, instance)
 
-    else:
-        download_handler = importutils.import_object(
-                'nova.virt.xenapi.image.glance.GlanceStore')
+    try:
+        vdis = handler.download_image(context, session, instance, image_id)
+    except Exception as e:
+        default_handler = _default_download_handler()
 
-        vdis = download_handler.download_image(
+        if handler == default_handler:
+            raise
+
+        LOG.exception(_("Download handler '%(handler)s' raised an"
+                        " exception, falling back to default handler"
+                        " '%(default_handler)s'") %
+                        {'handler': handler,
+                         'default_handler': default_handler})
+
+        vdis = default_handler.download_image(
                 context, session, instance, image_id)
 
     sr_ref = safe_find_sr(session)
@@ -1181,76 +1163,6 @@ def _fetch_vhd_image(context, session, instance, image_id):
                 destroy_vdi(session, vdi_ref)
 
     return vdis
-
-
-_TORRENT_URL_FN = None  # driver function to determine torrent URL to use
-
-
-def _lookup_torrent_url_fn():
-    """Load a "fetcher" func to get the right torrent URL via entrypoints."""
-    namespace = "nova.virt.xenapi.vm_utils"
-    name = "torrent_url"
-
-    eps = pkg_resources.iter_entry_points(namespace)
-    eps = [ep for ep in eps if ep.name == name]
-
-    x = len(eps)
-
-    if x == 0:
-        LOG.debug(_("No torrent URL fetcher extension found."))
-        return None
-    elif x > 1:
-        raise RuntimeError(_("Multiple torrent URL fetcher extension found.  "
-                             "Failing."))
-
-    ep = eps[0]
-    LOG.debug(_("Loading torrent URL fetcher from entry points %(ep)s"),
-              {'ep': ep})
-    fn = ep.load()
-    return fn
-
-
-def _add_torrent_url(instance, image_id, params):
-    """Add the torrent URL associated with the given image.
-
-    :param instance: instance ref
-    :param image_id: unique id of image
-    :param params: BT params dict
-    :returns: True if the URL could be obtained
-    """
-    global _TORRENT_URL_FN
-    if not _TORRENT_URL_FN:
-        fn = _lookup_torrent_url_fn()
-        if fn is None:
-            LOG.debug(_("No torrent URL fetcher installed."))
-            _TORRENT_URL_FN = get_torrent_url  # default
-        else:
-            _TORRENT_URL_FN = fn
-
-    try:
-        url = _TORRENT_URL_FN(instance, image_id)
-        params['torrent_url'] = url
-        return True
-    except Exception:
-        LOG.exception(_("Failed to get torrent URL for image %s") % image_id)
-        return False  # fall back to using glance
-
-
-def get_torrent_url(instance, image_id):
-    return urlparse.urljoin(CONF.xenapi_torrent_base_url,
-                            "%s.torrent" % image_id)
-
-
-def _add_bittorrent_params(image_id, params):
-    params['torrent_seed_duration'] = CONF.xenapi_torrent_seed_duration
-    params['torrent_seed_chance'] = CONF.xenapi_torrent_seed_chance
-    params['torrent_max_last_accessed'] = CONF.xenapi_torrent_max_last_accessed
-    params['torrent_listen_port_start'] = CONF.xenapi_torrent_listen_port_start
-    params['torrent_listen_port_end'] = CONF.xenapi_torrent_listen_port_end
-    params['torrent_download_stall_cutoff'] = \
-            CONF.xenapi_torrent_download_stall_cutoff
-    params['torrent_max_seeder_processes_per_host'] = \
-            CONF.xenapi_torrent_max_seeder_processes_per_host
 
 
 def _get_vdi_chain_size(session, vdi_uuid):
