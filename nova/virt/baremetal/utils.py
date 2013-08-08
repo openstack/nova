@@ -94,20 +94,32 @@ def map_network_interfaces(network_info, use_ipv6=False):
         network_info = [network_info]
 
     interfaces = []
-    for id, (network, mapping) in enumerate(network_info):
-        address_v6 = None
-        gateway_v6 = None
-        netmask_v6 = None
+    for id, vif in enumerate(network_info):
+        address_v6 = gateway_v6 = netmask_v6 = None
+        address_v4 = gateway_v4 = netmask_v4 = dns_v4 = None
+
         if use_ipv6:
-            address_v6 = mapping['ip6s'][0]['ip']
-            netmask_v6 = mapping['ip6s'][0]['netmask']
-            gateway_v6 = mapping['gateway_v6']
+            subnets_v6 = [s for s in vif['network']['subnets']
+                if s['version'] == 6]
+            if len(subnets_v6):
+                address_v6 = subnets_v6[0]['ips'][0]['address']
+                netmask_v6 = subnets_v6[0].as_netaddr()._prefixlen
+                gateway_v6 = subnets_v6[0]['gateway']['address']
+
+        subnets_v4 = [s for s in vif['network']['subnets']
+                if s['version'] == 4]
+        if len(subnets_v4):
+            address_v4 = subnets_v4[0]['ips'][0]['address']
+            netmask_v4 = subnets_v4[0].as_netaddr().netmask
+            gateway_v4 = subnets_v4[0]['gateway']['address']
+            dns_v4 = ' '.join([x['address'] for x in subnets_v4[0]['dns']])
+
         interface = {
                 'name': 'eth%d' % id,
-                'address': mapping['ips'][0]['ip'],
-                'gateway': mapping['gateway'],
-                'netmask': mapping['ips'][0]['netmask'],
-                'dns': ' '.join(mapping['dns']),
+                'address': address_v4,
+                'gateway': gateway_v4,
+                'netmask': netmask_v4,
+                'dns': dns_v4,
                 'address_v6': address_v6,
                 'gateway_v6': gateway_v6,
                 'netmask_v6': netmask_v6,

@@ -121,7 +121,7 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
                                 None, result['instance']),
                 injected_files=[('/fake/path', 'hello world')],
                 instance=result['instance'],
-                network_info=utils.get_test_network_info(),
+                network_info=utils.get_test_network_info(legacy_model=False),
             )
         result['destroy_params'] = dict(
                 instance=result['instance'],
