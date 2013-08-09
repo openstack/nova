@@ -82,10 +82,10 @@ class Controller(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'evacuate')
-        except Exception as e:
-            msg = _("Error in evacuate, %s") % e
-            LOG.exception(msg, instance=instance)
-            raise exc.HTTPBadRequest(explanation=msg)
+        except exception.InstanceNotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
+        except exception.ComputeServiceUnavailable as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
 
         if password:
             return {'adminPass': password}
