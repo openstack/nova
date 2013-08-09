@@ -60,8 +60,7 @@ def _cleanse_dict(original):
     return dict((k, v) for k, v in original.iteritems() if not "_pass" in k)
 
 
-def wrap_exception(notifier=None, publisher_id=None, event_type=None,
-                   level=None):
+def wrap_exception(notifier, publisher_id):
     """This decorator wraps a method to catch any exceptions that may
     get thrown. It logs the exception as well as optionally sending
     it to the notification system.
@@ -77,27 +76,16 @@ def wrap_exception(notifier=None, publisher_id=None, event_type=None,
                 return f(self, context, *args, **kw)
             except Exception as e:
                 with excutils.save_and_reraise_exception():
-                    if notifier:
-                        payload = dict(exception=e)
-                        call_dict = safe_utils.getcallargs(f, *args, **kw)
-                        cleansed = _cleanse_dict(call_dict)
-                        payload.update({'args': cleansed})
+                    payload = dict(exception=e)
+                    call_dict = safe_utils.getcallargs(f, *args, **kw)
+                    cleansed = _cleanse_dict(call_dict)
+                    payload.update({'args': cleansed})
 
-                        # Use a temp vars so we don't shadow
-                        # our outer definitions.
-                        temp_level = level
-                        if not temp_level:
-                            temp_level = notifier.ERROR
+                    level = notifier.ERROR
+                    event_type = f.__name__
 
-                        temp_type = event_type
-                        if not temp_type:
-                            # If f has multiple decorators, they must use
-                            # functools.wraps to ensure the name is
-                            # propagated.
-                            temp_type = f.__name__
-
-                        notifier.notify(context, publisher_id, temp_type,
-                                        temp_level, payload)
+                    notifier.notify(context, publisher_id,
+                                    event_type, level, payload)
 
         return functools.wraps(f)(wrapped)
     return inner

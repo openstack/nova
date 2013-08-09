@@ -62,36 +62,21 @@ def bad_function_exception(self, context, extra, blah="a", boo="b", zoo=None):
 
 class WrapExceptionTestCase(test.TestCase):
     def test_wrap_exception_good_return(self):
-        wrapped = exception.wrap_exception()
+        wrapped = exception.wrap_exception('foo', 'bar')
         self.assertEquals(99, wrapped(good_function)(1, 2))
-
-    def test_wrap_exception_throws_exception(self):
-        wrapped = exception.wrap_exception()
-        self.assertRaises(test.TestingException,
-                          wrapped(bad_function_exception), 1, 2, 3)
 
     def test_wrap_exception_with_notifier(self):
         notifier = FakeNotifier()
-        wrapped = exception.wrap_exception(notifier, "publisher", "event",
-                                           "level")
+        wrapped = exception.wrap_exception(notifier, "publisher")
         ctxt = context.get_admin_context()
         self.assertRaises(test.TestingException,
                           wrapped(bad_function_exception), 1, ctxt, 3, zoo=3)
         self.assertEquals(notifier.provided_publisher, "publisher")
-        self.assertEquals(notifier.provided_event, "event")
-        self.assertEquals(notifier.provided_priority, "level")
+        self.assertEquals(notifier.provided_event, "bad_function_exception")
+        self.assertEquals(notifier.provided_priority, notifier.ERROR)
         self.assertEquals(notifier.provided_context, ctxt)
         for key in ['exception', 'args']:
             self.assertTrue(key in notifier.provided_payload.keys())
-
-    def test_wrap_exception_with_notifier_defaults(self):
-        notifier = FakeNotifier()
-        wrapped = exception.wrap_exception(notifier)
-        self.assertRaises(test.TestingException,
-                          wrapped(bad_function_exception), 1, 2, 3)
-        self.assertEquals(notifier.provided_publisher, None)
-        self.assertEquals(notifier.provided_event, "bad_function_exception")
-        self.assertEquals(notifier.provided_priority, notifier.ERROR)
 
 
 class NovaExceptionTestCase(test.TestCase):

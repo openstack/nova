@@ -1168,7 +1168,6 @@ class LibvirtDriver(driver.ComputeDriver):
                                   connection_info,
                                   disk_dev)
 
-    @exception.wrap_exception()
     def attach_interface(self, instance, image_meta, network_info):
         virt_dom = self._lookup_by_name(instance['name'])
         inst_type = self.virtapi.instance_type_get(
@@ -1191,7 +1190,6 @@ class LibvirtDriver(driver.ComputeDriver):
                 self.vif_driver.unplug(instance, vif)
                 raise exception.InterfaceAttachFailed(instance)
 
-    @exception.wrap_exception()
     def detach_interface(self, instance, network_info):
         virt_dom = self._lookup_by_name(instance['name'])
         inst_type = self.virtapi.instance_type_get(
@@ -1796,7 +1794,6 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return {'host': host, 'port': port, 'internal_access_path': None}
 
-    @exception.wrap_exception()
     def get_spice_console(self, instance):
         def get_spice_ports_for_instance(instance_name):
             virt_dom = self._lookup_by_name(instance_name)
