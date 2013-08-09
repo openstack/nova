@@ -99,6 +99,15 @@ class LibvirtBaseVolumeDriver(object):
         conf.target_dev = disk_info['dev']
         conf.target_bus = disk_info['bus']
         conf.serial = connection_info.get('serial')
+
+        # Support for block size tuning
+        data = {}
+        if 'data' in connection_info:
+            data = connection_info['data']
+        if 'logical_block_size' in data:
+            conf.logical_block_size = data['logical_block_size']
+        if 'physical_block_size' in data:
+            conf.physical_block_size = data['physical_block_size']
         return conf
 
     def disconnect_volume(self, connection_info, disk_dev):

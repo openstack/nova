@@ -1863,6 +1863,39 @@ class LibvirtConnTestCase(test.TestCase):
                           {"name": "fake-instance"},
                           "/dev/sda")
 
+    def test_attach_blockio_invalid_hypervisor(self):
+        self.flags(libvirt_type='fake_type')
+        self.create_fake_libvirt_mock()
+        libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
+        self.mox.ReplayAll()
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertRaises(exception.InvalidHypervisorType,
+                          conn.attach_volume,
+                          {"driver_volume_type": "fake",
+                           "data": {"logical_block_size": "4096",
+                                    "physical_block_size": "4096"}
+                          },
+                          {"name": "fake-instance"},
+                          "/dev/sda")
+
+    def test_attach_blockio_invalid_version(self):
+        def get_lib_version_stub():
+            return (0 * 1000 * 1000) + (9 * 1000) + 8
+        self.flags(libvirt_type='qemu')
+        self.create_fake_libvirt_mock()
+        libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
+        self.mox.ReplayAll()
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.stubs.Set(self.conn, "getLibVersion", get_lib_version_stub)
+        self.assertRaises(exception.Invalid,
+                          conn.attach_volume,
+                          {"driver_volume_type": "fake",
+                           "data": {"logical_block_size": "4096",
+                                    "physical_block_size": "4096"}
+                          },
+                          {"name": "fake-instance"},
+                          "/dev/sda")
+
     def test_multi_nic(self):
         instance_data = dict(self.test_instance)
         network_info = _fake_network_info(self.stubs, 2)

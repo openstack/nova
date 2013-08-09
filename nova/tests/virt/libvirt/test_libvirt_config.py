@@ -546,6 +546,23 @@ class LibvirtConfigGuestDiskTest(LibvirtConfigBaseTest):
               </iotune>
             </disk>""")
 
+    def test_config_blockio(self):
+        obj = config.LibvirtConfigGuestDisk()
+        obj.source_type = "file"
+        obj.source_path = "/tmp/hello"
+        obj.target_dev = "/dev/hda"
+        obj.target_bus = "ide"
+        obj.logical_block_size = "4096"
+        obj.physical_block_size = "4096"
+
+        xml = obj.to_xml()
+        self.assertXmlEqual("""
+            <disk type="file" device="disk">
+              <source file="/tmp/hello"/>
+              <target bus="ide" dev="/dev/hda"/>
+              <blockio logical_block_size="4096" physical_block_size="4096"/>
+            </disk>""", xml)
+
 
 class LibvirtConfigGuestFilesysTest(LibvirtConfigBaseTest):
 
