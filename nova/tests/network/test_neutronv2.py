@@ -722,13 +722,16 @@ class TestNeutronv2(TestNeutronv2Base):
                 self.moxed_client.create_port(
                     MyComparator(port_req_body)).AndReturn({'port': port})
             else:
+                NeutronOverQuota = exceptions.NeutronClientException(
+                            message="Quota exceeded for resources: ['port']",
+                            status_code=409)
                 self.moxed_client.create_port(
-                    MyComparator(port_req_body)).AndRaise(
-                        Exception("fail to create port"))
+                    MyComparator(port_req_body)).AndRaise(NeutronOverQuota)
             index += 1
         self.moxed_client.delete_port('portid_' + self.nets2[0]['id'])
         self.mox.ReplayAll()
-        self.assertRaises(NEUTRON_CLIENT_EXCEPTION, api.allocate_for_instance,
+        self.assertRaises(exception.PortLimitExceeded,
+                          api.allocate_for_instance,
                           self.context, self.instance)
 
     def test_allocate_for_instance_ex2(self):
