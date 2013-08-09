@@ -358,6 +358,9 @@ class VMwareESXDriver(driver.ComputeDriver):
         """Sets the specified host's ability to accept new instances."""
         return self._host.set_host_enabled(host, enabled)
 
+    def get_host_uptime(self, host):
+        return 'Please refer to %s for the uptime' % CONF.vmware.host_ip
+
     def inject_network_info(self, instance, network_info):
         """inject network info for specified instance."""
         self._vmops.inject_network_info(instance, network_info)

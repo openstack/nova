@@ -858,6 +858,10 @@ class VMwareAPIHostTestCase(test.TestCase):
     def test_host_maintenance_off(self):
         self._test_host_action(self.conn.host_maintenance_mode, False)
 
+    def test_get_host_uptime(self):
+        result = self.conn.get_host_uptime('host')
+        self.assertEqual('Please refer to test_url for the uptime', result)
+
 
 class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
 
