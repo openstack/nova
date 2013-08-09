@@ -23,10 +23,8 @@ import os
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
-from nova.virt.hyperv import hostutils
 from nova.virt.hyperv import imagecache
-from nova.virt.hyperv import pathutils
-from nova.virt.hyperv import vhdutils
+from nova.virt.hyperv import utilsfactory
 from nova.virt.hyperv import vmops
 from nova.virt.hyperv import vmutils
 from nova.virt.hyperv import volumeops
@@ -36,10 +34,10 @@ LOG = logging.getLogger(__name__)
 
 class MigrationOps(object):
     def __init__(self):
-        self._hostutils = hostutils.HostUtils()
-        self._vmutils = vmutils.VMUtils()
-        self._vhdutils = vhdutils.VHDUtils()
-        self._pathutils = pathutils.PathUtils()
+        self._hostutils = utilsfactory.get_hostutils()
+        self._vmutils = utilsfactory.get_vmutils()
+        self._vhdutils = utilsfactory.get_vhdutils()
+        self._pathutils = utilsfactory.get_pathutils()
         self._volumeops = volumeops.VolumeOps()
         self._vmops = vmops.VMOps()
         self._imagecache = imagecache.ImageCache()

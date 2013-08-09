@@ -2453,6 +2453,14 @@
 
 
 #
+# Options defined in nova.virt.hyperv.utilsfactory
+#
+
+# Force V1 volume utility class (boolean value)
+#force_volumeutils_v1=false
+
+
+#
 # Options defined in nova.virt.hyperv.vif
 #
 
@@ -2493,9 +2501,6 @@
 # Interval between volume attachment attempts, in seconds
 # (integer value)
 #volume_attach_retry_interval=5
-
-# Force volumeutils v1 (boolean value)
-#force_volumeutils_v1=false
 
 
 [osapi_v3]

@@ -52,6 +52,7 @@ from nova.virt.hyperv import hostutils
 from nova.virt.hyperv import livemigrationutils
 from nova.virt.hyperv import networkutils
 from nova.virt.hyperv import pathutils
+from nova.virt.hyperv import utilsfactory
 from nova.virt.hyperv import vhdutils
 from nova.virt.hyperv import vmutils
 from nova.virt.hyperv import volumeutils
@@ -1011,25 +1012,38 @@ class HyperVAPITestCase(test.TestCase):
                                                         fake_mounted_disk)
         m.WithSideEffects(self._add_volume_disk)
 
-    def _test_volumeutils_version(self, is_hyperv_2012=True,
-                                  force_volumeutils_v1=False):
+    def _test_util_class_version(self, v1_class, v2_class,
+                                 get_instance_action, is_hyperv_2012,
+                                 force_v1_flag, force_utils_v1):
         self._check_min_windows_version_satisfied = is_hyperv_2012
-        self.flags(force_volumeutils_v1=force_volumeutils_v1, group='hyperv')
+        CONF.set_override(force_v1_flag, force_v1_flag, 'hyperv')
         self._conn = driver_hyperv.HyperVDriver(None)
-        is_volutils_v2 = isinstance(self._conn._volumeops._volutils,
-                                    volumeutilsv2.VolumeUtilsV2)
 
-        self.assertTrue((is_hyperv_2012 and not force_volumeutils_v1) ^
-                        (not is_volutils_v2))
+        instance = get_instance_action()
+        is_v1 = isinstance(instance, v1_class)
+        # v2_class can inherit from v1_class
+        is_v2 = isinstance(instance, v2_class)
+
+        self.assertTrue((is_hyperv_2012 and not force_v1_flag) ^
+                        (is_v1 and not is_v2))
 
     def test_volumeutils_version_hyperv_2012(self):
-        self._test_volumeutils_version(True, False)
+        self._test_util_class_version(volumeutils.VolumeUtils,
+                                      volumeutilsv2.VolumeUtilsV2,
+                                      lambda: utilsfactory.get_volumeutils(),
+                                      True, 'force_volumeutils_v1', False)
 
     def test_volumeutils_version_hyperv_2012_force_v1(self):
-        self._test_volumeutils_version(True, True)
+        self._test_util_class_version(volumeutils.VolumeUtils,
+                                      volumeutilsv2.VolumeUtilsV2,
+                                      lambda: utilsfactory.get_volumeutils(),
+                                      True, 'force_volumeutils_v1', True)
 
     def test_volumeutils_version_hyperv_2008R2(self):
-        self._test_volumeutils_version(False, False)
+        self._test_util_class_version(volumeutils.VolumeUtils,
+                                      volumeutilsv2.VolumeUtilsV2,
+                                      lambda: utilsfactory.get_volumeutils(),
+                                      False, 'force_volumeutils_v1', False)
 
     def test_attach_volume(self):
         instance_data = self._get_instance_data()

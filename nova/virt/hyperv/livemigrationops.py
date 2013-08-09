@@ -25,10 +25,8 @@ from oslo.config import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
-from nova.virt.hyperv import hostutils
 from nova.virt.hyperv import imagecache
-from nova.virt.hyperv import livemigrationutils
-from nova.virt.hyperv import pathutils
+from nova.virt.hyperv import utilsfactory
 from nova.virt.hyperv import volumeops
 
 LOG = logging.getLogger(__name__)
@@ -50,12 +48,12 @@ def check_os_version_requirement(function):
 class LiveMigrationOps(object):
     def __init__(self):
         # Live migration is supported starting from Hyper-V Server 2012
-        if hostutils.HostUtils().check_min_windows_version(6, 2):
-            self._livemigrutils = livemigrationutils.LiveMigrationUtils()
+        if utilsfactory.get_hostutils().check_min_windows_version(6, 2):
+            self._livemigrutils = utilsfactory.get_livemigrationutils()
         else:
             self._livemigrutils = None
 
-        self._pathutils = pathutils.PathUtils()
+        self._pathutils = utilsfactory.get_pathutils()
         self._volumeops = volumeops.VolumeOps()
         self._imagecache = imagecache.ImageCache()
 

@@ -22,8 +22,7 @@ from oslo.config import cfg
 
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
-from nova.virt.hyperv import networkutils
-from nova.virt.hyperv import vmutils
+from nova.virt.hyperv import utilsfactory
 
 hyperv_opts = [
     cfg.StrOpt('vswitch_name',
@@ -65,8 +64,8 @@ class HyperVNovaNetworkVIFDriver(HyperVBaseVIFDriver):
     """Nova network VIF driver."""
 
     def __init__(self):
-        self._vmutils = vmutils.VMUtils()
-        self._netutils = networkutils.NetworkUtils()
+        self._vmutils = utilsfactory.get_vmutils()
+        self._netutils = utilsfactory.get_networkutils()
 
     def plug(self, instance, vif):
         vswitch_path = self._netutils.get_external_vswitch(

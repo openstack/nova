@@ -26,8 +26,7 @@ from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova import utils
-from nova.virt.hyperv import pathutils
-from nova.virt.hyperv import vhdutils
+from nova.virt.hyperv import utilsfactory
 from nova.virt.hyperv import vmutils
 from nova.virt import images
 
@@ -39,8 +38,8 @@ CONF.import_opt('use_cow_images', 'nova.virt.driver')
 
 class ImageCache(object):
     def __init__(self):
-        self._pathutils = pathutils.PathUtils()
-        self._vhdutils = vhdutils.VHDUtils()
+        self._pathutils = utilsfactory.get_pathutils()
+        self._vhdutils = utilsfactory.get_vhdutils()
 
     def _validate_vhd_image(self, vhd_path):
         try:

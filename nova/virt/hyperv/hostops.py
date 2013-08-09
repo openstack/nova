@@ -27,8 +27,7 @@ from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.virt.hyperv import constants
-from nova.virt.hyperv import hostutils
-from nova.virt.hyperv import pathutils
+from nova.virt.hyperv import utilsfactory
 
 CONF = cfg.CONF
 CONF.import_opt('my_ip', 'nova.netconf')
@@ -38,8 +37,8 @@ LOG = logging.getLogger(__name__)
 class HostOps(object):
     def __init__(self):
         self._stats = None
-        self._hostutils = hostutils.HostUtils()
-        self._pathutils = pathutils.PathUtils()
+        self._hostutils = utilsfactory.get_hostutils()
+        self._pathutils = utilsfactory.get_pathutils()
 
     def _get_cpu_info(self):
         """Get the CPU information.
