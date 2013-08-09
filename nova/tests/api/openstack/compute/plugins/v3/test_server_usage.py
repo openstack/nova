@@ -17,7 +17,7 @@ import datetime
 
 from lxml import etree
 
-from nova.api.openstack.compute.contrib import server_usage
+from nova.api.openstack.compute.plugins.v3 import server_usage
 from nova import compute
 from nova import exception
 from nova.objects import instance as instance_obj
@@ -55,22 +55,19 @@ def fake_compute_get_all(*args, **kwargs):
 
 class ServerUsageTest(test.TestCase):
     content_type = 'application/json'
-    prefix = 'OS-SRV-USG:'
+    prefix = 'os-server-usage:'
 
     def setUp(self):
         super(ServerUsageTest, self).setUp()
         fakes.stub_out_nw_api(self.stubs)
         self.stubs.Set(compute.api.API, 'get', fake_compute_get)
         self.stubs.Set(compute.api.API, 'get_all', fake_compute_get_all)
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Server_usage'])
 
     def _make_request(self, url):
         req = fakes.HTTPRequest.blank(url)
         req.accept = self.content_type
-        res = req.get_response(fakes.wsgi_app(init_only=('servers',)))
+        res = req.get_response(fakes.wsgi_app_v3(init_only=(
+            'servers', 'os-server-usage')))
         return res
 
     def _get_server(self, body):
@@ -90,7 +87,7 @@ class ServerUsageTest(test.TestCase):
                          terminated_at)
 
     def test_show(self):
-        url = '/v2/fake/servers/%s' % UUID3
+        url = '/v3/servers/%s' % UUID3
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 200)
@@ -101,7 +98,7 @@ class ServerUsageTest(test.TestCase):
                                terminated_at=DATE2)
 
     def test_detail(self):
-        url = '/v2/fake/servers/detail'
+        url = '/v3/servers/detail'
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 200)
@@ -119,7 +116,7 @@ class ServerUsageTest(test.TestCase):
             raise exception.InstanceNotFound(instance_id='fake')
 
         self.stubs.Set(compute.api.API, 'get', fake_compute_get)
-        url = '/v2/fake/servers/70f6db34-de8d-4fbd-aafb-4065bdfa6115'
+        url = '/v3/servers/70f6db34-de8d-4fbd-aafb-4065bdfa6115'
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 404)
@@ -127,7 +124,7 @@ class ServerUsageTest(test.TestCase):
 
 class ServerUsageXmlTest(ServerUsageTest):
     content_type = 'application/xml'
-    prefix = '{%s}' % server_usage.Server_usage.namespace
+    prefix = '{%s}' % server_usage.ServerUsage.namespace
 
     def _get_server(self, body):
         return etree.XML(body)
