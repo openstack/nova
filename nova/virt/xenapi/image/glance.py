@@ -39,7 +39,7 @@ class GlanceStore(object):
     def _make_params(self, context, session, image_id):
         return {'image_id': image_id,
                 'sr_path': vm_utils.get_sr_path(session),
-                'auth_token': getattr(context, 'auth_token', None)}
+                'extra_headers': glance.generate_identity_headers(context)}
 
     def download_image(self, context, session, instance, image_id):
         params = self._make_params(context, session, image_id)

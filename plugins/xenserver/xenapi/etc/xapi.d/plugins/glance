@@ -89,15 +89,10 @@ def _download_tarball_and_verify(request, staging_path):
 
 
 def _download_tarball(sr_path, staging_path, image_id, glance_host,
-                      glance_port, glance_use_ssl, auth_token):
+                      glance_port, glance_use_ssl, extra_headers):
     """Download the tarball image from Glance and extract it into the staging
     area. Retry if there is any failure.
     """
-    # Build request headers
-    headers = {}
-    if auth_token:
-        headers['x-auth-token'] = auth_token
-
     if glance_use_ssl:
         scheme = 'https'
     else:
@@ -107,7 +102,7 @@ def _download_tarball(sr_path, staging_path, image_id, glance_host,
            "%(image_id)s" % locals())
     logging.info("Downloading %s" % url)
 
-    request = urllib2.Request(url, headers=headers)
+    request = urllib2.Request(url, headers=extra_headers)
     try:
         _download_tarball_and_verify(request, staging_path)
     except Exception:
@@ -116,7 +111,7 @@ def _download_tarball(sr_path, staging_path, image_id, glance_host,
 
 
 def _upload_tarball(staging_path, image_id, glance_host, glance_port,
-                    glance_use_ssl, auth_token, properties):
+                    glance_use_ssl, extra_headers, properties):
     """
     Create a tarball of the image and then stream that into Glance
     using chunked-transfer-encoded HTTP.
@@ -166,9 +161,7 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port,
             'x-image-meta-container-format': 'ovf',
             'x-glance-registry-purge-props': 'False'}
 
-        # If we have an auth_token, set an x-auth-token header
-        if auth_token:
-            headers['x-auth-token'] = auth_token
+        headers.update(**extra_headers)
 
         for key, value in properties.iteritems():
             header_key = "x-image-meta-property-%s" % key.replace('_', '-')
@@ -229,7 +222,7 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port,
 
 
 def download_vhd(session, image_id, glance_host, glance_port, glance_use_ssl,
-                 uuid_stack, sr_path, auth_token):
+                 uuid_stack, sr_path, extra_headers):
     """Download an image from Glance, unbundle it, and then deposit the VHDs
     into the storage repository
     """
@@ -238,7 +231,7 @@ def download_vhd(session, image_id, glance_host, glance_port, glance_use_ssl,
         # Download tarball into staging area and extract it
         _download_tarball(
             sr_path, staging_path, image_id, glance_host, glance_port,
-            glance_use_ssl, auth_token)
+            glance_use_ssl, extra_headers)
 
         # Move the VHDs from the staging area into the storage repository
         return utils.import_vhds(sr_path, staging_path, uuid_stack)
@@ -247,14 +240,14 @@ def download_vhd(session, image_id, glance_host, glance_port, glance_use_ssl,
 
 
 def upload_vhd(session, vdi_uuids, image_id, glance_host, glance_port,
-               glance_use_ssl, sr_path, auth_token, properties):
+               glance_use_ssl, sr_path, extra_headers, properties):
     """Bundle the VHDs comprising an image and then stream them into Glance.
     """
     staging_path = utils.make_staging_area(sr_path)
     try:
         utils.prepare_staging_area(sr_path, staging_path, vdi_uuids)
         _upload_tarball(staging_path, image_id, glance_host, glance_port,
-                        glance_use_ssl, auth_token, properties)
+                        glance_use_ssl, extra_headers, properties)
     finally:
         utils.cleanup_staging_area(staging_path)
 

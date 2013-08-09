@@ -104,6 +104,17 @@ def _parse_image_ref(image_href):
     return (image_id, host, port, use_ssl)
 
 
+def generate_identity_headers(context, status='Confirmed'):
+    return {
+        'X-Auth-Token': getattr(context, 'auth_token', None),
+        'X-User-Id': getattr(context, 'user', None),
+        'X-Tenant-Id': getattr(context, 'tenant', None),
+        'X-Roles': ','.join(context.roles),
+        'X-Identity-Status': status,
+        'X-Service-Catalog': json.dumps(context.service_catalog),
+    }
+
+
 def _create_glance_client(context, host, port, use_ssl, version=1):
     """Instantiate a new glanceclient.Client object."""
     params = {}
@@ -120,15 +131,7 @@ def _create_glance_client(context, host, port, use_ssl, version=1):
         # keyword 'token', but later versions accept both the
         # header 'X-Auth-Token' and 'token'
         params['token'] = context.auth_token
-        identity_headers = {
-            'X-Auth-Token': context.auth_token,
-            'X-User-Id': context.user,
-            'X-Tenant-Id': context.tenant,
-            'X-Roles': ','.join(context.roles),
-            'X-Identity-Status': 'Confirmed',
-            'X-Service-Catalog': json.dumps(context.service_catalog),
-        }
-        params['identity_headers'] = identity_headers
+        params['identity_headers'] = generate_identity_headers(context)
     endpoint = '%s://%s:%s' % (scheme, host, port)
     return glanceclient.Client(str(version), endpoint, **params)
 
