@@ -20,6 +20,7 @@ import webob
 from nova.compute import api as compute_api
 from nova.compute import vm_states
 from nova import context
+from nova import exception
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
@@ -41,6 +42,16 @@ def fake_compute_api_get(self, context, instance_id):
     }
 
 
+def fake_service_get_by_compute_host(self, context, host):
+    if host == 'bad_host':
+        raise exception.ComputeHostNotFound(host=host)
+    else:
+        return {
+                'host_name': host,
+                'service': 'compute',
+                'zone': 'nova'}
+
+
 class EvacuateTest(test.TestCase):
 
     _methods = ('resize', 'evacuate')
@@ -48,6 +59,8 @@ class EvacuateTest(test.TestCase):
     def setUp(self):
         super(EvacuateTest, self).setUp()
         self.stubs.Set(compute_api.API, 'get', fake_compute_api_get)
+        self.stubs.Set(compute_api.HostAPI, 'service_get_by_compute_host',
+                       fake_service_get_by_compute_host)
         self.UUID = uuid.uuid4()
         for _method in self._methods:
             self.stubs.Set(compute_api.API, _method, fake_compute_api)
@@ -75,6 +88,14 @@ class EvacuateTest(test.TestCase):
                                                'admin_password': 'MyNewPass'})
         res = req.get_response(app)
         self.assertEqual(res.status_int, 400)
+
+    def test_evacuate_instance_with_bad_host(self):
+        req, app = self._gen_request_with_app({'host': 'bad_host',
+                                               'on_shared_storage': 'False',
+                                               'admin_password': 'MyNewPass'})
+
+        res = req.get_response(app)
+        self.assertEqual(res.status_int, 404)
 
     def test_evacuate_instance_with_target(self):
         req, app = self._gen_request_with_app({'host': 'my_host',
