@@ -309,7 +309,7 @@ class NetworkManager(manager.Manager):
         l3_lib = kwargs.get("l3_lib", CONF.l3_lib)
         self.l3driver = importutils.import_object(l3_lib)
 
-        super(NetworkManager, self).__init__(service_name='cells',
+        super(NetworkManager, self).__init__(service_name='network',
                                              *args, **kwargs)
 
     def _import_ipam_lib(self, ipam_lib):
