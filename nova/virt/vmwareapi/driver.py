@@ -341,7 +341,10 @@ class VMwareESXDriver(driver.ComputeDriver):
                'hypervisor_type': host_stats['hypervisor_type'],
                'hypervisor_version': host_stats['hypervisor_version'],
                'hypervisor_hostname': host_stats['hypervisor_hostname'],
-               'cpu_info': jsonutils.dumps(host_stats['cpu_info'])}
+               'cpu_info': jsonutils.dumps(host_stats['cpu_info']),
+               'supported_instances': jsonutils.dumps(
+                   host_stats['supported_instances']),
+               }
 
         return dic
 

@@ -50,6 +50,7 @@ from oslo.config import cfg
 from nova import context
 from nova import exception
 from nova.openstack.common.gettextutils import _
+from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt import driver
@@ -398,7 +399,6 @@ class XenAPIDriver(driver.ComputeDriver):
         total_disk_gb = host_stats['disk_total'] / (1024 * 1024 * 1024)
         used_disk_gb = host_stats['disk_used'] / (1024 * 1024 * 1024)
         hyper_ver = utils.convert_version_to_int(self._session.product_version)
-
         dic = {'vcpus': 0,
                'memory_mb': total_ram_mb,
                'local_gb': total_disk_gb,
@@ -408,7 +408,9 @@ class XenAPIDriver(driver.ComputeDriver):
                'hypervisor_type': 'xen',
                'hypervisor_version': hyper_ver,
                'hypervisor_hostname': host_stats['host_hostname'],
-               'cpu_info': host_stats['host_cpu_info']['cpu_count']}
+               'cpu_info': host_stats['host_cpu_info']['cpu_count'],
+               'supported_instances': jsonutils.dumps(
+                   host_stats['supported_instances'])}
 
         return dic
 

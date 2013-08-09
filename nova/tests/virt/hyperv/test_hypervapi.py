@@ -271,6 +271,8 @@ class HyperVAPITestCase(test.TestCase):
                           tot_hdd_b / 1024 ** 3 - free_hdd_b / 1024 ** 3)
         self.assertEquals(dic['hypervisor_version'],
                           windows_version.replace('.', ''))
+        self.assertEquals(dic['supported_instances'],
+                '[["i686", "hyperv", "hvm"], ["x86_64", "hyperv", "hvm"]]')
 
     def test_get_host_stats(self):
         tot_mem_kb = 2000000L

@@ -769,6 +769,8 @@ class PowerVMDriverTestCase(test.TestCase):
         self.assertEquals('fake-powervm', res.pop('hypervisor_hostname'))
         self.assertEquals('ppc64,powervm,3940', res.pop('cpu_info'))
         self.assertEquals(10168, res.pop('disk_available_least'))
+        self.assertEquals('[["ppc64", "powervm", "hvm"]]',
+                res.pop('supported_instances'))
         self.assertEquals(0, len(res), 'Did not test all keys.')
 
     def test_get_host_uptime(self):
