@@ -937,12 +937,12 @@ class ServerActionsControllerTest(test.TestCase):
         volume_api.create_snapshot_force(mox.IgnoreArg(), volume['id'],
                mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(snapshot)
 
-        def fake_volume_image_metadata(fd, context, bdms):
+        def fake_bdm_image_metadata(fd, context, bdms):
             return {'test_key1': 'test_value1',
                     'test_key2': 'test_value2'}
         req = fakes.HTTPRequest.blank(self.url)
-        self.stubs.Set(compute_api.API, '_get_volume_image_metadata',
-                       fake_volume_image_metadata)
+        self.stubs.Set(compute_api.API, '_get_bdm_image_metadata',
+                       fake_bdm_image_metadata)
 
         self.mox.ReplayAll()
         response = self.controller._action_create_image(req, FAKE_UUID, body)

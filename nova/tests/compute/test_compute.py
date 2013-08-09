@@ -431,24 +431,55 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.assertEqual(self.cinfo.get('serial'), self.volume_id)
 
     def test_boot_volume_metadata(self):
+        def volume_api_get(*args, **kwargs):
+            return {
+                'volume_image_metadata': {'vol_test_key': 'vol_test_value'}
+            }
+
+        def image_api_show(*args, **kwargs):
+            return {'img_test_key': 'img_test_value'}
+
+        self.stubs.Set(self.compute_api.volume_api, 'get', volume_api_get)
+        self.stubs.Set(self.compute_api.image_service, 'show', image_api_show)
+
         block_device_mapping = [{
             'id': 1,
             'device_name': 'vda',
-            'volume_image_metadata': {'test_key': 'test_value'},
             'no_device': None,
             'virtual_name': None,
             'snapshot_id': None,
             'volume_id': self.volume_id,
             'delete_on_termination': False,
         }]
-        expected_output = {'volume_image_metadata': {'test_key': 'test_value'}}
-        self.stubs.Set(self.compute_api.volume_api, 'get',
-                lambda *a, **kw: expected_output)
-        vol = self.compute_api.volume_api.get(self.context,
-                block_device_mapping)
-        vol_md = self.compute_api._get_volume_image_metadata(self.context,
-                block_device_mapping)
-        self.assertEqual(vol_md['test_key'], 'test_value')
+
+        image_meta = self.compute_api._get_bdm_image_metadata(
+            self.context, block_device_mapping)
+        self.assertEqual(image_meta['vol_test_key'], 'vol_test_value')
+
+        # Test it with new-style BDMs
+        block_device_mapping = [{
+            'boot_index': 0,
+            'source_type': 'volume',
+            'destination_type': 'volume',
+            'volume_id': self.volume_id,
+            'delete_on_termination': False,
+        }]
+
+        image_meta = self.compute_api._get_bdm_image_metadata(
+            self.context, block_device_mapping, legacy_bdm=False)
+        self.assertEqual(image_meta['vol_test_key'], 'vol_test_value')
+
+        block_device_mapping = [{
+            'boot_index': 0,
+            'source_type': 'image',
+            'destination_type': 'local',
+            'image_id': "fake-image",
+            'delete_on_termination': True,
+        }]
+
+        image_meta = self.compute_api._get_bdm_image_metadata(
+            self.context, block_device_mapping, legacy_bdm=False)
+        self.assertEqual(image_meta['img_test_key'], 'img_test_value')
 
     def test_poll_volume_usage_disabled(self):
         ctxt = 'MockContext'

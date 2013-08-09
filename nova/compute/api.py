@@ -767,7 +767,8 @@ class API(base.Base):
         QUOTAS.commit(context, quota_reservations)
         return instances
 
-    def _get_volume_image_metadata(self, context, block_device_mapping):
+    def _get_bdm_image_metadata(self, context, block_device_mapping,
+                                legacy_bdm=True):
         """If we are booting from a volume, we need to get the
         volume details from Cinder and make sure we pass the
         metadata back accordingly.
@@ -776,16 +777,26 @@ class API(base.Base):
             return {}
 
         for bdm in block_device_mapping:
-            if bdm.get('device_name') == "vda":
-                volume_id = bdm.get('volume_id')
-                if volume_id is not None:
-                    try:
-                        volume = self.volume_api.get(context,
-                                volume_id)
-                        return volume['volume_image_metadata']
-                    except Exception:
-                        raise exception.InvalidBDMVolume(id=volume_id)
-        return None
+            if legacy_bdm and bdm.get('device_name') != 'vda':
+                continue
+            elif not legacy_bdm and bdm.get('boot_index') != 0:
+                continue
+
+            if bdm.get('image_id'):
+                try:
+                    image_id = bdm['image_id']
+                    return self.image_service.show(context, image_id)
+                except Exception:
+                    raise exception.InvalidBDMImage(id=image_id)
+            elif bdm.get('volume_id'):
+                try:
+                    volume_id = bdm['volume_id']
+                    volume = self.volume_api.get(context, volume_id)
+                    return volume['volume_image_metadata']
+                except Exception:
+                    raise exception.InvalidBDMVolume(id=volume_id)
+
+        return {}
 
     def _create_instance(self, context, instance_type,
                image_href, kernel_id, ramdisk_id,
@@ -820,8 +831,8 @@ class API(base.Base):
             image_id = None
             boot_meta = {}
             boot_meta['properties'] = \
-                self._get_volume_image_metadata(context,
-                    block_device_mapping)
+                self._get_bdm_image_metadata(context,
+                    block_device_mapping, legacy_bdm)
 
         handle_az = self._handle_availability_zone
         availability_zone, forced_host, forced_node = handle_az(
