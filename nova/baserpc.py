@@ -27,7 +27,6 @@ import nova.openstack.common.rpc.proxy as rpc_proxy
 
 CONF = cfg.CONF
 rpcapi_cap_opt = cfg.StrOpt('baseapi',
-        default=None,
         help='Set a version cap for messages sent to the base api in any '
              'service')
 CONF.register_opt(rpcapi_cap_opt, 'upgrade_levels')

@@ -39,7 +39,7 @@ from nova import utils
 LOG = log.getLogger(__name__)
 
 notify_opts = [
-    cfg.StrOpt('notify_on_state_change', default=None,
+    cfg.StrOpt('notify_on_state_change',
         help='If set, send compute.instance.update notifications on instance '
              'state changes.  Valid values are None for no notifications, '
              '"vm_state" for notifications on VM state changes, or '

@@ -38,7 +38,6 @@ CONF.import_opt('enable', 'nova.cells.opts', group='cells')
 CONF.import_opt('topic', 'nova.cells.opts', group='cells')
 
 rpcapi_cap_opt = cfg.StrOpt('cells',
-        default=None,
         help='Set a version cap for messages sent to local cells services')
 CONF.register_opt(rpcapi_cap_opt, 'upgrade_levels')
 

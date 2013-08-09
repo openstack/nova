@@ -62,10 +62,8 @@ LOG = logging.getLogger(__name__)
 
 trusted_opts = [
     cfg.StrOpt('attestation_server',
-               default=None,
                help='attestation server http'),
     cfg.StrOpt('attestation_server_ca_file',
-               default=None,
                help='attestation server Cert file for Identity verification'),
     cfg.StrOpt('attestation_port',
                default='8443',
@@ -74,7 +72,6 @@ trusted_opts = [
                default='/OpenAttestationWebServices/V1.0',
                help='attestation web API URL'),
     cfg.StrOpt('attestation_auth_blob',
-               default=None,
                help='attestation authorization blob - must change'),
     cfg.IntOpt('attestation_auth_timeout',
                default=60,

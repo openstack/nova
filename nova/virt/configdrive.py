@@ -43,7 +43,6 @@ configdrive_opts = [
     # force_config_drive is a string option, to allow for future behaviors
     #  (e.g. use config_drive based on image properties)
     cfg.StrOpt('force_config_drive',
-               default=None,
                help='Set to force injection to take place on a config drive '
                     '(if set, valid options are: always)'),
     cfg.StrOpt('mkisofs_cmd',

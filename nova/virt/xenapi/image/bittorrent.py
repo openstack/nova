@@ -26,7 +26,6 @@ LOG = logging.getLogger(__name__)
 
 xenapi_torrent_opts = [
     cfg.StrOpt('xenapi_torrent_base_url',
-               default=None,
                help='Base URL for torrent files.'),
     cfg.FloatOpt('xenapi_torrent_seed_chance',
                  default=1.0,

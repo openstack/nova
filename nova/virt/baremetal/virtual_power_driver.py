@@ -47,7 +47,6 @@ opts = [
                default='',
                help='password for virtual power host_user'),
     cfg.StrOpt('virtual_power_host_key',
-               default=None,
                help='ssh key for virtual power host_user'),
 
 ]

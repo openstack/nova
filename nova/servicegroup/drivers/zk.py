@@ -32,7 +32,6 @@ zookeeper = importutils.try_import('zookeeper')
 
 zk_driver_opts = [
     cfg.StrOpt('address',
-               default=None,
                help='The ZooKeeper addresses for servicegroup service in the '
                     'format of host1:port,host2:port,host3:port'),
     cfg.IntOpt('recv_timeout',

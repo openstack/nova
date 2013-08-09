@@ -40,7 +40,6 @@ CONF.import_opt('call_timeout', 'nova.cells.opts', group='cells')
 CONF.import_opt('rpc_backend', 'nova.openstack.common.rpc')
 
 rpcapi_cap_opt = cfg.StrOpt('intercell',
-        default=None,
         help='Set a version cap for messages sent between cells services')
 CONF.register_opt(rpcapi_cap_opt, 'upgrade_levels')
 

@@ -105,13 +105,10 @@ LOG = logging.getLogger(__name__)
 
 libvirt_opts = [
     cfg.StrOpt('rescue_image_id',
-               default=None,
                help='Rescue ami image'),
     cfg.StrOpt('rescue_kernel_id',
-               default=None,
                help='Rescue aki image'),
     cfg.StrOpt('rescue_ramdisk_id',
-               default=None,
                help='Rescue ari image'),
     cfg.StrOpt('libvirt_type',
                default='kvm',
@@ -152,7 +149,6 @@ libvirt_opts = [
                default=0,
                help='Maximum bandwidth to be used during migration, in Mbps'),
     cfg.StrOpt('snapshot_image_format',
-               default=None,
                help='Snapshot image format (valid options are : '
                     'raw, qcow2, vmdk, vdi). '
                     'Defaults to same as source image'),
@@ -177,7 +173,6 @@ libvirt_opts = [
                   ],
                 help='Libvirt handlers for remote volumes.'),
     cfg.StrOpt('libvirt_disk_prefix',
-               default=None,
                help='Override the default disk prefix for the devices attached'
                     ' to a server, which is dependent on libvirt_type. '
                     '(valid options are: sd, xvd, uvd, vd)'),
@@ -191,7 +186,6 @@ libvirt_opts = [
                 help='Use a separated OS thread pool to realize non-blocking'
                      ' libvirt calls'),
     cfg.StrOpt('libvirt_cpu_mode',
-               default=None,
                help='Set to "host-model" to clone the host CPU feature flags; '
                     'to "host-passthrough" to use the host CPU model exactly; '
                     'to "custom" to use a named CPU model; '
@@ -199,7 +193,6 @@ libvirt_opts = [
                     'If libvirt_type="kvm|qemu", it will default to '
                     '"host-model", otherwise it will default to "none"'),
     cfg.StrOpt('libvirt_cpu_model',
-               default=None,
                help='Set to a named libvirt CPU model (see names listed '
                     'in /usr/share/libvirt/cpu_map.xml). Only has effect if '
                     'libvirt_cpu_mode="custom" and libvirt_type="kvm|qemu"'),
@@ -215,7 +208,6 @@ libvirt_opts = [
                  help='Specific cachemodes to use for different disk types '
                       'e.g: ["file=directsync","block=none"]'),
     cfg.StrOpt('vcpu_pin_set',
-                default=None,
                 help='Which pcpus can be used by vcpus of instance '
                      'e.g: "4-12,^8,15"'),
     ]

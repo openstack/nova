@@ -89,7 +89,6 @@ compute_opts = [
                help='Console proxy host to use to connect '
                     'to instances on this host.'),
     cfg.StrOpt('default_access_ip_network_name',
-               default=None,
                help='Name of network to use to set access ips for instances'),
     cfg.BoolOpt('defer_iptables_apply',
                 default=False,

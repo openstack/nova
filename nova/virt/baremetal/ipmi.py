@@ -42,7 +42,6 @@ opts = [
                default='shellinaboxd',
                help='path to baremetal terminal program'),
     cfg.StrOpt('terminal_cert_dir',
-               default=None,
                help='path to baremetal terminal SSL cert(PEM)'),
     cfg.StrOpt('terminal_pid_dir',
                default=paths.state_path_def('baremetal/console'),

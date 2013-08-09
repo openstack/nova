@@ -55,14 +55,11 @@ wsgi_opts = [
                  'into it: client_ip, date_time, request_line, status_code, '
                  'body_length, wall_seconds.'),
     cfg.StrOpt('ssl_ca_file',
-               default=None,
                help="CA certificate file to use to verify "
                     "connecting clients"),
     cfg.StrOpt('ssl_cert_file',
-                    default=None,
                     help="SSL certificate of API server"),
     cfg.StrOpt('ssl_key_file',
-                    default=None,
                     help="SSL private key of API server"),
     cfg.IntOpt('tcp_keepidle',
                default=600,
