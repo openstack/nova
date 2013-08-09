@@ -468,3 +468,11 @@ class TestDriverBlockDevice(test.TestCase):
                           driver_block_device.get_swap(legacy_swap))
         self.assertEquals(no_swap, driver_block_device.get_swap(no_swap))
         self.assertEquals(None, driver_block_device.get_swap([]))
+
+    def test_is_implemented(self):
+        for bdm in (self.image_bdm, self.volume_bdm, self.swap_bdm,
+                    self.ephemeral_bdm, self.snapshot_bdm):
+            self.assertTrue(driver_block_device.is_implemented(bdm))
+        local_image = self.image_bdm.copy()
+        local_image['destination_type'] = 'local'
+        self.assertFalse(driver_block_device.is_implemented(local_image))

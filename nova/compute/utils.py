@@ -16,6 +16,7 @@
 
 """Compute-related Utilities and helpers."""
 
+import itertools
 import re
 import string
 import traceback
@@ -122,12 +123,78 @@ def pack_action_event_finish(context, instance_uuid, event_name, exc_val=None,
 def get_device_name_for_instance(context, instance, bdms, device):
     """Validates (or generates) a device name for instance.
 
+    This method is a wrapper for get_next_device_name that gets the list
+    of used devices and the root device from a block device mapping.
+    """
+    mappings = block_device.instance_block_mapping(instance, bdms)
+    return get_next_device_name(instance, mappings.values(),
+                                mappings['root'], device)
+
+
+def default_device_names_for_instance(instance, root_device_name,
+                                      update_function, *block_device_lists):
+    """Generate missing device names for an instance."""
+
+    def _device_names(iterables):
+        return [bdm['device_name']
+                for bdm in itertools.chain(*iterables) if bdm['device_name']]
+
+    dev_list = _device_names(block_device_lists)
+    if root_device_name not in dev_list:
+        dev_list.append(root_device_name)
+    inst_type = flavors.extract_flavor(instance)
+
+    is_libvirt = driver.compute_driver_matches('libvirt.LibvirtDriver')
+    libvirt_default_ephemerals = []
+
+    bdm_named_lists = zip(('ephemerals', 'swap', 'block_device_mapping'),
+        block_device_lists)
+
+    for name, bdm_list in bdm_named_lists:
+        # Libvirt will create a default ephemeral if instance allows
+        # and was not overridden.
+        if (is_libvirt and name == 'ephemerals' and not bdm_list and
+                instance['ephemeral_gb'] > 0):
+            default_eph = get_next_device_name(instance,
+                                               [root_device_name],
+                                               root_device_name)
+            if default_eph not in dev_list:
+                dev_list.append(default_eph)
+                libvirt_default_ephemerals.append(default_eph)
+
+        # Libvirt will create a default swap if it's in instance type
+        # and it was not supplied or overridden
+        if (is_libvirt and name == 'swap' and not bdm_list and
+                inst_type['swap'] > 0):
+
+            ephemerals = (_device_names(bdm_named_lists[0][1]) or
+                          libvirt_default_ephemerals)
+            default_swap = get_next_device_name(instance,
+                    [root_device_name] + ephemerals, root_device_name)
+            if default_swap not in dev_list:
+                dev_list.append(default_swap)
+
+        for bdm in bdm_list:
+            dev = bdm.get('device_name')
+            if not dev:
+                dev = get_next_device_name(instance, dev_list,
+                                           root_device_name)
+                bdm['device_name'] = dev
+                if update_function:
+                    update_function(bdm)
+                dev_list.append(dev)
+
+
+def get_next_device_name(instance, device_name_list,
+                         root_device_name=None, device=None):
+    """Validates (or generates) a device name for instance.
+
     If device is not set, it will generate a unique device appropriate
-    for the instance. It uses the block device mapping table to find
-    valid device names. If the device name is valid but applicable to
-    a different backend (for example /dev/vdc is specified but the
-    backend uses /dev/xvdc), the device name will be converted to the
-    appropriate format.
+    for the instance. It uses the root_device_name (if provided) and
+    the list of used devices to find valid device names. If the device
+    name is valid but applicable to a different backend (for example
+    /dev/vdc is specified but the backend uses /dev/xvdc), the device
+    name will be converted to the appropriate format.
     """
     req_prefix = None
     req_letter = None
@@ -138,23 +205,29 @@ def get_device_name_for_instance(context, instance, bdms, device):
         except (TypeError, AttributeError, ValueError):
             raise exception.InvalidDevicePath(path=device)
 
-    mappings = block_device.instance_block_mapping(instance, bdms)
+    if not root_device_name:
+        root_device_name = block_device.DEFAULT_ROOT_DEV_NAME
 
     try:
-        prefix = block_device.match_device(mappings['root'])[0]
+        prefix = block_device.match_device(root_device_name)[0]
     except (TypeError, AttributeError, ValueError):
-        raise exception.InvalidDevicePath(path=mappings['root'])
+        raise exception.InvalidDevicePath(path=root_device_name)
 
     # NOTE(vish): remove this when xenapi is setting default_root_device
     if driver.compute_driver_matches('xenapi.XenAPIDriver'):
         prefix = '/dev/xvd'
+
+    # NOTE(xqueralt): This can be removed when we have libvirt
+    # defaulting it's own device names.
+    if driver.compute_driver_matches('libvirt.LibvirtDriver'):
+        prefix = '/dev/vd'
 
     if req_prefix != prefix:
         LOG.debug(_("Using %(prefix)s instead of %(req_prefix)s"),
                   {'prefix': prefix, 'req_prefix': req_prefix})
 
     used_letters = set()
-    for device_path in mappings.itervalues():
+    for device_path in device_name_list:
         letter = block_device.strip_prefix(device_path)
         # NOTE(vish): delete numbers in case we have something like
         #             /dev/sda1
@@ -177,8 +250,7 @@ def get_device_name_for_instance(context, instance, bdms, device):
     if req_letter in used_letters:
         raise exception.DevicePathInUse(path=device)
 
-    device_name = prefix + req_letter
-    return device_name
+    return prefix + req_letter
 
 
 def _get_unused_letter(used_letters):

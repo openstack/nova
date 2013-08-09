@@ -4208,6 +4208,24 @@ class BlockDeviceMappingTestCase(test.TestCase):
         self.assertEqual(bdm_real['device_name'], 'fake_name')
         self.assertEqual(bdm_real['destination_type'], 'camelot')
 
+        # check create without device_name
+        bdm1 = dict(values)
+        bdm1['device_name'] = None
+        db.block_device_mapping_update_or_create(self.ctxt, bdm1, legacy=False)
+        bdm_real = db.block_device_mapping_get_all_by_instance(self.ctxt, uuid)
+        self.assertEqual(len(bdm_real), 2)
+        bdm_real = bdm_real[1]
+        self.assertEqual(bdm_real['device_name'], None)
+
+        # check create multiple devices without device_name
+        bdm2 = dict(values)
+        bdm2['device_name'] = None
+        db.block_device_mapping_update_or_create(self.ctxt, bdm2, legacy=False)
+        bdm_real = db.block_device_mapping_get_all_by_instance(self.ctxt, uuid)
+        self.assertEqual(len(bdm_real), 3)
+        bdm_real = bdm_real[2]
+        self.assertEqual(bdm_real['device_name'], None)
+
     def test_block_device_mapping_update_or_create_multiple_ephemeral(self):
         uuid = self.instance['uuid']
         values = {

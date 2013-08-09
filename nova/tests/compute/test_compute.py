@@ -5511,6 +5511,81 @@ class ComputeTestCase(BaseTestCase):
         instance.refresh()
         self.assertEqual(vm_states.ACTIVE, instance['vm_state'])
 
+    def _get_instance_and_bdm_for_dev_defaults_tests(self):
+        instance = self._create_fake_instance(
+            params={'root_device_name': '/dev/vda'})
+        block_device_mapping = [
+            {'id': 3, 'instance_uuid': 'fake-instance',
+             'device_name': '/dev/vda',
+             'source_type': 'volume',
+             'destination_type': 'volume',
+             'image_id': 'fake-image-id-1',
+             'boot_index': 0}]
+
+        return instance, block_device_mapping
+
+    def test_default_block_device_names_empty_instance_root_dev(self):
+        instance, bdms = self._get_instance_and_bdm_for_dev_defaults_tests()
+        instance['root_device_name'] = None
+        self.mox.StubOutWithMock(self.compute, '_instance_update')
+        self.mox.StubOutWithMock(self.compute,
+                                 '_default_device_names_for_instance')
+        self.compute._instance_update(self.context, instance['uuid'],
+                                      root_device_name='/dev/vda')
+        self.compute._default_device_names_for_instance(instance,
+                                                        '/dev/vda',
+                                                        mox.IgnoreArg(),
+                                                        [], [], bdms)
+        self.mox.ReplayAll()
+        self.compute._default_block_device_names(self.context,
+                                                 instance,
+                                                 {}, bdms)
+
+    def test_default_block_device_names_empty_root_device(self):
+        instance, bdms = self._get_instance_and_bdm_for_dev_defaults_tests()
+        bdms[0]['device_name'] = None
+        self.mox.StubOutWithMock(self.compute.conductor_api,
+                                 'block_device_mapping_update')
+        self.mox.StubOutWithMock(self.compute,
+                                 '_default_device_names_for_instance')
+        self.compute.conductor_api.block_device_mapping_update(
+            self.context, bdms[0]['id'], {'device_name': '/dev/vda'})
+        self.compute._default_device_names_for_instance(instance,
+                                                        '/dev/vda',
+                                                        mox.IgnoreArg(),
+                                                        [], [], bdms)
+        self.mox.ReplayAll()
+        self.compute._default_block_device_names(self.context,
+                                                 instance,
+                                                 {}, bdms)
+
+    def test_default_block_device_names_no_root_device(self):
+        instance, bdms = self._get_instance_and_bdm_for_dev_defaults_tests()
+        instance['root_device_name'] = None
+        bdms[0]['device_name'] = None
+        self.mox.StubOutWithMock(self.compute, '_instance_update')
+        self.mox.StubOutWithMock(self.compute.conductor_api,
+                                 'block_device_mapping_update')
+        self.mox.StubOutWithMock(self.compute,
+                                 '_default_root_device_name')
+        self.mox.StubOutWithMock(self.compute,
+                                 '_default_device_names_for_instance')
+
+        self.compute._default_root_device_name(instance, mox.IgnoreArg(),
+                                               bdms[0]).AndReturn('/dev/vda')
+        self.compute._instance_update(self.context, instance['uuid'],
+                                      root_device_name='/dev/vda')
+        self.compute.conductor_api.block_device_mapping_update(
+            self.context, bdms[0]['id'], {'device_name': '/dev/vda'})
+        self.compute._default_device_names_for_instance(instance,
+                                                        '/dev/vda',
+                                                        mox.IgnoreArg(),
+                                                        [], [], bdms)
+        self.mox.ReplayAll()
+        self.compute._default_block_device_names(self.context,
+                                                 instance,
+                                                 {}, bdms)
+
 
 class ComputeAPITestCase(BaseTestCase):
     def setUp(self):
