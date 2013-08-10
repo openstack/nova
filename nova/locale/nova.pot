@@ -6,9 +6,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: nova jenkins.nova.propose.translation.update.341\n"
+"Project-Id-Version: nova jenkins.nova.propose.translation.update.342\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2013-08-10 06:07+0000\n"
+"POT-Creation-Date: 2013-08-10 19:37+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -4642,157 +4642,157 @@ msgstr ""
 msgid "snapshot for %s"
 msgstr ""
 
-#: nova/compute/api.py:2159
+#: nova/compute/api.py:2160
 msgid "flavor_id is None. Assuming migration."
 msgstr ""
 
-#: nova/compute/api.py:2168
+#: nova/compute/api.py:2169
 #, python-format
 msgid ""
 "Old instance type %(current_instance_type_name)s,  new instance type "
 "%(new_instance_type_name)s"
 msgstr ""
 
-#: nova/compute/api.py:2209
+#: nova/compute/api.py:2210
 #, python-format
 msgid "%(overs)s quota exceeded for %(pid)s, tried to resize instance."
 msgstr ""
 
-#: nova/compute/api.py:2378
+#: nova/compute/api.py:2379
 msgid "Cannot rescue a volume-backed instance"
 msgstr ""
 
-#: nova/compute/api.py:2488
+#: nova/compute/api.py:2489
 msgid "Locking"
 msgstr ""
 
-#: nova/compute/api.py:2505
+#: nova/compute/api.py:2506
 msgid "Unlocking"
 msgstr ""
 
-#: nova/compute/api.py:2578
+#: nova/compute/api.py:2579
 msgid "Volume must be attached in order to detach."
 msgstr ""
 
-#: nova/compute/api.py:2595
+#: nova/compute/api.py:2596
 msgid "Old volume must be attached in order to swap."
 msgstr ""
 
-#: nova/compute/api.py:2602
+#: nova/compute/api.py:2603
 msgid "New volume must be detached in order to swap."
 msgstr ""
 
-#: nova/compute/api.py:2605
+#: nova/compute/api.py:2606
 msgid "New volume must be the same size or larger."
 msgstr ""
 
-#: nova/compute/api.py:2781
+#: nova/compute/api.py:2782
 #, python-format
 msgid "Going to try to live migrate instance to %s"
 msgstr ""
 
-#: nova/compute/api.py:2803
+#: nova/compute/api.py:2804
 msgid "vm evacuation scheduled"
 msgstr ""
 
-#: nova/compute/api.py:2807
+#: nova/compute/api.py:2808
 #, python-format
 msgid "Instance compute service state on %s expected to be down, but it was up."
 msgstr ""
 
-#: nova/compute/api.py:3071
+#: nova/compute/api.py:3072
 #, python-format
 msgid "Host already in availability zone %s."
 msgstr ""
 
-#: nova/compute/api.py:3125 nova/tests/compute/test_keypairs.py:109
+#: nova/compute/api.py:3126 nova/tests/compute/test_keypairs.py:109
 msgid "Keypair name contains unsafe characters"
 msgstr ""
 
-#: nova/compute/api.py:3129 nova/tests/compute/test_keypairs.py:101
+#: nova/compute/api.py:3130 nova/tests/compute/test_keypairs.py:101
 #: nova/tests/compute/test_keypairs.py:105
 msgid "Keypair name must be between 1 and 255 characters long"
 msgstr ""
 
-#: nova/compute/api.py:3211
+#: nova/compute/api.py:3212
 #, python-format
 msgid "Security group %s is not a string or unicode"
 msgstr ""
 
-#: nova/compute/api.py:3214
+#: nova/compute/api.py:3215
 #, python-format
 msgid "Security group %s cannot be empty."
 msgstr ""
 
-#: nova/compute/api.py:3222
+#: nova/compute/api.py:3223
 #, python-format
 msgid ""
 "Value (%(value)s) for parameter Group%(property)s is invalid. Content "
 "limited to '%(allowed)s'."
 msgstr ""
 
-#: nova/compute/api.py:3228
+#: nova/compute/api.py:3229
 #, python-format
 msgid "Security group %s should not be greater than 255 characters."
 msgstr ""
 
-#: nova/compute/api.py:3246
+#: nova/compute/api.py:3247
 msgid "Quota exceeded, too many security groups."
 msgstr ""
 
-#: nova/compute/api.py:3249
+#: nova/compute/api.py:3250
 #, python-format
 msgid "Create Security Group %s"
 msgstr ""
 
-#: nova/compute/api.py:3261
+#: nova/compute/api.py:3262
 #, python-format
 msgid "Security group %s already exists"
 msgstr ""
 
-#: nova/compute/api.py:3274
+#: nova/compute/api.py:3275
 #, python-format
 msgid "Unable to update system group '%s'"
 msgstr ""
 
-#: nova/compute/api.py:3334
+#: nova/compute/api.py:3335
 #, python-format
 msgid "Unable to delete system group '%s'"
 msgstr ""
 
-#: nova/compute/api.py:3339
+#: nova/compute/api.py:3340
 msgid "Security group is still in use"
 msgstr ""
 
-#: nova/compute/api.py:3347
+#: nova/compute/api.py:3348
 msgid "Failed to update usages deallocating security group"
 msgstr ""
 
-#: nova/compute/api.py:3350
+#: nova/compute/api.py:3351
 #, python-format
 msgid "Delete security group %s"
 msgstr ""
 
-#: nova/compute/api.py:3427 nova/compute/api.py:3501
+#: nova/compute/api.py:3428 nova/compute/api.py:3502
 #, python-format
 msgid "Rule (%s) not found"
 msgstr ""
 
-#: nova/compute/api.py:3443
+#: nova/compute/api.py:3444
 msgid "Quota exceeded, too many security group rules."
 msgstr ""
 
-#: nova/compute/api.py:3446
+#: nova/compute/api.py:3447
 #, python-format
 msgid "Authorize security group ingress %s"
 msgstr ""
 
-#: nova/compute/api.py:3455
+#: nova/compute/api.py:3456
 #, python-format
 msgid "Revoke security group ingress %s"
 msgstr ""
 
-#: nova/compute/api.py:3508
+#: nova/compute/api.py:3509
 msgid "Security group id should be integer"
 msgstr ""
 
@@ -5403,7 +5403,7 @@ msgstr ""
 msgid "Port %s is not attached"
 msgstr ""
 
-#: nova/compute/manager.py:3682 nova/tests/compute/test_compute.py:9044
+#: nova/compute/manager.py:3682 nova/tests/compute/test_compute.py:9064
 #, python-format
 msgid "Host %s not found"
 msgstr ""
@@ -7955,7 +7955,7 @@ msgstr ""
 msgid "wrong host/node"
 msgstr ""
 
-#: nova/tests/compute/test_compute.py:9248
+#: nova/tests/compute/test_compute.py:9268
 msgid "spawn error"
 msgstr ""
 
