@@ -498,9 +498,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         instance = self._get_sync_instance(power_state, vm_state)
         instance.refresh()
         instance.save()
-        self.mox.StubOutWithMock(self.compute.conductor_api, 'compute_stop')
+        self.mox.StubOutWithMock(self.compute.compute_api, 'stop')
         if stop:
-            self.compute.conductor_api.compute_stop(self.context, instance)
+            self.compute.compute_api.stop(self.context, instance)
         self.mox.ReplayAll()
         self.compute._sync_instance_power_state(self.context, instance,
                                                 driver_power_state)

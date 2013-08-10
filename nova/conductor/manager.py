@@ -519,6 +519,8 @@ class ConductorManager(manager.Manager):
 
         return ec2_ids
 
+    # NOTE(danms): This method is now deprecated and can be removed in
+    # version v2.0 of the RPC API
     def compute_stop(self, context, instance, do_cast=True):
         # NOTE(mriedem): Clients using an interface before 1.43 will be sending
         # dicts so we need to handle that here since compute/api::stop()
