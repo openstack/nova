@@ -29,6 +29,7 @@ from nova import db
 from nova import exception
 from nova.objects import base as obj_base
 from nova.objects import instance as instance_obj
+from nova.objects import instance_info_cache
 from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
 from nova import quota
@@ -109,6 +110,7 @@ class _ComputeAPIUnitTestMixIn(object):
         instance.updated_at = now
         instance.launched_at = now
         instance.disable_terminate = False
+        instance.info_cache = instance_info_cache.InstanceInfoCache()
 
         if params:
             instance.update(params)
@@ -374,7 +376,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(self.compute_api, '_reserve_quota_delta')
         self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
         self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
-        self.mox.StubOutWithMock(db, 'instance_info_cache_delete')
+        self.mox.StubOutWithMock(inst.info_cache, 'delete')
         self.mox.StubOutWithMock(self.compute_api.network_api,
                                  'deallocate_for_instance')
         self.mox.StubOutWithMock(db, 'instance_system_metadata_get')
@@ -408,7 +410,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(rpcapi, 'soft_delete_instance')
 
         if inst.host == 'down-host':
-            db.instance_info_cache_delete(self.context, inst.uuid)
+            inst.info_cache.delete()
             compute_utils.notify_about_instance_usage(self.context,
                                                       inst,
                                                       '%s.start' % delete_type)
