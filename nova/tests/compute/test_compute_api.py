@@ -83,6 +83,7 @@ class _ComputeAPIUnitTestMixIn(object):
         now = timeutils.utcnow()
 
         instance = instance_obj.Instance()
+        instance._context = self.context
         instance.id = 1
         instance.uuid = uuidutils.generate_uuid()
         instance.cell_name = 'api!child'
@@ -428,7 +429,7 @@ class _ComputeAPIUnitTestMixIn(object):
                 else:
                     rpcapi.terminate_instance(self.context, inst, [],
                                               reservations=None)
-            db.instance_destroy(self.context, inst.uuid)
+            db.instance_destroy(self.context, inst.uuid, constraint=None)
             compute_utils.notify_about_instance_usage(
                 self.context, inst, '%s.end' % delete_type,
                 system_metadata='sys-meta')
@@ -499,7 +500,7 @@ class _ComputeAPIUnitTestMixIn(object):
                                               inst.project_id, inst.user_id
                                               ).AndReturn(None)
         db.constraint(host=mox.IgnoreArg()).AndReturn('constraint')
-        db.instance_destroy(self.context, inst.uuid, 'constraint')
+        db.instance_destroy(self.context, inst.uuid, constraint='constraint')
 
         self.mox.ReplayAll()
 

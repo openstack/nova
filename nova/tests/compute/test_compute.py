@@ -8454,7 +8454,7 @@ class ComputePolicyTestCase(BaseTestCase):
         rules = {"compute:delete": []}
         self.policy.set_rules(rules)
 
-        self.compute_api.delete(self.context, instance)
+        self.compute_api.delete(self.context, self._objectify(instance))
 
     def test_create_fail(self):
         rules = {"compute:create": [["false:false"]]}
