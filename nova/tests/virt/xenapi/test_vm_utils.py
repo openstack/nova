@@ -503,7 +503,7 @@ class CheckVDISizeTestCase(test.TestCase):
 
         self.mox.StubOutWithMock(vm_utils, '_get_vdi_chain_size')
         vm_utils._get_vdi_chain_size(self.session,
-                self.vdi_uuid).AndReturn(1073741825)
+                self.vdi_uuid).AndReturn(11811160065)  # 10GB overhead allowed
 
         self.mox.ReplayAll()
 

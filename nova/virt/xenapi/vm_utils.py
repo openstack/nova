@@ -134,6 +134,11 @@ KERNEL_DIR = '/boot/guest'
 MAX_VDI_CHAIN_SIZE = 16
 PROGRESS_INTERVAL_SECONDS = 300
 
+# Fudge factor to allow for the VHD chain to be slightly larger than
+# the partitioned space. Otherwise, legitimate images near their
+# maximum allowed size can fail on build with InstanceDiskTypeTooSmall.
+VHD_SIZE_CHECK_FUDGE_FACTOR_GB = 10
+
 
 class ImageType(object):
     """Enumeration class for distinguishing different image types
@@ -1255,9 +1260,10 @@ def _get_vdi_chain_size(session, vdi_uuid):
 
 def _check_vdi_size(context, session, instance, vdi_uuid):
     instance_type = flavors.extract_flavor(instance)
-    allowed_size = instance_type['root_gb'] * (1024 ** 3)
+    allowed_size = (instance_type['root_gb'] +
+                    VHD_SIZE_CHECK_FUDGE_FACTOR_GB) * (1024 ** 3)
 
-    if not allowed_size:
+    if not instance_type['root_gb']:
         # root_gb=0 indicates that we're disabling size checks
         return
 
