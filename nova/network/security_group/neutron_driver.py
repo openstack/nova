@@ -28,6 +28,7 @@ from nova.compute import api as compute_api
 from nova import exception
 from nova.network import neutronv2
 from nova.network.security_group import security_group_base
+from nova.objects import security_group
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
@@ -460,4 +461,5 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
     def populate_security_groups(self, instance, security_groups):
         # Setting to emply list since we do not want to populate this field
         # in the nova database if using the neutron driver
-        instance['security_groups'] = []
+        instance['security_groups'] = security_group.SecurityGroupList()
+        instance['security_groups'].objects = []

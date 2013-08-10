@@ -31,6 +31,8 @@ from nova.compute import vm_states
 from nova import conductor
 from nova.db import base
 from nova import exception
+from nova.objects import instance as instance_obj
+from nova.objects import security_group
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.scheduler import rpcapi as scheduler_rpcapi
@@ -92,15 +94,20 @@ class CellsScheduler(base.Base):
         sys_metadata = flavors.save_flavor_info(sys_metadata, instance_type)
         instance_values['system_metadata'] = sys_metadata
         instance_values.pop('name')
+        if 'security_groups' in instance_values:
+            instance_values = security_group.make_secgroup_list(
+                instance_values['security_groups'])
 
         num_instances = len(instance_uuids)
         for i, instance_uuid in enumerate(instance_uuids):
-            instance_values['uuid'] = instance_uuid
+            instance = instance_obj.Instance()
+            instance.update(instance_values)
+            instance.uuid = instance_uuid
             instance = self.compute_api.create_db_entry_for_new_instance(
                     ctxt,
                     instance_type,
                     image,
-                    instance_values,
+                    instance,
                     security_groups,
                     block_device_mapping,
                     num_instances, i)

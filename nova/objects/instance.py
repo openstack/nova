@@ -290,7 +290,7 @@ class Instance(base.NovaObject):
 
     @base.remotable
     def create(self, context):
-        if hasattr(self, base.get_attrname('id')):
+        if self.obj_attr_is_set('id'):
             raise exception.ObjectActionError(action='create',
                                               reason='already created')
         updates = {}

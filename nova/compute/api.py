@@ -47,11 +47,14 @@ from nova import exception
 from nova import hooks
 from nova.image import glance
 from nova import network
+from nova.network import model as network_model
 from nova.network.security_group import openstack_driver
 from nova.network.security_group import security_group_base
 from nova import notifications
 from nova.objects import base as obj_base
 from nova.objects import instance as instance_obj
+from nova.objects import instance_info_cache
+from nova.objects import security_group
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
@@ -531,11 +534,10 @@ class API(base.Base):
             LOG.exception(_('Failed to set instance name using '
                             'multi_instance_display_name_template.'))
             new_name = instance['display_name']
-        updates = {'display_name': new_name}
-        if not instance.get('hostname'):
-            updates['hostname'] = utils.sanitize_hostname(new_name)
-        instance = self.db.instance_update(context,
-                instance['uuid'], updates)
+        instance.display_name = new_name
+        if not instance.get('hostname', None):
+            instance.hostname = utils.sanitize_hostname(new_name)
+        instance.save()
         return instance
 
     def _check_config_drive(self, config_drive):
@@ -680,7 +682,7 @@ class API(base.Base):
             'key_name': key_name,
             'key_data': key_data,
             'locked': False,
-            'metadata': metadata,
+            'metadata': metadata or {},
             'access_ip_v4': access_ip_v4,
             'access_ip_v6': access_ip_v6,
             'availability_zone': availability_zone,
@@ -717,9 +719,10 @@ class API(base.Base):
         instances = []
         try:
             for i in xrange(num_instances):
-                options = base_options.copy()
+                instance = instance_obj.Instance()
+                instance.update(base_options)
                 instance = self.create_db_entry_for_new_instance(
-                        context, instance_type, boot_meta, options,
+                        context, instance_type, boot_meta, instance,
                         security_groups, block_device_mapping,
                         num_instances, i)
 
@@ -976,16 +979,19 @@ class API(base.Base):
         if (block_device_mapping or
             image_properties.get('mappings') or
                 image_properties.get('block_device_mapping')):
-            instance['shutdown_terminate'] = False
+            instance.shutdown_terminate = False
 
     def _populate_instance_names(self, instance, num_instances):
         """Populate instance display_name and hostname."""
         display_name = instance.get('display_name')
-        hostname = instance.get('hostname')
+        if instance.obj_attr_is_set('hostname'):
+            hostname = instance.get('hostname')
+        else:
+            hostname = None
 
         if display_name is None:
             display_name = self._default_display_name(instance['uuid'])
-            instance['display_name'] = display_name
+            instance.display_name = display_name
 
         if hostname is None and num_instances == 1:
             # NOTE(russellb) In the multi-instance case, we're going to
@@ -996,32 +1002,32 @@ class API(base.Base):
             # Otherwise, it will be built after the template based
             # display_name.
             hostname = display_name
-            instance['hostname'] = utils.sanitize_hostname(hostname)
+            instance.hostname = utils.sanitize_hostname(hostname)
 
     def _default_display_name(self, instance_uuid):
         return "Server %s" % instance_uuid
 
-    def _populate_instance_for_create(self, base_options, image,
-            security_groups):
+    def _populate_instance_for_create(self, instance, image, security_groups):
         """Build the beginning of a new instance."""
         image_properties = image.get('properties', {})
 
-        instance = base_options
-        if not instance.get('uuid'):
+        if not instance.obj_attr_is_set('uuid'):
             # Generate the instance_uuid here so we can use it
             # for additional setup before creating the DB entry.
             instance['uuid'] = str(uuid.uuid4())
 
-        instance['launch_index'] = 0
-        instance['vm_state'] = vm_states.BUILDING
-        instance['task_state'] = task_states.SCHEDULING
-        instance['info_cache'] = {'network_info': '[]'}
+        instance.launch_index = 0
+        instance.vm_state = vm_states.BUILDING
+        instance.task_state = task_states.SCHEDULING
+        info_cache = instance_info_cache.InstanceInfoCache()
+        info_cache.instance_uuid = instance.uuid
+        info_cache.network_info = network_model.NetworkInfo()
+        instance.info_cache = info_cache
 
         # Store image properties so we can use them later
         # (for notifications, etc).  Only store what we can.
-        instance.setdefault('system_metadata', {})
-        # Make sure we have the dict form that we need for instance_update.
-        instance['system_metadata'] = utils.instance_sys_meta(instance)
+        if not instance.obj_attr_is_set('system_metadata'):
+            instance.system_metadata = {}
         prefix_format = SM_IMAGE_PROP_PREFIX + '%s'
         for key, value in image_properties.iteritems():
             new_value = unicode(value)[:255]
@@ -1033,9 +1039,9 @@ class API(base.Base):
         if not base_image_ref:
             # base image ref property not previously set through a snapshot.
             # default to using the image ref as the base:
-            base_image_ref = base_options['image_ref']
+            base_image_ref = instance.image_ref
 
-        instance['system_metadata']['image_base_image_ref'] = base_image_ref
+        instance.system_metadata['image_base_image_ref'] = base_image_ref
         self.security_group_api.populate_security_groups(instance,
                                                          security_groups)
         return instance
@@ -1043,7 +1049,7 @@ class API(base.Base):
     #NOTE(bcwaldon): No policy check since this is only used by scheduler and
     # the compute api. That should probably be cleaned up, though.
     def create_db_entry_for_new_instance(self, context, instance_type, image,
-            base_options, security_group, block_device_mapping, num_instances,
+            instance, security_group, block_device_mapping, num_instances,
             index):
         """Create an entry in the DB for this new instance,
         including any related table updates (such as security group,
@@ -1052,8 +1058,7 @@ class API(base.Base):
         This is called by the scheduler after a location for the
         instance has been determined.
         """
-        instance = self._populate_instance_for_create(base_options,
-                image, security_group)
+        self._populate_instance_for_create(instance, image, security_group)
 
         self._populate_instance_names(instance, num_instances)
 
@@ -1061,7 +1066,7 @@ class API(base.Base):
                                                    block_device_mapping)
 
         self.security_group_api.ensure_default(context)
-        instance = self.db.instance_create(context, instance)
+        instance.create(context)
 
         if num_instances > 1:
             # NOTE(russellb) We wait until this spot to handle
@@ -3567,4 +3572,8 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
             return [{'name': group['name']} for group in groups]
 
     def populate_security_groups(self, instance, security_groups):
-        instance['security_groups'] = security_groups
+        if not security_groups:
+            instance.security_groups = None
+            return
+        instance.security_groups = security_group.make_secgroup_list(
+            security_groups)
