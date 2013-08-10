@@ -53,6 +53,7 @@ from nova.network.security_group import security_group_base
 from nova import notifications
 from nova.objects import base as obj_base
 from nova.objects import instance as instance_obj
+from nova.objects import instance_action
 from nova.objects import instance_info_cache
 from nova.objects import security_group
 from nova.openstack.common import excutils
@@ -277,9 +278,10 @@ class API(base.Base):
         return instance_ref
 
     def _record_action_start(self, context, instance, action):
-        act = compute_utils.pack_action_start(context, instance['uuid'],
-                                              action)
-        self.db.action_start(context, act)
+        instance_action.InstanceAction.action_start(context,
+                                                    instance['uuid'],
+                                                    action,
+                                                    want_result=False)
 
     def _check_injected_file_quota(self, context, injected_files):
         """Enforce quota limits on injected files.
@@ -2949,14 +2951,16 @@ class InstanceActionAPI(base.Base):
     """Sub-set of the Compute Manager API for managing instance actions."""
 
     def actions_get(self, context, instance):
-        return self.db.actions_get(context, instance['uuid'])
+        return instance_action.InstanceActionList.get_by_instance_uuid(
+            context, instance['uuid'])
 
     def action_get_by_request_id(self, context, instance, request_id):
-        return self.db.action_get_by_request_id(context, instance['uuid'],
-                                                request_id)
+        return instance_action.InstanceAction.get_by_request_id(
+            context, instance['uuid'], request_id)
 
     def action_events_get(self, context, instance, action_id):
-        return self.db.action_events_get(context, action_id)
+        return instance_action.InstanceActionEventList.get_by_action(
+            context, action_id)
 
 
 class AggregateAPI(base.Base):

@@ -36,13 +36,15 @@ FAKE_REQUEST_ID = fake_instance_actions.FAKE_REQUEST_ID1
 
 def format_action(action):
     '''Remove keys that aren't serialized.'''
-    if 'id' in action:
-        del(action['id'])
-    if 'finish_time' in action:
-        del(action['finish_time'])
+    to_delete = ('id', 'finish_time', 'created_at', 'updated_at', 'deleted_at',
+                 'deleted')
+    for key in to_delete:
+        if key in action:
+            del(action[key])
     if 'start_time' in action:
-        # NOTE(danms): Without WSGI above us, these will be just stringified
-        action['start_time'] = str(action['start_time'])
+        # NOTE(danms): Without WSGI above us, these will be just stringified,
+        # and objects will have added a timezone, so strip that for comparison
+        action['start_time'] = str(action['start_time'].replace(tzinfo=None))
     for event in action.get('events', []):
         format_event(event)
     return action
@@ -50,14 +52,19 @@ def format_action(action):
 
 def format_event(event):
     '''Remove keys that aren't serialized.'''
-    if 'id' in event:
-        del(event['id'])
+    to_delete = ('id', 'created_at', 'updated_at', 'deleted_at', 'deleted',
+                 'action_id')
+    for key in to_delete:
+        if key in event:
+            del(event[key])
     if 'start_time' in event:
-        # NOTE(danms): Without WSGI above us, these will be just stringified
-        event['start_time'] = str(event['start_time'])
+        # NOTE(danms): Without WSGI above us, these will be just stringified,
+        # and objects will have added a timezone, so strip that for comparison
+        event['start_time'] = str(event['start_time'].replace(tzinfo=None))
     if 'finish_time' in event:
-        # NOTE(danms): Without WSGI above us, these will be just stringified
-        event['finish_time'] = str(event['finish_time'])
+        # NOTE(danms): Without WSGI above us, these will be just stringified,
+        # and objects will have added a timezone, so strip that for comparison
+        event['finish_time'] = str(event['finish_time'].replace(tzinfo=None))
     return event
 
 
@@ -160,7 +167,6 @@ class InstanceActionsTest(test.TestCase):
         res_dict = self.controller.show(req, FAKE_UUID, FAKE_REQUEST_ID)
         fake_action = self.fake_actions[FAKE_UUID][FAKE_REQUEST_ID]
         fake_events = self.fake_events[fake_action['id']]
-        fake_events = [format_event(event) for event in fake_events]
         fake_action['events'] = fake_events
         self.assertEqual(format_action(fake_action),
                          format_action(res_dict['instance_action']))
@@ -251,7 +257,7 @@ class InstanceActionsSerializerTest(test.TestCase):
         serializer = instance_actions.InstanceActionTemplate()
         action = self.fake_actions[FAKE_UUID][FAKE_REQUEST_ID]
         event = self.fake_events[action['id']][0]
-        action['events'] = [event, event]
+        action['events'] = [dict(event), dict(event)]
         text = serializer.serialize({'instance_action': action})
         tree = etree.fromstring(text)
 
