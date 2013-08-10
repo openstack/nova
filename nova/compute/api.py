@@ -1866,13 +1866,14 @@ class API(base.Base):
         except exception.ImageNotFound:
             return None, None
 
+        flavor = flavors.extract_flavor(instance)
         #disk format of vhd is non-shrinkable
         if orig_image.get('disk_format') == 'vhd':
-            instance_type = flavors.extract_flavor(instance)
-            min_disk = instance_type['root_gb']
+            min_disk = flavor['root_gb']
         else:
             #set new image values to the original image values
-            min_disk = orig_image.get('min_disk')
+            min_disk = max(orig_image.get('min_disk'),
+                           flavor['root_gb'])
 
         min_ram = orig_image.get('min_ram')
 
