@@ -142,7 +142,6 @@ class BlockDeviceDict(dict):
                         if fld in copy_over_fields)
 
         virt_name = legacy_bdm.get('virtual_name')
-        volume_size = legacy_bdm.get('volume_size')
 
         if is_swap_or_ephemeral(virt_name):
             new_bdm['source_type'] = 'blank'
