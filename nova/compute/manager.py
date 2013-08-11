@@ -3582,6 +3582,10 @@ class ComputeManager(manager.SchedulerDependentManager):
                               context=context,
                               instance=instance)
                 self.volume_api.unreserve_volume(context, new_volume_id)
+                self.volume_api.migrate_volume_completion(context,
+                                                          old_volume_id,
+                                                          new_volume_id,
+                                                          error=True)
 
         old_cinfo = jsonutils.loads(bdm['connection_info'])
         if old_cinfo and 'serial' not in old_cinfo:
@@ -3601,6 +3605,10 @@ class ComputeManager(manager.SchedulerDependentManager):
                 self.volume_api.terminate_connection(context,
                                                      new_volume_id,
                                                      connector)
+                self.volume_api.migrate_volume_completion(context,
+                                                          old_volume_id,
+                                                          new_volume_id,
+                                                          error=True)
         self.volume_api.attach(context,
                                new_volume_id,
                                instance['uuid'],
@@ -3609,6 +3617,14 @@ class ComputeManager(manager.SchedulerDependentManager):
         volume = self.volume_api.get(context, old_volume_id)
         self.volume_api.terminate_connection(context, old_volume_id, connector)
         self.volume_api.detach(context.elevated(), old_volume_id)
+
+        # If Cinder initiated the swap, it will keep the original ID
+        comp_ret = self.volume_api.migrate_volume_completion(context,
+                                                             old_volume_id,
+                                                             new_volume_id,
+                                                             error=False)
+        save_volume_id = comp_ret['save_volume_id']
+
         # Update bdm
         values = {
             'instance_uuid': instance['uuid'],
@@ -3617,7 +3633,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             'delete_on_termination': False,
             'virtual_name': None,
             'snapshot_id': None,
-            'volume_id': new_volume_id,
+            'volume_id': save_volume_id,
             'volume_size': None,
             'no_device': None}
         self.conductor_api.block_device_mapping_update_or_create(context,
