@@ -14,12 +14,18 @@
 #    under the License.
 
 from lxml import etree
+from webob import exc
 
 from nova.api.openstack.compute.plugins.v3 import certificates
 from nova import context
+from nova import exception
 from nova.openstack.common import rpc
 from nova import test
 from nova.tests.api.openstack import fakes
+
+
+def fake_get_root_cert_not_found(context, *args, **kwargs):
+    raise exception.CryptoCAFileNotFound(project='')
 
 
 def fake_get_root_cert(context, *args, **kwargs):
@@ -50,6 +56,11 @@ class CertificatesTest(test.TestCase):
         cert = fake_get_root_cert(self.context)
         response = {'certificate': {'data': cert, 'private_key': None}}
         self.assertEqual(res_dict, response)
+
+    def test_certificates_show_not_found(self):
+        self.stubs.Set(rpc, 'call', fake_get_root_cert_not_found)
+        req = fakes.HTTPRequestV3.blank('/os-certificates/root')
+        self.assertRaises(exc.HTTPNotFound, self.controller.show, req, 'root')
 
     def test_certificates_create_certificate(self):
         self.stubs.Set(rpc, 'call', fake_create_cert)
