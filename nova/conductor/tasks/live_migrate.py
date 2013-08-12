@@ -20,6 +20,7 @@ from nova.compute import rpcapi as compute_rpcapi
 from nova import db
 from nova import exception
 from nova.image import glance
+from nova.objects import base as obj_base
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.scheduler import rpcapi as scheduler_rpcapi
@@ -45,7 +46,7 @@ class LiveMigrationTask(object):
         self.destination = destination
         self.block_migration = block_migration
         self.disk_over_commit = disk_over_commit
-        self.source = instance['host']
+        self.source = instance.host
         self.migrate_data = None
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.servicegroup_api = servicegroup.API()
@@ -79,9 +80,9 @@ class LiveMigrationTask(object):
         raise NotImplementedError()
 
     def _check_instance_is_running(self):
-        if self.instance['power_state'] != power_state.RUNNING:
+        if self.instance.power_state != power_state.RUNNING:
             raise exception.InstanceNotRunning(
-                    instance_id=self.instance['uuid'])
+                    instance_id=self.instance.uuid)
 
     def _check_host_is_up(self, host):
         try:
@@ -102,14 +103,14 @@ class LiveMigrationTask(object):
     def _check_destination_is_not_source(self):
         if self.destination == self.source:
             raise exception.UnableToMigrateToSelf(
-                    instance_id=self.instance['uuid'], host=self.destination)
+                    instance_id=self.instance.uuid, host=self.destination)
 
     def _check_destination_has_enough_memory(self):
         avail = self._get_compute_info(self.destination)['free_ram_mb']
-        mem_inst = self.instance['memory_mb']
+        mem_inst = self.instance.memory_mb
 
         if not mem_inst or avail <= mem_inst:
-            instance_uuid = self.instance['uuid']
+            instance_uuid = self.instance.uuid
             dest = self.destination
             reason = _("Unable to migrate %(instance_uuid)s to %(dest)s: "
                        "Lack of memory(host:%(avail)s <= "
@@ -145,9 +146,9 @@ class LiveMigrationTask(object):
         #TODO(johngarbutt) this retry loop should be shared
         attempted_hosts = [self.source]
         image = None
-        if self.instance['image_ref']:
+        if self.instance.image_ref:
             image = self.image_service.show(self.context,
-                                            self.instance['image_ref'])
+                                            self.instance.image_ref)
         instance_type = flavors.extract_flavor(self.instance)
 
         host = None
@@ -168,9 +169,10 @@ class LiveMigrationTask(object):
 
     def _get_candidate_destination(self, image, instance_type,
                                    attempted_hosts):
-        request_spec = {'instance_properties': self.instance,
+        instance_p = obj_base.obj_to_primitive(self.instance)
+        request_spec = {'instance_properties': instance_p,
                         'instance_type': instance_type,
-                        'instance_uuids': [self.instance['uuid']]}
+                        'instance_uuids': [self.instance.uuid]}
         if image:
             request_spec['image'] = image
         filter_properties = {'ignore_hosts': attempted_hosts}
@@ -186,7 +188,7 @@ class LiveMigrationTask(object):
             msg = (_('Exceeded max scheduling retries %(max_retries)d for '
                      'instance %(instance_uuid)s during live migration')
                    % {'max_retries': retries,
-                      'instance_uuid': self.instance['uuid']})
+                      'instance_uuid': self.instance.uuid})
             raise exception.NoValidHost(reason=msg)
 
 

@@ -153,7 +153,7 @@ class AdminActionsTest(CommonMixin, test.TestCase):
         actions = ['pause', 'unpause', 'suspend', 'resume', 'migrate',
                    'resetNetwork', 'injectNetworkInfo', 'lock',
                    'unlock']
-        actions_not_objectified = ['migrate', 'resetNetwork', 'lock',
+        actions_not_objectified = ['resetNetwork', 'lock',
                                    'unlock', 'injectNetworkInfo']
         method_translations = {'migrate': 'resize',
                                'resetNetwork': 'reset_network',
@@ -169,15 +169,12 @@ class AdminActionsTest(CommonMixin, test.TestCase):
 
     def test_actions_raise_conflict_on_invalid_state(self):
         actions = ['pause', 'unpause', 'suspend', 'resume', 'migrate']
-        actions_not_objectified = ['migrate']
         method_translations = {'migrate': 'resize'}
 
         for action in actions:
-            old_style = action in actions_not_objectified
             method = method_translations.get(action)
             self.mox.StubOutWithMock(self.compute_api, method or action)
-            self._test_invalid_state(action, method=method,
-                                     objects=not old_style)
+            self._test_invalid_state(action, method=method)
             # Re-mock this.
             self.mox.StubOutWithMock(self.compute_api, 'get')
 
@@ -198,7 +195,7 @@ class AdminActionsTest(CommonMixin, test.TestCase):
 
     def _test_migrate_exception(self, exc_info, expected_result):
         self.mox.StubOutWithMock(self.compute_api, 'resize')
-        instance = self._stub_instance_get(objects=False)
+        instance = self._stub_instance_get()
         self.compute_api.resize(self.context, instance).AndRaise(exc_info)
 
         self.mox.ReplayAll()
@@ -209,7 +206,7 @@ class AdminActionsTest(CommonMixin, test.TestCase):
 
     def test_migrate_live_enabled(self):
         self.mox.StubOutWithMock(self.compute_api, 'live_migrate')
-        instance = self._stub_instance_get(objects=False)
+        instance = self._stub_instance_get()
         self.compute_api.live_migrate(self.context, instance, False,
                                       False, 'hostname')
 
@@ -233,13 +230,13 @@ class AdminActionsTest(CommonMixin, test.TestCase):
                                                  uuid=None):
         self.mox.StubOutWithMock(self.compute_api, 'live_migrate')
 
-        instance = self._stub_instance_get(uuid=uuid, objects=False)
+        instance = self._stub_instance_get(uuid=uuid)
         self.compute_api.live_migrate(self.context, instance, False,
                                       False, 'hostname').AndRaise(fake_exc)
 
         self.mox.ReplayAll()
 
-        res = self._make_request('/servers/%s/action' % instance['uuid'],
+        res = self._make_request('/servers/%s/action' % instance.uuid,
                                  {'os-migrateLive':
                                   {'host': 'hostname',
                                    'block_migration': False,

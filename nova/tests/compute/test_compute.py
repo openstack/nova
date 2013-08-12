@@ -4012,123 +4012,6 @@ class ComputeTestCase(BaseTestCase):
         self.compute.terminate_instance(self.context,
             instance=jsonutils.to_primitive(inst_ref))
 
-    def test_check_can_live_migrate_source_works_correctly(self):
-        # Confirm check_can_live_migrate_source works on positive path.
-        def fake_method(*args, **kwargs):
-            return {}
-        self.stubs.Set(self.compute.driver, 'check_can_live_migrate_source',
-                       fake_method)
-        inst_ref = jsonutils.to_primitive(self._create_fake_instance(
-                                          {'host': 'fake_host_2'}))
-
-        self.mox.StubOutWithMock(db, 'instance_get')
-        dest_check_data = {"test": "data"}
-
-        self.mox.ReplayAll()
-        ret = self.compute.check_can_live_migrate_source(self.context,
-                                              dest_check_data=dest_check_data,
-                                              instance=inst_ref)
-        self.assertTrue(type(ret) == dict)
-
-    def test_check_can_live_migrate_destination_works_correctly(self):
-        # Confirm check_can_live_migrate_destination works on positive path.
-        def fake_method(*args, **kwargs):
-            return {}
-        self.stubs.Set(self.compute.compute_rpcapi,
-                       'check_can_live_migrate_source',
-                       fake_method)
-        inst_ref = jsonutils.to_primitive(self._create_fake_instance(
-                                          {'host': 'fake_host_2'}))
-        compute_info = {"compute": "info"}
-
-        self.mox.StubOutWithMock(self.compute,
-                                 '_get_compute_info')
-        self.mox.StubOutWithMock(self.compute.driver,
-                                 'check_can_live_migrate_destination')
-        self.mox.StubOutWithMock(self.compute.driver,
-                                 'check_can_live_migrate_destination_cleanup')
-
-        dest_check_data = {"test": "data", "migrate_data": {"test": "data"}}
-        self.compute._get_compute_info(
-            self.context, inst_ref['host']).AndReturn(compute_info)
-        self.compute._get_compute_info(
-            self.context, CONF.host).AndReturn(compute_info)
-        self.compute.driver.check_can_live_migrate_destination(self.context,
-                inst_ref,
-                compute_info, compute_info,
-                True, False).AndReturn(dest_check_data)
-        self.compute.compute_rpcapi.check_can_live_migrate_source(self.context,
-                inst_ref, dest_check_data)
-        self.compute.driver.check_can_live_migrate_destination_cleanup(
-                self.context, dest_check_data)
-
-        self.mox.ReplayAll()
-        ret = self.compute.check_can_live_migrate_destination(self.context,
-                block_migration=True, disk_over_commit=False,
-                instance=inst_ref)
-        self.assertTrue(type(ret) == dict)
-        self.assertTrue("test" in ret)
-
-    def test_check_can_live_migrate_destination_fails_dest_check(self):
-        inst_ref = jsonutils.to_primitive(self._create_fake_instance(
-                                          {'host': 'fake_host_2'}))
-        compute_info = {"compute": "info"}
-
-        self.mox.StubOutWithMock(self.compute,
-                                 '_get_compute_info')
-        self.mox.StubOutWithMock(self.compute.driver,
-                                 'check_can_live_migrate_destination')
-
-        self.compute._get_compute_info(
-            self.context, inst_ref['host']).AndReturn(compute_info)
-        self.compute._get_compute_info(
-            self.context, CONF.host).AndReturn(compute_info)
-        self.compute.driver.check_can_live_migrate_destination(self.context,
-                inst_ref,
-                compute_info, compute_info,
-                True, False).AndRaise(exception.Invalid())
-
-        self.mox.ReplayAll()
-        self.assertRaises(exception.Invalid,
-                          self.compute.check_can_live_migrate_destination,
-                          self.context, block_migration=True,
-                          disk_over_commit=False, instance=inst_ref)
-
-    def test_check_can_live_migrate_destination_fails_source(self):
-        # Confirm check_can_live_migrate_destination works on positive path.
-        inst_ref = jsonutils.to_primitive(self._create_fake_instance(
-                                          {'host': 'fake_host_2'}))
-        compute_info = {"compute": "info"}
-
-        self.mox.StubOutWithMock(self.compute,
-                                 '_get_compute_info')
-        self.mox.StubOutWithMock(self.compute.driver,
-                                 'check_can_live_migrate_destination')
-        self.mox.StubOutWithMock(self.compute.compute_rpcapi,
-                                 'check_can_live_migrate_source')
-        self.mox.StubOutWithMock(self.compute.driver,
-                                 'check_can_live_migrate_destination_cleanup')
-
-        dest_check_data = {"test": "data"}
-        self.compute._get_compute_info(
-            self.context, inst_ref['host']).AndReturn(compute_info)
-        self.compute._get_compute_info(
-            self.context, CONF.host).AndReturn(compute_info)
-        self.compute.driver.check_can_live_migrate_destination(self.context,
-                inst_ref,
-                compute_info, compute_info,
-                True, False).AndReturn(dest_check_data)
-        self.compute.compute_rpcapi.check_can_live_migrate_source(self.context,
-                inst_ref, dest_check_data).AndRaise(exception.Invalid())
-        self.compute.driver.check_can_live_migrate_destination_cleanup(
-                self.context, dest_check_data)
-
-        self.mox.ReplayAll()
-        self.assertRaises(exception.Invalid,
-                          self.compute.check_can_live_migrate_destination,
-                          self.context, block_migration=True,
-                          disk_over_commit=False, instance=inst_ref)
-
     def test_pre_live_migration_instance_has_no_fixed_ip(self):
         # Confirm raising exception if instance doesn't have fixed_ip.
         # creating instance testdata
@@ -7908,27 +7791,23 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_live_migrate(self):
         instance, instance_uuid = self._run_instance()
+        instance = self._objectify(instance)
 
-        def fake_live_migrate(_self, context, instance, scheduler_hint,
-                              block_migration, disk_over_commit):
-            host = scheduler_hint["host"]
-            self.assertEqual('fake_dest_host', host)
-            self.assertTrue(block_migration)
-            self.assertTrue(disk_over_commit)
+        rpcapi = self.compute_api.compute_task_api
+        self.mox.StubOutWithMock(rpcapi, 'live_migrate_instance')
+        rpcapi.live_migrate_instance(self.context, instance, 'fake_dest_host',
+                                     block_migration=True,
+                                     disk_over_commit=True)
 
-        self.stubs.Set(conductor_manager.ComputeTaskManager,
-                       '_live_migrate',
-                       fake_live_migrate)
+        self.mox.ReplayAll()
 
         self.compute_api.live_migrate(self.context, instance,
                                       block_migration=True,
                                       disk_over_commit=True,
                                       host_name='fake_dest_host')
 
-        instance = db.instance_get_by_uuid(self.context, instance_uuid)
+        instance.refresh()
         self.assertEqual(instance['task_state'], task_states.MIGRATING)
-
-        db.instance_destroy(self.context, instance['uuid'])
 
     def test_evacuate(self):
         instance = jsonutils.to_primitive(self._create_fake_instance(
@@ -8596,7 +8475,7 @@ class DisabledInstanceTypesTestCase(BaseTestCase):
             self.compute_api.create, self.context, self.inst_type, None)
 
     def test_can_resize_to_visible_instance_type(self):
-        instance = self._create_fake_instance()
+        instance = self._create_fake_instance_obj()
         orig_get_flavor_by_flavor_id =\
                 flavors.get_flavor_by_flavor_id
 
@@ -8618,7 +8497,7 @@ class DisabledInstanceTypesTestCase(BaseTestCase):
         self.compute_api.resize(self.context, instance, '4')
 
     def test_cannot_resize_to_disabled_instance_type(self):
-        instance = self._create_fake_instance()
+        instance = self._create_fake_instance_obj()
         orig_get_flavor_by_flavor_id = \
                 flavors.get_flavor_by_flavor_id
 

@@ -1237,6 +1237,22 @@ class CellsTargetedMethodsTestCase(test.TestCase):
     def test_unpause_instance(self):
         self._test_instance_action_method('unpause', (), {}, (), {}, False)
 
+    def test_resize_instance(self):
+        kwargs = dict(flavor=dict(id=42),
+                      extra_instance_updates=dict(cow='moo'))
+        expected_kwargs = dict(flavor_id=42, cow='moo')
+        self._test_instance_action_method('resize', (), kwargs,
+                                          (), expected_kwargs,
+                                          False)
+
+    def test_live_migrate_instance(self):
+        kwargs = dict(block_migration='fake-block-mig',
+                      disk_over_commit='fake-commit',
+                      host_name='fake-host')
+        expected_args = ('fake-block-mig', 'fake-commit', 'fake-host')
+        self._test_instance_action_method('live_migrate', (), kwargs,
+                                          expected_args, {}, False)
+
 
 class CellsBroadcastMethodsTestCase(test.TestCase):
     """Test case for _BroadcastMessageMethods class.  Most of these

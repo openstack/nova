@@ -732,3 +732,23 @@ class CellsManagerClassTestCase(test.TestCase):
         self.mox.ReplayAll()
         self.cells_manager.soft_delete_instance(self.ctxt,
                                                 instance='fake-instance')
+
+    def test_resize_instance(self):
+        self.mox.StubOutWithMock(self.msg_runner, 'resize_instance')
+        self.msg_runner.resize_instance(self.ctxt, 'fake-instance',
+                                       'fake-flavor', 'fake-updates')
+        self.mox.ReplayAll()
+        self.cells_manager.resize_instance(
+                self.ctxt, instance='fake-instance', flavor='fake-flavor',
+                extra_instance_updates='fake-updates')
+
+    def test_live_migrate_instance(self):
+        self.mox.StubOutWithMock(self.msg_runner, 'live_migrate_instance')
+        self.msg_runner.live_migrate_instance(self.ctxt, 'fake-instance',
+                                              'fake-block', 'fake-commit',
+                                              'fake-host')
+        self.mox.ReplayAll()
+        self.cells_manager.live_migrate_instance(
+                self.ctxt, instance='fake-instance',
+                block_migration='fake-block', disk_over_commit='fake-commit',
+                host_name='fake-host')

@@ -56,6 +56,7 @@ from nova.objects import instance as instance_obj
 from nova.objects import instance_action
 from nova.objects import instance_info_cache
 from nova.objects import keypair as keypair_obj
+from nova.objects import migration as migration_obj
 from nova.objects import security_group
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
@@ -2044,15 +2045,14 @@ class API(base.Base):
         """Reverts a resize, deleting the 'new' instance in the process."""
         elevated = context.elevated()
         migration_ref = self.db.migration_get_by_instance_and_status(elevated,
-                instance['uuid'], 'finished')
+                instance.uuid, 'finished')
 
         # reverse quota reservation for increased resource usage
         deltas = self._reverse_upsize_quota_delta(context, migration_ref)
         reservations = self._reserve_quota_delta(context, deltas)
 
-        instance = self.update(context, instance,
-                               task_state=task_states.RESIZE_REVERTING,
-                               expected_task_state=None)
+        instance.task_state = task_states.RESIZE_REVERTING
+        instance.save(expected_task_state=None)
 
         self.db.migration_update(elevated, migration_ref['id'],
                                  {'status': 'reverting'})
@@ -2168,11 +2168,35 @@ class API(base.Base):
             return
         return QUOTAS.reserve(context, project_id=project_id, **deltas)
 
+    @staticmethod
+    def _resize_cells_support(context, reservations, instance,
+                              current_instance_type, new_instance_type):
+        """Special API cell logic for resize."""
+        if reservations:
+            # With cells, the best we can do right now is commit the
+            # reservations immediately...
+            QUOTAS.commit(context, reservations,
+                          project_id=instance.project_id)
+        # NOTE(johannes/comstud): The API cell needs a local migration
+        # record for later resize_confirm and resize_reverts to deal
+        # with quotas.  We don't need source and/or destination
+        # information, just the old and new flavors. Status is set to
+        # 'finished' since nothing else will update the status along
+        # the way.
+        mig = migration_obj.Migration()
+        mig.instance_uuid = instance.uuid
+        mig.old_instance_type_id = current_instance_type['id']
+        mig.new_instance_type_id = new_instance_type['id']
+        mig.status = 'finished'
+        mig.create(context.elevated())
+
     @wrap_check_policy
     @check_instance_lock
+    @check_instance_cell
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED],
                           task_state=[None])
-    def resize(self, context, instance, flavor_id=None, **kwargs):
+    def resize(self, context, instance, flavor_id=None,
+               **extra_instance_updates):
         """Resize (ie, migrate) a running instance.
 
         If flavor_id is None, the process is considered a migration, keeping
@@ -2207,7 +2231,7 @@ class API(base.Base):
 
         # NOTE(sirp): We don't want to force a customer to change their flavor
         # when Ops is migrating off of a failed host.
-        if not same_instance_type and new_instance_type['disabled']:
+        if not same_instance_type and new_instance_type.get('disabled'):
             raise exception.FlavorNotFound(flavor_id=flavor_id)
 
         if same_instance_type and flavor_id:
@@ -2241,10 +2265,10 @@ class API(base.Base):
                                              used=used, allowed=total_allowed,
                                              resource=resource)
 
-        instance = self.update(context, instance,
-                task_state=task_states.RESIZE_PREP,
-                expected_task_state=None,
-                progress=0, **kwargs)
+        instance.task_state = task_states.RESIZE_PREP
+        instance.progress = 0
+        instance.update(extra_instance_updates)
+        instance.save(expected_task_state=None)
 
         filter_properties = {'ignore_hosts': []}
 
@@ -2255,21 +2279,19 @@ class API(base.Base):
         if (not flavor_id and not CONF.allow_migrate_to_same_host):
             filter_properties['ignore_hosts'].append(instance['host'])
 
-        # With cells, the best we can do right now is commit the reservations
-        # immediately...
-        if CONF.cells.enable and reservations:
-            QUOTAS.commit(context, reservations,
-                          project_id=instance['project_id'])
+        if self.cell_type == 'api':
+            # Commit reservations early and create migration record.
+            self._resize_cells_support(context, reservations, instance,
+                                       current_instance_type,
+                                       new_instance_type)
             reservations = []
 
         self._record_action_start(context, instance, instance_actions.RESIZE)
 
         scheduler_hint = {'filter_properties': filter_properties}
-        self.compute_task_api.migrate_server(context, instance,
-                scheduler_hint=scheduler_hint,
-                live=False, rebuild=False, flavor=new_instance_type,
-                block_migration=None, disk_over_commit=None,
-                reservations=reservations)
+        self.compute_task_api.resize_instance(context, instance,
+                extra_instance_updates, scheduler_hint=scheduler_hint,
+                flavor=new_instance_type, reservations=reservations)
 
     @wrap_check_policy
     @check_instance_lock
@@ -2812,6 +2834,7 @@ class API(base.Base):
 
         return False
 
+    @check_instance_cell
     @check_instance_state(vm_state=[vm_states.ACTIVE])
     def live_migrate(self, context, instance, block_migration,
                      disk_over_commit, host_name):
@@ -2819,14 +2842,11 @@ class API(base.Base):
         LOG.debug(_("Going to try to live migrate instance to %s"),
                   host_name or "another host", instance=instance)
 
-        instance = self.update(context, instance,
-                               task_state=task_states.MIGRATING,
-                               expected_task_state=None)
+        instance.task_state = task_states.MIGRATING
+        instance.save(expected_task_state=None)
 
-        self.compute_task_api.migrate_server(context, instance,
-                scheduler_hint={'host': host_name},
-                live=True, rebuild=False, flavor=None,
-                block_migration=block_migration,
+        self.compute_task_api.live_migrate_instance(context, instance,
+                host_name, block_migration=block_migration,
                 disk_over_commit=disk_over_commit)
 
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED],

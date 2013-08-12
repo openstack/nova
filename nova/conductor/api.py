@@ -349,12 +349,21 @@ class LocalComputeTaskAPI(object):
         self._manager = utils.ExceptionHelper(
                 manager.ComputeTaskManager())
 
-    def migrate_server(self, context, instance, scheduler_hint, live, rebuild,
-                  flavor, block_migration, disk_over_commit,
-                  reservations=None):
+    def resize_instance(self, context, instance, extra_instance_updates,
+                        scheduler_hint, flavor, reservations):
+        # NOTE(comstud): 'extra_instance_updates' is not used here but is
+        # needed for compatibility with the cells_rpcapi version of this
+        # method.
         self._manager.migrate_server(
-            context, instance, scheduler_hint, live, rebuild, flavor,
-            block_migration, disk_over_commit, reservations)
+            context, instance, scheduler_hint, False, False, flavor,
+            None, None, reservations)
+
+    def live_migrate_instance(self, context, instance, host_name,
+                              block_migration, disk_over_commit):
+        scheduler_hint = {'host': host_name}
+        self._manager.migrate_server(
+            context, instance, scheduler_hint, True, False, None,
+            block_migration, disk_over_commit, None)
 
     def build_instances(self, context, instances, image,
             filter_properties, admin_password, injected_files,
@@ -423,12 +432,21 @@ class ComputeTaskAPI(object):
     def __init__(self):
         self.conductor_compute_rpcapi = rpcapi.ComputeTaskAPI()
 
-    def migrate_server(self, context, instance, scheduler_hint, live, rebuild,
-                  flavor, block_migration, disk_over_commit,
-                  reservations=None):
+    def resize_instance(self, context, instance, extra_instance_updates,
+                        scheduler_hint, flavor, reservations):
+        # NOTE(comstud): 'extra_instance_updates' is not used here but is
+        # needed for compatibility with the cells_rpcapi version of this
+        # method.
         self.conductor_compute_rpcapi.migrate_server(
-            context, instance, scheduler_hint, live, rebuild,
-            flavor, block_migration, disk_over_commit, reservations)
+            context, instance, scheduler_hint, False, False, flavor,
+            None, None, reservations)
+
+    def live_migrate_instance(self, context, instance, host_name,
+                              block_migration, disk_over_commit):
+        scheduler_hint = {'host': host_name}
+        self.conductor_compute_rpcapi.migrate_server(
+            context, instance, scheduler_hint, True, False, None,
+            block_migration, disk_over_commit, None)
 
     def build_instances(self, context, instances, image, filter_properties,
             admin_password, injected_files, requested_networks,

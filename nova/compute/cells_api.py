@@ -20,7 +20,6 @@ from nova import block_device
 from nova.cells import rpcapi as cells_rpcapi
 from nova.cells import utils as cells_utils
 from nova.compute import api as compute_api
-from nova.compute import flavors
 from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import vm_states
 from nova import exception
@@ -68,16 +67,23 @@ class SchedulerRPCAPIRedirect(object):
 
 
 class ConductorTaskRPCAPIRedirect(object):
+    # NOTE(comstud): These are a list of methods where the cells_rpcapi
+    # and the compute_task_rpcapi methods have the same signatures.  This
+    # is for transitioning to a common interface where we can just
+    # swap out the compute_task_rpcapi class with the cells_rpcapi class.
+    cells_compatible = ['build_instances', 'resize_instance',
+                        'live_migrate_instance']
+
     def __init__(self, cells_rpcapi_obj):
         self.cells_rpcapi = cells_rpcapi_obj
 
     def __getattr__(self, key):
+        if key in self.cells_compatible:
+            return getattr(self.cells_rpcapi, key)
+
         def _noop_rpc_wrapper(*args, **kwargs):
             return None
         return _noop_rpc_wrapper
-
-    def build_instances(self, context, **kwargs):
-        self.cells_rpcapi.build_instances(context, **kwargs)
 
 
 class ComputeRPCProxyAPI(compute_rpcapi.ComputeAPI):
@@ -279,49 +285,6 @@ class ComputeCellsAPI(compute_api.API):
                 context, instance, migration_ref=migration_ref)
         self._cast_to_cells(context, instance, 'confirm_resize')
 
-    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED],
-                          task_state=[None])
-    @check_instance_cell
-    def resize(self, context, instance, flavor_id=None, **kwargs):
-        """Resize (ie, migrate) a running instance.
-
-        If flavor_id is None, the process is considered a migration, keeping
-        the original flavor_id. If flavor_id is not None, the instance should
-        be migrated to a new host and resized to the new flavor_id.
-        """
-        super(ComputeCellsAPI, self).resize(context, instance,
-                                            flavor_id=flavor_id,
-                                            **kwargs)
-
-        # NOTE(johannes): If we get to this point, then we know the
-        # specified flavor_id is valid and exists. We'll need to load
-        # it again, but that should be safe.
-
-        old_instance_type = flavors.extract_flavor(instance)
-
-        if not flavor_id:
-            new_instance_type = old_instance_type
-        else:
-            new_instance_type = flavors.get_flavor_by_flavor_id(
-                    flavor_id, read_deleted="no")
-
-        # NOTE(johannes): Later, when the resize is confirmed or reverted,
-        # the superclass implementations of those methods will need access
-        # to a local migration record for quota reasons. We don't need
-        # source and/or destination information, just the old and new
-        # flavors. Status is set to 'finished' since nothing else
-        # will update the status along the way.
-        self.db.migration_create(context.elevated(),
-                    {'instance_uuid': instance['uuid'],
-                     'old_instance_type_id': old_instance_type['id'],
-                     'new_instance_type_id': new_instance_type['id'],
-                     'status': 'finished'})
-
-        # FIXME(comstud): pass new instance_type object down to a method
-        # that'll unfold it
-        self._cast_to_cells(context, instance, 'resize', flavor_id=flavor_id,
-                            **kwargs)
-
     @check_instance_cell
     def add_fixed_ip(self, context, instance, *args, **kwargs):
         """Add fixed_ip from specified network to given instance."""
@@ -511,16 +474,6 @@ class ComputeCellsAPI(compute_api.API):
         except exception.InstanceUnknownCell:
             pass
         return rv
-
-    @check_instance_cell
-    def live_migrate(self, context, instance, block_migration,
-                     disk_over_commit, host_name):
-        """Migrate a server lively to a new host."""
-        super(ComputeCellsAPI, self).live_migrate(context,
-            instance, block_migration, disk_over_commit, host_name)
-
-        self._cast_to_cells(context, instance, 'live_migrate',
-                            block_migration, disk_over_commit, host_name)
 
     def get_migrations(self, context, filters):
         return self.cells_rpcapi.get_migrations(context, filters)

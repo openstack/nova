@@ -870,6 +870,20 @@ class _TargetedMessageMethods(_BaseMessageMethods):
         """Unpause an instance via compute_api.pause()."""
         self._call_compute_api_with_obj(message.ctxt, instance, 'unpause')
 
+    def resize_instance(self, message, instance, flavor,
+                        extra_instance_updates):
+        """Resize an instance via compute_api.resize()."""
+        self._call_compute_api_with_obj(message.ctxt, instance, 'resize',
+                                        flavor_id=flavor['id'],
+                                        **extra_instance_updates)
+
+    def live_migrate_instance(self, message, instance, block_migration,
+                              disk_over_commit, host_name):
+        """Live migrate an instance via compute_api.live_migrate()."""
+        self._call_compute_api_with_obj(message.ctxt, instance,
+                                        'live_migrate', block_migration,
+                                        disk_over_commit, host_name)
+
 
 class _BroadcastMessageMethods(_BaseMessageMethods):
     """These are the methods that can be called as a part of a broadcast
@@ -1624,6 +1638,23 @@ class MessageRunner(object):
     def unpause_instance(self, ctxt, instance):
         """Unpause an instance in its cell."""
         self._instance_action(ctxt, instance, 'unpause_instance')
+
+    def resize_instance(self, ctxt, instance, flavor,
+                       extra_instance_updates):
+        """Resize an instance in its cell."""
+        extra_kwargs = dict(flavor=flavor,
+                            extra_instance_updates=extra_instance_updates)
+        self._instance_action(ctxt, instance, 'resize_instance',
+                              extra_kwargs=extra_kwargs)
+
+    def live_migrate_instance(self, ctxt, instance, block_migration,
+                              disk_over_commit, host_name):
+        """Live migrate an instance in its cell."""
+        extra_kwargs = dict(block_migration=block_migration,
+                            disk_over_commit=disk_over_commit,
+                            host_name=host_name)
+        self._instance_action(ctxt, instance, 'live_migrate_instance',
+                              extra_kwargs=extra_kwargs)
 
     @staticmethod
     def get_message_types():
