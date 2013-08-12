@@ -245,6 +245,10 @@ class InvalidBDMForLegacy(InvalidBDM):
                 "be converted to legacy format. ")
 
 
+class InvalidAttribute(Invalid):
+    msg_fmt = _("Attribute not supported: %(attr)s")
+
+
 class VolumeUnattached(Invalid):
     msg_fmt = _("Volume %(volume_id)s is not attached to anything")
 
@@ -280,6 +284,7 @@ class InvalidMetadataSize(Invalid):
 
 
 class InvalidPortRange(Invalid):
+    ec2_code = 'InvalidParameterValue'
     msg_fmt = _("Invalid port range %(from_port)s:%(to_port)s. %(msg)s")
 
 
@@ -303,6 +308,7 @@ class InvalidUnicodeParameter(Invalid):
 # Cannot be templated as the error syntax varies.
 # msg needs to be constructed when raised.
 class InvalidParameterValue(Invalid):
+    ec2_code = 'InvalidParameterValue'
     msg_fmt = _("%(err)s")
 
 
@@ -1407,3 +1413,9 @@ class PciInvalidAlias(NovaException):
 
 class PciRequestAliasNotDefined(NovaException):
     msg_fmt = _("PCI alias %(alias)s is not defined")
+
+
+class MissingParameter(NovaException):
+    ec2_code = 'MissingParameter'
+    msg_fmt = _("Not enough parameters: %(reason)s")
+    code = 400

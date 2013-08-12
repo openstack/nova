@@ -565,7 +565,10 @@ class Executor(wsgi.Application):
                 exception.InvalidPortRange,
                 exception.NotAuthorized,
                 exception.InvalidRequest,
+                exception.InvalidAttribute,
+                exception.InvalidPortRange,
                 exception.QuotaError,
+                exception.MissingParameter,
                 exception.InvalidInstanceIDMalformedEC2) as ex:
             return ec2_error_ex(ex, req)
         except Exception as ex:
