@@ -962,6 +962,67 @@ class TestNeutronv2(TestNeutronv2Base):
                           api.validate_networks,
                           self.context, requested_networks)
 
+    def test_validate_networks_port_in_use(self):
+        requested_networks = [(None, None, self.port_data3[0]['id'])]
+        self.moxed_client.show_port(self.port_data3[0]['id']).\
+            AndReturn({'port': self.port_data3[0]})
+
+        self.mox.ReplayAll()
+
+        api = neutronapi.API()
+        self.assertRaises(exception.PortInUse,
+                          api.validate_networks,
+                          self.context, requested_networks)
+
+    def test_validate_networks_ports_in_same_network(self):
+        port_a = self.port_data3[0]
+        port_b = self.port_data1[0]
+        self.assertEqual(port_a['network_id'], port_b['network_id'])
+        for port in [port_a, port_b]:
+            port['device_id'] = None
+            port['device_owner'] = None
+
+        requested_networks = [(None, None, port_a['id']),
+                              (None, None, port_b['id'])]
+        self.moxed_client.show_port(port_a['id']).AndReturn({'port': port_a})
+        self.moxed_client.show_port(port_b['id']).AndReturn({'port': port_b})
+
+        self.mox.ReplayAll()
+
+        api = neutronapi.API()
+        self.assertRaises(exception.NetworkDuplicated,
+                          api.validate_networks,
+                          self.context, requested_networks)
+
+    def test_validate_networks_ports_not_in_same_network(self):
+        port_a = self.port_data3[0]
+        port_b = self.port_data2[1]
+        self.assertNotEqual(port_a['network_id'], port_b['network_id'])
+        for port in [port_a, port_b]:
+            port['device_id'] = None
+            port['device_owner'] = None
+
+        requested_networks = [(None, None, port_a['id']),
+                              (None, None, port_b['id'])]
+        self.moxed_client.show_port(port_a['id']).AndReturn({'port': port_a})
+        self.moxed_client.show_port(port_b['id']).AndReturn({'port': port_b})
+
+        search_opts = dict(id=[port_a['network_id'], port_b['network_id']],
+                           tenant_id=self.context.project_id,
+                           shared=False)
+        self.moxed_client.list_networks(
+            **search_opts).AndReturn({'networks': self.nets2})
+
+        search_opts = dict(id=[port_a['network_id'], port_b['network_id']],
+                           shared=True)
+        self.moxed_client.list_networks(
+            **search_opts).AndReturn({'networks': []})
+
+        self.mox.ReplayAll()
+
+        api = neutronapi.API()
+        api.validate_networks(self.context, requested_networks)
+
     def _mock_list_ports(self, port_data=None):
         if port_data is None:
             port_data = self.port_data2
