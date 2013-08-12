@@ -370,11 +370,24 @@ class API(base.Base):
             used = quotas[resource] - headroom[resource]
             total_allowed = used + headroom[resource]
             overs = ','.join(overs)
-            LOG.warn(_("%(overs)s quota exceeded for %(pid)s,"
-                       " tried to run %(min_count)s instances. %(msg)s"),
-                     {'overs': overs, 'pid': context.project_id,
-                      'min_count': min_count, 'msg': msg})
-            requested = dict(instances=min_count, cores=req_cores, ram=req_ram)
+            params = {'overs': overs, 'pid': context.project_id,
+                      'min_count': min_count, 'max_count': max_count,
+                      'msg': msg}
+
+            if min_count == max_count:
+                LOG.warn(_("%(overs)s quota exceeded for %(pid)s,"
+                           " tried to run %(min_count)d instances. %(msg)s"),
+                         params)
+            else:
+                LOG.warn(_("%(overs)s quota exceeded for %(pid)s,"
+                           " tried to run between %(min_count)d and"
+                           " %(max_count)d instances. %(msg)s"),
+                         params)
+
+            num_instances = (str(min_count) if min_count == max_count else
+                "%s-%s" % (min_count, max_count))
+            requested = dict(instances=num_instances, cores=req_cores,
+                             ram=req_ram)
             raise exception.TooManyInstances(overs=overs,
                                              req=requested[resource],
                                              used=used, allowed=total_allowed,
