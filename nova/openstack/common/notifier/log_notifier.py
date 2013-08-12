@@ -25,7 +25,7 @@ CONF = cfg.CONF
 def notify(_context, message):
     """Notifies the recipient of the desired event given the model.
 
-    Log notifications using openstack's default logging system.
+    Log notifications using OpenStack's default logging system.
     """
 
     priority = message.get('priority',

@@ -16,7 +16,7 @@
 from oslo.config import cfg
 
 from nova.openstack.common import context as req_context
-from nova.openstack.common.gettextutils import _
+from nova.openstack.common.gettextutils import _  # noqa
 from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
 
@@ -24,7 +24,7 @@ LOG = logging.getLogger(__name__)
 
 notification_topic_opt = cfg.ListOpt(
     'notification_topics', default=['notifications', ],
-    help='AMQP topic used for openstack notifications')
+    help='AMQP topic used for OpenStack notifications')
 
 CONF = cfg.CONF
 CONF.register_opt(notification_topic_opt)
