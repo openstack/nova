@@ -79,6 +79,16 @@ class VMwareAPIConfTestCase(test.TestCase):
                          wsdl_url)
         self.assertEqual("https://www.example.com/sdk", url)
 
+    def test_configure_without_wsdl_loc_override_using_ipv6(self):
+        # Same as above but with ipv6 based host ip
+        wsdl_loc = cfg.CONF.vmware.wsdl_location
+        self.assertIsNone(wsdl_loc)
+        wsdl_url = vim.Vim.get_wsdl_url("https", "::1")
+        url = vim.Vim.get_soap_url("https", "::1")
+        self.assertEqual("https://[::1]/sdk/vimService.wsdl",
+                         wsdl_url)
+        self.assertEqual("https://[::1]/sdk", url)
+
     def test_configure_with_wsdl_loc_override(self):
         # Use the setting vmwareapi_wsdl_loc to override the
         # default path to the WSDL.
