@@ -1312,7 +1312,14 @@ class API(base.Base):
 
             if not host:
                 try:
+                    compute_utils.notify_about_instance_usage(
+                            self.notifier, context, instance,
+                            "%s.start" % delete_type)
                     instance.destroy()
+                    compute_utils.notify_about_instance_usage(
+                            self.notifier, context, instance,
+                            "%s.end" % delete_type,
+                            system_metadata=instance.system_metadata)
                     if reservations:
                         QUOTAS.commit(context,
                                       reservations,
