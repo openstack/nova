@@ -755,6 +755,22 @@ class PowerVMDriverTestCase(test.TestCase):
         self.assertEquals(host_stats['supported_instances'][0][1], "powervm")
         self.assertEquals(host_stats['supported_instances'][0][2], "hvm")
 
+    def test_get_available_resource(self):
+        res = self.powervm_connection.get_available_resource(nodename='fake')
+        self.assertIsNotNone(res)
+        self.assertEquals(8.0, res.pop('vcpus'))
+        self.assertEquals(65536, res.pop('memory_mb'))
+        self.assertEquals((10168 / 1024), res.pop('local_gb'))
+        self.assertEquals(1.7, round(res.pop('vcpus_used'), 1))
+        self.assertEquals((65536 - 46336), res.pop('memory_mb_used'))
+        self.assertEquals(0, res.pop('local_gb_used'))
+        self.assertEquals('powervm', res.pop('hypervisor_type'))
+        self.assertEquals('7.1', res.pop('hypervisor_version'))
+        self.assertEquals('fake-powervm', res.pop('hypervisor_hostname'))
+        self.assertEquals('ppc64,powervm,3940', res.pop('cpu_info'))
+        self.assertEquals(10168, res.pop('disk_available_least'))
+        self.assertEquals(0, len(res), 'Did not test all keys.')
+
     def test_get_host_uptime(self):
         # Tests that the get_host_uptime method issues the proper sysstat
         # command and parses the output correctly.
