@@ -19,7 +19,7 @@ import uuid
 from oslo.config import cfg
 
 from nova.openstack.common import context
-from nova.openstack.common.gettextutils import _
+from nova.openstack.common.gettextutils import _  # noqa
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
@@ -157,27 +157,14 @@ def _get_drivers():
     if _drivers is None:
         _drivers = {}
         for notification_driver in CONF.notification_driver:
-            add_driver(notification_driver)
-
+            try:
+                driver = importutils.import_module(notification_driver)
+                _drivers[notification_driver] = driver
+            except ImportError:
+                LOG.exception(_("Failed to load notifier %s. "
+                                "These notifications will not be sent.") %
+                              notification_driver)
     return _drivers.values()
-
-
-def add_driver(notification_driver):
-    """Add a notification driver at runtime."""
-    # Make sure the driver list is initialized.
-    _get_drivers()
-    if isinstance(notification_driver, basestring):
-        # Load and add
-        try:
-            driver = importutils.import_module(notification_driver)
-            _drivers[notification_driver] = driver
-        except ImportError:
-            LOG.exception(_("Failed to load notifier %s. "
-                            "These notifications will not be sent.") %
-                          notification_driver)
-    else:
-        # Driver is already loaded; just add the object.
-        _drivers[notification_driver] = notification_driver
 
 
 def _reset_drivers():

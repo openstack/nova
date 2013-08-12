@@ -1472,7 +1472,7 @@
 # Options defined in nova.openstack.common.notifier.rpc_notifier
 #
 
-# AMQP topic used for openstack notifications (list value)
+# AMQP topic used for OpenStack notifications (list value)
 #notification_topics=notifications
 
 
@@ -2943,7 +2943,7 @@
 # Options defined in nova.openstack.common.notifier.rpc_notifier2
 #
 
-# AMQP topic(s) used for openstack notifications (list value)
+# AMQP topic(s) used for OpenStack notifications (list value)
 #topics=notifications
 
 
