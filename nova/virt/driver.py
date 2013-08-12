@@ -471,7 +471,7 @@ class ComputeDriver(object):
         """Retrieve resource information.
 
         This method is called when nova-compute launches, and
-        as part of a periodic task
+        as part of a periodic task that records the results in the DB.
 
         :param nodename:
             node which the caller want to get resources from

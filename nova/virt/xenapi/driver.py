@@ -382,10 +382,10 @@ class XenAPIDriver(driver.ComputeDriver):
                 'password': CONF.xenapi_connection_password}
 
     def get_available_resource(self, nodename):
-        """Retrieve resource info.
+        """Retrieve resource information.
 
         This method is called when nova-compute launches, and
-        as part of a periodic task.
+        as part of a periodic task that records the results in the DB.
 
         :param nodename: ignored in this driver
         :returns: dictionary describing resources
