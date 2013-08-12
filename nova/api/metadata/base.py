@@ -415,7 +415,8 @@ class InstanceMetadata():
             filepath = os.path.join('ec2', version, 'meta-data.json')
             yield (filepath, json.dumps(data['meta-data']))
 
-        for version in OPENSTACK_VERSIONS + ["latest"]:
+        ALL_OPENSTACK_VERSIONS = OPENSTACK_VERSIONS + ["latest"]
+        for version in ALL_OPENSTACK_VERSIONS:
             path = 'openstack/%s/%s' % (version, MD_JSON_NAME)
             yield (path, self.lookup(path))
 
@@ -423,7 +424,7 @@ class InstanceMetadata():
             if self.userdata_raw is not None:
                 yield (path, self.lookup(path))
 
-            if self._check_version(HAVANA, version):
+            if self._check_version(HAVANA, version, ALL_OPENSTACK_VERSIONS):
                 path = 'openstack/%s/%s' % (version, VD_JSON_NAME)
                 yield (path, self.lookup(path))
 

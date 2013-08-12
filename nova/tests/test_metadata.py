@@ -285,6 +285,12 @@ class MetadataTestCase(test.TestCase):
 
         base.InstanceMetadata(INSTANCES[0], network_info=network_info)
 
+    def test_InstanceMetadata_invoke_metadata_for_config_drive(self):
+        inst = copy.copy(self.instance)
+        inst_md = base.InstanceMetadata(inst)
+        for (path, value) in inst_md.metadata_for_config_drive():
+            self.assertIsNotNone(path)
+
     def test_InstanceMetadata_queries_network_API_when_needed(self):
         network_info_from_api = {"c": "d"}
 
