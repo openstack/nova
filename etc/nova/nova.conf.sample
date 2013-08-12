@@ -936,7 +936,7 @@
 # value)
 #image_decryption_dir=/tmp
 
-# hostname or ip for openstack to use when accessing the s3
+# hostname or ip for OpenStack to use when accessing the s3
 # api (string value)
 #s3_host=$my_ip
 
