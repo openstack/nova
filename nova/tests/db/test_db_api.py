@@ -4717,7 +4717,7 @@ class NetworkTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_network_update_nonexistent(self):
         self.assertRaises(exception.NetworkNotFound,
-            db.network_update, self.ctxt, 'nonexistent', {})
+            db.network_update, self.ctxt, 123456, {})
 
     def test_network_update_with_duplicate_vlan(self):
         values1 = {'host': 'localhost', 'project_id': 'project1', 'vlan': 1}
@@ -4737,7 +4737,7 @@ class NetworkTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_network_set_host_nonexistent_network(self):
         self.assertRaises(exception.NetworkNotFound,
-            db.network_set_host, self.ctxt, 'nonexistent', 'nonexistent')
+            db.network_set_host, self.ctxt, 123456, 'nonexistent')
 
     def test_network_set_host_with_initially_no_host(self):
         values = {'host': 'example.com', 'project_id': 'project1'}
