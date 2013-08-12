@@ -19,13 +19,16 @@ import random
 import re
 import time
 
+from eventlet import timeout as eventlet_timeout
 from oslo.config import cfg
 
 from nova.compute import power_state
+from nova import exception as n_exc
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
+from nova.openstack.common import loopingcall
 from nova.openstack.common import processutils
 from nova.virt.powervm import blockdev
 from nova.virt.powervm import command
@@ -320,7 +323,8 @@ class PowerVMOperator(object):
             raise exception.PowerVMLPARInstanceCleanupFailed(
                                                   instance_name=instance_name)
 
-    def power_off(self, instance_name, timeout=30):
+    def power_off(self, instance_name,
+                  timeout=constants.POWERVM_LPAR_OPERATION_TIMEOUT):
         self._operator.stop_lpar(instance_name, timeout)
 
     def power_on(self, instance_name):
@@ -480,6 +484,40 @@ class BaseOperator(object):
         self._connection = common.check_connection(self._connection,
                                                    self.connection_data)
 
+    def _poll_for_lpar_status(self, instance_name, status, operation,
+                            timeout=constants.POWERVM_LPAR_OPERATION_TIMEOUT):
+        """Polls until the LPAR with the given name reaches the given status.
+
+        :param instance_name: LPAR instance name
+        :param status: Poll until the given LPAR status is reached
+        :param operation: The operation being performed, e.g. 'stop_lpar'
+        :param timeout: The number of seconds to wait.
+        :raises: PowerVMLPARInstanceNotFound
+        :raises: PowerVMLPAROperationTimeout
+        :raises: InvalidParameterValue
+        """
+        # make sure it's a valid status
+        if (status == constants.POWERVM_NOSTATE or
+                not status in constants.POWERVM_POWER_STATE):
+            msg = _("Invalid LPAR state: %s") % status
+            raise n_exc.InvalidParameterValue(err=msg)
+
+        # raise the given timeout exception if the loop call doesn't complete
+        # in the specified timeout
+        timeout_exception = exception.PowerVMLPAROperationTimeout(
+                                                operation=operation,
+                                                instance_name=instance_name)
+        with eventlet_timeout.Timeout(timeout, timeout_exception):
+            def _wait_for_lpar_status(instance_name, status):
+                """Called at an interval until the status is reached."""
+                lpar_obj = self.get_lpar(instance_name)
+                if lpar_obj['state'] == status:
+                    raise loopingcall.LoopingCallDone()
+
+            timer = loopingcall.FixedIntervalLoopingCall(_wait_for_lpar_status,
+                                                         instance_name, status)
+            timer.start(interval=1).wait()
+
     def get_lpar(self, instance_name, resource_type='lpar'):
         """Return a LPAR object by its instance name.
 
@@ -523,7 +561,8 @@ class BaseOperator(object):
         self.run_vios_command(self.command.chsysstate('-r lpar -o on -n %s'
                                                  % instance_name))
 
-    def stop_lpar(self, instance_name, timeout=30):
+    def stop_lpar(self, instance_name,
+                  timeout=constants.POWERVM_LPAR_OPERATION_TIMEOUT):
         """Stop a running LPAR.
 
         :param instance_name: LPAR instance name
@@ -535,19 +574,8 @@ class BaseOperator(object):
         self.run_vios_command(cmd)
 
         # poll instance until stopped or raise exception
-        lpar_obj = self.get_lpar(instance_name)
-        wait_inc = 1  # seconds to wait between status polling
-        start_time = time.time()
-        while lpar_obj['state'] != 'Not Activated':
-            curr_time = time.time()
-            # wait up to (timeout) seconds for shutdown
-            if (curr_time - start_time) > timeout:
-                raise exception.PowerVMLPAROperationTimeout(
-                        operation='stop_lpar',
-                        instance_name=instance_name)
-
-            time.sleep(wait_inc)
-            lpar_obj = self.get_lpar(instance_name)
+        self._poll_for_lpar_status(instance_name, constants.POWERVM_SHUTDOWN,
+                                   'stop_lpar', timeout)
 
     def remove_lpar(self, instance_name):
         """Removes a LPAR.

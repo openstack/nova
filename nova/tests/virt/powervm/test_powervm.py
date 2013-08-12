@@ -24,6 +24,7 @@ import paramiko
 
 from nova import context
 from nova import db
+from nova import exception as n_exc
 from nova import test
 
 from nova.compute import flavors
@@ -1167,10 +1168,21 @@ class IVMOperatorTestCase(test.TestCase):
         self.ivm_operator.run_vios_command('chsysstate -r lpar -o shutdown '
                                            '--immed -n %s' % instance_name)
         self.mox.StubOutWithMock(self.ivm_operator, 'get_lpar')
-        # the lpar is running and the timeout is 0 so we timeout
+        # the lpar is running and the timeout is less than the looping call
+        # interval so we timeout
         lpar1 = fake_lpar(instance_name)
         self.ivm_operator.get_lpar(instance_name).AndReturn(lpar1)
         self.mox.ReplayAll()
         self.assertRaises(exception.PowerVMLPAROperationTimeout,
                           self.ivm_operator.stop_lpar,
-                          instance_name=instance_name, timeout=0)
+                          instance_name=instance_name, timeout=0.5)
+
+    def test_poll_for_lpar_status_no_state(self):
+        self.assertRaises(n_exc.InvalidParameterValue,
+                          self.ivm_operator._poll_for_lpar_status,
+                          'fake', constants.POWERVM_NOSTATE, 'test')
+
+    def test_poll_for_lpar_status_bad_state(self):
+        self.assertRaises(n_exc.InvalidParameterValue,
+                          self.ivm_operator._poll_for_lpar_status,
+                          'fake', 'bad-lpar-state-value', 'test')

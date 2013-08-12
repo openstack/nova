@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 IBM Corp.
+# Copyright 2013 IBM Corp.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -47,3 +47,5 @@ POWERVM_MAX_MEM = 1024
 POWERVM_MAX_CPUS = 1
 POWERVM_MIN_CPUS = 1
 POWERVM_CONNECTION_TIMEOUT = 60
+
+POWERVM_LPAR_OPERATION_TIMEOUT = 30
