@@ -38,6 +38,7 @@ def make_flavor(elem, detailed=False):
         # NOTE(vish): this was originally added without a namespace
         elem.set('swap', xmlutil.EmptyStringSelector('swap'))
         elem.set('ephemeral', xmlutil.EmptyStringSelector('ephemeral'))
+        elem.set('disabled')
 
     xmlutil.make_links(elem, 'links')
 

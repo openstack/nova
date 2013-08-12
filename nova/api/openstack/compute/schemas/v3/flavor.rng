@@ -7,6 +7,7 @@
   <attribute name="vcpus">   <text/> </attribute>
   <attribute name="swap">   <text/> </attribute>
   <attribute name="ephemeral">   <text/> </attribute>
+  <attribute name="disabled">   <text/> </attribute>
   <zeroOrMore>
     <externalRef href="../atom-link.rng"/>
   </zeroOrMore>

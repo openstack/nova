@@ -78,5 +78,6 @@ class V3ViewBuilder(ViewBuilder):
         flavor_dict['flavor'].update({
             "swap": flavor.get("swap") or "",
             "ephemeral": flavor.get("ephemeral_gb") or "",
+            "disabled": flavor.get("disabled", False)
         })
         return flavor_dict
