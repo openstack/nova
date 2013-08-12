@@ -16,11 +16,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import fixtures
 from oslo.config import cfg
+
 
 from nova import config
 from nova import ipv6
+from nova.openstack.common.fixture import config as config_fixture
 from nova import paths
 from nova.tests import utils
 
@@ -38,15 +39,10 @@ CONF.import_opt('compute_driver', 'nova.virt.driver')
 CONF.import_opt('api_paste_config', 'nova.wsgi')
 
 
-class ConfFixture(fixtures.Fixture):
+class ConfFixture(config_fixture.Config):
     """Fixture to manage global conf settings."""
-
-    def __init__(self, conf):
-        self.conf = conf
-
     def setUp(self):
         super(ConfFixture, self).setUp()
-
         self.conf.set_default('api_paste_config',
                               paths.state_path_def('etc/nova/api-paste.ini'))
         self.conf.set_default('host', 'fake-mini')
@@ -70,6 +66,5 @@ class ConfFixture(fixtures.Fixture):
         self.conf.set_default('verbose', True)
         self.conf.set_default('vlan_interface', 'eth0')
         config.parse_args([], default_config_files=[])
-        self.addCleanup(self.conf.reset)
         self.addCleanup(utils.cleanup_dns_managers)
         self.addCleanup(ipv6.api.reset_backend)

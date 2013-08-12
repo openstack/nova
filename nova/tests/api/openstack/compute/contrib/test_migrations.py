@@ -21,9 +21,8 @@ from lxml import etree
 from nova.api.openstack.compute.contrib import migrations
 from nova import context
 from nova import exception
+from nova.openstack.common.fixture import moxstubout
 from nova import test
-from nova.test import MoxStubout
-
 
 fake_migrations = [
     {
@@ -70,7 +69,7 @@ class MigrationsTestCase(test.NoDBTestCase):
         self.context = context.get_admin_context()
         self.req = FakeRequest()
         self.req.environ['nova.context'] = self.context
-        mox_fixture = self.useFixture(MoxStubout())
+        mox_fixture = self.useFixture(moxstubout.MoxStubout())
         self.mox = mox_fixture.mox
 
     def test_index(self):
