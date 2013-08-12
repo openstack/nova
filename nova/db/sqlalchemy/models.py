@@ -1025,7 +1025,7 @@ class Cell(BASE, NovaBase):
     """
     __tablename__ = 'cells'
     __table_args__ = (schema.UniqueConstraint(
-        "name", "deleted", name="uniq_cell_name0deleted"
+        "name", "deleted", name="uniq_cells0name0deleted"
         ),
     )
     id = Column(Integer, primary_key=True)
