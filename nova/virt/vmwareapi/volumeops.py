@@ -320,6 +320,9 @@ class VMwareVolumeOps(object):
         over, so for consolidation we relocate the backing with move option
         as moveAllDiskBackingsAndAllowSharing and then delete the older version
         of the VMDK file attaching the new version VMDK file.
+
+        In the case of a volume boot the we need to ensure that the volume
+        is on the datastore of the instance.
         """
 
         # Consolidation only supported with VC driver
@@ -368,6 +371,21 @@ class VMwareVolumeOps(object):
                                                controller_key=controller_key,
                                                unit_number=unit_number)
 
+    def _get_vmdk_backed_disk_device(self, vm_ref, connection_info_data):
+        # Get the vmdk file name that the VM is pointing to
+        hardware_devices = self._session._call_method(vim_util,
+                        "get_dynamic_property", vm_ref,
+                        "VirtualMachine", "config.hardware.device")
+
+        # Get disk uuid
+        disk_uuid = self._get_volume_uuid(vm_ref,
+                                          connection_info_data['volume_id'])
+        device = vm_util.get_vmdk_backed_disk_device(hardware_devices,
+                                                     disk_uuid)
+        if not device:
+            raise volume_util.StorageError(_("Unable to find volume"))
+        return device
+
     def _detach_volume_vmdk(self, connection_info, instance, mountpoint):
         """Detach volume storage to VM instance."""
         instance_name = instance['name']
@@ -377,17 +395,7 @@ class VMwareVolumeOps(object):
                   {'mountpoint': mountpoint, 'instance_name': instance_name})
         data = connection_info['data']
 
-        # Get the vmdk file name that the VM is pointing to
-        hardware_devices = self._session._call_method(vim_util,
-                        "get_dynamic_property", vm_ref,
-                        "VirtualMachine", "config.hardware.device")
-
-        # Get disk uuid
-        disk_uuid = self._get_volume_uuid(vm_ref, data['volume_id'])
-        device = vm_util.get_vmdk_backed_disk_device(hardware_devices,
-                                                     disk_uuid)
-        if not device:
-            raise volume_util.StorageError(_("Unable to find volume"))
+        device = self._get_vmdk_backed_disk_device(vm_ref, data)
 
         # Get the volume ref
         volume_ref = self._get_volume_ref(data['volume'])
@@ -436,3 +444,18 @@ class VMwareVolumeOps(object):
             self._detach_volume_iscsi(connection_info, instance, mountpoint)
         else:
             raise exception.VolumeDriverNotFound(driver_type=driver_type)
+
+    def attach_root_volume(self, connection_info, instance, mountpoint):
+        """Attach a root volume to the VM instance."""
+        driver_type = connection_info['driver_volume_type']
+        LOG.debug(_("Root volume attach. Driver type: %s"), driver_type,
+                  instance=instance)
+        if driver_type == 'vmdk':
+            vm_ref = vm_util.get_vm_ref(self._session, instance)
+            data = connection_info['data']
+            device = self._get_vmdk_backed_disk_device(vm_ref, data)
+            # Get the volume ref
+            volume_ref = self._get_volume_ref(data['volume'])
+            self._consolidate_vmdk_volume(instance, vm_ref, device, volume_ref)
+
+        self.attach_volume(connection_info, instance, mountpoint)

@@ -24,6 +24,7 @@ Test suite for VMwareAPI.
 import mox
 from oslo.config import cfg
 
+from nova import block_device
 from nova.compute import api as compute_api
 from nova.compute import power_state
 from nova.compute import task_states
@@ -36,6 +37,7 @@ from nova.tests import matchers
 from nova.tests import utils
 from nova.tests.virt.vmwareapi import db_fakes
 from nova.tests.virt.vmwareapi import stubs
+from nova.virt import driver as v_driver
 from nova.virt import fake
 from nova.virt.vmwareapi import driver
 from nova.virt.vmwareapi import fake as vmwareapi_fake
@@ -232,6 +234,62 @@ class VMwareAPIVMTestCase(test.TestCase):
         self._create_vm()
         info = self.conn.get_info({'uuid': 'fake-uuid'})
         self._check_vm_info(info, power_state.RUNNING)
+
+    def test_spawn_attach_volume_vmdk(self):
+        self._create_instance_in_the_db()
+        self.type_data = db.flavor_get_by_name(None, 'm1.large')
+        self.mox.StubOutWithMock(block_device, 'volume_in_mapping')
+        self.mox.StubOutWithMock(v_driver, 'block_device_info_get_mapping')
+        ebs_root = 'fake_root'
+        block_device.volume_in_mapping(mox.IgnoreArg(),
+                mox.IgnoreArg()).AndReturn(ebs_root)
+        connection_info = self._test_vmdk_connection_info('vmdk')
+        root_disk = [{'connection_info': connection_info}]
+        v_driver.block_device_info_get_mapping(
+                mox.IgnoreArg()).AndReturn(root_disk)
+        mount_point = '/dev/vdc'
+        self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
+                                 '_get_volume_uuid')
+        volumeops.VMwareVolumeOps._get_volume_uuid(mox.IgnoreArg(),
+                'volume-fake-id').AndReturn('fake_disk_uuid')
+        self.mox.StubOutWithMock(vm_util, 'get_vmdk_backed_disk_device')
+        vm_util.get_vmdk_backed_disk_device(mox.IgnoreArg(),
+                'fake_disk_uuid').AndReturn('fake_device')
+        self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
+                                 '_consolidate_vmdk_volume')
+        volumeops.VMwareVolumeOps._consolidate_vmdk_volume(self.instance,
+                 mox.IgnoreArg(), 'fake_device', mox.IgnoreArg())
+        self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
+                                 'attach_volume')
+        volumeops.VMwareVolumeOps.attach_volume(connection_info,
+                self.instance, mox.IgnoreArg())
+        self.mox.ReplayAll()
+        self.conn.spawn(self.context, self.instance, self.image,
+                        injected_files=[], admin_password=None,
+                        network_info=self.network_info,
+                        block_device_info=None)
+
+    def test_spawn_attach_volume_iscsi(self):
+        self._create_instance_in_the_db()
+        self.type_data = db.flavor_get_by_name(None, 'm1.large')
+        self.mox.StubOutWithMock(block_device, 'volume_in_mapping')
+        self.mox.StubOutWithMock(v_driver, 'block_device_info_get_mapping')
+        ebs_root = 'fake_root'
+        block_device.volume_in_mapping(mox.IgnoreArg(),
+                mox.IgnoreArg()).AndReturn(ebs_root)
+        connection_info = self._test_vmdk_connection_info('iscsi')
+        root_disk = [{'connection_info': connection_info}]
+        v_driver.block_device_info_get_mapping(
+                mox.IgnoreArg()).AndReturn(root_disk)
+        self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
+                                 'attach_volume')
+        volumeops.VMwareVolumeOps.attach_volume(connection_info,
+                self.instance, mox.IgnoreArg())
+        self.mox.ReplayAll()
+        self.conn.spawn(self.context, self.instance, self.image,
+                        injected_files=[], admin_password=None,
+                        network_info=self.network_info,
+                        block_device_info=None)
 
     def test_snapshot(self):
         expected_calls = [
