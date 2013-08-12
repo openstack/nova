@@ -559,6 +559,8 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(db, 'constraint')
         self.mox.StubOutWithMock(db, 'instance_destroy')
         self.mox.StubOutWithMock(self.compute_api, '_create_reservations')
+        self.mox.StubOutWithMock(compute_utils,
+                                 'notify_about_instance_usage')
 
         db.block_device_mapping_get_all_by_instance(self.context,
                                                     inst.uuid).AndReturn([])
@@ -567,9 +569,15 @@ class _ComputeAPIUnitTestMixIn(object):
                                               inst, inst.instance_type_id,
                                               inst.project_id, inst.user_id
                                               ).AndReturn(None)
+        compute_utils.notify_about_instance_usage(mox.IgnoreArg(),
+                                                  self.context,
+                                                  inst,
+                                                  'delete.start')
         db.constraint(host=mox.IgnoreArg()).AndReturn('constraint')
         db.instance_destroy(self.context, inst.uuid, constraint='constraint')
-
+        compute_utils.notify_about_instance_usage(
+                mox.IgnoreArg(), self.context, inst, 'delete.end',
+                system_metadata=inst.system_metadata)
         self.mox.ReplayAll()
 
         self.compute_api.delete(self.context, inst)
