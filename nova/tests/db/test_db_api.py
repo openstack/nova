@@ -6092,7 +6092,7 @@ class ArchiveTestCase(test.TestCase):
         self.conn.execute(ins_stmt)
         update_statement = self.dns_domains.update().\
                            where(self.dns_domains.c.domain == uuidstr0).\
-                           values(deleted=1)
+                           values(deleted=True)
         self.conn.execute(update_statement)
         qdd = select([self.dns_domains], self.dns_domains.c.domain ==
                                             uuidstr0)
