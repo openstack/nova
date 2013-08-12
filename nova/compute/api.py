@@ -2603,7 +2603,7 @@ class API(base.Base):
         # The caller likely got the instance from volume['instance_uuid']
         # in the first place, but let's sanity check.
         if old_volume['instance_uuid'] != instance['uuid']:
-            raise exception.VolumeUnattached(volume_id=volume['id'])
+            raise exception.VolumeUnattached(volume_id=old_volume['id'])
         if new_volume['attach_status'] == 'attached':
             msg = _("New volume must be detached in order to swap.")
             raise exception.InvalidVolume(reason=msg)
@@ -2611,13 +2611,18 @@ class API(base.Base):
             msg = _("New volume must be the same size or larger.")
             raise exception.InvalidVolume(reason=msg)
         self.volume_api.check_detach(context, old_volume)
-        self.volume_api.begin_detaching(context, old_volume)
         self.volume_api.check_attach(context, new_volume, instance=instance)
-        self.volume_api.reserve_volume(context, new_volume)
-        self.compute_rpcapi.swap_volume(
-                context, instance=instance,
-                old_volume_id=old_volume['id'],
-                new_volume_id=new_volume['id'])
+        self.volume_api.begin_detaching(context, old_volume['id'])
+        self.volume_api.reserve_volume(context, new_volume['id'])
+        try:
+            self.compute_rpcapi.swap_volume(
+                    context, instance=instance,
+                    old_volume_id=old_volume['id'],
+                    new_volume_id=new_volume['id'])
+        except Exception:  # pylint: disable=W0702
+            with excutils.save_and_reraise_exception():
+                self.volume_api.roll_detaching(context, old_volume['id'])
+                self.volume_api.unreserve_volume(context, new_volume['id'])
 
     @wrap_check_policy
     def attach_interface(self, context, instance, network_id, port_id,

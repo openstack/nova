@@ -646,6 +646,118 @@ class _ComputeAPIUnitTestMixIn(object):
         self.assertEqual(vm_states.PAUSED, instance.vm_state)
         self.assertEqual(task_states.UNPAUSING, instance.task_state)
 
+    def test_swap_volume_volume_api_usage(self):
+        # This test ensures that volume_id arguments are passed to volume_api
+        # and that volumes return to previous states in case of error.
+        def fake_vol_api_begin_detaching(context, volume_id):
+            self.assertTrue(uuidutils.is_uuid_like(volume_id))
+            volumes[volume_id]['status'] = 'detaching'
+
+        def fake_vol_api_roll_detaching(context, volume_id):
+            self.assertTrue(uuidutils.is_uuid_like(volume_id))
+            if volumes[volume_id]['status'] == 'detaching':
+                volumes[volume_id]['status'] = 'in-use'
+
+        def fake_vol_api_reserve(context, volume_id):
+            self.assertTrue(uuidutils.is_uuid_like(volume_id))
+            self.assertTrue(volumes[volume_id]['status'], 'available')
+            volumes[volume_id]['status'] = 'attaching'
+
+        def fake_vol_api_unreserve(context, volume_id):
+            self.assertTrue(uuidutils.is_uuid_like(volume_id))
+            if volumes[volume_id]['status'] == 'attaching':
+                volumes[volume_id]['status'] = 'available'
+
+        def fake_swap_volume_exc(context, instance, old_volume_id,
+                                 new_volume_id):
+            raise AttributeError  # Random exception
+
+        # Should fail if VM state is not valid
+        instance = {'vm_state': vm_states.BUILDING,
+                    'launched_at': timeutils.utcnow(),
+                    'locked': False,
+                    'availability_zone': 'fake_az',
+                    'uuid': 'fake'}
+        volumes = {}
+        old_volume_id = uuidutils.generate_uuid()
+        volumes[old_volume_id] = {'id': old_volume_id,
+                                  'display_name': 'old_volume',
+                                  'attach_status': 'attached',
+                                  'instance_uuid': 'fake',
+                                  'size': 5,
+                                  'status': 'in-use'}
+        new_volume_id = uuidutils.generate_uuid()
+        volumes[new_volume_id] = {'id': new_volume_id,
+                                  'display_name': 'new_volume',
+                                  'attach_status': 'detached',
+                                  'instance_uuid': None,
+                                  'size': 5,
+                                  'status': 'available'}
+        self.assertRaises(exception.InstanceInvalidState,
+                          self.compute_api.swap_volume, self.context, instance,
+                          volumes[old_volume_id], volumes[new_volume_id])
+        instance['vm_state'] = vm_states.ACTIVE
+
+        # Should fail if old volume is not attached
+        volumes[old_volume_id]['attach_status'] = 'detached'
+        self.assertRaises(exception.InvalidVolume,
+                          self.compute_api.swap_volume, self.context, instance,
+                          volumes[old_volume_id], volumes[new_volume_id])
+        self.assertEquals(volumes[old_volume_id]['status'], 'in-use')
+        self.assertEquals(volumes[new_volume_id]['status'], 'available')
+        volumes[old_volume_id]['attach_status'] = 'attached'
+
+        # Should fail if old volume's instance_uuid is not that of the instance
+        volumes[old_volume_id]['instance_uuid'] = 'fake2'
+        self.assertRaises(exception.VolumeUnattached,
+                          self.compute_api.swap_volume, self.context, instance,
+                          volumes[old_volume_id], volumes[new_volume_id])
+        self.assertEquals(volumes[old_volume_id]['status'], 'in-use')
+        self.assertEquals(volumes[new_volume_id]['status'], 'available')
+        volumes[old_volume_id]['instance_uuid'] = 'fake'
+
+        # Should fail if new volume is attached
+        volumes[new_volume_id]['attach_status'] = 'attached'
+        self.assertRaises(exception.InvalidVolume,
+                          self.compute_api.swap_volume, self.context, instance,
+                          volumes[old_volume_id], volumes[new_volume_id])
+        self.assertEquals(volumes[old_volume_id]['status'], 'in-use')
+        self.assertEquals(volumes[new_volume_id]['status'], 'available')
+        volumes[new_volume_id]['attach_status'] = 'detached'
+
+        # Should fail if new volume is smaller than the old volume
+        volumes[new_volume_id]['size'] = 4
+        self.assertRaises(exception.InvalidVolume,
+                          self.compute_api.swap_volume, self.context, instance,
+                          volumes[old_volume_id], volumes[new_volume_id])
+        self.assertEquals(volumes[old_volume_id]['status'], 'in-use')
+        self.assertEquals(volumes[new_volume_id]['status'], 'available')
+        volumes[new_volume_id]['size'] = 5
+
+        # Fail call to swap_volume
+        self.stubs.Set(self.compute_api.volume_api, 'begin_detaching',
+                       fake_vol_api_begin_detaching)
+        self.stubs.Set(self.compute_api.volume_api, 'roll_detaching',
+                       fake_vol_api_roll_detaching)
+        self.stubs.Set(self.compute_api.volume_api, 'reserve_volume',
+                       fake_vol_api_reserve)
+        self.stubs.Set(self.compute_api.volume_api, 'unreserve_volume',
+                       fake_vol_api_unreserve)
+        self.stubs.Set(self.compute_api.compute_rpcapi, 'swap_volume',
+                       fake_swap_volume_exc)
+        self.assertRaises(AttributeError,
+                          self.compute_api.swap_volume, self.context, instance,
+                          volumes[old_volume_id], volumes[new_volume_id])
+        self.assertEquals(volumes[old_volume_id]['status'], 'in-use')
+        self.assertEquals(volumes[new_volume_id]['status'], 'available')
+
+        # Should succeed
+        self.stubs.Set(self.compute_api.compute_rpcapi, 'swap_volume',
+                       lambda c, instance, old_volume_id, new_volume_id: True)
+        self.compute_api.swap_volume(self.context, instance,
+                                     volumes[old_volume_id],
+                                     volumes[new_volume_id])
+
 
 class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
     def setUp(self):

@@ -570,3 +570,88 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.assertEqual('4', b.system_metadata['clean_attempts'])
         self.assertFalse(c.cleaned)
         self.assertEqual('1', c.system_metadata['clean_attempts'])
+
+    def test_swap_volume_volume_api_usage(self):
+        # This test ensures that volume_id arguments are passed to volume_api
+        # and that volume states are OK
+        volumes = {}
+        old_volume_id = uuidutils.generate_uuid()
+        volumes[old_volume_id] = {'id': old_volume_id,
+                                  'display_name': 'old_volume',
+                                  'status': 'detaching'}
+        new_volume_id = uuidutils.generate_uuid()
+        volumes[new_volume_id] = {'id': new_volume_id,
+                                  'display_name': 'new_volume',
+                                  'status': 'attaching'}
+
+        def fake_vol_api_func(context, volume, *args):
+            self.assertTrue(uuidutils.is_uuid_like(volume))
+            return {}
+
+        def fake_vol_get(context, volume_id):
+            self.assertTrue(uuidutils.is_uuid_like(volume_id))
+            return volumes[volume_id]
+
+        def fake_vol_attach(context, volume_id, instance_uuid, connector):
+            self.assertTrue(uuidutils.is_uuid_like(volume_id))
+            self.assertIn(volumes[volume_id]['status'],
+                          ['available', 'attaching'])
+            volumes[volume_id]['status'] = 'in-use'
+
+        def fake_vol_unreserve(context, volume_id):
+            self.assertTrue(uuidutils.is_uuid_like(volume_id))
+            if volumes[volume_id]['status'] == 'attaching':
+                volumes[volume_id]['status'] = 'available'
+
+        def fake_vol_detach(context, volume_id):
+            self.assertTrue(uuidutils.is_uuid_like(volume_id))
+            volumes[volume_id]['status'] = 'available'
+
+        def fake_func_exc(*args, **kwargs):
+            raise AttributeError  # Random exception
+
+        self.stubs.Set(self.compute.volume_api, 'get', fake_vol_get)
+        self.stubs.Set(self.compute.volume_api, 'initialize_connection',
+                       fake_vol_api_func)
+        self.stubs.Set(self.compute.volume_api, 'attach', fake_vol_attach)
+        self.stubs.Set(self.compute.volume_api, 'unreserve_volume',
+                       fake_vol_unreserve)
+        self.stubs.Set(self.compute.volume_api, 'terminate_connection',
+                       fake_vol_api_func)
+        self.stubs.Set(self.compute.volume_api, 'detach', fake_vol_detach)
+        self.stubs.Set(self.compute, '_get_instance_volume_bdm',
+                       lambda x, y, z: {'device_name': '/dev/vdb',
+                                        'connection_info': '{"foo": "bar"}'})
+        self.stubs.Set(self.compute.driver, 'get_volume_connector',
+                       lambda x: {})
+        self.stubs.Set(self.compute.driver, 'swap_volume',
+                       lambda w, x, y, z: None)
+        self.stubs.Set(self.compute.conductor_api,
+                       'block_device_mapping_update_or_create',
+                       lambda x, y: None)
+
+        # Good path
+        self.compute.swap_volume(self.context, old_volume_id, new_volume_id,
+                                 {'uuid': 'fake'})
+        self.assertTrue(volumes[old_volume_id]['status'], 'available')
+        self.assertTrue(volumes[new_volume_id]['status'], 'in-use')
+
+        # Error paths
+        volumes[old_volume_id]['status'] = 'detaching'
+        volumes[old_volume_id]['status'] = 'attaching'
+        self.stubs.Set(self.compute.driver, 'swap_volume', fake_func_exc)
+        self.assertRaises(AttributeError, self.compute.swap_volume,
+                          self.context, old_volume_id, new_volume_id,
+                          {'uuid': 'fake'})
+        self.assertTrue(volumes[old_volume_id]['status'], 'detaching')
+        self.assertTrue(volumes[new_volume_id]['status'], 'attaching')
+
+        volumes[old_volume_id]['status'] = 'detaching'
+        volumes[old_volume_id]['status'] = 'attaching'
+        self.stubs.Set(self.compute.volume_api, 'initialize_connection',
+                       fake_func_exc)
+        self.assertRaises(AttributeError, self.compute.swap_volume,
+                          self.context, old_volume_id, new_volume_id,
+                          {'uuid': 'fake'})
+        self.assertTrue(volumes[old_volume_id]['status'], 'detaching')
+        self.assertTrue(volumes[new_volume_id]['status'], 'attaching')

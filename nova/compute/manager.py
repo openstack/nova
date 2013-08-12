@@ -3572,7 +3572,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         volume = self.volume_api.get(context, new_volume_id)
         try:
             new_cinfo = self.volume_api.initialize_connection(context,
-                                                              volume,
+                                                              new_volume_id,
                                                               connector)
         except Exception:  # pylint: disable=W0702
             with excutils.save_and_reraise_exception():
@@ -3582,7 +3582,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                      'mountpoint': mountpoint},
                               context=context,
                               instance=instance)
-                self.volume_api.unreserve_volume(context, volume)
+                self.volume_api.unreserve_volume(context, new_volume_id)
 
         old_cinfo = jsonutils.loads(bdm['connection_info'])
         if old_cinfo and 'serial' not in old_cinfo:
@@ -3600,16 +3600,16 @@ class ComputeManager(manager.SchedulerDependentManager):
                               context=context,
                               instance=instance)
                 self.volume_api.terminate_connection(context,
-                                                     volume,
+                                                     new_volume_id,
                                                      connector)
         self.volume_api.attach(context,
-                               volume,
+                               new_volume_id,
                                instance['uuid'],
                                mountpoint)
         # Remove old connection
         volume = self.volume_api.get(context, old_volume_id)
-        self.volume_api.terminate_connection(context, volume, connector)
-        self.volume_api.detach(context.elevated(), volume)
+        self.volume_api.terminate_connection(context, old_volume_id, connector)
+        self.volume_api.detach(context.elevated(), old_volume_id)
         # Update bdm
         values = {
             'instance_uuid': instance['uuid'],
