@@ -864,7 +864,7 @@ class DbQuotaDriverTestCase(test.TestCase):
                 ))
 
     def _stub_get_by_project_and_user(self):
-        def fake_qgabp(context, project_id, user_id):
+        def fake_qgabpau(context, project_id, user_id):
             self.calls.append('quota_get_all_by_project_and_user')
             self.assertEqual(project_id, 'test_project')
             self.assertEqual(user_id, 'fake_user')
@@ -874,7 +874,16 @@ class DbQuotaDriverTestCase(test.TestCase):
                 injected_file_path_bytes=127,
                 )
 
-        def fake_qugabp(context, project_id, user_id):
+        def fake_qgabp(context, project_id):
+            self.calls.append('quota_get_all_by_project')
+            self.assertEqual(project_id, 'test_project')
+            return {
+                'cores': 10,
+                'injected_files': 2,
+                'injected_file_path_bytes': 127,
+                }
+
+        def fake_qugabpau(context, project_id, user_id):
             self.calls.append('quota_usage_get_all_by_project_and_user')
             self.assertEqual(project_id, 'test_project')
             self.assertEqual(user_id, 'fake_user')
@@ -889,9 +898,10 @@ class DbQuotaDriverTestCase(test.TestCase):
                 injected_file_path_bytes=dict(in_use=0, reserved=0),
                 )
 
-        self.stubs.Set(db, 'quota_get_all_by_project_and_user', fake_qgabp)
+        self.stubs.Set(db, 'quota_get_all_by_project_and_user', fake_qgabpau)
+        self.stubs.Set(db, 'quota_get_all_by_project', fake_qgabp)
         self.stubs.Set(db, 'quota_usage_get_all_by_project_and_user',
-                       fake_qugabp)
+                       fake_qugabpau)
 
         self._stub_quota_class_get_all_by_name()
 
@@ -904,6 +914,7 @@ class DbQuotaDriverTestCase(test.TestCase):
 
         self.assertEqual(self.calls, [
                 'quota_get_all_by_project_and_user',
+                'quota_get_all_by_project',
                 'quota_usage_get_all_by_project_and_user',
                 'quota_class_get_all_by_name',
                 ])
@@ -1080,11 +1091,12 @@ class DbQuotaDriverTestCase(test.TestCase):
         self.maxDiff = None
         self._stub_get_by_project_and_user()
         result = self.driver.get_user_quotas(
-            FakeContext('other_project', 'other_class'),
+            FakeContext('test_project', None),
             quota.QUOTAS._resources, 'test_project', 'fake_user')
 
         self.assertEqual(self.calls, [
                 'quota_get_all_by_project_and_user',
+                'quota_get_all_by_project',
                 'quota_usage_get_all_by_project_and_user',
                 ])
         self.assertEqual(result, dict(
@@ -1103,7 +1115,7 @@ class DbQuotaDriverTestCase(test.TestCase):
                     in_use=10 * 1024,
                     reserved=0,
                     ),
-               floating_ips=dict(
+                floating_ips=dict(
                     limit=10,
                     in_use=2,
                     reserved=0,
@@ -1229,12 +1241,13 @@ class DbQuotaDriverTestCase(test.TestCase):
         self.maxDiff = None
         self._stub_get_by_project_and_user()
         result = self.driver.get_user_quotas(
-            FakeContext('other_project', 'other_class'),
+            FakeContext('test_project', 'test_class'),
             quota.QUOTAS._resources, 'test_project', 'fake_user',
             quota_class='test_class')
 
         self.assertEqual(self.calls, [
                 'quota_get_all_by_project_and_user',
+                'quota_get_all_by_project',
                 'quota_usage_get_all_by_project_and_user',
                 'quota_class_get_all_by_name',
                 ])
@@ -1386,6 +1399,7 @@ class DbQuotaDriverTestCase(test.TestCase):
 
         self.assertEqual(self.calls, [
                 'quota_get_all_by_project_and_user',
+                'quota_get_all_by_project',
                 'quota_usage_get_all_by_project_and_user',
                 'quota_class_get_all_by_name',
                 ])
@@ -1445,6 +1459,7 @@ class DbQuotaDriverTestCase(test.TestCase):
 
         self.assertEqual(self.calls, [
                 'quota_get_all_by_project_and_user',
+                'quota_get_all_by_project',
                 'quota_class_get_all_by_name',
                 ])
         self.assertEqual(result, dict(
@@ -1535,6 +1550,170 @@ class DbQuotaDriverTestCase(test.TestCase):
                     limit=100,
                     ),
                 ))
+
+    def _stub_get_settable_quotas(self):
+        def fake_get_project_quotas(context, resources, project_id,
+                                    quota_class=None, defaults=True,
+                                    usages=True, remains=False):
+            self.calls.append('get_project_quotas')
+            result = {}
+            for k, v in resources.items():
+                if k == 'instances':
+                    remains = v.default - 5
+                    in_use = 1
+                else:
+                    remains = v.default
+                    in_use = 0
+                result[k] = {'limit': v.default, 'in_use': in_use,
+                             'reserved': 0, 'remains': remains}
+            return result
+
+        def fake_get_user_quotas(context, resources, project_id, user_id,
+                                 quota_class=None, defaults=True,
+                                 usages=True):
+            self.calls.append('get_user_quotas')
+            result = {}
+            for k, v in resources.items():
+                if k == 'instances':
+                    in_use = 1
+                else:
+                    in_use = 0
+                result[k] = {'limit': v.default,
+                             'in_use': in_use, 'reserved': 0}
+            return result
+
+        def fake_qgabpau(context, project_id, user_id):
+            self.calls.append('quota_get_all_by_project_and_user')
+            return {'instances': 2}
+
+        self.stubs.Set(self.driver, 'get_project_quotas',
+                       fake_get_project_quotas)
+        self.stubs.Set(self.driver, 'get_user_quotas',
+                       fake_get_user_quotas)
+        self.stubs.Set(db, 'quota_get_all_by_project_and_user',
+                       fake_qgabpau)
+
+    def test_get_settable_quotas_with_user(self):
+        self._stub_get_settable_quotas()
+        result = self.driver.get_settable_quotas(
+            FakeContext('test_project', 'test_class'),
+            quota.QUOTAS._resources, 'test_project', user_id='test_user')
+
+        self.assertEqual(self.calls, [
+                'get_project_quotas',
+                'get_user_quotas',
+                'quota_get_all_by_project_and_user',
+                ])
+        self.assertEqual(result, {
+                'instances': {
+                    'minimum': 1,
+                    'maximum': 7,
+                    },
+                'cores': {
+                    'minimum': 0,
+                    'maximum': 20,
+                    },
+                'ram': {
+                    'minimum': 0,
+                    'maximum': 50 * 1024,
+                    },
+                'floating_ips': {
+                    'minimum': 0,
+                    'maximum': 10,
+                    },
+                'fixed_ips': {
+                    'minimum': 0,
+                    'maximum': 10,
+                    },
+                'metadata_items': {
+                    'minimum': 0,
+                    'maximum': 128,
+                    },
+                'injected_files': {
+                    'minimum': 0,
+                    'maximum': 5,
+                    },
+                'injected_file_content_bytes': {
+                    'minimum': 0,
+                    'maximum': 10 * 1024,
+                    },
+                'injected_file_path_bytes': {
+                    'minimum': 0,
+                    'maximum': 255,
+                    },
+                'security_groups': {
+                    'minimum': 0,
+                    'maximum': 10,
+                    },
+                'security_group_rules': {
+                    'minimum': 0,
+                    'maximum': 20,
+                    },
+                'key_pairs': {
+                    'minimum': 0,
+                    'maximum': 100,
+                    },
+                })
+
+    def test_get_settable_quotas_without_user(self):
+        self._stub_get_settable_quotas()
+        result = self.driver.get_settable_quotas(
+            FakeContext('test_project', 'test_class'),
+            quota.QUOTAS._resources, 'test_project')
+
+        self.assertEqual(self.calls, [
+                'get_project_quotas',
+                ])
+        self.assertEqual(result, {
+                'instances': {
+                    'minimum': 5,
+                    'maximum': -1,
+                    },
+                'cores': {
+                    'minimum': 0,
+                    'maximum': -1,
+                    },
+                'ram': {
+                    'minimum': 0,
+                    'maximum': -1,
+                    },
+                'floating_ips': {
+                    'minimum': 0,
+                    'maximum': -1,
+                    },
+                'fixed_ips': {
+                    'minimum': 0,
+                    'maximum': -1,
+                    },
+                'metadata_items': {
+                    'minimum': 0,
+                    'maximum': -1,
+                    },
+                'injected_files': {
+                    'minimum': 0,
+                    'maximum': -1,
+                    },
+                'injected_file_content_bytes': {
+                    'minimum': 0,
+                    'maximum': -1,
+                    },
+                'injected_file_path_bytes': {
+                    'minimum': 0,
+                    'maximum': -1,
+                    },
+                'security_groups': {
+                    'minimum': 0,
+                    'maximum': -1,
+                    },
+                'security_group_rules': {
+                    'minimum': 0,
+                    'maximum': -1,
+                    },
+                'key_pairs': {
+                    'minimum': 0,
+                    'maximum': -1,
+                    },
+                })
 
     def _stub_get_project_quotas(self):
         def fake_get_project_quotas(context, resources, project_id,
