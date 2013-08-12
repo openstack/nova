@@ -67,12 +67,13 @@ class EC2ValidateTestCase(test.TestCase):
         self.EC2_MALFORMED_IDS = ['foobar', '', 123]
         self.EC2_VALID__IDS = ['i-284f3a41', 'i-001', 'i-deadbeef']
 
-        self.ec2_id_exception_map = [(x, exception.InvalidInstanceIDMalformed)
+        self.ec2_id_exception_map = [(x,
+                exception.InvalidInstanceIDMalformedEC2)
                 for x in self.EC2_MALFORMED_IDS]
         self.ec2_id_exception_map.extend([(x, exception.InstanceNotFound)
                 for x in self.EC2_VALID__IDS])
         self.volume_id_exception_map = [(x,
-                exception.InvalidInstanceIDMalformed)
+                exception.InvalidInstanceIDMalformedEC2)
                 for x in self.EC2_MALFORMED_IDS]
         self.volume_id_exception_map.extend([(x, exception.VolumeNotFound)
                 for x in self.EC2_VALID__IDS])
