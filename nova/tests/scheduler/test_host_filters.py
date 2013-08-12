@@ -661,7 +661,7 @@ class HostFiltersTestCase(test.NoDBTestCase):
         capabilities = {'supported_instances': [
                                 ('x86_64', 'kvm', 'hvm')]}
         host = fakes.FakeHostState('host1', 'node1',
-                {'capabilities': capabilities})
+                capabilities)
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
 
     def test_image_properties_filter_fails_different_inst_props(self):
@@ -674,7 +674,7 @@ class HostFiltersTestCase(test.NoDBTestCase):
         capabilities = {'supported_instances': [
                                 ('x86_64', 'kvm', 'hvm')]}
         host = fakes.FakeHostState('host1', 'node1',
-                {'capabilities': capabilities})
+                capabilities)
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
 
     def test_image_properties_filter_passes_partial_inst_props(self):
@@ -686,7 +686,7 @@ class HostFiltersTestCase(test.NoDBTestCase):
         capabilities = {'supported_instances': [
                                 ('x86_64', 'kvm', 'hvm')]}
         host = fakes.FakeHostState('host1', 'node1',
-                {'capabilities': capabilities})
+                capabilities)
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
 
     def test_image_properties_filter_fails_partial_inst_props(self):
@@ -698,7 +698,7 @@ class HostFiltersTestCase(test.NoDBTestCase):
         capabilities = {'supported_instances': [
                                 ('x86_64', 'xen', 'xen')]}
         host = fakes.FakeHostState('host1', 'node1',
-                {'capabilities': capabilities})
+                capabilities)
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
 
     def test_image_properties_filter_passes_without_inst_props(self):
@@ -708,7 +708,7 @@ class HostFiltersTestCase(test.NoDBTestCase):
         capabilities = {'supported_instances': [
                                 ('x86_64', 'kvm', 'hvm')]}
         host = fakes.FakeHostState('host1', 'node1',
-                {'capabilities': capabilities})
+                capabilities)
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
 
     def test_image_properties_filter_fails_without_host_props(self):
@@ -786,7 +786,7 @@ class HostFiltersTestCase(test.NoDBTestCase):
         filter_properties = {'context': self.context, 'instance_type':
                 {'memory_mb': 1024}}
         host = fakes.FakeHostState('host1', 'node1',
-                {'capabilities': capabilities})
+                capabilities)
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
 
     def _create_aggregate_with_host(self, name='fake_aggregate',
