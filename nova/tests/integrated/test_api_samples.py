@@ -185,7 +185,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
         if isinstance(expected, dict):
             if not isinstance(result, dict):
                 raise NoMatch(_('%(result_str)s: %(result)s is not a dict.')
-                              % locals())
+                        % {'result_str': result_str, 'result': result})
             ex_keys = sorted(expected.keys())
             res_keys = sorted(result.keys())
             if ex_keys != res_keys:
@@ -200,8 +200,9 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
                 raise NoMatch(
                         _('Dictionary key mismatch:\n'
                         'Extra key(s) in template:\n%(ex_delta)s\n'
-                        'Extra key(s) in %(result_str)s:\n%(res_delta)s\n')
-                        % locals())
+                        'Extra key(s) in %(result_str)s:\n%(res_delta)s\n') %
+                        {'ex_delta': ex_delta, 'result_str': result_str,
+                           'res_delta': res_delta})
             for key in ex_keys:
                 res = self._compare_result(subs, expected[key], result[key],
                                            result_str)
@@ -209,7 +210,8 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
         elif isinstance(expected, list):
             if not isinstance(result, list):
                 raise NoMatch(
-                     _('%(result_str)s: %(result)s is not a list.') % locals())
+                        _('%(result_str)s: %(result)s is not a list.') %
+                        {'result_str': result_str, 'result': result})
 
             expected = expected[:]
             extra = []
@@ -232,8 +234,8 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
                 error.extend([repr(o) for o in expected])
 
             if extra:
-                error.append(_('Extra list items in %(result_str)s:')
-                             % locals())
+                error.append(_('Extra list items in %(result_str)s:') %
+                        {'result_str': result_str})
                 error.extend([repr(o) for o in extra])
 
             if error:
@@ -254,8 +256,9 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             if not match:
                 raise NoMatch(
                     _('Values do not match:\n'
-                    'Template: %(expected)s\n%(result_str)s: %(result)s')
-                    % locals())
+                    'Template: %(expected)s\n%(result_str)s: %(result)s') %
+                    {'expected': expected, 'result_str': result_str,
+                        'result': result})
             try:
                 matched_value = match.group('id')
             except IndexError:
@@ -269,8 +272,10 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             if expected != result:
                 raise NoMatch(
                         _('Values do not match:\n'
-                        'Template: %(expected)s\n%(result_str)s: %(result)s')
-                        % locals())
+                        'Template: %(expected)s\n%(result_str)s: '
+                        '%(result)s') % {'expected': expected,
+                                         'result_str': result_str,
+                                         'result': result})
         return matched_value
 
     def generalize_subs(self, subs, vanilla_regexes):

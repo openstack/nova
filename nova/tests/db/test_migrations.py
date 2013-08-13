@@ -86,8 +86,7 @@ def _get_connect_string(backend, user, passwd, database):
     else:
         raise Exception("Unrecognized backend: '%s'" % backend)
 
-    return ("%(backend)s://%(user)s:%(passwd)s@localhost/%(database)s"
-            % locals())
+    return ("%s://%s:%s@localhost/%s" % (backend, user, passwd, database))
 
 
 def _is_backend_avail(backend, user, passwd, database):
@@ -262,13 +261,14 @@ class BaseMigrationTestCase(test.TestCase):
         # operations there is a special database template1.
         sqlcmd = ("psql -w -U %(user)s -h %(host)s -c"
                   " '%(sql)s' -d template1")
+        sqldict = {'user': user, 'host': host}
 
-        sql = ("drop database if exists %(database)s;") % locals()
-        droptable = sqlcmd % locals()
+        sqldict['sql'] = ("drop database if exists %s;") % database
+        droptable = sqlcmd % sqldict
         self.execute_cmd(droptable)
 
-        sql = ("create database %(database)s;") % locals()
-        createtable = sqlcmd % locals()
+        sqldict['sql'] = ("create database %s;") % database
+        createtable = sqlcmd % sqldict
         self.execute_cmd(createtable)
 
         os.unsetenv('PGPASSWORD')
@@ -294,9 +294,11 @@ class BaseMigrationTestCase(test.TestCase):
                 (user, password, database, host) = \
                         get_mysql_connection_info(conn_pieces)
                 sql = ("drop database if exists %(database)s; "
-                        "create database %(database)s;") % locals()
+                        "create database %(database)s;"
+                        % {'database': database})
                 cmd = ("mysql -u \"%(user)s\" %(password)s -h %(host)s "
-                       "-e \"%(sql)s\"") % locals()
+                       "-e \"%(sql)s\"" % {'user': user,
+                           'password': password, 'host': host, 'sql': sql})
                 self.execute_cmd(cmd)
             elif conn_string.startswith('postgresql'):
                 self._reset_pg(conn_pieces)
@@ -324,7 +326,7 @@ class BaseMigrationTestCase(test.TestCase):
         total = connection.execute("SELECT count(*) "
                                    "from information_schema.TABLES "
                                    "where TABLE_SCHEMA='%(database)s'" %
-                                   locals())
+                                   {'database': database})
         self.assertTrue(total.scalar() > 0, "No tables found. Wrong schema?")
 
         noninnodb = connection.execute("SELECT count(*) "
@@ -332,7 +334,7 @@ class BaseMigrationTestCase(test.TestCase):
                                        "where TABLE_SCHEMA='%(database)s' "
                                        "and ENGINE!='InnoDB' "
                                        "and TABLE_NAME!='migrate_version'" %
-                                       locals())
+                                       {'database': database})
         count = noninnodb.scalar()
         self.assertEqual(count, 0, "%d non InnoDB tables created" % count)
         connection.close()
