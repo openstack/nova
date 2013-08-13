@@ -331,23 +331,12 @@ class SimpleDH(object):
         return self._private
 
     def get_public(self):
-        self._public = self.mod_exp(self._base, self._private, self._prime)
+        self._public = pow(self._base, self._private, self._prime)
         return self._public
 
     def compute_shared(self, other):
-        self._shared = self.mod_exp(other, self._private, self._prime)
+        self._shared = pow(other, self._private, self._prime)
         return self._shared
-
-    @staticmethod
-    def mod_exp(num, exp, mod):
-        """Efficient implementation of (num ** exp) % mod."""
-        result = 1
-        while exp > 0:
-            if (exp & 1) == 1:
-                result = (result * num) % mod
-            exp = exp >> 1
-            num = (num * num) % mod
-        return result
 
     def _run_ssl(self, text, decrypt=False):
         cmd = ['openssl', 'aes-128-cbc', '-A', '-a', '-pass',
