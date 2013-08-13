@@ -34,6 +34,7 @@ from nova.network.security_group import openstack_driver
 from nova import notifications
 from nova.objects import base as nova_object
 from nova.objects import instance as instance_obj
+from nova.objects import migration as migration_obj
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
@@ -532,10 +533,17 @@ class ConductorManager(manager.Manager):
         self.compute_api.stop(context, instance, do_cast)
 
     def compute_confirm_resize(self, context, instance, migration_ref):
-        if isinstance(instance, nova_object.NovaObject):
-            # NOTE(danms): Remove this at RPC API v2.0
-            instance = dict(instance.items())
-        self.compute_api.confirm_resize(context, instance, migration_ref)
+        if isinstance(instance, dict):
+            attrs = ['metadata', 'system_metadata', 'info_cache',
+                     'security_groups']
+            instance = instance_obj.Instance._from_db_object(
+                                context, instance_obj.Instance(), instance,
+                                expected_attrs=attrs)
+        if isinstance(migration_ref, dict):
+            migration_ref = migration_obj.Migration._from_db_object(
+                                context.elevated(), migration_ref)
+        self.compute_api.confirm_resize(context, instance,
+                                        migration=migration_ref)
 
     def compute_unrescue(self, context, instance):
         self.compute_api.unrescue(context, instance)

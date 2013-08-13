@@ -77,6 +77,7 @@ class CellsAPI(rpc_proxy.RpcProxy):
         1.18 - Adds terminate_instance() and soft_delete_instance()
         1.19 - Adds pause_instance() and unpause_instance()
         1.20 - Adds resize_instance() and live_migrate_instance()
+        1.21 - Adds revert_resize() and confirm_resize()
     '''
     BASE_RPC_API_VERSION = '1.0'
 
@@ -538,3 +539,24 @@ class CellsAPI(rpc_proxy.RpcProxy):
                                 disk_over_commit=disk_over_commit,
                                 host_name=host_name),
                   version='1.20')
+
+    def revert_resize(self, ctxt, instance, migration, host,
+                      reservations):
+        if not CONF.cells.enable:
+            return
+        self.cast(ctxt,
+                  self.make_msg('revert_resize', instance=instance),
+                  version='1.21')
+
+    def confirm_resize(self, ctxt, instance, migration, host,
+                       reservations, cast=True):
+        if not CONF.cells.enable:
+            return
+        # NOTE(comstud): This is only used in the API cell where we should
+        # always cast and ignore the 'cast' kwarg.
+        # Also, the compute api method normally takes an optional
+        # 'migration_ref' argument.  But this is only used from the manager
+        # back to the API... which would happen in the child cell.
+        self.cast(ctxt,
+                  self.make_msg('confirm_resize', instance=instance),
+                  version='1.21')

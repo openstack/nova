@@ -65,7 +65,7 @@ class CellsManager(manager.Manager):
 
     Scheduling requests get passed to the scheduler class.
     """
-    RPC_API_VERSION = '1.20'
+    RPC_API_VERSION = '1.21'
 
     def __init__(self, *args, **kwargs):
         # Mostly for tests.
@@ -502,3 +502,11 @@ class CellsManager(manager.Manager):
                                               block_migration,
                                               disk_over_commit,
                                               host_name)
+
+    def revert_resize(self, ctxt, instance):
+        """Revert a resize for an instance in its cell."""
+        self.msg_runner.revert_resize(ctxt, instance)
+
+    def confirm_resize(self, ctxt, instance):
+        """Confirm a resize for an instance in its cell."""
+        self.msg_runner.confirm_resize(ctxt, instance)

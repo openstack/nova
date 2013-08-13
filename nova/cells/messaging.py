@@ -884,6 +884,16 @@ class _TargetedMessageMethods(_BaseMessageMethods):
                                         'live_migrate', block_migration,
                                         disk_over_commit, host_name)
 
+    def revert_resize(self, message, instance):
+        """Revert a resize for an instance in its cell."""
+        self._call_compute_api_with_obj(message.ctxt, instance,
+                                        'revert_resize')
+
+    def confirm_resize(self, message, instance):
+        """Confirm a resize for an instance in its cell."""
+        self._call_compute_api_with_obj(message.ctxt, instance,
+                                        'confirm_resize')
+
 
 class _BroadcastMessageMethods(_BaseMessageMethods):
     """These are the methods that can be called as a part of a broadcast
@@ -1655,6 +1665,14 @@ class MessageRunner(object):
                             host_name=host_name)
         self._instance_action(ctxt, instance, 'live_migrate_instance',
                               extra_kwargs=extra_kwargs)
+
+    def revert_resize(self, ctxt, instance):
+        """Revert a resize for an instance in its cell."""
+        self._instance_action(ctxt, instance, 'revert_resize')
+
+    def confirm_resize(self, ctxt, instance):
+        """Confirm a resize for an instance in its cell."""
+        self._instance_action(ctxt, instance, 'confirm_resize')
 
     @staticmethod
     def get_message_types():

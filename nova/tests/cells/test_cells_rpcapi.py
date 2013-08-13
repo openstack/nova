@@ -664,3 +664,27 @@ class CellsAPITestCase(test.TestCase):
                          'host_name': 'fake-host'}
         self._check_result(call_info, 'live_migrate_instance',
                            expected_args, version='1.20')
+
+    def test_revert_resize(self):
+        call_info = self._stub_rpc_method('cast', None)
+
+        self.cells_rpcapi.revert_resize(self.fake_context,
+                                        'fake-instance',
+                                        'fake-migration',
+                                        'fake-dest',
+                                        'resvs')
+        expected_args = {'instance': 'fake-instance'}
+        self._check_result(call_info, 'revert_resize',
+                           expected_args, version='1.21')
+
+    def test_confirm_resize(self):
+        call_info = self._stub_rpc_method('cast', None)
+
+        self.cells_rpcapi.confirm_resize(self.fake_context,
+                                         'fake-instance',
+                                         'fake-migration',
+                                         'fake-source',
+                                         'resvs')
+        expected_args = {'instance': 'fake-instance'}
+        self._check_result(call_info, 'confirm_resize',
+                           expected_args, version='1.21')

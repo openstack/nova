@@ -74,6 +74,7 @@ from nova.tests import fake_network
 from nova.tests import fake_network_cache_model
 from nova.tests.image import fake as fake_image
 from nova.tests import matchers
+from nova.tests.objects import test_migration
 from nova import utils
 from nova.virt.event import EVENT_LIFECYCLE_PAUSED
 from nova.virt.event import EVENT_LIFECYCLE_RESUMED
@@ -7920,7 +7921,7 @@ class ComputeAPITestCase(BaseTestCase):
             db.instance_destroy(self.context, instance['uuid'])
 
     def test_get_migrations(self):
-        migration = {uuid: "1234"}
+        migration = test_migration.fake_db_migration(uuid="1234")
         filters = {'host': 'host1'}
         self.mox.StubOutWithMock(db, "migration_get_all_by_filters")
         db.migration_get_all_by_filters(self.context,
@@ -7929,7 +7930,8 @@ class ComputeAPITestCase(BaseTestCase):
 
         migrations = self.compute_api.get_migrations(self.context,
                                                              filters)
-        self.assertEqual(migrations, [migration])
+        self.assertEqual(1, len(migrations))
+        self.assertEqual(migrations[0].id, migration['id'])
 
     def _setup_get_instance_bdm_mox(self):
         new_bdm = object()
