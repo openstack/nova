@@ -17,7 +17,7 @@
 """
 Handling of block device information and mapping.
 
-This module contains helper methods for intepreting the block
+This module contains helper methods for interpreting the block
 device information and determining the suitable mapping to
 guest devices and libvirt XML.
 
@@ -35,7 +35,7 @@ variables / types used
       'disk.swap' -> disk_info
       'disk.config' -> disk_info
 
-   If any of the default disks are overriden by the block
+   If any of the default disks are overridden by the block
    device info mappings, the hash value will be None
 
    For any ephemeral device there will also be a dict entry
@@ -239,14 +239,14 @@ def get_disk_bus_for_device_type(virt_type,
 
 
 def get_disk_bus_for_disk_dev(virt_type, disk_dev):
-    """Determine the disk bus for a disk dev.
+    """Determine the disk bus for a disk device.
 
-       Given a disk devi like 'hda', 'sdf', 'xvdb', etc
+       Given a disk device like 'hda', 'sdf', 'xvdb', etc
        guess what the most appropriate disk bus is for
        the currently configured virtualization technology
 
        Returns the disk bus, or raises an Exception if
-       the disk dev prefix is unknown.
+       the disk device prefix is unknown.
     """
 
     if disk_dev[:2] == 'hd':
@@ -323,7 +323,7 @@ def get_disk_mapping(virt_type, instance,
 
        This is about figuring out whether the default 'disk',
        'disk.local', 'disk.swap' and 'disk.config' images have
-       been overriden by the block device mapping.
+       been overridden by the block device mapping.
 
        Returns the guest disk mapping for the devices.
     """
