@@ -548,17 +548,6 @@
 
 
 #
-# Options defined in nova.cmd.clear_rabbit_queues
-#
-
-# Queues to delete (multi valued)
-#queues=
-
-# delete nova exchange too. (boolean value)
-#delete_exchange=false
-
-
-#
 # Options defined in nova.cmd.novnc
 #
 
