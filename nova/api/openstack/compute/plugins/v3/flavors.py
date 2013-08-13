@@ -26,6 +26,7 @@ from nova.compute import flavors
 from nova import exception
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import strutils
+from nova import utils
 
 
 def make_flavor(elem, detailed=False):
@@ -107,7 +108,7 @@ class FlavorsController(wsgi.Controller):
         if is_public is None:
             # preserve default value of showing only public flavors
             return True
-        elif is_public == 'none':
+        elif utils.is_none_string(is_public):
             return None
         else:
             try:
