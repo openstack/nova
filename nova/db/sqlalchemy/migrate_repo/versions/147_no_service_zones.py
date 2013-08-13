@@ -74,10 +74,30 @@ def downgrade(migrate_engine):
     availability_zone = Column('availability_zone', String(255),
             default='nova')
     services.create_column(availability_zone)
-    # migrate data
-    services.update().values(availability_zone=select(
-        [aggregate_metadata.c.value]).
-        where(agg_hosts.c.aggregate_id == aggregate_metadata.c.aggregate_id).
-        where(aggregate_metadata.c.key == 'availability_zone').
-        where(agg_hosts.c.host == services.c.host).
-        where(services.c.binary == 'nova-compute')).execute()
+
+    # Migrate data back
+    # NOTE(jhesketh): This needs to be done with individual inserts as multiple
+    # results in an update sub-query do not work with MySQL. See bug/1207309.
+    record_list = list(services.select().execute())
+    for rec in record_list:
+        # Only need to update nova-compute availability_zones
+        if rec['binary'] != 'nova-compute':
+            continue
+        result = select([aggregate_metadata.c.value],
+            from_obj=aggregate_metadata.join(
+                agg_hosts,
+                agg_hosts.c.aggregate_id == aggregate_metadata.c.aggregate_id
+            )
+        ).where(
+            aggregate_metadata.c.key == 'availability_zone'
+        ).where(
+            agg_hosts.c.aggregate_id == aggregate_metadata.c.aggregate_id
+        ).where(
+            agg_hosts.c.host == rec['host']
+        )
+
+        services.update().values(
+            availability_zone=list(result.execute())[0][0]
+        ).where(
+            services.c.id == rec['id']
+        )

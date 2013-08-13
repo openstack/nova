@@ -600,8 +600,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
                 aggregate_md.c.key == 'availability_zone').execute().scalar()
         self.assertEqual(0, num_azs)
 
-    # migration 147, availability zone transition for services
-    def _pre_upgrade_147(self, engine):
+    def _upgrade_147_test_data(self):
         az = 'test_zone'
         host1 = 'compute-host1'
         host2 = 'compute-host2'
@@ -618,6 +617,11 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
              'report_count': 0, 'availability_zone': az},
             ]
 
+        return data
+
+    # migration 147, availability zone transition for services
+    def _pre_upgrade_147(self, engine):
+        data = self._upgrade_147_test_data()
         services = db_utils.get_table(engine, 'services')
         engine.execute(services.insert(), data)
         self._pre_upgrade_147_no_duplicate_aggregate_hosts(engine)
@@ -669,6 +673,19 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
             aggregate_hosts.c.aggregate_id == 1
             ).execute().fetchall()]
         self.assertEqual(['compute-host3'], agg1_hosts)
+
+    def _post_downgrade_147(self, engine):
+        # Test that availability_zone is back on the services table.
+        services = db_utils.get_table(engine, 'services')
+        record_list = list(services.select().execute())
+        test_data = self._upgrade_147_test_data()
+
+        availability_zones = [x['availability_zone'] for x in test_data]
+        # Append the default availability_zone
+        availability_zones.append('nova')
+
+        for row in record_list:
+            self.assertIn(row['availability_zone'], availability_zones)
 
     # migration 149, changes IPAddr storage format
     def _pre_upgrade_149(self, engine):
