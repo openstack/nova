@@ -695,19 +695,26 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
             'provider_fw_rules':
                 [
                 {'protocol': 'tcp', 'from_port': 1234,
-                 'to_port': 1234, 'cidr': "127.0.0.1/30"},
+                 'to_port': 1234, 'cidr': str(netaddr.IPNetwork(
+                                              "127.0.0.1/30"))},
                 {'protocol': 'tcp', 'from_port': 1234,
-                 'to_port': 1234, 'cidr': "128.128.128.128/16"},
+                 'to_port': 1234, 'cidr': str(netaddr.IPNetwork(
+                                              "128.128.128.128/16"))},
                 {'protocol': 'tcp', 'from_port': 1234,
-                 'to_port': 1234, 'cidr': "128.128.128.128/32"},
+                 'to_port': 1234, 'cidr': str(netaddr.IPNetwork(
+                                              "128.128.128.128/32"))},
                 {'protocol': 'tcp', 'from_port': 1234,
-                 'to_port': 1234, 'cidr': "2001:db8::1:2/48"},
+                 'to_port': 1234, 'cidr': str(netaddr.IPNetwork(
+                                              "2001:db8::1:2/48"))},
                 {'protocol': 'tcp', 'from_port': 1234,
-                 'to_port': 1234, 'cidr': "::1/64"},
+                 'to_port': 1234, 'cidr': str(netaddr.IPNetwork(
+                                              "::1/64"))},
                 {'protocol': 'tcp', 'from_port': 1234, 'to_port': 1234,
-                 'cidr': "0000:0000:0000:2013:0000:6535:abcd:ef11/64"},
+                 'cidr': str(netaddr.IPNetwork(
+                             "0000:0000:0000:2013:0000:6535:abcd:ef11/64"))},
                 {'protocol': 'tcp', 'from_port': 1234, 'to_port': 1234,
-                 'cidr': "0000:1020:0000:2013:0000:6535:abcd:ef11/128"},
+                 'cidr': str(netaddr.IPNetwork(
+                             "0000:1020:0000:2013:0000:6535:abcd:ef11/128"))},
                 ],
             'console_pools':
                 [
@@ -930,19 +937,26 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
             'provider_fw_rules':
                 [
                 {'protocol': 'tcp', 'from_port': 1234,
-                 'to_port': 1234, 'cidr': "127.0.0.1/30"},
+                 'to_port': 1234, 'cidr': str(netaddr.IPNetwork(
+                                              "127.0.0.1/30"))},
                 {'protocol': 'tcp', 'from_port': 1234,
-                 'to_port': 1234, 'cidr': "128.128.128.128/16"},
+                 'to_port': 1234, 'cidr': str(netaddr.IPNetwork(
+                                              "128.128.128.128/16"))},
                 {'protocol': 'tcp', 'from_port': 1234,
-                 'to_port': 1234, 'cidr': "128.128.128.128/32"},
+                 'to_port': 1234, 'cidr': str(netaddr.IPNetwork(
+                                              "128.128.128.128/32"))},
                 {'protocol': 'tcp', 'from_port': 1234,
-                 'to_port': 1234, 'cidr': "2001:db8::1:2/48"},
+                 'to_port': 1234, 'cidr': str(netaddr.IPNetwork(
+                                              "2001:db8::1:2/48"))},
                 {'protocol': 'tcp', 'from_port': 1234,
-                 'to_port': 1234, 'cidr': "::1/64"},
+                 'to_port': 1234, 'cidr': str(netaddr.IPNetwork(
+                                              "::1/64"))},
                 {'protocol': 'tcp', 'from_port': 1234, 'to_port': 1234,
-                 'cidr': "0000:0000:0000:2013:0000:6535:abcd:ef11/64"},
+                 'cidr': str(netaddr.IPNetwork(
+                             "0000:0000:0000:2013:0000:6535:abcd:ef11/64"))},
                 {'protocol': 'tcp', 'from_port': 1234, 'to_port': 1234,
-                 'cidr': "0000:1020:0000:2013:0000:6535:abcd:ef11/128"},
+                 'cidr': str(netaddr.IPNetwork(
+                             "0000:1020:0000:2013:0000:6535:abcd:ef11/128"))},
                 ],
             'console_pools':
                 [
