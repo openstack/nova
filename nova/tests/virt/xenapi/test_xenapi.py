@@ -325,6 +325,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id, self.project_id)
         self.conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
+        self.conn._session.is_local_connection = False
 
         fake_image.stub_out_image_service(self.stubs)
         set_image_fixtures()
@@ -3653,14 +3654,33 @@ class XenAPIInjectMetadataTestCase(stubs.XenAPITestBase):
 
 class XenAPISessionTestCase(test.TestCase):
     def _get_mock_xapisession(self, software_version):
-        class XcpXapiSession(xenapi_conn.XenAPISession):
+        class MockXapiSession(xenapi_conn.XenAPISession):
             def __init__(_ignore):
                 "Skip the superclass's dirty init"
 
             def _get_software_version(_ignore):
                 return software_version
 
-        return XcpXapiSession()
+        return MockXapiSession()
+
+    def test_local_session(self):
+        session = self._get_mock_xapisession({})
+        session.is_local_connection = True
+        session.XenAPI = self.mox.CreateMockAnything()
+        session.XenAPI.xapi_local().AndReturn("local_connection")
+
+        self.mox.ReplayAll()
+        self.assertEqual("local_connection",
+                         session._create_session("unix://local"))
+
+    def test_remote_session(self):
+        session = self._get_mock_xapisession({})
+        session.is_local_connection = False
+        session.XenAPI = self.mox.CreateMockAnything()
+        session.XenAPI.Session("url").AndReturn("remote_connection")
+
+        self.mox.ReplayAll()
+        self.assertEqual("remote_connection", session._create_session("url"))
 
     def test_get_product_version_product_brand_does_not_fail(self):
         session = self._get_mock_xapisession({

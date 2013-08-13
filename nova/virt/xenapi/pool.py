@@ -249,7 +249,7 @@ class ResourcePool(object):
             "url": sender_url,
             "user": CONF.xenapi_connection_username,
             "passwd": CONF.xenapi_connection_password,
-            "compute_uuid": vm_utils.get_this_vm_uuid(),
+            "compute_uuid": vm_utils.get_this_vm_uuid(None),
             "xenhost_uuid": self._host_uuid,
         }
 

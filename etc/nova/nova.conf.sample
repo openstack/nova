@@ -2194,8 +2194,10 @@
 # Options defined in nova.virt.xenapi.driver
 #
 
-# URL for connection to XenServer/Xen Cloud Platform. Required
-# if compute_driver=xenapi.XenAPIDriver (string value)
+# URL for connection to XenServer/Xen Cloud Platform. A
+# special value of unix://local can be used to connect to the
+# local unix socket.  Required if
+# compute_driver=xenapi.XenAPIDriver (string value)
 #xenapi_connection_url=<None>
 
 # Username for connection to XenServer/Xen Cloud Platform.

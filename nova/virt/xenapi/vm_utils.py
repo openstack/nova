@@ -1878,7 +1878,14 @@ def _get_sys_hypervisor_uuid():
         return f.readline().strip()
 
 
-def get_this_vm_uuid():
+def get_this_vm_uuid(session):
+    if session and session.is_local_connection:
+        # UUID is the control domain running on this host
+        host_ref = session.get_xenapi_host()
+        vms = session.call_xenapi("VM.get_all_records_where",
+                                  'field "is_control_domain"="true" and '
+                                  'field "resident_on"="%s"' % host_ref)
+        return vms[vms.keys()[0]]['uuid']
     try:
         return _get_sys_hypervisor_uuid()
     except IOError:
@@ -1893,7 +1900,7 @@ def get_this_vm_uuid():
 
 
 def _get_this_vm_ref(session):
-    return session.call_xenapi("VM.get_by_uuid", get_this_vm_uuid())
+    return session.call_xenapi("VM.get_by_uuid", get_this_vm_uuid(session))
 
 
 def _get_partitions(dev):
@@ -2240,7 +2247,7 @@ def ensure_correct_host(session):
     """Ensure we're connected to the host we're running on. This is the
     required configuration for anything that uses vdi_attached_here.
     """
-    this_vm_uuid = get_this_vm_uuid()
+    this_vm_uuid = get_this_vm_uuid(session)
 
     try:
         session.call_xenapi('VM.get_by_uuid', this_vm_uuid)

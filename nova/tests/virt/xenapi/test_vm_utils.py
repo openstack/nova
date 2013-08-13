@@ -187,7 +187,7 @@ class XenAPIGetUUID(test.TestCase):
 
         self.mox.ReplayAll()
         self.assertEquals('2f46f0f5-f14c-ef1b-1fac-9eeca0888a3f',
-                          vm_utils.get_this_vm_uuid())
+                          vm_utils.get_this_vm_uuid(None))
         self.mox.VerifyAll()
 
     def test_get_this_vm_uuid_old_kernel_reboot(self):
@@ -204,7 +204,7 @@ class XenAPIGetUUID(test.TestCase):
 
         self.mox.ReplayAll()
         self.assertEquals('2f46f0f5-f14c-ef1b-1fac-9eeca0888a3f',
-                          vm_utils.get_this_vm_uuid())
+                          vm_utils.get_this_vm_uuid(None))
         self.mox.VerifyAll()
 
 
@@ -891,6 +891,7 @@ class GenerateDiskTestCase(stubs.XenAPITestBase):
         stubs.stubout_session(self.stubs, fake.SessionBase)
         driver = xenapi_conn.XenAPIDriver(False)
         self.session = driver._session
+        self.session.is_local_connection = False
         self.vm_ref = fake.create_vm("foo", "Running")
 
     def tearDown(self):
