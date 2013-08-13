@@ -35,6 +35,7 @@ from nova.virt.baremetal import utils as bm_utils
 from nova.virt.disk import api as disk_api
 from nova.virt import fake as fake_virt
 
+
 CONF = cfg.CONF
 
 COMMON_FLAGS = dict(
