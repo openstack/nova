@@ -7736,6 +7736,35 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute.terminate_instance(admin, instance=instance)
         self.assertTrue(result["detached"])
 
+    def test_terminate_deletes_all_bdms(self):
+        admin = context.get_admin_context()
+        instance = self._create_fake_instance()
+
+        img_bdm = {'instance_uuid': instance['uuid'],
+                   'device_name': '/dev/vda',
+                   'source_type': 'image',
+                   'destination_type': 'local',
+                   'delete_on_termination': False,
+                   'boot_index': 0,
+                   'image_id': 'fake_image'}
+        vol_bdm = {'instance_uuid': instance['uuid'],
+                   'device_name': '/dev/vdc',
+                   'source_type': 'volume',
+                   'destination_type': 'volume',
+                   'delete_on_termination': False,
+                   'volume_id': 'fake_vol'}
+        for bdm in img_bdm, vol_bdm:
+            db.block_device_mapping_create(admin, bdm, legacy=False)
+
+        self.stubs.Set(self.compute, 'volume_api', mox.MockAnything())
+        self.stubs.Set(self.compute, '_prep_block_device', mox.MockAnything())
+        self.compute.run_instance(self.context, instance=instance)
+
+        self.compute.terminate_instance(self.context, instance=instance)
+        bdms = db.block_device_mapping_get_all_by_instance(admin,
+                                                           instance['uuid'])
+        self.assertEquals(len(bdms), 0)
+
     def test_inject_network_info(self):
         instance = self._create_fake_instance(params={'host': CONF.host})
         self.compute.run_instance(self.context,

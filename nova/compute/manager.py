@@ -593,7 +593,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             # Do not convert to legacy here - we want them all
             leftover_bdm = \
                 self.conductor_api.block_device_mapping_get_all_by_instance(
-                    context, obj_base.obj_to_primitive(instance))
+                    context, obj_base.obj_to_primitive(instance), legacy=False)
             self.conductor_api.block_device_mapping_destroy(context,
                                                             leftover_bdm)
 
