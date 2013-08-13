@@ -666,10 +666,10 @@ class LibvirtDriver(driver.ComputeDriver):
                 None]
 
         try:
+            flags = 0
             if read_only:
-                return libvirt.openReadOnly(uri)
-            else:
-                return libvirt.openAuth(uri, auth, 0)
+                flags = libvirt.VIR_CONNECT_RO
+            return libvirt.openAuth(uri, auth, flags)
         except libvirt.libvirtError as ex:
             LOG.exception(_("Connection to libvirt failed: %s"), ex)
             payload = dict(ip=LibvirtDriver.get_host_ip_addr(),
@@ -3280,8 +3280,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _compare_cpu(self, cpu_info):
         """Checks the host cpu is compatible to a cpu given by xml.
-
-        "xml" must be a part of libvirt.openReadonly().getCapabilities().
+        "xml" must be a part of libvirt.openAuth(...).getCapabilities().
         return values follows by virCPUCompareResult.
         if 0 > return value, do live migration.
         'http://libvirt.org/html/libvirt-libvirt.html#virCPUCompareResult'

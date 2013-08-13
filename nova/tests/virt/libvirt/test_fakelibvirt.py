@@ -66,56 +66,36 @@ class FakeLibvirtTests(test.TestCase):
         super(FakeLibvirtTests, self).setUp()
         libvirt._reset()
 
-    def get_openReadOnly_curry_func(self):
-        return lambda uri: libvirt.openReadOnly(uri)
-
-    def get_openAuth_curry_func(self):
+    def get_openAuth_curry_func(self, readOnly=False):
         def fake_cb(credlist):
             return 0
-        return lambda uri: libvirt.openAuth(uri,
-                                            [[libvirt.VIR_CRED_AUTHNAME,
-                                              libvirt.VIR_CRED_NOECHOPROMPT],
-                                             fake_cb,
-                                             None], 0)
 
-    def _test_connect_method_accepts_None_uri_by_default(self, conn_method):
-        conn = conn_method(None)
-        self.assertNotEqual(conn, None, "Connecting to fake libvirt failed")
-
-    def test_openReadOnly_accepts_None_uri_by_default(self):
-        conn_method = self.get_openReadOnly_curry_func()
-        self._test_connect_method_accepts_None_uri_by_default(conn_method)
+        creds = [[libvirt.VIR_CRED_AUTHNAME,
+                  libvirt.VIR_CRED_NOECHOPROMPT],
+                  fake_cb,
+                  None]
+        flags = 0
+        if readOnly:
+            flags = libvirt.VIR_CONNECT_RO
+        return lambda uri: libvirt.openAuth(uri, creds, flags)
 
     def test_openAuth_accepts_None_uri_by_default(self):
         conn_method = self.get_openAuth_curry_func()
-        self._test_connect_method_accepts_None_uri_by_default(conn_method)
-
-    def _test_connect_method_can_refuse_None_uri(self, conn_method):
-        libvirt.allow_default_uri_connection = False
-        self.assertRaises(ValueError, conn_method, None)
-
-    def test_openReadOnly_can_refuse_None_uri(self):
-        conn_method = self.get_openReadOnly_curry_func()
-        self._test_connect_method_can_refuse_None_uri(conn_method)
+        conn = conn_method(None)
+        self.assertNotEqual(conn, None, "Connecting to fake libvirt failed")
 
     def test_openAuth_can_refuse_None_uri(self):
         conn_method = self.get_openAuth_curry_func()
-        self._test_connect_method_can_refuse_None_uri(conn_method)
-
-    def _test_connect_method_refuses_invalid_URI(self, conn_method):
-        self.assertRaises(libvirt.libvirtError, conn_method, 'blah')
-
-    def test_openReadOnly_refuses_invalid_URI(self):
-        conn_method = self.get_openReadOnly_curry_func()
-        self._test_connect_method_refuses_invalid_URI(conn_method)
+        libvirt.allow_default_uri_connection = False
+        self.assertRaises(ValueError, conn_method, None)
 
     def test_openAuth_refuses_invalid_URI(self):
         conn_method = self.get_openAuth_curry_func()
-        self._test_connect_method_refuses_invalid_URI(conn_method)
+        self.assertRaises(libvirt.libvirtError, conn_method, 'blah')
 
     def test_getInfo(self):
-        conn = libvirt.openReadOnly(None)
-        res = conn.getInfo()
+        conn_method = self.get_openAuth_curry_func(readOnly=True)
+        res = conn_method(None).getInfo()
         self.assertIn(res[0], ('i686', 'x86_64'))
         self.assertTrue(1024 <= res[1] <= 16384,
                         "Memory unusually high or low.")
