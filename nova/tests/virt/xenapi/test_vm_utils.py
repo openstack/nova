@@ -912,11 +912,24 @@ class GenerateDiskTestCase(stubs.XenAPITestBase):
 
     def _expect_parted_calls(self):
         self.mox.StubOutWithMock(utils, "execute")
+        self.mox.StubOutWithMock(utils, "trycmd")
         self.mox.StubOutWithMock(vm_utils, "destroy_vdi")
-        utils.execute('parted', '--script', '/dev/fakedev', 'mklabel',
-            'msdos', run_as_root=True)
-        utils.execute('parted', '--script', '/dev/fakedev', 'mkpart',
-            'primary', '0', '10', run_as_root=True)
+        self.mox.StubOutWithMock(vm_utils.os.path, "exists")
+        if self.session.is_local_connection:
+            utils.execute('parted', '--script', '/dev/fakedev', 'mklabel',
+                          'msdos', check_exit_code=False, run_as_root=True)
+            utils.execute('parted', '--script', '/dev/fakedev', 'mkpart',
+                          'primary', '0', '10',
+                          check_exit_code=False, run_as_root=True)
+            vm_utils.os.path.exists('/dev/mapper/fakedev1').AndReturn(True)
+            utils.trycmd('kpartx', '-a', '/dev/fakedev',
+                         discard_warnings=True, run_as_root=True)
+        else:
+            utils.execute('parted', '--script', '/dev/fakedev', 'mklabel',
+                          'msdos', check_exit_code=True, run_as_root=True)
+            utils.execute('parted', '--script', '/dev/fakedev', 'mkpart',
+                          'primary', '0', '10',
+                          check_exit_code=True, run_as_root=True)
 
     def _check_vdi(self, vdi_ref):
         vdi_rec = self.session.call_xenapi("VDI.get_record", vdi_ref)
@@ -966,6 +979,18 @@ class GenerateDiskTestCase(stubs.XenAPITestBase):
         self.assertRaises(test.TestingException, vm_utils._generate_disk,
             self.session, {"uuid": "fake_uuid"},
             self.vm_ref, "2", "name", "ephemeral", 10, "ext4")
+
+    @test_xenapi.stub_vm_utils_with_vdi_attached_here
+    def test_generate_disk_ephemeral_local(self):
+        self.session.is_local_connection = True
+        self._expect_parted_calls()
+        utils.execute('mkfs', '-t', 'ext4', '/dev/mapper/fakedev1',
+            run_as_root=True)
+
+        self.mox.ReplayAll()
+        vdi_ref = vm_utils._generate_disk(self.session, {"uuid": "fake_uuid"},
+            self.vm_ref, "2", "name", "ephemeral", 10, "ext4")
+        self._check_vdi(vdi_ref)
 
 
 class GenerateEphemeralTestCase(test.TestCase):
@@ -1057,15 +1082,15 @@ class StreamDiskTestCase(test.TestCase):
 
         self.mox.ReplayAll()
 
-        vm_utils._stream_disk(
-            self.image_service_func, vm_utils.ImageType.KERNEL, None, 'dev')
+        vm_utils._stream_disk("session", self.image_service_func,
+                              vm_utils.ImageType.KERNEL, None, 'dev')
 
         self.assertEquals([(fake_file.seek, 0)], fake_file._file_operations)
 
     def test_ami_disk(self):
         fake_file = FakeFile()
 
-        vm_utils._write_partition(100, 'dev')
+        vm_utils._write_partition("session", 100, 'dev')
         vm_utils.utils.make_dev_path('dev').AndReturn('some_path')
         vm_utils.utils.temporary_chown(
             'some_path').AndReturn(contextified(None))
@@ -1074,8 +1099,8 @@ class StreamDiskTestCase(test.TestCase):
 
         self.mox.ReplayAll()
 
-        vm_utils._stream_disk(
-            self.image_service_func, vm_utils.ImageType.DISK, 100, 'dev')
+        vm_utils._stream_disk("session", self.image_service_func,
+                              vm_utils.ImageType.DISK, 100, 'dev')
 
         self.assertEquals(
             [(fake_file.seek, vm_utils.MBR_SIZE_BYTES)],
