@@ -1234,32 +1234,35 @@ class _BaseTaskTestCase(object):
              'block_migration', 'disk_over_commit')
 
     def test_cold_migrate(self):
+        self.mox.StubOutWithMock(self.conductor_manager.image_service, 'show')
+        self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
         self.mox.StubOutWithMock(
-                self.conductor_manager.scheduler_rpcapi, 'prep_resize')
-        fake_instance = {'image_ref': 'image_ref'}
+                self.conductor_manager.compute_rpcapi, 'prep_resize')
+        self.mox.StubOutWithMock(self.conductor_manager.scheduler_rpcapi,
+                                 'select_destinations')
+        fake_instance = {
+            'uuid': 'fakeuuid',
+            'image_ref': 'image_ref'
+        }
         instance_type = {}
         instance_type['extra_specs'] = 'extra_specs'
         request_spec = {'instance_type': instance_type}
-        args = {
-                "instance": fake_instance,
-                "instance_type": 'flavor',
-                "image": 'image',
-                "request_spec": request_spec,
-                "filter_properties": {},
-                "reservations": []
-            }
-        self.conductor_manager.scheduler_rpcapi.prep_resize(
-                self.context, **args)
 
-        self.mox.StubOutWithMock(self.conductor_manager.image_service, 'show')
         self.conductor_manager.image_service.show(
-            self.context, fake_instance['image_ref']).AndReturn('image')
+            self.context, 'image_ref').AndReturn({})
 
-        def _fake_build_request_spec(context, image, instances):
-            return request_spec
+        scheduler_utils.build_request_spec(
+            self.context, {}, [fake_instance]).AndReturn(request_spec)
 
-        self.stubs.Set(scheduler_utils, 'build_request_spec',
-                       _fake_build_request_spec)
+        hosts = [dict(host='host1', nodename=None, limits={})]
+        self.conductor_manager.scheduler_rpcapi.select_destinations(
+            self.context, request_spec, {}).AndReturn(hosts)
+
+        filter_properties = {'limits': {}}
+        self.conductor_manager.compute_rpcapi.prep_resize(
+            self.context, {}, fake_instance, 'flavor', 'host1',
+            [], request_spec=request_spec,
+            filter_properties=filter_properties, node=None)
 
         self.mox.ReplayAll()
 
@@ -1267,6 +1270,141 @@ class _BaseTaskTestCase(object):
         self.conductor.migrate_server(
             self.context, fake_instance, scheduler_hint,
             False, False, 'flavor', None, None, [])
+
+    def test_cold_migrate_no_valid_host_back_in_active_state(self):
+        self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
+        self.mox.StubOutWithMock(
+            self.conductor_manager.scheduler_rpcapi, 'select_destinations')
+        self.mox.StubOutWithMock(compute_utils, 'add_instance_fault_from_exc')
+        self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
+
+        fake_instance_uuid = 'fake-instance-id'
+        fake_instance = {'uuid': fake_instance_uuid}
+        inst = {"vm_state": "", "task_state": ""}
+
+        instance_type = {}
+        instance_type['extra_specs'] = 'extra_specs'
+
+        request_spec = {'instance_type': instance_type,
+                        'instance_uuids': [fake_instance_uuid],
+                        'instance_properties': {'uuid': fake_instance_uuid}}
+
+        scheduler_utils.build_request_spec(
+            self.context, {}, [fake_instance]).AndReturn(request_spec)
+
+        self.conductor_manager.scheduler_rpcapi.select_destinations(
+            self.context, request_spec, 'fake_props').AndRaise(
+                exc.NoValidHost(reason=""))
+
+        old_ref, new_ref = db.instance_update_and_get_original(self.context,
+            fake_instance_uuid,
+            {"vm_state": vm_states.ACTIVE, "task_state": None}).AndReturn(
+                (inst, inst))
+
+        compute_utils.add_instance_fault_from_exc(self.context,
+            mox.IsA(conductor_api.LocalAPI), new_ref,
+            mox.IsA(exc.NoValidHost), mox.IgnoreArg())
+
+        self.mox.ReplayAll()
+
+        scheduler_hint = {'filter_properties': 'fake_props'}
+        self.conductor.migrate_server(
+            self.context, fake_instance, scheduler_hint,
+            False, False, 'fake_type', None, None, list('fake_res'))
+
+    def test_cold_migrate_exception_host_in_error_state_and_raise(self):
+        self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
+        self.mox.StubOutWithMock(
+            self.conductor_manager.scheduler_rpcapi, 'select_destinations')
+        self.mox.StubOutWithMock(self.conductor_manager.compute_rpcapi,
+                                 'prep_resize')
+        self.mox.StubOutWithMock(compute_utils, 'add_instance_fault_from_exc')
+        self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
+
+        fake_instance_uuid = 'fake-instance-id'
+        fake_instance = {'uuid': fake_instance_uuid}
+
+        instance_type = {}
+        instance_type['extra_specs'] = 'extra_specs'
+
+        request_spec = {'instance_type': instance_type,
+                        'instance_uuids': [fake_instance_uuid],
+                        'instance_properties': {'uuid': fake_instance_uuid}}
+
+        scheduler_utils.build_request_spec(
+            self.context, {}, [fake_instance]).AndReturn(request_spec)
+
+        filter_properties = {'limits': {}}
+        hosts = [dict(host='host1', nodename=None, limits={})]
+        self.conductor_manager.scheduler_rpcapi.select_destinations(
+            self.context, request_spec, filter_properties).AndReturn(hosts)
+
+        self.conductor_manager.compute_rpcapi.prep_resize(
+            self.context, {}, fake_instance, 'fake_type', 'host1',
+            list('fake_res'), request_spec=request_spec,
+            filter_properties=filter_properties, node=None).AndRaise(
+                    test.TestingException('something happened'))
+
+        inst = {
+            "vm_state": "",
+            "task_state": "",
+        }
+        old_ref, new_ref = db.instance_update_and_get_original(self.context,
+                fake_instance_uuid,
+                {"vm_state": vm_states.ERROR,
+                 "task_state": None}).AndReturn((inst, inst))
+        compute_utils.add_instance_fault_from_exc(self.context,
+                mox.IsA(conductor_api.LocalAPI), new_ref,
+                mox.IsA(test.TestingException), mox.IgnoreArg())
+
+        self.mox.ReplayAll()
+
+        scheduler_hint = {'filter_properties': filter_properties}
+        self.assertRaises(test.TestingException, self.conductor.migrate_server,
+                          self.context, fake_instance, scheduler_hint, False,
+                          False, 'fake_type', None, None, list('fake_res'))
+
+    def test_cold_migrate_post_populates_retry(self):
+        self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
+        self.mox.StubOutWithMock(
+            self.conductor_manager.scheduler_rpcapi, 'select_destinations')
+        self.mox.StubOutWithMock(self.conductor_manager.compute_rpcapi,
+                                 'prep_resize')
+
+        fake_instance_uuid = 'fake-instance-id'
+        fake_instance = {'uuid': fake_instance_uuid}
+
+        instance_type = {}
+        instance_type['extra_specs'] = 'extra_specs'
+        instance_properties = {'project_id': 'fake', 'os_type': 'Linux'}
+
+        request_spec = {'instance_type': instance_type,
+                        'instance_uuids': [fake_instance_uuid],
+                        'instance_properties': instance_properties}
+
+        scheduler_utils.build_request_spec(
+            self.context, {}, [fake_instance]).AndReturn(request_spec)
+
+        retry = {'hosts': [], 'num_attempts': 1}
+        filter_properties = {'retry': retry}
+        hosts = [dict(host='host1', nodename='node', limits={})]
+        self.conductor_manager.scheduler_rpcapi.select_destinations(
+            self.context, request_spec, filter_properties).AndReturn(hosts)
+
+        self.conductor_manager.compute_rpcapi.prep_resize(
+            self.context, {}, fake_instance, 'fake_type', 'host1',
+            list('fake_res'), request_spec=request_spec,
+            filter_properties=filter_properties, node='node')
+
+        self.mox.ReplayAll()
+
+        scheduler_hint = {'filter_properties': filter_properties}
+        self.conductor.migrate_server(
+            self.context, fake_instance, scheduler_hint,
+            False, False, 'fake_type', None, None, list('fake_res'))
+
+        self.assertEqual([['host1', 'node']],
+                         filter_properties['retry']['hosts'])
 
     def test_migrate_server_fails_with_rebuild(self):
         self.assertRaises(NotImplementedError, self.conductor.migrate_server,

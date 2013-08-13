@@ -68,6 +68,7 @@ class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         handle the version_cap being set to 2.6.
 
         2.7 - Add select_destinations()
+        2.8 - Deprecate prep_resize()
     '''
 
     #
@@ -106,6 +107,8 @@ class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 is_first_time=is_first_time,
                 filter_properties=filter_properties))
 
+    # NOTE(timello): This method is deprecated and it's functionality has
+    # been moved to conductor. This should be removed in RPC_API_VERSION 3.0.
     def prep_resize(self, ctxt, instance, instance_type, image,
             request_spec, filter_properties, reservations):
         instance_p = jsonutils.to_primitive(instance)
