@@ -192,6 +192,9 @@ class PolicyNotAuthorized(NotAuthorized):
 
 
 class ImageNotActive(NovaException):
+    # NOTE(jruzicka): IncorrectState is used for volumes only in EC2,
+    # but it still seems like the most appropriate option.
+    ec2_code = 'IncorrectState'
     msg_fmt = _("Image %(image_id)s is not active.")
 
 
@@ -251,6 +254,7 @@ class InvalidAttribute(Invalid):
 
 
 class VolumeUnattached(Invalid):
+    ec2_code = 'IncorrectState'
     msg_fmt = _("Volume %(volume_id)s is not attached to anything")
 
 

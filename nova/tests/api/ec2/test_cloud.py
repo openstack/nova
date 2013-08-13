@@ -1967,7 +1967,7 @@ class CloudTestCase(test.TestCase):
 
         self.stubs.UnsetAll()
         self.stubs.Set(fake._FakeImageService, 'show', fake_show_no_state)
-        self.assertRaises(exception.EC2APIError, run_instances,
+        self.assertRaises(exception.ImageNotActive, run_instances,
                           self.context, **kwargs)
 
     def test_run_instances_image_state_invalid(self):
@@ -1988,7 +1988,7 @@ class CloudTestCase(test.TestCase):
 
         self.stubs.UnsetAll()
         self.stubs.Set(fake._FakeImageService, 'show', fake_show_decrypt)
-        self.assertRaises(exception.EC2APIError, run_instances,
+        self.assertRaises(exception.ImageNotActive, run_instances,
                           self.context, **kwargs)
 
     def test_run_instances_image_status_active(self):
