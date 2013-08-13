@@ -391,6 +391,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.compute_api = compute.API()
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.conductor_api = conductor.API()
+        self.compute_task_api = conductor.ComputeTaskAPI()
         self.is_neutron_security_groups = (
             openstack_driver.is_neutron_security_groups())
         self.consoleauth_rpcapi = consoleauth.rpcapi.ConsoleAuthAPI()
@@ -1397,6 +1398,67 @@ class ComputeManager(manager.SchedulerDependentManager):
             block_device_mapping = driver_block_device.legacy_block_devices(
                 block_device_mapping)
         return {'block_device_mapping': block_device_mapping}
+
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @reverts_task_state
+    @wrap_instance_event
+    @wrap_instance_fault
+    def build_and_run_instance(self, context, instance, image, request_spec,
+                     filter_properties, admin_password=None,
+                     injected_files=None, requested_networks=None,
+                     security_groups=None, block_device_mapping=None,
+                     node=None):
+
+        @utils.synchronized(instance['uuid'])
+        def do_build_and_run_instance(context, instance, image, request_spec,
+                filter_properties, admin_password, injected_files,
+                requested_networks, security_groups, block_device_mapping,
+                node):
+
+            # b64 decode the files to inject:
+            decoded_files = self._decode_files(injected_files)
+
+            try:
+                self._build_and_run_instance(context, instance, image,
+                        decoded_files, admin_password)
+            except exception.BuildAbortException:
+                self._set_instance_error_state(context, instance['uuid'])
+            except exception.RescheduledException:
+                self.compute_task_api.build_instances(context, [instance],
+                        image, filter_properties, admin_password,
+                        injected_files, requested_networks, security_groups,
+                        block_device_mapping)
+            except Exception:
+                # Should not reach here.
+                self._set_instance_error_state(context, instance['uuid'])
+                msg = 'Unexpected build failure, not rescheduling build.'
+                LOG.exception(msg, instance=instance)
+
+        do_build_and_run_instance(context, instance, image, request_spec,
+                filter_properties, admin_password, injected_files,
+                requested_networks, security_groups, block_device_mapping,
+                node)
+
+    def _build_and_run_instance(self, context, instance, image, injected_files,
+            admin_password):
+
+        try:
+            self.driver.spawn(context, instance, image,
+                              injected_files, admin_password)
+        except exception.InstanceNotFound:
+            msg = _('Instance disappeared during build.')
+            LOG.debug(msg, instance=instance)
+            raise exception.BuildAbortException(instance_uuid=instance['uuid'],
+                reason=msg)
+        except exception.UnexpectedTaskStateError as e:
+            msg = e.format_message()
+            LOG.debug(msg, instance=instance)
+            raise exception.BuildAbortException(instance_uuid=instance['uuid'],
+                    reason=msg)
+        except Exception:
+            LOG.exception('Instance failed to spawn', instance=instance)
+            raise exception.RescheduledException(
+                    instance_uuid=instance['uuid'], reason='')
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state

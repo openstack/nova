@@ -614,3 +614,100 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                           {'uuid': 'fake'})
         self.assertTrue(volumes[old_volume_id]['status'], 'detaching')
         self.assertTrue(volumes[new_volume_id]['status'], 'attaching')
+
+
+class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
+    def setUp(self):
+        super(ComputeManagerBuildInstanceTestCase, self).setUp()
+        self.compute = importutils.import_object(CONF.compute_manager)
+        self.context = context.RequestContext('fake', 'fake')
+        self.instance = fake_instance.fake_db_instance(
+                vm_state=vm_states.ACTIVE)
+        self.admin_pass = 'pass'
+        self.injected_files = []
+        self.image = {}
+
+    def test_build_and_run_instance_called_with_proper_args(self):
+        self.mox.StubOutWithMock(self.compute, '_build_and_run_instance')
+        self.compute._build_and_run_instance(self.context, self.instance,
+                self.image, self.injected_files, self.admin_pass)
+        self.mox.ReplayAll()
+
+        self.compute.build_and_run_instance(self.context, self.instance,
+                self.image, request_spec={}, filter_properties=[],
+                injected_files=self.injected_files,
+                admin_password=self.admin_pass)
+
+    def test_build_abort_exception(self):
+        self.mox.StubOutWithMock(self.compute, '_build_and_run_instance')
+        self.mox.StubOutWithMock(self.compute, '_set_instance_error_state')
+        self.mox.StubOutWithMock(self.compute.compute_task_api,
+                'build_instances')
+        self.compute._build_and_run_instance(self.context, self.instance,
+                self.image, self.injected_files, self.admin_pass).AndRaise(
+                        exception.BuildAbortException(reason='',
+                            instance_uuid=self.instance['uuid']))
+        self.compute._set_instance_error_state(self.context,
+                self.instance['uuid'])
+        self.mox.ReplayAll()
+
+        self.compute.build_and_run_instance(self.context, self.instance,
+                self.image, request_spec={}, filter_properties=[],
+                injected_files=self.injected_files,
+                admin_password=self.admin_pass)
+
+    def test_rescheduled_exception(self):
+        self.mox.StubOutWithMock(self.compute, '_build_and_run_instance')
+        self.mox.StubOutWithMock(self.compute, '_set_instance_error_state')
+        self.mox.StubOutWithMock(self.compute.compute_task_api,
+                'build_instances')
+        self.compute._build_and_run_instance(self.context, self.instance,
+                self.image, self.injected_files, self.admin_pass).AndRaise(
+                        exception.RescheduledException(reason='',
+                            instance_uuid=self.instance['uuid']))
+        self.compute.compute_task_api.build_instances(self.context,
+                [self.instance], self.image, [], self.admin_pass,
+                self.injected_files, None, None, None)
+        self.mox.ReplayAll()
+
+        self.compute.build_and_run_instance(self.context, self.instance,
+                self.image, request_spec={}, filter_properties=[],
+                injected_files=self.injected_files,
+                admin_password=self.admin_pass)
+
+    def test_instance_not_found(self):
+        self.mox.StubOutWithMock(self.compute.driver, 'spawn')
+        self.compute.driver.spawn(self.context, self.instance, self.image,
+                self.injected_files, self.admin_pass).AndRaise(
+                        exception.InstanceNotFound(instance_id=1))
+        self.mox.ReplayAll()
+
+        self.assertRaises(exception.BuildAbortException,
+                self.compute._build_and_run_instance, self.context,
+                self.instance, self.image, self.injected_files,
+                self.admin_pass)
+
+    def test_reschedule_on_exception(self):
+        self.mox.StubOutWithMock(self.compute.driver, 'spawn')
+        self.compute.driver.spawn(self.context, self.instance, self.image,
+                self.injected_files, self.admin_pass).AndRaise(
+                        test.TestingException())
+        self.mox.ReplayAll()
+
+        self.assertRaises(exception.RescheduledException,
+                self.compute._build_and_run_instance, self.context,
+                self.instance, self.image, self.injected_files,
+                self.admin_pass)
+
+    def test_unexpected_task_state(self):
+        self.mox.StubOutWithMock(self.compute.driver, 'spawn')
+        self.compute.driver.spawn(self.context, self.instance, self.image,
+                self.injected_files, self.admin_pass).AndRaise(
+                        exception.UnexpectedTaskStateError(expected=None,
+                            actual='deleting'))
+        self.mox.ReplayAll()
+
+        self.assertRaises(exception.BuildAbortException,
+                self.compute._build_and_run_instance, self.context,
+                self.instance, self.image, self.injected_files,
+                self.admin_pass)
