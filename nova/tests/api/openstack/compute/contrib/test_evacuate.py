@@ -34,12 +34,16 @@ def fake_compute_api(*args, **kwargs):
 
 
 def fake_compute_api_get(self, context, instance_id):
-    return {
-        'id': 1,
-        'uuid': instance_id,
-        'vm_state': vm_states.ACTIVE,
-        'task_state': None, 'host': 'host1'
-    }
+    # BAD_UUID is something that does not exist
+    if instance_id == 'BAD_UUID':
+        raise exception.InstanceNotFound(instance_id=instance_id)
+    else:
+        return {
+            'id': 1,
+            'uuid': instance_id,
+            'vm_state': vm_states.ACTIVE,
+            'task_state': None, 'host': 'host1'
+        }
 
 
 def fake_service_get_by_compute_host(self, context, host):
@@ -65,6 +69,69 @@ class EvacuateTest(test.TestCase):
         self.UUID = uuid.uuid4()
         for _method in self._methods:
             self.stubs.Set(compute_api.API, _method, fake_compute_api)
+
+    def test_evacuate_with_valid_instance(self):
+        ctxt = context.get_admin_context()
+        ctxt.user_id = 'fake'
+        ctxt.project_id = 'fake'
+        ctxt.is_admin = True
+        app = fakes.wsgi_app(fake_auth_context=ctxt)
+        req = webob.Request.blank('/v2/fake/servers/%s/action' % self.UUID)
+        req.method = 'POST'
+        req.body = jsonutils.dumps({
+            'evacuate': {
+                'host': 'my_host',
+                'onSharedStorage': 'false',
+                'adminPass': 'MyNewPass'
+                }
+            })
+        req.content_type = 'application/json'
+        res = req.get_response(app)
+        self.assertEqual(res.status_int, 200)
+
+    def test_evacuate_with_invalid_instance(self):
+        ctxt = context.get_admin_context()
+        ctxt.user_id = 'fake'
+        ctxt.project_id = 'fake'
+        ctxt.is_admin = True
+        app = fakes.wsgi_app(fake_auth_context=ctxt)
+        req = webob.Request.blank('/v2/fake/servers/%s/action' % 'BAD_UUID')
+        req.method = 'POST'
+        req.body = jsonutils.dumps({
+            'evacuate': {
+                'host': 'my_host',
+                'onSharedStorage': 'false',
+                'adminPass': 'MyNewPass'
+                }
+            })
+        req.content_type = 'application/json'
+        res = req.get_response(app)
+        self.assertEqual(res.status_int, 404)
+
+    def test_evacuate_with_active_service(self):
+        ctxt = context.get_admin_context()
+        ctxt.user_id = 'fake'
+        ctxt.project_id = 'fake'
+        ctxt.is_admin = True
+        app = fakes.wsgi_app(fake_auth_context=ctxt)
+        req = webob.Request.blank('/v2/fake/servers/%s/action' % self.UUID)
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        req.body = jsonutils.dumps({
+            'evacuate': {
+                'host': 'my_host',
+                'onSharedStorage': 'false',
+                'adminPass': 'MyNewPass'
+                }
+            })
+
+        def fake_evacuate(*args, **kwargs):
+            raise exception.ComputeServiceUnavailable("Service Unavailable")
+
+        self.stubs.Set(compute_api.API, 'evacuate', fake_evacuate)
+
+        res = req.get_response(app)
+        self.assertEqual(res.status_int, 400)
 
     def test_evacuate_instance_with_no_target(self):
         ctxt = context.get_admin_context()
