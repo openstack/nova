@@ -15,6 +15,7 @@
 
 """Custom SQLAlchemy types."""
 
+import netaddr
 from sqlalchemy.dialects import postgresql
 from sqlalchemy import types
 
@@ -60,3 +61,11 @@ class CIDR(types.TypeDecorator):
         if utils.is_valid_ipv6_cidr(value):
             return utils.get_shortened_ipv6_cidr(value)
         return value
+
+    def process_result_value(self, value, dialect):
+        try:
+            return str(netaddr.IPNetwork(value, version=4).cidr)
+        except netaddr.AddrFormatError:
+            return str(netaddr.IPNetwork(value, version=6).cidr)
+        except TypeError:
+            return None
