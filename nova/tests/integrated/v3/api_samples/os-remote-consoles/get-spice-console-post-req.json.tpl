@@ -1,0 +1,5 @@
+{
+    "get_spice_console": {
+        "type": "spice-html5"
+    }
+}
