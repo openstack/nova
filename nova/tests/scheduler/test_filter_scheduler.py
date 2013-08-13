@@ -229,6 +229,44 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         # should not have retry info in the populated filter properties:
         self.assertFalse("retry" in filter_properties)
 
+    def test_retry_force_hosts(self):
+        # Retry info should not get populated when re-scheduling is off.
+        self.flags(scheduler_max_attempts=2)
+        sched = fakes.FakeFilterScheduler()
+
+        instance_properties = {'project_id': '12345', 'os_type': 'Linux'}
+        request_spec = dict(instance_properties=instance_properties)
+        filter_properties = dict(force_hosts=['force_host'])
+
+        self.mox.StubOutWithMock(db, 'compute_node_get_all')
+        db.compute_node_get_all(mox.IgnoreArg()).AndReturn([])
+        self.mox.ReplayAll()
+
+        sched._schedule(self.context, request_spec,
+                filter_properties=filter_properties)
+
+        # should not have retry info in the populated filter properties:
+        self.assertFalse("retry" in filter_properties)
+
+    def test_retry_force_nodes(self):
+        # Retry info should not get populated when re-scheduling is off.
+        self.flags(scheduler_max_attempts=2)
+        sched = fakes.FakeFilterScheduler()
+
+        instance_properties = {'project_id': '12345', 'os_type': 'Linux'}
+        request_spec = dict(instance_properties=instance_properties)
+        filter_properties = dict(force_nodes=['force_node'])
+
+        self.mox.StubOutWithMock(db, 'compute_node_get_all')
+        db.compute_node_get_all(mox.IgnoreArg()).AndReturn([])
+        self.mox.ReplayAll()
+
+        sched._schedule(self.context, request_spec,
+                filter_properties=filter_properties)
+
+        # should not have retry info in the populated filter properties:
+        self.assertFalse("retry" in filter_properties)
+
     def test_retry_attempt_one(self):
         # Test retry logic on initial scheduling attempt.
         self.flags(scheduler_max_attempts=2)

@@ -121,7 +121,9 @@ def _add_retry_host(filter_properties, host, node):
     node has already been tried.
     """
     retry = filter_properties.get('retry', None)
-    if not retry:
+    force_hosts = filter_properties.get('force_hosts', [])
+    force_nodes = filter_properties.get('force_nodes', [])
+    if not retry or force_hosts or force_nodes:
         return
     hosts = retry['hosts']
     hosts.append([host, node])

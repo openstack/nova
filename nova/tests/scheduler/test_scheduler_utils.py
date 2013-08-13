@@ -92,9 +92,15 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
         self._test_set_vm_state_and_notify(request_spec, expected_uuids)
 
     def _test_populate_filter_props(self, host_state_obj=True,
-                                    with_retry=True):
+                                    with_retry=True,
+                                    force_hosts=[],
+                                    force_nodes=[]):
         if with_retry:
-            filter_properties = dict(retry=dict(hosts=[]))
+            if not force_hosts and not force_nodes:
+                filter_properties = dict(retry=dict(hosts=[]))
+            else:
+                filter_properties = dict(force_hosts=force_hosts,
+                                         force_nodes=force_nodes)
         else:
             filter_properties = dict()
 
@@ -110,13 +116,13 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
 
         scheduler_utils.populate_filter_properties(filter_properties,
                                                    host_state)
-        if with_retry:
+        if with_retry and not force_hosts and not force_nodes:
             # So we can check for 2 hosts
             scheduler_utils.populate_filter_properties(filter_properties,
                                                        host_state)
 
         self.assertEqual('fake-limits', filter_properties['limits'])
-        if with_retry:
+        if with_retry and not force_hosts and not force_nodes:
             self.assertEqual([['fake-host', 'fake-node'],
                               ['fake-host', 'fake-node']],
                              filter_properties['retry']['hosts'])
@@ -131,3 +137,9 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
 
     def test_populate_filter_props_no_retry(self):
         self._test_populate_filter_props(with_retry=False)
+
+    def test_populate_filter_props_force_hosts_no_retry(self):
+        self._test_populate_filter_props(force_hosts=['force-host'])
+
+    def test_populate_filter_props_force_nodes_no_retry(self):
+        self._test_populate_filter_props(force_nodes=['force-node'])
