@@ -684,10 +684,13 @@ class XenAPISession(object):
         software_version = self._get_software_version()
 
         product_version_str = software_version.get('product_version')
+        # Product version is only set in some cases (e.g. XCP, XenServer) and
+        # not in others (e.g. xenserver-core, XAPI-XCP).
+        # In these cases, the platform version is the best number to use.
+        if product_version_str is None:
+            product_version_str = software_version.get('platform_version',
+                                                       '0.0.0')
         product_brand = software_version.get('product_brand')
-
-        if None in (product_version_str, product_brand):
-            return (None, None)
 
         product_version = tuple(int(part) for part in
                                 product_version_str.split('.'))
