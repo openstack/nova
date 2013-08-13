@@ -77,7 +77,6 @@ utils_opts = [
                help='Path to the rootwrap configuration file to use for '
                     'running commands as root'),
     cfg.StrOpt('tempdir',
-               default=None,
                help='Explicitly specify the temporary working directory'),
 ]
 CONF = cfg.CONF

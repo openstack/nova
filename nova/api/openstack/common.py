@@ -40,11 +40,9 @@ osapi_opts = [
                help='the maximum number of items returned in a single '
                     'response from a collection resource'),
     cfg.StrOpt('osapi_compute_link_prefix',
-               default=None,
                help='Base URL that will be presented to users in links '
                     'to the OpenStack Compute API'),
     cfg.StrOpt('osapi_glance_link_prefix',
-               default=None,
                help='Base URL that will be presented to users in links '
                     'to glance resources'),
 ]

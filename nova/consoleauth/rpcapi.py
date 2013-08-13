@@ -25,7 +25,6 @@ import nova.openstack.common.rpc.proxy
 CONF = cfg.CONF
 
 rpcapi_cap_opt = cfg.StrOpt('consoleauth',
-        default=None,
         help='Set a version cap for messages sent to consoleauth services')
 CONF.register_opt(rpcapi_cap_opt, 'upgrade_levels')
 

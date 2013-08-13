@@ -38,7 +38,6 @@ cell_state_manager_opts = [
                 default=60,
                 help='Seconds between getting fresh cell info from db.'),
         cfg.StrOpt('cells_config',
-                   default=None,
                    help='Configuration file from which to read cells '
                    'configuration.  If given, overrides reading cells '
                    'from the database.'),

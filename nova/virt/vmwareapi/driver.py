@@ -63,21 +63,18 @@ LOG = logging.getLogger(__name__)
 
 vmwareapi_opts = [
     cfg.StrOpt('host_ip',
-               default=None,
                deprecated_name='vmwareapi_host_ip',
                deprecated_group='DEFAULT',
                help='URL for connection to VMware ESX/VC host. Required if '
                     'compute_driver is vmwareapi.VMwareESXDriver or '
                     'vmwareapi.VMwareVCDriver.'),
     cfg.StrOpt('host_username',
-               default=None,
                deprecated_name='vmwareapi_host_username',
                deprecated_group='DEFAULT',
                help='Username for connection to VMware ESX/VC host. '
                     'Used only if compute_driver is '
                     'vmwareapi.VMwareESXDriver or vmwareapi.VMwareVCDriver.'),
     cfg.StrOpt('host_password',
-               default=None,
                deprecated_name='vmwareapi_host_password',
                deprecated_group='DEFAULT',
                help='Password for connection to VMware ESX/VC host. '
@@ -85,7 +82,6 @@ vmwareapi_opts = [
                     'vmwareapi.VMwareESXDriver or vmwareapi.VMwareVCDriver.',
                secret=True),
     cfg.StrOpt('cluster_name',
-               default=None,
                deprecated_name='vmwareapi_cluster_name',
                deprecated_group='DEFAULT',
                help='Name of a VMware Cluster ComputeResource. '
@@ -123,7 +119,6 @@ vmwareapi_opts = [
                deprecated_group='DEFAULT',
                help='Total number of VNC ports'),
     cfg.StrOpt('vnc_password',
-               default=None,
                deprecated_name='vnc_password',
                deprecated_group='DEFAULT',
                help='VNC password',

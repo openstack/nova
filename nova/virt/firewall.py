@@ -32,7 +32,6 @@ LOG = logging.getLogger(__name__)
 
 firewall_opts = [
     cfg.StrOpt('firewall_driver',
-               default=None,
                help='Firewall driver '
                     '(defaults to hypervisor specific iptables driver)'),
     cfg.BoolOpt('allow_same_net_traffic',

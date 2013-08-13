@@ -43,7 +43,6 @@ cleaner_opts = [
 ]
 
 cli_opt = cfg.StrOpt('command',
-                     default=None,
                      help='Cleaner command')
 
 CONF = cfg.CONF

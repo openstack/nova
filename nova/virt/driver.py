@@ -39,7 +39,6 @@ driver_opts = [
                    'fake.FakeDriver, baremetal.BareMetalDriver, '
                    'vmwareapi.VMwareESXDriver, vmwareapi.VMwareVCDriver'),
     cfg.StrOpt('default_ephemeral_format',
-               default=None,
                help='The default format an ephemeral_volume will be '
                     'formatted with on creation.'),
     cfg.StrOpt('preallocate_images',

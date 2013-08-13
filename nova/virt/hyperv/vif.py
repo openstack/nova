@@ -26,7 +26,6 @@ from nova.virt.hyperv import utilsfactory
 
 hyperv_opts = [
     cfg.StrOpt('vswitch_name',
-               default=None,
                help='External virtual switch Name, '
                     'if not provided, the first external virtual '
                     'switch is used'),

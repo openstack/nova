@@ -34,7 +34,6 @@ opts = [
                default='self.pem',
                help='SSL certificate file'),
     cfg.StrOpt('key',
-               default=None,
                help='SSL key file (if separate from cert)'),
     cfg.StrOpt('web',
                default='/usr/share/spice-html5',

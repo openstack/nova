@@ -39,7 +39,6 @@ __imagebackend_opts = [
                  ' default. If default is specified,'
                  ' then use_cow_images flag is used instead of this one.'),
     cfg.StrOpt('libvirt_images_volume_group',
-            default=None,
             help='LVM Volume Group that is used for VM images, when you'
                  ' specify libvirt_images_type=lvm.'),
     cfg.BoolOpt('libvirt_sparse_logical_volumes',

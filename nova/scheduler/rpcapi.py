@@ -33,7 +33,6 @@ CONF = cfg.CONF
 CONF.register_opts(rpcapi_opts)
 
 rpcapi_cap_opt = cfg.StrOpt('scheduler',
-        default=None,
         help='Set a version cap for messages sent to scheduler services')
 CONF.register_opt(rpcapi_cap_opt, 'upgrade_levels')
 

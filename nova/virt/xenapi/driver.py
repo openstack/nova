@@ -64,7 +64,6 @@ LOG = logging.getLogger(__name__)
 
 xenapi_opts = [
     cfg.StrOpt('xenapi_connection_url',
-               default=None,
                help='URL for connection to XenServer/Xen Cloud Platform. '
                     'Required if compute_driver=xenapi.XenAPIDriver'),
     cfg.StrOpt('xenapi_connection_username',
@@ -72,7 +71,6 @@ xenapi_opts = [
                help='Username for connection to XenServer/Xen Cloud Platform. '
                     'Used only if compute_driver=xenapi.XenAPIDriver'),
     cfg.StrOpt('xenapi_connection_password',
-               default=None,
                help='Password for connection to XenServer/Xen Cloud Platform. '
                     'Used only if compute_driver=xenapi.XenAPIDriver',
                secret=True),
@@ -96,7 +94,6 @@ xenapi_opts = [
                default='/var/run/sr-mount',
                help='Base path to the storage repository'),
     cfg.StrOpt('target_host',
-               default=None,
                help='iSCSI Target Host'),
     cfg.StrOpt('target_port',
                default='3260',

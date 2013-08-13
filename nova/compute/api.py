@@ -88,7 +88,6 @@ compute_opts = [
                 help='Allow migrate machine to the same host. '
                      'Useful when testing in single-host environments.'),
     cfg.StrOpt('default_schedule_zone',
-               default=None,
                help='availability zone to use when user doesn\'t specify one'),
     cfg.ListOpt('non_inheritable_image_properties',
                 default=['cache_in_nova',

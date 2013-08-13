@@ -27,7 +27,6 @@ from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 
 file_opt = cfg.StrOpt('vendordata_jsonfile_path',
-                      default=None,
                       help='File to load json formated vendor data from')
 
 CONF = cfg.CONF
