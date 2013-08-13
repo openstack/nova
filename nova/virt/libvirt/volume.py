@@ -69,6 +69,10 @@ volume_opts = [
     cfg.StrOpt('scality_sofs_mount_point',
                default='$state_path/scality',
                help='Base dir where Scality SOFS shall be mounted'),
+    cfg.ListOpt('qemu_allowed_storage_drivers',
+               default=[],
+               help='Protocols listed here will be accessed directly '
+                    'from QEMU. Currently supported protocols: [gluster]')
     ]
 
 CONF = cfg.CONF
@@ -609,11 +613,23 @@ class LibvirtGlusterfsVolumeDriver(LibvirtBaseVolumeDriver):
         """Connect the volume. Returns xml for libvirt."""
         conf = super(LibvirtGlusterfsVolumeDriver,
                      self).connect_volume(connection_info, mount_device)
-        options = connection_info['data'].get('options')
-        path = self._ensure_mounted(connection_info['data']['export'], options)
-        path = os.path.join(path, connection_info['data']['name'])
-        conf.source_type = 'file'
-        conf.source_path = path
+
+        data = connection_info['data']
+
+        if 'gluster' in CONF.qemu_allowed_storage_drivers:
+            vol_name = data['export'].split('/')[1]
+            source_host = data['export'].split('/')[0][:-1]
+
+            conf.source_ports = [None]
+            conf.source_type = 'network'
+            conf.source_protocol = 'gluster'
+            conf.source_hosts = [source_host]
+            conf.source_name = '%s/%s' % (vol_name, data['name'])
+        else:
+            path = self._ensure_mounted(data['export'], data.get('options'))
+            path = os.path.join(path, data['name'])
+            conf.source_type = 'file'
+            conf.source_path = path
         return conf
 
     def _ensure_mounted(self, glusterfs_export, options=None):

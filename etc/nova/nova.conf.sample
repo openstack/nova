@@ -2124,6 +2124,10 @@
 # Base dir where Scality SOFS shall be mounted (string value)
 #scality_sofs_mount_point=$state_path/scality
 
+# Protocols listed here will be accessed directly from QEMU.
+# Currently supported protocols: [gluster] (list value)
+#qemu_allowed_storage_drivers=
+
 
 #
 # Options defined in nova.virt.powervm.driver
