@@ -186,12 +186,12 @@ class EC2KeystoneAuth(wsgi.Middleware):
         signature = req.params.get('Signature')
         if not signature:
             msg = _("Signature not provided")
-            return faults.ec2_error_response(request_id, "Unauthorized", msg,
+            return faults.ec2_error_response(request_id, "AuthFailure", msg,
                                              status=400)
         access = req.params.get('AWSAccessKeyId')
         if not access:
             msg = _("Access key not provided")
-            return faults.ec2_error_response(request_id, "Unauthorized", msg,
+            return faults.ec2_error_response(request_id, "AuthFailure", msg,
                                              status=400)
 
         # Make a copy of args for authentication and signature verification.
@@ -227,8 +227,8 @@ class EC2KeystoneAuth(wsgi.Middleware):
                 msg = response.reason
             else:
                 msg = _("Failure communicating with keystone")
-            return faults.ec2_error_response(request_id, "Unauthorized", msg,
-                                             status=400)
+            return faults.ec2_error_response(request_id, "AuthFailure", msg,
+                                             status=response.status)
         result = jsonutils.loads(data)
         conn.close()
 
@@ -243,7 +243,7 @@ class EC2KeystoneAuth(wsgi.Middleware):
         except (AttributeError, KeyError) as e:
             LOG.exception(_("Keystone failure: %s") % e)
             msg = _("Failure communicating with keystone")
-            return faults.ec2_error_response(request_id, "Unauthorized", msg,
+            return faults.ec2_error_response(request_id, "AuthFailure", msg,
                                              status=400)
 
         remote_address = req.remote_addr
