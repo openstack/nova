@@ -4039,7 +4039,9 @@ def _instance_type_get_query(context, session=None, read_deleted=None):
 
 
 @require_context
-def flavor_get_all(context, inactive=False, filters=None):
+def flavor_get_all(context, inactive=False, filters=None,
+                   sort_key='flavorid', sort_dir='asc', limit=None,
+                   marker=None):
     """
     Returns all instance types.
     """
@@ -4050,6 +4052,8 @@ def flavor_get_all(context, inactive=False, filters=None):
     # should mean truly deleted, e.g. we can safely purge the record out of the
     # database.
     read_deleted = "yes" if inactive else "no"
+
+    sort_fn = {'desc': desc, 'asc': asc}
 
     query = _instance_type_get_query(context, read_deleted=read_deleted)
 
@@ -4077,7 +4081,19 @@ def flavor_get_all(context, inactive=False, filters=None):
         else:
             query = query.filter(the_filter[0])
 
-    inst_types = query.order_by("name").all()
+    if marker is not None:
+        marker = _instance_type_get_query(context,
+                                          read_deleted=read_deleted).\
+                    filter_by(id=marker).\
+                    first()
+        if not marker:
+            raise exception.MarkerNotFound(marker)
+
+    query = sqlalchemyutils.paginate_query(query, models.InstanceTypes, limit,
+                                           [sort_key, 'id'],
+                                           marker=marker, sort_dir=sort_dir)
+
+    inst_types = query.all()
 
     return [_dict_with_extra_specs(i) for i in inst_types]
 

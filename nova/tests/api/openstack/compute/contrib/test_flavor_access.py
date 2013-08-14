@@ -80,9 +80,11 @@ def _has_flavor_access(flavorid, projectid):
     return False
 
 
-def fake_get_all_flavors(context, inactive=0, filters=None):
+def fake_get_all_flavors_sorted_list(context=None, inactive=False,
+                                     filters=None, sort_key='flavorid',
+                                     sort_dir='asc', limit=None, marker=None):
     if filters == None or filters['is_public'] == None:
-        return INSTANCE_TYPES
+        return sorted(INSTANCE_TYPES.values(), key=lambda item: item[sort_key])
 
     res = {}
     for k, v in INSTANCE_TYPES.iteritems():
@@ -92,6 +94,7 @@ def fake_get_all_flavors(context, inactive=0, filters=None):
         if v['is_public'] == filters['is_public']:
             res.update({k: v})
 
+    res = sorted(res.values(), key=lambda item: item[sort_key])
     return res
 
 
@@ -123,7 +126,8 @@ class FlavorAccessTest(test.TestCase):
         self.context = self.req.environ['nova.context']
         self.stubs.Set(flavors, 'get_flavor_by_flavor_id',
                        fake_get_flavor_by_flavor_id)
-        self.stubs.Set(flavors, 'get_all_flavors', fake_get_all_flavors)
+        self.stubs.Set(flavors, 'get_all_flavors_sorted_list',
+                       fake_get_all_flavors_sorted_list)
         self.stubs.Set(flavors, 'get_flavor_access_by_flavor_id',
                        fake_get_flavor_access_by_flavor_id)
 

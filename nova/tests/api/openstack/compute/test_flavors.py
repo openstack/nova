@@ -54,26 +54,40 @@ def fake_flavor_get_by_flavor_id(flavorid, ctxt=None):
     return FAKE_FLAVORS['flavor %s' % flavorid]
 
 
-def fake_flavor_get_all(inactive=False, filters=None):
+def fake_get_all_flavors_sorted_list(context=None, inactive=False,
+                                     filters=None, sort_key='flavorid',
+                                     sort_dir='asc', limit=None, marker=None):
     def reject_min(db_attr, filter_attr):
         return (filter_attr in filters and
                 int(flavor[db_attr]) < int(filters[filter_attr]))
 
     filters = filters or {}
-    output = {}
+    res = []
     for (flavor_name, flavor) in FAKE_FLAVORS.items():
         if reject_min('memory_mb', 'min_memory_mb'):
             continue
         elif reject_min('root_gb', 'min_root_gb'):
             continue
 
-        output[flavor_name] = flavor
+        res.append(flavor)
+
+    res = sorted(res, key=lambda item: item[sort_key])
+    output = []
+    marker_found = True if marker is None else False
+    for flavor in res:
+        if not marker_found and marker == flavor['flavorid']:
+            marker_found = True
+        elif marker_found:
+            if limit is None or len(output) < int(limit):
+                output.append(flavor)
 
     return output
 
 
-def empty_flavor_get_all(inactive=False, filters=None):
-    return {}
+def empty_get_all_flavors_sorted_list(context=None, inactive=False,
+                                      filters=None, sort_key='flavorid',
+                                      sort_dir='asc', limit=None, marker=None):
+    return []
 
 
 def return_flavor_not_found(flavor_id, ctxt=None):
@@ -86,8 +100,8 @@ class FlavorsTest(test.TestCase):
         self.flags(osapi_compute_extension=[])
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
-        self.stubs.Set(nova.compute.flavors, "get_all_flavors",
-                       fake_flavor_get_all)
+        self.stubs.Set(nova.compute.flavors, "get_all_flavors_sorted_list",
+                       fake_get_all_flavors_sorted_list)
         self.stubs.Set(nova.compute.flavors,
                        "get_flavor_by_flavor_id",
                        fake_flavor_get_by_flavor_id)
@@ -341,8 +355,8 @@ class FlavorsTest(test.TestCase):
         self.assertEqual(flavor, expected)
 
     def test_get_empty_flavor_list(self):
-        self.stubs.Set(nova.compute.flavors, "get_all_flavors",
-                       empty_flavor_get_all)
+        self.stubs.Set(nova.compute.flavors, "get_all_flavors_sorted_list",
+                       empty_get_all_flavors_sorted_list)
 
         req = fakes.HTTPRequest.blank('/v2/fake/flavors')
         flavors = self.controller.index(req)
