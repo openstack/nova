@@ -1020,6 +1020,40 @@ class ComputeDriver(object):
         """
         return True
 
+    def volume_snapshot_create(self, context, instance, volume_id,
+                               create_info):
+        """
+        Snapshots volumes attached to a specified instance.
+
+        :param context: request context
+        :param instance: Instance object that has the volume attached
+        :param volume_id: Volume to be snapshotted
+        :param create_info: The data needed for nova to be able to attach
+               to the volume.  This is the same data format returned by
+               Cinder's initialize_connection() API call.  In the case of
+               doing a snapshot, it is the image file Cinder expects to be
+               used as the active disk after the snapshot operation has
+               completed.  There may be other data included as well that is
+               needed for creating the snapshot.
+        """
+        raise NotImplementedError()
+
+    def volume_snapshot_delete(self, context, instance, volume_id,
+                               snapshot_id, delete_info):
+        """
+        Snapshots volumes attached to a specified instance.
+
+        :param context: request context
+        :param instance: Instance object that has the volume attached
+        :param volume_id: Attached volume associated with the snapshot
+        :param snapshot_id: The snapshot to delete.
+        :param delete_info: Volume backend technology specific data needed to
+               be able to complete the snapshot.  For example, in the case of
+               qcow2 backed snapshots, this would include the file being
+               merged, and the file being merged into (if appropriate).
+        """
+        raise NotImplementedError()
+
 
 def load_compute_driver(virtapi, compute_driver=None):
     """Load a compute driver module.
