@@ -171,10 +171,9 @@ class CloudPipe(object):
         key_name = '%s%s' % (context.project_id, CONF.vpn_key_suffix)
         try:
             keypair_api = compute.api.KeypairAPI()
-            result = keypair_api.create_key_pair(context,
-                                                 context.user_id,
-                                                 key_name)
-            private_key = result['private_key']
+            result, private_key = keypair_api.create_key_pair(context,
+                                                              context.user_id,
+                                                              key_name)
             key_dir = os.path.join(CONF.keys_path, context.user_id)
             fileutils.ensure_tree(key_dir)
             key_path = os.path.join(key_dir, '%s.pem' % key_name)

@@ -55,6 +55,7 @@ from nova.objects import base as obj_base
 from nova.objects import instance as instance_obj
 from nova.objects import instance_action
 from nova.objects import instance_info_cache
+from nova.objects import keypair as keypair_obj
 from nova.objects import security_group
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
@@ -669,9 +670,10 @@ class API(base.Base):
         config_drive = self._check_config_drive(config_drive)
 
         if key_data is None and key_name:
-            key_pair = self.db.key_pair_get(context, context.user_id,
-                    key_name)
-            key_data = key_pair['public_key']
+            key_pair = keypair_obj.KeyPair.get_by_name(context,
+                                                       context.user_id,
+                                                       key_name)
+            key_data = key_pair.public_key
 
         root_device_name = block_device.properties_root_device_name(
             boot_meta.get('properties', {}))
@@ -3188,12 +3190,13 @@ class KeypairAPI(base.Base):
 
         fingerprint = crypto.generate_fingerprint(public_key)
 
-        keypair = {'user_id': user_id,
-                   'name': key_name,
-                   'fingerprint': fingerprint,
-                   'public_key': public_key}
+        keypair = keypair_obj.KeyPair()
+        keypair.user_id = user_id
+        keypair.name = key_name
+        keypair.fingerprint = fingerprint
+        keypair.public_key = public_key
+        keypair.create(context)
 
-        self.db.key_pair_create(context, keypair)
         return keypair
 
     def create_key_pair(self, context, user_id, key_name):
@@ -3202,33 +3205,26 @@ class KeypairAPI(base.Base):
 
         private_key, public_key, fingerprint = crypto.generate_key_pair()
 
-        keypair = {'user_id': user_id,
-                   'name': key_name,
-                   'fingerprint': fingerprint,
-                   'public_key': public_key,
-                   'private_key': private_key}
+        keypair = keypair_obj.KeyPair()
+        keypair.user_id = user_id
+        keypair.name = key_name
+        keypair.fingerprint = fingerprint
+        keypair.public_key = public_key
+        keypair.create(context)
 
-        self.db.key_pair_create(context, keypair)
-        return keypair
+        return keypair, private_key
 
     def delete_key_pair(self, context, user_id, key_name):
         """Delete a keypair by name."""
-        self.db.key_pair_destroy(context, user_id, key_name)
-
-    def _get_key_pair(self, key_pair):
-        return {'name': key_pair['name'],
-                'public_key': key_pair['public_key'],
-                'fingerprint': key_pair['fingerprint']}
+        keypair_obj.KeyPair.destroy_by_name(context, user_id, key_name)
 
     def get_key_pairs(self, context, user_id):
         """List key pairs."""
-        key_pairs = self.db.key_pair_get_all_by_user(context, user_id)
-        return [self._get_key_pair(k) for k in key_pairs]
+        return keypair_obj.KeyPairList.get_by_user(context, user_id)
 
     def get_key_pair(self, context, user_id, key_name):
         """Get a keypair by name."""
-        key_pair = self.db.key_pair_get(context, user_id, key_name)
-        return self._get_key_pair(key_pair)
+        return keypair_obj.KeyPair.get_by_name(context, user_id, key_name)
 
 
 class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):

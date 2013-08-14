@@ -1678,8 +1678,7 @@ class CloudTestCase(test.TestCase):
         rv = self.cloud.terminate_instances(self.context, [instance_id])
 
     def test_key_generation(self):
-        result = self._create_key('test')
-        private_key = result['private_key']
+        result, private_key = self._create_key('test')
 
         expected = db.key_pair_get(self.context,
                                     self.context.user_id,

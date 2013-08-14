@@ -444,15 +444,14 @@ class CloudController(object):
         LOG.audit(_("Create key pair %s"), key_name, context=context)
 
         try:
-            keypair = self.keypair_api.create_key_pair(context,
-                                                       context.user_id,
-                                                       key_name)
+            keypair, private_key = self.keypair_api.create_key_pair(
+                context, context.user_id, key_name)
         except exception.KeypairLimitExceeded:
             msg = _("Quota exceeded, too many key pairs.")
             raise exception.EC2APIError(msg, code='ResourceLimitExceeded')
         return {'keyName': key_name,
                 'keyFingerprint': keypair['fingerprint'],
-                'keyMaterial': keypair['private_key']}
+                'keyMaterial': private_key}
         # TODO(vish): when context is no longer an object, pass it here
 
     def import_key_pair(self, context, key_name, public_key_material,
