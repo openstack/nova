@@ -96,6 +96,7 @@ from nova.virt.libvirt import imagebackend
 from nova.virt.libvirt import imagecache
 from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt import netutils
+from nova import volume
 
 native_threading = patcher.original("threading")
 native_Queue = patcher.original("Queue")
@@ -287,6 +288,8 @@ MIN_LIBVIRT_LIVESNAPSHOT_VERSION = (1, 0, 0)
 MIN_QEMU_LIVESNAPSHOT_VERSION = (1, 3, 0)
 # block size tuning requirements
 MIN_LIBVIRT_BLOCKIO_VERSION = (0, 10, 2)
+# BlockJobInfo management requirement
+MIN_LIBVIRT_BLOCKJOBINFO_VERSION = (1, 1, 1)
 
 
 def libvirt_error_handler(context, err):
@@ -355,6 +358,8 @@ class LibvirtDriver(driver.ComputeDriver):
                          {'cache_mode': cache_mode, 'disk_type': disk_type})
                 continue
             self.disk_cachemodes[disk_type] = cache_mode
+
+        self._volume_api = volume.API()
 
     @property
     def disk_cachemode(self):
@@ -1373,8 +1378,11 @@ class LibvirtDriver(driver.ComputeDriver):
                          instance=instance)
 
     @staticmethod
-    def _wait_for_block_job(domain, disk_path):
+    def _wait_for_block_job(domain, disk_path, abort_on_error=False):
         status = domain.blockJobInfo(disk_path, 0)
+        if status == -1 and abort_on_error:
+            msg = _('libvirt error while requesting blockjob info.')
+            raise exception.NovaException(msg)
         try:
             cur = status.get('cur', 0)
             end = status.get('end', 0)
@@ -1436,6 +1444,310 @@ class LibvirtDriver(driver.ComputeDriver):
         # image with no backing file.
         libvirt_utils.extract_snapshot(disk_delta, 'qcow2', None,
                                        out_path, image_format)
+
+    def _volume_snapshot_update_status(self, context, snapshot_id, status):
+        """Send a snapshot status update to Cinder.
+
+        This method captures and logs exceptions that occur
+        since callers cannot do anything useful with these exceptions.
+
+        Operations on the Cinder side waiting for this will time out if
+        a failure occurs sending the update.
+
+        :param context: security context
+        :param snapshot_id: id of snapshot being updated
+        :param status: new status value
+
+        """
+
+        try:
+            self._volume_api.update_snapshot_status(context,
+                                                    snapshot_id,
+                                                    status)
+        except Exception:
+            msg = _('Failed to send updated snapshot status '
+                    'to volume service.')
+            LOG.exception(msg)
+
+    def _volume_snapshot_create(self, context, instance, domain,
+                                volume_id, snapshot_id, new_file):
+        """Perform volume snapshot.
+
+           :param domain: VM that volume is attached to
+           :param volume_id: volume UUID to snapshot
+           :param snapshot_id: UUID of snapshot being created
+           :param new_file: relative path to new qcow2 file present on share
+
+        """
+
+        xml = domain.XMLDesc(0)
+        xml_doc = etree.fromstring(xml)
+
+        device_info = vconfig.LibvirtConfigGuest()
+        device_info.parse_dom(xml_doc)
+
+        disks_to_snap = []         # to be snapshotted by libvirt
+        disks_to_skip = []         # local disks not snapshotted
+
+        for disk in device_info.devices:
+            if (disk.root_name != 'disk'):
+                continue
+
+            if (disk.target_dev is None):
+                continue
+
+            if (disk.serial is None or disk.serial != volume_id):
+                disks_to_skip.append(disk.source_path)
+                continue
+
+            # disk is a Cinder volume with the correct volume_id
+
+            disk_info = {
+                'dev': disk.target_dev,
+                'serial': disk.serial,
+                'current_file': disk.source_path
+            }
+
+            # Determine path for new_file based on current path
+            current_file = disk_info['current_file']
+            new_file_path = os.path.join(os.path.dirname(current_file),
+                                         new_file)
+            disks_to_snap.append((current_file, new_file_path))
+
+        if not disks_to_snap:
+            msg = _('Found no disk to snapshot.')
+            raise exception.NovaException(msg)
+
+        snapshot = vconfig.LibvirtConfigGuestSnapshot()
+        disks = []
+
+        for current_name, new_filename in disks_to_snap:
+            snap_disk = vconfig.LibvirtConfigGuestSnapshotDisk()
+            snap_disk.name = current_name
+            snap_disk.source_path = new_filename
+            snap_disk.source_type = 'file'
+            snap_disk.snapshot = 'external'
+            snap_disk.driver_name = 'qcow2'
+
+            snapshot.add_disk(snap_disk)
+
+        for dev in disks_to_skip:
+            snap_disk = vconfig.LibvirtConfigGuestSnapshotDisk()
+            snap_disk.name = dev
+            snap_disk.snapshot = 'no'
+
+            snapshot.add_disk(snap_disk)
+
+        snapshot_xml = snapshot.to_xml()
+        LOG.debug(_("snap xml: %s") % snapshot_xml)
+
+        snap_flags = (libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_DISK_ONLY |
+                      libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_NO_METADATA |
+                      libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_REUSE_EXT)
+
+        QUIESCE = libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_QUIESCE
+
+        try:
+            domain.snapshotCreateXML(snapshot_xml,
+                                     snap_flags | QUIESCE)
+
+            return
+        except libvirt.libvirtError:
+            msg = _('Unable to create quiesced VM snapshot, '
+                    'attempting again with quiescing disabled.')
+            LOG.exception(msg)
+
+        try:
+            domain.snapshotCreateXML(snapshot_xml, snap_flags)
+        except libvirt.libvirtError:
+            msg = _('Unable to create VM snapshot, '
+                    'failing volume_snapshot operation.')
+            LOG.exception(msg)
+
+            raise
+
+    def volume_snapshot_create(self, context, instance, volume_id,
+                               create_info):
+        """Create snapshots of a Cinder volume via libvirt.
+
+        :param instance: VM instance reference
+        :param volume_id: id of volume being snapshotted
+        :param create_info: dict of information used to create snapshots
+                     - snapshot_id : ID of snapshot
+                     - type : qcow2 / <other>
+                     - new_file : qcow2 file created by Cinder which
+                                  becomes the VM's active image after
+                                  the snapshot is complete
+        """
+
+        LOG.debug(_("volume_snapshot_create: instance: %(instance)s "
+                    "create_info: %(c_info)s") % {'instance': instance['uuid'],
+                                                 'c_info': create_info})
+
+        try:
+            virt_dom = self._lookup_by_name(instance['name'])
+        except exception.InstanceNotFound:
+            raise exception.InstanceNotRunning(instance_id=instance['uuid'])
+
+        if create_info['type'] != 'qcow2':
+            raise exception.NovaException(_('Unknown type: %s') %
+                                          create_info['type'])
+
+        snapshot_id = create_info.get('snapshot_id', None)
+        if snapshot_id is None:
+            raise exception.NovaException(_('snapshot_id required '
+                                            'in create_info'))
+
+        try:
+            self._volume_snapshot_create(context, instance, virt_dom,
+                                         volume_id, snapshot_id,
+                                         create_info['new_file'])
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                msg = _('Error occurred during volume_snapshot_create, '
+                        'sending error status to Cinder.')
+                LOG.exception(msg)
+                self._volume_snapshot_update_status(
+                    context, snapshot_id, 'error')
+
+        self._volume_snapshot_update_status(
+            context, snapshot_id, 'creating')
+
+    def _volume_snapshot_delete(self, context, instance, volume_id,
+                                snapshot_id, delete_info=None):
+        """
+        Note:
+            if file being merged into == active image:
+                do a blockRebase (pull) operation
+            else:
+                do a blockCommit operation
+            Files must be adjacent in snap chain.
+
+        :param instance: instance reference
+        :param volume_id: volume UUID
+        :param snapshot_id: snapshot UUID (unused currently)
+        :param delete_info: {
+            'type':              'qcow2',
+            'file_to_merge':     'a.img',
+            'merge_target_file': 'b.img' or None (if merging file_to_merge into
+                                                  active image)
+          }
+
+
+        Libvirt blockjob handling required for this method is broken
+        in versions of libvirt that do not contain:
+        http://libvirt.org/git/?p=libvirt.git;h=0f9e67bfad (1.1.1)
+        (Patch is pending in 1.0.5-maint branch as well, but we cannot detect
+        libvirt 1.0.5.5 vs. 1.0.5.6 here.)
+        """
+
+        if not self.has_min_version(MIN_LIBVIRT_BLOCKJOBINFO_VERSION):
+            ver = '.'.join([str(x) for x in MIN_LIBVIRT_BLOCKJOBINFO_VERSION])
+            msg = _("Libvirt '%s' or later is required for online deletion "
+                    "of volume snapshots.") % ver
+            raise exception.Invalid(msg)
+
+        LOG.debug(_('volume_snapshot_delete: delete_info: %s') % delete_info)
+
+        if delete_info['type'] != 'qcow2':
+            msg = _('Unknown delete_info type %s') % delete_info['type']
+            raise exception.NovaException(msg)
+
+        try:
+            virt_dom = self._lookup_by_name(instance['name'])
+        except exception.InstanceNotFound:
+            raise exception.InstanceNotRunning(instance_id=instance['uuid'])
+
+        ##### Find dev name
+        my_dev = None
+        active_disk = None
+
+        xml = virt_dom.XMLDesc(0)
+        xml_doc = etree.fromstring(xml)
+
+        device_info = vconfig.LibvirtConfigGuest()
+        device_info.parse_dom(xml_doc)
+
+        for disk in device_info.devices:
+            if (disk.root_name != 'disk'):
+                continue
+
+            if (disk.target_dev is None or disk.serial is None):
+                continue
+
+            if disk.serial == volume_id:
+                my_dev = disk.target_dev
+                active_disk = disk.source_path
+
+        if my_dev is None or active_disk is None:
+            msg = _('Unable to locate disk matching id: %s') % volume_id
+            raise exception.NovaException(msg)
+
+        LOG.debug("found dev, it's %s, with active disk: %s" %
+                  (my_dev, active_disk))
+
+        if delete_info['merge_target_file'] is None:
+            # pull via blockRebase()
+
+            # Merge the most recent snapshot into the active image
+
+            rebase_disk = my_dev
+            rebase_base = delete_info['file_to_merge']
+            rebase_bw = 0
+            rebase_flags = 0
+
+            LOG.debug(_('disk: %(disk)s, base: %(base)s, '
+                        'bw: %(bw)s, flags: %(flags)s') %
+                     {'disk': rebase_disk,
+                      'base': rebase_base,
+                      'bw': rebase_bw,
+                      'flags': rebase_flags})
+
+            result = virt_dom.blockRebase(rebase_disk, rebase_base,
+                                          rebase_bw, rebase_flags)
+
+            if result == 0:
+                LOG.debug(_('blockRebase started successfully'))
+
+            while self._wait_for_block_job(virt_dom, rebase_disk,
+                                           abort_on_error=True):
+                LOG.debug(_('waiting for blockRebase job completion'))
+                time.sleep(0.5)
+
+        else:
+            # commit with blockCommit()
+
+            commit_disk = my_dev
+            commit_base = delete_info['merge_target_file']
+            commit_top = delete_info['file_to_merge']
+            bandwidth = 0
+            flags = 0
+
+            result = virt_dom.blockCommit(commit_disk, commit_base, commit_top,
+                                          bandwidth, flags)
+
+            if result == 0:
+                LOG.debug(_('blockCommit started successfully'))
+
+            while self._wait_for_block_job(virt_dom, commit_disk,
+                                           abort_on_error=True):
+                LOG.debug(_('waiting for blockCommit job completion'))
+                time.sleep(0.5)
+
+    def volume_snapshot_delete(self, context, instance, volume_id, snapshot_id,
+                               delete_info=None):
+        try:
+            self._volume_snapshot_delete(context, instance, volume_id,
+                                         snapshot_id, delete_info=delete_info)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                msg = _('Error occurred during volume_snapshot_delete, '
+                        'sending error status to Cinder.')
+                LOG.exception(msg)
+                self._volume_snapshot_update_status(
+                    context, snapshot_id, 'error_deleting')
+
+        self._volume_snapshot_update_status(context, snapshot_id, 'deleting')
 
     def reboot(self, context, instance, network_info, reboot_type='SOFT',
                block_device_info=None, bad_volumes_callback=None):

@@ -574,6 +574,165 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
 
         return dev
 
+    def parse_dom(self, xmldoc):
+        super(LibvirtConfigGuestDisk, self).parse_dom(xmldoc)
+
+        self.source_type = xmldoc.get('type')
+        self.snapshot = xmldoc.get('snapshot')
+
+        for c in xmldoc.getchildren():
+            if c.tag == 'driver':
+                self.driver_name = c.get('name')
+                self.driver_format = c.get('type')
+                self.driver_cache = c.get('cache')
+            elif c.tag == 'source':
+                if self.source_type == 'file':
+                    self.source_path = c.get('file')
+                elif self.source_type == 'block':
+                    self.source_path = c.get('dev')
+                elif self.source_type == 'mount':
+                    self.source_path = c.get('dir')
+                elif self.source_type == 'network':
+                    self.source_protocol = c.get('protocol')
+                    self.source_name = c.get('name')
+            elif c.tag == 'serial':
+                self.serial = c.text
+
+        for c in xmldoc.getchildren():
+            if c.tag == 'target':
+                if self.source_type == 'mount':
+                    self.target_path = c.get('dir')
+                else:
+                    self.target_dev = c.get('dev')
+
+                self.target_bus = c.get('bus', None)
+
+
+class LibvirtConfigGuestSnapshotDisk(LibvirtConfigObject):
+    """Disk class for handling disk information in snapshots.
+
+    Similar to LibvirtConfigGuestDisk, but used to represent
+    disk entities in <domainsnapshot> structures rather than
+    real devices.  These typically have fewer members, and
+    different expectations for which fields are required.
+    """
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestSnapshotDisk, self).__init__(root_name="disk",
+                                                             **kwargs)
+
+        self.source_type = None
+        self.source_device = None
+        self.name = None
+        self.snapshot = None
+        self.driver_name = None
+        self.driver_format = None
+        self.driver_cache = None
+        self.source_path = None
+        self.source_protocol = None
+        self.source_name = None
+        self.source_hosts = []
+        self.source_ports = []
+        self.target_dev = None
+        self.target_path = None
+        self.target_bus = None
+        self.auth_username = None
+        self.auth_secret_type = None
+        self.auth_secret_uuid = None
+        self.serial = None
+
+    def format_dom(self):
+        dev = super(LibvirtConfigGuestSnapshotDisk, self).format_dom()
+
+        if self.name:
+            dev.attrib['name'] = self.name
+        if self.snapshot:
+            dev.attrib['snapshot'] = self.snapshot
+
+        if self.source_type:
+            dev.set("type", self.source_type)
+
+        if self.source_device:
+            dev.set("device", self.source_device)
+            if (self.driver_name is not None or
+                self.driver_format is not None or
+                    self.driver_cache is not None):
+                drv = etree.Element("driver")
+                if self.driver_name is not None:
+                    drv.set("name", self.driver_name)
+                if self.driver_format is not None:
+                    drv.set("type", self.driver_format)
+                if self.driver_cache is not None:
+                    drv.set("cache", self.driver_cache)
+                dev.append(drv)
+
+        if self.source_type == "file":
+            dev.append(etree.Element("source", file=self.source_path))
+        elif self.source_type == "block":
+            dev.append(etree.Element("source", dev=self.source_path))
+        elif self.source_type == "mount":
+            dev.append(etree.Element("source", dir=self.source_path))
+        elif self.source_type == "network":
+            source = etree.Element("source", protocol=self.source_protocol)
+            if self.source_name is not None:
+                source.set('name', self.source_name)
+            hosts_info = zip(self.source_hosts, self.source_ports)
+            for name, port in hosts_info:
+                host = etree.Element('host', name=name)
+                if port is not None:
+                    host.set('port', port)
+                source.append(host)
+            dev.append(source)
+
+        if self.auth_secret_type is not None:
+            auth = etree.Element("auth")
+            auth.set("username", self.auth_username)
+            auth.append(etree.Element("secret", type=self.auth_secret_type,
+                                      uuid=self.auth_secret_uuid))
+            dev.append(auth)
+
+        if self.source_type == "mount":
+            dev.append(etree.Element("target", dir=self.target_path))
+        else:
+            if self.target_bus and self.target_dev:
+                dev.append(etree.Element("target", dev=self.target_dev,
+                                         bus=self.target_bus))
+
+        return dev
+
+    def parse_dom(self, xmldoc):
+        super(LibvirtConfigGuestSnapshotDisk, self).parse_dom(xmldoc)
+
+        self.source_type = xmldoc.get('type')
+        self.snapshot = xmldoc.get('snapshot')
+
+        for c in xmldoc.getchildren():
+            if c.tag == 'driver':
+                self.driver_name = c.get('name')
+                self.driver_format = c.get('type')
+                self.driver_cache = c.get('cache')
+            elif c.tag == 'source':
+                if self.source_type == 'file':
+                    self.source_path = c.get('file')
+                elif self.source_type == 'block':
+                    self.source_path = c.get('dev')
+                elif self.source_type == 'mount':
+                    self.source_path = c.get('dir')
+                elif self.source_type == 'network':
+                    self.source_protocol = c.get('protocol')
+                    self.source_name = c.get('name')
+            elif c.tag == 'serial':
+                self.serial = c.text
+
+        for c in xmldoc.getchildren():
+            if c.tag == 'target':
+                if self.source_type == 'mount':
+                    self.target_path = c.get('dir')
+                else:
+                    self.target_dev = c.get('dev')
+
+                self.target_bus = c.get('bus', None)
+
 
 class LibvirtConfigGuestFilesys(LibvirtConfigGuestDevice):
 
@@ -922,6 +1081,16 @@ class LibvirtConfigGuest(LibvirtConfigObject):
 
         return root
 
+    def parse_dom(self, xmldoc):
+        # Note: This does not cover anything but LibvirtConfigGuestDisks
+        for c in xmldoc.getchildren():
+            if c.tag == 'devices':
+                for d in c.getchildren():
+                    if d.tag == 'disk':
+                        obj = LibvirtConfigGuestDisk()
+                        obj.parse_dom(d)
+                        self.devices.append(obj)
+
     def add_device(self, dev):
         self.devices.append(dev)
 
@@ -937,11 +1106,25 @@ class LibvirtConfigGuestSnapshot(LibvirtConfigObject):
             **kwargs)
 
         self.name = None
+        self.disks = []
 
     def format_dom(self):
         ss = super(LibvirtConfigGuestSnapshot, self).format_dom()
-        ss.append(self._text_node("name", self.name))
+
+        if self.name:
+            ss.append(self._text_node("name", self.name))
+
+        disks = etree.Element('disks')
+
+        for disk in self.disks:
+            disks.append(disk.format_dom())
+
+        ss.append(disks)
+
         return ss
+
+    def add_disk(self, disk):
+        self.disks.append(disk)
 
 
 class LibvirtConfigNodeDevice(LibvirtConfigObject):
