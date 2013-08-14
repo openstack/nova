@@ -58,7 +58,7 @@ FAKE_FLAVORS = {
 }
 
 
-def fake_flavor_get_by_flavor_id(flavorid):
+def fake_flavor_get_by_flavor_id(flavorid, ctxt=None):
     return FAKE_FLAVORS['flavor %s' % flavorid]
 
 
@@ -98,7 +98,7 @@ def empty_get_all_flavors_sorted_list(context=None, inactive=False,
     return []
 
 
-def return_flavor_not_found(flavor_id):
+def return_flavor_not_found(flavor_id, ctxt=None):
     raise exception.FlavorNotFound(flavor_id=flavor_id)
 
 

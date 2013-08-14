@@ -93,8 +93,9 @@ class FlavorsController(wsgi.Controller):
     @wsgi.serializers(xml=FlavorTemplate)
     def show(self, req, id):
         """Return data about the given flavor id."""
+        context = req.environ['nova.context']
         try:
-            flavor = flavors.get_flavor_by_flavor_id(id)
+            flavor = flavors.get_flavor_by_flavor_id(id, ctxt=context)
             req.cache_db_flavor(flavor)
         except exception.FlavorNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
