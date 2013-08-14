@@ -22,6 +22,7 @@ from nova.compute import api as compute_api
 from nova import exception
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
+from nova import utils
 
 LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'aggregates')
@@ -68,8 +69,10 @@ class AggregateController(object):
         except KeyError:
             raise exc.HTTPBadRequest()
 
-        if len(name) == 0:
-            raise exc.HTTPBadRequest()
+        try:
+            utils.check_string_length(name, "Aggregate name", 1, 255)
+        except exception.InvalidInput as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
 
         if len(host_aggregate) != 2:
             raise exc.HTTPBadRequest()
@@ -113,6 +116,13 @@ class AggregateController(object):
         for key in updates.keys():
             if key not in ["name", "availability_zone"]:
                 raise exc.HTTPBadRequest()
+
+        if 'name' in updates:
+            try:
+                utils.check_string_length(updates['name'], "Aggregate name", 1,
+                                          255)
+            except exception.InvalidInput as e:
+                raise exc.HTTPBadRequest(explanation=e.format_message())
 
         try:
             aggregate = self.api.update_aggregate(context, id, updates)

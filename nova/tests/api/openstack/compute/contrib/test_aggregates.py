@@ -124,6 +124,12 @@ class AggregateTestCase(test.TestCase):
                                      {"name": "",
                                       "availability_zone": "nova1"}})
 
+    def test_create_with_name_too_long(self):
+        self.assertRaises(exc.HTTPBadRequest, self.controller.create,
+                          self.req, {"aggregate":
+                                     {"name": "x" * 256,
+                                      "availability_zone": "nova1"}})
+
     def test_create_with_extra_invalid_arg(self):
         self.assertRaises(exc.HTTPBadRequest, self.controller.create,
                           self.req, dict(name="test",
@@ -203,6 +209,16 @@ class AggregateTestCase(test.TestCase):
     def test_update_with_wrong_updates(self):
         test_metadata = {"aggregate": {"status": "disable",
                                      "foo": "bar"}}
+        self.assertRaises(exc.HTTPBadRequest, self.controller.update,
+                          self.req, "2", body=test_metadata)
+
+    def test_update_with_null_name(self):
+        test_metadata = {"aggregate": {"name": ""}}
+        self.assertRaises(exc.HTTPBadRequest, self.controller.update,
+                          self.req, "2", body=test_metadata)
+
+    def test_update_with_name_too_long(self):
+        test_metadata = {"aggregate": {"name": "x" * 256}}
         self.assertRaises(exc.HTTPBadRequest, self.controller.update,
                           self.req, "2", body=test_metadata)
 
