@@ -29,6 +29,7 @@ from nova.objects import instance as instance_obj
 from nova.openstack.common import importutils
 from nova.openstack.common import uuidutils
 from nova import test
+from nova.tests.compute import fake_resource_tracker
 from nova.tests import fake_instance
 from nova import utils
 
@@ -626,17 +627,26 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.admin_pass = 'pass'
         self.injected_files = []
         self.image = {}
+        self.node = 'fake-node'
+        self.limits = {}
+
+        # override tracker with a version that doesn't need the database:
+        fake_rt = fake_resource_tracker.FakeResourceTracker(self.compute.host,
+                    self.compute.driver, self.node)
+        self.compute._resource_tracker_dict[self.node] = fake_rt
 
     def test_build_and_run_instance_called_with_proper_args(self):
         self.mox.StubOutWithMock(self.compute, '_build_and_run_instance')
         self.compute._build_and_run_instance(self.context, self.instance,
-                self.image, self.injected_files, self.admin_pass)
+                self.image, self.injected_files, self.admin_pass, self.node,
+                self.limits)
         self.mox.ReplayAll()
 
         self.compute.build_and_run_instance(self.context, self.instance,
                 self.image, request_spec={}, filter_properties=[],
                 injected_files=self.injected_files,
-                admin_password=self.admin_pass)
+                admin_password=self.admin_pass, node=self.node,
+                limits=self.limits)
 
     def test_build_abort_exception(self):
         self.mox.StubOutWithMock(self.compute, '_build_and_run_instance')
@@ -644,8 +654,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(self.compute.compute_task_api,
                 'build_instances')
         self.compute._build_and_run_instance(self.context, self.instance,
-                self.image, self.injected_files, self.admin_pass).AndRaise(
-                        exception.BuildAbortException(reason='',
+                self.image, self.injected_files, self.admin_pass, self.node,
+                self.limits).AndRaise(exception.BuildAbortException(reason='',
                             instance_uuid=self.instance['uuid']))
         self.compute._set_instance_error_state(self.context,
                 self.instance['uuid'])
@@ -654,7 +664,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.compute.build_and_run_instance(self.context, self.instance,
                 self.image, request_spec={}, filter_properties=[],
                 injected_files=self.injected_files,
-                admin_password=self.admin_pass)
+                admin_password=self.admin_pass, node=self.node,
+                limits=self.limits)
 
     def test_rescheduled_exception(self):
         self.mox.StubOutWithMock(self.compute, '_build_and_run_instance')
@@ -662,8 +673,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(self.compute.compute_task_api,
                 'build_instances')
         self.compute._build_and_run_instance(self.context, self.instance,
-                self.image, self.injected_files, self.admin_pass).AndRaise(
-                        exception.RescheduledException(reason='',
+                self.image, self.injected_files, self.admin_pass, self.node,
+                self.limits).AndRaise(exception.RescheduledException(reason='',
                             instance_uuid=self.instance['uuid']))
         self.compute.compute_task_api.build_instances(self.context,
                 [self.instance], self.image, [], self.admin_pass,
@@ -673,7 +684,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.compute.build_and_run_instance(self.context, self.instance,
                 self.image, request_spec={}, filter_properties=[],
                 injected_files=self.injected_files,
-                admin_password=self.admin_pass)
+                admin_password=self.admin_pass, node=self.node,
+                limits=self.limits)
 
     def test_instance_not_found(self):
         self.mox.StubOutWithMock(self.compute.driver, 'spawn')
@@ -685,7 +697,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.assertRaises(exception.BuildAbortException,
                 self.compute._build_and_run_instance, self.context,
                 self.instance, self.image, self.injected_files,
-                self.admin_pass)
+                self.admin_pass, self.node, self.limits)
 
     def test_reschedule_on_exception(self):
         self.mox.StubOutWithMock(self.compute.driver, 'spawn')
@@ -697,7 +709,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.assertRaises(exception.RescheduledException,
                 self.compute._build_and_run_instance, self.context,
                 self.instance, self.image, self.injected_files,
-                self.admin_pass)
+                self.admin_pass, self.node, self.limits)
 
     def test_unexpected_task_state(self):
         self.mox.StubOutWithMock(self.compute.driver, 'spawn')
@@ -710,4 +722,25 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.assertRaises(exception.BuildAbortException,
                 self.compute._build_and_run_instance, self.context,
                 self.instance, self.image, self.injected_files,
-                self.admin_pass)
+                self.admin_pass, self.node, self.limits)
+
+    def test_reschedule_on_resources_unavailable(self):
+        class FakeResourceTracker(object):
+            def instance_claim(self, context, instance, limits):
+                raise exception.ComputeResourcesUnavailable
+
+        self.mox.StubOutWithMock(self.compute, '_get_resource_tracker')
+        self.mox.StubOutWithMock(self.compute.compute_task_api,
+                'build_instances')
+        self.compute._get_resource_tracker('node').AndReturn(
+                FakeResourceTracker())
+        self.compute.compute_task_api.build_instances(self.context,
+                [self.instance], self.image, [], self.admin_pass,
+                self.injected_files, None, None, None)
+        self.mox.ReplayAll()
+
+        self.compute.build_and_run_instance(self.context, self.instance,
+                self.image, request_spec={}, filter_properties=[],
+                injected_files=self.injected_files,
+                admin_password=self.admin_pass, node=self.node,
+                limits=self.limits)
