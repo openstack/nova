@@ -103,6 +103,16 @@ class AvailabilityZoneTestCases(test.TestCase):
 
         self._destroy_service(service)
 
+    def test_set_availability_zone_unicode_key(self):
+        """Test set availability zone cache key is unicode."""
+        service = self._create_service_with_topic('network', self.host)
+        services = db.service_get_all(self.context)
+        new_service = az.set_availability_zones(self.context, services)[0]
+        self.assertEquals(type(services[0]['host']), unicode)
+        cached_key = az._make_cache_key(services[0]['host'])
+        self.assertEquals(type(cached_key), str)
+        self._destroy_service(service)
+
     def test_set_availability_zone_not_compute_service(self):
         """Test not compute service get right availability zone."""
         service = self._create_service_with_topic('network', self.host)
