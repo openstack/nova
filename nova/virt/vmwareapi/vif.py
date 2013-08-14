@@ -20,11 +20,14 @@
 from oslo.config import cfg
 
 from nova import exception
+from nova.openstack.common.gettextutils import _
+from nova.openstack.common import log as logging
 from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import network_util
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
 
+LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
 
 vmwareapi_vif_opts = [
@@ -96,6 +99,28 @@ def ensure_vlan_bridge(session, vif, cluster=None, create_vlan=True):
     return network_ref
 
 
+def _is_valid_opaque_network_id(opaque_id, bridge_id, integration_bridge,
+                                num_networks):
+    return (opaque_id == bridge_id or
+            (num_networks == 1 and
+             opaque_id == integration_bridge))
+
+
+def _get_network_ref_from_opaque(opaque_networks, integration_bridge, bridge):
+    num_networks = len(opaque_networks)
+    for network in opaque_networks:
+        if _is_valid_opaque_network_id(network['opaqueNetworkId'], bridge,
+                                       integration_bridge, num_networks):
+            return {'type': 'OpaqueNetwork',
+                    'network-id': network['opaqueNetworkId'],
+                    'network-name': network['opaqueNetworkName'],
+                    'network-type': network['opaqueNetworkType']}
+    LOG.warning(_("No valid network found in %(opaque)s, from %(bridge)s "
+                  "or %(integration_bridge)s"),
+                {'opaque': opaque_networks, 'bridge': bridge,
+                 'integration_bridge': integration_bridge})
+
+
 def get_neutron_network(session, network_name, cluster, vif):
     host = vm_util.get_host_ref(session, cluster)
     try:
@@ -104,22 +129,16 @@ def get_neutron_network(session, network_name, cluster, vif):
                                       "config.network.opaqueNetwork")
     except error_util.VimFaultException:
         opaque = None
-    network_ref = None
     if opaque:
         bridge = vif['network']['id']
         opaque_networks = opaque.HostOpaqueNetworkInfo
-        for network in opaque_networks:
-            if network['opaqueNetworkId'] == bridge:
-                network_ref = {'type': 'OpaqueNetwork',
-                               'network-id': network['opaqueNetworkId'],
-                               'network-name': network['opaqueNetworkName'],
-                               'network-type': network['opaqueNetworkType']}
-                break
+        network_ref = _get_network_ref_from_opaque(opaque_networks,
+                CONF.vmware.integration_bridge, bridge)
     else:
         bridge = network_name
         network_ref = network_util.get_network_with_the_name(
                 session, network_name, cluster)
-    if network_ref is None:
+    if not network_ref:
         raise exception.NetworkNotFoundForBridge(bridge=bridge)
     return network_ref
 
