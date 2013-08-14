@@ -149,7 +149,10 @@ class ServiceController(object):
                     'status': status,
                 },
             }
-            status_detail = {'disabled': disabled}
+            status_detail = {
+                'disabled': disabled,
+                'disabled_reason': None,
+            }
             if id == "disable-log-reason":
                 reason = body['service']['disabled_reason']
                 if not self._is_valid_as_reason(reason):
