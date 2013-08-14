@@ -137,3 +137,34 @@ class TestVirtDisk(test.NoDBTestCase):
                              ]
 
         self.assertEqual(self.executes, expected_commands)
+
+    def test_lxc_teardown_container_with_namespace_cleaned(self):
+
+        def proc_mounts(self, mount_point):
+            return None
+
+        self.stubs.Set(os.path, 'exists', lambda _: True)
+        self.stubs.Set(disk_api._DiskImage, '_device_for_path', proc_mounts)
+        expected_commands = []
+
+        disk_api.teardown_container('/mnt/loop/nopart', '/dev/loop0')
+        expected_commands += [
+                              ('losetup', '--detach', '/dev/loop0'),
+                             ]
+
+        disk_api.teardown_container('/mnt/loop/part', '/dev/loop0')
+        expected_commands += [
+                              ('losetup', '--detach', '/dev/loop0'),
+                             ]
+
+        disk_api.teardown_container('/mnt/nbd/nopart', '/dev/nbd15')
+        expected_commands += [
+                              ('qemu-nbd', '-d', '/dev/nbd15'),
+                             ]
+
+        disk_api.teardown_container('/mnt/nbd/part', '/dev/nbd15')
+        expected_commands += [
+                              ('qemu-nbd', '-d', '/dev/nbd15'),
+                             ]
+
+        self.assertEqual(self.executes, expected_commands)

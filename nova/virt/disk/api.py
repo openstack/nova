@@ -208,6 +208,8 @@ class _DiskImage(object):
         self.mount_dir = mount_dir
         self.use_cow = use_cow
 
+        self.device = None
+
         # Internal
         self._mkdir = False
         self._mounter = None
@@ -239,6 +241,7 @@ class _DiskImage(object):
 
         mount_name = os.path.basename(self.mount_dir or '')
         self._mkdir = mount_name.startswith(self.tmp_prefix)
+        self.device = self._mounter.device
 
     @property
     def errors(self):
@@ -344,6 +347,8 @@ def setup_container(image, container_dir, use_cow=False):
 
     It will mount the loopback image to the container directory in order
     to create the root filesystem for the container.
+
+    Returns path of image device which is mounted to the container directory.
     """
     img = _DiskImage(image=image, use_cow=use_cow, mount_dir=container_dir)
     if not img.mount():
@@ -352,9 +357,11 @@ def setup_container(image, container_dir, use_cow=False):
                   {"image": img, "target": container_dir,
                    "errors": img.errors})
         raise exception.NovaException(img.errors)
+    else:
+        return img.device
 
 
-def teardown_container(container_dir):
+def teardown_container(container_dir, container_root_device=None):
     """Teardown the container rootfs mounting once it is spawned.
 
     It will umount the container that is mounted,
@@ -363,8 +370,19 @@ def teardown_container(container_dir):
     try:
         img = _DiskImage(image=None, mount_dir=container_dir)
         img.teardown()
+
+        # Make sure container_root_device is released when teardown container.
+        if container_root_device:
+            if 'loop' in container_root_device:
+                LOG.debug(_("Release loop device %s"), container_root_device)
+                utils.execute('losetup', '--detach', container_root_device,
+                              run_as_root=True, attempts=3)
+            else:
+                LOG.debug(_('Release nbd device %s'), container_root_device)
+                utils.execute('qemu-nbd', '-d', container_root_device,
+                              run_as_root=True)
     except Exception as exn:
-        LOG.exception(_('Failed to teardown ntainer filesystem: %s'), exn)
+        LOG.exception(_('Failed to teardown container filesystem: %s'), exn)
 
 
 def clean_lxc_namespace(container_dir):
