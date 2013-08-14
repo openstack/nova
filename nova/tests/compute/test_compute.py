@@ -800,6 +800,28 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.compute_api._validate_bdm(self.context, self.instance,
                                        instance_type, all_mappings)
 
+    def test_volume_snapshot_create(self):
+        self.assertRaises(rpc_common.ClientException,
+                self.compute.volume_snapshot_create, self.context,
+                self.instance, 'fake_id', {})
+
+        self.compute = utils.ExceptionHelper(self.compute)
+
+        self.assertRaises(NotImplementedError,
+                self.compute.volume_snapshot_create, self.context,
+                self.instance, 'fake_id', {})
+
+    def test_volume_snapshot_delete(self):
+        self.assertRaises(rpc_common.ClientException,
+                self.compute.volume_snapshot_delete, self.context,
+                self.instance, 'fake_id', 'fake_id2', {})
+
+        self.compute = utils.ExceptionHelper(self.compute)
+
+        self.assertRaises(NotImplementedError,
+                self.compute.volume_snapshot_delete, self.context,
+                self.instance, 'fake_id', 'fake_id2', {})
+
 
 class ComputeTestCase(BaseTestCase):
     def test_wrap_instance_fault(self):

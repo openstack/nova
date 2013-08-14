@@ -17,6 +17,9 @@
     "compute:shelve_offload": "",
     "compute:unshelve": "",
 
+    "compute:volume_snapshot_create": "",
+    "compute:volume_snapshot_delete": "",
+
     "admin_api": "is_admin:True",
     "compute_extension:accounts": "rule:admin_api",
     "compute_extension:admin_actions": "rule:admin_api",

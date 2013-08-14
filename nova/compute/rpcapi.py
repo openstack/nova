@@ -202,6 +202,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                backup_instance() and makes them take new-world instance
                objects.
         2.43 - Made prep_resize() take new-world instance object
+        2.44 - Add volume_snapshot_create(), volume_snapshot_delete()
     '''
 
     #
@@ -823,6 +824,23 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
             instance=instance, image=image),
             topic=_compute_topic(self.topic, ctxt, host, None),
             version='2.31')
+
+    def volume_snapshot_create(self, ctxt, instance, volume_id,
+                               create_info):
+        instance_p = jsonutils.to_primitive(instance)
+        msg = self.make_msg('volume_snapshot_create', instance=instance_p,
+                volume_id=volume_id, create_info=create_info)
+        topic = _compute_topic(self.topic, ctxt, None, instance)
+        self.cast(ctxt, msg, topic=topic, version='2.44')
+
+    def volume_snapshot_delete(self, ctxt, instance, volume_id, snapshot_id,
+                               delete_info):
+        instance_p = jsonutils.to_primitive(instance)
+        msg = self.make_msg('volume_snapshot_delete', instance=instance_p,
+                volume_id=volume_id, snapshot_id=snapshot_id,
+                delete_info=delete_info)
+        topic = _compute_topic(self.topic, ctxt, None, instance)
+        self.cast(ctxt, msg, topic=topic, version='2.44')
 
 
 class SecurityGroupAPI(nova.openstack.common.rpc.proxy.RpcProxy):
