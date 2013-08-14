@@ -2311,13 +2311,14 @@ class LibvirtDriver(driver.ComputeDriver):
                                       size=size,
                                       ephemeral_size=ephemeral_gb)
 
-        for eph in driver.block_device_info_get_ephemerals(block_device_info):
+        for idx, eph in enumerate(driver.block_device_info_get_ephemerals(
+                block_device_info)):
             fn = functools.partial(self._create_ephemeral,
-                                   fs_label='ephemeral%d' % eph['num'],
+                                   fs_label='ephemeral%d' % idx,
                                    os_type=instance["os_type"])
             size = eph['size'] * 1024 * 1024 * 1024
             fname = "ephemeral_%s_%s" % (eph['size'], os_type_with_default)
-            image(blockinfo.get_eph_disk(eph)).cache(
+            image(blockinfo.get_eph_disk(idx)).cache(
                 fetch_func=fn,
                 filename=fname,
                 size=size,
@@ -2565,13 +2566,14 @@ class LibvirtDriver(driver.ComputeDriver):
                     self.virtapi.instance_update(
                         nova_context.get_admin_context(), instance['uuid'],
                         {'default_ephemeral_device':
-                             '/dev/' + disklocal.target_dev})
+                             block_device.prepend_dev(disklocal.target_dev)})
 
-                for eph in driver.block_device_info_get_ephemerals(
-                        block_device_info):
+                for idx, eph in enumerate(
+                    driver.block_device_info_get_ephemerals(
+                        block_device_info)):
                     diskeph = self.get_guest_disk_config(
                         instance,
-                        blockinfo.get_eph_disk(eph),
+                        blockinfo.get_eph_disk(idx),
                         disk_mapping, inst_type)
                     devices.append(diskeph)
 
@@ -2583,11 +2585,13 @@ class LibvirtDriver(driver.ComputeDriver):
                     devices.append(diskswap)
                     self.virtapi.instance_update(
                         nova_context.get_admin_context(), instance['uuid'],
-                        {'default_swap_device': '/dev/' + diskswap.target_dev})
+                        {'default_swap_device': block_device.prepend_dev(
+                            diskswap.target_dev)})
 
                 for vol in block_device_mapping:
                     connection_info = vol['connection_info']
-                    info = disk_mapping[vol['mount_device']]
+                    vol_dev = block_device.prepend_dev(vol['mount_device'])
+                    info = disk_mapping[vol_dev]
                     cfg = self.volume_driver_method('connect_volume',
                                                     connection_info,
                                                     info)
@@ -2652,8 +2656,9 @@ class LibvirtDriver(driver.ComputeDriver):
 
         guest.cpu = self.get_guest_cpu_config()
 
-        if 'root' in disk_mapping and disk_mapping['root']['dev'] is not None:
-            root_device_name = "/dev/" + disk_mapping['root']['dev']
+        if 'root' in disk_mapping:
+            root_device_name = block_device.prepend_dev(
+                disk_mapping['root']['dev'])
         else:
             root_device_name = None
 
@@ -2995,12 +3000,7 @@ class LibvirtDriver(driver.ComputeDriver):
         for vol in block_device_mapping:
             connection_info = vol['connection_info']
             disk_dev = vol['mount_device'].rpartition("/")[2]
-            disk_info = {
-                'dev': disk_dev,
-                'bus': blockinfo.get_disk_bus_for_disk_dev(CONF.libvirt_type,
-                                                           disk_dev),
-                'type': 'disk',
-                }
+            disk_info = blockinfo.get_info_from_bdm(CONF.libvirt_type, vol)
             self.volume_driver_method('connect_volume',
                                       connection_info,
                                       disk_info)
@@ -3928,12 +3928,7 @@ class LibvirtDriver(driver.ComputeDriver):
         for vol in block_device_mapping:
             connection_info = vol['connection_info']
             disk_dev = vol['mount_device'].rpartition("/")[2]
-            disk_info = {
-                'dev': disk_dev,
-                'bus': blockinfo.get_disk_bus_for_disk_dev(CONF.libvirt_type,
-                                                           disk_dev),
-                'type': 'disk',
-                }
+            disk_info = blockinfo.get_info_from_bdm(CONF.libvirt_type, vol)
             self.volume_driver_method('connect_volume',
                                       connection_info,
                                       disk_info)
@@ -4521,6 +4516,39 @@ class LibvirtDriver(driver.ComputeDriver):
 
         LOG.info(_('Deletion of %s complete'), target, instance=instance)
         return True
+
+    @property
+    def need_legacy_block_device_info(self):
+        return False
+
+    def default_root_device_name(self, instance, image_meta, root_bdm):
+
+        disk_bus = blockinfo.get_disk_bus_for_device_type(CONF.libvirt_type,
+                                                          image_meta,
+                                                          "disk")
+        cdrom_bus = blockinfo.get_disk_bus_for_device_type(CONF.libvirt_type,
+                                                           image_meta,
+                                                           "cdrom")
+        root_info = blockinfo.get_root_info(CONF.libvirt_type,
+                                            image_meta, root_bdm,
+                                            disk_bus, cdrom_bus)
+        return block_device.prepend_dev(root_info['dev'])
+
+    def default_device_names_for_instance(self, instance, root_device_name,
+                                          *block_device_lists):
+        ephemerals, swap, block_device_mapping = block_device_lists[:3]
+
+        def _update_func(bdm):
+            bdm_id = bdm.get('id')
+            self.virtapi.block_device_mapping_update(
+                nova_context.get_admin_context(),
+                bdm_id, bdm)
+
+        blockinfo.default_device_names(CONF.libvirt_type,
+                                       instance, root_device_name,
+                                       _update_func,
+                                       ephemerals, swap,
+                                       block_device_mapping)
 
 
 class HostState(object):

@@ -135,54 +135,21 @@ def default_device_names_for_instance(instance, root_device_name,
                                       update_function, *block_device_lists):
     """Generate missing device names for an instance."""
 
-    def _device_names(iterables):
-        return [bdm['device_name']
-                for bdm in itertools.chain(*iterables) if bdm['device_name']]
-
-    dev_list = _device_names(block_device_lists)
+    dev_list = [bdm['device_name']
+                for bdm in itertools.chain(*block_device_lists)
+                if bdm['device_name']]
     if root_device_name not in dev_list:
         dev_list.append(root_device_name)
-    inst_type = flavors.extract_flavor(instance)
 
-    is_libvirt = driver.compute_driver_matches('libvirt.LibvirtDriver')
-    libvirt_default_ephemerals = []
-
-    bdm_named_lists = zip(('ephemerals', 'swap', 'block_device_mapping'),
-        block_device_lists)
-
-    for name, bdm_list in bdm_named_lists:
-        # Libvirt will create a default ephemeral if instance allows
-        # and was not overridden.
-        if (is_libvirt and name == 'ephemerals' and not bdm_list and
-                instance['ephemeral_gb'] > 0):
-            default_eph = get_next_device_name(instance,
-                                               [root_device_name],
-                                               root_device_name)
-            if default_eph not in dev_list:
-                dev_list.append(default_eph)
-                libvirt_default_ephemerals.append(default_eph)
-
-        # Libvirt will create a default swap if it's in instance type
-        # and it was not supplied or overridden
-        if (is_libvirt and name == 'swap' and not bdm_list and
-                inst_type['swap'] > 0):
-
-            ephemerals = (_device_names(bdm_named_lists[0][1]) or
-                          libvirt_default_ephemerals)
-            default_swap = get_next_device_name(instance,
-                    [root_device_name] + ephemerals, root_device_name)
-            if default_swap not in dev_list:
-                dev_list.append(default_swap)
-
-        for bdm in bdm_list:
-            dev = bdm.get('device_name')
-            if not dev:
-                dev = get_next_device_name(instance, dev_list,
-                                           root_device_name)
-                bdm['device_name'] = dev
-                if update_function:
-                    update_function(bdm)
-                dev_list.append(dev)
+    for bdm in itertools.chain(*block_device_lists):
+        dev = bdm.get('device_name')
+        if not dev:
+            dev = get_next_device_name(instance, dev_list,
+                                       root_device_name)
+            bdm['device_name'] = dev
+            if update_function:
+                update_function(bdm)
+            dev_list.append(dev)
 
 
 def get_next_device_name(instance, device_name_list,
@@ -216,11 +183,6 @@ def get_next_device_name(instance, device_name_list,
     # NOTE(vish): remove this when xenapi is setting default_root_device
     if driver.compute_driver_matches('xenapi.XenAPIDriver'):
         prefix = '/dev/xvd'
-
-    # NOTE(xqueralt): This can be removed when we have libvirt
-    # defaulting it's own device names.
-    if driver.compute_driver_matches('libvirt.LibvirtDriver'):
-        prefix = '/dev/vd'
 
     if req_prefix != prefix:
         LOG.debug(_("Using %(prefix)s instead of %(req_prefix)s"),

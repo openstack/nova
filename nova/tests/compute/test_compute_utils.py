@@ -355,40 +355,6 @@ class DefaultDeviceNamesForInstanceTestCase(test.TestCase):
         self.assertEquals(self.block_device_mapping[1]['device_name'],
                           '/dev/vdd')
 
-    def test_libvirt_default_eph(self):
-        self.block_device_mapping[1]['device_name'] = None
-        self._test_default_device_names(None, [], [],
-                                        self.block_device_mapping)
-        self.assertEquals(self.block_device_mapping[1]['device_name'],
-                          '/dev/vdb')
-
-        # Test that default eph will be taken into account on libvirt
-        self.is_libvirt = True
-        self.instance_type['swap'] = 0
-        self.block_device_mapping[1]['device_name'] = None
-        self._test_default_device_names(None, [], [],
-                                        self.block_device_mapping)
-        self.assertEquals(self.block_device_mapping[1]['device_name'],
-                          '/dev/vdc')
-
-    def test_libvirt_default_swap(self):
-        # Test that default swap will be taken into account on libvirt
-        self.is_libvirt = True
-        self.instance['ephemeral_gb'] = 0
-        self.block_device_mapping[1]['device_name'] = None
-        self._test_default_device_names(None, [], [],
-                                        self.block_device_mapping)
-        self.assertEquals(self.block_device_mapping[1]['device_name'],
-                          '/dev/vdc')
-
-    def test_libvirt_default_swap_ephemeral(self):
-        self.is_libvirt = True
-        self.block_device_mapping[1]['device_name'] = None
-        self._test_default_device_names(None, [], [],
-                                        self.block_device_mapping)
-        self.assertEquals(self.block_device_mapping[1]['device_name'],
-                          '/dev/vdd')
-
     def test_update_fn_gets_called(self):
         def _update(bdm):
             self.update_called = True
