@@ -758,11 +758,8 @@ class VMOps(object):
            coalesce together, so, we must wait for this coalescing to occur to
            get a stable representation of the data on disk.
 
-        3. Push-to-data-store: Once coalesced, we call a plugin on the
-           XenServer that will bundle the VHDs together and then push the
-           bundle. Depending on the configured value of
-           'xenapi_image_upload_handler', image data may be pushed to
-           Glance or the specified data store.
+        3. Push-to-data-store: Once coalesced, we call
+           'xenapi_image_upload_handler' to upload the images.
 
         """
         vm_ref = self._get_vm_opaque_ref(instance)
