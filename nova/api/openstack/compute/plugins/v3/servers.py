@@ -629,6 +629,8 @@ class ServersController(wsgi.Controller):
 
     def _check_string_length(self, value, name, max_length=None):
         try:
+            if isinstance(value, basestring):
+                value = value.strip()
             utils.check_string_length(value, name, min_length=1,
                                       max_length=max_length)
         except exception.InvalidInput as e:
@@ -1226,6 +1228,9 @@ class ServersController(wsgi.Controller):
             'access_ip_v6': 'access_ip_v6',
             'metadata': 'metadata',
         }
+
+        if 'name' in rebuild_dict:
+            self._validate_server_name(rebuild_dict['name'])
 
         if 'access_ip_v4' in rebuild_dict:
             self._validate_access_ipv4(rebuild_dict['access_ip_v4'])
