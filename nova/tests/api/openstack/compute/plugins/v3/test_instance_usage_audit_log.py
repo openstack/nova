@@ -23,15 +23,17 @@ from nova import db
 from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.api.openstack import fakes
+from nova.tests.objects import test_service
 from nova import utils
 import urllib
 
 
-TEST_COMPUTE_SERVICES = [dict(host='foo', topic='compute'),
-                         dict(host='bar', topic='compute'),
-                         dict(host='baz', topic='compute'),
-                         dict(host='plonk', topic='compute'),
-                         dict(host='wibble', topic='bogus'),
+service_base = test_service.fake_service
+TEST_COMPUTE_SERVICES = [dict(service_base, host='foo', topic='compute'),
+                         dict(service_base, host='bar', topic='compute'),
+                         dict(service_base, host='baz', topic='compute'),
+                         dict(service_base, host='plonk', topic='compute'),
+                         dict(service_base, host='wibble', topic='bogus'),
                          ]
 
 

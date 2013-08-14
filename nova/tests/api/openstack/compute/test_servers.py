@@ -2556,7 +2556,7 @@ class ServersControllerCreateTest(test.TestCase):
             self.validation_fail_instance_destroy_called = True
 
         self.stubs.Set(compute_api.API, '_validate_bdm', _validate_bdm)
-        self.stubs.Set(compute_api.db, 'instance_destroy', _instance_destroy)
+        self.stubs.Set(db, 'instance_destroy', _instance_destroy)
 
         for _ in xrange(len(bdm_exceptions)):
             params = {'block_device_mapping_v2': [bdm.copy()]}

@@ -61,6 +61,10 @@ class DbDriver(api.ServiceGroupDriver):
             # conductor, then the timestamp will be a string and needs to be
             # converted back to a datetime.
             last_heartbeat = timeutils.parse_strtime(last_heartbeat)
+        else:
+            # Objects have proper UTC timezones, but the timeutils comparison
+            # below does not (and will fail)
+            last_heartbeat = last_heartbeat.replace(tzinfo=None)
         # Timestamps in DB are UTC.
         elapsed = utils.total_seconds(timeutils.utcnow() - last_heartbeat)
         LOG.debug('DB_Driver.is_up last_heartbeat = %(lhb)s elapsed = %(el)s',

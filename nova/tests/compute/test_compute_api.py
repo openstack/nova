@@ -31,11 +31,13 @@ from nova.objects import base as obj_base
 from nova.objects import instance as instance_obj
 from nova.objects import instance_info_cache
 from nova.objects import migration as migration_obj
+from nova.objects import service as service_obj
 from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
 from nova import quota
 from nova import test
 from nova.tests.objects import test_migration
+from nova.tests.objects import test_service
 
 
 FAKE_IMAGE_REF = 'fake-image-ref'
@@ -405,9 +407,9 @@ class _ComputeAPIUnitTestMixIn(object):
 
         self.context.elevated().MultipleTimes().AndReturn(self.context)
         db.service_get_by_compute_host(self.context, inst.host).AndReturn(
-            'fake-service')
+            test_service.fake_service)
         self.compute_api.servicegroup_api.service_is_up(
-            'fake-service').AndReturn(inst.host != 'down-host')
+            mox.IsA(service_obj.Service)).AndReturn(inst.host != 'down-host')
 
         if self.is_cells:
             rpcapi = self.compute_api.cells_rpcapi

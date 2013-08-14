@@ -26,42 +26,47 @@ from nova.openstack.common import timeutils
 from nova.servicegroup.drivers import db as db_driver
 from nova import test
 from nova.tests.api.openstack import fakes
+from nova.tests.objects import test_service
 
 
 fake_services_list = [
-        {'binary': 'nova-scheduler',
-         'host': 'host1',
-         'id': 1,
-         'disabled': True,
-         'topic': 'scheduler',
-         'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 2),
-         'created_at': datetime.datetime(2012, 9, 18, 2, 46, 27),
-         'disabled_reason': 'test1'},
-        {'binary': 'nova-compute',
-         'host': 'host1',
-         'id': 2,
-         'disabled': True,
-         'topic': 'compute',
-         'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 5),
-         'created_at': datetime.datetime(2012, 9, 18, 2, 46, 27),
-         'disabled_reason': 'test2'},
-        {'binary': 'nova-scheduler',
-         'host': 'host2',
-         'id': 3,
-         'disabled': False,
-         'topic': 'scheduler',
-         'updated_at': datetime.datetime(2012, 9, 19, 6, 55, 34),
-         'created_at': datetime.datetime(2012, 9, 18, 2, 46, 28),
-         'disabled_reason': ''},
-        {'binary': 'nova-compute',
-         'host': 'host2',
-         'id': 4,
-         'disabled': True,
-         'topic': 'compute',
-         'updated_at': datetime.datetime(2012, 9, 18, 8, 3, 38),
-         'created_at': datetime.datetime(2012, 9, 18, 2, 46, 28),
-         'disabled_reason': 'test4'},
-        ]
+    dict(test_service.fake_service,
+         binary='nova-scheduler',
+         host='host1',
+         id=1,
+         disabled=True,
+         topic='scheduler',
+         updated_at=datetime.datetime(2012, 10, 29, 13, 42, 2),
+         created_at=datetime.datetime(2012, 9, 18, 2, 46, 27),
+         disabled_reason='test1'),
+    dict(test_service.fake_service,
+         binary='nova-compute',
+         host='host1',
+         id=2,
+         disabled=True,
+         topic='compute',
+         updated_at=datetime.datetime(2012, 10, 29, 13, 42, 5),
+         created_at=datetime.datetime(2012, 9, 18, 2, 46, 27),
+         disabled_reason='test2'),
+    dict(test_service.fake_service,
+         binary='nova-scheduler',
+         host='host2',
+         id=3,
+         disabled=False,
+         topic='scheduler',
+         updated_at=datetime.datetime(2012, 9, 19, 6, 55, 34),
+         created_at=datetime.datetime(2012, 9, 18, 2, 46, 28),
+         disabled_reason=''),
+    dict(test_service.fake_service,
+         binary='nova-compute',
+         host='host2',
+         id=4,
+         disabled=True,
+         topic='compute',
+         updated_at=datetime.datetime(2012, 9, 18, 8, 3, 38),
+         created_at=datetime.datetime(2012, 9, 18, 2, 46, 28),
+         disabled_reason='test4'),
+    ]
 
 
 class FakeRequest(object):
@@ -112,6 +117,7 @@ def fake_service_update(context, service_id, values):
     service = fake_service_get_by_id(service_id)
     if service is None:
         raise exception.ServiceNotFound(service_id=service_id)
+    return service
 
 
 def fake_utcnow():
@@ -322,6 +328,7 @@ class ServicesTest(test.TestCase):
     def test_services_enable(self):
         def _service_update(context, service_id, values):
             self.assertEqual(values['disabled_reason'], None)
+            return dict(test_service.fake_service, **values)
 
         self.stubs.Set(db, "service_update", _service_update)
 

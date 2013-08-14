@@ -41,7 +41,6 @@ from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import crypto
-from nova import db
 from nova.db import base
 from nova import exception
 from nova import hooks
@@ -58,6 +57,7 @@ from nova.objects import instance_info_cache
 from nova.objects import keypair as keypair_obj
 from nova.objects import migration as migration_obj
 from nova.objects import security_group
+from nova.objects import service as service_obj
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
@@ -1191,9 +1191,10 @@ class API(base.Base):
     def trigger_provider_fw_rules_refresh(self, context):
         """Called when a rule is added/removed from a provider firewall."""
 
-        for service in self.db.service_get_all_by_topic(context,
-                                                        CONF.compute_topic):
-            host_name = service['host']
+        services = service_obj.ServiceList.get_all_by_topic(context,
+                                                            CONF.compute_topic)
+        for service in services:
+            host_name = service.host
             self.compute_rpcapi.refresh_provider_fw_rules(context, host_name)
 
     @wrap_check_policy
@@ -1303,8 +1304,8 @@ class API(base.Base):
 
             is_up = False
             try:
-                service = self.db.service_get_by_compute_host(
-                        context.elevated(), instance['host'])
+                service = service_obj.Service.get_by_compute_host(
+                    context.elevated(), instance.host)
                 if self.servicegroup_api.service_is_up(service):
                     is_up = True
 
@@ -2861,7 +2862,7 @@ class API(base.Base):
         """
         LOG.debug(_('vm evacuation scheduled'))
         inst_host = instance['host']
-        service = self.db.service_get_by_compute_host(context, inst_host)
+        service = service_obj.Service.get_by_compute_host(context, inst_host)
         if self.servicegroup_api.service_is_up(service):
             msg = (_('Instance compute service state on %s '
                      'expected to be down, but it was up.') % inst_host)
@@ -2900,7 +2901,7 @@ class HostAPI(base.Base):
 
     def _assert_host_exists(self, context, host_name, must_be_up=False):
         """Raise HostNotFound if compute host doesn't exist."""
-        service = self.db.service_get_by_compute_host(context, host_name)
+        service = service_obj.Service.get_by_compute_host(context, host_name)
         if not service:
             raise exception.HostNotFound(host=host_name)
         if must_be_up and not self.servicegroup_api.service_is_up(service):
@@ -2943,10 +2944,10 @@ class HostAPI(base.Base):
         if filters is None:
             filters = {}
         disabled = filters.pop('disabled', None)
-        services = self.db.service_get_all(context, disabled=disabled)
-        if set_zones or 'availability_zone' in filters:
-            services = availability_zones.set_availability_zones(context,
-                                                                 services)
+        if 'availability_zone' in filters:
+            set_zones = True
+        services = service_obj.ServiceList.get_all(context, disabled,
+                                                   set_zones=set_zones)
         ret_services = []
         for service in services:
             for key, val in filters.iteritems():
@@ -2959,7 +2960,7 @@ class HostAPI(base.Base):
 
     def service_get_by_compute_host(self, context, host_name):
         """Get service entry for the given compute hostname."""
-        return self.db.service_get_by_compute_host(context, host_name)
+        return service_obj.Service.get_by_compute_host(context, host_name)
 
     def service_update(self, context, host_name, binary, params_to_update):
         """Enable / Disable a service.
@@ -2967,8 +2968,11 @@ class HostAPI(base.Base):
         For compute services, this stops new builds and migrations going to
         the host.
         """
-        service = db.service_get_by_args(context, host_name, binary)
-        return db.service_update(context, service['id'], params_to_update)
+        service = service_obj.Service.get_by_args(context, host_name,
+                                                  binary)
+        service.update(params_to_update)
+        service.save()
+        return service
 
     def instance_get_all_by_host(self, context, host_name):
         """Return all instances on the given host."""
@@ -3143,7 +3147,7 @@ class AggregateAPI(base.Base):
                                                     "addhost.start",
                                                     aggregate_payload)
         # validates the host; ComputeHostNotFound is raised if invalid
-        self.db.service_get_by_compute_host(context, host_name)
+        service_obj.Service.get_by_compute_host(context, host_name)
         host_az = availability_zones.get_host_availability_zone(context,
                                                                 host_name)
         if host_az and host_az != CONF.default_availability_zone:
@@ -3172,7 +3176,7 @@ class AggregateAPI(base.Base):
                                                     "removehost.start",
                                                     aggregate_payload)
         # validates the host; ComputeHostNotFound is raised if invalid
-        self.db.service_get_by_compute_host(context, host_name)
+        service_obj.Service.get_by_compute_host(context, host_name)
         self.db.aggregate_host_delete(context, aggregate_id, host_name)
         aggregate = self.db.aggregate_get(context, aggregate_id)
         self.compute_rpcapi.remove_aggregate_host(context,
