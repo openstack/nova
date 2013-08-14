@@ -966,7 +966,7 @@ class ComputeDriver(object):
         """
 
         if not self._compute_event_callback:
-            LOG.debug("Discarding event %s" % str(event))
+            LOG.debug(_("Discarding event %s") % event)
             return
 
         if not isinstance(event, virtevent.Event):
@@ -974,7 +974,7 @@ class ComputeDriver(object):
                 _("Event must be an instance of nova.virt.event.Event"))
 
         try:
-            LOG.debug("Emitting event %s" % str(event))
+            LOG.debug(_("Emitting event %s") % event)
             self._compute_event_callback(event)
         except Exception as ex:
             LOG.error(_("Exception dispatching event %(event)s: %(ex)s"),
