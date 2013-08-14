@@ -762,7 +762,6 @@ class ComputeManager(manager.SchedulerDependentManager):
                 self.driver.filter_defer_apply_off()
 
         self._report_driver_status(context)
-        self.publish_service_capabilities(context)
 
     def pre_start_hook(self):
         """After the service is initialized, but before we fully bring

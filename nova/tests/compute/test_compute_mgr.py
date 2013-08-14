@@ -172,8 +172,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                         mox.IsA(instance_obj.Instance))
             if defer_iptables_apply:
                 self.compute.driver.filter_defer_apply_off()
-            self.compute._report_driver_status(fake_context)
-            self.compute.publish_service_capabilities(fake_context)
 
         self.mox.StubOutWithMock(self.compute.driver, 'init_host')
         self.mox.StubOutWithMock(self.compute.driver,
@@ -186,10 +184,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 '_destroy_evacuated_instances')
         self.mox.StubOutWithMock(self.compute,
                 '_init_instance')
-        self.mox.StubOutWithMock(self.compute,
-                '_report_driver_status')
-        self.mox.StubOutWithMock(self.compute,
-                'publish_service_capabilities')
 
         # Test with defer_iptables_apply
         self.flags(defer_iptables_apply=True)
@@ -229,8 +223,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(self.compute, 'init_virt_events')
         self.mox.StubOutWithMock(self.compute, '_get_instances_on_driver')
         self.mox.StubOutWithMock(self.compute, '_init_instance')
-        self.mox.StubOutWithMock(self.compute, '_report_driver_status')
-        self.mox.StubOutWithMock(self.compute, 'publish_service_capabilities')
         self.mox.StubOutWithMock(self.compute, '_get_instance_nw_info')
 
         self.compute.driver.init_host(host=our_host)
@@ -250,9 +242,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         # clean up any dangling files
         self.compute.driver.destroy(deleted_instance,
             mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg())
-
-        self.compute._report_driver_status(fake_context)
-        self.compute.publish_service_capabilities(fake_context)
 
         self.mox.ReplayAll()
         self.compute.init_host()
