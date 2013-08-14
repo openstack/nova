@@ -15,10 +15,19 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo.config import cfg
+
+from nova import exception
 from nova.network import model as network_model
 from nova import test
+from nova.tests import test_vmwareapi_vm_util
+from nova.virt.vmwareapi import fake
 from nova.virt.vmwareapi import network_util
 from nova.virt.vmwareapi import vif
+from nova.virt.vmwareapi import vim_util
+from nova.virt.vmwareapi import vm_util
+
+CONF = cfg.CONF
 
 
 class VMwareVifTestCase(test.TestCase):
@@ -41,7 +50,7 @@ class VMwareVifTestCase(test.TestCase):
                                   ovs_interfaceid=None,
                                   rxtx_cap=3)
         ])[0]
-        self.session = "fake"
+        self.session = test_vmwareapi_vm_util.fake_session()
         self.cluster = None
 
     def tearDown(self):
@@ -121,3 +130,110 @@ class VMwareVifTestCase(test.TestCase):
                                  rxtx_cap=3)
         ])[0]
         vif.get_network_ref(self.session, self.cluster, self.vif, False)
+
+    def test_get_network_ref_bridge(self):
+        opaque_networks = [{'opaqueNetworkId': 'bridge_id',
+                            'opaqueNetworkName': 'name',
+                            'opaqueNetworkType': 'OpaqueNetwork'}]
+        network_ref = vif._get_network_ref_from_opaque(opaque_networks,
+                'integration_bridge', 'bridge_id')
+        self.assertEqual('bridge_id', network_ref['network-id'])
+
+    def test_get_network_ref_bridges(self):
+        opaque_networks = [{'opaqueNetworkId': 'bridge_id1',
+                            'opaqueNetworkName': 'name1',
+                            'opaqueNetworkType': 'OpaqueNetwork'},
+                           {'opaqueNetworkId': 'bridge_id2',
+                            'opaqueNetworkName': 'name2',
+                            'opaqueNetworkType': 'OpaqueNetwork'}]
+        network_ref = vif._get_network_ref_from_opaque(opaque_networks,
+                'integration_bridge', 'bridge_id2')
+        self.assertEqual('bridge_id2', network_ref['network-id'])
+
+    def test_get_network_ref_integration(self):
+        opaque_networks = [{'opaqueNetworkId': 'integration_bridge',
+                            'opaqueNetworkName': 'name',
+                            'opaqueNetworkType': 'OpaqueNetwork'}]
+        network_ref = vif._get_network_ref_from_opaque(opaque_networks,
+                'integration_bridge', 'bridge_id')
+        self.assertEqual('integration_bridge', network_ref['network-id'])
+
+    def test_get_network_ref_bridge_none(self):
+        opaque_networks = [{'opaqueNetworkId': 'bridge_id1',
+                            'opaqueNetworkName': 'name1',
+                            'opaqueNetworkType': 'OpaqueNetwork'},
+                           {'opaqueNetworkId': 'bridge_id2',
+                            'opaqueNetworkName': 'name2',
+                            'opaqueNetworkType': 'OpaqueNetwork'}]
+        network_ref = vif._get_network_ref_from_opaque(opaque_networks,
+                'integration_bridge', 'bridge_id')
+        self.assertIsNone(network_ref)
+
+    def test_get_network_ref_integration_multiple(self):
+        opaque_networks = [{'opaqueNetworkId': 'bridge_id1',
+                            'opaqueNetworkName': 'name1',
+                            'opaqueNetworkType': 'OpaqueNetwork'},
+                           {'opaqueNetworkId': 'integration_bridge',
+                            'opaqueNetworkName': 'name2',
+                            'opaqueNetworkType': 'OpaqueNetwork'}]
+        network_ref = vif._get_network_ref_from_opaque(opaque_networks,
+                'integration_bridge', 'bridge_id')
+        self.assertIsNone(network_ref)
+
+    def test_get_quantum_network(self):
+        self.mox.StubOutWithMock(vm_util, 'get_host_ref')
+        self.mox.StubOutWithMock(self.session, '_call_method')
+        self.mox.StubOutWithMock(vif, '_get_network_ref_from_opaque')
+        vm_util.get_host_ref(self.session,
+                self.cluster).AndReturn('fake-host')
+        opaque = fake.DataObject()
+        opaque.HostOpaqueNetworkInfo = ['fake-network-info']
+        self.session._call_method(vim_util, "get_dynamic_property",
+                 'fake-host', 'HostSystem',
+                 'config.network.opaqueNetwork').AndReturn(opaque)
+        vif._get_network_ref_from_opaque(opaque.HostOpaqueNetworkInfo,
+                CONF.vmware.integration_bridge,
+                self.vif['network']['id']).AndReturn('fake-network-ref')
+        self.mox.ReplayAll()
+        network_ref = vif.get_quantum_network(self.session,
+                                              self.vif['network']['id'],
+                                              self.cluster,
+                                              self.vif)
+        self.assertEqual(network_ref, 'fake-network-ref')
+
+    def test_get_quantum_network_opaque_network_not_found(self):
+        self.mox.StubOutWithMock(vm_util, 'get_host_ref')
+        self.mox.StubOutWithMock(self.session, '_call_method')
+        self.mox.StubOutWithMock(vif, '_get_network_ref_from_opaque')
+        vm_util.get_host_ref(self.session,
+                self.cluster).AndReturn('fake-host')
+        opaque = fake.DataObject()
+        opaque.HostOpaqueNetworkInfo = ['fake-network-info']
+        self.session._call_method(vim_util, "get_dynamic_property",
+                 'fake-host', 'HostSystem',
+                 'config.network.opaqueNetwork').AndReturn(opaque)
+        vif._get_network_ref_from_opaque(opaque.HostOpaqueNetworkInfo,
+                CONF.vmware.integration_bridge,
+                self.vif['network']['id']).AndReturn(None)
+        self.mox.ReplayAll()
+        self.assertRaises(exception.NetworkNotFoundForBridge,
+                          vif.get_quantum_network, self.session,
+                          self.vif['network']['id'], self.cluster, self.vif)
+
+    def test_get_quantum_network_bridge_network_not_found(self):
+        self.mox.StubOutWithMock(vm_util, 'get_host_ref')
+        self.mox.StubOutWithMock(self.session, '_call_method')
+        self.mox.StubOutWithMock(network_util, 'get_network_with_the_name')
+        vm_util.get_host_ref(self.session,
+                self.cluster).AndReturn('fake-host')
+        opaque = fake.DataObject()
+        opaque.HostOpaqueNetworkInfo = ['fake-network-info']
+        self.session._call_method(vim_util, "get_dynamic_property",
+                 'fake-host', 'HostSystem',
+                 'config.network.opaqueNetwork').AndReturn(None)
+        network_util.get_network_with_the_name(self.session, 0,
+            self.cluster).AndReturn(None)
+        self.mox.ReplayAll()
+        self.assertRaises(exception.NetworkNotFoundForBridge,
+                          vif.get_quantum_network, self.session,
+                          self.vif['network']['id'], self.cluster, self.vif)
