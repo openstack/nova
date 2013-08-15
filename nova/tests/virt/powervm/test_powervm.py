@@ -811,6 +811,57 @@ class PowerVMDriverTestCase(test.TestCase):
                     context.get_admin_context(), op=fake_operation,
                     aggregate={'name': 'foo'}, host='fake')
 
+    def test_plug_vifs(self):
+        # Check to make sure the method raises NotImplementedError.
+        self.assertRaises(NotImplementedError,
+                          self.powervm_connection.plug_vifs,
+                          instance=None, network_info=None)
+
+    def test_reboot(self):
+        # Check to make sure the method raises NotImplementedError.
+        self.assertRaises(NotImplementedError, self.powervm_connection.reboot,
+                          context=None, instance=None, network_info=None,
+                          reboot_type='SOFT')
+
+    def test_manage_image_cache(self):
+        # Check to make sure the method passes (does nothing) since
+        # it's not implemented in the powervm driver and it passes
+        # in the driver base class.
+        self.powervm_connection.manage_image_cache(context.get_admin_context(),
+                                                   True)
+
+    def test_init_host(self):
+        # Check to make sure the method passes (does nothing) since
+        # it simply passes in the powervm driver but it raises a
+        # NotImplementedError in the base driver class.
+        self.powervm_connection.init_host(host='fake')
+
+    def test_pause(self):
+        # Check to make sure the method raises NotImplementedError.
+        self.assertRaises(NotImplementedError, self.powervm_connection.pause,
+                          instance=None)
+
+    def test_unpause(self):
+        # Check to make sure the method raises NotImplementedError.
+        self.assertRaises(NotImplementedError, self.powervm_connection.unpause,
+                          instance=None)
+
+    def test_suspend(self):
+        # Check to make sure the method raises NotImplementedError.
+        self.assertRaises(NotImplementedError, self.powervm_connection.suspend,
+                          instance=None)
+
+    def test_resume(self):
+        # Check to make sure the method raises NotImplementedError.
+        self.assertRaises(NotImplementedError, self.powervm_connection.resume,
+                          instance=None, network_info=None)
+
+    def test_host_power_action(self):
+        # Check to make sure the method raises NotImplementedError.
+        self.assertRaises(NotImplementedError,
+                          self.powervm_connection.host_power_action,
+                          host='fake', action='die!')
+
 
 class PowerVMDriverLparTestCase(test.TestCase):
     """Unit tests for PowerVM connection calls."""

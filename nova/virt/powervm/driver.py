@@ -62,10 +62,6 @@ class PowerVMDriver(driver.ComputeDriver):
         super(PowerVMDriver, self).__init__(virtapi)
         self._powervm = operator.PowerVMOperator()
 
-    @property
-    def host_state(self):
-        pass
-
     def init_host(self, host):
         """Initialize anything that is necessary for the driver to function,
         including catching up with currently running VM's on the given host.
@@ -94,7 +90,9 @@ class PowerVMDriver(driver.ComputeDriver):
         return self._powervm.get_host_uptime(host)
 
     def plug_vifs(self, instance, network_info):
-        pass
+        """Plug VIFs into networks."""
+        raise NotImplementedError(_("Network injection is not supported by the"
+                                    "PowerVM driver."))
 
     def macs_for_instance(self, instance):
         return self._powervm.macs_for_instance(instance)
@@ -121,7 +119,8 @@ class PowerVMDriver(driver.ComputeDriver):
         :param bad_volumes_callback: Function to handle any bad volumes
             encountered
         """
-        pass
+        raise NotImplementedError(_("Reboot is not supported by the"
+                                    "PowerVM driver."))
 
     def get_host_ip_addr(self):
         """Retrieves the IP address of the hypervisor host."""
@@ -186,11 +185,13 @@ class PowerVMDriver(driver.ComputeDriver):
 
     def suspend(self, instance):
         """suspend the specified instance."""
-        pass
+        raise NotImplementedError(_("Suspend is not supported by the"
+                                    "PowerVM driver."))
 
     def resume(self, instance, network_info, block_device_info=None):
         """resume the specified instance."""
-        pass
+        raise NotImplementedError(_("Resume is not supported by the"
+                                    "PowerVM driver."))
 
     def power_off(self, instance):
         """Power off the specified instance."""
@@ -207,24 +208,14 @@ class PowerVMDriver(driver.ComputeDriver):
 
     def host_power_action(self, host, action):
         """Reboots, shuts down or powers up the host."""
-        pass
+        raise NotImplementedError(_("Host power action is not supported by the"
+                                    "PowerVM driver."))
 
     def legacy_nwinfo(self):
         """
         Indicate if the driver requires the legacy network_info format.
         """
         return False
-
-    def manage_image_cache(self, context, all_instances):
-        """
-        Manage the driver's local image cache.
-
-        Some drivers chose to cache images for instances on disk. This method
-        is an opportunity to do management of that cache which isn't directly
-        related to other calls into the driver. The prime example is to clean
-        the cache and remove images which are no longer of interest.
-        """
-        pass
 
     def migrate_disk_and_power_off(self, context, instance, dest,
                                    instance_type, network_info,
