@@ -29,6 +29,7 @@ from nova import exception
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
+from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova import paths
 from nova.virt.baremetal import baremetal_states
@@ -415,6 +416,7 @@ class BareMetalDriver(driver.ComputeDriver):
                'hypervisor_version': self.get_hypervisor_version(),
                'hypervisor_hostname': str(node['uuid']),
                'cpu_info': 'baremetal cpu',
+               'supported_instances': jsonutils.dumps(self.supported_instances)
                }
         return dic
 

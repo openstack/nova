@@ -24,6 +24,7 @@ from oslo.config import cfg
 from nova.compute import power_state
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
+from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
 from nova.virt.powervm import blockdev
@@ -132,7 +133,9 @@ class PowerVMOperator(object):
                'hypervisor_version': data['hypervisor_version'],
                'hypervisor_hostname': self._operator.get_hostname(),
                'cpu_info': ','.join(data['cpu_info']),
-               'disk_available_least': data['disk_total']}
+               'disk_available_least': data['disk_total'],
+               'supported_instances': jsonutils.dumps(
+                   data['supported_instances'])}
         return dic
 
     def get_host_stats(self, refresh=False):

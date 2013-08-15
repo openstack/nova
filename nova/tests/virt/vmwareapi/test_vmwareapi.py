@@ -670,6 +670,8 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
         self.assertEquals(stats['hypervisor_type'], 'VMware ESXi')
         self.assertEquals(stats['hypervisor_version'], '5.0.0')
         self.assertEquals(stats['hypervisor_hostname'], 'test_url')
+        self.assertEquals(stats['supported_instances'],
+                '[["i686", "vmware", "hvm"], ["x86_64", "vmware", "hvm"]]')
 
     def test_invalid_datastore_regex(self):
         # Tests if we raise an exception for Invalid Regular Expression in

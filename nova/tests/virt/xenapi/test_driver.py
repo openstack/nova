@@ -29,6 +29,7 @@ class XenAPIDriverTestCase(stubs.XenAPITestBase):
                 'disk_total': 4 * 1024 * 1024 * 1024,
                 'disk_used': 5 * 1024 * 1024 * 1024,
                 'host_hostname': 'somename',
+                'supported_instances': 'x86_64',
                 'host_cpu_info': {'cpu_count': 50}}
 
     def test_available_resource(self):

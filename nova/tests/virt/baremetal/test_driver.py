@@ -270,6 +270,8 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
         self.assertEqual(resources['memory_mb'],
                          node['node_info']['memory_mb'])
         self.assertEqual(resources['memory_mb_used'], 0)
+        self.assertEqual(resources['supported_instances'],
+                '[["test", "baremetal", "baremetal"]]')
 
         self.driver.spawn(**node['spawn_params'])
         resources = self.driver.get_available_resource(node['node']['uuid'])
