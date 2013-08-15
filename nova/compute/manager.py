@@ -1549,14 +1549,20 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             try:
                 self._build_and_run_instance(context, instance, image,
-                        decoded_files, admin_password, node, limits)
-            except exception.BuildAbortException:
+                        decoded_files, admin_password, block_device_mapping,
+                        node, limits)
+            except exception.BuildAbortException as e:
+                LOG.exception(e.format_message(), instance=instance)
                 self._set_instance_error_state(context, instance['uuid'])
-            except exception.RescheduledException:
+            except exception.RescheduledException as e:
+                LOG.debug(e.format_message(), instance=instance)
                 self.compute_task_api.build_instances(context, [instance],
                         image, filter_properties, admin_password,
                         injected_files, requested_networks, security_groups,
                         block_device_mapping)
+            except exception.InstanceNotFound:
+                msg = _('Instance disappeared during build.')
+                LOG.debug(msg, instance=instance)
             except Exception:
                 # Should not reach here.
                 self._set_instance_error_state(context, instance['uuid'])
@@ -1569,31 +1575,76 @@ class ComputeManager(manager.SchedulerDependentManager):
                 node, limits)
 
     def _build_and_run_instance(self, context, instance, image, injected_files,
-            admin_password, node, limits):
+            admin_password, block_device_mapping, node, limits):
 
         try:
             rt = self._get_resource_tracker(node)
             with rt.instance_claim(context, instance, limits):
-                self.driver.spawn(context, instance, image,
-                                  injected_files, admin_password)
+                with self._build_resources(context, instance, image,
+                        block_device_mapping) as resources:
+                    block_device_info = resources['block_device_info']
+                    self.driver.spawn(context, instance, image,
+                                      injected_files, admin_password,
+                                      block_device_info=block_device_info)
         except exception.InstanceNotFound:
-            msg = _('Instance disappeared during build.')
-            LOG.debug(msg, instance=instance)
-            raise exception.BuildAbortException(instance_uuid=instance['uuid'],
-                reason=msg)
+            raise
         except exception.UnexpectedTaskStateError as e:
-            msg = e.format_message()
-            LOG.debug(msg, instance=instance)
+            raise exception.BuildAbortException(instance_uuid=instance['uuid'],
+                    reason=e.format_message())
+        except exception.ComputeResourcesUnavailable as e:
+            raise exception.RescheduledException(
+                    instance_uuid=instance['uuid'], reason=e.format_message())
+        except exception.BuildAbortException:
+            raise
+        except Exception as e:
+            raise exception.RescheduledException(
+                    instance_uuid=instance['uuid'], reason=str(e))
+
+    @contextlib.contextmanager
+    def _build_resources(self, context, instance, image, block_device_mapping):
+        resources = {}
+
+        # Verify that all the BDMs have a device_name set and assign a
+        # default to the ones missing it with the help of the driver.
+        self._default_block_device_names(context, instance, image,
+                block_device_mapping)
+
+        try:
+            block_device_info = self._prep_block_device(context, instance,
+                    block_device_mapping)
+            resources['block_device_info'] = block_device_info
+        except Exception:
+            LOG.exception(_('Failure prepping block device'),
+                    instance=instance)
+            msg = _('Failure prepping block device.')
             raise exception.BuildAbortException(instance_uuid=instance['uuid'],
                     reason=msg)
-        except exception.ComputeResourcesUnavailable as e:
-            LOG.debug(e.format_message(), instance=instance)
-            raise exception.RescheduledException(
-                    instance_uuid=instance['uuid'], reason='')
+
+        try:
+            yield resources
         except Exception:
-            LOG.exception(_('Instance failed to spawn'), instance=instance)
-            raise exception.RescheduledException(
-                    instance_uuid=instance['uuid'], reason='')
+            with excutils.save_and_reraise_exception() as ctxt:
+                LOG.exception(_('Instance failed to spawn'), instance=instance)
+                try:
+                    self._cleanup_build_resources(context, instance,
+                            block_device_mapping)
+                except Exception:
+                    ctxt.reraise = False
+                    msg = _('Could not clean up failed build,'
+                            ' not rescheduling')
+                    raise exception.BuildAbortException(
+                            instance_uuid=instance['uuid'], reason=msg)
+
+    def _cleanup_build_resources(self, context, instance,
+            block_device_mapping):
+        try:
+            self._cleanup_volumes(context, instance['uuid'],
+                    block_device_mapping)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                msg = _('Failed to cleanup volumes for failed build,'
+                        ' not rescheduling')
+                LOG.exception(msg, instance=instance)
 
     @wrap_exception()
     @reverts_task_state
