@@ -687,7 +687,7 @@ class LibvirtDriver(driver.ComputeDriver):
             return False
 
     def legacy_nwinfo(self):
-        return True
+        return False
 
     # TODO(Shrews): Remove when libvirt Bugzilla bug # 836647 is fixed.
     def list_instance_ids(self):
@@ -737,13 +737,13 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def plug_vifs(self, instance, network_info):
         """Plug VIFs into networks."""
-        for (network, mapping) in network_info:
-            self.vif_driver.plug(instance, (network, mapping))
+        for vif in network_info:
+            self.vif_driver.plug(instance, vif)
 
     def unplug_vifs(self, instance, network_info):
         """Unplug VIFs from networks."""
-        for (network, mapping) in network_info:
-            self.vif_driver.unplug(instance, (network, mapping))
+        for vif in network_info:
+            self.vif_driver.unplug(instance, vif)
 
     def _destroy(self, instance):
         try:
@@ -1171,12 +1171,10 @@ class LibvirtDriver(driver.ComputeDriver):
     @exception.wrap_exception()
     def attach_interface(self, instance, image_meta, network_info):
         virt_dom = self._lookup_by_name(instance['name'])
-        for (network, mapping) in network_info:
-            self.vif_driver.plug(instance, (network, mapping))
-            self.firewall_driver.setup_basic_filtering(instance,
-                                                       [(network, mapping)])
-            cfg = self.vif_driver.get_config(instance, network, mapping,
-                                             image_meta)
+        for vif in network_info:
+            self.vif_driver.plug(instance, vif)
+            self.firewall_driver.setup_basic_filtering(instance, [vif])
+            cfg = self.vif_driver.get_config(instance, vif, image_meta)
             try:
                 flags = libvirt.VIR_DOMAIN_AFFECT_CONFIG
                 state = LIBVIRT_POWER_STATE[virt_dom.info()[0]]
@@ -1186,16 +1184,16 @@ class LibvirtDriver(driver.ComputeDriver):
             except libvirt.libvirtError:
                 LOG.error(_('attaching network adapter failed.'),
                          instance=instance)
-                self.vif_driver.unplug(instance, (network, mapping))
+                self.vif_driver.unplug(instance, vif)
                 raise exception.InterfaceAttachFailed(instance)
 
     @exception.wrap_exception()
     def detach_interface(self, instance, network_info):
         virt_dom = self._lookup_by_name(instance['name'])
-        for (network, mapping) in network_info:
-            cfg = self.vif_driver.get_config(instance, network, mapping, None)
+        for vif in network_info:
+            cfg = self.vif_driver.get_config(instance, vif, None)
             try:
-                self.vif_driver.unplug(instance, (network, mapping))
+                self.vif_driver.unplug(instance, vif)
                 flags = libvirt.VIR_DOMAIN_AFFECT_CONFIG
                 state = LIBVIRT_POWER_STATE[virt_dom.info()[0]]
                 if state == power_state.RUNNING:
@@ -2420,9 +2418,9 @@ class LibvirtDriver(driver.ComputeDriver):
                                                  inst_type):
             guest.add_device(cfg)
 
-        for (network, mapping) in network_info:
+        for vif in network_info:
             cfg = self.vif_driver.get_config(instance,
-                                             network, mapping,
+                                             vif,
                                              image_meta,
                                              inst_type)
             guest.add_device(cfg)
