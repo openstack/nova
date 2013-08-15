@@ -73,6 +73,14 @@ disk_opts = [
                       ],
                     help='mkfs commands for ephemeral device. '
                          'The format is <os_type>=<mkfs command>'),
+
+    cfg.BoolOpt('resize_fs_using_block_device',
+                default=True,
+                help='Attempt to resize the filesystem by accessing the '
+                     'image over a block device. This is done by the host '
+                     'and may not be necessary if the image contains a recent '
+                     'version of cloud-init. Possible mechanisms require '
+                     'the nbd driver (for qcow and raw), or loop (for raw).'),
     ]
 
 CONF = cfg.CONF
@@ -118,14 +126,32 @@ def get_disk_size(path):
     return images.qemu_img_info(path).virtual_size
 
 
-def extend(image, size):
+def extend(image, size, use_cow=False):
     """Increase image to size."""
     virt_size = get_disk_size(image)
     if virt_size >= size:
         return
+
+    # Have to check while the container file is still small
+    can_resize = can_resize_fs(image, size, use_cow)
     utils.execute('qemu-img', 'resize', image, size)
+
+    # if we can't access the filesystem, we can't do anything more
+    if not can_resize:
+        return
+
     # NOTE(vish): attempts to resize filesystem
-    resize2fs(image)
+    if use_cow:
+        if CONF.resize_fs_using_block_device:
+            # in case of non-raw disks we can't just resize the image, but
+            # rather the mounted device instead
+            mounter = mount.Mount.instance_for_format(image, None, None,
+                                                      'qcow2')
+            if mounter.get_dev():
+                resize2fs(mounter.device, run_as_root=True)
+                mounter.unget_dev()
+    else:
+        resize2fs(image)
 
 
 def can_resize_fs(image, size, use_cow=False):

@@ -4317,7 +4317,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 fmt = 'raw'
 
             if size:
-                disk.extend(info['path'], size)
+                use_cow = fmt == 'qcow2'
+                disk.extend(info['path'], size, use_cow=use_cow)
 
             if fmt == 'raw' and CONF.use_cow_images:
                 # back to qcow2 (no backing_file though) so that snapshot
