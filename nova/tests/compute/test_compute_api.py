@@ -563,34 +563,370 @@ class _ComputeAPIUnitTestMixIn(object):
                                                         self.context,
                                                         instance, bdms))
 
-    def test_resize(self):
+    def _test_confirm_resize(self, mig_ref_passed=False):
+        params = dict(vm_state=vm_states.RESIZED)
+        fake_inst = obj_base.obj_to_primitive(
+                self._create_instance_obj(params=params))
+        fake_mig = dict(id='fake-migration-id',
+                        source_compute='source_host')
+
+        self.mox.StubOutWithMock(self.context, 'elevated')
+        self.mox.StubOutWithMock(self.compute_api.db,
+                                 'migration_get_by_instance_and_status')
+        self.mox.StubOutWithMock(self.compute_api, '_downsize_quota_delta')
+        self.mox.StubOutWithMock(self.compute_api, '_reserve_quota_delta')
+        self.mox.StubOutWithMock(self.compute_api.db, 'migration_update')
+        self.mox.StubOutWithMock(quota.QUOTAS, 'commit')
+        self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
+        self.mox.StubOutWithMock(self.compute_api.compute_rpcapi,
+                                 'confirm_resize')
+
+        self.context.elevated().AndReturn(self.context)
+        if not mig_ref_passed:
+            self.compute_api.db.migration_get_by_instance_and_status(
+                    self.context, fake_inst['uuid'], 'finished').AndReturn(
+                            fake_mig)
+        self.compute_api._downsize_quota_delta(self.context,
+                                               fake_inst).AndReturn('deltas')
+
+        resvs = ['resvs']
+
+        self.compute_api._reserve_quota_delta(self.context,
+                                              'deltas').AndReturn(resvs)
+        self.compute_api.db.migration_update(self.context,
+                                             'fake-migration-id',
+                                             {'status': 'confirming'})
+        if self.is_cells:
+            quota.QUOTAS.commit(self.context, resvs)
+            resvs = []
+
+        self.compute_api._record_action_start(self.context, fake_inst,
+                                              'confirmResize')
+
+        self.compute_api.compute_rpcapi.confirm_resize(self.context,
+                                           instance=fake_inst,
+                                           migration=fake_mig,
+                                           host='source_host',
+                                           reservations=resvs)
+        if self.is_cells:
+            self.mox.StubOutWithMock(self.compute_api, '_cast_to_cells')
+            self.compute_api._cast_to_cells(
+                    self.context, fake_inst, 'confirm_resize')
+
+        self.mox.ReplayAll()
+
+        if mig_ref_passed:
+            self.compute_api.confirm_resize(self.context, fake_inst,
+                                            migration_ref=fake_mig)
+        else:
+            self.compute_api.confirm_resize(self.context, fake_inst)
+
+    def test_confirm_resize(self):
+        self._test_confirm_resize()
+
+    def test_confirm_resize_with_migration_ref(self):
+        self._test_confirm_resize(mig_ref_passed=True)
+
+    def _test_revert_resize(self):
+        params = dict(vm_state=vm_states.RESIZED)
+        fake_inst = obj_base.obj_to_primitive(
+                self._create_instance_obj(params=params))
+        fake_mig = dict(id='fake-migration-id',
+                        dest_compute='dest_host')
+
+        self.mox.StubOutWithMock(self.context, 'elevated')
+        self.mox.StubOutWithMock(self.compute_api.db,
+                                 'migration_get_by_instance_and_status')
+        self.mox.StubOutWithMock(self.compute_api,
+                                 '_reverse_upsize_quota_delta')
+        self.mox.StubOutWithMock(self.compute_api, '_reserve_quota_delta')
         self.mox.StubOutWithMock(self.compute_api, 'update')
+        self.mox.StubOutWithMock(self.compute_api.db, 'migration_update')
+        self.mox.StubOutWithMock(quota.QUOTAS, 'commit')
+        self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
+        self.mox.StubOutWithMock(self.compute_api.compute_rpcapi,
+                                 'revert_resize')
+
+        self.context.elevated().AndReturn(self.context)
+        self.compute_api.db.migration_get_by_instance_and_status(
+                self.context, fake_inst['uuid'], 'finished').AndReturn(
+                        fake_mig)
+        self.compute_api._reverse_upsize_quota_delta(
+                self.context, fake_mig).AndReturn('deltas')
+
+        resvs = ['resvs']
+
+        self.compute_api._reserve_quota_delta(self.context,
+                                              'deltas').AndReturn(resvs)
+        self.compute_api.update(
+                self.context, fake_inst,
+                task_state=task_states.RESIZE_REVERTING,
+                expected_task_state=None).AndReturn(fake_inst)
+        self.compute_api.db.migration_update(self.context,
+                                             'fake-migration-id',
+                                             {'status': 'reverting'})
+        if self.is_cells:
+            quota.QUOTAS.commit(self.context, resvs)
+            resvs = []
+
+        self.compute_api._record_action_start(self.context, fake_inst,
+                                              'revertResize')
+
+        self.compute_api.compute_rpcapi.revert_resize(self.context,
+                                                      instance=fake_inst,
+                                                      migration=fake_mig,
+                                                      host='dest_host',
+                                                      reservations=resvs)
+
+        if self.is_cells:
+            self.mox.StubOutWithMock(self.compute_api, '_cast_to_cells')
+            self.compute_api._cast_to_cells(
+                    self.context, fake_inst, 'revert_resize')
+
+        self.mox.ReplayAll()
+
+        self.compute_api.revert_resize(self.context, fake_inst)
+
+    def test_revert_resize(self):
+        self._test_revert_resize()
+
+    def _test_resize(self, flavor_id_passed=True,
+                     same_host=False, allow_same_host=False,
+                     allow_mig_same_host=False,
+                     project_id=None,
+                     extra_kwargs=None):
+        if extra_kwargs is None:
+            extra_kwargs = {}
+
+        self.flags(allow_resize_to_same_host=allow_same_host,
+                   allow_migrate_to_same_host=allow_mig_same_host)
+
+        params = {}
+        if project_id is not None:
+            # To test instance w/ different project id than context (admin)
+            params['project_id'] = project_id
+        fake_inst = obj_base.obj_to_primitive(
+                self._create_instance_obj(params=params))
+
+        self.mox.StubOutWithMock(flavors, 'get_flavor_by_flavor_id')
+        self.mox.StubOutWithMock(self.compute_api, '_upsize_quota_delta')
+        self.mox.StubOutWithMock(self.compute_api, '_reserve_quota_delta')
+        self.mox.StubOutWithMock(self.compute_api, 'update')
+        self.mox.StubOutWithMock(quota.QUOTAS, 'commit')
         self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
         self.mox.StubOutWithMock(self.compute_api.compute_task_api,
                                  'migrate_server')
 
+        current_flavor = flavors.extract_flavor(fake_inst)
+        if flavor_id_passed:
+            new_flavor = dict(id=200, flavorid='new-flavor-id',
+                              name='new_flavor', disabled=False)
+            flavors.get_flavor_by_flavor_id(
+                    'new-flavor-id',
+                    read_deleted='no').AndReturn(new_flavor)
+        else:
+            new_flavor = current_flavor
+
+        resvs = ['resvs']
+
+        self.compute_api._upsize_quota_delta(
+                self.context, new_flavor,
+                current_flavor).AndReturn('deltas')
+        self.compute_api._reserve_quota_delta(self.context, 'deltas',
+                project_id=fake_inst['project_id']).AndReturn(resvs)
+        self.compute_api.update(self.context, fake_inst,
+                task_state=task_states.RESIZE_PREP,
+                expected_task_state=None,
+                progress=0, **extra_kwargs).AndReturn(fake_inst)
+
+        if allow_same_host:
+            filter_properties = {'ignore_hosts': []}
+        else:
+            filter_properties = {'ignore_hosts': [fake_inst['host']]}
+
+        if not flavor_id_passed and not allow_mig_same_host:
+            filter_properties['ignore_hosts'].append(fake_inst['host'])
+
         if self.is_cells:
-            self.mox.StubOutWithMock(self.compute_api.db, 'migration_create')
-            self.compute_api.db.migration_create(mox.IgnoreArg(),
-                                                 mox.IgnoreArg())
+            quota.QUOTAS.commit(self.context, resvs,
+                                project_id=fake_inst['project_id'])
+            resvs = []
 
-        inst = self._create_instance_obj()
-        self.compute_api.update(self.context, inst, expected_task_state=None,
-                                progress=0,
-                                task_state='resize_prep').AndReturn(inst)
-        self.compute_api._record_action_start(self.context, inst, 'resize')
+        self.compute_api._record_action_start(self.context, fake_inst,
+                                              'resize')
 
-        filter_properties = {'ignore_hosts': ['fake_host', 'fake_host']}
         scheduler_hint = {'filter_properties': filter_properties}
-        flavor = flavors.extract_flavor(inst)
+
         self.compute_api.compute_task_api.migrate_server(
-                self.context, inst, scheduler_hint=scheduler_hint,
-                live=False, rebuild=False, flavor=flavor,
+                self.context, fake_inst, scheduler_hint=scheduler_hint,
+                live=False, rebuild=False, flavor=new_flavor,
                 block_migration=None, disk_over_commit=None,
-                reservations=None)
+                reservations=resvs)
+
+        if self.is_cells:
+            self.mox.StubOutWithMock(self.context, 'elevated')
+            self.mox.StubOutWithMock(self.compute_api.db, 'migration_create')
+            self.mox.StubOutWithMock(self.compute_api, '_cast_to_cells')
+            if flavor_id_passed:
+                flavors.get_flavor_by_flavor_id(
+                        'new-flavor-id',
+                        read_deleted='no').AndReturn(new_flavor)
+            self.context.elevated().AndReturn(self.context)
+            self.compute_api.db.migration_create(
+                    self.context,
+                    dict(instance_uuid=fake_inst['uuid'],
+                         old_instance_type_id=current_flavor['id'],
+                         new_instance_type_id=new_flavor['id'],
+                         status='finished'))
+            self.compute_api._cast_to_cells(
+                    self.context, fake_inst, 'resize',
+                    flavor_id=new_flavor['flavorid'], **extra_kwargs)
 
         self.mox.ReplayAll()
-        self.compute_api.resize(self.context, inst)
+
+        if flavor_id_passed:
+            self.compute_api.resize(self.context, fake_inst,
+                                    flavor_id='new-flavor-id',
+                                    **extra_kwargs)
+        else:
+            self.compute_api.resize(self.context, fake_inst, **extra_kwargs)
+
+    def _test_migrate(self, *args, **kwargs):
+        self._test_resize(*args, flavor_id_passed=True, **kwargs)
+
+    def test_resize(self):
+        self._test_resize()
+
+    def test_resize_with_kwargs(self):
+        self._test_resize(extra_kwargs=dict(cow='moo'))
+
+    def test_resize_same_host_and_allowed(self):
+        self._test_resize(same_host=True, allow_same_host=True)
+
+    def test_resize_same_host_and_not_allowed(self):
+        self._test_resize(same_host=True, allow_same_host=False)
+
+    def test_resize_different_project_id(self):
+        self._test_resize(project_id='different')
+
+    def test_migrate(self):
+        self._test_migrate()
+
+    def test_migrate_with_kwargs(self):
+        self._test_migrate(extra_kwargs=dict(cow='moo'))
+
+    def test_migrate_same_host_and_allowed(self):
+        self._test_migrate(same_host=True, allow_same_host=True)
+
+    def test_migrate_same_host_and_not_allowed(self):
+        self._test_migrate(same_host=True, allow_same_host=False)
+
+    def test_migrate_different_project_id(self):
+        self._test_migrate(project_id='different')
+
+    def test_resize_invalid_flavor_fails(self):
+        self.mox.StubOutWithMock(flavors, 'get_flavor_by_flavor_id')
+        # Should never reach these.
+        self.mox.StubOutWithMock(self.compute_api, '_reserve_quota_delta')
+        self.mox.StubOutWithMock(self.compute_api, 'update')
+        self.mox.StubOutWithMock(quota.QUOTAS, 'commit')
+        self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
+        self.mox.StubOutWithMock(self.compute_api.compute_task_api,
+                                 'migrate_server')
+
+        fake_inst = obj_base.obj_to_primitive(self._create_instance_obj())
+        exc = exception.FlavorNotFound(flavor_id='flavor-id')
+
+        flavors.get_flavor_by_flavor_id('flavor-id',
+                                        read_deleted='no').AndRaise(exc)
+
+        self.mox.ReplayAll()
+
+        self.assertRaises(exception.FlavorNotFound,
+                          self.compute_api.resize, self.context,
+                          fake_inst, flavor_id='flavor-id')
+
+    def test_resize_disabled_flavor_fails(self):
+        self.mox.StubOutWithMock(flavors, 'get_flavor_by_flavor_id')
+        # Should never reach these.
+        self.mox.StubOutWithMock(self.compute_api, '_reserve_quota_delta')
+        self.mox.StubOutWithMock(self.compute_api, 'update')
+        self.mox.StubOutWithMock(quota.QUOTAS, 'commit')
+        self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
+        self.mox.StubOutWithMock(self.compute_api.compute_task_api,
+                                 'migrate_server')
+
+        fake_inst = obj_base.obj_to_primitive(self._create_instance_obj())
+        fake_flavor = dict(id=200, flavorid='flavor-id', name='foo',
+                           disabled=True)
+
+        flavors.get_flavor_by_flavor_id(
+                'flavor-id', read_deleted='no').AndReturn(fake_flavor)
+
+        self.mox.ReplayAll()
+
+        self.assertRaises(exception.FlavorNotFound,
+                          self.compute_api.resize, self.context,
+                          fake_inst, flavor_id='flavor-id')
+
+    def test_resize_same_flavor_fails(self):
+        self.mox.StubOutWithMock(flavors, 'get_flavor_by_flavor_id')
+        # Should never reach these.
+        self.mox.StubOutWithMock(self.compute_api, '_reserve_quota_delta')
+        self.mox.StubOutWithMock(self.compute_api, 'update')
+        self.mox.StubOutWithMock(quota.QUOTAS, 'commit')
+        self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
+        self.mox.StubOutWithMock(self.compute_api.compute_task_api,
+                                 'migrate_server')
+
+        fake_inst = obj_base.obj_to_primitive(self._create_instance_obj())
+        fake_flavor = flavors.extract_flavor(fake_inst)
+
+        flavors.get_flavor_by_flavor_id(
+                fake_flavor['flavorid'],
+                read_deleted='no').AndReturn(fake_flavor)
+
+        self.mox.ReplayAll()
+
+        # Pass in flavor_id.. same as current flavor.
+        self.assertRaises(exception.CannotResizeToSameFlavor,
+                          self.compute_api.resize, self.context,
+                          fake_inst, flavor_id=fake_flavor['flavorid'])
+
+    def test_resize_quota_exceeds_fails(self):
+        self.mox.StubOutWithMock(flavors, 'get_flavor_by_flavor_id')
+        self.mox.StubOutWithMock(self.compute_api, '_upsize_quota_delta')
+        self.mox.StubOutWithMock(self.compute_api, '_reserve_quota_delta')
+        # Should never reach these.
+        self.mox.StubOutWithMock(self.compute_api, 'update')
+        self.mox.StubOutWithMock(quota.QUOTAS, 'commit')
+        self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
+        self.mox.StubOutWithMock(self.compute_api.compute_task_api,
+                                 'migrate_server')
+
+        fake_inst = obj_base.obj_to_primitive(self._create_instance_obj())
+        current_flavor = flavors.extract_flavor(fake_inst)
+        fake_flavor = dict(id=200, flavorid='flavor-id', name='foo',
+                           disabled=False)
+        flavors.get_flavor_by_flavor_id(
+                'flavor-id', read_deleted='no').AndReturn(fake_flavor)
+        deltas = dict(resource=0)
+        self.compute_api._upsize_quota_delta(
+                self.context, fake_flavor,
+                current_flavor).AndReturn(deltas)
+        usage = dict(in_use=0, reserved=0)
+        over_quota_args = dict(quotas={'resource': 0},
+                               usages={'resource': usage},
+                               overs=['resource'])
+        self.compute_api._reserve_quota_delta(self.context, deltas,
+                project_id=fake_inst['project_id']).AndRaise(
+                        exception.OverQuota(**over_quota_args))
+
+        self.mox.ReplayAll()
+
+        self.assertRaises(exception.TooManyInstances,
+                          self.compute_api.resize, self.context,
+                          fake_inst, flavor_id='flavor-id')
 
     def test_pause(self):
         # Ensure instance can be paused.
@@ -769,5 +1105,6 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
 class ComputeCellsAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
     def setUp(self):
         super(ComputeCellsAPIUnitTestCase, self).setUp()
+        self.flags(cell_type='api', enable=True, group='cells')
         self.compute_api = compute_cells_api.ComputeCellsAPI()
         self.is_cells = True

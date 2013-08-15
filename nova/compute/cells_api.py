@@ -273,15 +273,16 @@ class ComputeCellsAPI(compute_api.API):
 
     @check_instance_state(vm_state=[vm_states.RESIZED])
     @check_instance_cell
-    def confirm_resize(self, context, instance):
+    def confirm_resize(self, context, instance, migration_ref=None):
         """Confirms a migration/resize and deletes the 'old' instance."""
-        super(ComputeCellsAPI, self).confirm_resize(context, instance)
+        super(ComputeCellsAPI, self).confirm_resize(
+                context, instance, migration_ref=migration_ref)
         self._cast_to_cells(context, instance, 'confirm_resize')
 
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED],
                           task_state=[None])
     @check_instance_cell
-    def resize(self, context, instance, flavor_id=None, *args, **kwargs):
+    def resize(self, context, instance, flavor_id=None, **kwargs):
         """Resize (ie, migrate) a running instance.
 
         If flavor_id is None, the process is considered a migration, keeping
@@ -289,7 +290,7 @@ class ComputeCellsAPI(compute_api.API):
         be migrated to a new host and resized to the new flavor_id.
         """
         super(ComputeCellsAPI, self).resize(context, instance,
-                                            flavor_id=flavor_id, *args,
+                                            flavor_id=flavor_id,
                                             **kwargs)
 
         # NOTE(johannes): If we get to this point, then we know the
@@ -319,7 +320,7 @@ class ComputeCellsAPI(compute_api.API):
         # FIXME(comstud): pass new instance_type object down to a method
         # that'll unfold it
         self._cast_to_cells(context, instance, 'resize', flavor_id=flavor_id,
-                            *args, **kwargs)
+                            **kwargs)
 
     @check_instance_cell
     def add_fixed_ip(self, context, instance, *args, **kwargs):

@@ -5212,9 +5212,45 @@ class ComputeTestCase(BaseTestCase):
         event = LifecycleEvent('does-not-exist', EVENT_LIFECYCLE_STOPPED)
         self.compute.handle_events(event)
 
+    def test_allow_confirm_resize_on_instance_in_deleting_task_state(self):
+        instance = self._create_fake_instance()
+        old_type = flavors.extract_flavor(instance)
+        new_type = flavors.get_flavor_by_flavor_id('4')
+        sys_meta = utils.metadata_to_dict(instance['system_metadata'])
+        sys_meta = flavors.save_flavor_info(sys_meta,
+                                            old_type, 'old_')
+        sys_meta = flavors.save_flavor_info(sys_meta,
+                                            new_type, 'new_')
+        sys_meta = flavors.save_flavor_info(sys_meta,
+                                            new_type)
+
+        fake_rt = self.mox.CreateMockAnything()
+
+        def fake_drop_resize_claim(*args, **kwargs):
+            pass
+
+        def fake_get_resource_tracker(self):
+            return fake_rt
+
+        self.stubs.Set(fake_rt, 'drop_resize_claim', fake_drop_resize_claim)
+        self.stubs.Set(self.compute, '_get_resource_tracker',
+                       fake_get_resource_tracker)
+
+        migration = db.migration_create(self.context.elevated(),
+                                        {'instance_uuid': instance['uuid'],
+                                         'status': 'finished'})
+        instance = db.instance_update(self.context, instance['uuid'],
+                                      {'task_state': task_states.DELETING,
+                                       'vm_state': vm_states.RESIZED,
+                                       'system_metadata': sys_meta})
+
+        self.compute.confirm_resize(self.context, instance,
+                                    migration=migration)
+        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
+        self.assertEqual(vm_states.ACTIVE, instance['vm_state'])
+
 
 class ComputeAPITestCase(BaseTestCase):
-
     def setUp(self):
         def fake_get_nw_info(cls, ctxt, instance):
             self.assertTrue(ctxt.is_admin)
@@ -6207,348 +6243,6 @@ class ComputeAPITestCase(BaseTestCase):
                           None)
 
         db.instance_destroy(self.context, instance['uuid'])
-
-    def test_resize_confirm_through_api(self):
-        instance = jsonutils.to_primitive(self._create_fake_instance())
-        self.compute.run_instance(self.context, instance=instance)
-        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
-        self._stub_migrate_server()
-        self.compute_api.resize(self.context, instance, '4')
-
-        # Do the prep/finish_resize steps (manager does this)
-        old_type = flavors.extract_flavor(instance)
-        new_type = flavors.get_flavor_by_flavor_id('4')
-        sys_meta = utils.metadata_to_dict(instance['system_metadata'])
-        sys_meta = flavors.save_flavor_info(sys_meta,
-                                            old_type, 'old_')
-        sys_meta = flavors.save_flavor_info(sys_meta,
-                                            new_type, 'new_')
-        sys_meta = flavors.save_flavor_info(sys_meta,
-                                            new_type)
-
-        # create a fake migration record (manager does this)
-        db.migration_create(self.context.elevated(),
-                {'instance_uuid': instance['uuid'],
-                 'status': 'finished'})
-        # set the state that the instance gets when resize finishes
-        instance = db.instance_update(self.context, instance['uuid'],
-                                      {'task_state': None,
-                                       'vm_state': vm_states.RESIZED,
-                                       'system_metadata': sys_meta})
-
-        self.compute_api.confirm_resize(self.context, instance)
-        self.compute.terminate_instance(self.context,
-            instance=jsonutils.to_primitive(instance))
-
-    def test_allow_confirm_resize_on_instance_in_deleting_task_state(self):
-        instance = self._create_fake_instance()
-        old_type = flavors.extract_flavor(instance)
-        new_type = flavors.get_flavor_by_flavor_id('4')
-        sys_meta = utils.metadata_to_dict(instance['system_metadata'])
-        sys_meta = flavors.save_flavor_info(sys_meta,
-                                            old_type, 'old_')
-        sys_meta = flavors.save_flavor_info(sys_meta,
-                                            new_type, 'new_')
-        sys_meta = flavors.save_flavor_info(sys_meta,
-                                            new_type)
-
-        fake_rt = self.mox.CreateMockAnything()
-
-        def fake_drop_resize_claim(*args, **kwargs):
-            pass
-
-        def fake_get_resource_tracker(self):
-            return fake_rt
-
-        self.stubs.Set(fake_rt, 'drop_resize_claim', fake_drop_resize_claim)
-        self.stubs.Set(self.compute, '_get_resource_tracker',
-                       fake_get_resource_tracker)
-
-        migration = db.migration_create(self.context.elevated(),
-                                        {'instance_uuid': instance['uuid'],
-                                         'status': 'finished'})
-        instance = db.instance_update(self.context, instance['uuid'],
-                                      {'task_state': task_states.DELETING,
-                                       'vm_state': vm_states.RESIZED,
-                                       'system_metadata': sys_meta})
-
-        self.compute.confirm_resize(self.context, instance,
-                                    migration=migration)
-        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
-        self.assertEqual(vm_states.ACTIVE, instance['vm_state'])
-
-    def test_resize_revert_through_api(self):
-        instance = jsonutils.to_primitive(self._create_fake_instance())
-        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
-        self.compute.run_instance(self.context, instance=instance)
-
-        self._stub_migrate_server()
-        self.compute_api.resize(self.context, instance, '4')
-
-        # create a fake migration record (manager does this)
-        db.migration_create(self.context.elevated(),
-                {'instance_uuid': instance['uuid'],
-                 'status': 'finished'})
-        # set the state that the instance gets when resize finishes
-        instance = db.instance_update(self.context, instance['uuid'],
-                                      {'task_state': None,
-                                       'vm_state': vm_states.RESIZED})
-
-        self.compute_api.revert_resize(self.context, instance)
-
-        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
-        self.assertEqual(instance['vm_state'], vm_states.RESIZED)
-        self.assertEqual(instance['task_state'], task_states.RESIZE_REVERTING)
-
-        self.compute.terminate_instance(self.context,
-            instance=jsonutils.to_primitive(instance))
-
-    def test_resize_invalid_flavor_fails(self):
-        # Ensure invalid flavors raise.
-        instance = self._create_fake_instance()
-        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
-        instance = jsonutils.to_primitive(instance)
-        self.compute.run_instance(self.context, instance=instance)
-
-        self.assertRaises(exception.NotFound, self.compute_api.resize,
-                self.context, instance, 200)
-
-        self.compute.terminate_instance(self.context, instance=instance)
-
-    def test_resize_deleted_flavor_fails(self):
-        instance = self._create_fake_instance()
-        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
-        instance = jsonutils.to_primitive(instance)
-        self.compute.run_instance(self.context, instance=instance)
-
-        name = 'test_resize_new_flavor'
-        flavorid = 11
-        flavors.create(name, 128, 1, 0, ephemeral_gb=0, flavorid=flavorid,
-                       swap=0, rxtx_factor=1.0, is_public=True)
-        flavors.destroy(name)
-        self.assertRaises(exception.FlavorNotFound, self.compute_api.resize,
-                self.context, instance, flavorid)
-
-        self.compute.terminate_instance(self.context, instance=instance)
-
-    def test_resize_same_flavor_fails(self):
-        # Ensure invalid flavors raise.
-        instance = self._create_fake_instance()
-        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
-        instance = jsonutils.to_primitive(instance)
-
-        self.compute.run_instance(self.context, instance=instance)
-
-        self.assertRaises(exception.CannotResizeToSameFlavor,
-                          self.compute_api.resize, self.context, instance, 1)
-
-        self.compute.terminate_instance(self.context, instance=instance)
-
-    def test_resize_quota_exceeds_fails(self):
-        instance = self._create_fake_instance()
-        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
-        instance = jsonutils.to_primitive(instance)
-        self.compute.run_instance(self.context, instance=instance)
-
-        name = 'test_resize_with_big_mem'
-        flavorid = 11
-        flavors.create(name, 102400, 1, 0, ephemeral_gb=0, flavorid=flavorid,
-                       swap=0, rxtx_factor=1.0, is_public=True)
-        self.assertRaises(exception.TooManyInstances, self.compute_api.resize,
-                self.context, instance, flavorid)
-
-        flavors.destroy(name)
-        self.compute.terminate_instance(self.context, instance=instance)
-
-    def test_resize_by_admin_for_tenant_with_sufficient_quota(self):
-        user_project_id = 'user'
-        instance = self._create_fake_instance({'project_id': user_project_id})
-        self.context.is_admin = True
-        db.quota_create(self.context, self.context.project_id, 'ram', 0)
-        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
-        instance = jsonutils.to_primitive(instance)
-        self.compute.run_instance(self.context, instance=instance)
-        name = 'test_resize_with_big_mem'
-        flavor_id = 11
-        flavors.create(name, 1024, 1, 0, ephemeral_gb=0, flavorid=flavor_id,
-                       swap=0, rxtx_factor=1.0, is_public=True)
-        deltas = {'ram': 512}
-        reservations = ['reservation_id']
-
-        self.mox.StubOutWithMock(self.compute_api, '_reserve_quota_delta')
-
-        self.compute_api._reserve_quota_delta(self.context,
-                                              deltas,
-                                              project_id=user_project_id). \
-            AndReturn(reservations)
-
-        CONF.cells.enable = True
-        self.mox.StubOutWithMock(nova.quota.QUOTAS, 'commit')
-        nova.quota.QUOTAS.commit(self.context, reservations,
-                                 project_id=user_project_id)
-        self.mox.ReplayAll()
-
-        self._stub_migrate_server()
-        self.compute_api.resize(self.context, instance, flavor_id)
-
-        flavors.destroy(name)
-        db.quota_destroy_all_by_project(self.context, self.context.project_id)
-        self.compute.terminate_instance(self.context, instance=instance)
-
-    def test_resize_revert_deleted_flavor_fails(self):
-        self._stub_migrate_server()
-        orig_name = 'test_resize_revert_orig_flavor'
-        orig_flavorid = 11
-        flavors.create(orig_name, 128, 1, 0, ephemeral_gb=0,
-                       flavorid=orig_flavorid, swap=0, rxtx_factor=1.0,
-                       is_public=True)
-
-        instance = self._create_fake_instance(type_name=orig_name)
-        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
-        instance = jsonutils.to_primitive(instance)
-        self.compute.run_instance(self.context, instance=instance)
-
-        old_instance_type_id = instance['instance_type_id']
-        new_flavor = flavors.get_flavor_by_name('m1.tiny')
-        new_flavorid = new_flavor['flavorid']
-        new_instance_type_id = new_flavor['id']
-        self.compute_api.resize(self.context, instance, new_flavorid)
-
-        db.migration_create(self.context.elevated(),
-                {'instance_uuid': instance['uuid'],
-                 'old_instance_type_id': old_instance_type_id,
-                 'new_instance_type_id': new_instance_type_id,
-                 'status': 'finished'})
-        instance = db.instance_update(self.context, instance['uuid'],
-                                      {'task_state': None,
-                                       'vm_state': vm_states.RESIZED})
-        flavors.destroy(orig_name)
-        self.assertRaises(exception.InstanceTypeNotFound,
-                          self.compute_api.revert_resize,
-                          self.context, instance)
-        self.compute.terminate_instance(self.context, instance=instance)
-
-    def test_resize_no_image(self):
-        def _fake_prep_resize(_context, **args):
-            image = args['image']
-            self.assertEqual(image, {})
-
-        instance = self._create_fake_instance(params={'image_ref': ''})
-        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
-        instance = jsonutils.to_primitive(instance)
-        self.compute.run_instance(self.context, instance=instance)
-
-        self.stubs.Set(self.compute_api.scheduler_rpcapi,
-                       'prep_resize', _fake_prep_resize)
-
-        self._stub_migrate_server()
-        self.compute_api.resize(self.context, instance, None)
-        self.compute.terminate_instance(self.context, instance=instance)
-
-    def test_migrate(self):
-        instance = self._create_fake_instance()
-        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
-        instance = jsonutils.to_primitive(instance)
-        self.compute.run_instance(self.context, instance=instance)
-        # Migrate simply calls resize() without a flavor_id.
-        self._stub_migrate_server()
-        self.compute_api.resize(self.context, instance, None)
-        self.compute.terminate_instance(self.context, instance=instance)
-
-    def test_resize_request_spec(self):
-        def _fake_cast(_context, _topic, msg):
-            request_spec = msg['args']['request_spec']
-            filter_properties = msg['args']['filter_properties']
-            instance_properties = request_spec['instance_properties']
-            # resize with flavor_id = None will still send instance_type
-            self.assertEqual(request_spec['instance_type'],
-                             orig_instance_type)
-            self.assertEqual(request_spec['instance_uuids'],
-                             [instance['uuid']])
-            self.assertEqual(FAKE_IMAGE_REF, request_spec['image']['id'])
-            self.assertEqual(instance_properties['uuid'], instance['uuid'])
-            self.assertEqual(instance_properties['host'], 'host2')
-            # Ensure the instance passed to us has been updated with
-            # progress set to 0 and task_state set to RESIZE_PREP.
-            self.assertEqual(instance_properties['task_state'],
-                    task_states.RESIZE_PREP)
-            self.assertEqual(instance_properties['progress'], 0)
-            self.assertIn('host2', filter_properties['ignore_hosts'])
-
-        def _noop(*args, **kwargs):
-            pass
-
-        self.stubs.Set(self.compute.cells_rpcapi,
-                       'consoleauth_delete_tokens', _noop)
-        self.stubs.Set(self.compute.consoleauth_rpcapi,
-                       'delete_tokens_for_instance', _noop)
-
-        self.stubs.Set(rpc, 'cast', _fake_cast)
-
-        instance = self._create_fake_instance(dict(host='host2'))
-        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
-        instance = jsonutils.to_primitive(instance)
-        orig_instance_type = flavors.extract_flavor(instance)
-        self.compute.run_instance(self.context, instance=instance)
-        # We need to set the host to something 'known'.  Unfortunately,
-        # the compute manager is using a cached copy of CONF.host,
-        # so we can't just self.flags(host='host2') before calling
-        # run_instance above.  Also, set progress to 10 so we ensure
-        # it is reset to 0 in compute_api.resize().  (verified in
-        # _fake_cast above).
-        instance = db.instance_update(self.context, instance['uuid'],
-                dict(host='host2', progress=10))
-        # different host
-        self.flags(host='host3')
-        try:
-            self._stub_migrate_server()
-            self.compute_api.resize(self.context, instance, None)
-        finally:
-            self.compute.terminate_instance(self.context, instance=instance)
-
-    def test_resize_request_spec_noavoid(self):
-        def _fake_cast(_context, topic, msg):
-            request_spec = msg['args']['request_spec']
-            filter_properties = msg['args']['filter_properties']
-            instance_properties = request_spec['instance_properties']
-            self.assertEqual(instance_properties['host'], 'host2')
-            # Ensure the instance passed to us has been updated with
-            # progress set to 0 and task_state set to RESIZE_PREP.
-            self.assertEqual(instance_properties['task_state'],
-                    task_states.RESIZE_PREP)
-            self.assertEqual(instance_properties['progress'], 0)
-            self.assertNotIn('host2', filter_properties['ignore_hosts'])
-
-        def _noop(*args, **kwargs):
-            pass
-
-        self.stubs.Set(self.compute.cells_rpcapi,
-                       'consoleauth_delete_tokens', _noop)
-        self.stubs.Set(self.compute.consoleauth_rpcapi,
-                       'delete_tokens_for_instance', _noop)
-
-        self.stubs.Set(rpc, 'cast', _fake_cast)
-        self.flags(allow_resize_to_same_host=True)
-        self.flags(allow_migrate_to_same_host=True)
-
-        instance = self._create_fake_instance(dict(host='host2'))
-        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
-        instance = jsonutils.to_primitive(instance)
-        self.compute.run_instance(self.context, instance=instance)
-        # We need to set the host to something 'known'.  Unfortunately,
-        # the compute manager is using a cached copy of CONF.host,
-        # so we can't just self.flags(host='host2') before calling
-        # run_instance above.  Also, set progress to 10 so we ensure
-        # it is reset to 0 in compute_api.resize().  (verified in
-        # _fake_cast above).
-        instance = db.instance_update(self.context, instance['uuid'],
-                dict(host='host2', progress=10))
-        # different host
-        try:
-            self._stub_migrate_server()
-            self.compute_api.resize(self.context, instance, None)
-        finally:
-            self.compute.terminate_instance(self.context, instance=instance)
 
     def test_get(self):
         # Test get instance.
