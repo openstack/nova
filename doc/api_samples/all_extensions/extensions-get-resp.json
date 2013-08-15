@@ -433,6 +433,14 @@
             "updated": "2014-02-18T00:00:00-00:00"
         },
         {
+            "alias": "os-server-groups",
+            "description": "Server group support.",
+            "links": [],
+            "name": "ServerGroups",
+            "namespace": "http://docs.openstack.org/compute/ext/servergroups/api/v2",
+            "updated": "2013-06-01T00:00:00+00:00"
+        },
+        {
             "alias": "os-instance_usage_audit_log",
             "description": "Admin-only Task Log Monitoring.",
             "links": [],

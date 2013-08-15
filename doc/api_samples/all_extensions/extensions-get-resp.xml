@@ -182,6 +182,9 @@
   <extension alias="os-server-external-events" updated="2014-02-18T00:00:00-00:00" namespace="http://docs.openstack.org/compute/ext/server-external-events/api/v2" name="ServerExternalEvents">
     <description>Server External Event Triggers.</description>
   </extension>
+  <extension alias="os-server-groups" updated="2013-06-12T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/servergroups/api/v2" name="ServerGroups">
+    <description>Server group support.</description>
+  </extension>
   <extension alias="os-instance_usage_audit_log" updated="2012-07-06T01:00:00+00:00" namespace="http://docs.openstack.org/ext/services/api/v1.1" name="OSInstanceUsageAuditLog">
     <description>Admin-only Task Log Monitoring.</description>
   </extension>

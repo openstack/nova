@@ -255,6 +255,7 @@ policy_data = """
     "compute_extension:v3:os-security-groups": "",
     "compute_extension:server_diagnostics": "",
     "compute_extension:v3:os-server-diagnostics": "",
+    "compute_extension:server_groups": "",
     "compute_extension:server_password": "",
     "compute_extension:v3:os-server-password": "",
     "compute_extension:server_usage": "",

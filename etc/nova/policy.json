@@ -211,6 +211,7 @@
     "compute_extension:server_diagnostics": "rule:admin_api",
     "compute_extension:v3:os-server-diagnostics": "rule:admin_api",
     "compute_extension:v3:os-server-diagnostics:discoverable": "",
+    "compute_extension:server_groups": "",
     "compute_extension:server_password": "",
     "compute_extension:v3:os-server-password": "",
     "compute_extension:v3:os-server-password:discoverable": "",

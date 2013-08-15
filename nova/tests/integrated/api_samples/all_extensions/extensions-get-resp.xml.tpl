@@ -242,4 +242,7 @@
   <extension alias="os-console-auth-tokens" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/consoles-auth-tokens/api/v2" name="ConsoleAuthTokens">
     <description>%(text)s</description>
   </extension>
+  <extension alias="os-server-groups" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/servergroups/api/v2" name="ServerGroups">
+    <description>%(text)s</description>
+  </extension>
 </extensions>

@@ -647,6 +647,14 @@
             "name": "ExtendedServicesDelete",
             "namespace": "http://docs.openstack.org/compute/ext/extended_services_delete/api/v2",
             "updated": "%(timestamp)s"
+        },
+        {
+            "alias": "os-server-groups",
+            "description": "%(text)s",
+            "links": [],
+            "name": "ServerGroups",
+            "namespace": "http://docs.openstack.org/compute/ext/servergroups/api/v2",
+            "updated": "%(timestamp)s"
         }
     ]
 }
