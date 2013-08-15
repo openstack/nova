@@ -38,6 +38,7 @@ from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import strutils
 from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
+from nova import policy
 from nova import utils
 
 
@@ -1048,6 +1049,7 @@ class Controller(wsgi.Controller):
             instance = self.compute_api.get(ctxt, id,
                                             want_objects=True)
             req.cache_db_instance(instance)
+            policy.enforce(ctxt, 'compute:update', instance)
             instance.update(update_dict)
             instance.save()
         except exception.NotFound:
