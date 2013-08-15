@@ -528,11 +528,11 @@ class _ComputeAPIUnitTestMixIn(object):
 
         db.block_device_mapping_get_all_by_instance(
             self.context, inst.uuid).AndReturn([])
-        inst.save().AndRaise(Exception)
+        inst.save().AndRaise(test.TestingException)
 
         self.mox.ReplayAll()
 
-        self.assertRaises(Exception,
+        self.assertRaises(test.TestingException,
                           self.compute_api.soft_delete, self.context, inst)
 
     def test_is_volume_backed_being_true_if_root_is_block_device(self):

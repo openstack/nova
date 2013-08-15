@@ -1,4 +1,4 @@
-hacking>=0.5.6,<0.7
+hacking>=0.5.6,<0.8
 coverage>=3.6
 discover
 feedparser
