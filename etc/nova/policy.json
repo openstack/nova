@@ -226,6 +226,7 @@
     "compute_extension:unshelve": "",
     "compute_extension:v3:os-shelve:unshelve": "",
     "compute_extension:users": "rule:admin_api",
+    "compute_extension:v3:os-user-data:discoverable": "",
     "compute_extension:virtual_interfaces": "",
     "compute_extension:virtual_storage_arrays": "",
     "compute_extension:volumes": "",
