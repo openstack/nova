@@ -134,6 +134,7 @@
     "compute_extension:v3:flavor-extra-specs:update": "rule:admin_api",
     "compute_extension:v3:flavor-extra-specs:delete": "rule:admin_api",
     "compute_extension:flavormanage": "rule:admin_api",
+    "compute_extension:v3:flavor-manage": "rule:admin_api",
     "compute_extension:floating_ip_dns": "",
     "compute_extension:floating_ip_pools": "",
     "compute_extension:floating_ips": "",
