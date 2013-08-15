@@ -52,6 +52,8 @@ CONF.register_opts(resource_tracker_opts)
 LOG = logging.getLogger(__name__)
 COMPUTE_RESOURCE_SEMAPHORE = "compute_resources"
 
+CONF.import_opt('my_ip', 'nova.netconf')
+
 
 class ResourceTracker(object):
     """Compute helper class for keeping track of resource usage as instances
@@ -271,6 +273,7 @@ class ResourceTracker(object):
                  "'get_available_resource'  Compute tracking is disabled."))
             self.compute_node = None
             return
+        resources['host_ip'] = CONF.my_ip
 
         self._verify_resources(resources)
 
