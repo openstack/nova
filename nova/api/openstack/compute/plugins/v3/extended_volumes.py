@@ -32,10 +32,10 @@ from nova import volume
 ALIAS = "os-extended-volumes"
 LOG = logging.getLogger(__name__)
 authorize = extensions.soft_extension_authorizer('compute', 'v3:' + ALIAS)
-authorize_attach = extensions.soft_extension_authorizer('compute',
-                                                        'v3:%s:attach' % ALIAS)
-authorize_detach = extensions.soft_extension_authorizer('compute',
-                                                        'v3:%s:detach' % ALIAS)
+authorize_attach = extensions.extension_authorizer('compute',
+                                                   'v3:%s:attach' % ALIAS)
+authorize_detach = extensions.extension_authorizer('compute',
+                                                   'v3:%s:detach' % ALIAS)
 authorize_swap = extensions.extension_authorizer('compute',
                                                  'v3:%s:swap' % ALIAS)
 
