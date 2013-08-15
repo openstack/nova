@@ -93,6 +93,8 @@ class NetworkRpcAPITestCase(test.TestCase):
                     if actual_args and required_args:
                         self.assertThat(required_args,
                                         matchers.IsSubDictOf(actual_args))
+                else:
+                    raise
 
     def test_get_all_networks(self):
         self._test_network_api('get_all_networks', rpc_method='call')
