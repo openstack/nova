@@ -452,7 +452,7 @@ class NetworkManager(manager.Manager):
             networks = self._get_networks_by_uuids(context, network_uuids)
         else:
             try:
-                networks = self.db.network_get_all(context)
+                networks = self.db.network_get_all_by_host(context, self.host)
             except exception.NoNetworksFound:
                 return []
         # return only networks which are not vlan networks
