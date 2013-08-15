@@ -401,7 +401,7 @@ class HostFiltersTestCase(test.NoDBTestCase):
     def test_affinity_simple_cidr_filter_passes(self):
         filt_cls = self.class_map['SimpleCIDRAffinityFilter']()
         host = fakes.FakeHostState('host1', 'node1', {})
-        host.capabilities = {'host_ip': '10.8.1.1'}
+        host.host_ip = '10.8.1.1'
 
         affinity_ip = "10.8.1.100"
 
@@ -415,7 +415,7 @@ class HostFiltersTestCase(test.NoDBTestCase):
     def test_affinity_simple_cidr_filter_fails(self):
         filt_cls = self.class_map['SimpleCIDRAffinityFilter']()
         host = fakes.FakeHostState('host1', 'node1', {})
-        host.capabilities = {'host_ip': '10.8.1.1'}
+        host.host_ip = '10.8.1.1'
 
         affinity_ip = "10.8.1.100"
 
