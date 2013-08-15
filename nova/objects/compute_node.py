@@ -18,6 +18,10 @@ from nova.objects import utils
 
 
 class ComputeNode(base.NovaObject):
+    # Version 1.0: Initial version
+    # Version 1.1: Added get_by_service_id()
+    VERSION = '1.1'
+
     fields = {
         'id': int,
         'service_id': int,
@@ -49,6 +53,11 @@ class ComputeNode(base.NovaObject):
     @base.remotable_classmethod
     def get_by_id(cls, context, compute_id):
         db_compute = db.compute_node_get(context, compute_id)
+        return cls._from_db_object(context, cls(), db_compute)
+
+    @base.remotable_classmethod
+    def get_by_service_id(cls, context, service_id):
+        db_compute = db.compute_node_get_by_service_id(context, service_id)
         return cls._from_db_object(context, cls(), db_compute)
 
     @base.remotable

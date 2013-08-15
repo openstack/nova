@@ -503,6 +503,18 @@ def _compute_node_get(context, compute_id, session=None):
 
 
 @require_admin_context
+def compute_node_get_by_service_id(context, service_id):
+    result = model_query(context, models.ComputeNode, read_deleted='no').\
+        filter_by(service_id=service_id).\
+        first()
+
+    if not result:
+        raise exception.ServiceNotFound(service_id=service_id)
+
+    return result
+
+
+@require_admin_context
 def compute_node_get_all(context):
     return model_query(context, models.ComputeNode).\
             options(joinedload('service')).\
