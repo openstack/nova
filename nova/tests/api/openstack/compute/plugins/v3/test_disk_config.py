@@ -441,18 +441,6 @@ class ServersControllerCreateTest(test.TestCase):
             instance.update(values)
             return instance
 
-        def rpc_call_wrapper(context, topic, msg, timeout=None):
-            """Stub out the scheduler creating the instance entry."""
-            if (topic == CONF.scheduler_topic and
-                   msg['method'] == 'run_instance'):
-                request_spec = msg['args']['request_spec']
-                num_instances = request_spec.get('num_instances', 1)
-                instances = []
-                for x in xrange(num_instances):
-                    instances.append(instance_create(context,
-                        request_spec['instance_properties']))
-                return instances
-
         def fake_method(*args, **kwargs):
             pass
 
@@ -473,7 +461,6 @@ class ServersControllerCreateTest(test.TestCase):
         self.stubs.Set(db, 'instance_get', instance_get)
         self.stubs.Set(db, 'instance_update', instance_update)
         self.stubs.Set(nova.openstack.common.rpc, 'cast', fake_method)
-        self.stubs.Set(nova.openstack.common.rpc, 'call', rpc_call_wrapper)
 
         return_server = fakes.fake_instance_get()
         return_servers = fakes.fake_instance_get_all_by_filters()
