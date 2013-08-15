@@ -3090,36 +3090,7 @@ class LibvirtDriver(driver.ComputeDriver):
         :returns: dictionary describing resources
 
         """
-
-        def _get_disk_available_least():
-            """Return total real disk available least size.
-
-            The size of available disk, when block_migration command given
-            disk_over_commit param is FALSE.
-
-            The size that deducted real instance disk size from the total size
-            of the virtual disk of all instances.
-
-            """
-            disk_free_gb = disk_info_dict['free']
-            disk_over_committed = self.get_disk_over_committed_size_total()
-            # Disk available least size
-            available_least = disk_free_gb * (1024 ** 3) - disk_over_committed
-            return (available_least / (1024 ** 3))
-
-        disk_info_dict = self.get_local_gb_info()
-        dic = {'vcpus': self.get_vcpu_total(),
-               'memory_mb': self.get_memory_mb_total(),
-               'local_gb': disk_info_dict['total'],
-               'vcpus_used': self.get_vcpu_used(),
-               'memory_mb_used': self.get_memory_mb_used(),
-               'local_gb_used': disk_info_dict['used'],
-               'hypervisor_type': self.get_hypervisor_type(),
-               'hypervisor_version': self.get_hypervisor_version(),
-               'hypervisor_hostname': self.get_hypervisor_hostname(),
-               'cpu_info': self.get_cpu_info(),
-               'disk_available_least': _get_disk_available_least()}
-        return dic
+        return self.host_state.get_host_stats(refresh=True)
 
     def check_instance_shared_storage_local(self, context, instance):
         dirpath = libvirt_utils.get_instance_path(instance)
@@ -4125,21 +4096,38 @@ class HostState(object):
 
     def update_status(self):
         """Retrieve status info from libvirt."""
+        def _get_disk_available_least():
+            """Return total real disk available least size.
+
+            The size of available disk, when block_migration command given
+            disk_over_commit param is FALSE.
+
+            The size that deducted real instance disk size from the total size
+            of the virtual disk of all instances.
+
+            """
+            disk_free_gb = disk_info_dict['free']
+            disk_over_committed = (self.driver.
+                    get_disk_over_committed_size_total())
+            # Disk available least size
+            available_least = disk_free_gb * (1024 ** 3) - disk_over_committed
+            return (available_least / (1024 ** 3))
+
         LOG.debug(_("Updating host stats"))
+        disk_info_dict = self.driver.get_local_gb_info()
         data = {}
         data["vcpus"] = self.driver.get_vcpu_total()
+        data["memory_mb"] = self.driver.get_memory_mb_total()
+        data["local_gb"] = disk_info_dict['total']
         data["vcpus_used"] = self.driver.get_vcpu_used()
-        data["cpu_info"] = jsonutils.loads(self.driver.get_cpu_info())
-        disk_info_dict = self.driver.get_local_gb_info()
-        data["disk_total"] = disk_info_dict['total']
-        data["disk_used"] = disk_info_dict['used']
-        data["disk_available"] = disk_info_dict['free']
-        data["host_memory_total"] = self.driver.get_memory_mb_total()
-        data["host_memory_free"] = (data["host_memory_total"] -
-                                    self.driver.get_memory_mb_used())
+        data["memory_mb_used"] = self.driver.get_memory_mb_used()
+        data["local_gb_used"] = disk_info_dict['used']
         data["hypervisor_type"] = self.driver.get_hypervisor_type()
         data["hypervisor_version"] = self.driver.get_hypervisor_version()
         data["hypervisor_hostname"] = self.driver.get_hypervisor_hostname()
+        data["cpu_info"] = self.driver.get_cpu_info()
+        data['disk_available_least'] = _get_disk_available_least()
+
         data["supported_instances"] = \
             self.driver.get_instance_capabilities()
 
