@@ -1722,52 +1722,8 @@ class CommonNetworkTestCase(test.TestCase):
         self.assertRaises(exception.NetworkNotFound,
                           manager.disassociate_network, fake_context, uuid)
 
-    def _test_init_host_static_fixed_range(self, net_manager):
-        self.flags(fake_network=True,
-                   fixed_range='10.0.0.0/22',
-                   routing_source_ip='192.168.0.1',
-                   metadata_host='192.168.0.1',
-                   public_interface='eth1',
-                   dmz_cidr=['10.0.3.0/24'])
-        binary_name = linux_net.get_binary_name()
-
-        # Stub out calls we don't want to really run
-        self.stubs.Set(linux_net.iptables_manager, '_apply', lambda: None)
-        self.stubs.Set(floating_ips.FloatingIP, 'init_host_floating_ips',
-                                                lambda *args: None)
-
-        # Call the network manager init code to configure the fixed_range
-        net_manager.init_host()
-
-        # Get the iptables rules that got created
-        current_lines = []
-        new_lines = linux_net.iptables_manager._modify_rules(current_lines,
-                                       linux_net.iptables_manager.ipv4['nat'],
-                                       table_name='nat')
-
-        # The expected rules that should be configured based on the fixed_range
-        expected_lines = ['[0:0] -A %s-snat -s %s -d 0.0.0.0/0 '
-                          '-j SNAT --to-source %s -o %s'
-                          % (binary_name, CONF.fixed_range,
-                                          CONF.routing_source_ip,
-                                          CONF.public_interface),
-                          '[0:0] -A %s-POSTROUTING -s %s -d %s/32 -j ACCEPT'
-                          % (binary_name, CONF.fixed_range,
-                                          CONF.metadata_host),
-                          '[0:0] -A %s-POSTROUTING -s %s -d %s -j ACCEPT'
-                          % (binary_name, CONF.fixed_range, CONF.dmz_cidr[0]),
-                          '[0:0] -A %s-POSTROUTING -s %s -d %s -m conntrack ! '
-                          '--ctstate DNAT -j ACCEPT' % (binary_name,
-                                                        CONF.fixed_range,
-                                                        CONF.fixed_range)]
-
-        # Finally, compare the expected rules against the actual ones
-        for line in expected_lines:
-            self.assertTrue(line in new_lines)
-
     def _test_init_host_dynamic_fixed_range(self, net_manager):
         self.flags(fake_network=True,
-                   fixed_range='',
                    routing_source_ip='172.16.0.1',
                    metadata_host='172.16.0.1',
                    public_interface='eth1',
@@ -1785,7 +1741,6 @@ class CommonNetworkTestCase(test.TestCase):
                         mox.IgnoreArg()).MultipleTimes().AndReturn(networks)
         self.mox.ReplayAll()
 
-        # Call the network manager init code to configure the fixed_range
         net_manager.init_host()
 
         # Get the iptables rules that got created
@@ -1794,7 +1749,6 @@ class CommonNetworkTestCase(test.TestCase):
                                        linux_net.iptables_manager.ipv4['nat'],
                                        table_name='nat')
 
-        # The expected rules that should be configured based on the fixed_range
         expected_lines = ['[0:0] -A %s-snat -s %s -d 0.0.0.0/0 '
                           '-j SNAT --to-source %s -o %s'
                           % (binary_name, networks[0]['cidr'],
@@ -1854,7 +1808,6 @@ class CommonNetworkTestCase(test.TestCase):
                        'vpn_public_port': '22',
                        'vpn_private_address': '10.0.0.2'}
 
-        # Call the network manager init code to configure the fixed_range
         ctxt = context.get_admin_context()
         net_manager._setup_network_on_host(ctxt, new_network)
 
@@ -1885,16 +1838,6 @@ class CommonNetworkTestCase(test.TestCase):
         for line in expected_lines:
             self.assertTrue(line in new_lines)
 
-    def test_flatdhcpmanager_static_fixed_range(self):
-        """Test FlatDHCPManager NAT rules for fixed_range."""
-        # Set the network manager
-        self.network = network_manager.FlatDHCPManager(host=HOST)
-        self.network.db = db
-
-        # Test existing behavior:
-        #     CONF.fixed_range is set, NAT based on CONF.fixed_range
-        self._test_init_host_static_fixed_range(self.network)
-
     def test_flatdhcpmanager_dynamic_fixed_range(self):
         """Test FlatDHCPManager NAT rules for fixed_range."""
         # Set the network manager
@@ -1905,16 +1848,6 @@ class CommonNetworkTestCase(test.TestCase):
         #     CONF.fixed_range is not set, defaults to None
         #     Determine networks to NAT based on lookup
         self._test_init_host_dynamic_fixed_range(self.network)
-
-    def test_vlanmanager_static_fixed_range(self):
-        """Test VlanManager NAT rules for fixed_range."""
-        # Set the network manager
-        self.network = network_manager.VlanManager(host=HOST)
-        self.network.db = db
-
-        # Test existing behavior:
-        #     CONF.fixed_range is set, NAT based on CONF.fixed_range
-        self._test_init_host_static_fixed_range(self.network)
 
     def test_vlanmanager_dynamic_fixed_range(self):
         """Test VlanManager NAT rules for fixed_range."""
