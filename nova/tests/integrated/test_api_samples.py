@@ -2254,7 +2254,7 @@ class AdminActionsSamplesJsonTest(ServersSampleBase):
             # NOTE(maurosr): I've added this simple stub cause backup action
             # was trapped in infinite loop during fetch image phase since the
             # fake Image Service always returns the same set of images
-            return None
+            return []
 
         self.stubs.Set(fake._FakeImageService, 'detail', image_details)
 
