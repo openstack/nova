@@ -65,7 +65,7 @@ class CellsManager(manager.Manager):
 
     Scheduling requests get passed to the scheduler class.
     """
-    RPC_API_VERSION = '1.21'
+    RPC_API_VERSION = '1.22'
 
     def __init__(self, *args, **kwargs):
         # Mostly for tests.
@@ -510,3 +510,7 @@ class CellsManager(manager.Manager):
     def confirm_resize(self, ctxt, instance):
         """Confirm a resize for an instance in its cell."""
         self.msg_runner.confirm_resize(ctxt, instance)
+
+    def reset_network(self, ctxt, instance):
+        """Reset networking for an instance in its cell."""
+        self.msg_runner.reset_network(ctxt, instance)

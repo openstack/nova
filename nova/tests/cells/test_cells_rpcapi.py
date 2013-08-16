@@ -688,3 +688,12 @@ class CellsAPITestCase(test.TestCase):
         expected_args = {'instance': 'fake-instance'}
         self._check_result(call_info, 'confirm_resize',
                            expected_args, version='1.21')
+
+    def test_reset_network(self):
+        call_info = self._stub_rpc_method('cast', None)
+
+        self.cells_rpcapi.reset_network(self.fake_context,
+                                        'fake-instance')
+        expected_args = {'instance': 'fake-instance'}
+        self._check_result(call_info, 'reset_network',
+                           expected_args, version='1.22')

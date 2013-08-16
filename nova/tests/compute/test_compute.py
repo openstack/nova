@@ -2132,7 +2132,8 @@ class ComputeTestCase(BaseTestCase):
         instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, instance=instance)
 
-        self.compute.reset_network(self.context, instance=instance)
+        self.compute.reset_network(self.context,
+                                   instance=self._objectify(instance))
 
         self.assertEqual(called['count'], 1)
 
@@ -7626,7 +7627,8 @@ class ComputeAPITestCase(BaseTestCase):
         instance = self._create_fake_instance()
         self.compute.run_instance(self.context,
                 instance=jsonutils.to_primitive(instance))
-        instance = self.compute_api.get(self.context, instance['uuid'])
+        instance = self.compute_api.get(self.context, instance['uuid'],
+                                        want_objects=True)
         self.compute_api.reset_network(self.context, instance)
 
     def test_lock(self):

@@ -383,7 +383,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '2.39'
+    RPC_API_VERSION = '2.40'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -2970,7 +2970,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                 network_id, conductor_api=self.conductor_api)
 
         network_info = self._inject_network_info(context, instance=instance)
-        self.reset_network(context, instance)
+        inst_obj = instance_obj.Instance._from_db_object(
+                context, instance_obj.Instance(), instance)
+        self.reset_network(context, inst_obj)
 
         # NOTE(russellb) We just want to bump updated_at.  See bug 1143466.
         self._instance_update(context, instance['uuid'],
@@ -2995,7 +2997,9 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         network_info = self._inject_network_info(context,
                                                  instance=instance)
-        self.reset_network(context, instance)
+        inst_obj = instance_obj.Instance._from_db_object(
+                context, instance_obj.Instance(), instance)
+        self.reset_network(context, inst_obj)
 
         # NOTE(russellb) We just want to bump updated_at.  See bug 1143466.
         self._instance_update(context, instance['uuid'],
@@ -3259,6 +3263,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance.save(expected_task_state=task_states.SPAWNING)
         self._notify_about_instance_usage(context, instance, 'unshelve.end')
 
+    @object_compat
     @reverts_task_state
     @wrap_instance_fault
     def reset_network(self, context, instance):

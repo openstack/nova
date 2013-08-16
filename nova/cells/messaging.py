@@ -894,6 +894,11 @@ class _TargetedMessageMethods(_BaseMessageMethods):
         self._call_compute_api_with_obj(message.ctxt, instance,
                                         'confirm_resize')
 
+    def reset_network(self, message, instance):
+        """Reset networking for an instance in its cell."""
+        self._call_compute_api_with_obj(message.ctxt, instance,
+                                        'reset_network')
+
 
 class _BroadcastMessageMethods(_BaseMessageMethods):
     """These are the methods that can be called as a part of a broadcast
@@ -1673,6 +1678,10 @@ class MessageRunner(object):
     def confirm_resize(self, ctxt, instance):
         """Confirm a resize for an instance in its cell."""
         self._instance_action(ctxt, instance, 'confirm_resize')
+
+    def reset_network(self, ctxt, instance):
+        """Reset networking for an instance in its cell."""
+        self._instance_action(ctxt, instance, 'reset_network')
 
     @staticmethod
     def get_message_types():

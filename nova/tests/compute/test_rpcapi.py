@@ -318,7 +318,8 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_reset_network(self):
         self._test_compute_api('reset_network', 'cast',
-                instance=self.fake_instance)
+                instance=self.fake_instance,
+                version='2.40')
 
     def test_resize_instance(self):
         self._test_compute_api('resize_instance', 'cast',

@@ -167,7 +167,7 @@ class AdminActionsTest(CommonMixin, test.TestCase):
         actions = ['pause', 'unpause', 'suspend', 'resume', 'migrate',
                    'reset_network', 'inject_network_info', 'lock',
                    'unlock']
-        actions_not_objectified = ['reset_network', 'inject_network_info']
+        actions_not_objectified = ['inject_network_info']
         method_translations = {'migrate': 'resize'}
 
         for action in actions:
@@ -202,7 +202,7 @@ class AdminActionsTest(CommonMixin, test.TestCase):
         actions = ['pause', 'unpause', 'suspend', 'resume', 'migrate',
                    'reset_network', 'inject_network_info', 'lock',
                    'unlock', 'reset_state', 'migrate_live']
-        actions_not_objectified = ['reset_network', 'inject_network_info']
+        actions_not_objectified = ['inject_network_info']
         body_map = {'reset_state': {'state': 'active'},
                     'migrate_live': {'host': 'hostname',
                                      'block_migration': False,
@@ -219,7 +219,7 @@ class AdminActionsTest(CommonMixin, test.TestCase):
         actions = ['pause', 'unpause', 'suspend', 'resume', 'migrate',
                    'reset_network', 'inject_network_info']
         method_translations = {'migrate': 'resize'}
-        actions_not_objectified = ['reset_network', 'inject_network_info']
+        actions_not_objectified = ['inject_network_info']
 
         for action in actions:
             old_style = action in actions_not_objectified

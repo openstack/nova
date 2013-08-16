@@ -2566,6 +2566,7 @@ class API(base.Base):
 
     @wrap_check_policy
     @check_instance_lock
+    @check_instance_cell
     def reset_network(self, context, instance):
         """Reset networking on the instance."""
         self.compute_rpcapi.reset_network(context, instance=instance)

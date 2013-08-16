@@ -78,6 +78,7 @@ class CellsAPI(rpc_proxy.RpcProxy):
         1.19 - Adds pause_instance() and unpause_instance()
         1.20 - Adds resize_instance() and live_migrate_instance()
         1.21 - Adds revert_resize() and confirm_resize()
+        1.22 - Adds reset_network()
     '''
     BASE_RPC_API_VERSION = '1.0'
 
@@ -560,3 +561,11 @@ class CellsAPI(rpc_proxy.RpcProxy):
         self.cast(ctxt,
                   self.make_msg('confirm_resize', instance=instance),
                   version='1.21')
+
+    def reset_network(self, ctxt, instance):
+        """Reset networking for an instance."""
+        if not CONF.cells.enable:
+            return
+        self.cast(ctxt,
+                  self.make_msg('reset_network', instance=instance),
+                  version='1.22')

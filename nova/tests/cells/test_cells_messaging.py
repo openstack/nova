@@ -1183,7 +1183,9 @@ class CellsTargetedMethodsTestCase(test.TestCase):
         self.mox.ReplayAll()
 
         method_translations = {'revert_resize': 'revert_resize',
-                               'confirm_resize': 'confirm_resize'}
+                               'confirm_resize': 'confirm_resize',
+                               'reset_network': 'reset_network',
+                              }
         tgt_method = method_translations.get(method,
                                              '%s_instance' % method)
         result = getattr(meth_cls, tgt_method)(
@@ -1263,6 +1265,10 @@ class CellsTargetedMethodsTestCase(test.TestCase):
 
     def test_confirm_resize(self):
         self._test_instance_action_method('confirm_resize',
+                                          (), {}, (), {}, False)
+
+    def test_reset_network(self):
+        self._test_instance_action_method('reset_network',
                                           (), {}, (), {}, False)
 
 

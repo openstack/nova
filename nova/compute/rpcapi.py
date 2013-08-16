@@ -196,6 +196,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                new-world instance objects
         2.39 - Made revert_resize() and confirm_resize() take new-world
                instance objects
+        2.40 - Made reset_network() take new-world instance object
     '''
 
     #
@@ -565,10 +566,16 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 topic=_compute_topic(self.topic, ctxt, None, instance))
 
     def reset_network(self, ctxt, instance):
-        instance_p = jsonutils.to_primitive(instance)
+        if self.can_send_version('2.40'):
+            version = '2.40'
+        else:
+            instance = jsonutils.to_primitive(
+                    objects_base.obj_to_primitive(instance))
+            version = '2.0'
         self.cast(ctxt, self.make_msg('reset_network',
-                instance=instance_p),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+                                      instance=instance),
+                  topic=_compute_topic(self.topic, ctxt, None, instance),
+                  version=version)
 
     def resize_instance(self, ctxt, instance, migration, image, instance_type,
                         reservations=None):

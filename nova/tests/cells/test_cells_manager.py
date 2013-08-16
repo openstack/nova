@@ -764,3 +764,9 @@ class CellsManagerClassTestCase(test.TestCase):
         self.msg_runner.confirm_resize(self.ctxt, 'fake-instance')
         self.mox.ReplayAll()
         self.cells_manager.confirm_resize(self.ctxt, instance='fake-instance')
+
+    def test_reset_network(self):
+        self.mox.StubOutWithMock(self.msg_runner, 'reset_network')
+        self.msg_runner.reset_network(self.ctxt, 'fake-instance')
+        self.mox.ReplayAll()
+        self.cells_manager.reset_network(self.ctxt, instance='fake-instance')
