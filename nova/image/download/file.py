@@ -141,7 +141,7 @@ class FileTransfer(xfer_base.TransferBase):
         new_path = path.replace(glance_mount, nova_mount, 1)
         return new_path
 
-    def download(self, url_parts, dst_file, metadata, **kwargs):
+    def download(self, context, url_parts, dst_file, metadata, **kwargs):
         self.filesystems = self._get_options()
         if not self.filesystems:
             #NOTE(jbresnah) when nothing is configured assume legacy behavior
