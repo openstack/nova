@@ -317,6 +317,12 @@ def object_compat(function):
                 expected_attrs=metas)
             instance._context = context
         kwargs['instance'] = instance
+        migration = kwargs.get('migration')
+        if isinstance(migration, dict):
+            migration = migration_obj.Migration._from_db_object(
+                    context.elevated(), migration_obj.Migration(),
+                    migration)
+            kwargs['migration'] = migration
 
         return function(self, context, *args, **kwargs)
 
@@ -377,7 +383,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '2.38'
+    RPC_API_VERSION = '2.39'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1354,6 +1360,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     # NOTE(danms): Legacy interface for digging up volumes in the database
     def _get_instance_volume_bdms(self, context, instance, legacy=True):
+        if isinstance(instance, instance_obj.Instance):
+            instance = obj_base.obj_to_primitive(instance)
         return self._get_volume_bdms(
             self.conductor_api.block_device_mapping_get_all_by_instance(
                 context, instance, legacy), legacy)
@@ -2440,6 +2448,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         return sys_meta, instance_type
 
+    @object_compat
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @wrap_instance_event
     @wrap_instance_fault
@@ -2447,7 +2456,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                        migration=None, migration_id=None):
         """Destroys the source instance."""
         if not migration:
-            migration = self.conductor_api.migration_get(context, migration_id)
+            migration = migration_obj.Migration.get_by_id(
+                    context.elevated(), migration_id)
 
         self._notify_about_instance_usage(context, instance,
                                           "resize.confirm.start")
@@ -2458,21 +2468,22 @@ class ComputeManager(manager.SchedulerDependentManager):
             sys_meta, instance_type = self._cleanup_stored_instance_types(
                 migration, instance)
             sys_meta.pop('old_vm_state', None)
-            self._instance_update(context, instance['uuid'],
-                                  system_metadata=sys_meta)
+
+            instance.system_metadata = sys_meta
+            instance.save()
 
             # NOTE(tr3buchet): tear down networks on source host
             self.network_api.setup_networks_on_host(context, instance,
-                               migration['source_compute'], teardown=True)
+                               migration.source_compute, teardown=True)
 
             network_info = self._get_instance_nw_info(context, instance)
             self.driver.confirm_migration(migration, instance,
                                           network_info)
 
-            self.conductor_api.migration_update(context, migration,
-                                                'confirmed')
+            migration.status = 'confirmed'
+            migration.save(context.elevated())
 
-            rt = self._get_resource_tracker(migration['source_node'])
+            rt = self._get_resource_tracker(migration.source_node)
             rt.drop_resize_claim(instance, prefix='old_')
 
             # NOTE(mriedem): The old_vm_state could be STOPPED but the user
@@ -2481,7 +2492,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             # on the instance and set the vm_state appropriately. We default
             # to ACTIVE because if the power state is not SHUTDOWN, we
             # assume _sync_instance_power_state will clean it up.
-            p_state = instance['power_state']
+            p_state = instance.power_state
             vm_state = None
             if p_state == power_state.SHUTDOWN:
                 vm_state = vm_states.STOPPED
@@ -2491,11 +2502,9 @@ class ComputeManager(manager.SchedulerDependentManager):
             else:
                 vm_state = vm_states.ACTIVE
 
-            instance = self._instance_update(context, instance['uuid'],
-                                             vm_state=vm_state,
-                                             task_state=None,
-                                             expected_task_state=[None,
-                                             task_states.DELETING])
+            instance.vm_state = vm_state
+            instance.task_state = None
+            instance.save(expected_task_state=[None, task_states.DELETING])
 
             self._notify_about_instance_usage(
                 context, instance, "resize.confirm.end",
@@ -2503,6 +2512,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             self._quota_commit(context, reservations)
 
+    @object_compat
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
     @wrap_instance_event
@@ -2516,7 +2526,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         """
         if not migration:
-            migration = self.conductor_api.migration_get(context, migration_id)
+            migration = migration_obj.Migration.get_by_id(
+                    context.elevated(), migration_id)
 
         # NOTE(comstud): A revert_resize is essentially a resize back to
         # the old size, so we need to send a usage event here.
@@ -2529,9 +2540,11 @@ class ComputeManager(manager.SchedulerDependentManager):
             self.network_api.setup_networks_on_host(context, instance,
                                                     teardown=True)
 
+            instance_p = obj_base.obj_to_primitive(instance)
+            migration_p = obj_base.obj_to_primitive(migration)
             self.conductor_api.network_migrate_instance_start(context,
-                                                              instance,
-                                                              migration)
+                                                              instance_p,
+                                                              migration_p)
 
             network_info = self._get_instance_nw_info(context, instance)
             block_device_info = self._get_instance_volume_block_device_info(
@@ -2542,13 +2555,15 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             self._terminate_volume_connections(context, instance)
 
-            self.conductor_api.migration_update(context, migration, 'reverted')
+            migration.status = 'reverted'
+            migration.save(context.elevated())
 
-            rt = self._get_resource_tracker(instance.get('node'))
+            rt = self._get_resource_tracker(instance.node)
             rt.drop_resize_claim(instance)
 
-            self.compute_rpcapi.finish_revert_resize(context, instance,
-                    migration, migration['source_compute'],
+            migration_p = obj_base.obj_to_primitive(migration)
+            self.compute_rpcapi.finish_revert_resize(context, instance_p,
+                    migration_p, migration.source_compute,
                     reservations)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())

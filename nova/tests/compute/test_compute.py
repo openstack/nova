@@ -53,6 +53,7 @@ from nova.network import model as network_model
 from nova.network.security_group import openstack_driver
 from nova.objects import base as obj_base
 from nova.objects import instance as instance_obj
+from nova.objects import migration as migration_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
@@ -3005,6 +3006,7 @@ class ComputeTestCase(BaseTestCase):
 
         want_objects = ['stop_instance', 'start_instance',
                         'terminate_instance', 'soft_delete_instance',
+                        'revert_resize', 'confirm_resize'
                         ]
 
         instance = self._create_fake_instance()
@@ -3691,7 +3693,7 @@ class ComputeTestCase(BaseTestCase):
         def fake_confirm_migration_driver(*args, **kwargs):
             # Confirm the instance uses the new type in finish_resize
             inst = args[1]
-            sys_meta = utils.metadata_to_dict(inst['system_metadata'])
+            sys_meta = inst['system_metadata']
             self.assertEqual(sys_meta['instance_type_flavorid'], '3')
 
         old_vm_state = None
@@ -3736,9 +3738,10 @@ class ComputeTestCase(BaseTestCase):
                 instance_type=new_instance_type_p,
                 image={}, reservations=reservations)
 
-        migration_ref = db.migration_get_by_instance_and_status(
+        migration = migration_obj.Migration.get_by_instance_and_status(
                 self.context.elevated(),
                 inst_ref['uuid'], 'pre-migrating')
+        migration_p = obj_base.obj_to_primitive(migration)
 
         # NOTE(danms): make sure to refresh our inst_ref after prep_resize
         instance = get_primitive_instance_by_uuid(self.context, instance_uuid)
@@ -3748,11 +3751,11 @@ class ComputeTestCase(BaseTestCase):
         db.instance_update(self.context, instance_uuid,
                            {"task_state": task_states.RESIZE_PREP})
         self.compute.resize_instance(self.context, instance=instance,
-                                     migration=migration_ref,
+                                     migration=migration_p,
                                      image={},
                                      instance_type=new_instance_type_p)
         self.compute.finish_resize(self.context,
-                    migration=jsonutils.to_primitive(migration_ref),
+                    migration=jsonutils.to_primitive(migration_p),
                     disk_info={}, image={}, instance=instance)
 
         # Prove that the instance size is now the new size
@@ -3765,9 +3768,11 @@ class ComputeTestCase(BaseTestCase):
         db.instance_update(self.context, instance_uuid,
                            {"task_state": None})
 
-        rpcinst = db.instance_get_by_uuid(self.context, rpcinst['uuid'])
-        self.compute.confirm_resize(self.context, rpcinst, reservations,
-                                    migration_ref)
+        rpcinst = instance_obj.Instance.get_by_uuid(self.context,
+                                                    instance_uuid)
+        self.compute.confirm_resize(self.context, instance=rpcinst,
+                                    reservations=reservations,
+                                    migration=migration)
 
         instance = get_primitive_instance_by_uuid(self.context, instance_uuid)
         self.assertEqual(instance['task_state'], None)
@@ -3775,7 +3780,7 @@ class ComputeTestCase(BaseTestCase):
         instance_type_ref = db.flavor_get(self.context,
                 instance['instance_type_id'])
         self.assertEqual(instance_type_ref['flavorid'], '3')
-        self.assertEqual('fake-mini', migration_ref['source_compute'])
+        self.assertEqual('fake-mini', migration.source_compute)
         self.assertEqual(old_vm_state, instance['vm_state'])
         self.assertEqual(p_state, instance['power_state'])
         self.compute.terminate_instance(self.context, instance=instance)
@@ -3845,9 +3850,10 @@ class ComputeTestCase(BaseTestCase):
                 instance_type=new_instance_type_p,
                 image={}, reservations=reservations)
 
-        migration_ref = db.migration_get_by_instance_and_status(
+        migration = migration_obj.Migration.get_by_instance_and_status(
                 self.context.elevated(),
                 inst_ref['uuid'], 'pre-migrating')
+        migration_p = obj_base.obj_to_primitive(migration)
 
         # NOTE(danms): make sure to refresh our inst_ref after prep_resize
         instance = get_primitive_instance_by_uuid(self.context, instance_uuid)
@@ -3857,11 +3863,11 @@ class ComputeTestCase(BaseTestCase):
         db.instance_update(self.context, instance_uuid,
                            {"task_state": task_states.RESIZE_PREP})
         self.compute.resize_instance(self.context, instance=instance,
-                                     migration=migration_ref,
+                                     migration=migration_p,
                                      image={},
                                      instance_type=new_instance_type_p)
         self.compute.finish_resize(self.context,
-                    migration=jsonutils.to_primitive(migration_ref),
+                    migration=migration_p,
                     disk_info={}, image={}, instance=instance)
 
         # Prove that the instance size is now the new size
@@ -3873,8 +3879,11 @@ class ComputeTestCase(BaseTestCase):
         # Finally, revert and confirm the old flavor has been applied
         db.instance_update(self.context, instance_uuid,
                            {"task_state": task_states.RESIZE_REVERTING})
+
+        inst_obj = self._objectify(rpcinst)
+
         self.compute.revert_resize(self.context,
-                migration_id=migration_ref['id'], instance=rpcinst,
+                migration=migration, instance=inst_obj,
                 reservations=reservations)
 
         rpcinst = db.instance_get_by_uuid(self.context, rpcinst['uuid'])
@@ -3887,7 +3896,7 @@ class ComputeTestCase(BaseTestCase):
                                          {'system_metadata': sys_meta})
 
         self.compute.finish_revert_resize(self.context,
-                migration=jsonutils.to_primitive(migration_ref),
+                migration=migration_p,
                 instance=rpcinst, reservations=reservations)
 
         instance = get_primitive_instance_by_uuid(self.context, instance_uuid)
@@ -3896,7 +3905,7 @@ class ComputeTestCase(BaseTestCase):
         instance_type_ref = db.flavor_get(self.context,
                 instance['instance_type_id'])
         self.assertEqual(instance_type_ref['flavorid'], '1')
-        self.assertEqual(instance['host'], migration_ref['source_compute'])
+        self.assertEqual(instance['host'], migration.source_compute)
         if remove_old_vm_state:
             self.assertEqual(vm_states.ACTIVE, instance['vm_state'])
         else:
@@ -5291,10 +5300,10 @@ class ComputeTestCase(BaseTestCase):
         self.compute.handle_events(event)
 
     def test_allow_confirm_resize_on_instance_in_deleting_task_state(self):
-        instance = self._create_fake_instance()
+        instance = self._create_fake_instance_obj()
         old_type = flavors.extract_flavor(instance)
         new_type = flavors.get_flavor_by_flavor_id('4')
-        sys_meta = utils.metadata_to_dict(instance['system_metadata'])
+        sys_meta = instance.system_metadata
         sys_meta = flavors.save_flavor_info(sys_meta,
                                             old_type, 'old_')
         sys_meta = flavors.save_flavor_info(sys_meta,
@@ -5319,17 +5328,19 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(self.compute.network_api, 'setup_networks_on_host',
                        fake_setup_networks_on_host)
 
-        migration = db.migration_create(self.context.elevated(),
-                                        {'instance_uuid': instance['uuid'],
-                                         'status': 'finished'})
-        instance = db.instance_update(self.context, instance['uuid'],
-                                      {'task_state': task_states.DELETING,
-                                       'vm_state': vm_states.RESIZED,
-                                       'system_metadata': sys_meta})
+        migration = migration_obj.Migration()
+        migration.instance_uuid = instance.uuid
+        migration.status = 'finished'
+        migration.create(self.context.elevated())
 
-        self.compute.confirm_resize(self.context, instance,
+        instance.task_state = task_states.DELETING
+        instance.vm_state = vm_states.RESIZED
+        instance.system_metadata = sys_meta
+        instance.save()
+
+        self.compute.confirm_resize(self.context, instance=instance,
                                     migration=migration)
-        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
+        instance.refresh()
         self.assertEqual(vm_states.ACTIVE, instance['vm_state'])
 
 

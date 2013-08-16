@@ -134,12 +134,12 @@ class ComputeRpcAPITestCase(test.TestCase):
     def test_confirm_resize_cast(self):
         self._test_compute_api('confirm_resize', 'cast',
                 instance=self.fake_instance, migration={'id': 'foo'},
-                host='host', reservations=list('fake_res'), version='2.7')
+                host='host', reservations=list('fake_res'), version='2.39')
 
     def test_confirm_resize_call(self):
         self._test_compute_api('confirm_resize', 'call',
                 instance=self.fake_instance, migration={'id': 'foo'},
-                host='host', reservations=list('fake_res'), version='2.7')
+                host='host', reservations=list('fake_res'), version='2.39')
 
     def test_detach_volume(self):
         self._test_compute_api('detach_volume', 'cast',
@@ -334,7 +334,7 @@ class ComputeRpcAPITestCase(test.TestCase):
     def test_revert_resize(self):
         self._test_compute_api('revert_resize', 'cast',
                 instance=self.fake_instance, migration={'id': 'fake_id'},
-                host='host', reservations=list('fake_res'), version='2.12')
+                host='host', reservations=list('fake_res'), version='2.39')
 
     def test_rollback_live_migration_at_destination(self):
         self._test_compute_api('rollback_live_migration_at_destination',
