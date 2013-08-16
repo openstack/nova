@@ -679,9 +679,18 @@ def stub_snapshot_create(self, context, volume_id, name, description):
                          display_description=description)
 
 
+def stub_compute_volume_snapshot_create(self, context, volume_id, create_info):
+    return {'snapshot': {'id': 100, 'volumeId': volume_id}}
+
+
 def stub_snapshot_delete(self, context, snapshot_id):
     if snapshot_id == '-1':
         raise exc.NotFound
+
+
+def stub_compute_volume_snapshot_delete(self, context, volume_id, snapshot_id,
+        delete_info):
+    pass
 
 
 def stub_snapshot_get(self, context, snapshot_id):

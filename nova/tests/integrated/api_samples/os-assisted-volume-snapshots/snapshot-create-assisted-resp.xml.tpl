@@ -1,0 +1,2 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<snapshot volumeId="521752a6-acf6-4b2d-bc7a-119f9148cd8c" id="100"/>

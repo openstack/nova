@@ -228,4 +228,7 @@
   <extension alias="os-migrations" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/migrations/api/v2.0" name="Migrations">
     <description>%(text)s</description>
   </extension>
+  <extension alias="os-assisted-volume-snapshots" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/assisted-volume-snapshots/api/v2" name="AssistedVolumeSnapshots">
+    <description>%(text)s</description>
+  </extension>
 </extensions>

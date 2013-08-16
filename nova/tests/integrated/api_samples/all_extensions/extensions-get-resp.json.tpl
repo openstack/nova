@@ -137,6 +137,14 @@
             "updated": "%(timestamp)s"
         },
         {
+            "alias": "os-assisted-volume-snapshots",
+            "description": "%(text)s",
+            "links": [],
+            "name": "AssistedVolumeSnapshots",
+            "namespace": "http://docs.openstack.org/compute/ext/assisted-volume-snapshots/api/v2",
+            "updated": "%(timestamp)s"
+        },
+        {
             "alias": "os-attach-interfaces",
             "description": "Attach interface support.",
             "links": [],

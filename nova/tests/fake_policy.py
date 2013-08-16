@@ -279,6 +279,8 @@ policy_data = """
     "compute_extension:v3:os-used-limits:tenant": "is_admin:True",
     "compute_extension:migrations:index": "is_admin:True",
     "compute_extension:v3:os-migrations:index": "is_admin:True",
+    "compute_extension:os-assisted-volume-snapshots:create": "",
+    "compute_extension:os-assisted-volume-snapshots:delete": "",
 
     "volume:create": "",
     "volume:get": "",

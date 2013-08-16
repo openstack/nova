@@ -3697,6 +3697,47 @@ class SnapshotsSampleXmlTests(SnapshotsSampleJsonTests):
     ctype = "xml"
 
 
+class AssistedVolumeSnapshotsJsonTest(ApiSampleTestBaseV2):
+    """Assisted volume snapshots."""
+    extension_name = ("nova.api.openstack.compute.contrib."
+                      "assisted_volume_snapshots.Assisted_volume_snapshots")
+
+    def _create_assisted_snapshot(self, subs):
+        self.stubs.Set(compute_api.API, 'volume_snapshot_create',
+                       fakes.stub_compute_volume_snapshot_create)
+
+        response = self._do_post("os-assisted-volume-snapshots",
+                                 "snapshot-create-assisted-req",
+                                 subs)
+        return response
+
+    def test_snapshots_create_assisted(self):
+        subs = {
+            'snapshot_name': 'snap-001',
+            'description': 'Daily backup',
+            'volume_id': '521752a6-acf6-4b2d-bc7a-119f9148cd8c'
+        }
+        subs.update(self._get_regexes())
+        response = self._create_assisted_snapshot(subs)
+        self._verify_response("snapshot-create-assisted-resp",
+                              subs, response, 200)
+
+    def test_snapshots_delete_assisted(self):
+        self.stubs.Set(compute_api.API, 'volume_snapshot_delete',
+                       fakes.stub_compute_volume_snapshot_delete)
+        snapshot_id = '100'
+        response = self._do_delete(
+                'os-assisted-volume-snapshots/%s?delete_info='
+                '{"volume_id":"521752a6-acf6-4b2d-bc7a-119f9148cd8c"}'
+                % snapshot_id)
+        self.assertEqual(response.status, 204)
+        self.assertEqual(response.read(), '')
+
+
+class AssistedVolumeSnapshotsXmlTest(AssistedVolumeSnapshotsJsonTest):
+    ctype = "xml"
+
+
 class VolumeAttachmentsSampleBase(ServersSampleBase):
     def _stub_compute_api_get_instance_bdms(self, server_id):
 

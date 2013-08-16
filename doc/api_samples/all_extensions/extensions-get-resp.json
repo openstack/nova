@@ -129,6 +129,14 @@
             "updated": "2012-01-12T00:00:00+00:00"
         },
         {
+            "alias": "os-assisted-volume-snapshots",
+            "description": "Assisted volume snapshots.",
+            "links": [],
+            "name": "AssistedVolumeSnapshots",
+            "namespace": "http://docs.openstack.org/compute/ext/assisted-volume-snapshots/api/v2",
+            "updated": "2013-08-15T00:00:00-00:00"
+        },
+        {
             "alias": "os-attach-interfaces",
             "description": "Attach interface support.",
             "links": [],
@@ -473,14 +481,6 @@
             "updated": "2011-08-08T00:00:00+00:00"
         },
         {
-            "alias": "os-user-quotas",
-            "description": "Project user quota support.",
-            "links": [],
-            "name": "UserQuotas",
-            "namespace": "http://docs.openstack.org/compute/ext/user_quotas/api/v1.1",
-            "updated": "2013-07-18T00:00:00+00:00"
-        },
-        {
             "alias": "os-rescue",
             "description": "Instance rescue mode.",
             "links": [],
@@ -583,6 +583,14 @@
             "name": "UserData",
             "namespace": "http://docs.openstack.org/compute/ext/userdata/api/v1.1",
             "updated": "2012-08-07T00:00:00+00:00"
+        },
+        {
+            "alias": "os-user-quotas",
+            "description": "Project user quota support.",
+            "links": [],
+            "name": "UserQuotas",
+            "namespace": "http://docs.openstack.org/compute/ext/user_quotas/api/v1.1",
+            "updated": "2013-07-18T00:00:00+00:00"
         },
         {
             "alias": "os-virtual-interfaces",

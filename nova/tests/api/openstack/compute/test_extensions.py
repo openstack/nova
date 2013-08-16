@@ -176,6 +176,7 @@ class ExtensionControllerTest(ExtensionTestCase):
         self.ext_list = [
             "AdminActions",
             "Aggregates",
+            "AssistedVolumeSnapshots",
             "AvailabilityZone",
             "Agents",
             "Certificates",
