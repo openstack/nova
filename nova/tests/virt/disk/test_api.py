@@ -57,4 +57,4 @@ class APITestCase(test.TestCase):
 
         imgfile = tempfile.NamedTemporaryFile()
         self.addCleanup(imgfile.close)
-        self.assertFalse(api.can_resize_fs(imgfile, 100, use_cow=True))
+        self.assertFalse(api.is_image_partitionless(imgfile, use_cow=True))
