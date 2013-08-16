@@ -176,7 +176,7 @@ class AdminActionsController(wsgi.Controller):
         context = req.environ['nova.context']
         authorize(context, 'lock')
         try:
-            instance = self.compute_api.get(context, id)
+            instance = self.compute_api.get(context, id, want_objects=True)
             self.compute_api.lock(context, instance)
         except exception.InstanceNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
@@ -189,7 +189,7 @@ class AdminActionsController(wsgi.Controller):
         context = req.environ['nova.context']
         authorize(context, 'unlock')
         try:
-            instance = self.compute_api.get(context, id)
+            instance = self.compute_api.get(context, id, want_objects=True)
             self.compute_api.unlock(context, instance)
         except exception.InstanceNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())

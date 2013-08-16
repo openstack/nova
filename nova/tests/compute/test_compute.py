@@ -2844,7 +2844,12 @@ class ComputeTestCase(BaseTestCase):
         self.compute.terminate_instance(self.context, instance=instance)
 
     def test_lock(self):
-        # ensure locked instance cannot be changed.
+        # FIXME(comstud): This test is such crap.  This is testing
+        # compute API lock functionality in a test class for the compute
+        # manager by running an instance.  Hello?  We should just have
+        # unit tests in test_compute_api that test the check_instance_lock
+        # decorator and make sure that appropriate compute_api methods
+        # have the decorator.
         instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_uuid = instance['uuid']
         self.compute.run_instance(self.context, instance=instance)
@@ -2858,18 +2863,17 @@ class ComputeTestCase(BaseTestCase):
             self.assertEqual(instance['task_state'], task_state)
 
         # should fail with locked nonadmin context
-        self.compute_api.lock(self.context, instance)
         inst_obj = instance_obj.Instance.get_by_uuid(self.context,
                                                      instance['uuid'])
 
+        self.compute_api.lock(self.context, inst_obj)
         self.assertRaises(exception.InstanceIsLocked,
                           self.compute_api.reboot,
                           non_admin_context, inst_obj, 'SOFT')
         check_task_state(None)
 
         # should fail with invalid task state
-        instance = db.instance_get_by_uuid(self.context, instance_uuid)
-        self.compute_api.unlock(self.context, instance)
+        self.compute_api.unlock(self.context, inst_obj)
         instance = db.instance_update(self.context, instance_uuid,
                                       {'task_state': task_states.REBOOTING})
         inst_obj.refresh()
@@ -2884,7 +2888,6 @@ class ComputeTestCase(BaseTestCase):
         inst_obj.refresh()
         self.compute_api.reboot(self.context, inst_obj, 'SOFT')
         check_task_state(task_states.REBOOTING)
-
         self.compute.terminate_instance(self.context,
                 instance=jsonutils.to_primitive(instance))
 
@@ -2895,6 +2898,12 @@ class ComputeTestCase(BaseTestCase):
         return instance
 
     def test_override_owner_lock(self):
+        # FIXME(comstud): This test is such crap.  This is testing
+        # compute API lock functionality in a test class for the compute
+        # manager by running an instance.  Hello?  We should just have
+        # unit tests in test_compute_api that test the check_instance_lock
+        # decorator and make sure that appropriate compute_api methods
+        # have the decorator.
         admin_context = context.RequestContext('admin-user',
                                                'admin-project',
                                                is_admin=True)
@@ -2904,12 +2913,19 @@ class ComputeTestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance=instance)
 
         # Ensure that an admin can override the owner lock
-        self.compute_api.lock(self.context, instance)
+        inst_obj = self._objectify(instance)
+        self.compute_api.lock(self.context, inst_obj)
         self._check_locked_by(instance_uuid, 'owner')
-        self.compute_api.unlock(admin_context, instance)
+        self.compute_api.unlock(admin_context, inst_obj)
         self._check_locked_by(instance_uuid, None)
 
     def test_upgrade_owner_lock(self):
+        # FIXME(comstud): This test is such crap.  This is testing
+        # compute API lock functionality in a test class for the compute
+        # manager by running an instance.  Hello?  We should just have
+        # unit tests in test_compute_api that test the check_instance_lock
+        # decorator and make sure that appropriate compute_api methods
+        # have the decorator.
         admin_context = context.RequestContext('admin-user',
                                                'admin-project',
                                                is_admin=True)
@@ -2920,14 +2936,16 @@ class ComputeTestCase(BaseTestCase):
 
         # Ensure that an admin can upgrade the lock and that
         # the owner can no longer unlock
-        self.compute_api.lock(self.context, instance)
-        self.compute_api.lock(admin_context, instance)
-        instance = self._check_locked_by(instance_uuid, 'admin')
+        inst_obj = self._objectify(instance)
+        self.compute_api.lock(self.context, inst_obj)
+        self.compute_api.lock(admin_context, inst_obj)
+        self._check_locked_by(instance_uuid, 'admin')
+        inst_obj.refresh()
         self.assertRaises(exception.PolicyNotAuthorized,
                           self.compute_api.unlock,
-                          self.context, instance)
+                          self.context, inst_obj)
         self._check_locked_by(instance_uuid, 'admin')
-        self.compute_api.unlock(admin_context, instance)
+        self.compute_api.unlock(admin_context, inst_obj)
         self._check_locked_by(instance_uuid, None)
 
     def _test_state_revert(self, instance, operation, pre_task_state,
@@ -7612,18 +7630,16 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute_api.reset_network(self.context, instance)
 
     def test_lock(self):
-        instance = self._create_fake_instance()
+        instance = self._create_fake_instance_obj()
         self.stubs.Set(self.compute_api.network_api, 'deallocate_for_instance',
                        lambda *a, **kw: None)
         self.compute_api.lock(self.context, instance)
-        self.compute_api.delete(self.context, self._objectify(instance))
 
     def test_unlock(self):
-        instance = self._create_fake_instance()
+        instance = self._create_fake_instance_obj()
         self.stubs.Set(self.compute_api.network_api, 'deallocate_for_instance',
                        lambda *a, **kw: None)
         self.compute_api.unlock(self.context, instance)
-        self.compute_api.delete(self.context, self._objectify(instance))
 
     def test_get_lock(self):
         instance = self._create_fake_instance()

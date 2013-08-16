@@ -167,8 +167,7 @@ class AdminActionsTest(CommonMixin, test.TestCase):
         actions = ['pause', 'unpause', 'suspend', 'resume', 'migrate',
                    'reset_network', 'inject_network_info', 'lock',
                    'unlock']
-        actions_not_objectified = ['reset_network', 'lock', 'unlock',
-                                   'inject_network_info']
+        actions_not_objectified = ['reset_network', 'inject_network_info']
         method_translations = {'migrate': 'resize'}
 
         for action in actions:
@@ -203,8 +202,7 @@ class AdminActionsTest(CommonMixin, test.TestCase):
         actions = ['pause', 'unpause', 'suspend', 'resume', 'migrate',
                    'reset_network', 'inject_network_info', 'lock',
                    'unlock', 'reset_state', 'migrate_live']
-        actions_not_objectified = ['reset_network', 'lock', 'unlock',
-                                   'inject_network_info']
+        actions_not_objectified = ['reset_network', 'inject_network_info']
         body_map = {'reset_state': {'state': 'active'},
                     'migrate_live': {'host': 'hostname',
                                      'block_migration': False,
@@ -330,7 +328,7 @@ class AdminActionsTest(CommonMixin, test.TestCase):
     def test_unlock_not_authorized(self):
         self.mox.StubOutWithMock(self.compute_api, 'unlock')
 
-        instance = self._stub_instance_get(objects=False)
+        instance = self._stub_instance_get(objects=True)
 
         self.compute_api.unlock(self.context, instance).AndRaise(
                 exception.PolicyNotAuthorized(action='unlock'))
