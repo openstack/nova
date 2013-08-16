@@ -4,6 +4,7 @@
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
+# Copyright 2013 Red Hat, Inc.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -31,8 +32,8 @@ from nova.compute import utils as compute_utils
 from nova import context
 from nova import db
 from nova import exception
-from nova.openstack.common import rpc
 from nova import test
+from nova.tests import cast_as_call
 from nova.tests import fake_network
 from nova.tests import fake_utils
 from nova.tests.image import fake
@@ -142,9 +143,7 @@ class CinderCloudTestCase(test.TestCase):
         self.volume_api = volume.API()
         self.volume_api.reset_fake_api(self.context)
 
-        # NOTE(comstud): Make 'cast' behave like a 'call' which will
-        # ensure that operations complete
-        self.stubs.Set(rpc, 'cast', rpc.call)
+        self.useFixture(cast_as_call.CastAsCall(self.stubs))
 
         # make sure we can map ami-00000001/2 to a uuid in FakeImageService
         db.s3_image_create(self.context,

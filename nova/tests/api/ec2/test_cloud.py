@@ -4,6 +4,7 @@
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
+# Copyright 2013 Red Hat, Inc.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -46,11 +47,11 @@ from nova.image import s3
 from nova.network import api as network_api
 from nova.network import neutronv2
 from nova.openstack.common import log as logging
-from nova.openstack.common import rpc
 from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.api.openstack.compute.contrib import (
     test_neutron_security_groups as test_neutron)
+from nova.tests import cast_as_call
 from nova.tests import fake_network
 from nova.tests import fake_utils
 from nova.tests.image import fake
@@ -165,9 +166,7 @@ class CloudTestCase(test.TestCase):
                                               is_admin=True)
         self.volume_api = volume.API()
 
-        # NOTE(comstud): Make 'cast' behave like a 'call' which will
-        # ensure that operations complete
-        self.stubs.Set(rpc, 'cast', rpc.call)
+        self.useFixture(cast_as_call.CastAsCall(self.stubs))
 
         # make sure we can map ami-00000001/2 to a uuid in FakeImageService
         db.s3_image_create(self.context,
@@ -1800,9 +1799,8 @@ class CloudTestCase(test.TestCase):
             pass
 
         self.stubs.Set(compute_utils, 'notify_about_instance_usage', dumb)
-        # NOTE(comstud): Make 'cast' behave like a 'call' which will
-        # ensure that operations complete
-        self.stubs.Set(rpc, 'cast', rpc.call)
+
+        self.useFixture(cast_as_call.CastAsCall(self.stubs))
 
         result = run_instances(self.context, **kwargs)
         instance = result['instancesSet'][0]
@@ -1829,9 +1827,8 @@ class CloudTestCase(test.TestCase):
                     'status': 'active'}
 
         self.stubs.Set(fake._FakeImageService, 'show', fake_show)
-        # NOTE(comstud): Make 'cast' behave like a 'call' which will
-        # ensure that operations complete
-        self.stubs.Set(rpc, 'cast', rpc.call)
+
+        self.useFixture(cast_as_call.CastAsCall(self.stubs))
 
         def fake_format(*args, **kwargs):
             pass
@@ -1886,9 +1883,8 @@ class CloudTestCase(test.TestCase):
             pass
 
         self.stubs.Set(compute_utils, 'notify_about_instance_usage', dumb)
-        # NOTE(comstud): Make 'cast' behave like a 'call' which will
-        # ensure that operations complete
-        self.stubs.Set(rpc, 'cast', rpc.call)
+
+        self.useFixture(cast_as_call.CastAsCall(self.stubs))
 
         kwargs['client_token'] = 'client-token-1'
         result = run_instances(self.context, **kwargs)
