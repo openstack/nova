@@ -5491,11 +5491,13 @@ class ComputeAPITestCase(BaseTestCase):
         instance = self.compute_api._populate_instance_for_create(
                                                     instance,
                                                     self.fake_image,
+                                                    1,
                                                     security_groups=None)
         self.assertEquals(str(base_options['image_ref']),
                           instance['system_metadata']['image_base_image_ref'])
         self.assertEquals(vm_states.BUILDING, instance['vm_state'])
         self.assertEquals(task_states.SCHEDULING, instance['task_state'])
+        self.assertEquals(1, instance['launch_index'])
         self.assertIsNotNone(instance.get('uuid'))
         self.assertIsNone(instance.get('security_groups'))
 
