@@ -3309,8 +3309,17 @@ def get_snapshot_uuid_by_ec2_id(context, ec2_id):
 ###################
 
 
-def _block_device_mapping_get_query(context, session=None):
-    return model_query(context, models.BlockDeviceMapping, session=session)
+def _block_device_mapping_get_query(context, session=None,
+        columns_to_join=None):
+    if columns_to_join is None:
+        columns_to_join = []
+
+    query = model_query(context, models.BlockDeviceMapping, session=session)
+
+    for column in columns_to_join:
+        query = query.options(joinedload(column))
+
+    return query
 
 
 def _scrub_empty_str_values(dct, keys_to_scrub):
@@ -3388,6 +3397,15 @@ def block_device_mapping_get_all_by_instance(context, instance_uuid):
     return _block_device_mapping_get_query(context).\
                  filter_by(instance_uuid=instance_uuid).\
                  all()
+
+
+@require_context
+def block_device_mapping_get_by_volume_id(context, volume_id,
+        columns_to_join=None):
+    return _block_device_mapping_get_query(context,
+            columns_to_join=columns_to_join).\
+                 filter_by(volume_id=volume_id).\
+                 first()
 
 
 @require_context
