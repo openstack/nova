@@ -140,7 +140,7 @@ class PowerVMOperator(object):
 
     def get_host_stats(self, refresh=False):
         """Return currently known host stats."""
-        if refresh:
+        if refresh or not self._host_stats:
             self._update_host_stats()
         return self._host_stats
 

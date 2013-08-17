@@ -4094,7 +4094,7 @@ class HostState(object):
 
         If 'refresh' is True, run update the stats first.
         """
-        if refresh:
+        if refresh or not self._stats:
             self.update_status()
         return self._stats
 

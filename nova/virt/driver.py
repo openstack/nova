@@ -905,7 +905,7 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
-    def get_available_nodes(self):
+    def get_available_nodes(self, refresh=False):
         """Returns nodenames of all nodes managed by the compute service.
 
         This method is for multi compute-nodes support. If a driver supports
@@ -913,10 +913,17 @@ class ComputeDriver(object):
         by the service. Otherwise, this method should return
         [hypervisor_hostname].
         """
-        stats = self.get_host_stats(refresh=True)
+        stats = self.get_host_stats(refresh=refresh)
         if not isinstance(stats, list):
             stats = [stats]
         return [s['hypervisor_hostname'] for s in stats]
+
+    def node_is_available(self, nodename):
+        """Return whether this compute service manages a particular node."""
+        if nodename in self.get_available_nodes():
+            return True
+        # Refresh and check again.
+        return nodename in self.get_available_nodes(refresh=True)
 
     def get_per_instance_usage(self):
         """Get information about instance resource usage.

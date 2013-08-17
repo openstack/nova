@@ -138,7 +138,7 @@ class HostState(object):
         """Return the current state of the host. If 'refresh' is
         True, run the update first.
         """
-        if refresh:
+        if refresh or not self._stats:
             self.update_status()
         return self._stats
 
