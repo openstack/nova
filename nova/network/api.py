@@ -259,11 +259,17 @@ class API(base.Base):
                               dhcp_options=None):
         """Allocates all network structures for an instance.
 
-        TODO(someone): document the rest of these parameters.
-
+        :param context: The request context.
+        :param instance: An Instance dict.
+        :param vpn: A boolean, if True, indicate a vpn to access the instance.
+        :param requested_networks: A dictionary of requested_networks,
+            Optional value containing network_id, fixed_ip, and port_id.
         :param macs: None or a set of MAC addresses that the instance
             should use. macs is supplied by the hypervisor driver (contrast
             with requested_networks which is user supplied).
+        :param conductor_api: The conductor api.
+        :param security_groups: None or security groups to allocate for
+            instance.
         :param dhcp_options: None or a set of key/value pairs that should
             determine the DHCP BOOTP response, eg. for PXE booting an instance
             configured with the baremetal hypervisor. It is expected that these
