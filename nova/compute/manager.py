@@ -1635,6 +1635,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             instance.vm_state = vm_states.DELETED
             instance.task_state = None
             instance.terminated_at = timeutils.utcnow()
+            instance.save()
             system_meta = utils.instance_sys_meta(instance)
             self.conductor_api.instance_destroy(
                 context, obj_base.obj_to_primitive(instance))
