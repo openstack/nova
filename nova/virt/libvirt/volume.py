@@ -108,6 +108,22 @@ class LibvirtBaseVolumeDriver(object):
             conf.logical_block_size = data['logical_block_size']
         if 'physical_block_size' in data:
             conf.physical_block_size = data['physical_block_size']
+
+        # Extract rate_limit control parameters
+        if 'qos_specs' in data and data['qos_specs']:
+            tune_opts = ['total_bytes_sec', 'read_bytes_sec',
+                         'write_bytes_sec', 'total_iops_sec',
+                         'read_iops_sec', 'write_iops_sec']
+            specs = data['qos_specs']
+            if isinstance(specs, dict):
+                for k, v in specs.iteritems():
+                    if k in tune_opts:
+                        new_key = 'disk_' + k
+                        setattr(conf, new_key, v)
+            else:
+                LOG.warn(_('Unknown content in connection_info/'
+                           'qos_specs: %s') % specs)
+
         return conf
 
     def disconnect_volume(self, connection_info, disk_dev):

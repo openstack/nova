@@ -123,6 +123,45 @@ class LibvirtVolumeTestCase(test.TestCase):
         self.assertEqual('4096', blockio.get('logical_block_size'))
         self.assertEqual('4096', blockio.get('physical_block_size'))
 
+    def test_libvirt_volume_driver_iotune(self):
+        libvirt_driver = volume.LibvirtVolumeDriver(self.fake_conn)
+        connection_info = {
+            'driver_volume_type': 'fake',
+            'data': {
+                "device_path": "/foo",
+                'qos_specs': 'bar',
+                },
+            }
+        disk_info = {
+            "bus": "virtio",
+            "dev": "vde",
+            "type": "disk",
+            }
+        conf = libvirt_driver.connect_volume(connection_info, disk_info)
+        tree = conf.format_dom()
+        iotune = tree.find('./iotune')
+        # ensure invalid qos_specs is ignored
+        self.assertEqual(iotune, None)
+
+        specs = {
+            'total_bytes_sec': '102400',
+            'read_bytes_sec': '51200',
+            'write_bytes_sec': '0',
+            'total_iops_sec': '0',
+            'read_iops_sec': '200',
+            'write_iops_sec': '200',
+        }
+        del connection_info['data']['qos_specs']
+        connection_info['data'].update(dict(qos_specs=specs))
+        conf = libvirt_driver.connect_volume(connection_info, disk_info)
+        tree = conf.format_dom()
+        self.assertEqual('102400', tree.find('./iotune/total_bytes_sec').text)
+        self.assertEqual('51200', tree.find('./iotune/read_bytes_sec').text)
+        self.assertEqual('0', tree.find('./iotune/write_bytes_sec').text)
+        self.assertEqual('0', tree.find('./iotune/total_iops_sec').text)
+        self.assertEqual('200', tree.find('./iotune/read_iops_sec').text)
+        self.assertEqual('200', tree.find('./iotune/write_iops_sec').text)
+
     def iscsi_connection(self, volume, location, iqn):
         return {
                 'driver_volume_type': 'iscsi',
@@ -131,6 +170,10 @@ class LibvirtVolumeTestCase(test.TestCase):
                     'target_portal': location,
                     'target_iqn': iqn,
                     'target_lun': 1,
+                    'qos_specs': {
+                        'total_bytes_sec': '102400',
+                        'read_iops_sec': '200',
+                        }
                 }
         }
 
@@ -162,6 +205,7 @@ class LibvirtVolumeTestCase(test.TestCase):
                               '-p', self.location, '--logout'),
                              ('iscsiadm', '-m', 'node', '-T', self.iqn,
                               '-p', self.location, '--op', 'delete')]
+        self.assertEqual('102400', tree.find('./iotune/total_bytes_sec').text)
         self.assertEqual(self.executes, expected_commands)
 
     def test_libvirt_iscsi_driver_still_in_use(self):
@@ -217,6 +261,10 @@ class LibvirtVolumeTestCase(test.TestCase):
                 'auth_username': CONF.rbd_user,
                 'secret_type': 'ceph',
                 'secret_uuid': CONF.rbd_secret_uuid,
+                'qos_specs': {
+                    'total_bytes_sec': '1048576',
+                    'read_iops_sec': '500',
+                    }
             }
         }
 
@@ -227,6 +275,8 @@ class LibvirtVolumeTestCase(test.TestCase):
         tree = conf.format_dom()
         self._assertNetworkAndProtocolEquals(tree)
         self.assertEqual(tree.find('./source/auth'), None)
+        self.assertEqual('1048576', tree.find('./iotune/total_bytes_sec').text)
+        self.assertEqual('500', tree.find('./iotune/read_iops_sec').text)
         libvirt_driver.disconnect_volume(connection_info, "vde")
 
     def test_libvirt_rbd_driver_hosts(self):
