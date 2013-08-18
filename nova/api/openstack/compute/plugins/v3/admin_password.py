@@ -54,7 +54,8 @@ class AdminPasswordController(wsgi.Controller):
     def change_password(self, req, id, body):
         context = req.environ['nova.context']
         authorize(context)
-        if 'admin_password' not in body['change_password']:
+        if (not self.is_valid_body(body, 'change_password')
+                or 'admin_password' not in body['change_password']):
             msg = _("No admin_password was specified")
             raise exc.HTTPBadRequest(explanation=msg)
         password = body['change_password']['admin_password']
