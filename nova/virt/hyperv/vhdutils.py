@@ -40,6 +40,17 @@ class VHDUtils(object):
             Path=vhd_path)
         self._vmutils.check_ret_val(ret_val, job_path)
 
+    def create_dynamic_vhd(self, path, max_internal_size, format):
+        if format != constants.DISK_FORMAT_VHD:
+            raise vmutils.HyperVException(_("Unsupported disk format: %s") %
+                                          format)
+
+        image_man_svc = self._conn.Msvm_ImageManagementService()[0]
+
+        (job_path, ret_val) = image_man_svc.CreateDynamicVirtualHardDisk(
+            Path=path, MaxInternalSize=max_internal_size)
+        self._vmutils.check_ret_val(ret_val, job_path)
+
     def create_differencing_vhd(self, path, parent_path):
         image_man_svc = self._conn.Msvm_ImageManagementService()[0]
 
@@ -108,3 +119,6 @@ class VHDUtils(object):
             return constants.DISK_FORMAT_VHD
         else:
             raise vmutils.HyperVException(_('Unsupported virtual disk format'))
+
+    def get_best_supported_vhd_format(self):
+        return constants.DISK_FORMAT_VHD

@@ -180,6 +180,7 @@ class HyperVAPITestCase(test.TestCase):
         self._mox.StubOutWithMock(vhdutils.VHDUtils, 'resize_vhd')
         self._mox.StubOutWithMock(vhdutils.VHDUtils, 'validate_vhd')
         self._mox.StubOutWithMock(vhdutils.VHDUtils, 'get_vhd_format')
+        self._mox.StubOutWithMock(vhdutils.VHDUtils, 'create_dynamic_vhd')
 
         self._mox.StubOutWithMock(hostutils.HostUtils, 'get_cpus_info')
         self._mox.StubOutWithMock(hostutils.HostUtils,
@@ -493,6 +494,10 @@ class HyperVAPITestCase(test.TestCase):
     def test_spawn_with_metrics_collection(self):
         self.flags(enable_instance_metrics_collection=True, group='hyperv')
         self._test_spawn_instance(False)
+
+    def test_spawn_with_ephemeral_storage(self):
+        self._test_spawn_instance(True, expected_ide_disks=2,
+                                  ephemeral_storage=True)
 
     def _check_instance_name(self, vm_name):
         return vm_name == self._instance_data['name']
@@ -843,12 +848,16 @@ class HyperVAPITestCase(test.TestCase):
                                                self._project_id,
                                                self._user_id)
 
-    def _spawn_instance(self, cow, block_device_info=None):
+    def _spawn_instance(self, cow, block_device_info=None,
+                        ephemeral_storage=False):
         self.flags(use_cow_images=cow)
 
         self._instance_data = self._get_instance_data()
         instance = db.instance_create(self._context, self._instance_data)
         instance['system_metadata'] = {}
+
+        if ephemeral_storage:
+            instance['ephemeral_gb'] = 1
 
         image = db_fakes.get_fake_image_data(self._project_id, self._user_id)
 
@@ -876,12 +885,21 @@ class HyperVAPITestCase(test.TestCase):
     def _setup_create_instance_mocks(self, setup_vif_mocks_func=None,
                                      boot_from_volume=False,
                                      block_device_info=None,
-                                     admin_permissions=True):
+                                     admin_permissions=True,
+                                     ephemeral_storage=False):
         vmutils.VMUtils.create_vm(mox.Func(self._check_vm_name), mox.IsA(int),
                                   mox.IsA(int), mox.IsA(bool),
                                   CONF.hyperv.dynamic_memory_ratio)
 
         if not boot_from_volume:
+            m = vmutils.VMUtils.attach_ide_drive(mox.Func(self._check_vm_name),
+                                                 mox.IsA(str),
+                                                 mox.IsA(int),
+                                                 mox.IsA(int),
+                                                 mox.IsA(str))
+            m.WithSideEffects(self._add_ide_disk).InAnyOrder()
+
+        if ephemeral_storage:
             m = vmutils.VMUtils.attach_ide_drive(mox.Func(self._check_vm_name),
                                                  mox.IsA(str),
                                                  mox.IsA(int),
@@ -956,7 +974,8 @@ class HyperVAPITestCase(test.TestCase):
                                     config_drive=False,
                                     use_cdrom=False,
                                     admin_permissions=True,
-                                    vhd_format=constants.DISK_FORMAT_VHD):
+                                    vhd_format=constants.DISK_FORMAT_VHD,
+                                    ephemeral_storage=False):
         m = vmutils.VMUtils.vm_exists(mox.IsA(str))
         m.WithSideEffects(self._set_vm_name).AndReturn(False)
 
@@ -986,10 +1005,16 @@ class HyperVAPITestCase(test.TestCase):
 
         self._setup_check_admin_permissions_mocks(
                                           admin_permissions=admin_permissions)
+        if ephemeral_storage:
+            m = fake.PathUtils.get_instance_dir(mox.Func(self._check_vm_name))
+            m.AndReturn(self._test_instance_dir)
+            vhdutils.VHDUtils.create_dynamic_vhd(mox.IsA(str), mox.IsA(int),
+                                                 mox.IsA(str))
 
         self._setup_create_instance_mocks(setup_vif_mocks_func,
                                           boot_from_volume,
-                                          block_device_info)
+                                          block_device_info,
+                                          ephemeral_storage=ephemeral_storage)
 
         if config_drive:
             self._setup_spawn_config_drive_mocks(use_cdrom)
@@ -1010,16 +1035,19 @@ class HyperVAPITestCase(test.TestCase):
                              config_drive=False,
                              use_cdrom=False,
                              admin_permissions=True,
-                             vhd_format=constants.DISK_FORMAT_VHD):
+                             vhd_format=constants.DISK_FORMAT_VHD,
+                             ephemeral_storage=False):
         self._setup_spawn_instance_mocks(cow,
                                          setup_vif_mocks_func,
                                          with_exception,
                                          config_drive=config_drive,
                                          use_cdrom=use_cdrom,
                                          admin_permissions=admin_permissions,
-                                         vhd_format=vhd_format)
+                                         vhd_format=vhd_format,
+                                         ephemeral_storage=ephemeral_storage)
+
         self._mox.ReplayAll()
-        self._spawn_instance(cow)
+        self._spawn_instance(cow, ephemeral_storage=ephemeral_storage)
         self._mox.VerifyAll()
 
         self.assertEquals(len(self._instance_ide_disks), expected_ide_disks)
@@ -1379,7 +1407,7 @@ class HyperVAPITestCase(test.TestCase):
                           instance_type, network_info)
         self._mox.VerifyAll()
 
-    def _test_finish_migration(self, power_on):
+    def _test_finish_migration(self, power_on, ephemeral_storage=False):
         self._instance_data = self._get_instance_data()
         instance = db.instance_create(self._context, self._instance_data)
         instance['system_metadata'] = {}
@@ -1411,8 +1439,15 @@ class HyperVAPITestCase(test.TestCase):
         m = fake.PathUtils.exists(mox.IsA(str))
         m.AndReturn(True)
 
+        m = fake.PathUtils.get_instance_dir(mox.IsA(str))
+        if ephemeral_storage:
+            return m.AndReturn(self._test_instance_dir)
+        else:
+            m.AndReturn(None)
+
         self._set_vm_name(instance['name'])
-        self._setup_create_instance_mocks(None, False)
+        self._setup_create_instance_mocks(None, False,
+                                          ephemeral_storage=ephemeral_storage)
 
         if power_on:
             vmutils.VMUtils.set_vm_state(mox.Func(self._check_instance_name),
@@ -1429,6 +1464,9 @@ class HyperVAPITestCase(test.TestCase):
     def test_finish_migration_power_off(self):
         self._test_finish_migration(False)
 
+    def test_finish_migration_with_ephemeral_storage(self):
+        self._test_finish_migration(False, ephemeral_storage=True)
+
     def test_confirm_migration(self):
         self._instance_data = self._get_instance_data()
         instance = db.instance_create(self._context, self._instance_data)
@@ -1440,7 +1478,7 @@ class HyperVAPITestCase(test.TestCase):
         self._conn.confirm_migration(None, instance, network_info)
         self._mox.VerifyAll()
 
-    def _test_finish_revert_migration(self, power_on):
+    def _test_finish_revert_migration(self, power_on, ephemeral_storage=False):
         self._instance_data = self._get_instance_data()
         instance = db.instance_create(self._context, self._instance_data)
         network_info = fake_network.fake_get_instance_nw_info(self.stubs)
@@ -1464,8 +1502,15 @@ class HyperVAPITestCase(test.TestCase):
         m = fake.PathUtils.get_instance_dir(mox.IsA(str))
         m.AndReturn(self._test_instance_dir)
 
+        m = fake.PathUtils.get_instance_dir(mox.IsA(str))
+        if ephemeral_storage:
+            m.AndReturn(self._test_instance_dir)
+        else:
+            m.AndReturn(None)
+
         self._set_vm_name(instance['name'])
-        self._setup_create_instance_mocks(None, False)
+        self._setup_create_instance_mocks(None, False,
+                                          ephemeral_storage=ephemeral_storage)
 
         if power_on:
             vmutils.VMUtils.set_vm_state(mox.Func(self._check_instance_name),
@@ -1487,3 +1532,6 @@ class HyperVAPITestCase(test.TestCase):
                           self._test_spawn_instance,
                           with_exception=True,
                           admin_permissions=False)
+
+    def test_finish_revert_migration_with_ephemeral_storage(self):
+        self._test_finish_revert_migration(False, ephemeral_storage=True)

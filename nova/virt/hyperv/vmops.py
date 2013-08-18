@@ -176,6 +176,17 @@ class VMOps(object):
 
         return root_vhd_path
 
+    def create_ephemeral_vhd(self, instance):
+        eph_vhd_size = instance.get('ephemeral_gb', 0) * 1024 ** 3
+        if eph_vhd_size:
+            vhd_format = self._vhdutils.get_best_supported_vhd_format()
+
+            eph_vhd_path = self._pathutils.get_ephemeral_vhd_path(
+                instance['name'], vhd_format)
+            self._vhdutils.create_dynamic_vhd(eph_vhd_path, eph_vhd_size,
+                                              vhd_format)
+            return eph_vhd_path
+
     @check_admin_permissions
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info, block_device_info=None):
@@ -194,9 +205,11 @@ class VMOps(object):
         else:
             root_vhd_path = self._create_root_vhd(context, instance)
 
+        eph_vhd_path = self.create_ephemeral_vhd(instance)
+
         try:
             self.create_instance(instance, network_info, block_device_info,
-                                 root_vhd_path)
+                                 root_vhd_path, eph_vhd_path)
 
             if configdrive.required_by(instance):
                 self._create_config_drive(instance, injected_files,
@@ -208,8 +221,8 @@ class VMOps(object):
             self.destroy(instance)
             raise vmutils.HyperVException(_('Spawn instance failed'))
 
-    def create_instance(self, instance, network_info,
-                        block_device_info, root_vhd_path):
+    def create_instance(self, instance, network_info, block_device_info,
+                        root_vhd_path, eph_vhd_path):
         instance_name = instance['name']
 
         self._vmutils.create_vm(instance_name,
@@ -218,11 +231,20 @@ class VMOps(object):
                                 CONF.hyperv.limit_cpu_features,
                                 CONF.hyperv.dynamic_memory_ratio)
 
+        ctrl_disk_addr = 0
         if root_vhd_path:
             self._vmutils.attach_ide_drive(instance_name,
                                            root_vhd_path,
                                            0,
+                                           ctrl_disk_addr,
+                                           constants.IDE_DISK)
+            ctrl_disk_addr += 1
+
+        if eph_vhd_path:
+            self._vmutils.attach_ide_drive(instance_name,
+                                           eph_vhd_path,
                                            0,
+                                           ctrl_disk_addr,
                                            constants.IDE_DISK)
 
         self._vmutils.create_scsi_controller(instance_name)
