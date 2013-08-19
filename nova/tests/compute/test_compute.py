@@ -7724,9 +7724,16 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_get_diagnostics(self):
         instance = self._create_fake_instance()
+
+        rpcapi = compute_rpcapi.ComputeAPI
+        self.mox.StubOutWithMock(rpcapi, 'get_diagnostics')
+        rpcapi.get_diagnostics(self.context, instance=instance)
+        self.mox.ReplayAll()
+
+        self.compute_api.get_diagnostics(self.context, instance)
+
         self.stubs.Set(self.compute_api.network_api, 'deallocate_for_instance',
                        lambda *a, **kw: None)
-        self.compute_api.get_diagnostics(self.context, instance)
         self.compute_api.delete(self.context, self._objectify(instance))
 
     def test_inject_file(self):
