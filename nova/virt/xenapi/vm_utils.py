@@ -211,7 +211,9 @@ def create_vm(session, instance, name_label, kernel, ramdisk,
     vcpu_weight = instance_type['vcpu_weight']
     vcpu_params = {}
     if vcpu_weight is not None:
-        vcpu_params = {"weight": str(vcpu_weight)}
+        # NOTE(johngarbutt) bug in XenServer 6.1 and 6.2 means
+        # we need to specify both weight and cap for either to apply
+        vcpu_params = {"weight": str(vcpu_weight), "cap": "0"}
 
     rec = {
         'actions_after_crash': 'destroy',

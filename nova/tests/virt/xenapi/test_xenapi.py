@@ -617,7 +617,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
             self.assertEquals(self.vm['VCPUs_params'], {})
         else:
             self.assertEquals(self.vm['VCPUs_params'],
-                              {'weight': str(vcpu_weight)})
+                              {'weight': str(vcpu_weight), 'cap': '0'})
 
         # Check that the VM is running according to Nova
         self.assertEquals(self.vm_info['state'], power_state.RUNNING)
