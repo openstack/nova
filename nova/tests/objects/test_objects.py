@@ -166,6 +166,30 @@ class TestUtils(test.TestCase):
         self.assertRaises(netaddr.AddrFormatError, utils.ip_or_none(4), 'foo')
         self.assertRaises(netaddr.AddrFormatError, utils.ip_or_none(6), 'foo')
 
+    def test_list_of_strings_or_none(self):
+        self.assertEqual(utils.list_of_strings_or_none(None), None)
+        self.assertEqual(utils.list_of_strings_or_none(['1', '2']),
+                         ['1', '2'])
+        self.assertRaises(ValueError,
+                          utils.list_of_strings_or_none, 'foo')
+        self.assertRaises(ValueError,
+                          utils.list_of_strings_or_none, [1, 2])
+        self.assertRaises(ValueError,
+                          utils.list_of_strings_or_none, ['1', 2])
+
+    def test_dict_of_strings_or_none(self):
+        self.assertEqual(utils.dict_of_strings_or_none(None), None)
+        self.assertEqual(utils.dict_of_strings_or_none({'1': '2'}),
+                         {'1': '2'})
+        self.assertRaises(ValueError,
+                          utils.dict_of_strings_or_none, {'1': '2', '3': 4})
+        self.assertRaises(ValueError,
+                          utils.dict_of_strings_or_none, {'1': '2', 3: '4'})
+        self.assertRaises(ValueError,
+                          utils.dict_of_strings_or_none, {'1': '2', 3: '4'})
+        self.assertRaises(ValueError,
+                          utils.dict_of_strings_or_none, 'foo')
+
     def test_dt_serializer(self):
         class Obj(object):
             foo = utils.dt_serializer('bar')

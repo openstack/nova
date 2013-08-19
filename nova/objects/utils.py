@@ -19,6 +19,7 @@ import iso8601
 import netaddr
 
 from nova.network import model as network_model
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import strutils
 from nova.openstack.common import timeutils
 
@@ -89,6 +90,34 @@ def network_model_or_none(val):
     if isinstance(val, network_model.NetworkInfo):
         return val
     return network_model.NetworkInfo.hydrate(val)
+
+
+def list_of_strings_or_none(val):
+    if val is None:
+        return val
+    if not isinstance(val, list):
+        raise ValueError(_('A list of strings is required here'))
+    if not all([isinstance(x, basestring) for x in val]):
+        raise ValueError(_('Invalid values found in list '
+                           '(strings are required)'))
+    return val
+
+
+def dict_of_strings_or_none(val):
+    if val is None:
+        return val
+    if not isinstance(val, dict):
+        try:
+            val = dict(val.iteritems())
+        except Exception:
+            raise ValueError(_('A dict of strings is required here'))
+    if not all([isinstance(x, basestring) for x in val.keys()]):
+        raise ValueError(_('Invalid keys found in dict '
+                           '(strings are required)'))
+    if not all([isinstance(x, basestring) for x in val.values()]):
+        raise ValueError(_('Invalid values found in dict '
+                           '(strings are required)'))
+    return val
 
 
 def dt_serializer(name):
