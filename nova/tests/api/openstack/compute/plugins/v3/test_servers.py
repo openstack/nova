@@ -51,7 +51,6 @@ from nova.objects import instance as instance_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import policy as common_policy
-from nova.openstack.common import rpc
 from nova import policy
 from nova import test
 from nova.tests.api.openstack import fakes
@@ -1725,6 +1724,8 @@ class ServersControllerCreateTest(test.TestCase):
         self.instance_cache_by_id = {}
         self.instance_cache_by_uuid = {}
 
+        fakes.stub_out_nw_api(self.stubs)
+
         ext_info = plugins.LoadedExtensionInfo()
         self.controller = servers.ServersController(extension_info=ext_info)
 
@@ -1786,7 +1787,6 @@ class ServersControllerCreateTest(test.TestCase):
         fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_key_pair_funcs(self.stubs)
         fake.stub_out_image_service(self.stubs)
-        fakes.stub_out_nw_api(self.stubs)
         self.stubs.Set(uuid, 'uuid4', fake_gen_uuid)
         self.stubs.Set(db, 'instance_add_security_group',
                        return_security_group)
@@ -1797,10 +1797,8 @@ class ServersControllerCreateTest(test.TestCase):
                 fake_method)
         self.stubs.Set(db, 'instance_get', instance_get)
         self.stubs.Set(db, 'instance_update', instance_update)
-        self.stubs.Set(rpc, 'cast', fake_method)
         self.stubs.Set(db, 'instance_update_and_get_original',
                 server_update)
-        self.stubs.Set(rpc, 'queue_get_for', queue_get_for)
         self.stubs.Set(manager.VlanManager, 'allocate_fixed_ip',
                        fake_method)
         self.body = {
