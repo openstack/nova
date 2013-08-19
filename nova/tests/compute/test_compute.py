@@ -1338,10 +1338,16 @@ class ComputeTestCase(BaseTestCase):
         def fake_volume_get(self, context, volume_id):
             return {'id': volume_id}
 
+        def fake_rpc_reserve_block_device_name(self, context, **kwargs):
+            pass
+
         self.stubs.Set(cinder.API, 'get', fake_volume_get)
         self.stubs.Set(cinder.API, 'check_attach', fake_check_attach)
         self.stubs.Set(cinder.API, 'reserve_volume',
                        fake_reserve_volume)
+        self.stubs.Set(compute_rpcapi.ComputeAPI,
+                       'reserve_block_device_name',
+                       fake_rpc_reserve_block_device_name)
 
         self.compute_api.attach_volume(self.context, instance, 1,
                                        '/dev/vdc')
@@ -7468,10 +7474,16 @@ class ComputeAPITestCase(BaseTestCase):
         def fake_rpc_attach_volume(self, context, **kwargs):
             called['fake_rpc_attach_volume'] = True
 
+        def fake_rpc_reserve_block_device_name(self, context, **kwargs):
+            called['fake_rpc_reserve_block_device_name'] = True
+
         self.stubs.Set(cinder.API, 'get', fake_volume_get)
         self.stubs.Set(cinder.API, 'check_attach', fake_check_attach)
         self.stubs.Set(cinder.API, 'reserve_volume',
                        fake_reserve_volume)
+        self.stubs.Set(compute_rpcapi.ComputeAPI,
+                       'reserve_block_device_name',
+                       fake_rpc_reserve_block_device_name)
         self.stubs.Set(compute_rpcapi.ComputeAPI, 'attach_volume',
                        fake_rpc_attach_volume)
 
@@ -7480,6 +7492,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertTrue(called.get('fake_check_attach'))
         self.assertTrue(called.get('fake_reserve_volume'))
         self.assertTrue(called.get('fake_reserve_volume'))
+        self.assertTrue(called.get('fake_rpc_reserve_block_device_name'))
         self.assertTrue(called.get('fake_rpc_attach_volume'))
 
     def test_attach_volume_no_device(self):
