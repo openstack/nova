@@ -3033,6 +3033,110 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
                 else:
                     self.assertNotIn((name, columns), index_data)
 
+    def _data_216(self):
+        ret = {'instances': [{'user_id': '1234', 'project_id': '5678',
+                              'vcpus': 2, 'memory_mb': 256, 'uuid': 'uuid1',
+                              'deleted': 0},
+                             {'user_id': '234', 'project_id': '5678',
+                              'vcpus': 1, 'memory_mb': 256, 'deleted': 0}],
+            'security_groups': [{'user_id': '1234', 'project_id': '5678',
+                                 'deleted': 0},
+                                {'user_id': '234', 'project_id': '5678',
+                                 'deleted': 0},
+                                {'user_id': '234', 'project_id': '5678',
+                                 'deleted': 0}],
+            'floating_ips': [{'deleted': 0, 'project_id': '5678',
+                              'auto_assigned': False},
+                             {'deleted': 0, 'project_id': '5678',
+                              'auto_assigned': False}],
+            'fixed_ips': [{'instance_uuid': 'uuid1', 'deleted': 0}],
+            'networks': [{'project_id': '5678', 'deleted': 0}],
+            'quota_usages': [{'user_id': '1234', 'project_id': '5678',
+                'resource': 'instances', 'in_use': 1, 'reserved': 0},
+                {'user_id': '234', 'project_id': '5678',
+                    'resource': 'instances', 'in_use': 1, 'reserved': 0},
+                {'user_id': None, 'project_id': '5678',
+                    'resource': 'instances', 'in_use': 1, 'reserved': 0},
+                {'user_id': '1234', 'project_id': '5678',
+                    'resource': 'security_groups', 'in_use': 1, 'reserved': 0},
+                {'user_id': '234', 'project_id': '5678',
+                    'resource': 'security_groups', 'in_use': 2, 'reserved': 0},
+                {'user_id': None, 'project_id': '5678',
+                    'resource': 'security_groups', 'in_use': 1, 'reserved': 0},
+                {'user_id': '1234', 'project_id': '5678',
+                    'resource': 'floating_ips', 'in_use': 1, 'reserved': 0},
+                {'user_id': None, 'project_id': '5678',
+                    'resource': 'floating_ips', 'in_use': 1, 'reserved': 0},
+                {'user_id': '1234', 'project_id': '5678',
+                    'resource': 'fixed_ips', 'in_use': 1, 'reserved': 0},
+                {'user_id': None, 'project_id': '5678',
+                    'resource': 'fixed_ips', 'in_use': 1, 'reserved': 0},
+                {'user_id': '1234', 'project_id': '5678',
+                    'resource': 'networks', 'in_use': 1, 'reserved': 0},
+                {'user_id': None, 'project_id': '5678',
+                    'resource': 'networks', 'in_use': 2, 'reserved': 0}]}
+        return ret
+
+    def _pre_upgrade_216(self, engine):
+        tables = ['instance_system_metadata', 'instance_info_caches',
+                'block_device_mapping', 'security_group_instance_association',
+                'security_groups', 'migrations', 'instance_metadata',
+                'fixed_ips', 'instances', 'security_groups', 'floating_ips',
+                'fixed_ips', 'networks']
+        delete_tables = dict((table, db_utils.get_table(engine, table))
+                             for table in tables)
+        for table in tables:
+            delete_tables[table].delete().execute()
+
+        data = self._data_216()
+        tables = data.keys()
+        change_tables = dict((table, db_utils.get_table(engine, table))
+                             for table in tables)
+        for table in tables:
+            for row in data[table]:
+                try:
+                    change_tables[table].insert().values(row).execute()
+                except sqlalchemy.exc.IntegrityError:
+                    # This is run multiple times with opportunistic db testing.
+                    # There's no on duplicate key update functionality in
+                    # sqlalchemy so we just ignore the error.
+                    pass
+
+    def _check_216(self, engine, data):
+        quota_usages = db_utils.get_table(engine, 'quota_usages')
+        per_user = {'1234': {'instances': 1, 'cores': 2, 'ram': 256,
+                        'security_groups': 1},
+                    '234': {'instances': 1, 'cores': 1, 'ram': 256,
+                        'security_groups': 2}}
+
+        per_project = {'floating_ips': 2, 'fixed_ips': 1, 'networks': 1}
+
+        for resource in ['instances', 'cores', 'ram', 'security_groups']:
+            rows = quota_usages.select().where(
+                    quota_usages.c.user_id == None).where(
+                            quota_usages.c.resource == resource).execute(
+                                    ).fetchall()
+            self.assertEqual(0, len(rows))
+
+        for user in per_user.keys():
+            rows = quota_usages.select().where(
+                    quota_usages.c.user_id == user).where(
+                            quota_usages.c.project_id == '5678').execute(
+                                    ).fetchall()
+            for row in rows:
+                resource = row['resource']
+                self.assertEqual(per_user[user][resource], row['in_use'])
+
+        networks = db_utils.get_table(engine, 'networks')
+        rows = networks.select().execute().fetchall()
+        for resource in per_project:
+            rows = quota_usages.select().where(
+                    quota_usages.c.resource == resource).where(
+                            quota_usages.c.project_id == '5678').execute(
+                                    ).fetchall()
+            self.assertEqual(1, len(rows))
+            self.assertEqual(per_project[resource], rows[0]['in_use'])
+
 
 class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""
