@@ -6,4 +6,5 @@
   <host host_name="%(host_name)s" service="scheduler" zone="internal"/>
   <host host_name="%(host_name)s" service="conductor" zone="internal"/>
   <host host_name="%(host_name)s" service="cells" zone="internal"/>
+  <host host_name="%(host_name)s" service="consoleauth" zone="internal"/>
 </hosts>

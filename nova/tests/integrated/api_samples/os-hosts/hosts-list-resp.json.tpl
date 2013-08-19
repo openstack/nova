@@ -29,6 +29,11 @@
             "host_name": "%(host_name)s",
             "service": "cells",
             "zone": "internal"
+        },
+        {
+            "host_name": "%(host_name)s",
+            "service": "consoleauth",
+            "zone": "internal"
         }
     ]
 }

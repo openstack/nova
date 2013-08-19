@@ -29,6 +29,11 @@
             "host_name": "39f55087a1024d1380755951c945ca69",
             "service": "cells",
             "zone": "internal"
+        },
+        {
+            "host_name": "7a9a6cb4701f4dee9048fe0bc25d0ee5",
+            "service": "consoleauth",
+            "zone": "internal"
         }
     ]
 }

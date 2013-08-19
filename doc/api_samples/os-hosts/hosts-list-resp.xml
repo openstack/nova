@@ -6,4 +6,5 @@
   <host zone="internal" host_name="ea70b9f0c530497fba8571deb4835ab0" service="network"/>
   <host zone="internal" host_name="7d52ad3988504fb18b0cdfd94dbd267b" service="scheduler"/>
   <host zone="internal" host_name="dc36bce962cc49c2ab916287bcf6c9d3" service="cells"/>
+  <host zone="internal" host_name="4bd7bbcc80064d21a5fd0bd53318c6fa" service="consoleauth"/>
 </hosts>
