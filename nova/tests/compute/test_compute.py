@@ -2685,6 +2685,8 @@ class ComputeTestCase(BaseTestCase):
 
         self.mox.StubOutWithMock(self.compute.network_api,
                                  "allocate_for_instance")
+        self.mox.StubOutWithMock(self.compute.network_api,
+                                 "deallocate_for_instance")
         self.compute.network_api.allocate_for_instance(
                 mox.IgnoreArg(),
                 mox.IgnoreArg(),
@@ -2693,6 +2695,10 @@ class ComputeTestCase(BaseTestCase):
                 conductor_api=self.compute.conductor_api,
                 security_groups=[], dhcp_options=None
                 ).AndRaise(rpc_common.RemoteError())
+        self.compute.network_api.deallocate_for_instance(
+                mox.IgnoreArg(),
+                mox.IgnoreArg(),
+                requested_networks=None).MultipleTimes()
 
         fake_network.unset_stub_network_methods(self.stubs)
 
@@ -7214,6 +7220,8 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_add_remove_fixed_ip(self):
         instance = self._create_fake_instance(params={'host': CONF.host})
+        self.stubs.Set(self.compute_api.network_api, 'deallocate_for_instance',
+                       lambda *a, **kw: None)
         self.compute_api.add_fixed_ip(self.context, instance, '1')
         self.compute_api.remove_fixed_ip(self.context, instance, '192.168.1.1')
         self.compute_api.delete(self.context, self._objectify(instance))
@@ -7654,6 +7662,9 @@ class ComputeAPITestCase(BaseTestCase):
         instance = self.compute_api.get(self.context, instance['uuid'],
                                         want_objects=True)
         self.compute_api.inject_network_info(self.context, instance)
+        self.stubs.Set(self.compute_api.network_api,
+                       'deallocate_for_instance',
+                       lambda *a, **kw: None)
         self.compute_api.delete(self.context, instance)
 
     def test_reset_network(self):
@@ -7665,11 +7676,15 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_lock(self):
         instance = self._create_fake_instance()
+        self.stubs.Set(self.compute_api.network_api, 'deallocate_for_instance',
+                       lambda *a, **kw: None)
         self.compute_api.lock(self.context, instance)
         self.compute_api.delete(self.context, self._objectify(instance))
 
     def test_unlock(self):
         instance = self._create_fake_instance()
+        self.stubs.Set(self.compute_api.network_api, 'deallocate_for_instance',
+                       lambda *a, **kw: None)
         self.compute_api.unlock(self.context, instance)
         self.compute_api.delete(self.context, self._objectify(instance))
 
@@ -7696,6 +7711,8 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_get_diagnostics(self):
         instance = self._create_fake_instance()
+        self.stubs.Set(self.compute_api.network_api, 'deallocate_for_instance',
+                       lambda *a, **kw: None)
         self.compute_api.get_diagnostics(self.context, instance)
         self.compute_api.delete(self.context, self._objectify(instance))
 

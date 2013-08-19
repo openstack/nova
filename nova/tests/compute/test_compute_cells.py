@@ -191,6 +191,8 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
         cells_rpcapi.instance_delete_everywhere(self.context,
                 inst, 'hard')
         self.mox.ReplayAll()
+        self.stubs.Set(self.compute_api.network_api, 'deallocate_for_instance',
+                       lambda *a, **kw: None)
         self.compute_api.delete(self.context, inst)
 
     def test_soft_delete_instance_no_cell(self):
@@ -201,6 +203,8 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
         cells_rpcapi.instance_delete_everywhere(self.context,
                 inst, 'soft')
         self.mox.ReplayAll()
+        self.stubs.Set(self.compute_api.network_api, 'deallocate_for_instance',
+                       lambda *a, **kw: None)
         self.compute_api.soft_delete(self.context, inst)
 
     def test_get_migrations(self):
