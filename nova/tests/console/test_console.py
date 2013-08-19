@@ -20,13 +20,13 @@
 
 from oslo.config import cfg
 
+from nova.compute import rpcapi as compute_rpcapi
 from nova.console import api as console_api
 from nova.console import rpcapi as console_rpcapi
 from nova import context
 from nova import db
 from nova import exception
 from nova.openstack.common import importutils
-from nova.openstack.common import rpc
 from nova import test
 
 CONF = cfg.CONF
@@ -140,10 +140,6 @@ class ConsoleAPITestCase(test.TestCase):
             'id': 'fake_id'
         }
 
-        def _fake_cast(_ctxt, _topic, _msg):
-            pass
-        self.stubs.Set(rpc, 'cast', _fake_cast)
-
         def _fake_db_console_get(_ctxt, _console_uuid, _instance_uuid):
             return self.fake_console
         self.stubs.Set(db, 'console_get', _fake_db_console_get)
@@ -177,6 +173,12 @@ class ConsoleAPITestCase(test.TestCase):
                                         'fake_id')
 
     def test_create_console(self):
+        self.mox.StubOutWithMock(compute_rpcapi.ComputeAPI,
+                                 'get_console_topic')
+
+        compute_rpcapi.ComputeAPI.get_console_topic(
+            self.context, 'fake_host').AndReturn('compute.fake_host')
+
         self.mox.StubOutWithMock(console_rpcapi.ConsoleAPI, 'add_console')
 
         console_rpcapi.ConsoleAPI.add_console(self.context,
