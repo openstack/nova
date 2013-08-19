@@ -23,6 +23,9 @@ import random
 import tempfile
 import time
 
+import sys
+import testtools
+
 import mox
 
 import glanceclient.exc
@@ -35,6 +38,8 @@ from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests.glance import stubs as glance_stubs
 from nova.tests import matchers
+from nova import utils
+
 import nova.virt.libvirt.utils as lv_utils
 
 CONF = cfg.CONF
@@ -948,11 +953,52 @@ class TestGlanceUrl(test.TestCase):
 
     def test_generate_glance_http_url(self):
         generated_url = glance.generate_glance_url()
-        http_url = "http://%s:%d" % (CONF.glance_host, CONF.glance_port)
+        glance_host = CONF.glance_host
+        # ipv6 address, need to wrap it with '[]'
+        if utils.is_valid_ipv6(glance_host):
+            glance_host = '[%s]' % glance_host
+        http_url = "http://%s:%d" % (glance_host, CONF.glance_port)
         self.assertEqual(generated_url, http_url)
 
     def test_generate_glance_https_url(self):
         self.flags(glance_protocol="https")
         generated_url = glance.generate_glance_url()
-        https_url = "https://%s:%d" % (CONF.glance_host, CONF.glance_port)
+        glance_host = CONF.glance_host
+        # ipv6 address, need to wrap it with '[]'
+        if utils.is_valid_ipv6(glance_host):
+            glance_host = '[%s]' % glance_host
+        https_url = "https://%s:%d" % (glance_host, CONF.glance_port)
         self.assertEqual(generated_url, https_url)
+
+
+class TestGlanceApiServers(test.TestCase):
+
+    def test_get_ipv4_api_servers(self):
+        self.flags(glance_api_servers=['10.0.1.1:9292',
+                              'https://10.0.0.1:9293',
+                              'http://10.0.2.2:9294'])
+        glance_host = ['10.0.1.1', '10.0.0.1',
+                        '10.0.2.2']
+        api_servers = glance.get_api_servers()
+        i = 0
+        for server in api_servers:
+            i += 1
+            self.assertIn(server[0], glance_host)
+            if i > 2:
+                break
+
+    # Python 2.6 can not parse ipv6 address correctly
+    @testtools.skipIf(sys.version_info < (2, 7), "py27 or greater only")
+    def test_get_ipv6_api_servers(self):
+        self.flags(glance_api_servers=['[2001:2012:1:f101::1]:9292',
+                              'https://[2010:2013:1:f122::1]:9293',
+                              'http://[2001:2011:1:f111::1]:9294'])
+        glance_host = ['2001:2012:1:f101::1', '2010:2013:1:f122::1',
+                        '2001:2011:1:f111::1']
+        api_servers = glance.get_api_servers()
+        i = 0
+        for server in api_servers:
+            i += 1
+            self.assertIn(server[0], glance_host)
+            if i > 2:
+                break

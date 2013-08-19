@@ -37,6 +37,7 @@ from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
+from nova import utils
 
 
 glance_opts = [
@@ -78,7 +79,10 @@ CONF.import_opt('my_ip', 'nova.netconf')
 
 def generate_glance_url():
     """Generate the URL to glance."""
-    return "%s://%s:%d" % (CONF.glance_protocol, CONF.glance_host,
+    glance_host = CONF.glance_host
+    if utils.is_valid_ipv6(glance_host):
+        glance_host = '[%s]' % glance_host
+    return "%s://%s:%d" % (CONF.glance_protocol, glance_host,
                            CONF.glance_port)
 
 
@@ -97,7 +101,7 @@ def _parse_image_ref(image_href):
     """
     o = urlparse.urlparse(image_href)
     port = o.port or 80
-    host = o.netloc.split(':', 1)[0]
+    host = o.netloc.rsplit(':', 1)[0]
     image_id = o.path.split('/')[-1]
     use_ssl = (o.scheme == 'https')
     return (image_id, host, port, use_ssl)
@@ -131,6 +135,9 @@ def _create_glance_client(context, host, port, use_ssl, version=1):
         # header 'X-Auth-Token' and 'token'
         params['token'] = context.auth_token
         params['identity_headers'] = generate_identity_headers(context)
+    if utils.is_valid_ipv6(host):
+        #if so, it is ipv6 address, need to wrap it with '[]'
+        host = '[%s]' % host
     endpoint = '%s://%s:%s' % (scheme, host, port)
     return glanceclient.Client(str(version), endpoint, **params)
 
@@ -147,7 +154,9 @@ def get_api_servers():
             api_server = 'http://' + api_server
         o = urlparse.urlparse(api_server)
         port = o.port or 80
-        host = o.netloc.split(':', 1)[0]
+        host = o.netloc.rsplit(':', 1)[0]
+        if host[0] == '[' and host[-1] == ']':
+            host = host[1:-1]
         use_ssl = (o.scheme == 'https')
         api_servers.append((host, port, use_ssl))
     random.shuffle(api_servers)
