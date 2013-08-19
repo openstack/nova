@@ -167,14 +167,12 @@ class AdminActionsTest(CommonMixin, test.TestCase):
         actions = ['pause', 'unpause', 'suspend', 'resume', 'migrate',
                    'reset_network', 'inject_network_info', 'lock',
                    'unlock']
-        actions_not_objectified = ['inject_network_info']
         method_translations = {'migrate': 'resize'}
 
         for action in actions:
-            old_style = action in actions_not_objectified
             method = method_translations.get(action)
             self.mox.StubOutWithMock(self.compute_api, method or action)
-            self._test_action(action, method=method, objects=not old_style)
+            self._test_action(action, method=method)
             # Re-mock this.
             self.mox.StubOutWithMock(self.compute_api, 'get')
 
@@ -202,16 +200,13 @@ class AdminActionsTest(CommonMixin, test.TestCase):
         actions = ['pause', 'unpause', 'suspend', 'resume', 'migrate',
                    'reset_network', 'inject_network_info', 'lock',
                    'unlock', 'reset_state', 'migrate_live']
-        actions_not_objectified = ['inject_network_info']
         body_map = {'reset_state': {'state': 'active'},
                     'migrate_live': {'host': 'hostname',
                                      'block_migration': False,
                                      'disk_over_commit': False}}
         for action in actions:
-            old_style = action in actions_not_objectified
             self._test_non_existing_instance(action,
-                                             body_map=body_map,
-                                             objects=not old_style)
+                                             body_map=body_map)
             # Re-mock this.
             self.mox.StubOutWithMock(self.compute_api, 'get')
 
@@ -219,14 +214,11 @@ class AdminActionsTest(CommonMixin, test.TestCase):
         actions = ['pause', 'unpause', 'suspend', 'resume', 'migrate',
                    'reset_network', 'inject_network_info']
         method_translations = {'migrate': 'resize'}
-        actions_not_objectified = ['inject_network_info']
 
         for action in actions:
-            old_style = action in actions_not_objectified
             method = method_translations.get(action)
             self.mox.StubOutWithMock(self.compute_api, method or action)
-            self._test_locked_instance(action, method=method,
-                                       objects=not old_style)
+            self._test_locked_instance(action, method=method)
             # Re-mock this.
             self.mox.StubOutWithMock(self.compute_api, 'get')
 

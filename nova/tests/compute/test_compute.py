@@ -2115,7 +2115,8 @@ class ComputeTestCase(BaseTestCase):
 
         instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, instance=instance)
-        self.compute.inject_network_info(self.context, instance=instance)
+        inst_obj = self._objectify(instance)
+        self.compute.inject_network_info(self.context, instance=inst_obj)
         self.assertTrue(called['inject'])
         self.compute.terminate_instance(self.context, instance=instance)
 

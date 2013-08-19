@@ -899,6 +899,11 @@ class _TargetedMessageMethods(_BaseMessageMethods):
         self._call_compute_api_with_obj(message.ctxt, instance,
                                         'reset_network')
 
+    def inject_network_info(self, message, instance):
+        """Inject networking for an instance in its cell."""
+        self._call_compute_api_with_obj(message.ctxt, instance,
+                                        'inject_network_info')
+
 
 class _BroadcastMessageMethods(_BaseMessageMethods):
     """These are the methods that can be called as a part of a broadcast
@@ -1682,6 +1687,10 @@ class MessageRunner(object):
     def reset_network(self, ctxt, instance):
         """Reset networking for an instance in its cell."""
         self._instance_action(ctxt, instance, 'reset_network')
+
+    def inject_network_info(self, ctxt, instance):
+        """Inject networking for an instance in its cell."""
+        self._instance_action(ctxt, instance, 'inject_network_info')
 
     @staticmethod
     def get_message_types():

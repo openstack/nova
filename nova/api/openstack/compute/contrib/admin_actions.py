@@ -159,7 +159,7 @@ class AdminActionsController(wsgi.Controller):
         context = req.environ['nova.context']
         authorize(context, 'injectNetworkInfo')
         try:
-            instance = self.compute_api.get(context, id)
+            instance = self.compute_api.get(context, id, want_objects=True)
             self.compute_api.inject_network_info(context, instance)
         except exception.InstanceNotFound:
             raise exc.HTTPNotFound(_("Server not found"))

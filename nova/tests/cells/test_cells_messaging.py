@@ -1185,6 +1185,7 @@ class CellsTargetedMethodsTestCase(test.TestCase):
         method_translations = {'revert_resize': 'revert_resize',
                                'confirm_resize': 'confirm_resize',
                                'reset_network': 'reset_network',
+                               'inject_network_info': 'inject_network_info',
                               }
         tgt_method = method_translations.get(method,
                                              '%s_instance' % method)
@@ -1269,6 +1270,10 @@ class CellsTargetedMethodsTestCase(test.TestCase):
 
     def test_reset_network(self):
         self._test_instance_action_method('reset_network',
+                                          (), {}, (), {}, False)
+
+    def test_inject_network_info(self):
+        self._test_instance_action_method('inject_network_info',
                                           (), {}, (), {}, False)
 
 

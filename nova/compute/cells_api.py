@@ -42,7 +42,8 @@ class ComputeRPCAPIRedirect(object):
                         'resume_instance', 'terminate_instance',
                         'soft_delete_instance', 'pause_instance',
                         'unpause_instance', 'revert_resize',
-                        'confirm_resize', 'reset_network']
+                        'confirm_resize', 'reset_network',
+                        'inject_network_info']
 
     def __init__(self, cells_rpcapi):
         self.cells_rpcapi = cells_rpcapi
@@ -392,12 +393,6 @@ class ComputeCellsAPI(compute_api.API):
         """Unlock the given instance."""
         super(ComputeCellsAPI, self).lock(context, instance)
         self._cast_to_cells(context, instance, 'unlock')
-
-    @check_instance_cell
-    def inject_network_info(self, context, instance):
-        """Inject network info for the instance."""
-        super(ComputeCellsAPI, self).inject_network_info(context, instance)
-        self._cast_to_cells(context, instance, 'inject_network_info')
 
     @wrap_check_policy
     @check_instance_cell

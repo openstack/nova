@@ -200,7 +200,8 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_inject_network_info(self):
         self._test_compute_api('inject_network_info', 'cast',
-                instance=self.fake_instance)
+                instance=self.fake_instance,
+                version='2.41')
 
     def test_live_migration(self):
         self._test_compute_api('live_migration', 'cast',

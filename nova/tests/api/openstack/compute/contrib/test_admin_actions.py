@@ -153,16 +153,14 @@ class AdminActionsTest(CommonMixin, test.TestCase):
         actions = ['pause', 'unpause', 'suspend', 'resume', 'migrate',
                    'resetNetwork', 'injectNetworkInfo', 'lock',
                    'unlock']
-        actions_not_objectified = ['injectNetworkInfo']
         method_translations = {'migrate': 'resize',
                                'resetNetwork': 'reset_network',
                                'injectNetworkInfo': 'inject_network_info'}
 
         for action in actions:
-            old_style = action in actions_not_objectified
             method = method_translations.get(action)
             self.mox.StubOutWithMock(self.compute_api, method or action)
-            self._test_action(action, method=method, objects=not old_style)
+            self._test_action(action, method=method)
             # Re-mock this.
             self.mox.StubOutWithMock(self.compute_api, 'get')
 
@@ -181,13 +179,10 @@ class AdminActionsTest(CommonMixin, test.TestCase):
         actions = ['pause', 'unpause', 'suspend', 'resume',
                    'resetNetwork', 'injectNetworkInfo', 'lock',
                    'unlock', 'os-resetState']
-        actions_not_objectified = ['injectNetworkInfo']
         body_map = {'os-resetState': {'state': 'active'}}
         for action in actions:
-            old_style = action in actions_not_objectified
             self._test_non_existing_instance(action,
-                                             body_map=body_map,
-                                             objects=not old_style)
+                                             body_map=body_map)
             # Re-mock this.
             self.mox.StubOutWithMock(self.compute_api, 'get')
 

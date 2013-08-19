@@ -383,7 +383,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '2.40'
+    RPC_API_VERSION = '2.41'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -2969,9 +2969,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.network_api.add_fixed_ip_to_instance(context, instance,
                 network_id, conductor_api=self.conductor_api)
 
-        network_info = self._inject_network_info(context, instance=instance)
         inst_obj = instance_obj.Instance._from_db_object(
                 context, instance_obj.Instance(), instance)
+        network_info = self._inject_network_info(context, inst_obj)
         self.reset_network(context, inst_obj)
 
         # NOTE(russellb) We just want to bump updated_at.  See bug 1143466.
@@ -2995,10 +2995,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.network_api.remove_fixed_ip_from_instance(context, instance,
                 address, conductor_api=self.conductor_api)
 
-        network_info = self._inject_network_info(context,
-                                                 instance=instance)
         inst_obj = instance_obj.Instance._from_db_object(
                 context, instance_obj.Instance(), instance)
+        network_info = self._inject_network_info(context, inst_obj)
         self.reset_network(context, inst_obj)
 
         # NOTE(russellb) We just want to bump updated_at.  See bug 1143466.
@@ -3283,6 +3282,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                         network_info)
         return network_info
 
+    @object_compat
     @wrap_instance_fault
     def inject_network_info(self, context, instance):
         """Inject network info, but don't return the info."""

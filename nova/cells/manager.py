@@ -65,7 +65,7 @@ class CellsManager(manager.Manager):
 
     Scheduling requests get passed to the scheduler class.
     """
-    RPC_API_VERSION = '1.22'
+    RPC_API_VERSION = '1.23'
 
     def __init__(self, *args, **kwargs):
         # Mostly for tests.
@@ -514,3 +514,7 @@ class CellsManager(manager.Manager):
     def reset_network(self, ctxt, instance):
         """Reset networking for an instance in its cell."""
         self.msg_runner.reset_network(ctxt, instance)
+
+    def inject_network_info(self, ctxt, instance):
+        """Inject networking for an instance in its cell."""
+        self.msg_runner.inject_network_info(ctxt, instance)

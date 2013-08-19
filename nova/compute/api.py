@@ -2573,6 +2573,7 @@ class API(base.Base):
 
     @wrap_check_policy
     @check_instance_lock
+    @check_instance_cell
     def inject_network_info(self, context, instance):
         """Inject network info for the instance."""
         self.compute_rpcapi.inject_network_info(context, instance=instance)

@@ -770,3 +770,10 @@ class CellsManagerClassTestCase(test.TestCase):
         self.msg_runner.reset_network(self.ctxt, 'fake-instance')
         self.mox.ReplayAll()
         self.cells_manager.reset_network(self.ctxt, instance='fake-instance')
+
+    def test_inject_network_info(self):
+        self.mox.StubOutWithMock(self.msg_runner, 'inject_network_info')
+        self.msg_runner.inject_network_info(self.ctxt, 'fake-instance')
+        self.mox.ReplayAll()
+        self.cells_manager.inject_network_info(self.ctxt,
+                                               instance='fake-instance')
