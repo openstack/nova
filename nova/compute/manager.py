@@ -383,7 +383,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '2.41'
+    RPC_API_VERSION = '2.42'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -2130,30 +2130,68 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
     @wrap_instance_fault
+    def backup_instance(self, context, image_id, instance, backup_type,
+                        rotation):
+        """Backup an instance on this host.
+
+        :param backup_type: daily | weekly
+        :param rotation: int representing how many backups to keep around
+        """
+        if rotation < 0:
+            raise exception.RotationRequiredForBackup()
+        self._snapshot_instance(context, image_id, instance,
+                                task_states.IMAGE_BACKUP)
+        self._rotate_backups(context, instance, backup_type, rotation)
+
+    # FIXME(comstud): Remove 'image_type', 'backup_type', and 'rotation'
+    #                 on next major RPC version bump.
+    @object_compat
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @reverts_task_state
+    @wrap_instance_fault
     def snapshot_instance(self, context, image_id, instance,
-                          image_type='snapshot', backup_type=None,
+                          image_type=None, backup_type=None,
                           rotation=None):
         """Snapshot an instance on this host.
 
         :param context: security context
         :param instance: an Instance dict
         :param image_id: glance.db.sqlalchemy.models.Image.Id
+        The following params are for RPC versions prior to 2.39 where
+        this method also handled backups:
         :param image_type: snapshot | backup
         :param backup_type: daily | weekly
         :param rotation: int representing how many backups to keep around;
             None if rotation shouldn't be used (as in the case of snapshots)
         """
+        if image_type is not None:
+            # Old RPC version
+            if image_type == 'backup':
+                if rotation < 0:
+                    raise exception.RotationRequiredForBackup()
+                self._snapshot_instance(context, image_id, instance,
+                                        task_states.IMAGE_BACKUP)
+                self._rotate_backups(context, instance, backup_type, rotation)
+                return
+            if rotation:
+                raise exception.ImageRotationNotAllowed()
+        self._snapshot_instance(context, image_id, instance,
+                                task_states.IMAGE_SNAPSHOT)
+
+    def _snapshot_instance(self, context, image_id, instance,
+                           expected_task_state):
         context = context.elevated()
 
         current_power_state = self._get_power_state(context, instance)
         try:
-            instance = self._instance_update(context, instance['uuid'],
-                                             power_state=current_power_state)
+            instance.power_state = current_power_state
+            instance.save()
+
             LOG.audit(_('instance snapshotting'), context=context,
                   instance=instance)
 
-            if instance['power_state'] != power_state.RUNNING:
-                state = instance['power_state']
+            if instance.power_state != power_state.RUNNING:
+                state = instance.power_state
                 running = power_state.RUNNING
                 LOG.warn(_('trying to snapshot a non-running instance: '
                        '(state: %(state)s expected: %(running)s)'),
@@ -2163,41 +2201,19 @@ class ComputeManager(manager.SchedulerDependentManager):
             self._notify_about_instance_usage(
                 context, instance, "snapshot.start")
 
-            if image_type == 'snapshot':
-                expected_task_state = task_states.IMAGE_SNAPSHOT
-
-            elif image_type == 'backup':
-                expected_task_state = task_states.IMAGE_BACKUP
-
             def update_task_state(task_state,
                                   expected_state=expected_task_state):
-                return self._instance_update(context, instance['uuid'],
-                                         task_state=task_state,
-                                         expected_task_state=expected_state
-                )
+                instance.task_state = task_state
+                instance.save(expected_task_state=expected_state)
 
             self.driver.snapshot(context, instance, image_id,
                                  update_task_state)
-            # The instance could have changed from the driver.  But since
-            # we're doing a fresh update here, we'll grab the changes.
 
-            instance = self._instance_update(context, instance['uuid'],
-                                             task_state=None,
-                                             expected_task_state=
-                                             task_states.IMAGE_UPLOADING)
-
-            if image_type == 'snapshot' and rotation:
-                raise exception.ImageRotationNotAllowed()
-
-            elif image_type == 'backup' and rotation >= 0:
-                self._rotate_backups(context, instance, backup_type, rotation)
-
-            elif image_type == 'backup':
-                raise exception.RotationRequiredForBackup()
+            instance.task_state = None
+            instance.save(expected_task_state=task_states.IMAGE_UPLOADING)
 
             self._notify_about_instance_usage(context, instance,
-                                               "snapshot.end")
-
+                                              "snapshot.end")
         except exception.InstanceNotFound:
             # the instance got deleted during the snapshot
             # Quickly bail out of here
@@ -2228,7 +2244,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         image_service = glance.get_default_image_service()
         filters = {'property-image_type': 'backup',
                    'property-backup_type': backup_type,
-                   'property-instance_uuid': instance['uuid']}
+                   'property-instance_uuid': instance.uuid}
 
         images = image_service.detail(context, filters=filters,
                                       sort_key='created_at', sort_dir='desc')

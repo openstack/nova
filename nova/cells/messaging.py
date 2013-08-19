@@ -31,6 +31,7 @@ from nova.cells import state as cells_state
 from nova.cells import utils as cells_utils
 from nova import compute
 from nova.compute import rpcapi as compute_rpcapi
+from nova.compute import task_states
 from nova.compute import vm_states
 from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import context
@@ -904,6 +905,27 @@ class _TargetedMessageMethods(_BaseMessageMethods):
         self._call_compute_api_with_obj(message.ctxt, instance,
                                         'inject_network_info')
 
+    def snapshot_instance(self, message, instance, image_id):
+        """Snapshot an instance in its cell."""
+        instance.refresh()
+        instance.task_state = task_states.IMAGE_SNAPSHOT
+        instance.save(expected_task_state=None)
+        self.compute_rpcapi.snapshot_instance(message.ctxt,
+                                              instance,
+                                              image_id)
+
+    def backup_instance(self, message, instance, image_id,
+                        backup_type, rotation):
+        """Backup an instance in its cell."""
+        instance.refresh()
+        instance.task_state = task_states.IMAGE_BACKUP
+        instance.save(expected_task_state=None)
+        self.compute_rpcapi.backup_instance(message.ctxt,
+                                            instance,
+                                            image_id,
+                                            backup_type,
+                                            rotation)
+
 
 class _BroadcastMessageMethods(_BaseMessageMethods):
     """These are the methods that can be called as a part of a broadcast
@@ -1691,6 +1713,20 @@ class MessageRunner(object):
     def inject_network_info(self, ctxt, instance):
         """Inject networking for an instance in its cell."""
         self._instance_action(ctxt, instance, 'inject_network_info')
+
+    def snapshot_instance(self, ctxt, instance, image_id):
+        """Snapshot an instance in its cell."""
+        extra_kwargs = dict(image_id=image_id)
+        self._instance_action(ctxt, instance, 'snapshot_instance',
+                              extra_kwargs=extra_kwargs)
+
+    def backup_instance(self, ctxt, instance, image_id, backup_type,
+                        rotation):
+        """Backup an instance in its cell."""
+        extra_kwargs = dict(image_id=image_id, backup_type=backup_type,
+                            rotation=rotation)
+        self._instance_action(ctxt, instance, 'backup_instance',
+                              extra_kwargs=extra_kwargs)
 
     @staticmethod
     def get_message_types():

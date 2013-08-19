@@ -198,6 +198,9 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                instance objects
         2.40 - Made reset_network() take new-world instance object
         2.41 - Make inject_network_info take new-world instance object
+        2.42 - Splits snapshot_instance() into snapshot_instance() and
+               backup_instance() and makes them take new-world instance
+               objects.
     '''
 
     #
@@ -680,14 +683,44 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 topic=_compute_topic(self.topic, ctxt, None, instance),
                 version='2.30')
 
-    def snapshot_instance(self, ctxt, instance, image_id, image_type,
-            backup_type=None, rotation=None):
-        instance_p = jsonutils.to_primitive(instance)
+    def backup_instance(self, ctxt, instance, image_id, backup_type,
+                        rotation):
+        if self.can_send_version('2.42'):
+            version = '2.42'
+            method = 'backup_instance'
+            extra_kwargs = dict()
+        else:
+            instance = jsonutils.to_primitive(
+                    objects_base.obj_to_primitive(instance))
+            method = 'snapshot_instance'
+            extra_kwargs = dict(image_type='backup')
+            version = '2.0'
+        self.cast(ctxt, self.make_msg(method,
+                                      instance=instance,
+                                      image_id=image_id,
+                                      backup_type=backup_type,
+                                      rotation=rotation,
+                                      **extra_kwargs),
+                  topic=_compute_topic(self.topic, ctxt, None, instance),
+                  version=version)
+
+    def snapshot_instance(self, ctxt, instance, image_id):
+        if self.can_send_version('2.42'):
+            version = '2.42'
+            extra_kwargs = dict()
+        else:
+            instance = jsonutils.to_primitive(
+                    objects_base.obj_to_primitive(instance))
+            extra_kwargs = dict(image_type='snapshot',
+                                backup_type=None,
+                                rotation=None)
+            version = '2.0'
         self.cast(ctxt, self.make_msg('snapshot_instance',
-                instance=instance_p, image_id=image_id,
-                image_type=image_type, backup_type=backup_type,
-                rotation=rotation),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+                                      instance=instance,
+                                      image_id=image_id,
+                                      **extra_kwargs),
+                  topic=_compute_topic(self.topic, ctxt, None, instance),
+                  version=version)
 
     def start_instance(self, ctxt, instance):
         self.cast(ctxt, self.make_msg('start_instance',

@@ -53,37 +53,29 @@ class CommonMixin(object):
         req.content_type = 'application/json'
         return req.get_response(self.app)
 
-    def _stub_instance_get(self, uuid=None, objects=True):
+    def _stub_instance_get(self, uuid=None):
         if uuid is None:
             uuid = uuidutils.generate_uuid()
         instance = fake_instance.fake_db_instance(
                 id=1, uuid=uuid, vm_state=vm_states.ACTIVE,
                 task_state=None, launched_at=timeutils.utcnow())
-        if objects:
-            instance = instance_obj.Instance._from_db_object(
-                    self.context, instance_obj.Instance(), instance)
-            self.compute_api.get(self.context, uuid,
-                                 want_objects=True).AndReturn(instance)
-        else:
-            self.compute_api.get(self.context, uuid).AndReturn(instance)
+        instance = instance_obj.Instance._from_db_object(
+                self.context, instance_obj.Instance(), instance)
+        self.compute_api.get(self.context, uuid,
+                             want_objects=True).AndReturn(instance)
         return instance
 
-    def _stub_instance_get_failure(self, exc_info, uuid=None, objects=True):
+    def _stub_instance_get_failure(self, exc_info, uuid=None):
         if uuid is None:
             uuid = uuidutils.generate_uuid()
-        if objects:
-            self.compute_api.get(self.context, uuid,
-                                 want_objects=True).AndRaise(exc_info)
-        else:
-            self.compute_api.get(self.context, uuid).AndRaise(exc_info)
+        self.compute_api.get(self.context, uuid,
+                             want_objects=True).AndRaise(exc_info)
         return uuid
 
-    def _test_non_existing_instance(self, action, body_map=None,
-                                    objects=True):
+    def _test_non_existing_instance(self, action, body_map=None):
         uuid = uuidutils.generate_uuid()
         self._stub_instance_get_failure(
-                exception.InstanceNotFound(instance_id=uuid),
-                uuid=uuid, objects=objects)
+                exception.InstanceNotFound(instance_id=uuid), uuid=uuid)
 
         self.mox.ReplayAll()
 
@@ -95,11 +87,11 @@ class CommonMixin(object):
         self.mox.VerifyAll()
         self.mox.UnsetStubs()
 
-    def _test_action(self, action, body=None, method=None, objects=True):
+    def _test_action(self, action, body=None, method=None):
         if method is None:
             method = action
 
-        instance = self._stub_instance_get(objects=objects)
+        instance = self._stub_instance_get()
         getattr(self.compute_api, method)(self.context, instance)
 
         self.mox.ReplayAll()
@@ -113,8 +105,7 @@ class CommonMixin(object):
         self.mox.UnsetStubs()
 
     def _test_invalid_state(self, action, method=None, body_map=None,
-                            compute_api_args_map=None,
-                            objects=True):
+                            compute_api_args_map=None):
         if method is None:
             method = action
         if body_map is None:
@@ -122,7 +113,7 @@ class CommonMixin(object):
         if compute_api_args_map is None:
             compute_api_args_map = {}
 
-        instance = self._stub_instance_get(objects=objects)
+        instance = self._stub_instance_get()
 
         args, kwargs = compute_api_args_map.get(action, ((), {}))
 
@@ -143,11 +134,11 @@ class CommonMixin(object):
         self.mox.VerifyAll()
         self.mox.UnsetStubs()
 
-    def _test_locked_instance(self, action, method=None, objects=True):
+    def _test_locked_instance(self, action, method=None):
         if method is None:
             method = action
 
-        instance = self._stub_instance_get(objects=objects)
+        instance = self._stub_instance_get()
         getattr(self.compute_api, method)(self.context, instance).AndRaise(
                 exception.InstanceIsLocked(instance_uuid=instance['uuid']))
 
@@ -320,7 +311,7 @@ class AdminActionsTest(CommonMixin, test.TestCase):
     def test_unlock_not_authorized(self):
         self.mox.StubOutWithMock(self.compute_api, 'unlock')
 
-        instance = self._stub_instance_get(objects=True)
+        instance = self._stub_instance_get()
 
         self.compute_api.unlock(self.context, instance).AndRaise(
                 exception.PolicyNotAuthorized(action='unlock'))
@@ -358,7 +349,7 @@ class CreateBackupTests(CommonMixin, test.TestCase):
                      properties=metadata)
 
         common.check_img_metadata_properties_quota(self.context, metadata)
-        instance = self._stub_instance_get(objects=False)
+        instance = self._stub_instance_get()
         self.compute_api.backup(self.context, instance, 'Backup 1',
                                 'daily', 1,
                                 extra_properties=metadata).AndReturn(image)
@@ -434,7 +425,7 @@ class CreateBackupTests(CommonMixin, test.TestCase):
         image = dict(id='fake-image-id', status='ACTIVE', name='Backup 1',
                      properties={})
         common.check_img_metadata_properties_quota(self.context, {})
-        instance = self._stub_instance_get(objects=False)
+        instance = self._stub_instance_get()
         self.compute_api.backup(self.context, instance, 'Backup 1',
                                 'daily', 0,
                                 extra_properties={}).AndReturn(image)
@@ -458,7 +449,7 @@ class CreateBackupTests(CommonMixin, test.TestCase):
         image = dict(id='fake-image-id', status='ACTIVE', name='Backup 1',
                      properties={})
         common.check_img_metadata_properties_quota(self.context, {})
-        instance = self._stub_instance_get(objects=False)
+        instance = self._stub_instance_get()
         self.compute_api.backup(self.context, instance, 'Backup 1',
                                 'daily', 1,
                                 extra_properties={}).AndReturn(image)
@@ -485,8 +476,7 @@ class CreateBackupTests(CommonMixin, test.TestCase):
         common.check_img_metadata_properties_quota(self.context, {})
         self._test_invalid_state('create_backup', method='backup',
                                  body_map=body_map,
-                                 compute_api_args_map=args_map,
-                                 objects=False)
+                                 compute_api_args_map=args_map)
 
     def test_create_backup_with_non_existed_instance(self):
         body_map = {
@@ -498,8 +488,7 @@ class CreateBackupTests(CommonMixin, test.TestCase):
         }
         common.check_img_metadata_properties_quota(self.context, {})
         self._test_non_existing_instance('create_backup',
-                                         body_map=body_map,
-                                         objects=False)
+                                         body_map=body_map)
 
 
 class ResetStateTests(test.TestCase):

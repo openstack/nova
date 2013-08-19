@@ -777,3 +777,24 @@ class CellsManagerClassTestCase(test.TestCase):
         self.mox.ReplayAll()
         self.cells_manager.inject_network_info(self.ctxt,
                                                instance='fake-instance')
+
+    def test_snapshot_instance(self):
+        self.mox.StubOutWithMock(self.msg_runner, 'snapshot_instance')
+        self.msg_runner.snapshot_instance(self.ctxt, 'fake-instance',
+                                          'fake-id')
+        self.mox.ReplayAll()
+        self.cells_manager.snapshot_instance(self.ctxt,
+                                             instance='fake-instance',
+                                             image_id='fake-id')
+
+    def test_backup_instance(self):
+        self.mox.StubOutWithMock(self.msg_runner, 'backup_instance')
+        self.msg_runner.backup_instance(self.ctxt, 'fake-instance',
+                                        'fake-id', 'backup-type',
+                                        'rotation')
+        self.mox.ReplayAll()
+        self.cells_manager.backup_instance(self.ctxt,
+                                           instance='fake-instance',
+                                           image_id='fake-id',
+                                           backup_type='backup-type',
+                                           rotation='rotation')

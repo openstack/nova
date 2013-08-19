@@ -1715,67 +1715,66 @@ class API(base.Base):
         return image_meta
 
     @wrap_check_policy
+    @check_instance_cell
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED])
     def backup(self, context, instance, name, backup_type, rotation,
-               extra_properties=None, image_id=None):
+               extra_properties=None):
         """Backup the given instance
 
         :param instance: nova.db.sqlalchemy.models.Instance
-        :param name: name of the backup or snapshot
-            name = backup_type  # daily backups are called 'daily'
+        :param name: name of the backup
+        :param backup_type: 'daily' or 'weekly'
         :param rotation: int representing how many backups to keep around;
             None if rotation shouldn't be used (as in the case of snapshots)
         :param extra_properties: dict of extra image properties to include
+                                 when creating the image.
         """
-        if image_id:
-            # The image entry has already been created, so just pull the
-            # metadata.
-            image_meta = self.image_service.show(context, image_id)
-        else:
-            image_meta = self._create_image(context, instance, name,
-                    'backup', backup_type=backup_type,
-                    rotation=rotation, extra_properties=extra_properties)
+        props_copy = dict(extra_properties, backup_type=backup_type)
+        image_meta = self._create_image(context, instance, name,
+                                       'backup', extra_properties=props_copy)
 
-        instance = self.update(context, instance,
-                               task_state=task_states.IMAGE_BACKUP,
-                               expected_task_state=None)
+        # NOTE(comstud): Any changes to this method should also be made
+        # to the backup_instance() method in nova/cells/messaging.py
 
-        self.compute_rpcapi.snapshot_instance(context, instance=instance,
-                image_id=image_meta['id'], image_type='backup',
-                backup_type=backup_type, rotation=rotation)
+        instance.task_state = task_states.IMAGE_BACKUP
+        instance.save(expected_task_state=None)
+
+        self.compute_rpcapi.backup_instance(context, instance,
+                                            image_meta['id'],
+                                            backup_type,
+                                            rotation)
         return image_meta
 
     @wrap_check_policy
+    @check_instance_cell
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
                                     vm_states.PAUSED, vm_states.SUSPENDED])
-    def snapshot(self, context, instance, name, extra_properties=None,
-                 image_id=None):
+    def snapshot(self, context, instance, name, extra_properties=None):
         """Snapshot the given instance.
 
         :param instance: nova.db.sqlalchemy.models.Instance
-        :param name: name of the backup or snapshot
+        :param name: name of the snapshot
         :param extra_properties: dict of extra image properties to include
-
+                                 when creating the image.
         :returns: A dict containing image metadata
         """
-        if image_id:
-            # The image entry has already been created, so just pull the
-            # metadata.
-            image_meta = self.image_service.show(context, image_id)
-        else:
-            image_meta = self._create_image(context, instance, name,
-                    'snapshot', extra_properties=extra_properties)
+        image_meta = self._create_image(context, instance, name,
+                                        'snapshot',
+                                        extra_properties=extra_properties)
 
-        instance = self.update(context, instance,
-                               task_state=task_states.IMAGE_SNAPSHOT,
-                               expected_task_state=None)
+        # NOTE(comstud): Any changes to this method should also be made
+        # to the snapshot_instance() method in nova/cells/messaging.py
 
-        self.compute_rpcapi.snapshot_instance(context, instance=instance,
-                image_id=image_meta['id'], image_type='snapshot')
+        instance.task_state = task_states.IMAGE_SNAPSHOT
+        instance.save(expected_task_state=None)
+
+        self.compute_rpcapi.snapshot_instance(context, instance,
+                                              image_meta['id'])
+
         return image_meta
 
     def _create_image(self, context, instance, name, image_type,
-                      backup_type=None, rotation=None, extra_properties=None):
+                      extra_properties=None):
         """Create new image entry in the image service.  This new image
         will be reserved for the compute manager to upload a snapshot
         or backup.
@@ -1785,11 +1784,11 @@ class API(base.Base):
         :param name: string for name of the snapshot
         :param image_type: snapshot | backup
         :param backup_type: daily | weekly
-        :param rotation: int representing how many backups to keep around;
-            None if rotation shouldn't be used (as in the case of snapshots)
         :param extra_properties: dict of extra image properties to include
 
         """
+        if extra_properties is None:
+            extra_properties = {}
         instance_uuid = instance['uuid']
 
         properties = {
@@ -1804,16 +1803,12 @@ class API(base.Base):
         }
 
         # Persist base image ref as a Glance image property
-        system_meta = self.db.instance_system_metadata_get(
-                context, instance_uuid)
+        system_meta = instance.system_metadata
         base_image_ref = system_meta.get('image_base_image_ref')
         if base_image_ref:
             properties['base_image_ref'] = base_image_ref
 
-        if image_type == 'backup':
-            properties['backup_type'] = backup_type
-
-        elif image_type == 'snapshot':
+        if image_type == 'snapshot':
             min_ram, min_disk = self._get_minram_mindisk_params(context,
                                                                 instance)
             if min_ram is not None:
@@ -1821,7 +1816,7 @@ class API(base.Base):
             if min_disk is not None:
                 sent_meta['min_disk'] = min_disk
 
-        properties.update(extra_properties or {})
+        properties.update(extra_properties)
 
         # Now inherit image properties from the base image
         for key, value in system_meta.items():

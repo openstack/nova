@@ -19,6 +19,7 @@ from oslo.config import cfg
 
 from nova.cells import messaging
 from nova.cells import utils as cells_utils
+from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context
 from nova import db
@@ -1275,6 +1276,68 @@ class CellsTargetedMethodsTestCase(test.TestCase):
     def test_inject_network_info(self):
         self._test_instance_action_method('inject_network_info',
                                           (), {}, (), {}, False)
+
+    def test_snapshot_instance(self):
+        inst = instance_obj.Instance()
+        meth_cls = self.tgt_methods_cls
+
+        self.mox.StubOutWithMock(inst, 'refresh')
+        self.mox.StubOutWithMock(inst, 'save')
+        self.mox.StubOutWithMock(meth_cls.compute_rpcapi, 'snapshot_instance')
+
+        def check_state(expected_task_state=None):
+            self.assertEqual(task_states.IMAGE_SNAPSHOT, inst.task_state)
+
+        inst.refresh()
+        inst.save(expected_task_state=None).WithSideEffects(check_state)
+
+        meth_cls.compute_rpcapi.snapshot_instance(self.ctxt,
+                                                  inst, 'image-id')
+
+        self.mox.ReplayAll()
+
+        class FakeMessage(object):
+            pass
+
+        message = FakeMessage()
+        message.ctxt = self.ctxt
+        message.need_response = False
+
+        meth_cls.snapshot_instance(message, inst, image_id='image-id')
+
+    def test_backup_instance(self):
+        inst = instance_obj.Instance()
+        meth_cls = self.tgt_methods_cls
+
+        self.mox.StubOutWithMock(inst, 'refresh')
+        self.mox.StubOutWithMock(inst, 'save')
+        self.mox.StubOutWithMock(meth_cls.compute_rpcapi, 'backup_instance')
+
+        def check_state(expected_task_state=None):
+            self.assertEqual(task_states.IMAGE_BACKUP, inst.task_state)
+
+        inst.refresh()
+        inst.save(expected_task_state=None).WithSideEffects(check_state)
+
+        meth_cls.compute_rpcapi.backup_instance(self.ctxt,
+                                                inst,
+                                                'image-id',
+                                                'backup-type',
+                                                'rotation')
+
+        self.mox.ReplayAll()
+
+        class FakeMessage(object):
+            pass
+
+        message = FakeMessage()
+        message.ctxt = self.ctxt
+        message.need_response = False
+
+        meth_cls.backup_instance(message, inst,
+                                 image_id='image-id',
+                                 backup_type='backup-type',
+                                 rotation='rotation')
 
 
 class CellsBroadcastMethodsTestCase(test.TestCase):

@@ -361,10 +361,16 @@ class ComputeRpcAPITestCase(test.TestCase):
     def test_get_host_uptime(self):
         self._test_compute_api('get_host_uptime', 'call', host='host')
 
+    def test_backup_instance(self):
+        self._test_compute_api('backup_instance', 'cast',
+                instance=self.fake_instance, image_id='id',
+                backup_type='type', rotation='rotation',
+                version='2.42')
+
     def test_snapshot_instance(self):
         self._test_compute_api('snapshot_instance', 'cast',
-                instance=self.fake_instance, image_id='id', image_type='type',
-                backup_type='type', rotation='rotation')
+                instance=self.fake_instance, image_id='id',
+                version='2.42')
 
     def test_live_snapshot_instance(self):
         self._test_compute_api('live_snapshot_instance', 'cast',

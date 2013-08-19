@@ -80,6 +80,7 @@ class CellsAPI(rpc_proxy.RpcProxy):
         1.21 - Adds revert_resize() and confirm_resize()
         1.22 - Adds reset_network()
         1.23 - Adds inject_network_info()
+        1.24 - Adds backup_instance() and snapshot_instance()
     '''
     BASE_RPC_API_VERSION = '1.0'
 
@@ -578,3 +579,21 @@ class CellsAPI(rpc_proxy.RpcProxy):
         self.cast(ctxt,
                   self.make_msg('inject_network_info', instance=instance),
                   version='1.23')
+
+    def snapshot_instance(self, ctxt, instance, image_id):
+        if not CONF.cells.enable:
+            return
+        self.cast(ctxt,
+                  self.make_msg('snapshot_instance', instance=instance,
+                                image_id=image_id),
+                  version='1.24')
+
+    def backup_instance(self, ctxt, instance, image_id, backup_type, rotation):
+        if not CONF.cells.enable:
+            return
+        self.cast(ctxt,
+                  self.make_msg('backup_instance', instance=instance,
+                                image_id=image_id,
+                                backup_type=backup_type,
+                                rotation=rotation),
+                  version='1.24')

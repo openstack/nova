@@ -43,7 +43,8 @@ class ComputeRPCAPIRedirect(object):
                         'soft_delete_instance', 'pause_instance',
                         'unpause_instance', 'revert_resize',
                         'confirm_resize', 'reset_network',
-                        'inject_network_info']
+                        'inject_network_info',
+                        'backup_instance', 'snapshot_instance']
 
     def __init__(self, cells_rpcapi):
         self.cells_rpcapi = cells_rpcapi
@@ -141,35 +142,6 @@ class ComputeCellsAPI(compute_api.API):
         child cell
         """
         return
-
-    def _validate_image_href(self, context, image_href):
-        """Override compute API's checking of this.  It'll happen in
-        child cell
-        """
-        return
-
-    def backup(self, context, instance, name, backup_type, rotation,
-               extra_properties=None, image_id=None):
-        """Backup the given instance."""
-        image_meta = super(ComputeCellsAPI, self).backup(context,
-                instance, name, backup_type, rotation,
-                extra_properties=extra_properties, image_id=image_id)
-        image_id = image_meta['id']
-        self._cast_to_cells(context, instance, 'backup', name,
-                backup_type=backup_type, rotation=rotation,
-                extra_properties=extra_properties, image_id=image_id)
-        return image_meta
-
-    def snapshot(self, context, instance, name, extra_properties=None,
-                 image_id=None):
-        """Snapshot the given instance."""
-        image_meta = super(ComputeCellsAPI, self).snapshot(context,
-                instance, name, extra_properties=extra_properties,
-                image_id=image_id)
-        image_id = image_meta['id']
-        self._cast_to_cells(context, instance, 'snapshot',
-                name, extra_properties=extra_properties, image_id=image_id)
-        return image_meta
 
     def create(self, *args, **kwargs):
         """We can use the base functionality, but I left this here just

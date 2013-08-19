@@ -2151,25 +2151,26 @@ class ComputeTestCase(BaseTestCase):
                                             instance=instance)
         self.compute.terminate_instance(self.context, instance=instance)
 
-    def test_snapshot(self):
+    def _get_snapshotting_instance(self):
         # Ensure instance can be snapshotted.
         instance = jsonutils.to_primitive(self._create_fake_instance())
-        name = "myfakesnapshot"
         self.compute.run_instance(self.context, instance=instance)
-        db.instance_update(self.context, instance['uuid'],
-                           {"task_state": task_states.IMAGE_SNAPSHOT})
-        self.compute.snapshot_instance(self.context, name, instance=instance)
-        self.compute.terminate_instance(self.context, instance=instance)
+        instance = db.instance_update(
+                self.context, instance['uuid'],
+                {"task_state": task_states.IMAGE_SNAPSHOT})
+        return self._objectify(instance)
+
+    def test_snapshot(self):
+        inst_obj = self._get_snapshotting_instance()
+        self.compute.snapshot_instance(self.context, image_id='fakesnap',
+                                       instance=inst_obj)
 
     def test_snapshot_no_image(self):
-        params = {'image_ref': ''}
-        name = "myfakesnapshot"
-        instance = self._create_fake_instance(params)
-        self.compute.run_instance(self.context, instance=instance)
-        db.instance_update(self.context, instance['uuid'],
-                           {"task_state": task_states.IMAGE_SNAPSHOT})
-        self.compute.snapshot_instance(self.context, name, instance=instance)
-        self.compute.terminate_instance(self.context, instance=instance)
+        inst_obj = self._get_snapshotting_instance()
+        inst_obj.image_ref = ''
+        inst_obj.save()
+        self.compute.snapshot_instance(self.context, image_id='fakesnap',
+                                       instance=inst_obj)
 
     def test_snapshot_fails(self):
         # Ensure task_state is set to None if snapshot fails.
@@ -2178,33 +2179,27 @@ class ComputeTestCase(BaseTestCase):
 
         self.stubs.Set(self.compute.driver, 'snapshot', fake_snapshot)
 
-        instance = jsonutils.to_primitive(self._create_fake_instance())
-        self.compute.run_instance(self.context, instance=instance)
-        db.instance_update(self.context, instance['uuid'],
-                           {"task_state": task_states.IMAGE_SNAPSHOT})
+        inst_obj = self._get_snapshotting_instance()
         self.assertRaises(test.TestingException,
                           self.compute.snapshot_instance,
-                          self.context, "failing_snapshot", instance=instance)
+                          self.context, image_id='fakesnap',
+                          instance=inst_obj)
         self._assert_state({'task_state': None})
-        self.compute.terminate_instance(self.context, instance=instance)
 
     def test_snapshot_handles_cases_when_instance_is_deleted(self):
-        instance = jsonutils.to_primitive(self._create_fake_instance(
-            {'vm_state': 'deleting'}))
-        self.compute.run_instance(self.context, instance=instance)
-        db.instance_update(self.context, instance['uuid'],
-                           {"task_state": task_states.DELETING})
-        self.compute.snapshot_instance(self.context, "failing_snapshot",
-                                       instance=instance)
-        self.compute.terminate_instance(self.context, instance=instance)
+        inst_obj = self._get_snapshotting_instance()
+        inst_obj.task_state = task_states.DELETING
+        inst_obj.save()
+        self.compute.snapshot_instance(self.context, image_id='fakesnap',
+                                       instance=inst_obj)
 
     def test_snapshot_handles_cases_when_instance_is_not_found(self):
-        instance = jsonutils.to_primitive(self._create_fake_instance(
-            {'vm_state': 'deleting'}))
-        instance["uuid"] = str(uuid.uuid4())
-        self.compute.snapshot_instance(self.context, "failing_snapshot",
-                                       instance=instance)
-        self.compute.terminate_instance(self.context, instance=instance)
+        inst_obj = self._get_snapshotting_instance()
+        inst_obj2 = instance_obj.Instance.get_by_uuid(self.context,
+                                                      inst_obj.uuid)
+        inst_obj2.destroy()
+        self.compute.snapshot_instance(self.context, image_id='fakesnap',
+                                       instance=inst_obj)
 
     def _assert_state(self, state_dict):
         """Assert state of VM is equal to state passed as parameter."""
@@ -6058,304 +6053,6 @@ class ComputeAPITestCase(BaseTestCase):
                 instance=jsonutils.to_primitive(volume_backed_inst_1))
         self.compute.terminate_instance(self.context,
                 instance=jsonutils.to_primitive(volume_backed_inst_2))
-
-    def test_snapshot(self):
-        # Ensure a snapshot of an instance can be created.
-        instance = self._create_fake_instance()
-        image = self.compute_api.snapshot(self.context, instance, 'snap1',
-                                          {'extra_param': 'value1'})
-
-        self.assertEqual(image['name'], 'snap1')
-        properties = image['properties']
-        self.assertTrue('backup_type' not in properties)
-        self.assertEqual(properties['image_type'], 'snapshot')
-        self.assertEqual(properties['instance_uuid'], instance['uuid'])
-        self.assertEqual(properties['extra_param'], 'value1')
-
-        db.instance_destroy(self.context, instance['uuid'])
-
-    def test_snapshot_given_image_uuid(self):
-        """Ensure a snapshot of an instance can be created when image UUID
-        is already known.
-        """
-        instance = self._create_fake_instance()
-        name = 'snap1'
-        extra_properties = {'extra_param': 'value1'}
-        recv_meta = self.compute_api.snapshot(self.context, instance, name,
-                                              extra_properties)
-        image_id = recv_meta['id']
-
-        def fake_show(meh, context, id):
-            return recv_meta
-
-        instance = db.instance_update(self.context, instance['uuid'],
-                {'task_state': None})
-        fake_image.stub_out_image_service(self.stubs)
-        self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
-        image = self.compute_api.snapshot(self.context, instance, name,
-                                          extra_properties,
-                                          image_id=image_id)
-        self.assertEqual(image, recv_meta)
-
-        db.instance_destroy(self.context, instance['uuid'])
-
-    def test_snapshot_minram_mindisk_VHD(self):
-        """Ensure a snapshots min_ram and min_disk are correct.
-
-        A snapshot of a non-shrinkable VHD should have min_disk
-        set to that of the original instances flavor.
-        """
-
-        self.fake_image.update(disk_format='vhd',
-                               min_ram=1, min_disk=1)
-        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
-
-        instance = self._create_fake_instance(type_name='m1.small')
-
-        image = self.compute_api.snapshot(self.context, instance, 'snap1',
-                                          {'extra_param': 'value1'})
-
-        self.assertEqual(image['name'], 'snap1')
-        instance_type = flavors.extract_flavor(instance)
-        self.assertEqual(image['min_ram'], self.fake_image['min_ram'])
-        self.assertEqual(image['min_disk'], instance_type['root_gb'])
-        properties = image['properties']
-        self.assertTrue('backup_type' not in properties)
-        self.assertEqual(properties['image_type'], 'snapshot')
-        self.assertEqual(properties['instance_uuid'], instance['uuid'])
-        self.assertEqual(properties['extra_param'], 'value1')
-
-    def test_snapshot_mindisk_with_bigger_flavor(self):
-        """If minDisk is smaller than flavor root_gb, the latter should be
-        used as minDisk
-        """
-        self.fake_image['min_disk'] = 0
-        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
-
-        instance = self._create_fake_instance()
-        image = self.compute_api.snapshot(self.context, instance, 'snap1',
-                                         {'extra_param': 'value1'})
-
-        self.assertEqual(image['min_disk'], 1)
-
-        db.instance_destroy(self.context, instance['uuid'])
-
-    def test_snapshot_minram_mindisk(self):
-        """Ensure a snapshots min_ram and min_disk are correct.
-
-        A snapshot of an instance should have min_ram and min_disk
-        set to that of the instances original image unless that
-        image had a disk format of vhd.
-        """
-
-        self.fake_image['disk_format'] = 'raw'
-        self.fake_image['min_ram'] = 512
-        self.fake_image['min_disk'] = 1
-        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
-
-        instance = self._create_fake_instance()
-
-        image = self.compute_api.snapshot(self.context, instance, 'snap1',
-                                          {'extra_param': 'value1'})
-
-        self.assertEqual(image['name'], 'snap1')
-        self.assertEqual(image['min_ram'], 512)
-        self.assertEqual(image['min_disk'], 1)
-        properties = image['properties']
-        self.assertTrue('backup_type' not in properties)
-        self.assertEqual(properties['image_type'], 'snapshot')
-        self.assertEqual(properties['instance_uuid'], instance['uuid'])
-        self.assertEqual(properties['extra_param'], 'value1')
-
-        db.instance_destroy(self.context, instance['uuid'])
-
-    def test_snapshot_minram_mindisk_img_missing_minram(self):
-        """Ensure a snapshots min_ram and min_disk are correct.
-
-        Do not show an attribute that the orig img did not have.
-        """
-
-        self.fake_image['disk_format'] = 'raw'
-        self.fake_image['min_disk'] = 1
-        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
-
-        instance = self._create_fake_instance()
-
-        image = self.compute_api.snapshot(self.context, instance, 'snap1',
-                                          {'extra_param': 'value1'})
-
-        self.assertEqual(image['name'], 'snap1')
-        self.assertFalse('min_ram' in image)
-        self.assertEqual(image['min_disk'], 1)
-        properties = image['properties']
-        self.assertTrue('backup_type' not in properties)
-        self.assertEqual(properties['image_type'], 'snapshot')
-        self.assertEqual(properties['instance_uuid'], instance['uuid'])
-        self.assertEqual(properties['extra_param'], 'value1')
-
-        db.instance_destroy(self.context, instance['uuid'])
-
-    def test_snapshot_minram_mindisk_no_image(self):
-        """Ensure a snapshots min_ram and min_disk are correct.
-
-        A snapshots min_ram and min_disk should be set to default if
-        an instances original image cannot be found.
-        """
-        # Cells tests will call this a 2nd time in child cell with
-        # the newly created image_id, and we want that one to succeed.
-        old_show = fake_image._FakeImageService.show
-        flag = []
-
-        def fake_show(*args):
-            if not flag:
-                flag.append(1)
-                raise exception.ImageNotFound(image_id="fake")
-            else:
-                return old_show(*args)
-
-        self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
-
-        instance = self._create_fake_instance()
-
-        image = self.compute_api.snapshot(self.context, instance, 'snap1',
-                                          {'extra_param': 'value1'})
-
-        self.assertEqual(image['name'], 'snap1')
-
-        # min_ram and min_disk are not returned when set to default
-        self.assertFalse('min_ram' in image)
-        self.assertFalse('min_disk' in image)
-
-        properties = image['properties']
-        self.assertTrue('backup_type' not in properties)
-        self.assertEqual(properties['image_type'], 'snapshot')
-        self.assertEqual(properties['instance_uuid'], instance['uuid'])
-        self.assertEqual(properties['extra_param'], 'value1')
-
-        db.instance_destroy(self.context, instance['uuid'])
-
-    def test_snapshot_image_metadata_inheritance(self):
-        # Ensure image snapshots inherit metadata from the base image
-        self.flags(non_inheritable_image_properties=['spam'])
-
-        def fake_instance_system_metadata_get(context, uuid):
-            return dict(image_a=1, image_b=2, image_c='c', d='d', spam='spam')
-
-        self.stubs.Set(db, 'instance_system_metadata_get',
-                       fake_instance_system_metadata_get)
-
-        instance = self._create_fake_instance()
-        image = self.compute_api.snapshot(self.context, instance, 'snap1',
-                                          {'extra_param': 'value1'})
-
-        properties = image['properties']
-        self.assertEqual(properties['a'], 1)
-        self.assertEqual(properties['b'], 2)
-        self.assertEqual(properties['c'], 'c')
-        self.assertEqual(properties['d'], 'd')
-        self.assertFalse('spam' in properties)
-
-    def _do_test_snapshot_image_service_fails(self, method, image_id):
-        # Ensure task_state remains at None if image service fails.
-        def fake_fails(*args, **kwargs):
-            raise test.TestingException()
-
-        restore = getattr(fake_image._FakeImageService, method)
-        self.stubs.Set(fake_image._FakeImageService, method, fake_fails)
-
-        instance = self._create_fake_instance()
-        self.assertRaises(test.TestingException,
-                          self.compute_api.snapshot,
-                          self.context,
-                          instance,
-                          'no_image_snapshot',
-                          image_id=image_id)
-
-        self.stubs.Set(fake_image._FakeImageService, method, restore)
-        db_instance = db.instance_get_all(self.context)[0]
-        self.assertIsNone(db_instance['task_state'])
-
-    def test_snapshot_image_creation_fails(self):
-        self._do_test_snapshot_image_service_fails('create', None)
-
-    def test_snapshot_image_show_fails(self):
-        self._do_test_snapshot_image_service_fails('show', 'image')
-
-    def _do_test_backup_image_service_fails(self, method, image_id):
-        # Ensure task_state remains at None if image service fails.
-        def fake_fails(*args, **kwargs):
-            raise test.TestingException()
-
-        restore = getattr(fake_image._FakeImageService, method)
-        self.stubs.Set(fake_image._FakeImageService, method, fake_fails)
-
-        instance = self._create_fake_instance()
-        self.assertRaises(test.TestingException,
-                          self.compute_api.backup,
-                          self.context,
-                          instance,
-                          'no_image_backup',
-                          'DAILY',
-                          0,
-                          image_id=image_id)
-
-        self.stubs.Set(fake_image._FakeImageService, method, restore)
-        db_instance = db.instance_get_all(self.context)[0]
-        self.assertIsNone(db_instance['task_state'])
-
-    def test_backup_image_creation_fails(self):
-        self._do_test_backup_image_service_fails('create', None)
-
-    def test_backup_image_show_fails(self):
-        self._do_test_backup_image_service_fails('show', 'image')
-
-    def test_backup(self):
-        # Can't backup an instance which is already being backed up.
-        instance = self._create_fake_instance()
-        image = self.compute_api.backup(self.context, instance,
-                                        'backup1', 'DAILY', None,
-                                        {'extra_param': 'value1'})
-
-        self.assertEqual(image['name'], 'backup1')
-        properties = image['properties']
-        self.assertEqual(properties['backup_type'], 'DAILY')
-        self.assertEqual(properties['image_type'], 'backup')
-        self.assertEqual(properties['instance_uuid'], instance['uuid'])
-        self.assertEqual(properties['extra_param'], 'value1')
-
-        db.instance_destroy(self.context, instance['uuid'])
-
-    def test_backup_conflict(self):
-        # Can't backup an instance which is already being backed up.
-        instance = self._create_fake_instance()
-        instance_values = {'task_state': task_states.IMAGE_BACKUP}
-        db.instance_update(self.context, instance['uuid'], instance_values)
-        instance = self.compute_api.get(self.context, instance['uuid'])
-
-        self.assertRaises(exception.InstanceInvalidState,
-                          self.compute_api.backup,
-                          self.context,
-                          instance,
-                          None,
-                          None,
-                          None)
-
-        db.instance_destroy(self.context, instance['uuid'])
-
-    def test_snapshot_conflict(self):
-        # Can't snapshot an instance which is already being snapshotted.
-        instance = self._create_fake_instance()
-        instance_values = {'task_state': task_states.IMAGE_SNAPSHOT}
-        db.instance_update(self.context, instance['uuid'], instance_values)
-        instance = self.compute_api.get(self.context, instance['uuid'])
-
-        self.assertRaises(exception.InstanceInvalidState,
-                          self.compute_api.snapshot,
-                          self.context,
-                          instance,
-                          None)
-
-        db.instance_destroy(self.context, instance['uuid'])
 
     def test_get(self):
         # Test get instance.

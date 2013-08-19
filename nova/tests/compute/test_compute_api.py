@@ -86,6 +86,10 @@ class _ComputeAPIUnitTestMixIn(object):
         now = timeutils.utcnow()
 
         instance = instance_obj.Instance()
+        instance.metadata = {}
+        instance.metadata.update(params.pop('metadata', {}))
+        instance.system_metadata = make_fake_sys_meta()
+        instance.system_metadata.update(params.pop('system_metadata', {}))
         instance._context = self.context
         instance.id = 1
         instance.uuid = uuidutils.generate_uuid()
@@ -106,7 +110,6 @@ class _ComputeAPIUnitTestMixIn(object):
         instance.ephemeral_gb = 0
         instance.architecture = 'x86_64'
         instance.os_type = 'Linux'
-        instance.system_metadata = make_fake_sys_meta()
         instance.locked = False
         instance.created_at = now
         instance.updated_at = now
@@ -1096,6 +1099,226 @@ class _ComputeAPIUnitTestMixIn(object):
         self.compute_api.swap_volume(self.context, instance,
                                      volumes[old_volume_id],
                                      volumes[new_volume_id])
+
+    def _test_snapshot_and_backup(self, is_snapshot=True,
+                                  with_base_ref=False, min_ram=None,
+                                  min_disk=None,
+                                  create_fails=False):
+        # 'cache_in_nova' is for testing non-inheritable properties
+        # 'user_id' should also not be carried from sys_meta into
+        # image property...since it should be set explicitly by
+        # _create_image() in compute api.
+        fake_sys_meta = dict(image_foo='bar', blah='bug?',
+                             image_cache_in_nova='dropped',
+                             cache_in_nova='dropped',
+                             user_id='meow')
+        if with_base_ref:
+            fake_sys_meta['image_base_image_ref'] = 'fake-base-ref'
+        params = dict(system_metadata=fake_sys_meta)
+        instance = self._create_instance_obj(params=params)
+        fake_sys_meta.update(instance.system_metadata)
+        extra_props = dict(cow='moo', cat='meow')
+
+        self.mox.StubOutWithMock(self.compute_api,
+                                 '_get_minram_mindisk_params')
+        self.mox.StubOutWithMock(self.compute_api.image_service,
+                                 'create')
+        self.mox.StubOutWithMock(instance, 'save')
+        self.mox.StubOutWithMock(self.compute_api.compute_rpcapi,
+                                 'snapshot_instance')
+        self.mox.StubOutWithMock(self.compute_api.compute_rpcapi,
+                                 'backup_instance')
+
+        image_type = is_snapshot and 'snapshot' or 'backup'
+
+        expected_sys_meta = dict(fake_sys_meta)
+        expected_sys_meta.pop('cache_in_nova')
+        expected_sys_meta.pop('image_cache_in_nova')
+        expected_sys_meta.pop('user_id')
+        expected_sys_meta['foo'] = expected_sys_meta.pop('image_foo')
+        if with_base_ref:
+            expected_sys_meta['base_image_ref'] = expected_sys_meta.pop(
+                    'image_base_image_ref')
+
+        expected_props = {'instance_uuid': instance.uuid,
+                          'user_id': self.context.user_id,
+                          'image_type': image_type}
+        expected_props.update(extra_props)
+        expected_props.update(expected_sys_meta)
+        expected_meta = {'name': 'fake-name',
+                         'is_public': False,
+                         'properties': expected_props}
+        if is_snapshot:
+            self.compute_api._get_minram_mindisk_params(
+                    self.context, instance).AndReturn((min_ram, min_disk))
+            if min_ram is not None:
+                expected_meta['min_ram'] = min_ram
+            if min_disk is not None:
+                expected_meta['min_disk'] = min_disk
+        else:
+            expected_props['backup_type'] = 'fake-backup-type'
+
+        fake_image = dict(id='fake-image-id')
+        mock_method = self.compute_api.image_service.create(
+                self.context, expected_meta)
+        if create_fails:
+            mock_method.AndRaise(test.TestingException())
+        else:
+            mock_method.AndReturn(fake_image)
+
+        def check_state(expected_task_state=None):
+            expected_state = (is_snapshot and task_states.IMAGE_SNAPSHOT or
+                              task_states.IMAGE_BACKUP)
+            self.assertEqual(expected_state, instance.task_state)
+
+        if not create_fails:
+            instance.save(expected_task_state=None).WithSideEffects(
+                    check_state)
+            if is_snapshot:
+                self.compute_api.compute_rpcapi.snapshot_instance(
+                        self.context, instance, fake_image['id'])
+            else:
+                self.compute_api.compute_rpcapi.backup_instance(
+                        self.context, instance, fake_image['id'],
+                        'fake-backup-type', 'fake-rotation')
+
+        self.mox.ReplayAll()
+
+        got_exc = False
+        try:
+            if is_snapshot:
+                res = self.compute_api.snapshot(self.context, instance,
+                                          'fake-name',
+                                          extra_properties=extra_props)
+            else:
+                res = self.compute_api.backup(self.context, instance,
+                                        'fake-name',
+                                        'fake-backup-type',
+                                        'fake-rotation',
+                                        extra_properties=extra_props)
+            self.assertEqual(fake_image, res)
+        except test.TestingException:
+            got_exc = True
+        self.assertEqual(create_fails, got_exc)
+
+    def test_snapshot(self):
+        self._test_snapshot_and_backup()
+
+    def test_snapshot_fails(self):
+        self._test_snapshot_and_backup(create_fails=True)
+
+    def test_snapshot_invalid_state(self):
+        instance = self._create_instance_obj()
+        instance.vm_state = vm_states.ACTIVE
+        instance.task_state = task_states.IMAGE_SNAPSHOT
+        self.assertRaises(exception.InstanceInvalidState,
+                          self.compute_api.snapshot,
+                          self.context, instance, 'fake-name')
+        instance.vm_state = vm_states.ACTIVE
+        instance.task_state = task_states.IMAGE_BACKUP
+        self.assertRaises(exception.InstanceInvalidState,
+                          self.compute_api.snapshot,
+                          self.context, instance, 'fake-name')
+        instance.vm_state = vm_states.BUILDING
+        instance.task_state = None
+        self.assertRaises(exception.InstanceInvalidState,
+                          self.compute_api.snapshot,
+                          self.context, instance, 'fake-name')
+
+    def test_snapshot_with_base_image_ref(self):
+        self._test_snapshot_and_backup(with_base_ref=True)
+
+    def test_snapshot_min_ram(self):
+        self._test_snapshot_and_backup(min_ram=42)
+
+    def test_snapshot_min_disk(self):
+        self._test_snapshot_and_backup(min_disk=42)
+
+    def test_backup(self):
+        self._test_snapshot_and_backup(is_snapshot=False)
+
+    def test_backup_fails(self):
+        self._test_snapshot_and_backup(is_snapshot=False, create_fails=True)
+
+    def test_backup_invalid_state(self):
+        instance = self._create_instance_obj()
+        instance.vm_state = vm_states.ACTIVE
+        instance.task_state = task_states.IMAGE_SNAPSHOT
+        self.assertRaises(exception.InstanceInvalidState,
+                          self.compute_api.snapshot,
+                          self.context, instance, 'fake-name',
+                          'fake', 'fake')
+        instance.vm_state = vm_states.ACTIVE
+        instance.task_state = task_states.IMAGE_BACKUP
+        self.assertRaises(exception.InstanceInvalidState,
+                          self.compute_api.backup,
+                          self.context, instance, 'fake-name',
+                          'fake', 'fake')
+        instance.vm_state = vm_states.BUILDING
+        instance.task_state = None
+        self.assertRaises(exception.InstanceInvalidState,
+                          self.compute_api.snapshot,
+                          self.context, instance, 'fake-name',
+                          'fake', 'fake')
+
+    def test_backup_with_base_image_ref(self):
+        self._test_snapshot_and_backup(is_snapshot=False,
+                                       with_base_ref=True)
+
+    def _test_get_minram_mindisk_params(self, disk_format,
+                                        show_fails=False,
+                                        img_missing_mins=False):
+        params = dict(image_ref='fake-image-ref')
+        instance = self._create_instance_obj(params=params)
+
+        self.mox.StubOutWithMock(self.compute_api.image_service, 'show')
+        self.mox.StubOutWithMock(flavors, 'extract_flavor')
+
+        fake_image = dict(disk_format=disk_format)
+        if not img_missing_mins:
+            fake_image.update(min_ram=42, min_disk=24)
+        fake_flavor = dict(root_gb=10)
+
+        mock_method = self.compute_api.image_service.show(
+                    self.context, 'fake-image-ref')
+        if show_fails:
+            exc_info = exception.ImageNotFound(image_id='fake-image-ref')
+            mock_method.AndRaise(exc_info)
+            expected_min_ram = None
+            expected_min_disk = None
+        else:
+            mock_method.AndReturn(fake_image)
+            flavors.extract_flavor(instance).AndReturn(fake_flavor)
+            if disk_format == 'vhd' or img_missing_mins:
+                expected_min_disk = 10
+            else:
+                expected_min_disk = 24
+            if img_missing_mins:
+                expected_min_ram = None
+            else:
+                expected_min_ram = 42
+        self.mox.ReplayAll()
+
+        min_ram, min_disk = self.compute_api._get_minram_mindisk_params(
+                self.context, instance)
+        self.assertEqual(expected_min_ram, min_ram)
+        self.assertEqual(expected_min_disk, min_disk)
+
+    def test_get_minram_mindisk_vhd(self):
+        self._test_get_minram_mindisk_params('vhd')
+
+    def test_get_minram_mindisk_vhd_fails(self):
+        self._test_get_minram_mindisk_params('vhd', show_fails=True)
+
+    def test_get_minram_mindisk_other(self):
+        self._test_get_minram_mindisk_params('other')
+
+    def test_get_minram_mindisk_other_img_missing_mins(self):
+        self._test_get_minram_mindisk_params('other',
+                                             img_missing_mins=True)
+
+    def test_get_minram_mindisk_other_fails(self):
+        self._test_get_minram_mindisk_params('other', show_fails=True)
 
 
 class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):

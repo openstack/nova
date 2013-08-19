@@ -706,3 +706,29 @@ class CellsAPITestCase(test.TestCase):
         expected_args = {'instance': 'fake-instance'}
         self._check_result(call_info, 'inject_network_info',
                            expected_args, version='1.23')
+
+    def test_snapshot_instance(self):
+        call_info = self._stub_rpc_method('cast', None)
+
+        self.cells_rpcapi.snapshot_instance(self.fake_context,
+                                            'fake-instance',
+                                            'image-id')
+        expected_args = {'instance': 'fake-instance',
+                         'image_id': 'image-id'}
+        self._check_result(call_info, 'snapshot_instance',
+                           expected_args, version='1.24')
+
+    def test_backup_instance(self):
+        call_info = self._stub_rpc_method('cast', None)
+
+        self.cells_rpcapi.backup_instance(self.fake_context,
+                                          'fake-instance',
+                                          'image-id',
+                                          'backup-type',
+                                          'rotation')
+        expected_args = {'instance': 'fake-instance',
+                         'image_id': 'image-id',
+                         'backup_type': 'backup-type',
+                         'rotation': 'rotation'}
+        self._check_result(call_info, 'backup_instance',
+                           expected_args, version='1.24')

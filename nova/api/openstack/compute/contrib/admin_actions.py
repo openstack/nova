@@ -256,7 +256,7 @@ class AdminActionsController(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=msg)
 
         try:
-            instance = self.compute_api.get(context, id)
+            instance = self.compute_api.get(context, id, want_objects=True)
         except exception.NotFound:
             raise exc.HTTPNotFound(_("Instance not found"))
 
