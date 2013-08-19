@@ -588,6 +588,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.stubs.Set(self.compute.conductor_api,
                        'block_device_mapping_update_or_create',
                        lambda x, y: None)
+        self.stubs.Set(self.compute.conductor_api,
+                       'instance_fault_create',
+                       lambda x, y: None)
 
         # Good path
         self.compute.swap_volume(self.context, old_volume_id, new_volume_id,
