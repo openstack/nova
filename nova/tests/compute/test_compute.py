@@ -4252,9 +4252,17 @@ class ComputeTestCase(BaseTestCase):
         inst_id = instance_ref['id']
 
         instance = jsonutils.to_primitive(db.instance_get(c, inst_id))
+
+        migrate_data = {'is_shared_storage': False}
+
+        self.mox.StubOutWithMock(self.compute.compute_rpcapi,
+                                 'pre_live_migration')
+        self.compute.compute_rpcapi.pre_live_migration(
+            c, instance, False, None, instance['host'], migrate_data)
+
         # start test
         self.mox.ReplayAll()
-        migrate_data = {'is_shared_storage': False}
+
         ret = self.compute.live_migration(c, dest=instance['host'],
                                           instance=instance,
                                           migrate_data=migrate_data)
@@ -4296,13 +4304,11 @@ class ComputeTestCase(BaseTestCase):
         migration = {'source_compute': srchost, 'dest_compute': dest, }
         self.compute.conductor_api.network_migrate_instance_start(c, inst_ref,
                                                                   migration)
-        self.mox.StubOutWithMock(rpc, 'call')
-        rpc.call(c, rpc.queue_get_for(c, CONF.compute_topic, dest),
-            {"method": "post_live_migration_at_destination",
-             "namespace": None,
-             "args": {'instance': inst_ref, 'block_migration': False},
-             "version": compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION},
-            None)
+
+        self.mox.StubOutWithMock(self.compute.compute_rpcapi,
+                                 'post_live_migration_at_destination')
+        self.compute.compute_rpcapi.post_live_migration_at_destination(
+            c, inst_ref, False, dest)
 
         self.mox.StubOutWithMock(self.compute.network_api,
                                  'setup_networks_on_host')
@@ -4345,13 +4351,12 @@ class ComputeTestCase(BaseTestCase):
                      'dest_compute': dest, }
         self.compute.conductor_api.network_migrate_instance_start(c, inst_ref,
                                                                   migration)
-        self.mox.StubOutWithMock(rpc, 'call')
-        rpc.call(c, rpc.queue_get_for(c, CONF.compute_topic, dest),
-            {"method": "post_live_migration_at_destination",
-             "namespace": None,
-             "args": {'instance': inst_ref, 'block_migration': False},
-             "version": compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION},
-            None)
+
+        self.mox.StubOutWithMock(self.compute.compute_rpcapi,
+                                 'post_live_migration_at_destination')
+        self.compute.compute_rpcapi.post_live_migration_at_destination(
+            c, inst_ref, False, dest)
+
         self.mox.StubOutWithMock(self.compute.driver, 'unplug_vifs')
         self.compute.driver.unplug_vifs(inst_ref, [])
 
