@@ -132,6 +132,7 @@ class CinderCloudTestCase(test.TestCase):
         self.compute = self.start_service('compute')
         self.scheduler = self.start_service('scheduler')
         self.network = self.start_service('network')
+        self.consoleauth = self.start_service('consoleauth')
 
         self.user_id = 'fake'
         self.project_id = 'fake'
