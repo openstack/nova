@@ -3340,7 +3340,7 @@ class EvacuateJsonTest(ServersSampleBase):
         uuid = self._post_server()
 
         req_subs = {
-            'host': 'TargetHost',
+            'host': self.compute.host,
             "adminPass": "MySecretPass",
             "onSharedStorage": 'False'
         }
