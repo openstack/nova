@@ -2646,6 +2646,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                     instance=instance)
             self.compute_rpcapi.resize_instance(context, instance,
                     migration_ref, image, instance_type, reservations)
+        return instance
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
@@ -2670,8 +2671,10 @@ class ComputeManager(manager.SchedulerDependentManager):
             self._notify_about_instance_usage(
                     context, instance, "resize.prep.start")
             try:
-                self._prep_resize(context, image, instance, instance_type,
-                        reservations, request_spec, filter_properties, node)
+                instance = self._prep_resize(context, image, instance,
+                                             instance_type, reservations,
+                                             request_spec, filter_properties,
+                                             node)
             except Exception:
                 # try to re-schedule the resize elsewhere:
                 exc_info = sys.exc_info()
