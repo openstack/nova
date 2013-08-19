@@ -64,6 +64,7 @@ from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
 from nova import policy
 from nova import quota
+from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import test
 from nova.tests.compute import fake_resource_tracker
 from nova.tests.db import fakes as db_fakes
@@ -7881,6 +7882,12 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_live_migrate(self):
         instance, instance_uuid = self._run_instance()
+
+        rpcapi = scheduler_rpcapi.SchedulerAPI
+        self.mox.StubOutWithMock(rpcapi, 'live_migration')
+        rpcapi.live_migration(self.context, True, True,
+                              mox.IgnoreArg(), 'fake_dest_host')
+        self.mox.ReplayAll()
 
         self.compute_api.live_migrate(self.context, instance,
                                       block_migration=True,
