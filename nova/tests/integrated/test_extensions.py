@@ -26,6 +26,8 @@ LOG = logging.getLogger(__name__)
 
 
 class ExtensionsTest(integrated_helpers._IntegratedTestBase):
+    _api_version = 'v2'
+
     def _get_flags(self):
         f = super(ExtensionsTest, self)._get_flags()
         f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]

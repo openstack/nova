@@ -30,6 +30,8 @@ LOG = logging.getLogger(__name__)
 
 
 class MultiprocessWSGITest(integrated_helpers._IntegratedTestBase):
+    _api_version = 'v2'
+
     def _start_api_service(self):
         # Process will be started in _spawn()
         self.osapi = service.WSGIService("osapi_compute")

@@ -32,6 +32,8 @@ LOG = logging.getLogger(__name__)
 
 
 class ServersTest(integrated_helpers._IntegratedTestBase):
+    _api_version = 'v2'
+
     def setUp(self):
         super(ServersTest, self).setUp()
         self.conductor = self.start_service(
