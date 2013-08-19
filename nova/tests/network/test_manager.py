@@ -2145,7 +2145,8 @@ class FloatingIPTestCase(test.TestCase):
         instance = db.instance_create(self.context, {
                 'project_id': self.project_id, 'deleted': True})
         network = db.network_create_safe(self.context.elevated(), {
-                'project_id': self.project_id})
+                'project_id': self.project_id,
+                'host': CONF.host})
         fixed = db.fixed_ip_create(self.context, {'allocated': True,
                 'instance_uuid': instance['uuid'], 'address': '10.1.1.1',
                 'network_id': network['id']})
@@ -2162,7 +2163,8 @@ class FloatingIPTestCase(test.TestCase):
         instance = db.instance_create(self.context, {
                 'project_id': self.project_id})
         network = db.network_create_safe(self.context.elevated(), {
-                'project_id': self.project_id})
+                'project_id': self.project_id,
+                'host': CONF.host})
         fixed = db.fixed_ip_create(self.context, {'allocated': True,
                 'instance_uuid': instance['uuid'], 'address': '10.1.1.1',
                 'network_id': network['id']})
