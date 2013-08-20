@@ -788,7 +788,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._report_driver_status(context)
         self.publish_service_capabilities(context)
 
-    def pre_start_hook(self, **kwargs):
+    def pre_start_hook(self):
         """After the service is initialized, but before we fully bring
         the service up by listening on RPC queues, make sure to update
         our available resources (and indirectly our available nodes).
