@@ -59,7 +59,7 @@ class AggregatesSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
                                  'aggregate-add-host-post-req', subs)
         subs.update(self._get_regexes())
         self._verify_response('aggregates-add-host-post-resp', subs,
-                              response, 200)
+                              response, 202)
 
     def test_remove_host(self):
         self.test_add_host()
@@ -70,7 +70,7 @@ class AggregatesSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
                                  'aggregate-remove-host-post-req', subs)
         subs.update(self._get_regexes())
         self._verify_response('aggregates-remove-host-post-resp',
-                              subs, response, 200)
+                              subs, response, 202)
 
     def test_update_aggregate(self):
         aggregate_id = self.test_aggregate_create()

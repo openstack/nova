@@ -109,14 +109,12 @@ class AggregateTestCase(test.TestCase):
     def test_create_with_no_name(self):
         self.assertRaises(exc.HTTPBadRequest, self.controller.create,
                           self.req, {"aggregate":
-                                     {"foo": "test",
-                                      "availability_zone": "nova1"}})
+                                     {"availability_zone": "nova1"}})
 
     def test_create_with_no_availability_zone(self):
         self.assertRaises(exc.HTTPBadRequest, self.controller.create,
                           self.req, {"aggregate":
-                                     {"name": "test",
-                                      "foo": "nova1"}})
+                                     {"name": "test"}})
 
     def test_create_with_null_name(self):
         self.assertRaises(exc.HTTPBadRequest, self.controller.create,
@@ -129,12 +127,6 @@ class AggregateTestCase(test.TestCase):
                           self.req, {"aggregate":
                                      {"name": "x" * 256,
                                       "availability_zone": "nova1"}})
-
-    def test_create_with_extra_invalid_arg(self):
-        self.assertRaises(exc.HTTPBadRequest, self.controller.create,
-                          self.req, dict(name="test",
-                                         availability_zone="nova1",
-                                         foo='bar'))
 
     def test_show(self):
         def stub_get_aggregate(context, id):
@@ -199,16 +191,11 @@ class AggregateTestCase(test.TestCase):
     def test_update_with_no_updates(self):
         test_metadata = {"aggregate": {}}
         self.assertRaises(exc.HTTPBadRequest, self.controller.update,
-                          self.req, "2", body=test_metadata)
-
-    def test_update_with_no_update_key(self):
-        test_metadata = {"asdf": {}}
-        self.assertRaises(exc.HTTPBadRequest, self.controller.update,
-                          self.req, "2", body=test_metadata)
+            self.req, "2", body=test_metadata)
 
     def test_update_with_wrong_updates(self):
         test_metadata = {"aggregate": {"status": "disable",
-                                     "foo": "bar"}}
+                                       "foo": "bar"}}
         self.assertRaises(exc.HTTPBadRequest, self.controller.update,
                           self.req, "2", body=test_metadata)
 
@@ -233,6 +220,11 @@ class AggregateTestCase(test.TestCase):
         self.assertRaises(exc.HTTPNotFound, self.controller.update,
                 self.req, "2", body=test_metadata)
 
+    def test_update_with_invalid_request(self):
+        test_metadata = {"aggregate": 1}
+        self.assertRaises(exc.HTTPBadRequest, self.controller.update,
+            self.req, "2", body=test_metadata)
+
     def test_add_host(self):
         def stub_add_host_to_aggregate(context, aggregate, host):
             self.assertEqual(context, self.context, "context")
@@ -247,6 +239,7 @@ class AggregateTestCase(test.TestCase):
                                                               "host1"}})
 
         self.assertEqual(aggregate["aggregate"], AGGREGATE)
+        self.assertEqual(self.controller._add_host.wsgi_code, 202)
 
     def test_add_host_with_already_added_host(self):
         def stub_add_host_to_aggregate(context, aggregate, host):
@@ -281,7 +274,15 @@ class AggregateTestCase(test.TestCase):
 
     def test_add_host_with_missing_host(self):
         self.assertRaises(exc.HTTPBadRequest, self.controller._add_host,
-                self.req, "1", body={"add_host": {"asdf": "asdf"}})
+                self.req, "1", body={"add_host": {}})
+
+    def test_add_host_with_invalid_request(self):
+        self.assertRaises(exc.HTTPBadRequest, self.controller._add_host,
+                self.req, "1", body={"add_host": 1})
+
+    def test_add_host_with_non_string(self):
+        self.assertRaises(exc.HTTPBadRequest, self.controller._add_host,
+                self.req, "1", body={"add_host": {"host": 1}})
 
     def test_remove_host(self):
         def stub_remove_host_from_aggregate(context, aggregate, host):
@@ -297,17 +298,7 @@ class AggregateTestCase(test.TestCase):
                                body={"remove_host": {"host": "host1"}})
 
         self.assertTrue(stub_remove_host_from_aggregate.called)
-
-    def test_remove_host_with_bad_aggregate(self):
-        def stub_remove_host_from_aggregate(context, aggregate, host):
-            raise exception.AggregateNotFound(aggregate_id=aggregate)
-        self.stubs.Set(self.controller.api,
-                       "remove_host_from_aggregate",
-                       stub_remove_host_from_aggregate)
-
-        self.assertRaises(exc.HTTPNotFound, self.controller._remove_host,
-                          self.req, "bogus_aggregate",
-                          body={"remove_host": {"host": "host1"}})
+        self.assertEqual(self.controller._remove_host.wsgi_code, 202)
 
     def test_remove_host_with_host_not_in_aggregate(self):
         def stub_remove_host_from_aggregate(context, aggregate, host):
@@ -331,10 +322,17 @@ class AggregateTestCase(test.TestCase):
         self.assertRaises(exc.HTTPNotFound, self.controller._remove_host,
                 self.req, "1", body={"remove_host": {"host": "bogushost"}})
 
-    def test_remove_host_with_extra_param(self):
+    def test_remove_host_with_invalid_request(self):
         self.assertRaises(exc.HTTPBadRequest, self.controller._remove_host,
-                self.req, "1", body={"remove_host": {"asdf": "asdf",
-                                                     "host": "asdf"}})
+                self.req, "1", body={"remove_host": 1})
+
+    def test_remove_host_with_missing_host(self):
+        self.assertRaises(exc.HTTPBadRequest, self.controller._remove_host,
+                self.req, "1", body={"remove_host": {}})
+
+    def test_remove_host_with_missing_host(self):
+        self.assertRaises(exc.HTTPBadRequest, self.controller._remove_host,
+                self.req, "1", body={"remove_host": {"host": 1}})
 
     def test_set_metadata(self):
         body = {"set_metadata": {"metadata": {"foo": "bar"}}}
@@ -366,12 +364,17 @@ class AggregateTestCase(test.TestCase):
                 self.req, "bad_aggregate", body=body)
 
     def test_set_metadata_with_missing_metadata(self):
-        body = {"asdf": {"foo": "bar"}}
+        body = {"set_metadata": {}}
         self.assertRaises(exc.HTTPBadRequest, self.controller._set_metadata,
                           self.req, "1", body=body)
 
-    def test_set_metadata_with_extra_params(self):
-        body = {"metadata": {"foo": "bar"}, "asdf": {"foo": "bar"}}
+    def test_set_metadata_with_invalid_request(self):
+        body = {"set_metadata": 1}
+        self.assertRaises(exc.HTTPBadRequest, self.controller._set_metadata,
+                          self.req, "1", body=body)
+
+    def test_set_metadata_without_dict(self):
+        body = {"set_metadata": {'metadata': 1}}
         self.assertRaises(exc.HTTPBadRequest, self.controller._set_metadata,
                           self.req, "1", body=body)
 
