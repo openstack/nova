@@ -1146,7 +1146,7 @@ class VMUtilsSRPath(stubs.XenAPITestBase):
             'field "host"="host_ref" and field "SR"="sr_ref"').AndReturn(
             {'pbd_ref': {'device_config': {}}})
         self.session.call_xenapi("SR.get_record", "sr_ref").AndReturn(
-            {'uuid': 'sr_uuid'})
+            {'uuid': 'sr_uuid', 'type': 'ext'})
         self.mox.ReplayAll()
         self.assertEqual(vm_utils.get_sr_path(self.session),
                          "/var/run/sr-mount/sr_uuid")
