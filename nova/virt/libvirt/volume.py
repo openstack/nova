@@ -706,9 +706,9 @@ class LibvirtFibreChannelVolumeDriver(LibvirtBaseVolumeDriver):
         # we support a list of wwns or a single wwn
         if isinstance(ports, list):
             for wwn in ports:
-                wwns.append(wwn)
-        elif isinstance(ports, str):
-            wwns.append(ports)
+                wwns.append(str(wwn))
+        elif isinstance(ports, basestring):
+            wwns.append(str(ports))
 
         # We need to look for wwns on every hba
         # because we don't know ahead of time
