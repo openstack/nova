@@ -586,6 +586,7 @@ class CinderCloudTestCase(test.TestCase):
         self._tearDownBlockDeviceMapping(inst1, inst2, volumes)
 
     def _setUpImageSet(self, create_volumes_and_snapshots=False):
+        self.flags(max_local_block_devices=-1)
         mappings1 = [
             {'device': '/dev/sda1', 'virtual': 'root'},
 

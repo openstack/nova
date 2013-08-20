@@ -19,6 +19,7 @@ import time
 
 from oslo.config import cfg
 
+from nova import block_device
 from nova.cells import filters
 from nova.cells import weights
 from nova.compute import vm_states
@@ -106,6 +107,8 @@ class CellsSchedulerTestCase(test.TestCase):
                           'project_id': self.ctxt.project_id}
 
         call_info = {'uuids': []}
+        block_device_mapping = [block_device.create_image_bdm(
+            'fake_image_ref')]
 
         def _fake_instance_update_at_top(_ctxt, instance):
             call_info['uuids'].append(instance['uuid'])
@@ -114,7 +117,8 @@ class CellsSchedulerTestCase(test.TestCase):
                        _fake_instance_update_at_top)
 
         self.scheduler._create_instances_here(self.ctxt, instance_uuids,
-                instance_props, inst_type, image, ['default'], [])
+                instance_props, inst_type, image,
+                ['default'], block_device_mapping)
         self.assertEqual(instance_uuids, call_info['uuids'])
 
         for instance_uuid in instance_uuids:

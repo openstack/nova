@@ -631,6 +631,12 @@
 # keys for the template are: name, uuid, count. (string value)
 #multi_instance_display_name_template=%(name)s-%(uuid)s
 
+# Maximum number of devices that will result in a local image
+# being created on the hypervisor node. Setting this to 0
+# means nova will allow only boot from volume. A negative
+# number means unlimited. (integer value)
+#max_local_block_devices=3
+
 
 #
 # Options defined in nova.compute.flavors

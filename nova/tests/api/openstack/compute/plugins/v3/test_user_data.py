@@ -89,6 +89,7 @@ class ServersControllerCreateTest(test.TestCase):
                 "fixed_ips": [],
                 "task_state": "",
                 "vm_state": "",
+                "root_device_name": inst.get('root_device_name', 'vda'),
             })
 
             self.instance_cache_by_id[instance['id']] = instance

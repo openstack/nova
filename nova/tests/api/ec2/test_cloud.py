@@ -1288,6 +1288,7 @@ class CloudTestCase(test.TestCase):
                     self.assertThat(d1, matchers.DictMatches(d2))
 
     def _setUpImageSet(self, create_volumes_and_snapshots=False):
+        self.flags(max_local_block_devices=-1)
         mappings1 = [
             {'device': '/dev/sda1', 'virtual': 'root'},
 

@@ -2429,7 +2429,8 @@ class ServersControllerCreateTest(test.TestCase):
         }]
         volume = bdm[0]
         compute_api.API._validate_bdm(mox.IgnoreArg(),
-                                      mox.IgnoreArg()).AndReturn(True)
+                mox.IgnoreArg(), mox.IgnoreArg(),
+                mox.IgnoreArg()).AndReturn(True)
         compute_api.API._get_volume_image_metadata(mox.IgnoreArg(),
                                                    bdm).AndReturn(volume)
         params = {'block_device_mapping': bdm}
@@ -2472,8 +2473,9 @@ class ServersControllerCreateTest(test.TestCase):
         self.mox.StubOutWithMock(compute_api.API, '_validate_bdm')
         self.mox.StubOutWithMock(compute_api.API, '_get_volume_image_metadata')
 
-        compute_api.API._validate_bdm(mox.IgnoreArg(),
-                                      mox.IgnoreArg()).AndReturn(True)
+        compute_api.API._validate_bdm(
+            mox.IgnoreArg(), mox.IgnoreArg(),
+            mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(True)
         compute_api.API._get_volume_image_metadata(
             mox.IgnoreArg(), mox.IgnoreArg()).AndReturn({})
         self.mox.ReplayAll()
@@ -2565,6 +2567,46 @@ class ServersControllerCreateTest(test.TestCase):
         self.stubs.Set(compute_api.API, 'create', create)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self._test_create_extra, params)
+
+    def test_create_instance_bdm_api_validation_fails(self):
+        self.ext_mgr.extensions = {'os-volumes': 'fake',
+                                   'os-block-device-mapping-v2-boot': 'fake'}
+        bdm = {'delete_on_termination': 1,
+                'device_name': 'vda',
+                'source_type': 'volume',
+                'destination_type': 'volume',
+                'volume_size': 1,
+                'boot_index': 0,
+                'uuid': '11111111-1111-1111-1111-111111111111'}
+        self.validation_fail_test_validate_called = False
+        self.validation_fail_instance_destroy_called = False
+
+        bdm_exceptions = ((exception.InvalidBDMSnapshot, {'id': 'fake'}),
+                          (exception.InvalidBDMVolume, {'id': 'fake'}),
+                          (exception.InvalidBDMImage, {'id': 'fake'}),
+                          (exception.InvalidBDMBootSequence, {}),
+                          (exception.InvalidBDMLocalsLimit, {}))
+
+        ex_iter = iter(bdm_exceptions)
+
+        def _validate_bdm(*args, **kwargs):
+            self.validation_fail_test_validate_called = True
+            ex, kargs = ex_iter.next()
+            raise ex(**kargs)
+
+        def _instance_destroy(*args, **kwargs):
+            self.validation_fail_instance_destroy_called = True
+
+        self.stubs.Set(compute_api.API, '_validate_bdm', _validate_bdm)
+        self.stubs.Set(compute_api.db, 'instance_destroy', _instance_destroy)
+
+        for _ in xrange(len(bdm_exceptions)):
+            params = {'block_device_mapping_v2': [bdm.copy()]}
+            self.assertRaises(webob.exc.HTTPBadRequest,
+                              self._test_create_extra, params)
+            self.assertTrue(self.validation_fail_test_validate_called)
+            self.validation_fail_test_validate_called = False
+            self.validation_fail_test_validate_called = True
 
     def test_create_instance_with_bdm_delete_on_termination(self):
         self.ext_mgr.extensions = {'os-volumes': 'fake'}
