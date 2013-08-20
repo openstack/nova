@@ -82,6 +82,7 @@ utils_opts = [
 CONF = cfg.CONF
 CONF.register_opts(monkey_patch_opts)
 CONF.register_opts(utils_opts)
+CONF.import_opt('network_api_class', 'nova.network')
 
 LOG = logging.getLogger(__name__)
 
@@ -102,6 +103,10 @@ TIME_UNITS = {
     'HOUR': 3600,
     'DAY': 84400
 }
+
+
+_IS_NEUTRON_ATTEMPTED = False
+_IS_NEUTRON = False
 
 synchronized = lockutils.synchronized_with_prefix('nova-')
 
@@ -1161,3 +1166,34 @@ def is_none_string(val):
 
 def convert_version_to_int(version):
     return version[0] * 1000000 + version[1] * 1000 + version[2]
+
+
+def is_neutron():
+    global _IS_NEUTRON_ATTEMPTED
+    global _IS_NEUTRON
+
+    if _IS_NEUTRON_ATTEMPTED:
+        return _IS_NEUTRON
+
+    try:
+        # compatibility with Folsom/Grizzly configs
+        cls_name = CONF.network_api_class
+        if cls_name == 'nova.network.quantumv2.api.API':
+            cls_name = 'nova.network.neutronv2.api.API'
+        _IS_NEUTRON_ATTEMPTED = True
+
+        from nova.network.neutronv2 import api as neutron_api
+        _IS_NEUTRON = issubclass(importutils.import_class(cls_name),
+                                 neutron_api.API)
+    except ImportError:
+        _IS_NEUTRON = False
+
+    return _IS_NEUTRON
+
+
+def reset_is_neutron():
+    global _IS_NEUTRON_ATTEMPTED
+    global _IS_NEUTRON
+
+    _IS_NEUTRON_ATTEMPTED = False
+    _IS_NEUTRON = False
