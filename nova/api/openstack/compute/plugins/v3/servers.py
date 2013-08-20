@@ -215,21 +215,6 @@ class CommonDeserializer(wsgi.MetadataXMLDeserializer):
         if block_device_mapping is not None:
             server["block_device_mapping"] = block_device_mapping
 
-        # NOTE(vish): Support this incorrect version because it was in the code
-        #             base for a while and we don't want to accidentally break
-        #             anyone that might be using it.
-
-        # TODO(cyeoh): bp v3-api-core-as-extensions
-        # Replace with an extension point when the disk_config
-        # extension is ported
-        # auto_disk_config = server_node.getAttribute('auto_disk_config')
-        #if auto_disk_config:
-        #    server['OS-DCF:diskConfig'] = auto_disk_config
-
-        # auto_disk_config = server_node.getAttribute('OS-DCF:diskConfig')
-        #if auto_disk_config:
-        #    server['OS-DCF:diskConfig'] = auto_disk_config
-
         if self.controller:
             self.controller.server_create_xml_deserialize(server_node, server)
 
@@ -336,17 +321,6 @@ class ActionDeserializer(CommonDeserializer):
                 raise AttributeError("Name cannot be blank")
             rebuild['name'] = name
 
-        # TODO(cyeoh): bp v3-api-core-as-extensions
-        # Replace with an extension point when the disk_config
-        # extension is ported
-        # if node.hasAttribute("auto_disk_config"):
-        #     rebuild['OS-DCF:diskConfig'] = node.getAttribute(
-        #         "auto_disk_config")
-
-        # if node.hasAttribute("OS-DCF:diskConfig"):
-        #     rebuild['OS-DCF:diskConfig'] = node.getAttribute(
-        #         "OS-DCF:diskConfig")
-
         metadata_node = self.find_first_child_named(node, "metadata")
         if metadata_node is not None:
             rebuild["metadata"] = self.extract_metadata(metadata_node)
@@ -368,6 +342,8 @@ class ActionDeserializer(CommonDeserializer):
         if node.hasAttribute("access_ipv6"):
             rebuild["access_ip_v6"] = node.getAttribute("access_ip_v6")
 
+        if self.controller:
+            self.controller.server_rebuild_xml_deserialize(node, rebuild)
         return rebuild
 
     def _action_resize(self, node):
@@ -378,17 +354,8 @@ class ActionDeserializer(CommonDeserializer):
         else:
             raise AttributeError("No flavor_ref was specified in request")
 
-        # TODO(cyeoh): bp v3-api-core-as-extensions
-        # Replace with an extension point when the disk_config
-        # extension is ported
-        # if node.hasAttribute("auto_disk_config"):
-        #     resize['OS-DCF:diskConfig'] = node.getAttribute(
-        #                                       "auto_disk_config")
-
-        # if node.hasAttribute("OS-DCF:diskConfig"):
-        #     resize['OS-DCF:diskConfig'] = node.getAttribute(
-        #         "OS-DCF:diskConfig")
-
+        if self.controller:
+            self.controller.server_resize_xml_deserialize(node, resize)
         return resize
 
     def _action_confirm_resize(self, node):
@@ -431,6 +398,17 @@ class ServersController(wsgi.Controller):
     EXTENSION_CREATE_NAMESPACE = 'nova.api.v3.extensions.server.create'
     EXTENSION_DESERIALIZE_EXTRACT_SERVER_NAMESPACE = (
         'nova.api.v3.extensions.server.create.deserialize')
+
+    EXTENSION_REBUILD_NAMESPACE = 'nova.api.v3.extensions.server.rebuild'
+    EXTENSION_DESERIALIZE_EXTRACT_REBUILD_NAMESPACE = (
+        'nova.api.v3.extensions.server.rebuild.deserialize')
+
+    EXTENSION_RESIZE_NAMESPACE = 'nova.api.v3.extensions.server.resize'
+    EXTENSION_DESERIALIZE_EXTRACT_RESIZE_NAMESPACE = (
+        'nova.api.v3.extensions.server.resize.deserialize')
+
+    EXTENSION_UPDATE_NAMESPACE = 'nova.api.v3.extensions.server.update'
+
     _view_builder_class = views_servers.ViewBuilderV3
 
     @staticmethod
@@ -448,7 +426,7 @@ class ServersController(wsgi.Controller):
         return robj
 
     def __init__(self, **kwargs):
-        def _create_check_load_extension(required_function):
+        def _check_load_extension(required_function):
 
             def check_whiteblack_lists(ext):
                 # Check whitelist is either empty or if not then the extension
@@ -502,7 +480,7 @@ class ServersController(wsgi.Controller):
         self.create_extension_manager = \
           stevedore.enabled.EnabledExtensionManager(
               namespace=self.EXTENSION_CREATE_NAMESPACE,
-              check_func=_create_check_load_extension('server_create'),
+              check_func=_check_load_extension('server_create'),
               invoke_on_load=True,
               invoke_kwds={"extension_info": self.extension_info},
               propagate_map_exceptions=True)
@@ -514,7 +492,7 @@ class ServersController(wsgi.Controller):
         self.create_xml_deserialize_manager = \
           stevedore.enabled.EnabledExtensionManager(
               namespace=self.EXTENSION_DESERIALIZE_EXTRACT_SERVER_NAMESPACE,
-              check_func=_create_check_load_extension(
+              check_func=_check_load_extension(
                   'server_xml_extract_server_deserialize'),
               invoke_on_load=True,
               invoke_kwds={"extension_info": self.extension_info},
@@ -522,6 +500,62 @@ class ServersController(wsgi.Controller):
         if not list(self.create_xml_deserialize_manager):
             LOG.debug(_("Did not find any server create xml deserializer"
                         " extensions"))
+
+        # Look for implmentation of extension point of server rebuild
+        self.rebuild_extension_manager = \
+            stevedore.enabled.EnabledExtensionManager(
+                namespace=self.EXTENSION_REBUILD_NAMESPACE,
+                check_func=_check_load_extension('server_rebuild'),
+                invoke_on_load=True,
+                invoke_kwds={"extension_info": self.extension_info})
+        if not list(self.rebuild_extension_manager):
+            LOG.debug(_("Did not find any server rebuild extensions"))
+
+        # Look for implmentation of extension point of server rebuild
+        # XML deserialization
+        self.rebuild_xml_deserialize_manager = \
+            stevedore.enabled.EnabledExtensionManager(
+                namespace=self.EXTENSION_DESERIALIZE_EXTRACT_REBUILD_NAMESPACE,
+                check_func=_check_load_extension(
+                    'server_xml_extract_rebuild_deserialize'),
+                invoke_on_load=True,
+                invoke_kwds={"extension_info": self.extension_info})
+        if not list(self.rebuild_xml_deserialize_manager):
+            LOG.debug(_("Did not find any server rebuild xml deserializer"
+                        " extensions"))
+
+        # Look for implmentation of extension point of server resize
+        self.resize_extension_manager = \
+            stevedore.enabled.EnabledExtensionManager(
+                namespace=self.EXTENSION_RESIZE_NAMESPACE,
+                check_func=_check_load_extension('server_resize'),
+                invoke_on_load=True,
+                invoke_kwds={"extension_info": self.extension_info})
+        if not list(self.resize_extension_manager):
+            LOG.debug(_("Did not find any server resize extensions"))
+
+        # Look for implmentation of extension point of server resize
+        # XML deserialization
+        self.resize_xml_deserialize_manager = \
+            stevedore.enabled.EnabledExtensionManager(
+                namespace=self.EXTENSION_DESERIALIZE_EXTRACT_RESIZE_NAMESPACE,
+                check_func=_check_load_extension(
+                    'server_xml_extract_resize_deserialize'),
+                invoke_on_load=True,
+                invoke_kwds={"extension_info": self.extension_info})
+        if not list(self.resize_xml_deserialize_manager):
+            LOG.debug(_("Did not find any server resize xml deserializer"
+                        " extensions"))
+
+        # Look for implmentation of extension point of server update
+        self.update_extension_manager = \
+            stevedore.enabled.EnabledExtensionManager(
+                namespace=self.EXTENSION_UPDATE_NAMESPACE,
+                check_func=_check_load_extension('server_resize'),
+                invoke_on_load=True,
+                invoke_kwds={"extension_info": self.extension_info})
+        if not list(self.update_extension_manager):
+            LOG.debug(_("Did not find any server update extensions"))
 
     @wsgi.serializers(xml=MinimalServersTemplate)
     def index(self, req):
@@ -927,13 +961,6 @@ class ServersController(wsgi.Controller):
             msg = _('min_count must be <= max_count')
             raise exc.HTTPBadRequest(explanation=msg)
 
-        auto_disk_config = False
-        # TODO(cyeoh): bp v3-api-core-as-extensions
-        # Replace with an extension point when the OS-DCF extension is
-        # ported
-        #if self.ext_mgr.is_loaded('OS-DCF'):
-        #    auto_disk_config = server_dict.get('auto_disk_config')
-
         try:
             inst_type = flavors.get_flavor_by_flavor_id(
                     flavor_id, read_deleted="no")
@@ -953,7 +980,6 @@ class ServersController(wsgi.Controller):
                             requested_networks=requested_networks,
                             security_group=sg_names,
                             block_device_mapping=block_device_mapping,
-                            auto_disk_config=auto_disk_config,
                             **create_kwargs)
         except exception.QuotaError as error:
             raise exc.HTTPRequestEntityTooLarge(
@@ -1012,6 +1038,24 @@ class ServersController(wsgi.Controller):
 
         handler.server_create(server_dict, create_kwargs)
 
+    def _rebuild_extension_point(self, ext, rebuild_dict, rebuild_kwargs):
+        handler = ext.obj
+        LOG.debug(_("Running _rebuild_extension_point for %s"), ext.obj)
+
+        handler.server_rebuild(rebuild_dict, rebuild_kwargs)
+
+    def _resize_extension_point(self, ext, resize_dict, resize_kwargs):
+        handler = ext.obj
+        LOG.debug(_("Running _resize_extension_point for %s"), ext.obj)
+
+        handler.server_resize(resize_dict, resize_kwargs)
+
+    def _update_extension_point(self, ext, update_dict, update_kwargs):
+        handler = ext.obj
+        LOG.debug(_("Running _update_extension_point for %s"), ext.obj)
+
+        handler.server_update(update_dict, update_kwargs)
+
     def _delete(self, context, req, instance_uuid):
         instance = self._get_server(context, req, instance_uuid)
         if CONF.reclaim_instance_interval:
@@ -1047,11 +1091,6 @@ class ServersController(wsgi.Controller):
             update_dict['access_ip_v6'] = (
                 access_ipv6 and access_ipv6.strip() or None)
 
-        if 'auto_disk_config' in body['server']:
-            auto_disk_config = strutils.bool_from_string(
-                    body['server']['auto_disk_config'])
-            update_dict['auto_disk_config'] = auto_disk_config
-
         if 'host_id' in body['server']:
             msg = _("host_id cannot be updated.")
             raise exc.HTTPBadRequest(explanation=msg)
@@ -1059,6 +1098,10 @@ class ServersController(wsgi.Controller):
         if 'personality' in body['server']:
             msg = _("Personality cannot be updated.")
             raise exc.HTTPBadRequest(explanation=msg)
+
+        if list(self.update_extension_manager):
+            self.update_extension_manager.map(self._update_extension_point,
+                                              body['server'], update_dict)
 
         try:
             instance = self.compute_api.get(ctxt, id, want_objects=True)
@@ -1243,8 +1286,9 @@ class ServersController(wsgi.Controller):
     @wsgi.action('resize')
     def _action_resize(self, req, id, body):
         """Resizes a given instance to the flavor size requested."""
+        resize_dict = body['resize']
         try:
-            flavor_ref = str(body["resize"]["flavor_ref"])
+            flavor_ref = str(resize_dict["flavor_ref"])
             if not flavor_ref:
                 msg = _("Resize request has invalid 'flavor_ref' attribute.")
                 raise exc.HTTPBadRequest(explanation=msg)
@@ -1252,11 +1296,13 @@ class ServersController(wsgi.Controller):
             msg = _("Resize requests require 'flavor_ref' attribute.")
             raise exc.HTTPBadRequest(explanation=msg)
 
-        kwargs = {}
-        if 'auto_disk_config' in body['resize']:
-            kwargs['auto_disk_config'] = body['resize']['auto_disk_config']
+        resize_kwargs = {}
 
-        return self._resize(req, id, flavor_ref, **kwargs)
+        if list(self.resize_extension_manager):
+            self.resize_extension_manager.map(self._resize_extension_point,
+                                              resize_dict, resize_kwargs)
+
+        return self._resize(req, id, flavor_ref, **resize_kwargs)
 
     @wsgi.response(202)
     @wsgi.serializers(xml=FullServerTemplate)
@@ -1265,13 +1311,13 @@ class ServersController(wsgi.Controller):
     def _action_rebuild(self, req, id, body):
         """Rebuild an instance with the given attributes."""
         try:
-            body = body['rebuild']
+            rebuild_dict = body['rebuild']
         except (KeyError, TypeError):
             msg = _('Invalid request body')
             raise exc.HTTPBadRequest(explanation=msg)
 
         try:
-            image_href = body["image_ref"]
+            image_href = rebuild_dict["image_ref"]
         except (KeyError, TypeError):
             msg = _("Could not parse image_ref from request.")
             raise exc.HTTPBadRequest(explanation=msg)
@@ -1279,7 +1325,7 @@ class ServersController(wsgi.Controller):
         image_href = self._image_uuid_from_href(image_href)
 
         try:
-            password = body['admin_pass']
+            password = rebuild_dict['admin_pass']
         except (KeyError, TypeError):
             password = utils.generate_password()
 
@@ -1292,38 +1338,40 @@ class ServersController(wsgi.Controller):
             'access_ip_v4': 'access_ip_v4',
             'access_ip_v6': 'access_ip_v6',
             'metadata': 'metadata',
-            'auto_disk_config': 'auto_disk_config',
         }
 
-        if 'access_ip_v4' in body:
-            self._validate_access_ipv4(body['access_ip_v4'])
+        if 'access_ip_v4' in rebuild_dict:
+            self._validate_access_ipv4(rebuild_dict['access_ip_v4'])
 
-        if 'access_ip_v6' in body:
-            self._validate_access_ipv6(body['access_ip_v6'])
+        if 'access_ip_v6' in rebuild_dict:
+            self._validate_access_ipv6(rebuild_dict['access_ip_v6'])
 
-        if 'name' in body:
-            self._validate_server_name(body['name'])
+        rebuild_kwargs = {}
 
-        kwargs = {}
+        if list(self.rebuild_extension_manager):
+            self.rebuild_extension_manager.map(self._rebuild_extension_point,
+                                               rebuild_dict, rebuild_kwargs)
 
         for request_attribute, instance_attribute in attr_map.items():
             try:
-                kwargs[instance_attribute] = body[request_attribute]
+                rebuild_kwargs[instance_attribute] = rebuild_dict[
+                    request_attribute]
             except (KeyError, TypeError):
                 pass
 
-        self._validate_metadata(kwargs.get('metadata', {}))
+        self._validate_metadata(rebuild_kwargs.get('metadata', {}))
 
-        if 'files_to_inject' in kwargs:
-            personality = kwargs['files_to_inject']
-            kwargs['files_to_inject'] = self._get_injected_files(personality)
+        if 'files_to_inject' in rebuild_kwargs:
+            personality = rebuild_kwargs['files_to_inject']
+            rebuild_kwargs['files_to_inject'] = self._get_injected_files(
+                personality)
 
         try:
             self.compute_api.rebuild(context,
                                      instance,
                                      image_href,
                                      password,
-                                     **kwargs)
+                                     **rebuild_kwargs)
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'rebuild')
@@ -1451,13 +1499,43 @@ class ServersController(wsgi.Controller):
     def _server_create_xml_deserialize_extension_point(self, ext, server_node,
                                                        server_dict):
         handler = ext.obj
-        LOG.debug(_("Running create xml deserialize ep for %s"), handler.alias)
-        handler.server_xml_extract_server_deserialize(server_node, server_dict)
+        LOG.debug(_("Running create xml deserialize ep for %s"),
+                  handler.alias)
+        handler.server_xml_extract_server_deserialize(server_node,
+                                                      server_dict)
 
     def server_create_xml_deserialize(self, server_node, server):
         self.create_xml_deserialize_manager.map(
             self._server_create_xml_deserialize_extension_point,
             server_node, server)
+
+    def _server_rebuild_xml_deserialize_extension_point(self, ext,
+                                                        rebuild_node,
+                                                        rebuild_dict):
+        handler = ext.obj
+        LOG.debug(_("Running rebuild xml deserialize ep for %s"),
+                  handler.alias)
+        handler.server_xml_extract_rebuild_deserialize(rebuild_node,
+                                                       rebuild_dict)
+
+    def server_rebuild_xml_deserialize(self, rebuild_node, rebuild_dict):
+        if list(self.rebuild_xml_deserialize_manager):
+            self.rebuild_xml_deserialize_manager.map(
+                self._server_rebuild_xml_deserialize_extension_point,
+                rebuild_node, rebuild_dict)
+
+    def _server_resize_xml_deserialize_extension_point(self, ext, resize_node,
+                                                       resize_dict):
+        handler = ext.obj
+        LOG.debug(_("Running rebuild xml deserialize ep for %s"),
+                  handler.alias)
+        handler.server_xml_extract_resize_deserialize(resize_node, resize_dict)
+
+    def server_resize_xml_deserialize(self, resize_node, resize_dict):
+        if list(self.resize_xml_deserialize_manager):
+            self.resize_xml_deserialize_manager.map(
+                self._server_resize_xml_deserialize_extension_point,
+                resize_node, resize_dict)
 
     def _get_instance(self, context, instance_uuid):
         try:

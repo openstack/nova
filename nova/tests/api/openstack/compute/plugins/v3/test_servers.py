@@ -2267,34 +2267,6 @@ class ServersControllerCreateTest(test.TestCase):
         self._test_create_extra(params)
 
     # TODO(cyeoh): bp-v3-api-unittests
-    # This needs to be ported to the OS-DCF extension tests
-    # def test_create_instance_with_disk_config_enabled(self):
-    #     self.ext_mgr.extensions = {'OS-DCF': 'fake'}
-    #     # NOTE(vish): the extension converts OS-DCF:disk_config into
-    #     #             auto_disk_config, so we are testing with
-    #     #             the_internal_value
-    #     params = {'auto_disk_config': 'AUTO'}
-    #     old_create = compute_api.API.create
-
-    #     def create(*args, **kwargs):
-    #         self.assertEqual(kwargs['auto_disk_config'], 'AUTO')
-    #         return old_create(*args, **kwargs)
-
-    #     self.stubs.Set(compute_api.API, 'create', create)
-    #     self._test_create_extra(params)
-
-    def test_create_instance_with_disk_config_disabled(self):
-        params = {'auto_disk_config': True}
-        old_create = compute_api.API.create
-
-        def create(*args, **kwargs):
-            self.assertEqual(kwargs['auto_disk_config'], False)
-            return old_create(*args, **kwargs)
-
-        self.stubs.Set(compute_api.API, 'create', create)
-        self._test_create_extra(params)
-
-    # TODO(cyeoh): bp-v3-api-unittests
     # This needs to be ported to the os-volumes extension tests
     # def test_create_instance_with_volumes_enabled(self):
     #     self.ext_mgr.extensions = {'os-volumes': 'fake'}
@@ -3312,24 +3284,6 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
         self.assertEquals(request['body'], expected)
 
     # TODO(cyeoh): bp-v3-api-unittests
-    # This needs to be ported to the OS-DCF extension tests
-    # def test_request_with_disk_config(self):
-    #     serial_request = """
-    # <server xmlns="http://docs.openstack.org/compute/api/v2"
-    # xmlns:OS-DCF="http://docs.openstack.org/compute/ext/disk_config/api/v1.1"
-    #  name="new-server-test" imageRef="1" flavorRef="1"
-    #  OS-DCF:diskConfig="AUTO">
-    # </server>"""
-    #     request = self.deserializer.deserialize(serial_request)
-    #     expected = {"server": {
-    #             "name": "new-server-test",
-    #             "imageRef": "1",
-    #             "flavorRef": "1",
-    #             "OS-DCF:diskConfig": "AUTO",
-    #             }}
-    #     self.assertEquals(request['body'], expected)
-
-    # TODO(cyeoh): bp-v3-api-unittests
     # This needs to be ported to the scheduler hints extension tests
     # def test_request_with_scheduler_hints(self):
     #     serial_request = """
@@ -3406,71 +3360,6 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
                 exception.MalformedRequestBody,
                 self.deserializer.deserialize,
                 utils.killer_xml_body())
-
-
-# TODO(cyeoh): bp-v3-api-unittests
-# This needs to be ported to the OS-DCF extension tests
-# class TestServerActionRequestXMLDeserializer(test.TestCase):
-
-#     def setUp(self):
-#         super(TestServerActionRequestXMLDeserializer, self).setUp()
-#         self.deserializer = servers.ActionDeserializer()
-
-#     def test_rebuild_request(self):
-#         serial_request = """
-# <rebuild xmlns="http://docs.openstack.org/compute/api/v1.1"
-#    xmlns:OS-DCF="http://docs.openstack.org/compute/ext/disk_config/api/v1.1"
-#    OS-DCF:diskConfig="MANUAL" imageRef="1"/>"""
-#         request = self.deserializer.deserialize(serial_request)
-#         expected = {
-#             "rebuild": {
-#                 "imageRef": "1",
-#                 "OS-DCF:diskConfig": "MANUAL",
-#                 },
-#             }
-#         self.assertEquals(request['body'], expected)
-
-#     def test_rebuild_request_auto_disk_config_compat(self):
-#         serial_request = """
-# <rebuild xmlns="http://docs.openstack.org/compute/api/v1.1"
-#    xmlns:OS-DCF="http://docs.openstack.org/compute/ext/disk_config/api/v1.1"
-#    auto_disk_config="MANUAL" imageRef="1"/>"""
-#         request = self.deserializer.deserialize(serial_request)
-#         expected = {
-#             "rebuild": {
-#                 "imageRef": "1",
-#                 "OS-DCF:diskConfig": "MANUAL",
-#                 },
-#             }
-#         self.assertEquals(request['body'], expected)
-
-#     def test_resize_request(self):
-#         serial_request = """
-# <resize xmlns="http://docs.openstack.org/compute/api/v1.1"
-#    xmlns:OS-DCF="http://docs.openstack.org/compute/ext/disk_config/api/v1.1"
-#    OS-DCF:diskConfig="MANUAL" flavorRef="1"/>"""
-#         request = self.deserializer.deserialize(serial_request)
-#         expected = {
-#             "resize": {
-#                 "flavorRef": "1",
-#                 "OS-DCF:diskConfig": "MANUAL",
-#                 },
-#             }
-#         self.assertEquals(request['body'], expected)
-
-#     def test_resize_request_auto_disk_config_compat(self):
-#         serial_request = """
-# <resize xmlns="http://docs.openstack.org/compute/api/v1.1"
-#    xmlns:OS-DCF="http://docs.openstack.org/compute/ext/disk_config/api/v1.1"
-#    auto_disk_config="MANUAL" flavorRef="1"/>"""
-#         request = self.deserializer.deserialize(serial_request)
-#         expected = {
-#             "resize": {
-#                 "flavorRef": "1",
-#                 "OS-DCF:diskConfig": "MANUAL",
-#                 },
-#             }
-#         self.assertEquals(request['body'], expected)
 
 
 class TestAddressesXMLSerialization(test.TestCase):
