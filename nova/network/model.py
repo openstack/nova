@@ -419,6 +419,7 @@ class NetworkInfo(list):
                          'qbg_params': vif.get('qbg_params'),
                          'rxtx_cap': vif.get_meta('rxtx_cap', 0),
                          'dns': [get_ip(ip) for ip in subnet_v4['dns']],
+                         'gateway': gateway,
                          'ips': [fixed_ip_dict(ip, subnet)
                                  for subnet in v4_subnets
                                  for ip in subnet['ips']],
@@ -428,12 +429,8 @@ class NetworkInfo(list):
             if routes:
                 info_dict['routes'] = routes
 
-            if gateway:
-                info_dict['gateway'] = gateway
-
             if v6_subnets:
-                if subnet_v6['gateway']:
-                    info_dict['gateway_v6'] = get_ip(subnet_v6['gateway'])
+                info_dict['gateway_v6'] = get_ip(subnet_v6['gateway'])
                 # NOTE(tr3buchet): only supporting single v6 subnet here
                 info_dict['ip6s'] = [fixed_ip_dict(ip, subnet_v6)
                                      for ip in subnet_v6['ips']]

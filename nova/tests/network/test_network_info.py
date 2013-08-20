@@ -379,28 +379,34 @@ class NetworkInfoTests(test.TestCase):
                         {'address': '10.10.0.3'})] * 4)
 
     def _test_injected_network_template(self, should_inject, use_ipv6=False,
-                                        legacy=False):
+                                        legacy=False, gateway=True):
         """Check that netutils properly decides whether to inject based on
            whether the supplied subnet is static or dynamic.
         """
         network = fake_network_cache_model.new_network({'subnets': []})
-        if should_inject:
-            network.add_subnet(fake_network_cache_model.new_subnet())
-            if use_ipv6:
-                gateway_ip = fake_network_cache_model.new_ip(dict(
-                                                        address='1234:567::1'))
-                ip = fake_network_cache_model.new_ip(dict(
-                                                        address='1234:567::2'))
-                subnet_dict = dict(
-                        cidr='1234:567::/48',
-                        gateway=gateway_ip,
-                        ips=[ip])
-                network.add_subnet(fake_network_cache_model.new_subnet(
-                        subnet_dict))
-        else:
-            subnet_dict = dict(dhcp_server='10.10.0.1')
+        subnet_dict = {}
+        if not gateway:
+            subnet_dict['gateway'] = None
+
+        if not should_inject:
+            subnet_dict['dhcp_server'] = '10.10.0.1'
+
+        network.add_subnet(fake_network_cache_model.new_subnet(subnet_dict))
+
+        if should_inject and use_ipv6:
+            gateway_ip = fake_network_cache_model.new_ip(dict(
+                address='1234:567::1'))
+            ip = fake_network_cache_model.new_ip(dict(
+                address='1234:567::2'))
+            ipv6_subnet_dict = dict(
+                cidr='1234:567::/48',
+                gateway=gateway_ip,
+                ips=[ip])
+            if not gateway:
+                ipv6_subnet_dict['gateway'] = None
             network.add_subnet(fake_network_cache_model.new_subnet(
-                    subnet_dict))
+                ipv6_subnet_dict))
+
         # Behave as though CONF.flat_injected is True
         network['meta']['injected'] = True
         vif = fake_network_cache_model.new_vif({'network': network})
@@ -424,30 +430,62 @@ class NetworkInfoTests(test.TestCase):
             self.assertTrue('address 10.10.0.2' in template)
             self.assertTrue('netmask 255.255.255.0' in template)
             self.assertTrue('broadcast 10.10.0.255' in template)
-            self.assertTrue('gateway 10.10.0.1' in template)
+            if gateway:
+                self.assertTrue('gateway 10.10.0.1' in template)
+            else:
+                self.assertFalse('gateway' in template)
             self.assertTrue('dns-nameservers 1.2.3.4 2.3.4.5' in template)
             if use_ipv6:
                 self.assertTrue('iface eth0 inet6 static' in template)
                 self.assertTrue('address 1234:567::2' in template)
                 self.assertTrue('netmask 48' in template)
-                self.assertTrue('gateway 1234:567::1' in template)
+                if gateway:
+                    self.assertTrue('gateway 1234:567::1' in template)
 
     def test_injection_static(self):
         self._test_injected_network_template(should_inject=True)
 
-    def test_injection_static_ipv6(self):
-        self._test_injected_network_template(should_inject=True, use_ipv6=True)
-
-    def test_injection_dynamic(self):
-        self._test_injected_network_template(should_inject=False)
+    def test_injection_static_nogateway(self):
+        self._test_injected_network_template(should_inject=True, gateway=False)
 
     def test_injection_static_legacy(self):
         self._test_injected_network_template(should_inject=True, legacy=True)
+
+    def test_injection_static_legacy_nogateway(self):
+        self._test_injected_network_template(should_inject=True,
+                                             legacy=True,
+                                             gateway=False)
+
+    def test_injection_static_ipv6(self):
+        self._test_injected_network_template(should_inject=True, use_ipv6=True)
+
+    def test_injection_static_ipv6_nogateway(self):
+        self._test_injected_network_template(should_inject=True,
+                                             use_ipv6=True,
+                                             gateway=False)
 
     def test_injection_static_ipv6_legacy(self):
         self._test_injected_network_template(should_inject=True,
                                              use_ipv6=True,
                                              legacy=True)
 
+    def test_injection_static_ipv6_legacy_nogateway(self):
+        self._test_injected_network_template(should_inject=True,
+                                             use_ipv6=True,
+                                             legacy=True,
+                                             gateway=False)
+
+    def test_injection_dynamic(self):
+        self._test_injected_network_template(should_inject=False)
+
+    def test_injection_dynamic_nogateway(self):
+        self._test_injected_network_template(should_inject=False,
+                                             gateway=False)
+
     def test_injection_dynamic_legacy(self):
         self._test_injected_network_template(should_inject=False, legacy=True)
+
+    def test_injection_dynamic_legacy_nogateway(self):
+        self._test_injected_network_template(should_inject=False,
+                                             legacy=True,
+                                             gateway=False)
