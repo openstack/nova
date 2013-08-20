@@ -1036,7 +1036,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
         # Should fail if old volume is not attached
         volumes[old_volume_id]['attach_status'] = 'detached'
-        self.assertRaises(exception.InvalidVolume,
+        self.assertRaises(exception.VolumeUnattached,
                           self.compute_api.swap_volume, self.context, instance,
                           volumes[old_volume_id], volumes[new_volume_id])
         self.assertEquals(volumes[old_volume_id]['status'], 'in-use')
@@ -1045,7 +1045,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
         # Should fail if old volume's instance_uuid is not that of the instance
         volumes[old_volume_id]['instance_uuid'] = 'fake2'
-        self.assertRaises(exception.VolumeUnattached,
+        self.assertRaises(exception.InvalidVolume,
                           self.compute_api.swap_volume, self.context, instance,
                           volumes[old_volume_id], volumes[new_volume_id])
         self.assertEquals(volumes[old_volume_id]['status'], 'in-use')
