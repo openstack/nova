@@ -68,7 +68,8 @@ class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         handle the version_cap being set to 2.6.
 
         2.7 - Add select_destinations()
-        2.8 - Deprecate prep_resize()
+        2.8 - Deprecate prep_resize() -- JUST KIDDING.  It is still used
+              by the compute manager for retries.
         2.9 - Added the leagacy_bdm_in_spec parameter to run_instances
     '''
 
@@ -109,8 +110,6 @@ class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 filter_properties=filter_properties,
                 legacy_bdm_in_spec=legacy_bdm_in_spec), version='2.9')
 
-    # NOTE(timello): This method is deprecated and it's functionality has
-    # been moved to conductor. This should be removed in RPC_API_VERSION 3.0.
     def prep_resize(self, ctxt, instance, instance_type, image,
             request_spec, filter_properties, reservations):
         instance_p = jsonutils.to_primitive(instance)
