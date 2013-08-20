@@ -68,7 +68,7 @@ class ExtendedServerAttributes(extensions.V3APIExtensionBase):
     name = "ExtendedServerAttributes"
     alias = ALIAS
     namespace = ("http://docs.openstack.org/compute/ext/"
-                 "ExtendedServerAttributes/api/v3")
+                 "extended_server_attributes/api/v3")
     version = 1
 
     def get_controller_extensions(self):
