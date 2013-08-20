@@ -17,7 +17,6 @@
 
 import webob
 
-from nova.api.openstack import common
 from nova.api.openstack.compute.views import flavors as flavors_view
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
@@ -120,6 +119,10 @@ class FlavorsController(wsgi.Controller):
     def _get_flavors(self, req):
         """Helper function that returns a list of flavor dicts."""
         filters = {}
+        sort_key = req.params.get('sort_key') or 'flavorid'
+        sort_dir = req.params.get('sort_dir') or 'asc'
+        limit = req.params.get('limit') or None
+        marker = req.params.get('marker') or None
 
         context = req.environ['nova.context']
         if context.is_admin:
@@ -145,11 +148,10 @@ class FlavorsController(wsgi.Controller):
                        req.params['min_disk'])
                 raise webob.exc.HTTPBadRequest(explanation=msg)
 
-        limited_flavors = flavors.get_all_flavors(context, filters=filters)
-        flavors_list = limited_flavors.values()
-        sorted_flavors = sorted(flavors_list,
-                                key=lambda item: item['flavorid'])
-        limited_flavors = common.limited_by_marker(sorted_flavors, req)
+        limited_flavors = flavors.get_all_flavors_sorted_list(context,
+            filters=filters, sort_key=sort_key, sort_dir=sort_dir,
+            limit=limit, marker=marker)
+
         return limited_flavors
 
 

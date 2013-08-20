@@ -2490,6 +2490,44 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
                         filts = dict(reduce(lambda x, y: x + y, filts, []))
                         assert_multi_filter_instance_type_get(filts)
 
+    def test_flavor_get_all_limit_sort(self):
+        """Test sorting getting all flavours."""
+        def assert_sorted_by_key_dir(sort_key, asc=True):
+            sort_dir = 'asc' if asc else 'desc'
+            results = db.flavor_get_all(self.ctxt, sort_key='name',
+                                        sort_dir=sort_dir)
+            # Manually sort the results as we would expect them
+            expected_results = sorted(results,
+                                      key=lambda item: item['name'],
+                                      reverse=(not asc))
+            self.assertEqual(expected_results, results)
+
+        def assert_sorted_by_key_both_dir(sort_key):
+            assert_sorted_by_key_dir(sort_key, True)
+            assert_sorted_by_key_dir(sort_key, False)
+
+        for attr in ['memory_mb', 'root_gb', 'deleted_at', 'name', 'deleted',
+                     'created_at', 'ephemeral_gb', 'updated_at', 'disabled',
+                     'vcpus', 'swap', 'rxtx_factor', 'is_public', 'flavorid',
+                     'vcpu_weight', 'id']:
+            assert_sorted_by_key_both_dir(attr)
+
+    def test_flavor_get_all_limit(self):
+        """Check a limit can be applied to db.flavor_get_all."""
+        limited_flavors = db.flavor_get_all(self.ctxt, limit=2)
+        self.assertEqual(2, len(limited_flavors))
+
+    def test_flavor_get_all_list_marker(self):
+        """Check results can be returned after marker"""
+        all_flavors = db.flavor_get_all(self.ctxt)
+
+        # Set the 3rd result as the marker
+        marker_flavorid = all_flavors[2]['id']
+        marked_flavors = db.flavor_get_all(self.ctxt, marker=marker_flavorid)
+        # We expect everything /after/ the 3rd result
+        expected_results = all_flavors[3:]
+        self.assertEqual(expected_results, marked_flavors)
+
     def test_instance_type_get(self):
         inst_types = [{'name': 'abc', 'flavorid': '123'},
                     {'name': 'def', 'flavorid': '456'},

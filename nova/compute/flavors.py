@@ -154,7 +154,7 @@ def destroy(name):
 
 
 def get_all_flavors(ctxt=None, inactive=False, filters=None):
-    """Get all non-deleted flavors.
+    """Get all non-deleted flavors as a dict.
 
     Pass true as argument if you want deleted flavors returned also.
     """
@@ -168,6 +168,20 @@ def get_all_flavors(ctxt=None, inactive=False, filters=None):
     for inst_type in inst_types:
         inst_type_dict[inst_type['name']] = inst_type
     return inst_type_dict
+
+
+def get_all_flavors_sorted_list(ctxt=None, inactive=False, filters=None,
+                                sort_key='flavorid', sort_dir='asc',
+                                limit=None, marker=None):
+    """Get all non-deleted flavors as a sorted list.
+
+    Pass true as argument if you want deleted flavors returned also.
+    """
+    if ctxt is None:
+        ctxt = context.get_admin_context()
+
+    return db.flavor_get_all(ctxt, filters=filters, sort_key=sort_key,
+                             sort_dir=sort_dir, limit=limit, marker=marker)
 
 
 def get_default_flavor():

@@ -1374,10 +1374,12 @@ def flavor_create(context, values):
 instance_type_create = flavor_create
 
 
-def flavor_get_all(context, inactive=False, filters=None):
-    """Get all instance types."""
+def flavor_get_all(context, inactive=False, filters=None, sort_key='flavorid',
+                   sort_dir='asc', limit=None, marker=None):
+    """Get all instance flavors."""
     return IMPL.flavor_get_all(
-        context, inactive=inactive, filters=filters)
+        context, inactive=inactive, filters=filters, sort_key=sort_key,
+        sort_dir=sort_dir, limit=limit, marker=marker)
 
 instance_type_get_all = flavor_get_all
 

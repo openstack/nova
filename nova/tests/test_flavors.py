@@ -26,6 +26,35 @@ from nova.openstack.common.db.sqlalchemy import session as sql_session
 from nova import test
 
 
+DEFAULT_FLAVORS = [
+    {'memory_mb': 512, 'root_gb': 1, 'deleted_at': None, 'name': 'm1.tiny',
+     'deleted': 0, 'created_at': None, 'ephemeral_gb': 0, 'updated_at': None,
+     'disabled': False, 'vcpus': 1, 'extra_specs': {}, 'swap': 0,
+     'rxtx_factor': 1.0, 'is_public': True, 'flavorid': '1',
+     'vcpu_weight': None, 'id': 2},
+    {'memory_mb': 2048, 'root_gb': 20, 'deleted_at': None, 'name': 'm1.small',
+     'deleted': 0, 'created_at': None, 'ephemeral_gb': 0, 'updated_at': None,
+     'disabled': False, 'vcpus': 1, 'extra_specs': {}, 'swap': 0,
+     'rxtx_factor': 1.0, 'is_public': True, 'flavorid': '2',
+     'vcpu_weight': None, 'id': 5},
+    {'memory_mb': 4096, 'root_gb': 40, 'deleted_at': None, 'name': 'm1.medium',
+     'deleted': 0, 'created_at': None, 'ephemeral_gb': 0, 'updated_at': None,
+     'disabled': False, 'vcpus': 2, 'extra_specs': {}, 'swap': 0,
+     'rxtx_factor': 1.0, 'is_public': True, 'flavorid': '3',
+     'vcpu_weight': None, 'id': 1},
+    {'memory_mb': 8192, 'root_gb': 80, 'deleted_at': None, 'name': 'm1.large',
+     'deleted': 0, 'created_at': None, 'ephemeral_gb': 0, 'updated_at': None,
+     'disabled': False, 'vcpus': 4, 'extra_specs': {}, 'swap': 0,
+     'rxtx_factor': 1.0, 'is_public': True, 'flavorid': '4',
+     'vcpu_weight': None, 'id': 3},
+    {'memory_mb': 16384, 'root_gb': 160, 'deleted_at': None,
+     'name': 'm1.xlarge', 'deleted': 0, 'created_at': None, 'ephemeral_gb': 0,
+     'updated_at': None, 'disabled': False, 'vcpus': 8, 'extra_specs': {},
+     'swap': 0, 'rxtx_factor': 1.0, 'is_public': True, 'flavorid': '5',
+     'vcpu_weight': None, 'id': 4}
+]
+
+
 class InstanceTypeTestCase(test.TestCase):
     """Test cases for flavor  code."""
     def _generate_name(self):
@@ -201,6 +230,38 @@ class InstanceTypeTestCase(test.TestCase):
                 "test1", read_deleted="no")
         self.assertEqual("instance_type1_redo", instance_type["name"])
 
+    def test_get_all_flavors_sorted_list_sort(self):
+        """Test getting all flavors as a sorted list with
+        flavors.get_all_flavors_sorted_list.
+        """
+        # Test default sort
+        all_flavors = flavors.get_all_flavors_sorted_list()
+        self.assertEqual(DEFAULT_FLAVORS, all_flavors)
+
+        # Test sorted by name
+        all_flavors = flavors.get_all_flavors_sorted_list(sort_key='name')
+        expected = sorted(DEFAULT_FLAVORS, key=lambda item: item['name'])
+        self.assertEqual(expected, all_flavors)
+
+    def test_get_all_flavors_sorted_list_limit(self):
+        """Check a limit can be applied to
+        flavors.get_all_flavors_sorted_list.
+        """
+        limited_flavors = flavors.get_all_flavors_sorted_list(limit=2)
+        self.assertEqual(2, len(limited_flavors))
+
+    def test_get_all_flavors_sorted_list_marker(self):
+        """Check results can be returned after marker"""
+        all_flavors = flavors.get_all_flavors_sorted_list()
+
+        # Set the 3rd result as the marker
+        marker_flavorid = all_flavors[2]['id']
+        marked_flavors = flavors.get_all_flavors_sorted_list(
+            marker=marker_flavorid)
+        # We expect everything /after/ the 3rd result
+        expected_results = all_flavors[3:]
+        self.assertEqual(expected_results, marked_flavors)
+
 
 class InstanceTypeToolsTest(test.TestCase):
     def _dict_to_metadata(self, data):
@@ -269,14 +330,14 @@ class InstanceTypeFilteringTest(test.TestCase):
 
     def test_no_filters(self):
         filters = None
-        expected = ['m1.large', 'm1.medium', 'm1.small', 'm1.tiny',
+        expected = ['m1.tiny', 'm1.small', 'm1.medium', 'm1.large',
                     'm1.xlarge']
         self.assertFilterResults(filters, expected)
 
     def test_min_memory_mb_filter(self):
         # Exclude tiny instance which is 512 MB.
         filters = dict(min_memory_mb=513)
-        expected = ['m1.large', 'm1.medium', 'm1.small', 'm1.xlarge']
+        expected = ['m1.small', 'm1.medium', 'm1.large', 'm1.xlarge']
         self.assertFilterResults(filters, expected)
 
     def test_min_root_gb_filter(self):
