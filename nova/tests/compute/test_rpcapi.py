@@ -344,7 +344,7 @@ class ComputeRpcAPITestCase(test.TestCase):
                 request_spec='fake_spec', filter_properties={},
                 requested_networks='networks', injected_files='files',
                 admin_password='pw', is_first_time=True, node='node',
-                version='2.19')
+                legacy_bdm_in_spec=False, version='2.37')
 
     def test_set_admin_password(self):
         self._test_compute_api('set_admin_password', 'call',

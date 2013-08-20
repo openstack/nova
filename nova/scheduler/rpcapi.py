@@ -69,6 +69,7 @@ class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
 
         2.7 - Add select_destinations()
         2.8 - Deprecate prep_resize()
+        2.9 - Added the leagacy_bdm_in_spec parameter to run_instances
     '''
 
     #
@@ -99,13 +100,14 @@ class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
 
     def run_instance(self, ctxt, request_spec, admin_password,
             injected_files, requested_networks, is_first_time,
-            filter_properties):
+            filter_properties, legacy_bdm_in_spec=True):
         return self.cast(ctxt, self.make_msg('run_instance',
                 request_spec=request_spec, admin_password=admin_password,
                 injected_files=injected_files,
                 requested_networks=requested_networks,
                 is_first_time=is_first_time,
-                filter_properties=filter_properties))
+                filter_properties=filter_properties,
+                legacy_bdm_in_spec=legacy_bdm_in_spec), version='2.9')
 
     # NOTE(timello): This method is deprecated and it's functionality has
     # been moved to conductor. This should be removed in RPC_API_VERSION 3.0.

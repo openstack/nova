@@ -851,10 +851,6 @@ class API(base.Base):
             self._record_action_start(context, instance,
                                       instance_actions.CREATE)
 
-        # NOTE (ndipanov): Switch back to the old format until the
-        #                  compute side is ready for it
-        block_device_mapping = block_device.legacy_mapping(
-            block_device_mapping)
         self.compute_task_api.build_instances(context,
                 instances=instances, image=boot_meta,
                 filter_properties=filter_properties,
@@ -862,7 +858,8 @@ class API(base.Base):
                 injected_files=injected_files,
                 requested_networks=requested_networks,
                 security_groups=security_groups,
-                block_device_mapping=block_device_mapping)
+                block_device_mapping=block_device_mapping,
+                legacy_bdm=False)
 
         return (instances, reservation_id)
 

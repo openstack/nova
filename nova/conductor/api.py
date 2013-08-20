@@ -358,14 +358,16 @@ class LocalComputeTaskAPI(object):
 
     def build_instances(self, context, instances, image,
             filter_properties, admin_password, injected_files,
-            requested_networks, security_groups, block_device_mapping):
+            requested_networks, security_groups, block_device_mapping,
+            legacy_bdm=True):
         utils.spawn_n(self._manager.build_instances, context,
                 instances=instances, image=image,
                 filter_properties=filter_properties,
                 admin_password=admin_password, injected_files=injected_files,
                 requested_networks=requested_networks,
                 security_groups=security_groups,
-                block_device_mapping=block_device_mapping)
+                block_device_mapping=block_device_mapping,
+                legacy_bdm=legacy_bdm)
 
     def unshelve_instance(self, context, instance):
         utils.spawn_n(self._manager.unshelve_instance, context,
@@ -430,14 +432,15 @@ class ComputeTaskAPI(object):
 
     def build_instances(self, context, instances, image, filter_properties,
             admin_password, injected_files, requested_networks,
-            security_groups, block_device_mapping):
+            security_groups, block_device_mapping, legacy_bdm=True):
         self.conductor_compute_rpcapi.build_instances(context,
                 instances=instances, image=image,
                 filter_properties=filter_properties,
                 admin_password=admin_password, injected_files=injected_files,
                 requested_networks=requested_networks,
                 security_groups=security_groups,
-                block_device_mapping=block_device_mapping)
+                block_device_mapping=block_device_mapping,
+                legacy_bdm=legacy_bdm)
 
     def unshelve_instance(self, context, instance):
         self.conductor_compute_rpcapi.unshelve_instance(context,

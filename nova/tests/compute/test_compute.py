@@ -8631,12 +8631,12 @@ class ComputeRescheduleOrErrorTestCase(BaseTestCase):
                 [], mox.IgnoreArg(), [], None, set_access_ip=False).AndRaise(
                         test.TestingException("BuildError"))
         self.compute._reschedule_or_error(mox.IgnoreArg(), self.instance,
-                mox.IgnoreArg(), None, None, None, False, None, {}, []).\
-                        AndReturn(True)
+                mox.IgnoreArg(), None, None, None,
+                False, None, {}, [], False).AndReturn(True)
 
         self.mox.ReplayAll()
         self.compute._run_instance(self.context, None, {}, None, None, None,
-                False, None, self.instance)
+                False, None, self.instance, False)
 
     def test_shutdown_instance_fail(self):
         """Test shutdown instance failing before re-scheduling logic can even
@@ -8776,7 +8776,7 @@ class ComputeRescheduleOrErrorTestCase(BaseTestCase):
         # test succeeds if mocked method '_reschedule_or_error' is not
         # called.
         self.compute._run_instance(self.context, None, {}, None, None, None,
-                False, None, self.instance)
+                False, None, self.instance, False)
 
     def test_no_reschedule_on_unexpected_task_state(self):
         # instance shouldn't be rescheduled if unexpected task state arises.
@@ -8793,7 +8793,7 @@ class ComputeRescheduleOrErrorTestCase(BaseTestCase):
         self.mox.ReplayAll()
         self.assertRaises(exception.UnexpectedTaskStateError,
                 self.compute._run_instance, self.context, None, {}, None, None,
-                None, False, None, self.instance)
+                None, False, None, self.instance, False)
 
 
 class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
@@ -9161,7 +9161,7 @@ class ComputeInjectedFilesTestCase(BaseTestCase):
 
         def _roe(context, instance, exc_info, requested_networks,
                  admin_password, injected_files, is_first_time, request_spec,
-                 filter_properties, bdms=None):
+                 filter_properties, bdms=None, legacy_bdm_in_spec=False):
             self.assertEqual(expected, injected_files)
             return True
 

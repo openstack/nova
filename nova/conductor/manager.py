@@ -581,7 +581,7 @@ class ComputeTaskManager(base.Base):
     """
 
     RPC_API_NAMESPACE = 'compute_task'
-    RPC_API_VERSION = '1.4'
+    RPC_API_VERSION = '1.5'
 
     def __init__(self):
         super(ComputeTaskManager, self).__init__()
@@ -672,7 +672,7 @@ class ComputeTaskManager(base.Base):
 
     def build_instances(self, context, instances, image, filter_properties,
             admin_password, injected_files, requested_networks,
-            security_groups, block_device_mapping):
+            security_groups, block_device_mapping, legacy_bdm=True):
         request_spec = scheduler_utils.build_request_spec(context, image,
                                                           instances)
         # NOTE(alaski): For compatibility until a new scheduler method is used.
@@ -681,7 +681,8 @@ class ComputeTaskManager(base.Base):
         self.scheduler_rpcapi.run_instance(context, request_spec=request_spec,
                 admin_password=admin_password, injected_files=injected_files,
                 requested_networks=requested_networks, is_first_time=True,
-                filter_properties=filter_properties)
+                filter_properties=filter_properties,
+                legacy_bdm_in_spec=legacy_bdm)
 
     def _instance_update(self, context, instance_uuid, **kwargs):
         (old_ref, instance_ref) = self.db.instance_update_and_get_original(

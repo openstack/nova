@@ -57,7 +57,7 @@ QUOTAS = quota.QUOTAS
 class SchedulerManager(manager.Manager):
     """Chooses a host to run instances on."""
 
-    RPC_API_VERSION = '2.8'
+    RPC_API_VERSION = '2.9'
 
     def __init__(self, scheduler_driver=None, *args, **kwargs):
         if not scheduler_driver:
@@ -138,7 +138,7 @@ class SchedulerManager(manager.Manager):
 
     def run_instance(self, context, request_spec, admin_password,
             injected_files, requested_networks, is_first_time,
-            filter_properties):
+            filter_properties, legacy_bdm_in_spec=True):
         """Tries to call schedule_run_instance on the driver.
         Sets instance vm_state to ERROR on exceptions
         """
@@ -148,7 +148,8 @@ class SchedulerManager(manager.Manager):
             try:
                 return self.driver.schedule_run_instance(context,
                         request_spec, admin_password, injected_files,
-                        requested_networks, is_first_time, filter_properties)
+                        requested_networks, is_first_time, filter_properties,
+                        legacy_bdm_in_spec)
 
             except exception.NoValidHost as ex:
                 # don't re-raise

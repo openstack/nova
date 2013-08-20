@@ -1304,7 +1304,7 @@ class _BaseTaskTestCase(object):
                 admin_password='admin_password',
                 injected_files='injected_files',
                 requested_networks='requested_networks', is_first_time=True,
-                filter_properties={})
+                filter_properties={}, legacy_bdm_in_spec=False)
         self.mox.ReplayAll()
         self.conductor.build_instances(self.context,
                 instances=[{'uuid': 'fakeuuid',
@@ -1316,7 +1316,8 @@ class _BaseTaskTestCase(object):
                 injected_files='injected_files',
                 requested_networks='requested_networks',
                 security_groups='security_groups',
-                block_device_mapping='block_device_mapping')
+                block_device_mapping='block_device_mapping',
+                legacy_bdm=False)
 
     def test_unshelve_instance_on_host(self):
         db_instance = jsonutils.to_primitive(self._create_fake_instance())

@@ -82,7 +82,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         self.mox.ReplayAll()
         sched.schedule_run_instance(
-                fake_context, request_spec, None, None, None, None, {})
+                fake_context, request_spec, None, None,
+                None, None, {}, False)
 
     def test_run_instance_non_admin(self):
         self.was_admin = False
@@ -113,7 +114,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                 mox.IsA(exception.NoValidHost), mox.IgnoreArg())
         self.mox.ReplayAll()
         sched.schedule_run_instance(
-                fake_context, request_spec, None, None, None, None, {})
+                fake_context, request_spec, None, None, None, None, {}, False)
         self.assertTrue(self.was_admin)
 
     def test_scheduler_includes_launch_index(self):
@@ -145,17 +146,19 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             fake_context, 'host1',
             mox.Func(_has_launch_index(0)), {},
             None, None, None, None,
-            instance_uuid='fake-uuid1').AndReturn(instance1)
+            instance_uuid='fake-uuid1',
+            legacy_bdm_in_spec=False).AndReturn(instance1)
         # instance 2
         self.driver._provision_resource(
             fake_context, 'host2',
             mox.Func(_has_launch_index(1)), {},
             None, None, None, None,
-            instance_uuid='fake-uuid2').AndReturn(instance2)
+            instance_uuid='fake-uuid2',
+            legacy_bdm_in_spec=False).AndReturn(instance2)
         self.mox.ReplayAll()
 
         self.driver.schedule_run_instance(fake_context, request_spec,
-                None, None, None, None, {})
+                None, None, None, None, {}, False)
 
     def test_schedule_happy_day(self):
         """Make sure there's nothing glaringly wrong with _schedule()
@@ -285,7 +288,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                           self.context, request_spec, admin_password=None,
                           injected_files=None, requested_networks=None,
                           is_first_time=False,
-                          filter_properties=filter_properties)
+                          filter_properties=filter_properties,
+                          legacy_bdm_in_spec=False)
         uuids = request_spec.get('instance_uuids')
         self.assertEqual(uuids, instance_uuids)
 
@@ -368,7 +372,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                 instance=instance1_1, requested_networks=None,
                 injected_files=None, admin_password=None, is_first_time=None,
                 request_spec=request_spec1, filter_properties=mox.IgnoreArg(),
-                node='node3')
+                node='node3', legacy_bdm_in_spec=False)
 
         driver.instance_update_db(fake_context, instance1_2['uuid'],
                 extra_values=expected_metadata).WithSideEffects(
@@ -377,10 +381,10 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                 instance=instance1_2, requested_networks=None,
                 injected_files=None, admin_password=None, is_first_time=None,
                 request_spec=request_spec1, filter_properties=mox.IgnoreArg(),
-                node='node4')
+                node='node4', legacy_bdm_in_spec=False)
         self.mox.ReplayAll()
         sched.schedule_run_instance(fake_context, request_spec1,
-                None, None, None, None, filter_properties)
+                None, None, None, None, filter_properties, False)
 
     def test_schedule_host_pool(self):
         """Make sure the scheduler_host_subset_size property works properly."""
