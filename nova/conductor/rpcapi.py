@@ -108,6 +108,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.55 - Pass instance objects for compute_stop
     1.56 - Remove compute_confirm_resize and
                   migration_get_unconfirmed_by_dest_compute
+    1.57 - Remove migration_create()
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -162,12 +163,6 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         msg = self.make_msg('migration_get_in_progress_by_host_and_node',
                             host=host, node=node)
         return self.call(context, msg, version='1.31')
-
-    def migration_create(self, context, instance, values):
-        instance_p = jsonutils.to_primitive(instance)
-        msg = self.make_msg('migration_create', instance=instance_p,
-                            values=values)
-        return self.call(context, msg, version='1.30')
 
     def migration_update(self, context, migration, status):
         migration_p = jsonutils.to_primitive(migration)

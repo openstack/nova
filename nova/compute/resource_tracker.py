@@ -28,6 +28,7 @@ from nova.compute import vm_states
 from nova import conductor
 from nova import context
 from nova import exception
+from nova.objects import migration as migration_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
@@ -138,9 +139,9 @@ class ResourceTracker(object):
         if self.disabled:
             # compute_driver doesn't support resource tracking, just
             # generate the migration record and continue the resize:
-            migration_ref = self._create_migration(context, instance_ref,
-                    instance_type)
-            return claims.NopClaim(migration=migration_ref)
+            migration = self._create_migration(context, instance_ref,
+                                               instance_type)
+            return claims.NopClaim(migration=migration)
 
         # get memory overhead required to build this instance:
         overhead = self.driver.estimate_instance_overhead(instance_type)
@@ -153,14 +154,14 @@ class ResourceTracker(object):
 
         if claim.test(self.compute_node, limits):
 
-            migration_ref = self._create_migration(context, instance_ref,
-                    instance_type)
-            claim.migration = migration_ref
+            migration = self._create_migration(context, instance_ref,
+                                               instance_type)
+            claim.migration = migration
 
             # Mark the resources in-use for the resize landing on this
             # compute host:
             self._update_usage_from_migration(context, instance_ref,
-                                              self.compute_node, migration_ref)
+                                              self.compute_node, migration)
             elevated = context.elevated()
             self._update(elevated, self.compute_node)
 
@@ -175,14 +176,18 @@ class ResourceTracker(object):
         claim will not be lost if the audit process starts.
         """
         old_instance_type = flavors.extract_flavor(instance)
-
-        return self.conductor_api.migration_create(context, instance,
-                {'dest_compute': self.host,
-                 'dest_node': self.nodename,
-                 'dest_host': self.driver.get_host_ip_addr(),
-                 'old_instance_type_id': old_instance_type['id'],
-                 'new_instance_type_id': instance_type['id'],
-                 'status': 'pre-migrating'})
+        migration = migration_obj.Migration()
+        migration.dest_compute = self.host
+        migration.dest_node = self.nodename
+        migration.dest_host = self.driver.get_host_ip_addr()
+        migration.old_instance_type_id = old_instance_type['id']
+        migration.new_instance_type_id = instance_type['id']
+        migration.status = 'pre-migrating'
+        migration.instance_uuid = instance['uuid']
+        migration.source_compute = instance['host']
+        migration.source_node = instance['node']
+        migration.create(context.elevated())
+        return migration
 
     def _set_instance_host_and_node(self, context, instance_ref):
         """Tag the instance as belonging to this host.  This should be done

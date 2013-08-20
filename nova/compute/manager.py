@@ -2707,10 +2707,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         rt = self._get_resource_tracker(node)
         with rt.resize_claim(context, instance, instance_type, limits=limits) \
                 as claim:
-            migration_ref = claim.migration
+            migration = claim.migration
 
             LOG.audit(_('Migrating'), context=context,
                     instance=instance)
+            migration_ref = obj_base.obj_to_primitive(migration)
             self.compute_rpcapi.resize_instance(context, instance,
                     migration_ref, image, instance_type, reservations)
         return instance

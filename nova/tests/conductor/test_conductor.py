@@ -146,21 +146,6 @@ class _BaseTestCase(object):
             self.context, 'fake-host', 'fake-node')
         self.assertEqual(result, 'fake-result')
 
-    def test_migration_create(self):
-        inst = {'uuid': 'fake-uuid',
-                'host': 'fake-host',
-                'node': 'fake-node'}
-        self.mox.StubOutWithMock(db, 'migration_create')
-        db.migration_create(self.context.elevated(),
-                            {'instance_uuid': inst['uuid'],
-                             'source_compute': inst['host'],
-                             'source_node': inst['node'],
-                             'fake-key': 'fake-value'}).AndReturn('result')
-        self.mox.ReplayAll()
-        result = self.conductor.migration_create(self.context, inst,
-                                                 {'fake-key': 'fake-value'})
-        self.assertEqual(result, 'result')
-
     def test_migration_update(self):
         migration = db.migration_create(self.context.elevated(),
                 {'instance_uuid': 'fake-uuid',
@@ -617,6 +602,21 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
         self.mox.ReplayAll()
         self.conductor.compute_confirm_resize(self.context, 'instance',
                                               'migration')
+
+    def test_migration_create(self):
+        inst = {'uuid': 'fake-uuid',
+                'host': 'fake-host',
+                'node': 'fake-node'}
+        self.mox.StubOutWithMock(db, 'migration_create')
+        db.migration_create(self.context.elevated(),
+                            {'instance_uuid': inst['uuid'],
+                             'source_compute': inst['host'],
+                             'source_node': inst['node'],
+                             'fake-key': 'fake-value'}).AndReturn('result')
+        self.mox.ReplayAll()
+        result = self.conductor.migration_create(self.context, inst,
+                                                 {'fake-key': 'fake-value'})
+        self.assertEqual(result, 'result')
 
     def test_block_device_mapping_update_or_create(self):
         fake_bdm = {'id': 'fake-id', 'device_name': 'foo'}

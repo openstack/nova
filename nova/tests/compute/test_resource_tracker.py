@@ -27,8 +27,11 @@ from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context
 from nova import db
+from nova.objects import base as obj_base
+from nova.objects import migration as migration_obj
 from nova.openstack.common import timeutils
 from nova import test
+from nova.tests.objects import test_migration
 from nova.virt import driver
 
 
@@ -394,6 +397,7 @@ class BaseTrackerTestCase(BaseTestCase):
         migrations = []
 
         for migration in self._migrations.values():
+            migration = obj_base.obj_to_primitive(migration)
             if migration['status'] in status:
                 continue
 
@@ -677,15 +681,20 @@ class ResizeClaimTestCase(BaseTrackerTestCase):
     def setUp(self):
         super(ResizeClaimTestCase, self).setUp()
 
-        self.stubs.Set(self.conductor.db,
-                       'migration_create', self._fake_migration_create)
+        def _fake_migration_create(mig_self, ctxt):
+            self._migrations[mig_self.instance_uuid] = mig_self
+            mig_self.obj_reset_changes()
+
+        self.stubs.Set(migration_obj.Migration, 'create',
+                       _fake_migration_create)
 
         self.instance = self._fake_instance()
         self.instance_type = self._fake_flavor_create()
 
     def _fake_migration_create(self, context, values=None):
         instance_uuid = str(uuid.uuid1())
-        migration = {
+        mig_dict = test_migration.fake_db_migration()
+        mig_dict.update({
             'id': 1,
             'source_compute': 'host1',
             'source_node': 'fakenode',
@@ -697,12 +706,14 @@ class ResizeClaimTestCase(BaseTrackerTestCase):
             'instance_uuid': instance_uuid,
             'status': 'pre-migrating',
             'updated_at': timeutils.utcnow()
-        }
+            })
         if values:
-            migration.update(values)
+            mig_dict.update(values)
 
-        self._migrations[migration['instance_uuid']] = migration
-        return migration
+        migration = migration_obj.Migration()
+        migration.update(mig_dict)
+        # This hits the stub in setUp()
+        migration.create('fake')
 
     def test_claim(self):
         self.tracker.resize_claim(self.context, self.instance,

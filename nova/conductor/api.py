@@ -117,9 +117,6 @@ class LocalAPI(object):
         return self._manager.migration_get_in_progress_by_host_and_node(
             context, host, node)
 
-    def migration_create(self, context, instance, values):
-        return self._manager.migration_create(context, instance, values)
-
     def migration_update(self, context, migration, status):
         return self._manager.migration_update(context, migration, status)
 

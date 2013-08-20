@@ -77,7 +77,7 @@ class ConductorManager(manager.Manager):
     namespace.  See the ComputeTaskManager class for details.
     """
 
-    RPC_API_VERSION = '1.56'
+    RPC_API_VERSION = '1.57'
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(service_name='conductor',
@@ -182,6 +182,7 @@ class ConductorManager(manager.Manager):
             context, host, node)
         return jsonutils.to_primitive(migrations)
 
+    # NOTE(comstud): This method can be removed in v2.0 of the RPC API.
     def migration_create(self, context, instance, values):
         values.update({'instance_uuid': instance['uuid'],
                        'source_compute': instance['host'],
