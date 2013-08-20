@@ -26,7 +26,6 @@ from nova.compute import vm_states
 from nova import db
 from nova import exception
 from nova.openstack.common.gettextutils import _
-from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova.scheduler import filters
@@ -123,11 +122,6 @@ class HostState(object):
 
         # Other information
         self.host_ip = None
-        self.hypervisor_type = None
-        self.hypervisor_version = None
-        self.hypervisor_hostname = None
-        self.cpu_info = None
-        self.supported_instances = None
 
         # Resource oversubscription values for the compute host:
         self.limits = {}
@@ -167,15 +161,7 @@ class HostState(object):
         self.vcpus_used = compute['vcpus_used']
         self.updated = compute['updated_at']
 
-        # All virt drivers report host_ip
         self.host_ip = compute['host_ip']
-        self.hypervisor_type = compute.get('hypervisor_type')
-        self.hypervisor_version = compute.get('hypervisor_version')
-        self.hypervisor_hostname = compute.get('hypervisor_hostname')
-        self.cpu_info = compute.get('cpu_info')
-        if compute.get('supported_instances'):
-            self.supported_instances = jsonutils.loads(
-                    compute.get('supported_instances'))
 
         stats = compute.get('stats', [])
         statmap = self._statmap(stats)
