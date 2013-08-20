@@ -1387,8 +1387,17 @@ class ServersController(wsgi.Controller):
             if self.compute_api.is_volume_backed_instance(context, instance,
                                                           bdms):
                 img = instance['image_ref']
-                src_image = self.compute_api.image_service.show(context, img)
-                image_meta = dict(src_image)
+                if not img:
+                    # NOTE(Vincent Hou) The private method
+                    # _get_volume_image_metadata only works, when boot
+                    # device is set to 'vda'. It needs to be fixed later,
+                    # but tentatively we use it here.
+                    image_meta = {'properties': self.compute_api.
+                                    _get_volume_image_metadata(context, bdms)}
+                else:
+                    src_image = self.compute_api.\
+                        image_service.show(context, img)
+                    image_meta = dict(src_image)
 
                 image = self.compute_api.snapshot_volume_backed(
                                                        context,
