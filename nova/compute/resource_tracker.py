@@ -28,6 +28,7 @@ from nova.compute import vm_states
 from nova import conductor
 from nova import context
 from nova import exception
+from nova.objects import base as obj_base
 from nova.objects import migration as migration_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
@@ -124,11 +125,11 @@ class ResourceTracker(object):
             raise exception.ComputeResourcesUnavailable()
 
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
-    def resize_claim(self, context, instance_ref, instance_type, limits=None):
+    def resize_claim(self, context, instance, instance_type, limits=None):
         """Indicate that resources are needed for a resize operation to this
         compute host.
         :param context: security context
-        :param instance_ref: instance to reserve resources for
+        :param instance: instance object to reserve resources for
         :param instance_type: new instance_type being resized to
         :param limits: Dict of oversubscription limits for memory, disk,
                        and CPUs.
@@ -139,7 +140,7 @@ class ResourceTracker(object):
         if self.disabled:
             # compute_driver doesn't support resource tracking, just
             # generate the migration record and continue the resize:
-            migration = self._create_migration(context, instance_ref,
+            migration = self._create_migration(context, instance,
                                                instance_type)
             return claims.NopClaim(migration=migration)
 
@@ -149,6 +150,7 @@ class ResourceTracker(object):
                     "MB"), {'flavor': instance_type['memory_mb'],
                             'overhead': overhead['memory_mb']})
 
+        instance_ref = obj_base.obj_to_primitive(instance)
         claim = claims.ResizeClaim(instance_ref, instance_type, self,
                                    overhead=overhead)
 

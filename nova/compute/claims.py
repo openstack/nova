@@ -17,6 +17,7 @@
 Claim objects for use with resource tracking.
 """
 
+from nova.objects import instance as instance_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
@@ -70,7 +71,14 @@ class Claim(NopClaim):
 
     def __init__(self, instance, tracker, overhead=None):
         super(Claim, self).__init__()
-        self.instance = jsonutils.to_primitive(instance)
+        # Stash a copy of the instance at the current point of time
+        if isinstance(instance, instance_obj.Instance):
+            self.instance = instance.obj_clone()
+        else:
+            # This does not use copy.deepcopy() because it could be
+            # a sqlalchemy model, and it's best to make sure we have
+            # the primitive form.
+            self.instance = jsonutils.to_primitive(instance)
         self.tracker = tracker
 
         if not overhead:

@@ -201,6 +201,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         2.42 - Splits snapshot_instance() into snapshot_instance() and
                backup_instance() and makes them take new-world instance
                objects.
+        2.43 - Made prep_resize() take new-world instance object
     '''
 
     #
@@ -493,17 +494,24 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     def prep_resize(self, ctxt, image, instance, instance_type, host,
                     reservations=None, request_spec=None,
                     filter_properties=None, node=None):
-        instance_p = jsonutils.to_primitive(instance)
+        if self.can_send_version('2.43'):
+            version = '2.43'
+        else:
+            instance = jsonutils.to_primitive(
+                    objects_base.obj_to_primitive(instance))
+            version = '2.20'
         instance_type_p = jsonutils.to_primitive(instance_type)
         image_p = jsonutils.to_primitive(image)
-        self.cast(ctxt, self.make_msg('prep_resize',
-                instance=instance_p, instance_type=instance_type_p,
-                image=image_p, reservations=reservations,
-                request_spec=request_spec,
-                filter_properties=filter_properties,
-                node=node),
-                _compute_topic(self.topic, ctxt, host, None),
-                version='2.20')
+        self.cast(ctxt,
+                  self.make_msg('prep_resize',
+                                instance=instance,
+                                instance_type=instance_type_p,
+                                image=image_p, reservations=reservations,
+                                request_spec=request_spec,
+                                filter_properties=filter_properties,
+                                node=node),
+                  _compute_topic(self.topic, ctxt, host, None),
+                  version=version)
 
     def reboot_instance(self, ctxt, instance, block_device_info,
                         reboot_type):

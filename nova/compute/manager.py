@@ -383,7 +383,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '2.42'
+    RPC_API_VERSION = '2.43'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -2693,15 +2693,14 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         # NOTE(danms): Stash the new instance_type to avoid having to
         # look it up in the database later
-        sys_meta = utils.instance_sys_meta(instance)
+        sys_meta = instance.system_metadata
         flavors.save_flavor_info(sys_meta, instance_type, prefix='new_')
         # NOTE(mriedem): Stash the old vm_state so we can set the
         # resized/reverted instance back to the same state later.
         vm_state = instance['vm_state']
         LOG.debug('Stashing vm_state: %s' % vm_state, instance=instance)
         sys_meta['old_vm_state'] = vm_state
-        instance = self._instance_update(context, instance['uuid'],
-                                         system_metadata=sys_meta)
+        instance.save()
 
         limits = filter_properties.get('limits', {})
         rt = self._get_resource_tracker(node)
@@ -2712,10 +2711,11 @@ class ComputeManager(manager.SchedulerDependentManager):
             LOG.audit(_('Migrating'), context=context,
                     instance=instance)
             migration_ref = obj_base.obj_to_primitive(migration)
-            self.compute_rpcapi.resize_instance(context, instance,
+            instance_p = obj_base.obj_to_primitive(instance)
+            self.compute_rpcapi.resize_instance(context, instance_p,
                     migration_ref, image, instance_type, reservations)
-        return instance
 
+    @object_compat
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
     @wrap_instance_event
@@ -2739,10 +2739,10 @@ class ComputeManager(manager.SchedulerDependentManager):
             self._notify_about_instance_usage(
                     context, instance, "resize.prep.start")
             try:
-                instance = self._prep_resize(context, image, instance,
-                                             instance_type, reservations,
-                                             request_spec, filter_properties,
-                                             node)
+                self._prep_resize(context, image, instance,
+                                  instance_type, reservations,
+                                  request_spec, filter_properties,
+                                  node)
             except Exception:
                 # try to re-schedule the resize elsewhere:
                 exc_info = sys.exc_info()
@@ -2779,7 +2779,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             # this is adjusted to send to conductor... and then
             # deprecate the scheduler manager method.
             scheduler_method = self.scheduler_rpcapi.prep_resize
-            method_args = (instance, instance_type, image, request_spec,
+            instance_p = obj_base.obj_to_primitive(instance)
+            method_args = (instance_p, instance_type, image, request_spec,
                            filter_properties, reservations)
             task_state = task_states.RESIZE_PREP
 

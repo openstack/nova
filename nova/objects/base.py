@@ -15,6 +15,7 @@
 """Nova common internal object model"""
 
 import collections
+import copy
 
 from nova import context
 from nova import exception
@@ -290,6 +291,10 @@ class NovaObject(object):
             return getattr(self, handler)()
         else:
             return getattr(self, attribute)
+
+    def obj_clone(self):
+        """Create a copy."""
+        return copy.deepcopy(self)
 
     def obj_to_primitive(self):
         """Simple base-case dehydration.

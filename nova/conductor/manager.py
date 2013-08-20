@@ -676,7 +676,7 @@ class ComputeTaskManager(base.Base):
 
             (host, node) = (host_state['host'], host_state['nodename'])
             self.compute_rpcapi.prep_resize(
-                context, image, nova_object.obj_to_primitive(instance),
+                context, image, instance,
                 flavor, host,
                 reservations, request_spec=request_spec,
                 filter_properties=filter_properties, node=node)

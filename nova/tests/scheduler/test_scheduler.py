@@ -31,12 +31,14 @@ from nova import context
 from nova import db
 from nova import exception
 from nova.image import glance
+from nova.objects import instance as instance_obj
 from nova.openstack.common.notifier import api as notifier
 from nova.openstack.common.rpc import common as rpc_common
 from nova.scheduler import driver
 from nova.scheduler import manager
 from nova import servicegroup
 from nova import test
+from nova.tests import fake_instance
 from nova.tests import fake_instance_actions
 from nova.tests.image import fake as fake_image
 from nova.tests import matchers
@@ -459,7 +461,7 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
 
         image = 'image'
         instance_uuid = 'fake-instance-id'
-        instance = {'uuid': instance_uuid}
+        instance = fake_instance.fake_db_instance(uuid=instance_uuid)
 
         instance_properties = {'project_id': 'fake', 'os_type': 'Linux'}
         instance_type = "m1.tiny"
@@ -477,7 +479,8 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
             self.context, request_spec, filter_properties).AndReturn(hosts)
 
         self.mox.StubOutWithMock(self.manager.compute_rpcapi, 'prep_resize')
-        self.manager.compute_rpcapi.prep_resize(self.context, image, instance,
+        self.manager.compute_rpcapi.prep_resize(self.context, image,
+                mox.IsA(instance_obj.Instance),
                 instance_type, 'host', reservations, request_spec=request_spec,
                 filter_properties=filter_properties, node='node')
 

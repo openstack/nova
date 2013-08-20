@@ -31,7 +31,6 @@ from nova import db
 from nova.db.sqlalchemy import models
 from nova import exception as exc
 from nova import notifications
-from nova.objects import base as obj_base
 from nova.objects import instance as instance_obj
 from nova.objects import migration as migration_obj
 from nova.openstack.common import jsonutils
@@ -1281,8 +1280,8 @@ class _BaseTaskTestCase(object):
         filter_properties = {'limits': {}}
 
         self.conductor_manager.compute_rpcapi.prep_resize(
-            self.context, 'image', mox.IsA(dict), 'flavor',
-            'host1', [], request_spec=request_spec,
+            self.context, 'image', mox.IsA(instance_obj.Instance),
+            'flavor', 'host1', [], request_spec=request_spec,
             filter_properties=filter_properties, node=None)
 
         self.mox.ReplayAll()
@@ -1646,7 +1645,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         exc_info = test.TestingException('something happened')
 
         self.conductor.compute_rpcapi.prep_resize(
-                self.context, image, obj_base.obj_to_primitive(inst_obj),
+                self.context, image, inst_obj,
                 'flavor', hosts[0]['host'], resvs,
                 request_spec=expected_request_spec,
                 filter_properties=expected_filter_props,

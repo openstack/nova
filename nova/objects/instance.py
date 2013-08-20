@@ -12,8 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import copy
-
 from nova.cells import opts as cells_opts
 from nova.cells import rpcapi as cells_rpcapi
 from nova import db
@@ -403,7 +401,7 @@ class Instance(base.NovaObject):
             # We also need to nuke any updates to vm_state and task_state
             # unless admin_state_reset is True.  compute cells are
             # authoritative for their view of vm_state and task_state.
-            stale_instance = copy.deepcopy(self)
+            stale_instance = self.obj_clone()
 
             def _handle_cell_update_from_api():
                 cells_api = cells_rpcapi.CellsAPI()
