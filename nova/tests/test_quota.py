@@ -1971,11 +1971,13 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
             instances=5,
             cores=10,
             ram=10 * 1024,
+            fixed_ips=5,
             )
         self.deltas = dict(
             instances=2,
             cores=4,
             ram=2 * 1024,
+            fixed_ips=2,
             )
 
         def make_sync(res_name):
@@ -1990,7 +1992,7 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
             return sync
         self.resources = {}
 
-        for res_name in ('instances', 'cores', 'ram'):
+        for res_name in ('instances', 'cores', 'ram', 'fixed_ips'):
             method_name = '_sync_%s' % res_name
             sqa_api.QUOTA_SYNC_FUNCTIONS[method_name] = make_sync(res_name)
             res = quota.ReservableResource(res_name, '_sync_%s' % res_name)
@@ -2018,6 +2020,12 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
                      user_id='fake_user',
                      in_use=2,
                      reserved=2 * 1024,
+                     until_refresh=None),
+                dict(resource='fixed_ips',
+                     project_id='test_project',
+                     user_id=None,
+                     in_use=2,
+                     reserved=2,
                      until_refresh=None),
                 ]
 
@@ -2085,6 +2093,8 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
             created_at = timeutils.utcnow()
         if updated_at is None:
             updated_at = timeutils.utcnow()
+        if resource == 'fixed_ips':
+            user_id = None
 
         quota_usage_ref = self._make_quota_usage(project_id, user_id, resource,
                                                  in_use, reserved,
@@ -2148,23 +2158,29 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
                 delta=4),
             dict(resource='ram',
                 delta=2 * 1024),
+            dict(resource='fixed_ips',
+                project_id='test_project',
+                delta=2),
             ]
         if usage_id_change:
             reservations_list[0]["usage_id"] = self.usages_created['instances']
             reservations_list[1]["usage_id"] = self.usages_created['cores']
             reservations_list[2]["usage_id"] = self.usages_created['ram']
+            reservations_list[3]["usage_id"] = self.usages_created['fixed_ips']
         else:
             reservations_list[0]["usage_id"] = self.usages['instances']
             reservations_list[1]["usage_id"] = self.usages['cores']
             reservations_list[2]["usage_id"] = self.usages['ram']
+            reservations_list[3]["usage_id"] = self.usages['fixed_ips']
         if delta_change:
             reservations_list[0]["delta"] = -2
             reservations_list[1]["delta"] = -4
             reservations_list[2]["delta"] = -2 * 1024
+            reservations_list[3]["delta"] = -2
         return reservations_list
 
     def _init_usages(self, *in_use, **kwargs):
-        for i, option in enumerate(('instances', 'cores', 'ram')):
+        for i, option in enumerate(('instances', 'cores', 'ram', 'fixed_ips')):
             self.init_usage('test_project', 'fake_user',
                             option, in_use[i], **kwargs)
         return FakeContext('test_project', 'test_class')
@@ -2175,38 +2191,44 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
                                        self.quotas, self.deltas, self.expire,
                                        0, 0)
 
-        self.assertEqual(self.sync_called, set(['instances', 'cores', 'ram']))
+        self.assertEqual(self.sync_called, set(['instances', 'cores',
+                                                'ram', 'fixed_ips']))
         self.usages_list[0]["in_use"] = 0
         self.usages_list[1]["in_use"] = 0
         self.usages_list[2]["in_use"] = 0
+        self.usages_list[3]["in_use"] = 0
         self.compare_usage(self.usages_created, self.usages_list)
         reservations_list = self._update_reservations_list(True)
         self.compare_reservation(result, reservations_list)
 
     def test_quota_reserve_negative_in_use(self):
-        context = self._init_usages(-1, -1, -1, until_refresh=1)
+        context = self._init_usages(-1, -1, -1, -1, until_refresh=1)
         result = sqa_api.quota_reserve(context, self.resources, self.quotas,
                                        self.quotas, self.deltas, self.expire,
                                        5, 0)
 
-        self.assertEqual(self.sync_called, set(['instances', 'cores', 'ram']))
+        self.assertEqual(self.sync_called, set(['instances', 'cores',
+                                                'ram', 'fixed_ips']))
         self.usages_list[0]["until_refresh"] = 5
         self.usages_list[1]["until_refresh"] = 5
         self.usages_list[2]["until_refresh"] = 5
+        self.usages_list[3]["until_refresh"] = 5
         self.compare_usage(self.usages, self.usages_list)
         self.assertEqual(self.usages_created, {})
         self.compare_reservation(result, self._update_reservations_list())
 
     def test_quota_reserve_until_refresh(self):
-        context = self._init_usages(3, 3, 3, until_refresh=1)
+        context = self._init_usages(3, 3, 3, 3, until_refresh=1)
         result = sqa_api.quota_reserve(context, self.resources, self.quotas,
                                        self.quotas, self.deltas, self.expire,
                                        5, 0)
 
-        self.assertEqual(self.sync_called, set(['instances', 'cores', 'ram']))
+        self.assertEqual(self.sync_called, set(['instances', 'cores',
+                                                'ram', 'fixed_ips']))
         self.usages_list[0]["until_refresh"] = 5
         self.usages_list[1]["until_refresh"] = 5
         self.usages_list[2]["until_refresh"] = 5
+        self.usages_list[3]["until_refresh"] = 5
         self.compare_usage(self.usages, self.usages_list)
         self.assertEqual(self.usages_created, {})
         self.compare_reservation(result, self._update_reservations_list())
@@ -2215,19 +2237,20 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
         max_age = 3600
         record_created = (timeutils.utcnow() -
                           datetime.timedelta(seconds=max_age))
-        context = self._init_usages(3, 3, 3, created_at=record_created,
+        context = self._init_usages(3, 3, 3, 3, created_at=record_created,
                                     updated_at=record_created)
         result = sqa_api.quota_reserve(context, self.resources, self.quotas,
                                        self.quotas, self.deltas, self.expire,
                                        0, max_age)
 
-        self.assertEqual(self.sync_called, set(['instances', 'cores', 'ram']))
+        self.assertEqual(self.sync_called, set(['instances', 'cores',
+                                                'ram', 'fixed_ips']))
         self.compare_usage(self.usages, self.usages_list)
         self.assertEqual(self.usages_created, {})
         self.compare_reservation(result, self._update_reservations_list())
 
     def test_quota_reserve_no_refresh(self):
-        context = self._init_usages(3, 3, 3)
+        context = self._init_usages(3, 3, 3, 3)
         result = sqa_api.quota_reserve(context, self.resources, self.quotas,
                                        self.quotas, self.deltas, self.expire,
                                        0, 0)
@@ -2236,15 +2259,17 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
         self.usages_list[0]["in_use"] = 3
         self.usages_list[1]["in_use"] = 3
         self.usages_list[2]["in_use"] = 3
+        self.usages_list[3]["in_use"] = 3
         self.compare_usage(self.usages, self.usages_list)
         self.assertEqual(self.usages_created, {})
         self.compare_reservation(result, self._update_reservations_list())
 
     def test_quota_reserve_unders(self):
-        context = self._init_usages(1, 3, 1 * 1024)
+        context = self._init_usages(1, 3, 1 * 1024, 1)
         self.deltas["instances"] = -2
         self.deltas["cores"] = -4
         self.deltas["ram"] = -2 * 1024
+        self.deltas["fixed_ips"] = -2
         result = sqa_api.quota_reserve(context, self.resources, self.quotas,
                                        self.quotas, self.deltas, self.expire,
                                        0, 0)
@@ -2256,13 +2281,15 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
         self.usages_list[1]["reserved"] = 0
         self.usages_list[2]["in_use"] = 1 * 1024
         self.usages_list[2]["reserved"] = 0
+        self.usages_list[3]["in_use"] = 1
+        self.usages_list[3]["reserved"] = 0
         self.compare_usage(self.usages, self.usages_list)
         self.assertEqual(self.usages_created, {})
         reservations_list = self._update_reservations_list(False, True)
         self.compare_reservation(result, reservations_list)
 
     def test_quota_reserve_overs(self):
-        context = self._init_usages(4, 8, 10 * 1024)
+        context = self._init_usages(4, 8, 10 * 1024, 4)
         self.assertRaises(exception.OverQuota,
                           sqa_api.quota_reserve,
                           context, self.resources, self.quotas,
@@ -2276,15 +2303,18 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
         self.usages_list[1]["reserved"] = 0
         self.usages_list[2]["in_use"] = 10 * 1024
         self.usages_list[2]["reserved"] = 0
+        self.usages_list[3]["in_use"] = 4
+        self.usages_list[3]["reserved"] = 0
         self.compare_usage(self.usages, self.usages_list)
         self.assertEqual(self.usages_created, {})
         self.assertEqual(self.reservations_created, {})
 
     def test_quota_reserve_reduction(self):
-        context = self._init_usages(10, 20, 20 * 1024)
+        context = self._init_usages(10, 20, 20 * 1024, 10)
         self.deltas["instances"] = -2
         self.deltas["cores"] = -4
         self.deltas["ram"] = -2 * 1024
+        self.deltas["fixed_ips"] = -2
         result = sqa_api.quota_reserve(context, self.resources, self.quotas,
                                        self.quotas, self.deltas, self.expire,
                                        0, 0)
@@ -2296,6 +2326,8 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
         self.usages_list[1]["reserved"] = 0
         self.usages_list[2]["in_use"] = 20 * 1024
         self.usages_list[2]["reserved"] = 0
+        self.usages_list[3]["in_use"] = 10
+        self.usages_list[3]["reserved"] = 0
         self.compare_usage(self.usages, self.usages_list)
         self.assertEqual(self.usages_created, {})
         reservations_list = self._update_reservations_list(False, True)

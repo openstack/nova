@@ -86,6 +86,7 @@ get_session = db_session.get_session
 
 _SHADOW_TABLE_PREFIX = 'shadow_'
 _DEFAULT_QUOTA_NAME = 'default'
+PER_PROJECT_QUOTAS = ['fixed_ips', 'floating_ips', 'networks']
 
 
 def get_backend():
@@ -2676,8 +2677,9 @@ def quota_get_all(context, project_id):
 
 @require_admin_context
 def quota_create(context, project_id, resource, limit, user_id=None):
-    quota_ref = models.ProjectUserQuota() if user_id else models.Quota()
-    if user_id:
+    per_user = user_id and resource not in PER_PROJECT_QUOTAS
+    quota_ref = models.ProjectUserQuota() if per_user else models.Quota()
+    if per_user:
         quota_ref.user_id = user_id
     quota_ref.project_id = project_id
     quota_ref.resource = resource
@@ -2691,16 +2693,17 @@ def quota_create(context, project_id, resource, limit, user_id=None):
 
 @require_admin_context
 def quota_update(context, project_id, resource, limit, user_id=None):
-    model = models.ProjectUserQuota if user_id else models.Quota
+    per_user = user_id and resource not in PER_PROJECT_QUOTAS
+    model = models.ProjectUserQuota if per_user else models.Quota
     query = model_query(context, model).\
                 filter_by(project_id=project_id).\
                 filter_by(resource=resource)
-    if user_id:
+    if per_user:
         query = query.filter_by(user_id=user_id)
 
     result = query.update({'hard_limit': limit})
     if not result:
-        if user_id:
+        if per_user:
             raise exception.ProjectUserQuotaNotFound(project_id=project_id,
                                                      user_id=user_id)
         else:
@@ -2780,7 +2783,10 @@ def quota_usage_get(context, project_id, resource, user_id=None):
                      filter_by(project_id=project_id).\
                      filter_by(resource=resource)
     if user_id:
-        result = query.filter_by(user_id=user_id).first()
+        if resource not in PER_PROJECT_QUOTAS:
+            result = query.filter_by(user_id=user_id).first()
+        else:
+            result = query.filter_by(user_id=None).first()
     else:
         result = query.first()
 
@@ -2796,7 +2802,8 @@ def _quota_usage_get_all(context, project_id, user_id=None):
                    filter_by(project_id=project_id)
     result = {'project_id': project_id}
     if user_id:
-        query = query.filter_by(user_id=user_id)
+        query = query.filter(or_(models.QuotaUsage.user_id == user_id,
+                                 models.QuotaUsage.user_id == None))
         result['user_id'] = user_id
 
     rows = query.all()
@@ -2848,8 +2855,9 @@ def quota_usage_update(context, project_id, user_id, resource, **kwargs):
 
     result = model_query(context, models.QuotaUsage, read_deleted="no").\
                      filter_by(project_id=project_id).\
-                     filter_by(user_id=user_id).\
                      filter_by(resource=resource).\
+                     filter(or_(models.QuotaUsage.user_id == user_id,
+                                models.QuotaUsage.user_id == None)).\
                      update(updates)
 
     if not result:
@@ -2906,7 +2914,8 @@ def _get_user_quota_usages(context, session, project_id, user_id):
                        read_deleted="no",
                        session=session).\
                    filter_by(project_id=project_id).\
-                   filter_by(user_id=user_id).\
+                   filter(or_(models.QuotaUsage.user_id == user_id,
+                              models.QuotaUsage.user_id == None)).\
                    with_lockmode('update').\
                    all()
     return dict((row.resource, row) for row in rows)
@@ -2960,10 +2969,21 @@ def quota_reserve(context, resources, project_quotas, user_quotas, deltas,
 
             # Do we need to refresh the usage?
             refresh = False
-            if resource not in user_usages:
+            if ((resource not in PER_PROJECT_QUOTAS) and
+                    (resource not in user_usages)):
                 user_usages[resource] = _quota_usage_create(elevated,
                                                       project_id,
                                                       user_id,
+                                                      resource,
+                                                      0, 0,
+                                                      until_refresh or None,
+                                                      session=session)
+                refresh = True
+            elif ((resource in PER_PROJECT_QUOTAS) and
+                    (resource not in user_usages)):
+                user_usages[resource] = _quota_usage_create(elevated,
+                                                      project_id,
+                                                      None,
                                                       resource,
                                                       0, 0,
                                                       until_refresh or None,
@@ -2989,10 +3009,20 @@ def quota_reserve(context, resources, project_quotas, user_quotas, deltas,
                 updates = sync(elevated, project_id, user_id, session)
                 for res, in_use in updates.items():
                     # Make sure we have a destination for the usage!
-                    if res not in user_usages:
+                    if ((res not in PER_PROJECT_QUOTAS) and
+                            (res not in user_usages)):
                         user_usages[res] = _quota_usage_create(elevated,
                                                          project_id,
                                                          user_id,
+                                                         res,
+                                                         0, 0,
+                                                         until_refresh or None,
+                                                         session=session)
+                    if ((res in PER_PROJECT_QUOTAS) and
+                            (res not in user_usages)):
+                        user_usages[res] = _quota_usage_create(elevated,
+                                                         project_id,
+                                                         None,
                                                          res,
                                                          0, 0,
                                                          until_refresh or None,
