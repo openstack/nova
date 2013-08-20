@@ -908,7 +908,7 @@ class ServersController(wsgi.Controller):
 
         try:
             inst_type = flavors.get_flavor_by_flavor_id(
-                    flavor_id, read_deleted="no")
+                    flavor_id, ctxt=context, read_deleted="no")
 
             (instances, resv_id) = self.compute_api.create(context,
                             inst_type,
