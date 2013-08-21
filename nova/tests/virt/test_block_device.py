@@ -30,7 +30,8 @@ class TestDriverBlockDevice(test.TestCase):
         'swap': driver_block_device.DriverSwapBlockDevice,
         'ephemeral': driver_block_device.DriverEphemeralBlockDevice,
         'volume': driver_block_device.DriverVolumeBlockDevice,
-        'snapshot': driver_block_device.DriverSnapshotBlockDevice
+        'snapshot': driver_block_device.DriverSnapshotBlockDevice,
+        'image': driver_block_device.DriverImageBlockDevice
     }
 
     swap_bdm = block_device.BlockDeviceDict(
@@ -134,6 +135,34 @@ class TestDriverBlockDevice(test.TestCase):
         'connection_info': {"fake": "connection_info"},
         'delete_on_termination': True}
 
+    image_bdm = block_device.BlockDeviceDict(
+        {'id': 5, 'instance_uuid': 'fake-instance',
+         'device_name': '/dev/sda2',
+         'delete_on_termination': True,
+         'volume_size': 1,
+         'disk_bus': 'scsi',
+         'device_type': 'disk',
+         'source_type': 'image',
+         'destination_type': 'volume',
+         'connection_info': '{"fake": "connection_info"}',
+         'image_id': 'fake-image-id-1',
+         'volume_id': 'fake-volume-id-2',
+         'boot_index': -1})
+
+    image_driver_bdm = {
+        'mount_device': '/dev/sda2',
+        'connection_info': {"fake": "connection_info"},
+        'delete_on_termination': True,
+        'disk_bus': 'scsi',
+        'device_type': 'disk',
+        'guest_format': None,
+        'boot_index': -1}
+
+    image_legacy_driver_bdm = {
+        'mount_device': '/dev/sda2',
+        'connection_info': {"fake": "connection_info"},
+        'delete_on_termination': True}
+
     def setUp(self):
         super(TestDriverBlockDevice, self).setUp()
         self.volume_api = self.mox.CreateMock(cinder.API)
@@ -203,6 +232,22 @@ class TestDriverBlockDevice(test.TestCase):
         self.assertEquals(test_bdm.snapshot_id, 'fake-snapshot-id-1')
         self.assertEquals(test_bdm.volume_id, 'fake-volume-id-2')
         self.assertEquals(test_bdm.volume_size, 3)
+
+    def test_driver_image_block_device(self):
+        self._test_driver_device('image')
+
+        test_bdm = self.driver_classes['image'](
+            self.image_bdm)
+        self.assertEquals(test_bdm.id, 5)
+        self.assertEquals(test_bdm.image_id, 'fake-image-id-1')
+        self.assertEquals(test_bdm.volume_size, 1)
+
+    def test_driver_image_block_device_destination_local(self):
+        self._test_driver_device('image')
+        bdm = self.image_bdm.copy()
+        bdm['destination_type'] = 'local'
+        self.assertRaises(driver_block_device._InvalidType,
+                          self.driver_classes['image'], bdm)
 
     def test_volume_attach(self):
         test_bdm = self.driver_classes['volume'](
@@ -295,6 +340,56 @@ class TestDriverBlockDevice(test.TestCase):
     def test_snapshot_attach_volume(self):
         test_bdm = self.driver_classes['snapshot'](
             self.snapshot_bdm)
+
+        instance = {'id': 'fake_id', 'uuid': 'fake_uuid'}
+
+        volume_class = self.driver_classes['volume']
+        self.mox.StubOutWithMock(volume_class, 'attach')
+
+        # Make sure theses are not called
+        self.mox.StubOutWithMock(self.volume_api, 'get_snapshot')
+        self.mox.StubOutWithMock(self.volume_api, 'create')
+        self.mox.StubOutWithMock(self.db_api,
+                                 'block_device_mapping_update')
+
+        volume_class.attach(self.context, instance, self.volume_api,
+                            self.virt_driver, self.db_api).AndReturn(None)
+        self.mox.ReplayAll()
+
+        test_bdm.attach(self.context, instance, self.volume_api,
+                        self.virt_driver, self.db_api)
+        self.assertEquals(test_bdm.volume_id, 'fake-volume-id-2')
+
+    def test_image_attach_no_volume(self):
+        no_volume_image = self.image_bdm.copy()
+        no_volume_image['volume_id'] = None
+        test_bdm = self.driver_classes['image'](no_volume_image)
+
+        instance = {'id': 'fake_id', 'uuid': 'fake_uuid'}
+        image = {'id': 'fake-image-id-1'}
+        volume = {'id': 'fake-volume-id-2'}
+
+        wait_func = self.mox.CreateMockAnything()
+        volume_class = self.driver_classes['volume']
+        self.mox.StubOutWithMock(volume_class, 'attach')
+
+        self.volume_api.create(self.context, 1,
+                               '', '', image_id=image['id']).AndReturn(volume)
+        wait_func(self.context, 'fake-volume-id-2').AndReturn(None)
+        self.db_api.block_device_mapping_update(
+            self.context, 5, {'volume_id': 'fake-volume-id-2'}).AndReturn(None)
+        volume_class.attach(self.context, instance, self.volume_api,
+                            self.virt_driver, self.db_api).AndReturn(None)
+
+        self.mox.ReplayAll()
+
+        test_bdm.attach(self.context, instance, self.volume_api,
+                        self.virt_driver, self.db_api, wait_func)
+        self.assertEquals(test_bdm.volume_id, 'fake-volume-id-2')
+
+    def test_image_attach_volume(self):
+        test_bdm = self.driver_classes['image'](
+            self.image_bdm)
 
         instance = {'id': 'fake_id', 'uuid': 'fake_uuid'}
 

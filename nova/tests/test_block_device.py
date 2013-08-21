@@ -224,6 +224,30 @@ class TestBlockDeviceDict(test.TestCase):
              'device_name': '/dev/vdc'},
         ]
 
+        self.new_mapping_source_image = [
+            BDM({'id': 6, 'instance_uuid': 'fake-instance',
+                 'device_name': '/dev/sda3',
+                 'source_type': 'image',
+                 'destination_type': 'volume',
+                 'connection_info': "{'fake': 'connection_info'}",
+                 'volume_id': 'fake-volume-id-3',
+                 'boot_index': -1}),
+            BDM({'id': 7, 'instance_uuid': 'fake-instance',
+                 'device_name': '/dev/sda4',
+                 'source_type': 'image',
+                 'destination_type': 'local',
+                 'connection_info': "{'fake': 'connection_info'}",
+                 'image_id': 'fake-image-id-2',
+                 'boot_index': -1}),
+        ]
+
+        self.legacy_mapping_source_image = [
+            {'id': 6, 'instance_uuid': 'fake-instance',
+             'device_name': '/dev/sda3',
+             'connection_info': "{'fake': 'connection_info'}",
+             'volume_id': 'fake-volume-id-3'},
+        ]
+
     def test_init(self):
         def fake_validate(obj, dct):
             pass
@@ -362,6 +386,20 @@ class TestBlockDeviceDict(test.TestCase):
                 matchers.IsSubDictOf(new.legacy()))
 
     def test_legacy_mapping(self):
+        got_legacy = block_device.legacy_mapping(self.new_mapping)
+
+        for legacy, expected in zip(got_legacy, self.legacy_mapping):
+            self.assertThat(expected, matchers.IsSubDictOf(legacy))
+
+    def test_legacy_source_image(self):
+        for legacy, new in zip(self.legacy_mapping_source_image,
+                               self.new_mapping_source_image):
+            if new['destination_type'] == 'volume':
+                self.assertThat(legacy, matchers.IsSubDictOf(new.legacy()))
+            else:
+                self.assertRaises(exception.InvalidBDMForLegacy, new.legacy)
+
+    def test_legacy_mapping_source_image(self):
         got_legacy = block_device.legacy_mapping(self.new_mapping)
 
         for legacy, expected in zip(got_legacy, self.legacy_mapping):
