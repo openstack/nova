@@ -2673,8 +2673,18 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         index_data = [(idx.name, idx.columns.keys())
                       for idx in project_user_quotas.indexes]
 
-        self.assertIn(('project_user_quotas_user_id_deleted_idx',
-                       ['user_id', 'deleted']), index_data)
+        if engine.name == 'postgresql':
+            # NOTE(vsergeyev): There is no possibility to get the order of
+            #                  columns due to bug in reflection of indexes in
+            #                  PostgreSQL.
+            #                  See http://www.sqlalchemy.org/trac/ticket/2767
+            #                  So we should compare sets instead of lists.
+            index_data = [(name, set(columns)) for name, columns in index_data]
+            self.assertIn(('project_user_quotas_user_id_deleted_idx',
+                           set(['user_id', 'deleted'])), index_data)
+        else:
+            self.assertIn(('project_user_quotas_user_id_deleted_idx',
+                           ['user_id', 'deleted']), index_data)
 
     def _post_downgrade_210(self, engine):
         project_user_quotas = db_utils.get_table(engine, 'project_user_quotas')
@@ -2682,8 +2692,18 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         index_data = [(idx.name, idx.columns.keys())
                       for idx in project_user_quotas.indexes]
 
-        self.assertNotIn(('project_user_quotas_user_id_deleted_idx',
-                          ['user_id', 'deleted']), index_data)
+        if engine.name == 'postgresql':
+            # NOTE(vsergeyev): There is no possibility to get the order of
+            #                  columns due to bug in reflection of indexes in
+            #                  PostgreSQL.
+            #                  See http://www.sqlalchemy.org/trac/ticket/2767
+            #                  So we should compare sets instead of lists.
+            index_data = [(name, set(columns)) for name, columns in index_data]
+            self.assertNotIn(('project_user_quotas_user_id_deleted_idx',
+                              set(['user_id', 'deleted'])), index_data)
+        else:
+            self.assertNotIn(('project_user_quotas_user_id_deleted_idx',
+                              ['user_id', 'deleted']), index_data)
 
 
 class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
