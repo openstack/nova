@@ -415,7 +415,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '2.44'
+    RPC_API_VERSION = '2.45'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -2744,16 +2744,11 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         limits = filter_properties.get('limits', {})
         rt = self._get_resource_tracker(node)
-        with rt.resize_claim(context, instance, instance_type, limits=limits) \
-                as claim:
-            migration = claim.migration
-
-            LOG.audit(_('Migrating'), context=context,
-                    instance=instance)
-            migration_ref = obj_base.obj_to_primitive(migration)
-            instance_p = obj_base.obj_to_primitive(instance)
-            self.compute_rpcapi.resize_instance(context, instance_p,
-                    migration_ref, image, instance_type, reservations)
+        with rt.resize_claim(context, instance, instance_type,
+                             limits=limits) as claim:
+            LOG.audit(_('Migrating'), context=context, instance=instance)
+            self.compute_rpcapi.resize_instance(context, instance,
+                    claim.migration, image, instance_type, reservations)
 
     @object_compat
     @wrap_exception()
@@ -2839,6 +2834,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             # not re-scheduling
             raise exc_info[0], exc_info[1], exc_info[2]
 
+    @object_compat
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
@@ -2848,8 +2844,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                         instance_type=None):
         """Starts the migration of a running instance to another host."""
         if not migration:
-            migration = self.conductor_api.migration_get(context, migration_id)
-        with self._error_out_instance_on_exception(context, instance['uuid'],
+            migration = migration_obj.Migration.get_by_id(
+                    context.elevated(), migration_id)
+        with self._error_out_instance_on_exception(context, instance.uuid,
                                                    reservations):
             if not instance_type:
                 instance_type = self.conductor_api.instance_type_get(context,
@@ -2857,12 +2854,11 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             network_info = self._get_instance_nw_info(context, instance)
 
-            migration = self.conductor_api.migration_update(context,
-                    migration, 'migrating')
+            migration.status = 'migrating'
+            migration.save(context.elevated())
 
-            instance = self._instance_update(context, instance['uuid'],
-                    task_state=task_states.RESIZE_MIGRATING,
-                    expected_task_state=task_states.RESIZE_PREP)
+            instance.task_state = task_states.RESIZE_MIGRATING
+            instance.save(expected_task_state=task_states.RESIZE_PREP)
 
             self._notify_about_instance_usage(
                 context, instance, "resize.start", network_info=network_info)
@@ -2871,29 +2867,31 @@ class ComputeManager(manager.SchedulerDependentManager):
                                 context, instance)
 
             disk_info = self.driver.migrate_disk_and_power_off(
-                    context, instance, migration['dest_host'],
+                    context, instance, migration.dest_host,
                     instance_type, network_info,
                     block_device_info)
 
             self._terminate_volume_connections(context, instance)
 
+            migration_p = obj_base.obj_to_primitive(migration)
+            instance_p = obj_base.obj_to_primitive(instance)
             self.conductor_api.network_migrate_instance_start(context,
-                                                              instance,
-                                                              migration)
+                                                              instance_p,
+                                                              migration_p)
 
-            migration = self.conductor_api.migration_update(context,
-                    migration, 'post-migrating')
+            migration.status = 'post-migrating'
+            migration.save(context.elevated())
 
-            instance = self._instance_update(context, instance['uuid'],
-                    host=migration['dest_compute'],
-                    node=migration['dest_node'],
-                    task_state=task_states.RESIZE_MIGRATED,
-                    expected_task_state=task_states.
-                    RESIZE_MIGRATING)
+            instance.host = migration.dest_compute
+            instance.node = migration.dest_node
+            instance.task_state = task_states.RESIZE_MIGRATED
+            instance.save(expected_task_state=task_states.RESIZE_MIGRATING)
 
-            self.compute_rpcapi.finish_resize(context, instance,
-                    migration, image, disk_info,
-                    migration['dest_compute'], reservations)
+            migration_p = obj_base.obj_to_primitive(migration)
+            instance_p = obj_base.obj_to_primitive(instance)
+            self.compute_rpcapi.finish_resize(context, instance_p,
+                    migration_p, image, disk_info,
+                    migration.dest_compute, reservations)
 
             self._notify_about_instance_usage(context, instance, "resize.end",
                                               network_info=network_info)

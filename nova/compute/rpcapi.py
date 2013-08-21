@@ -199,6 +199,7 @@ class ComputeAPI(rpcclient.RpcProxy):
                objects.
         2.43 - Made prep_resize() take new-world instance object
         2.44 - Add volume_snapshot_create(), volume_snapshot_delete()
+        2.45 - Made resize_instance() take new-world objects
     '''
 
     #
@@ -578,13 +579,19 @@ class ComputeAPI(rpcclient.RpcProxy):
 
     def resize_instance(self, ctxt, instance, migration, image, instance_type,
                         reservations=None):
-        instance_p = jsonutils.to_primitive(instance)
-        migration_p = jsonutils.to_primitive(migration)
+        if self.client.can_send_version('2.45'):
+            version = '2.45'
+        else:
+            instance = jsonutils.to_primitive(
+                    objects_base.obj_to_primitive(instance))
+            migration = jsonutils.to_primitive(
+                    objects_base.obj_to_primitive(migration))
+            version = '2.16'
         instance_type_p = jsonutils.to_primitive(instance_type)
         cctxt = self.client.prepare(server=_compute_host(None, instance),
-                                    version='2.16')
+                                    version=version)
         cctxt.cast(ctxt, 'resize_instance',
-                   instance=instance_p, migration=migration_p,
+                   instance=instance, migration=migration,
                    image=image, reservations=reservations,
                    instance_type=instance_type_p)
 
