@@ -604,8 +604,8 @@ class CloudTestCase(test.TestCase):
         authz = self.cloud.authorize_security_group_ingress
         kwargs = {'to_port': '999', 'from_port': '999', 'ip_protocol': 'tcp'}
         authz(self.context, group_name=sec['name'], **kwargs)
-        self.assertRaises(exception.EC2APIError, authz, self.context,
-                          group_name=sec['name'], **kwargs)
+        self.assertRaises(exception.SecurityGroupRuleExists, authz,
+                          self.context, group_name=sec['name'], **kwargs)
 
     def test_security_group_ingress_quota_limit(self):
         self.flags(quota_security_group_rules=20)

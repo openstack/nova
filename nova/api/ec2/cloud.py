@@ -685,8 +685,8 @@ class CloudController(object):
                 values_for_rule['parent_group_id'] = security_group['id']
                 if self.security_group_api.rule_exists(security_group,
                                                        values_for_rule):
-                    err = _('%s - This rule already exists in group')
-                    raise exception.EC2APIError(err % values_for_rule)
+                    raise exception.SecurityGroupRuleExists(
+                        rule=values_for_rule)
                 postvalues.append(values_for_rule)
 
         if postvalues:

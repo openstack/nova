@@ -817,6 +817,11 @@ class SecurityGroupCannotBeApplied(Invalid):
                 " in order to apply security groups.")
 
 
+class SecurityGroupRuleExists(Invalid):
+    ec2_code = 'InvalidPermission.Duplicate'
+    msg_fmt = _("Rule already exists in group: %(rule)s")
+
+
 class NoUniqueMatch(NovaException):
     msg_fmt = _("No Unique Match Found.")
     code = 409
