@@ -1160,7 +1160,8 @@ class MarkerNotFound(NotFound):
     msg_fmt = _("Marker %(marker)s could not be found.")
 
 
-class InvalidInstanceIDMalformed(Invalid):
+class InvalidInstanceIDMalformedEC2(Invalid):
+    ec2_code = 'InvalidInstanceID.Malformed'
     msg_fmt = _("Invalid id: %(val)s (expecting \"i-...\").")
 
 
