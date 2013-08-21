@@ -249,10 +249,6 @@ class HostTestCase(test.TestCase):
         self._test_host_power_action_service_unavailable(
             self.controller.reboot)
 
-    def test_host_startup_service_unavailable(self):
-        self._test_host_power_action_service_unavailable(
-            self.controller.startup)
-
     def _test_host_power_action_notimpl(self, method):
         self.assertRaises(webob.exc.HTTPNotImplemented,
                           method, self.req, "notimplemented")
