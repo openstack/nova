@@ -113,12 +113,6 @@ class LocalAPI(object):
     def migration_get(self, context, migration_id):
         return self._manager.migration_get(context, migration_id)
 
-    def migration_get_unconfirmed_by_dest_compute(self, context,
-                                                  confirm_window,
-                                                  dest_compute):
-        return self._manager.migration_get_unconfirmed_by_dest_compute(
-            context, confirm_window, dest_compute)
-
     def migration_get_in_progress_by_host_and_node(self, context, host, node):
         return self._manager.migration_get_in_progress_by_host_and_node(
             context, host, node)
@@ -333,10 +327,6 @@ class LocalAPI(object):
 
     def get_ec2_ids(self, context, instance):
         return self._manager.get_ec2_ids(context, instance)
-
-    def compute_confirm_resize(self, context, instance, migration_ref):
-        return self._manager.compute_confirm_resize(context, instance,
-                                                    migration_ref)
 
     def compute_unrescue(self, context, instance):
         return self._manager.compute_unrescue(context, instance)

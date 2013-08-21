@@ -4726,9 +4726,11 @@ class ComputeTestCase(BaseTestCase):
                                      'fake_uuid6': 'error'}
         migrations = []
         for i, instance in enumerate(instances, start=1):
-            migrations.append({'id': i,
-                               'instance_uuid': instance['uuid'],
-                               'status': None})
+            fake_mig = test_migration.fake_db_migration()
+            fake_mig.update({'id': i,
+                             'instance_uuid': instance['uuid'],
+                             'status': None})
+            migrations.append(fake_mig)
 
         def fake_instance_get_by_uuid(context, instance_uuid,
                 columns_to_join=None):
@@ -4746,29 +4748,29 @@ class ComputeTestCase(BaseTestCase):
             self.assertEqual(dest_compute, CONF.host)
             return migrations
 
-        def fake_migration_update(context, m, status):
+        def fake_migration_update(context, mid, updates):
             for migration in migrations:
-                if migration['id'] == m['id']:
-                    migration['status'] = status
+                if migration['id'] == mid:
+                    migration.update(updates)
+                    return migration
 
-        def fake_confirm_resize(context, instance, migration_ref=None):
+        def fake_confirm_resize(context, instance, migration=None):
             # raise exception for 'fake_uuid4' to check migration status
             # does not get set to 'error' on confirm_resize failure.
             if instance['uuid'] == 'fake_uuid4':
-                raise test.TestingException
-            self.assertNotEqual(migration_ref, None)
-            for migration in migrations:
-                if (migration['instance_uuid'] ==
-                        migration_ref['instance_uuid']):
-                    migration['status'] = 'confirmed'
+                raise test.TestingException('bomb')
+            self.assertNotEqual(migration, None)
+            for migration2 in migrations:
+                if (migration2['instance_uuid'] ==
+                        migration['instance_uuid']):
+                    migration2['status'] = 'confirmed'
 
         self.stubs.Set(db, 'instance_get_by_uuid',
                 fake_instance_get_by_uuid)
         self.stubs.Set(db, 'migration_get_unconfirmed_by_dest_compute',
                 fake_migration_get_unconfirmed_by_dest_compute)
-        self.stubs.Set(self.compute.conductor_api, 'migration_update',
-                fake_migration_update)
-        self.stubs.Set(self.compute.conductor_api, 'compute_confirm_resize',
+        self.stubs.Set(db, 'migration_update', fake_migration_update)
+        self.stubs.Set(self.compute.compute_api, 'confirm_resize',
                 fake_confirm_resize)
 
         def fetch_instance_migration_status(instance_uuid):

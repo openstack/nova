@@ -136,17 +136,6 @@ class _BaseTestCase(object):
                          self.conductor.migration_get(self.context,
                                                       migration['id']))
 
-    def test_migration_get_unconfirmed_by_dest_compute(self):
-        self.mox.StubOutWithMock(db,
-                                 'migration_get_unconfirmed_by_dest_compute')
-        db.migration_get_unconfirmed_by_dest_compute(self.context,
-                                                     'fake-window',
-                                                     'fake-host')
-        self.mox.ReplayAll()
-        self.conductor.migration_get_unconfirmed_by_dest_compute(self.context,
-                                                                 'fake-window',
-                                                                 'fake-host')
-
     def test_migration_get_in_progress_by_host_and_node(self):
         self.mox.StubOutWithMock(db,
                                  'migration_get_in_progress_by_host_and_node')
@@ -594,15 +583,6 @@ class _BaseTestCase(object):
         result = self.conductor.get_ec2_ids(self.context, inst)
         self.assertEqual(result, expected)
 
-    def test_compute_confirm_resize(self):
-        self.mox.StubOutWithMock(self.conductor_manager.compute_api,
-                                 'confirm_resize')
-        self.conductor_manager.compute_api.confirm_resize(
-                self.context, 'instance', migration='migration')
-        self.mox.ReplayAll()
-        self.conductor.compute_confirm_resize(self.context, 'instance',
-                                              'migration')
-
     def test_compute_unrescue(self):
         self.mox.StubOutWithMock(self.conductor_manager.compute_api,
                                  'unrescue')
@@ -617,6 +597,26 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
         super(ConductorTestCase, self).setUp()
         self.conductor = conductor_manager.ConductorManager()
         self.conductor_manager = self.conductor
+
+    def test_migration_get_unconfirmed_by_dest_compute(self):
+        self.mox.StubOutWithMock(db,
+                                 'migration_get_unconfirmed_by_dest_compute')
+        db.migration_get_unconfirmed_by_dest_compute(self.context,
+                                                     'fake-window',
+                                                     'fake-host')
+        self.mox.ReplayAll()
+        self.conductor.migration_get_unconfirmed_by_dest_compute(self.context,
+                                                                 'fake-window',
+                                                                 'fake-host')
+
+    def test_compute_confirm_resize(self):
+        self.mox.StubOutWithMock(self.conductor_manager.compute_api,
+                                 'confirm_resize')
+        self.conductor_manager.compute_api.confirm_resize(
+                self.context, 'instance', migration='migration')
+        self.mox.ReplayAll()
+        self.conductor.compute_confirm_resize(self.context, 'instance',
+                                              'migration')
 
     def test_block_device_mapping_update_or_create(self):
         fake_bdm = {'id': 'fake-id', 'device_name': 'foo'}

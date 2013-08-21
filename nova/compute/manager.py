@@ -62,6 +62,7 @@ from nova.network import model as network_model
 from nova.network.security_group import openstack_driver
 from nova.objects import base as obj_base
 from nova.objects import instance as instance_obj
+from nova.objects import migration as migration_obj
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
@@ -4134,8 +4135,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         if CONF.resize_confirm_window == 0:
             return
 
-        capi = self.conductor_api
-        migrations = capi.migration_get_unconfirmed_by_dest_compute(
+        mig_list_cls = migration_obj.MigrationList
+        migrations = mig_list_cls.get_unconfirmed_by_dest_compute(
                 context, CONF.resize_confirm_window, self.host)
 
         migrations_info = dict(migration_count=len(migrations),
@@ -4151,14 +4152,14 @@ class ComputeManager(manager.SchedulerDependentManager):
                        "%(reason)s"),
                      {'migration_id': migration['id'], 'reason': reason},
                      **kwargs)
-            self.conductor_api.migration_update(context, migration,
-                                                'error')
+            migration.status = 'error'
+            migration.save(context.elevated())
 
         for migration in migrations:
-            instance_uuid = migration['instance_uuid']
+            instance_uuid = migration.instance_uuid
             LOG.info(_("Automatically confirming migration "
                        "%(migration_id)s for instance %(instance_uuid)s"),
-                     {'migration_id': migration['id'],
+                     {'migration_id': migration.id,
                       'instance_uuid': instance_uuid})
             expected_attrs = ['metadata', 'system_metadata']
             try:
@@ -4185,8 +4186,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                                         instance=instance)
                 continue
             try:
-                self.conductor_api.compute_confirm_resize(
-                    context, instance, migration_ref=migration)
+                self.compute_api.confirm_resize(context, instance,
+                                                migration=migration)
             except Exception as e:
                 LOG.error(_("Error auto-confirming resize: %s. "
                             "Will retry later.") % e, instance=instance)
