@@ -143,7 +143,9 @@ network_opts = [
     cfg.BoolOpt('share_dhcp_address',
                 default=False,
                 help='If True in multi_host mode, all compute hosts share '
-                     'the same dhcp address.'),
+                     'the same dhcp address. The same IP address used for '
+                     'DHCP will be added on each nova-network node which '
+                     'is only visible to the vms on the same host.'),
     cfg.BoolOpt('update_dns_entries',
                 default=False,
                 help='If True, when a DNS entry must be updated, it sends a '
