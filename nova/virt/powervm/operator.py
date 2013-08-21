@@ -782,16 +782,6 @@ class BaseOperator(object):
 
         return new_name_trimmed
 
-    def _decompress_image_file(self, file_path, outfile_path):
-        command = "/usr/bin/gunzip -c %s > %s" % (file_path, outfile_path)
-        self.run_vios_command_as_root(command)
-
-        # Remove compressed image file
-        command = "/usr/bin/rm %s" % file_path
-        self.run_vios_command_as_root(command)
-
-        return outfile_path
-
     def _remove_file(self, file_path):
         """Removes a file on the VIOS partition
 
