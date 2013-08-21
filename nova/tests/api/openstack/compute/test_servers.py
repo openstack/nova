@@ -1735,14 +1735,32 @@ class ServersControllerCreateTest(test.TestCase):
         """utility function - check server_dict for absence of adminPass."""
         self.assertTrue("adminPass" not in server_dict)
 
-    def _test_create_instance(self):
+    def _test_create_instance(self, flavor=2):
         image_uuid = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
         self.body['server']['imageRef'] = image_uuid
-        self.body['server']['flavorRef'] = 2
+        self.body['server']['flavorRef'] = flavor
         self.req.body = jsonutils.dumps(self.body)
         server = self.controller.create(self.req, self.body).obj['server']
         self._check_admin_pass_len(server)
         self.assertEqual(FAKE_UUID, server['id'])
+
+    def test_create_instance_private_flavor(self):
+        values = {
+            'name': 'fake_name',
+            'memory_mb': 512,
+            'vcpus': 1,
+            'root_gb': 10,
+            'ephemeral_gb': 10,
+            'flavorid': '1324',
+            'swap': 0,
+            'rxtx_factor': 0.5,
+            'vcpu_weight': 1,
+            'disabled': False,
+            'is_public': False,
+        }
+        db.flavor_create(context.get_admin_context(), values)
+        self.assertRaises(webob.exc.HTTPBadRequest, self._test_create_instance,
+                          flavor=1324)
 
     def test_create_server_bad_image_href(self):
         image_href = 1
