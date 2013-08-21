@@ -370,6 +370,21 @@ def is_swap_or_ephemeral(device_name):
             (device_name == 'swap' or is_ephemeral(device_name)))
 
 
+def new_format_is_swap(bdm):
+    if (bdm.get('source_type') == 'blank' and
+            bdm.get('destination_type') == 'local' and
+            bdm.get('guest_format') == 'swap'):
+        return True
+    return False
+
+
+def new_format_is_ephemeral(bdm):
+    if (bdm.get('source_type') == 'blank' and not
+            new_format_is_swap(bdm)):
+        return True
+    return False
+
+
 def mappings_prepend_dev(mappings):
     """Prepend '/dev/' to 'device' entry of swap/ephemeral virtual type."""
     for m in mappings:
