@@ -2659,7 +2659,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         data = self._data_209()
         for i in tables:
             dump_table_name = 'dump_' + i
-            self.asserFalse(dump_table_name in check_tables)
+            self.assertFalse(dump_table_name in check_tables)
             table = change_tables[i]
             table.insert().values(data[i]).execute()
             self.assertEqual(len(table.select().execute().fetchall()), 2)
