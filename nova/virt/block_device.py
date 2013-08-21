@@ -167,6 +167,24 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
                 context, self.id,
                 {'connection_info': jsonutils.dumps(connection_info)})
 
+    def refresh_connection_info(self, context, instance, volume_api,
+                                virt_driver, db_api=None):
+        # NOTE (ndipanov): A no-op if there is no connection info already
+        if not self['connection_info']:
+            return
+
+        connector = virt_driver.get_volume_connector(instance)
+        connection_info = volume_api.initialize_connection(context,
+                                                           self.volume_id,
+                                                           connector)
+        if 'serial' not in connection_info:
+            connection_info['serial'] = self.volume_id
+        self['connection_info'] = connection_info
+
+        if db_api:
+            db_api.block_device_mapping_update(context, self.id,
+            {'connection_info': jsonutils.dumps(connection_info)})
+
 
 class DriverSnapshotBlockDevice(DriverVolumeBlockDevice):
     def _transform(self, bdm):
@@ -242,6 +260,13 @@ convert_snapshots = functools.partial(_convert_block_devices,
 
 def attach_block_devices(block_device_mapping, *attach_args, **attach_kwargs):
     map(operator.methodcaller('attach', *attach_args, **attach_kwargs),
+        block_device_mapping)
+    return block_device_mapping
+
+
+def refresh_conn_infos(block_device_mapping, *refresh_args, **refresh_kwargs):
+    map(operator.methodcaller('refresh_connection_info',
+                              *refresh_args, **refresh_kwargs),
         block_device_mapping)
     return block_device_mapping
 

@@ -269,14 +269,11 @@ class _ComputeAPIUnitTestMixIn(object):
         inst.task_state = task_state
 
         self.mox.StubOutWithMock(self.context, 'elevated')
-        self.mox.StubOutWithMock(self.compute_api, '_get_block_device_info')
         self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
         self.mox.StubOutWithMock(self.compute_api, 'update')
         self.mox.StubOutWithMock(inst, 'save')
         inst.save(expected_task_state=[None, task_states.REBOOTING])
         self.context.elevated().AndReturn(self.context)
-        self.compute_api._get_block_device_info(self.context, inst.uuid
-                                                ).AndReturn('blkinfo')
         self.compute_api._record_action_start(self.context, inst,
                                               instance_actions.REBOOT)
 
@@ -287,7 +284,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
         self.mox.StubOutWithMock(rpcapi, 'reboot_instance')
         rpcapi.reboot_instance(self.context, instance=inst,
-                               block_device_info='blkinfo',
+                               block_device_info=None,
                                reboot_type=reboot_type)
         self.mox.ReplayAll()
 

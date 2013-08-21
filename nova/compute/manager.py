@@ -404,6 +404,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         # compute manager via the virtapi, so we want it to be fully
         # initialized before that happens.
         self.driver = driver.load_compute_driver(self.virtapi, compute_driver)
+        self.use_legacy_block_device_info = \
+                            self.driver.need_legacy_block_device_info
 
     def _get_resource_tracker(self, nodename):
         rt = self._resource_tracker_dict.get(nodename)
@@ -1271,25 +1273,29 @@ class ComputeManager(manager.SchedulerDependentManager):
         try:
             block_device_info = {
                 'root_device_name': instance['root_device_name'],
-                'swap': driver_block_device.get_swap(
-                    driver_block_device.legacy_block_devices(
-                        driver_block_device.convert_swap(bdms))),
-                'ephemerals': driver_block_device.legacy_block_devices(
-                    driver_block_device.convert_ephemerals(bdms)),
-                'block_device_mapping':
-                    (driver_block_device.legacy_block_devices(
-                            driver_block_device.attach_block_devices(
-                                driver_block_device.convert_volumes(bdms),
-                                context, instance, self.volume_api,
-                                self.driver, self.conductor_api)) +
-                     driver_block_device.legacy_block_devices(
-                            driver_block_device.attach_block_devices(
-                                driver_block_device.convert_snapshots(bdms),
-                                context, instance, self.volume_api,
-                                self.driver, self.conductor_api,
-                                self._await_block_device_map_created)))
+                'swap': driver_block_device.convert_swap(bdms),
+                'ephemerals': driver_block_device.convert_ephemerals(bdms),
+                'block_device_mapping': (
+                    driver_block_device.attach_block_devices(
+                        driver_block_device.convert_volumes(bdms),
+                        context, instance, self.volume_api,
+                        self.driver, self.conductor_api) +
+                    driver_block_device.attach_block_devices(
+                        driver_block_device.convert_snapshots(bdms),
+                        context, instance, self.volume_api,
+                        self.driver, self.conductor_api,
+                        self._await_block_device_map_created))
             }
 
+            if self.use_legacy_block_device_info:
+                for bdm_type in ('swap', 'ephemerals', 'block_device_mapping'):
+                    block_device_info[bdm_type] = \
+                        driver_block_device.legacy_block_devices(
+                        block_device_info[bdm_type])
+
+            # Get swap out of the list
+            block_device_info['swap'] = driver_block_device.get_swap(
+                block_device_info['swap'])
             return block_device_info
 
         except Exception:
@@ -1369,15 +1375,19 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.network_api.deallocate_for_instance(
             context, instance, requested_networks=requested_networks)
 
-    def _get_volume_bdms(self, bdms):
+    def _get_volume_bdms(self, bdms, legacy=True):
         """Return only bdms that have a volume_id."""
-        return [bdm for bdm in bdms if bdm['volume_id']]
+        if legacy:
+            return [bdm for bdm in bdms if bdm['volume_id']]
+        else:
+            return [bdm for bdm in bdms
+                    if bdm['destination_type'] == 'volume']
 
     # NOTE(danms): Legacy interface for digging up volumes in the database
-    def _get_instance_volume_bdms(self, context, instance):
+    def _get_instance_volume_bdms(self, context, instance, legacy=True):
         return self._get_volume_bdms(
             self.conductor_api.block_device_mapping_get_all_by_instance(
-                context, instance))
+                context, instance, legacy), legacy)
 
     def _get_instance_volume_bdm(self, context, instance, volume_id):
         bdms = self._get_instance_volume_bdms(context, instance)
@@ -1388,31 +1398,35 @@ class ComputeManager(manager.SchedulerDependentManager):
             if str(bdm['volume_id']) == str(volume_id):
                 return bdm
 
-    # NOTE(danms): This is a transitional interface until all the callers
-    # can provide their own bdms
     def _get_instance_volume_block_device_info(self, context, instance,
-                                               bdms=None):
-        if bdms is None:
-            bdms = self._get_instance_volume_bdms(context, instance)
-        return self._get_volume_block_device_info(bdms)
+                                               refresh_conn_info=False):
+        """Transform volumes to the driver block_device format."""
 
-    def _get_volume_block_device_info(self, bdms):
-        block_device_mapping = []
-        for bdm in bdms:
-            try:
-                cinfo = jsonutils.loads(bdm['connection_info'])
-                if cinfo and 'serial' not in cinfo:
-                    cinfo['serial'] = bdm['volume_id']
-                bdmap = {'connection_info': cinfo,
-                         'mount_device': bdm['device_name'],
-                         'delete_on_termination': bdm['delete_on_termination']}
-                block_device_mapping.append(bdmap)
-            except TypeError:
-                # if the block_device_mapping has no value in connection_info
-                # (returned as None), don't include in the mapping
-                pass
-        # NOTE(vish): The mapping is passed in so the driver can disconnect
-        #             from remote volumes if necessary
+        # TODO(ndipanov): This method will allways hit the database
+        #                 even though we could pass it bdms if we have
+        #                 them already. this is so that we are sure we
+        #                 always get the new-style format for now and
+        #                 it will be changed in the future.
+        bdms = self._get_instance_volume_bdms(context, instance,
+                                              legacy=False)
+        block_device_mapping = (
+            driver_block_device.convert_volumes(bdms) +
+            driver_block_device.convert_snapshots(bdms))
+
+        if not refresh_conn_info:
+            # if the block_device_mapping has no value in connection_info
+            # (returned as None), don't include in the mapping
+            block_device_mapping = [
+                bdm for bdm in block_device_mapping
+                if bdm.get('connection_info')]
+        else:
+            block_device_mapping = driver_block_device.refresh_conn_infos(
+                block_device_mapping, context, instance, self.volume_api,
+                self.driver, self.conductor_api)
+
+        if self.use_legacy_block_device_info:
+            block_device_mapping = driver_block_device.legacy_block_devices(
+                block_device_mapping)
         return {'block_device_mapping': block_device_mapping}
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
@@ -1464,7 +1478,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         # NOTE(vish) get bdms before destroying the instance
         vol_bdms = self._get_volume_bdms(bdms)
         block_device_info = self._get_instance_volume_block_device_info(
-            context, instance, bdms=bdms)
+            context, instance)
 
         # NOTE(melwitt): attempt driver destroy before releasing ip, may
         #                want to keep ip allocated for certain failures
@@ -1853,8 +1867,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                 self.volume_api.detach(context, bdm['volume_id'])
 
             if not recreate:
-                block_device_info = self._get_volume_block_device_info(
-                        self._get_volume_bdms(bdms))
+                block_device_info = \
+                        self._get_instance_volume_block_device_info(
+                                context, instance)
                 self.driver.destroy(instance,
                                     self._legacy_nw_info(network_info),
                                     block_device_info=block_device_info)
@@ -1941,11 +1956,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         context = context.elevated()
         LOG.audit(_("Rebooting instance"), context=context, instance=instance)
 
-        # NOTE(danms): remove these when RPC API < 2.5 compatibility
-        # is no longer needed
-        if block_device_info is None:
-            block_device_info = self._get_instance_volume_block_device_info(
+        block_device_info = self._get_instance_volume_block_device_info(
                                 context, instance)
+
         network_info = self._get_instance_nw_info(context, instance)
 
         self._notify_about_instance_usage(context, instance, "reboot.start")
@@ -2497,27 +2510,6 @@ class ComputeManager(manager.SchedulerDependentManager):
                     migration, migration['source_compute'],
                     reservations)
 
-    def _refresh_block_device_connection_info(self, context, instance):
-        """After some operations, the IQN or CHAP, for example, may have
-        changed. This call updates the DB with the latest connection info.
-        """
-        bdms = self._get_instance_volume_bdms(context, instance)
-
-        if not bdms:
-            return bdms
-
-        connector = self.driver.get_volume_connector(instance)
-
-        for bdm in bdms:
-            cinfo = self.volume_api.initialize_connection(
-                    context, bdm['volume_id'], connector)
-
-            self.conductor_api.block_device_mapping_update(
-                context, bdm['id'],
-                {'connection_info': jsonutils.dumps(cinfo)})
-
-        return bdms
-
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
     @wrap_instance_event
@@ -2561,11 +2553,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             self.network_api.setup_networks_on_host(context, instance,
                                             migration['source_compute'])
 
-            bdms = self._refresh_block_device_connection_info(
-                    context, instance)
-
             block_device_info = self._get_instance_volume_block_device_info(
-                    context, instance, bdms=bdms)
+                    context, instance, refresh_conn_info=True)
 
             power_on = old_vm_state != vm_states.STOPPED
             self.driver.finish_revert_migration(instance,
@@ -2847,10 +2836,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             context, instance, "finish_resize.start",
             network_info=network_info)
 
-        bdms = self._refresh_block_device_connection_info(context, instance)
-
         block_device_info = self._get_instance_volume_block_device_info(
-                            context, instance, bdms=bdms)
+                            context, instance, refresh_conn_info=True)
 
         # NOTE(mriedem): If the original vm_state was STOPPED, we don't
         # automatically power on the instance after it's migrated
@@ -3701,10 +3688,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         required for live migration without shared storage.
 
         """
-        bdms = self._refresh_block_device_connection_info(context, instance)
-
         block_device_info = self._get_instance_volume_block_device_info(
-                            context, instance, bdms=bdms)
+                            context, instance, refresh_conn_info=True)
 
         network_info = self._get_instance_nw_info(context, instance)
         self._notify_about_instance_usage(
