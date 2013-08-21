@@ -154,7 +154,7 @@ class ComputeRpcAPITestCase(test.TestCase):
     def test_finish_revert_resize(self):
         self._test_compute_api('finish_revert_resize', 'cast',
                 instance=self.fake_instance, migration={'id': 'fake_id'},
-                host='host', reservations=list('fake_res'), version='2.13')
+                host='host', reservations=list('fake_res'), version='2.47')
 
     def test_get_console_output(self):
         self._test_compute_api('get_console_output', 'call',
