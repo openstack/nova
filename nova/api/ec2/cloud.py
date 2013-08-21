@@ -1389,8 +1389,8 @@ class CloudController(object):
         """Get reservation ID from db."""
         resv_id = None
         sys_metas = self.compute_api.get_all_system_metadata(
-            context, search_filts=[{'key': 'EC2_client_token'},
-                                   {'value': client_token}])
+            context, search_filts=[{'key': ['EC2_client_token']},
+                                   {'value': [client_token]}])
 
         for sys_meta in sys_metas:
             if sys_meta and sys_meta.get('value') == client_token:

@@ -1846,6 +1846,20 @@ class CloudTestCase(test.TestCase):
         # NOTE(vish) the assert for this call is in the fake_create method.
         run_instances(self.context, **kwargs)
 
+    def test_empty_reservation_id_from_token(self):
+        client_token = 'client-token-1'
+
+        def fake_get_all_system_metadata(context, search_filts):
+            reference = [{'key': ['EC2_client_token']},
+                         {'value': ['client-token-1']}]
+            self.assertEqual(search_filts, reference)
+            return []
+
+        self.stubs.Set(self.cloud.compute_api, 'get_all_system_metadata',
+                       fake_get_all_system_metadata)
+        resv_id = self.cloud._resv_id_from_token(self.context, client_token)
+        self.assertIsNone(resv_id)
+
     def test_run_instances_idempotent(self):
         # Ensure subsequent run_instances calls with same client token
         # are idempotent and that ones with different client_token are not
