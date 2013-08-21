@@ -109,6 +109,7 @@ class ConductorAPI(rpcclient.RpcProxy):
     1.56 - Remove compute_confirm_resize and
                   migration_get_unconfirmed_by_dest_compute
     1.57 - Remove migration_create()
+    1.58 - Remove migration_get()
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -151,10 +152,6 @@ class ConductorAPI(rpcclient.RpcProxy):
             kwargs = {'instance_uuid': instance_uuid}
         cctxt = self.client.prepare(version=version)
         return cctxt.call(context, 'instance_get_by_uuid', **kwargs)
-
-    def migration_get(self, context, migration_id):
-        cctxt = self.client.prepare(version='1.4')
-        return cctxt.call(context, 'migration_get', migration_id=migration_id)
 
     def migration_get_in_progress_by_host_and_node(self, context,
                                                    host, node):
