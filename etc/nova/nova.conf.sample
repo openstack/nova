@@ -2585,6 +2585,12 @@
 # a disk drive (boolean value)
 #config_drive_cdrom=false
 
+# Enables metrics collections for an instance by using
+# Hyper-V's metric APIs. Collected data can by retrieved by
+# other apps and services, e.g.: Ceilometer. Requires Hyper-V
+# / Windows Server 2012 and above (boolean value)
+#enable_instance_metrics_collection=false
+
 
 #
 # Options defined in nova.virt.hyperv.volumeops

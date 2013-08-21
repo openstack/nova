@@ -209,3 +209,26 @@ class VMUtilsV2TestCase(test.TestCase):
 
         mock_svc.RemoveResourceSettings.assert_called_with(
             [self._FAKE_RES_PATH])
+
+    def test_enable_vm_metrics_collection(self):
+        self._lookup_vm()
+        mock_svc = self._vmutils._conn.Msvm_MetricService()[0]
+
+        metric_def = mock.MagicMock()
+
+        fake_metric_def_paths = ["fake_0", "fake_1", "fake_2"]
+        metric_def.path_.side_effect = fake_metric_def_paths
+
+        self._vmutils._conn.CIM_BaseMetricDefinition.return_value = [
+            metric_def]
+
+        self._vmutils.enable_vm_metrics_collection(self._FAKE_VM_NAME)
+
+        calls = []
+        for fake_metric_def_path in fake_metric_def_paths:
+            calls.append(mock.call(
+                Subject=self._FAKE_VM_PATH,
+                Definition=fake_metric_def_path,
+                MetricCollectionEnabled=self._vmutils._METRIC_ENABLED))
+
+        mock_svc.ControlMetrics.assert_has_calls(calls, any_order=True)

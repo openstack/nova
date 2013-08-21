@@ -169,6 +169,8 @@ class HyperVAPITestCase(test.TestCase):
         self._mox.StubOutWithMock(vmutils.VMUtils, 'get_vm_storage_paths')
         self._mox.StubOutWithMock(vmutils.VMUtils,
                                   'get_controller_volume_paths')
+        self._mox.StubOutWithMock(vmutils.VMUtils,
+                                  'enable_vm_metrics_collection')
 
         self._mox.StubOutWithMock(vhdutils.VHDUtils, 'create_differencing_vhd')
         self._mox.StubOutWithMock(vhdutils.VHDUtils, 'reconnect_parent_vhd')
@@ -476,6 +478,10 @@ class HyperVAPITestCase(test.TestCase):
         self.assertRaises(vmutils.HyperVException, self._test_spawn_instance,
                           setup_vif_mocks_func=setup_vif_mocks,
                           with_exception=True)
+
+    def test_spawn_with_metrics_collection(self):
+        self.flags(enable_instance_metrics_collection=True, group='hyperv')
+        self._test_spawn_instance(False)
 
     def _check_instance_name(self, vm_name):
         return vm_name == self._instance_data['name']
@@ -894,6 +900,10 @@ class HyperVAPITestCase(test.TestCase):
 
         if setup_vif_mocks_func:
             setup_vif_mocks_func()
+
+        if CONF.hyperv.enable_instance_metrics_collection:
+            vmutils.VMUtils.enable_vm_metrics_collection(
+                mox.Func(self._check_vm_name))
 
     def _set_vm_name(self, vm_name):
         self._test_vm_name = vm_name

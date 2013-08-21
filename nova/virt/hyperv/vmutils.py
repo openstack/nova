@@ -542,3 +542,7 @@ class VMUtils(object):
             if disk.HostResource:
                 disk_data[disk.path().RelPath] = disk.HostResource[0]
         return disk_data
+
+    def enable_vm_metrics_collection(self, vm_name):
+        raise NotImplementedError(_("Metrics collection is not supported on "
+                                    "this version of Hyper-V"))

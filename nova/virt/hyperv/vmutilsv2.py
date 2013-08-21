@@ -28,6 +28,7 @@ if sys.platform == 'win32':
 
 from oslo.config import cfg
 
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.virt.hyperv import constants
 from nova.virt.hyperv import vmutils
@@ -50,6 +51,12 @@ class VMUtilsV2(vmutils.VMUtils):
     _VIRTUAL_SYSTEM_TYPE_REALIZED = 'Microsoft:Hyper-V:System:Realized'
 
     _SNAPSHOT_FULL = 2
+
+    _METRIC_AGGR_CPU_AVG = 'Aggregated Average CPU Utilization'
+    _METRIC_AGGR_DISK_R = 'Aggregated Disk Data Read'
+    _METRIC_AGGR_DISK_W = 'Aggregated Disk Data Written'
+
+    _METRIC_ENABLED = 2
 
     _vm_power_states_map = {constants.HYPERV_VM_STATE_ENABLED: 2,
                             constants.HYPERV_VM_STATE_DISABLED: 3,
@@ -215,3 +222,21 @@ class VMUtilsV2(vmutils.VMUtils):
 
         vm = self._lookup_vm_check(vm_name)
         self._add_virt_resource(eth_port_data, vm.path_())
+
+    def enable_vm_metrics_collection(self, vm_name):
+        metric_names = [self._METRIC_AGGR_CPU_AVG,
+                        self._METRIC_AGGR_DISK_R,
+                        self._METRIC_AGGR_DISK_W]
+
+        vm = self._lookup_vm_check(vm_name)
+        metric_svc = self._conn.Msvm_MetricService()[0]
+
+        for metric_name in metric_names:
+            metric_def = self._conn.CIM_BaseMetricDefinition(Name=metric_name)
+            if not metric_def:
+                LOG.debug(_("Metric not found: %s") % metric_name)
+            else:
+                metric_svc.ControlMetrics(
+                    Subject=vm.path_(),
+                    Definition=metric_def[0].path_(),
+                    MetricCollectionEnabled=self._METRIC_ENABLED)
