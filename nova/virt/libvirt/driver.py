@@ -327,7 +327,6 @@ class LibvirtDriver(driver.ComputeDriver):
         self.volume_drivers = driver.driver_dict_from_config(
             CONF.libvirt_volume_drivers, self)
 
-        self._host_state = None
         self._event_queue = None
 
         self._disk_cachemode = None
