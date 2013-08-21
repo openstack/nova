@@ -113,10 +113,17 @@ class AggregateTestCase(test.NoDBTestCase):
                                       "availability_zone": "nova1"}})
 
     def test_create_with_no_availability_zone(self):
-        self.assertRaises(exc.HTTPBadRequest, self.controller.create,
-                          self.req, {"aggregate":
-                                     {"name": "test",
-                                      "foo": "nova1"}})
+        def stub_create_aggregate(context, name, availability_zone):
+            self.assertEqual(context, self.context, "context")
+            self.assertEqual("test", name, "name")
+            self.assertEqual(None, availability_zone, "availability_zone")
+            return AGGREGATE
+        self.stubs.Set(self.controller.api, "create_aggregate",
+                       stub_create_aggregate)
+
+        result = self.controller.create(self.req,
+                                        {"aggregate": {"name": "test"}})
+        self.assertEqual(AGGREGATE, result["aggregate"])
 
     def test_create_with_null_name(self):
         self.assertRaises(exc.HTTPBadRequest, self.controller.create,
