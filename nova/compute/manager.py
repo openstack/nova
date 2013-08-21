@@ -1566,6 +1566,20 @@ class ComputeManager(manager.SchedulerDependentManager):
                 requested_networks, security_groups, block_device_mapping,
                 node=None, limits=None):
 
+            try:
+                LOG.audit(_('Starting instance...'), context=context,
+                      instance=instance)
+                self._instance_update(context, instance['uuid'],
+                        vm_state=vm_states.BUILDING, task_state=None,
+                        expected_task_state=(task_states.SCHEDULING, None))
+            except exception.InstanceNotFound:
+                msg = _('Instance disappeared before build.')
+                LOG.debug(msg, instance=instance)
+                return
+            except exception.UnexpectedTaskStateError as e:
+                LOG.debug(e.format_message(), instance=instance)
+                return
+
             # b64 decode the files to inject:
             decoded_files = self._decode_files(injected_files)
 
@@ -1593,6 +1607,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                     self._cleanup_allocated_networks(context, instance,
                             requested_networks)
 
+                self._instance_update(context, instance['uuid'],
+                        task_state=task_states.SCHEDULING)
+
                 self.compute_task_api.build_instances(context, [instance],
                         image, filter_properties, admin_password,
                         injected_files, requested_networks, security_groups,
@@ -1600,13 +1617,21 @@ class ComputeManager(manager.SchedulerDependentManager):
             except exception.InstanceNotFound:
                 msg = _('Instance disappeared during build.')
                 LOG.debug(msg, instance=instance)
-            except Exception:
-                # Should not reach here.
+            except exception.BuildAbortException:
                 self._cleanup_allocated_networks(context, instance,
                         requested_networks)
                 self._set_instance_error_state(context, instance['uuid'])
-                msg = _('Unexpected build failure, not rescheduling build.')
+            except exception.UnexpectedTaskStateError as e:
+                LOG.debug(e.format_message(), instance=instance)
+                self._cleanup_allocated_networks(context, instance,
+                        requested_networks)
+            except Exception:
+                # Should not reach here.
+                msg = 'Unexpected build failure, not rescheduling build.'
                 LOG.exception(msg, instance=instance)
+                self._cleanup_allocated_networks(context, instance,
+                        requested_networks)
+                self._set_instance_error_state(context, instance['uuid'])
 
         do_build_and_run_instance(context, instance, image, request_spec,
                 filter_properties, admin_password, injected_files,
@@ -1617,28 +1642,52 @@ class ComputeManager(manager.SchedulerDependentManager):
             admin_password, requested_networks, security_groups,
             block_device_mapping, node, limits):
 
+        image_name = image.get('name')
+        self._notify_about_instance_usage(context, instance, 'create.start',
+                extra_usage_info={'image_name': image_name})
         try:
             rt = self._get_resource_tracker(node)
             with rt.instance_claim(context, instance, limits):
                 with self._build_resources(context, instance,
                         requested_networks, security_groups, image,
                         block_device_mapping) as resources:
+                    instance = self._instance_update(context, instance['uuid'],
+                            vm_state=vm_states.BUILDING,
+                            task_state=task_states.SPAWNING,
+                            expected_task_state=
+                            task_states.BLOCK_DEVICE_MAPPING)
                     block_device_info = resources['block_device_info']
                     network_info = resources['network_info']
                     self.driver.spawn(context, instance, image,
                                       injected_files, admin_password,
                                       network_info=network_info,
                                       block_device_info=block_device_info)
-        except exception.InstanceNotFound:
+                    self._notify_about_instance_usage(context, instance,
+                            'create.end',
+                            extra_usage_info={'message': _('Success')},
+                            network_info=network_info)
+        except exception.InstanceNotFound as e:
+            self._notify_about_instance_usage(context, instance, 'create.end',
+                    extra_usage_info={'message': e.format_message()})
             raise
         except exception.UnexpectedTaskStateError as e:
-            raise exception.BuildAbortException(instance_uuid=instance['uuid'],
-                    reason=e.format_message())
+            with excutils.save_and_reraise_exception():
+                msg = e.format_message()
+                self._notify_about_instance_usage(context, instance,
+                        'create.end', extra_usage_info={'message': msg})
         except exception.ComputeResourcesUnavailable as e:
+            LOG.debug(e.format_message(), instance=instance)
+            self._notify_about_instance_usage(context, instance,
+                    'create.error',
+                    extra_usage_info={'message': e.format_message()})
             raise exception.RescheduledException(
                     instance_uuid=instance['uuid'], reason=e.format_message())
-        except exception.BuildAbortException:
-            raise
+        except exception.BuildAbortException as e:
+            with excutils.save_and_reraise_exception():
+                LOG.debug(e.format_message, instance=instance)
+                self._notify_about_instance_usage(context, instance,
+                        'create.end', extra_usage_info={'message':
+                                                        e.format_message()})
         except (exception.VirtualInterfaceCreateException,
                 exception.VirtualInterfaceMacAddressException,
                 exception.FixedIpLimitExceeded,
@@ -1648,8 +1697,17 @@ class ComputeManager(manager.SchedulerDependentManager):
             raise exception.BuildAbortException(instance_uuid=instance['uuid'],
                     reason=msg)
         except Exception as e:
+            self._notify_about_instance_usage(context, instance,
+                    'create.error',
+                    extra_usage_info={'message': str(e)})
             raise exception.RescheduledException(
                     instance_uuid=instance['uuid'], reason=str(e))
+
+        current_power_state = self._get_power_state(context, instance)
+        self._instance_update(context, instance['uuid'],
+                power_state=current_power_state, vm_state=vm_states.ACTIVE,
+                task_state=None, expected_task_state=task_states.SPAWNING,
+                launched_at=timeutils.utcnow())
 
     @contextlib.contextmanager
     def _build_resources(self, context, instance, requested_networks,
@@ -1672,6 +1730,11 @@ class ComputeManager(manager.SchedulerDependentManager):
             msg = _('Failed to allocate the network(s), not rescheduling.')
             raise exception.BuildAbortException(instance_uuid=instance['uuid'],
                     reason=msg)
+
+        self._instance_update(
+                context, instance['uuid'],
+                vm_state=vm_states.BUILDING,
+                task_state=task_states.BLOCK_DEVICE_MAPPING)
 
         try:
             block_device_info = self._prep_block_device(context, instance,
