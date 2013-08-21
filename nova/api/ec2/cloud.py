@@ -425,8 +425,7 @@ class CloudController(object):
         #If looking for non existent key pair
         if key_name is not None and not key_pairs:
             msg = _('Could not find key pair(s): %s') % ','.join(key_name)
-            raise exception.KeypairNotFound(msg,
-                                            code="InvalidKeyPair.Duplicate")
+            raise exception.KeypairNotFound(message=msg)
 
         result = []
         for key_pair in key_pairs:
@@ -1905,7 +1904,7 @@ class EC2SecurityGroupExceptions(object):
 
     @staticmethod
     def raise_group_already_exists(msg):
-        raise exception.EC2APIError(message=msg)
+        raise exception.SecurityGroupExists(message=msg)
 
     @staticmethod
     def raise_invalid_group(msg):
