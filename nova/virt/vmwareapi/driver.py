@@ -18,24 +18,7 @@
 #    under the License.
 
 """
-A connection to the VMware ESX platform.
-
-**Related Flags**
-
-:vmwareapi_host_ip:         IP address or Name of VMware ESX/VC server.
-:vmwareapi_host_username:   Username for connection to VMware ESX/VC Server.
-:vmwareapi_host_password:   Password for connection to VMware ESX/VC Server.
-:vmwareapi_cluster_name:    Name of a VMware Cluster ComputeResource.
-:vmwareapi_task_poll_interval: The interval (seconds) used for polling of
-                            remote tasks
-                            (default: 5.0).
-:vmwareapi_api_retry_count: The API retry count in case of failure such as
-                            network failures (socket errors etc.)
-                            (default: 10).
-:vnc_port:                  VNC starting port (default: 5900)
-:vnc_port_total:            Total number of VNC ports (default: 10000)
-:vnc_password:              VNC password
-:use_linked_clone:          Whether to use linked clone (default: True)
+A connection to the VMware ESX/vCenter platform.
 """
 
 import re
@@ -88,7 +71,6 @@ vmwareapi_opts = [
                     'Used only if compute_driver is '
                     'vmwareapi.VMwareVCDriver.'),
     cfg.StrOpt('datastore_regex',
-               default=None,
                help='Regex to match the name of a datastore. '
                     'Used only if compute_driver is '
                     'vmwareapi.VMwareVCDriver.'),
