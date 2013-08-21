@@ -231,9 +231,6 @@ class InstanceTypeTestCase(test.TestCase):
         self.assertEqual("instance_type1_redo", instance_type["name"])
 
     def test_get_all_flavors_sorted_list_sort(self):
-        """Test getting all flavors as a sorted list with
-        flavors.get_all_flavors_sorted_list.
-        """
         # Test default sort
         all_flavors = flavors.get_all_flavors_sorted_list()
         self.assertEqual(DEFAULT_FLAVORS, all_flavors)
@@ -244,14 +241,10 @@ class InstanceTypeTestCase(test.TestCase):
         self.assertEqual(expected, all_flavors)
 
     def test_get_all_flavors_sorted_list_limit(self):
-        """Check a limit can be applied to
-        flavors.get_all_flavors_sorted_list.
-        """
         limited_flavors = flavors.get_all_flavors_sorted_list(limit=2)
         self.assertEqual(2, len(limited_flavors))
 
     def test_get_all_flavors_sorted_list_marker(self):
-        """Check results can be returned after marker"""
         all_flavors = flavors.get_all_flavors_sorted_list()
 
         # Set the 3rd result as the marker

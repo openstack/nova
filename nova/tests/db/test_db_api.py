@@ -2491,7 +2491,6 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
                         assert_multi_filter_instance_type_get(filts)
 
     def test_flavor_get_all_limit_sort(self):
-        """Test sorting getting all flavours."""
         def assert_sorted_by_key_dir(sort_key, asc=True):
             sort_dir = 'asc' if asc else 'desc'
             results = db.flavor_get_all(self.ctxt, sort_key='name',
@@ -2513,12 +2512,10 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
             assert_sorted_by_key_both_dir(attr)
 
     def test_flavor_get_all_limit(self):
-        """Check a limit can be applied to db.flavor_get_all."""
         limited_flavors = db.flavor_get_all(self.ctxt, limit=2)
         self.assertEqual(2, len(limited_flavors))
 
     def test_flavor_get_all_list_marker(self):
-        """Check results can be returned after marker"""
         all_flavors = db.flavor_get_all(self.ctxt)
 
         # Set the 3rd result as the marker
