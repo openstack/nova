@@ -1605,8 +1605,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                 self._delete_instance(context, instance, bdms,
                                       reservations=reservations)
             except exception.InstanceTerminationFailure as error:
-                LOG.error(_('%s. Setting instance vm_state to ERROR'),
-                          error, instance=instance)
+                LOG.exception(_('Setting instance vm_state to ERROR'),
+                              instance=instance)
                 self._set_instance_error_state(context, instance['uuid'])
             except exception.InstanceNotFound as e:
                 LOG.warn(e, instance=instance)
@@ -2895,6 +2895,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                                 disk_info, image)
             self._quota_commit(context, reservations)
         except Exception as error:
+            LOG.exception(_('Setting instance vm_state to ERROR'),
+                          instance=instance)
             with excutils.save_and_reraise_exception():
                 try:
                     self._quota_rollback(context, reservations)
@@ -2902,8 +2904,6 @@ class ComputeManager(manager.SchedulerDependentManager):
                     LOG.exception(_("Failed to rollback quota for failed "
                                     "finish_resize: %s"),
                                   qr_error, instance=instance)
-                LOG.error(_('%s. Setting instance vm_state to ERROR') % error,
-                          instance=instance)
                 self._set_instance_error_state(context, instance['uuid'])
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
@@ -4684,10 +4684,10 @@ class ComputeManager(manager.SchedulerDependentManager):
                                   task_state=None)
             raise error.inner_exception
         except Exception as error:
+            LOG.exception(_('Setting instance vm_state to ERROR'),
+                          instance_uuid=instance_uuid)
             with excutils.save_and_reraise_exception():
                 self._quota_rollback(context, reservations)
-                LOG.error(_('%s. Setting instance vm_state to ERROR'),
-                          error, instance_uuid=instance_uuid)
                 self._set_instance_error_state(context, instance_uuid)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
