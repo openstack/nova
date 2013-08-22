@@ -6883,27 +6883,31 @@ class ComputeAPITestCase(BaseTestCase):
                  'no_device': True},
 
                 # overwrite ephemeral
-                {'device_name': '/dev/sdc2',
+                {'device_name': '/dev/sdc1',
                  'source_type': 'snapshot', 'destination_type': 'volume',
                  'snapshot_id': '33333333-aaaa-bbbb-cccc-333333333333',
                  'delete_on_termination': False},
+                {'device_name': '/dev/sdc2',
+                 'source_type': 'snapshot', 'destination_type': 'volume',
+                 'snapshot_id': '33333333-aaaa-bbbb-cccc-444444444444',
+                 'delete_on_termination': False},
                 {'device_name': '/dev/sdc3',
                  'source_type': 'snapshot', 'destination_type': 'volume',
-                 'snapshot_id': '44444444-aaaa-bbbb-cccc-444444444444'},
+                 'snapshot_id': '44444444-aaaa-bbbb-cccc-555555555555'},
                 {'device_name': '/dev/sdc4',
                  'no_device': True},
 
                 # volume
                 {'device_name': '/dev/sdd1',
                  'source_type': 'snapshot', 'destination_type': 'volume',
-                 'snapshot_id': '55555555-aaaa-bbbb-cccc-555555555555',
+                 'snapshot_id': '55555555-aaaa-bbbb-cccc-666666666666',
                  'delete_on_termination': False},
                 {'device_name': '/dev/sdd2',
                  'source_type': 'snapshot', 'destination_type': 'volume',
-                 'snapshot_id': '66666666-aaaa-bbbb-cccc-666666666666'},
+                 'snapshot_id': '66666666-aaaa-bbbb-cccc-777777777777'},
                 {'device_name': '/dev/sdd3',
                  'source_type': 'snapshot', 'destination_type': 'volume',
-                 'snapshot_id': '77777777-aaaa-bbbb-cccc-777777777777'},
+                 'snapshot_id': '77777777-aaaa-bbbb-cccc-888888888888'},
                 {'device_name': '/dev/sdd4',
                  'no_device': True}]
 
@@ -6922,11 +6926,12 @@ class ComputeAPITestCase(BaseTestCase):
             {'source_type': 'blank', 'destination_type': 'local',
              'guest_format': CONF.default_ephemeral_format,
              'device_name': '/dev/sdc3', 'delete_on_termination': True},
-
-            # NOTE(ndipanov): ATM only last ephemeral is supported.
-            #                 others are ignored for now
-            #{'virtual_name': 'ephemeral1', 'device_name': '/dev/sdc1'},
-            #{'virtual_name': 'ephemeral2', 'device_name': '/dev/sdc2'}
+            {'source_type': 'blank', 'destination_type': 'local',
+             'guest_format': CONF.default_ephemeral_format,
+             'device_name': '/dev/sdc1', 'delete_on_termination': True},
+             {'source_type': 'blank', 'destination_type': 'local',
+             'guest_format': CONF.default_ephemeral_format,
+             'device_name': '/dev/sdc2', 'delete_on_termination': True},
             ]
         bdms.sort(key=operator.itemgetter('device_name'))
         expected_result.sort(key=operator.itemgetter('device_name'))
@@ -6956,25 +6961,29 @@ class ComputeAPITestCase(BaseTestCase):
              'snapshot_id': '22222222-aaaa-bbbb-cccc-222222222222'},
             {'device_name': '/dev/sdb4', 'no_device': True},
 
-            {'device_name': '/dev/sdc2',
+            {'device_name': '/dev/sdc1',
              'source_type': 'snapshot', 'destination_type': 'volume',
              'snapshot_id': '33333333-aaaa-bbbb-cccc-333333333333',
              'delete_on_termination': False},
+            {'device_name': '/dev/sdc2',
+             'source_type': 'snapshot', 'destination_type': 'volume',
+             'snapshot_id': '33333333-aaaa-bbbb-cccc-444444444444',
+             'delete_on_termination': False},
             {'device_name': '/dev/sdc3',
              'source_type': 'snapshot', 'destination_type': 'volume',
-             'snapshot_id': '44444444-aaaa-bbbb-cccc-444444444444'},
+             'snapshot_id': '44444444-aaaa-bbbb-cccc-555555555555'},
             {'no_device': True, 'device_name': '/dev/sdc4'},
 
             {'device_name': '/dev/sdd1',
              'source_type': 'snapshot', 'destination_type': 'volume',
-             'snapshot_id': '55555555-aaaa-bbbb-cccc-555555555555',
+             'snapshot_id': '55555555-aaaa-bbbb-cccc-666666666666',
              'delete_on_termination': False},
             {'device_name': '/dev/sdd2',
              'source_type': 'snapshot', 'destination_type': 'volume',
-             'snapshot_id': '66666666-aaaa-bbbb-cccc-666666666666'},
+             'snapshot_id': '66666666-aaaa-bbbb-cccc-777777777777'},
             {'device_name': '/dev/sdd3',
              'source_type': 'snapshot', 'destination_type': 'volume',
-             'snapshot_id': '77777777-aaaa-bbbb-cccc-777777777777'},
+             'snapshot_id': '77777777-aaaa-bbbb-cccc-888888888888'},
             {'no_device': True, 'device_name': '/dev/sdd4'}]
         bdms.sort(key=operator.itemgetter('device_name'))
         expected_result.sort(key=operator.itemgetter('device_name'))
