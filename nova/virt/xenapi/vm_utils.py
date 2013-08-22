@@ -1202,6 +1202,12 @@ def _check_vdi_size(context, session, instance, vdi_uuid):
         raise exception.InstanceTypeDiskTooSmall()
 
 
+def get_stream_funct_for(context, image_service, image_id):
+    stream_func = lambda f: image_service.download(
+            context, image_id, f)
+    return stream_func
+
+
 def _fetch_disk_image(context, session, instance, name_label, image_id,
                       image_type):
     """Fetch the image from Glance
@@ -1255,8 +1261,8 @@ def _fetch_disk_image(context, session, instance, name_label, image_id,
         vdi_uuid = session.call_xenapi("VDI.get_uuid", vdi_ref)
 
         with vdi_attached_here(session, vdi_ref, read_only=False) as dev:
-            stream_func = lambda f: image_service.download(
-                    context, image_id, f)
+            stream_func = get_stream_funct_for(context, image_service,
+                                               image_id)
             _stream_disk(stream_func, image_type, virtual_size, dev)
 
         if image_type in (ImageType.KERNEL, ImageType.RAMDISK):
