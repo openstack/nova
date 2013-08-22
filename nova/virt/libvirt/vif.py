@@ -610,9 +610,9 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
 
     def unplug_ivs(self, instance, vif):
         if self.get_firewall_required():
-            self.unplug_ovs_hybrid(instance, vif)
+            self.unplug_ivs_hybrid(instance, vif)
         else:
-            self.unplug_ovs_ethernet(instance, vif)
+            self.unplug_ivs_ethernet(instance, vif)
 
     def unplug_802qbg(self, instance, vif):
         super(LibvirtGenericVIFDriver,
