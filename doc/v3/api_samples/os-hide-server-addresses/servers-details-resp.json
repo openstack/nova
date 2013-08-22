@@ -1,8 +1,6 @@
 {
     "servers": [
         {
-            "access_ip_v4": "",
-            "access_ip_v6": "",
             "addresses": {},
             "created": "2013-09-24T14:44:01Z",
             "flavor": {

@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <servers xmlns:os-disk-config="http://docs.openstack.org/compute/ext/disk_config/api/v3" xmlns:atom="http://www.w3.org/2005/Atom" xmlns="http://docs.openstack.org/compute/api/v1.1">
-  <server status="ACTIVE" updated="2013-10-15T02:10:26Z" user_id="fake" name="new-server-test" created="2013-10-15T02:10:26Z" tenant_id="openstack" access_ip_v4="" progress="0" host_id="91afc29a75a4060983952e3a85271fa9ae5748430d4688e81b2baf4d" id="b4bcbdb4-837c-4070-88df-3da18ffbf303" access_ip_v6="" os-disk-config:disk_config="AUTO" key_name="None">
+  <server status="ACTIVE" updated="2013-10-15T02:10:26Z" user_id="fake" name="new-server-test" created="2013-10-15T02:10:26Z" tenant_id="openstack" progress="0" host_id="91afc29a75a4060983952e3a85271fa9ae5748430d4688e81b2baf4d" id="b4bcbdb4-837c-4070-88df-3da18ffbf303" os-disk-config:disk_config="AUTO" key_name="None">
     <image id="70a599e0-31e7-49b7-b260-868f441e862b">
       <atom:link href="http://glance.openstack.example.com/images/70a599e0-31e7-49b7-b260-868f441e862b" rel="bookmark"/>
     </image>

@@ -6,8 +6,6 @@
             "os-extended-server-attributes:instance_name": "%(instance_name)s",
             "updated": "%(timestamp)s",
             "created": "%(timestamp)s",
-            "access_ip_v4": "",
-            "access_ip_v6": "",
             "addresses": {
                 "private": [
                     {

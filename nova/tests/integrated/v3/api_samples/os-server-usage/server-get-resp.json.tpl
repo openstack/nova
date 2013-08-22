@@ -2,8 +2,6 @@
     "server": {
         "os-server-usage:launched_at": "%(timestamp)s",
         "os-server-usage:terminated_at": null,
-        "access_ip_v4": "",
-        "access_ip_v6": "",
         "addresses": {
             "private": [
                 {

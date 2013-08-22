@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<server xmlns:os-extended-server-attributes="http://docs.openstack.org/compute/ext/extended_server_attributes/api/v3" xmlns:atom="http://www.w3.org/2005/Atom" xmlns="http://docs.openstack.org/compute/api/v1.1" status="ACTIVE" updated="%(timestamp)s" host_id="%(hostid)s" name="new-server-test" created="%(timestamp)s" user_id="fake" tenant_id="openstack" access_ip_v4="" access_ip_v6="" progress="0" id="%(uuid)s" os-extended-server-attributes:instance_name="%(instance_name)s" os-extended-server-attributes:host="%(compute_host)s" os-extended-server-attributes:hypervisor_hostname="%(hypervisor_hostname)s" key_name="None">
+<server xmlns:os-extended-server-attributes="http://docs.openstack.org/compute/ext/extended_server_attributes/api/v3" xmlns:atom="http://www.w3.org/2005/Atom" xmlns="http://docs.openstack.org/compute/api/v1.1" status="ACTIVE" updated="%(timestamp)s" host_id="%(hostid)s" name="new-server-test" created="%(timestamp)s" user_id="fake" tenant_id="openstack" progress="0" id="%(uuid)s" os-extended-server-attributes:instance_name="%(instance_name)s" os-extended-server-attributes:host="%(compute_host)s" os-extended-server-attributes:hypervisor_hostname="%(hypervisor_hostname)s" key_name="None">
   <image id="%(uuid)s">
     <atom:link href="%(glance_host)s/images/%(uuid)s" rel="bookmark"/>
   </image>

@@ -73,8 +73,6 @@ def make_server(elem, detailed=False):
         elem.set('updated')
         elem.set('created')
         elem.set('host_id')
-        elem.set('access_ip_v4')
-        elem.set('access_ip_v6')
         elem.set('status')
         elem.set('progress')
         elem.set('reservation_id')
@@ -160,7 +158,7 @@ class CommonDeserializer(wsgi.MetadataXMLDeserializer):
         server_node = self.find_first_child_named(node, 'server')
 
         attributes = ["name", "image_ref", "flavor_ref", "admin_pass",
-                      "access_ip_v4", "access_ip_v6", "key_name"]
+                      "key_name"]
         for attr in attributes:
             if server_node.getAttribute(attr):
                 server[attr] = server_node.getAttribute(attr)
@@ -249,12 +247,6 @@ class ActionDeserializer(CommonDeserializer):
 
         if node.hasAttribute("admin_pass"):
             rebuild["admin_pass"] = node.getAttribute("admin_pass")
-
-        if node.hasAttribute("access_ip_v4"):
-            rebuild["access_ip_v4"] = node.getAttribute("access_ip_v4")
-
-        if node.hasAttribute("access_ip_v6"):
-            rebuild["access_ip_v6"] = node.getAttribute("access_ip_v6")
 
         if self.controller:
             self.controller.server_rebuild_xml_deserialize(node, rebuild)
@@ -686,16 +678,6 @@ class ServersController(wsgi.Controller):
         except TypeError:
             return None
 
-    def _validate_access_ipv4(self, address):
-        if not utils.is_valid_ipv4(address):
-            expl = _('access_ip_v4 is not proper IPv4 format')
-            raise exc.HTTPBadRequest(explanation=expl)
-
-    def _validate_access_ipv6(self, address):
-        if not utils.is_valid_ipv6(address):
-            expl = _('access_ip_v6 is not proper IPv6 format')
-            raise exc.HTTPBadRequest(explanation=expl)
-
     @wsgi.serializers(xml=ServerTemplate)
     def show(self, req, id):
         """Returns server details by server id."""
@@ -769,14 +751,6 @@ class ServersController(wsgi.Controller):
             requested_networks = self._get_requested_networks(
                 requested_networks)
 
-        (access_ip_v4, ) = server_dict.get('access_ip_v4'),
-        if access_ip_v4 is not None:
-            self._validate_access_ipv4(access_ip_v4)
-
-        (access_ip_v6, ) = server_dict.get('access_ip_v6'),
-        if access_ip_v6 is not None:
-            self._validate_access_ipv6(access_ip_v6)
-
         try:
             flavor_id = self._flavor_id_from_req_data(body)
         except ValueError as error:
@@ -793,8 +767,6 @@ class ServersController(wsgi.Controller):
                             display_name=name,
                             display_description=name,
                             metadata=server_dict.get('metadata', {}),
-                            access_ip_v4=access_ip_v4,
-                            access_ip_v6=access_ip_v6,
                             admin_password=password,
                             requested_networks=requested_networks,
                             **create_kwargs)
@@ -876,7 +848,6 @@ class ServersController(wsgi.Controller):
     def _update_extension_point(self, ext, update_dict, update_kwargs):
         handler = ext.obj
         LOG.debug(_("Running _update_extension_point for %s"), ext.obj)
-
         handler.server_update(update_dict, update_kwargs)
 
     def _delete(self, context, req, instance_uuid):
@@ -905,20 +876,6 @@ class ServersController(wsgi.Controller):
             name = body['server']['name']
             self._validate_server_name(name)
             update_dict['display_name'] = name.strip()
-
-        if 'access_ip_v4' in body['server']:
-            access_ipv4 = body['server']['access_ip_v4']
-            if access_ipv4:
-                self._validate_access_ipv4(access_ipv4)
-            update_dict['access_ip_v4'] = (
-                access_ipv4 and access_ipv4.strip() or None)
-
-        if 'access_ip_v6' in body['server']:
-            access_ipv6 = body['server']['access_ip_v6']
-            if access_ipv6:
-                self._validate_access_ipv6(access_ipv6)
-            update_dict['access_ip_v6'] = (
-                access_ipv6 and access_ipv6.strip() or None)
 
         if 'host_id' in body['server']:
             msg = _("host_id cannot be updated.")
@@ -1144,19 +1101,11 @@ class ServersController(wsgi.Controller):
 
         attr_map = {
             'name': 'display_name',
-            'access_ip_v4': 'access_ip_v4',
-            'access_ip_v6': 'access_ip_v6',
             'metadata': 'metadata',
         }
 
         if 'name' in rebuild_dict:
             self._validate_server_name(rebuild_dict['name'])
-
-        if 'access_ip_v4' in rebuild_dict:
-            self._validate_access_ipv4(rebuild_dict['access_ip_v4'])
-
-        if 'access_ip_v6' in rebuild_dict:
-            self._validate_access_ipv6(rebuild_dict['access_ip_v6'])
 
         rebuild_kwargs = {}
         if list(self.rebuild_extension_manager):

@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<server xmlns:atom="http://www.w3.org/2005/Atom" xmlns="http://docs.openstack.org/compute/api/v1.1" status="RESCUE" updated="2013-09-18T07:22:11Z" user_id="fake" name="new-server-test" created="2013-09-18T07:22:09Z" tenant_id="openstack" access_ip_v4="" host_id="e244b05099c8c9dcf6bf3eba83bf113a81c79ad3e66444ae33e7e85c" id="46d75a5e-8eb5-4268-849a-b109c1fbed45" access_ip_v6="" key_name="None">
+<server xmlns:atom="http://www.w3.org/2005/Atom" xmlns="http://docs.openstack.org/compute/api/v1.1" status="RESCUE" updated="2013-09-18T07:22:11Z" user_id="fake" name="new-server-test" created="2013-09-18T07:22:09Z" tenant_id="openstack" host_id="e244b05099c8c9dcf6bf3eba83bf113a81c79ad3e66444ae33e7e85c" id="46d75a5e-8eb5-4268-849a-b109c1fbed45" key_name="None">
   <image id="70a599e0-31e7-49b7-b260-868f441e862b">
     <atom:link href="http://glance.openstack.example.com/images/70a599e0-31e7-49b7-b260-868f441e862b" rel="bookmark"/>
   </image>

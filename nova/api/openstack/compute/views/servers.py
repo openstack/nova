@@ -234,8 +234,6 @@ class ViewBuilderV3(ViewBuilder):
 
     def show(self, request, instance):
         """Detailed view of a single instance."""
-        ip_v4 = instance.get('access_ip_v4')
-        ip_v6 = instance.get('access_ip_v6')
         server = {
             "server": {
                 "id": instance["uuid"],
@@ -250,8 +248,6 @@ class ViewBuilderV3(ViewBuilder):
                 "created": timeutils.isotime(instance["created_at"]),
                 "updated": timeutils.isotime(instance["updated_at"]),
                 "addresses": self._get_addresses(request, instance),
-                "access_ip_v4": str(ip_v4) if ip_v4 is not None else '',
-                "access_ip_v6": str(ip_v6) if ip_v6 is not None else '',
                 "links": self._get_links(request,
                                          instance["uuid"],
                                          self._collection_name),

@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<server xmlns:os-disk-config="http://docs.openstack.org/compute/ext/disk_config/api/v3" xmlns:atom="http://www.w3.org/2005/Atom" xmlns="http://docs.openstack.org/compute/api/v1.1" status="ACTIVE" updated="2013-10-15T02:10:27Z" user_id="fake" name="new-server-test" created="2013-10-15T02:10:27Z" tenant_id="openstack" access_ip_v4="" progress="0" host_id="197205cc7340272607a9c5fa34f3520bbf53103399a6e80a06b67583" id="beb22987-dd7c-4791-8b7a-542c4f53cdd7" access_ip_v6="" admin_pass="whSjs3JXbb6p" os-disk-config:disk_config="AUTO">
+<server xmlns:os-disk-config="http://docs.openstack.org/compute/ext/disk_config/api/v3" xmlns:atom="http://www.w3.org/2005/Atom" xmlns="http://docs.openstack.org/compute/api/v1.1" status="ACTIVE" updated="2013-10-15T02:10:27Z" user_id="fake" name="new-server-test" created="2013-10-15T02:10:27Z" tenant_id="openstack" progress="0" host_id="197205cc7340272607a9c5fa34f3520bbf53103399a6e80a06b67583" id="beb22987-dd7c-4791-8b7a-542c4f53cdd7" admin_pass="whSjs3JXbb6p" os-disk-config:disk_config="AUTO">
   <image id="70a599e0-31e7-49b7-b260-868f441e862b">
     <atom:link href="http://glance.openstack.example.com/images/70a599e0-31e7-49b7-b260-868f441e862b" rel="bookmark"/>
   </image>

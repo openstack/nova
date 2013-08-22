@@ -12,6 +12,8 @@
                 "rel": "bookmark"
             }
         ],
+        "os-access-ips:access_ip_v4": "",
+        "os-access-ips:access_ip_v6": "",
         "os-disk-config:disk_config": "AUTO",
         "security_groups": [
             {

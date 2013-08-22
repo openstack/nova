@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <servers xmlns:os-extended-volumes="http://docs.openstack.org/compute/ext/extended_volumes/api/v3" xmlns:atom="http://www.w3.org/2005/Atom" xmlns="http://docs.openstack.org/compute/api/v1.1">
-  <server status="ACTIVE" updated="2013-09-16T03:22:37Z" user_id="fake" name="new-server-test" created="2013-09-16T03:22:36Z" tenant_id="openstack" access_ip_v4="" progress="0" host_id="7840e9f7175388e4a55b12a2c4b877aed4aed61c78fcf910f53c5ccb" id="a7a8a042-e1cf-41ab-be9c-085c1f3ee4fc" access_ip_v6="" key_name="None">
+  <server status="ACTIVE" updated="2013-09-16T03:22:37Z" user_id="fake" name="new-server-test" created="2013-09-16T03:22:36Z" tenant_id="openstack" progress="0" host_id="7840e9f7175388e4a55b12a2c4b877aed4aed61c78fcf910f53c5ccb" id="a7a8a042-e1cf-41ab-be9c-085c1f3ee4fc" key_name="None">
     <image id="70a599e0-31e7-49b7-b260-868f441e862b">
       <atom:link href="http://glance.openstack.example.com/images/70a599e0-31e7-49b7-b260-868f441e862b" rel="bookmark"/>
     </image>

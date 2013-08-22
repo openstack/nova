@@ -6,8 +6,6 @@
         "os-extended-status:locked_by": null,
         "updated": "%(timestamp)s",
         "created": "%(timestamp)s",
-        "access_ip_v4": "",
-        "access_ip_v6": "",
         "addresses": {
             "private": [
                 {
