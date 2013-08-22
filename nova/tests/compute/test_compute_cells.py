@@ -23,7 +23,6 @@ from oslo.config import cfg
 from nova.compute import api as compute_api
 from nova.compute import cells_api as compute_cells_api
 from nova import db
-from nova import exception
 from nova.openstack.common import jsonutils
 from nova import quota
 from nova.tests.compute import test_compute
@@ -189,7 +188,6 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
         self.mox.StubOutWithMock(cells_rpcapi,
                                  'instance_delete_everywhere')
         inst = self._create_fake_instance_obj()
-        exc = exception.InstanceUnknownCell(instance_uuid=inst['uuid'])
         cells_rpcapi.instance_delete_everywhere(self.context,
                 inst, 'hard')
         self.mox.ReplayAll()
@@ -200,7 +198,6 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
         self.mox.StubOutWithMock(cells_rpcapi,
                                  'instance_delete_everywhere')
         inst = self._create_fake_instance_obj()
-        exc = exception.InstanceUnknownCell(instance_uuid=inst['uuid'])
         cells_rpcapi.instance_delete_everywhere(self.context,
                 inst, 'soft')
         self.mox.ReplayAll()
