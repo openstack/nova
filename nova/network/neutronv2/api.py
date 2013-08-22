@@ -103,13 +103,13 @@ update_instance_info_cache = network_api.update_instance_cache_with_nw_info
 class API(base.Base):
     """API for interacting with the neutron 2.x API."""
 
-    conductor_api = conductor.API()
-    security_group_api = openstack_driver.get_openstack_security_group_driver()
-
     def __init__(self):
         super(API, self).__init__()
         self.last_neutron_extension_sync = None
         self.extensions = {}
+        self.conductor_api = conductor.API()
+        self.security_group_api = (
+            openstack_driver.get_openstack_security_group_driver())
 
     def setup_networks_on_host(self, context, instance, host=None,
                                teardown=False):
