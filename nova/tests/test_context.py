@@ -101,3 +101,21 @@ class ContextTestCase(test.TestCase):
         ctxt = context.RequestContext('111', '222',
                 service_catalog=service_catalog)
         self.assertEquals(ctxt.service_catalog, volume_catalog)
+
+    def test_to_dict_from_dict_no_log(self):
+        warns = []
+
+        def stub_warn(msg, *a, **kw):
+            if (a and len(a) == 1 and isinstance(a[0], dict) and a[0]):
+                a = a[0]
+            warns.append(str(msg) % a)
+
+        self.stubs.Set(context.LOG, 'warn', stub_warn)
+
+        ctxt = context.RequestContext('111',
+                                      '222',
+                                      roles=['admin', 'weasel'])
+
+        ctxt = context.RequestContext.from_dict(ctxt.to_dict())
+
+        self.assertEqual(len(warns), 0, warns)

@@ -139,6 +139,8 @@ class RequestContext(object):
 
     @classmethod
     def from_dict(cls, values):
+        values.pop('user', None)
+        values.pop('tenant', None)
         return cls(**values)
 
     def elevated(self, read_deleted=None, overwrite=False):
