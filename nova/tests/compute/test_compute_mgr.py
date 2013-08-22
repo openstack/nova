@@ -56,6 +56,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         macs = 'fake-macs'
         sec_groups = 'fake-sec-groups'
         final_result = 'meow'
+        dhcp_options = None
 
         expected_sleep_times = [1, 2, 4, 8, 16, 30, 30, 30]
 
@@ -64,7 +65,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                     self.context, instance, vpn=is_vpn,
                     requested_networks=req_networks, macs=macs,
                     conductor_api=self.compute.conductor_api,
-                    security_groups=sec_groups).AndRaise(
+                    security_groups=sec_groups,
+                    dhcp_options=dhcp_options).AndRaise(
                             test.TestingException())
             time.sleep(sleep_time)
 
@@ -72,7 +74,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 self.context, instance, vpn=is_vpn,
                 requested_networks=req_networks, macs=macs,
                 conductor_api=self.compute.conductor_api,
-                security_groups=sec_groups).AndReturn(final_result)
+                security_groups=sec_groups,
+                dhcp_options=dhcp_options).AndReturn(final_result)
 
         self.mox.ReplayAll()
 
@@ -80,7 +83,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                                    req_networks,
                                                    macs,
                                                    sec_groups,
-                                                   is_vpn)
+                                                   is_vpn,
+                                                   dhcp_options)
         self.assertEqual(final_result, res)
 
     def test_allocate_network_fails(self):
@@ -94,19 +98,21 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         req_networks = 'fake-req-networks'
         macs = 'fake-macs'
         sec_groups = 'fake-sec-groups'
+        dhcp_options = None
 
         nwapi.allocate_for_instance(
                 self.context, instance, vpn=is_vpn,
                 requested_networks=req_networks, macs=macs,
                 conductor_api=self.compute.conductor_api,
-                security_groups=sec_groups).AndRaise(test.TestingException())
+                security_groups=sec_groups,
+                dhcp_options=dhcp_options).AndRaise(test.TestingException())
 
         self.mox.ReplayAll()
 
         self.assertRaises(test.TestingException,
                           self.compute._allocate_network_async,
                           self.context, instance, req_networks, macs,
-                          sec_groups, is_vpn)
+                          sec_groups, is_vpn, dhcp_options)
 
     def test_allocate_network_neg_conf_value_treated_as_zero(self):
         self.flags(network_allocate_retries=-1)
@@ -119,20 +125,22 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         req_networks = 'fake-req-networks'
         macs = 'fake-macs'
         sec_groups = 'fake-sec-groups'
+        dhcp_options = None
 
         # Only attempted once.
         nwapi.allocate_for_instance(
                 self.context, instance, vpn=is_vpn,
                 requested_networks=req_networks, macs=macs,
                 conductor_api=self.compute.conductor_api,
-                security_groups=sec_groups).AndRaise(test.TestingException())
+                security_groups=sec_groups,
+                dhcp_options=dhcp_options).AndRaise(test.TestingException())
 
         self.mox.ReplayAll()
 
         self.assertRaises(test.TestingException,
                           self.compute._allocate_network_async,
                           self.context, instance, req_networks, macs,
-                          sec_groups, is_vpn)
+                          sec_groups, is_vpn, dhcp_options)
 
     def test_init_host(self):
         our_host = self.compute.host

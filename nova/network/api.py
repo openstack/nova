@@ -255,7 +255,8 @@ class API(base.Base):
     @refresh_cache
     def allocate_for_instance(self, context, instance, vpn,
                               requested_networks, macs=None,
-                              conductor_api=None, security_groups=None):
+                              conductor_api=None, security_groups=None,
+                              dhcp_options=None):
         """Allocates all network structures for an instance.
 
         TODO(someone): document the rest of these parameters.
@@ -263,6 +264,11 @@ class API(base.Base):
         :param macs: None or a set of MAC addresses that the instance
             should use. macs is supplied by the hypervisor driver (contrast
             with requested_networks which is user supplied).
+        :param dhcp_options: None or a set of key/value pairs that should
+            determine the DHCP BOOTP response, eg. for PXE booting an instance
+            configured with the baremetal hypervisor. It is expected that these
+            are already formatted for the neutron v2 api.
+            See nova/virt/driver.py:dhcp_options_for_instance for an example.
         :returns: network info as from get_instance_nw_info() below
         """
         # NOTE(vish): We can't do the floating ip allocation here because
@@ -278,6 +284,7 @@ class API(base.Base):
         args['host'] = instance['host']
         args['rxtx_factor'] = instance_type['rxtx_factor']
         args['macs'] = macs
+        args['dhcp_options'] = dhcp_options
         nw_info = self.network_rpcapi.allocate_for_instance(context, **args)
 
         return network_model.NetworkInfo.hydrate(nw_info)

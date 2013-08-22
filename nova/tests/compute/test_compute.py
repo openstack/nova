@@ -2646,7 +2646,7 @@ class ComputeTestCase(BaseTestCase):
             requested_networks=None,
             vpn=False, macs=macs,
             conductor_api=self.compute.conductor_api,
-            security_groups=[]).AndReturn(
+            security_groups=[], dhcp_options=None).AndReturn(
                 fake_network.fake_get_instance_nw_info(self.stubs, 1, 1,
                                                        spectacular=True))
         self.mox.StubOutWithMock(self.compute.driver, "macs_for_instance")
@@ -2666,7 +2666,7 @@ class ComputeTestCase(BaseTestCase):
                 requested_networks=None,
                 vpn=False, macs=None,
                 conductor_api=self.compute.conductor_api,
-                security_groups=[]
+                security_groups=[], dhcp_options=None
                 ).AndRaise(rpc_common.RemoteError())
 
         fake_network.unset_stub_network_methods(self.stubs)

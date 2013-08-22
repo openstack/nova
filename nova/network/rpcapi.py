@@ -169,7 +169,8 @@ class NetworkAPI(rpc_proxy.RpcProxy):
                 address=address, affect_auto_assigned=affect_auto_assigned))
 
     def allocate_for_instance(self, ctxt, instance_id, project_id, host,
-                              rxtx_factor, vpn, requested_networks, macs=None):
+                              rxtx_factor, vpn, requested_networks, macs=None,
+                              dhcp_options=None):
         if CONF.multi_host:
             topic = rpc.queue_get_for(ctxt, self.topic, host)
         else:

@@ -259,6 +259,13 @@ class TestNeutronv2Base(test.TestCase):
         api = neutronapi.API()
         self.mox.StubOutWithMock(api, '_get_instance_nw_info')
         has_portbinding = False
+        has_extra_dhcp_opts = False
+        # Note: (dkehn) this option check should be removed as soon as support
+        # in neutron released, see https://bugs.launchpad.net/nova/+bug/1214162
+        if (cfg.CONF.dhcp_options_enabled == True and kwargs.get(
+                'dhcp_options', None) != None):
+            has_extra_dhcp_opts = True
+            dhcp_options = kwargs.get('dhcp_options')
         if kwargs.get('portbinding'):
             has_portbinding = True
             api.extensions[constants.PORTBINDING_EXT] = 1
@@ -354,6 +361,8 @@ class TestNeutronv2Base(test.TestCase):
                     port_req_body['port']['binding:host_id'] = (
                         self.instance.get('host'))
                 res_port = {'port': {'id': 'fake'}}
+                if has_extra_dhcp_opts:
+                    port_req_body['port']['extra_dhcp_opts'] = dhcp_options
                 if kwargs.get('_break') == 'mac' + net_id:
                     self.mox.ReplayAll()
                     return api
@@ -1681,3 +1690,31 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
         self.assertRaises(NEUTRON_CLIENT_EXCEPTION,
                           api.migrate_instance_finish,
                           self.context, self.instance, None)
+
+
+class TestNeutronv2ExtraDhcpOpts(TestNeutronv2Base):
+    def setUp(self):
+        super(TestNeutronv2ExtraDhcpOpts, self).setUp()
+        neutronv2.get_client(mox.IgnoreArg()).MultipleTimes().AndReturn(
+            self.moxed_client)
+
+    def test_allocate_for_instance_1_with_extra_dhcp_opts_turned_off(self):
+        # Note: (dkehn) this option check should be removed as soon as support
+        # in neutron released, see https://bugs.launchpad.net/nova/+bug/1214162
+        CONF.set_override('dhcp_options_enabled', True)
+        self._allocate_for_instance(1, extra_dhcp_opts=False)
+        CONF.set_override('dhcp_options_enabled', False)
+
+    def test_allocate_for_instance_extradhcpopts(self):
+        # Note: (dkehn) this option check should be removed as soon as support
+        # in neutron released, see https://bugs.launchpad.net/nova/+bug/1214162
+        CONF.set_override('dhcp_options_enabled', True)
+        dhcp_opts = [{'opt_name': 'bootfile-name',
+                          'opt_value': 'pxelinux.0'},
+                         {'opt_name': 'tftp-server',
+                          'opt_value': '123.123.123.123'},
+                         {'opt_name': 'server-ip-address',
+                          'opt_value': '123.123.123.456'}]
+
+        self._allocate_for_instance(1, dhcp_options=dhcp_opts)
+        CONF.set_override('dhcp_options_enabled', False)
