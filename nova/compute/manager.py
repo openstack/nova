@@ -1323,6 +1323,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         if set_access_ip:
             _set_access_ip_values()
 
+        if network_info is not None:
+            network_info.wait(do_raise=True)
         return self._instance_update(context, instance['uuid'],
                                      **update_data)
 
