@@ -4248,6 +4248,14 @@ class HostState(object):
         LOG.debug(_("Updating host stats"))
         disk_info_dict = self.driver.get_local_gb_info()
         data = {}
+
+        #NOTE(dprince): calling capabilities before getVersion works around
+        # an initialization issue with some versions of Libvirt (1.0.5.5).
+        # See: https://bugzilla.redhat.com/show_bug.cgi?id=1000116
+        # See: https://bugs.launchpad.net/nova/+bug/1215593
+        data["supported_instances"] = \
+            self.driver.get_instance_capabilities()
+
         data["vcpus"] = self.driver.get_vcpu_total()
         data["memory_mb"] = self.driver.get_memory_mb_total()
         data["local_gb"] = disk_info_dict['total']
@@ -4262,9 +4270,6 @@ class HostState(object):
 
         data['pci_passthrough_devices'] = \
             self.driver.get_pci_passthrough_devices()
-
-        data["supported_instances"] = \
-            self.driver.get_instance_capabilities()
 
         self._stats = data
 
