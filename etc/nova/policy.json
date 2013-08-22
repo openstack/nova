@@ -86,6 +86,7 @@
     "compute_extension:v3:extension_info:discoverable": "",
     "compute_extension:extended_volumes": "",
     "compute_extension:v3:os-extended-volumes": "",
+    "compute_extension:v3:os-extended-volumes:swap": "",
     "compute_extension:v3:os-extended-volumes:attach": "",
     "compute_extension:v3:os-extended-volumes:detach": "",
     "compute_extension:fixed_ips": "rule:admin_api",

@@ -15,6 +15,7 @@
 #   under the License.
 
 """The Extended Volumes API extension."""
+import webob
 from webob import exc
 
 from nova.api.openstack import common
@@ -35,6 +36,8 @@ authorize_attach = extensions.soft_extension_authorizer('compute',
                                                         'v3:%s:attach' % ALIAS)
 authorize_detach = extensions.soft_extension_authorizer('compute',
                                                         'v3:%s:detach' % ALIAS)
+authorize_swap = extensions.extension_authorizer('compute',
+                                                 'v3:%s:swap' % ALIAS)
 
 
 class ExtendedVolumesController(wsgi.Controller):
@@ -48,6 +51,58 @@ class ExtendedVolumesController(wsgi.Controller):
         volume_ids = [bdm['volume_id'] for bdm in bdms if bdm['volume_id']]
         key = "%s:volumes_attached" % ExtendedVolumes.alias
         server[key] = [{'id': volume_id} for volume_id in volume_ids]
+
+    @extensions.expected_errors((400, 404, 409))
+    @wsgi.action('swap_volume_attachment')
+    def swap(self, req, server_id, body):
+        context = req.environ['nova.context']
+        authorize_swap(context)
+
+        try:
+            old_volume_id = body['swap_volume_attachment']['old_volume_id']
+            self._validate_volume_id(old_volume_id)
+            old_volume = self.volume_api.get(context, old_volume_id)
+
+            new_volume_id = body['swap_volume_attachment']['new_volume_id']
+            self._validate_volume_id(new_volume_id)
+            new_volume = self.volume_api.get(context, new_volume_id)
+        except exception.VolumeNotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
+        except KeyError:
+            raise exc.HTTPBadRequest("The request body is invalid")
+
+        try:
+            instance = self.compute_api.get(context, server_id,
+                                            want_objects=True)
+        except exception.InstanceNotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
+
+        bdms = self.compute_api.get_instance_bdms(context, instance)
+        found = False
+        try:
+            for bdm in bdms:
+                if bdm['volume_id'] != old_volume_id:
+                    continue
+                try:
+                    self.compute_api.swap_volume(context, instance, old_volume,
+                                                 new_volume)
+                    found = True
+                    break
+                except exception.VolumeUnattached:
+                    # The volume is not attached.  Treat it as NotFound
+                    # by falling through.
+                    pass
+                except exception.InvalidVolume as e:
+                    raise exc.HTTPBadRequest(explanation=e.format_message())
+        except exception.InstanceInvalidState as state_error:
+            common.raise_http_conflict_for_instance_invalid_state(state_error,
+                                                              'swap_volume')
+
+        if not found:
+            raise exc.HTTPNotFound("The volume was either invalid or not "
+                                   "attached to the instance.")
+        else:
+            return webob.Response(status_int=202)
 
     @wsgi.extends
     def show(self, req, resp_obj, id):
