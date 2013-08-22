@@ -164,7 +164,7 @@ class CellsTest(test.TestCase):
         req = self._get_request("cells")
         res_dict = self.controller.create(req, body)
         cell = res_dict['cell']
-
+        self.assertEqual(self.controller.create.wsgi_code, 201)
         self.assertEqual(cell['name'], 'meow')
         self.assertEqual(cell['username'], 'fred')
         self.assertEqual(cell['rpc_host'], 'r3.example.org')
@@ -182,7 +182,7 @@ class CellsTest(test.TestCase):
         req = self._get_request("cells")
         res_dict = self.controller.create(req, body)
         cell = res_dict['cell']
-
+        self.assertEqual(self.controller.create.wsgi_code, 201)
         self.assertEqual(cell['name'], 'meow')
         self.assertEqual(cell['username'], 'fred')
         self.assertEqual(cell['rpc_host'], 'r3.example.org')

@@ -74,6 +74,7 @@ class CertificatesController(object):
 
     @extensions.expected_errors(())
     @wsgi.serializers(xml=CertificateTemplate)
+    @wsgi.response(201)
     def create(self, req, body=None):
         """Create a certificate."""
         context = req.environ['nova.context']

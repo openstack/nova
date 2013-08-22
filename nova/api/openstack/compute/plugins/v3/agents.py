@@ -132,6 +132,7 @@ class AgentController(object):
             raise webob.exc.HTTPNotFound(explanation=ex.format_message())
 
     @extensions.expected_errors((400, 409))
+    @wsgi.response(201)
     def create(self, req, body):
         """Creates a new agent build."""
         context = req.environ['nova.context']

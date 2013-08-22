@@ -70,6 +70,7 @@ class CertificatesTest(test.TestCase):
         pk, cert = fake_create_cert(self.context)
         response = {'certificate': {'data': cert, 'private_key': pk}}
         self.assertEqual(res_dict, response)
+        self.assertEqual(self.controller.create.wsgi_code, 201)
 
 
 class CertificatesSerializerTest(test.TestCase):

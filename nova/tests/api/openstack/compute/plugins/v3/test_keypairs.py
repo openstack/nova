@@ -90,7 +90,7 @@ class KeypairsTest(test.TestCase):
         req.body = jsonutils.dumps(body)
         req.headers['Content-Type'] = 'application/json'
         res = req.get_response(self.app)
-        self.assertEqual(res.status_int, 200)
+        self.assertEqual(res.status_int, 201)
         res_dict = jsonutils.loads(res.body)
         self.assertTrue(len(res_dict['keypair']['fingerprint']) > 0)
         self.assertTrue(len(res_dict['keypair']['private_key']) > 0)
@@ -164,7 +164,7 @@ class KeypairsTest(test.TestCase):
         req.body = jsonutils.dumps(body)
         req.headers['Content-Type'] = 'application/json'
         res = req.get_response(self.app)
-        self.assertEqual(res.status_int, 200)
+        self.assertEqual(res.status_int, 201)
         # FIXME(ja): sholud we check that public_key was sent to create?
         res_dict = jsonutils.loads(res.body)
         self.assertTrue(len(res_dict['keypair']['fingerprint']) > 0)

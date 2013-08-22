@@ -132,6 +132,7 @@ class BareMetalNodeController(wsgi.Controller):
 
     @extensions.expected_errors(())
     @wsgi.serializers(xml=NodeTemplate)
+    @wsgi.response(201)
     def create(self, req, body):
         context = req.environ['nova.context']
         authorize(context)

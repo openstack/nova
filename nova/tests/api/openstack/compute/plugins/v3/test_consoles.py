@@ -145,6 +145,7 @@ class ConsolesControllerTest(test.TestCase):
 
         req = fakes.HTTPRequestV3.blank(self.url)
         self.controller.create(req, self.uuid)
+        self.assertEqual(self.controller.create.wsgi_code, 201)
 
     def test_create_console_unknown_instance(self):
         def fake_create_console(cons_self, context, instance_id):

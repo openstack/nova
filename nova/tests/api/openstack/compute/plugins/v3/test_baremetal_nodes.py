@@ -58,6 +58,7 @@ class BareMetalNodesTest(test.TestCase):
         self.mox.ReplayAll()
         res_dict = self.controller.create(self.request, {'node': node})
         self.assertEqual({'node': response}, res_dict)
+        self.assertEqual(self.controller.create.wsgi_code, 201)
 
     def test_delete(self):
         self.mox.StubOutWithMock(db, 'bm_node_destroy')

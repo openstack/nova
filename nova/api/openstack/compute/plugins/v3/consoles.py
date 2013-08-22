@@ -98,6 +98,7 @@ class ConsolesController(object):
                               for console in consoles])
 
     @extensions.expected_errors(404)
+    @wsgi.response(201)
     def create(self, req, server_id):
         """Creates a new console."""
         try:

@@ -216,6 +216,7 @@ class ServerMetaDataTest(BaseTest):
             "key3": "value3",
         })
         self.assertEqual(body, res_dict)
+        self.assertEqual(self.controller.create.wsgi_code, 201)
 
     def test_create_empty_body(self):
         self.stubs.Set(nova.db, 'instance_metadata_update',
