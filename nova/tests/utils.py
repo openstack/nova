@@ -92,40 +92,15 @@ def get_test_instance(context=None, instance_type=None):
     return instance_ref
 
 
-def get_test_network_info(count=1, legacy_model=True):
+def get_test_network_info(count=1, legacy_model=False):
     ipv6 = CONF.use_ipv6
     fake = 'fake'
-    fake_ip = '0.0.0.0/0'
-    fake_ip_2 = '0.0.0.1/0'
-    fake_ip_3 = '0.0.0.1/0'
+    fake_ip = '0.0.0.0'
     fake_netmask = '255.255.255.255'
     fake_vlan = 100
     fake_bridge_interface = 'eth0'
 
-    def legacy():
-        network = {'bridge': fake,
-                   'cidr': fake_ip,
-                   'cidr_v6': fake_ip,
-                   'vlan': fake_vlan,
-                   'bridge_interface': fake_bridge_interface,
-                   'injected': False}
-        mapping = {'mac': fake,
-                   'vif_type': network_model.VIF_TYPE_BRIDGE,
-                   'vif_uuid': 'vif-xxx-yyy-zzz',
-                   'dhcp_server': fake,
-                   'dns': ['fake1', 'fake2'],
-                   'gateway': fake,
-                   'gateway_v6': fake,
-                   'ips': [{'ip': fake_ip, 'netmask': fake_netmask},
-                           {'ip': fake_ip, 'netmask': fake_netmask}]}
-        if ipv6:
-            mapping['ip6s'] = [{'ip': fake_ip, 'netmask': fake_netmask},
-                               {'ip': fake_ip_2},
-                               {'ip': fake_ip_3}]
-        return network, mapping
-
     def current():
-        fake_ip = '0.0.0.0'
         subnet_4 = network_model.Subnet(cidr=fake_ip,
                                         dns=[network_model.IP(fake_ip),
                                              network_model.IP(fake_ip)],
@@ -160,10 +135,7 @@ def get_test_network_info(count=1, legacy_model=True):
 
         return vif
 
-    if legacy_model:
-        return [legacy() for x in xrange(0, count)]
-    else:
-        return network_model.NetworkInfo([current() for x in xrange(0, count)])
+    return network_model.NetworkInfo([current() for x in xrange(0, count)])
 
 
 def is_osx():

@@ -160,7 +160,7 @@ class FlatNetworkTestCase(test.TestCase):
 
         nw_info = fake_get_instance_nw_info(self.stubs, 1, 2)
 
-        for i, (nw, info) in enumerate(nw_info):
+        for i, vif in enumerate(nw_info):
             nid = i + 1
             check = {'bridge': 'fake_br%d' % nid,
                      'cidr': '192.168.%s.0/24' % nid,
@@ -169,17 +169,12 @@ class FlatNetworkTestCase(test.TestCase):
                      'multi_host': False,
                      'injected': False,
                      'bridge_interface': None,
-                     'vlan': None}
-
-            self.assertThat(nw, matchers.DictMatches(check))
-
-            check = {'broadcast': '192.168.%d.255' % nid,
+                     'vlan': None,
+                     'broadcast': '192.168.%d.255' % nid,
                      'dhcp_server': '192.168.1.1',
                      'dns': ['192.168.%d.3' % nid, '192.168.%d.4' % nid],
                      'gateway': '192.168.%d.1' % nid,
                      'gateway_v6': '2001:db8:0:1::1',
-                     'ip6s': 'DONTCARE',
-                     'ips': 'DONTCARE',
                      'label': 'test%d' % nid,
                      'mac': 'DE:AD:BE:EF:00:%02x' % nid,
                      'rxtx_cap': 30,
@@ -191,22 +186,52 @@ class FlatNetworkTestCase(test.TestCase):
                      'qbh_params': None,
                      'qbg_params': None,
                      'should_create_vlan': False,
-                     'should_create_bridge': False}
-            self.assertThat(info, matchers.DictMatches(check))
+                     'should_create_bridge': False,
+                     'ip': '192.168.%d.%03d' % (nid, nid + 99),
+                     'ip_v6': '2001:db8:0:1::%x' % nid,
+                     'netmask': '255.255.255.0',
+                     'netmask_v6': 64,
+                      }
 
-            check = [{'enabled': 'DONTCARE',
-                      'ip': '2001:db8:0:1::%x' % nid,
-                      'netmask': 64,
-                      'gateway': '2001:db8:0:1::1'}]
-            self.assertThat(info['ip6s'], matchers.DictListMatches(check))
+            network = vif['network']
+            net_v4 = vif['network']['subnets'][0]
+            net_v6 = vif['network']['subnets'][1]
 
-            num_fixed_ips = len(info['ips'])
-            check = [{'enabled': 'DONTCARE',
-                      'ip': '192.168.%d.%03d' % (nid, ip_num + 99),
-                      'netmask': '255.255.255.0',
-                      'gateway': '192.168.%d.1' % nid}
-                      for ip_num in xrange(1, num_fixed_ips + 1)]
-            self.assertThat(info['ips'], matchers.DictListMatches(check))
+            vif_dict = dict(bridge=network['bridge'],
+                            cidr=net_v4['cidr'],
+                            cidr_v6=net_v6['cidr'],
+                            id=vif['id'],
+                            multi_host=network.get_meta('multi_host', False),
+                            injected=network.get_meta('injected', False),
+                            bridge_interface=
+                                network.get_meta('bridge_interface'),
+                            vlan=network.get_meta('vlan'),
+                            broadcast=str(net_v4.as_netaddr().broadcast),
+                            dhcp_server=network.get_meta('dhcp_server',
+                                net_v4['gateway']['address']),
+                            dns=[ip['address'] for ip in net_v4['dns']],
+                            gateway=net_v4['gateway']['address'],
+                            gateway_v6=net_v6['gateway']['address'],
+                            label=network['label'],
+                            mac=vif['address'],
+                            rxtx_cap=vif.get_meta('rxtx_cap'),
+                            vif_type=vif['type'],
+                            vif_devname=vif.get('devname'),
+                            vif_uuid=vif['id'],
+                            ovs_interfaceid=vif.get('ovs_interfaceid'),
+                            qbh_params=vif.get('qbh_params'),
+                            qbg_params=vif.get('qbg_params'),
+                            should_create_vlan=
+                                network.get_meta('should_create_vlan', False),
+                            should_create_bridge=
+                                network.get_meta('should_create_bridge',
+                                                  False),
+                            ip=net_v4['ips'][i]['address'],
+                            ip_v6=net_v6['ips'][i]['address'],
+                            netmask=str(net_v4.as_netaddr().netmask),
+                            netmask_v6=net_v6.as_netaddr()._prefixlen)
+
+            self.assertThat(vif_dict, matchers.DictMatches(check))
 
     def test_validate_networks(self):
         self.mox.StubOutWithMock(db, 'network_get')

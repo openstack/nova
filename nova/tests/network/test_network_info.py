@@ -379,7 +379,7 @@ class NetworkInfoTests(test.TestCase):
                         {'address': '10.10.0.3'})] * 4)
 
     def _test_injected_network_template(self, should_inject, use_ipv6=False,
-                                        legacy=False, gateway=True):
+                                        gateway=True):
         """Check that netutils properly decides whether to inject based on
            whether the supplied subnet is static or dynamic.
         """
@@ -411,18 +411,12 @@ class NetworkInfoTests(test.TestCase):
         network['meta']['injected'] = True
         vif = fake_network_cache_model.new_vif({'network': network})
         ninfo = model.NetworkInfo([vif])
-        if legacy:
-            ninfo = ninfo.legacy()
 
         template = netutils.get_injected_network_template(ninfo,
                                                           use_ipv6=use_ipv6)
 
-        # NOTE(bnemec): There is a bug with legacy network info that causes
-        # it to inject regardless of whether the network is static or dynamic.
-        # This can't be fixed without changes that would potentially break
-        # existing code, so until legacy network info goes away this test
         # will just ignore the improper behavior.
-        if not should_inject and not legacy:
+        if not should_inject:
             self.assertTrue(template is None)
         else:
             self.assertTrue('auto eth0' in template)
@@ -448,14 +442,6 @@ class NetworkInfoTests(test.TestCase):
     def test_injection_static_nogateway(self):
         self._test_injected_network_template(should_inject=True, gateway=False)
 
-    def test_injection_static_legacy(self):
-        self._test_injected_network_template(should_inject=True, legacy=True)
-
-    def test_injection_static_legacy_nogateway(self):
-        self._test_injected_network_template(should_inject=True,
-                                             legacy=True,
-                                             gateway=False)
-
     def test_injection_static_ipv6(self):
         self._test_injected_network_template(should_inject=True, use_ipv6=True)
 
@@ -464,28 +450,9 @@ class NetworkInfoTests(test.TestCase):
                                              use_ipv6=True,
                                              gateway=False)
 
-    def test_injection_static_ipv6_legacy(self):
-        self._test_injected_network_template(should_inject=True,
-                                             use_ipv6=True,
-                                             legacy=True)
-
-    def test_injection_static_ipv6_legacy_nogateway(self):
-        self._test_injected_network_template(should_inject=True,
-                                             use_ipv6=True,
-                                             legacy=True,
-                                             gateway=False)
-
     def test_injection_dynamic(self):
         self._test_injected_network_template(should_inject=False)
 
     def test_injection_dynamic_nogateway(self):
         self._test_injected_network_template(should_inject=False,
-                                             gateway=False)
-
-    def test_injection_dynamic_legacy(self):
-        self._test_injected_network_template(should_inject=False, legacy=True)
-
-    def test_injection_dynamic_legacy_nogateway(self):
-        self._test_injected_network_template(should_inject=False,
-                                             legacy=True,
                                              gateway=False)

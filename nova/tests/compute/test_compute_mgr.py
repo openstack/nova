@@ -12,7 +12,6 @@
 
 """Unit tests for ComputeManager()."""
 
-import copy
 import time
 
 import mox
@@ -31,7 +30,6 @@ from nova.openstack.common import importutils
 from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests import fake_instance
-from nova.tests import fake_network_cache_model
 from nova import utils
 
 
@@ -333,53 +331,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
     def test_init_instance_reverts_crashed_migration_no_old_state(self):
         self._test_init_instance_reverts_crashed_migrations(old_vm_state=None)
-
-    def _test_init_instance_update_nw_info_cache_helper(self, legacy_nwinfo):
-        self.compute.driver.legacy_nwinfo = lambda *a, **k: legacy_nwinfo
-
-        cached_nw_info = fake_network_cache_model.new_vif()
-        cached_nw_info = network_model.NetworkInfo([cached_nw_info])
-        old_cached_nw_info = copy.deepcopy(cached_nw_info)
-
-        # Folsom has no 'type' in network cache info.
-        del old_cached_nw_info[0]['type']
-        fake_info_cache = {'network_info': old_cached_nw_info.json()}
-        instance = {
-            'uuid': 'a-foo-uuid',
-            'vm_state': vm_states.ACTIVE,
-            'task_state': None,
-            'power_state': power_state.RUNNING,
-            'info_cache': fake_info_cache,
-            }
-
-        self.mox.StubOutWithMock(self.compute, '_get_power_state')
-        self.compute._get_power_state(mox.IgnoreArg(),
-                instance).AndReturn(power_state.RUNNING)
-
-        if legacy_nwinfo:
-            self.mox.StubOutWithMock(self.compute, '_get_instance_nw_info')
-            # Call network API to get instance network info, and force
-            # an update to instance's info_cache.
-            self.compute._get_instance_nw_info(self.context,
-                instance).AndReturn(cached_nw_info)
-
-            self.mox.StubOutWithMock(self.compute.driver, 'plug_vifs')
-            self.compute.driver.plug_vifs(instance, cached_nw_info.legacy())
-        else:
-            self.mox.StubOutWithMock(self.compute.driver, 'plug_vifs')
-            self.compute.driver.plug_vifs(instance, cached_nw_info)
-
-        self.mox.ReplayAll()
-
-        self.compute._init_instance(self.context, instance)
-
-    def test_init_instance_update_nw_info_cache_legacy(self):
-        """network_info in legacy is form [(network_dict, info_dict)]."""
-        self._test_init_instance_update_nw_info_cache_helper(True)
-
-    def test_init_instance_update_nw_info_cache(self):
-        """network_info is NetworkInfo list-like object."""
-        self._test_init_instance_update_nw_info_cache_helper(False)
 
     def test_get_instances_on_driver(self):
         fake_context = context.get_admin_context()
