@@ -2705,6 +2705,50 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
             self.assertNotIn(('project_user_quotas_user_id_deleted_idx',
                               ['user_id', 'deleted']), index_data)
 
+    def _pre_upgrade_211(self, engine):
+        fake_aggregates = [{'id': 7, 'name': 'name1'},
+                           {'id': 8, 'name': 'name2'}]
+        aggregates = db_utils.get_table(engine, 'aggregates')
+        engine.execute(aggregates.insert(), fake_aggregates)
+        metadata = db_utils.get_table(engine, 'aggregate_metadata')
+        data = [
+                {'aggregate_id': 7, 'key': 'availability_zone',
+                 'value': 'custom_az1', 'deleted': 0},
+                {'aggregate_id': 7, 'key': 'availability_zone',
+                 'value': 'custom_az2', 'deleted': 0},
+                {'aggregate_id': 8, 'key': 'availability_zone',
+                 'value': 'custom_az3', 'deleted': 0},
+        ]
+        for item in data:
+            metadata.insert().values(item).execute()
+        return data
+
+    def _check_211(self, engine, data):
+        metadata = db_utils.get_table(engine, 'aggregate_metadata')
+
+        def get_(aggrid, deleted):
+            deleted_value = 0 if not deleted else metadata.c.id
+            return metadata.select().\
+                   where(metadata.c.aggregate_id == aggrid).\
+                   where(metadata.c.deleted == deleted_value).\
+                   execute().\
+                   fetchall()
+
+        self.assertEqual(1, len(get_(7, False)))
+        self.assertEqual(1, len(get_(7, True)))
+        self.assertEqual(1, len(get_(8, False)))
+        self.assertRaises(sqlalchemy.exc.IntegrityError,
+                          metadata.insert().execute,
+                          {'aggregate_id': 7, 'key': 'availability_zone',
+                           'value': 'az4', 'deleted': 0})
+
+    def _post_downgrade_211(self, engine):
+        metadata = db_utils.get_table(engine, 'aggregate_metadata')
+        data = {'aggregate_id': 8, 'key': 'availability_zone',
+                'value': 'az', 'deleted': 0}
+        metadata.insert().values(data).execute()
+        self.assertIsNotNone(metadata.insert().values(data).execute())
+
 
 class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""

@@ -57,6 +57,7 @@ from nova import exception
 from nova.openstack.common.db import exception as db_exc
 from nova.openstack.common.db.sqlalchemy import session as db_session
 from nova.openstack.common.db.sqlalchemy import utils as sqlalchemyutils
+from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
@@ -4951,38 +4952,49 @@ def aggregate_metadata_delete(context, aggregate_id, key):
 
 @require_admin_context
 @require_aggregate_exists
-def aggregate_metadata_add(context, aggregate_id, metadata, set_delete=False):
-    # NOTE(boris-42): There is a race condition in this method. We should add
-    #                 UniqueConstraint on (start_period, uuid, mac, deleted) to
-    #                 avoid duplicated aggregate_metadata. This will be
-    #                 possible after bp/db-unique-keys implementation.
-    session = get_session()
+def aggregate_metadata_add(context, aggregate_id, metadata, set_delete=False,
+                           max_retries=10):
     all_keys = metadata.keys()
-    with session.begin():
-        query = _aggregate_metadata_get_query(context, aggregate_id,
-                                              read_deleted='no',
-                                              session=session)
-        if set_delete:
-            query.filter(~models.AggregateMetadata.key.in_(all_keys)).\
-                soft_delete(synchronize_session=False)
+    for attempt in xrange(max_retries):
+        try:
+            session = get_session()
+            with session.begin():
+                query = _aggregate_metadata_get_query(context, aggregate_id,
+                                                      read_deleted='no',
+                                                      session=session)
+                if set_delete:
+                    query.filter(~models.AggregateMetadata.key.in_(all_keys)).\
+                        soft_delete(synchronize_session=False)
 
-        query = query.filter(models.AggregateMetadata.key.in_(all_keys))
-        already_existing_keys = set()
-        for meta_ref in query.all():
-            key = meta_ref.key
-            meta_ref.update({"value": metadata[key]})
-            already_existing_keys.add(key)
+                query = \
+                    query.filter(models.AggregateMetadata.key.in_(all_keys))
+                already_existing_keys = set()
+                for meta_ref in query.all():
+                    key = meta_ref.key
+                    meta_ref.update({"value": metadata[key]})
+                    already_existing_keys.add(key)
 
-        for key, value in metadata.iteritems():
-            if key in already_existing_keys:
-                continue
-            meta_ref = models.AggregateMetadata()
-            meta_ref.update({"key": key,
-                             "value": value,
-                             "aggregate_id": aggregate_id})
-            session.add(meta_ref)
+                for key, value in metadata.iteritems():
+                    if key in already_existing_keys:
+                        continue
+                    meta_ref = models.AggregateMetadata()
+                    meta_ref.update({"key": key,
+                                     "value": value,
+                                     "aggregate_id": aggregate_id})
+                    session.add(meta_ref)
 
-        return metadata
+            return metadata
+        except db_exc.DBDuplicateEntry:
+            # a concurrent transaction has been committed,
+            # try again unless this was the last attempt
+            with excutils.save_and_reraise_exception() as ctxt:
+                if attempt < max_retries - 1:
+                    ctxt.reraise = False
+                else:
+                    msg = _("Add metadata failed for aggregate %(id)s after "
+                            "%(retries)s retries") % {"id": aggregate_id,
+                                                      "retries": max_retries}
+                    LOG.warn(msg)
 
 
 @require_admin_context

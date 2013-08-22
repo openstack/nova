@@ -1064,6 +1064,9 @@ class AggregateMetadata(BASE, NovaBase):
     """Represents a metadata key/value pair for an aggregate."""
     __tablename__ = 'aggregate_metadata'
     __table_args__ = (
+        schema.UniqueConstraint("aggregate_id", "key", "deleted",
+            name="uniq_aggregate_metadata0aggregate_id0key0deleted"
+            ),
         Index('aggregate_metadata_key_idx', 'key'),
     )
     id = Column(Integer, primary_key=True)
