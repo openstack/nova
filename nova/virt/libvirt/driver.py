@@ -1171,10 +1171,14 @@ class LibvirtDriver(driver.ComputeDriver):
     @exception.wrap_exception()
     def attach_interface(self, instance, image_meta, network_info):
         virt_dom = self._lookup_by_name(instance['name'])
+        inst_type = self.virtapi.instance_type_get(
+            nova_context.get_admin_context(read_deleted='yes'),
+            instance['instance_type_id'])
         for vif in network_info:
             self.vif_driver.plug(instance, vif)
             self.firewall_driver.setup_basic_filtering(instance, [vif])
-            cfg = self.vif_driver.get_config(instance, vif, image_meta)
+            cfg = self.vif_driver.get_config(instance, vif, image_meta,
+                                             inst_type)
             try:
                 flags = libvirt.VIR_DOMAIN_AFFECT_CONFIG
                 state = LIBVIRT_POWER_STATE[virt_dom.info()[0]]
@@ -1190,8 +1194,11 @@ class LibvirtDriver(driver.ComputeDriver):
     @exception.wrap_exception()
     def detach_interface(self, instance, network_info):
         virt_dom = self._lookup_by_name(instance['name'])
+        inst_type = self.virtapi.instance_type_get(
+            nova_context.get_admin_context(read_deleted='yes'),
+            instance['instance_type_id'])
         for vif in network_info:
-            cfg = self.vif_driver.get_config(instance, vif, None)
+            cfg = self.vif_driver.get_config(instance, vif, None, inst_type)
             try:
                 self.vif_driver.unplug(instance, vif)
                 flags = libvirt.VIR_DOMAIN_AFFECT_CONFIG
