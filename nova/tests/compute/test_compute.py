@@ -4451,13 +4451,12 @@ class ComputeTestCase(BaseTestCase):
         exc_info = None
 
         def fake_db_fault_create(ctxt, values):
-            self.assertTrue(values['details'].startswith('test'))
             self.assertTrue('raise NotImplementedError' in values['details'])
             del values['details']
 
             expected = {
                 'code': 500,
-                'message': 'NotImplementedError',
+                'message': 'test',
                 'instance_uuid': instance['uuid'],
                 'host': self.compute.host
             }
@@ -4482,7 +4481,6 @@ class ComputeTestCase(BaseTestCase):
         exc_info = None
 
         def fake_db_fault_create(ctxt, values):
-            self.assertTrue(values['details'].startswith('Remote error'))
             self.assertTrue('raise rpc_common.RemoteError'
                 in values['details'])
             del values['details']
@@ -4490,7 +4488,7 @@ class ComputeTestCase(BaseTestCase):
             expected = {
                 'code': 500,
                 'instance_uuid': instance['uuid'],
-                'message': 'My Test Message',
+                'message': 'Remote error: test My Test Message\nNone.',
                 'host': self.compute.host
             }
             self.assertEquals(expected, values)
@@ -4514,8 +4512,8 @@ class ComputeTestCase(BaseTestCase):
 
             expected = {
                 'code': 400,
-                'message': 'Invalid',
-                'details': 'fake details',
+                'message': 'fake details',
+                'details': '',
                 'instance_uuid': instance['uuid'],
                 'host': self.compute.host
             }
@@ -4540,8 +4538,8 @@ class ComputeTestCase(BaseTestCase):
         def fake_db_fault_create(ctxt, values):
             expected = {
                 'code': 500,
-                'message': 'NotImplementedError',
-                'details': 'test',
+                'message': 'test',
+                'details': '',
                 'instance_uuid': instance['uuid'],
                 'host': self.compute.host
             }

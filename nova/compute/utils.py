@@ -45,18 +45,28 @@ def add_instance_fault_from_exc(context, conductor,
     """Adds the specified fault to the database."""
 
     code = 500
-    message = fault.__class__.__name__
 
     if hasattr(fault, "kwargs"):
         code = fault.kwargs.get('code', 500)
-        # get the message from the exception that was thrown
-        # if that does not exist, use the name of the exception class itself
-        message = fault.kwargs.get('value', message)
 
-    details = unicode(fault)
+    # get the message from the exception that was thrown
+    # if that does not exist, use the name of the exception class itself
+    try:
+        message = fault.format_message()
+    # These exception handlers are broad so we don't fail to log the fault
+    # just because there is an unexpected error retrieving the message
+    except Exception:
+        try:
+            message = unicode(fault)
+        except Exception:
+            message = None
+    if not message:
+        message = fault.__class__.__name__
+    details = ''
+
     if exc_info and code == 500:
         tb = exc_info[2]
-        details += '\n' + ''.join(traceback.format_tb(tb))
+        details += ''.join(traceback.format_tb(tb))
 
     values = {
         'instance_uuid': instance['uuid'],
