@@ -239,12 +239,13 @@ def after_VM_create(vm_ref, vm_rec):
     vm_rec.setdefault('resident_on', '')
 
 
-def create_pbd(config, host_ref, sr_ref, attached):
+def create_pbd(host_ref, sr_ref, attached):
+    config = {'path': '/var/run/sr-mount/%s' % sr_ref}
     return _create_object('PBD',
-                          {'device-config': config,
+                          {'device_config': config,
                            'host': host_ref,
                            'SR': sr_ref,
-                           'currently-attached': attached})
+                           'currently_attached': attached})
 
 
 def create_task(name_label):
@@ -291,7 +292,7 @@ def create_sr(**kwargs):
               'virtual_allocation': str(kwargs.get('virtual_allocation', 0)),
               'other_config': kwargs.get('other_config', {}),
               'VDIs': kwargs.get('VDIs', [])})
-    pbd_ref = create_pbd('', kwargs.get('host_ref'), sr_ref, True)
+    pbd_ref = create_pbd(kwargs.get('host_ref'), sr_ref, True)
     _db_content['SR'][sr_ref]['PBDs'] = [pbd_ref]
     return sr_ref
 
@@ -325,7 +326,7 @@ def _create_sr(table, obj):
     sr_ref = _create_object(table, obj[2])
     if sr_type == 'iscsi':
         vdi_ref = create_vdi('', sr_ref)
-        pbd_ref = create_pbd('', host_ref, sr_ref, True)
+        pbd_ref = create_pbd(host_ref, sr_ref, True)
         _db_content['SR'][sr_ref]['VDIs'] = [vdi_ref]
         _db_content['SR'][sr_ref]['PBDs'] = [pbd_ref]
         _db_content['VDI'][vdi_ref]['SR'] = sr_ref
