@@ -62,7 +62,6 @@ from nova.tests import utils
 
 CONF = cfg.CONF
 CONF.import_opt('password_length', 'nova.utils')
-CONF.import_opt('scheduler_topic', 'nova.scheduler.rpcapi')
 
 FAKE_UUID = fakes.FAKE_UUID
 NS = "{http://docs.openstack.org/compute/api/v1.1}"
@@ -1652,18 +1651,6 @@ class ServersControllerCreateTest(test.TestCase):
             instance.update(values)
             return instance
 
-        def rpc_call_wrapper(context, topic, msg, timeout=None):
-            """Stub out the scheduler creating the instance entry."""
-            if (topic == CONF.scheduler_topic and
-                    msg['method'] == 'run_instance'):
-                request_spec = msg['args']['request_spec']
-                num_instances = request_spec.get('num_instances', 1)
-                instances = []
-                for x in xrange(num_instances):
-                    instances.append(instance_create(context,
-                        request_spec['instance_properties']))
-                return instances
-
         def server_update(context, instance_uuid, params, update_cells=False):
             inst = self.instance_cache_by_uuid[instance_uuid]
             inst.update(params)
@@ -1693,7 +1680,6 @@ class ServersControllerCreateTest(test.TestCase):
         self.stubs.Set(db, 'instance_get', instance_get)
         self.stubs.Set(db, 'instance_update', instance_update)
         self.stubs.Set(rpc, 'cast', fake_method)
-        self.stubs.Set(rpc, 'call', rpc_call_wrapper)
         self.stubs.Set(db, 'instance_update_and_get_original',
                        server_update)
         self.stubs.Set(rpc, 'queue_get_for', queue_get_for)

@@ -27,15 +27,12 @@ from nova import db
 from nova.db.sqlalchemy import api as sqa_api
 from nova.db.sqlalchemy import models as sqa_models
 from nova import exception
-from nova.openstack.common import rpc
 from nova.openstack.common import timeutils
 from nova import quota
-from nova.scheduler import driver as scheduler_driver
 from nova import test
 import nova.tests.image.fake
 
 CONF = cfg.CONF
-CONF.import_opt('scheduler_topic', 'nova.scheduler.rpcapi')
 CONF.import_opt('compute_driver', 'nova.virt.driver')
 
 
@@ -57,22 +54,7 @@ class QuotaIntegrationTestCase(test.TestCase):
         self.context = context.RequestContext(self.user_id,
                                               self.project_id,
                                               is_admin=True)
-        orig_rpc_call = rpc.call
 
-        def rpc_call_wrapper(context, topic, msg, timeout=None):
-            """Stub out the scheduler creating the instance entry."""
-            if (topic == CONF.scheduler_topic and
-                    msg['method'] == 'run_instance'):
-                scheduler = scheduler_driver.Scheduler
-                instance = scheduler().create_instance_db_entry(
-                        context,
-                        msg['args']['request_spec'],
-                        None)
-                return [scheduler_driver.encode_instance(instance)]
-            else:
-                return orig_rpc_call(context, topic, msg)
-
-        self.stubs.Set(rpc, 'call', rpc_call_wrapper)
         nova.tests.image.fake.stub_out_image_service(self.stubs)
 
     def tearDown(self):
