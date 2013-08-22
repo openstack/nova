@@ -2704,6 +2704,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                 instance, exc_info[0], exc_info=exc_info)
 
         try:
+            # NOTE(comstud): remove the scheduler RPCAPI method when
+            # this is adjusted to send to conductor... and then
+            # deprecate the scheduler manager method.
             scheduler_method = self.scheduler_rpcapi.prep_resize
             method_args = (instance, instance_type, image, request_spec,
                            filter_properties, reservations)

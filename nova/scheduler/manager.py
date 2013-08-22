@@ -164,8 +164,6 @@ class SchedulerManager(manager.Manager):
                                                   'task_state': None},
                                                   context, ex, request_spec)
 
-    # NOTE(timello): This method is deprecated and its functionality has
-    # been moved to conductor. This should be removed in RPC_API_VERSION 3.0.
     def prep_resize(self, context, image, request_spec, filter_properties,
                     instance, instance_type, reservations):
         """Tries to call schedule_prep_resize on the driver.
