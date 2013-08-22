@@ -28,7 +28,7 @@ from nova import exception
 from nova.openstack.common.gettextutils import _
 
 
-ALIAS = 'os-keypairs'
+ALIAS = 'keypairs'
 authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
 soft_authorize = extensions.soft_extension_authorizer('compute', 'v3:' + ALIAS)
 
@@ -207,12 +207,12 @@ class Keypairs(extensions.V3APIExtensionBase):
 
     name = "Keypairs"
     alias = ALIAS
-    namespace = "http://docs.openstack.org/compute/ext/keypairs/api/v3"
+    namespace = "http://docs.openstack.org/compute/core/keypairs/api/v3"
     version = 1
 
     def get_resources(self):
         resources = [
-            extensions.ResourceExtension('os-keypairs',
+            extensions.ResourceExtension('keypairs',
                                          KeypairController())]
         return resources
 
