@@ -156,6 +156,7 @@ class CloudTestCase(test.TestCase):
         self.compute = self.start_service('compute')
         self.scheduler = self.start_service('scheduler')
         self.network = self.start_service('network')
+        self.consoleauth = self.start_service('consoleauth')
 
         self.user_id = 'fake'
         self.project_id = 'fake'
@@ -733,7 +734,7 @@ class CloudTestCase(test.TestCase):
         admin_ctxt = context.get_admin_context(read_deleted="no")
         result = self.cloud.describe_availability_zones(admin_ctxt,
                 zone_name='verbose')
-        self.assertEqual(len(result['availabilityZoneInfo']), 16)
+        self.assertEqual(len(result['availabilityZoneInfo']), 18)
         db.service_destroy(self.context, service1['id'])
         db.service_destroy(self.context, service2['id'])
 
@@ -755,7 +756,7 @@ class CloudTestCase(test.TestCase):
         result = self.cloud.describe_availability_zones(admin_ctxt,
                                                         zone_name='verbose')
 
-        self.assertEqual(len(result['availabilityZoneInfo']), 15)
+        self.assertEqual(len(result['availabilityZoneInfo']), 17)
         db.service_destroy(self.context, service1['id'])
         db.service_destroy(self.context, service2['id'])
 
