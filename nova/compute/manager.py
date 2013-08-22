@@ -4106,9 +4106,10 @@ class ComputeManager(manager.SchedulerDependentManager):
                        "%(migration_id)s for instance %(instance_uuid)s"),
                      {'migration_id': migration['id'],
                       'instance_uuid': instance_uuid})
+            expected_attrs = ['metadata', 'system_metadata']
             try:
                 instance = instance_obj.Instance.get_by_uuid(context,
-                                                             instance_uuid)
+                            instance_uuid, expected_attrs=expected_attrs)
             except exception.InstanceNotFound:
                 reason = (_("Instance %s not found") %
                           instance_uuid)

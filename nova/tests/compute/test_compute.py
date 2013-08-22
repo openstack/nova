@@ -4808,6 +4808,8 @@ class ComputeTestCase(BaseTestCase):
 
         def fake_instance_get_by_uuid(context, instance_uuid,
                 columns_to_join=None):
+            self.assertIn('metadata', columns_to_join)
+            self.assertIn('system_metadata', columns_to_join)
             # raise InstanceNotFound exception for uuid 'noexist'
             if instance_uuid == 'noexist':
                 raise exception.InstanceNotFound(instance_id=instance_uuid)
