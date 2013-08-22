@@ -3088,6 +3088,23 @@ class AggregateAPI(base.Base):
                                                     "delete.end",
                                                     aggregate_payload)
 
+    def _check_az_for_host(self, aggregate_meta, host_az, aggregate_id):
+        # NOTE(mtreinish) The availability_zone key returns a set of
+        # zones so loop over each zone. However there should only
+        # ever be one zone in the set because an aggregate can only
+        # have a single availability zone set at one time.
+        for aggregate_az in aggregate_meta["availability_zone"]:
+            # NOTE(mtreinish) Ensure that the aggregate_az is not none
+            # if it is none then that is just a regular aggregate and
+            # it is valid to have a host in multiple aggregates.
+            if aggregate_az and aggregate_az != host_az:
+                msg = _("Host already in availability zone"
+                        "%s.") % host_az
+                action_name = "add_host_to_aggregate"
+                raise exception.InvalidAggregateAction(
+                    action=action_name, aggregate_id=aggregate_id,
+                    reason=msg)
+
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def add_host_to_aggregate(self, context, aggregate_id, host_name):
         """Adds the host to an aggregate."""
@@ -3103,14 +3120,8 @@ class AggregateAPI(base.Base):
         if host_az and host_az != CONF.default_availability_zone:
             aggregate_meta = self.db.aggregate_metadata_get_by_metadata_key(
                 context, aggregate_id, 'availability_zone')
-            aggregate_az = aggregate_meta["availability_zone"].pop()
-            if aggregate_az != host_az:
-                msg = _("Host already in availability zone %s.") % host_az
-                action_name = "add_host_to_aggregate"
-                id = aggregate_id
-                raise exception.InvalidAggregateAction(action=action_name,
-                                                       aggregate_id=id,
-                                                       reason=msg)
+            if aggregate_meta.get("availability_zone"):
+                self._check_az_for_host(aggregate_meta, host_az, aggregate_id)
         aggregate = self.db.aggregate_get(context, aggregate_id)
         self.db.aggregate_host_add(context, aggregate_id, host_name)
         #NOTE(jogo): Send message to host to support resource pools

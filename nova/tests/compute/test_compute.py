@@ -8157,6 +8157,42 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                          'aggregate.addhost.end')
         self.assertEqual(len(aggr['hosts']), 1)
 
+    def test_add_host_to_aggr_with_no_az(self):
+        values = _create_service_entries(self.context)
+        fake_zone = values.keys()[0]
+        fake_host = values[fake_zone][0]
+        aggr = self.api.create_aggregate(self.context,
+                                         'fake_aggregate', fake_zone)
+        aggr = self.api.add_host_to_aggregate(self.context, aggr['id'],
+                                              fake_host)
+        aggr_no_az = self.api.create_aggregate(self.context, 'fake_aggregate2',
+                                               None)
+        aggr_no_az = self.api.add_host_to_aggregate(self.context,
+                                                    aggr_no_az['id'],
+                                                    fake_host)
+        self.assertIn(fake_host, aggr['hosts'])
+        self.assertIn(fake_host, aggr_no_az['hosts'])
+
+    def test_add_host_no_az_metadata(self):
+        # NOTE(mtreinish) based on how create works this is not how the
+        # the metadata is supposed to end up in the database but it has
+        # been seen. See lp bug #1209007. This test just confirms that
+        # the host is still added to the aggregate if there is no
+        # availability zone metadata.
+        def fake_aggregate_metadata_get_by_metadata_key(*args, **kwargs):
+            return {'meta_key': 'fake_value'}
+        self.stubs.Set(self.compute.db,
+                       'aggregate_metadata_get_by_metadata_key',
+                       fake_aggregate_metadata_get_by_metadata_key)
+        values = _create_service_entries(self.context)
+        fake_zone = values.keys()[0]
+        fake_host = values[fake_zone][0]
+        aggr = self.api.create_aggregate(self.context, 'fake_aggregate',
+                                         fake_zone)
+        aggr = self.api.add_host_to_aggregate(self.context, aggr['id'],
+                                              fake_host)
+        self.assertIn(fake_host, aggr['hosts'])
+
     def test_add_host_to_multi_az(self):
         # Ensure we can't add a host to different availability zone
         values = _create_service_entries(self.context)

@@ -139,11 +139,10 @@ class AggregateController(object):
             'set_metadata': self._set_metadata,
         }
         for action, data in body.iteritems():
-            try:
-                return _actions[action](req, id, data)
-            except KeyError:
+            if action not in _actions.keys():
                 msg = _('Aggregates does not have %s action') % action
                 raise exc.HTTPBadRequest(explanation=msg)
+            return _actions[action](req, id, data)
 
         raise exc.HTTPBadRequest(explanation=_("Invalid request body"))
 
