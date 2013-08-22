@@ -19,6 +19,7 @@
 """Unit tests for the API endpoint."""
 
 import random
+import re
 import StringIO
 
 import boto
@@ -176,6 +177,36 @@ class Ec2utilsTestCase(test.TestCase):
         root_device_name = block_device.properties_root_device_name(
             properties1)
         self.assertEqual(root_device_name, '/dev/sdb')
+
+    def test_regex_from_ec2_regex(self):
+        def _test_re(ec2_regex, expected, literal, match=True):
+            regex = ec2utils.regex_from_ec2_regex(ec2_regex)
+            self.assertEqual(regex, expected)
+            if match:
+                self.assertTrue(re.match(regex, literal) is not None)
+            else:
+                self.assertTrue(re.match(regex, literal) is None)
+
+        # wildcards
+        _test_re('foo', '\Afoo\Z(?s)', 'foo')
+        _test_re('foo', '\Afoo\Z(?s)', 'baz', match=False)
+        _test_re('foo?bar', '\Afoo.bar\Z(?s)', 'foo bar')
+        _test_re('foo?bar', '\Afoo.bar\Z(?s)', 'foo   bar', match=False)
+        _test_re('foo*bar', '\Afoo.*bar\Z(?s)', 'foo QUUX bar')
+
+        # backslashes and escaped wildcards
+        _test_re('foo\\', '\Afoo\\\\\Z(?s)', 'foo\\')
+        _test_re('foo*bar', '\Afoo.*bar\Z(?s)', 'zork QUUX bar', match=False)
+        _test_re('foo\\?bar', '\Afoo[?]bar\Z(?s)', 'foo?bar')
+        _test_re('foo\\?bar', '\Afoo[?]bar\Z(?s)', 'foo bar', match=False)
+        _test_re('foo\\*bar', '\Afoo[*]bar\Z(?s)', 'foo*bar')
+        _test_re('foo\\*bar', '\Afoo[*]bar\Z(?s)', 'foo bar', match=False)
+
+        # analog to the example given in the EC2 API docs
+        ec2_regex = '\*nova\?\\end'
+        expected = r'\A[*]nova[?]\\end\Z(?s)'
+        literal = r'*nova?\end'
+        _test_re(ec2_regex, expected, literal)
 
     def test_mapping_prepend_dev(self):
         mappings = [
