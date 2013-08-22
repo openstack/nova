@@ -52,7 +52,6 @@ class ConfFixture(fixtures.Fixture):
         self.conf.set_default('host', 'fake-mini')
         self.conf.set_default('compute_driver', 'nova.virt.fake.FakeDriver')
         self.conf.set_default('fake_network', True)
-        self.conf.set_default('fake_rabbit', True)
         self.conf.set_default('flat_network_bridge', 'br100')
         self.conf.set_default('floating_ip_dns_manager',
                               'nova.tests.utils.dns_manager')
