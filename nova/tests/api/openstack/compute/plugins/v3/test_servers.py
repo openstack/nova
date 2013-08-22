@@ -60,6 +60,7 @@ from nova.tests import fake_network
 from nova.tests.image import fake
 from nova.tests import matchers
 from nova.tests import utils
+from nova import utils as nova_utils
 
 CONF = cfg.CONF
 CONF.import_opt('password_length', 'nova.utils')
@@ -192,6 +193,10 @@ class ServersControllerTest(ControllerTest):
         #self.ext_mgr.extensions = {'os-fake': None}
         #self.assertTrue(self.controller.ext_mgr.is_loaded('os-fake'))
         #self.assertFalse(self.controller.ext_mgr.is_loaded('os-not-loaded'))
+
+    def setUp(self):
+        super(ServersControllerTest, self).setUp()
+        nova_utils.reset_is_neutron()
 
     def test_requested_networks_prefix(self):
         uuid = 'br-00000000-0000-0000-0000-000000000000'
@@ -2519,6 +2524,7 @@ class ServersControllerCreateTest(test.TestCase):
     #     self._test_create_extra(params)
 
     def test_create_instance_with_networks_disabled_neutronv2(self):
+        nova_utils.reset_is_neutron()
         self.flags(network_api_class='nova.network.neutronv2.api.API')
         net_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
         requested_networks = [{'uuid': net_uuid}]

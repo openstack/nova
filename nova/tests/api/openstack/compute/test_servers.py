@@ -59,6 +59,7 @@ from nova.tests import fake_network
 from nova.tests.image import fake
 from nova.tests import matchers
 from nova.tests import utils
+from nova import utils as nova_utils
 
 CONF = cfg.CONF
 CONF.import_opt('password_length', 'nova.utils')
@@ -181,6 +182,10 @@ class ControllerTest(test.TestCase):
 
 
 class ServersControllerTest(ControllerTest):
+
+    def setUp(self):
+        super(ServersControllerTest, self).setUp()
+        nova_utils.reset_is_neutron()
 
     def test_can_check_loaded_extensions(self):
         self.ext_mgr.extensions = {'os-fake': None}
@@ -1629,6 +1634,7 @@ class ServersControllerCreateTest(test.TestCase):
         self.ext_mgr = extensions.ExtensionManager()
         self.ext_mgr.extensions = {}
         self.controller = servers.Controller(self.ext_mgr)
+        nova_utils.reset_is_neutron()
 
         self.volume_id = 'fake'
 
