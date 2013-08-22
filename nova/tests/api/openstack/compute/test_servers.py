@@ -2447,7 +2447,7 @@ class ServersControllerCreateTest(test.TestCase):
         """
         self.ext_mgr.extensions = {'os-volumes': 'fake'}
         self.mox.StubOutWithMock(compute_api.API, '_validate_bdm')
-        self.mox.StubOutWithMock(compute_api.API, '_get_volume_image_metadata')
+        self.mox.StubOutWithMock(compute_api.API, '_get_bdm_image_metadata')
         bdm = [{
             'id': 1,
             'no_device': None,
@@ -2464,8 +2464,8 @@ class ServersControllerCreateTest(test.TestCase):
         compute_api.API._validate_bdm(mox.IgnoreArg(),
                 mox.IgnoreArg(), mox.IgnoreArg(),
                 mox.IgnoreArg()).AndReturn(True)
-        compute_api.API._get_volume_image_metadata(mox.IgnoreArg(),
-                                                   bdm).AndReturn(volume)
+        compute_api.API._get_bdm_image_metadata(mox.IgnoreArg(),
+                                                bdm, True).AndReturn(volume)
         params = {'block_device_mapping': bdm}
         old_create = compute_api.API.create
 
@@ -2504,13 +2504,13 @@ class ServersControllerCreateTest(test.TestCase):
             return old_create(*args, **kwargs)
 
         self.mox.StubOutWithMock(compute_api.API, '_validate_bdm')
-        self.mox.StubOutWithMock(compute_api.API, '_get_volume_image_metadata')
+        self.mox.StubOutWithMock(compute_api.API, '_get_bdm_image_metadata')
 
         compute_api.API._validate_bdm(
             mox.IgnoreArg(), mox.IgnoreArg(),
             mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(True)
-        compute_api.API._get_volume_image_metadata(
-            mox.IgnoreArg(), mox.IgnoreArg()).AndReturn({})
+        compute_api.API._get_bdm_image_metadata(
+            mox.IgnoreArg(), mox.IgnoreArg(), False).AndReturn({})
         self.mox.ReplayAll()
         self.stubs.Set(compute_api.API, 'create', create)
 
@@ -2766,27 +2766,6 @@ class ServersControllerCreateTest(test.TestCase):
                    'uuid': 'fake_vol'}]
         params = {'block_device_mapping': bdm,
                   'block_device_mapping_v2': bdm_v2}
-
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self._test_create_extra, params)
-
-    def test_create_instance_bdm_v2_missing_device_name(self):
-        self.ext_mgr.extensions = {'os-volumes': 'fake',
-                                   'os-block-device-mapping-v2-boot': 'fake'}
-        bdm_v2 = [{'source_type': 'volume',
-                   'uuid': 'fake_vol'}]
-        params = {'block_device_mapping_v2': bdm_v2}
-
-        def _validate(*args, **kwargs):
-            pass
-
-        def _validate_bdm(*args, **kwargs):
-            pass
-
-        self.stubs.Set(block_device.BlockDeviceDict,
-                      '_validate', _validate)
-        self.stubs.Set(compute_api.API, '_validate_bdm',
-                       _validate_bdm)
 
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self._test_create_extra, params)

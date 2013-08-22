@@ -1351,11 +1351,11 @@ class ServersController(wsgi.Controller):
                 img = instance['image_ref']
                 if not img:
                     # NOTE(Vincent Hou) The private method
-                    # _get_volume_image_metadata only works, when boot
+                    # _get_bdm_image_metadata only works, when boot
                     # device is set to 'vda'. It needs to be fixed later,
                     # but tentatively we use it here.
                     image_meta = {'properties': self.compute_api.
-                                    _get_volume_image_metadata(context, bdms)}
+                                    _get_bdm_image_metadata(context, bdms)}
                 else:
                     src_image = self.compute_api.\
                         image_service.show(context, img)

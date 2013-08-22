@@ -849,14 +849,6 @@ class Controller(wsgi.Controller):
                 # Assume legacy format
                 legacy_bdm = not bool(block_device_mapping_v2)
 
-                # NOTE (ndipanov) Don't allow empty device_name values
-                #                 for now until we can handle it on the
-                #                 compute side.
-                if any('device_name' not in bdm
-                       for bdm in block_device_mapping_v2):
-                    expl = _('Missing device_name in some block devices.')
-                    raise exc.HTTPBadRequest(explanation=expl)
-
                 try:
                     block_device_mapping_v2 = [
                         block_device.BlockDeviceDict.from_api(bdm_dict)
@@ -1379,11 +1371,11 @@ class Controller(wsgi.Controller):
                 img = instance['image_ref']
                 if not img:
                     # NOTE(Vincent Hou) The private method
-                    # _get_volume_image_metadata only works, when boot
+                    # _get_bdm_image_metadata only works, when boot
                     # device is set to 'vda'. It needs to be fixed later,
                     # but tentatively we use it here.
                     image_meta = {'properties': self.compute_api.
-                                    _get_volume_image_metadata(context, bdms)}
+                                    _get_bdm_image_metadata(context, bdms)}
                 else:
                     src_image = self.compute_api.image_service.\
                                                 show(context, img)
