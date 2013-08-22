@@ -41,6 +41,7 @@ from nova.tests import fake_instance_actions
 from nova.tests.image import fake as fake_image
 from nova.tests import matchers
 from nova.tests.scheduler import fakes
+from nova import utils
 
 
 class SchedulerManagerTestCase(test.NoDBTestCase):
@@ -60,12 +61,6 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
         self.fake_args = (1, 2, 3)
         self.fake_kwargs = {'cat': 'meow', 'dog': 'woof'}
         fake_instance_actions.stub_out_action_events(self.stubs)
-
-    def stub_out_client_exceptions(self):
-        def passthru(exceptions, func, *args, **kwargs):
-            return func(*args, **kwargs)
-
-        self.stubs.Set(rpc_common, 'catch_client_exception', passthru)
 
     def test_1_correct_init(self):
         # Correct scheduler driver
@@ -233,7 +228,7 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
                                 mox.IgnoreArg())
 
         self.mox.ReplayAll()
-        self.stub_out_client_exceptions()
+        self.manager = utils.ExceptionHelper(self.manager)
         self.assertRaises(exception.NoValidHost,
                           self.manager.live_migration,
                           self.context, inst, dest, block_migration,
@@ -266,7 +261,7 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
                                 mox.IgnoreArg())
 
         self.mox.ReplayAll()
-        self.stub_out_client_exceptions()
+        self.manager = utils.ExceptionHelper(self.manager)
         self.assertRaises(exception.ComputeServiceUnavailable,
                           self.manager.live_migration,
                           self.context, inst, dest, block_migration,
@@ -307,7 +302,7 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
                                 mox.IgnoreArg())
 
         self.mox.ReplayAll()
-        self.stub_out_client_exceptions()
+        self.manager = utils.ExceptionHelper(self.manager)
         self.assertRaises(ValueError,
                           self.manager.live_migration,
                           self.context, inst, dest, block_migration,

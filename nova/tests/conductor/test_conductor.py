@@ -42,6 +42,7 @@ from nova import test
 from nova.tests.compute import test_compute
 from nova.tests import fake_instance
 from nova.tests import fake_instance_actions
+from nova import utils
 
 
 FAKE_IMAGE_REF = 'fake-image-ref'
@@ -67,12 +68,6 @@ class _BaseTestCase(object):
         self.addCleanup(notifier_api._reset_drivers)
         self.flags(notification_driver=[test_notifier.__name__])
         test_notifier.NOTIFICATIONS = []
-
-    def stub_out_client_exceptions(self):
-        def passthru(exceptions, func, *args, **kwargs):
-            return func(*args, **kwargs)
-
-        self.stubs.Set(rpc_common, 'catch_client_exception', passthru)
 
     def _create_fake_instance(self, params=None, type_name='m1.tiny'):
         if not params:
@@ -125,7 +120,7 @@ class _BaseTestCase(object):
     def test_instance_update_invalid_key(self):
         # NOTE(danms): the real DB API call ignores invalid keys
         if self.db == None:
-            self.stub_out_client_exceptions()
+            self.conductor = utils.ExceptionHelper(self.conductor)
             self.assertRaises(KeyError,
                               self._do_update, 'any-uuid', foobar=1)
 
@@ -742,7 +737,7 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
                               self.conductor.service_get_all_by,
                               self.context, **condargs)
 
-            self.stub_out_client_exceptions()
+            self.conductor = utils.ExceptionHelper(self.conductor)
 
             self.assertRaises(db_exception.__class__,
                               self.conductor.service_get_all_by,

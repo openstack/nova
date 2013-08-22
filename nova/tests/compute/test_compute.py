@@ -245,12 +245,6 @@ class BaseTestCase(test.TestCase):
         fake.restore_nodes()
         super(BaseTestCase, self).tearDown()
 
-    def stub_out_client_exceptions(self):
-        def passthru(exceptions, func, *args, **kwargs):
-            return func(*args, **kwargs)
-
-        self.stubs.Set(rpc_common, 'catch_client_exception', passthru)
-
     def _create_fake_instance(self, params=None, type_name='m1.tiny',
                               services=False):
         """Create a test instance."""
@@ -2320,7 +2314,7 @@ class ComputeTestCase(BaseTestCase):
                           self.compute.get_vnc_console,
                           self.context, 'invalid', instance=instance)
 
-        self.stub_out_client_exceptions()
+        self.compute = utils.ExceptionHelper(self.compute)
 
         self.assertRaises(exception.ConsoleTypeInvalid,
                           self.compute.get_vnc_console,
@@ -2340,7 +2334,7 @@ class ComputeTestCase(BaseTestCase):
                           self.compute.get_vnc_console,
                           self.context, None, instance=instance)
 
-        self.stub_out_client_exceptions()
+        self.compute = utils.ExceptionHelper(self.compute)
 
         self.assertRaises(exception.ConsoleTypeInvalid,
                           self.compute.get_vnc_console,
@@ -2375,7 +2369,7 @@ class ComputeTestCase(BaseTestCase):
                           self.compute.get_spice_console,
                           self.context, 'invalid', instance=instance)
 
-        self.stub_out_client_exceptions()
+        self.compute = utils.ExceptionHelper(self.compute)
 
         self.assertRaises(exception.ConsoleTypeInvalid,
                           self.compute.get_spice_console,
@@ -2395,7 +2389,7 @@ class ComputeTestCase(BaseTestCase):
                           self.compute.get_spice_console,
                           self.context, None, instance=instance)
 
-        self.stub_out_client_exceptions()
+        self.compute = utils.ExceptionHelper(self.compute)
 
         self.assertRaises(exception.ConsoleTypeInvalid,
                           self.compute.get_spice_console,
@@ -2416,7 +2410,7 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(self.compute.driver, "get_vnc_console",
                        fake_driver_get_console)
 
-        self.stub_out_client_exceptions()
+        self.compute = utils.ExceptionHelper(self.compute)
 
         self.assertRaises(exception.InstanceNotReady,
                 self.compute.get_vnc_console, self.context, 'novnc',
@@ -2435,7 +2429,7 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(self.compute.driver, "get_spice_console",
                        fake_driver_get_console)
 
-        self.stub_out_client_exceptions()
+        self.compute = utils.ExceptionHelper(self.compute)
 
         self.assertRaises(exception.InstanceNotReady,
                 self.compute.get_spice_console, self.context, 'spice-html5',
