@@ -16,6 +16,7 @@ from oslo.config import cfg
 import webob.dec
 import webob.exc
 
+import nova.api.ec2
 from nova import context
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
@@ -52,12 +53,12 @@ class Fault(webob.exc.HTTPException):
     @webob.dec.wsgify
     def __call__(self, req):
         """Generate a WSGI response based on the exception passed to ctor."""
-        code = self.wrapped_exc.status_int
+        code = nova.api.ec2.exception_to_ec2code(self.wrapped_exc)
+        status = self.wrapped_exc.status_int
         message = self.wrapped_exc.explanation
 
-        if code == 501:
+        if status == 501:
             message = "The requested function is not supported"
-        code = str(code)
 
         if 'AWSAccessKeyId' not in req.params:
             raise webob.exc.HTTPBadRequest()
@@ -71,5 +72,5 @@ class Fault(webob.exc.HTTPException):
                                       project_id,
                                       remote_address=remote_address)
         resp = ec2_error_response(ctxt.request_id, code,
-                                  message=message, status=code)
+                                  message=message, status=status)
         return resp

@@ -12,10 +12,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mox
 import webob
 
 from nova.api.ec2 import faults
 from nova import test
+from nova.wsgi import Request
 
 
 class TestFaults(test.TestCase):
@@ -32,3 +34,16 @@ class TestFaults(test.TestCase):
         # Ensure the status_int is set correctly on faults.
         fault = faults.Fault(webob.exc.HTTPNotFound(explanation='test'))
         self.assertEquals(fault.wrapped_exc.status_int, 404)
+
+    def test_fault_call(self):
+        # Ensure proper EC2 response on faults.
+        message = 'test message'
+        ex = webob.exc.HTTPNotFound(explanation=message)
+        fault = faults.Fault(ex)
+        req = Request.blank('/test')
+        req.GET['AWSAccessKeyId'] = "test_user_id:test_project_id"
+        self.mox.StubOutWithMock(faults, 'ec2_error_response')
+        faults.ec2_error_response(mox.IgnoreArg(), 'HTTPNotFound',
+                                  message=message, status=ex.status_int)
+        self.mox.ReplayAll()
+        fault(req)
