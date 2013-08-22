@@ -3287,7 +3287,10 @@
 # Total number of VNC ports (integer value)
 #vnc_port_total=10000
 
-# VNC password (string value)
+# DEPRECATED. VNC password. The password-based access to VNC
+# consoles will be removed in the next release. The default
+# value will disable password protection on the VNC console.
+# (string value)
 #vnc_password=<None>
 
 # Whether to use linked clone (boolean value)
