@@ -29,7 +29,7 @@ import nova.openstack.common.rpc
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests import fake_instance
-from nova.tests.image import fake
+import nova.tests.image.fake
 
 CONF = cfg.CONF
 MANUAL_INSTANCE_UUID = fakes.FAKE_UUID
@@ -452,7 +452,7 @@ class ServersControllerCreateTest(test.TestCase):
 
         fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_key_pair_funcs(self.stubs)
-        fake.stub_out_image_service(self.stubs)
+        nova.tests.image.fake.stub_out_image_service(self.stubs)
         fakes.stub_out_nw_api(self.stubs)
         self.stubs.Set(db, 'instance_add_security_group',
                        return_security_group)
