@@ -517,13 +517,17 @@ class Controller(wsgi.Controller):
                 self._get_server_search_options())
 
         # Verify search by 'status' contains a valid status.
-        # Convert it to filter by vm_state for compute_api.
+        # Convert it to filter by vm_state or task_state for compute_api.
         status = search_opts.pop('status', None)
         if status is not None:
-            state = common.vm_state_from_status(status)
-            if state is None:
+            vm_state, task_state = common.task_and_vm_state_from_status(status)
+            if not vm_state and not task_state:
                 return {'servers': []}
-            search_opts['vm_state'] = state
+            search_opts['vm_state'] = vm_state
+            # When we search by vm state, task state will return 'default'.
+            # So we don't need task_state search_opt.
+            if 'default' not in task_state:
+                search_opts['task_state'] = task_state
 
         if 'changes-since' in search_opts:
             try:

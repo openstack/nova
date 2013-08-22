@@ -896,6 +896,29 @@ class ServersControllerTest(ControllerTest):
         self.assertEqual(len(servers), 1)
         self.assertEqual(servers[0]['id'], server_uuid)
 
+    def test_get_servers_allows_task_status(self):
+        server_uuid = str(uuid.uuid4())
+        task_state = task_states.REBOOTING
+
+        def fake_get_all(compute_self, context, search_opts=None,
+                         sort_key=None, sort_dir='desc',
+                         limit=None, marker=None, want_objects=False):
+            self.assertNotEqual(search_opts, None)
+            self.assertTrue('task_state' in search_opts)
+            self.assertEqual(search_opts['task_state'], [task_state])
+            db_list = [fakes.stub_instance(100, uuid=server_uuid,
+                                                task_state=task_state)]
+            return instance_obj._make_instance_list(
+                context, instance_obj.InstanceList(), db_list, FIELDS)
+
+        self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
+
+        req = fakes.HTTPRequestV3.blank('/servers?status=reboot')
+        servers = self.controller.index(req)['servers']
+
+        self.assertEqual(len(servers), 1)
+        self.assertEqual(servers[0]['id'], server_uuid)
+
     def test_get_servers_invalid_status(self):
         # Test getting servers by invalid status.
         req = fakes.HTTPRequestV3.blank('/servers?status=baloney',

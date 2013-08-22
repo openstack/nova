@@ -100,7 +100,7 @@ _STATE_MAP = {
         'default': 'DELETED',
     },
     vm_states.SOFT_DELETED: {
-        'default': 'DELETED',
+        'default': 'SOFT_DELETED',
     },
     vm_states.SHELVED: {
         'default': 'SHELVED',
@@ -123,12 +123,17 @@ def status_from_state(vm_state, task_state='default'):
     return status
 
 
-def vm_state_from_status(status):
-    """Map the server status string to a vm state."""
+def task_and_vm_state_from_status(status):
+    """Map the server status string to a vm state and list of task states."""
+    vm_state = ''
+    task_states = []
     for state, task_map in _STATE_MAP.iteritems():
-        status_string = task_map.get("default")
-        if status.lower() == status_string.lower():
-            return state
+        for task_state, mapped_state in task_map.iteritems():
+            status_string = mapped_state
+            if status.lower() == status_string.lower():
+                vm_state = state
+                task_states.append(task_state)
+    return vm_state, task_states
 
 
 def get_pagination_params(request):
