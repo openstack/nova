@@ -44,6 +44,12 @@ class TestBittorrentStore(stubs.XenAPITestBase):
 
         fake.reset()
         stubs.stubout_session(self.stubs, fake.SessionBase)
+
+        def mock_iter_eps(namespace):
+            return []
+
+        self.stubs.Set(pkg_resources, 'iter_entry_points', mock_iter_eps)
+
         driver = xenapi_conn.XenAPIDriver(False)
         self.session = driver._session
 
@@ -57,6 +63,7 @@ class TestBittorrentStore(stubs.XenAPITestBase):
                          'xenapi_use_agent': 'true'}
 
     def test_download_image(self):
+
         params = {'image_id': 'fake_image_uuid',
                   'sr_path': '/fake/sr/path',
                   'torrent_download_stall_cutoff': 600,
@@ -110,8 +117,14 @@ class LookupTorrentURLTestCase(test.TestCase):
         self.instance = {'uuid': 'fakeuuid'}
         self.image_id = 'fakeimageid'
 
+    def _mock_iter_none(self, namespace):
+        return []
+
     def test_default_fetch_url_no_base_url_set(self):
         self.flags(xenapi_torrent_base_url=None)
+        self.stubs.Set(pkg_resources, 'iter_entry_points',
+                       self._mock_iter_none)
+
         exc = self.assertRaises(
                 RuntimeError, self.store._lookup_torrent_url_fn)
         self.assertEqual(_('Cannot create default bittorrent URL without'
@@ -120,6 +133,9 @@ class LookupTorrentURLTestCase(test.TestCase):
 
     def test_default_fetch_url_base_url_is_set(self):
         self.flags(xenapi_torrent_base_url='http://foo')
+        self.stubs.Set(pkg_resources, 'iter_entry_points',
+                       self._mock_iter_none)
+
         lookup_fn = self.store._lookup_torrent_url_fn()
         self.assertEqual('http://foo/fakeimageid.torrent',
                          lookup_fn(self.instance, self.image_id))
