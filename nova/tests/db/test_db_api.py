@@ -82,10 +82,19 @@ def _quota_reserve(context, project_id, user_id):
     deltas = {}
     for i in range(3):
         resource = 'resource%d' % i
+        if i == 2:
+            # test for project level resources
+            resource = 'fixed_ips'
+            quotas[resource] = db.quota_create(context,
+                                               project_id, resource, i)
+            user_quotas[resource] = quotas[resource]
+        else:
+            quotas[resource] = db.quota_create(context,
+                                               project_id, resource, i)
+            user_quotas[resource] = db.quota_create(context, project_id,
+                                                    resource, i,
+                                                    user_id=user_id)
         sync_name = '_sync_%s' % resource
-        quotas[resource] = db.quota_create(context, project_id, resource, i)
-        user_quotas[resource] = db.quota_create(context, project_id,
-                                                resource, i, user_id=user_id)
         resources[resource] = ReservableResource(
             resource, sync_name, 'quota_res_%d' % i)
         deltas[resource] = i
@@ -900,7 +909,7 @@ class ReservationTestCase(test.TestCase, ModelsObjectComparatorMixin):
         expected = {'project_id': 'project1', 'user_id': 'user1',
                 'resource0': {'reserved': 0, 'in_use': 0},
                 'resource1': {'reserved': 1, 'in_use': 1},
-                'resource2': {'reserved': 2, 'in_use': 2}}
+                'fixed_ips': {'reserved': 2, 'in_use': 2}}
         self.assertEqual(expected, db.quota_usage_get_all_by_project_and_user(
                                             self.ctxt, 'project1', 'user1'))
         db.reservation_get(self.ctxt, reservations[0])
@@ -910,7 +919,7 @@ class ReservationTestCase(test.TestCase, ModelsObjectComparatorMixin):
         expected = {'project_id': 'project1', 'user_id': 'user1',
                 'resource0': {'reserved': 0, 'in_use': 0},
                 'resource1': {'reserved': 0, 'in_use': 2},
-                'resource2': {'reserved': 0, 'in_use': 4}}
+                'fixed_ips': {'reserved': 0, 'in_use': 4}}
         self.assertEqual(expected, db.quota_usage_get_all_by_project_and_user(
                                             self.ctxt, 'project1', 'user1'))
 
@@ -919,7 +928,7 @@ class ReservationTestCase(test.TestCase, ModelsObjectComparatorMixin):
         expected = {'project_id': 'project1', 'user_id': 'user1',
                 'resource0': {'reserved': 0, 'in_use': 0},
                 'resource1': {'reserved': 1, 'in_use': 1},
-                'resource2': {'reserved': 2, 'in_use': 2}}
+                'fixed_ips': {'reserved': 2, 'in_use': 2}}
         self.assertEqual(expected, db.quota_usage_get_all_by_project_and_user(
                                             self.ctxt, 'project1', 'user1'))
         db.reservation_get(self.ctxt, reservations[0])
@@ -929,7 +938,7 @@ class ReservationTestCase(test.TestCase, ModelsObjectComparatorMixin):
         expected = {'project_id': 'project1', 'user_id': 'user1',
                 'resource0': {'reserved': 0, 'in_use': 0},
                 'resource1': {'reserved': 0, 'in_use': 1},
-                'resource2': {'reserved': 0, 'in_use': 2}}
+                'fixed_ips': {'reserved': 0, 'in_use': 2}}
         self.assertEqual(expected, db.quota_usage_get_all_by_project_and_user(
                                             self.ctxt, 'project1', 'user1'))
 
@@ -941,7 +950,7 @@ class ReservationTestCase(test.TestCase, ModelsObjectComparatorMixin):
         expected = {'project_id': 'project1', 'user_id': 'user1',
                 'resource0': {'reserved': 0, 'in_use': 0},
                 'resource1': {'reserved': 0, 'in_use': 1},
-                'resource2': {'reserved': 0, 'in_use': 2}}
+                'fixed_ips': {'reserved': 0, 'in_use': 2}}
         self.assertEqual(expected, db.quota_usage_get_all_by_project_and_user(
                                             self.ctxt, 'project1', 'user1'))
 
@@ -4927,7 +4936,8 @@ class QuotaTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertEqual(db.quota_usage_get_all_by_project_and_user(
                             self.ctxt, 'project1', 'user1'),
                             {'project_id': 'project1',
-                             'user_id': 'user1'})
+                             'user_id': 'user1',
+                             'fixed_ips': {'in_use': 2, 'reserved': 2}})
         for r in reservations:
             self.assertRaises(exception.ReservationNotFound,
                             db.reservation_get, self.ctxt, r)
@@ -4949,7 +4959,7 @@ class QuotaTestCase(test.TestCase, ModelsObjectComparatorMixin):
         expected = {'project_id': 'p1',
                     'resource0': {'in_use': 0, 'reserved': 0},
                     'resource1': {'in_use': 1, 'reserved': 1},
-                    'resource2': {'in_use': 2, 'reserved': 2}}
+                    'fixed_ips': {'in_use': 2, 'reserved': 2}}
         self.assertEqual(expected, db.quota_usage_get_all_by_project(
                          self.ctxt, 'p1'))
 
@@ -4959,7 +4969,7 @@ class QuotaTestCase(test.TestCase, ModelsObjectComparatorMixin):
                     'user_id': 'u1',
                     'resource0': {'in_use': 0, 'reserved': 0},
                     'resource1': {'in_use': 1, 'reserved': 1},
-                    'resource2': {'in_use': 2, 'reserved': 2}}
+                    'fixed_ips': {'in_use': 2, 'reserved': 2}}
         self.assertEqual(expected, db.quota_usage_get_all_by_project_and_user(
                          self.ctxt, 'p1', 'u1'))
 
