@@ -387,7 +387,7 @@ class ApiSampleTestBaseV2(ApiSampleTestBase):
             ext = [self.extension_name] if self.extension_name else []
             self.flags(osapi_compute_extension=ext + extends)
         super(ApiSampleTestBaseV2, self).setUp()
-        self.useFixture(test.SampleNetworks())
+        self.useFixture(test.SampleNetworks(host=self.network.host))
         fake_network.stub_compute_with_ips(self.stubs)
         fake_utils.stub_out_utils_spawn_n(self.stubs)
         self.generate_samples = os.getenv('GENERATE_SAMPLES') is not None
@@ -3182,18 +3182,31 @@ class FloatingIPPoolsSampleXmlTests(FloatingIPPoolsSampleJsonTests):
 class MultinicSampleJsonTest(ServersSampleBase):
     extension_name = "nova.api.openstack.compute.contrib.multinic.Multinic"
 
+    def _disable_instance_dns_manager(self):
+        # NOTE(markmc): it looks like multinic and instance_dns_manager are
+        #               incompatible. See:
+        #               https://bugs.launchpad.net/nova/+bug/1213251
+        self.flags(
+            instance_dns_manager='nova.network.noop_dns_driver.NoopDNSDriver')
+
     def setUp(self):
+        self._disable_instance_dns_manager()
         super(MultinicSampleJsonTest, self).setUp()
         self.uuid = self._post_server()
 
-    def test_add_fixed_ip(self):
+    def _add_fixed_ip(self):
         subs = {"networkId": 1}
         response = self._do_post('servers/%s/action' % (self.uuid),
                                  'multinic-add-fixed-ip-req', subs)
         self.assertEqual(response.status, 202)
 
+    def test_add_fixed_ip(self):
+        self._add_fixed_ip()
+
     def test_remove_fixed_ip(self):
-        subs = {"ip": "10.0.0.2"}
+        self._add_fixed_ip()
+
+        subs = {"ip": "10.0.0.4"}
         response = self._do_post('servers/%s/action' % (self.uuid),
                                  'multinic-remove-fixed-ip-req', subs)
         self.assertEqual(response.status, 202)

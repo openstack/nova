@@ -116,10 +116,13 @@ class SampleNetworks(fixtures.Fixture):
 
     """Create sample networks in the database."""
 
+    def __init__(self, host=None):
+        self.host = host
+
     def setUp(self):
         super(SampleNetworks, self).setUp()
         ctxt = context.get_admin_context()
-        network = network_manager.VlanManager()
+        network = network_manager.VlanManager(host=self.host)
         bridge_interface = CONF.flat_interface or CONF.vlan_interface
         network.create_networks(ctxt,
                                 label='test',
