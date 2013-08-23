@@ -26,6 +26,7 @@ from nova import servicegroup
 
 CONF = cfg.CONF
 ALIAS = "os-availability-zone"
+ATTRIBUTE_NAME = "%s:availability_zone" % ALIAS
 authorize_list = extensions.extension_authorizer('compute',
                                                  'v3:' + ALIAS + ':list')
 authorize_detail = extensions.extension_authorizer('compute',
@@ -184,10 +185,9 @@ class AvailabilityZone(extensions.V3APIExtensionBase):
         return []
 
     def server_create(self, server_dict, create_kwargs):
-        create_kwargs['availability_zone'] = server_dict.get(
-            'availability_zone')
+        create_kwargs['availability_zone'] = server_dict.get(ATTRIBUTE_NAME)
 
     def server_xml_extract_server_deserialize(self, server_node, server_dict):
-        availability_zone = server_node.getAttribute('availability_zone')
+        availability_zone = server_node.getAttribute(ATTRIBUTE_NAME)
         if availability_zone:
-            server_dict['availability_zone'] = availability_zone
+            server_dict[ATTRIBUTE_NAME] = availability_zone
