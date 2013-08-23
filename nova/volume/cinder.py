@@ -278,6 +278,11 @@ class API(base.Base):
         return cinderclient(context).volumes.terminate_connection(volume_id,
                                                                   connector)
 
+    def migrate_volume_completion(self, context, old_volume_id, new_volume_id,
+                                  error=False):
+        return cinderclient(context).volumes.migrate_volume_completion(
+            old_volume_id, new_volume_id, error)
+
     def create(self, context, size, name, description, snapshot=None,
                image_id=None, volume_type=None, metadata=None,
                availability_zone=None):

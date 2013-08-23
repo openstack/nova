@@ -566,6 +566,12 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             self.assertTrue(uuidutils.is_uuid_like(volume_id))
             volumes[volume_id]['status'] = 'available'
 
+        def fake_vol_migrate_volume_completion(context, old_volume_id,
+                                               new_volume_id, error=False):
+            self.assertTrue(uuidutils.is_uuid_like(old_volume_id))
+            self.assertTrue(uuidutils.is_uuid_like(old_volume_id))
+            return {'save_volume_id': new_volume_id}
+
         def fake_func_exc(*args, **kwargs):
             raise AttributeError  # Random exception
 
@@ -585,6 +591,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                        lambda x: {})
         self.stubs.Set(self.compute.driver, 'swap_volume',
                        lambda w, x, y, z: None)
+        self.stubs.Set(self.compute.volume_api, 'migrate_volume_completion',
+                      fake_vol_migrate_volume_completion)
         self.stubs.Set(self.compute.conductor_api,
                        'block_device_mapping_update_or_create',
                        lambda x, y: None)
