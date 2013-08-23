@@ -66,6 +66,8 @@ LOG = logging.getLogger(__name__)
 xenapi_opts = [
     cfg.StrOpt('xenapi_connection_url',
                help='URL for connection to XenServer/Xen Cloud Platform. '
+                    'A special value of unix://local can be used to connect '
+                    'to the local unix socket.  '
                     'Required if compute_driver=xenapi.XenAPIDriver'),
     cfg.StrOpt('xenapi_connection_username',
                default='root',
@@ -782,6 +784,9 @@ class XenAPISession(object):
 
     def _create_session(self, url):
         """Stubout point. This can be replaced with a mock session."""
+        self.is_local_connection = url == "unix://local"
+        if self.is_local_connection:
+            return self.XenAPI.xapi_local()
         return self.XenAPI.Session(url)
 
     def _unwrap_plugin_exceptions(self, func, *args, **kwargs):

@@ -62,7 +62,7 @@ def stubout_session(stubs, cls, product_version=(5, 6, 2),
 
 
 def stubout_get_this_vm_uuid(stubs):
-    def f():
+    def f(session):
         vms = [rec['uuid'] for ref, rec
                in fake.get_all_records('VM').iteritems()
                if rec['is_control_domain']]
