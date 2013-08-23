@@ -3096,6 +3096,14 @@ class ComputeTestCase(BaseTestCase):
         self.compute.terminate_instance(self.context, instance,
                                         bdms=None, reservations=resvs)
 
+    def _stub_out_resize_network_methods(self):
+        def fake(cls, ctxt, instance, *args, **kwargs):
+            pass
+
+        self.stubs.Set(network_api.API, 'setup_networks_on_host', fake)
+        self.stubs.Set(network_api.API, 'migrate_instance_start', fake)
+        self.stubs.Set(network_api.API, 'migrate_instance_finish', fake)
+
     def _test_finish_resize(self, power_on):
         # Contrived test to ensure finish_resize doesn't raise anything and
         # also tests resize from ACTIVE or STOPPED state which determines
@@ -3125,6 +3133,8 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(self.compute.driver, 'finish_migration',
                        fake_finish_migration)
         self.stubs.Set(db, 'migration_update', fake_migration_update)
+
+        self._stub_out_resize_network_methods()
 
         reservations = self._ensure_quota_reservations_committed()
 
@@ -3251,6 +3261,8 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(cinder.API, "terminate_connection",
                        fake_terminate_connection)
 
+        self._stub_out_resize_network_methods()
+
         self.compute.resize_instance(self.context, instance=instance,
                 migration=migration_ref, image={},
                 instance_type=jsonutils.to_primitive(instance_type))
@@ -3320,6 +3332,8 @@ class ComputeTestCase(BaseTestCase):
             pass
 
         self.stubs.Set(self.compute.driver, 'finish_migration', throw_up)
+
+        self._stub_out_resize_network_methods()
 
         reservations = self._ensure_quota_reservations_rolledback()
 
@@ -3432,6 +3446,9 @@ class ComputeTestCase(BaseTestCase):
                 instance_type=new_type, image={})
         migration_ref = db.migration_get_by_instance_and_status(
                 self.context.elevated(), new_instance['uuid'], 'pre-migrating')
+
+        self._stub_out_resize_network_methods()
+
         self.compute.resize_instance(self.context, instance=new_instance,
                 migration=migration_ref, image={}, instance_type=new_type)
         timeutils.set_time_override(cur_time)
@@ -3649,6 +3666,8 @@ class ComputeTestCase(BaseTestCase):
         sys_meta = utils.metadata_to_dict(inst['system_metadata'])
         self.assertEqual(vm_states.ACTIVE, sys_meta['old_vm_state'])
 
+        self._stub_out_resize_network_methods()
+
         db.instance_update(self.context, instance_uuid,
                            {"task_state": task_states.RESIZE_PREP})
         self.compute.resize_instance(self.context, instance=new_instance,
@@ -3686,6 +3705,8 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(self.compute.driver, 'finish_migration', fake)
         self.stubs.Set(self.compute.driver, 'confirm_migration',
                        fake_confirm_migration_driver)
+
+        self._stub_out_resize_network_methods()
 
         reservations = self._ensure_quota_reservations_committed()
 
@@ -3740,16 +3761,6 @@ class ComputeTestCase(BaseTestCase):
         db.instance_update(self.context, instance_uuid,
                            {"task_state": None})
 
-        def fake_setup_networks_on_host(cls, ctxt, instance, host,
-                                        teardown):
-            self.assertEqual(host, migration_ref['source_compute'])
-            inst = db.instance_get_by_uuid(ctxt, instance['uuid'])
-            self.assertEqual('fake-mini', inst['host'])
-            self.assertTrue(teardown)
-
-        self.stubs.Set(network_api.API, 'setup_networks_on_host',
-                       fake_setup_networks_on_host)
-
         rpcinst = db.instance_get_by_uuid(self.context, rpcinst['uuid'])
         self.compute.confirm_resize(self.context, rpcinst, reservations,
                                     migration_ref)
@@ -3802,6 +3813,8 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(self.compute.driver, 'finish_migration', fake)
         self.stubs.Set(self.compute.driver, 'finish_revert_migration',
                        fake_finish_revert_migration_driver)
+
+        self._stub_out_resize_network_methods()
 
         reservations = self._ensure_quota_reservations_committed()
 
@@ -3859,16 +3872,6 @@ class ComputeTestCase(BaseTestCase):
         self.compute.revert_resize(self.context,
                 migration_id=migration_ref['id'], instance=rpcinst,
                 reservations=reservations)
-
-        def fake_setup_networks_on_host(cls, ctxt, instance, host,
-                                        teardown=False):
-            self.assertEqual(host, migration_ref['source_compute'])
-            inst = db.instance_get_by_uuid(ctxt, instance['uuid'])
-            self.assertEqual(host, inst['host'])
-            self.assertFalse(teardown)
-
-        self.stubs.Set(network_api.API, 'setup_networks_on_host',
-                       fake_setup_networks_on_host)
 
         rpcinst = db.instance_get_by_uuid(self.context, rpcinst['uuid'])
         if remove_old_vm_state:
@@ -4160,6 +4163,11 @@ class ComputeTestCase(BaseTestCase):
         self.compute.driver.ensure_filtering_rules_for_instance(
             mox.IsA(instance), nw_info)
 
+        self.mox.StubOutWithMock(self.compute.network_api,
+                                 'setup_networks_on_host')
+        self.compute.network_api.setup_networks_on_host(c, instance,
+                                                        self.compute.host)
+
         test_notifier.NOTIFICATIONS = []
         # start test
         self.mox.ReplayAll()
@@ -4295,12 +4303,13 @@ class ComputeTestCase(BaseTestCase):
              "args": {'instance': inst_ref, 'block_migration': False},
              "version": compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION},
             None)
-        rpc.call(c, 'network', {'method': 'setup_networks_on_host',
-                                'namespace': None,
-                                'args': {'instance_id': inst_id,
-                                         'host': self.compute.host,
-                                         'teardown': True},
-                                'version': '1.0'}, None)
+
+        self.mox.StubOutWithMock(self.compute.network_api,
+                                 'setup_networks_on_host')
+        self.compute.network_api.setup_networks_on_host(c, inst_ref,
+                                                        self.compute.host,
+                                                        teardown=True)
+
         # start test
         self.mox.ReplayAll()
         migrate_data = {'is_shared_storage': False}
@@ -4345,12 +4354,12 @@ class ComputeTestCase(BaseTestCase):
             None)
         self.mox.StubOutWithMock(self.compute.driver, 'unplug_vifs')
         self.compute.driver.unplug_vifs(inst_ref, [])
-        rpc.call(c, 'network', {'method': 'setup_networks_on_host',
-                                'namespace': None,
-                                'args': {'instance_id': inst_id,
-                                         'host': self.compute.host,
-                                         'teardown': True},
-                                'version': '1.0'}, None)
+
+        self.mox.StubOutWithMock(self.compute.network_api,
+                                 'setup_networks_on_host')
+        self.compute.network_api.setup_networks_on_host(c, inst_ref,
+                                                        self.compute.host,
+                                                        teardown=True)
 
         # start test
         self.mox.ReplayAll()
@@ -4443,6 +4452,13 @@ class ComputeTestCase(BaseTestCase):
 
         instance = jsonutils.to_primitive(db.instance_get(c, inst_id))
         test_notifier.NOTIFICATIONS = []
+
+        self.mox.StubOutWithMock(self.compute.network_api,
+                                 'setup_networks_on_host')
+        self.compute.network_api.setup_networks_on_host(c, instance,
+                                                        self.compute.host,
+                                                        teardown=True)
+
         # start test
         self.mox.ReplayAll()
         ret = self.compute.rollback_live_migration_at_destination(c,
@@ -5402,9 +5418,14 @@ class ComputeTestCase(BaseTestCase):
         def fake_get_resource_tracker(self):
             return fake_rt
 
+        def fake_setup_networks_on_host(self, *args, **kwargs):
+            pass
+
         self.stubs.Set(fake_rt, 'drop_resize_claim', fake_drop_resize_claim)
         self.stubs.Set(self.compute, '_get_resource_tracker',
                        fake_get_resource_tracker)
+        self.stubs.Set(self.compute.network_api, 'setup_networks_on_host',
+                       fake_setup_networks_on_host)
 
         migration = db.migration_create(self.context.elevated(),
                                         {'instance_uuid': instance['uuid'],
@@ -9023,6 +9044,11 @@ class EvacuateHostTestCase(BaseTestCase):
         super(EvacuateHostTestCase, self).tearDown()
 
     def _rebuild(self, on_shared_storage=True):
+        def fake(cls, ctxt, instance, *args, **kwargs):
+            pass
+
+        self.stubs.Set(network_api.API, 'setup_networks_on_host', fake)
+
         orig_image_ref = None
         image_ref = None
         injected_files = None
