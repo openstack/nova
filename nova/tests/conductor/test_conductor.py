@@ -1462,6 +1462,47 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         self.conductor._cold_migrate(self.context, inst,
                                      'flavor', filter_props, resvs)
 
+    def test_cold_migrate_no_valid_host_back_in_stopped_state(self):
+        inst = fake_instance.fake_db_instance(image_ref='fake-image_ref')
+        inst['vm_state'] = vm_states.STOPPED
+        request_spec = dict(instance_type=dict(extra_specs=dict()))
+        filter_props = dict(context=None)
+        resvs = 'fake-resvs'
+        image = 'fake-image'
+
+        self.mox.StubOutWithMock(self.conductor, '_get_image')
+        self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
+        self.mox.StubOutWithMock(self.conductor.scheduler_rpcapi,
+                                 'select_destinations')
+        self.mox.StubOutWithMock(self.conductor,
+                                 '_set_vm_state_and_notify')
+        self.mox.StubOutWithMock(self.conductor.quotas, 'rollback')
+
+        self.conductor._get_image(self.context,
+                                  'fake-image_ref').AndReturn(image)
+        scheduler_utils.build_request_spec(
+                self.context, image, [inst]).AndReturn(request_spec)
+
+        exc_info = exc.NoValidHost(reason="")
+
+        self.conductor.scheduler_rpcapi.select_destinations(
+                self.context, request_spec,
+                filter_props).AndRaise(exc_info)
+
+        updates = {'vm_state': vm_states.STOPPED,
+                   'task_state': None}
+
+        self.conductor._set_vm_state_and_notify(self.context,
+                                                'migrate_server',
+                                                updates, exc_info,
+                                                request_spec)
+        self.conductor.quotas.rollback(self.context, resvs)
+
+        self.mox.ReplayAll()
+
+        self.conductor._cold_migrate(self.context, inst,
+                                     'flavor', filter_props, resvs)
+
     def test_cold_migrate_exception_host_in_error_state_and_raise(self):
         inst = fake_instance.fake_db_instance(image_ref='fake-image_ref')
         request_spec = dict(instance_type=dict(extra_specs=dict()))

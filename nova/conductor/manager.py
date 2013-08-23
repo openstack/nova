@@ -630,7 +630,10 @@ class ComputeTaskManager(base.Base):
                     context, request_spec, filter_properties)
             host_state = hosts[0]
         except exception.NoValidHost as ex:
-            updates = {'vm_state': vm_states.ACTIVE, 'task_state': None}
+            vm_state = instance['vm_state']
+            if not vm_state:
+                vm_state = vm_states.ACTIVE
+            updates = {'vm_state': vm_state, 'task_state': None}
             self._set_vm_state_and_notify(context, 'migrate_server',
                                           updates, ex, request_spec)
             if reservations:
