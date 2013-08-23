@@ -3698,14 +3698,15 @@ class XenAPISessionTestCase(test.TestCase):
                 })
 
         self.assertEquals(
-            (None, None),
+            ((1, 6, 0), None),
             session._get_product_version_and_brand()
         )
 
     def test_get_product_version_product_brand_xs_6(self):
         session = self._get_mock_xapisession({
                     'product_brand': 'XenServer',
-                    'product_version': '6.0.50'
+                    'product_version': '6.0.50',
+                    'platform_version': '0.0.1'
                 })
 
         self.assertEquals(
