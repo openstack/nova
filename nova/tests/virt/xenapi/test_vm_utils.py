@@ -356,6 +356,18 @@ class FetchVhdImageTestCase(test.TestCase):
         self.mox.VerifyAll()
 
 
+class TestImageCompression(test.TestCase):
+    def test_image_compression(self):
+        # Testing for nova.conf, too low, negative, and a correct value.
+        self.assertEqual(vm_utils.get_compression_level(), None)
+        self.flags(xenapi_image_compression_level=0)
+        self.assertEqual(vm_utils.get_compression_level(), None)
+        self.flags(xenapi_image_compression_level=-6)
+        self.assertEqual(vm_utils.get_compression_level(), None)
+        self.flags(xenapi_image_compression_level=6)
+        self.assertEqual(vm_utils.get_compression_level(), 6)
+
+
 class ResizeHelpersTestCase(test.TestCase):
     def test_get_min_sectors(self):
         self.mox.StubOutWithMock(utils, 'execute')

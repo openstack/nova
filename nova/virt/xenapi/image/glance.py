@@ -60,6 +60,10 @@ class GlanceStore(object):
         props['auto_disk_config'] = instance['auto_disk_config']
         props['os_type'] = instance['os_type'] or CONF.default_os_type
 
+        compression_level = vm_utils.get_compression_level()
+        if compression_level:
+            props['xenapi_image_compression_level'] = compression_level
+
         try:
             self._call_glance_plugin(session, 'upload_vhd', params)
         except exception.PluginRetriesExceeded:
