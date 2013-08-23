@@ -29,6 +29,7 @@ import nova.image.glance
 from nova.openstack.common import log as logging
 from nova import service
 from nova import test
+from nova.tests import cast_as_call
 from nova.tests import fake_crypto
 import nova.tests.image.fake
 from nova.tests.integrated.api import client
@@ -90,6 +91,8 @@ class _IntegratedTestBase(test.TestCase):
         self._start_api_service()
 
         self.api = client.TestOpenStackClient('fake', 'fake', self.auth_url)
+
+        self.useFixture(cast_as_call.CastAsCall(self.stubs))
 
     def tearDown(self):
         self.osapi.stop()
