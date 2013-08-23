@@ -1088,15 +1088,15 @@ class VMOps(object):
     def inject_instance_metadata(self, instance, vm_ref):
         """Inject instance metadata into xenstore."""
         @utils.synchronized('xenstore-' + instance['uuid'])
-        def store_meta(topdir, data_list):
-            for item in data_list:
-                key = self._sanitize_xenstore_key(item['key'])
-                value = item['value'] or ''
+        def store_meta(topdir, data_dict):
+            for key, value in data_dict.items():
+                key = self._sanitize_xenstore_key(key)
+                value = value or ''
                 self._add_to_param_xenstore(vm_ref, '%s/%s' % (topdir, key),
                                             jsonutils.dumps(value))
 
         # Store user metadata
-        store_meta('vm-data/user-metadata', instance['metadata'])
+        store_meta('vm-data/user-metadata', utils.instance_meta(instance))
 
     def inject_auto_disk_config(self, instance, vm_ref):
         """Inject instance's auto_disk_config attribute into xenstore."""
