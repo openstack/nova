@@ -5505,6 +5505,8 @@ def instance_group_delete(context, group_uuid):
     """Delete an group."""
     session = get_session()
     with session.begin():
+        group_id = _instance_group_id(context, group_uuid, session=session)
+
         count = _instance_group_get_query(context,
                                           models.InstanceGroup,
                                           models.InstanceGroup.uuid,
@@ -5519,7 +5521,7 @@ def instance_group_delete(context, group_uuid):
                            models.InstanceGroupMember]
         for model in instance_models:
             model_query(context, model, session=session).\
-                    filter_by(group_id=group_uuid).\
+                    filter_by(group_id=group_id).\
                     soft_delete()
 
 
@@ -5535,21 +5537,22 @@ def instance_group_get_all_by_project_id(context, project_id):
                             all()
 
 
-def _instance_group_model_get_query(context, model_class, group_uuid,
+def _instance_group_model_get_query(context, model_class, group_id,
                                     session=None, read_deleted='no'):
     return model_query(context,
                        model_class,
                        read_deleted=read_deleted,
                        session=session).\
-                filter_by(group_id=group_uuid)
+                filter_by(group_id=group_id)
 
 
-def _instance_group_id(context, group_uuid):
+def _instance_group_id(context, group_uuid, session=None):
     """Returns the group database ID for the group UUID."""
 
     result = model_query(context,
                          models.InstanceGroup.id,
-                         base_model=models.InstanceGroup).\
+                         base_model=models.InstanceGroup,
+                         session=session).\
                 filter_by(uuid=group_uuid).\
                 first()
     if not result:
