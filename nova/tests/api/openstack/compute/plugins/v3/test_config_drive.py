@@ -14,12 +14,14 @@
 #    under the License.
 
 import datetime
+from lxml import etree
 import uuid
 
 from oslo.config import cfg
 import webob
 
 from nova.api.openstack.compute import plugins
+from nova.api.openstack.compute.plugins.v3 import config_drive
 from nova.api.openstack.compute.plugins.v3 import servers
 from nova.compute import api as compute_api
 from nova.compute import flavors
@@ -35,6 +37,7 @@ from nova.tests.image import fake
 
 CONF = cfg.CONF
 FAKE_UUID = fakes.FAKE_UUID
+CONFIG_DRIVE_XML_KEY = '{%s}config_drive' % config_drive.ConfigDrive.namespace
 
 
 def fake_gen_uuid():
@@ -64,7 +67,7 @@ class ConfigDriveTest(test.TestCase):
             init_only=('servers', 'os-config-drive')))
         self.assertEquals(response.status_int, 200)
         res_dict = jsonutils.loads(response.body)
-        self.assertTrue('config_drive' in res_dict['server'])
+        self.assertTrue(config_drive.ATTRIBUTE_NAME in res_dict['server'])
 
     def test_detail_servers(self):
         self.stubs.Set(db, 'instance_get_all_by_filters',
@@ -77,7 +80,7 @@ class ConfigDriveTest(test.TestCase):
         server_dicts = jsonutils.loads(res.body)['servers']
         self.assertNotEqual(len(server_dicts), 0)
         for server_dict in server_dicts:
-            self.assertTrue('config_drive' in server_dict)
+            self.assertTrue(config_drive.ATTRIBUTE_NAME in server_dict)
 
 
 class ServersControllerCreateTest(test.TestCase):
@@ -193,8 +196,7 @@ class ServersControllerCreateTest(test.TestCase):
             server = self.controller.create(req, body).obj['server']
 
     def test_create_instance_with_config_drive_disabled(self):
-        config_drive = [{'config_drive': 'foo'}]
-        params = {'config_drive': config_drive}
+        params = {config_drive.ATTRIBUTE_NAME: "False"}
         old_create = compute_api.API.create
 
         def create(*args, **kwargs):
@@ -224,7 +226,7 @@ class ServersControllerCreateTest(test.TestCase):
                     'open': 'stack',
                 },
                 'personality': {},
-                'config_drive': "true",
+                config_drive.ATTRIBUTE_NAME: "true",
             },
         }
 
@@ -250,7 +252,7 @@ class ServersControllerCreateTest(test.TestCase):
                     'open': 'stack',
                 },
                 'personality': {},
-                'config_drive': image_href,
+                config_drive.ATTRIBUTE_NAME: image_href,
             },
         }
 
@@ -299,17 +301,47 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
     def test_request_with_config_drive(self):
         serial_request = """
     <server xmlns="http://docs.openstack.org/compute/api/v2"
+        xmlns:%(alias)s="%(namespace)s"
         name="config_drive_test"
         image_ref="1"
         flavor_ref="1"
-        config_drive="true"/>"""
+        %(alias)s:config_drive="true"/>""" % {
+            "alias": config_drive.ALIAS,
+            "namespace": config_drive.ConfigDrive.namespace}
         request = self.deserializer.deserialize(serial_request)
         expected = {
             "server": {
                 "name": "config_drive_test",
                 "image_ref": "1",
                 "flavor_ref": "1",
-                "config_drive": "true"
+                config_drive.ATTRIBUTE_NAME: "true"
             },
         }
         self.assertEquals(request['body'], expected)
+
+
+class ConfigDriveXmlSerializerTest(test.TestCase):
+
+    def test_server_config_drive(self):
+        fake_server = {"server": {"id": 'fake',
+                                  config_drive.ATTRIBUTE_NAME: 'true'}}
+        serializer = servers.ServerTemplate()
+        serializer.attach(config_drive.ServerConfigDriveTemplate())
+        output = serializer.serialize(fake_server)
+        root = etree.XML(output)
+        self.assertEqual(root.get(CONFIG_DRIVE_XML_KEY), 'true')
+
+    def test_servers_config_drives(self):
+        fake_server = {"servers": [{"id": 'fake1',
+                                    config_drive.ATTRIBUTE_NAME: 'true'},
+                                   {"id": 'fake2',
+                                    config_drive.ATTRIBUTE_NAME: 'false'}]}
+        serializer = servers.ServersTemplate()
+        serializer.attach(config_drive.ServersConfigDriveTemplate())
+        output = serializer.serialize(fake_server)
+        root = etree.XML(output)
+        server_nodes = root.getchildren()
+        self.assertEqual('fake1', server_nodes[0].get('id'))
+        self.assertEqual('true', server_nodes[0].get(CONFIG_DRIVE_XML_KEY))
+        self.assertEqual('fake2', server_nodes[1].get('id'))
+        self.assertEqual('false', server_nodes[1].get(CONFIG_DRIVE_XML_KEY))
