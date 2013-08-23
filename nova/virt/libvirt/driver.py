@@ -340,7 +340,6 @@ class LibvirtDriver(driver.ComputeDriver):
                                  "writethrough",
                                  "writeback",
                                  "directsync",
-                                 "writethrough",
                                  "unsafe",
                                 ]
 
