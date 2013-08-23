@@ -23,6 +23,7 @@ import webob
 
 from nova.api.openstack.compute import plugins
 from nova.api.openstack.compute.plugins.v3 import servers
+from nova.api.openstack.compute.plugins.v3 import user_data
 from nova.compute import api as compute_api
 from nova.compute import flavors
 from nova import db
@@ -84,7 +85,7 @@ class ServersControllerCreateTest(test.TestCase):
                 'reservation_id': inst['reservation_id'],
                 "created_at": datetime.datetime(2010, 10, 10, 12, 0, 0),
                 "updated_at": datetime.datetime(2010, 11, 11, 11, 0, 0),
-                "user_data": None,
+                user_data.ATTRIBUTE_NAME: None,
                 "progress": 0,
                 "fixed_ips": [],
                 "task_state": "",
@@ -160,7 +161,7 @@ class ServersControllerCreateTest(test.TestCase):
             server = self.controller.create(req, body).obj['server']
 
     def test_create_instance_with_user_data_disabled(self):
-        params = {'user_data': base64.b64encode('fake')}
+        params = {user_data.ATTRIBUTE_NAME: base64.b64encode('fake')}
         old_create = compute_api.API.create
 
         def create(*args, **kwargs):
@@ -173,7 +174,7 @@ class ServersControllerCreateTest(test.TestCase):
             override_controller=self.no_user_data_controller)
 
     def test_create_instance_with_user_data_enabled(self):
-        params = {'user_data': base64.b64encode('fake')}
+        params = {user_data.ATTRIBUTE_NAME: base64.b64encode('fake')}
         old_create = compute_api.API.create
 
         def create(*args, **kwargs):
@@ -197,7 +198,7 @@ class ServersControllerCreateTest(test.TestCase):
                     'open': 'stack',
                 },
                 'personality': {},
-                'user_data': base64.b64encode(value),
+                user_data.ATTRIBUTE_NAME: base64.b64encode(value),
             },
         }
 
@@ -224,7 +225,7 @@ class ServersControllerCreateTest(test.TestCase):
                     'open': 'stack',
                 },
                 'personality': {},
-                'user_data': value,
+                user_data.ATTRIBUTE_NAME: value,
             },
         }
 
@@ -247,17 +248,20 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
     def test_request_with_user_data(self):
         serial_request = """
     <server xmlns="http://docs.openstack.org/compute/api/v3"
+        xmlns:%(alias)s="%(namespace)s"
         name="user_data_test"
         image_ref="1"
         flavor_ref="1"
-        user_data="IyEvYmluL2Jhc2gKL2Jpbi9"/>"""
+        %(alias)s:user_data="IyEvYmluL2Jhc2gKL2Jpbi9"/>""" % {
+            'alias': user_data.ALIAS,
+            'namespace': user_data.UserData.namespace}
         request = self.deserializer.deserialize(serial_request)
         expected = {
             "server": {
                 "name": "user_data_test",
                 "image_ref": "1",
                 "flavor_ref": "1",
-                "user_data": "IyEvYmluL2Jhc2gKL2Jpbi9"
+                user_data.ATTRIBUTE_NAME: "IyEvYmluL2Jhc2gKL2Jpbi9"
             },
         }
         self.assertEquals(request['body'], expected)
