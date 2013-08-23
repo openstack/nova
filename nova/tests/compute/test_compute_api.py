@@ -342,6 +342,8 @@ class _ComputeAPIUnitTestMixIn(object):
                                               ).AndReturn('rsvs')
         self.compute_api._record_action_start(
             self.context, inst, instance_actions.CONFIRM_RESIZE)
+        self.mox.StubOutWithMock(self.compute_api.compute_rpcapi,
+                                 'confirm_resize')
         self.compute_api.compute_rpcapi.confirm_resize(
             self.context, inst, migration,
             host=migration['source_compute'],
