@@ -1384,8 +1384,9 @@ class API(base.Base):
             context, instance, "%s.start" % delete_type)
 
         elevated = context.elevated()
-        self.network_api.deallocate_for_instance(elevated,
-                instance)
+        if self.cell_type != 'api':
+            self.network_api.deallocate_for_instance(elevated,
+                                                     instance)
         system_meta = self.db.instance_system_metadata_get(context,
                 instance_uuid)
 
