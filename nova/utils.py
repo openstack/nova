@@ -1109,8 +1109,8 @@ def check_string_length(value, name, min_length=0, max_length=None):
         raise exception.InvalidInput(message=msg)
 
     if len(value) < min_length:
-        msg = _("%(name)s has less than %(min_length)s "
-                "characters.") % {'name': name, 'min_length': min_length}
+        msg = _("%(name)s has a minimum character requirement of "
+                "%(min_length)s.") % {'name': name, 'min_length': min_length}
         raise exception.InvalidInput(message=msg)
 
     if max_length and len(value) > max_length:
