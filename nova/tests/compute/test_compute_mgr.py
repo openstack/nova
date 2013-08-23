@@ -648,9 +648,17 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
 
     def test_build_and_run_instance_called_with_proper_args(self):
         self.mox.StubOutWithMock(self.compute, '_build_and_run_instance')
+        self.mox.StubOutWithMock(self.compute.conductor_api,
+                                 'action_event_start')
+        self.mox.StubOutWithMock(self.compute.conductor_api,
+                                 'action_event_finish')
         self.compute._build_and_run_instance(self.context, self.instance,
                 self.image, self.injected_files, self.admin_pass, self.node,
                 self.limits)
+        self.compute.conductor_api.action_event_start(self.context,
+                                                      mox.IgnoreArg())
+        self.compute.conductor_api.action_event_finish(self.context,
+                                                       mox.IgnoreArg())
         self.mox.ReplayAll()
 
         self.compute.build_and_run_instance(self.context, self.instance,
@@ -663,13 +671,21 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(self.compute, '_build_and_run_instance')
         self.mox.StubOutWithMock(self.compute, '_set_instance_error_state')
         self.mox.StubOutWithMock(self.compute.compute_task_api,
-                'build_instances')
+                                 'build_instances')
+        self.mox.StubOutWithMock(self.compute.conductor_api,
+                                 'action_event_start')
+        self.mox.StubOutWithMock(self.compute.conductor_api,
+                                 'action_event_finish')
         self.compute._build_and_run_instance(self.context, self.instance,
                 self.image, self.injected_files, self.admin_pass, self.node,
                 self.limits).AndRaise(exception.BuildAbortException(reason='',
                             instance_uuid=self.instance['uuid']))
         self.compute._set_instance_error_state(self.context,
                 self.instance['uuid'])
+        self.compute.conductor_api.action_event_start(self.context,
+                                                      mox.IgnoreArg())
+        self.compute.conductor_api.action_event_finish(self.context,
+                                                       mox.IgnoreArg())
         self.mox.ReplayAll()
 
         self.compute.build_and_run_instance(self.context, self.instance,
@@ -682,7 +698,11 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(self.compute, '_build_and_run_instance')
         self.mox.StubOutWithMock(self.compute, '_set_instance_error_state')
         self.mox.StubOutWithMock(self.compute.compute_task_api,
-                'build_instances')
+                                 'build_instances')
+        self.mox.StubOutWithMock(self.compute.conductor_api,
+                                 'action_event_start')
+        self.mox.StubOutWithMock(self.compute.conductor_api,
+                                 'action_event_finish')
         self.compute._build_and_run_instance(self.context, self.instance,
                 self.image, self.injected_files, self.admin_pass, self.node,
                 self.limits).AndRaise(exception.RescheduledException(reason='',
@@ -690,6 +710,10 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.compute.compute_task_api.build_instances(self.context,
                 [self.instance], self.image, [], self.admin_pass,
                 self.injected_files, None, None, None)
+        self.compute.conductor_api.action_event_start(self.context,
+                                                      mox.IgnoreArg())
+        self.compute.conductor_api.action_event_finish(self.context,
+                                                       mox.IgnoreArg())
         self.mox.ReplayAll()
 
         self.compute.build_and_run_instance(self.context, self.instance,
@@ -743,11 +767,19 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(self.compute, '_get_resource_tracker')
         self.mox.StubOutWithMock(self.compute.compute_task_api,
                 'build_instances')
+        self.mox.StubOutWithMock(self.compute.conductor_api,
+                                 'action_event_start')
+        self.mox.StubOutWithMock(self.compute.conductor_api,
+                                 'action_event_finish')
         self.compute._get_resource_tracker('node').AndReturn(
                 FakeResourceTracker())
         self.compute.compute_task_api.build_instances(self.context,
                 [self.instance], self.image, [], self.admin_pass,
                 self.injected_files, None, None, None)
+        self.compute.conductor_api.action_event_start(self.context,
+                                                      mox.IgnoreArg())
+        self.compute.conductor_api.action_event_finish(self.context,
+                                                       mox.IgnoreArg())
         self.mox.ReplayAll()
 
         self.compute.build_and_run_instance(self.context, self.instance,
