@@ -75,12 +75,38 @@ class ConsolesController(wsgi.Controller):
 
         return {'console': {'type': console_type, 'url': output['url']}}
 
+    @wsgi.action('os-getRDPConsole')
+    def get_rdp_console(self, req, id, body):
+        """Get text console output."""
+        context = req.environ['nova.context']
+        authorize(context)
+
+        # If type is not supplied or unknown, get_rdp_console below will cope
+        console_type = body['os-getRDPConsole'].get('type')
+
+        try:
+            instance = self.compute_api.get(context, id, want_objects=True)
+            output = self.compute_api.get_rdp_console(context,
+                                                      instance,
+                                                      console_type)
+        except exception.InstanceNotFound as e:
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
+        except exception.InstanceNotReady as e:
+            raise webob.exc.HTTPConflict(explanation=e.format_message())
+        except NotImplementedError:
+            msg = _("Unable to get rdp console, functionality not implemented")
+            raise webob.exc.HTTPNotImplemented(explanation=msg)
+
+        return {'console': {'type': console_type, 'url': output['url']}}
+
     def get_actions(self):
         """Return the actions the extension adds, as required by contract."""
         actions = [extensions.ActionExtension("servers", "os-getVNCConsole",
                                               self.get_vnc_console),
                    extensions.ActionExtension("servers", "os-getSPICEConsole",
-                                              self.get_spice_console)]
+                                              self.get_spice_console),
+                   extensions.ActionExtension("servers", "os-getRDPConsole",
+                                              self.get_rdp_console)]
         return actions
 
 

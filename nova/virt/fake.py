@@ -324,6 +324,11 @@ class FakeDriver(driver.ComputeDriver):
                 'port': 6969,
                 'tlsPort': 6970}
 
+    def get_rdp_console(self, context, instance):
+        return {'internal_access_path': 'FAKE',
+                'host': 'fakerdpconsole.com',
+                'port': 6969}
+
     def get_console_pool_info(self, console_type):
         return {'address': '127.0.0.1',
                 'username': 'fakeuser',
