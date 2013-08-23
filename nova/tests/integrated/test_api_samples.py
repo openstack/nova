@@ -4025,6 +4025,9 @@ class VolumeAttachmentsSampleJsonTest(VolumeAttachmentsSampleBase):
         self.stubs.Set(compute_manager.ComputeManager,
                        "reserve_block_device_name",
                        lambda *a, **k: device_name)
+        self.stubs.Set(compute_manager.ComputeManager,
+                       'attach_volume',
+                       lambda *a, **k: None)
 
         volume = fakes.stub_volume_get(None, context.get_admin_context(),
                                        'a26887c6-c47b-4654-abb5-dfadf7d3f803')
