@@ -1,5 +1,6 @@
 # Copyright 2011 Andrew Bogott for the Wikimedia Foundation
 # All Rights Reserved.
+# Copyright 2013 Red Hat, Inc.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -83,6 +84,14 @@ def network_modify_dns_entry(self, context, address, name, domain):
                           'domain': domain}}
 
 
+def network_create_private_dns_domain(self, context, domain, avail_zone):
+    pass
+
+
+def network_create_public_dns_domain(self, context, domain, project):
+    pass
+
+
 class FloatingIpDNSTest(test.TestCase):
     def _create_floating_ip(self):
         """Create a floating ip object."""
@@ -112,6 +121,10 @@ class FloatingIpDNSTest(test.TestCase):
                        network_add_dns_entry)
         self.stubs.Set(network.api.API, "modify_dns_entry",
                        network_modify_dns_entry)
+        self.stubs.Set(network.api.API, "create_public_dns_domain",
+                       network_create_public_dns_domain)
+        self.stubs.Set(network.api.API, "create_private_dns_domain",
+                       network_create_private_dns_domain)
 
         self.context = context.get_admin_context()
 
