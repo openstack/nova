@@ -55,13 +55,13 @@ def upgrade(migrate_engine):
                      String(length=255))
     shadow_reservations.create_column(user_id)
 
-    indexes = [
-        Index('ix_quota_usages_user_id_deleted',
-              quota_usages.c.user_id, quota_usages.c.deleted),
-        Index('ix_reservations_user_id_deleted',
-              reservations.c.user_id, reservations.c.deleted)
-    ]
     if migrate_engine.name == 'mysql' or migrate_engine.name == 'postgresql':
+        indexes = [
+            Index('ix_quota_usages_user_id_deleted',
+                  quota_usages.c.user_id, quota_usages.c.deleted),
+            Index('ix_reservations_user_id_deleted',
+                  reservations.c.user_id, reservations.c.deleted)
+        ]
         for index in indexes:
             index.create(migrate_engine)
 
@@ -104,12 +104,24 @@ def upgrade(migrate_engine):
 
 def downgrade(migrate_engine):
     quota_usages = utils.get_table(migrate_engine, 'quota_usages')
+    reservations = utils.get_table(migrate_engine, 'reservations')
+
+    if migrate_engine.name == 'mysql' or migrate_engine.name == 'postgresql':
+        # Remove the indexes first
+        indexes = [
+            Index('ix_quota_usages_user_id_deleted',
+                quota_usages.c.user_id, quota_usages.c.deleted),
+            Index('ix_reservations_user_id_deleted',
+                reservations.c.user_id, reservations.c.deleted)
+        ]
+        for index in indexes:
+            index.drop(migrate_engine)
+
     quota_usages.drop_column('user_id')
     shadow_quota_usages = utils.get_table(migrate_engine,
                                 db._SHADOW_TABLE_PREFIX + 'quota_usages')
     shadow_quota_usages.drop_column('user_id')
 
-    reservations = utils.get_table(migrate_engine, 'reservations')
     reservations.drop_column('user_id')
     shadow_reservations = utils.get_table(migrate_engine,
                                 db._SHADOW_TABLE_PREFIX + 'reservations')

@@ -2450,6 +2450,37 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         self.assertEqual(quota['hard_limit'], 10)
         self.assertEqual(quota_usage['user_id'], None)
         self.assertEqual(reservation['user_id'], None)
+        # Check indexes exist
+        if engine.name == 'mysql' or engine.name == 'postgresql':
+            data = {
+                # table_name: ((idx_1, (c1, c2,)), (idx2, (c1, c2,)), ...)
+                'quota_usages': (
+                    ('ix_quota_usages_user_id_deleted',
+                     sorted(('user_id', 'deleted'))),
+                ),
+                'reservations': (
+                    ('ix_reservations_user_id_deleted',
+                     sorted(('user_id', 'deleted'))),
+                )
+            }
+
+            meta = sqlalchemy.MetaData()
+            meta.bind = engine
+
+            for table_name, indexes in data.iteritems():
+                table = sqlalchemy.Table(table_name, meta, autoload=True)
+                current_indexes = [(i.name, tuple(i.columns.keys()))
+                                   for i in table.indexes]
+
+                # we can not get correct order of columns in index
+                # definition to postgresql using sqlalchemy. So we sort
+                # columns list before compare
+                # bug http://www.sqlalchemy.org/trac/ticket/2767
+                current_indexes = (
+                    [(idx[0], sorted(idx[1])) for idx in current_indexes]
+                )
+                for index in indexes:
+                    self.assertIn(index, current_indexes)
 
     def _post_downgrade_203(self, engine):
         try:
@@ -2467,6 +2498,37 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         self.assertFalse('user_id' in quota_usage)
         self.assertFalse('user_id' in reservation)
         self.assertFalse(table_exist)
+        # Check indexes are gone
+        if engine.name == 'mysql' or engine.name == 'postgresql':
+            data = {
+                # table_name: ((idx_1, (c1, c2,)), (idx2, (c1, c2,)), ...)
+                'quota_usages': (
+                    ('ix_quota_usages_user_id_deleted',
+                     sorted(('user_id', 'deleted'))),
+                ),
+                'reservations': (
+                    ('ix_reservations_user_id_deleted',
+                     sorted(('user_id', 'deleted'))),
+                )
+            }
+
+            meta = sqlalchemy.MetaData()
+            meta.bind = engine
+
+            for table_name, indexes in data.iteritems():
+                table = sqlalchemy.Table(table_name, meta, autoload=True)
+                current_indexes = [(i.name, tuple(i.columns.keys()))
+                           for i in table.indexes]
+
+                # we can not get correct order of columns in index
+                # definition to postgresql using sqlalchemy. So we sort
+                # columns list before compare
+                # bug http://www.sqlalchemy.org/trac/ticket/2767
+                current_indexes = (
+                    [(idx[0], sorted(idx[1])) for idx in current_indexes]
+                )
+                for index in indexes:
+                    self.assertNotIn(index, current_indexes)
 
     def _check_204(self, engine, data):
         if engine.name != 'sqlite':
