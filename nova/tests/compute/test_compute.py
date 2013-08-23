@@ -1426,37 +1426,6 @@ class ComputeTestCase(BaseTestCase):
         LOG.info(_("After terminating instances: %s"), instances)
         self.assertEqual(len(instances), 0)
 
-    def test_terminate_failure_leaves_task_state(self):
-        """Ensure that a failure in terminate_instance does not result
-        in the task state being reverted from DELETING (see LP 1046236).
-        """
-        instance = jsonutils.to_primitive(self._create_fake_instance())
-
-        self.compute.run_instance(self.context, instance=instance)
-
-        instances = db.instance_get_all(self.context)
-        LOG.info(_("Running instances: %s"), instances)
-        self.assertEqual(len(instances), 1)
-
-        # Network teardown fails ungracefully
-        self.mox.StubOutWithMock(self.compute, '_get_instance_nw_info')
-        self.compute._get_instance_nw_info(
-                mox.IgnoreArg(),
-                mox.IgnoreArg()).AndRaise(TypeError())
-        self.mox.ReplayAll()
-
-        db.instance_update(self.context, instance['uuid'],
-                           {"task_state": task_states.DELETING})
-        try:
-            self.compute.terminate_instance(self.context, instance=instance)
-        except TypeError:
-            pass
-
-        instances = db.instance_get_all(self.context)
-        LOG.info(_("After terminating instances: %s"), instances)
-        self.assertEqual(len(instances), 1)
-        self.assertEqual(instances[0]['task_state'], 'deleting')
-
     def test_run_terminate_timestamps(self):
         # Make sure timestamps are set for launched and destroyed.
         instance = jsonutils.to_primitive(self._create_fake_instance())
@@ -2926,7 +2895,7 @@ class ComputeTestCase(BaseTestCase):
         self._check_locked_by(instance_uuid, None)
 
     def _test_state_revert(self, instance, operation, pre_task_state,
-                           post_task_state=None, kwargs=None):
+                           kwargs=None):
         if kwargs is None:
             kwargs = {}
 
@@ -2960,10 +2929,9 @@ class ComputeTestCase(BaseTestCase):
 
         self.assertTrue(raised)
 
-        # Fetch the instance's task_state and make sure it went to expected
-        # post-state
+        # Fetch the instance's task_state and make sure it reverted to None.
         instance = db.instance_get_by_uuid(self.context, instance['uuid'])
-        self.assertEqual(instance["task_state"], post_task_state)
+        self.assertEqual(instance["task_state"], None)
 
     def test_state_revert(self):
         # ensure that task_state is reverted after a failed operation.
@@ -2971,13 +2939,12 @@ class ComputeTestCase(BaseTestCase):
             ("reboot_instance", task_states.REBOOTING),
             ("stop_instance", task_states.POWERING_OFF),
             ("start_instance", task_states.POWERING_ON),
-            ("terminate_instance", task_states.DELETING,
-                                   task_states.DELETING),
+            ("terminate_instance", task_states.DELETING),
             ("power_off_instance", task_states.POWERING_OFF),
             ("power_on_instance", task_states.POWERING_ON),
             ("soft_delete_instance", task_states.SOFT_DELETING),
             ("restore_instance", task_states.RESTORING),
-            ("rebuild_instance", task_states.REBUILDING, None,
+            ("rebuild_instance", task_states.REBUILDING,
                                  {'orig_image_ref': None,
                                   'image_ref': None,
                                   'injected_files': [],
@@ -2985,12 +2952,12 @@ class ComputeTestCase(BaseTestCase):
             ("set_admin_password", task_states.UPDATING_PASSWORD),
             ("rescue_instance", task_states.RESCUING),
             ("unrescue_instance", task_states.UNRESCUING),
-            ("revert_resize", task_states.RESIZE_REVERTING, None,
+            ("revert_resize", task_states.RESIZE_REVERTING,
                               {'migration_id': None}),
-            ("prep_resize", task_states.RESIZE_PREP, None,
+            ("prep_resize", task_states.RESIZE_PREP,
                             {'image': {},
                              'instance_type': {}}),
-            ("resize_instance", task_states.RESIZE_PREP, None,
+            ("resize_instance", task_states.RESIZE_PREP,
                                 {'migration_id': None,
                                  'image': {}}),
             ("pause_instance", task_states.PAUSING),
