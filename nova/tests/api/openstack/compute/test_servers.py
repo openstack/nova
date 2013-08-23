@@ -1391,6 +1391,25 @@ class ServersControllerDeleteTest(ControllerTest):
         # because it may get stuck.
         self.assertTrue(self.server_delete_called)
 
+    def test_delete_server_instance_if_not_launched(self):
+        self.flags(reclaim_instance_interval=3600)
+        req = fakes.HTTPRequest.blank('/fake/servers/%s' % FAKE_UUID)
+        req.method = 'DELETE'
+
+        self.server_delete_called = False
+
+        self.stubs.Set(db, 'instance_get_by_uuid',
+            fakes.fake_instance_get(launched_at=None))
+
+        def instance_destroy_mock(*args, **kwargs):
+            self.server_delete_called = True
+        self.stubs.Set(db, 'instance_destroy', instance_destroy_mock)
+
+        self.controller.delete(req, FAKE_UUID)
+        # delete() should be called for instance which has never been active,
+        # even if reclaim_instance_interval has been set.
+        self.assertEqual(self.server_delete_called, True)
+
 
 class ServersControllerRebuildInstanceTest(ControllerTest):
     image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
