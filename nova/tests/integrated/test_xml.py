@@ -20,6 +20,7 @@ from lxml import etree
 from nova.api.openstack import common
 from nova.api.openstack import xmlutil
 from nova.openstack.common import log as logging
+from nova.tests.integrated.api import client
 from nova.tests.integrated import integrated_helpers
 
 
@@ -51,3 +52,7 @@ class XmlTests(integrated_helpers._IntegratedTestBase):
         LOG.debug("data: %s" % data)
         root = etree.XML(data)
         self.assertEqual(root.nsmap.get(None), common.XML_NS_V11)
+
+
+class XmlTestsV3(client.TestOpenStackClientV3Mixin, XmlTests):
+    _api_version = 'v3'
