@@ -1425,9 +1425,10 @@ class ServersController(wsgi.Controller):
                                                       server_dict)
 
     def server_create_xml_deserialize(self, server_node, server):
-        self.create_xml_deserialize_manager.map(
-            self._server_create_xml_deserialize_extension_point,
-            server_node, server)
+        if list(self.create_xml_deserialize_manager):
+            self.create_xml_deserialize_manager.map(
+                self._server_create_xml_deserialize_extension_point,
+                server_node, server)
 
     def _server_rebuild_xml_deserialize_extension_point(self, ext,
                                                         rebuild_node,
