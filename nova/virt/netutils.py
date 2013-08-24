@@ -50,6 +50,17 @@ def get_ip_version(cidr):
     return int(net.version)
 
 
+def _get_first_network(network, version):
+    # Using a generator expression with a next() call for the first element
+    # of a list since we don't want to evaluate the whole list as we can
+    # have a lot of subnets
+    try:
+        return (i for i in network['subnets']
+                if i['version'] == version).next()
+    except StopIteration:
+        pass
+
+
 def get_injected_network_template(network_info, use_ipv6=CONF.use_ipv6,
                                     template=CONF.injected_network_template):
     """Returns a rendered network template for the given network_info.
@@ -75,39 +86,45 @@ def get_injected_network_template(network_info, use_ipv6=CONF.use_ipv6,
         # NOTE(bnemec): The template only supports a single subnet per
         # interface and I'm not sure how/if that can be fixed, so this
         # code only takes the first subnet of the appropriate type.
-        subnet_v4 = [i for i in network['subnets'] if i['version'] == 4][0]
-        subnet_v6 = [i for i in network['subnets'] if i['version'] == 6]
-        if subnet_v6:
-            subnet_v6 = subnet_v6[0]
+        subnet_v4 = _get_first_network(network, 4)
+        subnet_v6 = _get_first_network(network, 6)
 
         ifc_num += 1
 
-        if (not network.get_meta('injected') or not subnet_v4['ips'] or
-                subnet_v4.get_meta('dhcp_server') is not None):
+        if not network.get_meta('injected'):
             continue
 
-        ip = subnet_v4['ips'][0]
-        address = ip['address']
-        netmask = model.get_netmask(ip, subnet_v4)
+        address = None
+        netmask = None
         gateway = ''
-        if subnet_v4['gateway']:
-            gateway = subnet_v4['gateway']['address']
-        broadcast = str(subnet_v4.as_netaddr().broadcast)
-        dns = ' '.join([i['address'] for i in subnet_v4['dns']])
-        # NOTE(bnemec): I don't think this code would handle a pure IPv6
-        # environment properly, but I don't have such an environment in
-        # which to test/fix that.
+        broadcast = None
+        dns = None
+        if subnet_v4:
+            if subnet_v4.get_meta('dhcp_server') is not None:
+                continue
+
+            if subnet_v4['ips']:
+                ip = subnet_v4['ips'][0]
+                address = ip['address']
+                netmask = model.get_netmask(ip, subnet_v4)
+                if subnet_v4['gateway']:
+                    gateway = subnet_v4['gateway']['address']
+                broadcast = str(subnet_v4.as_netaddr().broadcast)
+                dns = ' '.join([i['address'] for i in subnet_v4['dns']])
+
         address_v6 = None
-        gateway_v6 = None
+        gateway_v6 = ''
         netmask_v6 = None
         have_ipv6 = (use_ipv6 and subnet_v6)
         if have_ipv6:
+            if subnet_v6.get_meta('dhcp_server') is not None:
+                continue
+
             if subnet_v6['ips']:
                 ipv6_is_available = True
                 ip_v6 = subnet_v6['ips'][0]
                 address_v6 = ip_v6['address']
                 netmask_v6 = model.get_netmask(ip_v6, subnet_v6)
-                gateway_v6 = ''
                 if subnet_v6['gateway']:
                     gateway_v6 = subnet_v6['gateway']['address']
 
