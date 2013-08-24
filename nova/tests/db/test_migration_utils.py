@@ -14,6 +14,8 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+
+import uuid
 import warnings
 
 from migrate.changeset import UniqueConstraint
@@ -40,6 +42,43 @@ class CustomType(UserDefinedType):
 
 class TestMigrationUtils(test_migrations.BaseMigrationTestCase):
     """Class for testing utils that are used in db migrations."""
+
+    def test_delete_from_select(self):
+        table_name = "__test_deletefromselect_table__"
+        uuidstrs = []
+        for unused in range(10):
+            uuidstrs.append(uuid.uuid4().hex)
+        for key, engine in self.engines.items():
+            meta = MetaData()
+            meta.bind = engine
+            conn = engine.connect()
+            test_table = Table(table_name, meta,
+                               Column('id', Integer, primary_key=True,
+                                      nullable=False, autoincrement=True),
+                               Column('uuid', String(36), nullable=False))
+            test_table.create()
+            # Add 10 rows to table
+            for uuidstr in uuidstrs:
+                ins_stmt = test_table.insert().values(uuid=uuidstr)
+                conn.execute(ins_stmt)
+
+            # Delete 4 rows in one chunk
+            column = test_table.c.id
+            query_delete = select([column],
+                                  test_table.c.id < 5).order_by(column)
+            delete_statement = utils.DeleteFromSelect(test_table,
+                                                      query_delete, column)
+            result_delete = conn.execute(delete_statement)
+            # Verify we delete 4 rows
+            self.assertEqual(result_delete.rowcount, 4)
+
+            query_all = select([test_table]).\
+                        where(test_table.c.uuid.in_(uuidstrs))
+            rows = conn.execute(query_all).fetchall()
+            # Verify we still have 6 rows in table
+            self.assertEqual(len(rows), 6)
+
+            test_table.drop()
 
     def test_utils_drop_unique_constraint(self):
         table_name = "__test_tmp_table__"
