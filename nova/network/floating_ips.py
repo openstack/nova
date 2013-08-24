@@ -214,7 +214,8 @@ class FloatingIP(object):
         # called into from other places
         try:
             if use_quota:
-                reservations = QUOTAS.reserve(context, floating_ips=1)
+                reservations = QUOTAS.reserve(context, floating_ips=1,
+                                              project_id=project_id)
         except exception.OverQuota:
             LOG.warn(_("Quota exceeded for %s, tried to allocate "
                        "floating IP"), context.project_id)
@@ -229,11 +230,12 @@ class FloatingIP(object):
 
             # Commit the reservations
             if use_quota:
-                QUOTAS.commit(context, reservations)
+                QUOTAS.commit(context, reservations, project_id=project_id)
         except Exception:
             with excutils.save_and_reraise_exception():
                 if use_quota:
-                    QUOTAS.rollback(context, reservations)
+                    QUOTAS.rollback(context, reservations,
+                                    project_id=project_id)
 
         return floating_ip
 
@@ -263,10 +265,13 @@ class FloatingIP(object):
                        floating_ip=floating_ip['address'])
         self.notifier.info(context, 'network.floating_ip.deallocate', payload)
 
+        project_id = floating_ip['project_id']
         # Get reservations...
         try:
             if use_quota:
-                reservations = QUOTAS.reserve(context, floating_ips=-1)
+                reservations = QUOTAS.reserve(context,
+                                              project_id=project_id,
+                                              floating_ips=-1)
             else:
                 reservations = None
         except Exception:
@@ -278,7 +283,7 @@ class FloatingIP(object):
 
         # Commit the reservations
         if reservations:
-            QUOTAS.commit(context, reservations)
+            QUOTAS.commit(context, reservations, project_id=project_id)
 
     @rpc_common.client_exceptions(exception.FloatingIpNotFoundForAddress)
     def associate_floating_ip(self, context, floating_address, fixed_address,
