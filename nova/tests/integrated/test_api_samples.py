@@ -19,6 +19,7 @@ import datetime
 import inspect
 import json
 import os
+import re
 import urllib
 import uuid as uuid_lib
 
@@ -2035,6 +2036,46 @@ class ConsolesSampleJsonTests(ServersSampleBase):
 
 class ConsolesSampleXmlTests(ConsolesSampleJsonTests):
         ctype = 'xml'
+
+
+class ConsoleAuthTokensSampleJsonTests(ServersSampleBase):
+    extends_name = ("nova.api.openstack.compute.contrib.consoles.Consoles")
+    extension_name = ("nova.api.openstack.compute.contrib.console_auth_tokens."
+                      "Console_auth_tokens")
+
+    def _get_console_url(self, data):
+        return json.loads(data)["console"]["url"]
+
+    def _get_console_token(self, uuid):
+        response = self._do_post('servers/%s/action' % uuid,
+                                 'get-rdp-console-post-req',
+                                {'action': 'os-getRDPConsole'})
+
+        url = self._get_console_url(response.read())
+        return re.match('.+?token=([^&]+)', url).groups()[0]
+
+    def test_get_console_connect_info(self):
+        self.flags(enabled=True, group='rdp')
+
+        uuid = self._post_server()
+        token = self._get_console_token(uuid)
+
+        response = self._do_get('os-console-auth-tokens/%s' % token)
+
+        subs = self._get_regexes()
+        subs["uuid"] = uuid
+        subs["host"] = r"[\w\.\-]+"
+        subs["port"] = "[0-9]+"
+        subs["internal_access_path"] = ".*"
+        self._verify_response('get-console-connect-info-get-resp', subs,
+                              response, 200)
+
+
+class ConsoleAuthTokensSampleXmlTests(ConsoleAuthTokensSampleJsonTests):
+    ctype = 'xml'
+
+    def _get_console_url(self, data):
+        return etree.fromstring(data).find('url').text
 
 
 class DeferredDeleteSampleJsonTests(ServersSampleBase):

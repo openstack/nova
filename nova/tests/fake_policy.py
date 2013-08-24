@@ -294,6 +294,8 @@ policy_data = """
     "compute_extension:v3:os-migrations:index": "is_admin:True",
     "compute_extension:os-assisted-volume-snapshots:create": "",
     "compute_extension:os-assisted-volume-snapshots:delete": "",
+    "compute_extension:console_auth_tokens": "is_admin:True",
+    "compute_extension:v3:os-console-auth-tokens": "is_admin:True",
 
     "volume:create": "",
     "volume:get": "",

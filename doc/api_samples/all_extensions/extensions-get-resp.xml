@@ -260,4 +260,7 @@
   <extension alias="os-extended-services-delete" updated="2013-12-10T00:00:00" namespace="http://docs.openstack.org/compute/ext/extended_services_delete/api/v2" name="ExtendedServicesDelete">
     <description>Services deletion support.</description>
   </extension>
+  <extension alias="os-console-auth-tokens" updated="2013-08-13T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/consoles-auth-tokens/api/v2" name="ConsoleAuthTokens">
+    <description>Console token authentication support.</description>
+  </extension>
 </extensions>

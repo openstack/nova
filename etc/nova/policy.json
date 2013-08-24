@@ -256,6 +256,8 @@
     "compute_extension:v3:os-migrations:discoverable": "",
     "compute_extension:os-assisted-volume-snapshots:create": "rule:admin_api",
     "compute_extension:os-assisted-volume-snapshots:delete": "rule:admin_api",
+    "compute_extension:console_auth_tokens": "rule:admin_api",
+    "compute_extension:v3:os-console-auth-tokens": "rule:admin_api",
 
 
     "volume:create": "",

@@ -239,4 +239,7 @@
   <extension alias="os-extended-services-delete" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/extended_services_delete/api/v2" name="ExtendedServicesDelete">
     <description>%(text)s</description>
   </extension>
+  <extension alias="os-console-auth-tokens" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/consoles-auth-tokens/api/v2" name="ConsoleAuthTokens">
+    <description>%(text)s</description>
+  </extension>
 </extensions>
