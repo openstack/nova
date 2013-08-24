@@ -59,7 +59,7 @@ def _rename(src, dst):
 
 
 def make_subprocess(cmdline, stdout=False, stderr=False, stdin=False,
-                    universal_newlines=False, close_fds=True):
+                    universal_newlines=False, close_fds=True, env=None):
     """Make a subprocess according to the given command-line string
     """
     LOG.info("Running cmd '%s'" % " ".join(cmdline))
@@ -69,6 +69,7 @@ def make_subprocess(cmdline, stdout=False, stderr=False, stdin=False,
     kwargs['stdin'] = stdin and subprocess.PIPE or None
     kwargs['universal_newlines'] = universal_newlines
     kwargs['close_fds'] = close_fds
+    kwargs['env'] = env
     try:
         proc = subprocess.Popen(cmdline, **kwargs)
     except OSError, e:
