@@ -615,24 +615,28 @@ class LibvirtVolumeTestCase(test.TestCase):
                                 'id': 0, 'lun': 1}]}
         self.stubs.Set(linuxscsi, 'find_multipath_device', lambda x: devices)
         self.stubs.Set(linuxscsi, 'remove_device', lambda x: None)
-        wwn = '1234567890123456'
-        connection_info = self.fibrechan_connection(self.vol, self.location,
-                                                    wwn)
-        mount_device = "vde"
-        conf = libvirt_driver.connect_volume(connection_info, self.disk_info)
-        tree = conf.format_dom()
-        dev_str = '/dev/disk/by-path/pci-0000:05:00.2-fc-0x%s-lun-1' % wwn
-        self.assertEqual(tree.get('type'), 'block')
-        self.assertEqual(tree.find('./source').get('dev'), multipath_devname)
-        connection_info["data"]["devices"] = devices["devices"]
-        libvirt_driver.disconnect_volume(connection_info, mount_device)
-        expected_commands = []
-        self.assertEqual(self.executes, expected_commands)
+        # Should work for string, unicode, and list
+        wwns = ['1234567890123456', unicode('1234567890123456'),
+                ['1234567890123456', '1234567890123457']]
+        for wwn in wwns:
+            connection_info = self.fibrechan_connection(self.vol,
+                                                        self.location, wwn)
+            mount_device = "vde"
+            conf = libvirt_driver.connect_volume(connection_info,
+                                                 self.disk_info)
+            tree = conf.format_dom()
+            dev_str = '/dev/disk/by-path/pci-0000:05:00.2-fc-0x%s-lun-1' % wwn
+            self.assertEqual(tree.get('type'), 'block')
+            self.assertEqual(tree.find('./source').get('dev'),
+                             multipath_devname)
+            connection_info["data"]["devices"] = devices["devices"]
+            libvirt_driver.disconnect_volume(connection_info, mount_device)
+            expected_commands = []
+            self.assertEqual(self.executes, expected_commands)
 
-        self.stubs.Set(libvirt_utils, 'get_fc_hbas',
-                       lambda: [])
-        self.stubs.Set(libvirt_utils, 'get_fc_hbas_info',
-                       lambda: [])
+        # Should not work for anything other than string, unicode, and list
+        connection_info = self.fibrechan_connection(self.vol,
+                                                    self.location, 123)
         self.assertRaises(exception.NovaException,
                           libvirt_driver.connect_volume,
                           connection_info, self.disk_info)
