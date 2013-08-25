@@ -49,7 +49,7 @@ import math
 import re
 import uuid
 
-from eventlet import greenpool
+import eventlet
 import netaddr
 from oslo.config import cfg
 
@@ -180,7 +180,7 @@ class RPCAllocateFixedIP(object):
     def _allocate_fixed_ips(self, context, instance_id, host, networks,
                             **kwargs):
         """Calls allocate_fixed_ip once for each network."""
-        green_pool = greenpool.GreenPool()
+        green_threads = []
 
         vpn = kwargs.get('vpn')
         requested_networks = kwargs.get('requested_networks')
@@ -201,16 +201,18 @@ class RPCAllocateFixedIP(object):
                 host = self.network_rpcapi.set_network_host(context, network)
             if host != self.host:
                 # need to call allocate_fixed_ip to correct network host
-                green_pool.spawn_n(self.network_rpcapi._rpc_allocate_fixed_ip,
+                green_threads.append(eventlet.spawn(
+                        self.network_rpcapi._rpc_allocate_fixed_ip,
                         context, instance_id, network['id'], address, vpn,
-                        host)
+                        host))
             else:
                 # i am the correct host, run here
                 self.allocate_fixed_ip(context, instance_id, network,
                                        vpn=vpn, address=address)
 
         # wait for all of the allocates (if any) to finish
-        green_pool.waitall()
+        for gt in green_threads:
+            gt.wait()
 
     def _rpc_allocate_fixed_ip(self, context, instance_id, network_id,
                                **kwargs):
@@ -1246,7 +1248,7 @@ class NetworkManager(manager.Manager):
     def setup_networks_on_host(self, context, instance_id, host,
                                teardown=False):
         """calls setup/teardown on network hosts for an instance."""
-        green_pool = greenpool.GreenPool()
+        green_threads = []
 
         if teardown:
             call_func = self._teardown_network_on_host
@@ -1267,12 +1269,13 @@ class NetworkManager(manager.Manager):
                 call_func(context, network)
             else:
                 # i'm not the right host, run call on correct host
-                green_pool.spawn_n(
+                green_threads.append(eventlet.spawn(
                         self.network_rpcapi.rpc_setup_network_on_host, context,
-                        network['id'], teardown, host)
+                        network['id'], teardown, host))
 
         # wait for all of the setups (if any) to finish
-        green_pool.waitall()
+        for gt in green_threads:
+            gt.wait()
 
     def rpc_setup_network_on_host(self, context, network_id, teardown):
         if teardown:

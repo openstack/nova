@@ -50,7 +50,7 @@ class ApiSampleTestBaseV3(api_samples_test_base.ApiSampleTestBase):
                               'osapi_v3')
 
         super(ApiSampleTestBaseV3, self).setUp()
-        self.useFixture(test.SampleNetworks())
+        self.useFixture(test.SampleNetworks(host=self.network.host))
         fake_network.stub_compute_with_ips(self.stubs)
         fake_utils.stub_out_utils_spawn_n(self.stubs)
         self.generate_samples = os.getenv('GENERATE_SAMPLES') is not None
