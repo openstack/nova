@@ -418,6 +418,7 @@ class VMwareVCDriver(VMwareESXDriver):
         # The _resources is used to maintain the vmops, volumeops and vcstate
         # objects per cluster
         self._resources = {}
+        self._resource_keys = set()
         self._virtapi = virtapi
         self._update_resources()
 
@@ -470,7 +471,8 @@ class VMwareVCDriver(VMwareESXDriver):
         # API logic to create a valid VNC console connection object.
         # In specific, vCenter does not actually run the VNC service
         # itself. You must talk to the VNC host underneath vCenter.
-        return self._vmops.get_vnc_console_vcenter(instance)
+        _vmops = self._get_vmops_for_compute_node(instance['node'])
+        return _vmops.get_vnc_console_vcenter(instance)
 
     def _update_resources(self):
         """This method creates a dictionary of VMOps, VolumeOps and VCState.
@@ -488,11 +490,7 @@ class VMwareVCDriver(VMwareESXDriver):
                               'name': MyRP},
         }
         """
-
-        # TODO(kirankv) we can avoid creating multiple vmops and volumeops
-        # if we make them utility class so that cluster is passed as a
-        # parameter to the method
-        added_nodes = set(self.dict_mors.keys()) - set(self._resources.keys())
+        added_nodes = set(self.dict_mors.keys()) - set(self._resource_keys)
         for node in added_nodes:
             _volumeops = volumeops.VMwareVolumeOps(self._session,
                                         self.dict_mors[node]['cluster_mor'],
@@ -501,20 +499,23 @@ class VMwareVCDriver(VMwareESXDriver):
                                        _volumeops,
                                        self.dict_mors[node]['cluster_mor'])
             name = self.dict_mors.get(node)['name']
-            _vc_state = host.VCState(self._session,
-                                     self._create_nodename(node, name),
+            nodename = self._create_nodename(node, name)
+            _vc_state = host.VCState(self._session, nodename,
                                      self.dict_mors.get(node)['cluster_mor'])
-            self._resources[node] = {'vmops': _vmops,
-                                     'volumeops': _volumeops,
-                                     'vcstate': _vc_state,
-                                     'name': name,
+            self._resources[nodename] = {'vmops': _vmops,
+                                         'volumeops': _volumeops,
+                                         'vcstate': _vc_state,
+                                         'name': name,
                                      }
-        deleted_nodes = (set(self._resources.keys()) -
+            self._resource_keys.add(node)
+
+        deleted_nodes = (set(self._resource_keys) -
                             set(self.dict_mors.keys()))
         for node in deleted_nodes:
-            LOG.debug(_("Removing node %s since its removed from"
-                        " nova.conf") % node)
-            del self._resources[node]
+            name = self.dict_mors.get(node)['name']
+            nodename = self._create_nodename(node, name)
+            del self._resources[nodename]
+            self._resource_keys.discard(node)
 
     def _create_nodename(self, mo_id, display_name):
         """Creates the name that is stored in hypervisor_hostname column.
@@ -525,29 +526,37 @@ class VMwareVCDriver(VMwareESXDriver):
         """
         return mo_id + '(' + display_name + ')'
 
-    def _get_mo_id(self, nodename):
-        return nodename.partition('(')[0]
+    def _get_resource_for_node(self, nodename):
+        """Gets the resource information for the specific node."""
+        resource = self._resources.get(nodename)
+        if not resource:
+            msg = _("The resource %s does not exist") % nodename
+            raise exception.NotFound(msg)
+        return resource
 
     def _get_vmops_for_compute_node(self, nodename):
         """Retrieve vmops object from mo_id stored in the node name.
 
         Node name is of the form domain-1000(MyCluster)
         """
-        return self._resources.get(self._get_mo_id(nodename)).get('vmops')
+        resource = self._get_resource_for_node(nodename)
+        return resource['vmops']
 
     def _get_volumeops_for_compute_node(self, nodename):
         """Retrieve vmops object from mo_id stored in the node name.
 
         Node name is of the form domain-1000(MyCluster)
         """
-        return self._resources.get(self._get_mo_id(nodename)).get('volumeops')
+        resource = self._get_resource_for_node(nodename)
+        return resource['volumeops']
 
     def _get_vc_state_for_compute_node(self, nodename):
         """Retrieve VCState object from mo_id stored in the node name.
 
         Node name is of the form domain-1000(MyCluster)
         """
-        return self._resources.get(self._get_mo_id(nodename)).get('vcstate')
+        resource = self._get_resource_for_node(nodename)
+        return resource['vcstate']
 
     def get_available_resource(self, nodename):
         """Retrieve resource info.

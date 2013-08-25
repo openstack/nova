@@ -895,12 +895,8 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
                    task_poll_interval=10, datastore_regex='.*', group='vmware')
         self.flags(vnc_enabled=False)
         self.conn = driver.VMwareVCDriver(None, False)
-        node = self.conn._resources.keys()[0]
-        self.node_name = '%s(%s)' % (node,
-                                     self.conn._resources[node]['name'])
-        node = self.conn._resources.keys()[1]
-        self.node_name2 = '%s(%s)' % (node,
-                                      self.conn._resources[node]['name'])
+        self.node_name = self.conn._resources.keys()[0]
+        self.node_name2 = self.conn._resources.keys()[1]
 
     def tearDown(self):
         super(VMwareAPIVCDriverTestCase, self).tearDown()
@@ -928,8 +924,10 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
         self.assertRaises(exception.InvalidInput, driver.VMwareVCDriver, None)
 
     def test_get_available_nodes(self):
-        nodelist = self.conn.get_available_nodes(refresh=True)
-        self.assertEquals(nodelist, [self.node_name, self.node_name2])
+        nodelist = self.conn.get_available_nodes()
+        self.assertEqual(len(nodelist), 2)
+        self.assertIn(self.node_name, nodelist)
+        self.assertIn(self.node_name2, nodelist)
 
     def test_spawn_multiple_node(self):
         self._create_vm(node=self.node_name, num_instances=1)
@@ -975,3 +973,11 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
         self.mox.ReplayAll()
 
         self._test_snapshot()
+
+    def test_spawn_invalid_node(self):
+        self._create_instance_in_the_db(node='InvalidNodeName')
+        self.assertRaises(exception.NotFound, self.conn.spawn,
+                          self.context, self.instance, self.image,
+                          injected_files=[], admin_password=None,
+                          network_info=self.network_info,
+                          block_device_info=None)
