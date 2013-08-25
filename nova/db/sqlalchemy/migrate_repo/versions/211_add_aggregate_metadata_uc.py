@@ -16,6 +16,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 from migrate.changeset import UniqueConstraint
+from migrate import ForeignKeyConstraint
 from sqlalchemy import MetaData, Table
 
 from nova.db.sqlalchemy import utils
@@ -37,4 +38,22 @@ def upgrade(migrate_engine):
 
 
 def downgrade(migrate_engine):
+    if migrate_engine.name == 'mysql':
+        # NOTE(jhesketh): MySQL Cannot drop index
+        # 'uniq_aggregate_metadata0aggregate_id0key0deleted': needed in a
+        # foreign key constraint. So we'll remove the fkey constraint on the
+        # aggregate_metadata table and add it back after the index is
+        # downgraded.
+        meta = MetaData(bind=migrate_engine)
+        table = Table('aggregate_metadata', meta, autoload=True)
+        ref_table = Table('aggregates', meta, autoload=True)
+        params = {'columns': [table.c['aggregate_id']],
+                  'refcolumns': [ref_table.c['id']],
+                  'name': 'aggregate_metadata_ibfk_1'}
+        fkey = ForeignKeyConstraint(**params)
+        fkey.drop()
+
     utils.drop_unique_constraint(migrate_engine, TABLE_NAME, UC_NAME, *COLUMNS)
+
+    if migrate_engine.name == 'mysql':
+        fkey.create()
