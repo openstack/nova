@@ -58,6 +58,7 @@ from nova.tests import fake_instance
 from nova.tests import fake_network
 from nova.tests.image import fake
 from nova.tests import matchers
+from nova.tests.objects import test_keypair
 from nova.tests import utils
 from nova import utils as nova_utils
 
@@ -2838,9 +2839,10 @@ class ServersControllerCreateTest(test.TestCase):
         # NOTE(sdague): key pair goes back to the database,
         # so we need to stub it out for tests
         def key_pair_get(context, user_id, name):
-            return {'public_key': 'FAKE_KEY',
-                    'fingerprint': 'FAKE_FINGERPRINT',
-                    'name': name}
+            return dict(test_keypair.fake_keypair,
+                        public_key='FAKE_KEY',
+                        fingerprint='FAKE_FINGERPRINT',
+                        name=name)
 
         def create(*args, **kwargs):
             self.assertEqual(kwargs['key_name'], key_name)

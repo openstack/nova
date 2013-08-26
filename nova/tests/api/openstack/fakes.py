@@ -45,6 +45,7 @@ from nova.openstack.common import timeutils
 from nova import quota
 from nova.tests import fake_network
 from nova.tests.glance import stubs as glance_stubs
+from nova.tests.objects import test_keypair
 from nova import utils
 from nova import wsgi
 
@@ -126,11 +127,13 @@ def wsgi_app_v3(inner_app_v3=None, fake_auth_context=None,
 
 def stub_out_key_pair_funcs(stubs, have_key_pair=True):
     def key_pair(context, user_id):
-        return [dict(name='key', public_key='public_key')]
+        return [dict(test_keypair.fake_keypair,
+                     name='key', public_key='public_key')]
 
     def one_key_pair(context, user_id, name):
         if name == 'key':
-            return dict(name='key', public_key='public_key')
+            return dict(test_keypair.fake_keypair,
+                        name='key', public_key='public_key')
         else:
             raise exc.KeypairNotFound(user_id=user_id, name=name)
 

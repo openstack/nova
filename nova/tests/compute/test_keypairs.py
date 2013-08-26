@@ -25,7 +25,7 @@ from nova import exception
 from nova.openstack.common.gettextutils import _
 from nova import quota
 from nova.tests.compute import test_compute
-
+from nova.tests.objects import test_keypair
 
 CONF = cfg.CONF
 QUOTAS = quota.QUOTAS
@@ -51,21 +51,23 @@ class KeypairAPITestCase(test_compute.BaseTestCase):
     def _keypair_db_call_stubs(self):
 
         def db_key_pair_get_all_by_user(context, user_id):
-            return [{'name': self.existing_key_name,
-                     'public_key': self.pub_key,
-                     'fingerprint': self.fingerprint}]
+            return [dict(test_keypair.fake_keypair,
+                         name=self.existing_key_name,
+                         public_key=self.pub_key,
+                         fingerprint=self.fingerprint)]
 
         def db_key_pair_create(context, keypair):
-            pass
+            return dict(test_keypair.fake_keypair, **keypair)
 
         def db_key_pair_destroy(context, user_id, name):
             pass
 
         def db_key_pair_get(context, user_id, name):
             if name == self.existing_key_name:
-                return {'name': self.existing_key_name,
-                        'public_key': self.pub_key,
-                        'fingerprint': self.fingerprint}
+                return dict(test_keypair.fake_keypair,
+                            name=self.existing_key_name,
+                            public_key=self.pub_key,
+                            fingerprint=self.fingerprint)
             else:
                 raise exception.KeypairNotFound(user_id=user_id, name=name)
 
@@ -135,8 +137,8 @@ class CreateKeypairTestCase(KeypairAPITestCase, CreateImportSharedTestMixIn):
     func_name = 'create_key_pair'
 
     def test_success(self):
-        keypair = self.keypair_api.create_key_pair(self.ctxt,
-                                                   self.ctxt.user_id, 'foo')
+        keypair, private_key = self.keypair_api.create_key_pair(
+            self.ctxt, self.ctxt.user_id, 'foo')
         self.assertEqual('foo', keypair['name'])
 
 
