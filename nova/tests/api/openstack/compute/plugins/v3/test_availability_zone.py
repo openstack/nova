@@ -318,7 +318,7 @@ class ServersControllerCreateTest(test.TestCase):
                 'image_ref': inst.get('image_ref', def_image_ref),
                 'user_id': 'fake',
                 'project_id': 'fake',
-                'availability_zone': None,
+                availability_zone.ATTRIBUTE_NAME: None,
                 'reservation_id': inst['reservation_id'],
                 "created_at": datetime.datetime(2010, 10, 10, 12, 0, 0),
                 "updated_at": datetime.datetime(2010, 11, 11, 11, 0, 0),
@@ -484,17 +484,20 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
     def test_request_with_availability_zone(self):
         serial_request = """
     <server xmlns="http://docs.openstack.org/compute/api/v3"
+        xmlns:%(alias)s="%(namespace)s"
         name="availability_zone_test"
         image_ref="1"
         flavor_ref="1"
-        availability_zone="nova"/>"""
+        %(alias)s:availability_zone="nova"/>""" % {
+            'alias': availability_zone.ALIAS,
+            'namespace': availability_zone.AvailabilityZone.namespace}
         request = self.deserializer.deserialize(serial_request)
         expected = {
             "server": {
             "name": "availability_zone_test",
             "image_ref": "1",
             "flavor_ref": "1",
-            "availability_zone": "nova"
+            availability_zone.ATTRIBUTE_NAME: "nova"
             },
         }
         self.assertEquals(request['body'], expected)
