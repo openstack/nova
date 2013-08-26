@@ -31,9 +31,11 @@ from nova import exception
 from nova.image import glance
 from nova.network import api as network_api
 from nova import notifier as notify
+from nova.objects import instance as instance_obj
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova import test
+from nova.tests import fake_instance
 from nova.tests import fake_instance_actions
 from nova.tests import fake_network
 from nova.tests import fake_notifier
@@ -589,3 +591,98 @@ class UsageInfoTestCase(test.TestCase):
                                                     "create.start",
                                                     aggregate_payload)
         self.assertEquals(len(fake_notifier.NOTIFICATIONS), 0)
+
+
+class ComputeGetImageMetadataTestCase(test.TestCase):
+    def setUp(self):
+        super(ComputeGetImageMetadataTestCase, self).setUp()
+        self.context = context.RequestContext('fake', 'fake')
+
+        self.image = {
+            "min_ram": 10,
+            "min_disk": 1,
+            "disk_format": "raw",
+            "container_format": "bare",
+            "properties": {},
+        }
+
+        self.image_service = nova.tests.image.fake._FakeImageService()
+        self.stubs.Set(self.image_service, 'show', self._fake_show)
+
+        self.ctx = context.RequestContext('fake', 'fake')
+
+        sys_meta = {
+            'image_min_ram': 10,
+            'image_min_disk': 1,
+            'image_disk_format': 'raw',
+            'image_container_format': 'bare',
+            'instance_type_id': 0,
+            'instance_type_name': 'm1.fake',
+            'instance_type_memory_mb': 10,
+            'instance_type_vcpus': 1,
+            'instance_type_root_gb': 1,
+            'instance_type_ephemeral_gb': 1,
+            'instance_type_flavorid': '0',
+            'instance_type_swap': 1,
+            'instance_type_rxtx_factor': 0.0,
+            'instance_type_vcpu_weight': None,
+        }
+
+        self.instance = fake_instance.fake_db_instance(
+            memory_mb=0, root_gb=0,
+            system_metadata=sys_meta)
+
+    @property
+    def instance_obj(self):
+        return instance_obj.Instance._from_db_object(
+            self.ctx, instance_obj.Instance(), self.instance,
+            expected_attrs=instance_obj.INSTANCE_DEFAULT_FIELDS)
+
+    def _fake_show(self, ctx, image_id):
+        return self.image
+
+    def test_get_image_meta(self):
+        image_meta = compute_utils.get_image_metadata(
+            self.ctx, self.image_service, 'fake-image', self.instance_obj)
+
+        self.image['properties'] = 'DONTCARE'
+        self.assertThat(self.image, matchers.DictMatches(image_meta))
+
+    def test_get_image_meta_no_image(self):
+        def fake_show(ctx, image_id):
+            raise exception.ImageNotFound(image_id='fake-image')
+
+        self.stubs.Set(self.image_service, 'show', fake_show)
+
+        image_meta = compute_utils.get_image_metadata(
+            self.ctx, self.image_service, 'fake-image', self.instance_obj)
+
+        self.image['properties'] = 'DONTCARE'
+        self.assertThat(self.image, matchers.DictMatches(image_meta))
+
+    def test_get_image_meta_no_image_system_meta(self):
+        for k in self.instance['system_metadata'].keys():
+            if k.startswith('image_'):
+                del self.instance['system_metadata'][k]
+
+        image_meta = compute_utils.get_image_metadata(
+            self.ctx, self.image_service, 'fake-image', self.instance_obj)
+
+        self.image['properties'] = 'DONTCARE'
+        self.assertThat(self.image, matchers.DictMatches(image_meta))
+
+    def test_get_image_meta_no_image_no_image_system_meta(self):
+        def fake_show(ctx, image_id):
+            raise exception.ImageNotFound(image_id='fake-image')
+
+        self.stubs.Set(self.image_service, 'show', fake_show)
+
+        for k in self.instance['system_metadata'].keys():
+            if k.startswith('image_'):
+                del self.instance['system_metadata'][k]
+
+        image_meta = compute_utils.get_image_metadata(
+            self.ctx, self.image_service, 'fake-image', self.instance_obj)
+
+        expected = {'properties': 'DONTCARE'}
+        self.assertThat(expected, matchers.DictMatches(image_meta))

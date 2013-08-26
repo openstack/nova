@@ -225,6 +225,29 @@ def _get_unused_letter(used_letters):
     return letters[0]
 
 
+def get_image_metadata(context, image_service, image_id, instance):
+    # If the base image is still available, get its metadata
+    try:
+        image = image_service.show(context, image_id)
+    except Exception as e:
+        LOG.warning(_("Can't access image %(image_id)s: %(error)s"),
+                    {"image_id": image_id, "error": e}, instance=instance)
+        image_system_meta = {}
+    else:
+        instance_type = flavors.extract_flavor(instance)
+        image_system_meta = utils.get_system_metadata_from_image(
+                image, instance_type)
+
+    # Get the system metadata from the instance
+    system_meta = utils.instance_sys_meta(instance)
+
+    # Merge the metadata from the instance with the image's, if any
+    system_meta.update(image_system_meta)
+
+    # Convert the system metadata to image metadata
+    return utils.get_image_from_system_metadata(system_meta)
+
+
 def notify_usage_exists(notifier, context, instance_ref, current_period=False,
                         ignore_missing_network_data=True,
                         system_metadata=None, extra_usage_info=None):

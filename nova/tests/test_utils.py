@@ -1028,3 +1028,58 @@ class GetSystemMetadataFromImageTestCase(test.TestCase):
         for key in utils.SM_INHERITABLE_KEYS:
             sys_key = "%s%s" % (utils.SM_IMAGE_PROP_PREFIX, key)
             self.assertTrue(sys_key not in sys_meta)
+
+
+class GetImageFromSystemMetadataTestCase(test.TestCase):
+    def get_system_metadata(self):
+        sys_meta = {
+            "image_min_ram": 1,
+            "image_min_disk": 1,
+            "image_disk_format": "raw",
+            "image_container_format": "bare",
+        }
+
+        return sys_meta
+
+    def test_image_from_system_metadata(self):
+        sys_meta = self.get_system_metadata()
+        sys_meta["%soo1" % utils.SM_IMAGE_PROP_PREFIX] = "bar"
+        sys_meta["%soo2" % utils.SM_IMAGE_PROP_PREFIX] = "baz"
+
+        image = utils.get_image_from_system_metadata(sys_meta)
+
+        # Verify that we inherit all the needed keys
+        for key in utils.SM_INHERITABLE_KEYS:
+            sys_key = "%s%s" % (utils.SM_IMAGE_PROP_PREFIX, key)
+            self.assertEqual(image[key], sys_meta.get(sys_key))
+
+        # Verify that we inherit the rest of metadata as properties
+        self.assertTrue("properties" in image)
+
+        for key, value in image["properties"].iteritems():
+            sys_key = "%s%s" % (utils.SM_IMAGE_PROP_PREFIX, key)
+            self.assertEqual(image["properties"][key], sys_meta[sys_key])
+
+    def test_dont_inherit_empty_values(self):
+        sys_meta = self.get_system_metadata()
+
+        for key in utils.SM_INHERITABLE_KEYS:
+            sys_key = "%s%s" % (utils.SM_IMAGE_PROP_PREFIX, key)
+            sys_meta[sys_key] = None
+
+        image = utils.get_image_from_system_metadata(sys_meta)
+
+        # Verify that the empty properties have not been inherited
+        for key in utils.SM_INHERITABLE_KEYS:
+            self.assertTrue(key not in image)
+
+    def test_non_inheritable_image_properties(self):
+        sys_meta = self.get_system_metadata()
+        sys_meta["%soo1" % utils.SM_IMAGE_PROP_PREFIX] = "bar"
+
+        CONF.non_inheritable_image_properties = ["foo1"]
+
+        image = utils.get_image_from_system_metadata(sys_meta)
+
+        # Verify that the foo1 key has not been inherited
+        self.assertTrue("foo1" not in image)
