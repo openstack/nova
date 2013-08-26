@@ -59,6 +59,7 @@ class FlavorExtraSpecsController(object):
             expl = _('No Request Body')
             raise webob.exc.HTTPBadRequest(explanation=expl)
 
+    @extensions.expected_errors(())
     @wsgi.serializers(xml=ExtraSpecsTemplate)
     def index(self, req, flavor_id):
         """Returns the list of extra specs for a given flavor."""
@@ -66,6 +67,7 @@ class FlavorExtraSpecsController(object):
         self.authorize(context, action='index')
         return self._get_extra_specs(context, flavor_id)
 
+    @extensions.expected_errors((400, 404, 409))
     @wsgi.serializers(xml=ExtraSpecsTemplate)
     @wsgi.response(201)
     def create(self, req, flavor_id, body):
@@ -78,10 +80,14 @@ class FlavorExtraSpecsController(object):
         try:
             db.flavor_extra_specs_update_or_create(context, flavor_id,
                                                           specs)
-        except db_exc.DBDuplicateEntry as error:
-            raise webob.exc.HTTPBadRequest(explanation=error.format_message())
+        except db_exc.DBDuplicateEntry:
+            msg = _("Concurrent transaction has been committed, try again")
+            raise webob.exc.HTTPConflict(explanation=msg)
+        except exception.FlavorNotFound as e:
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
         return body
 
+    @extensions.expected_errors((400, 404, 409))
     @wsgi.serializers(xml=ExtraSpecTemplate)
     def update(self, req, flavor_id, id, body):
         context = req.environ['nova.context']
@@ -96,10 +102,14 @@ class FlavorExtraSpecsController(object):
         try:
             db.flavor_extra_specs_update_or_create(context, flavor_id,
                                                           body)
-        except db_exc.DBDuplicateEntry as error:
-            raise webob.exc.HTTPBadRequest(explanation=error.format_message())
+        except db_exc.DBDuplicateEntry:
+            msg = _("Concurrent transaction has been committed, try again")
+            raise webob.exc.HTTPConflict(explanation=msg)
+        except exception.FlavorNotFound as e:
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
         return body
 
+    @extensions.expected_errors(404)
     @wsgi.serializers(xml=ExtraSpecTemplate)
     def show(self, req, flavor_id, id):
         """Return a single extra spec item."""
