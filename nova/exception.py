@@ -277,6 +277,7 @@ class InvalidInput(Invalid):
 
 
 class InvalidVolume(Invalid):
+    ec2_code = 'UnsupportedOperation'
     msg_fmt = _("Invalid volume") + ": %(reason)s"
 
 
@@ -647,6 +648,7 @@ class FixedIpInvalid(Invalid):
 
 
 class NoMoreFixedIps(NovaException):
+    ec2_code = 'UnsupportedOperation'
     msg_fmt = _("Zero fixed ips available.")
 
 
@@ -659,6 +661,7 @@ class FloatingIpExists(Duplicate):
 
 
 class FloatingIpNotFound(NotFound):
+    ec2_code = "UnsupportedOpperation"
     msg_fmt = _("Floating ip not found for id %(id)s.")
 
 
@@ -689,6 +692,7 @@ class NoMoreFloatingIps(FloatingIpNotFound):
 
 
 class FloatingIpAssociated(NovaException):
+    ec2_code = "UnsupportedOpperation"
     msg_fmt = _("Floating ip %(address)s is associated.")
 
 
@@ -701,10 +705,12 @@ class NoFloatingIpsDefined(NotFound):
 
 
 class NoFloatingIpInterface(NotFound):
+    ec2_code = "UnsupportedOpperation"
     msg_fmt = _("Interface %(interface)s not found.")
 
 
 class CannotDisassociateAutoAssignedFloatingIP(NovaException):
+    ec2_code = "UnsupportedOpperation"
     msg_fmt = _("Cannot disassociate auto assigned floating ip")
 
 

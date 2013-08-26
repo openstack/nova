@@ -868,11 +868,7 @@ class CloudController(object):
     def delete_volume(self, context, volume_id, **kwargs):
         validate_ec2_id(volume_id)
         volume_id = ec2utils.ec2_vol_id_to_uuid(volume_id)
-        try:
-            self.volume_api.delete(context, volume_id)
-        except exception.InvalidVolume:
-            raise exception.EC2APIError(_('Delete Failed'))
-
+        self.volume_api.delete(context, volume_id)
         return True
 
     def attach_volume(self, context,
@@ -891,11 +887,7 @@ class CloudController(object):
                    'device': device},
                   context=context)
 
-        try:
-            self.compute_api.attach_volume(context, instance,
-                                           volume_id, device)
-        except exception.InvalidVolume:
-            raise exception.EC2APIError(_('Attach Failed.'))
+        self.compute_api.attach_volume(context, instance, volume_id, device)
 
         volume = self.volume_api.get(context, volume_id)
         return {'attachTime': volume['attach_time'],
@@ -921,10 +913,7 @@ class CloudController(object):
         volume = self.volume_api.get(context, volume_id)
         instance = self._get_instance_from_volume(context, volume)
 
-        try:
-            self.compute_api.detach_volume(context, instance, volume)
-        except exception.InvalidVolume:
-            raise exception.EC2APIError(_('Detach Volume Failed.'))
+        self.compute_api.detach_volume(context, instance, volume)
 
         return {'attachTime': volume['attach_time'],
                 'device': volume['mountpoint'],
@@ -1249,11 +1238,8 @@ class CloudController(object):
 
     def release_address(self, context, public_ip, **kwargs):
         LOG.audit(_('Release address %s'), public_ip, context=context)
-        try:
-            self.network_api.release_floating_ip(context, address=public_ip)
-            return {'return': "true"}
-        except exception.FloatingIpNotFound:
-            raise exception.EC2APIError(_('Unable to release IP Address.'))
+        self.network_api.release_floating_ip(context, address=public_ip)
+        return {'return': "true"}
 
     def associate_address(self, context, instance_id, public_ip, **kwargs):
         LOG.audit(_("Associate address %(public_ip)s to instance "
@@ -1267,7 +1253,7 @@ class CloudController(object):
         fixed_ips = cached_ipinfo['fixed_ips'] + cached_ipinfo['fixed_ip6s']
         if not fixed_ips:
             msg = _('Unable to associate IP Address, no fixed_ips.')
-            raise exception.EC2APIError(msg)
+            raise exception.NoMoreFixedIps(message=msg)
 
         # TODO(tr3buchet): this will associate the floating IP with the
         # first fixed_ip an instance has. This should be
@@ -1277,37 +1263,18 @@ class CloudController(object):
             msg = _('multiple fixed_ips exist, using the first: %s')
             LOG.warning(msg, fixed_ips[0])
 
-        try:
-            self.network_api.associate_floating_ip(context, instance,
-                                  floating_address=public_ip,
-                                  fixed_address=fixed_ips[0])
-            return {'return': 'true'}
-        except exception.FloatingIpAssociated:
-            msg = _('Floating ip is already associated.')
-            raise exception.EC2APIError(msg)
-        except exception.NoFloatingIpInterface:
-            msg = _('l3driver call to add floating ip failed.')
-            raise exception.EC2APIError(msg)
-        except Exception:
-            msg = _('Error, unable to associate floating ip.')
-            LOG.exception(msg)
-            raise exception.EC2APIError(msg)
+        self.network_api.associate_floating_ip(context, instance,
+                                               floating_address=public_ip,
+                                               fixed_address=fixed_ips[0])
+        return {'return': 'true'}
 
     def disassociate_address(self, context, public_ip, **kwargs):
         instance_id = self.network_api.get_instance_id_by_floating_address(
                                                          context, public_ip)
         instance = self.compute_api.get(context, instance_id)
         LOG.audit(_("Disassociate address %s"), public_ip, context=context)
-        try:
-            self.network_api.disassociate_floating_ip(context, instance,
-                                                      address=public_ip)
-        except exception.FloatingIpNotAssociated:
-            msg = _('Floating ip is not associated.')
-            raise exception.EC2APIError(msg)
-        except exception.CannotDisassociateAutoAssignedFloatingIP:
-            msg = _('Cannot disassociate auto assigned floating ip')
-            raise exception.EC2APIError(msg)
-
+        self.network_api.disassociate_floating_ip(context, instance,
+                                                  address=public_ip)
         return {'return': "true"}
 
     def run_instances(self, context, **kwargs):

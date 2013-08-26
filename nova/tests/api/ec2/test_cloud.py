@@ -334,7 +334,7 @@ class CloudTestCase(test.TestCase):
         self.stubs.Set(network_api.API, 'disassociate_floating_ip',
                                     fake_disassociate_floating_ip)
 
-        self.assertRaises(exception.EC2APIError,
+        self.assertRaises(exception.CannotDisassociateAutoAssignedFloatingIP,
                           self.cloud.disassociate_address,
                           self.context, public_ip=address)
 
