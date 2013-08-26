@@ -75,6 +75,7 @@ IMAGE_RAMDISK = '3'
 IMAGE_RAW = '4'
 IMAGE_VHD = '5'
 IMAGE_ISO = '6'
+IMAGE_IPXE_ISO = '7'
 
 IMAGE_FIXTURES = {
     IMAGE_MACHINE: {
@@ -106,6 +107,12 @@ IMAGE_FIXTURES = {
         'image_meta': {'name': 'fakeiso', 'size': 0,
                        'disk_format': 'iso',
                        'container_format': 'bare'},
+    },
+    IMAGE_IPXE_ISO: {
+        'image_meta': {'name': 'fake_ipxe_iso', 'size': 0,
+                       'disk_format': 'iso',
+                       'container_format': 'bare',
+                       'properties': {'ipxe_boot': 'true'}},
     },
 }
 
@@ -737,6 +744,52 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self.check_vm_record(self.conn, instance_type_id, check_injection)
         self.assertTrue(instance['os_type'])
         self.assertTrue(instance['architecture'])
+
+    def test_spawn_ipxe_iso_success(self):
+        self.mox.StubOutWithMock(vm_utils, 'get_sr_path')
+        vm_utils.get_sr_path(mox.IgnoreArg()).AndReturn('/sr/path')
+
+        self.flags(xenapi_ipxe_network_name='test1',
+                   xenapi_ipxe_boot_menu_url='http://boot.example.com',
+                   xenapi_ipxe_mkisofs_cmd='/root/mkisofs')
+        self.mox.StubOutWithMock(self.conn._session, 'call_plugin_serialized')
+        self.conn._session.call_plugin_serialized(
+            'ipxe', 'inject', '/sr/path', mox.IgnoreArg(),
+            'http://boot.example.com', '192.168.1.100', '255.255.255.0',
+            '192.168.1.1', '192.168.1.3', '/root/mkisofs')
+
+        self.mox.ReplayAll()
+        self._test_spawn(IMAGE_IPXE_ISO, None, None)
+
+    def test_spawn_ipxe_iso_no_network_name(self):
+        self.flags(xenapi_ipxe_network_name=None,
+                   xenapi_ipxe_boot_menu_url='http://boot.example.com')
+
+        # call_plugin_serialized shouldn't be called
+        self.mox.StubOutWithMock(self.conn._session, 'call_plugin_serialized')
+
+        self.mox.ReplayAll()
+        self._test_spawn(IMAGE_IPXE_ISO, None, None)
+
+    def test_spawn_ipxe_iso_no_boot_menu_url(self):
+        self.flags(xenapi_ipxe_network_name='test1',
+                   xenapi_ipxe_boot_menu_url=None)
+
+        # call_plugin_serialized shouldn't be called
+        self.mox.StubOutWithMock(self.conn._session, 'call_plugin_serialized')
+
+        self.mox.ReplayAll()
+        self._test_spawn(IMAGE_IPXE_ISO, None, None)
+
+    def test_spawn_ipxe_iso_unknown_network_name(self):
+        self.flags(xenapi_ipxe_network_name='test2',
+                   xenapi_ipxe_boot_menu_url='http://boot.example.com')
+
+        # call_plugin_serialized shouldn't be called
+        self.mox.StubOutWithMock(self.conn._session, 'call_plugin_serialized')
+
+        self.mox.ReplayAll()
+        self._test_spawn(IMAGE_IPXE_ISO, None, None)
 
     def test_spawn_empty_dns(self):
         # Test spawning with an empty dns list.

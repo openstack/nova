@@ -34,6 +34,7 @@ rm -rf $RPM_BUILD_ROOT
 /etc/xapi.d/plugins/config_file
 /etc/xapi.d/plugins/console
 /etc/xapi.d/plugins/glance
+/etc/xapi.d/plugins/ipxe
 /etc/xapi.d/plugins/kernel
 /etc/xapi.d/plugins/migration
 /etc/xapi.d/plugins/pluginlib_nova.py

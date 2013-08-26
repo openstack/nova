@@ -2351,6 +2351,16 @@
 # (all|some|none). (string value)
 #xenapi_torrent_images=none
 
+# Name of network to use for booting iPXE ISOs (string value)
+#xenapi_ipxe_network_name=<None>
+
+# URL to the iPXE boot menu (string value)
+#xenapi_ipxe_boot_menu_url=<None>
+
+# Name and optionally path of the tool used for ISO image
+# creation (string value)
+#xenapi_ipxe_mkisofs_cmd=mkisofs
+
 
 #
 # Options defined in nova.virt.xenapi.vmops

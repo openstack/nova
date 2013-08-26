@@ -43,6 +43,7 @@ from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
+from nova.openstack.common import strutils
 from nova.openstack.common import timeutils
 from nova import utils
 from nova.virt import configdrive
@@ -412,6 +413,20 @@ class VMOps(object):
 
         @step
         def attach_disks_step(undo_mgr, vm_ref, vdis, disk_image_type):
+            try:
+                ipxe_boot = strutils.bool_from_string(
+                        image_meta['properties']['ipxe_boot'])
+            except KeyError:
+                ipxe_boot = False
+
+            if ipxe_boot:
+                if 'iso' in vdis:
+                    vm_utils.handle_ipxe_iso(
+                        self._session, instance, vdis['iso'], network_info)
+                else:
+                    LOG.warning(_('ipxe_boot is True but no ISO image found'),
+                                instance=instance)
+
             self._attach_disks(instance, vm_ref, name_label, vdis,
                                disk_image_type, admin_password,
                                injected_files)
