@@ -21,6 +21,8 @@ The VMware API utility module.
 
 from oslo.config import cfg
 
+from nova.openstack.common.gettextutils import _
+from nova.openstack.common import log as logging
 
 vmware_opts = cfg.IntOpt('maximum_objects', default=100,
                          help='The maximum number of ObjectContent data '
@@ -34,6 +36,7 @@ vmware_opts = cfg.IntOpt('maximum_objects', default=100,
                               'additional requests.')
 CONF = cfg.CONF
 CONF.register_opt(vmware_opts, 'vmware')
+LOG = logging.getLogger(__name__)
 
 
 def build_selection_spec(client_factory, name):
@@ -178,10 +181,18 @@ def get_dynamic_properties(vim, mobj, type, property_names):
         vim.CancelRetrievePropertiesEx(token=obj_content.token)
     property_dict = {}
     if obj_content.objects:
-        dynamic_properties = obj_content.objects[0].propSet
-        if dynamic_properties:
-            for prop in dynamic_properties:
-                property_dict[prop.name] = prop.val
+        if hasattr(obj_content.objects[0], 'propSet'):
+            dynamic_properties = obj_content.objects[0].propSet
+            if dynamic_properties:
+                for prop in dynamic_properties:
+                    property_dict[prop.name] = prop.val
+        # The object may have information useful for logging
+        if hasattr(obj_content.objects[0], 'missingSet'):
+            for m in obj_content.objects[0].missingSet:
+                LOG.warning(_("Unable to retrieve value for %(path). "
+                              "Reason: %(reason)s"),
+                            {'path': m.path,
+                             'reason': m.fault.localizedMessage})
     return property_dict
 
 
