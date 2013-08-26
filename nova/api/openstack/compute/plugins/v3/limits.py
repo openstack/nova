@@ -40,6 +40,7 @@ from nova import wsgi as base_wsgi
 
 
 QUOTAS = quota.QUOTAS
+LIMITS_PREFIX = "limits."
 
 
 limits_nsmap = {None: xmlutil.XMLNS_COMMON_V10, 'atom': xmlutil.XMLNS_ATOM}
@@ -295,8 +296,8 @@ class Limiter(object):
 
         # Pick up any per-user limit information
         for key, value in kwargs.items():
-            if key.startswith('user:'):
-                username = key[5:]
+            if key.startswith(LIMITS_PREFIX):
+                username = key[len(LIMITS_PREFIX):]
                 self.levels[username] = self.parse_limits(value)
 
     def get_limits(self, username=None):
