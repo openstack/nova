@@ -51,6 +51,28 @@ class QuotaSetsTest(test.TestCase):
         quota_set['quota_set'].update(kwargs)
         return quota_set
 
+    def _generate_detail_quota_set(self, **kwargs):
+        quota_set = {
+            'quota_set':
+            {'cores': {'in_use': 0, 'limit': 20, 'reserved': 0},
+             'fixed_ips': {'in_use': 0, 'limit': -1, 'reserved': 0},
+             'floating_ips': {'in_use': 0, 'limit': 10, 'reserved': 0},
+             'injected_files': {'in_use': 0, 'limit': 5, 'reserved': 0},
+             'instances': {'in_use': 0, 'limit': 10, 'reserved': 0},
+             'key_pairs': {'in_use': 0, 'limit': 100, 'reserved': 0},
+             'metadata_items': {'in_use': 0, 'limit': 128, 'reserved': 0},
+             'ram': {'in_use': 0, 'limit': 51200, 'reserved': 0},
+             'security_groups': {'in_use': 0, 'limit': 10, 'reserved': 0},
+             'injected_file_content_bytes':
+             {'in_use': 0, 'limit': 10240, 'reserved': 0},
+             'injected_file_path_bytes':
+             {'in_use': 0, 'limit': 255, 'reserved': 0},
+             'security_group_rules':
+             {'in_use': 0, 'limit': 20, 'reserved': 0}}
+        }
+        quota_set['quota_set'].update(kwargs)
+        return quota_set
+
     def test_format_quota_set(self):
         raw_quota_set = self._generate_quota_set()['quota_set']
         quota_set = self.controller._format_quota_set('1234', raw_quota_set)
@@ -91,6 +113,18 @@ class QuotaSetsTest(test.TestCase):
         req = fakes.HTTPRequestV3.blank('/os-quota-sets/1234')
         self.assertRaises(webob.exc.HTTPForbidden, self.controller.show,
                           req, '1234')
+
+    def test_quotas_detail_as_admin(self):
+        uri = '/os-quota-sets/1234/detail'
+        req = fakes.HTTPRequestV3.blank(uri, use_admin_context=True)
+        res_dict = self.controller.detail(req, '1234')
+
+        self.assertEqual(res_dict, self._generate_detail_quota_set(id='1234'))
+
+    def test_quotas_detail_as_unauthorized_user(self):
+        req = fakes.HTTPRequestV3.blank('/os-quota-sets/1234/detail')
+        self.assertRaises(webob.exc.HTTPForbidden, self.controller.detail,
+                          req, 1234)
 
     def test_quotas_update_as_admin(self):
         id = 'update_me'
@@ -214,6 +248,22 @@ class QuotaSetsTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPForbidden, self.controller.show,
                           req, '1234')
 
+    def test_user_quotas_detail_as_admin(self):
+        req = fakes.HTTPRequestV3.blank(
+            '/os-quota-sets/1234/detail?user_id=1',
+            use_admin_context=True
+        )
+        res_dict = self.controller.detail(req, '1234')
+
+        self.assertEqual(res_dict, self._generate_detail_quota_set(id='1234'))
+
+    def test_user_quotas_detail_as_unauthorized_user(self):
+        req = fakes.HTTPRequestV3.blank(
+            '/os-quota-sets/1234/detail?user_id=1'
+        )
+        self.assertRaises(webob.exc.HTTPForbidden, self.controller.detail,
+                          req, '1234')
+
     def test_user_quotas_update_as_admin(self):
         body = self._generate_quota_set()
 
@@ -261,6 +311,7 @@ class QuotaXMLSerializerTest(test.TestCase):
         super(QuotaXMLSerializerTest, self).setUp()
         self.serializer = quotas.QuotaTemplate()
         self.deserializer = wsgi.XMLDeserializer()
+        self.detail_serializer = quotas.QuotaDetailTemplate()
 
     def test_serializer(self):
         exemplar = dict(quota_set=dict(
@@ -287,6 +338,35 @@ class QuotaXMLSerializerTest(test.TestCase):
         for child in tree:
             self.assertTrue(child.tag in exemplar['quota_set'])
             self.assertEqual(int(child.text), exemplar['quota_set'][child.tag])
+
+    def test_detail_serializer(self):
+        exemplar = dict(quota_set=dict(
+            id='project_id',
+            metadata_items=dict(limit=10, in_use=1, reserved=2),
+            injected_file_path_bytes=dict(limit=255, in_use=25, reserved=1),
+            injected_file_content_bytes=dict(limit=20, in_use=10, reserved=2),
+            ram=dict(limit=30, in_use=10, reserved=3),
+            floating_ips=dict(limit=60, in_use=20, reserved=20),
+            fixed_ips=dict(limit=-1, in_use=20, reserved=0),
+            instances=dict(limit=10, in_use=2, reserved=2),
+            injected_files=dict(limit=80, in_use=20, reserved=30),
+            security_groups=dict(limit=10, in_use=4, reserved=6),
+            security_group_rules=dict(limit=20, in_use=10, reserved=8),
+            key_pairs=dict(limit=20, in_use=10, reserved=11),
+            cores=dict(limit=20, in_use=10, reserved=2),
+        ))
+        text = self.detail_serializer.serialize(exemplar)
+
+        tree = etree.fromstring(text)
+
+        self.assertEqual('quota_set', tree.tag)
+        self.assertEqual('project_id', tree.get('id'))
+        self.assertEqual(len(exemplar['quota_set']) - 1, len(tree))
+        for child in tree:
+            self.assertTrue(child.tag in exemplar['quota_set'])
+            for k in child.attrib.keys():
+                self.assertEqual(int(child.attrib[k]),
+                                 exemplar['quota_set'][child.tag][k])
 
     def test_deserializer(self):
         exemplar = dict(quota_set=dict(

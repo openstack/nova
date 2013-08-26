@@ -39,6 +39,8 @@ authorize_show = extensions.extension_authorizer('compute',
                                                  'v3:%s:show' % ALIAS)
 authorize_delete = extensions.extension_authorizer('compute',
                                                    'v3:%s:delete' % ALIAS)
+authorize_detail = extensions.extension_authorizer('compute',
+                                                   'v3:%s:detail' % ALIAS)
 
 
 class QuotaTemplate(xmlutil.TemplateBuilder):
@@ -49,6 +51,21 @@ class QuotaTemplate(xmlutil.TemplateBuilder):
         for resource in QUOTAS.resources:
             elem = xmlutil.SubTemplateElement(root, resource)
             elem.text = resource
+
+        return xmlutil.MasterTemplate(root, 1)
+
+
+class QuotaDetailTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('quota_set', selector='quota_set')
+        root.set('id')
+
+        for resource in QUOTAS.resources:
+            elem = xmlutil.SubTemplateElement(root, resource,
+                                              selector=resource)
+            elem.set('in_use')
+            elem.set('reserved')
+            elem.set('limit')
 
         return xmlutil.MasterTemplate(root, 1)
 
@@ -96,6 +113,20 @@ class QuotaSetsController(object):
             nova.context.authorize_project_context(context, id)
             return self._format_quota_set(id,
                     self._get_quotas(context, id, user_id=user_id))
+        except exception.NotAuthorized:
+            raise webob.exc.HTTPForbidden()
+
+    @extensions.expected_errors(403)
+    @wsgi.serializers(xml=QuotaDetailTemplate)
+    def detail(self, req, id):
+        context = req.environ['nova.context']
+        authorize_detail(context)
+        user_id = req.GET.get('user_id', None)
+        try:
+            nova.context.authorize_project_context(context, id)
+            return self._format_quota_set(id, self._get_quotas(context, id,
+                                                               user_id=user_id,
+                                                               usages=True))
         except exception.NotAuthorized:
             raise webob.exc.HTTPForbidden()
 
@@ -220,7 +251,8 @@ class QuotaSets(extensions.V3APIExtensionBase):
 
         res = extensions.ResourceExtension(ALIAS,
                                             QuotaSetsController(),
-                                            member_actions={'defaults': 'GET'})
+                                            member_actions={'defaults': 'GET',
+                                                            'detail': 'GET'})
         resources.append(res)
 
         return resources

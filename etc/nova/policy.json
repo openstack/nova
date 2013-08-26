@@ -155,6 +155,7 @@
     "compute_extension:v3:os-quota-sets:show": "",
     "compute_extension:v3:os-quota-sets:update": "rule:admin_api",
     "compute_extension:v3:os-quota-sets:delete": "rule:admin_api",
+    "compute_extension:v3:os-quota-sets:detail": "rule:admin_api",
     "compute_extension:quota_classes": "",
     "compute_extension:v3:os-quota-class-sets": "",
     "compute_extension:rescue": "",
