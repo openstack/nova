@@ -176,7 +176,7 @@ class FlatNetworkTestCase(test.TestCase):
                      'dhcp_server': '192.168.1.1',
                      'dns': ['192.168.%d.3' % nid, '192.168.%d.4' % nid],
                      'gateway': '192.168.%d.1' % nid,
-                     'gateway_v6': 'fe80::def',
+                     'gateway_v6': '2001:db8:0:1::1',
                      'ip6s': 'DONTCARE',
                      'ips': 'DONTCARE',
                      'label': 'test%d' % nid,
@@ -196,7 +196,7 @@ class FlatNetworkTestCase(test.TestCase):
             check = [{'enabled': 'DONTCARE',
                       'ip': '2001:db8:0:1::%x' % nid,
                       'netmask': 64,
-                      'gateway': 'fe80::def'}]
+                      'gateway': '2001:db8:0:1::1'}]
             self.assertThat(info['ip6s'], matchers.DictListMatches(check))
 
             num_fixed_ips = len(info['ips'])
