@@ -413,8 +413,9 @@ class _ComputeAPIUnitTestMixIn(object):
             compute_utils.notify_about_instance_usage(self.context,
                                                       inst,
                                                       '%s.start' % delete_type)
-            self.compute_api.network_api.deallocate_for_instance(
-                self.context, inst)
+            if not self.is_cells:
+                self.compute_api.network_api.deallocate_for_instance(
+                        self.context, inst)
             db.instance_system_metadata_get(self.context, inst.uuid
                                             ).AndReturn('sys-meta')
             state = ('soft' in delete_type and vm_states.SOFT_DELETED or
