@@ -1251,7 +1251,7 @@ class _BaseTaskTestCase(object):
                  'block_migration', 'disk_over_commit')
 
     def test_cold_migrate(self):
-        self.mox.StubOutWithMock(self.conductor_manager.image_service, 'show')
+        self.mox.StubOutWithMock(compute_utils, 'get_image_metadata')
         self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
         self.mox.StubOutWithMock(
                 self.conductor_manager.compute_rpcapi, 'prep_resize')
@@ -1263,8 +1263,9 @@ class _BaseTaskTestCase(object):
         flavor = flavors.get_default_flavor()
         flavor['extra_specs'] = 'extra_specs'
         request_spec = {'instance_type': flavor}
-        self.conductor_manager.image_service.show(
-            self.context, inst_obj['image_ref']).AndReturn('image')
+        compute_utils.get_image_metadata(
+            self.context, self.conductor_manager.image_service,
+            'image_ref', mox.IsA(instance_obj.Instance)).AndReturn('image')
 
         scheduler_utils.build_request_spec(
             self.context, 'image',
@@ -1524,7 +1525,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         resvs = 'fake-resvs'
         image = 'fake-image'
 
-        self.mox.StubOutWithMock(self.conductor, '_get_image')
+        self.mox.StubOutWithMock(compute_utils, 'get_image_metadata')
         self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
         self.mox.StubOutWithMock(self.conductor.scheduler_rpcapi,
                                  'select_destinations')
@@ -1532,8 +1533,10 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                                  '_set_vm_state_and_notify')
         self.mox.StubOutWithMock(self.conductor.quotas, 'rollback')
 
-        self.conductor._get_image(self.context,
-                                  'fake-image_ref').AndReturn(image)
+        compute_utils.get_image_metadata(
+            self.context, self.conductor_manager.image_service,
+            'fake-image_ref', mox.IsA(instance_obj.Instance)).AndReturn(image)
+
         scheduler_utils.build_request_spec(
                 self.context, image, [inst_obj],
                 instance_type='flavor').AndReturn(request_spec)
@@ -1569,7 +1572,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         resvs = 'fake-resvs'
         image = 'fake-image'
 
-        self.mox.StubOutWithMock(self.conductor, '_get_image')
+        self.mox.StubOutWithMock(compute_utils, 'get_image_metadata')
         self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
         self.mox.StubOutWithMock(self.conductor.scheduler_rpcapi,
                                  'select_destinations')
@@ -1577,8 +1580,10 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                                  '_set_vm_state_and_notify')
         self.mox.StubOutWithMock(self.conductor.quotas, 'rollback')
 
-        self.conductor._get_image(self.context,
-                                  'fake-image_ref').AndReturn(image)
+        compute_utils.get_image_metadata(
+            self.context, self.conductor_manager.image_service,
+            'fake-image_ref', mox.IsA(instance_obj.Instance)).AndReturn(image)
+
         scheduler_utils.build_request_spec(
                 self.context, image, [inst_obj],
                 instance_type='flavor').AndReturn(request_spec)
@@ -1614,7 +1619,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         image = 'fake-image'
         hosts = [dict(host='host1', nodename=None, limits={})]
 
-        self.mox.StubOutWithMock(self.conductor, '_get_image')
+        self.mox.StubOutWithMock(compute_utils, 'get_image_metadata')
         self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
         self.mox.StubOutWithMock(self.conductor.scheduler_rpcapi,
                                  'select_destinations')
@@ -1626,8 +1631,10 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                                  '_set_vm_state_and_notify')
         self.mox.StubOutWithMock(self.conductor.quotas, 'rollback')
 
-        self.conductor._get_image(self.context,
-                                  'fake-image_ref').AndReturn(image)
+        compute_utils.get_image_metadata(
+            self.context, self.conductor_manager.image_service,
+            'fake-image_ref', mox.IsA(instance_obj.Instance)).AndReturn(image)
+
         scheduler_utils.build_request_spec(
                 self.context, image, [inst_obj],
                 instance_type='flavor').AndReturn(request_spec)

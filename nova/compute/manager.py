@@ -2478,7 +2478,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                     instance=instance)
         self.driver.inject_file(instance, path, file_contents)
 
-    def _get_rescue_image_ref(self, context, instance):
+    def _get_rescue_image(self, context, instance):
         """Determine what image should be used to boot the rescue VM."""
         system_meta = utils.instance_sys_meta(instance)
 
@@ -2490,13 +2490,17 @@ class ComputeManager(manager.SchedulerDependentManager):
         # The idea here is to provide the customer with a rescue environment
         # which they are familiar with. So, if they built their instance off of
         # a Debian image, their rescue VM wil also be Debian.
-        if rescue_image_ref:
-            return rescue_image_ref
+        if not rescue_image_ref:
+            # 2. As a last resort, use instance's current image
+            LOG.warn(_('Unable to find a different image to use for rescue VM,'
+                       ' using instance\'s current image'))
+            rescue_image_ref = instance['image_ref']
 
-        # 2. As a last resort, use instance's current image
-        LOG.warn(_('Unable to find a different image to use for rescue VM,'
-                   ' using instance\'s current image'))
-        return instance['image_ref']
+        image_service, image_id = glance.get_remote_image_service(
+            context, rescue_image_ref)
+        return compute_utils.get_image_metadata(
+            context, image_service, rescue_image_ref, instance
+        )
 
     @wrap_exception()
     @reverts_task_state
@@ -2514,12 +2518,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         network_info = self._get_instance_nw_info(context, instance)
 
-        rescue_image_ref = self._get_rescue_image_ref(context, instance)
-
-        if rescue_image_ref:
-            rescue_image_meta = _get_image_meta(context, rescue_image_ref)
-        else:
-            rescue_image_meta = {}
+        rescue_image_meta = self._get_rescue_image(context, instance)
 
         try:
             self.driver.rescue(context, instance,
@@ -3800,7 +3799,12 @@ class ComputeManager(manager.SchedulerDependentManager):
             LOG.error(_('allocate_port_for_instance returned %(ports)s ports')
                       % dict(ports=len(network_info)))
             raise exception.InterfaceAttachFailed(instance=instance)
-        image_meta = _get_image_meta(context, instance['image_ref'])
+        image_ref = instance.get('image_ref')
+        image_service, image_id = glance.get_remote_image_service(
+            context, image_ref)
+        image_meta = compute_utils.get_image_metadata(
+            context, image_service, image_ref, instance)
+
         self.driver.attach_interface(instance, image_meta, network_info[0])
         return network_info[0]
 

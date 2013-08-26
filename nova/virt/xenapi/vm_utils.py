@@ -1400,7 +1400,7 @@ def determine_disk_image_type(image_meta):
     except KeyError:
         raise exception.InvalidDiskFormat(disk_format=disk_format)
 
-    image_ref = image_meta['id']
+    image_ref = image_meta.get('id')
 
     params = {
         'image_type_str': ImageType.to_string(image_type),

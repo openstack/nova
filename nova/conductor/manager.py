@@ -639,10 +639,8 @@ class ComputeTaskManager(base.Base):
     def _cold_migrate(self, context, instance, flavor, filter_properties,
                       reservations):
         image_ref = instance.image_ref
-        if image_ref:
-            image = self._get_image(context, image_ref)
-        else:
-            image = {}
+        image = compute_utils.get_image_metadata(
+            context, self.image_service, image_ref, instance)
 
         request_spec = scheduler_utils.build_request_spec(
             context, image, [instance], instance_type=flavor)

@@ -20,6 +20,7 @@ import time
 from oslo.config import cfg
 
 from nova.compute import flavors
+from nova.compute import utils as compute_utils
 from nova.image import glance
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
@@ -154,8 +155,9 @@ class PowerVMDriver(driver.ComputeDriver):
         # get current image info
         glance_service, old_image_id = glance.get_remote_image_service(
                 context, instance['image_ref'])
-        image_meta = glance_service.show(context, old_image_id)
-        img_props = image_meta['properties']
+
+        image_meta = compute_utils.get_image_metadata(
+            context, glance_service, old_image_id, instance)
 
         # build updated snapshot metadata
         snapshot_meta = glance_service.show(context, image_id)

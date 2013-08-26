@@ -1845,41 +1845,16 @@ class API(base.Base):
             'user_id': str(context.user_id),
             'image_type': image_type,
         }
-        sent_meta = {
-            'name': name,
-            'is_public': False,
-            'properties': properties,
-        }
+        image_ref = instance.image_ref
+        sent_meta = compute_utils.get_image_metadata(
+            context, self.image_service, image_ref, instance)
 
-        # Persist base image ref as a Glance image property
-        system_meta = instance.system_metadata
-        base_image_ref = system_meta.get('image_base_image_ref')
-        if base_image_ref:
-            properties['base_image_ref'] = base_image_ref
+        sent_meta['name'] = name
+        sent_meta['is_public'] = False
 
-        if image_type == 'snapshot':
-            min_ram, min_disk = self._get_minram_mindisk_params(context,
-                                                                instance)
-            if min_ram is not None:
-                sent_meta['min_ram'] = min_ram
-            if min_disk is not None:
-                sent_meta['min_disk'] = min_disk
-
-        properties.update(extra_properties)
-
-        # Now inherit image properties from the base image
-        for key, value in system_meta.items():
-            # Trim off the image_ prefix
-            if key.startswith(utils.SM_IMAGE_PROP_PREFIX):
-                key = key[len(utils.SM_IMAGE_PROP_PREFIX):]
-
-            # Skip properties that are non-inheritable
-            if key in CONF.non_inheritable_image_properties:
-                continue
-
-            # By using setdefault, we ensure that the properties set
-            # up above will not be overwritten by inherited values
-            properties.setdefault(key, value)
+        # The properties set up above and in extra_properties have precedence
+        properties.update(extra_properties or {})
+        sent_meta['properties'].update(properties)
 
         return self.image_service.create(context, sent_meta)
 
@@ -1952,27 +1927,6 @@ class API(base.Base):
         image_meta['size'] = 0
 
         return self.image_service.create(context, image_meta, data='')
-
-    def _get_minram_mindisk_params(self, context, instance):
-        try:
-            #try to get source image of the instance
-            orig_image = self.image_service.show(context,
-                                                 instance['image_ref'])
-        except exception.ImageNotFound:
-            return None, None
-
-        flavor = flavors.extract_flavor(instance)
-        #disk format of vhd is non-shrinkable
-        if orig_image.get('disk_format') == 'vhd':
-            min_disk = flavor['root_gb']
-        else:
-            #set new image values to the original image values
-            min_disk = max(orig_image.get('min_disk'),
-                           flavor['root_gb'])
-
-        min_ram = orig_image.get('min_ram')
-
-        return min_ram, min_disk
 
     @wrap_check_policy
     @check_instance_lock

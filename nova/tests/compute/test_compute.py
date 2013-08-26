@@ -1643,11 +1643,11 @@ class ComputeTestCase(BaseTestCase):
         # If the driver fails to rescue, instance state should remain the same
         # and the exception should be converted to InstanceNotRescuable
         instance = jsonutils.to_primitive(self._create_fake_instance())
-        self.mox.StubOutWithMock(self.compute, '_get_rescue_image_ref')
+        self.mox.StubOutWithMock(self.compute, '_get_rescue_image')
         self.mox.StubOutWithMock(nova.virt.fake.FakeDriver, 'rescue')
 
-        self.compute._get_rescue_image_ref(
-            mox.IgnoreArg(), instance).AndReturn('resc_image_ref')
+        self.compute._get_rescue_image(
+            mox.IgnoreArg(), instance).AndReturn({})
         nova.virt.fake.FakeDriver.rescue(
             mox.IgnoreArg(), instance, [], mox.IgnoreArg(), 'password'
             ).AndRaise(RuntimeError("Try again later"))
@@ -7303,10 +7303,13 @@ class ComputeAPITestCase(BaseTestCase):
         db.instance_destroy(self.context, instance['uuid'])
 
     def test_attach_interface(self):
+        new_type = flavors.get_flavor_by_flavor_id('4')
+        sys_meta = flavors.save_flavor_info({}, new_type)
+
         instance = {
             'image_ref': 'foo',
+            'system_metadata': sys_meta,
             }
-        self.mox.StubOutWithMock(compute_manager, '_get_image_meta')
         self.mox.StubOutWithMock(self.compute.network_api,
                                  'allocate_port_for_instance')
         nwinfo = [fake_network_cache_model.new_vif()]
@@ -7316,7 +7319,6 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute.network_api.allocate_port_for_instance(
             self.context, instance, port_id, network_id, req_ip,
             conductor_api=self.compute.conductor_api).AndReturn(nwinfo)
-        compute_manager._get_image_meta(self.context, instance['image_ref'])
         self.mox.ReplayAll()
         vif = self.compute.attach_interface(self.context,
                                             instance,

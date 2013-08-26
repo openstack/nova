@@ -66,6 +66,7 @@ from nova import block_device
 from nova.compute import flavors
 from nova.compute import power_state
 from nova.compute import task_states
+from nova.compute import utils as compute_utils
 from nova.compute import vm_mode
 from nova import context as nova_context
 from nova import exception
@@ -1248,10 +1249,9 @@ class LibvirtDriver(driver.ComputeDriver):
 
         (image_service, image_id) = glance.get_remote_image_service(
             context, instance['image_ref'])
-        try:
-            base = image_service.show(context, image_id)
-        except exception.ImageNotFound:
-            base = {}
+
+        base = compute_utils.get_image_metadata(
+            context, image_service, image_id, instance)
 
         _image_service = glance.get_remote_image_service(context, image_href)
         snapshot_image_service, snapshot_image_id = _image_service
