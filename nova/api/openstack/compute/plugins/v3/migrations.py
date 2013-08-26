@@ -53,6 +53,7 @@ class MigrationsController(object):
     def __init__(self):
         self.compute_api = compute.API()
 
+    @extensions.expected_errors(())
     @wsgi.serializers(xml=MigrationsTemplate)
     def index(self, req):
         """Return all migrations in progress."""
