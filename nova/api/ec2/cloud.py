@@ -1920,7 +1920,7 @@ class EC2SecurityGroupExceptions(object):
 
     @staticmethod
     def raise_over_quota(msg):
-        raise exception.EC2APIError(message=msg)
+        raise exception.SecurityGroupLimitExceeded(msg)
 
     @staticmethod
     def raise_not_found(msg):

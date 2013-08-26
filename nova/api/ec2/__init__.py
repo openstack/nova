@@ -563,6 +563,7 @@ class Executor(wsgi.Application):
                 exception.NotFound,
                 exception.KeypairNotFound,
                 exception.SecurityGroupExists,
+                exception.SecurityGroupLimitExceeded,
                 exception.ImageNotActive,
                 exception.VolumeUnattached,
                 exception.SecurityGroupRuleExists,
