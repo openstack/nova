@@ -528,3 +528,26 @@ def obj_to_primitive(obj):
         return result
     else:
         return obj
+
+
+def obj_make_list(context, list_obj, item_cls, db_list, **extra_args):
+    """Construct an object list from a list of primitives.
+
+    This calls item_cls._from_db_object() on each item of db_list, and
+    adds the resulting object to list_obj.
+
+    :param:context: Request contextr
+    :param:list_obj: An ObjectListBase object
+    :param:item_cls: The NovaObject class of the objects within the list
+    :param:db_list: The list of primitives to convert to objects
+    :param:extra_args: Extra arguments to pass to _from_db_object()
+    :returns: list_obj
+    """
+    list_obj.objects = []
+    for db_item in db_list:
+        item = item_cls._from_db_object(context, item_cls(), db_item,
+                                        **extra_args)
+        list_obj.objects.append(item)
+    list_obj._context = context
+    list_obj.obj_reset_changes()
+    return list_obj
