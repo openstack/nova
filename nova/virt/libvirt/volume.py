@@ -688,6 +688,7 @@ class LibvirtNFSVolumeDriver(LibvirtBaseVolumeDriver):
         path = os.path.join(path, connection_info['data']['name'])
         conf.source_type = 'file'
         conf.source_path = path
+        conf.driver_format = connection_info['data'].get('format', 'raw')
         return conf
 
     def _ensure_mounted(self, nfs_export, options=None):
@@ -822,6 +823,9 @@ class LibvirtGlusterfsVolumeDriver(LibvirtBaseVolumeDriver):
             path = os.path.join(path, data['name'])
             conf.source_type = 'file'
             conf.source_path = path
+
+        conf.driver_format = connection_info['data'].get('format', 'raw')
+
         return conf
 
     def _ensure_mounted(self, glusterfs_export, options=None):
