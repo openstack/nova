@@ -5729,11 +5729,13 @@ class ComputeAPITestCase(BaseTestCase):
                                                             {'fake': 'value'})}
         instance = instance_obj.Instance()
         instance.update(base_options)
+        inst_type = flavors.get_flavor_by_name("m1.tiny")
         instance = self.compute_api._populate_instance_for_create(
                                                     instance,
                                                     self.fake_image,
                                                     1,
-                                                    security_groups=None)
+                                                    security_groups=None,
+                                                    instance_type=inst_type)
         self.assertEquals(str(base_options['image_ref']),
                           instance['system_metadata']['image_base_image_ref'])
         self.assertEquals(vm_states.BUILDING, instance['vm_state'])
@@ -5879,6 +5881,7 @@ class ComputeAPITestCase(BaseTestCase):
                 instance_uuid)
         self.assertEqual(sys_metadata,
                 {'image_kernel_id': 'fake_kernel_id',
+                'image_min_disk': '1',
                 'image_ramdisk_id': 'fake_ramdisk_id',
                 'image_something_else': 'meow',
                 'preserved': 'preserve this!'})
