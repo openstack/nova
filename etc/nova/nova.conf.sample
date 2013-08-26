@@ -642,7 +642,8 @@
 # Options defined in nova.compute.flavors
 #
 
-# default flavor to use, testing only (string value)
+# default flavor to use for the EC2 API only. The Nova API
+# does not support a default flavor. (string value)
 #default_flavor=m1.small
 
 
