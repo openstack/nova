@@ -146,7 +146,7 @@ class VMwareAPIVMTestCase(test.TestCase):
         nova.tests.image.fake.FakeImageService_reset()
 
     def _create_instance_in_the_db(self):
-        values = {'name': 1,
+        values = {'name': '1',
                   'id': 1,
                   'uuid': "fake-uuid",
                   'project_id': self.project_id,
@@ -438,6 +438,31 @@ class VMwareAPIVMTestCase(test.TestCase):
         self._create_instance_in_the_db()
         self.assertEquals(self.conn.destroy(self.instance, self.network_info),
                           None)
+
+    def _rescue(self):
+        def fake_attach_disk_to_vm(*args, **kwargs):
+            pass
+
+        self._create_vm()
+        info = self.conn.get_info({'name': 1, 'uuid': 'fake-uuid'})
+        self.stubs.Set(self.conn._volumeops, "attach_disk_to_vm",
+                       fake_attach_disk_to_vm)
+        self.conn.rescue(self.context, self.instance, self.network_info,
+                         self.image, 'fake-password')
+        info = self.conn.get_info({'name-rescue': 1,
+                                   'uuid': 'fake-uuid-rescue'})
+        self._check_vm_info(info, power_state.RUNNING)
+        info = self.conn.get_info({'name': 1, 'uuid': 'fake-uuid'})
+        self._check_vm_info(info, power_state.SHUTDOWN)
+
+    def test_rescue(self):
+        self._rescue()
+
+    def test_unrescue(self):
+        self._rescue()
+        self.conn.unrescue(self.instance, None)
+        info = self.conn.get_info({'name': 1, 'uuid': 'fake-uuid'})
+        self._check_vm_info(info, power_state.RUNNING)
 
     def test_pause(self):
         pass
