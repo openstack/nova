@@ -239,6 +239,7 @@ class _BaseTestCase(test.TestCase):
     def setUp(self):
         super(_BaseTestCase, self).setUp()
         self.remote_object_calls = list()
+        self.context = context.RequestContext('fake-user', 'fake-project')
 
 
 class _LocalTest(_BaseTestCase):
@@ -411,66 +412,59 @@ class _TestObject(object):
         self.assertRemotes()
 
     def test_orphaned_object(self):
-        ctxt = context.get_admin_context()
-        obj = MyObj.query(ctxt)
+        obj = MyObj.query(self.context)
         obj._context = None
         self.assertRaises(exception.OrphanedObjectError,
                           obj.update_test)
         self.assertRemotes()
 
     def test_changed_1(self):
-        ctxt = context.get_admin_context()
-        obj = MyObj.query(ctxt)
+        obj = MyObj.query(self.context)
         obj.foo = 123
         self.assertEqual(obj.obj_what_changed(), set(['foo']))
-        obj.update_test(ctxt)
+        obj.update_test(self.context)
         self.assertEqual(obj.obj_what_changed(), set(['foo', 'bar']))
         self.assertEqual(obj.foo, 123)
         self.assertRemotes()
 
     def test_changed_2(self):
-        ctxt = context.get_admin_context()
-        obj = MyObj.query(ctxt)
+        obj = MyObj.query(self.context)
         obj.foo = 123
         self.assertEqual(obj.obj_what_changed(), set(['foo']))
-        obj.save(ctxt)
+        obj.save(self.context)
         self.assertEqual(obj.obj_what_changed(), set([]))
         self.assertEqual(obj.foo, 123)
         self.assertRemotes()
 
     def test_changed_3(self):
-        ctxt = context.get_admin_context()
-        obj = MyObj.query(ctxt)
+        obj = MyObj.query(self.context)
         obj.foo = 123
         self.assertEqual(obj.obj_what_changed(), set(['foo']))
-        obj.refresh(ctxt)
+        obj.refresh(self.context)
         self.assertEqual(obj.obj_what_changed(), set([]))
         self.assertEqual(obj.foo, 321)
         self.assertEqual(obj.bar, 'refreshed')
         self.assertRemotes()
 
     def test_changed_4(self):
-        ctxt = context.get_admin_context()
-        obj = MyObj.query(ctxt)
+        obj = MyObj.query(self.context)
         obj.bar = 'something'
         self.assertEqual(obj.obj_what_changed(), set(['bar']))
-        obj.modify_save_modify(ctxt)
+        obj.modify_save_modify(self.context)
         self.assertEqual(obj.obj_what_changed(), set(['foo']))
         self.assertEqual(obj.foo, 42)
         self.assertEqual(obj.bar, 'meow')
         self.assertRemotes()
 
     def test_static_result(self):
-        ctxt = context.get_admin_context()
-        obj = MyObj.query(ctxt)
+        obj = MyObj.query(self.context)
         self.assertEqual(obj.bar, 'bar')
         result = obj.marco()
         self.assertEqual(result, 'polo')
         self.assertRemotes()
 
     def test_updates(self):
-        ctxt = context.get_admin_context()
-        obj = MyObj.query(ctxt)
+        obj = MyObj.query(self.context)
         self.assertEqual(obj.foo, 1)
         obj.update_test()
         self.assertEqual(obj.bar, 'updated')
@@ -548,21 +542,18 @@ class TestObject(_LocalTest, _TestObject):
 
 class TestRemoteObject(_RemoteTest, _TestObject):
     def test_major_version_mismatch(self):
-        ctxt = context.get_admin_context()
         MyObj2.version = '2.0'
         self.assertRaises(exception.IncompatibleObjectVersion,
-                          MyObj2.query, ctxt)
+                          MyObj2.query, self.context)
 
     def test_minor_version_greater(self):
-        ctxt = context.get_admin_context()
         MyObj2.version = '1.6'
         self.assertRaises(exception.IncompatibleObjectVersion,
-                          MyObj2.query, ctxt)
+                          MyObj2.query, self.context)
 
     def test_minor_version_less(self):
-        ctxt = context.get_admin_context()
         MyObj2.version = '1.2'
-        obj = MyObj2.query(ctxt)
+        obj = MyObj2.query(self.context)
         self.assertEqual(obj.bar, 'bar')
         self.assertRemotes()
 
@@ -604,7 +595,7 @@ class TestObjectListBase(test.TestCase):
                          [y.foo for y in obj2])
 
 
-class TestObjectSerializer(test.TestCase):
+class TestObjectSerializer(_BaseTestCase):
     def test_serialize_entity_primitive(self):
         ser = base.NovaObjectSerializer()
         for thing in (1, 'foo', [1, 2], {'foo': 'bar'}):
@@ -617,25 +608,23 @@ class TestObjectSerializer(test.TestCase):
 
     def test_object_serialization(self):
         ser = base.NovaObjectSerializer()
-        ctxt = context.get_admin_context()
         obj = MyObj()
-        primitive = ser.serialize_entity(ctxt, obj)
+        primitive = ser.serialize_entity(self.context, obj)
         self.assertTrue('nova_object.name' in primitive)
-        obj2 = ser.deserialize_entity(ctxt, primitive)
+        obj2 = ser.deserialize_entity(self.context, primitive)
         self.assertTrue(isinstance(obj2, MyObj))
-        self.assertEqual(ctxt, obj2._context)
+        self.assertEqual(self.context, obj2._context)
 
     def test_object_serialization_iterables(self):
         ser = base.NovaObjectSerializer()
-        ctxt = context.get_admin_context()
         obj = MyObj()
         for iterable in (list, tuple, set):
             thing = iterable([obj])
-            primitive = ser.serialize_entity(ctxt, thing)
+            primitive = ser.serialize_entity(self.context, thing)
             self.assertEqual(1, len(primitive))
             for item in primitive:
                 self.assertFalse(isinstance(item, base.NovaObject))
-            thing2 = ser.deserialize_entity(ctxt, primitive)
+            thing2 = ser.deserialize_entity(self.context, primitive)
             self.assertEqual(1, len(thing2))
             for item in thing2:
                 self.assertTrue(isinstance(item, MyObj))

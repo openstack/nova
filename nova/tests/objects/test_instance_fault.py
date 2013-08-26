@@ -12,7 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova import context
 from nova import db
 from nova.objects import instance_fault
 from nova.tests.objects import test_objects
@@ -32,47 +31,43 @@ fake_faults = {
 
 class _TestInstanceFault(object):
     def test_get_latest_for_instance(self):
-        ctxt = context.get_admin_context()
         self.mox.StubOutWithMock(db, 'instance_fault_get_by_instance_uuids')
-        db.instance_fault_get_by_instance_uuids(ctxt, ['fake-uuid']).AndReturn(
-            fake_faults)
+        db.instance_fault_get_by_instance_uuids(self.context, ['fake-uuid']
+                                                ).AndReturn(fake_faults)
         self.mox.ReplayAll()
         fault = instance_fault.InstanceFault.get_latest_for_instance(
-            ctxt, 'fake-uuid')
+            self.context, 'fake-uuid')
         for key in fake_faults['fake-uuid'][0]:
             self.assertEqual(fake_faults['fake-uuid'][0][key], fault[key])
 
     def test_get_latest_for_instance_with_none(self):
-        ctxt = context.get_admin_context()
         self.mox.StubOutWithMock(db, 'instance_fault_get_by_instance_uuids')
-        db.instance_fault_get_by_instance_uuids(ctxt, ['fake-uuid']).AndReturn(
-            {})
+        db.instance_fault_get_by_instance_uuids(self.context, ['fake-uuid']
+                                                ).AndReturn({})
         self.mox.ReplayAll()
         fault = instance_fault.InstanceFault.get_latest_for_instance(
-            ctxt, 'fake-uuid')
+            self.context, 'fake-uuid')
         self.assertEqual(None, fault)
 
     def test_get_by_instance(self):
-        ctxt = context.get_admin_context()
         self.mox.StubOutWithMock(db, 'instance_fault_get_by_instance_uuids')
-        db.instance_fault_get_by_instance_uuids(ctxt, ['fake-uuid']).AndReturn(
-            fake_faults)
+        db.instance_fault_get_by_instance_uuids(self.context, ['fake-uuid']
+                                                ).AndReturn(fake_faults)
         self.mox.ReplayAll()
         faults = instance_fault.InstanceFaultList.get_by_instance_uuids(
-            ctxt, ['fake-uuid'])
+            self.context, ['fake-uuid'])
         for index, db_fault in enumerate(fake_faults['fake-uuid']):
             for key in db_fault:
                 self.assertEqual(fake_faults['fake-uuid'][index][key],
                                  faults[index][key])
 
     def test_get_by_instance_with_none(self):
-        ctxt = context.get_admin_context()
         self.mox.StubOutWithMock(db, 'instance_fault_get_by_instance_uuids')
-        db.instance_fault_get_by_instance_uuids(ctxt, ['fake-uuid']).AndReturn(
-            {})
+        db.instance_fault_get_by_instance_uuids(self.context, ['fake-uuid']
+                                                ).AndReturn({})
         self.mox.ReplayAll()
         faults = instance_fault.InstanceFaultList.get_by_instance_uuids(
-            ctxt, ['fake-uuid'])
+            self.context, ['fake-uuid'])
         self.assertEqual(0, len(faults))
 
 

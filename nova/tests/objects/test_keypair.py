@@ -14,7 +14,6 @@
 
 import datetime
 
-from nova import context
 from nova import db
 from nova.objects import keypair
 from nova.openstack.common import timeutils
@@ -44,58 +43,54 @@ class _TestKeyPairObject(object):
             self.assertEqual(db_val, obj_val)
 
     def test_get_by_name(self):
-        ctxt = context.get_admin_context()
         self.mox.StubOutWithMock(db, 'key_pair_get')
-        db.key_pair_get(ctxt, 'fake-user', 'foo-keypair').AndReturn(
+        db.key_pair_get(self.context, 'fake-user', 'foo-keypair').AndReturn(
             fake_keypair)
         self.mox.ReplayAll()
-        keypair_obj = keypair.KeyPair.get_by_name(ctxt, 'fake-user',
+        keypair_obj = keypair.KeyPair.get_by_name(self.context, 'fake-user',
                                                   'foo-keypair')
         self._compare(keypair_obj, fake_keypair)
 
     def test_create(self):
-        ctxt = context.get_admin_context()
         self.mox.StubOutWithMock(db, 'key_pair_create')
-        db.key_pair_create(ctxt,
+        db.key_pair_create(self.context,
                            {'name': 'foo-keypair',
                             'public_key': 'keydata'}).AndReturn(fake_keypair)
         self.mox.ReplayAll()
         keypair_obj = keypair.KeyPair()
         keypair_obj.name = 'foo-keypair'
         keypair_obj.public_key = 'keydata'
-        keypair_obj.create(ctxt)
+        keypair_obj.create(self.context)
         self._compare(keypair_obj, fake_keypair)
 
     def test_destroy(self):
-        ctxt = context.get_admin_context()
         self.mox.StubOutWithMock(db, 'key_pair_destroy')
-        db.key_pair_destroy(ctxt, 'fake-user', 'foo-keypair')
+        db.key_pair_destroy(self.context, 'fake-user', 'foo-keypair')
         self.mox.ReplayAll()
         keypair_obj = keypair.KeyPair()
         keypair_obj.id = 123
         keypair_obj.user_id = 'fake-user'
         keypair_obj.name = 'foo-keypair'
-        keypair_obj.destroy(ctxt)
+        keypair_obj.destroy(self.context)
 
     def test_destroy_by_name(self):
-        ctxt = context.get_admin_context()
         self.mox.StubOutWithMock(db, 'key_pair_destroy')
-        db.key_pair_destroy(ctxt, 'fake-user', 'foo-keypair')
+        db.key_pair_destroy(self.context, 'fake-user', 'foo-keypair')
         self.mox.ReplayAll()
-        keypair.KeyPair.destroy_by_name(ctxt, 'fake-user', 'foo-keypair')
+        keypair.KeyPair.destroy_by_name(self.context, 'fake-user',
+                                        'foo-keypair')
 
     def test_get_by_user(self):
-        ctxt = context.get_admin_context()
         self.mox.StubOutWithMock(db, 'key_pair_get_all_by_user')
         self.mox.StubOutWithMock(db, 'key_pair_count_by_user')
-        db.key_pair_get_all_by_user(ctxt, 'fake-user').AndReturn(
+        db.key_pair_get_all_by_user(self.context, 'fake-user').AndReturn(
             [fake_keypair])
-        db.key_pair_count_by_user(ctxt, 'fake-user').AndReturn(1)
+        db.key_pair_count_by_user(self.context, 'fake-user').AndReturn(1)
         self.mox.ReplayAll()
-        keypairs = keypair.KeyPairList.get_by_user(ctxt, 'fake-user')
+        keypairs = keypair.KeyPairList.get_by_user(self.context, 'fake-user')
         self.assertEqual(1, len(keypairs))
         self._compare(keypairs[0], fake_keypair)
-        self.assertEqual(1, keypair.KeyPairList.get_count_by_user(ctxt,
+        self.assertEqual(1, keypair.KeyPairList.get_count_by_user(self.context,
                                                                   'fake-user'))
 
 

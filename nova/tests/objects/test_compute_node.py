@@ -14,7 +14,6 @@
 
 import datetime
 
-from nova import context
 from nova import db
 from nova.objects import compute_node
 from nova.objects import service
@@ -57,62 +56,56 @@ class _TestComputeNodeObject(object):
             self.assertEqual(db_val, obj_val)
 
     def test_get_by_id(self):
-        ctxt = context.get_admin_context()
         self.mox.StubOutWithMock(db, 'compute_node_get')
-        db.compute_node_get(ctxt, 123).AndReturn(fake_compute_node)
+        db.compute_node_get(self.context, 123).AndReturn(fake_compute_node)
         self.mox.ReplayAll()
-        compute = compute_node.ComputeNode.get_by_id(ctxt, 123)
+        compute = compute_node.ComputeNode.get_by_id(self.context, 123)
         self._compare(compute, fake_compute_node)
 
     def test_get_by_service_id(self):
-        ctxt = context.get_admin_context()
         self.mox.StubOutWithMock(db, 'compute_node_get_by_service_id')
-        db.compute_node_get_by_service_id(ctxt, 456).AndReturn(
+        db.compute_node_get_by_service_id(self.context, 456).AndReturn(
             fake_compute_node)
         self.mox.ReplayAll()
-        compute = compute_node.ComputeNode.get_by_service_id(ctxt, 456)
+        compute = compute_node.ComputeNode.get_by_service_id(self.context, 456)
         self._compare(compute, fake_compute_node)
 
     def test_create(self):
-        ctxt = context.get_admin_context()
         self.mox.StubOutWithMock(db, 'compute_node_create')
-        db.compute_node_create(ctxt, {'service_id': 456}).AndReturn(
+        db.compute_node_create(self.context, {'service_id': 456}).AndReturn(
             fake_compute_node)
         self.mox.ReplayAll()
         compute = compute_node.ComputeNode()
         compute.service_id = 456
-        compute.create(ctxt)
+        compute.create(self.context)
         self._compare(compute, fake_compute_node)
 
     def test_save(self):
-        ctxt = context.get_admin_context()
         self.mox.StubOutWithMock(db, 'compute_node_update')
-        db.compute_node_update(ctxt, 123, {'vcpus_used': 3},
+        db.compute_node_update(self.context, 123, {'vcpus_used': 3},
                                prune_stats=False
                                ).AndReturn(fake_compute_node)
         self.mox.ReplayAll()
         compute = compute_node.ComputeNode()
         compute.id = 123
         compute.vcpus_used = 3
-        compute.save(ctxt)
+        compute.save(self.context)
         self._compare(compute, fake_compute_node)
 
     def test_destroy(self):
-        ctxt = context.get_admin_context()
         self.mox.StubOutWithMock(db, 'compute_node_delete')
-        db.compute_node_delete(ctxt, 123)
+        db.compute_node_delete(self.context, 123)
         self.mox.ReplayAll()
         compute = compute_node.ComputeNode()
         compute.id = 123
-        compute.destroy(ctxt)
+        compute.destroy(self.context)
 
     def test_service(self):
-        ctxt = context.get_admin_context()
         self.mox.StubOutWithMock(service.Service, 'get_by_id')
-        service.Service.get_by_id(ctxt, 456).AndReturn('my-service')
+        service.Service.get_by_id(self.context, 456).AndReturn('my-service')
         self.mox.ReplayAll()
         compute = compute_node.ComputeNode()
-        compute._context = ctxt
+        compute._context = self.context
         compute.id = 123
         compute.service_id = 456
         self.assertEqual('my-service', compute.service)
@@ -120,21 +113,19 @@ class _TestComputeNodeObject(object):
         self.assertEqual('my-service', compute.service)
 
     def test_get_all(self):
-        ctxt = context.get_admin_context()
         self.mox.StubOutWithMock(db, 'compute_node_get_all')
-        db.compute_node_get_all(ctxt).AndReturn([fake_compute_node])
+        db.compute_node_get_all(self.context).AndReturn([fake_compute_node])
         self.mox.ReplayAll()
-        computes = compute_node.ComputeNodeList.get_all(ctxt)
+        computes = compute_node.ComputeNodeList.get_all(self.context)
         self.assertEqual(1, len(computes))
         self._compare(computes[0], fake_compute_node)
 
     def test_get_by_hypervisor(self):
-        ctxt = context.get_admin_context()
         self.mox.StubOutWithMock(db, 'compute_node_search_by_hypervisor')
-        db.compute_node_search_by_hypervisor(ctxt, 'hyper').AndReturn(
+        db.compute_node_search_by_hypervisor(self.context, 'hyper').AndReturn(
             [fake_compute_node])
         self.mox.ReplayAll()
-        computes = compute_node.ComputeNodeList.get_by_hypervisor(ctxt,
+        computes = compute_node.ComputeNodeList.get_by_hypervisor(self.context,
                                                                   'hyper')
         self.assertEqual(1, len(computes))
         self._compare(computes[0], fake_compute_node)

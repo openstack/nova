@@ -12,7 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova import context
 from nova import db
 from nova.objects import instance
 from nova.objects import security_group
@@ -38,23 +37,21 @@ class _TestSecurityGroupObject(object):
         return dict(db_secgroup.items(), deleted=False)
 
     def test_get(self):
-        ctxt = context.get_admin_context()
         self.mox.StubOutWithMock(db, 'security_group_get')
-        db.security_group_get(ctxt, 1).AndReturn(fake_secgroup)
+        db.security_group_get(self.context, 1).AndReturn(fake_secgroup)
         self.mox.ReplayAll()
-        secgroup = security_group.SecurityGroup.get(ctxt, 1)
+        secgroup = security_group.SecurityGroup.get(self.context, 1)
         self.assertEqual(self._fix_deleted(fake_secgroup),
                          dict(secgroup.items()))
         self.assertEqual(secgroup.obj_what_changed(), set())
         self.assertRemotes()
 
     def test_get_by_name(self):
-        ctxt = context.get_admin_context()
         self.mox.StubOutWithMock(db, 'security_group_get_by_name')
-        db.security_group_get_by_name(ctxt, 'fake-project',
+        db.security_group_get_by_name(self.context, 'fake-project',
                                       'fake-name').AndReturn(fake_secgroup)
         self.mox.ReplayAll()
-        secgroup = security_group.SecurityGroup.get_by_name(ctxt,
+        secgroup = security_group.SecurityGroup.get_by_name(self.context,
                                                             'fake-project',
                                                             'fake-name')
         self.assertEqual(self._fix_deleted(fake_secgroup),
@@ -63,49 +60,45 @@ class _TestSecurityGroupObject(object):
         self.assertRemotes()
 
     def test_in_use(self):
-        ctxt = context.get_admin_context()
         self.mox.StubOutWithMock(db, 'security_group_in_use')
-        db.security_group_in_use(ctxt, 123).AndReturn(True)
+        db.security_group_in_use(self.context, 123).AndReturn(True)
         self.mox.ReplayAll()
         secgroup = security_group.SecurityGroup()
         secgroup.id = 123
-        self.assertTrue(secgroup.in_use(ctxt))
+        self.assertTrue(secgroup.in_use(self.context))
         self.assertRemotes()
 
     def test_save(self):
-        ctxt = context.get_admin_context()
         self.mox.StubOutWithMock(db, 'security_group_update')
         updated_secgroup = dict(fake_secgroup, project_id='changed')
-        db.security_group_update(ctxt, 1,
+        db.security_group_update(self.context, 1,
                                  {'description': 'foobar'}).AndReturn(
                                      updated_secgroup)
         self.mox.ReplayAll()
         secgroup = security_group.SecurityGroup._from_db_object(
             security_group.SecurityGroup(), fake_secgroup)
         secgroup.description = 'foobar'
-        secgroup.save(ctxt)
+        secgroup.save(self.context)
         self.assertEqual(self._fix_deleted(updated_secgroup),
                          dict(secgroup.items()))
         self.assertEqual(secgroup.obj_what_changed(), set())
         self.assertRemotes()
 
     def test_save_no_changes(self):
-        ctxt = context.get_admin_context()
         self.mox.StubOutWithMock(db, 'security_group_update')
         self.mox.ReplayAll()
         secgroup = security_group.SecurityGroup._from_db_object(
             security_group.SecurityGroup(), fake_secgroup)
-        secgroup.save(ctxt)
+        secgroup.save(self.context)
 
     def test_refresh(self):
-        ctxt = context.get_admin_context()
         updated_secgroup = dict(fake_secgroup, description='changed')
         self.mox.StubOutWithMock(db, 'security_group_get')
-        db.security_group_get(ctxt, 1).AndReturn(updated_secgroup)
+        db.security_group_get(self.context, 1).AndReturn(updated_secgroup)
         self.mox.ReplayAll()
         secgroup = security_group.SecurityGroup._from_db_object(
             security_group.SecurityGroup(), fake_secgroup)
-        secgroup.refresh(ctxt)
+        secgroup.refresh(self.context)
         self.assertEqual(self._fix_deleted(updated_secgroup),
                          dict(secgroup.items()))
         self.assertEqual(secgroup.obj_what_changed(), set())
@@ -130,27 +123,25 @@ fake_secgroups = [
 
 class _TestSecurityGroupListObject(object):
     def test_get_all(self):
-        ctxt = context.get_admin_context()
         self.mox.StubOutWithMock(db, 'security_group_get_all')
-        db.security_group_get_all(ctxt).AndReturn(fake_secgroups)
+        db.security_group_get_all(self.context).AndReturn(fake_secgroups)
         self.mox.ReplayAll()
-        secgroup_list = security_group.SecurityGroupList.get_all(ctxt)
+        secgroup_list = security_group.SecurityGroupList.get_all(self.context)
         for i in range(len(fake_secgroups)):
             self.assertTrue(isinstance(secgroup_list[i],
                                        security_group.SecurityGroup))
             self.assertEqual(fake_secgroups[i]['id'],
                              secgroup_list[i]['id'])
-            self.assertEqual(secgroup_list[i]._context, ctxt)
+            self.assertEqual(secgroup_list[i]._context, self.context)
 
     def test_get_by_project(self):
-        ctxt = context.get_admin_context()
         self.mox.StubOutWithMock(db, 'security_group_get_by_project')
-        db.security_group_get_by_project(ctxt,
+        db.security_group_get_by_project(self.context,
                                          'fake-project').AndReturn(
                                              fake_secgroups)
         self.mox.ReplayAll()
         secgroup_list = security_group.SecurityGroupList.get_by_project(
-            ctxt, 'fake-project')
+            self.context, 'fake-project')
         for i in range(len(fake_secgroups)):
             self.assertTrue(isinstance(secgroup_list[i],
                                        security_group.SecurityGroup))
@@ -158,17 +149,15 @@ class _TestSecurityGroupListObject(object):
                              secgroup_list[i]['id'])
 
     def test_get_by_instance(self):
-        ctxt = context.get_admin_context()
-
         inst = instance.Instance()
         inst.uuid = 'fake-inst-uuid'
         self.mox.StubOutWithMock(db, 'security_group_get_by_instance')
-        db.security_group_get_by_instance(ctxt,
+        db.security_group_get_by_instance(self.context,
                                           'fake-inst-uuid').AndReturn(
                                               fake_secgroups)
         self.mox.ReplayAll()
         secgroup_list = security_group.SecurityGroupList.get_by_instance(
-            ctxt, inst)
+            self.context, inst)
         for i in range(len(fake_secgroups)):
             self.assertTrue(isinstance(secgroup_list[i],
                                        security_group.SecurityGroup))
