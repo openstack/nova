@@ -353,6 +353,7 @@ class Datastore(ManagedObject):
         self.set("summary.name", name)
         self.set("summary.capacity", 1024 * 1024 * 1024 * 1024)
         self.set("summary.freeSpace", 500 * 1024 * 1024 * 1024)
+        self.set("summary.accessible", True)
 
 
 class HostNetworkSystem(ManagedObject):

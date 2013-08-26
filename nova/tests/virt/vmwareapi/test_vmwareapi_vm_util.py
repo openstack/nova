@@ -210,3 +210,14 @@ class VMwareVMUtilTestCase(test.TestCase):
         prop4 = vm_util.property_from_property_set('foo', bad_objects)
         self.assertIsNotNone(prop4)
         self.assertEqual('bar1', prop4.val)
+
+    def test_get_datastore_ref_and_name_inaccessible_ds(self):
+        data_store = fake.Datastore()
+        data_store.set("summary.accessible", False)
+
+        fake_objects = fake.FakeRetrieveResult()
+        fake_objects.add_object(data_store)
+
+        self.assertRaises(exception.DatastoreNotFound,
+                vm_util.get_datastore_ref_and_name,
+                fake_session(fake_objects))
