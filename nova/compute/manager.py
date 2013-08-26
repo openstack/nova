@@ -1407,20 +1407,27 @@ class ComputeManager(manager.SchedulerDependentManager):
                      filter_properties, admin_password=None,
                      injected_files=None, requested_networks=None,
                      security_groups=None, block_device_mapping=None,
-                     node=None):
+                     node=None, limits=None):
 
         @utils.synchronized(instance['uuid'])
         def do_build_and_run_instance(context, instance, image, request_spec,
                 filter_properties, admin_password, injected_files,
                 requested_networks, security_groups, block_device_mapping,
-                node):
+                node=None, limits=None):
 
             # b64 decode the files to inject:
             decoded_files = self._decode_files(injected_files)
 
+            if limits is None:
+                limits = {}
+
+            if node is None:
+                node = self.driver.get_available_nodes()[0]
+                LOG.debug(_('No node specified, defaulting to %s'), node)
+
             try:
                 self._build_and_run_instance(context, instance, image,
-                        decoded_files, admin_password)
+                        decoded_files, admin_password, node, limits)
             except exception.BuildAbortException:
                 self._set_instance_error_state(context, instance['uuid'])
             except exception.RescheduledException:
@@ -1437,14 +1444,16 @@ class ComputeManager(manager.SchedulerDependentManager):
         do_build_and_run_instance(context, instance, image, request_spec,
                 filter_properties, admin_password, injected_files,
                 requested_networks, security_groups, block_device_mapping,
-                node)
+                node, limits)
 
     def _build_and_run_instance(self, context, instance, image, injected_files,
-            admin_password):
+            admin_password, node, limits):
 
         try:
-            self.driver.spawn(context, instance, image,
-                              injected_files, admin_password)
+            rt = self._get_resource_tracker(node)
+            with rt.instance_claim(context, instance, limits):
+                self.driver.spawn(context, instance, image,
+                                  injected_files, admin_password)
         except exception.InstanceNotFound:
             msg = _('Instance disappeared during build.')
             LOG.debug(msg, instance=instance)
@@ -1455,6 +1464,10 @@ class ComputeManager(manager.SchedulerDependentManager):
             LOG.debug(msg, instance=instance)
             raise exception.BuildAbortException(instance_uuid=instance['uuid'],
                     reason=msg)
+        except exception.ComputeResourcesUnavailable as e:
+            LOG.debug(e.format_message(), instance=instance)
+            raise exception.RescheduledException(
+                    instance_uuid=instance['uuid'], reason='')
         except Exception:
             LOG.exception('Instance failed to spawn', instance=instance)
             raise exception.RescheduledException(
