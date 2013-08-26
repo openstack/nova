@@ -442,12 +442,9 @@ class CloudController(object):
     def create_key_pair(self, context, key_name, **kwargs):
         LOG.audit(_("Create key pair %s"), key_name, context=context)
 
-        try:
-            keypair, private_key = self.keypair_api.create_key_pair(
-                context, context.user_id, key_name)
-        except exception.KeypairLimitExceeded:
-            msg = _("Quota exceeded, too many key pairs.")
-            raise exception.EC2APIError(msg, code='ResourceLimitExceeded')
+        keypair, private_key = self.keypair_api.create_key_pair(
+            context, context.user_id, key_name)
+
         return {'keyName': key_name,
                 'keyFingerprint': keypair['fingerprint'],
                 'keyMaterial': private_key}
@@ -459,17 +456,10 @@ class CloudController(object):
 
         public_key = base64.b64decode(public_key_material)
 
-        try:
-            keypair = self.keypair_api.import_key_pair(context,
-                                                       context.user_id,
-                                                       key_name,
-                                                       public_key)
-        except exception.KeypairLimitExceeded:
-            msg = _("Quota exceeded, too many key pairs.")
-            raise exception.EC2APIError(msg)
-        except exception.InvalidKeypair:
-            msg = _("Keypair data is invalid")
-            raise exception.EC2APIError(msg)
+        keypair = self.keypair_api.import_key_pair(context,
+                                                   context.user_id,
+                                                   key_name,
+                                                   public_key)
 
         return {'keyName': key_name,
                 'keyFingerprint': keypair['fingerprint']}
@@ -1230,10 +1220,7 @@ class CloudController(object):
 
     def allocate_address(self, context, **kwargs):
         LOG.audit(_("Allocate address"), context=context)
-        try:
-            public_ip = self.network_api.allocate_floating_ip(context)
-        except exception.FloatingIpLimitExceeded:
-            raise exception.EC2APIError(_('No more floating IPs available'))
+        public_ip = self.network_api.allocate_floating_ip(context)
         return {'publicIp': public_ip}
 
     def release_address(self, context, public_ip, **kwargs):
