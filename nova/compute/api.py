@@ -1280,7 +1280,7 @@ class API(base.Base):
     @check_instance_lock
     @check_instance_host
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.RESCUED,
-                                    vm_states.ERROR, vm_states.STOPPED],
+                                    vm_states.ERROR],
                           task_state=[None])
     def stop(self, context, instance, do_cast=True):
         """Stop an instance."""
