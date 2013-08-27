@@ -1245,6 +1245,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                    'image_state': 'available',
                                    'owner_id': instance['project_id'],
                                    'ramdisk_id': instance['ramdisk_id'],
+                                   'os_type': instance['os_type'],
                                    }
                     }
 
