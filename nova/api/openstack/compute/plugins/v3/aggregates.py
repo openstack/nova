@@ -91,7 +91,7 @@ class AggregateController(wsgi.Controller):
         try:
             aggregate = self.api.get_aggregate(context, id)
         except exception.AggregateNotFound:
-            msg = _("Cannot show aggregate: %s"), id
+            msg = _("Cannot show aggregate: %s") % id
             raise exc.HTTPNotFound(explanation=msg)
         return self._marshall_aggregate(aggregate)
 
@@ -118,7 +118,7 @@ class AggregateController(wsgi.Controller):
         try:
             aggregate = self.api.update_aggregate(context, id, updates)
         except exception.AggregateNotFound:
-            msg = _('Cannot update aggregate: %s'), id
+            msg = _('Cannot update aggregate: %s') % id
             raise exc.HTTPNotFound(explanation=msg)
 
         return self._marshall_aggregate(aggregate)
@@ -131,7 +131,7 @@ class AggregateController(wsgi.Controller):
         try:
             self.api.delete_aggregate(context, id)
         except exception.AggregateNotFound:
-            msg = _('Cannot delete aggregate: %s'), id
+            msg = _('Cannot delete aggregate: %s') % id
             raise exc.HTTPNotFound(explanation=msg)
 
     @wsgi.action('add_host')
