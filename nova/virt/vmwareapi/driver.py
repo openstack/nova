@@ -284,7 +284,11 @@ class VMwareESXDriver(driver.ComputeDriver):
 
     def get_console_output(self, instance):
         """Return snapshot of console."""
-        return self._vmops.get_console_output(instance)
+        # The method self._vmops.get_console_output(instance) returns
+        # a PNG format. The vCenter and ESX do not provide a way
+        # to get the text based console format.
+        return _("Currently there is no log available for "
+                 "instance %s") % instance['uuid']
 
     def get_vnc_console(self, instance):
         """Return link to instance's VNC console."""
