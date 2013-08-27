@@ -92,7 +92,7 @@ class IP(Model):
     @classmethod
     def hydrate(cls, ip):
         if ip:
-            return IP(**ensure_string_keys(ip))
+            return cls(**ensure_string_keys(ip))
         return None
 
 
@@ -112,8 +112,8 @@ class FixedIP(IP):
     def floating_ip_addresses(self):
         return [ip['address'] for ip in self['floating_ips']]
 
-    @classmethod
-    def hydrate(cls, fixed_ip):
+    @staticmethod
+    def hydrate(fixed_ip):
         fixed_ip = FixedIP(**ensure_string_keys(fixed_ip))
         fixed_ip['floating_ips'] = [IP.hydrate(floating_ip)
                                    for floating_ip in fixed_ip['floating_ips']]
@@ -133,7 +133,7 @@ class Route(Model):
 
     @classmethod
     def hydrate(cls, route):
-        route = Route(**ensure_string_keys(route))
+        route = cls(**ensure_string_keys(route))
         route['gateway'] = IP.hydrate(route['gateway'])
         return route
 
@@ -177,7 +177,7 @@ class Subnet(Model):
 
     @classmethod
     def hydrate(cls, subnet):
-        subnet = Subnet(**ensure_string_keys(subnet))
+        subnet = cls(**ensure_string_keys(subnet))
         subnet['dns'] = [IP.hydrate(dns) for dns in subnet['dns']]
         subnet['ips'] = [FixedIP.hydrate(ip) for ip in subnet['ips']]
         subnet['routes'] = [Route.hydrate(route) for route in subnet['routes']]
@@ -205,7 +205,7 @@ class Network(Model):
     @classmethod
     def hydrate(cls, network):
         if network:
-            network = Network(**ensure_string_keys(network))
+            network = cls(**ensure_string_keys(network))
             network['subnets'] = [Subnet.hydrate(subnet)
                                   for subnet in network['subnets']]
         return network
@@ -295,7 +295,7 @@ class VIF(Model):
 
     @classmethod
     def hydrate(cls, vif):
-        vif = VIF(**ensure_string_keys(vif))
+        vif = cls(**ensure_string_keys(vif))
         vif['network'] = Network.hydrate(vif['network'])
         return vif
 
@@ -324,7 +324,7 @@ class NetworkInfo(list):
     def hydrate(cls, network_info):
         if isinstance(network_info, basestring):
             network_info = jsonutils.loads(network_info)
-        return NetworkInfo([VIF.hydrate(vif) for vif in network_info])
+        return cls([VIF.hydrate(vif) for vif in network_info])
 
     def json(self):
         return jsonutils.dumps(self)

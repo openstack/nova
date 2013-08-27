@@ -170,7 +170,7 @@ class ImageType(object):
 
     @classmethod
     def to_string(cls, image_type):
-        return dict(zip(ImageType._ids, ImageType._strs)).get(image_type)
+        return dict(zip(cls._ids, ImageType._strs)).get(image_type)
 
     @classmethod
     def get_role(cls, image_type_id):
