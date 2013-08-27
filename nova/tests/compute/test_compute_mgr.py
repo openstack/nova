@@ -21,6 +21,7 @@ from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
+from nova.conductor import rpcapi as conductor_rpcapi
 from nova import context
 from nova import db
 from nova import exception
@@ -724,9 +725,13 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
 
     def test_instance_not_found(self):
         self.mox.StubOutWithMock(self.compute.driver, 'spawn')
+        self.mox.StubOutWithMock(conductor_rpcapi.ConductorAPI,
+                                 'instance_update')
         self.compute.driver.spawn(self.context, self.instance, self.image,
                 self.injected_files, self.admin_pass).AndRaise(
                         exception.InstanceNotFound(instance_id=1))
+        conductor_rpcapi.ConductorAPI.instance_update(
+            self.context, self.instance['uuid'], mox.IgnoreArg(), 'conductor')
         self.mox.ReplayAll()
 
         self.assertRaises(exception.BuildAbortException,
@@ -736,9 +741,13 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
 
     def test_reschedule_on_exception(self):
         self.mox.StubOutWithMock(self.compute.driver, 'spawn')
+        self.mox.StubOutWithMock(conductor_rpcapi.ConductorAPI,
+                                 'instance_update')
         self.compute.driver.spawn(self.context, self.instance, self.image,
                 self.injected_files, self.admin_pass).AndRaise(
                         test.TestingException())
+        conductor_rpcapi.ConductorAPI.instance_update(
+            self.context, self.instance['uuid'], mox.IgnoreArg(), 'conductor')
         self.mox.ReplayAll()
 
         self.assertRaises(exception.RescheduledException,
@@ -748,10 +757,14 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
 
     def test_unexpected_task_state(self):
         self.mox.StubOutWithMock(self.compute.driver, 'spawn')
+        self.mox.StubOutWithMock(conductor_rpcapi.ConductorAPI,
+                                 'instance_update')
         self.compute.driver.spawn(self.context, self.instance, self.image,
                 self.injected_files, self.admin_pass).AndRaise(
                         exception.UnexpectedTaskStateError(expected=None,
                             actual='deleting'))
+        conductor_rpcapi.ConductorAPI.instance_update(
+            self.context, self.instance['uuid'], mox.IgnoreArg(), 'conductor')
         self.mox.ReplayAll()
 
         self.assertRaises(exception.BuildAbortException,
