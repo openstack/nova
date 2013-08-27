@@ -1176,9 +1176,9 @@ class CloudController(object):
             else:
                 i['privateDnsName'] = instance['hostname']
             i['privateIpAddress'] = fixed_ip
-            i['publicDnsName'] = floating_ip
-            i['ipAddress'] = floating_ip or fixed_ip
-            i['dnsName'] = i['publicDnsName'] or i['privateDnsName']
+            if floating_ip is not None:
+                i['ipAddress'] = floating_ip
+            i['dnsName'] = floating_ip
             i['keyName'] = instance['key_name']
             i['tagSet'] = []
 
