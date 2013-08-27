@@ -1205,18 +1205,18 @@ class API(base.Base):
                        as data fields of the instance to be
                        updated
 
-        :returns: None
+        :returns: A reference to the updated instance
         """
-        _, updated = self._update(context, instance, **kwargs)
-        return updated
+        refs = self._update(context, instance, **kwargs)
+        return refs[1]
 
     def _update(self, context, instance, **kwargs):
         # Update the instance record and send a state update notification
         # if task or vm state changed
         old_ref, instance_ref = self.db.instance_update_and_get_original(
-                context, instance['uuid'], kwargs)
-        notifications.send_update(context, old_ref, instance_ref,
-                service="api")
+                                  context, instance['uuid'], kwargs)
+        notifications.send_update(context, old_ref,
+                                  instance_ref, service="api")
 
         return dict(old_ref.iteritems()), dict(instance_ref.iteritems())
 
