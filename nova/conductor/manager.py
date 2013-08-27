@@ -24,6 +24,7 @@ from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
+from nova.conductor.tasks import live_migrate
 from nova.db import base
 from nova import exception
 from nova.image import glance
@@ -601,9 +602,8 @@ class ComputeTaskManager(base.Base):
     def migrate_server(self, context, instance, scheduler_hint, live, rebuild,
             flavor, block_migration, disk_over_commit, reservations=None):
         if live and not rebuild and not flavor:
-            destination = scheduler_hint.get("host")
-            self.scheduler_rpcapi.live_migration(context, block_migration,
-                    disk_over_commit, instance, destination)
+            self._live_migrate(context, instance, scheduler_hint,
+                               block_migration, disk_over_commit)
         elif not live and not rebuild and flavor:
             instance_uuid = instance['uuid']
             with compute_utils.EventReporter(context, ConductorManager(),
@@ -672,6 +672,41 @@ class ComputeTaskManager(base.Base):
         scheduler_utils.set_vm_state_and_notify(
                 context, 'compute_task', method, updates,
                 ex, request_spec, self.db)
+
+    def _live_migrate(self, context, instance, scheduler_hint,
+                      block_migration, disk_over_commit):
+        destination = scheduler_hint.get("host")
+        try:
+            live_migrate.execute(context, instance, destination,
+                             block_migration, disk_over_commit)
+        except (exception.NoValidHost,
+                exception.ComputeServiceUnavailable,
+                exception.InvalidHypervisorType,
+                exception.UnableToMigrateToSelf,
+                exception.DestinationHypervisorTooOld,
+                exception.InvalidLocalStorage,
+                exception.InvalidSharedStorage,
+                exception.MigrationPreCheckError) as ex:
+            with excutils.save_and_reraise_exception():
+                #TODO(johngarbutt) - eventually need instance actions here
+                request_spec = {'instance_properties': {
+                    'uuid': instance['uuid'], },
+                }
+                scheduler_utils.set_vm_state_and_notify(context,
+                        'compute_task', 'migrate_server',
+                        dict(vm_state=instance['vm_state'],
+                             task_state=None,
+                             expected_task_state=task_states.MIGRATING,),
+                        ex, request_spec, self.db)
+        except Exception as ex:
+            with excutils.save_and_reraise_exception():
+                request_spec = {'instance_properties': {
+                    'uuid': instance['uuid'], },
+                }
+                scheduler_utils.set_vm_state_and_notify(context,
+                        'compute_task', 'migrate_server',
+                        {'vm_state': vm_states.ERROR},
+                        ex, request_spec, self.db)
 
     def build_instances(self, context, instances, image, filter_properties,
             admin_password, injected_files, requested_networks,

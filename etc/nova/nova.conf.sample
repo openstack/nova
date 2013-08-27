@@ -784,6 +784,16 @@
 
 
 #
+# Options defined in nova.conductor.tasks.live_migrate
+#
+
+# Number of times to retry live-migration before failing. If
+# == -1, try until out of hosts. If == 0, only try once, no
+# retries. (integer value)
+#migrate_max_retries=-1
+
+
+#
 # Options defined in nova.console.manager
 #
 
