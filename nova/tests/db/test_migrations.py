@@ -2811,6 +2811,30 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         metadata.insert().values(data).execute()
         self.assertIsNotNone(metadata.insert().values(data).execute())
 
+    def _212(self, engine, ext=None):
+        if engine.name == 'sqlite':
+            return
+        migrations = db_utils.get_table(engine, 'migrations')
+        indexes = dict((i.name, i) for i in migrations.indexes)
+        check_index = indexes['migrations_by_host_nodes_and_status_idx']
+        index_columns = [c.name for c in check_index.columns]
+        check_columns = ['source_compute', 'dest_compute', 'source_node',
+                         'dest_node', 'status']
+        if ext is not None:
+            check_columns.insert(0, ext)
+        self.assertTrue(set(index_columns) == set(check_columns))
+
+    def _pre_upgrade_212(self, engine):
+        if engine.name == 'mysql':
+            self._212(engine)
+
+    def _check_212(self, engine, data):
+        self._212(engine, ext='deleted')
+
+    def _post_downgrade_212(self, engine):
+        if engine.name == 'mysql':
+            self._212(engine)
+
 
 class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""
