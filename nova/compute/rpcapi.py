@@ -648,17 +648,29 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 topic=_compute_topic(self.topic, ctxt, None, instance))
 
     def start_instance(self, ctxt, instance):
+        if self.can_send_version('2.29'):
+            version = '2.29'
+        else:
+            version = '2.0'
+            instance = jsonutils.to_primitive(
+                    objects_base.obj_to_primitive(instance))
         self.cast(ctxt, self.make_msg('start_instance',
                 instance=instance),
                 topic=_compute_topic(self.topic, ctxt, None, instance),
-                version='2.29')
+                version=version)
 
     def stop_instance(self, ctxt, instance, do_cast=True):
+        if self.can_send_version('2.29'):
+            version = '2.29'
+        else:
+            version = '2.0'
+            instance = jsonutils.to_primitive(
+                    objects_base.obj_to_primitive(instance))
         rpc_method = self.cast if do_cast else self.call
         return rpc_method(ctxt, self.make_msg('stop_instance',
                 instance=instance),
                 topic=_compute_topic(self.topic, ctxt, None, instance),
-                version='2.29')
+                version=version)
 
     def suspend_instance(self, ctxt, instance):
         if self.can_send_version('2.33'):
