@@ -149,12 +149,30 @@ def service_update(context, service_id, values):
 
 
 def compute_node_get(context, compute_id):
-    """Get a computeNode."""
+    """Get a compute node by its id.
+
+    :param context: The security context
+    :param compute_id: ID of the compute node
+
+    :returns: Dictionary-like object containing properties of the compute node,
+              including its corresponding service and statistics
+
+    Raises ComputeHostNotFound if compute node with the given ID doesn't exist.
+    """
     return IMPL.compute_node_get(context, compute_id)
 
 
 def compute_node_get_by_service_id(context, service_id):
-    """Get a computeNode by its associated service's id."""
+    """Get a compute node by its associated service id.
+
+    :param context: The security context
+    :param compute_id: ID of the associated service
+
+    :returns: Dictionary-like object containing properties of the compute node,
+              including its corresponding service and statistics
+
+    Raises ServiceNotFound if service with the given ID doesn't exist.
+    """
     return IMPL.compute_node_get_by_service_id(context, service_id)
 
 
@@ -174,32 +192,67 @@ def compute_node_get_all(context, no_date_fields=False):
 
 
 def compute_node_search_by_hypervisor(context, hypervisor_match):
-    """Get computeNodes given a hypervisor hostname match string."""
+    """Get compute nodes by hypervisor hostname.
+
+    :param context: The security context
+    :param hypervisor_match: The hypervisor hostname
+
+    :returns: List of dictionary-like objects each containing compute node
+              properties, including corresponding service
+    """
     return IMPL.compute_node_search_by_hypervisor(context, hypervisor_match)
 
 
 def compute_node_create(context, values):
-    """Create a computeNode from the values dictionary."""
+    """Create a compute node from the values dictionary.
+
+    :param context: The security context
+    :param values: Dictionary containing compute node properties
+
+    :returns: Dictionary-like object containing the properties of the created
+              node, including its corresponding service and statistics
+    """
     return IMPL.compute_node_create(context, values)
 
 
 def compute_node_update(context, compute_id, values, prune_stats=False):
-    """Set the given properties on a computeNode and update it.
+    """Set the given properties on a compute node and update it.
 
-    Raises ComputeHostNotFound if computeNode does not exist.
+    :param context: The security context
+    :param compute_id: ID of the compute node
+    :param values: Dictionary containing compute node properties to be updated
+    :param prune_stats: If set to True, forces the compute node statistics
+                        entries corresponding to the given compute node with
+                        keys not present in the values['stats'] dictionary to
+                        be deleted from the database. Set to False by default
+
+    :returns: Dictionary-like object containing the properties of the updated
+              compute node, including its corresponding service and statistics
+
+    Raises ComputeHostNotFound if compute node with the given ID doesn't exist.
     """
     return IMPL.compute_node_update(context, compute_id, values, prune_stats)
 
 
 def compute_node_delete(context, compute_id):
-    """Delete a computeNode from the database.
+    """Delete a compute node from the database.
 
-    Raises ComputeHostNotFound if computeNode does not exist.
+    :param context: The security context
+    :param compute_id: ID of the compute node
+
+    Raises ComputeHostNotFound if compute node with the given ID doesn't exist.
     """
     return IMPL.compute_node_delete(context, compute_id)
 
 
 def compute_node_statistics(context):
+    """Get aggregate statistics over all compute nodes.
+
+    :param context: The security context
+
+    :returns: Dictionary containing compute node characteristics summed up
+              over all the compute nodes, e.g. 'vcpus', 'free_ram_mb' etc.
+    """
     return IMPL.compute_node_statistics(context)
 
 
