@@ -1223,12 +1223,6 @@ class _BaseTaskTestCase(object):
         self.context = FakeContext(self.user_id, self.project_id)
         fake_instance_actions.stub_out_action_events(self.stubs)
 
-    def stub_out_client_exceptions(self):
-        def passthru(exceptions, func, *args, **kwargs):
-            return func(*args, **kwargs)
-
-        self.stubs.Set(rpc_common, 'catch_client_exception', passthru)
-
     def test_live_migrate(self):
         inst = fake_instance.fake_db_instance()
         inst_obj = instance_obj.Instance._from_db_object(
@@ -1471,7 +1465,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                 self.conductor_manager.db)
         self.mox.ReplayAll()
 
-        self.stub_out_client_exceptions()
+        self.conductor = utils.ExceptionHelper(self.conductor)
+
         self.assertRaises(exc.DestinationHypervisorTooOld,
             self.conductor.migrate_server, self.context, inst_obj,
             {'host': 'destination'}, True, False, None, 'block_migration',
@@ -1496,7 +1491,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                 self.conductor_manager.db)
         self.mox.ReplayAll()
 
-        self.stub_out_client_exceptions()
+        self.conductor = utils.ExceptionHelper(self.conductor)
+
         self.assertRaises(IOError,
             self.conductor.migrate_server, self.context, inst_obj,
             {'host': 'destination'}, True, False, None, 'block_migration',
