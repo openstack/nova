@@ -804,6 +804,7 @@ def clean_conntrack(fixed_ip):
         LOG.exception(_('Error deleting conntrack entries for %s'), fixed_ip)
 
 
+@utils.synchronized('lock_gateway', external=True)
 def initialize_gateway_device(dev, network_ref):
     if not network_ref:
         return
