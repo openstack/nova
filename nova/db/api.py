@@ -1471,6 +1471,38 @@ instance_type_extra_specs_update_or_create = \
 ####################
 
 
+def pci_device_get_by_addr(context, node_id, dev_addr):
+    """Get PCI device by address."""
+    return IMPL.pci_device_get_by_addr(context, node_id, dev_addr)
+
+
+def pci_device_get_by_id(context, id):
+    """Get PCI device by id."""
+    return IMPL.pci_device_get_by_id(context, id)
+
+
+def pci_device_get_all_by_node(context, node_id):
+    """Get all PCI devices for one host."""
+    return IMPL.pci_device_get_all_by_node(context, node_id)
+
+
+def pci_device_get_all_by_instance_uuid(context, instance_uuid):
+    """Get PCI devices allocated to instance."""
+    return IMPL.pci_device_get_all_by_instance_uuid(context, instance_uuid)
+
+
+def pci_device_destroy(context, node_id, address):
+    """Delete a PCI device record."""
+    return IMPL.pci_device_destroy(context, node_id, address)
+
+
+def pci_device_update(context, node_id, address, value):
+    """Update a pci device."""
+    return IMPL.pci_device_update(context, node_id, address, value)
+
+
+###################
+
 def cell_create(context, values):
     """Create a new child Cell entry."""
     return IMPL.cell_create(context, values)
