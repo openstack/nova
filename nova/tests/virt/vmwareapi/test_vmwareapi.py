@@ -131,7 +131,7 @@ class VMwareAPIVMTestCase(test.TestCase):
         self.conn = driver.VMwareVCDriver(fake.FakeVirtAPI)
         # NOTE(vish): none of the network plugging code is actually
         #             being tested
-        self.network_info = utils.get_test_network_info(legacy_model=False)
+        self.network_info = utils.get_test_network_info()
 
         self.image = {
             'id': 'c1c8ce3d-c2e0-4247-890c-ccf5cc1c004c',

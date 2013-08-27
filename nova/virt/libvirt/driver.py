@@ -686,9 +686,6 @@ class LibvirtDriver(driver.ComputeDriver):
         except exception.NovaException:
             return False
 
-    def legacy_nwinfo(self):
-        return False
-
     # TODO(Shrews): Remove when libvirt Bugzilla bug # 836647 is fixed.
     def list_instance_ids(self):
         if self._conn.numOfDomains() == 0:

@@ -211,8 +211,7 @@ class stub_out_compute_api_backup(object):
 
 
 def stub_out_nw_api_get_instance_nw_info(stubs, num_networks=1, func=None):
-    fake_network.stub_out_nw_api_get_instance_nw_info(stubs,
-                                                      spectacular=True)
+    fake_network.stub_out_nw_api_get_instance_nw_info(stubs)
 
 
 def stub_out_nw_api_get_floating_ips_by_fixed_address(stubs, func=None):
@@ -243,7 +242,7 @@ def stub_out_nw_api(stubs, cls=None, private=None, publics=None):
     if cls is None:
         cls = Fake
     stubs.Set(network_api, 'API', cls)
-    fake_network.stub_out_nw_api_get_instance_nw_info(stubs, spectacular=True)
+    fake_network.stub_out_nw_api_get_instance_nw_info(stubs)
 
 
 def _make_image_fixtures():

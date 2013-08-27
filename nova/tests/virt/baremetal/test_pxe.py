@@ -69,8 +69,7 @@ class BareMetalPXETestCase(bm_db_base.BMDBTestCase):
         self.context = utils.get_test_admin_context()
         self.test_block_device_info = None,
         self.instance = utils.get_test_instance()
-        self.test_network_info = utils.get_test_network_info(
-                                        legacy_model=False),
+        self.test_network_info = utils.get_test_network_info()
         self.node_info = bm_db_utils.new_bm_node(
                 service_host='test_host',
                 cpus=4,
@@ -147,23 +146,23 @@ class PXEClassMethodsTestCase(BareMetalPXETestCase):
                 pxe_network_config=True,
                 group='baremetal',
             )
-        net = utils.get_test_network_info(1, legacy_model=False)
+        net = utils.get_test_network_info(1)
         config = pxe.build_pxe_network_config(net)
         self.assertIn('eth0:off', config)
         self.assertNotIn('eth1', config)
 
-        net = utils.get_test_network_info(2, legacy_model=False)
+        net = utils.get_test_network_info(2)
         config = pxe.build_pxe_network_config(net)
         self.assertIn('eth0:off', config)
         self.assertIn('eth1:off', config)
 
     def test_build_network_config(self):
-        net = utils.get_test_network_info(1, legacy_model=False)
+        net = utils.get_test_network_info(1)
         config = pxe.build_network_config(net)
         self.assertIn('eth0', config)
         self.assertNotIn('eth1', config)
 
-        net = utils.get_test_network_info(2, legacy_model=False)
+        net = utils.get_test_network_info(2)
         config = pxe.build_network_config(net)
         self.assertIn('eth0', config)
         self.assertIn('eth1', config)
@@ -174,7 +173,7 @@ class PXEClassMethodsTestCase(BareMetalPXETestCase):
                                     'net-dhcp.ubuntu.template',
                 group='baremetal',
             )
-        net = utils.get_test_network_info(legacy_model=False)
+        net = utils.get_test_network_info()
         net[0]['network']['subnets'][0]['ips'][0]['address'] = '1.2.3.4'
         config = pxe.build_network_config(net)
         self.assertIn('iface eth0 inet dhcp', config)
@@ -186,7 +185,7 @@ class PXEClassMethodsTestCase(BareMetalPXETestCase):
                                     'net-static.ubuntu.template',
                 group='baremetal',
             )
-        net = utils.get_test_network_info(legacy_model=False)
+        net = utils.get_test_network_info()
         net[0]['network']['subnets'][0]['ips'][0]['address'] = '1.2.3.4'
         config = pxe.build_network_config(net)
         self.assertIn('iface eth0 inet static', config)
@@ -200,7 +199,7 @@ class PXEClassMethodsTestCase(BareMetalPXETestCase):
                 group='baremetal'
             )
 
-        net = utils.get_test_network_info(legacy_model=False)
+        net = utils.get_test_network_info()
         net[0]['network']['subnets'][0]['cidr'] = '10.1.1.0/24'
         net[0]['network']['subnets'][0]['gateway']['address'] = '10.1.1.1'
         net[0]['network']['subnets'][0]['dns'][0]['address'] = '10.1.1.2'
@@ -408,7 +407,7 @@ class PXEPrivateMethodsTestCase(BareMetalPXETestCase):
         self.instance['hostname'] = 'fake hostname'
         files.append(('/etc/hostname', 'fake hostname'))
         self.instance['key_data'] = 'fake ssh key'
-        net_info = utils.get_test_network_info(1, legacy_model=False)
+        net_info = utils.get_test_network_info(1)
         net = pxe.build_network_config(net_info)
         admin_password = 'fake password'
 

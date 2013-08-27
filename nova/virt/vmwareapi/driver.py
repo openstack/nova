@@ -190,9 +190,6 @@ class VMwareESXDriver(driver.ComputeDriver):
         # FIXME(sateesh): implement this
         pass
 
-    def legacy_nwinfo(self):
-        return False
-
     def list_instances(self):
         """List VM instances."""
         return self._vmops.list_instances()

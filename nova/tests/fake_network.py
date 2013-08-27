@@ -269,8 +269,7 @@ def ipv4_like(ip, match_string):
 
 
 def fake_get_instance_nw_info(stubs, num_networks=1, ips_per_vif=2,
-                              floating_ips_per_fixed_ip=0,
-                              spectacular=False):
+                              floating_ips_per_fixed_ip=0):
     # stubs is the self.stubs from the test
     # ips_per_vif is the number of ips each vif will have
     # num_floating_ips is number of float ips for each fixed ip
@@ -378,14 +377,12 @@ def fake_get_instance_nw_info(stubs, num_networks=1, ips_per_vif=2,
 def stub_out_nw_api_get_instance_nw_info(stubs, func=None,
                                          num_networks=1,
                                          ips_per_vif=1,
-                                         floating_ips_per_fixed_ip=0,
-                                         spectacular=False):
+                                         floating_ips_per_fixed_ip=0):
 
     def get_instance_nw_info(self, context, instance, conductor_api=None):
         return fake_get_instance_nw_info(stubs, num_networks=num_networks,
                         ips_per_vif=ips_per_vif,
-                        floating_ips_per_fixed_ip=floating_ips_per_fixed_ip,
-                        spectacular=spectacular)
+                        floating_ips_per_fixed_ip=floating_ips_per_fixed_ip)
 
     if func is None:
         func = get_instance_nw_info

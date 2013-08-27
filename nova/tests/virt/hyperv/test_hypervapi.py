@@ -516,8 +516,7 @@ class HyperVAPITestCase(test.TestCase):
 
     def test_power_on(self):
         self._instance_data = self._get_instance_data()
-        network_info = fake_network.fake_get_instance_nw_info(self.stubs,
-                                                              spectacular=True)
+        network_info = fake_network.fake_get_instance_nw_info(self.stubs)
         vmutils.VMUtils.set_vm_state(mox.Func(self._check_instance_name),
                                      constants.HYPERV_VM_STATE_ENABLED)
         self._mox.ReplayAll()
@@ -526,8 +525,7 @@ class HyperVAPITestCase(test.TestCase):
 
     def test_power_on_already_running(self):
         self._instance_data = self._get_instance_data()
-        network_info = fake_network.fake_get_instance_nw_info(self.stubs,
-                                                              spectacular=True)
+        network_info = fake_network.fake_get_instance_nw_info(self.stubs)
         vmutils.VMUtils.set_vm_state(mox.Func(self._check_instance_name),
                                      constants.HYPERV_VM_STATE_ENABLED)
         self._mox.ReplayAll()
@@ -536,8 +534,7 @@ class HyperVAPITestCase(test.TestCase):
 
     def test_reboot(self):
 
-        network_info = fake_network.fake_get_instance_nw_info(self.stubs,
-                                                              spectacular=True)
+        network_info = fake_network.fake_get_instance_nw_info(self.stubs)
         self._instance_data = self._get_instance_data()
 
         vmutils.VMUtils.set_vm_state(mox.Func(self._check_instance_name),
@@ -662,8 +659,7 @@ class HyperVAPITestCase(test.TestCase):
         instance = db.instance_create(self._context, instance_data)
         instance['system_metadata'] = {}
 
-        network_info = fake_network.fake_get_instance_nw_info(self.stubs,
-                                                              spectacular=True)
+        network_info = fake_network.fake_get_instance_nw_info(self.stubs)
 
         m = livemigrationutils.LiveMigrationUtils.check_live_migration_config()
         m.AndReturn(True)
@@ -822,8 +818,7 @@ class HyperVAPITestCase(test.TestCase):
 
         image = db_fakes.get_fake_image_data(self._project_id, self._user_id)
 
-        network_info = fake_network.fake_get_instance_nw_info(self.stubs,
-                                                              spectacular=True)
+        network_info = fake_network.fake_get_instance_nw_info(self.stubs)
 
         self._conn.spawn(self._context, instance, image,
                          injected_files=[], admin_password=None,
@@ -1122,8 +1117,7 @@ class HyperVAPITestCase(test.TestCase):
                                                      size_exception=False):
         self._instance_data = self._get_instance_data()
         instance = db.instance_create(self._context, self._instance_data)
-        network_info = fake_network.fake_get_instance_nw_info(
-            self.stubs, spectacular=True)
+        network_info = fake_network.fake_get_instance_nw_info(self.stubs)
 
         instance['root_gb'] = 10
 
@@ -1238,8 +1232,7 @@ class HyperVAPITestCase(test.TestCase):
         self._instance_data = self._get_instance_data()
         instance = db.instance_create(self._context, self._instance_data)
         instance['system_metadata'] = {}
-        network_info = fake_network.fake_get_instance_nw_info(
-            self.stubs, spectacular=True)
+        network_info = fake_network.fake_get_instance_nw_info(self.stubs)
 
         m = basevolumeutils.BaseVolumeUtils.volume_in_mapping(mox.IsA(str),
                                                               None)
@@ -1291,8 +1284,7 @@ class HyperVAPITestCase(test.TestCase):
     def test_confirm_migration(self):
         self._instance_data = self._get_instance_data()
         instance = db.instance_create(self._context, self._instance_data)
-        network_info = fake_network.fake_get_instance_nw_info(
-            self.stubs, spectacular=True)
+        network_info = fake_network.fake_get_instance_nw_info(self.stubs)
 
         pathutils.PathUtils.get_instance_migr_revert_dir(instance['name'],
                                                          remove_dir=True)
@@ -1303,8 +1295,7 @@ class HyperVAPITestCase(test.TestCase):
     def _test_finish_revert_migration(self, power_on):
         self._instance_data = self._get_instance_data()
         instance = db.instance_create(self._context, self._instance_data)
-        network_info = fake_network.fake_get_instance_nw_info(
-            self.stubs, spectacular=True)
+        network_info = fake_network.fake_get_instance_nw_info(self.stubs)
 
         fake_revert_path = ('C:\\FakeInstancesPath\\%s\\_revert' %
                             instance['name'])

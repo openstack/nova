@@ -76,7 +76,8 @@ class IP(Model):
             try:
                 self['version'] = netaddr.IPAddress(self['address']).version
             except netaddr.AddrFormatError:
-                raise exception.InvalidIpAddressError(self['address'])
+                msg = _("Invalid IP format %s") % self['address']
+                raise exception.InvalidIpAddressError(msg)
 
     def __eq__(self, other):
         return self['address'] == other['address']
@@ -328,116 +329,6 @@ class NetworkInfo(list):
     def json(self):
         return jsonutils.dumps(self)
 
-    def legacy(self):
-        """
-        Return the legacy network_info representation of self
-        """
-        def get_ip(ip):
-            if not ip:
-                return None
-            return ip['address']
-
-        def fixed_ip_dict(ip, subnet):
-            netmask = get_netmask(ip, subnet)
-
-            return {'ip': ip['address'],
-                    'enabled': '1',
-                    'netmask': netmask,
-                    'gateway': get_ip(subnet['gateway'])}
-
-        def convert_routes(routes):
-            routes_list = []
-            for route in routes:
-                r = {'route': str(netaddr.IPNetwork(route['cidr']).network),
-                     'netmask': str(netaddr.IPNetwork(route['cidr']).netmask),
-                     'gateway': get_ip(route['gateway'])}
-                routes_list.append(r)
-            return routes_list
-
-        network_info = []
-        for vif in self:
-            # if vif doesn't have network or that network has no subnets, quit
-            if not vif['network'] or not vif['network']['subnets']:
-                continue
-            network = vif['network']
-
-            # NOTE(jkoelker) The legacy format only supports one subnet per
-            #                network, so we only use the 1st one of each type
-            # NOTE(tr3buchet): o.O
-            v4_subnets = []
-            v6_subnets = []
-            for subnet in vif['network']['subnets']:
-                if subnet['version'] == 4:
-                    v4_subnets.append(subnet)
-                else:
-                    v6_subnets.append(subnet)
-
-            subnet_v4 = None
-            subnet_v6 = None
-
-            if v4_subnets:
-                subnet_v4 = v4_subnets[0]
-
-            if v6_subnets:
-                subnet_v6 = v6_subnets[0]
-
-            if not subnet_v4:
-                msg = _('v4 subnets are required for legacy nw_info')
-                raise exception.NovaException(message=msg)
-
-            routes = convert_routes(subnet_v4['routes'])
-            should_create_bridge = network.get_meta('should_create_bridge',
-                                                    False)
-            should_create_vlan = network.get_meta('should_create_vlan', False)
-            gateway = get_ip(subnet_v4['gateway'])
-            dhcp_server = subnet_v4.get_meta('dhcp_server', gateway)
-
-            network_dict = {
-                'bridge': network['bridge'],
-                'id': network['id'],
-                'cidr': subnet_v4['cidr'],
-                'cidr_v6': subnet_v6['cidr'] if subnet_v6 else None,
-                'vlan': network.get_meta('vlan'),
-                'injected': network.get_meta('injected', False),
-                'multi_host': network.get_meta('multi_host', False),
-                'bridge_interface': network.get_meta('bridge_interface')
-            }
-            # NOTE(tr3buchet): 'ips' bit here is tricky, we support a single
-            #                  subnet but we want all the IPs to be there
-            #                  so use the v4_subnets[0] and its IPs are first
-            #                  so that eth0 will be from subnet_v4, the rest of
-            #                  the IPs will be aliased eth0:1 etc and the
-            #                  gateways from their subnets will not be used
-            info_dict = {'label': network['label'],
-                         'broadcast': str(subnet_v4.as_netaddr().broadcast),
-                         'mac': vif['address'],
-                         'vif_type': vif['type'],
-                         'vif_devname': vif.get('devname'),
-                         'vif_uuid': vif['id'],
-                         'ovs_interfaceid': vif.get('ovs_interfaceid'),
-                         'qbh_params': vif.get('qbh_params'),
-                         'qbg_params': vif.get('qbg_params'),
-                         'rxtx_cap': vif.get_meta('rxtx_cap', 0),
-                         'dns': [get_ip(ip) for ip in subnet_v4['dns']],
-                         'gateway': gateway,
-                         'ips': [fixed_ip_dict(ip, subnet)
-                                 for subnet in v4_subnets
-                                 for ip in subnet['ips']],
-                         'should_create_bridge': should_create_bridge,
-                         'should_create_vlan': should_create_vlan,
-                         'dhcp_server': dhcp_server}
-            if routes:
-                info_dict['routes'] = routes
-
-            if v6_subnets:
-                info_dict['gateway_v6'] = get_ip(subnet_v6['gateway'])
-                # NOTE(tr3buchet): only supporting single v6 subnet here
-                info_dict['ip6s'] = [fixed_ip_dict(ip, subnet_v6)
-                                     for ip in subnet_v6['ips']]
-
-            network_info.append((network_dict, info_dict))
-        return network_info
-
 
 class NetworkInfoAsyncWrapper(NetworkInfo):
     """Wrapper around NetworkInfo that allows retrieving NetworkInfo
@@ -462,7 +353,7 @@ class NetworkInfoAsyncWrapper(NetworkInfo):
 
     def __init__(self, async_method, *args, **kwargs):
         self._gt = eventlet.spawn(async_method, *args, **kwargs)
-        methods = ['json', 'legacy', 'fixed_ips', 'floating_ips']
+        methods = ['json', 'fixed_ips', 'floating_ips']
         for method in methods:
             fn = getattr(self, method)
             wrapper = functools.partial(self._sync_wrapper, fn)

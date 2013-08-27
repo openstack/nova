@@ -455,9 +455,6 @@ class FakeDriver(driver.ComputeDriver):
     def list_instance_uuids(self):
         return []
 
-    def legacy_nwinfo(self):
-        return True
-
 
 class FakeVirtAPI(virtapi.VirtAPI):
     def instance_update(self, context, instance_uuid, updates):

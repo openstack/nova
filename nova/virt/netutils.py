@@ -58,15 +58,9 @@ def get_ip_version(cidr):
     return int(net.version)
 
 
-def get_non_legacy_network_template(network_info, use_ipv6=CONF.use_ipv6,
+def get_injected_network_template(network_info, use_ipv6=CONF.use_ipv6,
                                     template=CONF.injected_network_template):
-    """A new version of get_injected_network_template that does not rely on
-       legacy network info.
-
-    Returns a rendered network template for the given network_info.  When
-    libvirt's dependency on using legacy network info for network config
-    injection goes away, this function can replace
-    get_injected_network_template entirely.
+    """Returns a rendered network template for the given network_info.
 
     :param network_info:
         :py:meth:`~nova.network.manager.NetworkManager.get_instance_nw_info`
@@ -138,66 +132,6 @@ def get_non_legacy_network_template(network_info, use_ipv6=CONF.use_ipv6,
         nets.append(net_info)
 
     if not nets:
-        return
-
-    return build_template(template, nets, ipv6_is_available)
-
-
-def get_injected_network_template(network_info, use_ipv6=CONF.use_ipv6,
-                                  template=CONF.injected_network_template):
-    """
-    return a rendered network template for the given network_info
-
-    :param network_info:
-       :py:meth:`~nova.network.manager.NetworkManager.get_instance_nw_info`
-    :param use_ipv6: If False, do not return IPv6 template information
-        even if an IPv6 subnet is present in network_info.
-    :param template: Path to the interfaces template file.
-    """
-
-    if not (network_info and template):
-        return
-
-    # If we're passed new network_info, make use of it instead of forcing
-    # it to the legacy format required below.
-    if isinstance(network_info, model.NetworkInfo):
-        return get_non_legacy_network_template(network_info,
-                                               use_ipv6,
-                                               template)
-
-    nets = []
-    ifc_num = -1
-    have_injected_networks = False
-
-    for (network_ref, mapping) in network_info:
-        ifc_num += 1
-
-        if not network_ref['injected']:
-            continue
-
-        have_injected_networks = True
-        address = mapping['ips'][0]['ip']
-        netmask = mapping['ips'][0]['netmask']
-        address_v6 = None
-        gateway_v6 = None
-        netmask_v6 = None
-        ipv6_is_available = use_ipv6 and 'ip6s' in mapping
-        if ipv6_is_available:
-            address_v6 = mapping['ip6s'][0]['ip']
-            netmask_v6 = mapping['ip6s'][0]['netmask']
-            gateway_v6 = mapping['gateway_v6']
-        net_info = {'name': 'eth%d' % ifc_num,
-               'address': address,
-               'netmask': netmask,
-               'gateway': mapping['gateway'],
-               'broadcast': mapping['broadcast'],
-               'dns': ' '.join(mapping['dns']),
-               'address_v6': address_v6,
-               'gateway_v6': gateway_v6,
-               'netmask_v6': netmask_v6}
-        nets.append(net_info)
-
-    if have_injected_networks is False:
         return
 
     return build_template(template, nets, ipv6_is_available)

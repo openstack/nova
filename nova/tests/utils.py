@@ -92,7 +92,7 @@ def get_test_instance(context=None, instance_type=None):
     return instance_ref
 
 
-def get_test_network_info(count=1, legacy_model=False):
+def get_test_network_info(count=1):
     ipv6 = CONF.use_ipv6
     fake = 'fake'
     fake_ip = '0.0.0.0'

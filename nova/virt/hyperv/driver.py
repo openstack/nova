@@ -192,6 +192,3 @@ class HyperVDriver(driver.ComputeDriver):
     def get_console_output(self, instance):
         LOG.debug(_("get_console_output called"), instance=instance)
         return ''
-
-    def legacy_nwinfo(self):
-        return False
