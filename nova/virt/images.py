@@ -187,8 +187,7 @@ def fetch(context, image_href, path, _user_id, _project_id):
     (image_service, image_id) = glance.get_remote_image_service(context,
                                                                 image_href)
     with fileutils.remove_path_on_error(path):
-        with open(path, "wb") as image_file:
-            image_service.download(context, image_id, image_file)
+        image_service.download(context, image_id, dst_path=path)
 
 
 def fetch_to_raw(context, image_href, path, user_id, project_id):
