@@ -52,6 +52,7 @@ class _TestInstanceObject(object):
         fake_instance['deleted'] = False
         fake_instance['info_cache']['instance_uuid'] = fake_instance['uuid']
         fake_instance['security_groups'] = None
+        fake_instance['pci_devices'] = []
         return fake_instance
 
     def test_datetime_deserialization(self):
@@ -113,7 +114,7 @@ class _TestInstanceObject(object):
         self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
         db.instance_get_by_uuid(
             ctxt, 'uuid',
-            columns_to_join=['metadata', 'system_metadata']
+            columns_to_join=['metadata', 'system_metadata', 'pci_devices']
             ).AndReturn(self.fake_instance)
         self.mox.ReplayAll()
         inst = instance.Instance.get_by_uuid(
@@ -386,6 +387,61 @@ class _TestInstanceObject(object):
         self.mox.ReplayAll()
         inst = instance.Instance.get_by_uuid(ctxt, fake_uuid)
         self.assertEqual(0, len(inst.security_groups))
+
+    def test_with_empty_pci_devices(self):
+        ctxt = context.get_admin_context()
+        fake_inst = dict(self.fake_instance, pci_devices=[])
+        fake_uuid = fake_inst['uuid']
+        self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
+        db.instance_get_by_uuid(ctxt, fake_uuid,
+                                columns_to_join=['pci_devices']
+                                ).AndReturn(fake_inst)
+        self.mox.ReplayAll()
+        inst = instance.Instance.get_by_uuid(ctxt, fake_uuid,
+            ['pci_devices'])
+        self.assertEqual(len(inst.pci_devices), 0)
+
+    def test_with_pci_devices(self):
+        ctxt = context.get_admin_context()
+        fake_inst = dict(self.fake_instance)
+        fake_uuid = fake_inst['uuid']
+        fake_inst['pci_devices'] = [
+            {'created_at': None,
+             'updated_at': None,
+             'deleted_at': None,
+             'deleted': None,
+             'id': 2,
+             'compute_node_id': 1,
+             'address': 'a1',
+             'product_id': 'p1',
+             'vendor_id': 'v1',
+             'status': 'allocated',
+             'instance_uuid': fake_uuid,
+             'extra_info': '{}'},
+            {
+             'created_at': None,
+             'updated_at': None,
+             'deleted_at': None,
+             'deleted': None,
+             'id': 1,
+             'compute_node_id': 1,
+             'address': 'a',
+             'product_id': 'p',
+             'vendor_id': 'v',
+             'status': 'allocated',
+             'instance_uuid': fake_uuid,
+             'extra_info': '{}'},
+            ]
+        self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
+        db.instance_get_by_uuid(ctxt, fake_uuid,
+                                columns_to_join=['pci_devices']
+                                ).AndReturn(fake_inst)
+        self.mox.ReplayAll()
+        inst = instance.Instance.get_by_uuid(ctxt, fake_uuid,
+            ['pci_devices'])
+        self.assertEqual(len(inst.pci_devices), 2)
+        self.assertEqual(inst.pci_devices[0].instance_uuid, fake_uuid)
+        self.assertEqual(inst.pci_devices[1].instance_uuid, fake_uuid)
 
     def test_with_fault(self):
         ctxt = context.get_admin_context()

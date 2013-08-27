@@ -22,6 +22,7 @@ from nova import notifications
 from nova.objects import base
 from nova.objects import instance_fault
 from nova.objects import instance_info_cache
+from nova.objects import pci_device
 from nova.objects import security_group
 from nova.objects import utils as obj_utils
 from nova import utils
@@ -33,7 +34,8 @@ CONF = cfg.CONF
 
 
 # These are fields that can be specified as expected_attrs
-INSTANCE_OPTIONAL_FIELDS = ['metadata', 'system_metadata', 'fault']
+INSTANCE_OPTIONAL_FIELDS = ['metadata', 'system_metadata', 'fault',
+                            'pci_devices']
 # These are fields that are always joined by the db right now
 INSTANCE_IMPLIED_FIELDS = ['info_cache', 'security_groups']
 # These are fields that are optional but don't translate to db columns
@@ -50,7 +52,8 @@ class Instance(base.NovaObject):
     #              save()
     # Version 1.4: Added locked_by and deprecated locked
     # Version 1.5: Added cleaned
-    VERSION = '1.5'
+    # Version 1.6: Added pci_devices
+    VERSION = '1.6'
 
     fields = {
         'id': int,
@@ -136,6 +139,8 @@ class Instance(base.NovaObject):
 
         'cleaned': bool,
 
+        'pci_devices': obj_utils.nested_object_or_none(
+            pci_device.PciDeviceList),
         }
 
     obj_extra_fields = ['name']
@@ -199,6 +204,8 @@ class Instance(base.NovaObject):
     _attr_info_cache_to_primitive = obj_utils.obj_serializer('info_cache')
     _attr_security_groups_to_primitive = obj_utils.obj_serializer(
         'security_groups')
+    _attr_pci_devices_to_primitive = obj_utils.obj_serializer(
+        'pci_devices')
 
     _attr_scheduled_at_from_primitive = obj_utils.dt_deserializer
     _attr_launched_at_from_primitive = obj_utils.dt_deserializer
@@ -208,6 +215,9 @@ class Instance(base.NovaObject):
         return base.NovaObject.obj_from_primitive(val)
 
     def _attr_security_groups_from_primitive(self, val):
+        return base.NovaObject.obj_from_primitive(val)
+
+    def _attr_pci_devices_from_primitive(self, val):
         return base.NovaObject.obj_from_primitive(val)
 
     @staticmethod
@@ -237,6 +247,13 @@ class Instance(base.NovaObject):
             instance['fault'] = (
                 instance_fault.InstanceFault.get_latest_for_instance(
                     context, instance.uuid))
+
+        if 'pci_devices' in expected_attrs:
+            instance['pci_devices'] =\
+                    pci_device._make_pci_list(context,
+                                              pci_device.PciDeviceList(),
+                                              db_inst['pci_devices'])
+
         # NOTE(danms): info_cache and security_groups are almost
         # always joined in the DB layer right now, so check to see if
         # they are asked for and are present in the resulting object
@@ -263,6 +280,8 @@ class Instance(base.NovaObject):
             columns_to_join.append('metadata')
         if 'system_metadata' in attrs:
             columns_to_join.append('system_metadata')
+        if 'pci_devices' in attrs:
+            columns_to_join.append('pci_devices')
         # NOTE(danms): The DB API currently always joins info_cache and
         # security_groups for get operations, so don't add them to the
         # list of columns
@@ -338,6 +357,12 @@ class Instance(base.NovaObject):
 
     def _save_instance_fault(self, context):
         # NOTE(danms): I don't think we need to worry about this, do we?
+        pass
+
+    def _save_pci_devices(self, context):
+        # NOTE(yjiang5): All devices held by PCI tracker, only PCI tracker
+        # permitted to update the DB. all change to devices from here will
+        # be dropped.
         pass
 
     @base.remotable
@@ -448,6 +473,8 @@ class Instance(base.NovaObject):
             extra.append('info_cache')
         elif attrname == 'security_groups':
             extra.append('security_groups')
+        elif attrname == 'pci_devices':
+            extra.append('pci_devices')
         elif attrname == 'fault':
             extra.append('fault')
 
