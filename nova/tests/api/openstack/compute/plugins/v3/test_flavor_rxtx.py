@@ -27,6 +27,10 @@ FAKE_FLAVORS = {
         "memory_mb": '256',
         "root_gb": '10',
         "rxtx_factor": '1.0',
+        "swap": 0,
+        "ephemeral_gb": 0,
+        "vcpus": 1,
+        "disabled": False,
     },
     'flavor 2': {
         "flavorid": '2',
@@ -34,6 +38,10 @@ FAKE_FLAVORS = {
         "memory_mb": '512',
         "root_gb": '10',
         "rxtx_factor": None,
+        "swap": 0,
+        "vcpus": 1,
+        "ephemeral_gb": 0,
+        "disabled": False,
     },
 }
 

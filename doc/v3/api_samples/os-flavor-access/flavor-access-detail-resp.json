@@ -3,7 +3,7 @@
         {
             "disabled": false,
             "disk": 1,
-            "ephemeral": "",
+            "ephemeral": 0,
             "id": "1",
             "links": [
                 {
@@ -18,13 +18,13 @@
             "name": "m1.tiny",
             "os-flavor-access:is_public": true,
             "ram": 512,
-            "swap": "",
+            "swap": 0,
             "vcpus": 1
         },
         {
             "disabled": false,
             "disk": 20,
-            "ephemeral": "",
+            "ephemeral": 0,
             "id": "2",
             "links": [
                 {
@@ -39,13 +39,13 @@
             "name": "m1.small",
             "os-flavor-access:is_public": true,
             "ram": 2048,
-            "swap": "",
+            "swap": 0,
             "vcpus": 1
         },
         {
             "disabled": false,
             "disk": 40,
-            "ephemeral": "",
+            "ephemeral": 0,
             "id": "3",
             "links": [
                 {
@@ -60,13 +60,13 @@
             "name": "m1.medium",
             "os-flavor-access:is_public": true,
             "ram": 4096,
-            "swap": "",
+            "swap": 0,
             "vcpus": 2
         },
         {
             "disabled": false,
             "disk": 80,
-            "ephemeral": "",
+            "ephemeral": 0,
             "id": "4",
             "links": [
                 {
@@ -81,13 +81,13 @@
             "name": "m1.large",
             "os-flavor-access:is_public": true,
             "ram": 8192,
-            "swap": "",
+            "swap": 0,
             "vcpus": 4
         },
         {
             "disabled": false,
             "disk": 160,
-            "ephemeral": "",
+            "ephemeral": 0,
             "id": "5",
             "links": [
                 {
@@ -102,7 +102,7 @@
             "name": "m1.xlarge",
             "os-flavor-access:is_public": true,
             "ram": 16384,
-            "swap": "",
+            "swap": 0,
             "vcpus": 8
         }
     ]

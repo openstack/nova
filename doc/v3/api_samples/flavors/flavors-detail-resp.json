@@ -3,7 +3,7 @@
         {
             "disabled": false,
             "disk": 1,
-            "ephemeral": "",
+            "ephemeral": 0,
             "id": "1",
             "links": [
                 {
@@ -17,13 +17,13 @@
             ],
             "name": "m1.tiny",
             "ram": 512,
-            "swap": "",
+            "swap": 0,
             "vcpus": 1
         },
         {
             "disabled": false,
             "disk": 20,
-            "ephemeral": "",
+            "ephemeral": 0,
             "id": "2",
             "links": [
                 {
@@ -37,13 +37,13 @@
             ],
             "name": "m1.small",
             "ram": 2048,
-            "swap": "",
+            "swap": 0,
             "vcpus": 1
         },
         {
             "disabled": false,
             "disk": 40,
-            "ephemeral": "",
+            "ephemeral": 0,
             "id": "3",
             "links": [
                 {
@@ -57,13 +57,13 @@
             ],
             "name": "m1.medium",
             "ram": 4096,
-            "swap": "",
+            "swap": 0,
             "vcpus": 2
         },
         {
             "disabled": false,
             "disk": 80,
-            "ephemeral": "",
+            "ephemeral": 0,
             "id": "4",
             "links": [
                 {
@@ -77,13 +77,13 @@
             ],
             "name": "m1.large",
             "ram": 8192,
-            "swap": "",
+            "swap": 0,
             "vcpus": 4
         },
         {
             "disabled": false,
             "disk": 160,
-            "ephemeral": "",
+            "ephemeral": 0,
             "id": "5",
             "links": [
                 {
@@ -97,7 +97,7 @@
             ],
             "name": "m1.xlarge",
             "ram": 16384,
-            "swap": "",
+            "swap": 0,
             "vcpus": 8
         }
     ]
