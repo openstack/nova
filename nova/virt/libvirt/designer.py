@@ -115,7 +115,7 @@ def set_vif_bandwidth_config(conf, inst_type):
     bandwidth_items = ['vif_inbound_average', 'vif_inbound_peak',
         'vif_inbound_burst', 'vif_outbound_average', 'vif_outbound_peak',
         'vif_outbound_burst']
-    for key, value in inst_type['extra_specs'].iteritems():
+    for key, value in inst_type.get('extra_specs', {}).iteritems():
         scope = key.split(':')
         if len(scope) > 1 and scope[0] == 'quota':
             if scope[1] in bandwidth_items:
