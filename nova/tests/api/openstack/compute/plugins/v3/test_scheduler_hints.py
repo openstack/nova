@@ -296,3 +296,32 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
             }
         }
         self.assertEquals(request['body'], expected)
+
+    def test_request_with_scheduler_hints(self):
+        serial_request = """
+    <server xmlns="http://docs.openstack.org/compute/api/v3"
+     xmlns:os-scheduler-hints=
+     "http://docs.openstack.org/compute/ext/scheduler-hints/api/v3"
+     name="new-server-test" image_ref="1" flavor_ref="1">
+       <os-scheduler-hints:scheduler_hints>
+         <different_host>
+           7329b667-50c7-46a6-b913-cb2a09dfeee0
+         </different_host>
+         <different_host>
+           f31efb24-34d2-43e1-8b44-316052956a39
+         </different_host>
+       </os-scheduler-hints:scheduler_hints>
+    </server>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = {"server": {
+                "name": "new-server-test",
+                "image_ref": "1",
+                "flavor_ref": "1",
+                "os-scheduler-hints:scheduler_hints": {
+                    "different_host": [
+                        "7329b667-50c7-46a6-b913-cb2a09dfeee0",
+                        "f31efb24-34d2-43e1-8b44-316052956a39",
+                    ]
+                }
+                }}
+        self.assertEquals(request['body'], expected)
