@@ -187,13 +187,9 @@ class ControllerTest(test.TestCase):
 
 class ServersControllerTest(ControllerTest):
 
-        #    def test_can_check_loaded_extensions(self):
-        #self.ext_mgr.extensions = {'os-fake': None}
-        #self.assertTrue(self.controller.ext_mgr.is_loaded('os-fake'))
-        #self.assertFalse(self.controller.ext_mgr.is_loaded('os-not-loaded'))
-
     def setUp(self):
         super(ServersControllerTest, self).setUp()
+        CONF.set_override('glance_host', 'localhost')
         nova_utils.reset_is_neutron()
 
     def test_requested_networks_prefix(self):
@@ -347,7 +343,7 @@ class ServersControllerTest(ControllerTest):
 
     def test_get_server_by_id(self):
         self.flags(use_ipv6=True)
-        image_bookmark = "http://localhost/images/10"
+        image_bookmark = "http://localhost:9292/images/10"
         flavor_bookmark = "http://localhost/flavors/1"
 
         uuid = FAKE_UUID
@@ -363,7 +359,7 @@ class ServersControllerTest(ControllerTest):
         self.assertThat(res_dict, matchers.DictMatches(expected_server))
 
     def test_get_server_with_active_status_by_id(self):
-        image_bookmark = "http://localhost/images/10"
+        image_bookmark = "http://localhost:9292/images/10"
         flavor_bookmark = "http://localhost/flavors/1"
 
         new_return_server = fakes.fake_instance_get(
@@ -380,7 +376,7 @@ class ServersControllerTest(ControllerTest):
 
     def test_get_server_with_id_image_ref_by_id(self):
         image_ref = "10"
-        image_bookmark = "http://localhost/images/10"
+        image_bookmark = "http://localhost:9292/images/10"
         flavor_id = "1"
         flavor_bookmark = "http://localhost/flavors/1"
 
@@ -1039,7 +1035,7 @@ class ServersControllerTest(ControllerTest):
             "links": [
                 {
                     "rel": "bookmark",
-                    "href": 'http://localhost/images/10',
+                    "href": 'http://localhost:9292/images/10',
                     },
                 ],
             }
@@ -3265,6 +3261,7 @@ class ServersViewBuilderTest(test.TestCase):
 
     def setUp(self):
         super(ServersViewBuilderTest, self).setUp()
+        CONF.set_override('glance_host', 'localhost')
         self.flags(use_ipv6=True)
         self.instance = fakes.stub_instance(
             id=1,
@@ -3349,7 +3346,7 @@ class ServersViewBuilderTest(test.TestCase):
         self.assertThat(output, matchers.DictMatches(expected_server))
 
     def test_build_server_detail(self):
-        image_bookmark = "http://localhost/images/5"
+        image_bookmark = "http://localhost:9292/images/5"
         flavor_bookmark = "http://localhost/flavors/1"
         self_link = "http://localhost/v3/servers/%s" % self.uuid
         bookmark_link = "http://localhost/servers/%s" % self.uuid
@@ -3424,7 +3421,7 @@ class ServersViewBuilderTest(test.TestCase):
             'created_at': datetime.datetime(2010, 10, 10, 12, 0, 0),
         }
 
-        image_bookmark = "http://localhost/images/5"
+        image_bookmark = "http://localhost:9292/images/5"
         flavor_bookmark = "http://localhost/flavors/1"
         self_link = "http://localhost/v3/servers/%s" % self.uuid
         bookmark_link = "http://localhost/servers/%s" % self.uuid
@@ -3559,7 +3556,7 @@ class ServersViewBuilderTest(test.TestCase):
             'created_at': datetime.datetime(2010, 10, 10, 12, 0, 0),
         }
 
-        image_bookmark = "http://localhost/images/5"
+        image_bookmark = "http://localhost:9292/images/5"
         flavor_bookmark = "http://localhost/flavors/1"
         self_link = "http://localhost/v3/servers/%s" % self.uuid
         bookmark_link = "http://localhost/servers/%s" % self.uuid
@@ -3571,7 +3568,7 @@ class ServersViewBuilderTest(test.TestCase):
         #set the power state of the instance to running
         self.instance['vm_state'] = vm_states.ACTIVE
         self.instance['progress'] = 100
-        image_bookmark = "http://localhost/images/5"
+        image_bookmark = "http://localhost:9292/images/5"
         flavor_bookmark = "http://localhost/flavors/1"
         self_link = "http://localhost/v3/servers/%s" % self.uuid
         bookmark_link = "http://localhost/servers/%s" % self.uuid
@@ -3635,7 +3632,7 @@ class ServersViewBuilderTest(test.TestCase):
 
         self.instance['access_ip_v4'] = '1.2.3.4'
 
-        image_bookmark = "http://localhost/images/5"
+        image_bookmark = "http://localhost:9292/images/5"
         flavor_bookmark = "http://localhost/flavors/1"
         self_link = "http://localhost/v3/servers/%s" % self.uuid
         bookmark_link = "http://localhost/servers/%s" % self.uuid
@@ -3699,7 +3696,7 @@ class ServersViewBuilderTest(test.TestCase):
 
         self.instance['access_ip_v6'] = 'fead::1234'
 
-        image_bookmark = "http://localhost/images/5"
+        image_bookmark = "http://localhost:9292/images/5"
         flavor_bookmark = "http://localhost/flavors/1"
         self_link = "http://localhost/v3/servers/%s" % self.uuid
         bookmark_link = "http://localhost/servers/%s" % self.uuid
@@ -3765,7 +3762,7 @@ class ServersViewBuilderTest(test.TestCase):
         metadata.append(models.InstanceMetadata(key="Open", value="Stack"))
         self.instance['metadata'] = metadata
 
-        image_bookmark = "http://localhost/images/5"
+        image_bookmark = "http://localhost:9292/images/5"
         flavor_bookmark = "http://localhost/flavors/1"
         self_link = "http://localhost/v3/servers/%s" % self.uuid
         bookmark_link = "http://localhost/servers/%s" % self.uuid
@@ -3832,7 +3829,7 @@ class ServerXMLSerializationTest(test.TestCase):
     SERVER_HREF = 'http://localhost/v3/servers/%s' % FAKE_UUID
     SERVER_NEXT = 'http://localhost/v3/servers?limit=%s&marker=%s'
     SERVER_BOOKMARK = 'http://localhost/servers/%s' % FAKE_UUID
-    IMAGE_BOOKMARK = 'http://localhost/images/5'
+    IMAGE_BOOKMARK = 'http://localhost:9292/images/5'
     FLAVOR_BOOKMARK = 'http://localhost/flavors/1'
 
     def test_xml_declaration(self):
