@@ -285,7 +285,6 @@ class BaseTestCase(test.TestCase):
         inst['updated_at'] = timeutils.utcnow()
         inst['launched_at'] = timeutils.utcnow()
         inst['security_groups'] = []
-        inst['pci_devices'] = []
         inst.update(params)
         if services:
             _create_service_entries(self.context.elevated(),
