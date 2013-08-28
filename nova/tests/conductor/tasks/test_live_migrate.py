@@ -19,7 +19,10 @@ from nova.compute import power_state
 from nova.conductor.tasks import live_migrate
 from nova import db
 from nova import exception
+from nova.objects import base as obj_base
+from nova.objects import instance as instance_obj
 from nova import test
+from nova.tests import fake_instance
 
 
 class LiveMigrationTaskTestCase(test.TestCase):
@@ -29,12 +32,14 @@ class LiveMigrationTaskTestCase(test.TestCase):
         self.instance_host = "host"
         self.instance_uuid = "uuid"
         self.instance_image = "image_ref"
-        self.instance = {
-            "host": self.instance_host,
-            "uuid": self.instance_uuid,
-            "power_state": power_state.RUNNING,
-            "memory_mb": 512,
-            "image_ref": self.instance_image}
+        db_instance = fake_instance.fake_db_instance(
+                host=self.instance_host,
+                uuid=self.instance_uuid,
+                power_state=power_state.RUNNING,
+                memory_mb=512,
+                image_ref=self.instance_image)
+        self.instance = instance_obj.Instance._from_db_object(
+                self.context, instance_obj.Instance(), db_instance)
         self.destination = "destination"
         self.block_migration = "bm"
         self.disk_over_commit = "doc"
@@ -255,7 +260,8 @@ class LiveMigrationTaskTestCase(test.TestCase):
 
         flavors.extract_flavor(self.instance).AndReturn("inst_type")
         # request_spec with no image set
-        request_spec = {'instance_properties': self.instance,
+        instance_p = obj_base.obj_to_primitive(self.instance)
+        request_spec = {'instance_properties': instance_p,
                         'instance_type': "inst_type",
                         'instance_uuids': [self.instance['uuid']]}
         self.task.scheduler_rpcapi.select_hosts(self.context, request_spec,

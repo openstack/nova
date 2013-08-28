@@ -376,7 +376,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '2.37'
+    RPC_API_VERSION = '2.38'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -3680,6 +3680,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         """
         return self.driver.check_instance_shared_storage_remote(ctxt, data)
 
+    @object_compat
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def check_can_live_migrate_destination(self, ctxt, instance,
                                            block_migration=False,
@@ -3695,7 +3696,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         :param disk_over_commit: if true, allow disk over commit
         :returns: a dict containing migration info
         """
-        src_compute_info = self._get_compute_info(ctxt, instance['host'])
+        src_compute_info = self._get_compute_info(ctxt, instance.host)
         dst_compute_info = self._get_compute_info(ctxt, CONF.host)
         dest_check_data = self.driver.check_can_live_migrate_destination(ctxt,
             instance, src_compute_info, dst_compute_info,
@@ -3712,6 +3713,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             migrate_data.update(dest_check_data['migrate_data'])
         return migrate_data
 
+    @object_compat
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def check_can_live_migrate_source(self, ctxt, instance, dest_check_data):
         """Check if it is possible to execute live migration.
@@ -3725,7 +3727,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         :returns: a dict containing migration info
         """
         capi = self.conductor_api
-        bdms = capi.block_device_mapping_get_all_by_instance(ctxt, instance)
+        instance_p = obj_base.obj_to_primitive(instance)
+        bdms = capi.block_device_mapping_get_all_by_instance(ctxt, instance_p)
 
         is_volume_backed = self.compute_api.is_volume_backed_instance(ctxt,
                                                                       instance,

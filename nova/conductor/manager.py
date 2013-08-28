@@ -582,7 +582,7 @@ class ComputeTaskManager(base.Base):
     """
 
     RPC_API_NAMESPACE = 'compute_task'
-    RPC_API_VERSION = '1.5'
+    RPC_API_VERSION = '1.6'
 
     def __init__(self):
         super(ComputeTaskManager, self).__init__()
@@ -601,6 +601,14 @@ class ComputeTaskManager(base.Base):
                                   exception.MigrationPreCheckError)
     def migrate_server(self, context, instance, scheduler_hint, live, rebuild,
             flavor, block_migration, disk_over_commit, reservations=None):
+        if instance and not isinstance(instance, instance_obj.Instance):
+            # NOTE(danms): Until v2 of the RPC API, we need to tolerate
+            # old-world instance objects here
+            attrs = ['metadata', 'system_metadata', 'info_cache',
+                     'security_groups']
+            instance = instance_obj.Instance._from_db_object(
+                context, instance_obj.Instance(), instance,
+                expected_attrs=attrs)
         if live and not rebuild and not flavor:
             self._live_migrate(context, instance, scheduler_hint,
                                block_migration, disk_over_commit)
@@ -616,7 +624,7 @@ class ComputeTaskManager(base.Base):
 
     def _cold_migrate(self, context, instance, flavor, filter_properties,
                       reservations):
-        image_ref = instance.get('image_ref')
+        image_ref = instance.image_ref
         if image_ref:
             image = self._get_image(context, image_ref)
         else:
@@ -655,7 +663,8 @@ class ComputeTaskManager(base.Base):
 
             (host, node) = (host_state['host'], host_state['nodename'])
             self.compute_rpcapi.prep_resize(
-                context, image, instance, flavor, host,
+                context, image, nova_object.obj_to_primitive(instance),
+                flavor, host,
                 reservations, request_spec=request_spec,
                 filter_properties=filter_properties, node=node)
         except Exception as ex:
@@ -721,12 +730,6 @@ class ComputeTaskManager(base.Base):
                 requested_networks=requested_networks, is_first_time=True,
                 filter_properties=filter_properties,
                 legacy_bdm_in_spec=legacy_bdm)
-
-    def _instance_update(self, context, instance_uuid, **kwargs):
-        (old_ref, instance_ref) = self.db.instance_update_and_get_original(
-                context, instance_uuid, kwargs)
-        notifications.send_update(context, old_ref, instance_ref, 'conductor')
-        return instance_ref
 
     def _get_image(self, context, image_id):
         if not image_id:

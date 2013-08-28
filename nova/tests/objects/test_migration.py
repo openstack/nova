@@ -23,22 +23,29 @@ from nova.tests.objects import test_objects
 
 
 NOW = timeutils.utcnow().replace(microsecond=0)
-fake_migration = {
-    'created_at': NOW,
-    'updated_at': None,
-    'deleted_at': None,
-    'deleted': False,
-    'id': 123,
-    'source_compute': 'compute-source',
-    'dest_compute': 'compute-dest',
-    'source_node': 'node-source',
-    'dest_node': 'node-dest',
-    'dest_host': 'host-dest',
-    'old_instance_type_id': 42,
-    'new_instance_type_id': 84,
-    'instance_uuid': 'fake-uuid',
-    'status': 'migrating',
-}
+
+
+def fake_db_migration(**updates):
+    db_instance = {
+        'created_at': NOW,
+        'updated_at': None,
+        'deleted_at': None,
+        'deleted': False,
+        'id': 123,
+        'source_compute': 'compute-source',
+        'dest_compute': 'compute-dest',
+        'source_node': 'node-source',
+        'dest_node': 'node-dest',
+        'dest_host': 'host-dest',
+        'old_instance_type_id': 42,
+        'new_instance_type_id': 84,
+        'instance_uuid': 'fake-uuid',
+        'status': 'migrating',
+    }
+
+    if updates:
+        db_instance.update(updates)
+    return db_instance
 
 
 class _TestMigrationObject(object):
@@ -52,6 +59,7 @@ class _TestMigrationObject(object):
 
     def test_get_by_id(self):
         ctxt = context.get_admin_context()
+        fake_migration = fake_db_migration()
         self.mox.StubOutWithMock(db, 'migration_get')
         db.migration_get(ctxt, fake_migration['id']).AndReturn(fake_migration)
         self.mox.ReplayAll()
@@ -60,6 +68,7 @@ class _TestMigrationObject(object):
 
     def test_get_by_instance_and_status(self):
         ctxt = context.get_admin_context()
+        fake_migration = fake_db_migration()
         self.mox.StubOutWithMock(db, 'migration_get_by_instance_and_status')
         db.migration_get_by_instance_and_status(ctxt,
                                                 fake_migration['id'],
@@ -72,6 +81,7 @@ class _TestMigrationObject(object):
 
     def test_create(self):
         ctxt = context.get_admin_context()
+        fake_migration = fake_db_migration()
         self.mox.StubOutWithMock(db, 'migration_create')
         db.migration_create(ctxt, {'source_compute': 'foo'}).AndReturn(
             fake_migration)
@@ -83,6 +93,7 @@ class _TestMigrationObject(object):
 
     def test_save(self):
         ctxt = context.get_admin_context()
+        fake_migration = fake_db_migration()
         self.mox.StubOutWithMock(db, 'migration_update')
         db.migration_update(ctxt, 123, {'source_compute': 'foo'}
                             ).AndReturn(fake_migration)
@@ -95,6 +106,7 @@ class _TestMigrationObject(object):
 
     def test_instance(self):
         ctxt = context.get_admin_context()
+        fake_migration = fake_db_migration()
         fake_inst = fake_instance.fake_db_instance()
         self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
         db.instance_get_by_uuid(ctxt, fake_migration['instance_uuid'],
@@ -109,6 +121,7 @@ class _TestMigrationObject(object):
 
     def test_get_unconfirmed_by_dest_compute(self):
         ctxt = context.get_admin_context()
+        fake_migration = fake_db_migration()
         db_migrations = [fake_migration, dict(fake_migration, id=456)]
         self.mox.StubOutWithMock(
             db, 'migration_get_unconfirmed_by_dest_compute')
@@ -124,6 +137,7 @@ class _TestMigrationObject(object):
 
     def test_get_in_progress_by_host_and_node(self):
         ctxt = context.get_admin_context()
+        fake_migration = fake_db_migration()
         db_migrations = [fake_migration, dict(fake_migration, id=456)]
         self.mox.StubOutWithMock(
             db, 'migration_get_in_progress_by_host_and_node')
@@ -139,6 +153,7 @@ class _TestMigrationObject(object):
 
     def test_get_by_filters(self):
         ctxt = context.get_admin_context()
+        fake_migration = fake_db_migration()
         db_migrations = [fake_migration, dict(fake_migration, id=456)]
         self.mox.StubOutWithMock(
             db, 'migration_get_all_by_filters')

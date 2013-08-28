@@ -30,6 +30,7 @@ from nova import exception
 from nova.objects import base as obj_base
 from nova.objects import instance as instance_obj
 from nova.objects import instance_info_cache
+from nova.objects import migration as migration_obj
 from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
 from nova import quota
@@ -629,8 +630,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
     def _test_revert_resize(self):
         params = dict(vm_state=vm_states.RESIZED)
-        fake_inst = obj_base.obj_to_primitive(
-                self._create_instance_obj(params=params))
+        fake_inst = self._create_instance_obj(params=params)
         fake_mig = dict(id='fake-migration-id',
                         dest_compute='dest_host')
 
@@ -640,7 +640,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(self.compute_api,
                                  '_reverse_upsize_quota_delta')
         self.mox.StubOutWithMock(self.compute_api, '_reserve_quota_delta')
-        self.mox.StubOutWithMock(self.compute_api, 'update')
+        self.mox.StubOutWithMock(fake_inst, 'save')
         self.mox.StubOutWithMock(self.compute_api.db, 'migration_update')
         self.mox.StubOutWithMock(quota.QUOTAS, 'commit')
         self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
@@ -658,10 +658,14 @@ class _ComputeAPIUnitTestMixIn(object):
 
         self.compute_api._reserve_quota_delta(self.context,
                                               'deltas').AndReturn(resvs)
-        self.compute_api.update(
-                self.context, fake_inst,
-                task_state=task_states.RESIZE_REVERTING,
-                expected_task_state=None).AndReturn(fake_inst)
+
+        def _check_state(expected_task_state=None):
+            self.assertEqual(task_states.RESIZE_REVERTING,
+                             fake_inst.task_state)
+
+        fake_inst.save(expected_task_state=None).WithSideEffects(
+                _check_state)
+
         self.compute_api.db.migration_update(self.context,
                                              'fake-migration-id',
                                              {'status': 'reverting'})
@@ -705,17 +709,16 @@ class _ComputeAPIUnitTestMixIn(object):
         if project_id is not None:
             # To test instance w/ different project id than context (admin)
             params['project_id'] = project_id
-        fake_inst = obj_base.obj_to_primitive(
-                self._create_instance_obj(params=params))
+        fake_inst = self._create_instance_obj(params=params)
 
         self.mox.StubOutWithMock(flavors, 'get_flavor_by_flavor_id')
         self.mox.StubOutWithMock(self.compute_api, '_upsize_quota_delta')
         self.mox.StubOutWithMock(self.compute_api, '_reserve_quota_delta')
-        self.mox.StubOutWithMock(self.compute_api, 'update')
+        self.mox.StubOutWithMock(fake_inst, 'save')
         self.mox.StubOutWithMock(quota.QUOTAS, 'commit')
         self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
         self.mox.StubOutWithMock(self.compute_api.compute_task_api,
-                                 'migrate_server')
+                                 'resize_instance')
 
         current_flavor = flavors.extract_flavor(fake_inst)
         if flavor_id_passed:
@@ -734,10 +737,15 @@ class _ComputeAPIUnitTestMixIn(object):
                 current_flavor).AndReturn('deltas')
         self.compute_api._reserve_quota_delta(self.context, 'deltas',
                 project_id=fake_inst['project_id']).AndReturn(resvs)
-        self.compute_api.update(self.context, fake_inst,
-                task_state=task_states.RESIZE_PREP,
-                expected_task_state=None,
-                progress=0, **extra_kwargs).AndReturn(fake_inst)
+
+        def _check_state(expected_task_state=None):
+            self.assertEqual(task_states.RESIZE_PREP, fake_inst.task_state)
+            self.assertEqual(fake_inst.progress, 0)
+            for key, value in extra_kwargs.items():
+                self.assertEqual(value, getattr(fake_inst, key))
+
+        fake_inst.save(expected_task_state=None).WithSideEffects(
+                _check_state)
 
         if allow_same_host:
             filter_properties = {'ignore_hosts': []}
@@ -751,36 +759,35 @@ class _ComputeAPIUnitTestMixIn(object):
             quota.QUOTAS.commit(self.context, resvs,
                                 project_id=fake_inst['project_id'])
             resvs = []
+            mig = migration_obj.Migration()
+
+            def _get_migration():
+                return mig
+
+            def _check_mig(ctxt):
+                self.assertEqual(fake_inst.uuid, mig.instance_uuid)
+                self.assertEqual(current_flavor['id'],
+                                 mig.old_instance_type_id)
+                self.assertEqual(new_flavor['id'],
+                                 mig.new_instance_type_id)
+                self.assertEqual('finished', mig.status)
+
+            self.stubs.Set(migration_obj, 'Migration', _get_migration)
+            self.mox.StubOutWithMock(self.context, 'elevated')
+            self.mox.StubOutWithMock(mig, 'create')
+
+            self.context.elevated().AndReturn(self.context)
+            mig.create(self.context).WithSideEffects(_check_mig)
 
         self.compute_api._record_action_start(self.context, fake_inst,
                                               'resize')
 
         scheduler_hint = {'filter_properties': filter_properties}
 
-        self.compute_api.compute_task_api.migrate_server(
-                self.context, fake_inst, scheduler_hint=scheduler_hint,
-                live=False, rebuild=False, flavor=new_flavor,
-                block_migration=None, disk_over_commit=None,
-                reservations=resvs)
-
-        if self.is_cells:
-            self.mox.StubOutWithMock(self.context, 'elevated')
-            self.mox.StubOutWithMock(self.compute_api.db, 'migration_create')
-            self.mox.StubOutWithMock(self.compute_api, '_cast_to_cells')
-            if flavor_id_passed:
-                flavors.get_flavor_by_flavor_id(
-                        'new-flavor-id',
-                        read_deleted='no').AndReturn(new_flavor)
-            self.context.elevated().AndReturn(self.context)
-            self.compute_api.db.migration_create(
-                    self.context,
-                    dict(instance_uuid=fake_inst['uuid'],
-                         old_instance_type_id=current_flavor['id'],
-                         new_instance_type_id=new_flavor['id'],
-                         status='finished'))
-            self.compute_api._cast_to_cells(
-                    self.context, fake_inst, 'resize',
-                    flavor_id=new_flavor['flavorid'], **extra_kwargs)
+        self.compute_api.compute_task_api.resize_instance(
+                self.context, fake_inst, extra_kwargs,
+                scheduler_hint=scheduler_hint,
+                flavor=new_flavor, reservations=resvs)
 
         self.mox.ReplayAll()
 
@@ -832,7 +839,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(quota.QUOTAS, 'commit')
         self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
         self.mox.StubOutWithMock(self.compute_api.compute_task_api,
-                                 'migrate_server')
+                                 'resize_instance')
 
         fake_inst = obj_base.obj_to_primitive(self._create_instance_obj())
         exc = exception.FlavorNotFound(flavor_id='flavor-id')
@@ -854,7 +861,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(quota.QUOTAS, 'commit')
         self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
         self.mox.StubOutWithMock(self.compute_api.compute_task_api,
-                                 'migrate_server')
+                                 'resize_instance')
 
         fake_inst = obj_base.obj_to_primitive(self._create_instance_obj())
         fake_flavor = dict(id=200, flavorid='flavor-id', name='foo',
@@ -877,7 +884,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(quota.QUOTAS, 'commit')
         self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
         self.mox.StubOutWithMock(self.compute_api.compute_task_api,
-                                 'migrate_server')
+                                 'resize_instance')
 
         fake_inst = obj_base.obj_to_primitive(self._create_instance_obj())
         fake_flavor = flavors.extract_flavor(fake_inst)
@@ -902,7 +909,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(quota.QUOTAS, 'commit')
         self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
         self.mox.StubOutWithMock(self.compute_api.compute_task_api,
-                                 'migrate_server')
+                                 'resize_instance')
 
         fake_inst = obj_base.obj_to_primitive(self._create_instance_obj())
         current_flavor = flavors.extract_flavor(fake_inst)

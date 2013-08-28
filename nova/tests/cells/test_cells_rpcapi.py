@@ -634,3 +634,33 @@ class CellsAPITestCase(test.TestCase):
         expected_args = {'instance': 'fake-instance'}
         self._check_result(call_info, 'soft_delete_instance',
                            expected_args, version='1.18')
+
+    def test_resize_instance(self):
+        call_info = self._stub_rpc_method('cast', None)
+
+        self.cells_rpcapi.resize_instance(self.fake_context,
+                                          'fake-instance',
+                                          dict(cow='moo'),
+                                          'fake-hint',
+                                          'fake-flavor',
+                                          'fake-reservations')
+        expected_args = {'instance': 'fake-instance',
+                         'flavor': 'fake-flavor',
+                         'extra_instance_updates': dict(cow='moo')}
+        self._check_result(call_info, 'resize_instance',
+                           expected_args, version='1.20')
+
+    def test_live_migrate_instance(self):
+        call_info = self._stub_rpc_method('cast', None)
+
+        self.cells_rpcapi.live_migrate_instance(self.fake_context,
+                                                'fake-instance',
+                                                'fake-host',
+                                                'fake-block',
+                                                'fake-commit')
+        expected_args = {'instance': 'fake-instance',
+                         'block_migration': 'fake-block',
+                         'disk_over_commit': 'fake-commit',
+                         'host_name': 'fake-host'}
+        self._check_result(call_info, 'live_migrate_instance',
+                           expected_args, version='1.20')

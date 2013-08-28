@@ -118,12 +118,14 @@ class ComputeRpcAPITestCase(test.TestCase):
         self._test_compute_api('check_can_live_migrate_destination', 'call',
                 instance=self.fake_instance,
                 destination='dest', block_migration=True,
-                disk_over_commit=True)
+                disk_over_commit=True,
+                version='2.38')
 
     def test_check_can_live_migrate_source(self):
         self._test_compute_api('check_can_live_migrate_source', 'call',
                 instance=self.fake_instance,
-                dest_check_data={"test": "data"})
+                dest_check_data={"test": "data"},
+                version='2.38')
 
     def test_check_instance_shared_storage(self):
         self._test_compute_api('check_instance_shared_storage', 'call',

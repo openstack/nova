@@ -192,6 +192,8 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         2.36 - Made pause_instance() and unpause_instance() take new-world
                instance objects
         2.37 - Added the leagacy_bdm_in_spec parameter to run_instance
+        2.38 - Made check_can_live_migrate_[destination|source] take
+               new-world instance objects
     '''
 
     #
@@ -265,22 +267,34 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
 
     def check_can_live_migrate_destination(self, ctxt, instance, destination,
                                            block_migration, disk_over_commit):
-        instance_p = jsonutils.to_primitive(instance)
+        if self.can_send_version('2.38'):
+            version = '2.38'
+        else:
+            version = '2.0'
+            instance = jsonutils.to_primitive(
+                    objects_base.obj_to_primitive(instance))
         return self.call(ctxt,
                          self.make_msg('check_can_live_migrate_destination',
-                                       instance=instance_p,
+                                       instance=instance,
                                        block_migration=block_migration,
                                        disk_over_commit=disk_over_commit),
                          topic=_compute_topic(self.topic,
-                                              ctxt, destination, None))
+                                              ctxt, destination, None),
+                         version=version)
 
     def check_can_live_migrate_source(self, ctxt, instance, dest_check_data):
-        instance_p = jsonutils.to_primitive(instance)
+        if self.can_send_version('2.38'):
+            version = '2.38'
+        else:
+            version = '2.0'
+            instance = jsonutils.to_primitive(
+                    objects_base.obj_to_primitive(instance))
         return self.call(ctxt, self.make_msg('check_can_live_migrate_source',
-                                             instance=instance_p,
+                                             instance=instance,
                                              dest_check_data=dest_check_data),
                          topic=_compute_topic(self.topic, ctxt, None,
-                                              instance))
+                                              instance),
+                         version=version)
 
     def check_instance_shared_storage(self, ctxt, instance, data):
         instance_p = jsonutils.to_primitive(instance)

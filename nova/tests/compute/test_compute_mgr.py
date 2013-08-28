@@ -25,6 +25,7 @@ from nova import context
 from nova import db
 from nova import exception
 from nova.network import model as network_model
+from nova.objects import base as obj_base
 from nova.objects import instance as instance_obj
 from nova.openstack.common import importutils
 from nova.openstack.common import uuidutils
@@ -626,6 +627,99 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                           {'uuid': 'fake'})
         self.assertTrue(volumes[old_volume_id]['status'], 'detaching')
         self.assertTrue(volumes[new_volume_id]['status'], 'attaching')
+
+    def test_check_can_live_migrate_source(self):
+        is_volume_backed = 'volume_backed'
+        bdms = 'bdms'
+        dest_check_data = dict(foo='bar')
+        db_instance = fake_instance.fake_db_instance()
+        instance = instance_obj.Instance._from_db_object(
+                self.context, instance_obj.Instance(), db_instance)
+        expected_dest_check_data = dict(dest_check_data,
+                                        is_volume_backed=is_volume_backed)
+
+        self.mox.StubOutWithMock(self.compute.conductor_api,
+                                 'block_device_mapping_get_all_by_instance')
+        self.mox.StubOutWithMock(self.compute.compute_api,
+                                 'is_volume_backed_instance')
+        self.mox.StubOutWithMock(self.compute.driver,
+                                 'check_can_live_migrate_source')
+
+        instance_p = obj_base.obj_to_primitive(instance)
+        self.compute.conductor_api.block_device_mapping_get_all_by_instance(
+                self.context, instance_p).AndReturn(bdms)
+        self.compute.compute_api.is_volume_backed_instance(
+                self.context, instance, bdms).AndReturn(is_volume_backed)
+        self.compute.driver.check_can_live_migrate_source(
+                self.context, instance, expected_dest_check_data)
+
+        self.mox.ReplayAll()
+
+        self.compute.check_can_live_migrate_source(
+                self.context, instance=instance,
+                dest_check_data=dest_check_data)
+
+    def _test_check_can_live_migrate_destination(self, do_raise=False,
+                                                 has_mig_data=False):
+        db_instance = fake_instance.fake_db_instance(host='fake-host')
+        instance = instance_obj.Instance._from_db_object(
+                self.context, instance_obj.Instance(), db_instance)
+        instance.host = 'fake-host'
+        block_migration = 'block_migration'
+        disk_over_commit = 'disk_over_commit'
+        src_info = 'src_info'
+        dest_info = 'dest_info'
+        dest_check_data = dict(foo='bar')
+        mig_data = dict(cow='moo')
+        expected_result = dict(mig_data)
+        if has_mig_data:
+            dest_check_data['migrate_data'] = dict(cat='meow')
+            expected_result.update(cat='meow')
+
+        self.mox.StubOutWithMock(self.compute, '_get_compute_info')
+        self.mox.StubOutWithMock(self.compute.driver,
+                                 'check_can_live_migrate_destination')
+        self.mox.StubOutWithMock(self.compute.compute_rpcapi,
+                                 'check_can_live_migrate_source')
+        self.mox.StubOutWithMock(self.compute.driver,
+                                 'check_can_live_migrate_destination_cleanup')
+
+        self.compute._get_compute_info(self.context,
+                                       'fake-host').AndReturn(src_info)
+        self.compute._get_compute_info(self.context,
+                                       CONF.host).AndReturn(dest_info)
+        self.compute.driver.check_can_live_migrate_destination(
+                self.context, instance, src_info, dest_info,
+                block_migration, disk_over_commit).AndReturn(dest_check_data)
+
+        mock_meth = self.compute.compute_rpcapi.check_can_live_migrate_source(
+                self.context, instance, dest_check_data)
+        if do_raise:
+            mock_meth.AndRaise(test.TestingException())
+        else:
+            mock_meth.AndReturn(mig_data)
+        self.compute.driver.check_can_live_migrate_destination_cleanup(
+                self.context, dest_check_data)
+
+        self.mox.ReplayAll()
+
+        result = self.compute.check_can_live_migrate_destination(
+                self.context, instance=instance,
+                block_migration=block_migration,
+                disk_over_commit=disk_over_commit)
+        self.assertEqual(expected_result, result)
+
+    def test_check_can_live_migrate_destination_success(self):
+        self._test_check_can_live_migrate_destination()
+
+    def test_check_can_live_migrate_destination_success_w_mig_data(self):
+        self._test_check_can_live_migrate_destination(has_mig_data=True)
+
+    def test_check_can_live_migrate_destination_fail(self):
+        self.assertRaises(
+                test.TestingException,
+                self._test_check_can_live_migrate_destination,
+                do_raise=True)
 
 
 class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):

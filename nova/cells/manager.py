@@ -65,7 +65,7 @@ class CellsManager(manager.Manager):
 
     Scheduling requests get passed to the scheduler class.
     """
-    RPC_API_VERSION = '1.19'
+    RPC_API_VERSION = '1.20'
 
     def __init__(self, *args, **kwargs):
         # Mostly for tests.
@@ -488,3 +488,17 @@ class CellsManager(manager.Manager):
     def soft_delete_instance(self, ctxt, instance):
         """Soft-delete an instance in its cell."""
         self.msg_runner.soft_delete_instance(ctxt, instance)
+
+    def resize_instance(self, ctxt, instance, flavor,
+                        extra_instance_updates):
+        """Resize an instance in its cell."""
+        self.msg_runner.resize_instance(ctxt, instance,
+                                        flavor, extra_instance_updates)
+
+    def live_migrate_instance(self, ctxt, instance, block_migration,
+                              disk_over_commit, host_name):
+        """Live migrate an instance in its cell."""
+        self.msg_runner.live_migrate_instance(ctxt, instance,
+                                              block_migration,
+                                              disk_over_commit,
+                                              host_name)
