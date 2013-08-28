@@ -2619,12 +2619,12 @@ class API(base.Base):
     def swap_volume(self, context, instance, old_volume, new_volume):
         """Swap volume attached to an instance."""
         if old_volume['attach_status'] == 'detached':
-            msg = _("Old volume must be attached in order to swap.")
-            raise exception.InvalidVolume(reason=msg)
+            raise exception.VolumeUnattached(volume_id=old_volume['id'])
         # The caller likely got the instance from volume['instance_uuid']
         # in the first place, but let's sanity check.
         if old_volume['instance_uuid'] != instance['uuid']:
-            raise exception.VolumeUnattached(volume_id=old_volume['id'])
+            msg = _("Old volume is attached to a different instance.")
+            raise exception.InvalidVolume(reason=msg)
         if new_volume['attach_status'] == 'attached':
             msg = _("New volume must be detached in order to swap.")
             raise exception.InvalidVolume(reason=msg)
