@@ -1,18 +1,18 @@
-# English (United States) translations for nova.
-# Copyright (C) 2012 ORGANIZATION
+# Hindi translations for nova.
+# Copyright (C) 2013 ORGANIZATION
 # This file is distributed under the same license as the nova project.
 #
 # Translators:
-# Özcan Zafer AYAN <ozcanzaferayan@gmail.com>, 2013.
 msgid ""
 msgstr ""
 "Project-Id-Version:  Nova\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/nova\n"
 "POT-Creation-Date: 2013-08-27 06:06+0000\n"
-"PO-Revision-Date: 2013-02-02 18:03+0000\n"
-"Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
-"Language-Team: en_US <LL@li.org>\n"
-"Plural-Forms: nplurals=1; plural=0\n"
+"PO-Revision-Date: 2013-08-27 04:58+0000\n"
+"Last-Translator: daisy.ycguo <daisy.ycguo@gmail.com>\n"
+"Language-Team: Hindi "
+"(http://www.transifex.com/projects/p/openstack/language/hi/)\n"
+"Plural-Forms: nplurals=2; plural=(n != 1)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -35,42 +35,41 @@ msgstr ""
 
 #: nova/crypto.py:56
 msgid "Filename of root CA"
-msgstr "Kök sertifika yetkilisinin dosya adı"
+msgstr ""
 
 #: nova/crypto.py:59
 msgid "Filename of private key"
-msgstr "Özel anahtarın dosya adı"
+msgstr ""
 
 #: nova/crypto.py:62
 msgid "Filename of root Certificate Revocation List"
-msgstr "Kök sertifika iptali listesinin dosya adı"
+msgstr ""
 
 #: nova/crypto.py:65
 msgid "Where we keep our keys"
-msgstr "Anahtarlarımızı tuttuğumuz yer"
+msgstr ""
 
 #: nova/crypto.py:68
 msgid "Where we keep our root CA"
-msgstr "Kök sertifika yetkilisini tutttuğumuz yer"
+msgstr ""
 
 #: nova/crypto.py:71
 msgid "Should we use a CA for each project?"
-msgstr "Her proje için sertifika yetkilisini kullanmalı mıyız?"
+msgstr ""
 
 #: nova/crypto.py:75
 #, python-format
 msgid "Subject for certificate for users, %s for project, user, timestamp"
-msgstr "Kullanıcıların sertifika konusu, proje, kullanıcı ve tarih bilgisi için %s"
+msgstr ""
 
 #: nova/crypto.py:80
 #, python-format
 msgid "Subject for certificate for projects, %s for project, timestamp"
-msgstr "Projelerin sertifika konusu, proje ve tarih bilgisi için %s"
+msgstr ""
 
 #: nova/crypto.py:211
-#, fuzzy
 msgid "Unable to find the key"
-msgstr "%r adresini bulmak olanaksız"
+msgstr ""
 
 #: nova/crypto.py:394
 msgid "Failed to write inbound.csr"
@@ -79,11 +78,11 @@ msgstr ""
 #: nova/crypto.py:396
 #, python-format
 msgid "Flags path: %s"
-msgstr "Bayrakların yolu: %s"
+msgstr ""
 
 #: nova/exception.py:102
 msgid "An unknown exception occurred."
-msgstr "Bilinmeyen bir istisna oluştu."
+msgstr ""
 
 #: nova/exception.py:124 nova/openstack/common/rpc/common.py:89
 msgid "Exception in string format operation"
@@ -94,22 +93,22 @@ msgid "Unknown"
 msgstr ""
 
 #: nova/exception.py:159
-#, fuzzy, python-format
+#, python-format
 msgid "Failed to encrypt text: %(reason)s"
-msgstr "Özel anahtar çözümü başarısız: %s"
+msgstr ""
 
 #: nova/exception.py:163
-#, fuzzy, python-format
+#, python-format
 msgid "Failed to decrypt text: %(reason)s"
-msgstr "Özel anahtar çözümü başarısız: %s"
+msgstr ""
 
 #: nova/exception.py:167
 msgid "Virtual Interface creation failed"
-msgstr "Sanal arayüz oluşturma hatası"
+msgstr ""
 
 #: nova/exception.py:171
 msgid "5 attempts to create virtual interfacewith unique mac address failed"
-msgstr "Hata. Eşsiz mac adresiyle sanal arayüz oluşturmada 5 kez girişim yapıldı."
+msgstr ""
 
 #: nova/exception.py:176
 #, python-format
@@ -118,16 +117,16 @@ msgstr ""
 
 #: nova/exception.py:181
 msgid "Not authorized."
-msgstr "Yetkiniz yok."
+msgstr ""
 
 #: nova/exception.py:186
 msgid "User does not have admin privileges"
-msgstr "Kullanıcı yönetici ayrıcalıklarına sahip değil"
+msgstr ""
 
 #: nova/exception.py:190
 #, python-format
 msgid "Policy doesn't allow %(action)s to be performed."
-msgstr "%(action)s uygulanmasına izin verilmiyor."
+msgstr ""
 
 #: nova/exception.py:194
 #, python-format
@@ -141,7 +140,7 @@ msgstr ""
 
 #: nova/exception.py:202
 msgid "Unacceptable parameters."
-msgstr "Kabul edilemez parametreler var."
+msgstr ""
 
 #: nova/exception.py:207
 msgid "Block Device Mapping is Invalid."
@@ -186,7 +185,7 @@ msgstr ""
 #: nova/exception.py:249
 #, python-format
 msgid "Volume %(volume_id)s is not attached to anything"
-msgstr "%(volume_id)s bölümü hiçbir şeyle ilişkilendirilmedi"
+msgstr ""
 
 #: nova/exception.py:253
 #, python-format
@@ -197,26 +196,26 @@ msgstr ""
 
 #: nova/exception.py:259 nova/api/ec2/cloud.py:472
 msgid "Keypair data is invalid"
-msgstr "Anahtar çifti verisi geçersiz"
+msgstr ""
 
 #: nova/exception.py:263
 msgid "The request is invalid."
-msgstr "İstek geçersiz"
+msgstr ""
 
 #: nova/exception.py:267
 msgid "Invalid input received"
-msgstr "Geçersiz giriş yapıldı"
+msgstr ""
 
 #: nova/exception.py:271
 msgid "Invalid volume"
-msgstr "Geçersiz bölüm"
+msgstr ""
 
 #: nova/exception.py:275 nova/api/openstack/compute/servers.py:1367
 #: nova/api/openstack/compute/contrib/admin_actions.py:255
 #: nova/api/openstack/compute/plugins/v3/admin_actions.py:248
 #: nova/api/openstack/compute/plugins/v3/servers.py:1347
 msgid "Invalid metadata"
-msgstr "Geçersiz metadata"
+msgstr ""
 
 #: nova/exception.py:279
 msgid "Invalid metadata size"
@@ -225,22 +224,22 @@ msgstr ""
 #: nova/exception.py:283
 #, python-format
 msgid "Invalid port range %(from_port)s:%(to_port)s. %(msg)s"
-msgstr "Geçersiz port aralığı %(from_port)s:%(to_port)s. %(msg)s"
+msgstr ""
 
 #: nova/exception.py:287
 #, python-format
 msgid "Invalid IP protocol %(protocol)s."
-msgstr "Geçersiz IP %(protocol)s."
+msgstr ""
 
 #: nova/exception.py:291
 #, python-format
 msgid "Invalid content type %(content_type)s."
-msgstr "Geçersiz içerik türü %(content_type)s."
+msgstr ""
 
 #: nova/exception.py:295
 #, python-format
 msgid "Invalid cidr %(cidr)s."
-msgstr "Geçersiz CIDR %(cidr)s."
+msgstr ""
 
 #: nova/exception.py:299 nova/openstack/common/db/exception.py:44
 msgid "Invalid Parameter: Unicode is not supported by the current database."
@@ -249,7 +248,7 @@ msgstr ""
 #: nova/exception.py:306
 #, python-format
 msgid "%(err)s"
-msgstr "Hatalar: %(err)s"
+msgstr ""
 
 #: nova/exception.py:310
 #, python-format
@@ -257,8 +256,6 @@ msgid ""
 "Cannot perform action '%(action)s' on aggregate %(aggregate_id)s. Reason:"
 " %(reason)s."
 msgstr ""
-"%(aggregate_id)s üzerinde '%(action)s' eylemi gerçekleştirilemiyor. "
-"Nedeni: %(reason)s."
 
 #: nova/exception.py:315
 #, python-format
@@ -275,23 +272,21 @@ msgid ""
 "Instance %(instance_uuid)s in %(attr)s %(state)s. Cannot %(method)s while"
 " the instance is in this state."
 msgstr ""
-"%(attr)s %(state)s 'deki %(instance_uuid)s örneği. Örnek bu durumda iken "
-"%(method)s yapılamaz."
 
 #: nova/exception.py:328
 #, python-format
 msgid "Instance %(instance_id)s is not running."
-msgstr "%(instance_id)s örneği çalışmıyor."
+msgstr ""
 
 #: nova/exception.py:332
 #, python-format
 msgid "Instance %(instance_id)s is not in rescue mode"
-msgstr "%(instance_id)s örneği kurtarma modunda değil"
+msgstr ""
 
 #: nova/exception.py:336
-#, fuzzy, python-format
+#, python-format
 msgid "Instance %(instance_id)s cannot be rescued: %(reason)s"
-msgstr "%(instance_id)s örneği kurtarma modunda değil"
+msgstr ""
 
 #: nova/exception.py:340
 #, python-format
@@ -300,73 +295,72 @@ msgstr ""
 
 #: nova/exception.py:344
 msgid "Failed to suspend instance"
-msgstr "Örnek kapatmada hata oluştu."
+msgstr ""
 
 #: nova/exception.py:348
-#, fuzzy, python-format
+#, python-format
 msgid "Failed to resume instance: %(reason)s."
-msgstr "Örnek kapatmada hata oluştu."
+msgstr ""
 
 #: nova/exception.py:352
-#, fuzzy, python-format
+#, python-format
 msgid "Failed to power on instance: %(reason)s."
-msgstr "Örnek kapatmada hata oluştu."
+msgstr ""
 
 #: nova/exception.py:356
-#, fuzzy, python-format
+#, python-format
 msgid "Failed to power off instance: %(reason)s."
-msgstr "Tekrar yükleme örneğinde hata oluştu."
+msgstr ""
 
 #: nova/exception.py:360
 msgid "Failed to reboot instance"
-msgstr "Tekrar yükleme örneğinde hata oluştu."
+msgstr ""
 
 #: nova/exception.py:364
 msgid "Failed to terminate instance"
 msgstr ""
 
 #: nova/exception.py:368
-#, fuzzy
 msgid "Failed to deploy instance"
-msgstr "Tekrar yükleme örneğinde hata oluştu."
+msgstr ""
 
 #: nova/exception.py:372
 msgid "Service is unavailable at this time."
-msgstr "Şu anda servis kullanılamıyor."
+msgstr ""
 
 #: nova/exception.py:376
 msgid "Insufficient compute resources."
 msgstr ""
 
 #: nova/exception.py:380
-#, fuzzy, python-format
+#, python-format
 msgid "Compute service of %(host)s is unavailable at this time."
-msgstr "Hesaplama servisi şu anda kullanılamıyor."
+msgstr ""
 
 #: nova/exception.py:384
 #, python-format
 msgid "Unable to migrate instance (%(instance_id)s) to current host (%(host)s)."
-msgstr "Mevcut (%(host)s) sunucusundan (%(instance_id)s) örneği geçirilemez."
+msgstr ""
 
 #: nova/exception.py:389
 msgid "The supplied hypervisor type of is invalid."
-msgstr "Desteklenen hypervisor türü geçersiz."
+msgstr ""
 
 #: nova/exception.py:393
 msgid "The instance requires a newer hypervisor version than has been provided."
-msgstr "Örnek şu ankinden daha yeni hypervisor versiyonu gerektirir."
+msgstr ""
 
 #: nova/exception.py:398
 #, python-format
 msgid ""
 "The supplied disk path (%(path)s) already exists, it is expected not to "
 "exist."
-msgstr "Desteklenen disk yolu (%(path)s) halen var,fakat var olmaması gerekir."
+msgstr ""
 
 #: nova/exception.py:403
 #, python-format
 msgid "The supplied device path (%(path)s) is invalid."
-msgstr "Desteklenen cihaz yolu (%(path)s) geçersiz."
+msgstr ""
 
 #: nova/exception.py:407
 #, python-format
@@ -380,12 +374,12 @@ msgstr ""
 
 #: nova/exception.py:416
 msgid "Unacceptable CPU info"
-msgstr "Kabul edilemeyen CPU bilgisi"
+msgstr ""
 
 #: nova/exception.py:420
 #, python-format
 msgid "%(address)s is not a valid IP v4/6 address."
-msgstr "%(address)s geçerli bir IP v4/6 adresi değildir."
+msgstr ""
 
 #: nova/exception.py:424
 #, python-format
@@ -393,8 +387,6 @@ msgid ""
 "VLAN tag is not appropriate for the port group %(bridge)s. Expected VLAN "
 "tag is %(tag)s, but the one associated with the port group is %(pgroup)s."
 msgstr ""
-"VLAN etiketi %(bridge)s port grubu için uygun değil. Beklenen VLAN "
-"etiketi %(tag)s'dir, fakat tek ilişkili port grubu %(pgroup)s'dir."
 
 #: nova/exception.py:430
 #, python-format
@@ -403,29 +395,26 @@ msgid ""
 "the desired physical adapter. Expected vSwitch is %(expected)s, but the "
 "one associated is %(actual)s."
 msgstr ""
-"%(bridge)s port grubunu içeren vSwitch istenilen fiziksel adaptörü ile "
-"ilişkilendirilmemiştir. Beklenen vSwitch %(expected)s'dir, fakat "
-"ilişkilendirilen ise %(actual)s'dir."
 
 #: nova/exception.py:437
 #, python-format
 msgid "Disk format %(disk_format)s is not acceptable"
-msgstr "%(disk_format)s disk formatı kabul edilemez."
+msgstr ""
 
 #: nova/exception.py:441
 #, python-format
 msgid "Image %(image_id)s is unacceptable: %(reason)s"
-msgstr "%(image_id)s imajı kabul edilemez: %(reason)s"
+msgstr ""
 
 #: nova/exception.py:445
 #, python-format
 msgid "Instance %(instance_id)s is unacceptable: %(reason)s"
-msgstr "%(instance_id)s örneği kabul edilemez: %(reason)s"
+msgstr ""
 
 #: nova/exception.py:449
 #, python-format
 msgid "Ec2 id %(ec2_id)s is unacceptable."
-msgstr "%(ec2_id)s Ec2 id'si kabul edilemez."
+msgstr ""
 
 #: nova/exception.py:453
 #, python-format
@@ -433,9 +422,9 @@ msgid "Expected a uuid but received %(uuid)s."
 msgstr ""
 
 #: nova/exception.py:457
-#, fuzzy, python-format
+#, python-format
 msgid "Invalid ID received %(id)s."
-msgstr "Geçersiz CIDR %(cidr)s."
+msgstr ""
 
 #: nova/exception.py:461
 msgid "Constraint not met."
@@ -443,12 +432,12 @@ msgstr ""
 
 #: nova/exception.py:466
 msgid "Resource could not be found."
-msgstr "Kaynak bulunamadı."
+msgstr ""
 
 #: nova/exception.py:471
-#, fuzzy, python-format
+#, python-format
 msgid "No agent-build associated with id %(id)s."
-msgstr "%(id)s ile ilişkilendirilmiş bir dinamik IP yok."
+msgstr ""
 
 #: nova/exception.py:475
 #, python-format
@@ -460,37 +449,37 @@ msgstr ""
 #: nova/exception.py:480
 #, python-format
 msgid "Volume %(volume_id)s could not be found."
-msgstr "%(volume_id)s bölümü bulunamadı."
+msgstr ""
 
 #: nova/exception.py:484
 #, python-format
 msgid "Snapshot %(snapshot_id)s could not be found."
-msgstr "%(snapshot_id)s sistem anlık görüntüsü bulunamadı."
+msgstr ""
 
 #: nova/exception.py:488 nova/exception.py:492
 #, python-format
 msgid "No target id found for volume %(volume_id)s."
-msgstr "%(volume_id)s bölümü için hedef id bulunamadı."
+msgstr ""
 
 #: nova/exception.py:496
 #, python-format
 msgid "No disk at %(location)s"
-msgstr "%(location)s'da disk yok."
+msgstr ""
 
 #: nova/exception.py:500
 #, python-format
 msgid "Could not find a handler for %(driver_type)s volume."
-msgstr "%(driver_type)s bölümü için bir işleyici bulunamadı."
+msgstr ""
 
 #: nova/exception.py:504
 #, python-format
 msgid "Invalid image href %(image_href)s."
-msgstr "Geçersiz %(image_href)s imaj kaynak dosyası."
+msgstr ""
 
 #: nova/exception.py:508
 #, python-format
 msgid "Image %(image_id)s could not be found."
-msgstr "%(image_id)s imaj kaynak dosyası bulunamadı."
+msgstr ""
 
 #: nova/exception.py:512
 #, python-format
@@ -503,16 +492,16 @@ msgstr ""
 #: nova/exception.py:519
 #, python-format
 msgid "Project %(project_id)s could not be found."
-msgstr "%(project_id)s projesi bulunamadı."
+msgstr ""
 
 #: nova/exception.py:523
 msgid "Cannot find SR to read/write VDI."
-msgstr "VDI'ya okuma/yazma yapılırken SR(Saklama deposu) bulunamadı."
+msgstr ""
 
 #: nova/exception.py:527
-#, fuzzy, python-format
+#, python-format
 msgid "Network %(network_id)s is duplicated."
-msgstr "%(network_id)s ağı bulunamadı."
+msgstr ""
 
 #: nova/exception.py:531
 #, python-format
@@ -522,41 +511,41 @@ msgstr ""
 #: nova/exception.py:535
 #, python-format
 msgid "%(req)s is required to create a network."
-msgstr "Ağ oluşturulurken %(req)s gereklidir."
+msgstr ""
 
 #: nova/exception.py:539
 #, python-format
 msgid "Network %(network_id)s could not be found."
-msgstr "%(network_id)s ağı bulunamadı."
+msgstr ""
 
 #: nova/exception.py:543
-#, fuzzy, python-format
+#, python-format
 msgid "Port id %(port_id)s could not be found."
-msgstr "%(snapshot_id)s sistem anlık görüntüsü bulunamadı."
+msgstr ""
 
 #: nova/exception.py:547
 #, python-format
 msgid "Network could not be found for bridge %(bridge)s"
-msgstr " %(bridge)s köprüsü için ağ bulunamadı."
+msgstr ""
 
 #: nova/exception.py:551
 #, python-format
 msgid "Network could not be found for uuid %(uuid)s"
-msgstr "%(uuid)s UUID'si için bir ağ bulunamadı"
+msgstr ""
 
 #: nova/exception.py:555
 #, python-format
 msgid "Network could not be found with cidr %(cidr)s."
-msgstr "%(cidr)s CIDR ile bir ağ bulunamadı."
+msgstr ""
 
 #: nova/exception.py:559
 #, python-format
 msgid "Network could not be found for instance %(instance_id)s."
-msgstr "%(instance_id)s örneği için ağ bulunamadı."
+msgstr ""
 
 #: nova/exception.py:563
 msgid "No networks defined."
-msgstr "Tanımlı bir ağ yok."
+msgstr ""
 
 #: nova/exception.py:567
 #, python-format
@@ -564,8 +553,6 @@ msgid ""
 "Either Network uuid %(network_uuid)s is not present or is not assigned to"
 " the project %(project_id)s."
 msgstr ""
-"%(network_uuid)s ağ UUID verilmedi veya %(project_id)s projesi ile "
-"ilişkilendirilmedi."
 
 #: nova/exception.py:572
 msgid ""
@@ -575,7 +562,7 @@ msgstr ""
 
 #: nova/exception.py:577
 msgid "Could not find the datastore reference(s) which the VM uses."
-msgstr "VM'nin kullandığı veri deposu referansı(ları) bulunamadı."
+msgstr ""
 
 #: nova/exception.py:581
 #, python-format
@@ -583,14 +570,14 @@ msgid "Port %(port_id)s is still in use."
 msgstr ""
 
 #: nova/exception.py:585
-#, fuzzy, python-format
+#, python-format
 msgid "Port %(port_id)s not usable for instance %(instance)s."
-msgstr "%(instance_id)s örneği için ağ bulunamadı."
+msgstr ""
 
 #: nova/exception.py:589
-#, fuzzy, python-format
+#, python-format
 msgid "No free port available for instance %(instance)s."
-msgstr "%(instance_id)s örneği için ağ bulunamadı."
+msgstr ""
 
 #: nova/exception.py:593
 #, python-format
@@ -600,12 +587,12 @@ msgstr ""
 #: nova/exception.py:597
 #, python-format
 msgid "No fixed IP associated with id %(id)s."
-msgstr "%(id)s ile ilişkilendirilmiş bir dinamik IP yok."
+msgstr ""
 
 #: nova/exception.py:601
 #, python-format
 msgid "Fixed ip not found for address %(address)s."
-msgstr "%(address)s adresi için bir dinamik IP bulunamadı."
+msgstr ""
 
 #: nova/exception.py:605
 #, python-format
@@ -616,8 +603,6 @@ msgstr ""
 #, python-format
 msgid "Network host %(host)s has zero fixed ips in network %(network_id)s."
 msgstr ""
-"%(network_id)s ağında %(host)s ağ sunucusunun hiç dinamik IP'si yok.\n"
-" "
 
 #: nova/exception.py:614
 #, python-format
@@ -629,7 +614,7 @@ msgstr ""
 msgid ""
 "Fixed IP address (%(address)s) does not exist in network "
 "(%(network_uuid)s)."
-msgstr "(%(network_uuid)s) ağında bir (%(address)s) dinamik IP adresi yok."
+msgstr ""
 
 #: nova/exception.py:623
 #, python-format
@@ -646,15 +631,15 @@ msgstr ""
 #: nova/exception.py:633
 #, python-format
 msgid "Fixed IP address %(address)s is invalid."
-msgstr "%(address)s dinamik IP adresi geçersiz."
+msgstr ""
 
 #: nova/exception.py:637
 msgid "Zero fixed ips available."
-msgstr "Kullanılabilir hiç dinamik IP yok."
+msgstr ""
 
 #: nova/exception.py:641
 msgid "Zero fixed ips could be found."
-msgstr "Hiç dinamik IP bulunamadı."
+msgstr ""
 
 #: nova/exception.py:645
 #, python-format
@@ -664,22 +649,22 @@ msgstr ""
 #: nova/exception.py:649
 #, python-format
 msgid "Floating ip not found for id %(id)s."
-msgstr "%(id)s ID'si için değişken IP bulunamadı."
+msgstr ""
 
 #: nova/exception.py:653
 #, python-format
 msgid "The DNS entry %(name)s already exists in domain %(domain)s."
-msgstr "%(domain)s alanında %(name)s DNS girdisi halen var."
+msgstr ""
 
 #: nova/exception.py:657
 #, python-format
 msgid "Floating ip not found for address %(address)s."
-msgstr "%(address)s adresi için bir değişken IP bulunamadı."
+msgstr ""
 
 #: nova/exception.py:661
 #, python-format
 msgid "Floating ip not found for host %(host)s."
-msgstr " %(host)s sunucusu için bir değişken IP bulunamadı."
+msgstr ""
 
 #: nova/exception.py:665
 #, python-format
@@ -692,26 +677,26 @@ msgstr ""
 
 #: nova/exception.py:674
 msgid "Zero floating ips available."
-msgstr "Hiç mevcut değişken IP yok."
+msgstr ""
 
 #: nova/exception.py:679
 #, python-format
 msgid "Floating ip %(address)s is associated."
-msgstr "%(address)s değişken IP adresi ilişkilendirildi."
+msgstr ""
 
 #: nova/exception.py:683
 #, python-format
 msgid "Floating ip %(address)s is not associated."
-msgstr "%(address)s değişken IP adresi ilişkilendirilemedi."
+msgstr ""
 
 #: nova/exception.py:687
 msgid "Zero floating ips exist."
-msgstr "Hiç değişken IP yok."
+msgstr ""
 
 #: nova/exception.py:691
 #, python-format
 msgid "Interface %(interface)s not found."
-msgstr "%(interface)s arayüzü bulunamadı."
+msgstr ""
 
 #: nova/exception.py:695 nova/api/ec2/cloud.py:1307
 #: nova/api/openstack/compute/contrib/floating_ips.py:98
@@ -721,12 +706,12 @@ msgstr ""
 #: nova/exception.py:699
 #, python-format
 msgid "Keypair %(name)s not found for user %(user_id)s"
-msgstr "%(user_id)s kullanıcısı için %(name)s anahtar çifti bulunamadı"
+msgstr ""
 
 #: nova/exception.py:703
 #, python-format
 msgid "Service %(service_id)s could not be found."
-msgstr "%(service_id)s servisi bulunamadı."
+msgstr ""
 
 #: nova/exception.py:707
 #, python-format
@@ -741,17 +726,17 @@ msgstr ""
 #: nova/exception.py:715
 #, python-format
 msgid "Host %(host)s could not be found."
-msgstr "%(host)s sunucusu bulunamadı."
+msgstr ""
 
 #: nova/exception.py:719
 #, python-format
 msgid "Compute host %(host)s could not be found."
-msgstr "%(host)s hesaplama sunucusu bulunamadı."
+msgstr ""
 
 #: nova/exception.py:723
 #, python-format
 msgid "Could not find binary %(binary)s on host %(host)s."
-msgstr "%(host)s sunucusunda %(binary)s ikilisi bulunamadı."
+msgstr ""
 
 #: nova/exception.py:727
 #, python-format
@@ -767,7 +752,7 @@ msgstr ""
 
 #: nova/exception.py:736
 msgid "Quota could not be found"
-msgstr "Kota bulunamadı."
+msgstr ""
 
 #: nova/exception.py:740
 #, python-format
@@ -787,7 +772,7 @@ msgstr ""
 #: nova/exception.py:754
 #, python-format
 msgid "Quota for project %(project_id)s could not be found."
-msgstr "%(project_id)s projesi için bir kota bulunamadı."
+msgstr ""
 
 #: nova/exception.py:758
 #, python-format
@@ -812,19 +797,17 @@ msgstr ""
 #: nova/exception.py:774
 #, python-format
 msgid "Security group %(security_group_id)s not found."
-msgstr "%(security_group_id)s güvenlik grubu bulunamadı."
+msgstr ""
 
 #: nova/exception.py:778
 #, python-format
 msgid "Security group %(security_group_id)s not found for project %(project_id)s."
 msgstr ""
-"%(project_id)s projesi için %(security_group_id)s güvenlik grubu "
-"bulunamadı."
 
 #: nova/exception.py:783
 #, python-format
 msgid "Security group with rule %(rule_id)s not found."
-msgstr "%(rule_id)s kurallı güvenlik grubu bulunamadı."
+msgstr ""
 
 #: nova/exception.py:787
 #, python-format
@@ -839,8 +822,6 @@ msgid ""
 "Security group %(security_group_id)s is already associated with the "
 "instance %(instance_id)s"
 msgstr ""
-"%(security_group_id)s güvenlik grubu zaten %(instance_id)s örneği ile "
-"ilişkilendirimiş."
 
 #: nova/exception.py:797
 #, python-format
@@ -848,13 +829,11 @@ msgid ""
 "Security group %(security_group_id)s is not associated with the instance "
 "%(instance_id)s"
 msgstr ""
-"%(security_group_id)s güvenlik grubu %(instance_id)s örneği ile "
-"ilişkilendirilmedi."
 
 #: nova/exception.py:802
-#, fuzzy, python-format
+#, python-format
 msgid "Security group default rule (%rule_id)s not found."
-msgstr "%(rule_id)s kurallı güvenlik grubu bulunamadı."
+msgstr ""
 
 #: nova/exception.py:806
 msgid ""
@@ -869,17 +848,17 @@ msgstr ""
 #: nova/exception.py:816
 #, python-format
 msgid "Migration %(migration_id)s could not be found."
-msgstr "%(migration_id)s göçü bulunamadı."
+msgstr ""
 
 #: nova/exception.py:820
 #, python-format
 msgid "Migration not found for instance %(instance_id)s with status %(status)s."
-msgstr "%(status)s durumuyla %(instance_id)s örneği için göç bulunamadı."
+msgstr ""
 
 #: nova/exception.py:825
 #, python-format
 msgid "Console pool %(pool_id)s could not be found."
-msgstr "%(pool_id)s konsol havuzu bulunamadı."
+msgstr ""
 
 #: nova/exception.py:829
 #, python-format
@@ -894,13 +873,11 @@ msgid ""
 "Console pool of type %(console_type)s for compute host %(compute_host)s "
 "on proxy host %(host)s not found."
 msgstr ""
-"%(host)s roxy sunucusundaki %(compute_host)s hesaplama sunucusu için "
-"%(console_type)s türünün konsol havuzu bulunamadı."
 
 #: nova/exception.py:841
 #, python-format
 msgid "Console %(console_id)s could not be found."
-msgstr "%(console_id)s konsolu bulunamadı."
+msgstr ""
 
 #: nova/exception.py:845
 #, python-format
@@ -915,9 +892,9 @@ msgid ""
 msgstr ""
 
 #: nova/exception.py:854
-#, fuzzy, python-format
+#, python-format
 msgid "Invalid console type %(console_type)s"
-msgstr "Geçersiz içerik türü %(content_type)s."
+msgstr ""
 
 #: nova/exception.py:858
 #, python-format
@@ -927,17 +904,17 @@ msgstr ""
 #: nova/exception.py:862
 #, python-format
 msgid "Instance type %(instance_type_id)s could not be found."
-msgstr "%(instance_type_id)s örnek türü bulunamadı"
+msgstr ""
 
 #: nova/exception.py:866
 #, python-format
 msgid "Instance type with name %(instance_type_name)s could not be found."
-msgstr "%(instance_type_name)s isimli örnek türü bulunamadı."
+msgstr ""
 
 #: nova/exception.py:871
 #, python-format
 msgid "Flavor %(flavor_id)s could not be found."
-msgstr "%(flavor_id)s örnek türü bulunamadı."
+msgstr ""
 
 #: nova/exception.py:875
 #, python-format
@@ -945,9 +922,9 @@ msgid "Flavor access not found for %(flavor_id)s / %(project_id)s combination."
 msgstr ""
 
 #: nova/exception.py:880
-#, fuzzy, python-format
+#, python-format
 msgid "Cell %(cell_name)s doesn't exist."
-msgstr "%(name)s örneği zaten var."
+msgstr ""
 
 #: nova/exception.py:884
 #, python-format
@@ -982,14 +959,14 @@ msgid "Cannot update cells configuration file."
 msgstr ""
 
 #: nova/exception.py:912
-#, fuzzy, python-format
+#, python-format
 msgid "Cell is not known for instance %(instance_uuid)s"
-msgstr "%(instance_id)s örneği için ağ bulunamadı."
+msgstr ""
 
 #: nova/exception.py:916
 #, python-format
 msgid "Scheduler Host Filter %(filter_name)s could not be found."
-msgstr "%(filter_name)s zamanlayıcı sunucu filtresi bulunamadı."
+msgstr ""
 
 #: nova/exception.py:920
 #, python-format
@@ -1002,56 +979,52 @@ msgid ""
 "Instance Type %(instance_type_id)s has no extra specs with key "
 "%(extra_specs_key)s."
 msgstr ""
-"%(instance_type_id)s örnek türü %(extra_specs_key)s anahtarı ile ekstra "
-"özelliklere sahip değil."
 
 #: nova/exception.py:930
 #, python-format
 msgid "File %(file_path)s could not be found."
-msgstr "%(file_path)s dosyası bulunamadı."
+msgstr ""
 
 #: nova/exception.py:934
 msgid "Zero files could be found."
-msgstr "Hiç dosya bulunamadı."
+msgstr ""
 
 #: nova/exception.py:938
 #, python-format
 msgid "Virtual switch associated with the network adapter %(adapter)s not found."
 msgstr ""
-"%(adapter)s ağ bağdaştırıcısı ile ilişkilendirilen sanal anahtar "
-"bulunamadı."
 
 #: nova/exception.py:943
 #, python-format
 msgid "Network adapter %(adapter)s could not be found."
-msgstr "%(adapter)s ağ bağdaştırıcısı bulunamadı."
+msgstr ""
 
 #: nova/exception.py:947
 #, python-format
 msgid "Class %(class_name)s could not be found: %(exception)s"
-msgstr "%(class_name)s sınıfı bulunamadı: %(exception)s"
+msgstr ""
 
 #: nova/exception.py:951
 msgid "Action not allowed."
-msgstr "İşlem için izin verilmiyor."
+msgstr ""
 
 #: nova/exception.py:955
 msgid "Rotation is not allowed for snapshots"
-msgstr "Önceki sistem geri görüntüsüne dönmek için izin verilmiyor."
+msgstr ""
 
 #: nova/exception.py:959
 msgid "Rotation param is required for backup image_type"
-msgstr "Yedek imajı geri dönüş parametresi gerekli"
+msgstr ""
 
 #: nova/exception.py:963 nova/tests/compute/test_keypairs.py:121
-#, fuzzy, python-format
+#, python-format
 msgid "Key pair '%(key_name)s' already exists."
-msgstr "%(key_name)s anahtar çifti zaten var."
+msgstr ""
 
 #: nova/exception.py:967
 #, python-format
 msgid "Instance %(name)s already exists."
-msgstr "%(name)s örneği zaten var."
+msgstr ""
 
 #: nova/exception.py:971
 #, python-format
@@ -1082,22 +1055,21 @@ msgstr ""
 
 #: nova/exception.py:992
 msgid "Migration error"
-msgstr "Geçiş hatası."
+msgstr ""
 
 #: nova/exception.py:996
-#, fuzzy
 msgid "Migration pre-check error"
-msgstr "Geçiş hatası."
+msgstr ""
 
 #: nova/exception.py:1000
 #, python-format
 msgid "Malformed message body: %(reason)s"
-msgstr "Hatalı biçimlendirilmiş mesaj gövdesi: %(reason)s"
+msgstr ""
 
 #: nova/exception.py:1006
 #, python-format
 msgid "Could not find config at %(path)s"
-msgstr "%(path)s'deki yapılandırma bulunamadı"
+msgstr ""
 
 #: nova/exception.py:1010
 #, python-format
@@ -1120,25 +1092,25 @@ msgstr ""
 
 #: nova/exception.py:1026
 msgid "Instance type's memory is too small for requested image."
-msgstr "Örnek türün belleği istenilen imaj dosyası için çok küçük."
+msgstr ""
 
 #: nova/exception.py:1030
 msgid "Instance type's disk is too small for requested image."
-msgstr "Örnek türünün diski istenilen imaj dosyası için çok küçük."
+msgstr ""
 
 #: nova/exception.py:1034
 #, python-format
 msgid "Insufficient free memory on compute node to start %(uuid)s."
-msgstr "%(uuid)s hesaplama düğümü başlatmada yetersiz boş hafıza."
+msgstr ""
 
 #: nova/exception.py:1038
 #, python-format
 msgid "No valid host was found. %(reason)s"
-msgstr "Geçerli bir sunucu bulunamadı: %(reason)s"
+msgstr ""
 
 #: nova/exception.py:1042
 msgid "Quota exceeded"
-msgstr "Kota aşıldı"
+msgstr ""
 
 #: nova/exception.py:1049
 #, python-format
@@ -1162,15 +1134,15 @@ msgstr ""
 
 #: nova/exception.py:1066
 msgid "Personality file limit exceeded"
-msgstr "Kişisel dosya limiti aşıldı"
+msgstr ""
 
 #: nova/exception.py:1070
 msgid "Personality file path too long"
-msgstr "Kişisel dosya yolu çok uzun"
+msgstr ""
 
 #: nova/exception.py:1074
 msgid "Personality file content too long"
-msgstr "Kişisel dosya içeriği çok uzun"
+msgstr ""
 
 #: nova/exception.py:1078 nova/tests/compute/test_keypairs.py:132
 msgid "Maximum number of key pairs exceeded"
@@ -1190,33 +1162,31 @@ msgstr ""
 #: nova/exception.py:1091
 #, python-format
 msgid "Aggregate %(aggregate_id)s could not be found."
-msgstr "%(aggregate_id)s kümesi bulunamadı."
+msgstr ""
 
 #: nova/exception.py:1095
 #, python-format
 msgid "Aggregate %(aggregate_name)s already exists."
-msgstr "%(aggregate_name)s kümesi zaten var."
+msgstr ""
 
 #: nova/exception.py:1099
 #, python-format
 msgid "Aggregate %(aggregate_id)s has no host %(host)s."
-msgstr "%(aggregate_id)s kümesi %(host)s sunucusuna sahip değil."
+msgstr ""
 
 #: nova/exception.py:1103
 #, python-format
 msgid "Aggregate %(aggregate_id)s has no metadata with key %(metadata_key)s."
 msgstr ""
-"%(aggregate_id)s kümesi %(metadata_key)s. anahtarı ile hiç metadata'sı "
-"yok."
 
 #: nova/exception.py:1108
 #, python-format
 msgid "Aggregate %(aggregate_id)s already has host %(host)s."
-msgstr "%(aggregate_id)s kümesi zaten%(host)s sunucusuna sahip."
+msgstr ""
 
 #: nova/exception.py:1112
 msgid "Unable to create instance type"
-msgstr "Örnek tür oluşturulamıyor."
+msgstr ""
 
 #: nova/exception.py:1116
 #, python-format
@@ -1235,22 +1205,22 @@ msgstr ""
 #: nova/exception.py:1131
 #, python-format
 msgid "Instance %(instance_id)s could not be found."
-msgstr "%(instance_id)s örneği bulunamadı."
+msgstr ""
 
 #: nova/exception.py:1135
-#, fuzzy, python-format
+#, python-format
 msgid "Info cache for instance %(instance_uuid)s could not be found."
-msgstr "%(instance_id)s örneği bulunamadı."
+msgstr ""
 
 #: nova/exception.py:1140
-#, fuzzy, python-format
+#, python-format
 msgid "Node %(node_id)s could not be found."
-msgstr "%(volume_id)s bölümü bulunamadı."
+msgstr ""
 
 #: nova/exception.py:1144
-#, fuzzy, python-format
+#, python-format
 msgid "Node with UUID %(node_uuid)s could not be found."
-msgstr "%(project_id)s projesi bulunamadı."
+msgstr ""
 
 #: nova/exception.py:1148
 #, python-format
@@ -1331,16 +1301,16 @@ msgid ""
 msgstr ""
 
 #: nova/exception.py:1214
-#, fuzzy, python-format
+#, python-format
 msgid ""
 "Action for request_id %(request_id)s on instance %(instance_uuid)s not "
 "found"
-msgstr "%(device)s'daki %(instance_id)s örneğine %(volume_id)s birimini bağla"
+msgstr ""
 
 #: nova/exception.py:1219
-#, fuzzy, python-format
+#, python-format
 msgid "Event %(event)s not found for action id %(action_id)s"
-msgstr "%(user_id)s kullanıcısı için %(name)s anahtar çifti bulunamadı"
+msgstr ""
 
 #: nova/exception.py:1223
 #, python-format
@@ -1393,19 +1363,19 @@ msgid "Invalid Base 64 data for file %(path)s"
 msgstr ""
 
 #: nova/exception.py:1264
-#, fuzzy, python-format
+#, python-format
 msgid "Build of instance %(instance_uuid)s aborted: %(reason)s"
-msgstr "%(instance_id)s örneği kurtarma modunda değil"
+msgstr ""
 
 #: nova/exception.py:1268
-#, fuzzy, python-format
+#, python-format
 msgid "Build of instance %(instance_uuid)s was re-scheduled: %(reason)s"
-msgstr "%(instance_id)s örneği kurtarma modunda değil"
+msgstr ""
 
 #: nova/exception.py:1273
-#, fuzzy, python-format
+#, python-format
 msgid "Shadow table with name %(name)s already exists."
-msgstr "%(name)s örneği zaten var."
+msgstr ""
 
 #: nova/exception.py:1278
 #, python-format
@@ -1413,9 +1383,9 @@ msgid "Instance rollback performed due to: %s"
 msgstr ""
 
 #: nova/exception.py:1284
-#, fuzzy, python-format
+#, python-format
 msgid "Unsupported object type %(objtype)s"
-msgstr "Beklenen nesne türü: %s"
+msgstr ""
 
 #: nova/exception.py:1288
 #, python-format
@@ -1541,24 +1511,23 @@ msgstr ""
 
 #: nova/manager.py:163
 msgid "Notifying Schedulers of capabilities ..."
-msgstr "Yetenekler zamanlayıcısı bildiriliyor ..."
+msgstr ""
 
 #: nova/notifications.py:115 nova/notifications.py:155
 msgid "Failed to send state update notification"
 msgstr ""
 
 #: nova/notifications.py:241
-#, fuzzy
 msgid "Failed to get nw_info"
-msgstr "Tekrar yükleme örneğinde hata oluştu."
+msgstr ""
 
 #: nova/policy.py:33
 msgid "JSON file representing policy"
-msgstr "JSON dosyası ilkeyi temsil eder"
+msgstr ""
 
 #: nova/policy.py:36
 msgid "Rule checked when requested rule is not found"
-msgstr "İstekte bulunan kural bulunamadığında kural kontrol edildi."
+msgstr ""
 
 #: nova/quota.py:1256
 #, python-format
@@ -1593,7 +1562,7 @@ msgstr ""
 #: nova/service.py:170 nova/openstack/common/rpc/service.py:48
 #, python-format
 msgid "Creating Consumer connection for Service %s"
-msgstr "%s servisi için tüketici bağlantısı oluşturuluyor."
+msgstr ""
 
 #: nova/service.py:188
 #, python-format
@@ -1602,7 +1571,7 @@ msgstr ""
 
 #: nova/service.py:268
 msgid "Service killed that has no database entry"
-msgstr "Servis, hiç veritabanı girdisi olmayanı sonlandırdı."
+msgstr ""
 
 #: nova/service.py:290
 #, python-format
@@ -1641,32 +1610,32 @@ msgstr ""
 #: nova/utils.py:402
 #, python-format
 msgid "Link Local address is not found.:%s"
-msgstr "Yerel adres bağlantısı bulunamadı.:%s"
+msgstr ""
 
 #: nova/utils.py:405
 #, python-format
 msgid "Couldn't get Link Local IP of %(interface)s :%(ex)s"
-msgstr "Couldn't get Link Local IP of %(interface)s :%(ex)s"
+msgstr ""
 
 #: nova/utils.py:444
 #, python-format
 msgid "Invalid backend: %s"
-msgstr "Geçersiz backend: %s"
+msgstr ""
 
 #: nova/utils.py:594
 #, python-format
 msgid "Expected object of type: %s"
-msgstr "Beklenen nesne türü: %s"
+msgstr ""
 
 #: nova/utils.py:623
 #, python-format
 msgid "Invalid server_string: %s"
-msgstr "Geçersiz server_string: %s"
+msgstr ""
 
 #: nova/utils.py:765
 #, python-format
 msgid "timefunc: '%(name)s' took %(total_time).2f secs"
-msgstr "Zaman Fonksiyonu: %(name)s %(total_time).2f saniye sürdü"
+msgstr ""
 
 #: nova/utils.py:819 nova/openstack/common/fileutils.py:64
 #, python-format
@@ -1679,9 +1648,9 @@ msgid "Could not remove tmpdir: %s"
 msgstr ""
 
 #: nova/utils.py:1108
-#, fuzzy, python-format
+#, python-format
 msgid "%s is not a string or unicode"
-msgstr "%s güvenlik grubu string veya unicode değil"
+msgstr ""
 
 #: nova/utils.py:1112
 #, python-format
@@ -1714,19 +1683,19 @@ msgid "%(name)s listening on %(host)s:%(port)s"
 msgstr ""
 
 #: nova/wsgi.py:140 nova/openstack/common/sslutils.py:52
-#, fuzzy, python-format
+#, python-format
 msgid "Unable to find cert_file : %s"
-msgstr "%r adresini bulmak olanaksız"
+msgstr ""
 
 #: nova/wsgi.py:144 nova/openstack/common/sslutils.py:55
-#, fuzzy, python-format
+#, python-format
 msgid "Unable to find ca_file : %s"
-msgstr "%r adresini bulmak olanaksız"
+msgstr ""
 
 #: nova/wsgi.py:148 nova/openstack/common/sslutils.py:58
-#, fuzzy, python-format
+#, python-format
 msgid "Unable to find key_file : %s"
-msgstr "%r adresini bulmak olanaksız"
+msgstr ""
 
 #: nova/wsgi.py:152 nova/openstack/common/sslutils.py:61
 msgid ""
@@ -1741,15 +1710,15 @@ msgstr ""
 
 #: nova/wsgi.py:210
 msgid "Stopping WSGI server."
-msgstr "WSGI sunucusu durduruluyor."
+msgstr ""
 
 #: nova/wsgi.py:228
 msgid "WSGI server has stopped."
-msgstr "WSGI sunucusu durduruldu."
+msgstr ""
 
 #: nova/wsgi.py:297
 msgid "You must implement __call__"
-msgstr "__call__ fonksiyonunu uygulamalısınız."
+msgstr ""
 
 #: nova/wsgi.py:483
 #, python-format
@@ -1777,11 +1746,11 @@ msgstr ""
 #: nova/api/ec2/__init__.py:89
 #, python-format
 msgid "FaultWrapper: %s"
-msgstr "Hata yakalayıcı: %s"
+msgstr ""
 
 #: nova/api/ec2/__init__.py:160
 msgid "Too many failed authentications."
-msgstr "Çok sayıda kimlik doğrulama başarısız oldu."
+msgstr ""
 
 #: nova/api/ec2/__init__.py:169
 #, python-format
@@ -1789,45 +1758,42 @@ msgid ""
 "Access key %(access_key)s has had %(failures)d failed authentications and"
 " will be locked out for %(lock_mins)d minutes."
 msgstr ""
-"%(access_key)s erişim anahtarı %(failures)d kez yanlış girildi ve "
-"%(lock_mins)d dakika boyunca kilitlenmiş olacak."
 
 #: nova/api/ec2/__init__.py:188
 msgid "Signature not provided"
-msgstr "İmza verilmedi."
+msgstr ""
 
 #: nova/api/ec2/__init__.py:193
 msgid "Access key not provided"
-msgstr "Erişim anahtarı verilmedi."
+msgstr ""
 
 #: nova/api/ec2/__init__.py:229 nova/api/ec2/__init__.py:245
 msgid "Failure communicating with keystone"
 msgstr ""
 
 #: nova/api/ec2/__init__.py:244
-#, fuzzy, python-format
+#, python-format
 msgid "Keystone failure: %s"
-msgstr "Temel dosya kaldırılıyor: %s"
+msgstr ""
 
 #: nova/api/ec2/__init__.py:305
-#, fuzzy
 msgid "Timestamp failed validation."
-msgstr "Çok sayıda kimlik doğrulama başarısız oldu."
+msgstr ""
 
 #: nova/api/ec2/__init__.py:325
 #, python-format
 msgid "action: %s"
-msgstr "işlem: %s"
+msgstr ""
 
 #: nova/api/ec2/__init__.py:327
 #, python-format
 msgid "arg: %(key)s\t\tval: %(value)s"
-msgstr "arg: %(key)s»»val: %(value)s"
+msgstr ""
 
 #: nova/api/ec2/__init__.py:403
 #, python-format
 msgid "Unauthorized request for controller=%(controller)s and action=%(action)s"
-msgstr "%(controller)s kontrolcüsü ve %(action)s işlemi için izinsiz istek"
+msgstr ""
 
 #: nova/api/ec2/__init__.py:491
 #, python-format
@@ -1852,7 +1818,7 @@ msgstr ""
 #: nova/api/ec2/__init__.py:520
 #, python-format
 msgid "Environment: %s"
-msgstr "Ortam: %s"
+msgstr ""
 
 #: nova/api/ec2/__init__.py:522
 msgid "Unknown error occured."
@@ -1861,12 +1827,12 @@ msgstr ""
 #: nova/api/ec2/apirequest.py:62
 #, python-format
 msgid "Unsupported API request: controller = %(controller)s, action = %(action)s"
-msgstr "Desteklenmeyen API isteği: kontrolcü = %(controller)s, işlem = %(action)s"
+msgstr ""
 
 #: nova/api/ec2/cloud.py:402
 #, python-format
 msgid "Create snapshot of volume %s"
-msgstr "Bölüm %s'in sistem anlık görüntüsünü oluştur"
+msgstr ""
 
 #: nova/api/ec2/cloud.py:427
 #, python-format
@@ -1876,7 +1842,7 @@ msgstr ""
 #: nova/api/ec2/cloud.py:444
 #, python-format
 msgid "Create key pair %s"
-msgstr "%s anahtar çiftini oluştur"
+msgstr ""
 
 #: nova/api/ec2/cloud.py:450 nova/api/ec2/cloud.py:469
 #: nova/api/openstack/compute/contrib/keypairs.py:107
@@ -1887,12 +1853,12 @@ msgstr ""
 #: nova/api/ec2/cloud.py:459
 #, python-format
 msgid "Import key %s"
-msgstr "%s anahtarını içeriye aktar"
+msgstr ""
 
 #: nova/api/ec2/cloud.py:479
 #, python-format
 msgid "Delete key pair %s"
-msgstr "%s anahtar çiftini sil"
+msgstr ""
 
 #: nova/api/ec2/cloud.py:621 nova/api/ec2/cloud.py:741
 msgid "Not enough parameters, need group_name or group_id"
@@ -1904,13 +1870,13 @@ msgid "%s Not enough parameters to build a valid rule"
 msgstr ""
 
 #: nova/api/ec2/cloud.py:633
-#, fuzzy, python-format
+#, python-format
 msgid "Invalid IP protocol %s."
-msgstr "Geçersiz IP %(protocol)s."
+msgstr ""
 
 #: nova/api/ec2/cloud.py:663 nova/api/ec2/cloud.py:695
 msgid "No rule for the specified parameters."
-msgstr "Belirlenmiş parametreler için hiç kural yok"
+msgstr ""
 
 #: nova/api/ec2/cloud.py:686
 #, python-format
@@ -1920,17 +1886,17 @@ msgstr ""
 #: nova/api/ec2/cloud.py:769
 #, python-format
 msgid "Get console output for instance %s"
-msgstr "%s örneği için konsol çıktısını getir"
+msgstr ""
 
 #: nova/api/ec2/cloud.py:840
 #, python-format
 msgid "Create volume from snapshot %s"
-msgstr "%s sistem görüntüsünden birim oluştur"
+msgstr ""
 
 #: nova/api/ec2/cloud.py:844 nova/api/openstack/compute/contrib/volumes.py:242
 #, python-format
 msgid "Create volume of %s GB"
-msgstr "%s GB'lık birim oluştur"
+msgstr ""
 
 #: nova/api/ec2/cloud.py:871
 msgid "Delete Failed"
@@ -1939,7 +1905,7 @@ msgstr ""
 #: nova/api/ec2/cloud.py:884
 #, python-format
 msgid "Attach volume %(volume_id)s to instance %(instance_id)s at %(device)s"
-msgstr "%(device)s'daki %(instance_id)s örneğine %(volume_id)s birimini bağla"
+msgstr ""
 
 #: nova/api/ec2/cloud.py:895
 msgid "Attach Failed."
@@ -1948,7 +1914,7 @@ msgstr ""
 #: nova/api/ec2/cloud.py:917 nova/api/openstack/compute/contrib/volumes.py:490
 #, python-format
 msgid "Detach volume %s"
-msgstr "Birimi ayır %s"
+msgstr ""
 
 #: nova/api/ec2/cloud.py:924
 msgid "Detach Volume Failed."
@@ -1958,16 +1924,16 @@ msgstr ""
 #: nova/api/ec2/cloud.py:1626 nova/api/ec2/cloud.py:1641
 #, python-format
 msgid "attribute not supported: %s"
-msgstr "Özellik desteklenmiyor: %s"
+msgstr ""
 
 #: nova/api/ec2/cloud.py:1082
 #, python-format
 msgid "vol = %s\n"
-msgstr "birim = %s\n"
+msgstr ""
 
 #: nova/api/ec2/cloud.py:1242
 msgid "Allocate address"
-msgstr "Adres tahsisi"
+msgstr ""
 
 #: nova/api/ec2/cloud.py:1246
 msgid "No more floating IPs available"
@@ -1976,7 +1942,7 @@ msgstr ""
 #: nova/api/ec2/cloud.py:1250
 #, python-format
 msgid "Release address %s"
-msgstr "%s adresini serbest bırak"
+msgstr ""
 
 #: nova/api/ec2/cloud.py:1255
 msgid "Unable to release IP Address."
@@ -1985,7 +1951,7 @@ msgstr ""
 #: nova/api/ec2/cloud.py:1258
 #, python-format
 msgid "Associate address %(public_ip)s to instance %(instance_id)s"
-msgstr "%(instance_id)s örneğine %(public_ip)s adresini ilişkilendir"
+msgstr ""
 
 #: nova/api/ec2/cloud.py:1268
 msgid "Unable to associate IP Address, no fixed_ips."
@@ -2012,7 +1978,7 @@ msgstr ""
 #: nova/api/ec2/cloud.py:1299
 #, python-format
 msgid "Disassociate address %s"
-msgstr "Adresi kes %s"
+msgstr ""
 
 #: nova/api/ec2/cloud.py:1304
 msgid "Floating ip is not associated."
@@ -2020,29 +1986,29 @@ msgstr ""
 
 #: nova/api/ec2/cloud.py:1344
 msgid "Image must be available"
-msgstr "İmaj müsait olmak zorunda"
+msgstr ""
 
 #: nova/api/ec2/cloud.py:1424
 msgid "Going to start terminating instances"
-msgstr "Örnekleri sonlandırma işlemi başlatılıyor"
+msgstr ""
 
 #: nova/api/ec2/cloud.py:1435
 #, python-format
 msgid "Reboot instance %r"
-msgstr "%r örneğini tekrar yükle"
+msgstr ""
 
 #: nova/api/ec2/cloud.py:1445
 msgid "Going to stop instances"
-msgstr "Örnekler durdurulacak"
+msgstr ""
 
 #: nova/api/ec2/cloud.py:1455
 msgid "Going to start instances"
-msgstr "Örnekler başlatılacak"
+msgstr ""
 
 #: nova/api/ec2/cloud.py:1546
 #, python-format
 msgid "De-registering image %s"
-msgstr "%s imaj kaydı siliniyor"
+msgstr ""
 
 #: nova/api/ec2/cloud.py:1562
 msgid "imageLocation is required"
@@ -2051,24 +2017,24 @@ msgstr ""
 #: nova/api/ec2/cloud.py:1581
 #, python-format
 msgid "Registered image %(image_location)s with id %(image_id)s"
-msgstr "%(image_id)s id ile %(image_location)s imajı kaydedildi"
+msgstr ""
 
 #: nova/api/ec2/cloud.py:1644
 msgid "user or group not specified"
-msgstr "Kullanıcı veya grup belirlenmedi"
+msgstr ""
 
 #: nova/api/ec2/cloud.py:1646
 msgid "only group \"all\" is supported"
-msgstr "Sadece \"all\" grubu destekleniyor"
+msgstr ""
 
 #: nova/api/ec2/cloud.py:1648
 msgid "operation_type must be add or remove"
-msgstr "İşlem türü eklenmek veya kaldırılmak zorunda"
+msgstr ""
 
 #: nova/api/ec2/cloud.py:1650
 #, python-format
 msgid "Updating image %s publicity"
-msgstr "%s imaj tanıtımı güncelleniyor"
+msgstr ""
 
 #: nova/api/ec2/cloud.py:1663
 #, python-format
@@ -2085,7 +2051,7 @@ msgstr ""
 #: nova/api/ec2/cloud.py:1724
 #, python-format
 msgid "Couldn't stop instance with in %d sec"
-msgstr "%d saniye içinde örnek durdurulamadı"
+msgstr ""
 
 #: nova/api/ec2/cloud.py:1742
 #, python-format
@@ -2121,9 +2087,8 @@ msgid "Request must include either Timestamp or Expires, but cannot contain both
 msgstr ""
 
 #: nova/api/ec2/ec2utils.py:274
-#, fuzzy
 msgid "Timestamp is invalid."
-msgstr "İstek geçersiz"
+msgstr ""
 
 #: nova/api/ec2/faults.py:31
 #, python-format
@@ -2145,11 +2110,11 @@ msgstr ""
 #: nova/api/metadata/handler.py:137 nova/api/metadata/handler.py:144
 #, python-format
 msgid "Failed to get metadata for ip: %s"
-msgstr "IP için metadata alma hata ile sonuçlandı: %s"
+msgstr ""
 
 #: nova/api/metadata/handler.py:139 nova/api/metadata/handler.py:190
 msgid "An unknown error has occurred. Please try your request again."
-msgstr "Bilinmeyen bir hata oluştu. Lütfen tekrar deneyin."
+msgstr ""
 
 #: nova/api/metadata/handler.py:156
 msgid "X-Instance-ID header is missing from request."
@@ -2172,9 +2137,9 @@ msgid "Invalid proxy request signature."
 msgstr ""
 
 #: nova/api/metadata/handler.py:188 nova/api/metadata/handler.py:195
-#, fuzzy, python-format
+#, python-format
 msgid "Failed to get metadata for instance id: %s"
-msgstr "IP için metadata alma hata ile sonuçlandı: %s"
+msgstr ""
 
 #: nova/api/metadata/vendordata_json.py:49
 msgid "file does not exist"
@@ -2191,21 +2156,21 @@ msgstr ""
 #: nova/api/openstack/__init__.py:81
 #, python-format
 msgid "Caught error: %s"
-msgstr "Yakalama hatası: %s"
+msgstr ""
 
 #: nova/api/openstack/__init__.py:90
 #, python-format
 msgid "%(url)s returned with HTTP %(status)d"
-msgstr "%(url)s HTTP %(status)d ile geri döndü"
+msgstr ""
 
 #: nova/api/openstack/__init__.py:177
 msgid "Must specify an ExtensionManager class"
-msgstr "UzantıYöneticisi sınıfı belirlenmek zorunda"
+msgstr ""
 
 #: nova/api/openstack/__init__.py:188 nova/api/openstack/__init__.py:351
 #, python-format
 msgid "Extended resource: %s"
-msgstr "Genişletilmiş kaynak: %s"
+msgstr ""
 
 #: nova/api/openstack/__init__.py:223 nova/api/openstack/__init__.py:398
 #, python-format
@@ -2213,13 +2178,11 @@ msgid ""
 "Extension %(ext_name)s: Cannot extend resource %(collection)s: No such "
 "resource"
 msgstr ""
-"%(ext_name)s uzantısı: %(collection)s kaynağı genişletilemiyor: Böyle bir"
-" kaynak yok"
 
 #: nova/api/openstack/__init__.py:228 nova/api/openstack/__init__.py:403
 #, python-format
 msgid "Extension %(ext_name)s extending resource: %(collection)s"
-msgstr "%(ext_name)s uzantısı kaynağı genişletiyor: %(collection)s"
+msgstr ""
 
 #: nova/api/openstack/__init__.py:271
 #: nova/api/openstack/compute/plugins/v3/servers.py:417
@@ -2234,14 +2197,14 @@ msgid "Not loading %s because it is not in the whitelist"
 msgstr ""
 
 #: nova/api/openstack/__init__.py:287
-#, fuzzy, python-format
+#, python-format
 msgid "v3 API Extension Blacklist: %s"
-msgstr "Genişletme fabrikası çağırılıyor %s"
+msgstr ""
 
 #: nova/api/openstack/__init__.py:289
-#, fuzzy, python-format
+#, python-format
 msgid "v3 API Extension Whitelist: %s"
-msgstr "Genişletme yükleniyor: %s"
+msgstr ""
 
 #: nova/api/openstack/__init__.py:296
 #, python-format
@@ -2249,9 +2212,9 @@ msgid "Extensions in both blacklist and whitelist: %s"
 msgstr ""
 
 #: nova/api/openstack/__init__.py:320
-#, fuzzy, python-format
+#, python-format
 msgid "Missing core API extensions: %s"
-msgstr "Genişletme yükleniyor: %s"
+msgstr ""
 
 #: nova/api/openstack/__init__.py:348
 #, python-format
@@ -2272,34 +2235,34 @@ msgstr ""
 
 #: nova/api/openstack/common.py:164 nova/api/openstack/common.py:198
 msgid "limit param must be an integer"
-msgstr "Sınır parametresi tam sayı olmak zorunda"
+msgstr ""
 
 #: nova/api/openstack/common.py:167 nova/api/openstack/common.py:202
 msgid "limit param must be positive"
-msgstr "Sınır parametresi pozitif olmak zorunda"
+msgstr ""
 
 #: nova/api/openstack/common.py:192
 msgid "offset param must be an integer"
-msgstr "Göreli konum parametresi tam sayı olmak zorunda"
+msgstr ""
 
 #: nova/api/openstack/common.py:206
 msgid "offset param must be positive"
-msgstr "Göreli konum parametresi pozitif olmak zorunda"
+msgstr ""
 
 #: nova/api/openstack/common.py:241 nova/api/openstack/compute/servers.py:570
 #: nova/api/openstack/compute/plugins/v3/servers.py:616
 #, python-format
 msgid "marker [%s] not found"
-msgstr " [%s] göstergesi bulunamadı"
+msgstr ""
 
 #: nova/api/openstack/common.py:281
 #, python-format
 msgid "href %s does not contain version"
-msgstr "%s referansı versiyon içermiyor"
+msgstr ""
 
 #: nova/api/openstack/common.py:296
 msgid "Image metadata limit exceeded"
-msgstr "İmaj üstveri sınırı aşıldı"
+msgstr ""
 
 #: nova/api/openstack/common.py:304
 msgid "Image metadata key cannot be blank"
@@ -2316,7 +2279,7 @@ msgstr ""
 #: nova/api/openstack/common.py:373
 #, python-format
 msgid "Cannot '%(action)s' while instance is in %(attr)s %(state)s"
-msgstr "Örnek %(attr)s %(state)s'de iken '%(action)s' yapılamaz"
+msgstr ""
 
 #: nova/api/openstack/common.py:376
 #, python-format
@@ -2324,82 +2287,82 @@ msgid "Cannot '%s' an instance which has never been active"
 msgstr ""
 
 #: nova/api/openstack/common.py:379
-#, fuzzy, python-format
+#, python-format
 msgid "Instance is in an invalid state for '%s'"
-msgstr "Örnek '%(action)s' için geçersiz durumda"
+msgstr ""
 
 #: nova/api/openstack/common.py:459
 msgid "Rejecting snapshot request, snapshots currently disabled"
-msgstr "Sistem görüntüsü isteği reddedildi, sistem görüntüleri şu anda devre dışı."
+msgstr ""
 
 #: nova/api/openstack/common.py:461
 msgid "Instance snapshots are not permitted at this time."
-msgstr "Örnek sistem görüntüleri şu an onaylanmadı."
+msgstr ""
 
 #: nova/api/openstack/extensions.py:198
 #, python-format
 msgid "Loaded extension: %s"
-msgstr "Yüklenen bölüm: %s"
+msgstr ""
 
 #: nova/api/openstack/extensions.py:237
 #: nova/api/openstack/compute/plugins/__init__.py:47
 #, python-format
 msgid "Ext name: %s"
-msgstr "Ext adı: %s"
+msgstr ""
 
 #: nova/api/openstack/extensions.py:238
 #: nova/api/openstack/compute/plugins/__init__.py:48
 #, python-format
 msgid "Ext alias: %s"
-msgstr "Ext takma adı: %s"
+msgstr ""
 
 #: nova/api/openstack/extensions.py:239
 #: nova/api/openstack/compute/plugins/__init__.py:49
 #, python-format
 msgid "Ext description: %s"
-msgstr "Ext açıklaması: %s"
+msgstr ""
 
 #: nova/api/openstack/extensions.py:241
 #: nova/api/openstack/compute/plugins/__init__.py:51
 #, python-format
 msgid "Ext namespace: %s"
-msgstr "Ext isim uzayı: %s"
+msgstr ""
 
 #: nova/api/openstack/extensions.py:242
 #, python-format
 msgid "Ext updated: %s"
-msgstr "Ext güncellendi: %s"
+msgstr ""
 
 #: nova/api/openstack/extensions.py:244
 #: nova/api/openstack/compute/plugins/__init__.py:54
 #, python-format
 msgid "Exception loading extension: %s"
-msgstr "İstisna yükleme uzantısı: %s"
+msgstr ""
 
 #: nova/api/openstack/extensions.py:258
 #, python-format
 msgid "Loading extension %s"
-msgstr "Genişletme yükleniyor: %s"
+msgstr ""
 
 #: nova/api/openstack/extensions.py:267
 #, python-format
 msgid "Calling extension factory %s"
-msgstr "Genişletme fabrikası çağırılıyor %s"
+msgstr ""
 
 #: nova/api/openstack/extensions.py:279
 #, python-format
 msgid "Failed to load extension %(ext_factory)s: %(exc)s"
-msgstr "%(ext_factory)s uzantısı yüklemede hata: %(exc)s"
+msgstr ""
 
 #: nova/api/openstack/extensions.py:350
 #, python-format
 msgid "Failed to load extension %(classpath)s: %(exc)s"
-msgstr "%(classpath)s uzantısı yüklemede hata: %(exc)s"
+msgstr ""
 
 #: nova/api/openstack/extensions.py:373
-#, fuzzy, python-format
+#, python-format
 msgid "Failed to load extension %(ext_name)s:%(exc)s"
-msgstr "%(ext_name)s uzantısı yüklemede hata: %(exc)s"
+msgstr ""
 
 #: nova/api/openstack/extensions.py:486
 msgid "Unexpected exception in API method"
@@ -2416,11 +2379,11 @@ msgstr ""
 
 #: nova/api/openstack/wsgi.py:209 nova/api/openstack/wsgi.py:627
 msgid "cannot understand JSON"
-msgstr "JSON dosyası anlaşılamadı"
+msgstr ""
 
 #: nova/api/openstack/wsgi.py:632
 msgid "too many body keys"
-msgstr "Çok sayıda gövde anahtarları"
+msgstr ""
 
 #: nova/api/openstack/wsgi.py:676
 #, python-format
@@ -2430,29 +2393,29 @@ msgstr ""
 #: nova/api/openstack/wsgi.py:680
 #, python-format
 msgid "Fault thrown: %s"
-msgstr "Hata fırlatıldı: %s"
+msgstr ""
 
 #: nova/api/openstack/wsgi.py:683
 #, python-format
 msgid "HTTP exception thrown: %s"
-msgstr "HTTP istisnası fırlatıldı: %s"
+msgstr ""
 
 #: nova/api/openstack/wsgi.py:797
 msgid "Unrecognized Content-Type provided in request"
-msgstr "İstekte tanınamayan içerik türü sağlayıcısı"
+msgstr ""
 
 #: nova/api/openstack/wsgi.py:801
 msgid "No Content-Type provided in request"
-msgstr "İstekte içerik türü sağlayıcısı yok"
+msgstr ""
 
 #: nova/api/openstack/wsgi.py:805
 msgid "Empty body provided in request"
-msgstr "İstekteki sağlayıcı gövdesi boş"
+msgstr ""
 
 #: nova/api/openstack/wsgi.py:917
 #, python-format
 msgid "There is no such action: %s"
-msgstr "Böyle bir işlem yok: %s"
+msgstr ""
 
 #: nova/api/openstack/wsgi.py:920 nova/api/openstack/wsgi.py:940
 #: nova/api/openstack/compute/server_metadata.py:59
@@ -2467,7 +2430,7 @@ msgstr "Böyle bir işlem yok: %s"
 #: nova/api/openstack/compute/plugins/v3/server_metadata.py:77
 #: nova/api/openstack/compute/plugins/v3/server_metadata.py:101
 msgid "Malformed request body"
-msgstr "Kusurlu istek gövdesi"
+msgstr ""
 
 #: nova/api/openstack/wsgi.py:924
 #, python-format
@@ -2481,7 +2444,7 @@ msgstr ""
 
 #: nova/api/openstack/wsgi.py:937
 msgid "Unsupported Content-Type"
-msgstr "Desteklenmeyen içerik türü"
+msgstr ""
 
 #: nova/api/openstack/wsgi.py:949
 #, python-format
@@ -2497,26 +2460,24 @@ msgstr ""
 
 #: nova/api/openstack/xmlutil.py:271
 msgid "element is not a child"
-msgstr "eleman çocuk değil"
+msgstr ""
 
 #: nova/api/openstack/xmlutil.py:420
 msgid "root element selecting a list"
-msgstr "listeden kök elemanı seçiliyor"
+msgstr ""
 
 #: nova/api/openstack/xmlutil.py:743
 #, python-format
 msgid "Template tree mismatch; adding slave %(slavetag)s to master %(mastertag)s"
 msgstr ""
-"Şablon ağacı uyumsuz; %(mastertag)s ana kaydına %(slavetag)s bağımlı "
-"birimi ekleniyor"
 
 #: nova/api/openstack/xmlutil.py:863
 msgid "subclasses must implement construct()!"
-msgstr "alt sınıflar yapıcı() oluşturmak zorunda!"
+msgstr ""
 
 #: nova/api/openstack/compute/extensions.py:39
 msgid "Initializing extension manager."
-msgstr "Genişletme yöneticisi başlatılıyor"
+msgstr ""
 
 #: nova/api/openstack/compute/flavors.py:109
 #: nova/api/openstack/compute/plugins/v3/flavors.py:116
@@ -2541,12 +2502,12 @@ msgstr ""
 #: nova/api/openstack/compute/plugins/v3/images.py:148
 #: nova/api/openstack/compute/plugins/v3/images.py:166
 msgid "Image not found."
-msgstr "İmaj bulunamadı"
+msgstr ""
 
 #: nova/api/openstack/compute/image_metadata.py:80
 #: nova/api/openstack/compute/plugins/v3/image_metadata.py:88
 msgid "Incorrect request body format"
-msgstr "Geçersiz gövde biçimi isteği."
+msgstr ""
 
 #: nova/api/openstack/compute/image_metadata.py:84
 #: nova/api/openstack/compute/server_metadata.py:81
@@ -2555,7 +2516,7 @@ msgstr "Geçersiz gövde biçimi isteği."
 #: nova/api/openstack/compute/plugins/v3/image_metadata.py:92
 #: nova/api/openstack/compute/plugins/v3/server_metadata.py:81
 msgid "Request body and URI mismatch"
-msgstr "URI ve gövde isteği uyumsuz"
+msgstr ""
 
 #: nova/api/openstack/compute/image_metadata.py:87
 #: nova/api/openstack/compute/server_metadata.py:85
@@ -2564,12 +2525,12 @@ msgstr "URI ve gövde isteği uyumsuz"
 #: nova/api/openstack/compute/plugins/v3/image_metadata.py:95
 #: nova/api/openstack/compute/plugins/v3/server_metadata.py:85
 msgid "Request body contains too many items"
-msgstr "İstek gövdesi çok sayıda öğe içeriyor"
+msgstr ""
 
 #: nova/api/openstack/compute/image_metadata.py:119
 #: nova/api/openstack/compute/plugins/v3/image_metadata.py:128
 msgid "Invalid metadata key"
-msgstr "Geçersiz özellik anahtarı"
+msgstr ""
 
 #: nova/api/openstack/compute/images.py:163
 #: nova/api/openstack/compute/plugins/v3/images.py:171
@@ -2579,12 +2540,12 @@ msgstr ""
 #: nova/api/openstack/compute/ips.py:69
 #: nova/api/openstack/compute/plugins/v3/ips.py:71
 msgid "Instance does not exist"
-msgstr "Örnek mevcut değil"
+msgstr ""
 
 #: nova/api/openstack/compute/ips.py:92
 #: nova/api/openstack/compute/plugins/v3/ips.py:94
 msgid "Instance is not a member of specified network"
-msgstr "Örnek belirlenmiş ağın bir üyesi değil"
+msgstr ""
 
 #: nova/api/openstack/compute/limits.py:164
 #: nova/api/openstack/compute/plugins/v3/limits.py:147
@@ -2597,7 +2558,7 @@ msgstr ""
 #: nova/api/openstack/compute/limits.py:292
 #: nova/api/openstack/compute/plugins/v3/limits.py:274
 msgid "This request was rate-limited."
-msgstr "Bu istek sayı limitlidir."
+msgstr ""
 
 #: nova/api/openstack/compute/server_metadata.py:39
 #: nova/api/openstack/compute/server_metadata.py:123
@@ -2606,20 +2567,20 @@ msgstr "Bu istek sayı limitlidir."
 #: nova/api/openstack/compute/plugins/v3/server_metadata.py:122
 #: nova/api/openstack/compute/plugins/v3/server_metadata.py:171
 msgid "Server does not exist"
-msgstr "Sunucu mevcut değil"
+msgstr ""
 
 #: nova/api/openstack/compute/server_metadata.py:155
 #: nova/api/openstack/compute/server_metadata.py:166
 #: nova/api/openstack/compute/plugins/v3/server_metadata.py:151
 #: nova/api/openstack/compute/plugins/v3/server_metadata.py:163
 msgid "Metadata item was not found"
-msgstr "İçerik özelliği bilgisi bulunamadı"
+msgstr ""
 
 #: nova/api/openstack/compute/servers.py:534
 #: nova/api/openstack/compute/contrib/cells.py:401
 #: nova/api/openstack/compute/plugins/v3/cells.py:408
 msgid "Invalid changes-since value"
-msgstr "Geçersiz değişiklik-oluşturma değeri"
+msgstr ""
 
 #: nova/api/openstack/compute/servers.py:553
 #: nova/api/openstack/compute/plugins/v3/servers.py:599
@@ -2628,9 +2589,9 @@ msgstr ""
 
 #: nova/api/openstack/compute/servers.py:573
 #: nova/api/openstack/compute/plugins/v3/servers.py:619
-#, fuzzy, python-format
+#, python-format
 msgid "Flavor '%s' could not be found "
-msgstr "%(flavor_id)s örnek türü bulunamadı."
+msgstr ""
 
 #: nova/api/openstack/compute/servers.py:591
 #: nova/api/openstack/compute/servers.py:737
@@ -2643,24 +2604,24 @@ msgstr "%(flavor_id)s örnek türü bulunamadı."
 #: nova/api/openstack/compute/plugins/v3/servers.py:1144
 #: nova/api/openstack/compute/plugins/v3/servers.py:1299
 msgid "Instance could not be found"
-msgstr "Örnek bulunamadı."
+msgstr ""
 
 #: nova/api/openstack/compute/servers.py:622
 #: nova/api/openstack/compute/plugins/v3/personalities.py:88
 #, python-format
 msgid "Bad personality format: missing %s"
-msgstr "Yanlış kişisel biçim: %s bulunamadı"
+msgstr ""
 
 #: nova/api/openstack/compute/servers.py:625
 #: nova/api/openstack/compute/plugins/v3/personalities.py:91
 msgid "Bad personality format"
-msgstr "Yanlış kişisel biçim"
+msgstr ""
 
 #: nova/api/openstack/compute/servers.py:628
 #: nova/api/openstack/compute/plugins/v3/personalities.py:94
 #, python-format
 msgid "Personality content for %s cannot be decoded"
-msgstr "%s için kişisel içerik çözümlenemedi"
+msgstr ""
 
 #: nova/api/openstack/compute/servers.py:643
 msgid "Unknown argment : port"
@@ -2676,39 +2637,39 @@ msgstr ""
 #: nova/api/openstack/compute/plugins/v3/servers.py:696
 #, python-format
 msgid "Bad networks format: network uuid is not in proper format (%s)"
-msgstr "Yanlış ağ biçimi: ağ UUID'si uygun formatta değil(%s)"
+msgstr ""
 
 #: nova/api/openstack/compute/servers.py:666
 #: nova/api/openstack/compute/plugins/v3/servers.py:669
 #, python-format
 msgid "Invalid fixed IP address (%s)"
-msgstr "Geçersiz değişken IP adresi (%s)"
+msgstr ""
 
 #: nova/api/openstack/compute/servers.py:679
 #: nova/api/openstack/compute/plugins/v3/servers.py:711
 #, python-format
 msgid "Duplicate networks (%s) are not allowed"
-msgstr "Tekrarlanan ağlara (%s) izin verilmiyor"
+msgstr ""
 
 #: nova/api/openstack/compute/servers.py:685
 #: nova/api/openstack/compute/plugins/v3/servers.py:717
 #, python-format
 msgid "Bad network format: missing %s"
-msgstr "Yanlış ağ biçimi: %s bulunamadı"
+msgstr ""
 
 #: nova/api/openstack/compute/servers.py:688
 #: nova/api/openstack/compute/servers.py:789
 #: nova/api/openstack/compute/plugins/v3/servers.py:720
 msgid "Bad networks format"
-msgstr "Hatalı ağ biçimi"
+msgstr ""
 
 #: nova/api/openstack/compute/servers.py:714
 msgid "Userdata content cannot be decoded"
-msgstr "Kullanıcı verisi içeriği çözülemez"
+msgstr ""
 
 #: nova/api/openstack/compute/servers.py:719
 msgid "accessIPv4 is not proper IPv4 format"
-msgstr "IPv4 adresi uygun IPv4 formatında değil"
+msgstr ""
 
 #: nova/api/openstack/compute/servers.py:724
 msgid "accessIPv6 is not proper IPv6 format"
@@ -2717,12 +2678,12 @@ msgstr ""
 #: nova/api/openstack/compute/servers.py:753
 #: nova/api/openstack/compute/plugins/v3/servers.py:776
 msgid "Server name is not defined"
-msgstr "Sunucu adı tanımlanmadı"
+msgstr ""
 
 #: nova/api/openstack/compute/servers.py:805
 #: nova/api/openstack/compute/servers.py:932
 msgid "Invalid flavorRef provided."
-msgstr "Geçersiz örnek türü sağlayıcısı"
+msgstr ""
 
 #: nova/api/openstack/compute/servers.py:845
 msgid ""
@@ -2738,12 +2699,12 @@ msgstr ""
 #: nova/api/openstack/compute/servers.py:929
 #: nova/api/openstack/compute/plugins/v3/servers.py:917
 msgid "Can not find requested image"
-msgstr "İstenilen imaj dosyası bulunamadı"
+msgstr ""
 
 #: nova/api/openstack/compute/servers.py:935
 #: nova/api/openstack/compute/plugins/v3/servers.py:923
 msgid "Invalid key_name provided."
-msgstr "Geçersiz anahtar adı verildi."
+msgstr ""
 
 #: nova/api/openstack/compute/servers.py:938
 #: nova/api/openstack/compute/plugins/v3/servers.py:926
@@ -2755,37 +2716,35 @@ msgid "HostId cannot be updated."
 msgstr ""
 
 #: nova/api/openstack/compute/servers.py:1026
-#, fuzzy
 msgid "Personality cannot be updated."
-msgstr "%s için kişisel içerik çözümlenemedi"
+msgstr ""
 
 #: nova/api/openstack/compute/servers.py:1052
 #: nova/api/openstack/compute/servers.py:1069
 #: nova/api/openstack/compute/plugins/v3/servers.py:1054
 #: nova/api/openstack/compute/plugins/v3/servers.py:1071
 msgid "Instance has not been resized."
-msgstr "Örnek tekrar boyutlandırılacak şekilde ayarlanmadı."
+msgstr ""
 
 #: nova/api/openstack/compute/servers.py:1072
 #: nova/api/openstack/compute/plugins/v3/servers.py:1074
-#, fuzzy
 msgid "Flavor used by the instance could not be found."
-msgstr "%(instance_id)s örneği bulunamadı."
+msgstr ""
 
 #: nova/api/openstack/compute/servers.py:1088
 #: nova/api/openstack/compute/plugins/v3/servers.py:1090
 msgid "Argument 'type' for reboot is not HARD or SOFT"
-msgstr "Önyükleme için argüman türü HARD veya SOFT değil"
+msgstr ""
 
 #: nova/api/openstack/compute/servers.py:1092
 #: nova/api/openstack/compute/plugins/v3/servers.py:1094
 msgid "Missing argument 'type' for reboot"
-msgstr "Önyükleme için tür argümanı eksik"
+msgstr ""
 
 #: nova/api/openstack/compute/servers.py:1114
 #: nova/api/openstack/compute/plugins/v3/servers.py:1116
 msgid "Unable to locate requested flavor."
-msgstr "İstenilen örnek türü konumlandırılamıyor."
+msgstr ""
 
 #: nova/api/openstack/compute/servers.py:1117
 #: nova/api/openstack/compute/plugins/v3/servers.py:1119
@@ -2799,59 +2758,52 @@ msgstr ""
 
 #: nova/api/openstack/compute/servers.py:1127
 #: nova/api/openstack/compute/plugins/v3/servers.py:1129
-#, fuzzy
 msgid "Image that the instance was started with could not be found."
-msgstr "%(instance_id)s örneği bulunamadı."
+msgstr ""
 
 #: nova/api/openstack/compute/servers.py:1131
 #: nova/api/openstack/compute/plugins/v3/servers.py:1133
-#, fuzzy
 msgid "Invalid instance image."
-msgstr "%s geçerli bir örnek ismidir"
+msgstr ""
 
 #: nova/api/openstack/compute/servers.py:1152
 msgid "Missing imageRef attribute"
-msgstr "İmaj referans özelliği eksik"
+msgstr ""
 
 #: nova/api/openstack/compute/servers.py:1161
 msgid "Invalid imageRef provided."
-msgstr "Geçersiz imaj referansı verildi."
+msgstr ""
 
 #: nova/api/openstack/compute/servers.py:1192
 msgid "Missing flavorRef attribute"
-msgstr "Örnek türü referans özelliği eksik"
+msgstr ""
 
 #: nova/api/openstack/compute/servers.py:1205
 msgid "No adminPass was specified"
-msgstr "Belirlenmiş bir yönetici parolası yok"
+msgstr ""
 
 #: nova/api/openstack/compute/servers.py:1209
 #: nova/api/openstack/compute/servers.py:1426
 msgid "Invalid adminPass"
-msgstr "Geçersiz yönetici parolası"
+msgstr ""
 
 #: nova/api/openstack/compute/servers.py:1215
 #: nova/api/openstack/compute/plugins/v3/admin_password.py:76
-#, fuzzy
 msgid "Unable to set password on instance"
-msgstr "Örnek kapatmada hata oluştu."
+msgstr ""
 
 #: nova/api/openstack/compute/servers.py:1224
 #: nova/api/openstack/compute/plugins/v3/servers.py:1206
 msgid "Unable to parse metadata key/value pairs."
-msgstr "Çözümlenemeyen metadata anahtar/değer çifti."
+msgstr ""
 
 #: nova/api/openstack/compute/servers.py:1237
 msgid "Resize request has invalid 'flavorRef' attribute."
 msgstr ""
-"Yeniden boyutlandırma isteği geçersiz örnek türü referansı özelliğine "
-"sahip."
 
 #: nova/api/openstack/compute/servers.py:1240
 msgid "Resize requests require 'flavorRef' attribute."
 msgstr ""
-"Yeniden boyutlandırma isteği geçersiz örnek türü referansı özelliği "
-"gerektirir."
 
 #: nova/api/openstack/compute/servers.py:1258
 #: nova/api/openstack/compute/contrib/aggregates.py:147
@@ -2860,26 +2812,26 @@ msgstr ""
 #: nova/api/openstack/compute/plugins/v3/keypairs.py:91
 #: nova/api/openstack/compute/plugins/v3/servers.py:1243
 msgid "Invalid request body"
-msgstr "Geçersiz istek gövdesi"
+msgstr ""
 
 #: nova/api/openstack/compute/servers.py:1264
 msgid "Could not parse imageRef from request."
-msgstr "İstekte bulunulan imaj referansı çözümlenemedi."
+msgstr ""
 
 #: nova/api/openstack/compute/servers.py:1325
 #: nova/api/openstack/compute/plugins/v3/servers.py:1305
 msgid "Cannot find image for rebuild"
-msgstr "Yeniden kurulum için imaj dosyası bulunamadı."
+msgstr ""
 
 #: nova/api/openstack/compute/servers.py:1358
 msgid "createImage entity requires name attribute"
-msgstr "createImage varlığının isim özelliğine ihtiyacı var"
+msgstr ""
 
 #: nova/api/openstack/compute/servers.py:1452
 #: nova/api/openstack/compute/plugins/v3/servers.py:1504
-#, fuzzy, python-format
+#, python-format
 msgid "Removing options '%s' from query"
-msgstr "Sorgudan '%(unk_opt_str)s' seçenekleri kaldırılıyor"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/admin_actions.py:60
 #: nova/api/openstack/compute/contrib/admin_actions.py:79
@@ -2920,7 +2872,7 @@ msgstr ""
 #: nova/api/openstack/compute/contrib/admin_actions.py:136
 #, python-format
 msgid "Error in migrate %s"
-msgstr "Göçte hata %s"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/admin_actions.py:152
 #, python-format
@@ -2945,27 +2897,26 @@ msgstr ""
 #: nova/api/openstack/compute/contrib/admin_actions.py:232
 #, python-format
 msgid "createBackup entity requires %s attribute"
-msgstr "yedekOluşturma birimi %s özelliğini gerektiriyor"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/admin_actions.py:236
 msgid "Malformed createBackup entity"
-msgstr "Bozuk yedekOluşturma birimi"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/admin_actions.py:242
 msgid "createBackup attribute 'rotation' must be an integer"
-msgstr "yedekOluşturma 'dönüşme' özelliği tamsayı olmak zorunda"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/admin_actions.py:245
-#, fuzzy
 msgid "createBackup attribute 'rotation' must be greater than or equal to zero"
-msgstr "yedekOluşturma 'dönüşme' özelliği tamsayı olmak zorunda"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/admin_actions.py:261
 #: nova/api/openstack/compute/contrib/console_output.py:46
 #: nova/api/openstack/compute/contrib/server_diagnostics.py:48
 #: nova/api/openstack/compute/contrib/server_start_stop.py:42
 msgid "Instance not found"
-msgstr "Örnek bulunamadı"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/admin_actions.py:291
 #: nova/api/openstack/compute/plugins/v3/admin_actions.py:285
@@ -2975,14 +2926,14 @@ msgid ""
 msgstr ""
 
 #: nova/api/openstack/compute/contrib/admin_actions.py:306
-#, fuzzy, python-format
+#, python-format
 msgid "Live migration of instance %s to another host failed"
-msgstr "%(id)s'dan %(host)s sunucusuna örnek göçü hatalı"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/admin_actions.py:309
 #, python-format
 msgid "Live migration of instance %(id)s to host %(host)s failed"
-msgstr "%(id)s'dan %(host)s sunucusuna örnek göçü hatalı"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/admin_actions.py:327
 #: nova/api/openstack/compute/plugins/v3/admin_actions.py:320
@@ -3016,7 +2967,7 @@ msgstr ""
 #: nova/api/openstack/compute/contrib/aggregates.py:143
 #, python-format
 msgid "Aggregates does not have %s action"
-msgstr "Kümeler %s işlemine sahip değil"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/aggregates.py:157
 #: nova/api/openstack/compute/contrib/aggregates.py:162
@@ -3048,26 +2999,23 @@ msgstr ""
 #: nova/api/openstack/compute/contrib/attach_interfaces.py:143
 #: nova/api/openstack/compute/contrib/attach_interfaces.py:166
 #: nova/api/openstack/compute/plugins/v3/attach_interfaces.py:164
-#, fuzzy
 msgid "Network driver does not support this function."
-msgstr "Misafir sistem sürücüsü güvenlik duvarı kurallarını desteklemiyor"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/attach_interfaces.py:114
-#, fuzzy
 msgid "Failed to attach interface"
-msgstr "Tekrar yükleme örneğinde hata oluştu."
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/attach_interfaces.py:122
 #: nova/api/openstack/compute/plugins/v3/attach_interfaces.py:122
-#, fuzzy
 msgid "Attachments update is not supported"
-msgstr "Özellik desteklenmiyor: %s"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/attach_interfaces.py:133
 #: nova/api/openstack/compute/plugins/v3/attach_interfaces.py:133
-#, fuzzy, python-format
+#, python-format
 msgid "Detach interface %s"
-msgstr "%s VLAN arayüzü başlatılıyor "
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/baremetal_nodes.py:193
 #: nova/api/openstack/compute/plugins/v3/baremetal_nodes.py:201
@@ -3075,15 +3023,14 @@ msgid "Must specify id or address"
 msgstr ""
 
 #: nova/api/openstack/compute/contrib/cells.py:243
-#, fuzzy, python-format
+#, python-format
 msgid "Cell %(id)s not found."
-msgstr "Kural (%s) bulunamadı"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/cells.py:274
 #: nova/api/openstack/compute/plugins/v3/cells.py:277
-#, fuzzy
 msgid "Cell name cannot be empty"
-msgstr "Güvenlik grup adı boş bırakılamaz"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/cells.py:278
 #: nova/api/openstack/compute/plugins/v3/cells.py:281
@@ -3115,20 +3062,18 @@ msgstr ""
 #: nova/api/openstack/compute/contrib/certificates.py:63
 #: nova/api/openstack/compute/plugins/v3/certificates.py:66
 msgid "Only root certificate can be retrieved."
-msgstr "Sadece kök sertifikası alınabilir."
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/cloudpipe.py:150
 msgid ""
 "Unable to claim IP for VPN instances, ensure it isn't running, and try "
 "again in a few minutes"
 msgstr ""
-"VPN örnekleri için IP talep edilemiyor, çalışmadığından emin olun ve "
-"birkaç dakika içerisinde tekrar deneyin"
 
 #: nova/api/openstack/compute/contrib/cloudpipe_update.py:42
-#, fuzzy, python-format
+#, python-format
 msgid "Unknown action %s"
-msgstr "Tanınmayan zincir: %r"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/console_output.py:51
 msgid "os-getConsoleOutput malformed or missing from request body"
@@ -3144,9 +3089,8 @@ msgid "Unable to get console"
 msgstr ""
 
 #: nova/api/openstack/compute/contrib/consoles.py:52
-#, fuzzy
 msgid "Instance not yet ready"
-msgstr "Örnek tekrar boyutlandırılacak şekilde ayarlanmadı."
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/coverage_ext.py:98
 #: nova/api/openstack/compute/plugins/v3/coverage.py:113
@@ -3161,15 +3105,13 @@ msgstr ""
 
 #: nova/api/openstack/compute/contrib/coverage_ext.py:165
 #: nova/api/openstack/compute/plugins/v3/coverage.py:194
-#, fuzzy
 msgid "Coverage not running"
-msgstr "XVP çalışmıyor..."
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/coverage_ext.py:194
 #: nova/api/openstack/compute/plugins/v3/coverage.py:227
-#, fuzzy
 msgid "Invalid path"
-msgstr "Geçersiz metadata"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/coverage_ext.py:198
 #: nova/api/openstack/compute/plugins/v3/coverage.py:231
@@ -3183,9 +3125,9 @@ msgstr ""
 
 #: nova/api/openstack/compute/contrib/coverage_ext.py:218
 #: nova/api/openstack/compute/plugins/v3/coverage.py:251
-#, fuzzy, python-format
+#, python-format
 msgid "Directory conflict: %s already exists"
-msgstr "%s güvenlik grubu zaten var"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/coverage_ext.py:276
 #: nova/api/openstack/compute/plugins/v3/coverage.py:132
@@ -3193,15 +3135,15 @@ msgid "Python coverage module is not installed."
 msgstr ""
 
 #: nova/api/openstack/compute/contrib/coverage_ext.py:284
-#, fuzzy, python-format
+#, python-format
 msgid "Coverage doesn't have %s action"
-msgstr "Kümeler %s işlemine sahip değil"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/disk_config.py:44
 #: nova/api/openstack/compute/plugins/v3/disk_config.py:45
 #, python-format
 msgid "%s must be either 'MANUAL' or 'AUTO'."
-msgstr "%s 'MANUAL' veya 'AUTO' olmak zorunda"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/evacuate.py:61
 #: nova/api/openstack/compute/plugins/v3/evacuate.py:63
@@ -3209,9 +3151,8 @@ msgid "admin password can't be changed on existing disk"
 msgstr ""
 
 #: nova/api/openstack/compute/contrib/evacuate.py:69
-#, fuzzy
 msgid "host and onSharedStorage must be specified."
-msgstr "Sunucu ve blok_göçü tanımlanmak zorunda."
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/evacuate.py:75
 #: nova/api/openstack/compute/plugins/v3/evacuate.py:77
@@ -3227,9 +3168,9 @@ msgstr ""
 
 #: nova/api/openstack/compute/contrib/fixed_ips.py:74
 #: nova/api/openstack/compute/plugins/v3/fixed_ips.py:82
-#, fuzzy, python-format
+#, python-format
 msgid "Fixed IP %s not found"
-msgstr "Kural (%s) bulunamadı"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/flavor_access.py:77
 #: nova/api/openstack/compute/contrib/flavor_access.py:101
@@ -3248,12 +3189,11 @@ msgstr ""
 #: nova/api/openstack/compute/contrib/flavorextraspecs.py:56
 #: nova/api/openstack/compute/plugins/v3/flavors_extraspecs.py:58
 msgid "No Request Body"
-msgstr "İstek gövdesi yok"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/floating_ip_dns.py:224
-#, fuzzy
 msgid "DNS entries not found."
-msgstr "Örnek bulunamadı"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/floating_ips.py:130
 #: nova/api/openstack/compute/contrib/floating_ips.py:178
@@ -3264,28 +3204,28 @@ msgstr ""
 #: nova/api/openstack/compute/contrib/floating_ips.py:163
 #, python-format
 msgid "No more floating ips in pool %s."
-msgstr "%s havuzunda daha fazla değişken IP yok"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/floating_ips.py:165
 msgid "No more floating ips available."
-msgstr "Daha fazla değişken IP mevcut değil"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/floating_ips.py:190
-#, fuzzy, python-format
+#, python-format
 msgid "Floating ip %s has been disassociated"
-msgstr "%(address)s değişken IP adresi ilişkilendirildi."
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/floating_ips.py:217
 #: nova/api/openstack/compute/contrib/floating_ips.py:282
 #: nova/api/openstack/compute/contrib/security_groups.py:458
 #: nova/api/openstack/compute/plugins/v3/security_groups.py:79
 msgid "Missing parameter dict"
-msgstr "Parametre dizini eksik"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/floating_ips.py:220
 #: nova/api/openstack/compute/contrib/floating_ips.py:285
 msgid "Address not specified"
-msgstr "Adres belirtilmedi"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/floating_ips.py:227
 msgid "No nw_info cache associated with instance"
@@ -3293,12 +3233,11 @@ msgstr ""
 
 #: nova/api/openstack/compute/contrib/floating_ips.py:232
 msgid "No fixed ips associated to instance"
-msgstr "Örnekle değişken IP ilişkilendirilmedi"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/floating_ips.py:243
-#, fuzzy
 msgid "Specified fixed address not assigned to instance"
-msgstr "Örnekle değişken IP ilişkilendirilmedi"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/floating_ips.py:257
 msgid "floating ip is already associated"
@@ -3322,9 +3261,9 @@ msgid "Floating ip is not associated"
 msgstr ""
 
 #: nova/api/openstack/compute/contrib/floating_ips.py:312
-#, fuzzy, python-format
+#, python-format
 msgid "Floating ip %(address)s is not associated with instance %(id)s."
-msgstr "%(address)s değişken IP adresi ilişkilendirilemedi."
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/floating_ips_bulk.py:147
 #: nova/cmd/manage.py:415
@@ -3333,21 +3272,20 @@ msgid "/%s should be specified as single address(es) not in cidr format"
 msgstr ""
 
 #: nova/api/openstack/compute/contrib/fping.py:54
-#, fuzzy
 msgid "fping utility is not found."
-msgstr "Kural (%s) bulunamadı"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/hosts.py:184
 #: nova/api/openstack/compute/plugins/v3/hosts.py:151
 #, python-format
 msgid "Invalid update setting: '%s'"
-msgstr "Geçersiz güncelleme ayarı: '%s'"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/hosts.py:187
 #: nova/api/openstack/compute/plugins/v3/hosts.py:154
 #, python-format
 msgid "Invalid status: '%s'"
-msgstr "Geçersiz durum: %s"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/hosts.py:189
 #: nova/api/openstack/compute/plugins/v3/hosts.py:156
@@ -3379,9 +3317,9 @@ msgstr ""
 
 #: nova/api/openstack/compute/contrib/hosts.py:230
 #: nova/api/openstack/compute/plugins/v3/hosts.py:199
-#, fuzzy, python-format
+#, python-format
 msgid "Disabling host %s."
-msgstr "Sunucu durumu güncelleniyor"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/hosts.py:235
 #: nova/api/openstack/compute/plugins/v3/hosts.py:204
@@ -3426,21 +3364,21 @@ msgstr ""
 
 #: nova/api/openstack/compute/contrib/multinic.py:53
 msgid "Missing 'networkId' argument for addFixedIp"
-msgstr "addFixedlp için 'networkld' argümanı bulunamadı"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/multinic.py:69
 msgid "Missing 'address' argument for removeFixedIp"
-msgstr "removeFixedIp için 'address' argümanı bulunamadı"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/multinic.py:78
 #, python-format
 msgid "Unable to find address %r"
-msgstr "%r adresini bulmak olanaksız"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/networks_associate.py:24
-#, fuzzy, python-format
+#, python-format
 msgid "Disassociating host with network with id %s"
-msgstr "%s id'si ile ağ ayrılıyor"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/networks_associate.py:28
 #: nova/api/openstack/compute/contrib/networks_associate.py:39
@@ -3451,29 +3389,29 @@ msgstr "%s id'si ile ağ ayrılıyor"
 #: nova/api/openstack/compute/contrib/os_tenant_networks.py:113
 #: nova/api/openstack/compute/contrib/os_tenant_networks.py:135
 msgid "Network not found"
-msgstr "Ağ bulunamadı"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/networks_associate.py:35
-#, fuzzy, python-format
+#, python-format
 msgid "Disassociating project with network with id %s"
-msgstr "%s id'si ile ağ ayrılıyor"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/os_networks.py:75
 #, python-format
 msgid "Disassociating network with id %s"
-msgstr "%s id'si ile ağ ayrılıyor"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/os_networks.py:86
 #: nova/api/openstack/compute/contrib/os_tenant_networks.py:109
 #, python-format
 msgid "Showing network with id %s"
-msgstr "%s id'li ağ gösteriliyor"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/os_networks.py:96
 #: nova/api/openstack/compute/contrib/os_tenant_networks.py:127
 #, python-format
 msgid "Deleting network with id %s"
-msgstr "%s id'li ağ siliniyor"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/os_networks.py:111
 msgid "Missing network in body"
@@ -3511,9 +3449,8 @@ msgid "Failed to update usages deallocating network."
 msgstr ""
 
 #: nova/api/openstack/compute/contrib/os_tenant_networks.py:154
-#, fuzzy
 msgid "No CIDR requested"
-msgstr "İstenilen imaj dosyası bulunamadı"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/os_tenant_networks.py:160
 msgid "Requested network does not contain enough (2+) usable hosts"
@@ -3524,18 +3461,16 @@ msgid "CIDR is malformed."
 msgstr ""
 
 #: nova/api/openstack/compute/contrib/os_tenant_networks.py:167
-#, fuzzy
 msgid "Address could not be converted."
-msgstr "Kaynak bulunamadı."
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/os_tenant_networks.py:175
 msgid "Quota exceeded, too many networks."
 msgstr ""
 
 #: nova/api/openstack/compute/contrib/os_tenant_networks.py:186
-#, fuzzy
 msgid "Create networks failed"
-msgstr "Tanımlı bir ağ yok."
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/quotas.py:73
 #: nova/api/openstack/compute/plugins/v3/quota_sets.py:83
@@ -3591,42 +3526,40 @@ msgstr ""
 #: nova/api/openstack/compute/contrib/scheduler_hints.py:39
 #: nova/api/openstack/compute/plugins/v3/scheduler_hints.py:38
 msgid "Malformed scheduler_hints attribute"
-msgstr "Bozuk scheduler_hints özelliği"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/security_group_default_rules.py:129
 #: nova/api/openstack/compute/contrib/security_groups.py:372
 msgid "Not enough parameters to build a valid rule."
-msgstr "Geçerli bir kuralı oluşturmak için yeterli parametre yok."
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/security_group_default_rules.py:133
-#, fuzzy
 msgid "This default rule already exists."
-msgstr "Bu kural zaten grupta var %s"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/security_group_default_rules.py:154
-#, fuzzy, python-format
+#, python-format
 msgid "Showing security_group_default_rule with id %s"
-msgstr "%s id'li ağ gösteriliyor"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/security_group_default_rules.py:158
-#, fuzzy
 msgid "security group default rule not found"
-msgstr "%(rule_id)s kurallı güvenlik grubu bulunamadı."
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/security_groups.py:380
-#, fuzzy, python-format
+#, python-format
 msgid "Bad prefix for network in cidr %s"
-msgstr "Global ipv6 için yanlış sonek: %s"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/security_groups.py:461
 #: nova/api/openstack/compute/plugins/v3/security_groups.py:82
 msgid "Security group not specified"
-msgstr "Güvenlik grubu belirlenmedi"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/security_groups.py:465
 #: nova/api/openstack/compute/plugins/v3/security_groups.py:86
 msgid "Security group name cannot be empty"
-msgstr "Güvenlik grup adı boş bırakılamaz"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/server_start_stop.py:50
 #: nova/api/openstack/compute/plugins/v3/servers.py:1475
@@ -3654,9 +3587,8 @@ msgid "Missing disabled reason field"
 msgstr ""
 
 #: nova/api/openstack/compute/contrib/services.py:192
-#, fuzzy
 msgid "Unknown service"
-msgstr "Kimlik doğrulama hatası"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/simple_tenant_usage.py:228
 #: nova/api/openstack/compute/plugins/v3/simple_tenant_usage.py:237
@@ -3666,12 +3598,12 @@ msgstr ""
 #: nova/api/openstack/compute/contrib/volumes.py:76
 #, python-format
 msgid "vol=%s"
-msgstr "birim=%s"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/volumes.py:187
 #, python-format
 msgid "Delete volume with id: %s"
-msgstr "%s id'li birim siliniyor"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/volumes.py:360
 #: nova/api/openstack/compute/contrib/volumes.py:501
@@ -3681,25 +3613,25 @@ msgstr ""
 
 #: nova/api/openstack/compute/contrib/volumes.py:381
 #: nova/api/openstack/compute/plugins/v3/extended_volumes.py:134
-#, fuzzy, python-format
+#, python-format
 msgid "Bad volumeId format: volumeId is not in proper format (%s)"
-msgstr "Yanlış ağ biçimi: ağ UUID'si uygun formatta değil(%s)"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/volumes.py:400
 #: nova/api/openstack/compute/plugins/v3/extended_volumes.py:159
 #, python-format
 msgid "Attach volume %(volume_id)s to instance %(server_id)s at %(device)s"
-msgstr "%(device)s'daki %(server_id)s örneğine %(volume_id)s birimi ekleniyor"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/volumes.py:624
 #, python-format
 msgid "Delete snapshot with id: %s"
-msgstr "%s id'li sistem görüntüsü siliniyor"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/volumes.py:664
 #, python-format
 msgid "Create snapshot from volume %s"
-msgstr "%s biriminden sistem görüntüsü oluşturuluyor"
+msgstr ""
 
 #: nova/api/openstack/compute/contrib/volumes.py:671
 #, python-format
@@ -3707,14 +3639,14 @@ msgid "Invalid value '%s' for force."
 msgstr ""
 
 #: nova/api/openstack/compute/plugins/__init__.py:36
-#, fuzzy, python-format
+#, python-format
 msgid "Loaded extension %s"
-msgstr "Yüklenen bölüm: %s"
+msgstr ""
 
 #: nova/api/openstack/compute/plugins/__init__.py:52
-#, fuzzy, python-format
+#, python-format
 msgid "Ext version: %i"
-msgstr "Ext açıklaması: %s"
+msgstr ""
 
 #: nova/api/openstack/compute/plugins/v3/admin_actions.py:225
 #, python-format
@@ -3808,14 +3740,14 @@ msgid "Filter out extension %s from discover list"
 msgstr ""
 
 #: nova/api/openstack/compute/plugins/v3/fixed_ips.py:66
-#, fuzzy, python-format
+#, python-format
 msgid "Reserving IP address %s"
-msgstr "%s adresini serbest bırak"
+msgstr ""
 
 #: nova/api/openstack/compute/plugins/v3/fixed_ips.py:69
-#, fuzzy, python-format
+#, python-format
 msgid "Unreserving IP address %s"
-msgstr "%s adresini serbest bırak"
+msgstr ""
 
 #: nova/api/openstack/compute/plugins/v3/flavor_access.py:166
 #: nova/api/openstack/compute/plugins/v3/flavor_access.py:191
@@ -3957,9 +3889,9 @@ msgid "max_count must be > 0"
 msgstr ""
 
 #: nova/api/openstack/compute/plugins/v3/servers.py:962
-#, fuzzy, python-format
+#, python-format
 msgid "Running _create_extension_point for %s"
-msgstr "Genişletme fabrikası çağırılıyor %s"
+msgstr ""
 
 #: nova/api/openstack/compute/plugins/v3/servers.py:968
 #, python-format
@@ -4058,9 +3990,9 @@ msgid "Error locating next hop for message: %(exc)s"
 msgstr ""
 
 #: nova/cells/messaging.py:440
-#, fuzzy, python-format
+#, python-format
 msgid "Failed to send message to cell: %(next_hop)s: %(exc)s"
-msgstr "%(ext_factory)s uzantısı yüklemede hata: %(exc)s"
+msgstr ""
 
 #: nova/cells/messaging.py:519
 #, python-format
@@ -4093,14 +4025,13 @@ msgid "Received capacities from child cell %(cell_name)s: %(capacities)s"
 msgstr ""
 
 #: nova/cells/messaging.py:910
-#, fuzzy, python-format
+#, python-format
 msgid "Got update for instance: %(instance)s"
-msgstr "%(instance_id)s örneği için ağ bulunamadı."
+msgstr ""
 
 #: nova/cells/messaging.py:954
-#, fuzzy
 msgid "Got update to delete instance"
-msgstr "%(instance_id)s örneği için ağ bulunamadı."
+msgstr ""
 
 #: nova/cells/messaging.py:969
 #, python-format
@@ -4202,9 +4133,9 @@ msgid ""
 msgstr ""
 
 #: nova/cells/scheduler.py:283
-#, fuzzy, python-format
+#, python-format
 msgid "Error scheduling instances %(instance_uuids)s"
-msgstr "%(instance_id)s örneği için ağ bulunamadı."
+msgstr ""
 
 #: nova/cells/state.py:348
 #, python-format
@@ -4304,9 +4235,9 @@ msgid "start deployment for node %(node_id)s, params %(params)s"
 msgstr ""
 
 #: nova/cmd/baremetal_deploy_helper.py:254
-#, fuzzy, python-format
+#, python-format
 msgid "deployment to node %s failed"
-msgstr "eleman çocuk değil"
+msgstr ""
 
 #: nova/cmd/baremetal_deploy_helper.py:258
 #, python-format
@@ -4384,18 +4315,17 @@ msgstr ""
 
 #: nova/cmd/manage.py:320 nova/cmd/manage.py:395 nova/cmd/manage.py:720
 #: nova/cmd/manage.py:734 nova/cmd/manage.py:804
-#, fuzzy, python-format
+#, python-format
 msgid "error: %s"
-msgstr "Veritabanı hatası: %s"
+msgstr ""
 
 #: nova/cmd/manage.py:328
 msgid "network"
 msgstr ""
 
 #: nova/cmd/manage.py:329
-#, fuzzy
 msgid "IP address"
-msgstr "Başlangıç adresi"
+msgstr ""
 
 #: nova/cmd/manage.py:330
 msgid "hostname"
@@ -4406,14 +4336,13 @@ msgid "host"
 msgstr ""
 
 #: nova/cmd/manage.py:343 nova/cmd/manage.py:367
-#, fuzzy
 msgid "No fixed IP found."
-msgstr "Hiç dinamik IP bulunamadı."
+msgstr ""
 
 #: nova/cmd/manage.py:359
-#, fuzzy, python-format
+#, python-format
 msgid "WARNING: fixed ip %s allocated to missing instance"
-msgstr "Örnekle değişken IP ilişkilendirilmedi"
+msgstr ""
 
 #: nova/cmd/manage.py:422
 #, python-format
@@ -4428,45 +4357,44 @@ msgstr ""
 
 #: nova/cmd/manage.py:535 nova/tests/test_nova_manage.py:213
 msgid "id"
-msgstr "id"
+msgstr ""
 
 #: nova/cmd/manage.py:536 nova/tests/test_nova_manage.py:214
 msgid "IPv4"
-msgstr "IPv4"
+msgstr ""
 
 #: nova/cmd/manage.py:537 nova/tests/test_nova_manage.py:215
 msgid "IPv6"
-msgstr "IPv6"
+msgstr ""
 
 #: nova/cmd/manage.py:538 nova/tests/test_nova_manage.py:216
 msgid "start address"
-msgstr "Başlangıç adresi"
+msgstr ""
 
 #: nova/cmd/manage.py:539 nova/tests/test_nova_manage.py:217
 msgid "DNS1"
-msgstr "DNS1"
+msgstr ""
 
 #: nova/cmd/manage.py:540 nova/tests/test_nova_manage.py:218
 msgid "DNS2"
-msgstr "DNS2"
+msgstr ""
 
 #: nova/cmd/manage.py:541 nova/tests/test_nova_manage.py:219
 msgid "VlanID"
-msgstr "VlanID"
+msgstr ""
 
 #: nova/cmd/manage.py:542 nova/cmd/manage.py:648
 #: nova/tests/test_nova_manage.py:220
 msgid "project"
-msgstr "proje"
+msgstr ""
 
 #: nova/cmd/manage.py:543 nova/tests/test_nova_manage.py:221
 msgid "uuid"
-msgstr "uuid"
+msgstr ""
 
 #: nova/cmd/manage.py:550
-#, fuzzy
 msgid "No networks found"
-msgstr "Ağ bulunamadı"
+msgstr ""
 
 #: nova/cmd/manage.py:569
 msgid "Please specify either fixed_range or uuid"
@@ -4481,9 +4409,8 @@ msgid "Deleting by fixed_range is not supported with the NeutronManager"
 msgstr ""
 
 #: nova/cmd/manage.py:640
-#, fuzzy
 msgid "instance"
-msgstr "%r örneğini tekrar yükle"
+msgstr ""
 
 #: nova/cmd/manage.py:641
 msgid "node"
@@ -4550,19 +4477,18 @@ msgid "Updated_At"
 msgstr ""
 
 #: nova/cmd/manage.py:722
-#, fuzzy, python-format
+#, python-format
 msgid "Service %(service)s on host %(host)s enabled."
-msgstr "%(service_id)s servisi bulunamadı."
+msgstr ""
 
 #: nova/cmd/manage.py:736
-#, fuzzy, python-format
+#, python-format
 msgid "Service %(service)s on host %(host)s disabled."
-msgstr "%(service_id)s servisi bulunamadı."
+msgstr ""
 
 #: nova/cmd/manage.py:808
-#, fuzzy
 msgid "An unexpected error has occurred."
-msgstr "BeklenmeyenHata: %s"
+msgstr ""
 
 #: nova/cmd/manage.py:809
 msgid "[Result]"
@@ -4573,9 +4499,8 @@ msgid "HOST"
 msgstr ""
 
 #: nova/cmd/manage.py:814
-#, fuzzy
 msgid "PROJECT"
-msgstr "proje"
+msgstr ""
 
 #: nova/cmd/manage.py:815
 msgid "cpu"
@@ -4610,9 +4535,8 @@ msgid "Currently defined flavor names and flavorids:"
 msgstr ""
 
 #: nova/cmd/manage.py:954
-#, fuzzy
 msgid "Unknown error"
-msgstr "Kimlik doğrulama hatası"
+msgstr ""
 
 #: nova/cmd/manage.py:957
 #, python-format
@@ -4624,9 +4548,9 @@ msgid "Valid flavor name is required"
 msgstr ""
 
 #: nova/cmd/manage.py:968
-#, fuzzy, python-format
+#, python-format
 msgid "DB Error: %s"
-msgstr "Veritabanı hatası: %s"
+msgstr ""
 
 #: nova/cmd/manage.py:973
 #, python-format
@@ -4644,9 +4568,9 @@ msgid "Key %(key)s on flavor %(name)s unset"
 msgstr ""
 
 #: nova/cmd/manage.py:1093
-#, fuzzy, python-format
+#, python-format
 msgid "Hypervisor: %s"
-msgstr "Veritabanı hatası: %s"
+msgstr ""
 
 #: nova/cmd/manage.py:1142
 #, python-format
@@ -4733,9 +4657,8 @@ msgid "block_device_mapping %s"
 msgstr ""
 
 #: nova/compute/api.py:1225
-#, fuzzy
 msgid "instance termination disabled"
-msgstr "Örnekleri sonlandırma işlemi başlatılıyor"
+msgstr ""
 
 #: nova/compute/api.py:1364
 #, python-format
@@ -4743,9 +4666,8 @@ msgid "instance type %d not found"
 msgstr ""
 
 #: nova/compute/api.py:1370
-#, fuzzy
 msgid "going to delete a resizing instance"
-msgstr "Örnekleri sonlandırma işlemi başlatılıyor"
+msgstr ""
 
 #: nova/compute/api.py:1381
 #, python-format
@@ -4788,8 +4710,6 @@ msgid ""
 "Old instance type %(current_instance_type_name)s,  new instance type "
 "%(new_instance_type_name)s"
 msgstr ""
-"Eski örnek türü %(current_instance_type_name)s, yeni örnek türü "
-"%(new_instance_type_name)s"
 
 #: nova/compute/api.py:2236
 #, python-format
@@ -4850,17 +4770,17 @@ msgstr ""
 #: nova/compute/api.py:3180 nova/tests/compute/test_keypairs.py:103
 #: nova/tests/compute/test_keypairs.py:107
 msgid "Keypair name must be between 1 and 255 characters long"
-msgstr "Anahtar çifti adı 1-255 karakter arası uzunluğunda olmak zorunda"
+msgstr ""
 
 #: nova/compute/api.py:3256
 #, python-format
 msgid "Security group %s is not a string or unicode"
-msgstr "%s güvenlik grubu string veya unicode değil"
+msgstr ""
 
 #: nova/compute/api.py:3259
 #, python-format
 msgid "Security group %s cannot be empty."
-msgstr "%s güvenlik grubu boş bırakılamaz."
+msgstr ""
 
 #: nova/compute/api.py:3267
 #, python-format
@@ -4872,7 +4792,7 @@ msgstr ""
 #: nova/compute/api.py:3273
 #, python-format
 msgid "Security group %s should not be greater than 255 characters."
-msgstr "%s güvenlik grubu 255 karakterden fazla olmamalıdır."
+msgstr ""
 
 #: nova/compute/api.py:3291
 msgid "Quota exceeded, too many security groups."
@@ -4881,17 +4801,17 @@ msgstr ""
 #: nova/compute/api.py:3294
 #, python-format
 msgid "Create Security Group %s"
-msgstr "%s güvenlik grubunu oluşturunuz"
+msgstr ""
 
 #: nova/compute/api.py:3306
 #, python-format
 msgid "Security group %s already exists"
-msgstr "%s güvenlik grubu zaten var"
+msgstr ""
 
 #: nova/compute/api.py:3319
-#, fuzzy, python-format
+#, python-format
 msgid "Unable to update system group '%s'"
-msgstr "Geçersiz güncelleme ayarı: '%s'"
+msgstr ""
 
 #: nova/compute/api.py:3379
 #, python-format
@@ -4909,12 +4829,12 @@ msgstr ""
 #: nova/compute/api.py:3395
 #, python-format
 msgid "Delete security group %s"
-msgstr "%s güvenlik grubunu siliniz"
+msgstr ""
 
 #: nova/compute/api.py:3472 nova/compute/api.py:3546
 #, python-format
 msgid "Rule (%s) not found"
-msgstr "Kural (%s) bulunamadı"
+msgstr ""
 
 #: nova/compute/api.py:3488
 msgid "Quota exceeded, too many security group rules."
@@ -4923,16 +4843,16 @@ msgstr ""
 #: nova/compute/api.py:3491
 #, python-format
 msgid "Authorize security group ingress %s"
-msgstr "Yetkilendirilmiş %s güvenlik grubu girişi"
+msgstr ""
 
 #: nova/compute/api.py:3500
 #, python-format
 msgid "Revoke security group ingress %s"
-msgstr "%s güvenlik grubu girişini iptal et"
+msgstr ""
 
 #: nova/compute/api.py:3553
 msgid "Security group id should be integer"
-msgstr "Güvenlik grup id'si integer olmak zorunda"
+msgstr ""
 
 #: nova/compute/claims.py:97 nova/compute/claims.py:225
 #, python-format
@@ -5013,12 +4933,12 @@ msgstr ""
 #: nova/compute/flavors.py:142
 #, python-format
 msgid "DB error: %s"
-msgstr "Veritabanı hatası: %s"
+msgstr ""
 
 #: nova/compute/flavors.py:153
 #, python-format
 msgid "Instance type %s not found for deletion"
-msgstr "Silme işlemi için %s örnek türü bulunamadı"
+msgstr ""
 
 #: nova/compute/manager.py:233
 msgid "Possibly task preempted."
@@ -5034,11 +4954,11 @@ msgid "Instance has been destroyed from under us while trying to set it to ERROR
 msgstr ""
 
 #: nova/compute/manager.py:502
-#, fuzzy, python-format
+#, python-format
 msgid ""
 "Deleting instance as its host (%(instance_host)s) is not equal to our "
 "host (%(our_host)s)."
-msgstr "Mevcut (%(host)s) sunucusundan (%(instance_id)s) örneği geçirilemez."
+msgstr ""
 
 #: nova/compute/manager.py:518
 msgid "Instance has been marked deleted already, removing it from the hypervisor."
@@ -5051,9 +4971,8 @@ msgid ""
 msgstr ""
 
 #: nova/compute/manager.py:545
-#, fuzzy
 msgid "Failed to check if instance shared"
-msgstr "Tekrar yükleme örneğinde hata oluştu."
+msgstr ""
 
 #: nova/compute/manager.py:625
 msgid "Failed to complete a deletion"
@@ -5070,7 +4989,7 @@ msgstr ""
 #: nova/compute/manager.py:664
 #, python-format
 msgid "Current state is %(drv_state)s, state in DB is %(db_state)s."
-msgstr "Mevcut durum %(drv_state)s, veritabanındaki durum %(db_state)s."
+msgstr ""
 
 #: nova/compute/manager.py:670
 msgid "Rebooting instance after nova-compute restart."
@@ -5081,13 +5000,12 @@ msgid "Hypervisor driver does not support resume guests"
 msgstr ""
 
 #: nova/compute/manager.py:686
-#, fuzzy
 msgid "Failed to resume instance"
-msgstr "Örnek kapatmada hata oluştu."
+msgstr ""
 
 #: nova/compute/manager.py:695
 msgid "Hypervisor driver does not support firewall rules"
-msgstr "Misafir sistem sürücüsü güvenlik duvarı kurallarını desteklemiyor"
+msgstr ""
 
 #: nova/compute/manager.py:699
 #, python-format
@@ -5095,9 +5013,9 @@ msgid "Lifecycle event %(state)d on VM %(uuid)s"
 msgstr ""
 
 #: nova/compute/manager.py:715
-#, fuzzy, python-format
+#, python-format
 msgid "Unexpected power state %d"
-msgstr "BeklenmeyenHata: %s"
+msgstr ""
 
 #: nova/compute/manager.py:728
 #, python-format
@@ -5113,7 +5031,7 @@ msgstr ""
 
 #: nova/compute/manager.py:769
 msgid "Checking state"
-msgstr "Durum kontrol ediliyor"
+msgstr ""
 
 #: nova/compute/manager.py:861
 #, python-format
@@ -5143,14 +5061,13 @@ msgid "Failed to dealloc network for deleted instance"
 msgstr ""
 
 #: nova/compute/manager.py:1025
-#, fuzzy
 msgid "Instance was deleted during spawn."
-msgstr "Örnek oluşturmada hata"
+msgstr ""
 
 #: nova/compute/manager.py:1056
-#, fuzzy, python-format
+#, python-format
 msgid "Error: %s"
-msgstr "Veritabanı hatası: %s"
+msgstr ""
 
 #: nova/compute/manager.py:1074
 msgid "Clean up resource before rescheduling."
@@ -5179,7 +5096,7 @@ msgstr ""
 
 #: nova/compute/manager.py:1164
 msgid "Starting instance..."
-msgstr "Örnek başlatılıyor.."
+msgstr ""
 
 #: nova/compute/manager.py:1178
 msgid "Allocating IP information in the background."
@@ -5195,7 +5112,7 @@ msgstr ""
 #: nova/compute/manager.py:1196
 #, python-format
 msgid "Instance network_info: |%s|"
-msgstr "Örnek ağ_bilgisi: |%s|"
+msgstr ""
 
 #: nova/compute/manager.py:1204
 #, python-format
@@ -5209,34 +5126,33 @@ msgstr ""
 
 #: nova/compute/manager.py:1273
 msgid "Instance failed block device setup"
-msgstr "Örnek blok aygıtı kurulumu hatalı"
+msgstr ""
 
 #: nova/compute/manager.py:1292 nova/compute/manager.py:3234
 msgid "Instance failed to spawn"
-msgstr "Örnek oluşturmada hata"
+msgstr ""
 
 #: nova/compute/manager.py:1344
 msgid "Deallocating network for instance"
-msgstr "Örnek için ağ serbest bırakılıyor"
+msgstr ""
 
 #: nova/compute/manager.py:1458
 msgid "Instance disappeared during build."
 msgstr ""
 
 #: nova/compute/manager.py:1503
-#, fuzzy
 msgid "Failed to deallocate network for instance."
-msgstr "Örnek için ağ serbest bırakılıyor"
+msgstr ""
 
 #: nova/compute/manager.py:1511
 #, python-format
 msgid "%(action_str)s instance"
-msgstr "%(action_str)s örneği"
+msgstr ""
 
 #: nova/compute/manager.py:1555
 #, python-format
 msgid "Ignoring DiskNotFound: %s"
-msgstr "DiskBulunamadı yok sayılıyor: %s"
+msgstr ""
 
 #: nova/compute/manager.py:1558
 #, python-format
@@ -5246,7 +5162,7 @@ msgstr ""
 #: nova/compute/manager.py:1565
 #, python-format
 msgid "terminating bdm %s"
-msgstr "Blok cihazı haritalandırması kapatılıyor %s"
+msgstr ""
 
 #: nova/compute/manager.py:1619
 #, python-format
@@ -5276,9 +5192,9 @@ msgid "disk not on shared storagerebuilding from: '%s'"
 msgstr ""
 
 #: nova/compute/manager.py:1863 nova/compute/manager.py:3957
-#, fuzzy, python-format
+#, python-format
 msgid "Failed to get compute_info for %s"
-msgstr "Tekrar yükleme örneğinde hata oluştu."
+msgstr ""
 
 #: nova/compute/manager.py:1948
 #, python-format
@@ -5286,9 +5202,9 @@ msgid "bringing vm to original state: '%s'"
 msgstr ""
 
 #: nova/compute/manager.py:1980
-#, fuzzy, python-format
+#, python-format
 msgid "Detaching from volume api: %s"
-msgstr "Birimi ayır %s"
+msgstr ""
 
 #: nova/compute/manager.py:1999
 msgid "Rebooting instance"
@@ -5340,7 +5256,7 @@ msgstr ""
 #: nova/compute/manager.py:2229
 #, python-format
 msgid "Found %(num_images)d images (rotation: %(rotation)d)"
-msgstr "%(num_images)d tane imaj bulundu(dönüş: %(rotation)d)"
+msgstr ""
 
 #: nova/compute/manager.py:2237
 #, python-format
@@ -5350,12 +5266,12 @@ msgstr ""
 #: nova/compute/manager.py:2242
 #, python-format
 msgid "Deleting image %s"
-msgstr "İmaj siliniyor %s"
+msgstr ""
 
 #: nova/compute/manager.py:2270
 #, python-format
 msgid "Failed to set admin password. Instance %s is not running"
-msgstr "Yönetici parolası oluşturmada hata. %s örneği çalışmıyor."
+msgstr ""
 
 #: nova/compute/manager.py:2277
 msgid "Root password set"
@@ -5397,14 +5313,13 @@ msgid "Rescuing"
 msgstr ""
 
 #: nova/compute/manager.py:2376
-#, fuzzy
 msgid "Error trying to Rescue Instance"
-msgstr "Örnek kapatmada hata oluştu."
+msgstr ""
 
 #: nova/compute/manager.py:2380
-#, fuzzy, python-format
+#, python-format
 msgid "Driver Error: %s"
-msgstr "Veritabanı hatası: %s"
+msgstr ""
 
 #: nova/compute/manager.py:2398
 msgid "Unrescuing"
@@ -5421,13 +5336,12 @@ msgid "Updating instance to original state: '%s'"
 msgstr ""
 
 #: nova/compute/manager.py:2655
-#, fuzzy
 msgid "Instance has no source host"
-msgstr "Örneğin hiç bölümü yok."
+msgstr ""
 
 #: nova/compute/manager.py:2661
 msgid "destination same as source!"
-msgstr "dedef kaynak ile aynı!"
+msgstr ""
 
 #: nova/compute/manager.py:2682
 msgid "Migrating"
@@ -5476,14 +5390,13 @@ msgid "Getting vnc console"
 msgstr ""
 
 #: nova/compute/manager.py:3339
-#, fuzzy
 msgid "Getting spice console"
-msgstr "Konsol ekleniyor"
+msgstr ""
 
 #: nova/compute/manager.py:3419
 #, python-format
 msgid "Attaching volume %(volume_id)s to %(mountpoint)s"
-msgstr "%(mountpoint)s'e %(volume_id)s bölümü bağlanıyor"
+msgstr ""
 
 #: nova/compute/manager.py:3429
 #, python-format
@@ -5500,16 +5413,16 @@ msgstr ""
 #: nova/compute/manager.py:3479
 #, python-format
 msgid "Detach volume %(volume_id)s from mountpoint %(mp)s"
-msgstr "%(mp)s bağlama noktasındaki %(volume_id)s bölümü ayrılıyor"
+msgstr ""
 
 #: nova/compute/manager.py:3490
 msgid "Detaching volume from unknown instance"
 msgstr ""
 
 #: nova/compute/manager.py:3497
-#, fuzzy, python-format
+#, python-format
 msgid "Failed to detach volume %(volume_id)s from %(mp)s"
-msgstr "%(mp)s bağlama noktasındaki %(volume_id)s bölümü ayrılıyor"
+msgstr ""
 
 #: nova/compute/manager.py:3521
 msgid "Updating volume usage cache with totals"
@@ -5624,16 +5537,15 @@ msgstr ""
 
 #: nova/compute/manager.py:4280
 msgid "Updating bandwidth usage cache"
-msgstr "Bant genişliği kullanım önbelleği güncelleniyor"
+msgstr ""
 
 #: nova/compute/manager.py:4392
-#, fuzzy
 msgid "Updating volume usage cache"
-msgstr "Bant genişliği kullanım önbelleği güncelleniyor"
+msgstr ""
 
 #: nova/compute/manager.py:4406
 msgid "Updating host status"
-msgstr "Sunucu durumu güncelleniyor"
+msgstr ""
 
 #: nova/compute/manager.py:4433
 #, python-format
@@ -5641,8 +5553,6 @@ msgid ""
 "Found %(num_db_instances)s in the database and %(num_vm_instances)s on "
 "the hypervisor."
 msgstr ""
-"Veritabanında %(num_db_instances)s ve misafir sistemde "
-"%(num_vm_instances)s bulundu"
 
 #: nova/compute/manager.py:4440 nova/compute/manager.py:4489
 msgid "During sync_power_state the instance has a pending task. Skip."
@@ -5690,7 +5600,7 @@ msgstr ""
 
 #: nova/compute/manager.py:4595
 msgid "Reclaiming deleted instance"
-msgstr "Silinen örnek kurtarılıyor"
+msgstr ""
 
 #: nova/compute/manager.py:4602
 #, python-format
@@ -5698,9 +5608,9 @@ msgid "Periodic reclaim failed to delete instance: %s"
 msgstr ""
 
 #: nova/compute/manager.py:4627
-#, fuzzy, python-format
+#, python-format
 msgid "Deleting orphan compute node %s"
-msgstr "İmaj siliniyor %s"
+msgstr ""
 
 #: nova/compute/manager.py:4637 nova/compute/resource_tracker.py:335
 #, python-format
@@ -5835,9 +5745,8 @@ msgid "Instance not resizing, skipping migration."
 msgstr ""
 
 #: nova/compute/resource_tracker.py:477
-#, fuzzy
 msgid "InstanceType could not be found, skipping migration."
-msgstr "Örnek bulunamadı."
+msgstr ""
 
 #: nova/compute/resource_tracker.py:560
 #, python-format
@@ -5858,7 +5767,7 @@ msgstr ""
 #: nova/compute/rpcapi.py:61
 #, python-format
 msgid "Unable to find host for Instance %s"
-msgstr "%s örneği için sunucu bulma başarısız"
+msgstr ""
 
 #: nova/compute/utils.py:153
 #, python-format
@@ -5915,22 +5824,21 @@ msgstr ""
 
 #: nova/console/manager.py:82 nova/console/vmrc_manager.py:64
 msgid "Adding console"
-msgstr "Konsol ekleniyor"
+msgstr ""
 
 #: nova/console/manager.py:102 nova/console/vmrc_manager.py:114
 #, python-format
 msgid "Tried to remove non-existent console %(console_id)s."
-msgstr "Var olmayan %(console_id)s konsolu kaldırılmaya çalışıldı."
+msgstr ""
 
 #: nova/console/vmrc_manager.py:117
 #, python-format
 msgid "Removing console %(console_id)s."
-msgstr "%(console_id)s konsolu kaldırılıyor."
+msgstr ""
 
 #: nova/console/websocketproxy.py:60
-#, fuzzy
 msgid "Invalid Token"
-msgstr "Geçersiz bölüm"
+msgstr ""
 
 #: nova/console/websocketproxy.py:79
 msgid "Invalid Connection Info"
@@ -5938,12 +5846,12 @@ msgstr ""
 
 #: nova/console/xvp.py:101
 msgid "Rebuilding xvp conf"
-msgstr "XVP ayarı yeniden oluşturuluyor"
+msgstr ""
 
 #: nova/console/xvp.py:120
 #, python-format
 msgid "Re-wrote %s"
-msgstr "%s yeniden yazıldı"
+msgstr ""
 
 #: nova/console/xvp.py:125
 msgid "Failed to write configuration file"
@@ -5951,24 +5859,24 @@ msgstr ""
 
 #: nova/console/xvp.py:128
 msgid "Stopping xvp"
-msgstr "XVP durduruluyor"
+msgstr ""
 
 #: nova/console/xvp.py:141
 msgid "Starting xvp"
-msgstr "XVP başlatılıyor"
+msgstr ""
 
 #: nova/console/xvp.py:148
 #, python-format
 msgid "Error starting xvp: %s"
-msgstr "XVP başlatılırken hata oluştu: %s"
+msgstr ""
 
 #: nova/console/xvp.py:151
 msgid "Restarting xvp"
-msgstr "XVP tekar başlatılıyor"
+msgstr ""
 
 #: nova/console/xvp.py:153
 msgid "xvp not running..."
-msgstr "XVP çalışmıyor..."
+msgstr ""
 
 #: nova/console/xvp.py:204
 msgid "Failed to run xvp."
@@ -5989,18 +5897,16 @@ msgid "Failed to notify cells of instance destroy"
 msgstr ""
 
 #: nova/db/api.py:664 nova/db/api.py:690
-#, fuzzy
 msgid "Failed to notify cells of instance update"
-msgstr "Tekrar yükleme örneğinde hata oluştu."
+msgstr ""
 
 #: nova/db/api.py:1588
 msgid "Failed to notify cells of bw_usage update"
 msgstr ""
 
 #: nova/db/api.py:1733
-#, fuzzy
 msgid "Failed to notify cells of instance fault"
-msgstr "Tekrar yükleme örneğinde hata oluştu."
+msgstr ""
 
 #: nova/db/sqlalchemy/api.py:165
 #, python-format
@@ -6014,27 +5920,27 @@ msgstr ""
 #: nova/db/sqlalchemy/api.py:213 nova/virt/baremetal/db/sqlalchemy/api.py:62
 #, python-format
 msgid "Unrecognized read_deleted value '%s'"
-msgstr "Tanınmayan silinmiş okuma değeri '%s'"
+msgstr ""
 
 #: nova/db/sqlalchemy/api.py:688
-#, fuzzy, python-format
+#, python-format
 msgid "Invalid floating ip id %s in request"
-msgstr "%s geçerli bir örnek ismidir"
+msgstr ""
 
 #: nova/db/sqlalchemy/api.py:907
-#, fuzzy, python-format
+#, python-format
 msgid "Invalid floating IP %s in request"
-msgstr "%s geçerli bir örnek ismidir"
+msgstr ""
 
 #: nova/db/sqlalchemy/api.py:1199 nova/db/sqlalchemy/api.py:1239
-#, fuzzy, python-format
+#, python-format
 msgid "Invalid fixed IP Address %s in request"
-msgstr "%s geçerli bir örnek ismidir"
+msgstr ""
 
 #: nova/db/sqlalchemy/api.py:1374
-#, fuzzy, python-format
+#, python-format
 msgid "Invalid virtual interface address %s in request"
-msgstr "%s geçerli bir örnek ismidir"
+msgstr ""
 
 #: nova/db/sqlalchemy/api.py:1467
 #, python-format
@@ -6044,9 +5950,9 @@ msgid ""
 msgstr ""
 
 #: nova/db/sqlalchemy/api.py:1625
-#, fuzzy, python-format
+#, python-format
 msgid "Invalid instance id %s in request"
-msgstr "%s geçerli bir örnek ismidir"
+msgstr ""
 
 #: nova/db/sqlalchemy/api.py:1875
 #, python-format
@@ -6073,7 +5979,7 @@ msgstr ""
 #: nova/db/sqlalchemy/migration.py:70
 #: nova/virt/baremetal/db/sqlalchemy/migration.py:67
 msgid "version should be an integer"
-msgstr "Sürüm tam sayı olmak zorunda"
+msgstr ""
 
 #: nova/db/sqlalchemy/migration.py:97
 #: nova/virt/baremetal/db/sqlalchemy/migration.py:95
@@ -6132,9 +6038,8 @@ msgid "Exception while creating table."
 msgstr ""
 
 #: nova/db/sqlalchemy/utils.py:333
-#, fuzzy
 msgid "Unsupported id columns type"
-msgstr "Desteklenmeyen içerik türü"
+msgstr ""
 
 #: nova/db/sqlalchemy/migrate_repo/versions/133_folsom.py:63
 msgid "Exception while seeding instance_types table"
@@ -6188,29 +6093,29 @@ msgid "Successfully transferred using %s"
 msgstr ""
 
 #: nova/image/glance.py:566
-#, fuzzy, python-format
+#, python-format
 msgid "fetching image %s from glance"
-msgstr "İmaj siliniyor %s"
+msgstr ""
 
 #: nova/image/s3.py:333
 #, python-format
 msgid "Failed to download %(image_location)s to %(image_path)s"
-msgstr "%(image_path)si için %(image_location)s indirme işlemi başarısız"
+msgstr ""
 
 #: nova/image/s3.py:350
 #, python-format
 msgid "Failed to decrypt %(image_location)s to %(image_path)s"
-msgstr "%(image_path)s için %(image_location)s çözümü başarısız"
+msgstr ""
 
 #: nova/image/s3.py:361
 #, python-format
 msgid "Failed to untar %(image_location)s to %(image_path)s"
-msgstr "%(image_path)s için %(image_location)s çıkarma işlemi başarısız"
+msgstr ""
 
 #: nova/image/s3.py:371
 #, python-format
 msgid "Failed to upload %(image_location)s to %(image_path)s"
-msgstr "%(image_path)s için %(image_location)s yükleme işlemi başarısız"
+msgstr ""
 
 #: nova/image/s3.py:383
 #, python-format
@@ -6220,21 +6125,21 @@ msgstr ""
 #: nova/image/s3.py:398
 #, python-format
 msgid "Failed to decrypt private key: %s"
-msgstr "Özel anahtar çözümü başarısız: %s"
+msgstr ""
 
 #: nova/image/s3.py:405
 #, python-format
 msgid "Failed to decrypt initialization vector: %s"
-msgstr "Başlatma vektörü çözümü başarısız: %s"
+msgstr ""
 
 #: nova/image/s3.py:416
 #, python-format
 msgid "Failed to decrypt image file %(image_file)s: %(err)s"
-msgstr "%(image_file)s imaj dosyası çözümü başarısız: %(err)s"
+msgstr ""
 
 #: nova/image/s3.py:428
 msgid "Unsafe filenames in image"
-msgstr "İmajda güvenliksiz dosya isimleri var"
+msgstr ""
 
 #: nova/image/download/__init__.py:44
 #, python-format
@@ -6302,26 +6207,25 @@ msgstr ""
 #: nova/ipv6/account_identifier.py:40 nova/ipv6/rfc2462.py:36
 #, python-format
 msgid "Bad mac for to_global_ipv6: %s"
-msgstr "Global ipv6 için yanlış mac numarası: %s"
+msgstr ""
 
 #: nova/ipv6/account_identifier.py:42 nova/ipv6/rfc2462.py:38
 #, python-format
 msgid "Bad prefix for to_global_ipv6: %s"
-msgstr "Global ipv6 için yanlış sonek: %s"
+msgstr ""
 
 #: nova/ipv6/account_identifier.py:44
 #, python-format
 msgid "Bad project_id for to_global_ipv6: %s"
-msgstr "Global ipv6 için yanlış proje numarası: %s"
+msgstr ""
 
 #: nova/network/api.py:57
 msgid "instance is a required argument to use @refresh_cache"
 msgstr ""
 
 #: nova/network/api.py:83
-#, fuzzy
 msgid "Failed storing info cache"
-msgstr "Tekrar yükleme örneğinde hata oluştu."
+msgstr ""
 
 #: nova/network/api.py:238 nova/network/neutronv2/api.py:614
 #, python-format
@@ -6333,9 +6237,9 @@ msgid "Network driver option required, but not specified"
 msgstr ""
 
 #: nova/network/driver.py:44
-#, fuzzy, python-format
+#, python-format
 msgid "Loading network driver '%s'"
-msgstr "%s id'li ağ gösteriliyor"
+msgstr ""
 
 #: nova/network/floating_ips.py:89
 #, python-format
@@ -6359,12 +6263,12 @@ msgstr ""
 #: nova/network/floating_ips.py:198
 #, python-format
 msgid "Address |%(address)s| is not allocated"
-msgstr "|%(address)s| adresi tahsis edilemedi"
+msgstr ""
 
 #: nova/network/floating_ips.py:202
 #, python-format
 msgid "Address |%(address)s| is not allocated to your project |%(project)s|"
-msgstr "Sizin |%(project)s| projeniz için |%(address)s| adresi tahsis edilemedi"
+msgstr ""
 
 #: nova/network/floating_ips.py:221
 #, python-format
@@ -6435,7 +6339,7 @@ msgstr ""
 
 #: nova/network/ldapdns.py:333
 msgid "This driver only supports type 'a' entries."
-msgstr "Bu türücü sadece 'a' türü girdileri destekliyor."
+msgstr ""
 
 #: nova/network/ldapdns.py:376
 msgid "This shouldn't be getting called except during testing."
@@ -6444,12 +6348,12 @@ msgstr ""
 #: nova/network/linux_net.py:221
 #, python-format
 msgid "Attempted to remove chain %s which does not exist"
-msgstr "Var olmayan %s zinciri kaldırılmaya çalışılıyor"
+msgstr ""
 
 #: nova/network/linux_net.py:257
 #, python-format
 msgid "Unknown chain: %r"
-msgstr "Tanınmayan zincir: %r"
+msgstr ""
 
 #: nova/network/linux_net.py:264
 msgid "Skipping duplicate iptables rule addition"
@@ -6508,7 +6412,7 @@ msgstr ""
 #: nova/network/linux_net.py:1134
 #, python-format
 msgid "Pid %d is stale, relaunching radvd"
-msgstr "%d süreç numarası bozuldu, radvd tekrar başlatılıyor"
+msgstr ""
 
 #: nova/network/linux_net.py:1322
 #, python-format
@@ -6523,17 +6427,17 @@ msgstr ""
 #: nova/network/linux_net.py:1443
 #, python-format
 msgid "Starting VLAN interface %s"
-msgstr "%s VLAN arayüzü başlatılıyor "
+msgstr ""
 
 #: nova/network/linux_net.py:1489
-#, fuzzy, python-format
+#, python-format
 msgid "Starting Bridge %s"
-msgstr "%s köprüsü koruma altına alınıyor"
+msgstr ""
 
 #: nova/network/linux_net.py:1501
-#, fuzzy, python-format
+#, python-format
 msgid "Adding interface %(interface)s to bridge %(bridge)s"
-msgstr "%(vlan)s vlan ve %(bridge)s köprüsü koruma altına alınıyor"
+msgstr ""
 
 #: nova/network/linux_net.py:1537
 #, python-format
@@ -6689,9 +6593,8 @@ msgid "minidns file is |%s|"
 msgstr ""
 
 #: nova/network/minidns.py:76 nova/network/minidns.py:107
-#, fuzzy
 msgid "Invalid name"
-msgstr "Geçersiz bölüm"
+msgstr ""
 
 #: nova/network/minidns.py:79
 msgid "This driver only supports type 'a'"
@@ -6703,9 +6606,9 @@ msgid "Cannot delete entry |%s|"
 msgstr ""
 
 #: nova/network/minidns.py:202
-#, fuzzy, python-format
+#, python-format
 msgid "deleted %s"
-msgstr "sil: %s"
+msgstr ""
 
 #: nova/network/minidns.py:208
 #, python-format
@@ -6714,7 +6617,7 @@ msgstr ""
 
 #: nova/network/model.py:385
 msgid "v4 subnets are required for legacy nw_info"
-msgstr "miras nw_info için v4 alt ağları gerekiyor"
+msgstr ""
 
 #: nova/network/neutronv2/__init__.py:47
 #, python-format
@@ -6830,9 +6733,8 @@ msgid "Neutron Error getting security groups"
 msgstr ""
 
 #: nova/network/security_group/neutron_driver.py:166
-#, fuzzy
 msgid "Security group id should be uuid"
-msgstr "Güvenlik grup id'si integer olmak zorunda"
+msgstr ""
 
 #: nova/network/security_group/neutron_driver.py:203
 #, python-format
@@ -6873,35 +6775,30 @@ msgstr ""
 
 #: nova/network/security_group/neutron_driver.py:400
 #: nova/network/security_group/neutron_driver.py:451
-#, fuzzy, python-format
+#, python-format
 msgid "Adding security group %(security_group_id)s to port %(port_id)s"
 msgstr ""
-"%(project_id)s projesi için %(security_group_id)s güvenlik grubu "
-"bulunamadı."
 
 #: nova/network/security_group/neutron_driver.py:461
-#, fuzzy, python-format
+#, python-format
 msgid ""
 "Security group %(security_group_name)s not assocaited with the instance "
 "%(instance)s"
 msgstr ""
-"%(security_group_id)s güvenlik grubu %(instance_id)s örneği ile "
-"ilişkilendirilmedi."
 
 #: nova/network/security_group/security_group_base.py:138
 #, python-format
 msgid "This rule already exists in group %s"
-msgstr "Bu kural zaten grupta var %s"
+msgstr ""
 
 #: nova/objects/base.py:69
-#, fuzzy, python-format
+#, python-format
 msgid "Error setting %(attr)s"
-msgstr "XVP başlatılırken hata oluştu: %s"
+msgstr ""
 
 #: nova/objects/base.py:160
-#, fuzzy
 msgid "Invalid version string"
-msgstr "Geçersiz server_string: %s"
+msgstr ""
 
 #: nova/objects/base.py:215
 #, python-format
@@ -6978,9 +6875,9 @@ msgid "Semaphore / lock released \"%(function)s\""
 msgstr ""
 
 #: nova/openstack/common/log.py:245
-#, fuzzy, python-format
+#, python-format
 msgid "Deprecated: %s"
-msgstr "sil: %s"
+msgstr ""
 
 #: nova/openstack/common/log.py:337
 #, python-format
@@ -6990,7 +6887,7 @@ msgstr ""
 #: nova/openstack/common/log.py:387
 #, python-format
 msgid "syslog facility must be one of: %s"
-msgstr "syslog servisi bunlardan biri olmak zorundadır: %s"
+msgstr ""
 
 #: nova/openstack/common/log.py:557
 #, python-format
@@ -7033,12 +6930,12 @@ msgstr ""
 #: nova/openstack/common/periodic_task.py:176
 #, python-format
 msgid "Running periodic task %(full_task_name)s"
-msgstr "%(full_task_name)s periyodik görevi çalışıyor"
+msgstr ""
 
 #: nova/openstack/common/periodic_task.py:184
 #, python-format
 msgid "Error during %(full_task_name)s: %(e)s"
-msgstr "%(full_task_name)s sırasında hata: %(e)s"
+msgstr ""
 
 #: nova/openstack/common/policy.py:394
 #, python-format
@@ -7058,36 +6955,36 @@ msgstr ""
 #: nova/openstack/common/processutils.py:132
 #, python-format
 msgid "Got unknown keyword args to utils.execute: %r"
-msgstr "utils.execute için bilinmeyen anahtar kelime argümanları: %r"
+msgstr ""
 
 #: nova/openstack/common/processutils.py:147
 #, python-format
 msgid "Running cmd (subprocess): %s"
-msgstr "Çalışan komut(alt süreç): %s"
+msgstr ""
 
 #: nova/openstack/common/processutils.py:172
 #: nova/openstack/common/processutils.py:244 nova/virt/powervm/common.py:118
 #, python-format
 msgid "Result was %s"
-msgstr "Sonuç %s"
+msgstr ""
 
 #: nova/openstack/common/processutils.py:184
 #, python-format
 msgid "%r failed. Retrying."
-msgstr "%r hatalı. Yeniden deneniyor."
+msgstr ""
 
 #: nova/openstack/common/processutils.py:223
 #, python-format
 msgid "Running cmd (SSH): %s"
-msgstr "Çalışan komut(SSH): %s"
+msgstr ""
 
 #: nova/openstack/common/processutils.py:225
 msgid "Environment not supported over SSH"
-msgstr "SSH üzerinde ortam desteklenmemektedir."
+msgstr ""
 
 #: nova/openstack/common/processutils.py:229
 msgid "process_input not supported over SSH"
-msgstr "SSH üzerinde process_input desteklenmemektedir."
+msgstr ""
 
 #: nova/openstack/common/service.py:113 nova/openstack/common/service.py:276
 msgid "Full set of CONF:"
@@ -7161,13 +7058,13 @@ msgid "Invalid string format: %s"
 msgstr ""
 
 #: nova/openstack/common/strutils.py:189
-#, fuzzy, python-format
+#, python-format
 msgid "Unknown byte multiplier: %s"
-msgstr "Bilinmeyen temel dosya: %s"
+msgstr ""
 
 #: nova/openstack/common/db/sqlalchemy/session.py:542
 msgid "DB exception wrapped."
-msgstr "Veritabanı istisnası yakalandı."
+msgstr ""
 
 #: nova/openstack/common/db/sqlalchemy/session.py:604
 #, python-format
@@ -7334,7 +7231,7 @@ msgstr ""
 
 #: nova/openstack/common/rpc/common.py:151
 msgid "Invalid reuse of an RPC connection."
-msgstr "Geçersi RPC bağlantısı kullanımı."
+msgstr ""
 
 #: nova/openstack/common/rpc/common.py:155
 #, python-format
@@ -7430,7 +7327,7 @@ msgstr ""
 
 #: nova/openstack/common/rpc/impl_qpid.py:443
 msgid "Re-established AMQP queues"
-msgstr "AMQP kuyrukları tekrar kuruluyor"
+msgstr ""
 
 #: nova/openstack/common/rpc/impl_qpid.py:509
 msgid "Error processing message.  Skipping it."
@@ -7582,9 +7479,8 @@ msgid "Unsupported or unknown ZMQ envelope returned."
 msgstr ""
 
 #: nova/openstack/common/rpc/impl_zmq.py:698
-#, fuzzy
 msgid "RPC Message Invalid."
-msgstr "İstek geçersiz"
+msgstr ""
 
 #: nova/openstack/common/rpc/impl_zmq.py:721
 #, python-format
@@ -7634,11 +7530,11 @@ msgstr ""
 
 #: nova/scheduler/chance.py:57
 msgid "Is the appropriate service running?"
-msgstr "Uygun servis çalışıyor mu?"
+msgstr ""
 
 #: nova/scheduler/chance.py:62
 msgid "Could not find another compute"
-msgstr "Başka bir işlem bulunamadı"
+msgstr ""
 
 #: nova/scheduler/driver.py:58
 msgid "Exception during scheduler.run_instance"
@@ -7662,21 +7558,21 @@ msgid "Driver must implement select_hosts"
 msgstr ""
 
 #: nova/scheduler/filter_scheduler.py:79
-#, fuzzy, python-format
+#, python-format
 msgid ""
 "Attempting to build %(num_instances)d instance(s) uuids: "
 "%(instance_uuids)s"
-msgstr "%(num_instances)d örnek(leri) kurulmaya çalışılıyor."
+msgstr ""
 
 #: nova/scheduler/filter_scheduler.py:83
-#, fuzzy, python-format
+#, python-format
 msgid "Request Spec: %s"
-msgstr "Geçersizİstek hatası: %s"
+msgstr ""
 
 #: nova/scheduler/filter_scheduler.py:103
-#, fuzzy, python-format
+#, python-format
 msgid "Choosing host %(weighed_host)s for instance %(instance_uuid)s"
-msgstr "%(instance_id)s örneği için ağ bulunamadı."
+msgstr ""
 
 #: nova/scheduler/filter_scheduler.py:184
 msgid "Instance disappeared during scheduling"
@@ -7701,17 +7597,17 @@ msgstr ""
 #: nova/scheduler/filter_scheduler.py:336
 #, python-format
 msgid "Filtered %(hosts)s"
-msgstr "%(hosts)s filtrelendi"
+msgstr ""
 
 #: nova/scheduler/filter_scheduler.py:341
-#, fuzzy, python-format
+#, python-format
 msgid "Weighed %(hosts)s"
-msgstr "%(hosts)s filtrelendi"
+msgstr ""
 
 #: nova/scheduler/filter_scheduler.py:394
-#, fuzzy, python-format
+#, python-format
 msgid "Unable to migrate %(instance_uuid)s to %(dest)s: Lack of memory"
-msgstr "Mevcut (%(host)s) sunucusundan (%(instance_id)s) örneği geçirilemez."
+msgstr ""
 
 #: nova/scheduler/host_manager.py:309
 #, python-format
@@ -7752,7 +7648,7 @@ msgstr ""
 #: nova/scheduler/filters/trusted_filter.py:212
 #, python-format
 msgid "No service for compute ID %s"
-msgstr "%s işlem ID'si için servis yok"
+msgstr ""
 
 #: nova/scheduler/host_manager.py:428
 #, python-format
@@ -7762,7 +7658,7 @@ msgstr ""
 #: nova/scheduler/scheduler_options.py:72
 #, python-format
 msgid "Could not stat scheduler options file %(filename)s: '%(e)s'"
-msgstr "%(filename)s dosyası için zamanlayıcı seçenekleri başlatılamadı: '%(e)s'"
+msgstr ""
 
 #: nova/scheduler/scheduler_options.py:81
 #, python-format
@@ -7820,7 +7716,7 @@ msgstr ""
 
 #: nova/scheduler/filters/core_filter.py:51
 msgid "VCPUs not set; assuming CPU collection broken"
-msgstr "VCPU ayarlanamadı, CPU koleksiyonunun bozulduğu varsayılıyor"
+msgstr ""
 
 #: nova/scheduler/filters/core_filter.py:94
 #: nova/scheduler/filters/ram_filter.py:95
@@ -7956,16 +7852,15 @@ msgstr ""
 
 #: nova/servicegroup/drivers/db.py:97 nova/servicegroup/drivers/mc.py:101
 msgid "Recovered model server connection!"
-msgstr "Kurtarılmış model sunucu bağlantısı!"
+msgstr ""
 
 #: nova/servicegroup/drivers/db.py:103 nova/servicegroup/drivers/mc.py:107
 msgid "model server went away"
-msgstr "Model sunucusu gitti."
+msgstr ""
 
 #: nova/servicegroup/drivers/mc.py:44
-#, fuzzy
 msgid "memcached_servers not defined"
-msgstr "Sunucu adı tanımlanmadı"
+msgstr ""
 
 #: nova/servicegroup/drivers/mc.py:52
 #, python-format
@@ -8034,24 +7929,22 @@ msgstr ""
 #: nova/tests/fake_processutils.py:72
 #, python-format
 msgid "Faking execution of cmd (subprocess): %s"
-msgstr "Komutun(alt sürecin) taklit çalıştırılması: %s"
+msgstr ""
 
 #: nova/tests/fake_processutils.py:80
 #, python-format
 msgid "Faked command matched %s"
-msgstr "Sahte komut eşleşti %s"
+msgstr ""
 
 #: nova/tests/fake_processutils.py:96
 #, python-format
 msgid "Faked command raised an exception %s"
-msgstr "Sahte komut bir istisna fırlattı %s"
+msgstr ""
 
 #: nova/tests/fake_processutils.py:99
 #, python-format
 msgid "Reply to faked command is stdout='%(stdout)s' stderr='%(stderr)s'"
 msgstr ""
-"Sahte komuta verilen yanıt: standartçıktı='%(stdout)s' "
-"standarthata='%(stderr)s'"
 
 #: nova/tests/fake_volume.py:189
 msgid "status must be available"
@@ -8107,7 +8000,7 @@ msgstr ""
 #: nova/tests/compute/test_compute.py:4493
 #, python-format
 msgid "Running instances: %s"
-msgstr "Örnekler çalışıyor: %s"
+msgstr ""
 
 #: nova/tests/compute/test_compute.py:1318
 #: nova/tests/compute/test_compute.py:1359
@@ -8116,25 +8009,24 @@ msgstr "Örnekler çalışıyor: %s"
 #: nova/tests/compute/test_compute.py:1456
 #, python-format
 msgid "After terminating instances: %s"
-msgstr "Örnekleri sonlandırmanın ardından: %s"
+msgstr ""
 
 #: nova/tests/compute/test_compute.py:2063
 msgid "Internal error"
-msgstr "İçsel hata"
+msgstr ""
 
 #: nova/tests/compute/test_compute.py:4504
 #, python-format
 msgid "After force-killing instances: %s"
-msgstr "Zorla öldürülen örneklerin ardından: %s"
+msgstr ""
 
 #: nova/tests/compute/test_compute.py:5019
 msgid "wrong host/node"
 msgstr ""
 
 #: nova/tests/compute/test_compute.py:9285
-#, fuzzy
 msgid "spawn error"
-msgstr "Kimlik doğrulama hatası"
+msgstr ""
 
 #: nova/tests/db/test_migrations.py:2947
 #, python-format
@@ -8184,7 +8076,7 @@ msgstr ""
 #: nova/tests/integrated/test_login.py:35
 #, python-format
 msgid "flavor: %s"
-msgstr "Örnek türü: %s"
+msgstr ""
 
 #: nova/tests/integrated/api/client.py:39
 #, python-format
@@ -8193,36 +8085,33 @@ msgid ""
 "Status Code: %(_status)s\n"
 "Body: %(_body)s"
 msgstr ""
-"%(message)s\n"
-"Durum Kodu: %(_status)s\n"
-"Gövde: %(_body)s"
 
 #: nova/tests/integrated/api/client.py:50
 msgid "Authentication error"
-msgstr "Kimlik doğrulama hatası"
+msgstr ""
 
 #: nova/tests/integrated/api/client.py:58
 msgid "Authorization error"
-msgstr "Yetkilendirme hatası"
+msgstr ""
 
 #: nova/tests/integrated/api/client.py:66
 msgid "Item not found"
-msgstr "Öğe bulunamadı"
+msgstr ""
 
 #: nova/tests/integrated/api/client.py:108
 #, python-format
 msgid "Doing %(method)s on %(relative_url)s"
-msgstr "%(relative_url)s'de %(method)s işlemleri yapılıyor"
+msgstr ""
 
 #: nova/tests/integrated/api/client.py:111
 #, python-format
 msgid "Body: %s"
-msgstr "Gövde: %s"
+msgstr ""
 
 #: nova/tests/integrated/api/client.py:129
 #, python-format
 msgid "%(auth_uri)s => code %(http_status)s"
-msgstr "%(auth_uri)s => kodu %(http_status)s"
+msgstr ""
 
 #: nova/tests/integrated/api/client.py:160
 #, python-format
@@ -8239,9 +8128,8 @@ msgid "Decoding JSON: %s"
 msgstr ""
 
 #: nova/tests/virt/hyperv/test_hypervapi.py:453
-#, fuzzy
 msgid "fake vswitch not found"
-msgstr " [%s] göstergesi bulunamadı"
+msgstr ""
 
 #: nova/tests/virt/libvirt/fakelibvirt.py:897
 msgid "Expected a list for 'auth' parameter"
@@ -8272,12 +8160,12 @@ msgstr ""
 #: nova/tests/virt/xenapi/test_xenapi.py:954
 #, python-format
 msgid "Creating files in %s to simulate guest agent"
-msgstr "Konuk aracı benzetmek için %s'de dosyalar oluşturuluyor"
+msgstr ""
 
 #: nova/tests/virt/xenapi/test_xenapi.py:965
 #, python-format
 msgid "Removing simulated guest agent files in %s"
-msgstr "%s'deki benzetilmiş konuk aracı dosyaları kaldırılıyor"
+msgstr ""
 
 #: nova/tests/virt/xenapi/image/test_bittorrent.py:130
 #: nova/virt/xenapi/image/bittorrent.py:77
@@ -8292,7 +8180,7 @@ msgstr ""
 #: nova/virt/block_device.py:162
 #, python-format
 msgid "Booting with volume %(volume_id)s at %(mountpoint)s"
-msgstr "%(mountpoint)s'de %(volume_id)s bölümü ön yükleniyor"
+msgstr ""
 
 #: nova/virt/configdrive.py:97
 #, python-format
@@ -8318,9 +8206,8 @@ msgid "Loading compute driver '%s'"
 msgstr ""
 
 #: nova/virt/driver.py:1052
-#, fuzzy
 msgid "Unable to load the virtualization driver"
-msgstr "Sanallaştırma sürücüsü yükleme başarısız: %s"
+msgstr ""
 
 #: nova/virt/fake.py:214
 #, python-format
@@ -8422,18 +8309,17 @@ msgid "Exception no pxe bootfile-name path: %s"
 msgstr ""
 
 #: nova/virt/baremetal/ipmi.py:86
-#, fuzzy, python-format
+#, python-format
 msgid "pid file %s does not contain any pid"
-msgstr "%s referansı versiyon içermiyor"
+msgstr ""
 
 #: nova/virt/baremetal/ipmi.py:109
 msgid "Node id not supplied to IPMI"
 msgstr ""
 
 #: nova/virt/baremetal/ipmi.py:112
-#, fuzzy
 msgid "Address not supplied to IPMI"
-msgstr "Adres belirtilmedi"
+msgstr ""
 
 #: nova/virt/baremetal/ipmi.py:115
 msgid "User not supplied to IPMI"
@@ -8444,11 +8330,9 @@ msgid "Password not supplied to IPMI"
 msgstr ""
 
 #: nova/virt/baremetal/ipmi.py:135
-#, fuzzy, python-format
+#, python-format
 msgid "ipmitool stdout: '%(out)s', stderr: '%(err)s'"
 msgstr ""
-"Sahte komuta verilen yanıt: standartçıktı='%(stdout)s' "
-"standarthata='%(stderr)s'"
 
 #: nova/virt/baremetal/ipmi.py:157
 msgid "IPMI power on failed"
@@ -8480,9 +8364,9 @@ msgid ""
 msgstr ""
 
 #: nova/virt/baremetal/pxe.py:253 nova/virt/baremetal/tilera.py:147
-#, fuzzy, python-format
+#, python-format
 msgid "Fetching kernel and ramdisk for instance %s"
-msgstr "|%s| örneği için değişken IP tahsisi"
+msgstr ""
 
 #: nova/virt/baremetal/pxe.py:285 nova/virt/baremetal/tilera.py:178
 #, python-format
@@ -8500,19 +8384,19 @@ msgid "Node associated with another instance while waiting for deploy of %s"
 msgstr ""
 
 #: nova/virt/baremetal/pxe.py:465
-#, fuzzy, python-format
+#, python-format
 msgid "PXE deploy started for instance %s"
-msgstr "%s örneği için konsol çıktısını getir"
+msgstr ""
 
 #: nova/virt/baremetal/pxe.py:470
-#, fuzzy, python-format
+#, python-format
 msgid "PXE deploy completed for instance %s"
-msgstr "%s örneği için konsol çıktısını getir"
+msgstr ""
 
 #: nova/virt/baremetal/pxe.py:474
-#, fuzzy, python-format
+#, python-format
 msgid "PXE deploy failed for instance %s"
-msgstr "%s örneği için konsol çıktısını getir"
+msgstr ""
 
 #: nova/virt/baremetal/pxe.py:476 nova/virt/baremetal/tilera.py:358
 #, python-format
@@ -8532,32 +8416,31 @@ msgid ""
 msgstr ""
 
 #: nova/virt/baremetal/tilera.py:339
-#, fuzzy, python-format
+#, python-format
 msgid "Tilera deploy started for instance %s"
-msgstr "%s örneği için konsol çıktısını getir"
+msgstr ""
 
 #: nova/virt/baremetal/tilera.py:345
-#, fuzzy, python-format
+#, python-format
 msgid "Tilera deploy completed for instance %s"
-msgstr "%s örneği için konsol çıktısını getir"
+msgstr ""
 
 #: nova/virt/baremetal/tilera.py:353
 msgid "Node is unknown error state."
 msgstr ""
 
 #: nova/virt/baremetal/tilera.py:356
-#, fuzzy, python-format
+#, python-format
 msgid "Tilera deploy failed for instance %s"
-msgstr "%s örneği için sunucu bulma başarısız"
+msgstr ""
 
 #: nova/virt/baremetal/tilera_pdu.py:84
 msgid "Node id not supplied to PDU"
 msgstr ""
 
 #: nova/virt/baremetal/tilera_pdu.py:87
-#, fuzzy
 msgid "Address not supplied to PDU"
-msgstr "Adres belirtilmedi"
+msgstr ""
 
 #: nova/virt/baremetal/tilera_pdu.py:90
 msgid "User not supplied to PDU"
@@ -8580,19 +8463,19 @@ msgid "PDU power off failed"
 msgstr ""
 
 #: nova/virt/baremetal/utils.py:42
-#, fuzzy, python-format
+#, python-format
 msgid "Failed to inject data into image %(image)s. Error: %(e)s"
-msgstr "%(image_file)s imaj dosyası çözümü başarısız: %(err)s"
+msgstr ""
 
 #: nova/virt/baremetal/utils.py:53
-#, fuzzy, python-format
+#, python-format
 msgid "Failed to unlink %(path)s, error: %(e)s"
-msgstr "%(method)s zamanlaması başarısız: %(ex)s"
+msgstr ""
 
 #: nova/virt/baremetal/utils.py:62
-#, fuzzy, python-format
+#, python-format
 msgid "Failed to remove dir %(path)s, error: %(e)s"
-msgstr "%(base_file)s dosyasını kaldırma başarısız, %(error)s"
+msgstr ""
 
 #: nova/virt/baremetal/utils.py:78
 #, python-format
@@ -8654,9 +8537,9 @@ msgid "Could not determine iscsi initiator name for instance %s"
 msgstr ""
 
 #: nova/virt/baremetal/volume_driver.py:228
-#, fuzzy, python-format
+#, python-format
 msgid "No fixed PXE IP is associated to %s"
-msgstr "Örnekle değişken IP ilişkilendirilmedi"
+msgstr ""
 
 #: nova/virt/baremetal/volume_driver.py:261
 #, python-format
@@ -8674,14 +8557,14 @@ msgstr ""
 
 #: nova/virt/baremetal/db/sqlalchemy/api.py:247
 #: nova/virt/baremetal/db/sqlalchemy/api.py:289
-#, fuzzy, python-format
+#, python-format
 msgid "Baremetal interface %s not found"
-msgstr "%(interface)s arayüzü bulunamadı"
+msgstr ""
 
 #: nova/virt/baremetal/db/sqlalchemy/api.py:299
-#, fuzzy, python-format
+#, python-format
 msgid "Baremetal interface %s already in use"
-msgstr "Sanal arayüz oluşturma hatası"
+msgstr ""
 
 #: nova/virt/baremetal/db/sqlalchemy/api.py:312
 #, python-format
@@ -8821,9 +8704,9 @@ msgid "Device allocation failed after repeated retries."
 msgstr ""
 
 #: nova/virt/disk/mount/api.py:140
-#, fuzzy, python-format
+#, python-format
 msgid "Map dev %s"
-msgstr "%s anahtarını içeriye aktar"
+msgstr ""
 
 #: nova/virt/disk/mount/api.py:145
 #, python-format
@@ -8870,9 +8753,9 @@ msgid "Could not attach image to loopback: %s"
 msgstr ""
 
 #: nova/virt/disk/mount/loop.py:35
-#, fuzzy, python-format
+#, python-format
 msgid "Loop mount error: %s"
-msgstr "Yakalama hatası: %s"
+msgstr ""
 
 #: nova/virt/disk/mount/loop.py:41
 #, python-format
@@ -8880,9 +8763,9 @@ msgid "Got loop device %s"
 msgstr ""
 
 #: nova/virt/disk/mount/loop.py:59
-#, fuzzy, python-format
+#, python-format
 msgid "Release loop device %s"
-msgstr "%s adresini serbest bırak"
+msgstr ""
 
 #: nova/virt/disk/mount/nbd.py:56 nova/virt/disk/mount/nbd.py:70
 msgid "No free nbd devices"
@@ -8907,9 +8790,9 @@ msgid "qemu-nbd error: %s"
 msgstr ""
 
 #: nova/virt/disk/mount/nbd.py:93 nova/virt/disk/mount/nbd.py:106
-#, fuzzy, python-format
+#, python-format
 msgid "NBD mount error: %s"
-msgstr "Yakalama hatası: %s"
+msgstr ""
 
 #: nova/virt/disk/mount/nbd.py:105
 #, python-format
@@ -8922,9 +8805,9 @@ msgid "Detaching from erroneous nbd device returned error: %s"
 msgstr ""
 
 #: nova/virt/disk/mount/nbd.py:127
-#, fuzzy, python-format
+#, python-format
 msgid "Release nbd device %s"
-msgstr "%s adresini serbest bırak"
+msgstr ""
 
 #: nova/virt/disk/vfs/api.py:28
 #, python-format
@@ -8951,9 +8834,9 @@ msgid "Mount guest OS image %(imgfile)s partition %(part)s"
 msgstr ""
 
 #: nova/virt/disk/vfs/guestfs.py:65
-#, fuzzy, python-format
+#, python-format
 msgid "Inspecting guest OS image %s"
-msgstr "İmaj siliniyor %s"
+msgstr ""
 
 #: nova/virt/disk/vfs/guestfs.py:69
 #, python-format
@@ -9072,14 +8955,14 @@ msgid "Failed to mount image %(ex)s)"
 msgstr ""
 
 #: nova/virt/disk/vfs/localfs.py:91
-#, fuzzy, python-format
+#, python-format
 msgid "Failed to unmount %(imgdir)s: %(ex)s"
-msgstr "%(method)s zamanlaması başarısız: %(ex)s"
+msgstr ""
 
 #: nova/virt/disk/vfs/localfs.py:97
-#, fuzzy, python-format
+#, python-format
 msgid "Failed to remove %(imgdir)s: %(ex)s"
-msgstr "%(method)s zamanlaması başarısız: %(ex)s"
+msgstr ""
 
 #: nova/virt/disk/vfs/localfs.py:140
 #, python-format
@@ -9134,9 +9017,9 @@ msgid "get_host_stats called"
 msgstr ""
 
 #: nova/virt/hyperv/hostops.py:180
-#, fuzzy, python-format
+#, python-format
 msgid "Host IP address is: %s"
-msgstr "%s adresini serbest bırak"
+msgstr ""
 
 #: nova/virt/hyperv/imagecache.py:49
 #, python-format
@@ -9209,9 +9092,9 @@ msgid "Target live migration host \"%s\" is unreachable"
 msgstr ""
 
 #: nova/virt/hyperv/livemigrationutils.py:50
-#, fuzzy, python-format
+#, python-format
 msgid "Live migration failed: %s"
-msgstr "Güncel göç işlemi %(dest)s'da bir hata ile karşılaştı"
+msgstr ""
 
 #: nova/virt/hyperv/livemigrationutils.py:62
 msgid "Live migration is not enabled on this host"
@@ -9222,9 +9105,9 @@ msgid "Live migration networks are not configured on this host"
 msgstr ""
 
 #: nova/virt/hyperv/livemigrationutils.py:71 nova/virt/hyperv/vmutils.py:104
-#, fuzzy, python-format
+#, python-format
 msgid "VM not found: %s"
-msgstr "Öğe bulunamadı"
+msgstr ""
 
 #: nova/virt/hyperv/livemigrationutils.py:73 nova/virt/hyperv/vmutils.py:113
 #, python-format
@@ -9254,9 +9137,9 @@ msgid "Updating remote planned VM disk paths for VM: %s"
 msgstr ""
 
 #: nova/virt/hyperv/livemigrationutils.py:202
-#, fuzzy, python-format
+#, python-format
 msgid "Starting live migration for VM: %s"
-msgstr "Güncel göç işlemi %(dest)s'da bir hata ile karşılaştı"
+msgstr ""
 
 #: nova/virt/hyperv/livemigrationutils.py:211
 #, python-format
@@ -9339,18 +9222,18 @@ msgid "finish_migration called"
 msgstr ""
 
 #: nova/virt/hyperv/migrationops.py:231
-#, fuzzy, python-format
+#, python-format
 msgid "Cannot find boot VHD file: %s"
-msgstr "Bilinmeyen temel dosya: %s"
+msgstr ""
 
 #: nova/virt/hyperv/migrationops.py:244 nova/virt/hyperv/vmops.py:137
 msgid "Cannot resize a VHD to a smaller size"
 msgstr ""
 
 #: nova/virt/hyperv/networkutils.py:47
-#, fuzzy, python-format
+#, python-format
 msgid "vswitch \"%s\" not found"
-msgstr "Örnek bulunamadı"
+msgstr ""
 
 #: nova/virt/hyperv/networkutils.py:60
 #, python-format
@@ -9363,9 +9246,9 @@ msgid "The file copy from %(src)s to %(dest)s failed"
 msgstr ""
 
 #: nova/virt/hyperv/pathutils.py:94
-#, fuzzy, python-format
+#, python-format
 msgid "Creating directory: %s"
-msgstr "oluştur: %s"
+msgstr ""
 
 #: nova/virt/hyperv/pathutils.py:99 nova/virt/hyperv/snapshotops.py:124
 #, python-format
@@ -9427,9 +9310,9 @@ msgid "Failed to remove snapshot for VM %s"
 msgstr ""
 
 #: nova/virt/hyperv/vif.py:74
-#, fuzzy, python-format
+#, python-format
 msgid "Creating vswitch port for instance: %s"
-msgstr "Örnek için ağ serbest bırakılıyor"
+msgstr ""
 
 #: nova/virt/hyperv/vmops.py:89
 #, python-format
@@ -9458,19 +9341,17 @@ msgid "Resizing VHD %(root_vhd_path)s to new size %(root_vhd_size)s"
 msgstr ""
 
 #: nova/virt/hyperv/vmops.py:155
-#, fuzzy
 msgid "Spawning new instance"
-msgstr "Örnek başlatılıyor.."
+msgstr ""
 
 #: nova/virt/hyperv/vmops.py:181
-#, fuzzy
 msgid "Spawn instance failed"
-msgstr "Örnek oluşturmada hata"
+msgstr ""
 
 #: nova/virt/hyperv/vmops.py:206
-#, fuzzy, python-format
+#, python-format
 msgid "Creating nic for instance: %s"
-msgstr "Örnek için ağ serbest bırakılıyor"
+msgstr ""
 
 #: nova/virt/hyperv/vmops.py:214
 #, python-format
@@ -9478,9 +9359,9 @@ msgid "Invalid config_drive_format \"%s\""
 msgstr ""
 
 #: nova/virt/hyperv/vmops.py:217
-#, fuzzy, python-format
+#, python-format
 msgid "Using config drive for instance: %s"
-msgstr "|%s| örneği için değişken IP tahsisi"
+msgstr ""
 
 #: nova/virt/hyperv/vmops.py:230 nova/virt/libvirt/driver.py:2026
 #, python-format
@@ -9493,24 +9374,23 @@ msgid "Creating config drive failed with error: %s"
 msgstr ""
 
 #: nova/virt/hyperv/vmops.py:274
-#, fuzzy, python-format
+#, python-format
 msgid "Got request to destroy instance: %s"
-msgstr "Örnekler durdurulacak"
+msgstr ""
 
 #: nova/virt/hyperv/vmops.py:287
-#, fuzzy, python-format
+#, python-format
 msgid "Instance not found: %s"
-msgstr "Örnek bulunamadı"
+msgstr ""
 
 #: nova/virt/hyperv/vmops.py:293
-#, fuzzy, python-format
+#, python-format
 msgid "Failed to destroy instance: %s"
-msgstr "Tekrar yükleme örneğinde hata oluştu."
+msgstr ""
 
 #: nova/virt/hyperv/vmops.py:298
-#, fuzzy
 msgid "reboot instance"
-msgstr "%r örneğini tekrar yükle"
+msgstr ""
 
 #: nova/virt/hyperv/vmops.py:304
 msgid "Pause instance"
@@ -9547,14 +9427,14 @@ msgid "Failed to change vm state of %(vm_name)s to %(req_state)s"
 msgstr ""
 
 #: nova/virt/hyperv/vmutils.py:84
-#, fuzzy, python-format
+#, python-format
 msgid "Cannot get VM summary data for: %s"
-msgstr "IP için metadata alma hata ile sonuçlandı: %s"
+msgstr ""
 
 #: nova/virt/hyperv/vmutils.py:161
-#, fuzzy, python-format
+#, python-format
 msgid "Creating VM %s"
-msgstr "Blok cihazı haritalandırması kapatılıyor %s"
+msgstr ""
 
 #: nova/virt/hyperv/vmutils.py:170
 #, python-format
@@ -9617,9 +9497,9 @@ msgid ""
 msgstr ""
 
 #: nova/virt/hyperv/volumeops.py:108
-#, fuzzy, python-format
+#, python-format
 msgid "Attach_volume: %(connection_info)s to %(instance_name)s"
-msgstr "%(device)s'daki %(instance_id)s örneğine %(volume_id)s birimini bağla"
+msgstr ""
 
 #: nova/virt/hyperv/volumeops.py:139
 #, python-format
@@ -9750,9 +9630,8 @@ msgid "Instance may be started again."
 msgstr ""
 
 #: nova/virt/libvirt/driver.py:821
-#, fuzzy
 msgid "Going to destroy instance again."
-msgstr "Örnekler durdurulacak"
+msgstr ""
 
 #: nova/virt/libvirt/driver.py:840
 msgid "Error from libvirt during undefineFlags. Retrying with undefine"
@@ -9801,18 +9680,16 @@ msgid "During detach_volume, instance disappeared."
 msgstr ""
 
 #: nova/virt/libvirt/driver.py:1188
-#, fuzzy
 msgid "attaching network adapter failed."
-msgstr "Tanımlı bir ağ yok."
+msgstr ""
 
 #: nova/virt/libvirt/driver.py:1210
 msgid "During detach_interface, instance disappeared."
 msgstr ""
 
 #: nova/virt/libvirt/driver.py:1214
-#, fuzzy
 msgid "detaching network adapter failed."
-msgstr "Tanımlı bir ağ yok."
+msgstr ""
 
 #: nova/virt/libvirt/driver.py:1312
 msgid "Beginning live snapshot process"
@@ -10051,17 +9928,15 @@ msgid ""
 msgstr ""
 
 #: nova/virt/libvirt/driver.py:3110
-#, fuzzy, python-format
+#, python-format
 msgid ""
 "Creating tmpfile %s to verify with other compute node that the instance "
 "is on the same shared storage."
 msgstr ""
-"Diğer hesaplama düğümlerini haberdar etmek için %s geçici dosyası "
-"oluşturuluyor. Düğümler aynı belleğe bağlanmalıdır."
 
 #: nova/virt/libvirt/driver.py:3191
 msgid "Block migration can not be used with shared storage."
-msgstr "Blok göçü paylaşılan hafıza ile kullanılamaz."
+msgstr ""
 
 #: nova/virt/libvirt/driver.py:3199
 msgid "Live migration can not be used without shared storage."
@@ -10090,11 +9965,6 @@ msgid ""
 "\n"
 "Refer to %(u)s"
 msgstr ""
-"CPU uyumluluğu yok. \n"
-" \n"
-" %(ret)s \n"
-" \n"
-" Bkz: %(u)s"
 
 #: nova/virt/libvirt/driver.py:3299
 #, python-format
@@ -10102,8 +9972,6 @@ msgid ""
 "Creating tmpfile %s to notify to other compute nodes that they should "
 "mount the same storage."
 msgstr ""
-"Diğer hesaplama düğümlerini haberdar etmek için %s geçici dosyası "
-"oluşturuluyor. Düğümler aynı belleğe bağlanmalıdır."
 
 #: nova/virt/libvirt/driver.py:3349
 #, python-format
@@ -10116,11 +9984,9 @@ msgid "Live Migration failure: %s"
 msgstr ""
 
 #: nova/virt/libvirt/driver.py:3527
-#, fuzzy, python-format
+#, python-format
 msgid "plug_vifs() failed %(cnt)d. Retry up to %(max_retry)d."
 msgstr ""
-"plug_vifs() %(cnt)d kez başarısız oldu. %(hostname)s için %(max_retry)d "
-"denemeye kadar tekrar deneniyor."
 
 #: nova/virt/libvirt/driver.py:3631
 #, python-format
@@ -10194,15 +10060,15 @@ msgstr ""
 msgid ""
 "Libvirt module could not be loaded. NWFilterFirewall will not work "
 "correctly."
-msgstr "Libvirt modülü yüklenemedi. Ağ filtre güvenlik duvarı doğru çalışmıyor."
+msgstr ""
 
 #: nova/virt/libvirt/firewall.py:109
 msgid "Called setup_basic_filtering in nwfilter"
-msgstr "Ağ filtresinde temel filtreleme kurulumu çağırıldı"
+msgstr ""
 
 #: nova/virt/libvirt/firewall.py:117
 msgid "Ensuring static filters"
-msgstr "Durağan filtreler koruma altına alındı"
+msgstr ""
 
 #: nova/virt/libvirt/firewall.py:268
 #, python-format
@@ -10212,11 +10078,11 @@ msgstr ""
 #: nova/virt/libvirt/firewall.py:290
 #, python-format
 msgid "The nwfilter(%(instance_filter_name)s) for%(name)s is not found."
-msgstr "%(name)s için (%(instance_filter_name)s) ağ filtresi bulunamadı."
+msgstr ""
 
 #: nova/virt/libvirt/firewall.py:308
 msgid "iptables firewall: Setup Basic Filtering"
-msgstr "iptabloları güvenlik duvarı: Temel Filtreleme Kurulumu"
+msgstr ""
 
 #: nova/virt/libvirt/imagebackend.py:287
 #, python-format
@@ -10252,17 +10118,17 @@ msgstr ""
 #: nova/virt/libvirt/imagecache.py:330
 #, python-format
 msgid "%s is a valid instance name"
-msgstr "%s geçerli bir örnek ismidir"
+msgstr ""
 
 #: nova/virt/libvirt/imagecache.py:333
 #, python-format
 msgid "%s has a disk file"
-msgstr "%s bir disk dosyasına sahiptir"
+msgstr ""
 
 #: nova/virt/libvirt/imagecache.py:335
 #, python-format
 msgid "Instance %(instance)s is backed by %(backing)s"
-msgstr "%(instance)s örneği %(backing)s tarafından desteklenmiştir"
+msgstr ""
 
 #: nova/virt/libvirt/imagecache.py:348
 #, python-format
@@ -10270,8 +10136,6 @@ msgid ""
 "Instance %(instance)s is using a backing file %(backing)s which does not "
 "appear in the image service"
 msgstr ""
-"%(instance)s örneği imaj servisinde görünmeyen bir %(backing)s destek "
-"dosyasını kullanıyor"
 
 #: nova/virt/libvirt/imagecache.py:423
 #, python-format
@@ -10298,17 +10162,17 @@ msgstr ""
 #: nova/virt/libvirt/imagecache.py:469
 #, python-format
 msgid "Base file too young to remove: %s"
-msgstr "Temel dosya kaldırmak için çok yeni: %s"
+msgstr ""
 
 #: nova/virt/libvirt/imagecache.py:472
 #, python-format
 msgid "Removing base file: %s"
-msgstr "Temel dosya kaldırılıyor: %s"
+msgstr ""
 
 #: nova/virt/libvirt/imagecache.py:479
 #, python-format
 msgid "Failed to remove %(base_file)s, error was %(error)s"
-msgstr "%(base_file)s dosyasını kaldırma başarısız, %(error)s"
+msgstr ""
 
 #: nova/virt/libvirt/imagecache.py:490
 #, python-format
@@ -10342,11 +10206,11 @@ msgstr ""
 #: nova/virt/libvirt/imagecache.py:569
 #, python-format
 msgid "Skipping verification, no base directory at %s"
-msgstr "Doğrulama atlanıyor, %s'de temel dizin yok"
+msgstr ""
 
 #: nova/virt/libvirt/imagecache.py:573
 msgid "Verify base images"
-msgstr "Temel imajları doğrulayın"
+msgstr ""
 
 #: nova/virt/libvirt/imagecache.py:580
 #, python-format
@@ -10356,26 +10220,26 @@ msgstr ""
 #: nova/virt/libvirt/imagecache.py:598
 #, python-format
 msgid "Unknown base file: %s"
-msgstr "Bilinmeyen temel dosya: %s"
+msgstr ""
 
 #: nova/virt/libvirt/imagecache.py:603
 #, python-format
 msgid "Active base files: %s"
-msgstr "Aktif temel dosyalar: %s"
+msgstr ""
 
 #: nova/virt/libvirt/imagecache.py:606
 #, python-format
 msgid "Corrupt base files: %s"
-msgstr "Bozuk temel dosyalar: %s"
+msgstr ""
 
 #: nova/virt/libvirt/imagecache.py:610
 #, python-format
 msgid "Removable base files: %s"
-msgstr "Taşınabilir temel dosyalar: %s"
+msgstr ""
 
 #: nova/virt/libvirt/imagecache.py:618
 msgid "Verification complete"
-msgstr "Doğrulama tamamlandı"
+msgstr ""
 
 #: nova/virt/libvirt/utils.py:78 nova/virt/libvirt/utils.py:84
 msgid "systool is not installed"
@@ -10427,19 +10291,19 @@ msgstr ""
 
 #: nova/virt/libvirt/vif.py:343 nova/virt/libvirt/vif.py:526
 #: nova/virt/libvirt/vif.py:672
-#, fuzzy, python-format
+#, python-format
 msgid "Unexpected vif_type=%s"
-msgstr "Beklenen nesne türü: %s"
+msgstr ""
 
 #: nova/virt/libvirt/vif.py:355
 #, python-format
 msgid "Ensuring vlan %(vlan)s and bridge %(bridge)s"
-msgstr "%(vlan)s vlan ve %(bridge)s köprüsü koruma altına alınıyor"
+msgstr ""
 
 #: nova/virt/libvirt/vif.py:366
 #, python-format
 msgid "Ensuring bridge %s"
-msgstr "%s köprüsü koruma altına alınıyor"
+msgstr ""
 
 #: nova/virt/libvirt/vif.py:498
 msgid "Failed while plugging vif"
@@ -10493,7 +10357,7 @@ msgstr ""
 #: nova/virt/libvirt/volume.py:260
 #, python-format
 msgid "iSCSI device not found at %s"
-msgstr "%s'de iSCSI cihazı bulunamadı"
+msgstr ""
 
 #: nova/virt/libvirt/volume.py:263
 #, python-format
@@ -10530,9 +10394,9 @@ msgid "%s is already mounted"
 msgstr ""
 
 #: nova/virt/libvirt/volume.py:768
-#, fuzzy, python-format
+#, python-format
 msgid "AoE device not found at %s"
-msgstr "%s'de iSCSI cihazı bulunamadı"
+msgstr ""
 
 #: nova/virt/libvirt/volume.py:770
 #, python-format
@@ -10554,9 +10418,8 @@ msgid "Looking for Fibre Channel dev %(device)s"
 msgstr ""
 
 #: nova/virt/libvirt/volume.py:946
-#, fuzzy
 msgid "Fibre Channel device not found."
-msgstr "%s'de iSCSI cihazı bulunamadı"
+msgstr ""
 
 #: nova/virt/libvirt/volume.py:949
 #, python-format
@@ -10675,9 +10538,9 @@ msgid "Connection error connecting PowerVM manager"
 msgstr ""
 
 #: nova/virt/powervm/common.py:101
-#, fuzzy, python-format
+#, python-format
 msgid "Running cmd (SSH-as-root): %s"
-msgstr "Çalışan komut(alt süreç): %s"
+msgstr ""
 
 #: nova/virt/powervm/common.py:150
 msgid "File transfer to PowerVM manager failed"
@@ -10890,9 +10753,9 @@ msgid "Instance cannot be found in host, or in an unknownstate."
 msgstr ""
 
 #: nova/virt/vmwareapi/driver.py:411
-#, fuzzy, python-format
+#, python-format
 msgid "VMware Cluster %s is not found"
-msgstr " [%s] göstergesi bulunamadı"
+msgstr ""
 
 #: nova/virt/vmwareapi/driver.py:419
 #, python-format
@@ -10966,9 +10829,9 @@ msgid "No Virtual Machine has been registered yet"
 msgstr ""
 
 #: nova/virt/vmwareapi/host.py:40
-#, fuzzy, python-format
+#, python-format
 msgid "%(action)s %(host)s"
-msgstr "işlem: %s"
+msgstr ""
 
 #: nova/virt/vmwareapi/host.py:63
 #, python-format
@@ -11319,14 +11182,14 @@ msgid ""
 msgstr ""
 
 #: nova/virt/vmwareapi/vmops.py:996
-#, fuzzy, python-format
+#, python-format
 msgid "Renaming the VM from %s"
-msgstr "%s sistem görüntüsünden birim oluştur"
+msgstr ""
 
 #: nova/virt/vmwareapi/vmops.py:1002
-#, fuzzy, python-format
+#, python-format
 msgid "Renamed the VM from %s"
-msgstr "%s sistem görüntüsünden birim oluştur"
+msgstr ""
 
 #: nova/virt/vmwareapi/vmops.py:1027
 #, python-format
@@ -11478,9 +11341,8 @@ msgid "Attach_volume: %(connection_info)s, %(instance_name)s, %(mountpoint)s"
 msgstr ""
 
 #: nova/virt/vmwareapi/volumeops.py:153 nova/virt/vmwareapi/volumeops.py:193
-#, fuzzy
 msgid "Unable to find iSCSI Target"
-msgstr "%r adresini bulmak olanaksız"
+msgstr ""
 
 #: nova/virt/vmwareapi/volumeops.py:171 nova/virt/xenapi/volumeops.py:61
 #, python-format
@@ -11493,9 +11355,8 @@ msgid "Detach_volume: %(instance_name)s, %(mountpoint)s"
 msgstr ""
 
 #: nova/virt/vmwareapi/volumeops.py:201
-#, fuzzy
 msgid "Unable to find volume"
-msgstr "Geçersiz bölüm"
+msgstr ""
 
 #: nova/virt/vmwareapi/volumeops.py:203 nova/virt/xenapi/volumeops.py:153
 #, python-format
@@ -11678,9 +11539,9 @@ msgid ""
 msgstr ""
 
 #: nova/virt/xenapi/host.py:83
-#, fuzzy, python-format
+#, python-format
 msgid "Aggregate for host %(host)s count not be found."
-msgstr "%(host)s hesaplama sunucusu bulunamadı."
+msgstr ""
 
 #: nova/virt/xenapi/host.py:102
 #, python-format
@@ -11936,11 +11797,9 @@ msgid "vdi_uuid=%(cur_vdi_uuid)s vdi_size_bytes=%(vdi_size_bytes)d"
 msgstr ""
 
 #: nova/virt/xenapi/vm_utils.py:1219
-#, fuzzy, python-format
+#, python-format
 msgid "Image size %(size)d exceeded instance_type allowed size %(allowed_size)d"
 msgstr ""
-"İmaj '%(image_id)s' boyut%(size_bytes)d izin verilen örnek  "
-"%(allowed_size_bytes)d"
 
 #: nova/virt/xenapi/vm_utils.py:1254
 #, python-format
@@ -12288,9 +12147,8 @@ msgid "Clean shutdown did not complete successfully, trying hard shutdown."
 msgstr ""
 
 #: nova/virt/xenapi/vmops.py:829
-#, fuzzy
 msgid "Unable to terminate instance."
-msgstr "Örnek tür oluşturulamıyor."
+msgstr ""
 
 #: nova/virt/xenapi/vmops.py:883
 #, python-format
@@ -12321,9 +12179,8 @@ msgid "Unable to find root VBD/VDI for VM"
 msgstr ""
 
 #: nova/virt/xenapi/vmops.py:1173
-#, fuzzy
 msgid "Destroying VDIs"
-msgstr "XVP tekar başlatılıyor"
+msgstr ""
 
 #: nova/virt/xenapi/vmops.py:1200
 msgid "Using RAW or VHD, skipping kernel and ramdisk deletion"
@@ -12386,9 +12243,8 @@ msgid "Destination host:%s must be in the same aggregate as the source server"
 msgstr ""
 
 #: nova/virt/xenapi/vmops.py:1749
-#, fuzzy
 msgid "No suitable network for migrate"
-msgstr "Hatalı ağ biçimi"
+msgstr ""
 
 #: nova/virt/xenapi/vmops.py:1761
 msgid "Migrate Receive failed"
@@ -12417,9 +12273,8 @@ msgid "Introducing SR %s"
 msgstr ""
 
 #: nova/virt/xenapi/volume_utils.py:69
-#, fuzzy
 msgid "Creating PBD for SR"
-msgstr "%s blok aygıt haritalandırması ayarlanıyor"
+msgstr ""
 
 #: nova/virt/xenapi/volume_utils.py:72
 msgid "Plugging SR"
@@ -12538,263 +12393,10 @@ msgid "Cinderclient connection created using URL: %s"
 msgstr ""
 
 #: nova/volume/cinder.py:224
-#, fuzzy
 msgid "status must be 'in-use'"
-msgstr "İmaj müsait olmak zorunda"
+msgstr ""
 
 #: nova/volume/cinder.py:230
-#, fuzzy
 msgid "status must be 'available'"
-msgstr "İmaj müsait olmak zorunda"
-
-#~ msgid "Created reservations %(reservations)s"
-#~ msgstr ""
-
-#~ msgid "Failed to commit reservations %(reservations)s"
-#~ msgstr ""
-
-#~ msgid "Committed reservations %(reservations)s"
-#~ msgstr ""
-
-#~ msgid "Failed to roll back reservations %(reservations)s"
-#~ msgstr ""
-
-#~ msgid "Rolled back reservations %(reservations)s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ msgstr ""
-
-#~ msgid "Received Token: %(token)s, %(token_dict)s)"
-#~ msgstr "Token alındı: %(token)s, %(token_dict)s)"
-
-#~ msgid "Checking Token: %(token)s, %(token_valid)s)"
-#~ msgstr "Anahtar kontrol edliyor: %(token)s, %(token_valid)s)"
-
-#~ msgid "Fixed ip %(fixed_ip_id)s not found"
-#~ msgstr ""
-
-#~ msgid "Interface %(interface)s not found"
-#~ msgstr "%(interface)s arayüzü bulunamadı"
-
-#~ msgid "floating IP allocation for instance |%(floating_address)s|"
-#~ msgstr "|%s| örneği için değişken IP tahsisi"
-
-#~ msgid "Quota exceeded for %(pid)s, tried to allocate floating IP"
-#~ msgstr ""
-
-#~ msgid "Starting migration network for instance %(instance_uuid)s"
-#~ msgstr ""
-
-#~ msgid "Finishing migration network for instance %(instance_uuid)s"
-#~ msgstr ""
-
-#~ msgid "networks retrieved for instance: |%(networks_list)s|"
-#~ msgstr ""
-
-#~ msgid "Quota exceeded for %(pid)s, tried to allocate fixed IP"
-#~ msgstr ""
-
-#~ msgid "Leased IP |%(address)s|"
-#~ msgstr ""
-
-#~ msgid "Released IP |%(address)s|"
-#~ msgstr ""
-
-#~ msgid "Failed to delete neutron port %(port_id)s "
-#~ msgstr ""
-
-#~ msgid "Cannot load '%(attrname)s' in the base class"
-#~ msgstr ""
-
-#~ msgid "Group affinity: %(host)s in %(configured)s"
-#~ msgstr ""
-
-#~ msgid "Could not decode cpu_allocation_ratio: '%(e)s'"
-#~ msgstr ""
-
-#~ msgid "Could not decode ram_allocation_ratio: '%(e)s'"
-#~ msgstr ""
-
-#~ msgid "Couldn't find multipath device %(line)s"
-#~ msgstr ""
-
-#~ msgid "Found multipath device = %(mdev)s"
-#~ msgstr ""
-
-#~ msgid "Make directory path=%(path)s"
-#~ msgstr ""
-
-#~ msgid "Append file path=%(path)s"
-#~ msgstr ""
-
-#~ msgid "Replace file path=%(path)s"
-#~ msgstr ""
-
-#~ msgid "Read file path=%(path)s"
-#~ msgstr ""
-
-#~ msgid "Has file path=%(path)s"
-#~ msgstr ""
-
-#~ msgid "Exception received during cell processing: %(exc_name)s."
-#~ msgstr ""
-
-#~ msgid "%(code)s: %(message)s"
-#~ msgstr "%(code)s: %(message)s"
-
-#~ msgid "InstanceNotFound raised: %s"
-#~ msgstr "ÖrnekBulunamadı hatası: %s"
-
-#~ msgid "VolumeNotFound raised: %s"
-#~ msgstr "BölümBulunamadı hatası: %s"
-
-#~ msgid "SnapshotNotFound raised: %s"
-#~ msgstr "SistemAnlıkGörüntüsüBulunamadı hatası: %s"
-
-#~ msgid "NotFound raised: %s"
-#~ msgstr "Bulunamadı hatası: %s"
-
-#~ msgid "KeyPairExists raised: %s"
-#~ msgstr "AnahtarÇiftiZatenVar hatası: %s"
-
-#~ msgid "InvalidKeypair raised: %s"
-#~ msgstr "Geçersizİstek hatası: %s"
-
-#~ msgid "InvalidParameterValue raised: %s"
-#~ msgstr "GeçersizParametreDeğeri hatası: %s"
-
-#~ msgid "InvalidPortRange raised: %s"
-#~ msgstr "GeçersizPortGenişliği hatası: %s"
-
-#~ msgid "NotAuthorized raised: %s"
-#~ msgstr "KimlikDoğrulama hatası: %s"
-
-#~ msgid "InvalidRequest raised: %s"
-#~ msgstr "Geçersizİstek hatası: %s"
-
-#~ msgid "QuotaError raised: %s"
-#~ msgstr ""
-
-#~ msgid "Invalid id: bogus (expecting \"i-...\"): %s"
-#~ msgstr ""
-
-#~ msgid "Unexpected error raised: %s"
-#~ msgstr "BeklenmeyenHata: %s"
-
-#~ msgid "Compute.api::reset_state %s"
-#~ msgstr ""
-
-#~ msgid "Must supply valid parameters to create instance_type"
-#~ msgstr "Örnek tür oluşturulamıyor."
-
-#~ msgid "Instance Type exists."
-#~ msgstr "Örnek mevcut değil"
-
-#~ msgid "Please ensure instance_type name and flavorid are unique."
-#~ msgstr ""
-
-#~ msgid "Currently defined instance_type names and flavorids:"
-#~ msgstr ""
-
-#~ msgid "Valid instance type name is required"
-#~ msgstr "%s geçerli bir örnek ismidir"
-
-#~ msgid "Key %(key)s on instance type %(name)s unset"
-#~ msgstr ""
-
-#~ msgid "Got semaphore \"%(lock)s\" for method \"%(method)s\"..."
-#~ msgstr ""
-
-#~ msgid "Attempting to grab file lock \"%(lock)s\" for method \"%(method)s\"..."
-#~ msgstr ""
-
-#~ msgid "Got file lock \"%(lock)s\" at %(path)s for method \"%(method)s\"..."
-#~ msgstr ""
-
-#~ msgid "Failed to sanitize %(item)s. Key error %(err)s"
-#~ msgstr "%(base_file)s dosyasını kaldırma başarısız, %(error)s"
-
-#~ msgid "Driver must implement schedule_prep_resize"
-#~ msgstr ""
-
-#~ msgid "Failed to soft reboot instance."
-#~ msgstr ""
-
-#~ msgid "Error(s) %s occurred in the call to RetrieveProperties"
-#~ msgstr ""
-
-#~ msgid "download_vhd failed: %r"
-#~ msgstr ""
-
-#~ msgid "Setting VCPU weight"
-#~ msgstr ""
-
-#~ msgid "upload_vhd failed: %r"
-#~ msgstr ""
-
-#~ msgid "No torrent URL fetcher extension found."
-#~ msgstr ""
-
-#~ msgid "Multiple torrent URL fetcher extension found.  Failing."
-#~ msgstr ""
-
-#~ msgid "No torrent URL fetcher installed."
-#~ msgstr ""
-
-#~ msgid "Failed to get torrent URL for image %s"
-#~ msgstr ""
-
-#~ msgid "Running pygrub against %s"
-#~ msgstr ""
-
-#~ msgid "Found Xen kernel %s"
-#~ msgstr ""
-
-#~ msgid "No Xen kernel found.  Booting HVM."
-#~ msgstr ""
-
-#~ msgid "%(name)s has less than %(min_length)s characters."
-#~ msgstr ""
-
-#~ msgid "Missing device_name in some block devices."
-#~ msgstr ""
-
-#~ msgid "Error in evacuate, %s"
-#~ msgstr "Göçte hata %s"
-
-#~ msgid "leasing ip"
-#~ msgstr ""
-
-#~ msgid "releasing ip"
-#~ msgstr ""
-
-#~ msgid "bdm %s"
-#~ msgstr ""
-
-#~ msgid "Host already in availability zone %s."
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Error raised getting network info for"
-#~ " instance %(instance_uuid)s. Retrying in "
-#~ "%(retry_time)s seconds."
-#~ msgstr ""
-
-#~ msgid "Setting up bdm %s"
-#~ msgstr "%s blok aygıt haritalandırması ayarlanıyor"
-
-#~ msgid "%s. Setting instance vm_state to ERROR"
-#~ msgstr ""
-
-#~ msgid "Extra column %(table)%.%(column)s in shadow table"
-#~ msgstr ""
-
-#~ msgid "Please extend mock libvirt module to support flags"
-#~ msgstr "Lütfen sahte libvirt modülü desteklenen bayraklar için genişletiniz"
-
-#~ msgid ""
-#~ "vif_type=%(vif_type)s instance=%(instance)s "
-#~ "network=%(network)s mapping=%(mapping)s"
-#~ msgstr ""
+msgstr ""
 
