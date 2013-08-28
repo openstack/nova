@@ -1297,7 +1297,10 @@ def _fetch_disk_image(context, session, instance, name_label, image_id,
         sr_ref = safe_find_sr(session)
 
     glance_image = image_utils.GlanceImage(context, image_id)
-    image = image_utils.RawImage(glance_image)
+    if glance_image.is_raw_tgz():
+        image = image_utils.RawTGZImage(glance_image)
+    else:
+        image = image_utils.RawImage(glance_image)
 
     virtual_size = image.get_size()
     vdi_size = virtual_size

@@ -15,6 +15,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import shutil
+import tarfile
+
 from nova.image import glance
 
 
@@ -36,6 +39,13 @@ class GlanceImage(object):
         return self._image_service.download(
             self._context, self._image_id, fileobj)
 
+    def is_raw_tgz(self):
+        return ['raw', 'tgz'] == [
+            self.meta.get(key) for key in ('disk_format', 'container_format')]
+
+    def data(self):
+        return self._image_service.download(self._context, self._image_id)
+
 
 class RawImage(object):
     def __init__(self, glance_image):
@@ -46,3 +56,54 @@ class RawImage(object):
 
     def stream_to(self, fileobj):
         return self.glance_image.download_to(fileobj)
+
+
+class IterableToFileAdapter(object):
+    """A degenerate file-like so that an iterable could be read like a file.
+
+    As Glance client returns an iterable, but tarfile requires a file like,
+    this is the adapter between the two. This allows tarfile to access the
+    glance stream.
+    """
+
+    def __init__(self, iterable):
+        self.iterator = iterable.__iter__()
+        self.remaining_data = ''
+
+    def read(self, size):
+        chunk = self.remaining_data
+        try:
+            while not chunk:
+                chunk = self.iterator.next()
+        except StopIteration:
+            return ''
+        return_value = chunk[0:size]
+        self.remaining_data = chunk[size:]
+        return return_value
+
+
+class RawTGZImage(object):
+    def __init__(self, glance_image):
+        self.glance_image = glance_image
+        self._tar_info = None
+        self._tar_file = None
+
+    def _as_file(self):
+        return IterableToFileAdapter(self.glance_image.data())
+
+    def _as_tarfile(self):
+        return tarfile.open(mode='r|gz', fileobj=self._as_file())
+
+    def get_size(self):
+        if self._tar_file is None:
+            self._tar_file = self._as_tarfile()
+            self._tar_info = self._tar_file.next()
+        return self._tar_info.size
+
+    def stream_to(self, target_file):
+        if self._tar_file is None:
+            self._tar_file = self._as_tarfile()
+            self._tar_info = self._tar_file.next()
+        source_file = self._tar_file.extractfile(self._tar_info)
+        shutil.copyfileobj(source_file, target_file)
+        self._tar_file.close()
