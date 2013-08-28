@@ -416,7 +416,9 @@ class BareMetalDriver(driver.ComputeDriver):
                'hypervisor_version': self.get_hypervisor_version(),
                'hypervisor_hostname': str(node['uuid']),
                'cpu_info': 'baremetal cpu',
-               'supported_instances': jsonutils.dumps(self.supported_instances)
+               'supported_instances':
+                        jsonutils.dumps(self.supported_instances),
+               'stats': self.extra_specs
                }
         return dic
 

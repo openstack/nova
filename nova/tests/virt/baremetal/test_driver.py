@@ -281,6 +281,7 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
         self.driver.destroy(**node['destroy_params'])
         resources = self.driver.get_available_resource(node['node']['uuid'])
         self.assertEqual(resources['memory_mb_used'], 0)
+        self.assertEqual(resources['stats']['test_spec'], 'test_value')
 
     def test_get_available_nodes(self):
         self.assertEqual(0, len(self.driver.get_available_nodes()))
