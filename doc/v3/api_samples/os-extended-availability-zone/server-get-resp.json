@@ -1,0 +1,58 @@
+{
+    "server": {
+        "access_ip_v4": "",
+        "access_ip_v6": "",
+        "addresses": {
+            "private": [
+                {
+                    "addr": "192.168.0.3",
+                    "mac_addr": "aa:bb:cc:dd:ee:ff",
+                    "type": "fixed",
+                    "version": 4
+                }
+            ]
+        },
+        "created": "2013-09-16T02:54:56Z",
+        "flavor": {
+            "id": "1",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/flavors/1",
+                    "rel": "bookmark"
+                }
+            ]
+        },
+        "host_id": "b75d6736650f9b272223ceb48f4cde001de1856e381613a922117ab7",
+        "id": "f22e4521-d03a-4e9f-9fd3-016b9e227219",
+        "image": {
+            "id": "70a599e0-31e7-49b7-b260-868f441e862b",
+            "links": [
+                {
+                    "href": "http://glance.openstack.example.com/images/70a599e0-31e7-49b7-b260-868f441e862b",
+                    "rel": "bookmark"
+                }
+            ]
+        },
+        "key_name": null,
+        "links": [
+            {
+                "href": "http://openstack.example.com/v3/servers/f22e4521-d03a-4e9f-9fd3-016b9e227219",
+                "rel": "self"
+            },
+            {
+                "href": "http://openstack.example.com/servers/f22e4521-d03a-4e9f-9fd3-016b9e227219",
+                "rel": "bookmark"
+            }
+        ],
+        "metadata": {
+            "My Server Name": "Apache1"
+        },
+        "name": "new-server-test",
+        "os-extended-availability-zone:availability_zone": "nova",
+        "progress": 0,
+        "status": "ACTIVE",
+        "tenant_id": "openstack",
+        "updated": "2013-09-16T02:54:57Z",
+        "user_id": "fake"
+    }
+}

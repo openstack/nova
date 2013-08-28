@@ -1,8 +1,8 @@
 {
     "server" : {
         "name" : "new-server-test",
-        "image_ref" : "%(glance_host)s/openstack/images/%(image_id)s",
-        "flavor_ref" : "%(host)s/openstack/flavors/1",
+        "image_ref" : "%(glance_host)s/images/%(image_id)s",
+        "flavor_ref" : "%(host)s/flavors/1",
         "metadata" : {
             "My Server Name" : "Apache1"
         },

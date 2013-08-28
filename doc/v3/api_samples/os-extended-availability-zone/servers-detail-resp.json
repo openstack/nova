@@ -1,0 +1,60 @@
+{
+    "servers": [
+        {
+            "access_ip_v4": "",
+            "access_ip_v6": "",
+            "addresses": {
+                "private": [
+                    {
+                        "addr": "192.168.0.3",
+                        "mac_addr": "aa:bb:cc:dd:ee:ff",
+                        "type": "fixed",
+                        "version": 4
+                    }
+                ]
+            },
+            "created": "2013-09-16T02:54:56Z",
+            "flavor": {
+                "id": "1",
+                "links": [
+                    {
+                        "href": "http://openstack.example.com/flavors/1",
+                        "rel": "bookmark"
+                    }
+                ]
+            },
+            "host_id": "cf5540800371e53064a60b36ff9d6d1d6a8719ffc870c63a270c6bee",
+            "id": "55f43fa2-dc7c-4c0b-b21a-76f9abe516f9",
+            "image": {
+                "id": "70a599e0-31e7-49b7-b260-868f441e862b",
+                "links": [
+                    {
+                        "href": "http://glance.openstack.example.com/images/70a599e0-31e7-49b7-b260-868f441e862b",
+                        "rel": "bookmark"
+                    }
+                ]
+            },
+            "key_name": null,
+            "links": [
+                {
+                    "href": "http://openstack.example.com/v3/servers/55f43fa2-dc7c-4c0b-b21a-76f9abe516f9",
+                    "rel": "self"
+                },
+                {
+                    "href": "http://openstack.example.com/servers/55f43fa2-dc7c-4c0b-b21a-76f9abe516f9",
+                    "rel": "bookmark"
+                }
+            ],
+            "metadata": {
+                "My Server Name": "Apache1"
+            },
+            "name": "new-server-test",
+            "os-extended-availability-zone:availability_zone": "nova",
+            "progress": 0,
+            "status": "ACTIVE",
+            "tenant_id": "openstack",
+            "updated": "2013-09-16T02:54:58Z",
+            "user_id": "fake"
+        }
+    ]
+}
