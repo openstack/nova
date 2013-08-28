@@ -1388,3 +1388,14 @@ class PciDeviceInvalidOwner(NovaException):
     msg_fmt = _(
         "PCI Device %(compute_node_id)s:%(address)s is owned by %(owner)s "
         "instead of %(hopeowner)s")
+
+
+class PciDeviceRequestFailed(NovaException):
+    msg_fmt = _(
+        "PCI Device request (%requests)s failed")
+
+
+class PciDevicePoolEmpty(NovaException):
+    msg_fmt = _(
+        "Attempt to consume PCI Device %(compute_node_id)s:%(address)s "
+        "from empty pool")
