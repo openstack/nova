@@ -773,6 +773,64 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEquals(cfg.devices[6].type, "vnc")
         self.assertEquals(cfg.devices[7].type, "spice")
 
+    def test_get_guest_config_with_qga_through_image_meta(self):
+        self.flags(libvirt_type='kvm')
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
+                                            instance_ref)
+        image_meta = {"properties": {"hw_qemu_guest_agent": "yes"}}
+        cfg = conn.get_guest_config(instance_ref, [], image_meta, disk_info)
+        self.assertEqual(len(cfg.devices), 7)
+        self.assertEqual(type(cfg.devices[0]),
+                          vconfig.LibvirtConfigGuestDisk)
+        self.assertEqual(type(cfg.devices[1]),
+                          vconfig.LibvirtConfigGuestDisk)
+        self.assertEqual(type(cfg.devices[2]),
+                          vconfig.LibvirtConfigGuestSerial)
+        self.assertEqual(type(cfg.devices[3]),
+                          vconfig.LibvirtConfigGuestSerial)
+        self.assertEqual(type(cfg.devices[4]),
+                          vconfig.LibvirtConfigGuestInput)
+        self.assertEqual(type(cfg.devices[5]),
+                          vconfig.LibvirtConfigGuestGraphics)
+        self.assertEqual(type(cfg.devices[6]),
+                          vconfig.LibvirtConfigGuestChannel)
+
+        self.assertEqual(cfg.devices[4].type, "tablet")
+        self.assertEqual(cfg.devices[5].type, "vnc")
+        self.assertEqual(cfg.devices[6].type, "unix")
+        self.assertEqual(cfg.devices[6].target_name, "org.qemu.guest_agent.0")
+
+    def test_get_guest_config_without_qga_through_image_meta(self):
+        self.flags(libvirt_type='kvm')
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
+                                            instance_ref)
+        image_meta = {"properties": {"hw_qemu_guest_agent": "no"}}
+        cfg = conn.get_guest_config(instance_ref, [], image_meta, disk_info)
+        self.assertEqual(len(cfg.devices), 6)
+        self.assertEqual(type(cfg.devices[0]),
+                          vconfig.LibvirtConfigGuestDisk)
+        self.assertEqual(type(cfg.devices[1]),
+                          vconfig.LibvirtConfigGuestDisk)
+        self.assertEqual(type(cfg.devices[2]),
+                          vconfig.LibvirtConfigGuestSerial)
+        self.assertEqual(type(cfg.devices[3]),
+                          vconfig.LibvirtConfigGuestSerial)
+        self.assertEqual(type(cfg.devices[4]),
+                          vconfig.LibvirtConfigGuestInput)
+        self.assertEqual(type(cfg.devices[5]),
+                          vconfig.LibvirtConfigGuestGraphics)
+
+        self.assertEqual(cfg.devices[4].type, "tablet")
+        self.assertEqual(cfg.devices[5].type, "vnc")
+
     def test_get_guest_cpu_config_none(self):
         self.flags(libvirt_cpu_mode="none")
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)

@@ -750,6 +750,9 @@ class LibvirtConfigGuestCharBase(LibvirtConfigGuestDevice):
         dev.set("type", self.type)
         if self.type == "file":
             dev.append(etree.Element("source", path=self.source_path))
+        elif self.type == "unix":
+            dev.append(etree.Element("source", mode="bind",
+                                    path=self.source_path))
 
         return dev
 
