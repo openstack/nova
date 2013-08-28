@@ -64,6 +64,15 @@ class _TestComputeNodeObject(object):
         compute = compute_node.ComputeNode.get_by_id(ctxt, 123)
         self._compare(compute, fake_compute_node)
 
+    def test_get_by_service_id(self):
+        ctxt = context.get_admin_context()
+        self.mox.StubOutWithMock(db, 'compute_node_get_by_service_id')
+        db.compute_node_get_by_service_id(ctxt, 456).AndReturn(
+            fake_compute_node)
+        self.mox.ReplayAll()
+        compute = compute_node.ComputeNode.get_by_service_id(ctxt, 456)
+        self._compare(compute, fake_compute_node)
+
     def test_create(self):
         ctxt = context.get_admin_context()
         self.mox.StubOutWithMock(db, 'compute_node_create')

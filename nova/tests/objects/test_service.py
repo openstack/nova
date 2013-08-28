@@ -18,6 +18,7 @@ from nova import context
 from nova import db
 from nova.objects import service
 from nova.openstack.common import timeutils
+from nova.tests.objects import test_compute_node
 from nova.tests.objects import test_objects
 
 NOW = timeutils.utcnow().replace(microsecond=0)
@@ -37,7 +38,7 @@ fake_service = {
 
 
 def compare(obj, db_obj):
-    allow_missing = ('availability_zone',)
+    allow_missing = ('availability_zone', 'compute_node')
     for key in obj.fields:
         if key in allow_missing and not obj.obj_attr_is_set(key):
             continue
@@ -72,6 +73,18 @@ class _TestServiceObject(object):
     def test_get_by_args(self):
         self._test_query('service_get_by_args', 'get_by_args', 'fake-host',
                          'fake-service')
+
+    def test_with_compute_node(self):
+        ctxt = context.get_admin_context()
+        self.mox.StubOutWithMock(db, 'service_get')
+        self.mox.StubOutWithMock(db, 'compute_node_get_by_service_id')
+        _fake_service = dict(
+            fake_service, compute_node=[test_compute_node.fake_compute_node])
+        db.service_get(ctxt, 123).AndReturn(_fake_service)
+        self.mox.ReplayAll()
+        service_obj = service.Service.get_by_id(ctxt, 123)
+        self.assertTrue(service_obj.obj_attr_is_set('compute_node'))
+        compare(service_obj.compute_node, test_compute_node.fake_compute_node)
 
     def test_create(self):
         ctxt = context.get_admin_context()
@@ -155,6 +168,19 @@ class _TestServiceObject(object):
         services = service.ServiceList.get_all(ctxt, set_zones=True)
         self.assertEqual(1, len(services))
         self.assertEqual('test-az', services[0].availability_zone)
+
+    def test_compute_node(self):
+        ctxt = context.get_admin_context()
+        self.mox.StubOutWithMock(db, 'compute_node_get_by_service_id')
+        db.compute_node_get_by_service_id(ctxt, 123).AndReturn(
+            test_compute_node.fake_compute_node)
+        self.mox.ReplayAll()
+        service_obj = service.Service()
+        service_obj._context = ctxt
+        service_obj.id = 123
+        compare(service_obj.compute_node, test_compute_node.fake_compute_node)
+        # Make sure it doesn't re-fetch this
+        service_obj.compute_node
 
 
 class TestServiceObject(test_objects._LocalTest,

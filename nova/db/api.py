@@ -178,6 +178,11 @@ def compute_node_get(context, compute_id):
     return IMPL.compute_node_get(context, compute_id)
 
 
+def compute_node_get_by_service_id(context, service_id):
+    """Get a computeNode by its associated service's id."""
+    return IMPL.compute_node_get_by_service_id(context, service_id)
+
+
 def compute_node_get_all(context):
     """Get all computeNodes."""
     return IMPL.compute_node_get_all(context)
