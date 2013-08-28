@@ -752,3 +752,15 @@ class CellsManagerClassTestCase(test.TestCase):
                 self.ctxt, instance='fake-instance',
                 block_migration='fake-block', disk_over_commit='fake-commit',
                 host_name='fake-host')
+
+    def test_revert_resize(self):
+        self.mox.StubOutWithMock(self.msg_runner, 'revert_resize')
+        self.msg_runner.revert_resize(self.ctxt, 'fake-instance')
+        self.mox.ReplayAll()
+        self.cells_manager.revert_resize(self.ctxt, instance='fake-instance')
+
+    def test_confirm_resize(self):
+        self.mox.StubOutWithMock(self.msg_runner, 'confirm_resize')
+        self.msg_runner.confirm_resize(self.ctxt, 'fake-instance')
+        self.mox.ReplayAll()
+        self.cells_manager.confirm_resize(self.ctxt, instance='fake-instance')

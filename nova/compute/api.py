@@ -1272,14 +1272,14 @@ class API(base.Base):
             if instance['vm_state'] == vm_states.RESIZED:
                 # If in the middle of a resize, use confirm_resize to
                 # ensure the original instance is cleaned up too
-                get_migration = self.db.migration_get_by_instance_and_status
+                mig_cls = migration_obj.Migration
                 try:
-                    migration_ref = get_migration(context.elevated(),
-                            instance['uuid'], 'finished')
+                    migration = mig_cls.get_by_instance_and_status(
+                        context.elevated(), instance.uuid, 'finished')
                 except exception.MigrationNotFoundByStatus:
-                    migration_ref = None
-                if migration_ref:
-                    src_host = migration_ref['source_compute']
+                    migration = None
+                if migration:
+                    src_host = migration.source_compute
                     # Call since this can race with the terminate_instance.
                     # The resize is done but awaiting confirmation/reversion,
                     # so there are two cases:
@@ -1297,9 +1297,9 @@ class API(base.Base):
                                               instance_actions.CONFIRM_RESIZE)
 
                     self.compute_rpcapi.confirm_resize(context,
-                            instance, migration_ref,
-                            host=src_host, cast=False,
-                            reservations=downsize_reservations)
+                            instance, migration,
+                            src_host, downsize_reservations,
+                            cast=False)
 
             is_up = False
             try:
@@ -1349,16 +1349,16 @@ class API(base.Base):
         # see https://bugs.launchpad.net/nova/+bug/1099729 for more details
         if old_instance['task_state'] in (task_states.RESIZE_MIGRATED,
                                           task_states.RESIZE_FINISH):
-            get_migration = self.db.migration_get_by_instance_and_status
+            Migration = migration_obj.Migration
             try:
-                migration_ref = get_migration(context.elevated(),
-                                    old_instance['uuid'], 'post-migrating')
+                migration = Migration.get_by_instance_and_status(
+                    context.elevated(), old_instance.uuid, 'post-migrating')
             except exception.MigrationNotFoundByStatus:
-                migration_ref = None
-            if (migration_ref and
+                migration = None
+            if (migration and
                     new_instance_type_id ==
-                        migration_ref['new_instance_type_id']):
-                old_inst_type_id = migration_ref['old_instance_type_id']
+                        migration.new_instance_type_id):
+                old_inst_type_id = migration.old_instance_type_id
                 try:
                     old_inst_type = flavors.get_flavor(old_inst_type_id)
                 except exception.InstanceTypeNotFound:
@@ -2040,22 +2040,23 @@ class API(base.Base):
 
     @wrap_check_policy
     @check_instance_lock
+    @check_instance_cell
     @check_instance_state(vm_state=[vm_states.RESIZED])
     def revert_resize(self, context, instance):
         """Reverts a resize, deleting the 'new' instance in the process."""
         elevated = context.elevated()
-        migration_ref = self.db.migration_get_by_instance_and_status(elevated,
-                instance.uuid, 'finished')
+        migration = migration_obj.Migration.get_by_instance_and_status(
+            elevated, instance.uuid, 'finished')
 
         # reverse quota reservation for increased resource usage
-        deltas = self._reverse_upsize_quota_delta(context, migration_ref)
+        deltas = self._reverse_upsize_quota_delta(context, migration)
         reservations = self._reserve_quota_delta(context, deltas)
 
         instance.task_state = task_states.RESIZE_REVERTING
         instance.save(expected_task_state=None)
 
-        self.db.migration_update(elevated, migration_ref['id'],
-                                 {'status': 'reverting'})
+        migration.status = 'reverting'
+        migration.save()
         # With cells, the best we can do right now is commit the reservations
         # immediately...
         if CONF.cells.enable and reservations:
@@ -2065,26 +2066,28 @@ class API(base.Base):
         self._record_action_start(context, instance,
                                   instance_actions.REVERT_RESIZE)
 
-        self.compute_rpcapi.revert_resize(context,
-                instance=instance, migration=migration_ref,
-                host=migration_ref['dest_compute'], reservations=reservations)
+        self.compute_rpcapi.revert_resize(context, instance,
+                                          migration,
+                                          migration.dest_compute,
+                                          reservations)
 
     @wrap_check_policy
     @check_instance_lock
+    @check_instance_cell
     @check_instance_state(vm_state=[vm_states.RESIZED])
-    def confirm_resize(self, context, instance, migration_ref=None):
+    def confirm_resize(self, context, instance, migration=None):
         """Confirms a migration/resize and deletes the 'old' instance."""
         elevated = context.elevated()
-        if migration_ref is None:
-            migration_ref = self.db.migration_get_by_instance_and_status(
-                elevated, instance['uuid'], 'finished')
+        if migration is None:
+            migration = migration_obj.Migration.get_by_instance_and_status(
+                elevated, instance.uuid, 'finished')
 
         # reserve quota only for any decrease in resource usage
         deltas = self._downsize_quota_delta(context, instance)
         reservations = self._reserve_quota_delta(context, deltas)
 
-        self.db.migration_update(elevated, migration_ref['id'],
-                {'status': 'confirming'})
+        migration.status = 'confirming'
+        migration.save()
         # With cells, the best we can do right now is commit the reservations
         # immediately...
         if CONF.cells.enable and reservations:
@@ -2095,9 +2098,10 @@ class API(base.Base):
                                   instance_actions.CONFIRM_RESIZE)
 
         self.compute_rpcapi.confirm_resize(context,
-                instance=instance, migration=migration_ref,
-                host=migration_ref['source_compute'],
-                reservations=reservations)
+                                           instance,
+                                           migration,
+                                           migration.source_compute,
+                                           reservations)
 
     @staticmethod
     def _resize_quota_delta(context, new_instance_type,
@@ -2886,7 +2890,7 @@ class API(base.Base):
 
     def get_migrations(self, context, filters):
         """Get all migrations for the given filters."""
-        return self.db.migration_get_all_by_filters(context, filters)
+        return migration_obj.MigrationList.get_by_filters(context, filters)
 
 
 class HostAPI(base.Base):

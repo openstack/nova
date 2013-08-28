@@ -308,10 +308,12 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     def confirm_resize(self, ctxt, instance, migration, host,
             reservations=None, cast=True):
         rpc_method = self.cast if cast else self.call
-        instance_p = jsonutils.to_primitive(instance)
-        migration_p = jsonutils.to_primitive(migration)
+        instance = jsonutils.to_primitive(
+                objects_base.obj_to_primitive(instance))
+        migration = jsonutils.to_primitive(
+                objects_base.obj_to_primitive(migration))
         return rpc_method(ctxt, self.make_msg('confirm_resize',
-                instance=instance_p, migration=migration_p,
+                instance=instance, migration=migration,
                 reservations=reservations),
                 topic=_compute_topic(self.topic, ctxt, host, instance),
                 version='2.7')
@@ -588,10 +590,12 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
 
     def revert_resize(self, ctxt, instance, migration, host,
                       reservations=None):
-        instance_p = jsonutils.to_primitive(instance)
-        migration_p = jsonutils.to_primitive(migration)
+        instance = jsonutils.to_primitive(
+                objects_base.obj_to_primitive(instance))
+        migration = jsonutils.to_primitive(
+                objects_base.obj_to_primitive(migration))
         self.cast(ctxt, self.make_msg('revert_resize',
-                instance=instance_p, migration=migration_p,
+                instance=instance, migration=migration,
                 reservations=reservations),
                 topic=_compute_topic(self.topic, ctxt, host, instance),
                 version='2.12')

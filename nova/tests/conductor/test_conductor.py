@@ -33,6 +33,7 @@ from nova import exception as exc
 from nova import notifications
 from nova.objects import base as obj_base
 from nova.objects import instance as instance_obj
+from nova.objects import migration as migration_obj
 from nova.openstack.common import jsonutils
 from nova.openstack.common.notifier import api as notifier_api
 from nova.openstack.common.notifier import test_notifier
@@ -44,6 +45,7 @@ from nova import test
 from nova.tests.compute import test_compute
 from nova.tests import fake_instance
 from nova.tests import fake_instance_actions
+from nova.tests.objects import test_migration
 from nova import utils
 
 
@@ -595,9 +597,8 @@ class _BaseTestCase(object):
     def test_compute_confirm_resize(self):
         self.mox.StubOutWithMock(self.conductor_manager.compute_api,
                                  'confirm_resize')
-        self.conductor_manager.compute_api.confirm_resize(self.context,
-                                                          'instance',
-                                                          'migration')
+        self.conductor_manager.compute_api.confirm_resize(
+                self.context, 'instance', migration='migration')
         self.mox.ReplayAll()
         self.conductor.compute_confirm_resize(self.context, 'instance',
                                               'migration')
@@ -809,15 +810,17 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
         instance = self._create_fake_instance()
         inst_obj = instance_obj.Instance._from_db_object(
                         self.context, instance_obj.Instance(), instance)
+        migration = test_migration.fake_db_migration()
+        mig_obj = migration_obj.Migration._from_db_object(
+                self.context.elevated(), migration_obj.Migration(),
+                migration)
         self.mox.StubOutWithMock(self.conductor_manager.compute_api,
                                  'confirm_resize')
-        # make sure the instance object is serialized
-        primitive_instance = dict(inst_obj.items())
         self.conductor_manager.compute_api.confirm_resize(
-                        self.context, primitive_instance, 'migration')
+                        self.context, inst_obj, migration=mig_obj)
         self.mox.ReplayAll()
         self.conductor.compute_confirm_resize(self.context, inst_obj,
-                                              'migration')
+                                              mig_obj)
 
 
 class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):

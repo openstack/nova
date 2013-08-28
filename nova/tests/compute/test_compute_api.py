@@ -35,6 +35,7 @@ from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
 from nova import quota
 from nova import test
+from nova.tests.objects import test_migration
 
 
 FAKE_IMAGE_REF = 'fake-image-ref'
@@ -333,9 +334,15 @@ class _ComputeAPIUnitTestMixIn(object):
                                      launched_at=None)
 
     def _test_delete_resized_part(self, inst):
-        migration = {'source_compute': 'foo'}
+        migration = migration_obj.Migration._from_db_object(
+                self.context, migration_obj.Migration(),
+                test_migration.fake_db_migration())
+
+        self.mox.StubOutWithMock(migration_obj.Migration,
+                                 'get_by_instance_and_status')
+
         self.context.elevated().AndReturn(self.context)
-        db.migration_get_by_instance_and_status(
+        migration_obj.Migration.get_by_instance_and_status(
             self.context, inst.uuid, 'finished').AndReturn(migration)
         self.compute_api._downsize_quota_delta(self.context, inst
                                                ).AndReturn('deltas')
@@ -343,12 +350,9 @@ class _ComputeAPIUnitTestMixIn(object):
                                               ).AndReturn('rsvs')
         self.compute_api._record_action_start(
             self.context, inst, instance_actions.CONFIRM_RESIZE)
-        self.mox.StubOutWithMock(self.compute_api.compute_rpcapi,
-                                 'confirm_resize')
         self.compute_api.compute_rpcapi.confirm_resize(
             self.context, inst, migration,
-            host=migration['source_compute'],
-            cast=False, reservations='rsvs')
+            migration['source_compute'], 'rsvs', cast=False)
 
     def _test_delete(self, delete_type, **attrs):
         inst = self._create_instance_obj()
@@ -359,7 +363,6 @@ class _ComputeAPIUnitTestMixIn(object):
         timeutils.set_time_override(delete_time)
         task_state = (delete_type == 'soft_delete' and
                       task_states.SOFT_DELETING or task_states.DELETING)
-        db_inst = obj_base.obj_to_primitive(inst)
         updates = {'progress': 0, 'task_state': task_state}
         if delete_type == 'soft_delete':
             updates['deleted_at'] = delete_time
@@ -384,6 +387,8 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(compute_utils,
                                  'notify_about_instance_usage')
         self.mox.StubOutWithMock(quota.QUOTAS, 'commit')
+        self.mox.StubOutWithMock(self.compute_api.compute_rpcapi,
+                                 'confirm_resize')
 
         db.block_device_mapping_get_all_by_instance(
             self.context, inst.uuid).AndReturn([])
@@ -566,17 +571,17 @@ class _ComputeAPIUnitTestMixIn(object):
 
     def _test_confirm_resize(self, mig_ref_passed=False):
         params = dict(vm_state=vm_states.RESIZED)
-        fake_inst = obj_base.obj_to_primitive(
-                self._create_instance_obj(params=params))
-        fake_mig = dict(id='fake-migration-id',
-                        source_compute='source_host')
+        fake_inst = self._create_instance_obj(params=params)
+        fake_mig = migration_obj.Migration._from_db_object(
+                self.context, migration_obj.Migration(),
+                test_migration.fake_db_migration())
 
         self.mox.StubOutWithMock(self.context, 'elevated')
-        self.mox.StubOutWithMock(self.compute_api.db,
-                                 'migration_get_by_instance_and_status')
+        self.mox.StubOutWithMock(migration_obj.Migration,
+                                 'get_by_instance_and_status')
         self.mox.StubOutWithMock(self.compute_api, '_downsize_quota_delta')
         self.mox.StubOutWithMock(self.compute_api, '_reserve_quota_delta')
-        self.mox.StubOutWithMock(self.compute_api.db, 'migration_update')
+        self.mox.StubOutWithMock(fake_mig, 'save')
         self.mox.StubOutWithMock(quota.QUOTAS, 'commit')
         self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
         self.mox.StubOutWithMock(self.compute_api.compute_rpcapi,
@@ -584,7 +589,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
         self.context.elevated().AndReturn(self.context)
         if not mig_ref_passed:
-            self.compute_api.db.migration_get_by_instance_and_status(
+            migration_obj.Migration.get_by_instance_and_status(
                     self.context, fake_inst['uuid'], 'finished').AndReturn(
                             fake_mig)
         self.compute_api._downsize_quota_delta(self.context,
@@ -594,9 +599,12 @@ class _ComputeAPIUnitTestMixIn(object):
 
         self.compute_api._reserve_quota_delta(self.context,
                                               'deltas').AndReturn(resvs)
-        self.compute_api.db.migration_update(self.context,
-                                             'fake-migration-id',
-                                             {'status': 'confirming'})
+
+        def _check_mig(expected_task_state=None):
+            self.assertEqual('confirming', fake_mig.status)
+
+        fake_mig.save().WithSideEffects(_check_mig)
+
         if self.is_cells:
             quota.QUOTAS.commit(self.context, resvs)
             resvs = []
@@ -604,21 +612,14 @@ class _ComputeAPIUnitTestMixIn(object):
         self.compute_api._record_action_start(self.context, fake_inst,
                                               'confirmResize')
 
-        self.compute_api.compute_rpcapi.confirm_resize(self.context,
-                                           instance=fake_inst,
-                                           migration=fake_mig,
-                                           host='source_host',
-                                           reservations=resvs)
-        if self.is_cells:
-            self.mox.StubOutWithMock(self.compute_api, '_cast_to_cells')
-            self.compute_api._cast_to_cells(
-                    self.context, fake_inst, 'confirm_resize')
+        self.compute_api.compute_rpcapi.confirm_resize(
+                self.context, fake_inst, fake_mig, 'compute-source', resvs)
 
         self.mox.ReplayAll()
 
         if mig_ref_passed:
             self.compute_api.confirm_resize(self.context, fake_inst,
-                                            migration_ref=fake_mig)
+                                            migration=fake_mig)
         else:
             self.compute_api.confirm_resize(self.context, fake_inst)
 
@@ -631,24 +632,25 @@ class _ComputeAPIUnitTestMixIn(object):
     def _test_revert_resize(self):
         params = dict(vm_state=vm_states.RESIZED)
         fake_inst = self._create_instance_obj(params=params)
-        fake_mig = dict(id='fake-migration-id',
-                        dest_compute='dest_host')
+        fake_mig = migration_obj.Migration._from_db_object(
+                self.context, migration_obj.Migration(),
+                test_migration.fake_db_migration())
 
         self.mox.StubOutWithMock(self.context, 'elevated')
-        self.mox.StubOutWithMock(self.compute_api.db,
-                                 'migration_get_by_instance_and_status')
+        self.mox.StubOutWithMock(migration_obj.Migration,
+                                 'get_by_instance_and_status')
         self.mox.StubOutWithMock(self.compute_api,
                                  '_reverse_upsize_quota_delta')
         self.mox.StubOutWithMock(self.compute_api, '_reserve_quota_delta')
         self.mox.StubOutWithMock(fake_inst, 'save')
-        self.mox.StubOutWithMock(self.compute_api.db, 'migration_update')
+        self.mox.StubOutWithMock(fake_mig, 'save')
         self.mox.StubOutWithMock(quota.QUOTAS, 'commit')
         self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
         self.mox.StubOutWithMock(self.compute_api.compute_rpcapi,
                                  'revert_resize')
 
         self.context.elevated().AndReturn(self.context)
-        self.compute_api.db.migration_get_by_instance_and_status(
+        migration_obj.Migration.get_by_instance_and_status(
                 self.context, fake_inst['uuid'], 'finished').AndReturn(
                         fake_mig)
         self.compute_api._reverse_upsize_quota_delta(
@@ -666,9 +668,11 @@ class _ComputeAPIUnitTestMixIn(object):
         fake_inst.save(expected_task_state=None).WithSideEffects(
                 _check_state)
 
-        self.compute_api.db.migration_update(self.context,
-                                             'fake-migration-id',
-                                             {'status': 'reverting'})
+        def _check_mig(expected_task_state=None):
+            self.assertEqual('reverting', fake_mig.status)
+
+        fake_mig.save().WithSideEffects(_check_mig)
+
         if self.is_cells:
             quota.QUOTAS.commit(self.context, resvs)
             resvs = []
@@ -676,16 +680,8 @@ class _ComputeAPIUnitTestMixIn(object):
         self.compute_api._record_action_start(self.context, fake_inst,
                                               'revertResize')
 
-        self.compute_api.compute_rpcapi.revert_resize(self.context,
-                                                      instance=fake_inst,
-                                                      migration=fake_mig,
-                                                      host='dest_host',
-                                                      reservations=resvs)
-
-        if self.is_cells:
-            self.mox.StubOutWithMock(self.compute_api, '_cast_to_cells')
-            self.compute_api._cast_to_cells(
-                    self.context, fake_inst, 'revert_resize')
+        self.compute_api.compute_rpcapi.revert_resize(
+                self.context, fake_inst, fake_mig, 'compute-dest', resvs)
 
         self.mox.ReplayAll()
 

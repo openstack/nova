@@ -21,7 +21,6 @@ from nova.cells import rpcapi as cells_rpcapi
 from nova.cells import utils as cells_utils
 from nova.compute import api as compute_api
 from nova.compute import rpcapi as compute_rpcapi
-from nova.compute import vm_states
 from nova import exception
 from nova.openstack.common import excutils
 
@@ -42,7 +41,8 @@ class ComputeRPCAPIRedirect(object):
                         'reboot_instance', 'suspend_instance',
                         'resume_instance', 'terminate_instance',
                         'soft_delete_instance', 'pause_instance',
-                        'unpause_instance']
+                        'unpause_instance', 'revert_resize',
+                        'confirm_resize']
 
     def __init__(self, cells_rpcapi):
         self.cells_rpcapi = cells_rpcapi
@@ -269,21 +269,6 @@ class ComputeCellsAPI(compute_api.API):
         super(ComputeCellsAPI, self).evacuate(context, instance, *args,
                 **kwargs)
         self._cast_to_cells(context, instance, 'evacuate', *args, **kwargs)
-
-    @check_instance_state(vm_state=[vm_states.RESIZED])
-    @check_instance_cell
-    def revert_resize(self, context, instance):
-        """Reverts a resize, deleting the 'new' instance in the process."""
-        super(ComputeCellsAPI, self).revert_resize(context, instance)
-        self._cast_to_cells(context, instance, 'revert_resize')
-
-    @check_instance_state(vm_state=[vm_states.RESIZED])
-    @check_instance_cell
-    def confirm_resize(self, context, instance, migration_ref=None):
-        """Confirms a migration/resize and deletes the 'old' instance."""
-        super(ComputeCellsAPI, self).confirm_resize(
-                context, instance, migration_ref=migration_ref)
-        self._cast_to_cells(context, instance, 'confirm_resize')
 
     @check_instance_cell
     def add_fixed_ip(self, context, instance, *args, **kwargs):

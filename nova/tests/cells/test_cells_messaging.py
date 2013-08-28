@@ -1182,7 +1182,11 @@ class CellsTargetedMethodsTestCase(test.TestCase):
 
         self.mox.ReplayAll()
 
-        result = getattr(meth_cls, '%s_instance' % method)(
+        method_translations = {'revert_resize': 'revert_resize',
+                               'confirm_resize': 'confirm_resize'}
+        tgt_method = method_translations.get(method,
+                                             '%s_instance' % method)
+        result = getattr(meth_cls, tgt_method)(
                 message, 'fake-instance', *args, **kwargs)
         if expect_result:
             self.assertEqual('meow', result)
@@ -1252,6 +1256,14 @@ class CellsTargetedMethodsTestCase(test.TestCase):
         expected_args = ('fake-block-mig', 'fake-commit', 'fake-host')
         self._test_instance_action_method('live_migrate', (), kwargs,
                                           expected_args, {}, False)
+
+    def test_revert_resize(self):
+        self._test_instance_action_method('revert_resize',
+                                          (), {}, (), {}, False)
+
+    def test_confirm_resize(self):
+        self._test_instance_action_method('confirm_resize',
+                                          (), {}, (), {}, False)
 
 
 class CellsBroadcastMethodsTestCase(test.TestCase):
