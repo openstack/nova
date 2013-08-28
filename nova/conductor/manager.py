@@ -77,7 +77,7 @@ class ConductorManager(manager.Manager):
     namespace.  See the ComputeTaskManager class for details.
     """
 
-    RPC_API_VERSION = '1.55'
+    RPC_API_VERSION = '1.56'
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(service_name='conductor',
@@ -167,6 +167,8 @@ class ConductorManager(manager.Manager):
                                               migration_id)
         return jsonutils.to_primitive(migration_ref)
 
+    # NOTE(comstud): This method is now deprecated and can be removed in
+    # version v2.0 of the RPC API
     def migration_get_unconfirmed_by_dest_compute(self, context,
                                                   confirm_window,
                                                   dest_compute):
@@ -532,6 +534,8 @@ class ConductorManager(manager.Manager):
                                 context, instance_obj.Instance(), instance)
         self.compute_api.stop(context, instance, do_cast)
 
+    # NOTE(comstud): This method is now deprecated and can be removed in
+    # version v2.0 of the RPC API
     def compute_confirm_resize(self, context, instance, migration_ref):
         if isinstance(instance, dict):
             attrs = ['metadata', 'system_metadata', 'info_cache',

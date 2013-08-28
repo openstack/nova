@@ -106,6 +106,8 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.53 - Added compute_reboot
     1.54 - Added 'update_cells' argument to bw_usage_update
     1.55 - Pass instance objects for compute_stop
+    1.56 - Remove compute_confirm_resize and
+                  migration_get_unconfirmed_by_dest_compute
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -154,14 +156,6 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     def migration_get(self, context, migration_id):
         msg = self.make_msg('migration_get', migration_id=migration_id)
         return self.call(context, msg, version='1.4')
-
-    def migration_get_unconfirmed_by_dest_compute(self, context,
-                                                  confirm_window,
-                                                  dest_compute):
-        msg = self.make_msg('migration_get_unconfirmed_by_dest_compute',
-                            confirm_window=confirm_window,
-                            dest_compute=dest_compute)
-        return self.call(context, msg, version='1.20')
 
     def migration_get_in_progress_by_host_and_node(self, context,
                                                    host, node):
@@ -477,18 +471,6 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         instance_p = jsonutils.to_primitive(instance)
         msg = self.make_msg('get_ec2_ids', instance=instance_p)
         return self.call(context, msg, version='1.42')
-
-    def compute_confirm_resize(self, context, instance, migration_ref):
-        migration_p = jsonutils.to_primitive(migration_ref)
-        if not self.can_send_version('1.52'):
-            instance = jsonutils.to_primitive(
-                objects_base.obj_to_primitive(instance))
-            version = '1.46'
-        else:
-            version = '1.52'
-        msg = self.make_msg('compute_confirm_resize', instance=instance,
-                            migration_ref=migration_p)
-        return self.call(context, msg, version=version)
 
     def compute_unrescue(self, context, instance):
         instance_p = jsonutils.to_primitive(instance)
