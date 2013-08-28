@@ -1052,10 +1052,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         return instance, network_info
 
     def _log_original_error(self, exc_info, instance_uuid):
-        type_, value, tb = exc_info
-        LOG.error(_('Error: %s') %
-                  traceback.format_exception(type_, value, tb),
-                  instance_uuid=instance_uuid)
+        LOG.error(_('Error: %s') % exc_info[1].message,
+                  instance_uuid=instance_uuid, exc_info=exc_info)
 
     def _reschedule_or_error(self, context, instance, exc_info,
             requested_networks, admin_password, injected_files, is_first_time,
