@@ -459,7 +459,7 @@ class CloudTestCase(test.TestCase):
 
     def test_delete_security_group_no_params(self):
         delete = self.cloud.delete_security_group
-        self.assertRaises(exception.EC2APIError, delete, self.context)
+        self.assertRaises(exception.MissingParameter, delete, self.context)
 
     def test_authorize_security_group_ingress(self):
         kwargs = {'project_id': self.context.project_id, 'name': 'test'}
@@ -589,12 +589,14 @@ class CloudTestCase(test.TestCase):
                                        {'project_id': self.context.project_id,
                                         'name': 'test'})
         authz = self.cloud.authorize_security_group_ingress
-        self.assertRaises(exception.EC2APIError, authz, self.context, 'test')
+        self.assertRaises(exception.MissingParameter, authz, self.context,
+                          'test')
 
     def test_authorize_security_group_ingress_missing_group_name_or_id(self):
         kwargs = {'project_id': self.context.project_id, 'name': 'test'}
         authz = self.cloud.authorize_security_group_ingress
-        self.assertRaises(exception.EC2APIError, authz, self.context, **kwargs)
+        self.assertRaises(exception.MissingParameter, authz, self.context,
+                          **kwargs)
 
     def test_authorize_security_group_ingress_already_exists(self):
         kwargs = {'project_id': self.context.project_id, 'name': 'test'}
@@ -655,7 +657,7 @@ class CloudTestCase(test.TestCase):
 
         authz = self.cloud.authorize_security_group_ingress
         auth_kwargs = {'ip_protocol': proto}
-        self.assertRaises(exception.EC2APIError, authz, self.context,
+        self.assertRaises(exception.MissingParameter, authz, self.context,
                           group_name=sec['name'], **auth_kwargs)
 
         db.security_group_destroy(self.context, sec['id'])
@@ -675,7 +677,7 @@ class CloudTestCase(test.TestCase):
     def test_revoke_security_group_ingress_missing_group_name_or_id(self):
         kwargs = {'to_port': '999', 'from_port': '999', 'ip_protocol': 'tcp'}
         revoke = self.cloud.revoke_security_group_ingress
-        self.assertRaises(exception.EC2APIError, revoke,
+        self.assertRaises(exception.MissingParameter, revoke,
                 self.context, **kwargs)
 
     def test_delete_security_group_in_use_by_group(self):
@@ -1585,8 +1587,8 @@ class CloudTestCase(test.TestCase):
 
     def test_register_image_empty(self):
         register_image = self.cloud.register_image
-        self.assertRaises(exception.EC2APIError, register_image, self.context,
-                          image_location=None)
+        self.assertRaises(exception.MissingParameter, register_image,
+                          self.context, image_location=None)
 
     def test_register_image_name(self):
         register_image = self.cloud.register_image
@@ -2789,7 +2791,7 @@ class CloudTestCase(test.TestCase):
         self.assertEqualSorted(tags, [inst2_key_baz])
 
         # And we should fail on supported resource types
-        self.assertRaises(exception.EC2APIError,
+        self.assertRaises(exception.InvalidParameterValue,
                           self.cloud.describe_tags,
                           self.context,
                           filter=[{'name': 'resource-type',

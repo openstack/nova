@@ -618,20 +618,22 @@ class CloudController(object):
 
     def _validate_group_identifier(self, group_name, group_id):
         if not group_name and not group_id:
-            err = _("Not enough parameters, need group_name or group_id")
-            raise exception.EC2APIError(err)
+            err = _("need group_name or group_id")
+            raise exception.MissingParameter(reason=err)
 
     def _validate_rulevalues(self, rulesvalues):
         if not rulesvalues:
-            err = _("%s Not enough parameters to build a valid rule")
-            raise exception.EC2APIError(err % rulesvalues)
+            err = _("can't build a valid rule")
+            raise exception.MissingParameter(reason=err)
 
     def _validate_security_group_protocol(self, values):
         validprotocols = ['tcp', 'udp', 'icmp', '6', '17', '1']
         if 'ip_protocol' in values and \
                 values['ip_protocol'] not in validprotocols:
-            err = _('Invalid IP protocol %s.') % values['ip_protocol']
-            raise exception.EC2APIError(message=err, code="400")
+            protocol = values['ip_protocol']
+            err = _("Invalid IP protocol %(protocol)s") % \
+                  {'protocol': protocol}
+            raise exception.InvalidParameterValue(message=err)
 
     def revoke_security_group_ingress(self, context, group_name=None,
                                       group_id=None, **kwargs):
@@ -660,7 +662,8 @@ class CloudController(object):
 
             return True
 
-        raise exception.EC2APIError(_("No rule for the specified parameters."))
+        msg = _("No rule for the specified parameters.")
+        raise exception.InvalidParameterValue(message=msg)
 
     # TODO(soren): This has only been tested with Boto as the client.
     #              Unfortunately, it seems Boto is using an old API
@@ -692,7 +695,8 @@ class CloudController(object):
                                            security_group['name'], postvalues)
             return True
 
-        raise exception.EC2APIError(_("No rule for the specified parameters."))
+        msg = _("No rule for the specified parameters.")
+        raise exception.InvalidParameterValue(message=msg)
 
     def _get_source_project_id(self, context, source_security_group_owner_id):
         if source_security_group_owner_id:
@@ -738,8 +742,8 @@ class CloudController(object):
     def delete_security_group(self, context, group_name=None, group_id=None,
                               **kwargs):
         if not group_name and not group_id:
-            err = _("Not enough parameters, need group_name or group_id")
-            raise exception.EC2APIError(err)
+            err = _("need group_name or group_id")
+            raise exception.MissingParameter(reason=err)
 
         security_group = self.security_group_api.get(context, group_name,
                                                      group_id)
@@ -947,8 +951,7 @@ class CloudController(object):
     def describe_instance_attribute(self, context, instance_id, attribute,
                                     **kwargs):
         def _unsupported_attribute(instance, result):
-            raise exception.EC2APIError(_('attribute not supported: %s') %
-                                     attribute)
+            raise exception.InvalidAttribute(attr=attribute)
 
         def _format_attr_block_device_mapping(instance, result):
             tmp = {}
@@ -1003,8 +1006,7 @@ class CloudController(object):
 
         fn = attribute_formatter.get(attribute)
         if fn is None:
-            raise exception.EC2APIError(
-                _('attribute not supported: %s') % attribute)
+            raise exception.InvalidAttribute(attr=attribute)
 
         validate_ec2_id(instance_id)
         instance_uuid = ec2utils.ec2_inst_id_to_uuid(context, instance_id)
@@ -1559,7 +1561,8 @@ class CloudController(object):
         if image_location is None and kwargs.get('name'):
             image_location = kwargs['name']
         if image_location is None:
-            raise exception.EC2APIError(_('imageLocation is required'))
+            msg = _('imageLocation is required')
+            raise exception.MissingParameter(reason=msg)
 
         metadata = {'properties': {'image_location': image_location}}
 
@@ -1623,8 +1626,7 @@ class CloudController(object):
 
         fn = supported_attributes.get(attribute)
         if fn is None:
-            raise exception.EC2APIError(_('attribute not supported: %s')
-                                     % attribute)
+            raise exception.InvalidAttribute(attr=attribute)
         try:
             image = self._get_image(context, image_id)
         except exception.NotFound:
@@ -1638,15 +1640,16 @@ class CloudController(object):
                                operation_type, **kwargs):
         # TODO(devcamcar): Support users and groups other than 'all'.
         if attribute != 'launchPermission':
-            raise exception.EC2APIError(_('attribute not supported: %s')
-                                     % attribute)
+            raise exception.InvalidAttribute(attr=attribute)
         if 'user_group' not in kwargs:
-            raise exception.EC2APIError(_('user or group not specified'))
+            msg = _('user or group not specified')
+            raise exception.MissingParameter(reason=msg)
         if len(kwargs['user_group']) != 1 and kwargs['user_group'][0] != 'all':
-            raise exception.EC2APIError(_('only group "all" is supported'))
+            msg = _('only group "all" is supported')
+            raise exception.InvalidParameterValue(message=msg)
         if operation_type not in ['add', 'remove']:
             msg = _('operation_type must be add or remove')
-            raise exception.EC2APIError(msg)
+            raise exception.InvalidParameterValue(message=msg)
         LOG.audit(_("Updating image %s publicity"), image_id, context=context)
 
         try:
@@ -1764,30 +1767,34 @@ class CloudController(object):
         tags = kwargs.get('tag', None)
 
         if resources is None or tags is None:
-            raise exception.EC2APIError(_('resource_id and tag are required'))
+            msg = _('resource_id and tag are required')
+            raise exception.MissingParameter(reason=msg)
 
         if not isinstance(resources, (tuple, list, set)):
-            raise exception.EC2APIError(_('Expecting a list of resources'))
+            msg = _('Expecting a list of resources')
+            raise exception.InvalidParameterValue(message=msg)
 
         for r in resources:
             if ec2utils.resource_type_from_id(context, r) != 'instance':
-                raise exception.EC2APIError(_('Only instances implemented'))
+                msg = _('Only instances implemented')
+                raise exception.InvalidParameterValue(message=msg)
 
         if not isinstance(tags, (tuple, list, set)):
-            raise exception.EC2APIError(_('Expecting a list of tagSets'))
+            msg = _('Expecting a list of tagSets')
+            raise exception.InvalidParameterValue(message=msg)
 
         metadata = {}
         for tag in tags:
             if not isinstance(tag, dict):
-                raise exception.EC2APIError(_
-                        ('Expecting tagSet to be key/value pairs'))
+                err = _('Expecting tagSet to be key/value pairs')
+                raise exception.InvalidParameterValue(message=err)
 
             key = tag.get('key', None)
             val = tag.get('value', None)
 
             if key is None or val is None:
-                raise exception.EC2APIError(_
-                        ('Expecting both key and value to be set'))
+                err = _('Expecting both key and value to be set')
+                raise exception.InvalidParameterValue(message=err)
 
             metadata[key] = val
 
@@ -1809,29 +1816,34 @@ class CloudController(object):
         resources = kwargs.get('resource_id', None)
         tags = kwargs.get('tag', None)
         if resources is None or tags is None:
-            raise exception.EC2APIError(_('resource_id and tag are required'))
+            msg = _('resource_id and tag are required')
+            raise exception.MissingParameter(reason=msg)
 
         if not isinstance(resources, (tuple, list, set)):
-            raise exception.EC2APIError(_('Expecting a list of resources'))
+            msg = _('Expecting a list of resources')
+            raise exception.InvalidParameterValue(message=msg)
 
         for r in resources:
             if ec2utils.resource_type_from_id(context, r) != 'instance':
-                raise exception.EC2APIError(_('Only instances implemented'))
+                msg = _('Only instances implemented')
+                raise exception.InvalidParameterValue(message=msg)
 
         if not isinstance(tags, (tuple, list, set)):
-            raise exception.EC2APIError(_('Expecting a list of tagSets'))
+            msg = _('Expecting a list of tagSets')
+            raise exception.InvalidParameterValue(message=msg)
 
         for ec2_id in resources:
             instance_uuid = ec2utils.ec2_inst_id_to_uuid(context, ec2_id)
             instance = self.compute_api.get(context, instance_uuid)
             for tag in tags:
                 if not isinstance(tag, dict):
-                    raise exception.EC2APIError(_
-                            ('Expecting tagSet to be key/value pairs'))
+                    msg = _('Expecting tagSet to be key/value pairs')
+                    raise exception.InvalidParameterValue(message=msg)
 
                 key = tag.get('key', None)
                 if key is None:
-                    raise exception.EC2APIError(_('Expecting key to be set'))
+                    msg = _('Expecting key to be set')
+                    raise exception.InvalidParameterValue(message=msg)
 
                 self.compute_api.delete_instance_metadata(context,
                         instance, key)
@@ -1869,8 +1881,8 @@ class CloudController(object):
                     elif key_name in ('resource_type', 'resource-type'):
                         for res_type in val:
                             if res_type != 'instance':
-                                raise exception.EC2APIError(_
-                                        ('Only instances implemented'))
+                                raise exception.InvalidParameterValue(
+                                    message=_('Only instances implemented'))
                             search_block[key_name] = 'instance'
                     if len(search_block.keys()) > 0:
                         search_filts.append(search_block)
@@ -1889,7 +1901,7 @@ class CloudController(object):
 class EC2SecurityGroupExceptions(object):
     @staticmethod
     def raise_invalid_property(msg):
-        raise exception.InvalidParameterValue(err=msg)
+        raise exception.InvalidParameterValue(message=msg)
 
     @staticmethod
     def raise_group_already_exists(msg):
@@ -1904,7 +1916,7 @@ class EC2SecurityGroupExceptions(object):
         if decoding_exception:
             raise decoding_exception
         else:
-            raise exception.EC2APIError(_("Invalid CIDR"))
+            raise exception.InvalidParameterValue(message=_("Invalid CIDR"))
 
     @staticmethod
     def raise_over_quota(msg):
