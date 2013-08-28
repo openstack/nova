@@ -33,15 +33,19 @@ from oslo.config import cfg
 CONF = cfg.CONF
 
 
+# These are fields that can be specified as expected_attrs but are
+# also joined often by default.
+INSTANCE_OPTIONAL_COMMON_FIELDS = ['metadata', 'system_metadata']
 # These are fields that can be specified as expected_attrs
-INSTANCE_OPTIONAL_FIELDS = ['metadata', 'system_metadata', 'fault',
-                            'pci_devices']
+INSTANCE_OPTIONAL_FIELDS = (INSTANCE_OPTIONAL_COMMON_FIELDS +
+                            ['fault', 'pci_devices'])
 # These are fields that are always joined by the db right now
 INSTANCE_IMPLIED_FIELDS = ['info_cache', 'security_groups']
 # These are fields that are optional but don't translate to db columns
 INSTANCE_OPTIONAL_NON_COLUMNS = ['fault']
 # These are all fields that most query calls load by default
-INSTANCE_DEFAULT_FIELDS = INSTANCE_OPTIONAL_FIELDS + INSTANCE_IMPLIED_FIELDS
+INSTANCE_DEFAULT_FIELDS = (INSTANCE_OPTIONAL_COMMON_FIELDS +
+                           INSTANCE_IMPLIED_FIELDS)
 
 
 class Instance(base.NovaObject):
@@ -218,6 +222,8 @@ class Instance(base.NovaObject):
         return base.NovaObject.obj_from_primitive(val)
 
     def _attr_pci_devices_from_primitive(self, val):
+        if val is None:
+            return None
         return base.NovaObject.obj_from_primitive(val)
 
     @staticmethod
@@ -249,10 +255,13 @@ class Instance(base.NovaObject):
                     context, instance.uuid))
 
         if 'pci_devices' in expected_attrs:
-            instance['pci_devices'] =\
-                    pci_device._make_pci_list(context,
-                                              pci_device.PciDeviceList(),
-                                              db_inst['pci_devices'])
+            if db_inst['pci_devices'] is None:
+                pci_devices = None
+            else:
+                pci_devices = pci_device._make_pci_list(
+                        context, pci_device.PciDeviceList(),
+                        db_inst['pci_devices'])
+            instance['pci_devices'] = pci_devices
 
         # NOTE(danms): info_cache and security_groups are almost
         # always joined in the DB layer right now, so check to see if
@@ -452,7 +461,7 @@ class Instance(base.NovaObject):
     @base.remotable
     def refresh(self, context):
         extra = []
-        for field in INSTANCE_DEFAULT_FIELDS:
+        for field in INSTANCE_OPTIONAL_FIELDS + INSTANCE_IMPLIED_FIELDS:
             if hasattr(self, base.get_attrname(field)):
                 extra.append(field)
         current = self.__class__.get_by_uuid(context, uuid=self.uuid,
