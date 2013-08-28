@@ -39,7 +39,6 @@ from nova.compute import flavors
 from nova.compute import power_state
 from nova.compute import task_states
 from nova import exception
-from nova.image import glance
 from nova.network import model as network_model
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
@@ -54,6 +53,7 @@ from nova.virt import configdrive
 from nova.virt.disk import api as disk
 from nova.virt.disk.vfs import localfs as vfsimpl
 from nova.virt.xenapi import agent
+from nova.virt.xenapi.image import utils as image_utils
 from nova.virt.xenapi import volume_utils
 
 
@@ -1271,17 +1271,6 @@ def _check_vdi_size(context, session, instance, vdi_uuid):
         raise exception.InstanceTypeDiskTooSmall()
 
 
-def get_stream_funct_for(context, image_service, image_id):
-    stream_func = lambda f: image_service.download(
-            context, image_id, f)
-    return stream_func
-
-
-def get_virtual_size(context, image_service, image_id):
-    meta = image_service.show(context, image_id)
-    return int(meta['size'])
-
-
 def _fetch_disk_image(context, session, instance, name_label, image_id,
                       image_type):
     """Fetch the image from Glance
@@ -1307,9 +1296,10 @@ def _fetch_disk_image(context, session, instance, name_label, image_id,
     else:
         sr_ref = safe_find_sr(session)
 
-    image_service, image_id = glance.get_remote_image_service(
-            context, image_id)
-    virtual_size = get_virtual_size(context, image_service, image_id)
+    glance_image = image_utils.GlanceImage(context, image_id)
+    image = image_utils.RawImage(glance_image)
+
+    virtual_size = image.get_size()
     vdi_size = virtual_size
     LOG.debug(_("Size for image %(image_id)s: %(virtual_size)d"),
               {'image_id': image_id, 'virtual_size': virtual_size},
@@ -1334,9 +1324,8 @@ def _fetch_disk_image(context, session, instance, name_label, image_id,
         vdi_uuid = session.call_xenapi("VDI.get_uuid", vdi_ref)
 
         with vdi_attached_here(session, vdi_ref, read_only=False) as dev:
-            stream_func = get_stream_funct_for(context, image_service,
-                                               image_id)
-            _stream_disk(session, stream_func, image_type, virtual_size, dev)
+            _stream_disk(
+                session, image.stream_to, image_type, virtual_size, dev)
 
         if image_type in (ImageType.KERNEL, ImageType.RAMDISK):
             # We need to invoke a plugin for copying the
