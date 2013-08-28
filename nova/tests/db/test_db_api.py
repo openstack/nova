@@ -6745,22 +6745,22 @@ class PciDeviceDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def _get_fake_pci_devs(self):
         return {'id': 3353,
                 'compute_node_id': 1,
-                'address': '0000:0f:08:07',
+                'address': '0000:0f:08.7',
                 'vendor_id': '8086',
                 'product_id': '1520',
                 'dev_type': 'type-VF',
-                'dev_id': 'pci_0000:0f:08:07',
+                'dev_id': 'pci_0000:0f:08.7',
                 'extra_info': None,
                 'label': 'label_8086_1520',
                 'status': 'available',
                 'instance_uuid': '00000000-0000-0000-0000-000000000010',
                 }, {'id': 3356,
                 'compute_node_id': 1,
-                'address': '0000:0f:03:07',
+                'address': '0000:0f:03.7',
                 'vendor_id': '8083',
                 'product_id': '1523',
                 'dev_type': 'type-VF',
-                'dev_id': 'pci_0000:0f:08:07',
+                'dev_id': 'pci_0000:0f:08.7',
                 'extra_info': None,
                 'label': 'label_8086_1520',
                 'status': 'available',
@@ -6778,7 +6778,7 @@ class PciDeviceDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def test_pci_device_get_by_addr(self):
         v1, v2 = self._create_fake_pci_devs()
         result = db.pci_device_get_by_addr(self.admin_context, 1,
-                                           '0000:0f:08:07')
+                                           '0000:0f:08.7')
         self._assertEqualObjects(v1, result, self.ignored_keys)
 
     def test_pci_device_get_by_addr_not_found(self):
@@ -6791,7 +6791,7 @@ class PciDeviceDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self._create_fake_pci_devs()
         self.assertRaises(exception.AdminRequired,
                           db.pci_device_get_by_addr,
-                          self.context, 1, '0000:0f:08:07')
+                          self.context, 1, '0000:0f:08.7')
 
     def test_pci_device_get_by_id(self):
         v1, v2 = self._create_fake_pci_devs()
@@ -6860,14 +6860,14 @@ class PciDeviceDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
         db.pci_device_update(self.admin_context, v1['compute_node_id'],
                              v1['address'], v1)
         result = db.pci_device_get_by_addr(
-            self.admin_context, 1, '0000:0f:08:07')
+            self.admin_context, 1, '0000:0f:08.7')
         self._assertEqualObjects(v1, result, self.ignored_keys)
 
         v1['status'] = 'claimed'
         db.pci_device_update(self.admin_context, v1['compute_node_id'],
                              v1['address'], v1)
         result = db.pci_device_get_by_addr(
-            self.admin_context, 1, '0000:0f:08:07')
+            self.admin_context, 1, '0000:0f:08.7')
         self._assertEqualObjects(v1, result, self.ignored_keys)
 
     def test_pci_device_update_low_priv(self):
