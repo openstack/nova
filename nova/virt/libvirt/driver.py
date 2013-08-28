@@ -469,8 +469,8 @@ class LibvirtDriver(driver.ComputeDriver):
         """
 
         if self._event_queue is None:
-            LOG.debug("Event loop thread is not active, "
-                      "discarding event %s" % event)
+            LOG.debug(_("Event loop thread is not active, "
+                        "discarding event %s") % event)
             return
 
         # Queue the event...
@@ -542,12 +542,12 @@ class LibvirtDriver(driver.ComputeDriver):
 
         self._init_events_pipe()
 
-        LOG.debug("Starting native event thread")
+        LOG.debug(_("Starting native event thread"))
         event_thread = native_threading.Thread(target=self._native_thread)
         event_thread.setDaemon(True)
         event_thread.start()
 
-        LOG.debug("Starting green dispatch thread")
+        LOG.debug(_("Starting green dispatch thread"))
         eventlet.spawn(self._dispatch_thread)
 
     def init_host(self, host):
@@ -580,7 +580,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 self._wrapped_conn = wrapped_conn
 
             try:
-                LOG.debug("Registering for lifecycle events %s" % str(self))
+                LOG.debug(_("Registering for lifecycle events %s") % self)
                 wrapped_conn.domainEventRegisterAny(
                     None,
                     libvirt.VIR_DOMAIN_EVENT_ID_LIFECYCLE,
@@ -592,8 +592,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
             if self.has_min_version(MIN_LIBVIRT_CLOSE_CALLBACK_VERSION):
                 try:
-                    LOG.debug("Registering for connection events: %s" %
-                              str(self))
+                    LOG.debug(_("Registering for connection events: %s")
+                                % self)
                     wrapped_conn.registerCloseCallback(
                         self._close_callback, None)
                 except libvirt.libvirtError:
@@ -1817,7 +1817,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def _supports_direct_io(dirpath):
 
         if not hasattr(os, 'O_DIRECT'):
-            LOG.debug("This python runtime does not support direct I/O")
+            LOG.debug(_("This python runtime does not support direct I/O"))
             return False
 
         testfile = os.path.join(dirpath, ".directio.test")
