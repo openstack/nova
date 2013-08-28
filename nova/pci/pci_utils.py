@@ -22,6 +22,7 @@ import re
 from nova import exception
 
 
+PCI_VENDOR_PATTERN = "^(hex{4})$".replace("hex", "[\da-fA-F]")
 _PCI_ADDRESS_PATTERN = ("^(hex{4}):(hex{2}):(hex{2}).(oct{1})$".
                                              replace("hex", "[\da-fA-F]").
                                              replace("oct", "[0-7]"))

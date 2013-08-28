@@ -1664,6 +1664,20 @@
 
 
 #
+# Options defined in nova.pci.pci_request
+#
+
+# An alias for a PCI passthrough device requirement. This
+# allows users to specify the alias in the extra_spec for a
+# flavor, without needing to repeat all the PCI property
+# requirements. For example: pci_alias = { "name":
+# "QuicAssist",   "product_id": "0443",   "vendor_id": "8086",
+# "device_type": "ACCEL" } defines an alias for the Intel
+# QuickAssist card. (multi valued) (multi valued)
+#pci_alias=
+
+
+#
 # Options defined in nova.scheduler.driver
 #
 
