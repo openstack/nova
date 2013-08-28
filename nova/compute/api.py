@@ -3040,6 +3040,7 @@ class AggregateAPI(base.Base):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def update_aggregate(self, context, aggregate_id, values):
         """Update the properties of an aggregate."""
+        include_az = values.get('availability_zone')
         aggregate_payload = {'aggregate_id': aggregate_id}
         aggregate_payload.update({'meta_data': values})
         compute_utils.notify_about_aggregate_update(context,
@@ -3049,6 +3050,10 @@ class AggregateAPI(base.Base):
         compute_utils.notify_about_aggregate_update(context,
                                                     "updateprop.end",
                                                     aggregate_payload)
+        # If updated values include availability_zones, then the cache
+        # which stored availability_zones and host need to be reset
+        if include_az:
+            availability_zones.reset_cache()
         return self._reformat_aggregate_info(aggregate)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())

@@ -32,6 +32,7 @@ import mox
 from oslo.config import cfg
 
 import nova
+from nova import availability_zones
 from nova import block_device
 from nova import compute
 from nova.compute import api as compute_api
@@ -8132,6 +8133,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         test_notifier.NOTIFICATIONS = []
         aggr = self.api.update_aggregate(self.context, aggr['id'],
                                          {'name': 'new_fake_aggregate'})
+        self.assertEqual(availability_zones._get_cache().get('cache'), None)
         self.assertEqual(len(test_notifier.NOTIFICATIONS), 2)
         msg = test_notifier.NOTIFICATIONS[0]
         self.assertEqual(msg['event_type'],
