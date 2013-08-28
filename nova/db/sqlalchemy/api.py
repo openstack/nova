@@ -2444,8 +2444,9 @@ def network_get(context, network_id, project_only='allow_none'):
 
 
 @require_context
-def network_get_all(context):
-    result = model_query(context, models.Network, read_deleted="no").all()
+def network_get_all(context, project_only):
+    result = model_query(context, models.Network, read_deleted="no",
+                         project_only=project_only).all()
 
     if not result:
         raise exception.NoNetworksFound()
@@ -2454,8 +2455,7 @@ def network_get_all(context):
 
 
 @require_context
-def network_get_all_by_uuids(context, network_uuids,
-                             project_only="allow_none"):
+def network_get_all_by_uuids(context, network_uuids, project_only):
     result = model_query(context, models.Network, read_deleted="no",
                          project_only=project_only).\
                 filter(models.Network.uuid.in_(network_uuids)).\
