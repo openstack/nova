@@ -616,18 +616,6 @@ def stub_volume_create(self, context, size, name, description, snapshot,
     return vol
 
 
-def stub_volume_create_from_image(self, context, size, name, description,
-                                  snapshot, volume_type, metadata,
-                                  availability_zone):
-    vol = stub_volume('1')
-    vol['status'] = 'creating'
-    vol['size'] = size
-    vol['display_name'] = name
-    vol['display_description'] = description
-    vol['availability_zone'] = 'nova'
-    return vol
-
-
 def stub_volume_update(self, context, *args, **param):
     pass
 
@@ -648,10 +636,6 @@ def stub_volume_get_all(context, search_opts=None):
     return [stub_volume(100, project_id='fake'),
             stub_volume(101, project_id='superfake'),
             stub_volume(102, project_id='superduperfake')]
-
-
-def stub_volume_get_all_by_project(self, context, search_opts=None):
-    return [stub_volume_get(self, context, '1')]
 
 
 def stub_volume_check_attach(self, context, *args, **param):
