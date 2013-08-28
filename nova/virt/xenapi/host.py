@@ -21,6 +21,7 @@ Management class for host-related functions (start, reboot, etc).
 
 from nova.compute import task_states
 from nova.compute import vm_states
+from nova import conductor
 from nova import context
 from nova import exception
 from nova.objects import instance as instance_obj
@@ -40,6 +41,7 @@ class Host(object):
     def __init__(self, session, virtapi):
         self._session = session
         self._virtapi = virtapi
+        self._conductor_api = conductor.API()
 
     def host_power_action(self, _host, action):
         """Reboots or shuts down the host."""
@@ -112,8 +114,23 @@ class Host(object):
             raise exception.NoValidHost(reason='Unable to find suitable '
                                                    'host for VMs evacuation')
 
-    def set_host_enabled(self, _host, enabled):
+    def set_host_enabled(self, host, enabled):
         """Sets the specified host's ability to accept new instances."""
+        # Since capabilities are gone, use service table to disable a node
+        # in scheduler
+        status = {'disabled': not enabled,
+                'disabled_reason': 'set by xenapi host_state'
+                }
+        cntxt = context.get_admin_context()
+        service = self._conductor_api.service_get_by_args(
+                cntxt,
+                host,
+                'nova-compute')
+        self._conductor_api.service_update(
+                cntxt,
+                service,
+                status)
+
         args = {"enabled": jsonutils.dumps(enabled)}
         response = call_xenhost(self._session, "set_host_enabled", args)
         return response.get("status", response)
