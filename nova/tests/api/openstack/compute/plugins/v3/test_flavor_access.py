@@ -140,7 +140,7 @@ class FlavorAccessTest(test.TestCase):
 
     def test_list_flavor_access_public(self):
         # query os-flavor-access on public flavor should return 404
-        req = fakes.HTTPRequestV3.blank('/flavors/os-flavor-access',
+        req = fakes.HTTPRequestV3.blank('/flavors/fake/os-flavor-access',
                                         use_admin_context=True)
         self.assertRaises(exc.HTTPNotFound,
                           self.flavor_access_controller.index,
@@ -152,6 +152,18 @@ class FlavorAccessTest(test.TestCase):
             {'flavor_id': '2', 'tenant_id': 'proj3'}]}
         result = self.flavor_access_controller.index(self.req, '2')
         self.assertEqual(result, expected)
+
+    def test_list_with_no_context(self):
+        req = fakes.HTTPRequestV3.blank('/flavors/2/os-flavor-access')
+
+        def fake_authorize(context, target=None, action=None):
+            raise exception.PolicyNotAuthorized(action='index')
+
+        self.stubs.Set(flavor_access, 'authorize', fake_authorize)
+
+        self.assertRaises(exception.PolicyNotAuthorized,
+                          self.flavor_access_controller.index,
+                          req, '2')
 
     def test_list_flavor_with_admin_default_proj1(self):
         expected = {'flavors': [{'id': '0'}, {'id': '1'}]}
@@ -276,6 +288,25 @@ class FlavorAccessTest(test.TestCase):
                           self.flavor_action_controller._add_tenant_access,
                           req, '3', body)
 
+    def test_add_tenant_access_with_no_admin_user(self):
+        req = fakes.HTTPRequestV3.blank('/flavors/2/action')
+        body = {'add_tenant_access': {'tenant_id': 'proj2'}}
+        self.assertRaises(exception.PolicyNotAuthorized,
+                          self.flavor_action_controller._add_tenant_access,
+                          req, '2', body)
+
+    def test_add_tenant_access_without_policy_check(self):
+        req = fakes.HTTPRequestV3.blank('/flavors/2/action')
+        body = {'add_tenant_access': {'tenant_id': 'proj2'}}
+
+        def fake_authorize(context, target=None, action=None):
+            pass
+
+        self.stubs.Set(flavor_access, 'authorize', fake_authorize)
+        self.assertRaises(exc.HTTPForbidden,
+                          self.flavor_action_controller._add_tenant_access,
+                          req, '2', body)
+
     def test_add_tenant_access_without_tenant_id(self):
         def stub_add_flavor_access(flavorid, projectid, ctxt=None):
             raise exception.FlavorNotFound(flavor_id=flavorid)
@@ -361,6 +392,26 @@ class FlavorAccessTest(test.TestCase):
         self.assertRaises(exc.HTTPBadRequest,
                           self.flavor_action_controller._remove_tenant_access,
                           req, '3', body)
+
+    def test_remove_tenant_access_with_no_admin_user(self):
+        req = fakes.HTTPRequestV3.blank('flavors/2/action',
+                                        use_admin_context=False)
+        body = {'remove_tenant_access': {'tenant_id': 'proj2'}}
+        self.assertRaises(exception.PolicyNotAuthorized,
+                          self.flavor_action_controller._remove_tenant_access,
+                          req, '2', body)
+
+    def test_remove_tenant_access_without_policy_check(self):
+        req = fakes.HTTPRequestV3.blank('/flavors/2/action')
+        body = {'remove_tenant_access': {'tenant_id': 'proj2'}}
+
+        def fake_authorize(context, target=None, action=None):
+            pass
+
+        self.stubs.Set(flavor_access, 'authorize', fake_authorize)
+        self.assertRaises(exc.HTTPForbidden,
+                          self.flavor_action_controller._remove_tenant_access,
+                          req, '2', body)
 
 
 class FlavorAccessSerializerTest(test.TestCase):

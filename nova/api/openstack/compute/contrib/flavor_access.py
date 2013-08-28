@@ -27,7 +27,9 @@ from nova import exception
 from nova.openstack.common.gettextutils import _
 
 
-authorize = extensions.soft_extension_authorizer('compute', 'flavor_access')
+soft_authorize = extensions.soft_extension_authorizer('compute',
+                                                      'flavor_access')
+authorize = extensions.extension_authorizer('compute', 'flavor_access')
 
 
 def make_flavor(elem):
@@ -133,7 +135,7 @@ class FlavorActionController(wsgi.Controller):
     @wsgi.extends
     def show(self, req, resp_obj, id):
         context = req.environ['nova.context']
-        if authorize(context):
+        if soft_authorize(context):
             # Attach our slave template to the response object
             resp_obj.attach(xml=FlavorTemplate())
             db_flavor = req.get_db_flavor(id)
@@ -143,7 +145,7 @@ class FlavorActionController(wsgi.Controller):
     @wsgi.extends
     def detail(self, req, resp_obj):
         context = req.environ['nova.context']
-        if authorize(context):
+        if soft_authorize(context):
             # Attach our slave template to the response object
             resp_obj.attach(xml=FlavorsTemplate())
 
@@ -155,7 +157,7 @@ class FlavorActionController(wsgi.Controller):
     @wsgi.extends(action='create')
     def create(self, req, body, resp_obj):
         context = req.environ['nova.context']
-        if authorize(context):
+        if soft_authorize(context):
             # Attach our slave template to the response object
             resp_obj.attach(xml=FlavorTemplate())
 
@@ -167,7 +169,8 @@ class FlavorActionController(wsgi.Controller):
     @wsgi.action("addTenantAccess")
     def _addTenantAccess(self, req, id, body):
         context = req.environ['nova.context']
-        authorize(context)
+        authorize(context, action="addTenantAccess")
+
         self._check_body(body)
 
         vals = body['addTenantAccess']
@@ -184,7 +187,8 @@ class FlavorActionController(wsgi.Controller):
     @wsgi.action("removeTenantAccess")
     def _removeTenantAccess(self, req, id, body):
         context = req.environ['nova.context']
-        authorize(context)
+        authorize(context, action="removeTenantAccess")
+
         self._check_body(body)
 
         vals = body['removeTenantAccess']

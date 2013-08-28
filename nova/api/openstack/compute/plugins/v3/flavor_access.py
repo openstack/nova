@@ -27,7 +27,9 @@ from nova import exception
 from nova.openstack.common.gettextutils import _
 
 ALIAS = 'os-flavor-access'
-authorize = extensions.soft_extension_authorizer('compute', 'v3:' + ALIAS)
+soft_authorize = extensions.soft_extension_authorizer('compute',
+                                                      'v3:' + ALIAS)
+authorize = extensions.extension_authorizer('compute', 'v3:%s' % ALIAS)
 
 
 def make_flavor(elem):
@@ -126,7 +128,7 @@ class FlavorActionController(wsgi.Controller):
     @wsgi.extends
     def show(self, req, resp_obj, id):
         context = req.environ['nova.context']
-        if authorize(context):
+        if soft_authorize(context):
             # Attach our slave template to the response object
             resp_obj.attach(xml=FlavorTemplate())
             db_flavor = req.get_db_flavor(id)
@@ -136,7 +138,7 @@ class FlavorActionController(wsgi.Controller):
     @wsgi.extends
     def detail(self, req, resp_obj):
         context = req.environ['nova.context']
-        if authorize(context):
+        if soft_authorize(context):
             # Attach our slave template to the response object
             resp_obj.attach(xml=FlavorsTemplate())
 
@@ -148,7 +150,7 @@ class FlavorActionController(wsgi.Controller):
     @wsgi.extends(action='create')
     def create(self, req, body, resp_obj):
         context = req.environ['nova.context']
-        if authorize(context):
+        if soft_authorize(context):
             # Attach our slave template to the response object
             resp_obj.attach(xml=FlavorTemplate())
 
@@ -156,12 +158,13 @@ class FlavorActionController(wsgi.Controller):
 
             self._extend_flavor(resp_obj.obj['flavor'], db_flavor)
 
-    @extensions.expected_errors((400, 404, 409))
+    @extensions.expected_errors((400, 403, 404, 409))
     @wsgi.serializers(xml=FlavorAccessTemplate)
     @wsgi.action("add_tenant_access")
     def _add_tenant_access(self, req, id, body):
         context = req.environ['nova.context']
-        authorize(context)
+        authorize(context, action="add_tenant_access")
+
         if not self.is_valid_body(body, 'add_tenant_access'):
             raise webob.exc.HTTPBadRequest(explanation=_("Invalid request"))
 
@@ -178,15 +181,17 @@ class FlavorActionController(wsgi.Controller):
             raise webob.exc.HTTPConflict(explanation=err.format_message())
         except exception.FlavorNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
-
+        except exception.AdminRequired as e:
+            raise webob.exc.HTTPForbidden(explanation=e.format_message())
         return _marshall_flavor_access(id)
 
-    @extensions.expected_errors((400, 404))
+    @extensions.expected_errors((400, 403, 404))
     @wsgi.serializers(xml=FlavorAccessTemplate)
     @wsgi.action("remove_tenant_access")
     def _remove_tenant_access(self, req, id, body):
         context = req.environ['nova.context']
-        authorize(context)
+        authorize(context, action="remove_tenant_access")
+
         if not self.is_valid_body(body, 'remove_tenant_access'):
             raise webob.exc.HTTPBadRequest(explanation=_("Invalid request"))
 
@@ -202,7 +207,8 @@ class FlavorActionController(wsgi.Controller):
         except (exception.FlavorAccessNotFound,
                 exception.FlavorNotFound) as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
-
+        except exception.AdminRequired as e:
+            raise webob.exc.HTTPForbidden(explanation=e.format_message())
         return _marshall_flavor_access(id)
 
 
