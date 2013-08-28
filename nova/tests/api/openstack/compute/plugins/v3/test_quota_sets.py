@@ -203,7 +203,7 @@ class QuotaSetsTest(test.TestCase):
                                  "destroy_all_by_project")
         quota.QUOTAS.destroy_all_by_project(context, '1234')
         self.mox.ReplayAll()
-        res = self.controller.delete(self.req, '1234')
+        self.controller.delete(self.req, '1234')
         self.mox.VerifyAll()
 
     def test_quotas_update_exceed_in_used(self):
@@ -237,14 +237,14 @@ class QuotaSetsTest(test.TestCase):
         self.assertEqual(res_dict, expected)
 
     def test_user_quotas_show_as_admin(self):
-        req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/1234?user_id=1',
+        req = fakes.HTTPRequestV3.blank('/os-quota-sets/1234?user_id=1',
                                       use_admin_context=True)
         res_dict = self.controller.show(req, '1234')
 
         self.assertEqual(res_dict, self._generate_quota_set(id='1234'))
 
     def test_user_quotas_show_as_unauthorized_user(self):
-        req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/1234?user_id=1')
+        req = fakes.HTTPRequestV3.blank('/os-quota-sets/1234?user_id=1')
         self.assertRaises(webob.exc.HTTPForbidden, self.controller.show,
                           req, '1234')
 
@@ -267,8 +267,8 @@ class QuotaSetsTest(test.TestCase):
     def test_user_quotas_update_as_admin(self):
         body = self._generate_quota_set()
 
-        url = '/v2/fake4/os-quota-sets/update_me?user_id=1'
-        req = fakes.HTTPRequest.blank(url, use_admin_context=True)
+        url = '/os-quota-sets/update_me?user_id=1'
+        req = fakes.HTTPRequestV3.blank(url, use_admin_context=True)
         res_dict = self.controller.update(req, 'update_me', body)
         body['quota_set'].update({'id': 'update_me'})
         self.assertEqual(res_dict, body)
@@ -276,33 +276,33 @@ class QuotaSetsTest(test.TestCase):
     def test_user_quotas_update_as_user(self):
         body = self._generate_quota_set()
 
-        url = '/v2/fake4/os-quota-sets/update_me?user_id=1'
-        req = fakes.HTTPRequest.blank(url)
+        url = '/os-quota-sets/update_me?user_id=1'
+        req = fakes.HTTPRequestV3.blank(url)
         self.assertRaises(webob.exc.HTTPForbidden, self.controller.update,
                           req, 'update_me', body)
 
     def test_user_quotas_update_exceed_project(self):
         body = {'quota_set': {'instances': 20}}
-        url = '/v2/fake4/os-quota-sets/update_me?user_id=1'
-        req = fakes.HTTPRequest.blank(url, use_admin_context=True)
+        url = '/os-quota-sets/update_me?user_id=1'
+        req = fakes.HTTPRequestV3.blank(url, use_admin_context=True)
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
                           req, 'update_me', body)
 
     def test_user_quotas_delete_as_unauthorized_user(self):
-        req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/1234?user_id=1')
+        req = fakes.HTTPRequestV3.blank('/os-quota-sets/1234?user_id=1')
         self.assertRaises(webob.exc.HTTPForbidden, self.controller.delete,
                           req, '1234')
 
     def test_user_quotas_delete_as_admin(self):
         context = context_maker.get_admin_context()
-        url = '/v2/fake4/os-quota-sets/1234?user_id=1'
-        self.req = fakes.HTTPRequest.blank(url)
+        url = '/os-quota-sets/1234?user_id=1'
+        self.req = fakes.HTTPRequestV3.blank(url)
         self.req.environ['nova.context'] = context
         self.mox.StubOutWithMock(quota.QUOTAS,
                                  "destroy_all_by_project_and_user")
         quota.QUOTAS.destroy_all_by_project_and_user(context, '1234', '1')
         self.mox.ReplayAll()
-        res = self.controller.delete(self.req, '1234')
+        self.controller.delete(self.req, '1234')
         self.mox.VerifyAll()
 
 
