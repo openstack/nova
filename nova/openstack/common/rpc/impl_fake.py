@@ -146,7 +146,7 @@ def multicall(conf, context, topic, msg, timeout=None):
     try:
         consumer = CONSUMERS[topic][0]
     except (KeyError, IndexError):
-        return iter([None])
+        raise rpc_common.Timeout("No consumers available")
     else:
         return consumer.call(context, version, method, namespace, args,
                              timeout)
