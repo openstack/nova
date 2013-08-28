@@ -2587,6 +2587,17 @@ class LibvirtDriver(driver.ComputeDriver):
             xmlstr = self._conn.getCapabilities()
             self._caps = vconfig.LibvirtConfigCaps()
             self._caps.parse_str(xmlstr)
+            if hasattr(libvirt, 'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES'):
+                try:
+                    features = self._conn.baselineCPU(
+                        [self._caps.host.cpu.to_xml()],
+                        libvirt.VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES)
+                    if features:
+                        self._caps.host.cpu = vconfig.LibvirtConfigCPU()
+                        self._caps.host.cpu.parse_str(features)
+                except libvirt.VIR_ERR_NO_SUPPORT:
+                    # Note(yjiang5): ignore if libvirt has no support
+                    pass
         return self._caps
 
     def get_host_uuid(self):
