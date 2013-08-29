@@ -2738,6 +2738,8 @@ class ComputeTestCase(BaseTestCase):
         self.assertEquals(payload['instance_type'], 'm1.tiny')
         type_id = flavors.get_flavor_by_name('m1.tiny')['id']
         self.assertEquals(str(payload['instance_type_id']), str(type_id))
+        flavor_id = flavors.get_flavor_by_name('m1.tiny')['flavorid']
+        self.assertEquals(str(payload['instance_flavor_id']), str(flavor_id))
         self.assertEquals(payload['state'], 'active')
         self.assertTrue('display_name' in payload)
         self.assertTrue('created_at' in payload)
@@ -2850,6 +2852,8 @@ class ComputeTestCase(BaseTestCase):
         self.assertEquals(payload['instance_type'], 'm1.tiny')
         type_id = flavors.get_flavor_by_name('m1.tiny')['id']
         self.assertEquals(str(payload['instance_type_id']), str(type_id))
+        flavor_id = flavors.get_flavor_by_name('m1.tiny')['flavorid']
+        self.assertEquals(str(payload['instance_flavor_id']), str(flavor_id))
         self.assertTrue('display_name' in payload)
         self.assertTrue('created_at' in payload)
         self.assertTrue('launched_at' in payload)
@@ -3703,6 +3707,8 @@ class ComputeTestCase(BaseTestCase):
         self.assertEquals(payload['instance_type'], 'm1.tiny')
         type_id = flavors.get_flavor_by_name('m1.tiny')['id']
         self.assertEquals(str(payload['instance_type_id']), str(type_id))
+        flavor_id = flavors.get_flavor_by_name('m1.tiny')['flavorid']
+        self.assertEquals(str(payload['instance_flavor_id']), str(flavor_id))
         self.assertTrue('display_name' in payload)
         self.assertTrue('created_at' in payload)
         self.assertTrue('launched_at' in payload)
@@ -3720,6 +3726,7 @@ class ComputeTestCase(BaseTestCase):
         new_type = flavors.get_flavor_by_name('m1.small')
         new_type = jsonutils.to_primitive(new_type)
         new_type_id = new_type['id']
+        flavor_id = new_type['flavorid']
         instance_p = obj_base.obj_to_primitive(instance)
         self.compute.run_instance(self.context, instance=instance_p)
 
@@ -3758,6 +3765,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertEquals(payload['instance_id'], instance.uuid)
         self.assertEquals(payload['instance_type'], 'm1.small')
         self.assertEquals(str(payload['instance_type_id']), str(new_type_id))
+        self.assertEquals(str(payload['instance_flavor_id']), str(flavor_id))
         self.assertTrue('display_name' in payload)
         self.assertTrue('created_at' in payload)
         self.assertTrue('launched_at' in payload)
@@ -3806,6 +3814,8 @@ class ComputeTestCase(BaseTestCase):
         self.assertEquals(payload['instance_type'], 'm1.tiny')
         type_id = flavors.get_flavor_by_name('m1.tiny')['id']
         self.assertEquals(str(payload['instance_type_id']), str(type_id))
+        flavor_id = flavors.get_flavor_by_name('m1.tiny')['flavorid']
+        self.assertEquals(str(payload['instance_flavor_id']), str(flavor_id))
         self.assertTrue('display_name' in payload)
         self.assertTrue('created_at' in payload)
         self.assertTrue('launched_at' in payload)
