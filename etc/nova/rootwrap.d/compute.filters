@@ -204,3 +204,6 @@ xenstore-read: CommandFilter, xenstore-read, root
 
 # nova/virt/baremetal/tilera.py: 'rpc.mountd'
 rpc.mountd: CommandFilter, rpc.mountd, root
+
+# nova/virt/libvirt/utils.py:
+rbd: CommandFilter, rbd, root

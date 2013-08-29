@@ -2023,9 +2023,10 @@
 # Options defined in nova.virt.libvirt.imagebackend
 #
 
-# VM Images format. Acceptable values are: raw, qcow2, lvm,
-# default. If default is specified, then use_cow_images flag
-# is used instead of this one. (string value)
+# VM Images format. Acceptable values are: raw, qcow2,
+# lvm,rbd, default. If default is specified, then
+# use_cow_images flag is used instead of this one. (string
+# value)
 #libvirt_images_type=default
 
 # LVM Volume Group that is used for VM images, when you
@@ -2039,6 +2040,13 @@
 # The amount of storage (in megabytes) to allocate for LVM
 # snapshot copy-on-write blocks. (integer value)
 #libvirt_lvm_snapshot_size=1000
+
+# the RADOS pool in which rbd volumes are stored (string
+# value)
+#libvirt_images_rbd_pool=rbd
+
+# path to the ceph configuration file to use (string value)
+#libvirt_images_rbd_ceph_conf=
 
 
 #

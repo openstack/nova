@@ -165,7 +165,7 @@ class QemuImgInfo(object):
 
 def qemu_img_info(path):
     """Return an object containing the parsed output from qemu-img info."""
-    if not os.path.exists(path):
+    if not os.path.exists(path) and CONF.libvirt_images_type != 'rbd':
         return QemuImgInfo()
 
     out, err = utils.execute('env', 'LC_ALL=C', 'LANG=C',
