@@ -1320,6 +1320,68 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_get_minram_mindisk_other_fails(self):
         self._test_get_minram_mindisk_params('other', show_fails=True)
 
+    def test_volume_snapshot_create(self):
+        volume_id = '1'
+        create_info = {'id': 'eyedee'}
+        fake_bdm = {
+            'instance': {
+                'uuid': 'fake_uuid',
+                'vm_state': vm_states.ACTIVE,
+            },
+        }
+
+        def fake_get_bdm(context, _volume_id, columns_to_join):
+            self.assertEqual(volume_id, _volume_id)
+            return fake_bdm
+
+        self.stubs.Set(self.compute_api.db,
+                'block_device_mapping_get_by_volume_id', fake_get_bdm)
+        self.mox.StubOutWithMock(self.compute_api.compute_rpcapi,
+                'volume_snapshot_create')
+
+        self.compute_api.compute_rpcapi.volume_snapshot_create(self.context,
+                fake_bdm['instance'], volume_id, create_info)
+
+        self.mox.ReplayAll()
+
+        snapshot = self.compute_api.volume_snapshot_create(self.context,
+                volume_id, create_info)
+
+        expected_snapshot = {
+            'snapshot': {
+                'id': create_info['id'],
+                'volumeId': volume_id,
+            },
+        }
+        self.assertEqual(snapshot, expected_snapshot)
+
+    def test_volume_snapshot_delete(self):
+        volume_id = '1'
+        snapshot_id = '2'
+        fake_bdm = {
+            'instance': {
+                'uuid': 'fake_uuid',
+                'vm_state': vm_states.ACTIVE,
+            },
+        }
+
+        def fake_get_bdm(context, _volume_id, columns_to_join):
+            self.assertEqual(volume_id, _volume_id)
+            return fake_bdm
+
+        self.stubs.Set(self.compute_api.db,
+                'block_device_mapping_get_by_volume_id', fake_get_bdm)
+        self.mox.StubOutWithMock(self.compute_api.compute_rpcapi,
+                'volume_snapshot_delete')
+
+        self.compute_api.compute_rpcapi.volume_snapshot_delete(self.context,
+                fake_bdm['instance'], volume_id, snapshot_id, {})
+
+        self.mox.ReplayAll()
+
+        self.compute_api.volume_snapshot_delete(self.context, volume_id,
+                snapshot_id, {})
+
 
 class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
     def setUp(self):

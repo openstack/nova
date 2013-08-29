@@ -99,6 +99,8 @@ policy_data = """
     "compute:restore": "",
     "compute:swap_volume": "",
 
+    "compute:volume_snapshot_create": "",
+    "compute:volume_snapshot_delete": "",
 
     "compute_extension:accounts": "",
     "compute_extension:admin_actions:pause": "",

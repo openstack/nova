@@ -383,7 +383,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '2.43'
+    RPC_API_VERSION = '2.44'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -2226,6 +2226,18 @@ class ComputeManager(manager.SchedulerDependentManager):
                 LOG.debug(msg, instance=instance)
             else:
                 raise
+
+    @rpc_common.client_exceptions(NotImplementedError)
+    def volume_snapshot_create(self, context, instance, volume_id,
+                               create_info):
+        self.driver.volume_snapshot_create(context, instance, volume_id,
+                                           create_info)
+
+    @rpc_common.client_exceptions(NotImplementedError)
+    def volume_snapshot_delete(self, context, instance, volume_id,
+                               snapshot_id, delete_info):
+        self.driver.volume_snapshot_delete(context, instance, volume_id,
+                                           snapshot_id, delete_info)
 
     @wrap_instance_fault
     def _rotate_backups(self, context, instance, backup_type, rotation):

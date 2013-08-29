@@ -2889,6 +2889,28 @@ class API(base.Base):
         """Get all migrations for the given filters."""
         return migration_obj.MigrationList.get_by_filters(context, filters)
 
+    @wrap_check_policy
+    def volume_snapshot_create(self, context, volume_id, create_info):
+        bdm = self.db.block_device_mapping_get_by_volume_id(context,
+                volume_id, ['instance'])
+        self.compute_rpcapi.volume_snapshot_create(context, bdm['instance'],
+                volume_id, create_info)
+        snapshot = {
+            'snapshot': {
+                'id': create_info.get('id'),
+                'volumeId': volume_id
+            }
+        }
+        return snapshot
+
+    @wrap_check_policy
+    def volume_snapshot_delete(self, context, volume_id, snapshot_id,
+                               delete_info):
+        bdm = self.db.block_device_mapping_get_by_volume_id(context,
+                volume_id, ['instance'])
+        self.compute_rpcapi.volume_snapshot_delete(context, bdm['instance'],
+                volume_id, snapshot_id, delete_info)
+
 
 class HostAPI(base.Base):
     """Sub-set of the Compute Manager API for managing host operations."""
