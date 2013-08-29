@@ -19,6 +19,7 @@ import copy
 import errno
 import eventlet
 import fixtures
+import functools
 import mox
 import os
 import re
@@ -5679,7 +5680,7 @@ disk size: 4.4M''', ''))
         def fake_unlink(path):
             self.executes.append(('rm', path))
 
-        def fake_rm_on_errror(path):
+        def fake_rm_on_error(path, remove=None):
             self.executes.append(('rm', '-f', path))
 
         def fake_qemu_img_info(path):
@@ -5706,7 +5707,14 @@ disk size: 4.4M''', ''))
         self.stubs.Set(os, 'unlink', fake_unlink)
         self.stubs.Set(images, 'fetch', lambda *_: None)
         self.stubs.Set(images, 'qemu_img_info', fake_qemu_img_info)
-        self.stubs.Set(fileutils, 'delete_if_exists', fake_rm_on_errror)
+        self.stubs.Set(fileutils, 'delete_if_exists', fake_rm_on_error)
+
+        # Since the remove param of fileutils.remove_path_on_error()
+        # is initialized at load time, we must provide a wrapper
+        # that explicitly resets it to our fake delete_if_exists()
+        old_rm_path_on_error = fileutils.remove_path_on_error
+        f = functools.partial(old_rm_path_on_error, remove=fake_rm_on_error)
+        self.stubs.Set(fileutils, 'remove_path_on_error', f)
 
         context = 'opaque context'
         image_id = '4'
