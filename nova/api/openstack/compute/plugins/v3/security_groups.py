@@ -34,6 +34,7 @@ from nova.openstack.common import xmlutils
 
 
 ALIAS = 'os-security-groups'
+ATTRIBUTE_NAME = '%s:security_groups' % ALIAS
 authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
 softauth = extensions.soft_extension_authorizer('compute', 'v3:' + ALIAS)
 
@@ -239,6 +240,10 @@ class SecurityGroups(extensions.V3APIExtensionBase):
     namespace = "http://docs.openstack.org/compute/ext/securitygroups/api/v3"
     version = 1
 
+    def __init__(self, extension_info):
+        super(SecurityGroups, self).__init__(extension_info)
+        self.xml_deserializer = wsgi.XMLDeserializer()
+
     def get_controller_extensions(self):
         controller = SecurityGroupActionController()
         actions = extensions.ControllerExtension(self, 'servers', controller)
@@ -248,6 +253,37 @@ class SecurityGroups(extensions.V3APIExtensionBase):
 
     def get_resources(self):
         return []
+
+    def server_create(self, server_dict, create_kwargs):
+        security_groups = server_dict.get(ATTRIBUTE_NAME)
+        if security_groups is not None:
+            create_kwargs['security_group'] = [
+                sg['name'] for sg in security_groups if sg.get('name')]
+            create_kwargs['security_group'] = list(
+                set(create_kwargs['security_group']))
+
+    def _extract_security_groups(self, server_node):
+        """Marshal the security_groups attribute of a parsed request."""
+        node = self.xml_deserializer.find_first_child_named_in_namespace(
+            server_node, self.namespace, 'security_groups')
+        if node is not None:
+            security_groups = []
+            for sg_node in self.xml_deserializer.find_children_named(
+                    node, "security_group"):
+                item = {}
+                name = self.xml_deserializer.find_attribute_or_element(
+                    sg_node, 'name')
+                if name:
+                    item["name"] = name
+                    security_groups.append(item)
+            return security_groups
+        else:
+            return None
+
+    def server_xml_extract_server_deserialize(self, server_node, server_dict):
+        security_groups = self._extract_security_groups(server_node)
+        if security_groups is not None:
+            server_dict[ATTRIBUTE_NAME] = security_groups
 
 
 class NativeSecurityGroupExceptions(object):

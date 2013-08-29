@@ -173,10 +173,6 @@ class CommonDeserializer(wsgi.MetadataXMLDeserializer):
         if networks is not None:
             server["networks"] = networks
 
-        security_groups = self._extract_security_groups(server_node)
-        if security_groups is not None:
-            server["security_groups"] = security_groups
-
         # NOTE(vish): this is not namespaced in json, so leave it without a
         #             namespace for now
         block_device_mapping = self._extract_block_device_mapping(server_node)
@@ -229,21 +225,6 @@ class CommonDeserializer(wsgi.MetadataXMLDeserializer):
                     item["port"] = network_node.getAttribute("port")
                 networks.append(item)
             return networks
-        else:
-            return None
-
-    def _extract_security_groups(self, server_node):
-        """Marshal the security_groups attribute of a parsed request."""
-        node = self.find_first_child_named(server_node, "security_groups")
-        if node is not None:
-            security_groups = []
-            for sg_node in self.find_children_named(node, "security_group"):
-                item = {}
-                name = self.find_attribute_or_element(sg_node, 'name')
-                if name:
-                    item["name"] = name
-                    security_groups.append(item)
-            return security_groups
         else:
             return None
 
@@ -794,20 +775,6 @@ class ServersController(wsgi.Controller):
         return_reservation_id = create_kwargs.pop('return_reservation_id',
                                                   False)
 
-        # TODO(cyeoh): bp v3-api-core-as-extensions
-        # Replace with an extension point when the security groups
-        # extension is ported
-        sg_names = []
-        #if self.ext_mgr.is_loaded('os-security-groups'):
-        #    security_groups = server_dict.get('security_groups')
-        #    if security_groups is not None:
-        #        sg_names = [sg['name'] for sg in security_groups
-        #                    if sg.get('name')]
-        if not sg_names:
-            sg_names.append('default')
-
-        sg_names = list(set(sg_names))
-
         requested_networks = None
         # TODO(cyeoh): bp v3-api-core-as-extensions
         # Replace with an extension point when the os-networks
@@ -863,7 +830,6 @@ class ServersController(wsgi.Controller):
                             access_ip_v6=access_ip_v6,
                             admin_password=password,
                             requested_networks=requested_networks,
-                            security_group=sg_names,
                             block_device_mapping=block_device_mapping,
                             **create_kwargs)
         except exception.QuotaError as error:
