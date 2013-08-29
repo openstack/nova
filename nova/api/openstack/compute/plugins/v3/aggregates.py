@@ -23,7 +23,7 @@ from nova.compute import api as compute_api
 from nova import exception
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
-
+from nova import utils
 
 ALIAS = "os-aggregates"
 LOG = logging.getLogger(__name__)
@@ -77,6 +77,11 @@ class AggregateController(wsgi.Controller):
             raise exc.HTTPBadRequest()
 
         try:
+            utils.check_string_length(name, "Aggregate name", 1, 255)
+        except exception.InvalidInput as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
+
+        try:
             aggregate = self.api.create_aggregate(context, name, avail_zone)
         except exception.AggregateNameExists as e:
             raise exc.HTTPConflict(explanation=e.format_message())
@@ -114,6 +119,13 @@ class AggregateController(wsgi.Controller):
             if key not in ["name", "availability_zone"]:
                 msg = _("Invalid key %s in request body.") % key
                 raise exc.HTTPBadRequest(explanation=msg)
+
+        if 'name' in updates:
+            try:
+                utils.check_string_length(updates['name'], "Aggregate name", 1,
+                                          255)
+            except exception.InvalidInput as e:
+                raise exc.HTTPBadRequest(explanation=e.format_message())
 
         try:
             aggregate = self.api.update_aggregate(context, id, updates)
