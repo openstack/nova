@@ -6110,6 +6110,12 @@ class ArchiveTestCase(test.TestCase):
         metadata = MetaData(bind=self.engine)
         metadata.reflect()
         for table_name in metadata.tables:
+            # NOTE(rpodolyaka): migration 209 introduced a few new tables,
+            #                   which don't have shadow tables and it's
+            #                   completely OK, so we should skip them here
+            if table_name.startswith("dump_"):
+                continue
+
             if table_name.startswith("shadow_"):
                 self.assertIn(table_name[7:], metadata.tables)
                 continue
