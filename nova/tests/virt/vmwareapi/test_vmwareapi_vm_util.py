@@ -55,9 +55,9 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         result = vm_util.get_datastore_ref_and_name(
             fake_session(fake_objects))
 
-        self.assertEquals(result[1], "fake-ds")
-        self.assertEquals(result[2], 1024 * 1024 * 1024 * 1024)
-        self.assertEquals(result[3], 1024 * 1024 * 500 * 1024)
+        self.assertEqual(result[1], "fake-ds")
+        self.assertEqual(result[2], 1024 * 1024 * 1024 * 1024)
+        self.assertEqual(result[3], 1024 * 1024 * 500 * 1024)
 
     def test_get_datastore_ref_and_name_with_regex(self):
         # Test with a regex that matches with a datastore
@@ -68,7 +68,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         fake_objects.add_object(fake.Datastore("fake-ds1"))
         result = vm_util.get_datastore_ref_and_name(
             fake_session(fake_objects), None, None, datastore_valid_regex)
-        self.assertEquals("openstack-ds0", result[1])
+        self.assertEqual("openstack-ds0", result[1])
 
     def test_get_datastore_ref_and_name_with_list(self):
         # Test with a regex containing whitelist of datastores
@@ -97,7 +97,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                 fake_session(fake_objects), None, None,
                 datastore_invalid_regex)
         except exception.DatastoreNotFound as e:
-            self.assertEquals(exp_message, e.args[0])
+            self.assertEqual(exp_message, e.args[0])
         else:
             self.fail("DatastoreNotFound Exception was not raised with "
                       "message: %s" % exp_message)
@@ -126,7 +126,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
 
         host_name = vm_util.get_host_name_from_host_ref(ref)
 
-        self.assertEquals(fake_host_name, host_name)
+        self.assertEqual(fake_host_name, host_name)
 
     def test_get_host_ref_no_hosts_in_cluster(self):
         self.assertRaises(exception.NoValidHost,

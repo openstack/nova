@@ -195,7 +195,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         the db.
         """
         instances = self.conn.list_instances()
-        self.assertEquals(len(instances), num_instances)
+        self.assertEqual(len(instances), num_instances)
 
         # Get Nova record for VM
         vm_info = self.conn.get_info({'uuid': 'fake-uuid',
@@ -209,20 +209,20 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         # Check that m1.large above turned into the right thing.
         mem_kib = long(self.type_data['memory_mb']) << 10
         vcpus = self.type_data['vcpus']
-        self.assertEquals(vm_info['max_mem'], mem_kib)
-        self.assertEquals(vm_info['mem'], mem_kib)
-        self.assertEquals(vm.get("summary.config.numCpu"), vcpus)
-        self.assertEquals(vm.get("summary.config.memorySizeMB"),
-                          self.type_data['memory_mb'])
+        self.assertEqual(vm_info['max_mem'], mem_kib)
+        self.assertEqual(vm_info['mem'], mem_kib)
+        self.assertEqual(vm.get("summary.config.numCpu"), vcpus)
+        self.assertEqual(vm.get("summary.config.memorySizeMB"),
+                         self.type_data['memory_mb'])
 
         self.assertEqual(
             vm.get("config.hardware.device")[2].device.obj_name,
             "ns0:VirtualE1000")
         # Check that the VM is running according to Nova
-        self.assertEquals(vm_info['state'], power_state.RUNNING)
+        self.assertEqual(vm_info['state'], power_state.RUNNING)
 
         # Check that the VM is running according to vSphere API.
-        self.assertEquals(vm.get("runtime.powerState"), 'poweredOn')
+        self.assertEqual(vm.get("runtime.powerState"), 'poweredOn')
 
         found_vm_uuid = False
         found_iface_id = False
@@ -241,19 +241,19 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         object in the db.
         """
         mem_kib = long(self.type_data['memory_mb']) << 10
-        self.assertEquals(info["state"], pwr_state)
-        self.assertEquals(info["max_mem"], mem_kib)
-        self.assertEquals(info["mem"], mem_kib)
-        self.assertEquals(info["num_cpu"], self.type_data['vcpus'])
+        self.assertEqual(info["state"], pwr_state)
+        self.assertEqual(info["max_mem"], mem_kib)
+        self.assertEqual(info["mem"], mem_kib)
+        self.assertEqual(info["num_cpu"], self.type_data['vcpus'])
 
     def test_list_instances(self):
         instances = self.conn.list_instances()
-        self.assertEquals(len(instances), 0)
+        self.assertEqual(len(instances), 0)
 
     def test_list_instances_1(self):
         self._create_vm()
         instances = self.conn.list_instances()
-        self.assertEquals(len(instances), 1)
+        self.assertEqual(len(instances), 1)
 
     def test_instance_dir_disk_created(self):
         """Test image file is cached when even when use_linked_clone
@@ -590,15 +590,15 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                                    'node': self.instance_node})
         self._check_vm_info(info, power_state.RUNNING)
         instances = self.conn.list_instances()
-        self.assertEquals(len(instances), 1)
+        self.assertEqual(len(instances), 1)
         self.conn.destroy(self.instance, self.network_info)
         instances = self.conn.list_instances()
-        self.assertEquals(len(instances), 0)
+        self.assertEqual(len(instances), 0)
 
     def test_destroy_non_existent(self):
         self._create_instance_in_the_db()
-        self.assertEquals(self.conn.destroy(self.instance, self.network_info),
-                          None)
+        self.assertEqual(self.conn.destroy(self.instance, self.network_info),
+                         None)
 
     def _rescue(self):
         def fake_attach_disk_to_vm(*args, **kwargs):
@@ -651,14 +651,14 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.power_on_called = False
 
         def fake_power_on(instance):
-            self.assertEquals(self.instance, instance)
+            self.assertEqual(self.instance, instance)
             self.power_on_called = True
 
         def fake_vmops_update_instance_progress(context, instance, step,
                                                 total_steps):
-            self.assertEquals(self.context, context)
-            self.assertEquals(self.instance, instance)
-            self.assertEquals(4, step)
+            self.assertEqual(self.context, context)
+            self.assertEqual(self.instance, instance)
+            self.assertEqual(4, step)
             self.assertEqual(vmops.RESIZE_TOTAL_STEPS, total_steps)
 
         self.stubs.Set(self.conn._vmops, "_power_on", fake_power_on)
@@ -698,15 +698,15 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.vm_name = str(self.instance['name']) + '-orig'
 
         def fake_power_on(instance):
-            self.assertEquals(self.instance, instance)
+            self.assertEqual(self.instance, instance)
             self.power_on_called = True
 
         def fake_get_orig_vm_name_label(instance):
-            self.assertEquals(self.instance, instance)
+            self.assertEqual(self.instance, instance)
             return self.vm_name
 
         def fake_get_vm_ref_from_name(session, vm_name):
-            self.assertEquals(self.vm_name, vm_name)
+            self.assertEqual(self.vm_name, vm_name)
             return vmwareapi_fake._get_objects("VirtualMachine").objects[0]
 
         def fake_get_vm_ref_from_uuid(session, vm_uuid):
@@ -750,9 +750,9 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
     def test_get_console_pool_info(self):
         info = self.conn.get_console_pool_info("console_type")
-        self.assertEquals(info['address'], 'test_url')
-        self.assertEquals(info['username'], 'test_username')
-        self.assertEquals(info['password'], 'test_pass')
+        self.assertEqual(info['address'], 'test_url')
+        self.assertEqual(info['username'], 'test_username')
+        self.assertEqual(info['password'], 'test_pass')
 
     def test_get_vnc_console_non_existent(self):
         self._create_instance_in_the_db()
@@ -765,9 +765,9 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         fake_vm = vmwareapi_fake._get_objects("VirtualMachine").objects[0]
         fake_vm_id = int(fake_vm.obj.value.replace('vm-', ''))
         vnc_dict = self.conn.get_vnc_console(self.instance)
-        self.assertEquals(vnc_dict['host'], self.vnc_host)
-        self.assertEquals(vnc_dict['port'], cfg.CONF.vmware.vnc_port +
-                          fake_vm_id % cfg.CONF.vmware.vnc_port_total)
+        self.assertEqual(vnc_dict['host'], self.vnc_host)
+        self.assertEqual(vnc_dict['port'], cfg.CONF.vmware.vnc_port +
+                         fake_vm_id % cfg.CONF.vmware.vnc_port_total)
 
     def test_get_vnc_console(self):
         self._test_get_vnc_console()
@@ -777,17 +777,17 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self._test_get_vnc_console()
 
     def test_host_ip_addr(self):
-        self.assertEquals(self.conn.get_host_ip_addr(), "test_url")
+        self.assertEqual(self.conn.get_host_ip_addr(), "test_url")
 
     def test_get_volume_connector(self):
         self._create_vm()
         connector_dict = self.conn.get_volume_connector(self.instance)
         fake_vm = vmwareapi_fake._get_objects("VirtualMachine").objects[0]
         fake_vm_id = fake_vm.obj.value
-        self.assertEquals(connector_dict['ip'], 'test_url')
-        self.assertEquals(connector_dict['initiator'], 'iscsi-name')
-        self.assertEquals(connector_dict['host'], 'test_url')
-        self.assertEquals(connector_dict['instance'], fake_vm_id)
+        self.assertEqual(connector_dict['ip'], 'test_url')
+        self.assertEqual(connector_dict['initiator'], 'iscsi-name')
+        self.assertEqual(connector_dict['host'], 'test_url')
+        self.assertEqual(connector_dict['instance'], fake_vm_id)
 
     def _test_vmdk_connection_info(self, type):
         return {'driver_volume_type': type,
@@ -971,15 +971,15 @@ class VMwareAPIHostTestCase(test.NoDBTestCase):
 
     def test_host_state(self):
         stats = self.conn.get_host_stats()
-        self.assertEquals(stats['vcpus'], 16)
-        self.assertEquals(stats['disk_total'], 1024)
-        self.assertEquals(stats['disk_available'], 500)
-        self.assertEquals(stats['disk_used'], 1024 - 500)
-        self.assertEquals(stats['host_memory_total'], 1024)
-        self.assertEquals(stats['host_memory_free'], 1024 - 500)
+        self.assertEqual(stats['vcpus'], 16)
+        self.assertEqual(stats['disk_total'], 1024)
+        self.assertEqual(stats['disk_available'], 500)
+        self.assertEqual(stats['disk_used'], 1024 - 500)
+        self.assertEqual(stats['host_memory_total'], 1024)
+        self.assertEqual(stats['host_memory_free'], 1024 - 500)
         supported_instances = [('i686', 'vmware', 'hvm'),
                                ('x86_64', 'vmware', 'hvm')]
-        self.assertEquals(stats['supported_instances'], supported_instances)
+        self.assertEqual(stats['supported_instances'], supported_instances)
 
     def _test_host_action(self, method, action, expected=None):
         result = method('host', action)
@@ -1035,16 +1035,16 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
                     "vendor": ["Intel", "Intel"],
                     "topology": {"cores": 16,
                                  "threads": 32}}
-        self.assertEquals(stats['vcpus'], 32)
-        self.assertEquals(stats['local_gb'], 1024)
-        self.assertEquals(stats['local_gb_used'], 1024 - 500)
-        self.assertEquals(stats['memory_mb'], 1000)
-        self.assertEquals(stats['memory_mb_used'], 500)
-        self.assertEquals(stats['hypervisor_type'], 'VMware vCenter Server')
-        self.assertEquals(stats['hypervisor_version'], '5.1.0')
-        self.assertEquals(stats['hypervisor_hostname'], self.node_name)
-        self.assertEquals(stats['cpu_info'], jsonutils.dumps(cpu_info))
-        self.assertEquals(stats['supported_instances'],
+        self.assertEqual(stats['vcpus'], 32)
+        self.assertEqual(stats['local_gb'], 1024)
+        self.assertEqual(stats['local_gb_used'], 1024 - 500)
+        self.assertEqual(stats['memory_mb'], 1000)
+        self.assertEqual(stats['memory_mb_used'], 500)
+        self.assertEqual(stats['hypervisor_type'], 'VMware vCenter Server')
+        self.assertEqual(stats['hypervisor_version'], '5.1.0')
+        self.assertEqual(stats['hypervisor_hostname'], self.node_name)
+        self.assertEqual(stats['cpu_info'], jsonutils.dumps(cpu_info))
+        self.assertEqual(stats['supported_instances'],
                 '[["i686", "vmware", "hvm"], ["x86_64", "vmware", "hvm"]]')
 
     def test_invalid_datastore_regex(self):
@@ -1073,19 +1073,19 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
 
     def test_finish_migration_power_on(self):
         self._test_finish_migration(power_on=True)
-        self.assertEquals(True, self.power_on_called)
+        self.assertEqual(True, self.power_on_called)
 
     def test_finish_migration_power_off(self):
         self._test_finish_migration(power_on=False)
-        self.assertEquals(False, self.power_on_called)
+        self.assertEqual(False, self.power_on_called)
 
     def test_finish_revert_migration_power_on(self):
         self._test_finish_revert_migration(power_on=True)
-        self.assertEquals(True, self.power_on_called)
+        self.assertEqual(True, self.power_on_called)
 
     def test_finish_revert_migration_power_off(self):
         self._test_finish_revert_migration(power_on=False)
-        self.assertEquals(False, self.power_on_called)
+        self.assertEqual(False, self.power_on_called)
 
     def test_snapshot(self):
         # Ensure VMwareVCVMOps's get_copy_virtual_disk_spec is getting called
