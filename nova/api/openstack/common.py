@@ -150,23 +150,25 @@ def get_pagination_params(request):
     """
     params = {}
     if 'limit' in request.GET:
-        params['limit'] = _get_limit_param(request)
+        params['limit'] = _get_int_param(request, 'limit')
+    if 'page_size' in request.GET:
+        params['page_size'] = _get_int_param(request, 'page_size')
     if 'marker' in request.GET:
         params['marker'] = _get_marker_param(request)
     return params
 
 
-def _get_limit_param(request):
-    """Extract integer limit from request or fail."""
+def _get_int_param(request, param):
+    """Extract integer param from request or fail."""
     try:
-        limit = int(request.GET['limit'])
+        int_param = int(request.GET[param])
     except ValueError:
-        msg = _('limit param must be an integer')
+        msg = _('%s param must be an integer') % param
         raise webob.exc.HTTPBadRequest(explanation=msg)
-    if limit < 0:
-        msg = _('limit param must be positive')
+    if int_param < 0:
+        msg = _('%s param must be positive') % param
         raise webob.exc.HTTPBadRequest(explanation=msg)
-    return limit
+    return int_param
 
 
 def _get_marker_param(request):
