@@ -4277,6 +4277,18 @@ class BlockDeviceMappingTestCase(test.TestCase):
         self.assertEqual(len(bdms), 1)
         self.assertEqual(bdms[0]['device_name'], 'fake2')
 
+    def test_block_device_mapping_get_by_volume_id(self):
+        self._create_bdm({'volume_id': 'fake_id'})
+        bdm = db.block_device_mapping_get_by_volume_id(self.ctxt, 'fake_id')
+        self.assertEqual(bdm['volume_id'], 'fake_id')
+
+    def test_block_device_mapping_get_by_volume_id_join_instance(self):
+        self._create_bdm({'volume_id': 'fake_id'})
+        bdm = db.block_device_mapping_get_by_volume_id(self.ctxt, 'fake_id',
+                ['instance'])
+        self.assertEqual(bdm['volume_id'], 'fake_id')
+        self.assertEqual(bdm['instance']['uuid'], self.instance['uuid'])
+
 
 class AgentBuildTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
