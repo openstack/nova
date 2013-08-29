@@ -976,3 +976,284 @@ class LibvirtConfigGuestSnapshotTest(LibvirtConfigBaseTest):
             <domainsnapshot>
               <name>Demo</name>
             </domainsnapshot>""")
+
+
+class LibvirtConfigNodeDeviceTest(LibvirtConfigBaseTest):
+
+    def test_config_virt_usb_device(self):
+        xmlin = """
+        <device>
+          <name>usb_0000_09_00_0</name>
+          <parent>pci_0000_00_1c_0</parent>
+          <driver>
+          <name>vxge</name>
+          </driver>
+          <capability type="usb">
+            <domain>0</domain>
+             <capability type="fake_usb">
+             <address fake_usb="fake"/>
+            </capability>
+          </capability>
+        </device>"""
+
+        obj = config.LibvirtConfigNodeDevice()
+        obj.parse_str(xmlin)
+
+        self.assertEqual(obj.pci_capability, None)
+
+    def test_config_virt_device(self):
+        xmlin = """
+        <device>
+          <name>pci_0000_09_00_0</name>
+          <parent>pci_0000_00_1c_0</parent>
+          <driver>
+          <name>vxge</name>
+          </driver>
+          <capability type="pci">
+            <domain>0</domain>
+            <bus>9</bus>
+            <slot>0</slot>
+            <function>0</function>
+        <product id="0x5833">X3100 Series 10 Gigabit Ethernet PCIe</product>
+            <vendor id="0x17d5">Neterion Inc.</vendor>
+            <capability type="virt_functions">
+             <address domain="0x0000" bus="0x0a" slot="0x00" function="0x1"/>
+             <address domain="0x0000" bus="0x0a" slot="0x00" function="0x2"/>
+             <address domain="0x0000" bus="0x0a" slot="0x00" function="0x3"/>
+            </capability>
+          </capability>
+        </device>"""
+
+        obj = config.LibvirtConfigNodeDevice()
+        obj.parse_str(xmlin)
+
+        self.assertEqual(type(obj.pci_capability),
+                         config.LibvirtConfigNodeDevicePciCap)
+        self.assertEqual(type(obj.pci_capability.fun_capability[0]),
+                         config.LibvirtConfigNodeDevicePciSubFunctionCap)
+        self.assertEqual(obj.pci_capability.fun_capability[0].type,
+                          "virt_functions")
+        self.assertEqual(len(obj.pci_capability.fun_capability[0].
+                             device_addrs),
+                          3)
+        self.assertEqual(obj.pci_capability.bus, 9)
+
+    def test_config_phy_device(self):
+        xmlin = """
+        <device>
+          <name>pci_0000_33_00_0</name>
+          <parent>pci_0000_22_1c_0</parent>
+          <driver>
+          <name>vxx</name>
+          </driver>
+          <capability type="pci">
+            <domain>0</domain>
+            <bus>9</bus>
+            <slot>0</slot>
+            <function>0</function>
+           <product id="0x5833">X3100 Series 10 Gigabit Ethernet PCIe</product>
+            <vendor id="0x17d5">Neterion Inc.</vendor>
+            <capability type="phys_function">
+            <address domain='0x0000' bus='0x09' slot='0x00' function='0x0'/>
+            </capability>
+          </capability>
+        </device>"""
+
+        obj = config.LibvirtConfigNodeDevice()
+        obj.parse_str(xmlin)
+
+        self.assertEqual(type(obj.pci_capability),
+                         config.LibvirtConfigNodeDevicePciCap)
+        self.assertEqual(type(obj.pci_capability.fun_capability[0]),
+                         config.LibvirtConfigNodeDevicePciSubFunctionCap)
+        self.assertEqual(obj.pci_capability.fun_capability[0].type,
+                          "phys_function")
+        self.assertEqual(len(obj.pci_capability.fun_capability[0].
+                             device_addrs),
+                         1)
+
+    def test_config_non_device(self):
+        xmlin = """
+        <device>
+          <name>pci_0000_33_00_0</name>
+          <parent>pci_0000_22_1c_0</parent>
+          <driver>
+          <name>vxx</name>
+          </driver>
+          <capability type="pci">
+            <domain>0</domain>
+            <bus>9</bus>
+            <slot>0</slot>
+            <function>0</function>
+          <product id="0x5833">X3100 Series 10 Gigabit Ethernet PCIe</product>
+             <vendor id="0x17d5">Neterion Inc.</vendor>
+             <capability type="virt_functions"/>
+          </capability>
+        </device>"""
+
+        obj = config.LibvirtConfigNodeDevice()
+        obj.parse_str(xmlin)
+
+        self.assertEqual(type(obj.pci_capability),
+                         config.LibvirtConfigNodeDevicePciCap)
+        self.assertEqual(type(obj.pci_capability.fun_capability[0]),
+                         config.LibvirtConfigNodeDevicePciSubFunctionCap)
+        self.assertEqual(obj.pci_capability.fun_capability[0].type,
+                          "virt_functions")
+
+    def test_config_fail_device(self):
+        xmlin = """
+        <device>
+          <name>pci_0000_33_00_0</name>
+          <parent>pci_0000_22_1c_0</parent>
+          <driver>
+          <name>vxx</name>
+          </driver>
+          <capability type="pci">
+            <domain>0</domain>
+            <bus>9</bus>
+            <slot>0</slot>
+            <function>0</function>
+         <product id="0x5833">X3100 Series 10 Gigabit Ethernet PCIe</product>
+            <vendor id="0x17d5">Neterion Inc.</vendor>
+            <capability type="virt_functions">
+            </capability>
+          </capability>
+        </device>"""
+
+        obj = config.LibvirtConfigNodeDevice()
+        obj.parse_str(xmlin)
+
+        self.assertEqual(type(obj.pci_capability),
+                         config.LibvirtConfigNodeDevicePciCap)
+        self.assertEqual(type(obj.pci_capability.fun_capability[0]),
+                         config.LibvirtConfigNodeDevicePciSubFunctionCap)
+        self.assertEqual(obj.pci_capability.fun_capability[0].type,
+                          "virt_functions")
+
+    def test_config_2cap_device(self):
+        xmlin = """
+        <device>
+          <name>pci_0000_04_10_7</name>
+          <parent>pci_0000_00_01_1</parent>
+          <driver>
+            <name>igbvf</name>
+          </driver>
+          <capability type='pci'>
+            <domain>0</domain>
+            <bus>4</bus>
+            <slot>16</slot>
+            <function>7</function>
+            <product id='0x1520'>I350 Ethernet Controller Virtual</product>
+            <vendor id='0x8086'>Intel Corporation</vendor>
+            <capability type='phys_function'>
+              <address domain='0x0000' bus='0x04' slot='0x00' function='0x3'/>
+            </capability>
+            <capability type='virt_functions'>
+              <address domain='0x0000' bus='0x04' slot='0x00' function='0x3'/>
+            </capability>
+          </capability>
+        </device>"""
+
+        obj = config.LibvirtConfigNodeDevice()
+        obj.parse_str(xmlin)
+
+        self.assertEqual(type(obj.pci_capability),
+                          config.LibvirtConfigNodeDevicePciCap)
+        self.assertEqual(type(obj.pci_capability.fun_capability[0]),
+                         config.LibvirtConfigNodeDevicePciSubFunctionCap)
+        self.assertEqual(obj.pci_capability.fun_capability[0].type,
+                          "phys_function")
+        self.assertEqual(obj.pci_capability.fun_capability[1].type,
+                          "virt_functions")
+
+
+class LibvirtConfigNodeDevicePciCapTest(LibvirtConfigBaseTest):
+
+    def test_config_device_pci_cap(self):
+        xmlin = """
+            <capability type="pci">
+              <domain>0</domain>
+              <bus>10</bus>
+              <slot>1</slot>
+              <function>5</function>
+              <product id="0x8086-3">Intel 10 Gigabit Ethernet</product>
+              <vendor id="0x8086">Intel Inc.</vendor>
+              <capability type="virt_functions">
+               <address domain="0000" bus="0x0a" slot="0x1" function="0x1"/>
+               <address domain="0001" bus="0x0a" slot="0x02" function="0x03"/>
+              </capability>
+            </capability>"""
+        obj = config.LibvirtConfigNodeDevicePciCap()
+        obj.parse_str(xmlin)
+
+        self.assertEqual(obj.domain, 0)
+        self.assertEqual(obj.bus, 10)
+        self.assertEqual(obj.slot, 1)
+        self.assertEqual(obj.function, 5)
+        self.assertEqual(obj.product, "Intel 10 Gigabit Ethernet")
+        self.assertEqual(obj.product_id, '0x8086-3')
+        self.assertEqual(obj.vendor, "Intel Inc.")
+        self.assertEqual(obj.vendor_id, "0x8086")
+        self.assertEqual(type(obj.fun_capability[0]),
+                         config.LibvirtConfigNodeDevicePciSubFunctionCap)
+
+        self.assertEqual(obj.fun_capability[0].type, 'virt_functions')
+        self.assertEqual(obj.fun_capability[0].device_addrs,
+                         [("0000", "0x0a", "0x1", "0x1"),
+                          ("0001", "0x0a", "0x02", "0x03"), ])
+
+    def test_config_device_pci_2cap(self):
+        xmlin = """
+            <capability type="pci">
+              <domain>0</domain>
+              <bus>10</bus>
+              <slot>1</slot>
+              <function>5</function>
+              <product id="0x8086-3">Intel 10 Gigabit Ethernet</product>
+              <vendor id="0x8086">Intel Inc.</vendor>
+              <capability type="virt_functions">
+               <address domain="0000" bus="0x0a" slot="0x1" function="0x1"/>
+               <address domain="0001" bus="0x0a" slot="0x02" function="0x03"/>
+              </capability>
+              <capability type="phys_function">
+               <address domain="0000" bus="0x0a" slot="0x1" function="0x1"/>
+              </capability>
+            </capability>"""
+        obj = config.LibvirtConfigNodeDevicePciCap()
+        obj.parse_str(xmlin)
+
+        self.assertEqual(obj.domain, 0)
+        self.assertEqual(obj.bus, 10)
+        self.assertEqual(obj.slot, 1)
+        self.assertEqual(obj.function, 5)
+        self.assertEqual(obj.product, "Intel 10 Gigabit Ethernet")
+        self.assertEqual(obj.product_id, '0x8086-3')
+        self.assertEqual(obj.vendor, "Intel Inc.")
+        self.assertEqual(obj.vendor_id, "0x8086")
+        self.assertEqual(type(obj.fun_capability[0]),
+                         config.LibvirtConfigNodeDevicePciSubFunctionCap)
+
+        self.assertEqual(obj.fun_capability[0].type, 'virt_functions')
+        self.assertEqual(obj.fun_capability[0].device_addrs,
+                         [("0000", '0x0a', '0x1', "0x1"),
+                          ("0001", "0x0a", "0x02", "0x03"), ])
+        self.assertEqual(obj.fun_capability[1].type, 'phys_function')
+        self.assertEqual(obj.fun_capability[1].device_addrs,
+                         [("0000", '0x0a', '0x1', "0x1"), ])
+
+
+class LibvirtConfigNodeDevicePciSubFunctionCap(LibvirtConfigBaseTest):
+
+    def test_config_device_pci_subfunction(self):
+        xmlin = """
+        <capability type="virt_functions">
+            <address domain="0000" bus="0x0a" slot="0x1" function="0x1"/>
+            <address domain="0001" bus="0x0a" slot="0x02" function="0x03"/>
+        </capability>"""
+        fun_capability = config.LibvirtConfigNodeDevicePciSubFunctionCap()
+        fun_capability.parse_str(xmlin)
+        self.assertEqual('virt_functions', fun_capability.type)
+        self.assertEqual([("0000", "0x0a", "0x1", "0x1"),
+                          ("0001", "0x0a", "0x02", "0x03"), ],
+                         fun_capability.device_addrs)

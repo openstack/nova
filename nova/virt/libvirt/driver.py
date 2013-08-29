@@ -81,6 +81,7 @@ from nova.openstack.common import loopingcall
 from nova.openstack.common.notifier import api as notifier
 from nova.openstack.common import processutils
 from nova.openstack.common import xmlutils
+from nova.pci import pci_whitelist
 from nova import utils
 from nova import version
 from nova.virt import configdrive
@@ -326,6 +327,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
         self.volume_drivers = driver.driver_dict_from_config(
             CONF.libvirt_volume_drivers, self)
+
+        self.dev_filter = pci_whitelist.get_pci_devices_filter()
 
         self._event_queue = None
 
@@ -3033,6 +3036,83 @@ class LibvirtDriver(driver.ComputeDriver):
         # data format needs to be standardized across drivers
         return jsonutils.dumps(cpu_info)
 
+    def _get_pcidev_info(self, devname):
+        """Returns a dict of PCI device."""
+
+        def _get_device_type(cfgdev):
+            """Get a PCI device's device type.
+
+            An assignable PCI device can be a normal PCI device,
+            a SR-IOV Physical Function (PF), or a SR-IOV Virtual
+            Function (VF). Only normal PCI devices or SR-IOV VFs
+            are assignable, while SR-IOV PFs are always owned by
+            hypervisor.
+
+            Please notice that a PCI device with SR-IOV
+            capability but not enabled is reported as normal PCI device.
+            """
+            for fun_cap in cfgdev.pci_capability.fun_capability:
+                if len(fun_cap.device_addrs) != 0:
+                    if fun_cap.type == 'virt_functions':
+                        return {'dev_type': 'type-PF'}
+                    if fun_cap.type == 'phys_function':
+                        return {'dev_type': 'type-VF',
+                                'phys_function': fun_cap.device_addrs}
+            return {'dev_type': 'type-PCI'}
+
+        virtdev = self._conn.nodeDeviceLookupByName(devname)
+        xmlstr = virtdev.XMLDesc(0)
+        cfgdev = vconfig.LibvirtConfigNodeDevice()
+        cfgdev.parse_str(xmlstr)
+
+        address = "%04x:%02x:%02x.%1x" % (
+            cfgdev.pci_capability.domain,
+            cfgdev.pci_capability.bus,
+            cfgdev.pci_capability.slot,
+            cfgdev.pci_capability.function)
+
+        device = {
+            "dev_id": cfgdev.name,
+            "address": address,
+            "product_id": cfgdev.pci_capability.product_id[2:6],
+            "vendor_id": cfgdev.pci_capability.vendor_id[2:6],
+            }
+
+        #requirement by DataBase Model
+        device['label'] = 'label_%(vendor_id)s_%(product_id)s' % device
+        device.update(_get_device_type(cfgdev))
+        return device
+
+    def _pci_device_assignbale(self, device):
+        if device['dev_type'] == 'type-PF':
+            return False
+        return self.dev_filter.device_assignable(device)
+
+    def get_pci_passthrough_devices(self):
+        """Get host pci devices information.
+
+        Obtains pci devices information from libvirt, and returns
+        as a json string.
+
+        Each device information is a dictionary, with mandatory keys
+        of 'address', 'vendor_id', 'product_id', 'dev_type', 'dev_id',
+        'label' and other optional device specific information.
+
+        Refer to the objects/pci_device.py for more idea of these keys.
+
+        :returns: a list of the assignable pci devices information
+        """
+        pci_info = []
+
+        dev_names = self._conn.listDevices('pci', 0) or []
+
+        for name in dev_names:
+            pci_dev = self._get_pcidev_info(name)
+            if self._pci_device_assignbale(pci_dev):
+                pci_info.append(pci_dev)
+
+        return jsonutils.dumps(pci_info)
+
     def get_all_volume_usage(self, context, compute_host_bdms):
         """Return usage info for volumes attached to vms on
            a given host.
@@ -3122,9 +3202,8 @@ class LibvirtDriver(driver.ComputeDriver):
         This method is called when nova-compute launches, and
         as part of a periodic task that records the results in the DB.
 
-        :param nodename: ignored in this driver
-        :returns: dictionary describing resources
-
+        :param nodename: will be put in PCI device
+        :returns: dictionary containing resource info
         """
 
         # Temporary: convert supported_instances into a string, while keeping
@@ -4169,6 +4248,9 @@ class HostState(object):
         data["hypervisor_hostname"] = self.driver.get_hypervisor_hostname()
         data["cpu_info"] = self.driver.get_cpu_info()
         data['disk_available_least'] = _get_disk_available_least()
+
+        data['pci_passthrough_devices'] = \
+            self.driver.get_pci_passthrough_devices()
 
         data["supported_instances"] = \
             self.driver.get_instance_capabilities()

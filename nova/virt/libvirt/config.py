@@ -942,3 +942,87 @@ class LibvirtConfigGuestSnapshot(LibvirtConfigObject):
         ss = super(LibvirtConfigGuestSnapshot, self).format_dom()
         ss.append(self._text_node("name", self.name))
         return ss
+
+
+class LibvirtConfigNodeDevice(LibvirtConfigObject):
+    """Libvirt Node Devices parser"""
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigNodeDevice, self).__init__(root_name="device",
+                                                **kwargs)
+        self.name = None
+        self.parent = None
+        self.driver = None
+        self.pci_capability = None
+
+    def parse_dom(self, xmldoc):
+        super(LibvirtConfigNodeDevice, self).parse_dom(xmldoc)
+
+        for c in xmldoc.getchildren():
+            if c.tag == "name":
+                self.name = c.text
+            elif c.tag == "parent":
+                self.parent = c.text
+            elif c.tag == "capability" and c.get("type") == 'pci':
+                pcicap = LibvirtConfigNodeDevicePciCap()
+                pcicap.parse_dom(c)
+                self.pci_capability = pcicap
+
+
+class LibvirtConfigNodeDevicePciCap(LibvirtConfigObject):
+    """Libvirt Node Devices pci capability parser"""
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigNodeDevicePciCap, self).__init__(
+            root_name="capability", **kwargs)
+        self.domain = None
+        self.bus = None
+        self.slot = None
+        self.function = None
+        self.product = None
+        self.product_id = None
+        self.vendor = None
+        self.vendor_id = None
+        self.fun_capability = list()
+
+    def parse_dom(self, xmldoc):
+        super(LibvirtConfigNodeDevicePciCap, self).parse_dom(xmldoc)
+
+        for c in xmldoc.getchildren():
+            if c.tag == "domain":
+                self.domain = int(c.text)
+            elif c.tag == "slot":
+                self.slot = int(c.text)
+            elif c.tag == "bus":
+                self.bus = int(c.text)
+            elif c.tag == "function":
+                self.function = int(c.text)
+            elif c.tag == "product":
+                self.product = c.text
+                self.product_id = c.get('id')
+            elif c.tag == "vendor":
+                self.vendor = c.text
+                self.vendor_id = c.get('id')
+            elif c.tag == "capability" and c.get('type') in \
+                            ('virt_functions', 'phys_function'):
+                funcap = LibvirtConfigNodeDevicePciSubFunctionCap()
+                funcap.parse_dom(c)
+                self.fun_capability.append(funcap)
+
+
+class LibvirtConfigNodeDevicePciSubFunctionCap(LibvirtConfigObject):
+    def __init__(self, **kwargs):
+        super(LibvirtConfigNodeDevicePciSubFunctionCap, self).__init__(
+                                        root_name="capability", **kwargs)
+        self.type = None
+        self.device_addrs = list()  # list of tuple (domain,bus,slot,function)
+
+    def parse_dom(self, xmldoc):
+        super(LibvirtConfigNodeDevicePciSubFunctionCap, self).parse_dom(xmldoc)
+        self.type = xmldoc.get("type")
+        for c in xmldoc.getchildren():
+            if c.tag == "address":
+                self.device_addrs.append((c.get('domain'),
+                                          c.get('bus'),
+                                          c.get('slot'),
+                                          c.get('function')))

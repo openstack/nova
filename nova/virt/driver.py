@@ -787,7 +787,18 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def get_host_stats(self, refresh=False):
-        """Return currently known host stats."""
+        """Return currently known host stats.
+
+        If the hypervisor supports pci passthrough, the returned
+        dictionary includes a key-value pair for it.
+        The key of pci passthrough device is "pci_passthrough_devices"
+        and the value is a json string for the list of assignable
+        pci devices. Each device is a dictionary, with mandatory
+        keys of 'address', 'vendor_id', 'product_id', 'dev_type',
+        'dev_id', 'label' and other optional device specific information.
+
+        Refer to the objects/pci_device.py for more idea of these keys.
+        """
         raise NotImplementedError()
 
     def block_stats(self, instance_name, disk_id):
