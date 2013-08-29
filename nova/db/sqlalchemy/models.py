@@ -588,7 +588,7 @@ class BlockDeviceMapping(BASE, NovaBase):
     volume_id = Column(String(36))
     volume_size = Column(Integer)
 
-    image_id = Column('image_id', String(36))
+    image_id = Column(String(36))
 
     # for no device to suppress devices.
     no_device = Column(Boolean)
