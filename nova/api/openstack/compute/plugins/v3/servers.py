@@ -901,6 +901,8 @@ class ServersController(wsgi.Controller):
                 exception.SecurityGroupNotFound,
                 exception.InstanceUserDataMalformed) as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
+        except exception.PortInUse as error:
+            raise exc.HTTPConflict(explanation=error.format_message())
 
         # If the caller wanted a reservation_id, return it
         if return_reservation_id:
