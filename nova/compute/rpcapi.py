@@ -194,6 +194,8 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         2.37 - Added the leagacy_bdm_in_spec parameter to run_instance
         2.38 - Made check_can_live_migrate_[destination|source] take
                new-world instance objects
+        2.39 - Made revert_resize() and confirm_resize() take new-world
+               instance objects
     '''
 
     #
@@ -308,15 +310,19 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     def confirm_resize(self, ctxt, instance, migration, host,
             reservations=None, cast=True):
         rpc_method = self.cast if cast else self.call
-        instance = jsonutils.to_primitive(
-                objects_base.obj_to_primitive(instance))
-        migration = jsonutils.to_primitive(
-                objects_base.obj_to_primitive(migration))
+        if self.can_send_version('2.39'):
+            version = '2.39'
+        else:
+            instance = jsonutils.to_primitive(
+                    objects_base.obj_to_primitive(instance))
+            migration = jsonutils.to_primitive(
+                    objects_base.obj_to_primitive(migration))
+            version = '2.7'
         return rpc_method(ctxt, self.make_msg('confirm_resize',
                 instance=instance, migration=migration,
                 reservations=reservations),
                 topic=_compute_topic(self.topic, ctxt, host, instance),
-                version='2.7')
+                version=version)
 
     def detach_interface(self, ctxt, instance, port_id):
         instance_p = jsonutils.to_primitive(instance)
@@ -590,15 +596,19 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
 
     def revert_resize(self, ctxt, instance, migration, host,
                       reservations=None):
-        instance = jsonutils.to_primitive(
-                objects_base.obj_to_primitive(instance))
-        migration = jsonutils.to_primitive(
-                objects_base.obj_to_primitive(migration))
+        if self.can_send_version('2.39'):
+            version = '2.39'
+        else:
+            instance = jsonutils.to_primitive(
+                    objects_base.obj_to_primitive(instance))
+            migration = jsonutils.to_primitive(
+                    objects_base.obj_to_primitive(migration))
+            version = '2.12'
         self.cast(ctxt, self.make_msg('revert_resize',
                 instance=instance, migration=migration,
                 reservations=reservations),
                 topic=_compute_topic(self.topic, ctxt, host, instance),
-                version='2.12')
+                version=version)
 
     def rollback_live_migration_at_destination(self, ctxt, instance, host):
         instance_p = jsonutils.to_primitive(instance)

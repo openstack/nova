@@ -250,6 +250,8 @@ def bandwidth_usage(instance_ref, audit_start,
     from nova.objects import instance as instance_obj
     if isinstance(instance_ref, instance_obj.Instance):
         nw_info = instance_ref.info_cache.network_info
+        if nw_info is None:
+            nw_info = network_model.NetworkInfo()
     else:
         nw_info = _get_nwinfo_old_skool()
 
