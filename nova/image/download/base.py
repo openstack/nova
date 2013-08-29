@@ -20,6 +20,6 @@ from nova import exception
 
 class TransferBase(object):
 
-    def download(self, url_parts, dst_path, metadata, **kwargs):
+    def download(self, context, url_parts, dst_path, metadata, **kwargs):
         raise exception.ImageDownloadModuleNotImplementedError(
             method_name='download')

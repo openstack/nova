@@ -326,7 +326,7 @@ class GlanceImageService(object):
                 xfer_mod = self._get_transfer_module(o.scheme)
                 if xfer_mod:
                     try:
-                        xfer_mod.download(o, dst_path, loc_meta)
+                        xfer_mod.download(context, o, dst_path, loc_meta)
                         msg = _("Successfully transferred "
                                 "using %s") % o.scheme
                         LOG.info(msg)
