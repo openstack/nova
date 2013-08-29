@@ -106,7 +106,7 @@ class FlavorManageTest(test.TestCase):
     def test_create(self):
         expected = {
             "flavor": {
-                "name": "test",
+                "name": "azAZ09. -_",
                 "ram": 512,
                 "vcpus": 2,
                 "disk": 1,
@@ -127,6 +127,30 @@ class FlavorManageTest(test.TestCase):
         body = jsonutils.loads(res.body)
         for key in expected["flavor"]:
             self.assertEquals(body["flavor"][key], expected["flavor"][key])
+
+    def test_create_invalid_name(self):
+        self.stubs.UnsetAll()
+        expected = {
+            "flavor": {
+                "name": "bad !@#!$% name",
+                'id': "1",
+                "ram": 512,
+                "vcpus": 2,
+                "disk": 1,
+                "OS-FLV-EXT-DATA:ephemeral": 1,
+                "swap": 512,
+                "rxtx_factor": 1,
+                "os-flavor-access:is_public": True,
+            }
+        }
+
+        url = '/v2/fake/flavors'
+        req = webob.Request.blank(url)
+        req.headers['Content-Type'] = 'application/json'
+        req.method = 'POST'
+        req.body = jsonutils.dumps(expected)
+        res = req.get_response(self.app)
+        self.assertEquals(res.status_code, 400)
 
     def test_create_public_default(self):
         flavor = {
@@ -190,6 +214,79 @@ class FlavorManageTest(test.TestCase):
         body = jsonutils.loads(res.body)
         for key in expected["flavor"]:
             self.assertEquals(body["flavor"][key], expected["flavor"][key])
+
+    def test_create_invalid_flavorid(self):
+        self.stubs.UnsetAll()
+        expected = {
+            "flavor": {
+                "name": "test",
+                'id': "!@#!$#!$^#&^$&",
+                "ram": 512,
+                "vcpus": 2,
+                "disk": 1,
+                "OS-FLV-EXT-DATA:ephemeral": 1,
+                "swap": 512,
+                "rxtx_factor": 1,
+                "os-flavor-access:is_public": True,
+            }
+        }
+
+        url = '/v2/fake/flavors'
+        req = webob.Request.blank(url)
+        req.headers['Content-Type'] = 'application/json'
+        req.method = 'POST'
+        req.body = jsonutils.dumps(expected)
+        res = req.get_response(self.app)
+        self.assertEquals(res.status_code, 400)
+
+    def test_create_check_flavor_id_length(self):
+        self.stubs.UnsetAll()
+        MAX_LENGTH = 255
+        expected = {
+            "flavor": {
+                "name": "test",
+                'id': "a" * (MAX_LENGTH + 1),
+                "ram": 512,
+                "vcpus": 2,
+                "disk": 1,
+                "OS-FLV-EXT-DATA:ephemeral": 1,
+                "swap": 512,
+                "rxtx_factor": 1,
+                "os-flavor-access:is_public": True,
+            }
+        }
+
+        url = '/v2/fake/flavors'
+        req = webob.Request.blank(url)
+        req.headers['Content-Type'] = 'application/json'
+        req.method = 'POST'
+        req.body = jsonutils.dumps(expected)
+        res = req.get_response(self.app)
+        self.assertEquals(res.status_code, 400)
+
+    def test_create_with_leading_trailing_whitespaces_in_flavor_id(self):
+        self.stubs.UnsetAll()
+        expected = {
+            "flavor": {
+                "name": "test",
+                'id': "   bad_id   ",
+                "ram": 512,
+                "vcpus": 2,
+                "disk": 1,
+                "OS-FLV-EXT-DATA:ephemeral": 1,
+                "swap": 512,
+                "rxtx_factor": 1,
+                "os-flavor-access:is_public": True,
+            }
+        }
+
+        url = '/v2/fake/flavors'
+        req = webob.Request.blank(url)
+        req.headers['Content-Type'] = 'application/json'
+        req.method = 'POST'
+        req.body = jsonutils.dumps(expected)
+        res = req.get_response(self.app)
+        self.assertEquals(res.status_code, 400)
 
     def test_flavor_exists_exception_returns_409(self):
         expected = {

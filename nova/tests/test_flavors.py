@@ -359,6 +359,10 @@ class CreateInstanceTypeTest(test.TestCase):
         self.assertRaises(exception.InvalidInput, flavors.create,
                           *create_args, **create_kwargs)
 
+    def test_create_with_valid_name(self):
+        # Names can contain [a-zA-Z0-9_.- ]
+        flavors.create('azAZ09. -_', 64, 1, 120)
+
     def test_name_with_special_characters(self):
         # Names can contain [a-zA-Z0-9_.- ]
         flavors.create('_foo.bar-123', 64, 1, 120)
@@ -377,6 +381,16 @@ class CreateInstanceTypeTest(test.TestCase):
 
         # Flavor name which is empty should cause an error
         self.assertInvalidInput('', 64, 1, 120)
+
+    def test_flavorid_with_invalid_characters(self):
+        # Ensure Flavor ID can only contain [a-zA-Z0-9_.- ]
+        self.assertInvalidInput('a', 64, 1, 120, flavorid=u'\u2605')
+        self.assertInvalidInput('a', 64, 1, 120, flavorid='%%$%$@#$#@$@#$^%')
+
+    def test_flavorid_length_checks(self):
+        MAX_LEN = 255
+        # Flavor ID which is more than 255 characters will cause error.
+        self.assertInvalidInput('a', 64, 1, 120, flavorid='a' * (MAX_LEN + 1))
 
     def test_memory_must_be_positive_integer(self):
         self.assertInvalidInput('flavor1', 'foo', 1, 120)
