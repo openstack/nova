@@ -402,7 +402,7 @@ class LibvirtVifTestCase(test.TestCase):
         self._assertTypeAndMacEquals(node, "ethernet", "target", "dev",
                                      self.vif_ivs, prefix=dev_prefix)
         script = node.find("script").get("path")
-        self.assertEquals(script, "")
+        self.assertEqual(script, "")
 
     def _check_ovs_ethernet_driver(self, d, vif, dev_prefix):
         self.flags(firewall_driver="nova.virt.firewall.NoopFirewallDriver")
@@ -411,7 +411,7 @@ class LibvirtVifTestCase(test.TestCase):
         self._assertTypeAndMacEquals(node, "ethernet", "target", "dev",
                                      self.vif_ovs, prefix=dev_prefix)
         script = node.find("script").get("path")
-        self.assertEquals(script, "")
+        self.assertEqual(script, "")
 
     def test_ovs_ethernet_driver(self):
         d = vif.LibvirtGenericVIFDriver(self._get_conn(ver=9010))

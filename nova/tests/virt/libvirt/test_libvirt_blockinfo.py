@@ -73,7 +73,7 @@ class LibvirtBlockInfoTest(test.TestCase):
                 'block_device_mapping': block_device_mapping}
 
         def _assert_volume_in_mapping(device_name, true_or_false):
-            self.assertEquals(
+            self.assertEqual(
                 block_device.volume_in_mapping(device_name,
                                                block_device_info),
                 true_or_false)
@@ -838,35 +838,35 @@ class DefaultDeviceNamesTestCase(test.TestCase):
         self.block_device_mapping[1]['device_name'] = None
         self._test_default_device_names(None, [], [],
                                         self.block_device_mapping)
-        self.assertEquals(self.block_device_mapping[1]['device_name'],
-                          '/dev/vdd')
+        self.assertEqual(self.block_device_mapping[1]['device_name'],
+                         '/dev/vdd')
 
     def test_with_ephemerals(self):
         # Test ephemeral gets assigned
         self.ephemerals[0]['device_name'] = None
         self._test_default_device_names(None, self.ephemerals, [],
                                         self.block_device_mapping)
-        self.assertEquals(self.ephemerals[0]['device_name'], '/dev/vdb')
+        self.assertEqual(self.ephemerals[0]['device_name'], '/dev/vdb')
 
         self.block_device_mapping[1]['device_name'] = None
         self._test_default_device_names(None, self.ephemerals, [],
                                         self.block_device_mapping)
-        self.assertEquals(self.block_device_mapping[1]['device_name'],
-                          '/dev/vdd')
+        self.assertEqual(self.block_device_mapping[1]['device_name'],
+                         '/dev/vdd')
 
     def test_with_swap(self):
         # Test swap only
         self.swap[0]['device_name'] = None
         self._test_default_device_names(None, [], self.swap, [])
-        self.assertEquals(self.swap[0]['device_name'], '/dev/vdc')
+        self.assertEqual(self.swap[0]['device_name'], '/dev/vdc')
 
         # Test swap and block_device_mapping
         self.swap[0]['device_name'] = None
         self.block_device_mapping[1]['device_name'] = None
         self._test_default_device_names(None, [], self.swap,
                                         self.block_device_mapping)
-        self.assertEquals(self.swap[0]['device_name'], '/dev/vdc')
-        self.assertEquals(self.block_device_mapping[1]['device_name'],
+        self.assertEqual(self.swap[0]['device_name'], '/dev/vdc')
+        self.assertEqual(self.block_device_mapping[1]['device_name'],
                           '/dev/vdd')
 
     def test_all_together(self):
@@ -874,15 +874,15 @@ class DefaultDeviceNamesTestCase(test.TestCase):
         self.swap[0]['device_name'] = None
         self._test_default_device_names(None, self.ephemerals,
                                         self.swap, self.block_device_mapping)
-        self.assertEquals(self.swap[0]['device_name'], '/dev/vdc')
+        self.assertEqual(self.swap[0]['device_name'], '/dev/vdc')
 
         # Test swap and eph missing
         self.swap[0]['device_name'] = None
         self.ephemerals[0]['device_name'] = None
         self._test_default_device_names(None, self.ephemerals,
                                         self.swap, self.block_device_mapping)
-        self.assertEquals(self.ephemerals[0]['device_name'], '/dev/vdb')
-        self.assertEquals(self.swap[0]['device_name'], '/dev/vdc')
+        self.assertEqual(self.ephemerals[0]['device_name'], '/dev/vdb')
+        self.assertEqual(self.swap[0]['device_name'], '/dev/vdc')
 
         # Test all missing
         self.swap[0]['device_name'] = None
@@ -890,7 +890,7 @@ class DefaultDeviceNamesTestCase(test.TestCase):
         self.block_device_mapping[1]['device_name'] = None
         self._test_default_device_names(None, self.ephemerals,
                                         self.swap, self.block_device_mapping)
-        self.assertEquals(self.ephemerals[0]['device_name'], '/dev/vdb')
-        self.assertEquals(self.swap[0]['device_name'], '/dev/vdc')
-        self.assertEquals(self.block_device_mapping[1]['device_name'],
-                          '/dev/vdd')
+        self.assertEqual(self.ephemerals[0]['device_name'], '/dev/vdb')
+        self.assertEqual(self.swap[0]['device_name'], '/dev/vdc')
+        self.assertEqual(self.block_device_mapping[1]['device_name'],
+                         '/dev/vdd')
