@@ -123,6 +123,7 @@ class FlavorsExtraSpecsTest(test.TestCase):
         res_dict = self.controller.create(req, 1, body)
 
         self.assertEqual('value1', res_dict['extra_specs']['key1'])
+        self.assertEqual(self.controller.create.wsgi_code, 201)
 
     def test_create_no_admin(self):
         self.stubs.Set(nova.db,

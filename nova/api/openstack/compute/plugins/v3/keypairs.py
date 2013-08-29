@@ -66,6 +66,7 @@ class KeypairController(object):
 
     @wsgi.serializers(xml=KeypairTemplate)
     @extensions.expected_errors((400, 409, 413))
+    @wsgi.response(201)
     def create(self, req, body):
         """
         Create or import keypair.

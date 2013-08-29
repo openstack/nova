@@ -120,6 +120,7 @@ class AgentsTest(test.TestCase):
                     'agent_id': 1}}
         res_dict = self.controller.create(req, body)
         self.assertEqual(res_dict, response)
+        self.assertEqual(self.controller.create.wsgi_code, 201)
 
     def test_agents_create_with_existed_agent(self):
         self.stubs.Set(db, 'agent_build_create',

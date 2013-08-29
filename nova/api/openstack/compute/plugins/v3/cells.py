@@ -334,6 +334,7 @@ class CellsController(object):
     @extensions.expected_errors((400, 403))
     @wsgi.serializers(xml=CellTemplate)
     @wsgi.deserializers(xml=CellDeserializer)
+    @wsgi.response(201)
     def create(self, req, body):
         """Create a child cell entry."""
         context = req.environ['nova.context']

@@ -66,6 +66,7 @@ class FlavorExtraSpecsController(object):
         return self._get_extra_specs(context, flavor_id)
 
     @wsgi.serializers(xml=ExtraSpecsTemplate)
+    @wsgi.response(201)
     def create(self, req, flavor_id, body):
         context = req.environ['nova.context']
         self.authorize(context, action='create')

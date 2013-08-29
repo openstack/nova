@@ -55,6 +55,7 @@ class ServerMetadataController(wsgi.Controller):
     @extensions.expected_errors((400, 404, 409, 413))
     @wsgi.serializers(xml=common.MetadataTemplate)
     @wsgi.deserializers(xml=common.MetadataDeserializer)
+    @wsgi.response(201)
     def create(self, req, server_id, body):
         if not self.is_valid_body(body, 'metadata'):
             msg = _("Malformed request body")
