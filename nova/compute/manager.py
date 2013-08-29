@@ -215,8 +215,9 @@ CONF.import_opt('enable', 'nova.cells.opts', group='cells')
 LOG = logging.getLogger(__name__)
 
 
-def publisher_id(host=None):
-    return notifier.publisher_id("compute", host)
+wrap_exception = functools.partial(
+    exception.wrap_exception,
+    notifier=notifier, publisher_id=notifier.publisher_id('compute'))
 
 
 def reverts_task_state(function):
@@ -799,7 +800,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     def get_console_pool_info(self, context, console_type):
         return self.driver.get_console_pool_info(console_type)
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     def refresh_security_group_rules(self, context, security_group_id):
         """Tell the virtualization driver to refresh security group rules.
 
@@ -808,7 +809,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         """
         return self.driver.refresh_security_group_rules(security_group_id)
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     def refresh_security_group_members(self, context, security_group_id):
         """Tell the virtualization driver to refresh security group members.
 
@@ -817,7 +818,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         """
         return self.driver.refresh_security_group_members(security_group_id)
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     def refresh_instance_security_rules(self, context, instance):
         """Tell the virtualization driver to refresh security rules for
         an instance.
@@ -832,7 +833,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             return self.driver.refresh_instance_security_rules(instance)
         return _sync_refresh()
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     def refresh_provider_fw_rules(self, context):
         """This call passes straight through to the virtualization driver."""
         return self.driver.refresh_provider_fw_rules()
@@ -1406,7 +1407,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 block_device_mapping)
         return {'block_device_mapping': block_device_mapping}
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
     @wrap_instance_fault
@@ -1480,7 +1481,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             raise exception.RescheduledException(
                     instance_uuid=instance['uuid'], reason='')
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
     @wrap_instance_fault
@@ -1648,7 +1649,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                 user_id=user_id)
 
     @object_compat
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
     @wrap_instance_fault
@@ -1677,7 +1678,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     # so it matches the driver method, but because of other issues, we
     # can't use that name in grizzly.
     @object_compat
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
     @wrap_instance_fault
@@ -1705,7 +1706,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     # so it matches the driver method, but because of other issues, we
     # can't use that name in grizzly.
     @object_compat
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
     @wrap_instance_fault
@@ -1722,7 +1723,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._notify_about_instance_usage(context, instance, "power_on.end")
 
     @object_compat
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
     @wrap_instance_fault
@@ -1762,7 +1763,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                            user_id=user_id)
         self._notify_about_instance_usage(context, instance, "soft_delete.end")
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
     @wrap_instance_fault
@@ -1787,7 +1788,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     # named. It was the main entry point to soft delete an instance. That
     # has been changed to soft_delete_instance now, but power_off_instance
     # will need to stick around for compatibility in grizzly.
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     @reverts_task_state
     @wrap_instance_fault
     def power_off_instance(self, context, instance):
@@ -1798,14 +1799,14 @@ class ComputeManager(manager.SchedulerDependentManager):
     # named. It was the main entry point to restore a soft deleted instance.
     # That has been changed to restore_instance now, but power_on_instance
     # will need to stick around for compatibility in grizzly.
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     @reverts_task_state
     @wrap_instance_fault
     def power_on_instance(self, context, instance):
         """Power on an instance on this host."""
         self.restore_instance(context, instance)
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
     @wrap_instance_fault
@@ -1988,7 +1989,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 self.detach_volume(context, volume_id, instance)
 
     @object_compat
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
     @wrap_instance_fault
@@ -2072,7 +2073,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         self._notify_about_instance_usage(context, instance, "reboot.end")
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     @reverts_task_state
     @wrap_instance_fault
     def live_snapshot_instance(self, context, image_id, instance):
@@ -2122,7 +2123,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._notify_about_instance_usage(
                 context, instance, "live_snapshot.end")
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     @reverts_task_state
     @wrap_instance_fault
     def backup_instance(self, context, image_id, instance, backup_type,
@@ -2141,7 +2142,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     # FIXME(comstud): Remove 'image_type', 'backup_type', and 'rotation'
     #                 on next major RPC version bump.
     @object_compat
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     @reverts_task_state
     @wrap_instance_fault
     def snapshot_instance(self, context, image_id, instance,
@@ -2273,7 +2274,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                           instance=instance)
                 image_service.delete(context, image_id)
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
     @wrap_instance_fault
@@ -2337,7 +2338,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 raise exception.InstancePasswordSetFailed(
                     instance=instance['uuid'], reason=_msg)
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     @reverts_task_state
     @wrap_instance_fault
     def inject_file(self, context, path, file_contents, instance):
@@ -2375,7 +2376,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                    ' using instance\'s current image'))
         return instance['image_ref']
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
     def rescue_instance(self, context, instance, rescue_password=None):
@@ -2418,7 +2419,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                               launched_at=timeutils.utcnow(),
                               expected_task_state=task_states.RESCUING)
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
     @wrap_instance_fault
@@ -2441,7 +2442,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                               expected_task_state=task_states.UNRESCUING,
                               power_state=current_power_state)
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     @reverts_task_state
     @wrap_instance_fault
     def change_instance_metadata(self, context, diff, instance):
@@ -2472,7 +2473,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         return sys_meta, instance_type
 
     @object_compat
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     @wrap_instance_event
     @wrap_instance_fault
     def confirm_resize(self, context, instance, reservations=None,
@@ -2536,7 +2537,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             self._quota_commit(context, reservations)
 
     @object_compat
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
     @wrap_instance_fault
@@ -2589,7 +2590,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                     migration_p, migration.source_compute,
                     reservations)
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
     @wrap_instance_fault
@@ -2723,7 +2724,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                     migration_ref, image, instance_type, reservations)
 
     @object_compat
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
     @wrap_instance_fault
@@ -2806,7 +2807,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             # not re-scheduling
             raise exc_info[0], exc_info[1], exc_info[2]
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
     @wrap_instance_fault
@@ -2950,7 +2951,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             context, instance, "finish_resize.end",
             network_info=network_info)
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
     @wrap_instance_fault
@@ -2980,7 +2981,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                   qr_error, instance=instance)
                 self._set_instance_error_state(context, instance['uuid'])
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     @reverts_task_state
     @wrap_instance_fault
     def add_fixed_ip_to_instance(self, context, network_id, instance):
@@ -3006,7 +3007,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._notify_about_instance_usage(
             context, instance, "create_ip.end", network_info=network_info)
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     @reverts_task_state
     @wrap_instance_fault
     def remove_fixed_ip_from_instance(self, context, address, instance):
@@ -3033,7 +3034,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             context, instance, "delete_ip.end", network_info=network_info)
 
     @object_compat
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
     @wrap_instance_fault
@@ -3049,7 +3050,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance.save(expected_task_state=task_states.PAUSING)
 
     @object_compat
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
     @wrap_instance_fault
@@ -3064,29 +3065,29 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance.task_state = None
         instance.save(expected_task_state=task_states.UNPAUSING)
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     def host_power_action(self, context, host=None, action=None):
         """Reboots, shuts down or powers up the host."""
         return self.driver.host_power_action(host, action)
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     def host_maintenance_mode(self, context, host, mode):
         """Start/Stop host maintenance window. On start, it triggers
         guest VMs evacuation.
         """
         return self.driver.host_maintenance_mode(host, mode)
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     def set_host_enabled(self, context, host=None, enabled=None):
         """Sets the specified host's ability to accept new instances."""
         return self.driver.set_host_enabled(host, enabled)
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     def get_host_uptime(self, context):
         """Returns the result of calling "uptime" on the target host."""
         return self.driver.get_host_uptime(self.host)
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     @wrap_instance_fault
     def get_diagnostics(self, context, instance):
         """Retrieve diagnostics for an instance on this host."""
@@ -3097,7 +3098,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             return self.driver.get_diagnostics(instance)
 
     @object_compat
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
     @wrap_instance_fault
@@ -3115,7 +3116,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._notify_about_instance_usage(context, instance, 'suspend')
 
     @object_compat
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
     @wrap_instance_fault
@@ -3137,7 +3138,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance.save(expected_task_state=task_states.RESUMING)
         self._notify_about_instance_usage(context, instance, 'resume')
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
     @wrap_instance_fault
@@ -3190,7 +3191,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         self._notify_about_instance_usage(context, instance, 'shelve.end')
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     @reverts_task_state
     @wrap_instance_fault
     def shelve_offload_instance(self, context, instance):
@@ -3226,7 +3227,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._notify_about_instance_usage(context, instance,
                 'shelve_offload.end')
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
     @wrap_instance_fault
@@ -3313,7 +3314,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         """Inject network info, but don't return the info."""
         self._inject_network_info(context, instance)
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     @wrap_instance_fault
     def get_console_output(self, context, instance, tail_length=None):
         """Send the console output for the given instance."""
@@ -3340,7 +3341,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @rpc_common.client_exceptions(exception.ConsoleTypeInvalid,
             exception.InstanceNotReady, exception.InstanceNotFound)
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     @wrap_instance_fault
     def get_vnc_console(self, context, console_type, instance):
         """Return connection information for a vnc console."""
@@ -3375,7 +3376,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @rpc_common.client_exceptions(exception.ConsoleTypeInvalid,
             exception.InstanceNotReady, exception.InstanceNotFound)
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     @wrap_instance_fault
     def get_spice_console(self, context, console_type, instance):
         """Return connection information for a spice console."""
@@ -3409,7 +3410,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @rpc_common.client_exceptions(exception.ConsoleTypeInvalid,
             exception.InstanceNotReady, exception.InstanceNotFound)
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     @wrap_instance_fault
     def validate_console_port(self, ctxt, instance, port, console_type):
         if console_type == "spice-html5":
@@ -3419,7 +3420,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         return console_info['port'] == port
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     @reverts_task_state
     @wrap_instance_fault
     def reserve_block_device_name(self, context, instance, device,
@@ -3444,7 +3445,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         return do_reserve()
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     @reverts_task_state
     @wrap_instance_fault
     def attach_volume(self, context, volume_id, mountpoint, instance):
@@ -3544,7 +3545,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                               context=context, instance=instance)
                 self.volume_api.roll_detaching(context, volume_id)
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     @reverts_task_state
     @wrap_instance_fault
     def detach_volume(self, context, volume_id, instance):
@@ -3580,7 +3581,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._notify_about_instance_usage(
             context, instance, "volume.detach", extra_usage_info=info)
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     @reverts_task_state
     @wrap_instance_fault
     def swap_volume(self, context, old_volume_id, new_volume_id, instance):
@@ -3660,7 +3661,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.conductor_api.block_device_mapping_update_or_create(context,
                                                                  values)
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     def remove_volume_connection(self, context, volume_id, instance):
         """Remove a volume connection using the volume api."""
         # NOTE(vish): We don't want to actually mark the volume
@@ -3714,7 +3715,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         except IndexError:
             raise exception.NotFound(_("Host %s not found") % host)
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     def check_instance_shared_storage(self, ctxt, instance, data):
         """Check if the instance files are shared
 
@@ -3727,7 +3728,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         return self.driver.check_instance_shared_storage_remote(ctxt, data)
 
     @object_compat
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     def check_can_live_migrate_destination(self, ctxt, instance,
                                            block_migration=False,
                                            disk_over_commit=False):
@@ -3760,7 +3761,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         return migrate_data
 
     @object_compat
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     def check_can_live_migrate_source(self, ctxt, instance, dest_check_data):
         """Check if it is possible to execute live migration.
 
@@ -3783,7 +3784,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         return self.driver.check_can_live_migrate_source(ctxt, instance,
                                                          dest_check_data)
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     def pre_live_migration(self, context, instance,
                            block_migration=False, disk=None,
                            migrate_data=None):
@@ -3836,7 +3837,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         return pre_live_migration_data
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     def live_migration(self, context, dest, instance,
                        block_migration=False, migrate_data=None):
         """Executing live migration.
@@ -3876,7 +3877,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                    self._rollback_live_migration,
                                    block_migration, migrate_data)
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     def _post_live_migration(self, ctxt, instance_ref,
                             dest, block_migration=False, migrate_data=None):
         """Post operations for live migration.
@@ -3959,7 +3960,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                    "This error can be safely ignored."),
                  instance=instance_ref)
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     def post_live_migration_at_destination(self, context, instance,
                                            block_migration=False):
         """Post operations for live migration .
@@ -4015,7 +4016,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                      context, instance, "live_migration.post.dest.end",
                      network_info=network_info)
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     def _rollback_live_migration(self, context, instance,
                                  dest, block_migration, migrate_data=None):
         """Recovers Instance/volume state from migrating -> running.
@@ -4064,7 +4065,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._notify_about_instance_usage(context, instance,
                                           "live_migration._rollback.end")
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     def rollback_live_migration_at_destination(self, context, instance):
         """Cleaning up image directory that is created pre_live_migration.
 
@@ -4781,7 +4782,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 self._quota_rollback(context, reservations)
                 self._set_instance_error_state(context, instance_uuid)
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     def add_aggregate_host(self, context, host, slave_info=None,
                            aggregate=None, aggregate_id=None):
         """Notify hypervisor of change (for hypervisor pools)."""
@@ -4798,7 +4799,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                     self.conductor_api.aggregate_host_delete,
                                     aggregate, host)
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     def remove_aggregate_host(self, context, host, slave_info=None,
                               aggregate=None, aggregate_id=None):
         """Removes a host from a physical hypervisor pool."""
