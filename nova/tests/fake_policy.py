@@ -170,7 +170,6 @@ policy_data = """
     "compute_extension:v3:os-extended-volumes:attach": "",
     "compute_extension:v3:os-extended-volumes:detach": "",
     "compute_extension:fixed_ips": "",
-    "compute_extension:v3:os-fixed-ips": "",
     "compute_extension:flavor_access": "",
     "compute_extension:v3:os-flavor-access": "",
     "compute_extension:flavor_disabled": "",
