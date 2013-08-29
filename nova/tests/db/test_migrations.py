@@ -2656,6 +2656,25 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     def _post_downgrade_207(self, engine):
         self._207(engine)
 
+    def _check_208(self, engine, data):
+        self.assertColumnExists(engine, 'compute_nodes', 'host_ip')
+        self.assertColumnExists(engine, 'compute_nodes', 'supported_instances')
+
+        compute_nodes = db_utils.get_table(engine, 'compute_nodes')
+        if engine.name == "postgresql":
+            self.assertTrue(isinstance(compute_nodes.c.host_ip.type,
+                            sqlalchemy.dialects.postgresql.INET))
+        else:
+            self.assertTrue(isinstance(compute_nodes.c.host_ip.type,
+                            sqlalchemy.types.String))
+        self.assertTrue(isinstance(compute_nodes.c.supported_instances.type,
+                            sqlalchemy.types.Text))
+
+    def _post_downgrade_208(self, engine):
+        self.assertColumnNotExists(engine, 'compute_nodes', 'host_ip')
+        self.assertColumnNotExists(engine, 'compute_nodes',
+                                   'supported_instance')
+
     def _data_209(self):
         ret = {"compute_nodes": {"service_id": 999, "vcpus": 1, "memory_mb": 1,
                                  "local_gb": 1, "vcpus_used": 1,
