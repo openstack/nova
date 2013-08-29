@@ -561,6 +561,8 @@ class Executor(wsgi.Application):
             return ec2_error_ex(ex, req, code=code)
         except (exception.EC2APIError,
                 exception.NotFound,
+                exception.KeypairNotFound,
+                exception.SecurityGroupExists,
                 exception.InvalidParameterValue,
                 exception.InvalidPortRange,
                 exception.NotAuthorized,

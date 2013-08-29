@@ -483,10 +483,12 @@ class AgentBuildExists(Duplicate):
 
 
 class VolumeNotFound(NotFound):
+    ec2_code = 'InvalidVolumeID.NotFound'
     msg_fmt = _("Volume %(volume_id)s could not be found.")
 
 
 class SnapshotNotFound(NotFound):
+    ec2_code = 'InvalidSnapshotID.NotFound'
     msg_fmt = _("Snapshot %(snapshot_id)s could not be found.")
 
 
@@ -702,6 +704,7 @@ class CannotDisassociateAutoAssignedFloatingIP(NovaException):
 
 
 class KeypairNotFound(NotFound):
+    ec2_code = 'InvalidKeyPair.NotFound'
     msg_fmt = _("Keypair %(name)s not found for user %(user_id)s")
 
 
@@ -790,6 +793,7 @@ class SecurityGroupNotFoundForRule(SecurityGroupNotFound):
 
 
 class SecurityGroupExists(Invalid):
+    ec2_code = 'InvalidGroup.Duplicate'
     msg_fmt = _("Security group %(security_group_name)s already exists "
                 "for project %(project_id)s.")
 
@@ -1134,6 +1138,7 @@ class CidrConflict(NovaException):
 
 
 class InstanceNotFound(NotFound):
+    ec2_code = 'InvalidInstanceID.NotFound'
     msg_fmt = _("Instance %(instance_id)s could not be found.")
 
 
