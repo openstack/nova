@@ -1649,17 +1649,12 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @object_compat
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @reverts_task_state
     @wrap_instance_event
     @wrap_instance_fault
     def terminate_instance(self, context, instance, bdms=None,
                            reservations=None):
         """Terminate an instance on this host."""
-        # Note(eglynn): we do not decorate this action with reverts_task_state
-        # because a failure during termination should leave the task state as
-        # DELETING, as a signal to the API layer that a subsequent deletion
-        # attempt should not result in a further decrement of the quota_usages
-        # in_use count (see bug 1046236).
-
         # NOTE(danms): remove this compatibility in the future
         if not bdms:
             bdms = self._get_instance_volume_bdms(context, instance)
