@@ -50,6 +50,7 @@ from nova.network import model as network_model
 from nova.network.security_group import openstack_driver
 from nova.network.security_group import security_group_base
 from nova import notifications
+from nova import notifier
 from nova.objects import aggregate as aggregate_obj
 from nova.objects import base as obj_base
 from nova.objects import instance as instance_obj
@@ -62,7 +63,6 @@ from nova.objects import service as service_obj
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
-from nova.openstack.common.notifier import api as notifier
 from nova.openstack.common import strutils
 from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
@@ -75,11 +75,9 @@ from nova import volume
 
 LOG = logging.getLogger(__name__)
 
-
-wrap_exception = functools.partial(
-    exception.wrap_exception,
-    notifier=notifier, publisher_id=notifier.publisher_id('aggregate'))
-
+get_notifier = functools.partial(notifier.get_notifier, service='aggregate')
+wrap_exception = functools.partial(exception.wrap_exception,
+                                   get_notifier=get_notifier)
 
 compute_opts = [
     cfg.BoolOpt('allow_resize_to_same_host',
@@ -236,6 +234,7 @@ class API(base.Base):
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self._compute_task_api = None
         self.servicegroup_api = servicegroup.API()
+        self.notifier = notifier.get_notifier('compute', CONF.host)
 
         super(API, self).__init__(**kwargs)
 
@@ -1418,7 +1417,7 @@ class API(base.Base):
         instance_uuid = instance['uuid']
         instance.info_cache.delete()
         compute_utils.notify_about_instance_usage(
-            context, instance, "%s.start" % delete_type)
+            self.notifier, context, instance, "%s.start" % delete_type)
 
         elevated = context.elevated()
         if self.cell_type != 'api':
@@ -1445,7 +1444,7 @@ class API(base.Base):
         cb(context, instance, bdms, local=True)
         instance.destroy()
         compute_utils.notify_about_instance_usage(
-            context, instance, "%s.end" % delete_type,
+            self.notifier, context, instance, "%s.end" % delete_type,
             system_metadata=system_meta)
 
     def _do_delete(self, context, instance, bdms, reservations=None,

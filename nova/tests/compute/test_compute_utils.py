@@ -2,6 +2,7 @@
 
 # Copyright 2011 OpenStack Foundation
 # All Rights Reserved.
+# Copyright 2013 Red Hat, Inc.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -28,13 +29,13 @@ from nova import db
 from nova import exception
 from nova.image import glance
 from nova.network import api as network_api
+from nova import notifier as notify
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
-from nova.openstack.common.notifier import api as notifier_api
-from nova.openstack.common.notifier import test_notifier
 from nova import test
 from nova.tests import fake_instance_actions
 from nova.tests import fake_network
+from nova.tests import fake_notifier
 import nova.tests.image.fake
 
 CONF = cfg.CONF
@@ -236,17 +237,16 @@ class UsageInfoTestCase(test.TestCase):
         self.stubs.Set(network_api.API, 'get_instance_nw_info',
                        fake_get_nw_info)
 
-        notifier_api._reset_drivers()
-        self.addCleanup(notifier_api._reset_drivers)
+        fake_notifier.stub_notifier(self.stubs)
+        self.addCleanup(fake_notifier.reset)
+
         self.flags(use_local=True, group='conductor')
         self.flags(compute_driver='nova.virt.fake.FakeDriver',
-                   notification_driver=[test_notifier.__name__],
                    network_manager='nova.network.manager.FlatManager')
         self.compute = importutils.import_object(CONF.compute_manager)
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id, self.project_id)
-        test_notifier.NOTIFICATIONS = []
 
         def fake_show(meh, context, id):
             return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1}}
@@ -284,12 +284,13 @@ class UsageInfoTestCase(test.TestCase):
         db.instance_system_metadata_update(self.context, instance['uuid'],
                 sys_metadata, False)
         instance = db.instance_get(self.context, instance_id)
-        compute_utils.notify_usage_exists(self.context, instance)
-        self.assertEquals(len(test_notifier.NOTIFICATIONS), 1)
-        msg = test_notifier.NOTIFICATIONS[0]
-        self.assertEquals(msg['priority'], 'INFO')
-        self.assertEquals(msg['event_type'], 'compute.instance.exists')
-        payload = msg['payload']
+        compute_utils.notify_usage_exists(
+            notify.get_notifier('compute'), self.context, instance)
+        self.assertEquals(len(fake_notifier.NOTIFICATIONS), 1)
+        msg = fake_notifier.NOTIFICATIONS[0]
+        self.assertEquals(msg.priority, 'INFO')
+        self.assertEquals(msg.event_type, 'compute.instance.exists')
+        payload = msg.payload
         self.assertEquals(payload['tenant_id'], self.project_id)
         self.assertEquals(payload['user_id'], self.user_id)
         self.assertEquals(payload['instance_id'], instance['uuid'])
@@ -323,11 +324,12 @@ class UsageInfoTestCase(test.TestCase):
                                         jsonutils.to_primitive(instance))
         instance = db.instance_get(self.context.elevated(read_deleted='yes'),
                                    instance_id)
-        compute_utils.notify_usage_exists(self.context, instance)
-        msg = test_notifier.NOTIFICATIONS[-1]
-        self.assertEquals(msg['priority'], 'INFO')
-        self.assertEquals(msg['event_type'], 'compute.instance.exists')
-        payload = msg['payload']
+        compute_utils.notify_usage_exists(
+            notify.get_notifier('compute'), self.context, instance)
+        msg = fake_notifier.NOTIFICATIONS[-1]
+        self.assertEquals(msg.priority, 'INFO')
+        self.assertEquals(msg.event_type, 'compute.instance.exists')
+        payload = msg.payload
         self.assertEquals(payload['tenant_id'], self.project_id)
         self.assertEquals(payload['user_id'], self.user_id)
         self.assertEquals(payload['instance_id'], instance['uuid'])
@@ -351,11 +353,12 @@ class UsageInfoTestCase(test.TestCase):
         instance = db.instance_get(self.context, instance_id)
         self.compute.terminate_instance(self.context,
                                         jsonutils.to_primitive(instance))
-        compute_utils.notify_usage_exists(self.context, instance)
-        msg = test_notifier.NOTIFICATIONS[-1]
-        self.assertEquals(msg['priority'], 'INFO')
-        self.assertEquals(msg['event_type'], 'compute.instance.exists')
-        payload = msg['payload']
+        compute_utils.notify_usage_exists(
+            notify.get_notifier('compute'), self.context, instance)
+        msg = fake_notifier.NOTIFICATIONS[-1]
+        self.assertEquals(msg.priority, 'INFO')
+        self.assertEquals(msg.event_type, 'compute.instance.exists')
+        payload = msg.payload
         self.assertEquals(payload['tenant_id'], self.project_id)
         self.assertEquals(payload['user_id'], self.user_id)
         self.assertEquals(payload['instance_id'], instance['uuid'])
@@ -385,13 +388,15 @@ class UsageInfoTestCase(test.TestCase):
         # NOTE(russellb) Make sure our instance has the latest system_metadata
         # in it.
         instance = db.instance_get(self.context, instance_id)
-        compute_utils.notify_about_instance_usage(self.context, instance,
-        'create.start', extra_usage_info=extra_usage_info)
-        self.assertEquals(len(test_notifier.NOTIFICATIONS), 1)
-        msg = test_notifier.NOTIFICATIONS[0]
-        self.assertEquals(msg['priority'], 'INFO')
-        self.assertEquals(msg['event_type'], 'compute.instance.create.start')
-        payload = msg['payload']
+        compute_utils.notify_about_instance_usage(
+            notify.get_notifier('compute'),
+            self.context, instance, 'create.start',
+            extra_usage_info=extra_usage_info)
+        self.assertEquals(len(fake_notifier.NOTIFICATIONS), 1)
+        msg = fake_notifier.NOTIFICATIONS[0]
+        self.assertEquals(msg.priority, 'INFO')
+        self.assertEquals(msg.event_type, 'compute.instance.create.start')
+        payload = msg.payload
         self.assertEquals(payload['tenant_id'], self.project_id)
         self.assertEquals(payload['user_id'], self.user_id)
         self.assertEquals(payload['instance_id'], instance['uuid'])
@@ -416,11 +421,11 @@ class UsageInfoTestCase(test.TestCase):
         compute_utils.notify_about_aggregate_update(self.context,
                                                     "create.end",
                                                     aggregate_payload)
-        self.assertEquals(len(test_notifier.NOTIFICATIONS), 1)
-        msg = test_notifier.NOTIFICATIONS[0]
-        self.assertEquals(msg['priority'], 'INFO')
-        self.assertEquals(msg['event_type'], 'aggregate.create.end')
-        payload = msg['payload']
+        self.assertEquals(len(fake_notifier.NOTIFICATIONS), 1)
+        msg = fake_notifier.NOTIFICATIONS[0]
+        self.assertEquals(msg.priority, 'INFO')
+        self.assertEquals(msg.event_type, 'aggregate.create.end')
+        payload = msg.payload
         self.assertEquals(payload['aggregate_id'], 1)
 
     def test_notify_about_aggregate_update_with_name(self):
@@ -429,11 +434,11 @@ class UsageInfoTestCase(test.TestCase):
         compute_utils.notify_about_aggregate_update(self.context,
                                                     "create.start",
                                                     aggregate_payload)
-        self.assertEquals(len(test_notifier.NOTIFICATIONS), 1)
-        msg = test_notifier.NOTIFICATIONS[0]
-        self.assertEquals(msg['priority'], 'INFO')
-        self.assertEquals(msg['event_type'], 'aggregate.create.start')
-        payload = msg['payload']
+        self.assertEquals(len(fake_notifier.NOTIFICATIONS), 1)
+        msg = fake_notifier.NOTIFICATIONS[0]
+        self.assertEquals(msg.priority, 'INFO')
+        self.assertEquals(msg.event_type, 'aggregate.create.start')
+        payload = msg.payload
         self.assertEquals(payload['name'], 'fakegroup')
 
     def test_notify_about_aggregate_update_without_name_id(self):
@@ -442,4 +447,4 @@ class UsageInfoTestCase(test.TestCase):
         compute_utils.notify_about_aggregate_update(self.context,
                                                     "create.start",
                                                     aggregate_payload)
-        self.assertEquals(len(test_notifier.NOTIFICATIONS), 0)
+        self.assertEquals(len(fake_notifier.NOTIFICATIONS), 0)

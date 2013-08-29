@@ -39,7 +39,6 @@ from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
-from nova.openstack.common.notifier import api as notifier
 from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import timeutils
 from nova import quota
@@ -401,9 +400,8 @@ class ConductorManager(manager.Manager):
                                              update_totals)
 
         # We have just updated the database, so send the notification now
-        notifier.notify(context, 'conductor.%s' % self.host, 'volume.usage',
-                        notifier.INFO,
-                        compute_utils.usage_volume_info(vol_usage))
+        self.notifier.info(context, 'volume.usage',
+                           compute_utils.usage_volume_info(vol_usage))
 
     @rpc_common.client_exceptions(exception.ComputeHostNotFound,
                                   exception.HostBinaryNotFound)
@@ -482,7 +480,8 @@ class ConductorManager(manager.Manager):
     def notify_usage_exists(self, context, instance, current_period=False,
                             ignore_missing_network_data=True,
                             system_metadata=None, extra_usage_info=None):
-        compute_utils.notify_usage_exists(context, instance, current_period,
+        compute_utils.notify_usage_exists(self.notifier, context, instance,
+                                          current_period,
                                           ignore_missing_network_data,
                                           system_metadata, extra_usage_info)
 

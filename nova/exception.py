@@ -60,14 +60,11 @@ def _cleanse_dict(original):
     return dict((k, v) for k, v in original.iteritems() if not "_pass" in k)
 
 
-def wrap_exception(notifier, publisher_id):
+def wrap_exception(notifier=None, get_notifier=None):
     """This decorator wraps a method to catch any exceptions that may
     get thrown. It logs the exception as well as optionally sending
     it to the notification system.
     """
-    # TODO(sandy): Find a way to import nova.notifier.api so we don't have
-    # to pass it in as a parameter. Otherwise we get a cyclic import of
-    # nova.notifier.api -> nova.utils -> nova.exception :(
     def inner(f):
         def wrapped(self, context, *args, **kw):
             # Don't store self or context in the payload, it now seems to
@@ -76,16 +73,20 @@ def wrap_exception(notifier, publisher_id):
                 return f(self, context, *args, **kw)
             except Exception as e:
                 with excutils.save_and_reraise_exception():
-                    payload = dict(exception=e)
-                    call_dict = safe_utils.getcallargs(f, *args, **kw)
-                    cleansed = _cleanse_dict(call_dict)
-                    payload.update({'args': cleansed})
+                    if notifier or get_notifier:
+                        payload = dict(exception=e)
+                        call_dict = safe_utils.getcallargs(f, *args, **kw)
+                        cleansed = _cleanse_dict(call_dict)
+                        payload.update({'args': cleansed})
 
-                    level = notifier.ERROR
-                    event_type = f.__name__
+                        # If f has multiple decorators, they must use
+                        # functools.wraps to ensure the name is
+                        # propagated.
+                        event_type = f.__name__
 
-                    notifier.notify(context, publisher_id,
-                                    event_type, level, payload)
+                        (notifier or get_notifier()).error(context,
+                                                           event_type,
+                                                           payload)
 
         return functools.wraps(f)(wrapped)
     return inner

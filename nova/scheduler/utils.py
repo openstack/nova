@@ -20,10 +20,10 @@ from nova.compute import flavors
 from nova.compute import utils as compute_utils
 from nova import db
 from nova import notifications
+from nova import notifier as notify
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
-from nova.openstack.common.notifier import api as notifier
 
 LOG = logging.getLogger(__name__)
 
@@ -69,6 +69,8 @@ def set_vm_state_and_notify(context, service, method, updates, ex,
     #             verify that uuid is always set.
     uuids = [properties.get('uuid')]
     from nova.conductor import api as conductor_api
+    conductor = conductor_api.LocalAPI()
+    notifier = notify.get_notifier(service)
     for instance_uuid in request_spec.get('instance_uuids') or uuids:
         if instance_uuid:
             state = vm_state.upper()
@@ -81,7 +83,7 @@ def set_vm_state_and_notify(context, service, method, updates, ex,
             notifications.send_update(context, old_ref, new_ref,
                     service=service)
             compute_utils.add_instance_fault_from_exc(context,
-                    conductor_api.LocalAPI(),
+                    conductor,
                     new_ref, ex, sys.exc_info())
 
         payload = dict(request_spec=request_spec,
@@ -92,8 +94,7 @@ def set_vm_state_and_notify(context, service, method, updates, ex,
                         reason=ex)
 
         event_type = '%s.%s' % (service, method)
-        notifier.notify(context, notifier.publisher_id(service),
-                        event_type, notifier.ERROR, payload)
+        notifier.error(context, event_type, payload)
 
 
 def populate_filter_properties(filter_properties, host_state):

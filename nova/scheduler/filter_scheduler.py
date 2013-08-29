@@ -27,9 +27,9 @@ from nova.compute import flavors
 from nova.compute import rpcapi as compute_rpcapi
 from nova import db
 from nova import exception
+from nova import notifier
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
-from nova.openstack.common.notifier import api as notifier
 from nova.pci import pci_request
 from nova.scheduler import driver
 from nova.scheduler import scheduler_options
@@ -61,6 +61,7 @@ class FilterScheduler(driver.Scheduler):
         super(FilterScheduler, self).__init__(*args, **kwargs)
         self.options = scheduler_options.SchedulerOptions()
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
+        self.notifier = notifier.get_notifier('scheduler')
 
     def schedule_run_instance(self, context, request_spec,
                               admin_password, injected_files,
@@ -73,8 +74,7 @@ class FilterScheduler(driver.Scheduler):
         Returns a list of the instances created.
         """
         payload = dict(request_spec=request_spec)
-        notifier.notify(context, notifier.publisher_id("scheduler"),
-                        'scheduler.run_instance.start', notifier.INFO, payload)
+        self.notifier.info(context, 'scheduler.run_instance.start', payload)
 
         instance_uuids = request_spec.get('instance_uuids')
         LOG.info(_("Attempting to build %(num_instances)d instance(s) "
@@ -127,8 +127,7 @@ class FilterScheduler(driver.Scheduler):
             retry = filter_properties.get('retry', {})
             retry['hosts'] = []
 
-        notifier.notify(context, notifier.publisher_id("scheduler"),
-                        'scheduler.run_instance.end', notifier.INFO, payload)
+        self.notifier.info(context, 'scheduler.run_instance.end', payload)
 
     def select_hosts(self, context, request_spec, filter_properties):
         """Selects a filtered set of hosts."""
@@ -164,9 +163,8 @@ class FilterScheduler(driver.Scheduler):
         payload = dict(request_spec=request_spec,
                        weighted_host=weighed_host.to_dict(),
                        instance_id=instance_uuid)
-        notifier.notify(context, notifier.publisher_id("scheduler"),
-                        'scheduler.run_instance.scheduled', notifier.INFO,
-                        payload)
+        self.notifier.info(context,
+                           'scheduler.run_instance.scheduled', payload)
 
         # Update the metadata if necessary
         scheduler_hints = filter_properties.get('scheduler_hints') or {}

@@ -2,6 +2,7 @@
 
 # Copyright (c) 2012 OpenStack Foundation
 # All Rights Reserved.
+# Copyright 2013 Red Hat, Inc.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -29,10 +30,11 @@ from nova import db
 from nova.image import glance
 from nova import network
 from nova.network import model as network_model
+from nova import notifier as notify
+from nova.openstack.common import context as common_context
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log
-from nova.openstack.common.notifier import api as notifier_api
 from nova.openstack.common import timeutils
 from nova import utils
 
@@ -53,6 +55,40 @@ notify_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(notify_opts)
+CONF.import_opt('default_notification_level',
+                'nova.openstack.common.notifier.api')
+CONF.import_opt('default_publisher_id',
+                'nova.openstack.common.notifier.api')
+
+
+def notify_decorator(name, fn):
+    """Decorator for notify which is used from utils.monkey_patch().
+
+        :param name: name of the function
+        :param function: - object of the function
+        :returns: function -- decorated function
+
+    """
+    def wrapped_func(*args, **kwarg):
+        body = {}
+        body['args'] = []
+        body['kwarg'] = {}
+        for arg in args:
+            body['args'].append(arg)
+        for key in kwarg:
+            body['kwarg'][key] = kwarg[key]
+
+        ctxt = common_context.get_context_from_function_and_args(
+            fn, args, kwarg)
+
+        notifier = notify.get_notifier(publisher_id=(CONF.default_publisher_id
+                                                     or CONF.host))
+        method = notifier.getattr(CONF.default_notification_level.lower(),
+                                  'info')
+        method(ctxt, name, body)
+
+        return fn(*args, **kwarg)
+    return wrapped_func
 
 
 def send_api_fault(url, status, exception):
@@ -63,10 +99,7 @@ def send_api_fault(url, status, exception):
 
     payload = {'url': url, 'exception': str(exception), 'status': status}
 
-    publisher_id = notifier_api.publisher_id("api")
-
-    notifier_api.notify(None, publisher_id, 'api.fault', notifier_api.ERROR,
-                        payload)
+    notify.get_notifier('api').error(None, 'api.fault', payload)
 
 
 def send_update(context, old_instance, new_instance, service=None, host=None):
@@ -192,10 +225,8 @@ def _send_instance_update_notification(context, instance, old_vm_state=None,
     if old_display_name:
         payload["old_display_name"] = old_display_name
 
-    publisher_id = notifier_api.publisher_id(service, host)
-
-    notifier_api.notify(context, publisher_id, 'compute.instance.update',
-            notifier_api.INFO, payload)
+    notify.get_notifier(service, host).info(context,
+                                            'compute.instance.update', payload)
 
 
 def audit_period_bounds(current_period=False):

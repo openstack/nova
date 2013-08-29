@@ -1,4 +1,5 @@
 #    Copyright 2012 IBM Corp.
+#    Copyright 2013 Red Hat, Inc.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -34,8 +35,6 @@ from nova import notifications
 from nova.objects import instance as instance_obj
 from nova.objects import migration as migration_obj
 from nova.openstack.common import jsonutils
-from nova.openstack.common.notifier import api as notifier_api
-from nova.openstack.common.notifier import test_notifier
 from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import timeutils
 from nova import quota
@@ -44,6 +43,7 @@ from nova import test
 from nova.tests.compute import test_compute
 from nova.tests import fake_instance
 from nova.tests import fake_instance_actions
+from nova.tests import fake_notifier
 from nova.tests.objects import test_migration
 from nova import utils
 
@@ -67,10 +67,8 @@ class _BaseTestCase(object):
         self.project_id = 'fake'
         self.context = FakeContext(self.user_id, self.project_id)
 
-        notifier_api._reset_drivers()
-        self.addCleanup(notifier_api._reset_drivers)
-        self.flags(notification_driver=[test_notifier.__name__])
-        test_notifier.NOTIFICATIONS = []
+        fake_notifier.stub_notifier(self.stubs)
+        self.addCleanup(fake_notifier.reset)
 
     def _create_fake_instance(self, params=None, type_name='m1.tiny'):
         if not params:
@@ -352,7 +350,6 @@ class _BaseTestCase(object):
 
     def test_vol_usage_update(self):
         self.mox.StubOutWithMock(db, 'vol_usage_update')
-        self.mox.StubOutWithMock(test_notifier, 'notify')
         self.mox.StubOutWithMock(compute_utils, 'usage_volume_info')
 
         fake_inst = {'uuid': 'fake-uuid',
@@ -368,16 +365,20 @@ class _BaseTestCase(object):
                             fake_inst['availability_zone'],
                             False).AndReturn('fake-usage')
         compute_utils.usage_volume_info('fake-usage').AndReturn('fake-info')
-        notifier_api.notify(self.context,
-                            'conductor.%s' % self.conductor_manager.host,
-                            'volume.usage', notifier_api.INFO,
-                            'fake-info')
 
         self.mox.ReplayAll()
 
         self.conductor.vol_usage_update(self.context, 'fake-vol',
                                         22, 33, 44, 55, fake_inst,
                                         'fake-update-time', False)
+
+        self.assertEqual(1, len(fake_notifier.NOTIFICATIONS))
+        msg = fake_notifier.NOTIFICATIONS[0]
+        self.assertEqual('conductor.%s' % self.conductor_manager.host,
+                         msg.publisher_id)
+        self.assertEqual('volume.usage', msg.event_type)
+        self.assertEqual('INFO', msg.priority)
+        self.assertEqual('fake-info', msg.payload)
 
     def test_compute_node_create(self):
         self.mox.StubOutWithMock(db, 'compute_node_create')
@@ -471,7 +472,9 @@ class _BaseTestCase(object):
         notifications.audit_period_bounds(False).AndReturn(('start', 'end'))
         notifications.bandwidth_usage(instance, 'start', True).AndReturn(
             'bw_usage')
-        compute_utils.notify_about_instance_usage(self.context, instance,
+        notifier = self.conductor_manager.notifier
+        compute_utils.notify_about_instance_usage(notifier,
+                                                  self.context, instance,
                                                   'exists',
                                                   system_metadata={},
                                                   extra_usage_info=info)

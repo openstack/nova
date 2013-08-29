@@ -4,6 +4,7 @@
 # Administrator of the National Aeronautics and Space Administration.
 # Copyright 2011 Piston Cloud Computing, Inc.
 # All Rights Reserved.
+# Copyright 2013 Red Hat, Inc.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -60,8 +61,6 @@ from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
-from nova.openstack.common.notifier import api as notifier_api
-from nova.openstack.common.notifier import test_notifier
 from nova.openstack.common import rpc
 from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import timeutils
@@ -75,6 +74,7 @@ from nova.tests import fake_instance
 from nova.tests import fake_instance_actions
 from nova.tests import fake_network
 from nova.tests import fake_network_cache_model
+from nova.tests import fake_notifier
 from nova.tests.image import fake as fake_image
 from nova.tests import matchers
 from nova.tests.objects import test_migration
@@ -147,13 +147,14 @@ class BaseTestCase(test.TestCase):
 
     def setUp(self):
         super(BaseTestCase, self).setUp()
-        notifier_api._reset_drivers()
-        self.addCleanup(notifier_api._reset_drivers)
         self.flags(compute_driver='nova.virt.fake.FakeDriver',
-                   notification_driver=[test_notifier.__name__],
                    network_manager='nova.network.manager.FlatManager')
         fake.set_nodes([NODENAME])
         self.flags(use_local=True, group='conductor')
+
+        fake_notifier.stub_notifier(self.stubs)
+        self.addCleanup(fake_notifier.reset)
+
         self.compute = importutils.import_object(CONF.compute_manager)
 
         # override tracker with a version that doesn't need the database:
@@ -201,7 +202,6 @@ class BaseTestCase(test.TestCase):
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id,
                                               self.project_id)
-        test_notifier.NOTIFICATIONS = []
 
         def fake_show(meh, context, id):
             if id:
@@ -581,19 +581,18 @@ class ComputeVolumeTestCase(BaseTestCase):
         CONF.volume_usage_poll_interval = 10
         self.compute._poll_volume_usage(self.context)
         # Check that a volume.usage and volume.attach notification was sent
-        self.assertEqual(2, len(test_notifier.NOTIFICATIONS))
-        msg = test_notifier.NOTIFICATIONS[0]
+        self.assertEqual(2, len(fake_notifier.NOTIFICATIONS))
 
         self.compute.detach_volume(self.context, 1, instance)
 
         # Check that volume.attach, 2 volume.usage, and volume.detach
         # notifications were sent
-        self.assertEquals(4, len(test_notifier.NOTIFICATIONS))
-        msg = test_notifier.NOTIFICATIONS[0]
-        self.assertEquals('compute.instance.volume.attach', msg['event_type'])
-        msg = test_notifier.NOTIFICATIONS[2]
-        self.assertEquals('volume.usage', msg['event_type'])
-        payload = msg['payload']
+        self.assertEquals(4, len(fake_notifier.NOTIFICATIONS))
+        msg = fake_notifier.NOTIFICATIONS[0]
+        self.assertEquals('compute.instance.volume.attach', msg.event_type)
+        msg = fake_notifier.NOTIFICATIONS[2]
+        self.assertEquals('volume.usage', msg.event_type)
+        payload = msg.payload
         self.assertEquals(instance['uuid'], payload['instance_id'])
         self.assertEquals('fake', payload['user_id'])
         self.assertEquals('fake', payload['tenant_id'])
@@ -602,8 +601,8 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.assertEquals(1, payload['writes'])
         self.assertEquals(20, payload['write_bytes'])
         self.assertEquals(None, payload['availability_zone'])
-        msg = test_notifier.NOTIFICATIONS[3]
-        self.assertEquals('compute.instance.volume.detach', msg['event_type'])
+        msg = fake_notifier.NOTIFICATIONS[3]
+        self.assertEquals('compute.instance.volume.detach', msg.event_type)
 
         # Check the database for the
         volume_usages = db.vol_get_usage_by_time(self.context, 0)
@@ -2601,11 +2600,11 @@ class ComputeTestCase(BaseTestCase):
 
         instance = jsonutils.to_primitive(self._create_fake_instance())
 
-        self.assertEquals(len(test_notifier.NOTIFICATIONS), 0)
+        self.assertEquals(len(fake_notifier.NOTIFICATIONS), 0)
         self.compute.add_fixed_ip_to_instance(self.context, network_id=1,
                 instance=instance)
 
-        self.assertEquals(len(test_notifier.NOTIFICATIONS), 2)
+        self.assertEquals(len(fake_notifier.NOTIFICATIONS), 2)
         self.compute.terminate_instance(self.context, instance=instance)
 
     def test_remove_fixed_ip_usage_notification(self):
@@ -2621,11 +2620,11 @@ class ComputeTestCase(BaseTestCase):
 
         instance = jsonutils.to_primitive(self._create_fake_instance())
 
-        self.assertEquals(len(test_notifier.NOTIFICATIONS), 0)
+        self.assertEquals(len(fake_notifier.NOTIFICATIONS), 0)
         self.compute.remove_fixed_ip_from_instance(self.context, 1,
                                                    instance=instance)
 
-        self.assertEquals(len(test_notifier.NOTIFICATIONS), 2)
+        self.assertEquals(len(fake_notifier.NOTIFICATIONS), 2)
         self.compute.terminate_instance(self.context, instance=instance)
 
     def test_run_instance_usage_notification(self):
@@ -2633,16 +2632,16 @@ class ComputeTestCase(BaseTestCase):
         instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_uuid = instance['uuid']
         self.compute.run_instance(self.context, instance=instance)
-        self.assertEquals(len(test_notifier.NOTIFICATIONS), 2)
+        self.assertEquals(len(fake_notifier.NOTIFICATIONS), 2)
         inst_ref = db.instance_get_by_uuid(self.context, instance_uuid)
-        msg = test_notifier.NOTIFICATIONS[0]
-        self.assertEquals(msg['event_type'], 'compute.instance.create.start')
-        self.assertEquals(msg['payload']['image_name'], 'fake_name')
+        msg = fake_notifier.NOTIFICATIONS[0]
+        self.assertEquals(msg.event_type, 'compute.instance.create.start')
+        self.assertEquals(msg.payload['image_name'], 'fake_name')
         # The last event is the one with the sugar in it.
-        msg = test_notifier.NOTIFICATIONS[1]
-        self.assertEquals(msg['priority'], 'INFO')
-        self.assertEquals(msg['event_type'], 'compute.instance.create.end')
-        payload = msg['payload']
+        msg = fake_notifier.NOTIFICATIONS[1]
+        self.assertEquals(msg.priority, 'INFO')
+        self.assertEquals(msg.event_type, 'compute.instance.create.end')
+        payload = msg.payload
         self.assertEquals(payload['tenant_id'], self.project_id)
         self.assertEquals(payload['image_name'], 'fake_name')
         self.assertEquals(payload['user_id'], self.user_id)
@@ -2674,14 +2673,14 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(self.compute, '_build_instance', build_inst_abort)
 
         self.compute.run_instance(self.context, instance=instance)
-        self.assertEquals(len(test_notifier.NOTIFICATIONS), 2)
-        msg = test_notifier.NOTIFICATIONS[0]
-        self.assertEquals(msg['event_type'], 'compute.instance.create.start')
-        msg = test_notifier.NOTIFICATIONS[1]
+        self.assertEquals(len(fake_notifier.NOTIFICATIONS), 2)
+        msg = fake_notifier.NOTIFICATIONS[0]
+        self.assertEquals(msg.event_type, 'compute.instance.create.start')
+        msg = fake_notifier.NOTIFICATIONS[1]
 
-        self.assertEquals(msg['event_type'], 'compute.instance.create.end')
-        self.assertEquals('INFO', msg['priority'])
-        payload = msg['payload']
+        self.assertEquals(msg.event_type, 'compute.instance.create.end')
+        self.assertEquals('INFO', msg.priority)
+        payload = msg.payload
         message = payload['message']
         self.assertTrue(message.find("already deleted") != -1)
 
@@ -2698,14 +2697,14 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute.run_instance(self.context, instance=instance)
 
-        self.assertTrue(len(test_notifier.NOTIFICATIONS) >= 2)
-        msg = test_notifier.NOTIFICATIONS[0]
-        self.assertEquals(msg['event_type'], 'compute.instance.create.start')
-        msg = test_notifier.NOTIFICATIONS[1]
+        self.assertTrue(len(fake_notifier.NOTIFICATIONS) >= 2)
+        msg = fake_notifier.NOTIFICATIONS[0]
+        self.assertEquals(msg.event_type, 'compute.instance.create.start')
+        msg = fake_notifier.NOTIFICATIONS[1]
 
-        self.assertEquals(msg['event_type'], 'compute.instance.create.error')
-        self.assertEquals('ERROR', msg['priority'])
-        payload = msg['payload']
+        self.assertEquals(msg.event_type, 'compute.instance.create.error')
+        self.assertEquals('ERROR', msg.priority)
+        payload = msg.payload
         message = payload['message']
         self.assertTrue(message.find("something bad happened") != -1)
 
@@ -2722,14 +2721,14 @@ class ComputeTestCase(BaseTestCase):
         self.assertRaises(test.TestingException, self.compute.run_instance,
                 self.context, instance=instance)
 
-        self.assertTrue(len(test_notifier.NOTIFICATIONS) >= 2)
-        msg = test_notifier.NOTIFICATIONS[0]
-        self.assertEquals(msg['event_type'], 'compute.instance.create.start')
-        msg = test_notifier.NOTIFICATIONS[1]
+        self.assertTrue(len(fake_notifier.NOTIFICATIONS) >= 2)
+        msg = fake_notifier.NOTIFICATIONS[0]
+        self.assertEquals(msg.event_type, 'compute.instance.create.start')
+        msg = fake_notifier.NOTIFICATIONS[1]
 
-        self.assertEquals(msg['event_type'], 'compute.instance.create.error')
-        self.assertEquals('ERROR', msg['priority'])
-        payload = msg['payload']
+        self.assertEquals(msg.event_type, 'compute.instance.create.error')
+        self.assertEquals('ERROR', msg.priority)
+        payload = msg.payload
         message = payload['message']
         self.assertTrue(message.find("i'm dying") != -1)
 
@@ -2741,23 +2740,22 @@ class ComputeTestCase(BaseTestCase):
 
         instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, instance=instance)
-        test_notifier.NOTIFICATIONS = []
+        fake_notifier.NOTIFICATIONS = []
         timeutils.set_time_override(cur_time)
         self.compute.terminate_instance(self.context, instance=instance)
 
-        self.assertEquals(len(test_notifier.NOTIFICATIONS), 4)
+        self.assertEquals(len(fake_notifier.NOTIFICATIONS), 4)
 
-        msg = test_notifier.NOTIFICATIONS[0]
-        self.assertEquals(msg['priority'], 'INFO')
-        self.assertEquals(msg['event_type'], 'compute.instance.delete.start')
-        msg1 = test_notifier.NOTIFICATIONS[1]
-        self.assertEquals(msg1['event_type'],
-                                            'compute.instance.shutdown.start')
-        msg1 = test_notifier.NOTIFICATIONS[2]
-        self.assertEquals(msg1['event_type'], 'compute.instance.shutdown.end')
-        msg1 = test_notifier.NOTIFICATIONS[3]
-        self.assertEquals(msg1['event_type'], 'compute.instance.delete.end')
-        payload = msg1['payload']
+        msg = fake_notifier.NOTIFICATIONS[0]
+        self.assertEquals(msg.priority, 'INFO')
+        self.assertEquals(msg.event_type, 'compute.instance.delete.start')
+        msg1 = fake_notifier.NOTIFICATIONS[1]
+        self.assertEquals(msg1.event_type, 'compute.instance.shutdown.start')
+        msg1 = fake_notifier.NOTIFICATIONS[2]
+        self.assertEquals(msg1.event_type, 'compute.instance.shutdown.end')
+        msg1 = fake_notifier.NOTIFICATIONS[3]
+        self.assertEquals(msg1.event_type, 'compute.instance.delete.end')
+        payload = msg1.payload
         self.assertEquals(payload['tenant_id'], self.project_id)
         self.assertEquals(payload['user_id'], self.user_id)
         self.assertEquals(payload['instance_id'], instance['uuid'])
@@ -3502,7 +3500,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance=inst_ref)
         timeutils.set_time_override(cur_time)
 
-        test_notifier.NOTIFICATIONS = []
+        fake_notifier.NOTIFICATIONS = []
         instance = db.instance_get_by_uuid(self.context, inst_ref['uuid'])
         orig_sys_metadata = db.instance_system_metadata_get(self.context,
                 inst_ref['uuid'])
@@ -3530,21 +3528,21 @@ class ComputeTestCase(BaseTestCase):
         image_ref_url = glance.generate_image_url(image_ref)
         new_image_ref_url = glance.generate_image_url(new_image_ref)
 
-        self.assertEquals(len(test_notifier.NOTIFICATIONS), 3)
-        msg = test_notifier.NOTIFICATIONS[0]
-        self.assertEquals(msg['event_type'],
+        self.assertEquals(len(fake_notifier.NOTIFICATIONS), 3)
+        msg = fake_notifier.NOTIFICATIONS[0]
+        self.assertEquals(msg.event_type,
                           'compute.instance.exists')
-        self.assertEquals(msg['payload']['image_ref_url'], image_ref_url)
-        msg = test_notifier.NOTIFICATIONS[1]
-        self.assertEquals(msg['event_type'],
+        self.assertEquals(msg.payload['image_ref_url'], image_ref_url)
+        msg = fake_notifier.NOTIFICATIONS[1]
+        self.assertEquals(msg.event_type,
                           'compute.instance.rebuild.start')
-        self.assertEquals(msg['payload']['image_ref_url'], new_image_ref_url)
-        self.assertEquals(msg['payload']['image_name'], 'fake_name')
-        msg = test_notifier.NOTIFICATIONS[2]
-        self.assertEquals(msg['event_type'],
+        self.assertEquals(msg.payload['image_ref_url'], new_image_ref_url)
+        self.assertEquals(msg.payload['image_name'], 'fake_name')
+        msg = fake_notifier.NOTIFICATIONS[2]
+        self.assertEquals(msg.event_type,
                           'compute.instance.rebuild.end')
-        self.assertEquals(msg['priority'], 'INFO')
-        payload = msg['payload']
+        self.assertEquals(msg.priority, 'INFO')
+        payload = msg.payload
         self.assertEquals(payload['image_name'], 'fake_name')
         self.assertEquals(payload['tenant_id'], self.project_id)
         self.assertEquals(payload['user_id'], self.user_id)
@@ -3587,7 +3585,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.resize_instance(self.context, instance=instance,
                 migration=migration, image={}, instance_type=new_type)
         timeutils.set_time_override(cur_time)
-        test_notifier.NOTIFICATIONS = []
+        fake_notifier.NOTIFICATIONS = []
 
         instance_p = obj_base.obj_to_primitive(instance)
         migration_p = obj_base.obj_to_primitive(migration)
@@ -3595,15 +3593,15 @@ class ComputeTestCase(BaseTestCase):
                 migration=migration_p,
                 disk_info={}, image={}, instance=instance_p)
 
-        self.assertEquals(len(test_notifier.NOTIFICATIONS), 2)
-        msg = test_notifier.NOTIFICATIONS[0]
-        self.assertEquals(msg['event_type'],
+        self.assertEquals(len(fake_notifier.NOTIFICATIONS), 2)
+        msg = fake_notifier.NOTIFICATIONS[0]
+        self.assertEquals(msg.event_type,
                           'compute.instance.finish_resize.start')
-        msg = test_notifier.NOTIFICATIONS[1]
-        self.assertEquals(msg['event_type'],
+        msg = fake_notifier.NOTIFICATIONS[1]
+        self.assertEquals(msg.event_type,
                           'compute.instance.finish_resize.end')
-        self.assertEquals(msg['priority'], 'INFO')
-        payload = msg['payload']
+        self.assertEquals(msg.priority, 'INFO')
+        payload = msg.payload
         self.assertEquals(payload['tenant_id'], self.project_id)
         self.assertEquals(payload['user_id'], self.user_id)
         self.assertEquals(payload['instance_id'], instance.uuid)
@@ -3627,7 +3625,7 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute.run_instance(self.context, instance=instance)
         timeutils.set_time_override(cur_time)
-        test_notifier.NOTIFICATIONS = []
+        fake_notifier.NOTIFICATIONS = []
 
         instance.host = 'foo'
         instance.task_state = task_states.RESIZE_PREP
@@ -3640,18 +3638,18 @@ class ComputeTestCase(BaseTestCase):
                                                 instance.uuid,
                                                 'pre-migrating')
 
-        self.assertEquals(len(test_notifier.NOTIFICATIONS), 3)
-        msg = test_notifier.NOTIFICATIONS[0]
-        self.assertEquals(msg['event_type'],
+        self.assertEquals(len(fake_notifier.NOTIFICATIONS), 3)
+        msg = fake_notifier.NOTIFICATIONS[0]
+        self.assertEquals(msg.event_type,
                           'compute.instance.exists')
-        msg = test_notifier.NOTIFICATIONS[1]
-        self.assertEquals(msg['event_type'],
+        msg = fake_notifier.NOTIFICATIONS[1]
+        self.assertEquals(msg.event_type,
                           'compute.instance.resize.prep.start')
-        msg = test_notifier.NOTIFICATIONS[2]
-        self.assertEquals(msg['event_type'],
+        msg = fake_notifier.NOTIFICATIONS[2]
+        self.assertEquals(msg.event_type,
                           'compute.instance.resize.prep.end')
-        self.assertEquals(msg['priority'], 'INFO')
-        payload = msg['payload']
+        self.assertEquals(msg.priority, 'INFO')
+        payload = msg.payload
         self.assertEquals(payload['tenant_id'], self.project_id)
         self.assertEquals(payload['user_id'], self.user_id)
         self.assertEquals(payload['instance_id'], instance.uuid)
@@ -4186,7 +4184,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.network_api.setup_networks_on_host(c, instance,
                                                         self.compute.host)
 
-        test_notifier.NOTIFICATIONS = []
+        fake_notifier.NOTIFICATIONS = []
         # start test
         self.mox.ReplayAll()
         migrate_data = {'is_shared_storage': False}
@@ -4194,12 +4192,12 @@ class ComputeTestCase(BaseTestCase):
                                               block_migration=False,
                                               migrate_data=migrate_data)
         self.assertEqual(ret, None)
-        self.assertEqual(len(test_notifier.NOTIFICATIONS), 2)
-        msg = test_notifier.NOTIFICATIONS[0]
-        self.assertEqual(msg['event_type'],
+        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
+        msg = fake_notifier.NOTIFICATIONS[0]
+        self.assertEqual(msg.event_type,
                          'compute.instance.live_migration.pre.start')
-        msg = test_notifier.NOTIFICATIONS[1]
-        self.assertEqual(msg['event_type'],
+        msg = fake_notifier.NOTIFICATIONS[1]
+        self.assertEqual(msg.event_type,
                          'compute.instance.live_migration.pre.end')
 
         # cleanup
@@ -4218,7 +4216,6 @@ class ComputeTestCase(BaseTestCase):
         fake_bdms = [dict(volume_id='vol1-id'), dict(volume_id='vol2-id')]
 
         # creating mocks
-        self.mox.StubOutWithMock(rpc, 'call')
         self.mox.StubOutWithMock(self.compute.driver,
                                  'get_instance_disk_info')
         self.mox.StubOutWithMock(self.compute.compute_rpcapi,
@@ -4430,18 +4427,18 @@ class ComputeTestCase(BaseTestCase):
         self.compute.network_api.setup_networks_on_host(self.admin_ctxt,
                 mox.IgnoreArg(), self.compute.host)
 
-        test_notifier.NOTIFICATIONS = []
+        fake_notifier.NOTIFICATIONS = []
         self.mox.ReplayAll()
 
         self.compute.post_live_migration_at_destination(self.admin_ctxt,
                                                         self.instance)
 
-        self.assertEqual(len(test_notifier.NOTIFICATIONS), 2)
-        msg = test_notifier.NOTIFICATIONS[0]
-        self.assertEqual(msg['event_type'],
+        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
+        msg = fake_notifier.NOTIFICATIONS[0]
+        self.assertEqual(msg.event_type,
                          'compute.instance.live_migration.post.dest.start')
-        msg = test_notifier.NOTIFICATIONS[1]
-        self.assertEqual(msg['event_type'],
+        msg = fake_notifier.NOTIFICATIONS[1]
+        self.assertEqual(msg.event_type,
                          'compute.instance.live_migration.post.dest.end')
 
         return self.compute.conductor_api.instance_get_by_uuid(self.admin_ctxt,
@@ -4477,7 +4474,7 @@ class ComputeTestCase(BaseTestCase):
         inst_id = instance_ref['id']
 
         instance = jsonutils.to_primitive(db.instance_get(c, inst_id))
-        test_notifier.NOTIFICATIONS = []
+        fake_notifier.NOTIFICATIONS = []
 
         self.mox.StubOutWithMock(self.compute.network_api,
                                  'setup_networks_on_host')
@@ -4490,12 +4487,12 @@ class ComputeTestCase(BaseTestCase):
         ret = self.compute.rollback_live_migration_at_destination(c,
                                           instance=instance)
         self.assertEqual(ret, None)
-        self.assertEqual(len(test_notifier.NOTIFICATIONS), 2)
-        msg = test_notifier.NOTIFICATIONS[0]
-        self.assertEqual(msg['event_type'],
+        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
+        msg = fake_notifier.NOTIFICATIONS[0]
+        self.assertEqual(msg.event_type,
                        'compute.instance.live_migration.rollback.dest.start')
-        msg = test_notifier.NOTIFICATIONS[1]
-        self.assertEqual(msg['event_type'],
+        msg = fake_notifier.NOTIFICATIONS[1]
+        self.assertEqual(msg.event_type,
                         'compute.instance.live_migration.rollback.dest.end')
 
         # cleanup
@@ -6547,9 +6544,9 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual(metadata, {'key1': 'value1', 'key2': 'value2'})
         self.assertEqual(meta_changes, [{'key2': ['+', 'value2']}])
 
-        self.assertEquals(len(test_notifier.NOTIFICATIONS), 1)
-        msg = test_notifier.NOTIFICATIONS[0]
-        payload = msg['payload']
+        self.assertEquals(len(fake_notifier.NOTIFICATIONS), 1)
+        msg = fake_notifier.NOTIFICATIONS[0]
+        payload = msg.payload
         self.assertTrue('metadata' in payload)
         self.assertEquals(payload['metadata'], metadata)
 
@@ -6564,9 +6561,9 @@ class ComputeAPITestCase(BaseTestCase):
                     'key3': ['+', 'value3'],
                     }])
 
-        self.assertEquals(len(test_notifier.NOTIFICATIONS), 2)
-        msg = test_notifier.NOTIFICATIONS[1]
-        payload = msg['payload']
+        self.assertEquals(len(fake_notifier.NOTIFICATIONS), 2)
+        msg = fake_notifier.NOTIFICATIONS[1]
+        payload = msg.payload
         self.assertTrue('metadata' in payload)
         self.assertEquals(payload['metadata'], metadata)
 
@@ -6575,9 +6572,9 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual(metadata, {'key3': 'value3'})
         self.assertEqual(meta_changes, [{'key2': ['-']}])
 
-        self.assertEquals(len(test_notifier.NOTIFICATIONS), 3)
-        msg = test_notifier.NOTIFICATIONS[2]
-        payload = msg['payload']
+        self.assertEquals(len(fake_notifier.NOTIFICATIONS), 3)
+        msg = fake_notifier.NOTIFICATIONS[2]
+        payload = msg.payload
         self.assertTrue('metadata' in payload)
         self.assertEquals(payload['metadata'], {})
 
@@ -7859,16 +7856,16 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         # Ensure metadata can be updated.
         aggr = self.api.create_aggregate(self.context, 'fake_aggregate',
                                          'fake_zone')
-        test_notifier.NOTIFICATIONS = []
+        fake_notifier.NOTIFICATIONS = []
         aggr = self.api.update_aggregate(self.context, aggr['id'],
                                          {'name': 'new_fake_aggregate'})
         self.assertEqual(availability_zones._get_cache().get('cache'), None)
-        self.assertEqual(len(test_notifier.NOTIFICATIONS), 2)
-        msg = test_notifier.NOTIFICATIONS[0]
-        self.assertEqual(msg['event_type'],
+        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
+        msg = fake_notifier.NOTIFICATIONS[0]
+        self.assertEqual(msg.event_type,
                          'aggregate.updateprop.start')
-        msg = test_notifier.NOTIFICATIONS[1]
-        self.assertEqual(msg['event_type'],
+        msg = fake_notifier.NOTIFICATIONS[1]
+        self.assertEqual(msg.event_type,
                          'aggregate.updateprop.end')
 
     def test_update_aggregate_metadata(self):
@@ -7877,15 +7874,15 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                                          'fake_zone')
         metadata = {'foo_key1': 'foo_value1',
                     'foo_key2': 'foo_value2', }
-        test_notifier.NOTIFICATIONS = []
+        fake_notifier.NOTIFICATIONS = []
         aggr = self.api.update_aggregate_metadata(self.context, aggr['id'],
                                                   metadata)
-        self.assertEqual(len(test_notifier.NOTIFICATIONS), 2)
-        msg = test_notifier.NOTIFICATIONS[0]
-        self.assertEqual(msg['event_type'],
+        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
+        msg = fake_notifier.NOTIFICATIONS[0]
+        self.assertEqual(msg.event_type,
                          'aggregate.updatemetadata.start')
-        msg = test_notifier.NOTIFICATIONS[1]
-        self.assertEqual(msg['event_type'],
+        msg = fake_notifier.NOTIFICATIONS[1]
+        self.assertEqual(msg.event_type,
                          'aggregate.updatemetadata.end')
         metadata['foo_key1'] = None
         expected = self.api.update_aggregate_metadata(self.context,
@@ -7896,24 +7893,24 @@ class ComputeAPIAggrTestCase(BaseTestCase):
 
     def test_delete_aggregate(self):
         # Ensure we can delete an aggregate.
-        test_notifier.NOTIFICATIONS = []
+        fake_notifier.NOTIFICATIONS = []
         aggr = self.api.create_aggregate(self.context, 'fake_aggregate',
                                          'fake_zone')
-        self.assertEqual(len(test_notifier.NOTIFICATIONS), 2)
-        msg = test_notifier.NOTIFICATIONS[0]
-        self.assertEqual(msg['event_type'],
+        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
+        msg = fake_notifier.NOTIFICATIONS[0]
+        self.assertEqual(msg.event_type,
                          'aggregate.create.start')
-        msg = test_notifier.NOTIFICATIONS[1]
-        self.assertEqual(msg['event_type'],
+        msg = fake_notifier.NOTIFICATIONS[1]
+        self.assertEqual(msg.event_type,
                          'aggregate.create.end')
-        test_notifier.NOTIFICATIONS = []
+        fake_notifier.NOTIFICATIONS = []
         self.api.delete_aggregate(self.context, aggr['id'])
-        self.assertEqual(len(test_notifier.NOTIFICATIONS), 2)
-        msg = test_notifier.NOTIFICATIONS[0]
-        self.assertEqual(msg['event_type'],
+        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
+        msg = fake_notifier.NOTIFICATIONS[0]
+        self.assertEqual(msg.event_type,
                          'aggregate.delete.start')
-        msg = test_notifier.NOTIFICATIONS[1]
-        self.assertEqual(msg['event_type'],
+        msg = fake_notifier.NOTIFICATIONS[1]
+        self.assertEqual(msg.event_type,
                          'aggregate.delete.end')
         db.aggregate_get(self.context.elevated(read_deleted='yes'),
                          aggr['id'])
@@ -7945,15 +7942,15 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         self.stubs.Set(self.api.compute_rpcapi, 'add_aggregate_host',
                        fake_add_aggregate_host)
 
-        test_notifier.NOTIFICATIONS = []
+        fake_notifier.NOTIFICATIONS = []
         aggr = self.api.add_host_to_aggregate(self.context,
                                               aggr['id'], fake_host)
-        self.assertEqual(len(test_notifier.NOTIFICATIONS), 2)
-        msg = test_notifier.NOTIFICATIONS[0]
-        self.assertEqual(msg['event_type'],
+        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
+        msg = fake_notifier.NOTIFICATIONS[0]
+        self.assertEqual(msg.event_type,
                          'aggregate.addhost.start')
-        msg = test_notifier.NOTIFICATIONS[1]
-        self.assertEqual(msg['event_type'],
+        msg = fake_notifier.NOTIFICATIONS[1]
+        self.assertEqual(msg.event_type,
                          'aggregate.addhost.end')
         self.assertEqual(len(aggr['hosts']), 1)
 
@@ -8047,16 +8044,16 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         self.stubs.Set(self.api.compute_rpcapi, 'remove_aggregate_host',
                        fake_remove_aggregate_host)
 
-        test_notifier.NOTIFICATIONS = []
+        fake_notifier.NOTIFICATIONS = []
         expected = self.api.remove_host_from_aggregate(self.context,
                                                        aggr['id'],
                                                        host_to_remove)
-        self.assertEqual(len(test_notifier.NOTIFICATIONS), 2)
-        msg = test_notifier.NOTIFICATIONS[0]
-        self.assertEqual(msg['event_type'],
+        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
+        msg = fake_notifier.NOTIFICATIONS[0]
+        self.assertEqual(msg.event_type,
                          'aggregate.removehost.start')
-        msg = test_notifier.NOTIFICATIONS[1]
-        self.assertEqual(msg['event_type'],
+        msg = fake_notifier.NOTIFICATIONS[1]
+        self.assertEqual(msg.event_type,
                          'aggregate.removehost.end')
         self.assertEqual(len(aggr['hosts']) - 1, len(expected['hosts']))
 
