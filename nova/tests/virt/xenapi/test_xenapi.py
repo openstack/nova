@@ -276,8 +276,8 @@ class XenAPIVolumeTestCase(stubs.XenAPITestBase):
         result = volume_utils.parse_volume_info(
             self._make_connection_data())
 
-        self.assertEquals('username', result['chapuser'])
-        self.assertEquals('password', result['chappassword'])
+        self.assertEqual('username', result['chapuser'])
+        self.assertEqual('password', result['chappassword'])
 
     def test_get_device_number_raise_exception_on_wrong_mountpoint(self):
         self.assertRaises(
@@ -380,7 +380,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         vbd2 = xenapi_fake.create_vbd(vm, vdi2)
 
         self.conn.init_host(None)
-        self.assertEquals(set(xenapi_fake.get_all('VBD')), set([vbd0, vbd2]))
+        self.assertEqual(set(xenapi_fake.get_all('VBD')), set([vbd0, vbd2]))
 
     def test_instance_exists(self):
         self.mox.StubOutWithMock(vm_utils, 'lookup')
@@ -398,11 +398,11 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
 
     def test_list_instances_0(self):
         instances = self.conn.list_instances()
-        self.assertEquals(instances, [])
+        self.assertEqual(instances, [])
 
     def test_list_instance_uuids_0(self):
         instance_uuids = self.conn.list_instance_uuids()
-        self.assertEquals(instance_uuids, [])
+        self.assertEqual(instance_uuids, [])
 
     def test_list_instance_uuids(self):
         uuids = []
@@ -569,7 +569,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
             if not vm_rec["is_control_domain"]:
                 vm_labels.append(vm_rec["name_label"])
 
-        self.assertEquals(vm_labels, [instance['name']])
+        self.assertEqual(vm_labels, [instance['name']])
 
         # Ensure VBDs were torn down
         vbd_labels = []
@@ -577,7 +577,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
             vbd_rec = xenapi_fake.get_record('VBD', vbd_ref)
             vbd_labels.append(vbd_rec["vm_name_label"])
 
-        self.assertEquals(vbd_labels, [instance['name']])
+        self.assertEqual(vbd_labels, [instance['name']])
 
         # Ensure task states changed in correct order
         self.assertIsNone(func_call_matcher.match())
@@ -592,7 +592,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
 
     def create_vm_record(self, conn, os_type, name):
         instances = conn.list_instances()
-        self.assertEquals(instances, [name])
+        self.assertEqual(instances, [name])
 
         # Get Nova record for VM
         vm_info = conn.get_info({'name': name})
@@ -611,24 +611,24 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         vcpus = instance_type['vcpus']
         vcpu_weight = instance_type['vcpu_weight']
 
-        self.assertEquals(self.vm_info['max_mem'], mem_kib)
-        self.assertEquals(self.vm_info['mem'], mem_kib)
-        self.assertEquals(self.vm['memory_static_max'], mem_bytes)
-        self.assertEquals(self.vm['memory_dynamic_max'], mem_bytes)
-        self.assertEquals(self.vm['memory_dynamic_min'], mem_bytes)
-        self.assertEquals(self.vm['VCPUs_max'], str(vcpus))
-        self.assertEquals(self.vm['VCPUs_at_startup'], str(vcpus))
+        self.assertEqual(self.vm_info['max_mem'], mem_kib)
+        self.assertEqual(self.vm_info['mem'], mem_kib)
+        self.assertEqual(self.vm['memory_static_max'], mem_bytes)
+        self.assertEqual(self.vm['memory_dynamic_max'], mem_bytes)
+        self.assertEqual(self.vm['memory_dynamic_min'], mem_bytes)
+        self.assertEqual(self.vm['VCPUs_max'], str(vcpus))
+        self.assertEqual(self.vm['VCPUs_at_startup'], str(vcpus))
         if vcpu_weight == None:
-            self.assertEquals(self.vm['VCPUs_params'], {})
+            self.assertEqual(self.vm['VCPUs_params'], {})
         else:
-            self.assertEquals(self.vm['VCPUs_params'],
-                              {'weight': str(vcpu_weight), 'cap': '0'})
+            self.assertEqual(self.vm['VCPUs_params'],
+                             {'weight': str(vcpu_weight), 'cap': '0'})
 
         # Check that the VM is running according to Nova
-        self.assertEquals(self.vm_info['state'], power_state.RUNNING)
+        self.assertEqual(self.vm_info['state'], power_state.RUNNING)
 
         # Check that the VM is running according to XenAPI.
-        self.assertEquals(self.vm['power_state'], 'Running')
+        self.assertEqual(self.vm['power_state'], 'Running')
 
         if check_injection:
             xenstore_data = self.vm['xenstore_data']
@@ -636,57 +636,57 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
             key = 'vm-data/networking/DEADBEEF0001'
             xenstore_value = xenstore_data[key]
             tcpip_data = ast.literal_eval(xenstore_value)
-            self.assertEquals(tcpip_data,
-                              {'broadcast': '192.168.1.255',
-                               'dns': ['192.168.1.4', '192.168.1.3'],
-                               'gateway': '192.168.1.1',
-                               'gateway_v6': '2001:db8:0:1::1',
-                               'ip6s': [{'enabled': '1',
-                                         'ip': '2001:db8:0:1::1',
-                                         'netmask': 64,
-                                         'gateway': '2001:db8:0:1::1'}],
-                               'ips': [{'enabled': '1',
-                                        'ip': '192.168.1.100',
-                                        'netmask': '255.255.255.0',
-                                        'gateway': '192.168.1.1'},
-                                       {'enabled': '1',
-                                        'ip': '192.168.1.101',
-                                        'netmask': '255.255.255.0',
-                                        'gateway': '192.168.1.1'}],
-                               'label': 'test1',
-                               'mac': 'DE:AD:BE:EF:00:01'})
+            self.assertEqual(tcpip_data,
+                             {'broadcast': '192.168.1.255',
+                              'dns': ['192.168.1.4', '192.168.1.3'],
+                              'gateway': '192.168.1.1',
+                              'gateway_v6': '2001:db8:0:1::1',
+                              'ip6s': [{'enabled': '1',
+                                        'ip': '2001:db8:0:1::1',
+                                        'netmask': 64,
+                                        'gateway': '2001:db8:0:1::1'}],
+                              'ips': [{'enabled': '1',
+                                       'ip': '192.168.1.100',
+                                       'netmask': '255.255.255.0',
+                                       'gateway': '192.168.1.1'},
+                                      {'enabled': '1',
+                                       'ip': '192.168.1.101',
+                                       'netmask': '255.255.255.0',
+                                       'gateway': '192.168.1.1'}],
+                              'label': 'test1',
+                              'mac': 'DE:AD:BE:EF:00:01'})
 
     def check_vm_params_for_windows(self):
-        self.assertEquals(self.vm['platform']['nx'], 'true')
-        self.assertEquals(self.vm['HVM_boot_params'], {'order': 'dc'})
-        self.assertEquals(self.vm['HVM_boot_policy'], 'BIOS order')
+        self.assertEqual(self.vm['platform']['nx'], 'true')
+        self.assertEqual(self.vm['HVM_boot_params'], {'order': 'dc'})
+        self.assertEqual(self.vm['HVM_boot_policy'], 'BIOS order')
 
         # check that these are not set
-        self.assertEquals(self.vm['PV_args'], '')
-        self.assertEquals(self.vm['PV_bootloader'], '')
-        self.assertEquals(self.vm['PV_kernel'], '')
-        self.assertEquals(self.vm['PV_ramdisk'], '')
+        self.assertEqual(self.vm['PV_args'], '')
+        self.assertEqual(self.vm['PV_bootloader'], '')
+        self.assertEqual(self.vm['PV_kernel'], '')
+        self.assertEqual(self.vm['PV_ramdisk'], '')
 
     def check_vm_params_for_linux(self):
-        self.assertEquals(self.vm['platform']['nx'], 'false')
-        self.assertEquals(self.vm['PV_args'], '')
-        self.assertEquals(self.vm['PV_bootloader'], 'pygrub')
+        self.assertEqual(self.vm['platform']['nx'], 'false')
+        self.assertEqual(self.vm['PV_args'], '')
+        self.assertEqual(self.vm['PV_bootloader'], 'pygrub')
 
         # check that these are not set
-        self.assertEquals(self.vm['PV_kernel'], '')
-        self.assertEquals(self.vm['PV_ramdisk'], '')
-        self.assertEquals(self.vm['HVM_boot_params'], {})
-        self.assertEquals(self.vm['HVM_boot_policy'], '')
+        self.assertEqual(self.vm['PV_kernel'], '')
+        self.assertEqual(self.vm['PV_ramdisk'], '')
+        self.assertEqual(self.vm['HVM_boot_params'], {})
+        self.assertEqual(self.vm['HVM_boot_policy'], '')
 
     def check_vm_params_for_linux_with_external_kernel(self):
-        self.assertEquals(self.vm['platform']['nx'], 'false')
-        self.assertEquals(self.vm['PV_args'], 'root=/dev/xvda1')
-        self.assertNotEquals(self.vm['PV_kernel'], '')
-        self.assertNotEquals(self.vm['PV_ramdisk'], '')
+        self.assertEqual(self.vm['platform']['nx'], 'false')
+        self.assertEqual(self.vm['PV_args'], 'root=/dev/xvda1')
+        self.assertNotEqual(self.vm['PV_kernel'], '')
+        self.assertNotEqual(self.vm['PV_ramdisk'], '')
 
         # check that these are not set
-        self.assertEquals(self.vm['HVM_boot_params'], {})
-        self.assertEquals(self.vm['HVM_boot_policy'], '')
+        self.assertEqual(self.vm['HVM_boot_params'], {})
+        self.assertEqual(self.vm['HVM_boot_policy'], '')
 
     def _list_vdis(self):
         url = CONF.xenapi_connection_url
@@ -936,7 +936,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
             config = [line.strip() for line in input.split("\n")]
             # Find the start of eth0 configuration and check it
             index = config.index('auto eth0')
-            self.assertEquals(config[index + 1:index + 8], [
+            self.assertEqual(config[index + 1:index + 8], [
                 'iface eth0 inet static',
                 'address 192.168.1.100',
                 'netmask 255.255.255.0',
@@ -1051,9 +1051,9 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self._create_instance()
         for vif_ref in xenapi_fake.get_all('VIF'):
             vif_rec = xenapi_fake.get_record('VIF', vif_ref)
-            self.assertEquals(vif_rec['qos_algorithm_type'], 'ratelimit')
-            self.assertEquals(vif_rec['qos_algorithm_params']['kbps'],
-                              str(3 * 10 * 1024))
+            self.assertEqual(vif_rec['qos_algorithm_type'], 'ratelimit')
+            self.assertEqual(vif_rec['qos_algorithm_params']['kbps'],
+                             str(3 * 10 * 1024))
 
     def test_spawn_ssh_key_injection(self):
         # Test spawning with key_data on an instance.  Should use
@@ -1083,7 +1083,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self._test_spawn(IMAGE_VHD, None, None,
                          os_type="linux", architecture="x86-64",
                          key_data='ssh-rsa fake_keydata')
-        self.assertEquals(actual_injected_files, injected_files)
+        self.assertEqual(actual_injected_files, injected_files)
 
     def test_spawn_ssh_key_injection_non_rsa(self):
         # Test spawning with key_data on an instance.  Should use
@@ -1112,7 +1112,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self._test_spawn(IMAGE_VHD, None, None,
                          os_type="linux", architecture="x86-64",
                          key_data='ssh-dsa fake_keydata')
-        self.assertEquals(actual_injected_files, injected_files)
+        self.assertEqual(actual_injected_files, injected_files)
 
     def test_spawn_injected_files(self):
         # Test spawning with injected_files.
@@ -1132,7 +1132,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
                          os_type="linux", architecture="x86-64",
                          injected_files=injected_files)
         self.check_vm_params_for_linux()
-        self.assertEquals(actual_injected_files, injected_files)
+        self.assertEqual(actual_injected_files, injected_files)
 
     def test_spawn_agent_upgrade(self):
         self.flags(xenapi_use_agent_default=True)
@@ -1363,7 +1363,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         conn.reboot(self.context, instance, None, "SOFT")
         vm_ref = vm_utils.lookup(session, instance['name'])
         vm = xenapi_fake.get_record('VM', vm_ref)
-        self.assertEquals(vm['power_state'], 'Running')
+        self.assertEqual(vm['power_state'], 'Running')
 
     def test_reboot_unknown_state(self):
         instance = self._create_instance(spawn=False)
@@ -1572,13 +1572,13 @@ class XenAPIDiffieHellmanTestCase(test.NoDBTestCase):
         bob_pub = self.bob.get_public()
         alice_shared = self.alice.compute_shared(bob_pub)
         bob_shared = self.bob.compute_shared(alice_pub)
-        self.assertEquals(alice_shared, bob_shared)
+        self.assertEqual(alice_shared, bob_shared)
 
     def _test_encryption(self, message):
         enc = self.alice.encrypt(message)
         self.assertFalse(enc.endswith('\n'))
         dec = self.bob.decrypt(enc)
-        self.assertEquals(dec, message)
+        self.assertEqual(dec, message)
 
     def test_encrypt_simple_message(self):
         self._test_encryption('This is a simple message.')
@@ -2005,12 +2005,12 @@ class XenAPIImageTypeTestCase(test.NoDBTestCase):
 
     def test_to_string(self):
         # Can convert from type id to type string.
-        self.assertEquals(
+        self.assertEqual(
             vm_utils.ImageType.to_string(vm_utils.ImageType.KERNEL),
             vm_utils.ImageType.KERNEL_STR)
 
     def _assert_role(self, expected_role, image_type_id):
-        self.assertEquals(
+        self.assertEqual(
             expected_role,
             vm_utils.ImageType.get_role(image_type_id))
 
@@ -2070,13 +2070,13 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
 
     def test_host_state(self):
         stats = self.conn.get_host_stats()
-        self.assertEquals(stats['disk_total'], 40000)
-        self.assertEquals(stats['disk_used'], 20000)
-        self.assertEquals(stats['host_memory_total'], 10)
-        self.assertEquals(stats['host_memory_overhead'], 20)
-        self.assertEquals(stats['host_memory_free'], 30)
-        self.assertEquals(stats['host_memory_free_computed'], 40)
-        self.assertEquals(stats['hypervisor_hostname'], 'fake-xenhost')
+        self.assertEqual(stats['disk_total'], 40000)
+        self.assertEqual(stats['disk_used'], 20000)
+        self.assertEqual(stats['host_memory_total'], 10)
+        self.assertEqual(stats['host_memory_overhead'], 20)
+        self.assertEqual(stats['host_memory_free'], 30)
+        self.assertEqual(stats['host_memory_free_computed'], 40)
+        self.assertEqual(stats['hypervisor_hostname'], 'fake-xenhost')
 
     def test_host_state_missing_sr(self):
         def fake_safe_find_sr(session):
@@ -2115,14 +2115,14 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
             ['host']})
         self._test_host_action(self.conn.set_host_enabled, True, 'enabled')
         service = db.service_get_by_args(self.context, 'host', 'nova-compute')
-        self.assertEquals(service.disabled, False)
+        self.assertEqual(service.disabled, False)
 
     def test_set_enable_host_disable(self):
         values = _create_service_entries(self.context, values={'nova':
             ['host']})
         self._test_host_action(self.conn.set_host_enabled, False, 'disabled')
         service = db.service_get_by_args(self.context, 'host', 'nova-compute')
-        self.assertEquals(service.disabled, True)
+        self.assertEqual(service.disabled, True)
 
     def test_get_host_uptime(self):
         result = self.conn.get_host_uptime('host')
@@ -2135,12 +2135,12 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
     def test_supported_instances_is_calculated_by_to_supported_instances(self):
 
         def to_supported_instances(somedata):
-            self.assertEquals(None, somedata)
+            self.assertEqual(None, somedata)
             return "SOMERETURNVALUE"
         self.stubs.Set(host, 'to_supported_instances', to_supported_instances)
 
         stats = self.conn.get_host_stats()
-        self.assertEquals("SOMERETURNVALUE", stats['supported_instances'])
+        self.assertEqual("SOMERETURNVALUE", stats['supported_instances'])
 
     def test_update_stats_caches_hostname(self):
         self.mox.StubOutWithMock(host, 'call_xenhost')
@@ -2176,19 +2176,19 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
 
 class ToSupportedInstancesTestCase(test.NoDBTestCase):
     def test_default_return_value(self):
-        self.assertEquals([],
+        self.assertEqual([],
             host.to_supported_instances(None))
 
     def test_return_value(self):
-        self.assertEquals([('x86_64', 'xapi', 'xen')],
+        self.assertEqual([('x86_64', 'xapi', 'xen')],
              host.to_supported_instances([u'xen-3.0-x86_64']))
 
     def test_invalid_values_do_not_break(self):
-        self.assertEquals([('x86_64', 'xapi', 'xen')],
+        self.assertEqual([('x86_64', 'xapi', 'xen')],
              host.to_supported_instances([u'xen-3.0-x86_64', 'spam']))
 
     def test_multiple_values(self):
-        self.assertEquals(
+        self.assertEqual(
             [
                 ('x86_64', 'xapi', 'xen'),
                 ('x86_32', 'xapi', 'hvm')
@@ -2682,15 +2682,15 @@ class XenAPIDom0IptablesFirewallTestCase(stubs.XenAPITestBase):
         self.flags(use_ipv6=True)
         network_info = fake_network.fake_get_instance_nw_info(self.stubs, 1)
         rulesv4, rulesv6 = self.fw._filters_for_instance("fake", network_info)
-        self.assertEquals(len(rulesv4), 2)
-        self.assertEquals(len(rulesv6), 1)
+        self.assertEqual(len(rulesv4), 2)
+        self.assertEqual(len(rulesv6), 1)
 
     def test_filters_for_instance_without_ip_v6(self):
         self.flags(use_ipv6=False)
         network_info = fake_network.fake_get_instance_nw_info(self.stubs, 1)
         rulesv4, rulesv6 = self.fw._filters_for_instance("fake", network_info)
-        self.assertEquals(len(rulesv4), 2)
-        self.assertEquals(len(rulesv6), 0)
+        self.assertEqual(len(rulesv4), 2)
+        self.assertEqual(len(rulesv6), 0)
 
     def test_multinic_iptables(self):
         ipv4_rules_per_addr = 1
@@ -2717,8 +2717,8 @@ class XenAPIDom0IptablesFirewallTestCase(stubs.XenAPITestBase):
         # Extra rules are for the DHCP request
         rules = (ipv4_rules_per_addr * ipv4_addr_per_network *
                  networks_count) + 2
-        self.assertEquals(ipv4_network_rules, rules)
-        self.assertEquals(ipv6_network_rules,
+        self.assertEqual(ipv4_network_rules, rules)
+        self.assertEqual(ipv6_network_rules,
                   ipv6_rules_per_addr * ipv6_addr_per_network * networks_count)
 
     def test_do_refresh_security_group_rules(self):
@@ -2911,10 +2911,10 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
         calls = []
 
         def pool_add_to_aggregate(context, aggregate, host, slave_info=None):
-            self.assertEquals("CONTEXT", context)
-            self.assertEquals("AGGREGATE", aggregate)
-            self.assertEquals("HOST", host)
-            self.assertEquals("SLAVEINFO", slave_info)
+            self.assertEqual("CONTEXT", context)
+            self.assertEqual("AGGREGATE", aggregate)
+            self.assertEqual("HOST", host)
+            self.assertEqual("SLAVEINFO", slave_info)
             calls.append(pool_add_to_aggregate)
         self.stubs.Set(self.conn._pool,
                        "add_to_aggregate",
@@ -2931,10 +2931,10 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
 
         def pool_remove_from_aggregate(context, aggregate, host,
                                        slave_info=None):
-            self.assertEquals("CONTEXT", context)
-            self.assertEquals("AGGREGATE", aggregate)
-            self.assertEquals("HOST", host)
-            self.assertEquals("SLAVEINFO", slave_info)
+            self.assertEqual("CONTEXT", context)
+            self.assertEqual("AGGREGATE", aggregate)
+            self.assertEqual("HOST", host)
+            self.assertEqual("SLAVEINFO", slave_info)
             calls.append(pool_remove_from_aggregate)
         self.stubs.Set(self.conn._pool,
                        "remove_from_aggregate",
@@ -3230,19 +3230,19 @@ class HypervisorPoolTestCase(test.NoDBTestCase):
 class SwapXapiHostTestCase(test.NoDBTestCase):
 
     def test_swapping(self):
-        self.assertEquals(
+        self.assertEqual(
             "http://otherserver:8765/somepath",
             pool.swap_xapi_host(
                 "http://someserver:8765/somepath", 'otherserver'))
 
     def test_no_port(self):
-        self.assertEquals(
+        self.assertEqual(
             "http://otherserver/somepath",
             pool.swap_xapi_host(
                 "http://someserver/somepath", 'otherserver'))
 
     def test_no_path(self):
-        self.assertEquals(
+        self.assertEqual(
             "http://otherserver",
             pool.swap_xapi_host(
                 "http://someserver", 'otherserver'))
@@ -3288,8 +3288,8 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
         fake_network_info = "network_info"
 
         def fake_fw(instance, network_info):
-            self.assertEquals(instance, fake_instance)
-            self.assertEquals(network_info, fake_network_info)
+            self.assertEqual(instance, fake_instance)
+            self.assertEqual(network_info, fake_network_info)
             fake_fw.called += 1
 
         fake_fw.called = 0
@@ -3602,8 +3602,8 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
         class Session(xenapi_fake.SessionBase):
             def VM_migrate_send(self_, session, vmref, migrate_data, islive,
                                 vdi_map, vif_map, options):
-                self.assertEquals('SOMEDATA', migrate_data)
-                self.assertEquals(fake_vdi_map, vdi_map)
+                self.assertEqual('SOMEDATA', migrate_data)
+                self.assertEqual(fake_vdi_map, vdi_map)
 
         stubs.stubout_session(self.stubs, Session)
 
@@ -3631,8 +3631,8 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
 
         class Session(xenapi_fake.SessionBase):
             def VM_pool_migrate(self_, session, vm_ref, host_ref, options):
-                self.assertEquals("fake_ref", host_ref)
-                self.assertEquals({"live": "true"}, options)
+                self.assertEqual("fake_ref", host_ref)
+                self.assertEqual({"live": "true"}, options)
                 raise IOError()
 
         stubs.stubout_session(self.stubs, Session)
@@ -3660,14 +3660,14 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
         vm_ref = "fake_vm_ref"
 
         def fake_find_sr(_session):
-            self.assertEquals(conn._session, _session)
+            self.assertEqual(conn._session, _session)
             return "source_sr_ref"
         self.stubs.Set(vm_utils, "safe_find_sr", fake_find_sr)
 
         def fake_get_instance_vdis_for_sr(_session, _vm_ref, _sr_ref):
-            self.assertEquals(conn._session, _session)
-            self.assertEquals(vm_ref, _vm_ref)
-            self.assertEquals("source_sr_ref", _sr_ref)
+            self.assertEqual(conn._session, _session)
+            self.assertEqual(vm_ref, _vm_ref)
+            self.assertEqual("source_sr_ref", _sr_ref)
             return ["vdi0", "vdi1"]
 
         self.stubs.Set(vm_utils, "get_instance_vdis_for_sr",
@@ -3675,8 +3675,8 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
 
         result = conn._vmops._generate_vdi_map("dest_sr_ref", vm_ref)
 
-        self.assertEquals({"vdi0": "dest_sr_ref",
-                           "vdi1": "dest_sr_ref"}, result)
+        self.assertEqual({"vdi0": "dest_sr_ref",
+                          "vdi1": "dest_sr_ref"}, result)
 
 
 class XenAPIInjectMetadataTestCase(stubs.XenAPITestBaseNoDB):
@@ -3904,7 +3904,7 @@ class XenAPISessionTestCase(test.NoDBTestCase):
                     'xencenter_min': '1.10'
                 })
 
-        self.assertEquals(
+        self.assertEqual(
             ((1, 6, 0), None),
             session._get_product_version_and_brand()
         )
@@ -3916,7 +3916,7 @@ class XenAPISessionTestCase(test.NoDBTestCase):
                     'platform_version': '0.0.1'
                 })
 
-        self.assertEquals(
+        self.assertEqual(
             ((6, 0, 50), 'XenServer'),
             session._get_product_version_and_brand()
         )
@@ -3990,8 +3990,8 @@ class XenAPISessionTestCase(test.NoDBTestCase):
                     print line
                     plugin_version = line.strip()[17:].strip('"')
 
-        self.assertEquals(session.PLUGIN_REQUIRED_VERSION,
-                          plugin_version)
+        self.assertEqual(session.PLUGIN_REQUIRED_VERSION,
+                         plugin_version)
 
 
 class XenAPIFakeTestCase(test.NoDBTestCase):

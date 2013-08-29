@@ -44,7 +44,7 @@ class TestDelegatingToCommand(test.NoDBTestCase):
         result = store.upload_image(
             'ctx', 'session', 'instance', 'vdis', 'image_id')
 
-        self.assertEquals('result', result)
+        self.assertEqual('result', result)
 
 
 class TestUploadToGlanceAsRawTgz(test.NoDBTestCase):
@@ -109,7 +109,7 @@ class TestUploadToGlanceAsRawTgz(test.NoDBTestCase):
 
         self.mox.ReplayAll()
 
-        self.assertEquals('vdi_ref', store._get_vdi_ref())
+        self.assertEqual('vdi_ref', store._get_vdi_ref())
 
     def test__get_virtual_size(self):
         session = self.mox.CreateMock(driver.XenAPISession)
@@ -172,13 +172,13 @@ class TestTarGzProducer(test.NoDBTestCase):
 
         producer.start()
 
-        self.assertEquals(100, tinfo.size)
+        self.assertEqual(100, tinfo.size)
 
     def test_get_metadata(self):
         producer = vdi_through_dev.TarGzProducer('devpath', 'writefile',
             '100', 'fname')
 
-        self.assertEquals({
+        self.assertEqual({
             'disk_format': 'raw',
             'container_format': 'tgz'},
             producer.get_metadata())

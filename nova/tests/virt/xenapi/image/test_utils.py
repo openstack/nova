@@ -39,14 +39,14 @@ class GlanceImageTestCase(test.NoDBTestCase):
 
         image = self._get_image()
 
-        self.assertEquals('id', image._image_id)
+        self.assertEqual('id', image._image_id)
 
     def test__image_service(self):
         image_service = self._stub_out_glance_services()
         self.mox.ReplayAll()
 
         image = self._get_image()
-        self.assertEquals(image_service, image._image_service)
+        self.assertEqual(image_service, image._image_service)
 
     def test_meta(self):
         image_service = self._stub_out_glance_services()
@@ -54,7 +54,7 @@ class GlanceImageTestCase(test.NoDBTestCase):
         self.mox.ReplayAll()
 
         image = self._get_image()
-        self.assertEquals('metadata', image.meta)
+        self.assertEqual('metadata', image.meta)
 
     def test_meta_caching(self):
         image_service = self._stub_out_glance_services()
@@ -62,7 +62,7 @@ class GlanceImageTestCase(test.NoDBTestCase):
 
         image = self._get_image()
         image._cached_meta = 'metadata'
-        self.assertEquals('metadata', image.meta)
+        self.assertEqual('metadata', image.meta)
 
     def test_download_to(self):
         image_service = self._stub_out_glance_services()
@@ -70,7 +70,7 @@ class GlanceImageTestCase(test.NoDBTestCase):
         self.mox.ReplayAll()
 
         image = self._get_image()
-        self.assertEquals('result', image.download_to('fobj'))
+        self.assertEqual('result', image.download_to('fobj'))
 
     def test_is_raw_tgz_empty_meta(self):
         self._stub_out_glance_services()
@@ -79,7 +79,7 @@ class GlanceImageTestCase(test.NoDBTestCase):
         image = self._get_image()
         image._cached_meta = {}
 
-        self.assertEquals(False, image.is_raw_tgz())
+        self.assertEqual(False, image.is_raw_tgz())
 
     def test_is_raw_tgz_for_raw_tgz(self):
         self._stub_out_glance_services()
@@ -88,7 +88,7 @@ class GlanceImageTestCase(test.NoDBTestCase):
         image = self._get_image()
         image._cached_meta = {'disk_format': 'raw', 'container_format': 'tgz'}
 
-        self.assertEquals(True, image.is_raw_tgz())
+        self.assertEqual(True, image.is_raw_tgz())
 
     def test_data(self):
         image_service = self._stub_out_glance_services()
@@ -97,7 +97,7 @@ class GlanceImageTestCase(test.NoDBTestCase):
 
         image = self._get_image()
 
-        self.assertEquals('data', image.data())
+        self.assertEqual('data', image.data())
 
 
 class RawImageTestCase(test.NoDBTestCase):
@@ -107,7 +107,7 @@ class RawImageTestCase(test.NoDBTestCase):
         raw_image = utils.RawImage(glance_image)
         self.mox.ReplayAll()
 
-        self.assertEquals(123, raw_image.get_size())
+        self.assertEqual(123, raw_image.get_size())
 
     def test_stream_to(self):
         glance_image = self.mox.CreateMock(utils.GlanceImage)
@@ -115,7 +115,7 @@ class RawImageTestCase(test.NoDBTestCase):
         raw_image = utils.RawImage(glance_image)
         self.mox.ReplayAll()
 
-        self.assertEquals('result', raw_image.stream_to('file'))
+        self.assertEqual('result', raw_image.stream_to('file'))
 
 
 class TestIterableBasedFile(test.NoDBTestCase):
@@ -126,14 +126,14 @@ class TestIterableBasedFile(test.NoDBTestCase):
 
         the_file = utils.IterableToFileAdapter(FakeIterable())
 
-        self.assertEquals('iterator', the_file.iterator)
+        self.assertEqual('iterator', the_file.iterator)
 
     def test_read_one_character(self):
         the_file = utils.IterableToFileAdapter([
             'chunk1', 'chunk2'
         ])
 
-        self.assertEquals('c', the_file.read(1))
+        self.assertEqual('c', the_file.read(1))
 
     def test_read_stores_remaining_characters(self):
         the_file = utils.IterableToFileAdapter([
@@ -142,31 +142,31 @@ class TestIterableBasedFile(test.NoDBTestCase):
 
         the_file.read(1)
 
-        self.assertEquals('hunk1', the_file.remaining_data)
+        self.assertEqual('hunk1', the_file.remaining_data)
 
     def test_read_remaining_characters(self):
         the_file = utils.IterableToFileAdapter([
             'chunk1', 'chunk2'
         ])
 
-        self.assertEquals('c', the_file.read(1))
-        self.assertEquals('h', the_file.read(1))
+        self.assertEqual('c', the_file.read(1))
+        self.assertEqual('h', the_file.read(1))
 
     def test_read_reached_end_of_file(self):
         the_file = utils.IterableToFileAdapter([
             'chunk1', 'chunk2'
         ])
 
-        self.assertEquals('chunk1', the_file.read(100))
-        self.assertEquals('chunk2', the_file.read(100))
-        self.assertEquals('', the_file.read(100))
+        self.assertEqual('chunk1', the_file.read(100))
+        self.assertEqual('chunk2', the_file.read(100))
+        self.assertEqual('', the_file.read(100))
 
     def test_empty_chunks(self):
         the_file = utils.IterableToFileAdapter([
             '', '', 'chunk2'
         ])
 
-        self.assertEquals('chunk2', the_file.read(100))
+        self.assertEqual('chunk2', the_file.read(100))
 
 
 class RawTGZTestCase(test.NoDBTestCase):
@@ -181,7 +181,7 @@ class RawTGZTestCase(test.NoDBTestCase):
         self.mox.ReplayAll()
 
         result = image._as_tarfile()
-        self.assertEquals('tf', result)
+        self.assertEqual('tf', result)
 
     def test_as_file(self):
         self.mox.StubOutWithMock(utils, 'IterableToFileAdapter')
@@ -194,7 +194,7 @@ class RawTGZTestCase(test.NoDBTestCase):
 
         result = image._as_file()
 
-        self.assertEquals('data-as-file', result)
+        self.assertEqual('data-as-file', result)
 
     def test_get_size(self):
         tar_file = self.mox.CreateMock(tarfile.TarFile)
@@ -212,9 +212,9 @@ class RawTGZTestCase(test.NoDBTestCase):
 
         result = image.get_size()
 
-        self.assertEquals(124, result)
-        self.assertEquals(image._tar_info, tar_info)
-        self.assertEquals(image._tar_file, tar_file)
+        self.assertEqual(124, result)
+        self.assertEqual(image._tar_info, tar_info)
+        self.assertEqual(image._tar_file, tar_file)
 
     def test_get_size_called_twice(self):
         tar_file = self.mox.CreateMock(tarfile.TarFile)
@@ -233,9 +233,9 @@ class RawTGZTestCase(test.NoDBTestCase):
         image.get_size()
         result = image.get_size()
 
-        self.assertEquals(124, result)
-        self.assertEquals(image._tar_info, tar_info)
-        self.assertEquals(image._tar_file, tar_file)
+        self.assertEqual(124, result)
+        self.assertEqual(image._tar_info, tar_info)
+        self.assertEqual(image._tar_file, tar_file)
 
     def test_stream_to_without_size_retrieved(self):
         source_tar = self.mox.CreateMock(tarfile.TarFile)

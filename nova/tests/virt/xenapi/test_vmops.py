@@ -74,7 +74,7 @@ class VMOpsTestCase(VMOpsTestBase):
         return mock_session
 
     def test_check_resize_func_name_defaults_to_VDI_resize(self):
-        self.assertEquals(
+        self.assertEqual(
             'VDI.resize',
             self._vmops.check_resize_func_name())
 
@@ -151,14 +151,14 @@ class InjectAutoDiskConfigTestCase(VMOpsTestBase):
         instance = {"name": "dummy", "uuid": "1234", "auto_disk_config": True}
         self.vmops._inject_auto_disk_config(instance, vm_ref)
         xenstore_data = vm['xenstore_data']
-        self.assertEquals(xenstore_data['vm-data/auto-disk-config'], 'True')
+        self.assertEqual(xenstore_data['vm-data/auto-disk-config'], 'True')
 
     def test_inject_auto_disk_config_none_as_false(self):
         vm, vm_ref = self.create_vm("dummy")
         instance = {"name": "dummy", "uuid": "1234", "auto_disk_config": None}
         self.vmops._inject_auto_disk_config(instance, vm_ref)
         xenstore_data = vm['xenstore_data']
-        self.assertEquals(xenstore_data['vm-data/auto-disk-config'], 'False')
+        self.assertEqual(xenstore_data['vm-data/auto-disk-config'], 'False')
 
 
 class GetConsoleOutputTestCase(VMOpsTestBase):
