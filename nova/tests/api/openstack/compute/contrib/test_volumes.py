@@ -75,6 +75,10 @@ def fake_create_snapshot(self, context, volume, name, description):
             'display_description': 'myVolumeDescription'}
 
 
+def fake_delete_snapshot(self, context, snapshot_id):
+    pass
+
+
 def fake_get_instance_bdms(self, context, instance):
     return [{'id': 1,
              'instance_uuid': instance['uuid'],
@@ -768,3 +772,24 @@ class CreateSnapshotTestCase(test.TestCase):
         self.body['snapshot']['force'] = 'foo'
         self.assertRaises(exception.InvalidParameterValue,
                           self.controller.create, self.req, body=self.body)
+
+
+class DeleteSnapshotTestCase(test.TestCase):
+    def setUp(self):
+        super(DeleteSnapshotTestCase, self).setUp()
+        self.controller = volumes.SnapshotController()
+        self.stubs.Set(cinder.API, 'get', fake_get_volume)
+        self.stubs.Set(cinder.API, 'create_snapshot_force',
+                       fake_create_snapshot)
+        self.stubs.Set(cinder.API, 'create_snapshot', fake_create_snapshot)
+        self.stubs.Set(cinder.API, 'delete_snapshot', fake_delete_snapshot)
+        self.req = fakes.HTTPRequest.blank('/v2/fake/os-snapshots')
+
+    def test_normal_delete(self):
+        self.req.method = 'POST'
+        self.body = {'snapshot': {'volume_id': 1}}
+        result = self.controller.create(self.req, body=self.body)
+
+        self.req.method = 'DELETE'
+        result = self.controller.delete(self.req, result['snapshot']['id'])
+        self.assertEqual(result.status_int, 202)
