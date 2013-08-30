@@ -4509,6 +4509,29 @@ class ComputeTestCase(BaseTestCase):
                                                   instance,
                                                   NotImplementedError('test'))
 
+    def test_add_instance_fault_long_message(self):
+        instance = self._create_fake_instance()
+
+        message = 300 * 'a'
+
+        def fake_db_fault_create(ctxt, values):
+            expected = {
+                'code': 500,
+                'message': message[:255],
+                'details': '',
+                'instance_uuid': instance['uuid'],
+                'host': self.compute.host
+            }
+            self.assertEquals(expected, values)
+
+        self.stubs.Set(nova.db, 'instance_fault_create', fake_db_fault_create)
+
+        ctxt = context.get_admin_context()
+        compute_utils.add_instance_fault_from_exc(ctxt,
+                                                  self.compute.conductor_api,
+                                                  instance,
+                                                  NotImplementedError(message))
+
     def test_cleanup_running_deleted_instances(self):
         admin_context = context.get_admin_context()
         deleted_at = (timeutils.utcnow() -
