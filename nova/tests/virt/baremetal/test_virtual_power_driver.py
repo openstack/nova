@@ -318,14 +318,9 @@ class VPDClassMethodsTestCase(BareMetalVPDTestCase):
         self._create_pm()
 
         self.mox.StubOutWithMock(self.pm, '_check_for_node')
-        self.mox.StubOutWithMock(self.pm, '_run_command')
-        self.pm._check_for_node().AndReturn(['"NotFoundNode"'])
-        self.pm._run_command(self.pm._vp_cmd.list_running_cmd).\
-                AndReturn(['"NotFoundNode"'])
-        self.pm._matched_name = 'testNode'
+        self.pm._check_for_node().AndReturn(None)
         self.mox.ReplayAll()
-        state = self.pm.is_power_on()
-        self.assertEqual(state, False)
+        self.assertRaises(exception.NodeNotFound, self.pm.is_power_on)
         self.mox.VerifyAll()
 
     def test_is_power_on_match_subname(self):
