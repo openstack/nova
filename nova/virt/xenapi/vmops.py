@@ -702,8 +702,7 @@ class VMOps(object):
             # Inject files, if necessary
             if injected_files:
                 # Inject any files, if specified
-                for path, contents in injected_files:
-                    agent.inject_file(path, contents)
+                agent.inject_files(injected_files)
 
             # Set admin password, if necessary
             if admin_password and not no_agent:
