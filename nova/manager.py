@@ -152,13 +152,14 @@ class SchedulerDependentManager(Manager):
             capabilities = [capabilities]
         self.last_capabilities = capabilities
 
-    @periodic_task.periodic_task
     def publish_service_capabilities(self, context):
         """Pass data back to the scheduler.
 
         Called at a periodic interval. And also called via rpc soon after
         the start of the scheduler.
         """
+        #NOTE(jogo): this is now deprecated, unused and can be removed in
+        #V3.0 of compute  RPCAPI
         if self.last_capabilities:
             LOG.debug(_('Notifying Schedulers of capabilities ...'))
             self.scheduler_rpcapi.update_service_capabilities(context,

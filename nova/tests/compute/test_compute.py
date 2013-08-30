@@ -95,10 +95,6 @@ FAKE_IMAGE_REF = 'fake-image-ref'
 NODENAME = 'fakenode1'
 
 
-def nop_report_driver_status(self):
-    pass
-
-
 def get_primitive_instance_by_uuid(context, instance_uuid):
     """
     Helper method to get an instance and then convert it to
@@ -4367,9 +4363,6 @@ class ComputeTestCase(BaseTestCase):
 
     def test_run_kill_vm(self):
         # Detect when a vm is terminated behind the scenes.
-        self.stubs.Set(compute_manager.ComputeManager,
-                '_report_driver_status', nop_report_driver_status)
-
         instance = jsonutils.to_primitive(self._create_fake_instance())
 
         self.compute.run_instance(self.context, instance=instance)

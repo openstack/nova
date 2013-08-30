@@ -29,7 +29,6 @@ from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova.conductor import api as conductor_api
 from nova.conductor.tasks import live_migrate
-import nova.context
 from nova import exception
 from nova import manager
 from nova.objects import instance as instance_obj
@@ -68,16 +67,12 @@ class SchedulerManager(manager.Manager):
         super(SchedulerManager, self).__init__(service_name='scheduler',
                                                *args, **kwargs)
 
-    def post_start_hook(self):
-        """After we start up and can receive messages via RPC, tell all
-        compute nodes to send us their capabilities.
-        """
-        ctxt = nova.context.get_admin_context()
-        compute_rpcapi.ComputeAPI().publish_service_capabilities(ctxt)
-
     def update_service_capabilities(self, context, service_name,
                                     host, capabilities):
         """Process a capability update from a service node."""
+        #NOTE(jogo) This is deprecated, but is used by the deprecated
+        # publish_service_capabilities call. So this can begin its removal
+        # process once publish_service_capabilities is removed.
         if not isinstance(capabilities, list):
             capabilities = [capabilities]
         for capability in capabilities:
