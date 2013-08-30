@@ -519,6 +519,9 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
 
         self.tracker.update_available_resource(self.context)
 
+        # confirm tracker is adding in host_ip
+        self.assertTrue(self.compute.get('host_ip') is not None)
+
         # confirm that resource usage is derived from instance usages,
         # not virt layer:
         self.assertEqual(claim_mem + FAKE_VIRT_MEMORY_OVERHEAD,
