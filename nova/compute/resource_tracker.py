@@ -121,8 +121,9 @@ class ResourceTracker(object):
             # Mark resources in-use and update stats
             self._update_usage_from_instance(self.compute_node, instance_ref)
 
+            elevated = context.elevated()
             # persist changes to the compute node:
-            self._update(context, self.compute_node)
+            self._update(elevated, self.compute_node)
 
             return claim
 
