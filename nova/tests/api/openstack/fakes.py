@@ -333,8 +333,8 @@ class FakeRequestContext(context.RequestContext):
 
 class HTTPRequest(os_wsgi.Request):
 
-    @classmethod
-    def blank(cls, *args, **kwargs):
+    @staticmethod
+    def blank(*args, **kwargs):
         kwargs['base_url'] = 'http://localhost/v2'
         use_admin_context = kwargs.pop('use_admin_context', False)
         out = os_wsgi.Request.blank(*args, **kwargs)
@@ -345,8 +345,8 @@ class HTTPRequest(os_wsgi.Request):
 
 class HTTPRequestV3(os_wsgi.Request):
 
-    @classmethod
-    def blank(cls, *args, **kwargs):
+    @staticmethod
+    def blank(*args, **kwargs):
         kwargs['base_url'] = 'http://localhost/v3'
         use_admin_context = kwargs.pop('use_admin_context', False)
         out = os_wsgi.Request.blank(*args, **kwargs)

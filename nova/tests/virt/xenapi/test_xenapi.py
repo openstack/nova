@@ -2323,12 +2323,12 @@ class XenAPIBWCountersTestCase(stubs.XenAPITestBase):
     def _fake_list_vms(cls, session):
         return cls.FAKE_VMS.iteritems()
 
-    @classmethod
-    def _fake_fetch_bandwidth_mt(cls, session):
+    @staticmethod
+    def _fake_fetch_bandwidth_mt(session):
         return {}
 
-    @classmethod
-    def _fake_fetch_bandwidth(cls, session):
+    @staticmethod
+    def _fake_fetch_bandwidth(session):
         return {'42':
                     {'0': {'bw_in': 21024, 'bw_out': 22048},
                      '1': {'bw_in': 231337, 'bw_out': 221212121}},
@@ -2342,7 +2342,7 @@ class XenAPIBWCountersTestCase(stubs.XenAPITestBase):
                      dict(name='test2', uuid='4-5-6')]
 
         self.stubs.Set(vm_utils, 'fetch_bandwidth',
-                       XenAPIBWCountersTestCase._fake_fetch_bandwidth)
+                       self._fake_fetch_bandwidth)
         result = self.conn.get_all_bw_counters(instances)
         self.assertEqual(len(result), 4)
         self.assertIn(dict(uuid='1-2-3',
@@ -2370,7 +2370,7 @@ class XenAPIBWCountersTestCase(stubs.XenAPITestBase):
         instances = [dict(name='instance-0001', uuid='1-2-3-4-5')]
 
         self.stubs.Set(vm_utils, 'fetch_bandwidth',
-                       XenAPIBWCountersTestCase._fake_fetch_bandwidth_mt)
+                       self._fake_fetch_bandwidth_mt)
         result = self.conn.get_all_bw_counters(instances)
         self.assertEqual(result, [])
 

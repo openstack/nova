@@ -453,8 +453,8 @@ class LinuxNetworkTestCase(test.TestCase):
 
         info = {}
 
-        @classmethod
-        def test_ensure(_self, vlan, bridge, interface, network, mac_address):
+        @staticmethod
+        def test_ensure(vlan, bridge, interface, network, mac_address):
             info['passed_interface'] = interface
 
         self.stubs.Set(linux_net.LinuxBridgeInterfaceDriver,
@@ -483,8 +483,8 @@ class LinuxNetworkTestCase(test.TestCase):
 
         info = {}
 
-        @classmethod
-        def test_ensure(_self, bridge, interface, network, gateway):
+        @staticmethod
+        def test_ensure(bridge, interface, network, gateway):
             info['passed_interface'] = interface
 
         self.stubs.Set(linux_net.LinuxBridgeInterfaceDriver,
@@ -595,8 +595,8 @@ class LinuxNetworkTestCase(test.TestCase):
 
         driver = linux_net.LinuxBridgeInterfaceDriver()
 
-        @classmethod
-        def fake_ensure(_self, bridge, interface, network, gateway):
+        @staticmethod
+        def fake_ensure(bridge, interface, network, gateway):
             return bridge
 
         self.stubs.Set(linux_net.LinuxBridgeInterfaceDriver,
@@ -639,8 +639,8 @@ class LinuxNetworkTestCase(test.TestCase):
         executes = []
         inputs = []
 
-        @classmethod
-        def fake_remove(_self, bridge, gateway):
+        @staticmethod
+        def fake_remove(bridge, gateway):
             return
 
         self.stubs.Set(linux_net.LinuxBridgeInterfaceDriver,
@@ -686,8 +686,8 @@ class LinuxNetworkTestCase(test.TestCase):
 
         driver = linux_net.LinuxBridgeInterfaceDriver()
 
-        @classmethod
-        def fake_ensure(_self, bridge, interface, network, gateway):
+        @staticmethod
+        def fake_ensure(bridge, interface, network, gateway):
             return bridge
 
         self.stubs.Set(linux_net.LinuxBridgeInterfaceDriver,
@@ -730,8 +730,8 @@ class LinuxNetworkTestCase(test.TestCase):
         executes = []
         inputs = []
 
-        @classmethod
-        def fake_remove(_self, bridge, gateway):
+        @staticmethod
+        def fake_remove(bridge, gateway):
             return
 
         self.stubs.Set(linux_net.LinuxBridgeInterfaceDriver,

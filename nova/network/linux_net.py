@@ -1420,24 +1420,24 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
     def get_dev(self, network):
         return network['bridge']
 
-    @classmethod
-    def ensure_vlan_bridge(_self, vlan_num, bridge, bridge_interface,
-                                            net_attrs=None, mac_address=None):
+    @staticmethod
+    def ensure_vlan_bridge(vlan_num, bridge, bridge_interface,
+                           net_attrs=None, mac_address=None):
         """Create a vlan and bridge unless they already exist."""
         interface = LinuxBridgeInterfaceDriver.ensure_vlan(vlan_num,
                                                bridge_interface, mac_address)
         LinuxBridgeInterfaceDriver.ensure_bridge(bridge, interface, net_attrs)
         return interface
 
-    @classmethod
-    def remove_vlan_bridge(cls, vlan_num, bridge):
+    @staticmethod
+    def remove_vlan_bridge(vlan_num, bridge):
         """Delete a bridge and vlan."""
         LinuxBridgeInterfaceDriver.remove_bridge(bridge)
         LinuxBridgeInterfaceDriver.remove_vlan(vlan_num)
 
-    @classmethod
+    @staticmethod
     @utils.synchronized('lock_vlan', external=True)
-    def ensure_vlan(_self, vlan_num, bridge_interface, mac_address=None):
+    def ensure_vlan(vlan_num, bridge_interface, mac_address=None):
         """Create a vlan unless it already exists."""
         interface = 'vlan%s' % vlan_num
         if not device_exists(interface):
@@ -1460,16 +1460,16 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
                          check_exit_code=[0, 2, 254])
         return interface
 
-    @classmethod
+    @staticmethod
     @utils.synchronized('lock_vlan', external=True)
-    def remove_vlan(cls, vlan_num):
+    def remove_vlan(vlan_num):
         """Delete a vlan."""
         vlan_interface = 'vlan%s' % vlan_num
         delete_net_dev(vlan_interface)
 
-    @classmethod
+    @staticmethod
     @utils.synchronized('lock_bridge', external=True)
-    def ensure_bridge(_self, bridge, interface, net_attrs=None, gateway=True,
+    def ensure_bridge(bridge, interface, net_attrs=None, gateway=True,
                       filtering=True):
         """Create a bridge unless it already exists.
 
@@ -1552,9 +1552,9 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
                                      ('--out-interface %s -j %s'
                                       % (bridge, CONF.iptables_drop_action)))
 
-    @classmethod
+    @staticmethod
     @utils.synchronized('lock_bridge', external=True)
-    def remove_bridge(cls, bridge, gateway=True, filtering=True):
+    def remove_bridge(bridge, gateway=True, filtering=True):
         """Delete a bridge."""
         if not device_exists(bridge):
             return
