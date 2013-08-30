@@ -1513,7 +1513,7 @@
 
 # Modules of exceptions that are permitted to be recreatedupon
 # receiving exception data from an rpc call. (list value)
-#allowed_rpc_exception_modules=nova.openstack.common.exception,nova.exception,cinder.exception,exceptions
+#allowed_rpc_exception_modules=nova.exception,cinder.exception,exceptions
 
 # If passed, use a fake RabbitMQ provider (boolean value)
 #fake_rabbit=false
@@ -1521,6 +1521,17 @@
 # AMQP exchange to connect to if using RabbitMQ or Qpid
 # (string value)
 #control_exchange=openstack
+
+
+#
+# Options defined in nova.openstack.common.rpc.amqp
+#
+
+# Use durable queues in amqp. (boolean value)
+#amqp_durable_queues=false
+
+# Auto-delete queues in amqp. (boolean value)
+#amqp_auto_delete=false
 
 
 #
@@ -1578,9 +1589,6 @@
 # value)
 #rabbit_max_retries=0
 
-# use durable queues in RabbitMQ (boolean value)
-#rabbit_durable_queues=false
-
 # use H/A queues in RabbitMQ (x-ha-policy: all).You need to
 # wipe RabbitMQ database when changing this option. (boolean
 # value)
@@ -1619,6 +1627,14 @@
 
 # Disable Nagle algorithm (boolean value)
 #qpid_tcp_nodelay=true
+
+# The qpid topology version to use.  Version 1 is what was
+# originally used by impl_qpid.  Version 2 includes some
+# backwards-incompatible changes that allow broker federation
+# to work.  Users should update to version 2 when they are
+# able to take everything down, as it requires a clean break.
+# (integer value)
+#qpid_topology_version=1
 
 
 #

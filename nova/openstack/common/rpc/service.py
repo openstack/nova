@@ -32,10 +32,11 @@ class Service(service.Service):
 
     A service enables rpc by listening to queues based on topic and host.
     """
-    def __init__(self, host, topic, manager=None):
+    def __init__(self, host, topic, manager=None, serializer=None):
         super(Service, self).__init__()
         self.host = host
         self.topic = topic
+        self.serializer = serializer
         if manager is None:
             self.manager = self
         else:
@@ -48,7 +49,8 @@ class Service(service.Service):
         LOG.debug(_("Creating Consumer connection for Service %s") %
                   self.topic)
 
-        dispatcher = rpc_dispatcher.RpcDispatcher([self.manager])
+        dispatcher = rpc_dispatcher.RpcDispatcher([self.manager],
+                                                  self.serializer)
 
         # Share this same connection for these Consumers
         self.conn.create_consumer(self.topic, dispatcher, fanout=False)
