@@ -55,7 +55,7 @@ def _rsync_vhds(instance_uuid, host, staging_path, user="root"):
         rsync_progress = rsync_proc.stdout.readline()
         if not rsync_progress:
             break
-        logging.debug(rsync_progress)
+        logging.debug("[%s] %s" % (instance_uuid, rsync_progress))
 
     utils.finish_subprocess(rsync_proc, rsync_cmd)
 
