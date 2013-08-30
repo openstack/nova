@@ -77,11 +77,7 @@ from nova.tests.image import fake as fake_image
 from nova.tests import matchers
 from nova.tests.objects import test_migration
 from nova import utils
-from nova.virt.event import EVENT_LIFECYCLE_PAUSED
-from nova.virt.event import EVENT_LIFECYCLE_RESUMED
-from nova.virt.event import EVENT_LIFECYCLE_STARTED
-from nova.virt.event import EVENT_LIFECYCLE_STOPPED
-from nova.virt.event import LifecycleEvent
+from nova.virt import event
 from nova.virt import fake
 from nova.volume import cinder
 
@@ -5273,26 +5269,27 @@ class ComputeTestCase(BaseTestCase):
                 mox.ContainsKeyValue('uuid', uuid),
                 power_state)
         self.mox.ReplayAll()
-        self.compute.handle_events(LifecycleEvent(uuid, lifecycle_event))
+        self.compute.handle_events(event.LifecycleEvent(uuid, lifecycle_event))
         self.mox.VerifyAll()
         self.mox.UnsetStubs()
 
     def test_lifecycle_events(self):
-        self._test_lifecycle_event(EVENT_LIFECYCLE_STOPPED,
+        self._test_lifecycle_event(event.EVENT_LIFECYCLE_STOPPED,
                                    power_state.SHUTDOWN)
-        self._test_lifecycle_event(EVENT_LIFECYCLE_STARTED,
+        self._test_lifecycle_event(event.EVENT_LIFECYCLE_STARTED,
                                    power_state.RUNNING)
-        self._test_lifecycle_event(EVENT_LIFECYCLE_PAUSED,
+        self._test_lifecycle_event(event.EVENT_LIFECYCLE_PAUSED,
                                    power_state.PAUSED)
-        self._test_lifecycle_event(EVENT_LIFECYCLE_RESUMED,
+        self._test_lifecycle_event(event.EVENT_LIFECYCLE_RESUMED,
                                    power_state.RUNNING)
         self._test_lifecycle_event(-1, None)
 
     def test_lifecycle_event_non_existent_instance(self):
         # No error raised for non-existent instance because of inherent race
         # between database updates and hypervisor events. See bug #1180501.
-        event = LifecycleEvent('does-not-exist', EVENT_LIFECYCLE_STOPPED)
-        self.compute.handle_events(event)
+        event_instance = event.LifecycleEvent('does-not-exist',
+                event.EVENT_LIFECYCLE_STOPPED)
+        self.compute.handle_events(event_instance)
 
     def test_allow_confirm_resize_on_instance_in_deleting_task_state(self):
         instance = self._create_fake_instance_obj()

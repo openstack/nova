@@ -48,8 +48,7 @@ from nova.openstack.common.db import exception as db_exc
 from nova.openstack.common.db.sqlalchemy import session as db_session
 from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
-from nova.quota import ReservableResource
-from nova.quota import resources
+from nova import quota
 from nova import test
 from nova.tests import matchers
 from nova import utils
@@ -95,7 +94,7 @@ def _quota_reserve(context, project_id, user_id):
                                                     resource, i,
                                                     user_id=user_id)
         sync_name = '_sync_%s' % resource
-        resources[resource] = ReservableResource(
+        resources[resource] = quota.ReservableResource(
             resource, sync_name, 'quota_res_%d' % i)
         deltas[resource] = i
         setattr(sqlalchemy_api, sync_name, get_sync(resource, i))
@@ -4899,8 +4898,8 @@ class QuotaTestCase(test.TestCase, ModelsObjectComparatorMixin):
         quotas = {}
         deltas = {}
         reservable_resources = {}
-        for i, resource in enumerate(resources):
-            if isinstance(resource, ReservableResource):
+        for i, resource in enumerate(quota.resources):
+            if isinstance(resource, quota.ReservableResource):
                 quotas[resource.name] = db.quota_create(self.ctxt, 'project1',
                                                         resource.name, 100)
                 deltas[resource.name] = i
