@@ -323,7 +323,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
                    xenapi_connection_url='test_url',
                    xenapi_connection_password='test_pass',)
         db_fakes.stub_out_db_instance_api(self.stubs)
-        xenapi_fake.create_network('fake', CONF.flat_network_bridge)
+        xenapi_fake.create_network('fake', 'fake_br1')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         stubs.stubout_get_this_vm_uuid(self.stubs)
         stubs.stub_out_vm_methods(self.stubs)
@@ -1509,7 +1509,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
                                    'Dom0IptablesFirewallDriver')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         db_fakes.stub_out_db_instance_api(self.stubs)
-        xenapi_fake.create_network('fake', CONF.flat_network_bridge)
+        xenapi_fake.create_network('fake', 'fake_br1')
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id, self.project_id)
@@ -3764,3 +3764,36 @@ class XenAPISessionTestCase(test.TestCase):
             ((6, 0, 50), 'XenServer'),
             session._get_product_version_and_brand()
         )
+
+
+class XenAPIFakeTestCase(test.TestCase):
+    def test_query_matches(self):
+        record = {'a': '1', 'b': '2', 'c_d': '3'}
+
+        tests = {'field "a"="1"': True,
+                 'field "b"="2"': True,
+                 'field "b"="4"': False,
+                 'not field "b"="4"': True,
+                 'field "a"="1" and field "b"="4"': False,
+                 'field "a"="1" or field "b"="4"': True,
+                 'field "c__d"="3"': True,
+                 'field \'b\'=\'2\'': True,
+                 }
+
+        for query in tests.keys():
+            expected = tests[query]
+            fail_msg = "for test '%s'" % query
+            self.assertEqual(xenapi_fake._query_matches(record, query),
+                             expected, fail_msg)
+
+    def test_query_bad_format(self):
+        record = {'a': '1', 'b': '2', 'c': '3'}
+
+        tests = ['"a"="1" or "b"="4"',
+                 'a=1',
+                 ]
+
+        for query in tests:
+            fail_msg = "for test '%s'" % query
+            self.assertFalse(xenapi_fake._query_matches(record, query),
+                             fail_msg)

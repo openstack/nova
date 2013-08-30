@@ -304,7 +304,8 @@ def _create_local_pif(host_ref):
                               'VLAN': -1,
                               'device': 'fake0',
                               'host_uuid': host_ref,
-                              'network': ''})
+                              'network': '',
+                              'management': 'true'})
     return pif_ref
 
 
@@ -353,6 +354,50 @@ def get_all(table):
 
 def get_all_records(table):
     return _db_content[table]
+
+
+def _query_matches(record, query):
+    # Simple support for the XenServer query language:
+    # 'field "host"="<uuid>" and field "SR"="<sr uuid>"'
+    # Tested through existing tests (e.g. calls to find_network_with_bridge)
+
+    and_clauses = query.split(" and ")
+    if len(and_clauses) > 1:
+        matches = True
+        for clause in and_clauses:
+            matches = matches and _query_matches(record, clause)
+        return matches
+
+    or_clauses = query.split(" or ")
+    if len(or_clauses) > 1:
+        matches = False
+        for clause in or_clauses:
+            matches = matches or _query_matches(record, clause)
+        return matches
+
+    if query[:4] == 'not ':
+        return not _query_matches(record, query[4:])
+
+    # Now it must be a single field - bad queries never match
+    if query[:5] != 'field':
+        return False
+    (field, value) = query[6:].split('=', 1)
+
+    # Some fields (e.g. name_label, memory_overhead) have double
+    # underscores in the DB, but only single underscores when querying
+
+    field = field.replace("__", "_").strip(" \"'")
+    value = value.strip(" \"'")
+    return record[field] == value
+
+
+def get_all_records_where(table_name, query):
+    matching_records = {}
+    table = _db_content[table_name]
+    for record in table:
+        if _query_matches(table[record], query):
+            matching_records[record] = table[record]
+    return matching_records
 
 
 def get_record(table, ref):
@@ -504,10 +549,6 @@ class SessionBase(object):
 
     def SR_scan(self, _1, sr_ref):
         return
-
-    def PIF_get_all_records_where(self, _1, _2):
-        # TODO(salvatore-orlando): filter table on _2
-        return _db_content['PIF']
 
     def VM_get_xenstore_data(self, _1, vm_ref):
         return _db_content['VM'][vm_ref].get('xenstore_data', {})
@@ -693,9 +734,6 @@ class SessionBase(object):
                         vif_map, options):
         pass
 
-    def network_get_all_records_where(self, _1, filter):
-        return self.xenapi.network.get_all_records()
-
     def xenapi_request(self, methodname, params):
         if methodname.startswith('login'):
             self._login(methodname, params)
@@ -790,6 +828,10 @@ class SessionBase(object):
         if func == 'get_all_records':
             self._check_arg_count(params, 1)
             return get_all_records(cls)
+
+        if func == 'get_all_records_where':
+            self._check_arg_count(params, 2)
+            return get_all_records_where(cls, params[1])
 
         if func == 'get_record':
             self._check_arg_count(params, 2)
