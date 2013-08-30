@@ -830,6 +830,38 @@ def try_auto_configure_disk(session, vdi_ref, new_gb):
         LOG.warn(msg % e)
 
 
+def _make_partition(session, dev, partition_start, partition_end):
+    dev_path = utils.make_dev_path(dev)
+
+    # NOTE(bobball) If this runs in Dom0, parted will error trying
+    # to re-read the partition table and return a generic error
+    utils.execute('parted', '--script', dev_path,
+                  'mklabel', 'msdos', run_as_root=True,
+                  check_exit_code=not session.is_local_connection)
+
+    utils.execute('parted', '--script', dev_path,
+                  'mkpart', 'primary',
+                  partition_start,
+                  partition_end,
+                  run_as_root=True,
+                  check_exit_code=not session.is_local_connection)
+
+    partition_path = utils.make_dev_path(dev, partition=1)
+    if session.is_local_connection:
+        # Need to refresh the partitions
+        utils.trycmd('kpartx', '-a', dev_path,
+                     run_as_root=True,
+                     discard_warnings=True)
+
+        # Sometimes the partition gets created under /dev/mapper, depending
+        # on the setup in dom0.
+        mapper_path = '/dev/mapper/%s' % os.path.basename(partition_path)
+        if os.path.exists(mapper_path):
+            return mapper_path
+
+    return partition_path
+
+
 def _generate_disk(session, instance, vm_ref, userdevice, name_label,
                    disk_type, size_mb, fs_type):
     """
@@ -854,19 +886,12 @@ def _generate_disk(session, instance, vm_ref, userdevice, name_label,
         # 2. Attach VDI to compute worker (VBD hotplug)
         with vdi_attached_here(session, vdi_ref, read_only=False) as dev:
             # 3. Create partition
-            dev_path = utils.make_dev_path(dev)
-            utils.execute('parted', '--script', dev_path,
-                          'mklabel', 'msdos', run_as_root=True)
-
             partition_start = 0
             partition_end = size_mb
-            utils.execute('parted', '--script', dev_path,
-                          'mkpart', 'primary',
-                          str(partition_start),
-                          str(partition_end),
-                          run_as_root=True)
 
-            partition_path = utils.make_dev_path(dev, partition=1)
+            partition_path = _make_partition(session, dev,
+                                             "%d" % partition_start,
+                                             "%d" % partition_end)
 
             if fs_type == 'linux-swap':
                 utils.execute('mkswap', partition_path, run_as_root=True)
@@ -1303,7 +1328,7 @@ def _fetch_disk_image(context, session, instance, name_label, image_id,
         with vdi_attached_here(session, vdi_ref, read_only=False) as dev:
             stream_func = get_stream_funct_for(context, image_service,
                                                image_id)
-            _stream_disk(stream_func, image_type, virtual_size, dev)
+            _stream_disk(session, stream_func, image_type, virtual_size, dev)
 
         if image_type in (ImageType.KERNEL, ImageType.RAMDISK):
             # We need to invoke a plugin for copying the
@@ -1961,11 +1986,11 @@ def _get_partitions(dev):
     return partitions
 
 
-def _stream_disk(image_service_func, image_type, virtual_size, dev):
+def _stream_disk(session, image_service_func, image_type, virtual_size, dev):
     offset = 0
     if image_type == ImageType.DISK:
         offset = MBR_SIZE_BYTES
-        _write_partition(virtual_size, dev)
+        _write_partition(session, virtual_size, dev)
 
     dev_path = utils.make_dev_path(dev)
 
@@ -1975,7 +2000,7 @@ def _stream_disk(image_service_func, image_type, virtual_size, dev):
             image_service_func(f)
 
 
-def _write_partition(virtual_size, dev):
+def _write_partition(session, virtual_size, dev):
     dev_path = utils.make_dev_path(dev)
     primary_first = MBR_SIZE_SECTORS
     primary_last = MBR_SIZE_SECTORS + (virtual_size / SECTOR_SIZE) - 1
@@ -1988,12 +2013,7 @@ def _write_partition(virtual_size, dev):
     def execute(*cmd, **kwargs):
         return utils.execute(*cmd, **kwargs)
 
-    execute('parted', '--script', dev_path, 'mklabel', 'msdos',
-            run_as_root=True)
-    execute('parted', '--script', dev_path, 'mkpart', 'primary',
-            '%ds' % primary_first,
-            '%ds' % primary_last,
-            run_as_root=True)
+    _make_partition(session, dev, "%ds" % primary_first, "%ds" % primary_last)
 
     LOG.debug(_('Writing partition table %s done.'), dev_path)
 
@@ -2130,7 +2150,7 @@ def _copy_partition(session, src_ref, dst_ref, partition, virtual_size):
         with vdi_attached_here(session, dst_ref, read_only=False) as dst:
             dst_path = utils.make_dev_path(dst, partition=partition)
 
-            _write_partition(virtual_size, dst)
+            _write_partition(session, virtual_size, dst)
 
             if CONF.xenapi_sparse_copy:
                 _sparse_copy(src_path, dst_path, virtual_size)
