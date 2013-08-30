@@ -29,8 +29,10 @@ import textwrap
 
 from oslo.config import cfg
 
+from nova.openstack.common import gettextutils
 from nova.openstack.common import importutils
 
+gettextutils.install('nova')
 
 STROPT = "StrOpt"
 BOOLOPT = "BoolOpt"
