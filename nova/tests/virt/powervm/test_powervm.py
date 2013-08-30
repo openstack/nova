@@ -1140,10 +1140,31 @@ class IVMOperatorTestCase(test.TestCase):
         self.ivm_operator = powervm_operator.IVMOperator(ivm_connection)
 
     def test_start_lpar(self):
+        instance_name = 'fake'
         self.mox.StubOutWithMock(self.ivm_operator, 'run_vios_command')
-        self.ivm_operator.run_vios_command('chsysstate -r lpar -o on -n fake')
+        self.ivm_operator.run_vios_command('chsysstate -r lpar -o on -n %s' %
+                                           instance_name)
+        self.mox.StubOutWithMock(self.ivm_operator, 'get_lpar')
+        lpar1 = fake_lpar(instance_name)
+        self.ivm_operator.get_lpar(instance_name).AndReturn(lpar1)
         self.mox.ReplayAll()
-        self.ivm_operator.start_lpar('fake')
+        self.ivm_operator.start_lpar(instance_name)
+
+    def test_start_lpar_timeout(self):
+        instance_name = 'fake'
+        # mock the remote command call
+        self.mox.StubOutWithMock(self.ivm_operator, 'run_vios_command')
+        self.ivm_operator.run_vios_command('chsysstate -r lpar -o on -n %s' %
+                                           instance_name)
+        self.mox.StubOutWithMock(self.ivm_operator, 'get_lpar')
+        # the lpar is stopped and the timeout is less than the looping call
+        # interval so we timeout
+        lpar1 = fake_lpar(instance_name, state=constants.POWERVM_SHUTDOWN)
+        self.ivm_operator.get_lpar(instance_name).AndReturn(lpar1)
+        self.mox.ReplayAll()
+        self.assertRaises(exception.PowerVMLPAROperationTimeout,
+                          self.ivm_operator.start_lpar,
+                          instance_name=instance_name, timeout=0.5)
 
     def test_stop_lpar(self):
         instance_name = 'fake'

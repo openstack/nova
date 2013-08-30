@@ -553,13 +553,19 @@ class BaseOperator(object):
         self.run_vios_command(self.command.mksyscfg('-r lpar -i "%s"' %
                                                     conf_data))
 
-    def start_lpar(self, instance_name):
+    def start_lpar(self, instance_name,
+                   timeout=constants.POWERVM_LPAR_OPERATION_TIMEOUT):
         """Start a LPAR instance.
 
         :param instance_name: LPAR instance name
+        :param timeout: value in seconds for specifying
+                        how long to wait for the LPAR to start
         """
         self.run_vios_command(self.command.chsysstate('-r lpar -o on -n %s'
                                                  % instance_name))
+        # poll instance until running or raise exception
+        self._poll_for_lpar_status(instance_name, constants.POWERVM_RUNNING,
+                                   'start_lpar', timeout)
 
     def stop_lpar(self, instance_name,
                   timeout=constants.POWERVM_LPAR_OPERATION_TIMEOUT):
