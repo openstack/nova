@@ -26,6 +26,7 @@ from nova.compute import vm_states
 from nova import db
 from nova import exception
 from nova.openstack.common.gettextutils import _
+from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova.scheduler import filters
@@ -122,6 +123,11 @@ class HostState(object):
 
         # Other information
         self.host_ip = None
+        self.hypervisor_type = None
+        self.hypervisor_version = None
+        self.hypervisor_hostname = None
+        self.cpu_info = None
+        self.supported_instances = None
 
         # Resource oversubscription values for the compute host:
         self.limits = {}
@@ -161,41 +167,53 @@ class HostState(object):
         self.vcpus_used = compute['vcpus_used']
         self.updated = compute['updated_at']
 
+        # All virt drivers report host_ip
         self.host_ip = compute['host_ip']
+        self.hypervisor_type = compute.get('hypervisor_type')
+        self.hypervisor_version = compute.get('hypervisor_version')
+        self.hypervisor_hostname = compute.get('hypervisor_hostname')
+        self.cpu_info = compute.get('cpu_info')
+        if compute.get('supported_instances'):
+            self.supported_instances = jsonutils.loads(
+                    compute.get('supported_instances'))
 
-        stats = compute.get('stats', [])
-        statmap = self._statmap(stats)
+        # Don't store stats directly in host_state to make sure these don't
+        # overwrite any values, or get overwritten themselves. Store in self so
+        # filters can schedule with them.
+        self.stats = self._statmap(compute.get('stats', []))
 
         # Track number of instances on host
-        self.num_instances = int(statmap.get('num_instances', 0))
+        self.num_instances = int(self.stats.get('num_instances', 0))
 
         # Track number of instances by project_id
-        project_id_keys = [k for k in statmap.keys() if
+        project_id_keys = [k for k in self.stats.keys() if
                 k.startswith("num_proj_")]
         for key in project_id_keys:
             project_id = key[9:]
-            self.num_instances_by_project[project_id] = int(statmap[key])
+            self.num_instances_by_project[project_id] = int(self.stats[key])
 
         # Track number of instances in certain vm_states
-        vm_state_keys = [k for k in statmap.keys() if k.startswith("num_vm_")]
+        vm_state_keys = [k for k in self.stats.keys() if
+                k.startswith("num_vm_")]
         for key in vm_state_keys:
             vm_state = key[7:]
-            self.vm_states[vm_state] = int(statmap[key])
+            self.vm_states[vm_state] = int(self.stats[key])
 
         # Track number of instances in certain task_states
-        task_state_keys = [k for k in statmap.keys() if
+        task_state_keys = [k for k in self.stats.keys() if
                 k.startswith("num_task_")]
         for key in task_state_keys:
             task_state = key[9:]
-            self.task_states[task_state] = int(statmap[key])
+            self.task_states[task_state] = int(self.stats[key])
 
         # Track number of instances by host_type
-        os_keys = [k for k in statmap.keys() if k.startswith("num_os_type_")]
+        os_keys = [k for k in self.stats.keys() if
+                k.startswith("num_os_type_")]
         for key in os_keys:
             os = key[12:]
-            self.num_instances_by_os_type[os] = int(statmap[key])
+            self.num_instances_by_os_type[os] = int(self.stats[key])
 
-        self.num_io_ops = int(statmap.get('io_workload', 0))
+        self.num_io_ops = int(self.stats.get('io_workload', 0))
 
     def consume_from_instance(self, instance):
         """Incrementally update host state from an instance."""

@@ -732,27 +732,27 @@ class HostFiltersTestCase(test.NoDBTestCase):
         service = {'disabled': False}
         filter_properties = {'instance_type': {'memory_mb': 1024,
                                                'extra_specs': especs}}
-        host = fakes.FakeHostState('host1', 'node1',
-                {'free_ram_mb': 1024, 'capabilities': capabilities,
-                 'service': service})
+        host_state = {'free_ram_mb': 1024, 'service': service}
+        host_state.update(capabilities)
+        host = fakes.FakeHostState('host1', 'node1', host_state)
         assertion = self.assertTrue if passes else self.assertFalse
         assertion(filt_cls.host_passes(host, filter_properties))
 
     def test_compute_filter_passes_extra_specs_simple(self):
         self._do_test_compute_filter_extra_specs(
-            ecaps={'opt1': 1, 'opt2': 2},
+                ecaps={'stats': {'opt1': 1, 'opt2': 2}},
             especs={'opt1': '1', 'opt2': '2', 'trust:trusted_host': 'true'},
             passes=True)
 
     def test_compute_filter_fails_extra_specs_simple(self):
         self._do_test_compute_filter_extra_specs(
-            ecaps={'opt1': 1, 'opt2': 2},
+                ecaps={'stats': {'opt1': 1, 'opt2': 2}},
             especs={'opt1': '1', 'opt2': '222', 'trust:trusted_host': 'true'},
             passes=False)
 
     def test_compute_filter_pass_extra_specs_simple_with_scope(self):
         self._do_test_compute_filter_extra_specs(
-            ecaps={'opt1': 1, 'opt2': 2},
+                ecaps={'stats': {'opt1': 1, 'opt2': 2}},
             especs={'capabilities:opt1': '1',
                     'trust:trusted_host': 'true'},
             passes=True)
@@ -773,7 +773,7 @@ class HostFiltersTestCase(test.NoDBTestCase):
 
     def test_compute_filter_extra_specs_pass_multi_level_with_scope(self):
         self._do_test_compute_filter_extra_specs(
-            ecaps={'opt1': {'a': 1, 'b': {'aa': 2}}, 'opt2': 2},
+                ecaps={'stats': {'opt1': {'a': 1, 'b': {'aa': 2}}, 'opt2': 2}},
             especs={'opt1:a': '1', 'capabilities:opt1:b:aa': '2',
                     'trust:trusted_host': 'true'},
             passes=True)

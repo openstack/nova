@@ -435,9 +435,12 @@ class HostStateTestCase(test.NoDBTestCase):
             dict(key='num_os_type_windoze', value='1'),
             dict(key='io_workload', value='42'),
         ]
-        compute = dict(stats=stats, memory_mb=0, free_disk_gb=0, local_gb=0,
+        compute = dict(stats=stats, memory_mb=1, free_disk_gb=0, local_gb=0,
                        local_gb_used=0, free_ram_mb=0, vcpus=0, vcpus_used=0,
-                       updated_at=None, host_ip='127.0.0.1')
+                       updated_at=None, host_ip='127.0.0.1',
+                       hypervisor_type='htype', hypervisor_version='1.1',
+                       hypervisor_hostname='hostname', cpu_info='cpu_info',
+                       supported_instances='{}')
 
         host = host_manager.HostState("fakehost", "fakenode")
         host.update_from_compute_node(compute)
@@ -452,6 +455,14 @@ class HostStateTestCase(test.NoDBTestCase):
         self.assertEqual(4, host.num_instances_by_os_type['linux'])
         self.assertEqual(1, host.num_instances_by_os_type['windoze'])
         self.assertEqual(42, host.num_io_ops)
+        self.assertEqual(10, len(host.stats))
+
+        self.assertEqual('127.0.0.1', host.host_ip)
+        self.assertEqual('htype', host.hypervisor_type)
+        self.assertEqual('1.1', host.hypervisor_version)
+        self.assertEqual('hostname', host.hypervisor_hostname)
+        self.assertEqual('cpu_info', host.cpu_info)
+        self.assertEqual({}, host.supported_instances)
 
     def test_stat_consumption_from_instance(self):
         host = host_manager.HostState("fakehost", "fakenode")
