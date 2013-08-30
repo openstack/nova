@@ -379,6 +379,12 @@ class ComputeVirtAPI(virtapi.VirtAPI):
         return self._compute.conductor_api.instance_type_get(context,
                                                              instance_type_id)
 
+    def block_device_mapping_get_all_by_instance(self, context, instance,
+                                                 legacy=True):
+        capi = self._compute.conductor_api
+        return capi.block_device_mapping_get_all_by_instance(context, instance,
+                                                             legacy=legacy)
+
 
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
