@@ -21,6 +21,8 @@ from nova.objects import instance as instance_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
+from nova.pci import pci_request
+
 
 LOG = logging.getLogger(__name__)
 
@@ -133,7 +135,8 @@ class Claim(NopClaim):
         # Test for resources:
         can_claim = (self._test_memory(resources, memory_mb_limit) and
                      self._test_disk(resources, disk_gb_limit) and
-                     self._test_cpu(resources, vcpu_limit))
+                     self._test_cpu(resources, vcpu_limit) and
+                     self._test_pci())
 
         if can_claim:
             LOG.audit(_("Claim successful"), instance=self.instance)
@@ -159,6 +162,12 @@ class Claim(NopClaim):
         requested = self.disk_gb
 
         return self._test(type_, unit, total, used, requested, limit)
+
+    def _test_pci(self):
+        pci_requests = pci_request.get_instance_pci_requests(self.instance)
+        if not pci_requests:
+            return True
+        return self.tracker.pci_tracker.stats.support_requests(pci_requests)
 
     def _test_cpu(self, resources, limit):
         type_ = _("CPU")
@@ -225,6 +234,14 @@ class ResizeClaim(Claim):
     @property
     def vcpus(self):
         return self.instance_type['vcpus']
+
+    def _test_pci(self):
+        pci_requests = pci_request.get_instance_pci_requests(
+            self.instance, 'new_')
+        if not pci_requests:
+            return True
+
+        return self.tracker.pci_tracker.stats.support_requests(pci_requests)
 
     def abort(self):
         """Compute operation requiring claimed resources has failed or
