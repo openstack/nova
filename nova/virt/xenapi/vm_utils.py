@@ -571,7 +571,8 @@ def _safe_copy_vdi(session, sr_ref, instance, vdi_to_copy_ref):
         with snapshot_attached_here(
                 session, instance, vm_ref, label) as vdi_uuids:
             imported_vhds = session.call_plugin_serialized(
-                'workarounds', 'safe_copy_vdis', sr_path=get_sr_path(session),
+                'workarounds', 'safe_copy_vdis',
+                sr_path=get_sr_path(session, sr_ref=sr_ref),
                 vdi_uuids=vdi_uuids, uuid_stack=_make_uuid_stack())
 
     root_uuid = imported_vhds['root']['uuid']
@@ -666,13 +667,26 @@ def snapshot_attached_here(session, instance, vm_ref, label, *args):
         safe_destroy_vdis(session, [snapshot_ref])
 
 
-def get_sr_path(session):
+def get_sr_path(session, sr_ref=None):
     """Return the path to our storage repository
 
     This is used when we're dealing with VHDs directly, either by taking
     snapshots or by restoring an image in the DISK_VHD format.
     """
-    sr_ref = safe_find_sr(session)
+    if sr_ref is None:
+        sr_ref = safe_find_sr(session)
+    host_ref = session.get_xenapi_host()
+    pbd_rec = session.call_xenapi("PBD.get_all_records_where",
+                                  'field "host"="%s" and '
+                                  'field "SR"="%s"' % (host_ref, sr_ref))
+
+    # NOTE(bobball): There can only be one PBD for a host/SR pair, but path is
+    # not always present - older versions of XS do not set it.
+    pbd_ref = pbd_rec.keys()[0]
+    device_config = pbd_rec[pbd_ref]['device_config']
+    if 'path' in device_config:
+        return device_config['path']
+
     sr_rec = session.call_xenapi("SR.get_record", sr_ref)
     sr_uuid = sr_rec["uuid"]
     return os.path.join(CONF.xenapi_sr_base_path, sr_uuid)

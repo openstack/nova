@@ -1080,3 +1080,48 @@ class StreamDiskTestCase(test.TestCase):
         self.assertEquals(
             [(fake_file.seek, vm_utils.MBR_SIZE_BYTES)],
             fake_file._file_operations)
+
+
+class VMUtilsSRPath(stubs.XenAPITestBase):
+    def setUp(self):
+        super(VMUtilsSRPath, self).setUp()
+        self.flags(disable_process_locking=True,
+                   instance_name_template='%d',
+                   firewall_driver='nova.virt.xenapi.firewall.'
+                                   'Dom0IptablesFirewallDriver',
+                   xenapi_connection_url='test_url',
+                   xenapi_connection_password='test_pass',)
+        stubs.stubout_session(self.stubs, fake.SessionBase)
+        driver = xenapi_conn.XenAPIDriver(False)
+        self.session = driver._session
+        self.session.is_local_connection = False
+
+    def test_defined(self):
+        self.mox.StubOutWithMock(vm_utils, "safe_find_sr")
+        self.mox.StubOutWithMock(self.session, "call_xenapi")
+        self.mox.StubOutWithMock(self.session, "get_xenapi_host")
+
+        vm_utils.safe_find_sr(self.session).AndReturn("sr_ref")
+        self.session.get_xenapi_host().AndReturn("host_ref")
+        self.session.call_xenapi('PBD.get_all_records_where',
+            'field "host"="host_ref" and field "SR"="sr_ref"').AndReturn(
+            {'pbd_ref': {'device_config': {'path': 'sr_path'}}})
+
+        self.mox.ReplayAll()
+        self.assertEqual(vm_utils.get_sr_path(self.session), "sr_path")
+
+    def test_default(self):
+        self.mox.StubOutWithMock(vm_utils, "safe_find_sr")
+        self.mox.StubOutWithMock(self.session, "call_xenapi")
+        self.mox.StubOutWithMock(self.session, "get_xenapi_host")
+
+        vm_utils.safe_find_sr(self.session).AndReturn("sr_ref")
+        self.session.get_xenapi_host().AndReturn("host_ref")
+        self.session.call_xenapi('PBD.get_all_records_where',
+            'field "host"="host_ref" and field "SR"="sr_ref"').AndReturn(
+            {'pbd_ref': {'device_config': {}}})
+        self.session.call_xenapi("SR.get_record", "sr_ref").AndReturn(
+            {'uuid': 'sr_uuid'})
+        self.mox.ReplayAll()
+        self.assertEqual(vm_utils.get_sr_path(self.session),
+                         "/var/run/sr-mount/sr_uuid")
