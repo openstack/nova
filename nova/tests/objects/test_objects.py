@@ -154,6 +154,7 @@ class TestUtils(test.TestCase):
         self.assertEqual(utils.str_or_none('foo'), 'foo')
         self.assertEqual(utils.str_or_none(1), '1')
         self.assertEqual(utils.str_or_none(None), None)
+        self.assertEqual(utils.str_or_none(u'\u30bdfoo'), '\xe3\x82\xbdfoo')
 
     def test_ip_or_none(self):
         ip4 = netaddr.IPAddress('1.2.3.4', 4)
