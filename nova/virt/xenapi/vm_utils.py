@@ -689,6 +689,12 @@ def get_sr_path(session, sr_ref=None):
 
     sr_rec = session.call_xenapi("SR.get_record", sr_ref)
     sr_uuid = sr_rec["uuid"]
+    if sr_rec["type"] not in ["ext", "nfs"]:
+        raise exception.NovaException(
+            _("Only file-based SRs (ext/NFS) are supported by this feature."
+              "  SR %(uuid)s is of type %(type)s") %
+            {"uuid": sr_uuid, "type": sr_rec["type"]})
+
     return os.path.join(CONF.xenapi_sr_base_path, sr_uuid)
 
 
@@ -1053,8 +1059,10 @@ def _create_cached_image(context, session, instance, name_label,
 
     if CONF.use_cow_images and sr_type == 'ext':
         new_vdi_ref = _clone_vdi(session, cache_vdi_ref)
-    else:
+    elif sr_type == 'ext':
         new_vdi_ref = _safe_copy_vdi(session, sr_ref, instance, cache_vdi_ref)
+    else:
+        new_vdi_ref = session.call_xenapi("VDI.copy", cache_vdi_ref, sr_ref)
 
     session.call_xenapi('VDI.remove_from_other_config',
                         new_vdi_ref, 'image-id')
