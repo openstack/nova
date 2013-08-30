@@ -814,10 +814,10 @@ class PowerVMDriverTestCase(test.TestCase):
                     aggregate={'name': 'foo'}, host='fake')
 
     def test_plug_vifs(self):
-        # Check to make sure the method raises NotImplementedError.
-        self.assertRaises(NotImplementedError,
-                          self.powervm_connection.plug_vifs,
-                          instance=None, network_info=None)
+        # Check to make sure the method passes (does nothing) since
+        # it simply passes in the powervm driver but it raises a
+        # NotImplementedError in the base driver class.
+        self.powervm_connection.plug_vifs(self.instance, None)
 
     def test_manage_image_cache(self):
         # Check to make sure the method passes (does nothing) since
