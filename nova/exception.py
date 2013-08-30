@@ -277,6 +277,10 @@ class InvalidVolume(Invalid):
     msg_fmt = _("Invalid volume") + ": %(reason)s"
 
 
+class InvalidVolumeAccessMode(Invalid):
+    msg_fmt = _("Invalid volume access mode") + ": %(access_mode)s"
+
+
 class InvalidMetadata(Invalid):
     msg_fmt = _("Invalid metadata") + ": %(reason)s"
 

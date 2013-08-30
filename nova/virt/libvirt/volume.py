@@ -131,6 +131,18 @@ class LibvirtBaseVolumeDriver(object):
                 LOG.warn(_('Unknown content in connection_info/'
                            'qos_specs: %s') % specs)
 
+        # Extract access_mode control parameters
+        if 'access_mode' in data and data['access_mode']:
+            access_mode = data['access_mode']
+            if access_mode in ('ro', 'rw'):
+                conf.readonly = access_mode == 'ro'
+            else:
+                msg = (_('Unknown content in connection_info/access_mode: %s')
+                       % access_mode)
+                LOG.error(msg)
+                raise exception.InvalidVolumeAccessMode(
+                                                    access_mode=access_mode)
+
         return conf
 
     def disconnect_volume(self, connection_info, disk_dev):
