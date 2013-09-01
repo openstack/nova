@@ -651,14 +651,15 @@ class ServersControllerTest(ControllerTest):
                          sort_dir='desc', limit=None, marker=None,
                          columns_to_join=None):
             self.assertNotEqual(filters, None)
-            self.assertEqual(filters['project_id'], 'fake')
+            self.assertEqual(filters['project_id'], 'newfake')
             self.assertFalse(filters.get('tenant_id'))
             return [fakes.stub_instance(100)]
 
         self.stubs.Set(db, 'instance_get_all_by_filters',
                        fake_get_all)
 
-        req = fakes.HTTPRequest.blank('/fake/servers?tenant_id=fake',
+        req = fakes.HTTPRequest.blank('/fake/servers'
+                                      '?all_tenants=1&tenant_id=newfake',
                                       use_admin_context=True)
         res = self.controller.index(req)
 
