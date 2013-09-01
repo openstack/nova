@@ -787,6 +787,10 @@ class MigrationTestCase(test.TestCase):
         db.migration_update(self.ctxt, migration['id'],
                             {"status": "CONFIRMED"})
 
+    def test_migration_update_not_found(self):
+        self.assertRaises(exception.MigrationNotFound,
+                          db.migration_update, self.ctxt, 42, {})
+
 
 class ModelsObjectComparatorMixin(object):
     def _dict_from_object(self, obj, ignored_keys):
@@ -4074,10 +4078,14 @@ class TaskLogTestCase(test.TestCase):
         result = db.task_log_get_all(self.context, self.task_name, self.begin,
                                      self.end, host=self.host)
         self.assertEqual(len(result), 1)
+        result = db.task_log_get_all(self.context, self.task_name, self.begin,
+                                     self.end, host=self.host, state='')
+        self.assertEqual(len(result), 0)
 
     def test_task_log_begin_task(self):
         db.task_log_begin_task(self.context, 'fake', self.begin,
-                               self.end, self.host, message=self.message)
+                               self.end, self.host, task_items=42,
+                               message=self.message)
         result = db.task_log_get(self.context, 'fake', self.begin,
                                  self.end, self.host)
         self.assertEqual(result['task_name'], 'fake')
@@ -4096,6 +4104,12 @@ class TaskLogTestCase(test.TestCase):
         result = db.task_log_get(self.context, self.task_name, self.begin,
                                  self.end, self.host)
         self.assertEqual(result['errors'], 1)
+
+    def test_task_log_end_task_task_not_running(self):
+        self.assertRaises(exception.TaskNotRunning,
+                          db.task_log_end_task, self.context, 'nonexistent',
+                          self.begin, self.end, self.host, 42,
+                          message=self.message)
 
 
 class BlockDeviceMappingTestCase(test.TestCase):
@@ -4341,6 +4355,13 @@ class AgentBuildTestCase(test.TestCase, ModelsObjectComparatorMixin):
         db.agent_build_create(self.ctxt, values)
         self.assertRaises(exception.AgentBuildExists, db.agent_build_create,
                           self.ctxt, values)
+
+    def test_agent_build_get_all_by_hypervisor(self):
+        values = {'hypervisor': 'kvm', 'os': 'FreeBSD',
+                  'architecture': 'x86_64'}
+        created = db.agent_build_create(self.ctxt, values)
+        actual = db.agent_build_get_all(self.ctxt, hypervisor='kvm')
+        self._assertEqualListsOfObjects([created], actual)
 
 
 class VirtualInterfaceTestCase(test.TestCase, ModelsObjectComparatorMixin):
@@ -6248,7 +6269,20 @@ class InstanceGroupDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
         result = self._create_instance_group(self.context, values)
         db.instance_group_delete(self.context, result['uuid'])
         self.assertRaises(exception.InstanceGroupNotFound,
-                          db.instance_group_get, self.context, result['uuid'])
+                          db.instance_group_delete, self.context,
+                          result['uuid'])
+
+    def test_instance_group_get_nonexistent(self):
+        self.assertRaises(exception.InstanceGroupNotFound,
+                          db.instance_group_get,
+                          self.context,
+                          'nonexistent')
+
+    def test_instance_group_delete_nonexistent(self):
+        self.assertRaises(exception.InstanceGroupNotFound,
+                          db.instance_group_delete,
+                          self.context,
+                          'nonexistent')
 
     def test_instance_group_get_all(self):
         groups = db.instance_group_get_all(self.context)
