@@ -563,6 +563,7 @@ class Executor(wsgi.Application):
                 exception.NotFound,
                 exception.KeypairNotFound,
                 exception.SecurityGroupExists,
+                exception.SecurityGroupRuleExists,
                 exception.InvalidParameterValue,
                 exception.InvalidPortRange,
                 exception.NotAuthorized,
