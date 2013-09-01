@@ -3545,7 +3545,12 @@ class XenAPIInjectMetadataTestCase(stubs.XenAPITestBase):
 
         self.xenstore = dict(persist={}, ephem={})
 
+        self.called_fake_get_vm_opaque_ref = False
+
         def fake_get_vm_opaque_ref(inst, instance):
+            self.called_fake_get_vm_opaque_ref = True
+            if instance["uuid"] == "not_found":
+                raise exception.NotFound
             self.assertEqual(instance, {'uuid': 'fake'})
             return 'vm_ref'
 
@@ -3701,6 +3706,11 @@ class XenAPIInjectMetadataTestCase(stubs.XenAPITestBase):
                     'vm-data/user-metadata/c': '3',
                     },
                 })
+
+    def test_change_instance_metadata_not_found(self):
+        instance = {'uuid': 'not_found'}
+        self.conn._vmops.change_instance_metadata(instance, "fake_diff")
+        self.assertTrue(self.called_fake_get_vm_opaque_ref)
 
 
 class XenAPISessionTestCase(test.TestCase):
