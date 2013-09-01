@@ -102,7 +102,7 @@ class ResourceTracker(object):
                           instance=instance_ref)
 
         if instance_ref['node']:
-            LOG.warning(_("Node field should be not be set on the instance "
+            LOG.warning(_("Node field should not be set on the instance "
                           "until resources have been claimed."),
                           instance=instance_ref)
 
