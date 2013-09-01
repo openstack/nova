@@ -31,6 +31,7 @@ import uuid
 
 from oslo.config import cfg
 
+from nova.api.metadata import base as instance_metadata
 from nova import block_device
 from nova import compute
 from nova.compute import power_state
@@ -41,6 +42,7 @@ from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova import utils
+from nova.virt import configdrive
 from nova.virt import driver
 from nova.virt.vmwareapi import vif as vmwarevif
 from nova.virt.vmwareapi import vim_util
@@ -124,8 +126,8 @@ class VMwareVMOps(object):
         LOG.debug(_("Got total of %s instances") % str(len(lst_vm_names)))
         return lst_vm_names
 
-    def spawn(self, context, instance, image_meta, network_info,
-              block_device_info=None):
+    def spawn(self, context, instance, image_meta, injected_files,
+              admin_password, network_info, block_device_info=None):
         """
         Creates a VM instance.
 
@@ -371,6 +373,9 @@ class VMwareVMOps(object):
             uploaded_vmdk_path = vm_util.build_datastore_path(data_store_name,
                                                 uploaded_vmdk_name)
 
+            session_vim = self._session._get_vim()
+            cookies = session_vim.client.options.transport.cookiejar
+
             if not (linked_clone and self._check_if_folder_file_exists(
                                         data_store_ref, data_store_name,
                                         upload_folder, upload_name + ".vmdk")):
@@ -396,8 +401,6 @@ class VMwareVMOps(object):
                     _create_virtual_disk()
                     _delete_disk_file(flat_uploaded_vmdk_path)
 
-                cookies = \
-                    self._session._get_vim().client.options.transport.cookiejar
                 _fetch_image_on_esx_datastore()
 
                 if disk_type == "sparse":
@@ -415,6 +418,23 @@ class VMwareVMOps(object):
                                 vm_ref, instance,
                                 adapter_type, disk_type, uploaded_vmdk_path,
                                 vmdk_file_size_in_kb, linked_clone)
+
+            if configdrive.required_by(instance):
+                uploaded_iso_path = self._create_config_drive(instance,
+                                                              injected_files,
+                                                              admin_password,
+                                                              data_store_name,
+                                                              instance['uuid'],
+                                                              cookies)
+                uploaded_iso_path = vm_util.build_datastore_path(
+                    data_store_name,
+                    uploaded_iso_path)
+                self._attach_cdrom_to_vm(
+                    vm_ref, instance,
+                    data_store_ref,
+                    uploaded_iso_path,
+                    1 if adapter_type in ['ide'] else 0)
+
         else:
             # Attach the root disk to the VM.
             root_disk = driver.block_device_info_get_mapping(
@@ -433,6 +453,66 @@ class VMwareVMOps(object):
             self._session._wait_for_task(instance['uuid'], power_on_task)
             LOG.debug(_("Powered on the VM instance"), instance=instance)
         _power_on_vm()
+
+    def _create_config_drive(self, instance, injected_files, admin_password,
+                             data_store_name, upload_folder, cookies):
+        if CONF.config_drive_format != 'iso9660':
+            reason = (_('Invalid config_drive_format "%s"') %
+                      CONF.config_drive_format)
+            raise exception.InstancePowerOnFailure(reason=reason)
+
+        LOG.info(_('Using config drive for instance'), instance=instance)
+        extra_md = {}
+        if admin_password:
+            extra_md['admin_pass'] = admin_password
+
+        inst_md = instance_metadata.InstanceMetadata(instance,
+                                                     content=injected_files,
+                                                     extra_md=extra_md)
+        try:
+            with configdrive.ConfigDriveBuilder(instance_md=inst_md) as cdb:
+                with utils.tempdir() as tmp_path:
+                    tmp_file = os.path.join(tmp_path, 'configdrive.iso')
+                    cdb.make_drive(tmp_file)
+                    dc_name = self._get_datacenter_ref_and_name()[1]
+
+                    upload_iso_path = "%s/configdrive.iso" % (
+                        upload_folder)
+                    vmware_images.upload_iso_to_datastore(
+                        tmp_file, instance,
+                        host=self._session._host_ip,
+                        data_center_name=dc_name,
+                        datastore_name=data_store_name,
+                        cookies=cookies,
+                        file_path=upload_iso_path)
+                    return upload_iso_path
+        except Exception as e:
+            with excutils.save_and_reraise_exception():
+                LOG.error(_('Creating config drive failed with error: %s'),
+                          e, instance=instance)
+
+    def _attach_cdrom_to_vm(self, vm_ref, instance,
+                         datastore, file_path,
+                         cdrom_unit_number):
+        """Attach cdrom to VM by reconfiguration."""
+        instance_name = instance['name']
+        instance_uuid = instance['uuid']
+        client_factory = self._session._get_vim().client.factory
+        vmdk_attach_config_spec = vm_util.get_cdrom_attach_config_spec(
+                                    client_factory, datastore, file_path,
+                                    cdrom_unit_number)
+
+        LOG.debug(_("Reconfiguring VM instance %(instance_name)s to attach "
+                    "cdrom %(file_path)s"),
+                  {'instance_name': instance_name, 'file_path': file_path})
+        reconfig_task = self._session._call_method(
+                                        self._session._get_vim(),
+                                        "ReconfigVM_Task", vm_ref,
+                                        spec=vmdk_attach_config_spec)
+        self._session._wait_for_task(instance_uuid, reconfig_task)
+        LOG.debug(_("Reconfigured VM instance %(instance_name)s to attach "
+                    "cdrom %(file_path)s"),
+                  {'instance_name': instance_name, 'file_path': file_path})
 
     def snapshot(self, context, instance, snapshot_name, update_task_state):
         """Create snapshot from a running VM instance.
@@ -804,7 +884,8 @@ class VMwareVMOps(object):
         r_instance = copy.deepcopy(instance)
         r_instance['name'] = r_instance['name'] + self._rescue_suffix
         r_instance['uuid'] = r_instance['uuid'] + self._rescue_suffix
-        self.spawn(context, r_instance, image_meta, network_info)
+        self.spawn(context, r_instance, image_meta,
+                   None, None, network_info)
 
         # Attach vmdk to the rescue VM
         hardware_devices = self._session._call_method(vim_util,
