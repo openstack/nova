@@ -207,6 +207,8 @@ class HyperVAPITestCase(test.TestCase):
                                   'logout_storage_target')
         self._mox.StubOutWithMock(volumeutils.VolumeUtils,
                                   'execute_log_out')
+        self._mox.StubOutWithMock(volumeutils.VolumeUtils,
+                                  'get_iscsi_initiator')
 
         self._mox.StubOutWithMock(volumeutilsv2.VolumeUtilsV2,
                                   'login_storage_target')
@@ -1111,6 +1113,28 @@ class HyperVAPITestCase(test.TestCase):
         self._mox.VerifyAll()
 
         self.assertEquals(len(self._instance_volume_disks), 1)
+
+    def test_get_volume_connector(self):
+        self._instance_data = self._get_instance_data()
+        instance = db.instance_create(self._context, self._instance_data)
+
+        fake_my_ip = "fake_ip"
+        fake_host = "fake_host"
+        fake_initiator = "fake_initiator"
+
+        self.flags(my_ip=fake_my_ip)
+        self.flags(host=fake_host)
+
+        m = volumeutils.VolumeUtils.get_iscsi_initiator()
+        m.AndReturn(fake_initiator)
+
+        self._mox.ReplayAll()
+        data = self._conn.get_volume_connector(instance)
+        self._mox.VerifyAll()
+
+        self.assertEquals(fake_my_ip, data.get('ip'))
+        self.assertEquals(fake_host, data.get('host'))
+        self.assertEquals(fake_initiator, data.get('initiator'))
 
     def _setup_test_migrate_disk_and_power_off_mocks(self, same_host=False,
                                                      copy_exception=False,
