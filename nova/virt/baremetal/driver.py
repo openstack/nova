@@ -34,6 +34,7 @@ from nova.openstack.common import log as logging
 from nova import paths
 from nova.virt.baremetal import baremetal_states
 from nova.virt.baremetal import db
+from nova.virt.baremetal import pxe
 from nova.virt import driver
 from nova.virt import firewall
 from nova.virt.libvirt import imagecache
@@ -508,7 +509,7 @@ class BareMetalDriver(driver.ComputeDriver):
     def dhcp_options_for_instance(self, instance):
         # NOTE(deva): This only works for PXE driver currently.
         try:
-            bootfile_path = self.driver.get_pxe_config_file_path(instance)
+            bootfile_path = pxe.get_pxe_config_file_path(instance)
         except AttributeError as ex:
             # NOTE: not all drivers are going to support PXE boot capability
             LOG.exception(_("Exception no pxe bootfile-name path: %s"),

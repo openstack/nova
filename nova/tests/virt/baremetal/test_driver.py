@@ -20,6 +20,8 @@
 
 """Tests for the base baremetal driver class."""
 
+import mox
+
 from oslo.config import cfg
 
 from nova.compute import power_state
@@ -33,6 +35,7 @@ from nova.virt.baremetal import baremetal_states
 from nova.virt.baremetal import db
 from nova.virt.baremetal import driver as bm_driver
 from nova.virt.baremetal import fake
+from nova.virt.baremetal import pxe
 
 
 CONF = cfg.CONF
@@ -365,4 +368,18 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
         res = self.driver.get_info(node['instance'])
         # prior to the fix, returned power_state was SHUTDOWN
         self.assertEqual(res['state'], power_state.NOSTATE)
+        self.mox.VerifyAll()
+
+    def test_dhcp_options_for_instance(self):
+        node = self._create_node()
+        fake_path = "/a/b/c"
+        self.mox.StubOutWithMock(pxe, 'get_pxe_config_file_path')
+        pxe.get_pxe_config_file_path(mox.IgnoreArg()).AndReturn(fake_path)
+        self.mox.ReplayAll()
+        expected = [{'opt_name': 'bootfile-name', 'opt_value': fake_path},
+                    {'opt_name': 'server-ip-address', 'opt_value': CONF.my_ip},
+                    {'opt_name': 'tftp-server', 'opt_value': CONF.my_ip}]
+
+        res = self.driver.dhcp_options_for_instance(node['instance'])
+        self.assertEqual(expected.sort(), res.sort())
         self.mox.VerifyAll()
