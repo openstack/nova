@@ -647,14 +647,22 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                      injected_files, admin_password,
                      is_first_time, node=None, legacy_bdm_in_spec=True):
         instance_p = jsonutils.to_primitive(instance)
-        self.cast(ctxt, self.make_msg('run_instance', instance=instance_p,
-                request_spec=request_spec, filter_properties=filter_properties,
-                requested_networks=requested_networks,
-                injected_files=injected_files, admin_password=admin_password,
-                is_first_time=is_first_time, node=node,
-                legacy_bdm_in_spec=legacy_bdm_in_spec),
-                topic=_compute_topic(self.topic, ctxt, host, None),
-                version='2.37')
+        msg_kwargs = {'instance': instance_p, 'request_spec': request_spec,
+                      'filter_properties': filter_properties,
+                      'requested_networks': requested_networks,
+                      'injected_files': injected_files,
+                      'admin_password': admin_password,
+                      'is_first_time': is_first_time, 'node': node}
+
+        if self.can_send_version('2.37'):
+            version = '2.37'
+            msg_kwargs['legacy_bdm_in_spec'] = legacy_bdm_in_spec
+        else:
+            version = '2.19'
+        msg = self.make_msg('run_instance', **msg_kwargs)
+        self.cast(ctxt, msg,
+                  topic=_compute_topic(self.topic, ctxt, host, None),
+                  version=version)
 
     def set_admin_password(self, ctxt, instance, new_pass):
         instance_p = jsonutils.to_primitive(instance)
