@@ -34,6 +34,7 @@ from eventlet import greenpool
 from eventlet import pools
 from eventlet import queue
 from eventlet import semaphore
+from oslo.config import cfg
 
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _  # noqa
@@ -41,6 +42,19 @@ from nova.openstack.common import local
 from nova.openstack.common import log as logging
 from nova.openstack.common.rpc import common as rpc_common
 
+
+amqp_opts = [
+    cfg.BoolOpt('amqp_durable_queues',
+                default=False,
+                deprecated_name='rabbit_durable_queues',
+                deprecated_group='DEFAULT',
+                help='Use durable queues in amqp.'),
+    cfg.BoolOpt('amqp_auto_delete',
+                default=False,
+                help='Auto-delete queues in amqp.'),
+]
+
+cfg.CONF.register_opts(amqp_opts)
 
 UNIQUE_ID = '_unique_id'
 LOG = logging.getLogger(__name__)
@@ -286,8 +300,13 @@ def pack_context(msg, context):
     for args at some point.
 
     """
-    context_d = dict([('_context_%s' % key, value)
-                      for (key, value) in context.to_dict().iteritems()])
+    if isinstance(context, dict):
+        context_d = dict([('_context_%s' % key, value)
+                          for (key, value) in context.iteritems()])
+    else:
+        context_d = dict([('_context_%s' % key, value)
+                          for (key, value) in context.to_dict().iteritems()])
+
     msg.update(context_d)
 
 
@@ -345,22 +364,43 @@ class CallbackWrapper(_ThreadPoolWithWait):
     Allows it to be invoked in a green thread.
     """
 
-    def __init__(self, conf, callback, connection_pool):
+    def __init__(self, conf, callback, connection_pool,
+                 wait_for_consumers=False):
         """Initiates CallbackWrapper object.
 
         :param conf: cfg.CONF instance
         :param callback: a callable (probably a function)
         :param connection_pool: connection pool as returned by
                                 get_connection_pool()
+        :param wait_for_consumers: wait for all green threads to
+                                   complete and raise the last
+                                   caught exception, if any.
+
         """
         super(CallbackWrapper, self).__init__(
             conf=conf,
             connection_pool=connection_pool,
         )
         self.callback = callback
+        self.wait_for_consumers = wait_for_consumers
+        self.exc_info = None
+
+    def _wrap(self, message_data, **kwargs):
+        """Wrap the callback invocation to catch exceptions.
+        """
+        try:
+            self.callback(message_data, **kwargs)
+        except Exception:
+            self.exc_info = sys.exc_info()
 
     def __call__(self, message_data):
-        self.pool.spawn_n(self.callback, message_data)
+        self.exc_info = None
+        self.pool.spawn_n(self._wrap, message_data)
+
+        if self.wait_for_consumers:
+            self.pool.waitall()
+            if self.exc_info:
+                raise self.exc_info[1], None, self.exc_info[2]
 
 
 class ProxyCallback(_ThreadPoolWithWait):

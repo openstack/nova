@@ -63,9 +63,7 @@ class RingExchange(mm.Exchange):
             self.ring0[k] = itertools.cycle(self.ring[k])
 
     def _ring_has(self, key):
-        if key in self.ring0:
-            return True
-        return False
+        return key in self.ring0
 
 
 class RoundRobinRingExchange(RingExchange):
