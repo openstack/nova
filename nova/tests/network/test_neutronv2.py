@@ -292,8 +292,11 @@ class TestNeutronv2Base(test.TestCase):
                 if port_id:
                     self.moxed_client.show_port(port_id).AndReturn(
                         {'port': {'id': 'my_portid1',
-                         'network_id': 'my_netid1',
-                         'mac_address': 'my_mac1'}})
+                                  'network_id': 'my_netid1',
+                                  'mac_address': 'my_mac1',
+                                  'device_id': kwargs.get('_device') and
+                                               self.instance2['uuid'] or ''}})
+
                     ports['my_netid1'] = self.port_data1[0]
                     id = 'my_netid1'
                     if macs is not None:
@@ -782,6 +785,17 @@ class TestNeutronv2(TestNeutronv2Base):
         self._returned_nw_info = self.port_data1 + [new_port]
         nw_info = self._allocate_for_instance()
         self.assertEqual(nw_info, [new_port])
+
+    def test_allocate_for_instance_port_in_use(self):
+        # If a port is already in use, an exception should be raised.
+        requested_networks = [(None, None, 'my_portid1')]
+        api = self._stub_allocate_for_instance(
+            requested_networks=requested_networks,
+            _break='pre_list_networks',
+            _device=True)
+        self.assertRaises(exception.PortInUse,
+                          api.allocate_for_instance, self.context,
+                          self.instance, requested_networks=requested_networks)
 
     def _deallocate_for_instance(self, number):
         port_data = number == 1 and self.port_data1 or self.port_data2
