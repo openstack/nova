@@ -831,7 +831,7 @@ class BaseOperator(object):
 
         :param file_path: absolute path to file to be removed
         """
-        command = 'rm %s' % file_path
+        command = 'rm -f %s' % file_path
         self.run_vios_command_as_root(command)
 
     def set_lpar_mac_base_value(self, instance_name, mac):

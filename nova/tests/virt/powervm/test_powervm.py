@@ -19,6 +19,7 @@ Test suite for PowerVMDriver.
 """
 
 import contextlib
+import mock
 import os
 import paramiko
 
@@ -123,9 +124,6 @@ class FakeIVMOperator(powervm_operator.IVMOperator):
         return 'fake-powervm'
 
     def rename_lpar(self, old, new):
-        pass
-
-    def _remove_file(self, file_path):
         pass
 
     def set_lpar_mac_base_value(self, instance_name, mac):
@@ -505,10 +503,10 @@ class PowerVMDriverTestCase(test.TestCase):
         fake_op = self.powervm_connection._powervm
         self.deploy_from_vios_file_called = False
         self.power_on = power_on
+        exp_file_path = 'some/file/path.gz'
 
         def fake_deploy_from_vios_file(lpar, file_path, size,
                                        decompress, power_on):
-            exp_file_path = 'some/file/path.gz'
             exp_size = 40 * 1024 ** 3
             exp_decompress = True
             self.deploy_from_vios_file_called = True
@@ -519,11 +517,18 @@ class PowerVMDriverTestCase(test.TestCase):
 
         self.stubs.Set(fake_op, '_deploy_from_vios_file',
                        fake_deploy_from_vios_file)
-        self.powervm_connection.finish_migration(context, None,
-                         instance, disk_info, network_info,
-                         None, resize_instance=True,
-                         block_device_info=None,
-                         power_on=power_on)
+
+        # mock out the rm -f command call to vios
+        with mock.patch.object(self.powervm_connection._powervm._operator,
+                               'run_vios_command_as_root',
+                               return_value=[]) as run_vios_cmd:
+            self.powervm_connection.finish_migration(context, None,
+                             instance, disk_info, network_info,
+                             None, resize_instance=True,
+                             block_device_info=None,
+                             power_on=power_on)
+            run_vios_cmd.assert_called_once_with('rm -f %s' % exp_file_path)
+
         self.assertEqual(self.deploy_from_vios_file_called, True)
 
     def test_deploy_from_migrated_file_power_on(self):
