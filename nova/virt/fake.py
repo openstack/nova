@@ -27,6 +27,7 @@ semantics of real hypervisor connections.
 
 from oslo.config import cfg
 
+from nova import block_device
 from nova.compute import power_state
 from nova.compute import task_states
 from nova import db
@@ -490,3 +491,11 @@ class FakeVirtAPI(virtapi.VirtAPI):
 
     def instance_type_get(self, context, instance_type_id):
         return db.instance_type_get(context, instance_type_id)
+
+    def block_device_mapping_get_all_by_instance(self, context, instance,
+                                                 legacy=True):
+        bdms = db.block_device_mapping_get_all_by_instance(context,
+                                                           instance['uuid'])
+        if legacy:
+            bdms = block_device.legacy_mapping(bdms)
+        return bdms
