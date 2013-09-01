@@ -16,10 +16,7 @@
 
 """The security groups extension."""
 
-import contextlib
 import json
-import webob
-from webob import exc
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
@@ -29,7 +26,6 @@ from nova.compute import api as compute_api
 from nova import exception
 from nova.network.security_group import neutron_driver
 from nova.network.security_group import openstack_driver
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import xmlutils
 
 
@@ -43,78 +39,6 @@ def _authorize_context(req):
     context = req.environ['nova.context']
     authorize(context)
     return context
-
-
-@contextlib.contextmanager
-def translate_exceptions():
-    """Translate nova exceptions to http exceptions."""
-    try:
-        yield
-    except exception.Invalid as exp:
-        msg = exp.format_message()
-        raise exc.HTTPBadRequest(explanation=msg)
-    except exception.SecurityGroupNotFound as exp:
-        msg = exp.format_message()
-        raise exc.HTTPNotFound(explanation=msg)
-    except exception.InstanceNotFound as exp:
-        msg = exp.format_message()
-        raise exc.HTTPNotFound(explanation=msg)
-    except exception.SecurityGroupLimitExceeded as exp:
-        msg = exp.format_message()
-        raise exc.HTTPRequestEntityTooLarge(explanation=msg)
-
-
-class SecurityGroupActionController(wsgi.Controller):
-    def __init__(self, *args, **kwargs):
-        super(SecurityGroupActionController, self).__init__(*args, **kwargs)
-        self.security_group_api = (
-            openstack_driver.get_openstack_security_group_driver())
-        self.compute_api = compute.API(
-                                   security_group_api=self.security_group_api)
-
-    def _parse(self, body, action):
-        try:
-            body = body[action]
-            group_name = body['name']
-        except TypeError:
-            msg = _("Missing parameter dict")
-            raise webob.exc.HTTPBadRequest(explanation=msg)
-        except KeyError:
-            msg = _("Security group not specified")
-            raise webob.exc.HTTPBadRequest(explanation=msg)
-
-        if not group_name or group_name.strip() == '':
-            msg = _("Security group name cannot be empty")
-            raise webob.exc.HTTPBadRequest(explanation=msg)
-
-        return group_name
-
-    def _invoke(self, method, context, id, group_name):
-        with translate_exceptions():
-            instance = self.compute_api.get(context, id)
-            method(context, instance, group_name)
-
-        return webob.Response(status_int=202)
-
-    @wsgi.action('add_security_group')
-    def _add_security_group(self, req, id, body):
-        context = req.environ['nova.context']
-        authorize(context)
-
-        group_name = self._parse(body, 'add_security_group')
-
-        return self._invoke(self.security_group_api.add_to_instance,
-                            context, id, group_name)
-
-    @wsgi.action('remove_security_group')
-    def _remove_security_group(self, req, id, body):
-        context = req.environ['nova.context']
-        authorize(context)
-
-        group_name = self._parse(body, 'remove_security_group')
-
-        return self._invoke(self.security_group_api.remove_from_instance,
-                            context, id, group_name)
 
 
 class SecurityGroupsOutputController(wsgi.Controller):
@@ -245,11 +169,9 @@ class SecurityGroups(extensions.V3APIExtensionBase):
         self.xml_deserializer = wsgi.XMLDeserializer()
 
     def get_controller_extensions(self):
-        controller = SecurityGroupActionController()
-        actions = extensions.ControllerExtension(self, 'servers', controller)
         controller = SecurityGroupsOutputController()
         output = extensions.ControllerExtension(self, 'servers', controller)
-        return [actions, output]
+        return [output]
 
     def get_resources(self):
         return []
