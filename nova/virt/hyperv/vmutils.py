@@ -51,6 +51,11 @@ class VHDResizeException(HyperVException):
         super(HyperVException, self).__init__(message)
 
 
+class HyperVAuthorizationException(HyperVException):
+    def __init__(self, message=None):
+        super(HyperVException, self).__init__(message)
+
+
 class VMUtils(object):
 
     def __init__(self, host='.'):
@@ -150,6 +155,13 @@ class VMUtils(object):
         vmsetting = self._get_vm_setting_data(vm)
         self._set_vm_memory(vm, vmsetting, memory_mb)
         self._set_vm_vcpus(vm, vmsetting, vcpus_num, limit_cpu_features)
+
+    def check_admin_permissions(self):
+        if not self._conn.Msvm_VirtualSystemManagementService():
+            msg = _("The Windows account running nova-compute on this Hyper-V"
+                    " host doesn't have the required permissions to create or"
+                    " operate the virtual machine.")
+            raise HyperVAuthorizationException(msg)
 
     def create_vm(self, vm_name, memory_mb, vcpus_num, limit_cpu_features):
         """Creates a VM."""

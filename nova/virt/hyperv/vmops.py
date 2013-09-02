@@ -19,6 +19,7 @@
 """
 Management class for basic VM operations.
 """
+import functools
 import os
 
 from oslo.config import cfg
@@ -62,6 +63,16 @@ CONF = cfg.CONF
 CONF.register_opts(hyperv_opts, 'hyperv')
 CONF.import_opt('use_cow_images', 'nova.virt.driver')
 CONF.import_opt('network_api_class', 'nova.network')
+
+
+def check_admin_permissions(function):
+    @functools.wraps(function)
+    def wrapper(self, *args, **kwds):
+
+        # Make sure the windows account has the required admin permissions.
+        self._vmutils.check_admin_permissions()
+        return function(self, *args, **kwds)
+    return wrapper
 
 
 class VMOps(object):
@@ -149,6 +160,7 @@ class VMOps(object):
 
         return root_vhd_path
 
+    @check_admin_permissions
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info, block_device_info=None):
         """Create a new VM and start it."""

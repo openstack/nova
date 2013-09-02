@@ -843,7 +843,8 @@ class HyperVAPITestCase(test.TestCase):
 
     def _setup_create_instance_mocks(self, setup_vif_mocks_func=None,
                                      boot_from_volume=False,
-                                     block_device_info=None):
+                                     block_device_info=None,
+                                     admin_permissions=True):
         vmutils.VMUtils.create_vm(mox.Func(self._check_vm_name), mox.IsA(int),
                                   mox.IsA(int), mox.IsA(bool))
 
@@ -881,12 +882,23 @@ class HyperVAPITestCase(test.TestCase):
     def _check_vm_name(self, vm_name):
         return vm_name == self._test_vm_name
 
+    def _setup_check_admin_permissions_mocks(self, admin_permissions=True):
+        self._mox.StubOutWithMock(vmutils.VMUtils,
+                                  'check_admin_permissions')
+        m = vmutils.VMUtils.check_admin_permissions()
+        if admin_permissions:
+            m.AndReturn(None)
+        else:
+            m.AndRaise(vmutils.HyperVAuthorizationException(_(
+                                                'Simulated failure')))
+
     def _setup_spawn_instance_mocks(self, cow, setup_vif_mocks_func=None,
                                     with_exception=False,
                                     block_device_info=None,
                                     boot_from_volume=False,
                                     config_drive=False,
-                                    use_cdrom=False):
+                                    use_cdrom=False,
+                                    admin_permissions=True):
         m = vmutils.VMUtils.vm_exists(mox.IsA(str))
         m.WithSideEffects(self._set_vm_name).AndReturn(False)
 
@@ -915,6 +927,9 @@ class HyperVAPITestCase(test.TestCase):
                 vhdutils.VHDUtils.resize_vhd(mox.IsA(str), mox.IsA(object))
                 fake.PathUtils.copyfile(mox.IsA(str), mox.IsA(str))
 
+        self._setup_check_admin_permissions_mocks(
+                                          admin_permissions=admin_permissions)
+
         self._setup_create_instance_mocks(setup_vif_mocks_func,
                                           boot_from_volume,
                                           block_device_info)
@@ -936,12 +951,14 @@ class HyperVAPITestCase(test.TestCase):
                              setup_vif_mocks_func=None,
                              with_exception=False,
                              config_drive=False,
-                             use_cdrom=False):
+                             use_cdrom=False,
+                             admin_permissions=True):
         self._setup_spawn_instance_mocks(cow,
                                          setup_vif_mocks_func,
                                          with_exception,
                                          config_drive=config_drive,
-                                         use_cdrom=use_cdrom)
+                                         use_cdrom=use_cdrom,
+                                         admin_permissions=admin_permissions)
 
         self._mox.ReplayAll()
         self._spawn_instance(cow)
@@ -1357,3 +1374,9 @@ class HyperVAPITestCase(test.TestCase):
 
     def test_finish_revert_migration_power_off(self):
         self._test_finish_revert_migration(False)
+
+    def test_spawn_no_admin_permissions(self):
+        self.assertRaises(vmutils.HyperVAuthorizationException,
+                          self._test_spawn_instance,
+                          with_exception=True,
+                          admin_permissions=False)
