@@ -767,8 +767,6 @@ class ComputeManager(manager.SchedulerDependentManager):
             if CONF.defer_iptables_apply:
                 self.driver.filter_defer_apply_off()
 
-        self._report_driver_status(context)
-
     def pre_start_hook(self):
         """After the service is initialized, but before we fully bring
         the service up by listening on RPC queues, make sure to update
@@ -4455,20 +4453,6 @@ class ComputeManager(manager.SchedulerDependentManager):
             return
 
         self._update_volume_usage_cache(context, vol_usages)
-
-    @periodic_task.periodic_task
-    def _report_driver_status(self, context):
-        curr_time = time.time()
-        if curr_time - self._last_host_check > CONF.host_state_interval:
-            self._last_host_check = curr_time
-            LOG.info(_("Updating host status"))
-            # This will grab info about the host and queue it
-            # to be sent to the Schedulers.
-            capabilities = self.driver.get_host_stats(refresh=True)
-            for capability in (capabilities if isinstance(capabilities, list)
-                               else [capabilities]):
-                capability['host_ip'] = CONF.my_ip
-            self.update_service_capabilities(capabilities)
 
     @periodic_task.periodic_task(spacing=CONF.sync_power_state_interval,
                                  run_immediately=True)
