@@ -1768,6 +1768,10 @@
 # Host reserved for specific images (list value)
 #isolated_hosts=
 
+# Whether to force isolated hosts to run only isolated images
+# (boolean value)
+#restrict_isolated_hosts_to_isolated_images=true
+
 
 #
 # Options defined in nova.scheduler.filters.num_instances_filter

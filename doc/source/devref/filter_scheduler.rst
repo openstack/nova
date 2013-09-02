@@ -79,8 +79,8 @@ There are some standard filter classes to use (:mod:`nova.scheduler.filters`):
   fall back to the global default ``cpu_allocation_ratio``. If more than one value
   is found for a host (meaning the host is in two differenet aggregate with
   different ratio settings), the minimum value will be used.
-* |IsolatedHostsFilter| - filter based on ``image_isolated`` and ``host_isolated``
-  flags.
+* |IsolatedHostsFilter| - filter based on ``image_isolated``, ``host_isolated``
+  and ``restrict_isolated_hosts_to_isolated_images`` flags.
 * |JsonFilter| - allows simple JSON-based grammar for selecting hosts.
 * |RamFilter| - filters hosts by their RAM. Only hosts with sufficient RAM
   to host the instance are passed.
@@ -166,7 +166,8 @@ Now we are going to |IsolatedHostsFilter|. There can be some special hosts
 reserved for specific images. These hosts are called **isolated**. So the
 images to run on the isolated hosts are also called isolated. This Scheduler
 checks if ``image_isolated`` flag named in instance specifications is the same
-that the host has.
+that the host has. Isolated hosts can run non isolated images if the flag
+``restrict_isolated_hosts_to_isolated_images`` is set to false.
 
 |DifferentHostFilter| - its method ``host_passes`` returns ``True`` if host to
 place instance on is different from all the hosts used by set of instances.

@@ -24,6 +24,10 @@ isolated_opts = [
     cfg.ListOpt('isolated_hosts',
                 default=[],
                 help='Host reserved for specific images'),
+    cfg.BoolOpt('restrict_isolated_hosts_to_isolated_images',
+                default=True,
+                help='Whether to force isolated hosts to run only isolated '
+                     'images'),
 ]
 CONF = cfg.CONF
 CONF.register_opts(isolated_opts)
@@ -37,10 +41,18 @@ class IsolatedHostsFilter(filters.BaseHostFilter):
 
     def host_passes(self, host_state, filter_properties):
         """
-        Result Matrix:
+        Result Matrix with 'restrict_isolated_hosts_to_isolated_images' set
+        to True:
                      | isolated_image | non_isolated_image
         -------------+----------------+-------------------
         iso_host     |    True        |     False
+        non_iso_host |    False       |      True
+
+        Result Matrix with 'restrict_isolated_hosts_to_isolated_images' set
+        to False:
+                     | isolated_image | non_isolated_image
+        -------------+----------------+-------------------
+        iso_host     |    True        |      True
         non_iso_host |    False       |      True
 
         """
@@ -49,14 +61,22 @@ class IsolatedHostsFilter(filters.BaseHostFilter):
         # through.
         isolated_hosts = CONF.isolated_hosts
         isolated_images = CONF.isolated_images
+        restrict_isolated_hosts_to_isolated_images = (CONF.
+                                   restrict_isolated_hosts_to_isolated_images)
         if not isolated_images:
-            # As there are no images to match, return False if the host is in
-            # the isolation list
-            return host_state.host not in isolated_hosts
+            # As there are no images to match, return True if the filter is
+            # not restrictive otherwise return False if the host is in the
+            # isolation list.
+            return ((not restrict_isolated_hosts_to_isolated_images) or
+                   (host_state.host not in isolated_hosts))
 
         spec = filter_properties.get('request_spec', {})
         props = spec.get('instance_properties', {})
         image_ref = props.get('image_ref')
         image_isolated = image_ref in isolated_images
         host_isolated = host_state.host in isolated_hosts
-        return image_isolated == host_isolated
+
+        if restrict_isolated_hosts_to_isolated_images:
+            return (image_isolated == host_isolated)
+        else:
+            return (not image_isolated) or host_isolated
