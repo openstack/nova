@@ -123,8 +123,6 @@ class FloatingIP(object):
             LOG.debug(_("floating IP allocation for instance "
                         "|%s|"), floating_address,
                         instance_uuid=instance_uuid, context=context)
-            # set auto_assigned column to true for the floating ip
-            self.db.floating_ip_set_auto_assigned(context, floating_address)
 
             # get the first fixed address belonging to the instance
             fixed_ips = nw_info.fixed_ips()
@@ -223,9 +221,8 @@ class FloatingIP(object):
             raise exception.FloatingIpLimitExceeded()
 
         try:
-            floating_ip = self.db.floating_ip_allocate_address(context,
-                                                               project_id,
-                                                               pool)
+            floating_ip = self.db.floating_ip_allocate_address(
+                context, project_id, pool, auto_assigned=auto_assigned)
             payload = dict(project_id=project_id, floating_ip=floating_ip)
             notifier.notify(context,
                             notifier.publisher_id("network"),

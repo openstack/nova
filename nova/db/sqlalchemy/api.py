@@ -713,7 +713,8 @@ def floating_ip_get_pools(context):
 
 
 @require_context
-def floating_ip_allocate_address(context, project_id, pool):
+def floating_ip_allocate_address(context, project_id, pool,
+                                 auto_assigned=False):
     nova.context.authorize_project_context(context, project_id)
     session = get_session()
     with session.begin():
@@ -729,6 +730,7 @@ def floating_ip_allocate_address(context, project_id, pool):
         if not floating_ip_ref:
             raise exception.NoMoreFloatingIps()
         floating_ip_ref['project_id'] = project_id
+        floating_ip_ref['auto_assigned'] = auto_assigned
         session.add(floating_ip_ref)
     return floating_ip_ref['address']
 
