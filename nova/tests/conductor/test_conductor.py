@@ -1257,15 +1257,16 @@ class _BaseTaskTestCase(object):
         inst = fake_instance.fake_db_instance(image_ref='image_ref')
         inst_obj = instance_obj.Instance._from_db_object(
             self.context, instance_obj.Instance(), inst, [])
-        instance_type = {}
-        instance_type['extra_specs'] = 'extra_specs'
-        request_spec = {'instance_type': instance_type}
+        flavor = flavors.get_default_flavor()
+        flavor['extra_specs'] = 'extra_specs'
+        request_spec = {'instance_type': flavor}
         self.conductor_manager.image_service.show(
             self.context, inst_obj['image_ref']).AndReturn('image')
 
         scheduler_utils.build_request_spec(
             self.context, 'image',
-            [mox.IsA(instance_obj.Instance)]).AndReturn(request_spec)
+            [mox.IsA(instance_obj.Instance)],
+            instance_type=flavor).AndReturn(request_spec)
 
         hosts = [dict(host='host1', nodename=None, limits={})]
         self.conductor_manager.scheduler_rpcapi.select_destinations(
@@ -1275,7 +1276,7 @@ class _BaseTaskTestCase(object):
 
         self.conductor_manager.compute_rpcapi.prep_resize(
             self.context, 'image', mox.IsA(instance_obj.Instance),
-            'flavor', 'host1', [], request_spec=request_spec,
+            mox.IsA(dict), 'host1', [], request_spec=request_spec,
             filter_properties=filter_properties, node=None)
 
         self.mox.ReplayAll()
@@ -1287,11 +1288,11 @@ class _BaseTaskTestCase(object):
             # The API method is actually 'resize_instance'.  It gets
             # converted into 'migrate_server' when doing RPC.
             self.conductor.resize_instance(
-                self.context, inst_obj, {}, scheduler_hint, 'flavor', [])
+                self.context, inst_obj, {}, scheduler_hint, flavor, [])
         else:
             self.conductor.migrate_server(
                 self.context, inst_obj, scheduler_hint,
-                False, False, 'flavor', None, None, [])
+                False, False, flavor, None, None, [])
 
     def test_build_instances(self):
         instance_type = flavors.get_default_flavor()
@@ -1531,7 +1532,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         self.conductor._get_image(self.context,
                                   'fake-image_ref').AndReturn(image)
         scheduler_utils.build_request_spec(
-                self.context, image, [inst_obj]).AndReturn(request_spec)
+                self.context, image, [inst_obj],
+                instance_type='flavor').AndReturn(request_spec)
 
         exc_info = exc.NoValidHost(reason="")
 
@@ -1575,7 +1577,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         self.conductor._get_image(self.context,
                                   'fake-image_ref').AndReturn(image)
         scheduler_utils.build_request_spec(
-                self.context, image, [inst_obj]).AndReturn(request_spec)
+                self.context, image, [inst_obj],
+                instance_type='flavor').AndReturn(request_spec)
 
         exc_info = exc.NoValidHost(reason="")
 
@@ -1623,7 +1626,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         self.conductor._get_image(self.context,
                                   'fake-image_ref').AndReturn(image)
         scheduler_utils.build_request_spec(
-                self.context, image, [inst_obj]).AndReturn(request_spec)
+                self.context, image, [inst_obj],
+                instance_type='flavor').AndReturn(request_spec)
 
         exc_info = exc.NoValidHost(reason="")
 
