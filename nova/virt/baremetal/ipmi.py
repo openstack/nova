@@ -148,6 +148,8 @@ class IPMI(base.PowerManager):
                 self.state = baremetal_states.ACTIVE
                 raise loopingcall.LoopingCallDone()
             if self.retries > CONF.baremetal.ipmi_power_retry:
+                LOG.error(_("IPMI power on failed after %d tries") % (
+                    CONF.baremetal.ipmi_power_retry))
                 self.state = baremetal_states.ERROR
                 raise loopingcall.LoopingCallDone()
             try:
@@ -170,6 +172,8 @@ class IPMI(base.PowerManager):
                 self.state = baremetal_states.DELETED
                 raise loopingcall.LoopingCallDone()
             if self.retries > CONF.baremetal.ipmi_power_retry:
+                LOG.error(_("IPMI power off failed after %d tries") % (
+                    CONF.baremetal.ipmi_power_retry))
                 self.state = baremetal_states.ERROR
                 raise loopingcall.LoopingCallDone()
             try:
