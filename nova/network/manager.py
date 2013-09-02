@@ -1096,6 +1096,7 @@ class NetworkManager(manager.Manager):
                 nets = self.db.network_get_all(context)
             except exception.NoNetworksFound:
                 nets = []
+            num_used_nets = len(nets)
             used_subnets = [netaddr.IPNetwork(net['cidr']) for net in nets]
 
             def find_next(subnet):
@@ -1168,9 +1169,17 @@ class NetworkManager(manager.Manager):
 
                 net['netmask_v6'] = str(subnet_v6._prefixlen)
 
-            if kwargs.get('vpn', False):
-                # this bit here is for vlan-manager
-                vlan = kwargs['vlan_start'] + index
+            if CONF.network_manager == 'nova.network.manager.VlanManager':
+                vlan = kwargs.get('vlan', None)
+                if not vlan:
+                    index_vlan = index + num_used_nets
+                    vlan = kwargs['vlan_start'] + index_vlan
+                    used_vlans = [x['vlan'] for x in nets]
+                    if vlan in used_vlans:
+                        # That vlan is used, try to get another one
+                        used_vlans.sort()
+                        vlan = used_vlans[-1] + 1
+
                 net['vpn_private_address'] = str(subnet_v4[2])
                 net['dhcp_start'] = str(subnet_v4[3])
                 net['vlan'] = vlan
@@ -1178,7 +1187,8 @@ class NetworkManager(manager.Manager):
 
                 # NOTE(vish): This makes ports unique across the cloud, a more
                 #             robust solution would be to make them uniq per ip
-                net['vpn_public_port'] = kwargs['vpn_start'] + index
+                index_vpn = index + num_used_nets
+                net['vpn_public_port'] = kwargs['vpn_start'] + index_vpn
 
             # None if network with cidr or cidr_v6 already exists
             network = self.db.network_create_safe(context, net)
