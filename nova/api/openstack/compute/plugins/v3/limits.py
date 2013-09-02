@@ -212,7 +212,7 @@ DEFAULT_LIMITS = [
     Limit("POST", "*", ".*", 10, utils.TIME_UNITS['MINUTE']),
     Limit("POST", "*/servers", "^/servers", 50, utils.TIME_UNITS['DAY']),
     Limit("PUT", "*", ".*", 10, utils.TIME_UNITS['MINUTE']),
-    Limit("GET", "*changes-since*", ".*changes-since.*", 3,
+    Limit("GET", "*changes_since*", ".*changes_since.*", 3,
           utils.TIME_UNITS['MINUTE']),
     Limit("DELETE", "*", ".*", 100, utils.TIME_UNITS['MINUTE']),
 ]
