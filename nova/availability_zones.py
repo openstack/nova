@@ -58,7 +58,7 @@ def reset_cache():
 
 
 def _make_cache_key(host):
-    return "azcache-%s" % host
+    return "azcache-%s" % host.encode('utf-8')
 
 
 def set_availability_zones(context, services):
