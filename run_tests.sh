@@ -162,6 +162,10 @@ function copy_subunit_log {
 
 function run_pep8 {
   echo "Running flake8 ..."
+  if [ $never_venv -eq 1 ]; then
+      echo "**WARNING**:"
+      echo "Running flake8 without virtual env may miss OpenStack HACKING detection"
+  fi
   bash -c "${wrapper} flake8"
 }
 
