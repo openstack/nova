@@ -3687,6 +3687,17 @@ class LibvirtDriver(driver.ComputeDriver):
         # following normal way.
         self._fetch_instance_kernel_ramdisk(context, instance)
 
+    def post_live_migration(self, context, instance, block_device_info):
+        # Disconnect from volume server
+        block_device_mapping = driver.block_device_info_get_mapping(
+                block_device_info)
+        for vol in block_device_mapping:
+            connection_info = vol['connection_info']
+            disk_dev = vol['mount_device'].rpartition("/")[2]
+            self.volume_driver_method('disconnect_volume',
+                                      connection_info,
+                                      disk_dev)
+
     def post_live_migration_at_destination(self, context,
                                            instance,
                                            network_info,
