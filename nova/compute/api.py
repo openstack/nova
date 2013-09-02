@@ -75,8 +75,9 @@ from nova import volume
 LOG = logging.getLogger(__name__)
 
 
-def publisher_id(aggregate_identify=None):
-    return notifier.publisher_id("aggregate", aggregate_identify)
+wrap_exception = functools.partial(
+    exception.wrap_exception,
+    notifier=notifier, publisher_id=notifier.publisher_id('aggregate'))
 
 
 compute_opts = [
@@ -3044,7 +3045,7 @@ class AggregateAPI(base.Base):
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         super(AggregateAPI, self).__init__(**kwargs)
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     def create_aggregate(self, context, aggregate_name, availability_zone):
         """Creates the model for the aggregate."""
 
@@ -3080,7 +3081,7 @@ class AggregateAPI(base.Base):
         aggregates = self.db.aggregate_get_all(context)
         return [self._reformat_aggregate_info(agg) for agg in aggregates]
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     def update_aggregate(self, context, aggregate_id, values):
         """Update the properties of an aggregate."""
         include_az = values.get('availability_zone')
@@ -3099,7 +3100,7 @@ class AggregateAPI(base.Base):
             availability_zones.reset_cache()
         return self._reformat_aggregate_info(aggregate)
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     def update_aggregate_metadata(self, context, aggregate_id, metadata):
         """Updates the aggregate metadata."""
         aggregate_payload = {'aggregate_id': aggregate_id}
@@ -3122,7 +3123,7 @@ class AggregateAPI(base.Base):
                                                     aggregate_payload)
         return self.get_aggregate(context, aggregate_id)
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     def delete_aggregate(self, context, aggregate_id):
         """Deletes the aggregate."""
         aggregate_payload = {'aggregate_id': aggregate_id}
@@ -3156,7 +3157,7 @@ class AggregateAPI(base.Base):
                     action=action_name, aggregate_id=aggregate_id,
                     reason=msg)
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     def add_host_to_aggregate(self, context, aggregate_id, host_name):
         """Adds the host to an aggregate."""
         aggregate_payload = {'aggregate_id': aggregate_id,
@@ -3185,7 +3186,7 @@ class AggregateAPI(base.Base):
                                                     aggregate_payload)
         return self.get_aggregate(context, aggregate_id)
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_exception()
     def remove_host_from_aggregate(self, context, aggregate_id, host_name):
         """Removes host from the aggregate."""
         aggregate_payload = {'aggregate_id': aggregate_id,
