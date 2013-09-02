@@ -17,6 +17,10 @@
 from nova.api.openstack import extensions
 
 
+ALIAS = "os-user-data"
+ATTRIBUTE_NAME = '%s:user_data' % ALIAS
+
+
 class UserData(extensions.V3APIExtensionBase):
     """Add user_data to the Create Server v1.1 API."""
 
@@ -33,9 +37,9 @@ class UserData(extensions.V3APIExtensionBase):
         return []
 
     def server_create(self, server_dict, create_kwargs):
-        create_kwargs['user_data'] = server_dict.get('user_data')
+        create_kwargs['user_data'] = server_dict.get(ATTRIBUTE_NAME)
 
     def server_xml_extract_server_deserialize(self, server_node, server_dict):
-        user_data = server_node.getAttribute('user_data')
+        user_data = server_node.getAttribute(ATTRIBUTE_NAME)
         if user_data:
-            server_dict['user_data'] = user_data
+            server_dict[ATTRIBUTE_NAME] = user_data
