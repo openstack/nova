@@ -3064,6 +3064,37 @@ class LibvirtConnTestCase(test.TestCase):
                                                        inst_ref['name'])))
         db.instance_destroy(self.context, inst_ref['uuid'])
 
+    def test_pre_live_migration_plug_vifs_retry_fails(self):
+        self.flags(live_migration_retry_count=3)
+        instance = {'name': 'test', 'uuid': 'uuid'}
+
+        def fake_plug_vifs(instance, network_info):
+            raise processutils.ProcessExecutionError()
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.stubs.Set(conn, 'plug_vifs', fake_plug_vifs)
+        self.assertRaises(processutils.ProcessExecutionError,
+                          conn.pre_live_migration,
+                          self.context, instance, block_device_info=None,
+                          network_info=[], disk_info={})
+
+    def test_pre_live_migration_plug_vifs_retry_works(self):
+        self.flags(live_migration_retry_count=3)
+        called = {'count': 0}
+        instance = {'name': 'test', 'uuid': 'uuid'}
+
+        def fake_plug_vifs(instance, network_info):
+            called['count'] += 1
+            if called['count'] < CONF.live_migration_retry_count:
+                raise processutils.ProcessExecutionError()
+            else:
+                return
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.stubs.Set(conn, 'plug_vifs', fake_plug_vifs)
+        conn.pre_live_migration(self.context, instance, block_device_info=None,
+                                network_info=[], disk_info={})
+
     def test_get_instance_disk_info_works_correctly(self):
         # Test data
         instance_ref = db.instance_create(self.context, self.test_instance)
