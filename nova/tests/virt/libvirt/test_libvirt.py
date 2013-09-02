@@ -5976,8 +5976,8 @@ class LibvirtDriverTestCase(test.TestCase):
         def fake_create_image(context, inst,
                               disk_mapping, suffix='',
                               disk_images=None, network_info=None,
-                              block_device_info=None):
-            pass
+                              block_device_info=None, inject_files=True):
+            self.assertFalse(inject_files)
 
         def fake_create_domain(xml, instance=None, power_on=True):
             self.fake_create_domain_called = True
