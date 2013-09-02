@@ -4971,6 +4971,9 @@ class QuotaTestCase(test.TestCase, ModelsObjectComparatorMixin):
         db.quota_destroy_all_by_project(self.ctxt, 'project1')
         self.assertEqual(db.quota_get_all_by_project(self.ctxt, 'project1'),
                             {'project_id': 'project1'})
+        self.assertEqual(db.quota_get_all_by_project_and_user(self.ctxt,
+                            'project1', 'user1'),
+                            {'project_id': 'project1', 'user_id': 'user1'})
         self.assertEqual(db.quota_usage_get_all_by_project(
                             self.ctxt, 'project1'),
                             {'project_id': 'project1'})
