@@ -245,12 +245,14 @@ class FilterScheduler(driver.Scheduler):
         request. If maximum retries is exceeded, raise NoValidHost.
         """
         max_attempts = self._max_attempts()
-        retry = filter_properties.pop('retry', {})
+        force_hosts = filter_properties.get('force_hosts', [])
+        force_nodes = filter_properties.get('force_nodes', [])
 
-        if max_attempts == 1:
+        if max_attempts == 1 or force_hosts or force_nodes:
             # re-scheduling is disabled.
             return
 
+        retry = filter_properties.pop('retry', {})
         # retry is enabled, update attempt count:
         if retry:
             retry['num_attempts'] += 1
