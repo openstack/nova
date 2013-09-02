@@ -5417,6 +5417,7 @@ class ConsoleTestCase(test.TestCase, ModelsObjectComparatorMixin):
         console_pools = [db.console_pool_create(self.ctxt, val)
                          for val in pools_data]
         instance_uuid = uuidutils.generate_uuid()
+        db.instance_create(self.ctxt, {'uuid': instance_uuid})
         self.console_data = [dict([('instance_name', 'name' + str(x)),
                                   ('instance_uuid', instance_uuid),
                                   ('password', 'pass' + str(x)),
