@@ -438,8 +438,14 @@ class Instance(base.NovaObject):
         if expected_vm_state is not None:
             updates['expected_vm_state'] = expected_vm_state
 
+        expected_attrs = []
+        for attr in INSTANCE_OPTIONAL_FIELDS + INSTANCE_IMPLIED_FIELDS:
+            if hasattr(self, base.get_attrname(attr)):
+                expected_attrs.append(attr)
+
         old_ref, inst_ref = db.instance_update_and_get_original(
-                context, self.uuid, updates, update_cells=False)
+                context, self.uuid, updates, update_cells=False,
+                columns_to_join=self._attrs_to_columns(expected_attrs))
 
         if stale_instance:
             _handle_cell_update_from_api()
@@ -447,10 +453,6 @@ class Instance(base.NovaObject):
             cells_api = cells_rpcapi.CellsAPI()
             cells_api.instance_update_at_top(context, inst_ref)
 
-        expected_attrs = []
-        for attr in INSTANCE_OPTIONAL_FIELDS:
-            if hasattr(self, base.get_attrname(attr)):
-                expected_attrs.append(attr)
         self._from_db_object(context, self, inst_ref, expected_attrs)
         if 'vm_state' in changes or 'task_state' in changes:
             notifications.send_update(context, old_ref, inst_ref)

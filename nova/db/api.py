@@ -676,7 +676,8 @@ def instance_update(context, instance_uuid, values, update_cells=True):
 # objects.  When everything is using Instance.save(), we can remove the
 # argument and the RPC to nova-cells.
 def instance_update_and_get_original(context, instance_uuid, values,
-                                     update_cells=True):
+                                     update_cells=True,
+                                     columns_to_join=None):
     """Set the given properties on an instance and update it. Return
     a shallow copy of the original instance reference, as well as the
     updated one.
@@ -689,7 +690,8 @@ def instance_update_and_get_original(context, instance_uuid, values,
 
     Raises NotFound if instance does not exist.
     """
-    rv = IMPL.instance_update_and_get_original(context, instance_uuid, values)
+    rv = IMPL.instance_update_and_get_original(context, instance_uuid, values,
+                                               columns_to_join=columns_to_join)
     if update_cells:
         try:
             cells_rpcapi.CellsAPI().instance_update_at_top(context, rv[1])

@@ -2078,7 +2078,8 @@ def instance_update(context, instance_uuid, values):
 
 
 @require_context
-def instance_update_and_get_original(context, instance_uuid, values):
+def instance_update_and_get_original(context, instance_uuid, values,
+                                     columns_to_join=None):
     """Set the given properties on an instance and update it. Return
     a shallow copy of the original instance reference, as well as the
     updated one.
@@ -2096,7 +2097,8 @@ def instance_update_and_get_original(context, instance_uuid, values):
     Raises NotFound if instance does not exist.
     """
     return _instance_update(context, instance_uuid, values,
-                            copy_old_instance=True)
+                            copy_old_instance=True,
+                            columns_to_join=columns_to_join)
 
 
 # NOTE(danms): This updates the instance's metadata list in-place and in
@@ -2123,7 +2125,8 @@ def _instance_metadata_update_in_place(context, instance, metadata_type, model,
         instance[metadata_type].append(newitem)
 
 
-def _instance_update(context, instance_uuid, values, copy_old_instance=False):
+def _instance_update(context, instance_uuid, values, copy_old_instance=False,
+                     columns_to_join=None):
     session = get_session()
 
     if not uuidutils.is_uuid_like(instance_uuid):
@@ -2131,7 +2134,8 @@ def _instance_update(context, instance_uuid, values, copy_old_instance=False):
 
     with session.begin():
         instance_ref = _instance_get_by_uuid(context, instance_uuid,
-                                             session=session)
+                                             session=session,
+                                             columns_to_join=columns_to_join)
         if "expected_task_state" in values:
             # it is not a db column so always pop out
             expected = values.pop("expected_task_state")

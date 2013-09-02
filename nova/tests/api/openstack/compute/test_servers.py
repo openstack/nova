@@ -90,11 +90,21 @@ def return_security_group(context, instance_id, security_group_id):
     pass
 
 
-def instance_update(context, instance_uuid, values, update_cells=True):
+def instance_update_and_get_original(context, instance_uuid, values,
+                                     update_cells=True,
+                                     columns_to_join=None,
+                                     ):
     inst = fakes.stub_instance(INSTANCE_IDS.get(instance_uuid),
                                name=values.get('display_name'))
     inst = dict(inst, **values)
     return (inst, inst)
+
+
+def instance_update(context, instance_uuid, values, update_cells=True):
+    inst = fakes.stub_instance(INSTANCE_IDS.get(instance_uuid),
+                               name=values.get('display_name'))
+    inst = dict(inst, **values)
+    return inst
 
 
 def fake_compute_api(cls, req, id):
@@ -170,7 +180,7 @@ class ControllerTest(test.TestCase):
         self.stubs.Set(db, 'instance_add_security_group',
                        return_security_group)
         self.stubs.Set(db, 'instance_update_and_get_original',
-                       instance_update)
+                       instance_update_and_get_original)
 
         self.ext_mgr = extensions.ExtensionManager()
         self.ext_mgr.extensions = {}
@@ -1612,6 +1622,13 @@ class ServersControllerCreateTest(test.TestCase):
         def server_update(context, instance_uuid, params, update_cells=False):
             inst = self.instance_cache_by_uuid[instance_uuid]
             inst.update(params)
+            return inst
+
+        def server_update_and_get_original(
+                context, instance_uuid, params, update_cells=False,
+                columns_to_join=None):
+            inst = self.instance_cache_by_uuid[instance_uuid]
+            inst.update(params)
             return (inst, inst)
 
         def fake_method(*args, **kwargs):
@@ -1637,7 +1654,7 @@ class ServersControllerCreateTest(test.TestCase):
         self.stubs.Set(db, 'instance_get', instance_get)
         self.stubs.Set(db, 'instance_update', instance_update)
         self.stubs.Set(db, 'instance_update_and_get_original',
-                       server_update)
+                       server_update_and_get_original)
         self.stubs.Set(manager.VlanManager, 'allocate_fixed_ip',
                        fake_method)
         self.body = {
