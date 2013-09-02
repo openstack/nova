@@ -112,6 +112,12 @@ class FlavorsExtraSpecsTest(test.TestCase):
         self.assertRaises(exception.NotAuthorized, self.controller.delete,
                           req, 1, 'key 5')
 
+    def test_delete_spec_not_found(self):
+        req = fakes.HTTPRequest.blank('/v3/flavors/1/extra-specs/key6',
+                                      use_admin_context=True)
+        self.assertRaises(webob.exc.HTTPNotFound, self.controller.delete,
+                          req, 1, 'key6')
+
     def test_create(self):
         self.stubs.Set(nova.db,
                        'instance_type_extra_specs_update_or_create',

@@ -2728,6 +2728,12 @@ class InstanceTypeExtraSpecsTestCase(BaseInstanceTypeTestCase):
                                                           it['flavorid'])
             self._assertEqualObjects(it['extra_specs'], real_specs)
 
+    def test_instance_type_extra_specs_delete_failed(self):
+        for it in self.inst_types:
+            self.assertRaises(exception.InstanceTypeExtraSpecsNotFound,
+                          db.flavor_extra_specs_delete,
+                          self.ctxt, it['flavorid'], 'dummy')
+
     def test_instance_type_extra_specs_update_or_create(self):
         for it in self.inst_types:
             current_specs = it['extra_specs']

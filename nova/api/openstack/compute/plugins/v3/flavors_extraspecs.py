@@ -112,11 +112,15 @@ class FlavorExtraSpecsController(object):
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
     @wsgi.response(204)
+    @extensions.expected_errors(404)
     def delete(self, req, flavor_id, id):
         """Deletes an existing extra spec."""
         context = req.environ['nova.context']
         self.authorize(context, action='delete')
-        db.instance_type_extra_specs_delete(context, flavor_id, id)
+        try:
+            db.instance_type_extra_specs_delete(context, flavor_id, id)
+        except exception.InstanceTypeExtraSpecsNotFound as e:
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
 
 class FlavorsExtraSpecs(extensions.V3APIExtensionBase):
