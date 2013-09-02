@@ -4369,8 +4369,10 @@ class LibvirtConnTestCase(test.TestCase):
         def fake_get_info(instance_name):
             return {'state': power_state.SHUTDOWN, 'id': -1}
 
-        fake_volumes = ['fakeinstancename.local', 'fakeinstancename.swap',
-                        'fakeinstancename', 'wronginstancename']
+        fake_volumes = ['875a8070-d0b9-4949-8b31-104d125c9a64.local',
+                        '875a8070-d0b9-4949-8b31-104d125c9a64.swap',
+                        '875a8070-d0b9-4949-8b31-104d125c9a64',
+                        'wrong875a8070-d0b9-4949-8b31-104d125c9a64']
         fake_pool = 'fake_pool'
         fake_instance = {'name': 'fakeinstancename', 'id': 'instanceid',
                          'uuid': '875a8070-d0b9-4949-8b31-104d125c9a64'}

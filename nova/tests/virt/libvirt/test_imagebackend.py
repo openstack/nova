@@ -736,10 +736,12 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
         self.libvirt_utils = imagebackend.libvirt_utils
         self.utils = imagebackend.utils
         self.rbd = self.mox.CreateMockAnything()
+        self.rados = self.mox.CreateMockAnything()
 
     def prepare_mocks(self):
         fn = self.mox.CreateMockAnything()
         self.mox.StubOutWithMock(imagebackend, 'rbd')
+        self.mox.StubOutWithMock(imagebackend, 'rados')
         return fn
 
     def test_cache(self):
@@ -830,6 +832,9 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
 
         self.rbd.RBD_FEATURE_LAYERING = 1
 
+        self.mox.StubOutWithMock(imagebackend.disk, 'get_disk_size')
+        imagebackend.disk.get_disk_size(self.TEMPLATE_PATH
+                                       ).AndReturn(self.SIZE)
         rbd_name = "%s/%s" % (self.INSTANCE['name'], self.NAME)
         cmd = ('--pool', self.POOL, self.TEMPLATE_PATH,
                rbd_name, '--new-format', '--id', self.USER,
@@ -848,9 +853,13 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
         fake_processutils.fake_execute_clear_log()
         fake_processutils.stub_out_processutils_execute(self.stubs)
         self.mox.StubOutWithMock(imagebackend, 'rbd')
+        self.mox.StubOutWithMock(imagebackend, 'rados')
         image = self.image_class(self.INSTANCE, self.NAME)
 
         def fake_fetch(target, *args, **kwargs):
+            return
+
+        def fake_resize(rbd_name, size):
             return
 
         self.stubs.Set(os.path, 'exists', lambda _: True)

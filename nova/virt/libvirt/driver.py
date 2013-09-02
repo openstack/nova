@@ -952,7 +952,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def _cleanup_rbd(self, instance):
         pool = CONF.libvirt_images_rbd_pool
         volumes = libvirt_utils.list_rbd_volumes(pool)
-        pattern = instance['name']
+        pattern = instance['uuid']
 
         def belongs_to_instance(disk):
             return disk.startswith(pattern)
