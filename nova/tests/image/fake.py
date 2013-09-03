@@ -249,7 +249,9 @@ def get_valid_image_id():
 
 
 def stub_out_image_service(stubs):
+    image_service = FakeImageService()
     stubs.Set(nova.image.glance, 'get_remote_image_service',
-              lambda x, y: (FakeImageService(), y))
+              lambda x, y: (image_service, y))
     stubs.Set(nova.image.glance, 'get_default_image_service',
-              lambda: FakeImageService())
+              lambda: image_service)
+    return image_service

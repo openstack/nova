@@ -1197,3 +1197,22 @@ def reset_is_neutron():
 
     _IS_NEUTRON_ATTEMPTED = False
     _IS_NEUTRON = False
+
+
+def is_auto_disk_config_disabled(auto_disk_config_raw):
+    auto_disk_config_disabled = False
+    if auto_disk_config_raw is not None:
+        adc_lowered = auto_disk_config_raw.strip().lower()
+        if adc_lowered == "disabled":
+            auto_disk_config_disabled = True
+    return auto_disk_config_disabled
+
+
+def get_auto_disk_config_from_instance(instance=None, sys_meta=None):
+    if sys_meta is None:
+        sys_meta = instance_sys_meta(instance)
+    return sys_meta.get("image_auto_disk_config")
+
+
+def get_auto_disk_config_from_image_props(image_properties):
+    return image_properties.get("auto_disk_config")

@@ -252,7 +252,7 @@ class BaseTestCase(test.TestCase):
             params = {}
 
         def make_fake_sys_meta():
-            sys_meta = {}
+            sys_meta = params.pop("system_metadata", {})
             inst_type = flavors.get_flavor_by_name(type_name)
             for key in flavors.system_metadata_flavor_props:
                 sys_meta['instance_type_%s' % key] = inst_type[key]
