@@ -430,7 +430,7 @@ class NetworkInfoTests(test.NoDBTestCase):
                 if gateway:
                     self.assertTrue('gateway 10.10.0.1' in template)
                 else:
-                    self.assertFalse('gateway' in template)
+                    self.assertNotIn('gateway', template)
                 self.assertTrue('dns-nameservers 1.2.3.4 2.3.4.5' in template)
             if use_ipv6:
                 self.assertTrue('iface eth0 inet6 static' in template)

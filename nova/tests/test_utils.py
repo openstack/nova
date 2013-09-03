@@ -872,7 +872,7 @@ class GetSystemMetadataFromImageTestCase(test.NoDBTestCase):
         # Verify that the empty properties have not been inherited
         for key in utils.SM_INHERITABLE_KEYS:
             sys_key = "%s%s" % (utils.SM_IMAGE_PROP_PREFIX, key)
-            self.assertTrue(sys_key not in sys_meta)
+            self.assertNotIn(sys_key, sys_meta)
 
 
 class GetImageFromSystemMetadataTestCase(test.NoDBTestCase):
@@ -916,7 +916,7 @@ class GetImageFromSystemMetadataTestCase(test.NoDBTestCase):
 
         # Verify that the empty properties have not been inherited
         for key in utils.SM_INHERITABLE_KEYS:
-            self.assertTrue(key not in image)
+            self.assertNotIn(key, image)
 
     def test_non_inheritable_image_properties(self):
         sys_meta = self.get_system_metadata()
@@ -927,4 +927,4 @@ class GetImageFromSystemMetadataTestCase(test.NoDBTestCase):
         image = utils.get_image_from_system_metadata(sys_meta)
 
         # Verify that the foo1 key has not been inherited
-        self.assertTrue("foo1" not in image)
+        self.assertNotIn("foo1", image)

@@ -364,7 +364,7 @@ class ServersControllerCreateTest(test.TestCase):
 
     def _check_admin_pass_missing(self, server_dict):
         """utility function - check server_dict for absence of adminPass."""
-        self.assertTrue("admin_pass" not in server_dict)
+        self.assertNotIn("admin_pass", server_dict)
 
     def test_create_multiple_instances_resv_id_return(self):
         """Test creating multiple instances with asking for

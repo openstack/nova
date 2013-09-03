@@ -560,10 +560,10 @@ class _TestObject(object):
 
     def test_contains(self):
         obj = MyObj()
-        self.assertFalse('foo' in obj)
+        self.assertNotIn('foo', obj)
         obj.foo = 1
         self.assertTrue('foo' in obj)
-        self.assertFalse('does_not_exist' in obj)
+        self.assertNotIn('does_not_exist', obj)
 
     def test_obj_attr_is_set(self):
         obj = MyObj()

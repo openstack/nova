@@ -245,7 +245,7 @@ class ServicesTest(test.TestCase):
         res_dict = self.controller.update(req, "enable", body)
 
         self.assertEqual(res_dict['service']['status'], 'enabled')
-        self.assertFalse('disabled_reason' in res_dict['service'])
+        self.assertNotIn('disabled_reason', res_dict['service'])
 
     # This test is just to verify that the servicegroup API gets used when
     # calling this API.
@@ -265,7 +265,7 @@ class ServicesTest(test.TestCase):
         res_dict = self.controller.update(req, "disable", body)
 
         self.assertEqual(res_dict['service']['status'], 'disabled')
-        self.assertFalse('disabled_reason' in res_dict['service'])
+        self.assertNotIn('disabled_reason', res_dict['service'])
 
     def test_services_disable_log_reason(self):
         req = \

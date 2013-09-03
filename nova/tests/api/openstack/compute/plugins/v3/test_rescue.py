@@ -81,7 +81,7 @@ class RescueTest(test.NoDBTestCase):
         resp = req.get_response(self.app)
         self.assertEqual(resp.status_int, 202)
         resp_json = jsonutils.loads(resp.body)
-        self.assertTrue('admin_pass' not in resp_json)
+        self.assertNotIn('admin_pass', resp_json)
 
     def test_rescue_of_rescued_instance(self):
         body = dict(rescue=None)

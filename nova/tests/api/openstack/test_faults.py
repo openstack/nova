@@ -171,7 +171,7 @@ class TestFaults(test.NoDBTestCase):
         resp = req.get_response(raiser)
         self.assertEqual(resp.content_type, "application/xml")
         self.assertEqual(resp.status_int, 403)
-        self.assertTrue('resizeNotAllowed' not in resp.body)
+        self.assertNotIn('resizeNotAllowed', resp.body)
         self.assertTrue('forbidden' in resp.body)
 
     def test_raise_localize_explanation(self):

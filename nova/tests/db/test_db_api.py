@@ -357,7 +357,7 @@ class AggregateDBApiTestCase(test.TestCase):
                 hosts=['bar.openstack.org'], metadata={'badkey': 'bad'})
         r1 = db.aggregate_metadata_get_by_host(ctxt, 'foo.openstack.org')
         self.assertEqual(r1['fake_key1'], set(['fake_value1']))
-        self.assertFalse('badkey' in r1)
+        self.assertNotIn('badkey', r1)
 
     def test_aggregate_metadata_get_by_metadata_key(self):
         ctxt = context.get_admin_context()
@@ -371,7 +371,7 @@ class AggregateDBApiTestCase(test.TestCase):
                                                         'availability_zone')
         self.assertEqual(r1['availability_zone'], set(['az1']))
         self.assertTrue('availability_zone' in r1)
-        self.assertFalse('name' in r1)
+        self.assertNotIn('name', r1)
 
     def test_aggregate_metadata_get_by_host_with_key(self):
         ctxt = context.get_admin_context()
@@ -389,13 +389,13 @@ class AggregateDBApiTestCase(test.TestCase):
         r1 = db.aggregate_metadata_get_by_host(ctxt, 'foo2.openstack.org',
                                                key='good')
         self.assertEqual(r1['good'], set(['value12', 'value23']))
-        self.assertFalse('fake_key1' in r1)
-        self.assertFalse('bad' in r1)
+        self.assertNotIn('fake_key1', r1)
+        self.assertNotIn('bad', r1)
         # Delete metadata
         db.aggregate_metadata_delete(ctxt, a3['id'], 'good')
         r2 = db.aggregate_metadata_get_by_host(ctxt, 'foo.openstack.org',
                                                key='good')
-        self.assertFalse('good' in r2)
+        self.assertNotIn('good', r2)
 
     def test_aggregate_host_get_by_metadata_key(self):
         ctxt = context.get_admin_context()
@@ -416,7 +416,7 @@ class AggregateDBApiTestCase(test.TestCase):
             'foo2.openstack.org': set(['value12', 'value23']),
             'foo3.openstack.org': set(['value23']),
         }, r1)
-        self.assertFalse('fake_key1' in r1)
+        self.assertNotIn('fake_key1', r1)
 
     def test_aggregate_get_by_host_not_found(self):
         ctxt = context.get_admin_context()
@@ -6560,10 +6560,10 @@ class InstanceGroupMetadataDBApiTestCase(InstanceGroupDBApiTestCase):
         self._assertEqualObjects(metadata, metadata3)
         db.instance_group_metadata_delete(self.context, id, 'key1')
         metadata = db.instance_group_metadata_get(self.context, id)
-        self.assertTrue('key1' not in metadata)
+        self.assertNotIn('key1', metadata)
         db.instance_group_metadata_delete(self.context, id, 'key2')
         metadata = db.instance_group_metadata_get(self.context, id)
-        self.assertTrue('key2' not in metadata)
+        self.assertNotIn('key2', metadata)
 
     def test_instance_group_metadata_invalid_ids(self):
         values = self._get_default_values()

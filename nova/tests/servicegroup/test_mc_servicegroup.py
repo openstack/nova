@@ -125,7 +125,7 @@ class MemcachedServiceGroupTestCase(test.TestCase):
 
         self.assertTrue(host1 in services)
         self.assertTrue(host2 in services)
-        self.assertFalse(host3 in services)
+        self.assertNotIn(host3, services)
 
         service_id = self.servicegroup_api.get_one(self._topic)
         self.assertTrue(service_id in services)

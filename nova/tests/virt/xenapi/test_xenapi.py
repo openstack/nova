@@ -627,7 +627,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
 
         if check_injection:
             xenstore_data = self.vm['xenstore_data']
-            self.assertFalse('vm-data/hostname' in xenstore_data)
+            self.assertNotIn('vm-data/hostname', xenstore_data)
             key = 'vm-data/networking/DEADBEEF0001'
             xenstore_value = xenstore_data[key]
             tcpip_data = ast.literal_eval(xenstore_value)
@@ -1256,7 +1256,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         vdi_uuids = []
         for vbd_uuid in rescue_vm["VBDs"]:
             vdi_uuids.append(xenapi_fake.get_record('VBD', vbd_uuid)["VDI"])
-        self.assertTrue("swap" not in vdi_uuids)
+        self.assertNotIn("swap", vdi_uuids)
 
     def test_rescue_preserve_disk_on_failure(self):
         # test that the original disk is preserved if rescue setup fails

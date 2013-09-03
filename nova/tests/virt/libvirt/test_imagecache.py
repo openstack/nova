@@ -144,7 +144,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         self.assertTrue(expected in image_cache_manager.unexplained_images)
 
         unexpected = os.path.join(base_dir, '00000004')
-        self.assertFalse(unexpected in image_cache_manager.unexplained_images)
+        self.assertNotIn(unexpected, image_cache_manager.unexplained_images)
 
         for ent in image_cache_manager.unexplained_images:
             self.assertTrue(ent.startswith(base_dir))
@@ -158,7 +158,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         unexpected = os.path.join(base_dir,
                                   '17d1b00b81642842e514494a78e804e9a511637c_'
                                 '10737418240')
-        self.assertFalse(unexpected in image_cache_manager.originals)
+        self.assertNotIn(unexpected, image_cache_manager.originals)
 
     def test_list_running_instances(self):
         all_instances = [{'image_ref': '1',

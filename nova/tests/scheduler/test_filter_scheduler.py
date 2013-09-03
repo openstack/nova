@@ -229,7 +229,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                 filter_properties=filter_properties)
 
         # should not have retry info in the populated filter properties:
-        self.assertFalse("retry" in filter_properties)
+        self.assertNotIn("retry", filter_properties)
 
     def test_retry_force_hosts(self):
         # Retry info should not get populated when re-scheduling is off.
@@ -248,7 +248,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                 filter_properties=filter_properties)
 
         # should not have retry info in the populated filter properties:
-        self.assertFalse("retry" in filter_properties)
+        self.assertNotIn("retry", filter_properties)
 
     def test_retry_force_nodes(self):
         # Retry info should not get populated when re-scheduling is off.
@@ -267,7 +267,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                 filter_properties=filter_properties)
 
         # should not have retry info in the populated filter properties:
-        self.assertFalse("retry" in filter_properties)
+        self.assertNotIn("retry", filter_properties)
 
     def test_retry_attempt_one(self):
         # Test retry logic on initial scheduling attempt.
