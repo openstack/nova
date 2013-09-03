@@ -879,15 +879,13 @@ class API(base.Base):
 
     @staticmethod
     def _volume_size(instance_type, bdm):
-        size = 0
-        if bdm.get('source_type') == 'blank':
+        size = bdm.get('volume_size')
+        if size is None and bdm.get('source_type') == 'blank':
             if bdm.get('guest_format') == 'swap':
                 size = instance_type.get('swap', 0)
             else:
                 size = instance_type.get('ephemeral_gb', 0)
-            return size
-        else:
-            return bdm.get('volume_size')
+        return size
 
     def _prepare_image_mapping(self, instance_type, instance_uuid, mappings):
         """Extract and format blank devices from image mappings."""
@@ -937,11 +935,7 @@ class API(base.Base):
         LOG.debug(_("block_device_mapping %s"), block_device_mapping,
                   instance_uuid=instance_uuid)
         for bdm in block_device_mapping:
-            # Default the size of blank devices per instance type
-            dest_type = bdm.get('destination_type')
-            if dest_type == 'blank':
-                bdm['volume_size'] = self._volume_size(
-                    instance_type, bdm)
+            bdm['volume_size'] = self._volume_size(instance_type, bdm)
             if bdm.get('volume_size') == 0:
                 continue
 
@@ -990,6 +984,24 @@ class API(base.Base):
                     self.volume_api.get_snapshot(context, snapshot_id)
                 except Exception:
                     raise exception.InvalidBDMSnapshot(id=snapshot_id)
+
+        ephemeral_size = sum(bdm.get('volume_size') or 0
+                for bdm in all_mappings
+                if block_device.new_format_is_ephemeral(bdm))
+        if ephemeral_size > instance_type['ephemeral_gb']:
+            raise exception.InvalidBDMEphemeralSize()
+
+        # There should be only one swap
+        swap_list = [bdm for bdm in all_mappings
+                if block_device.new_format_is_swap(bdm)]
+        if len(swap_list) > 1:
+            msg = _("More than one swap drive requested.")
+            raise exception.InvalidBDMFormat(details=msg)
+
+        if swap_list:
+            swap_size = swap_list[0].get('volume_size') or 0
+            if swap_size > instance_type['swap']:
+                raise exception.InvalidBDMSwapSize()
 
         max_local = CONF.max_local_block_devices
         if max_local >= 0:

@@ -235,6 +235,15 @@ class InvalidBDMLocalsLimit(InvalidBDM):
                 "limit allows")
 
 
+class InvalidBDMEphemeralSize(InvalidBDM):
+    msg_fmt = _("Ephemeral disks requested are larger than "
+                "the instance type allows.")
+
+
+class InvalidBDMSwapSize(InvalidBDM):
+    msg_fmt = _("Swap drive requested is larger than instance type allows.")
+
+
 class InvalidBDMFormat(InvalidBDM):
     msg_fmt = _("Block Device Mapping is Invalid: "
                 "%(details)s")

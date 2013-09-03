@@ -686,7 +686,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         snapshot_id = '66666666-aaaa-bbbb-cccc-555555555555'
 
         instance = self._create_fake_instance()
-        instance_type = {'swap': 1, 'ephemeral_gb': 1}
+        instance_type = {'swap': 1, 'ephemeral_gb': 2}
         mappings = [
             {
                 'device_name': '/dev/sdb4',
@@ -746,6 +746,68 @@ class ComputeVolumeTestCase(BaseTestCase):
                           self.compute_api._validate_bdm,
                           self.context, instance, instance_type,
                           mappings)
+        ephemerals = [
+            {
+                'device_name': '/dev/vdb',
+                'source_type': 'blank',
+                'destination_type': 'local',
+                'device_type': 'disk',
+                'volume_id': volume_id,
+                'guest_format': None,
+                'boot_index': -1,
+                'volume_size': 1
+            },
+            {
+                'device_name': '/dev/vdc',
+                'source_type': 'blank',
+                'destination_type': 'local',
+                'device_type': 'disk',
+                'volume_id': volume_id,
+                'guest_format': None,
+                'boot_index': -1,
+                'volume_size': 1
+            }]
+
+        self.flags(max_local_block_devices=4)
+        # More ephemerals are OK as long as they are not over the size limit
+        self.compute_api._validate_bdm(self.context, instance,
+                                       instance_type, mappings + ephemerals)
+
+        # Ephemerals over the size limit
+        ephemerals[0]['volume_size'] = 3
+        self.assertRaises(exception.InvalidBDMEphemeralSize,
+                          self.compute_api._validate_bdm,
+                          self.context, instance, instance_type,
+                          mappings + ephemerals)
+        self.assertRaises(exception.InvalidBDMEphemeralSize,
+                          self.compute_api._validate_bdm,
+                          self.context, instance, instance_type,
+                          mappings + [ephemerals[0]])
+
+        # Swap over the size limit
+        mappings[0]['volume_size'] = 3
+        self.assertRaises(exception.InvalidBDMSwapSize,
+                          self.compute_api._validate_bdm,
+                          self.context, instance, instance_type,
+                          mappings)
+        mappings[0]['volume_size'] = 1
+
+        additional_swap = [
+            {
+                'device_name': '/dev/vdb',
+                'source_type': 'blank',
+                'destination_type': 'local',
+                'device_type': 'disk',
+                'guest_format': 'swap',
+                'boot_index': -1,
+                'volume_size': 1
+            }]
+
+        # More than one swap
+        self.assertRaises(exception.InvalidBDMFormat,
+                          self.compute_api._validate_bdm,
+                          self.context, instance, instance_type,
+                          mappings + additional_swap)
 
     def test_validate_bdm_media_service_exceptions(self):
         instance_type = {'swap': 1, 'ephemeral_gb': 1}
@@ -6710,9 +6772,15 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual(
             self.compute_api._volume_size(inst_type, ephemeral_bdm),
             ephemeral_size)
+        ephemeral_bdm['volume_size'] = 42
+        self.assertEqual(
+            self.compute_api._volume_size(inst_type, ephemeral_bdm), 42)
         self.assertEqual(
             self.compute_api._volume_size(inst_type, swap_bdm),
             swap_size)
+        swap_bdm['volume_size'] = 42
+        self.assertEqual(
+                self.compute_api._volume_size(inst_type, swap_bdm), 42)
         self.assertEqual(
             self.compute_api._volume_size(inst_type, volume_bdm),
             volume_size)
