@@ -178,6 +178,7 @@ class GlanceConnectionFailed(NovaException):
 
 
 class NotAuthorized(NovaException):
+    ec2_code = 'AuthFailure'
     msg_fmt = _("Not authorized.")
     code = 403
 
