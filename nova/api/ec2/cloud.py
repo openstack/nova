@@ -1342,7 +1342,8 @@ class CloudController(object):
             raise exception.ImageNotFoundEC2(image_id=kwargs['image_id'])
 
         if image_state != 'available':
-            raise exception.EC2APIError(_('Image must be available'))
+            msg = _('Image must be available')
+            raise exception.ImageNotActive(message=msg)
 
         (instances, resv_id) = self.compute_api.create(context,
             instance_type=flavors.get_flavor_by_name(
