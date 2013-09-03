@@ -1463,3 +1463,9 @@ class PciConfigInvalidWhitelist(Invalid):
 
 class PciTrackerInvalidNodeId(NovaException):
     mst_fmt = _("Cannot change %(node_id)s to %(new_node_id)")
+
+
+# Cannot be templated, msg needs to be constructed when raised.
+class InternalError(NovaException):
+    ec2_code = 'InternalError'
+    msg_fmt = "%(err)s"

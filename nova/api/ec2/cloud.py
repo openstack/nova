@@ -1690,8 +1690,8 @@ class CloudController(object):
                 #                 Or is there any better way?
                 timeout = 1 * 60 * 60
                 if time.time() > start_time + timeout:
-                    raise exception.EC2APIError(
-                        _('Couldn\'t stop instance with in %d sec') % timeout)
+                    err = _("Couldn't stop instance within %d sec") % timeout
+                    raise exception.InternalError(message=err)
 
         glance_uuid = instance['image_ref']
         ec2_image_id = ec2utils.glance_id_to_ec2_id(context, glance_uuid)
