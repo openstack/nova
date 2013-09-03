@@ -22,12 +22,8 @@ Classes for making VMware VI SOAP calls.
 
 import httplib
 
-try:
-    import suds
-except ImportError:
-    suds = None
-
 from oslo.config import cfg
+import suds
 
 from nova.openstack.common.gettextutils import _
 from nova import utils
@@ -48,26 +44,24 @@ CONF = cfg.CONF
 CONF.register_opt(vmwareapi_wsdl_loc_opt, 'vmware')
 
 
-if suds:
+class VIMMessagePlugin(suds.plugin.MessagePlugin):
 
-    class VIMMessagePlugin(suds.plugin.MessagePlugin):
+    def addAttributeForValue(self, node):
+        # suds does not handle AnyType properly.
+        # VI SDK requires type attribute to be set when AnyType is used
+        if node.name == 'value':
+            node.set('xsi:type', 'xsd:string')
 
-        def addAttributeForValue(self, node):
-            # suds does not handle AnyType properly.
-            # VI SDK requires type attribute to be set when AnyType is used
-            if node.name == 'value':
-                node.set('xsi:type', 'xsd:string')
-
-        def marshalled(self, context):
-            """suds will send the specified soap envelope.
-            Provides the plugin with the opportunity to prune empty
-            nodes and fixup nodes before sending it to the server.
-            """
-            # suds builds the entire request object based on the wsdl schema.
-            # VI SDK throws server errors if optional SOAP nodes are sent
-            # without values, e.g. <test/> as opposed to <test>test</test>
-            context.envelope.prune()
-            context.envelope.walk(self.addAttributeForValue)
+    def marshalled(self, context):
+        """suds will send the specified soap envelope.
+        Provides the plugin with the opportunity to prune empty
+        nodes and fixup nodes before sending it to the server.
+        """
+        # suds builds the entire request object based on the wsdl schema.
+        # VI SDK throws server errors if optional SOAP nodes are sent
+        # without values, e.g. <test/> as opposed to <test>test</test>
+        context.envelope.prune()
+        context.envelope.walk(self.addAttributeForValue)
 
 
 class Vim:
