@@ -342,6 +342,13 @@ class MiscFunctionsTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest,
                 common.check_img_metadata_properties_quota, ctxt, metadata3)
 
+        metadata4 = None
+        self.assertEqual(common.check_img_metadata_properties_quota(ctxt,
+                                                        metadata4), None)
+        metadata5 = {}
+        self.assertEqual(common.check_img_metadata_properties_quota(ctxt,
+                                                        metadata5), None)
+
     def test_task_and_vm_state_from_status(self):
         fixture = 'reboot'
         actual = common.task_and_vm_state_from_status(fixture)
