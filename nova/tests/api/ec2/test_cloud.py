@@ -437,7 +437,7 @@ class CloudTestCase(test.TestCase):
             result = create(self.context, name, descript)
 
         # 11'th group should fail
-        self.assertRaises(exception.EC2APIError,
+        self.assertRaises(exception.SecurityGroupLimitExceeded,
                           create, self.context, 'foo', 'bar')
 
     def test_delete_security_group_by_id(self):
@@ -617,8 +617,8 @@ class CloudTestCase(test.TestCase):
             authz(self.context, group_id=sec_group['id'], **kwargs)
 
         kwargs = {'to_port': 121, 'from_port': 121, 'ip_protocol': 'tcp'}
-        self.assertRaises(exception.EC2APIError, authz, self.context,
-                              group_id=sec_group['id'], **kwargs)
+        self.assertRaises(exception.SecurityGroupLimitExceeded, authz,
+                          self.context, group_id=sec_group['id'], **kwargs)
 
     def _test_authorize_security_group_no_ports_with_source_group(self, proto):
         kwargs = {'project_id': self.context.project_id, 'name': 'test'}
