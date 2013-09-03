@@ -315,7 +315,7 @@ class HostController(wsgi.Controller):
             # be removed
             msg = _("Describe-resource is admin only functionality")
             raise webob.exc.HTTPForbidden(explanation=msg)
-        compute_node = service['compute_node'][0]
+        compute_node = service['compute_node']
         instances = self.api.instance_get_all_by_host(context, host_name)
         resources = [self._get_total_resources(host_name, compute_node)]
         resources.append(self._get_used_now_resources(host_name,

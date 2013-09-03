@@ -20,6 +20,7 @@ from nova import context
 from nova import exception
 from nova.openstack.common import rpc
 from nova import test
+from nova.tests.objects import test_service
 
 
 class ComputeHostAPITestCase(test.TestCase):
@@ -27,6 +28,13 @@ class ComputeHostAPITestCase(test.TestCase):
         super(ComputeHostAPITestCase, self).setUp()
         self.host_api = compute.HostAPI()
         self.ctxt = context.get_admin_context()
+
+    def _compare_obj(self, obj, db_obj):
+        test_service.compare(obj, db_obj)
+
+    def _compare_objs(self, obj_list, db_obj_list):
+        for index, obj in enumerate(obj_list):
+            test_service.compare(obj, db_obj_list[index])
 
     def _mock_rpc_call(self, expected_message, result=None):
         if result is None:
@@ -83,7 +91,7 @@ class ComputeHostAPITestCase(test.TestCase):
 
     def test_get_host_uptime_service_down(self):
         def fake_service_get_by_compute_host(context, host_name):
-            return {id: 1}
+            return dict(test_service.fake_service, id=1)
         self.stubs.Set(self.host_api.db, 'service_get_by_compute_host',
                                     fake_service_get_by_compute_host)
 
@@ -121,10 +129,10 @@ class ComputeHostAPITestCase(test.TestCase):
         self.assertEqual('fake-result', result)
 
     def test_service_get_all_no_zones(self):
-        services = [dict(id=1, key1='val1', key2='val2', topic='compute',
-                         host='host1'),
-                    dict(id=2, key1='val2', key3='val3', topic='compute',
-                         host='host2')]
+        services = [dict(test_service.fake_service,
+                         id=1, topic='compute', host='host1'),
+                    dict(test_service.fake_service,
+                         topic='compute', host='host2')]
 
         self.mox.StubOutWithMock(self.host_api.db,
                                  'service_get_all')
@@ -135,7 +143,7 @@ class ComputeHostAPITestCase(test.TestCase):
         self.mox.ReplayAll()
         result = self.host_api.service_get_all(self.ctxt)
         self.mox.VerifyAll()
-        self.assertEqual(services, result)
+        self._compare_objs(result, services)
 
         # Test no filters #2
         self.mox.ResetAll()
@@ -144,7 +152,7 @@ class ComputeHostAPITestCase(test.TestCase):
         self.mox.ReplayAll()
         result = self.host_api.service_get_all(self.ctxt, filters={})
         self.mox.VerifyAll()
-        self.assertEqual(services, result)
+        self._compare_objs(result, services)
 
         # Test w/ filter
         self.mox.ResetAll()
@@ -152,15 +160,15 @@ class ComputeHostAPITestCase(test.TestCase):
                                          disabled=None).AndReturn(services)
         self.mox.ReplayAll()
         result = self.host_api.service_get_all(self.ctxt,
-                                               filters=dict(key1='val2'))
+                                               filters=dict(host='host2'))
         self.mox.VerifyAll()
-        self.assertEqual([services[1]], result)
+        self._compare_objs(result, [services[1]])
 
     def test_service_get_all(self):
-        services = [dict(id=1, key1='val1', key2='val2', topic='compute',
-                         host='host1'),
-                    dict(id=2, key1='val2', key3='val3', topic='compute',
-                         host='host2')]
+        services = [dict(test_service.fake_service,
+                         topic='compute', host='host1'),
+                    dict(test_service.fake_service,
+                         topic='compute', host='host2')]
         exp_services = []
         for service in services:
             exp_service = {}
@@ -176,7 +184,7 @@ class ComputeHostAPITestCase(test.TestCase):
         self.mox.ReplayAll()
         result = self.host_api.service_get_all(self.ctxt, set_zones=True)
         self.mox.VerifyAll()
-        self.assertEqual(exp_services, result)
+        self._compare_objs(result, exp_services)
 
         # Test no filters #2
         self.mox.ResetAll()
@@ -186,7 +194,7 @@ class ComputeHostAPITestCase(test.TestCase):
         result = self.host_api.service_get_all(self.ctxt, filters={},
                                                set_zones=True)
         self.mox.VerifyAll()
-        self.assertEqual(exp_services, result)
+        self._compare_objs(result, exp_services)
 
         # Test w/ filter
         self.mox.ResetAll()
@@ -194,10 +202,10 @@ class ComputeHostAPITestCase(test.TestCase):
                                          disabled=None).AndReturn(services)
         self.mox.ReplayAll()
         result = self.host_api.service_get_all(self.ctxt,
-                                               filters=dict(key1='val2'),
+                                               filters=dict(host='host2'),
                                                set_zones=True)
         self.mox.VerifyAll()
-        self.assertEqual([exp_services[1]], result)
+        self._compare_objs(result, [exp_services[1]])
 
         # Test w/ zone filter but no set_zones arg.
         self.mox.ResetAll()
@@ -208,29 +216,29 @@ class ComputeHostAPITestCase(test.TestCase):
         result = self.host_api.service_get_all(self.ctxt,
                                                filters=filters)
         self.mox.VerifyAll()
-        self.assertEqual(exp_services, result)
+        self._compare_objs(result, exp_services)
 
     def test_service_get_by_compute_host(self):
         self.mox.StubOutWithMock(self.host_api.db,
                                  'service_get_by_compute_host')
 
         self.host_api.db.service_get_by_compute_host(self.ctxt,
-                'fake-host').AndReturn('fake-response')
+                'fake-host').AndReturn(test_service.fake_service)
         self.mox.ReplayAll()
         result = self.host_api.service_get_by_compute_host(self.ctxt,
                                                            'fake-host')
-        self.assertEqual('fake-response', result)
+        self.assertEqual(test_service.fake_service['id'], result.id)
 
     def test_service_update(self):
         host_name = 'fake-host'
         binary = 'nova-compute'
         params_to_update = dict(disabled=True)
         service_id = 42
-        expected_result = {'id': service_id}
+        expected_result = dict(test_service.fake_service, id=service_id)
 
         self.mox.StubOutWithMock(self.host_api.db, 'service_get_by_args')
         self.host_api.db.service_get_by_args(self.ctxt,
-            host_name, binary).AndReturn({'id': service_id})
+            host_name, binary).AndReturn(expected_result)
 
         self.mox.StubOutWithMock(self.host_api.db, 'service_update')
         self.host_api.db.service_update(
@@ -240,7 +248,7 @@ class ComputeHostAPITestCase(test.TestCase):
 
         result = self.host_api.service_update(
             self.ctxt, host_name, binary, params_to_update)
-        self.assertEqual(expected_result, result)
+        self._compare_obj(result, expected_result)
 
     def test_instance_get_all_by_host(self):
         self.mox.StubOutWithMock(self.host_api.db,
@@ -288,12 +296,12 @@ class ComputeHostAPICellsTestCase(ComputeHostAPITestCase):
                  None).AndReturn(result)
 
     def test_service_get_all_no_zones(self):
-        services = [dict(id=1, key1='val1', key2='val2', topic='compute',
-                         host='host1'),
-                    dict(id=2, key1='val2', key3='val3', topic='compute',
-                         host='host2')]
+        services = [dict(test_service.fake_service,
+                         id=1, topic='compute', host='host1'),
+                    dict(test_service.fake_service,
+                         id=2, topic='compute', host='host2')]
 
-        fake_filters = {'key1': 'val1'}
+        fake_filters = {'host': 'host1'}
         self.mox.StubOutWithMock(self.host_api.cells_rpcapi,
                                  'service_get_all')
         self.host_api.cells_rpcapi.service_get_all(self.ctxt,
@@ -301,12 +309,14 @@ class ComputeHostAPICellsTestCase(ComputeHostAPITestCase):
         self.mox.ReplayAll()
         result = self.host_api.service_get_all(self.ctxt,
                                                filters=fake_filters)
-        self.assertEqual(services, result)
+        self._compare_objs(result, services)
 
     def test_service_get_all(self):
-        services = [dict(id=1, key1='val1', key2='val2', topic='compute',
+        services = [dict(test_service.fake_service,
+                         id=1, key1='val1', key2='val2', topic='compute',
                          host='host1'),
-                    dict(id=2, key1='val2', key3='val3', topic='compute',
+                    dict(test_service.fake_service,
+                         id=2, key1='val2', key3='val3', topic='compute',
                          host='host2')]
         exp_services = []
         for service in services:
@@ -324,7 +334,7 @@ class ComputeHostAPICellsTestCase(ComputeHostAPITestCase):
                                                filters=fake_filters,
                                                set_zones=True)
         self.mox.VerifyAll()
-        self.assertEqual(exp_services, result)
+        self._compare_objs(result, exp_services)
 
         # Test w/ zone filter but no set_zones arg.
         self.mox.ResetAll()
@@ -337,25 +347,25 @@ class ComputeHostAPICellsTestCase(ComputeHostAPITestCase):
         result = self.host_api.service_get_all(self.ctxt,
                                                filters=fake_filters)
         self.mox.VerifyAll()
-        self.assertEqual(exp_services, result)
+        self._compare_objs(result, exp_services)
 
     def test_service_get_by_compute_host(self):
         self.mox.StubOutWithMock(self.host_api.cells_rpcapi,
                                  'service_get_by_compute_host')
 
         self.host_api.cells_rpcapi.service_get_by_compute_host(self.ctxt,
-                'fake-host').AndReturn('fake-response')
+                'fake-host').AndReturn(test_service.fake_service)
         self.mox.ReplayAll()
         result = self.host_api.service_get_by_compute_host(self.ctxt,
                                                            'fake-host')
-        self.assertEqual('fake-response', result)
+        self._compare_obj(result, test_service.fake_service)
 
     def test_service_update(self):
         host_name = 'fake-host'
         binary = 'nova-compute'
         params_to_update = dict(disabled=True)
         service_id = 42
-        expected_result = {'id': service_id}
+        expected_result = dict(test_service.fake_service, id=service_id)
 
         self.mox.StubOutWithMock(self.host_api.cells_rpcapi, 'service_update')
         self.host_api.cells_rpcapi.service_update(
@@ -366,7 +376,7 @@ class ComputeHostAPICellsTestCase(ComputeHostAPITestCase):
 
         result = self.host_api.service_update(
             self.ctxt, host_name, binary, params_to_update)
-        self.assertEqual(expected_result, result)
+        self._compare_obj(result, expected_result)
 
     def test_instance_get_all_by_host(self):
         instances = [dict(id=1, cell_name='cell1', host='host1'),

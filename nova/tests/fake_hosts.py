@@ -17,6 +17,9 @@
 Provides some fake hosts to test host and service related functions
 """
 
+from nova.tests.objects import test_service
+
+
 HOST_LIST = [
         {"host_name": "host_c1", "service": "compute", "zone": "nova"},
         {"host_name": "host_c2", "service": "compute", "zone": "nova"}]
@@ -27,6 +30,8 @@ HOST_LIST_NOVA_ZONE = [
         {"host_name": "host_c1", "service": "compute", "zone": "nova"},
         {"host_name": "host_c2", "service": "compute", "zone": "nova"}]
 
+service_base = test_service.fake_service
+
 SERVICES_LIST = [
-        {"host": "host_c1", "topic": "compute"},
-        {"host": "host_c2", "topic": "compute"}]
+        dict(service_base, host='host_c1', topic='compute'),
+        dict(service_base, host='host_c2', topic='compute')]

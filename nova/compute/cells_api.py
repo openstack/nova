@@ -22,6 +22,7 @@ from nova.cells import utils as cells_utils
 from nova.compute import api as compute_api
 from nova.compute import rpcapi as compute_rpcapi
 from nova import exception
+from nova.objects import service as service_obj
 from nova.openstack.common import excutils
 
 
@@ -466,11 +467,24 @@ class HostAPI(compute_api.HostAPI):
             if zone_filter is not None:
                 services = [s for s in services
                             if s['availability_zone'] == zone_filter]
-        return services
+        # NOTE(danms): Currently cells does not support objects as
+        # return values, so just convert the db-formatted service objects
+        # to new-world objects here
+        return service_obj._make_list(context,
+                                      service_obj.ServiceList(),
+                                      service_obj.Service,
+                                      services)
 
     def service_get_by_compute_host(self, context, host_name):
-        return self.cells_rpcapi.service_get_by_compute_host(context,
-                                                             host_name)
+        db_service = self.cells_rpcapi.service_get_by_compute_host(context,
+                                                                   host_name)
+        # NOTE(danms): Currently cells does not support objects as
+        # return values, so just convert the db-formatted service objects
+        # to new-world objects here
+        if db_service:
+            return service_obj.Service._from_db_object(context,
+                                                       service_obj.Service(),
+                                                       db_service)
 
     def service_update(self, context, host_name, binary, params_to_update):
         """
@@ -482,8 +496,15 @@ class HostAPI(compute_api.HostAPI):
         :param binary: The name of the executable that the service runs as
         :param params_to_update: eg. {'disabled': True}
         """
-        return self.cells_rpcapi.service_update(
+        db_service = self.cells_rpcapi.service_update(
             context, host_name, binary, params_to_update)
+        # NOTE(danms): Currently cells does not support objects as
+        # return values, so just convert the db-formatted service objects
+        # to new-world objects here
+        if db_service:
+            return service_obj.Service._from_db_object(context,
+                                                       service_obj.Service(),
+                                                       db_service)
 
     def instance_get_all_by_host(self, context, host_name):
         """Get all instances by host.  Host might have a cell prepended
