@@ -581,7 +581,7 @@ class Executor(wsgi.Application):
                 exception.InvalidPortRange,
                 exception.QuotaError,
                 exception.MissingParameter,
-                exception.InvalidInstanceIDMalformedEC2) as ex:
+                exception.InvalidInstanceIDMalformed) as ex:
             return ec2_error_ex(ex, req)
         except Exception as ex:
             return ec2_error_ex(ex, req, unexpected=True)
