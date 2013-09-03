@@ -434,11 +434,7 @@ class ComputeVolumeTestCase(BaseTestCase):
                 'volume_image_metadata': {'vol_test_key': 'vol_test_value'}
             }
 
-        def image_api_show(*args, **kwargs):
-            return {'img_test_key': 'img_test_value'}
-
         self.stubs.Set(self.compute_api.volume_api, 'get', volume_api_get)
-        self.stubs.Set(self.compute_api.image_service, 'show', image_api_show)
 
         block_device_mapping = [{
             'id': 1,
@@ -467,6 +463,17 @@ class ComputeVolumeTestCase(BaseTestCase):
             self.context, block_device_mapping, legacy_bdm=False)
         self.assertEqual(image_meta['vol_test_key'], 'vol_test_value')
 
+    def test_boot_image_metadata(self, metadata=True):
+        def image_api_show(*args, **kwargs):
+            if metadata:
+                return {
+                    'properties': {'img_test_key': 'img_test_value'}
+                }
+            else:
+                return {}
+
+        self.stubs.Set(self.compute_api.image_service, 'show', image_api_show)
+
         block_device_mapping = [{
             'boot_index': 0,
             'source_type': 'image',
@@ -477,7 +484,14 @@ class ComputeVolumeTestCase(BaseTestCase):
 
         image_meta = self.compute_api._get_bdm_image_metadata(
             self.context, block_device_mapping, legacy_bdm=False)
-        self.assertEqual(image_meta['img_test_key'], 'img_test_value')
+
+        if metadata:
+            self.assertEqual(image_meta['img_test_key'], 'img_test_value')
+        else:
+            self.assertEqual(image_meta, {})
+
+    def test_boot_image_no_metadata(self):
+        self.test_boot_image_metadata(metadata=False)
 
     def test_poll_volume_usage_disabled(self):
         ctxt = 'MockContext'

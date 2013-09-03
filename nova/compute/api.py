@@ -801,7 +801,8 @@ class API(base.Base):
             if bdm.get('image_id'):
                 try:
                     image_id = bdm['image_id']
-                    return self.image_service.show(context, image_id)
+                    image_meta = self.image_service.show(context, image_id)
+                    return image_meta.get('properties', {})
                 except Exception:
                     raise exception.InvalidBDMImage(id=image_id)
             elif bdm.get('volume_id'):
