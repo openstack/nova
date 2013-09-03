@@ -23,7 +23,6 @@ and storage repositories
 
 import time
 
-from eventlet.green import subprocess
 from oslo.config import cfg
 
 from nova.openstack.common.gettextutils import _
@@ -40,14 +39,7 @@ class VolumeUtils(basevolumeutils.BaseVolumeUtils):
         super(VolumeUtils, self).__init__()
 
     def execute(self, *args, **kwargs):
-        _PIPE = subprocess.PIPE  # pylint: disable=E1101
-        proc = subprocess.Popen(
-            [args],
-            stdin=_PIPE,
-            stdout=_PIPE,
-            stderr=_PIPE,
-        )
-        stdout_value, stderr_value = proc.communicate()
+        stdout_value, stderr_value = utils.execute(*args, **kwargs)
         if stdout_value.find('The operation completed successfully') == -1:
             raise vmutils.HyperVException(_('An error has occurred when '
                                             'calling the iscsi initiator: %s')

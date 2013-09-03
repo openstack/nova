@@ -20,11 +20,11 @@
 """Test cases for sqlite-specific logic"""
 
 from nova import test
+from nova import utils
 import os
 from sqlalchemy import create_engine
 from sqlalchemy import Column, BigInteger, String
 from sqlalchemy.ext.declarative import declarative_base
-import subprocess
 
 
 class TestSqlite(test.TestCase):
@@ -48,9 +48,7 @@ class TestSqlite(test.TestCase):
         get_schema_cmd = "sqlite3 %s '.schema'" % self.db_file
         engine = create_engine("sqlite:///%s" % self.db_file)
         base_class.metadata.create_all(engine)
-        process = subprocess.Popen(get_schema_cmd, shell=True,
-                                   stdout=subprocess.PIPE)
-        output, _ = process.communicate()
+        output, _ = utils.execute(get_schema_cmd, shell=True)
         self.assertFalse('BIGINT' in output, msg="column type BIGINT "
                          "not converted to INTEGER in schema")
 
