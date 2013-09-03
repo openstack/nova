@@ -2217,6 +2217,32 @@ class ComputeTestCase(BaseTestCase):
                                             instance=instance)
         self.compute.terminate_instance(self.context, instance=instance)
 
+    def test_live_snapshot_fails(self):
+        # Ensure task_state is set to None if snapshot fails.
+        def fake_live_snapshot(*args, **kwargs):
+            raise test.TestingException()
+
+        self.fake_image_delete_called = False
+
+        def fake_delete(self_, context, image_id):
+            self.fake_image_delete_called = True
+
+        self.stubs.Set(self.compute.driver, 'live_snapshot',
+                       fake_live_snapshot)
+        fake_image.stub_out_image_service(self.stubs)
+        self.stubs.Set(fake_image._FakeImageService, 'delete', fake_delete)
+
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+        self.compute.run_instance(self.context, instance=instance)
+        db.instance_update(self.context, instance['uuid'],
+                           {"task_state": task_states.IMAGE_LIVE_SNAPSHOT})
+        self.assertRaises(test.TestingException,
+                          self.compute.live_snapshot_instance,
+                          self.context, "failing_snapshot", instance=instance)
+        self.assertTrue(self.fake_image_delete_called)
+        self._assert_state({'task_state': None})
+        self.compute.terminate_instance(self.context, instance=instance)
+
     def _get_snapshotting_instance(self):
         # Ensure instance can be snapshotted.
         instance = jsonutils.to_primitive(self._create_fake_instance())
@@ -2238,19 +2264,34 @@ class ComputeTestCase(BaseTestCase):
         self.compute.snapshot_instance(self.context, image_id='fakesnap',
                                        instance=inst_obj)
 
-    def test_snapshot_fails(self):
-        # Ensure task_state is set to None if snapshot fails.
+    def _test_snapshot_fails(self, raise_during_cleanup):
         def fake_snapshot(*args, **kwargs):
             raise test.TestingException()
 
+        self.fake_image_delete_called = False
+
+        def fake_delete(self_, context, image_id):
+            self.fake_image_delete_called = True
+            if raise_during_cleanup:
+                raise Exception()
+
         self.stubs.Set(self.compute.driver, 'snapshot', fake_snapshot)
+        fake_image.stub_out_image_service(self.stubs)
+        self.stubs.Set(fake_image._FakeImageService, 'delete', fake_delete)
 
         inst_obj = self._get_snapshotting_instance()
         self.assertRaises(test.TestingException,
                           self.compute.snapshot_instance,
                           self.context, image_id='fakesnap',
                           instance=inst_obj)
+        self.assertTrue(self.fake_image_delete_called)
         self._assert_state({'task_state': None})
+
+    def test_snapshot_fails(self):
+        self._test_snapshot_fails(False)
+
+    def test_snapshot_fails_cleanup_ignores_exception(self):
+        self._test_snapshot_fails(True)
 
     def test_snapshot_handles_cases_when_instance_is_deleted(self):
         inst_obj = self._get_snapshotting_instance()
