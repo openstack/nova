@@ -28,14 +28,15 @@ from nova.openstack.common.notifier import api as notifier
 LOG = logging.getLogger(__name__)
 
 
-def build_request_spec(ctxt, image, instances):
+def build_request_spec(ctxt, image, instances, instance_type=None):
     """Build a request_spec for the scheduler.
 
     The request_spec assumes that all instances to be scheduled are the same
     type.
     """
     instance = instances[0]
-    instance_type = flavors.extract_flavor(instance)
+    if instance_type is None:
+        instance_type = flavors.extract_flavor(instance)
     # NOTE(comstud): This is a bit ugly, but will get cleaned up when
     # we're passing an InstanceType internal object.
     extra_specs = db.flavor_extra_specs_get(ctxt,

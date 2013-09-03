@@ -644,7 +644,7 @@ class ComputeTaskManager(base.Base):
             image = {}
 
         request_spec = scheduler_utils.build_request_spec(
-            context, image, [instance])
+            context, image, [instance], instance_type=flavor)
 
         try:
             hosts = self.scheduler_rpcapi.select_destinations(
